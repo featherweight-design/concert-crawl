@@ -14,6 +14,9 @@ out/
 build/
 *.tsbuildinfo
 
+# Next.js generated files
+next-env.d.ts
+
 # Turborepo
 .turbo/
 
