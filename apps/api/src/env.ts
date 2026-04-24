@@ -1,4 +1,8 @@
+import dotenv from 'dotenv'
 import { z } from 'zod'
+
+dotenv.config({ path: '.env.local' })
+dotenv.config() // fallback to .env if present
 
 const envSchema = z.object({
   DATABASE_URL: z.string().url(),

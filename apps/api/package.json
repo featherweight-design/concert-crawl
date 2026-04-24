@@ -12,11 +12,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@clerk/backend": "^1.0.0",
     "@concert-crawl/db": "workspace:*",
     "@concert-crawl/types": "workspace:*",
     "@hono/clerk-auth": "^2.0.0",
     "@hono/node-server": "^1.0.0",
-    "@clerk/backend": "^1.0.0",
+    "dotenv": "^17.4.2",
     "hono": "^4.0.0",
     "zod": "^3.22.0"
   },
