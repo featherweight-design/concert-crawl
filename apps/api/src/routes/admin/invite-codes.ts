@@ -1,15 +1,21 @@
 import { Hono } from 'hono'
 import { db, inviteCodes } from '@concert-crawl/db'
 import { eq } from 'drizzle-orm'
+import { zValidator } from '@hono/zod-validator'
+import { z } from 'zod'
 import { getAuthUser } from '../../middleware/auth.js'
 import { randomBytes } from 'crypto'
 import type { AdminVariables } from './index.js'
 
 function generateCode(): string {
-  // Format: BETA-XXXX-XXXX (uppercase alphanumeric, URL-safe)
+  // Format: BETA-XXXX-XXXX (uppercase hex, URL-safe)
   const part = () => randomBytes(3).toString('hex').toUpperCase().slice(0, 4)
   return `BETA-${part()}-${part()}`
 }
+
+const generateCodeSchema = z.object({
+  expiresAt: z.string().datetime({ offset: true }).optional(),
+})
 
 export const inviteCodesAdminRouter = new Hono<AdminVariables>()
 
@@ -23,25 +29,29 @@ inviteCodesAdminRouter.get('/', async (c) => {
 })
 
 // POST /v1/admin/invite-codes — generate a new code
-inviteCodesAdminRouter.post('/', async (c) => {
-  const { userId } = getAuthUser(c)
-  const body = await c.req.json<{ expiresAt?: string }>().catch(() => ({}))
+inviteCodesAdminRouter.post(
+  '/',
+  zValidator('json', generateCodeSchema),
+  async (c) => {
+    const { userId } = getAuthUser(c)
+    const { expiresAt } = c.req.valid('json')
 
-  const [code] = await db
-    .insert(inviteCodes)
-    .values({
-      code: generateCode(),
-      createdBy: userId,
-      expiresAt: body.expiresAt ? new Date(body.expiresAt) : null,
-    })
-    .returning()
+    const [code] = await db
+      .insert(inviteCodes)
+      .values({
+        code: generateCode(),
+        createdBy: userId,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+      })
+      .returning()
 
-  c.set('auditAction', 'invite_code.create')
-  c.set('auditTargetId', code!.id)
-  c.set('auditActorId', userId)
+    c.set('auditAction', 'invite_code.create')
+    c.set('auditTargetId', code!.id)
+    c.set('auditActorId', userId)
 
-  return c.json({ success: true, data: code }, 201)
-})
+    return c.json({ success: true, data: code }, 201)
+  },
+)
 
 // POST /v1/admin/invite-codes/:id/revoke — revoke a code
 inviteCodesAdminRouter.post('/:id/revoke', async (c) => {

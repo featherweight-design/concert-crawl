@@ -8,11 +8,6 @@ vi.mock('@hono/clerk-auth', () => ({
   getAuth: () => mockGetAuth(),
 }))
 
-vi.mock('drizzle-orm', () => ({
-  eq: vi.fn(),
-  desc: vi.fn(),
-}))
-
 vi.mock('@concert-crawl/db', () => {
   const mockDb = {
     select: vi.fn(function mockSelect() {
@@ -22,7 +17,7 @@ vi.mock('@concert-crawl/db', () => {
             orderBy: vi.fn().mockResolvedValue([
               {
                 id: 'code-1',
-                code: 'BETA-ABCD',
+                code: 'BETA-ABCD-EF12',
                 createdBy: 'admin_123',
                 usedBy: null,
                 usedAt: null,
@@ -35,7 +30,7 @@ vi.mock('@concert-crawl/db', () => {
             where: vi.fn().mockResolvedValue([
               {
                 id: 'code-1',
-                code: 'BETA-ABCD',
+                code: 'BETA-ABCD-EF12',
                 createdBy: 'admin_123',
                 usedBy: null,
                 usedAt: null,
@@ -56,7 +51,7 @@ vi.mock('@concert-crawl/db', () => {
             returning: vi.fn().mockResolvedValue([
               {
                 id: 'code-1',
-                code: 'BETA-ABCD',
+                code: 'BETA-ABCD-EF12',
                 createdBy: 'admin_123',
                 usedBy: null,
                 usedAt: null,
@@ -79,7 +74,7 @@ vi.mock('@concert-crawl/db', () => {
                 returning: vi.fn().mockResolvedValue([
                   {
                     id: 'code-1',
-                    code: 'BETA-ABCD',
+                    code: 'BETA-ABCD-EF12',
                     createdBy: 'admin_123',
                     usedBy: null,
                     usedAt: null,
