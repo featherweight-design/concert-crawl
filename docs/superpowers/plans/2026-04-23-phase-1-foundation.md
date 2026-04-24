@@ -1529,7 +1529,7 @@ const { version } = { version: '0.1.0' } // Phase 1 static version
 
 export const healthRouter = new Hono()
 
-healthRouter.get('/', (c) => {
+healthRouter.get('/', (ctx) => {
   return c.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -1657,7 +1657,7 @@ describe('requireAuth middleware', () => {
   it('returns 401 when no Authorization header is present', async () => {
     const app = new Hono()
     app.use('/protected', requireAuth)
-    app.get('/protected', (c) => c.json({ ok: true }))
+    app.get('/protected', (ctx) => c.json({ ok: true }))
 
     const res = await app.request('/protected')
     expect(res.status).toBe(401)
@@ -1666,7 +1666,7 @@ describe('requireAuth middleware', () => {
   it('returns 401 when Authorization header is malformed', async () => {
     const app = new Hono()
     app.use('/protected', requireAuth)
-    app.get('/protected', (c) => c.json({ ok: true }))
+    app.get('/protected', (ctx) => c.json({ ok: true }))
 
     const res = await app.request('/protected', {
       headers: { Authorization: 'NotBearer token' },
@@ -1705,7 +1705,7 @@ export const requireAuth: MiddlewareHandler = async (
     return c.json({ success: false, error: 'Unauthorized' }, 401)
   }
 
-  const auth = getAuth(c)
+  const auth = getAuth(ctx)
 
   if (!auth?.userId) {
     return c.json({ success: false, error: 'Unauthorized' }, 401)
@@ -1716,7 +1716,7 @@ export const requireAuth: MiddlewareHandler = async (
 
 // getAuthUser — call inside a route handler after requireAuth to get the userId
 export function getAuthUser(c: Context): { userId: string } {
-  const auth = getAuth(c)
+  const auth = getAuth(ctx)
   if (!auth?.userId)
     throw new Error('getAuthUser called outside of authenticated context')
   return { userId: auth.userId }
@@ -1757,7 +1757,7 @@ describe('requireRole middleware', () => {
   function makeApp(minimumRole: Role) {
     const app = new Hono()
     app.use('/route', requireRole(minimumRole))
-    app.get('/route', (c) => c.json({ ok: true }))
+    app.get('/route', (ctx) => c.json({ ok: true }))
     return app
   }
 
@@ -1831,7 +1831,7 @@ function getRoleLevel(role: Role): number {
 // Must be used after clerkAuth middleware
 export function requireRole(minimumRole: Role): MiddlewareHandler {
   return async (c, next) => {
-    const auth = getAuth(c)
+    const auth = getAuth(ctx)
 
     if (!auth?.userId) {
       return c.json({ success: false, error: 'Unauthorized' }, 401)
