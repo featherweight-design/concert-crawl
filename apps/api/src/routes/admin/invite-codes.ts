@@ -45,8 +45,18 @@ inviteCodesAdminRouter.post(
       })
       .returning()
 
+    if (!code) {
+      return c.json(
+        {
+          success: false,
+          error: 'Invite code was created but no row was returned by the database',
+        },
+        500,
+      )
+    }
+
     c.set('auditAction', 'invite_code.create')
-    c.set('auditTargetId', code!.id)
+    c.set('auditTargetId', code.id)
     c.set('auditActorId', userId)
 
     return c.json({ success: true, data: code }, 201)
