@@ -48,3 +48,41 @@ export type FeedbackCategory = 'bug' | 'suggestion' | 'praise'
 
 // Subscription tiers
 export type SubscriptionTier = 'free' | 'premium'
+
+// Venue — mirrors the Drizzle inferred type from packages/db
+export interface Venue {
+  id: string
+  name: string
+  slug: string
+  websiteUrl: string
+  city: string
+  active: boolean
+  verified: boolean
+  lastCrawledAt: Date | null
+  crawlNotes: string | null
+  crawlDelayMs: number
+  robotsTxtAllowed: boolean | null
+  consecutiveFailures: number
+  blockedAt: Date | null
+  extractionStrategy: 'structured_data' | 'llm' | 'manual' | null
+  contactEmail: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+export type NewVenue = Omit<
+  Venue,
+  'id' | 'createdAt' | 'updatedAt' | 'lastCrawledAt' | 'consecutiveFailures'
+>
+
+export interface InviteCode {
+  id: string
+  code: string
+  createdBy: string
+  usedBy: string | null
+  usedAt: Date | null
+  expiresAt: Date | null
+  revokedAt: Date | null
+  revokedBy: string | null
+  createdAt: Date
+}
