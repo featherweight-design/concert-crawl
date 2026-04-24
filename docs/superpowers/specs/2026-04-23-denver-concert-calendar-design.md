@@ -201,6 +201,18 @@ All tables use UUID primary keys and include `created_at` / `updated_at` timesta
 | status | enum | active / cancelled / past_due |
 | current_period_end | timestamp | |
 
+### `feedback`
+| Field | Type | Notes |
+|-------|------|-------|
+| id | uuid | PK |
+| user_id | text | Clerk user ID |
+| page_url | text | Captured automatically from the browser |
+| category | enum | bug / suggestion / praise |
+| message | text | |
+| created_at | timestamp | |
+
+Rate-limited to one submission per user per hour. Bug reports are additionally routed through the Sentry User Feedback widget for session context.
+
 ### `notifications`
 | Field | Type | Notes |
 |-------|------|-------|
@@ -398,6 +410,18 @@ The admin UI surfaces venues flagged for outreach. Building relationships with v
 7. `cost_tracking` record written per LLM call
 8. Venue `consecutive_failures` reset on success; incremented + admin alerted on failure
 9. Future: ticket price crawls run hourly via BullMQ + Upstash Redis targeting specific event ticket URLs
+
+### User Feedback System
+
+A lightweight, authenticated-only feedback mechanism for the private beta. Two complementary channels:
+
+**Bug reports → Sentry User Feedback widget**
+Triggered from a "Report a bug" button. Automatically captures current page, user session, recent events, and optional screenshot — richer context than any custom form. Lands in the Sentry dashboard linked to the session. No additional DB tables or admin UI required.
+
+**Suggestions + general feedback → in-app form**
+A persistent "Feedback" button (bottom corner of the UI) opens a modal with three fields: category (bug / suggestion / praise), message, and auto-captured page URL. Authenticated users only. Stored in the `feedback` table. Rate-limited to one submission per user per hour.
+
+Admin UI surfaces all feedback entries in a simple table (Phase 7). No upvoting, threading, or public roadmap — unnecessary overhead at private beta scale.
 
 ### In-App Notification System
 
@@ -823,9 +847,11 @@ Complete all of the following before writing any code. Most Phase 1 work is bloc
 - Seed with Denver venue list (~50–100 venues)
 - End-to-end beta flow: invite code → signup → browse events
 - Stripe integration (subscription tiers, founder pricing)
+- User feedback system: Sentry User Feedback widget + in-app form + `feedback` table
+- Feedback admin UI: simple table view of all submissions
 - Performance audit (Core Web Vitals)
 - Security review
-- **Milestone:** Private beta live, founder tier purchasable, first real users
+- **Milestone:** Private beta live, founder tier purchasable, feedback collection active, first real users
 
 ### Future Phases
 - Ticket price tracking (hourly crawls, BullMQ + Redis)

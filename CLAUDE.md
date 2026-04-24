@@ -203,6 +203,16 @@ Each app has a `.env.example` at its root. Required variables:
 
 ---
 
+## Beta Feedback Strategy
+
+Two channels, deliberately minimal:
+- **Bug reports:** Sentry User Feedback widget (rich session context, no custom code needed)
+- **Suggestions/praise:** In-app modal → `feedback` table → admin UI (rate-limited, auth-only)
+
+Do not build upvoting, threading, status tracking, or public roadmaps. The list is small enough to read manually during private beta.
+
+---
+
 ## Current Status
 
 Phase: **Pre-work / Design complete — implementation planning pending**
