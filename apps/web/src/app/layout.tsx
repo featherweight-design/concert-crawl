@@ -14,11 +14,11 @@ export const viewport: Viewport = {
   themeColor: '#000000',
 }
 
-export default function RootLayout({
-  children,
-}: {
+interface RootLayoutProps {
   children: React.ReactNode
-}) {
+}
+
+export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
