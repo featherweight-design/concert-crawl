@@ -19,7 +19,7 @@ describe('requireRole middleware', () => {
   function makeApp(minimumRole: Role) {
     const app = new Hono()
     app.use('/route', requireRole(minimumRole))
-    app.get('/route', (c) => c.json({ ok: true }))
+    app.get('/route', (ctx) => ctx.json({ ok: true }))
     return app
   }
 

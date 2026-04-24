@@ -7,27 +7,27 @@ export const clerkAuth = clerkMiddleware()
 // requireAuth — use after clerkAuth on protected routes
 // Returns 401 if no valid session is present
 export const requireAuth: MiddlewareHandler = async (
-  c: Context,
+  ctx: Context,
   next: Next,
 ) => {
-  const authHeader = c.req.header('Authorization')
+  const authHeader = ctx.req.header('Authorization')
 
   if (!authHeader?.startsWith('Bearer ')) {
-    return c.json({ success: false, error: 'Unauthorized' }, 401)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
   }
 
-  const auth = getAuth(c)
+  const auth = getAuth(ctx)
 
   if (!auth?.userId) {
-    return c.json({ success: false, error: 'Unauthorized' }, 401)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
   }
 
   await next()
 }
 
 // getAuthUser — call inside a route handler after requireAuth to get the userId
-export function getAuthUser(c: Context): { userId: string } {
-  const auth = getAuth(c)
+export function getAuthUser(ctx: Context): { userId: string } {
+  const auth = getAuth(ctx)
   if (!auth?.userId)
     throw new Error('getAuthUser called outside of authenticated context')
   return { userId: auth.userId }

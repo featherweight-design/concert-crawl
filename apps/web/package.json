@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
-    "@clerk/nextjs": "^5.0.0",
+    "@clerk/nextjs": "^7.2.6",
     "@concert-crawl/types": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -35,8 +35,8 @@
     "eslint-config-next": "^15.0.0",
     "jsdom": "^24.0.0",
     "postcss": "^8.0.0",
-    "tailwindcss": "^3.4.0",
     "shadcn": "^4.4.0",
+    "tailwindcss": "^3.4.0",
     "typescript": "^5.0.0",
     "vitest": "^2.0.0"
   }

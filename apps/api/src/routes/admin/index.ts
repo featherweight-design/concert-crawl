@@ -20,15 +20,15 @@ adminRouter.use('*', clerkAuth)
 adminRouter.use('*', requireRole('admin'))
 
 // Write audit log entry after each mutating request
-adminRouter.use('*', async (c, next) => {
+adminRouter.use('*', async (ctx, next) => {
   await next()
 
   // Only write audit log for mutating requests
-  if (['GET', 'HEAD', 'OPTIONS'].includes(c.req.method)) return
+  if (['GET', 'HEAD', 'OPTIONS'].includes(ctx.req.method)) return
 
-  const action = c.get('auditAction')
-  const targetId = c.get('auditTargetId')
-  const actorId = c.get('auditActorId')
+  const action = ctx.get('auditAction')
+  const targetId = ctx.get('auditTargetId')
+  const actorId = ctx.get('auditActorId')
 
   if (action && actorId) {
     try {

@@ -20,21 +20,21 @@ const generateCodeSchema = z.object({
 export const inviteCodesAdminRouter = new Hono<AdminVariables>()
 
 // GET /v1/admin/invite-codes — list all codes
-inviteCodesAdminRouter.get('/', async (c) => {
+inviteCodesAdminRouter.get('/', async (ctx) => {
   const codes = await db
     .select()
     .from(inviteCodes)
     .orderBy(inviteCodes.createdAt)
-  return c.json({ success: true, data: codes })
+  return ctx.json({ success: true, data: codes })
 })
 
 // POST /v1/admin/invite-codes — generate a new code
 inviteCodesAdminRouter.post(
   '/',
   zValidator('json', generateCodeSchema),
-  async (c) => {
-    const { userId } = getAuthUser(c)
-    const { expiresAt } = c.req.valid('json')
+  async (ctx) => {
+    const { userId } = getAuthUser(ctx)
+    const { expiresAt } = ctx.req.valid('json')
 
     const [code] = await db
       .insert(inviteCodes)
@@ -46,37 +46,41 @@ inviteCodesAdminRouter.post(
       .returning()
 
     if (!code) {
-      return c.json(
+      return ctx.json(
         {
           success: false,
-          error: 'Invite code was created but no row was returned by the database',
+          error:
+            'Invite code was created but no row was returned by the database',
         },
         500,
       )
     }
 
-    c.set('auditAction', 'invite_code.create')
-    c.set('auditTargetId', code.id)
-    c.set('auditActorId', userId)
+    ctx.set('auditAction', 'invite_code.create')
+    ctx.set('auditTargetId', code.id)
+    ctx.set('auditActorId', userId)
 
-    return c.json({ success: true, data: code }, 201)
+    return ctx.json({ success: true, data: code }, 201)
   },
 )
 
 // POST /v1/admin/invite-codes/:id/revoke — revoke a code
-inviteCodesAdminRouter.post('/:id/revoke', async (c) => {
-  const { id } = c.req.param()
-  const { userId } = getAuthUser(c)
+inviteCodesAdminRouter.post('/:id/revoke', async (ctx) => {
+  const { id } = ctx.req.param()
+  const { userId } = getAuthUser(ctx)
 
   const [existing] = await db
     .select()
     .from(inviteCodes)
     .where(eq(inviteCodes.id, id))
   if (!existing) {
-    return c.json({ success: false, error: 'Invite code not found' }, 404)
+    return ctx.json({ success: false, error: 'Invite code not found' }, 404)
   }
   if (existing.revokedAt) {
-    return c.json({ success: false, error: 'Invite code already revoked' }, 400)
+    return ctx.json(
+      { success: false, error: 'Invite code already revoked' },
+      400,
+    )
   }
 
   const [updated] = await db
@@ -85,9 +89,9 @@ inviteCodesAdminRouter.post('/:id/revoke', async (c) => {
     .where(eq(inviteCodes.id, id))
     .returning()
 
-  c.set('auditAction', 'invite_code.revoke')
-  c.set('auditTargetId', id)
-  c.set('auditActorId', userId)
+  ctx.set('auditAction', 'invite_code.revoke')
+  ctx.set('auditTargetId', id)
+  ctx.set('auditActorId', userId)
 
-  return c.json({ success: true, data: updated })
+  return ctx.json({ success: true, data: updated })
 })

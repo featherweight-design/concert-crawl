@@ -28,44 +28,44 @@ const updateVenueSchema = createVenueSchema.partial().extend({
 export const venuesAdminRouter = new Hono<AdminVariables>()
 
 // GET /v1/admin/venues — list all venues
-venuesAdminRouter.get('/', async (c) => {
+venuesAdminRouter.get('/', async (ctx) => {
   const allVenues = await db.select().from(venues).orderBy(venues.name)
-  return c.json({ success: true, data: allVenues })
+  return ctx.json({ success: true, data: allVenues })
 })
 
 // GET /v1/admin/venues/:id — get single venue
-venuesAdminRouter.get('/:id', async (c) => {
-  const { id } = c.req.param()
+venuesAdminRouter.get('/:id', async (ctx) => {
+  const { id } = ctx.req.param()
   const [venue] = await db.select().from(venues).where(eq(venues.id, id))
 
   if (!venue) {
-    return c.json({ success: false, error: 'Venue not found' }, 404)
+    return ctx.json({ success: false, error: 'Venue not found' }, 404)
   }
 
-  return c.json({ success: true, data: venue })
+  return ctx.json({ success: true, data: venue })
 })
 
 // POST /v1/admin/venues — create venue
 venuesAdminRouter.post(
   '/',
   zValidator('json', createVenueSchema),
-  async (c) => {
-    const body = c.req.valid('json')
+  async (ctx) => {
+    const body = ctx.req.valid('json')
 
     const [venue] = await db.insert(venues).values(body).returning()
 
     if (!venue) {
-      return c.json(
+      return ctx.json(
         { success: false, error: 'Venue created but no row was returned' },
         500,
       )
     }
 
-    c.set('auditAction', 'venue.create')
-    c.set('auditTargetId', venue.id)
-    c.set('auditActorId', getAuthUser(c).userId)
+    ctx.set('auditAction', 'venue.create')
+    ctx.set('auditTargetId', venue.id)
+    ctx.set('auditActorId', getAuthUser(ctx).userId)
 
-    return c.json({ success: true, data: venue }, 201)
+    return ctx.json({ success: true, data: venue }, 201)
   },
 )
 
@@ -73,13 +73,13 @@ venuesAdminRouter.post(
 venuesAdminRouter.patch(
   '/:id',
   zValidator('json', updateVenueSchema),
-  async (c) => {
-    const { id } = c.req.param()
-    const body = c.req.valid('json')
+  async (ctx) => {
+    const { id } = ctx.req.param()
+    const body = ctx.req.valid('json')
 
     const [existing] = await db.select().from(venues).where(eq(venues.id, id))
     if (!existing) {
-      return c.json({ success: false, error: 'Venue not found' }, 404)
+      return ctx.json({ success: false, error: 'Venue not found' }, 404)
     }
 
     const [updated] = await db
@@ -88,21 +88,21 @@ venuesAdminRouter.patch(
       .where(eq(venues.id, id))
       .returning()
 
-    c.set('auditAction', 'venue.update')
-    c.set('auditTargetId', id)
-    c.set('auditActorId', getAuthUser(c).userId)
+    ctx.set('auditAction', 'venue.update')
+    ctx.set('auditTargetId', id)
+    ctx.set('auditActorId', getAuthUser(ctx).userId)
 
-    return c.json({ success: true, data: updated })
+    return ctx.json({ success: true, data: updated })
   },
 )
 
 // DELETE /v1/admin/venues/:id — soft delete (set active = false)
-venuesAdminRouter.delete('/:id', async (c) => {
-  const { id } = c.req.param()
+venuesAdminRouter.delete('/:id', async (ctx) => {
+  const { id } = ctx.req.param()
 
   const [existing] = await db.select().from(venues).where(eq(venues.id, id))
   if (!existing) {
-    return c.json({ success: false, error: 'Venue not found' }, 404)
+    return ctx.json({ success: false, error: 'Venue not found' }, 404)
   }
 
   await db
@@ -110,9 +110,9 @@ venuesAdminRouter.delete('/:id', async (c) => {
     .set({ active: false, updatedAt: new Date() })
     .where(eq(venues.id, id))
 
-  c.set('auditAction', 'venue.deactivate')
-  c.set('auditTargetId', id)
-  c.set('auditActorId', getAuthUser(c).userId)
+  ctx.set('auditAction', 'venue.deactivate')
+  ctx.set('auditTargetId', id)
+  ctx.set('auditActorId', getAuthUser(ctx).userId)
 
-  return c.json({ success: true })
+  return ctx.json({ success: true })
 })
