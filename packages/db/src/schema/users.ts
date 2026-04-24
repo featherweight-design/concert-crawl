@@ -1,4 +1,11 @@
-import { jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import {
+  jsonb,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from 'drizzle-orm/pg-core'
 
 export const roleEnum = pgEnum('role', ['admin', 'sub_admin', 'user'])
 
@@ -8,7 +15,9 @@ export const userRoles = pgTable('user_roles', {
   role: roleEnum('role').notNull(),
   permissions: jsonb('permissions').$type<string[]>().default([]),
   grantedBy: text('granted_by').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 })
 
 export const inviteCodes = pgTable('invite_codes', {
@@ -20,7 +29,9 @@ export const inviteCodes = pgTable('invite_codes', {
   expiresAt: timestamp('expires_at', { withTimezone: true }),
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
   revokedBy: text('revoked_by'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 })
 
 export const auditLog = pgTable('audit_log', {
@@ -29,7 +40,9 @@ export const auditLog = pgTable('audit_log', {
   action: text('action').notNull(), // e.g. "venue.create", "user.role.grant"
   targetId: text('target_id'),
   metadata: jsonb('metadata'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 })
 
 export type UserRole = typeof userRoles.$inferSelect

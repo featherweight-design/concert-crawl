@@ -6,6 +6,10 @@
 
 <!-- Steps to verify this works -->
 
+## Screen recordings / captures
+
+<!-- If this PR includes UI changes, attach a screen recording or screenshot here. Delete this section if not applicable. -->
+
 ## Checklist
 
 - [ ] Tests pass locally (`pnpm test`)

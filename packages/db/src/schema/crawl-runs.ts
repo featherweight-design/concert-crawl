@@ -1,7 +1,18 @@
-import { integer, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import {
+  integer,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from 'drizzle-orm/pg-core'
 import { venues } from './venues.js'
 
-export const crawlStatusEnum = pgEnum('crawl_status', ['success', 'failed', 'partial'])
+export const crawlStatusEnum = pgEnum('crawl_status', [
+  'success',
+  'failed',
+  'partial',
+])
 
 export const crawlRuns = pgTable('crawl_runs', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -16,7 +27,9 @@ export const crawlRuns = pgTable('crawl_runs', {
   eventsInserted: integer('events_inserted').notNull().default(0),
   errorMessage: text('error_message'),
   durationMs: integer('duration_ms'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 })
 
 export type CrawlRun = typeof crawlRuns.$inferSelect

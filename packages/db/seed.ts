@@ -52,7 +52,10 @@ export const SEED_VENUES: NewVenue[] = [
 async function seed() {
   console.warn('Seeding database...')
 
-  await db.insert(venues).values(SEED_VENUES).onConflictDoNothing({ target: venues.slug })
+  await db
+    .insert(venues)
+    .values(SEED_VENUES)
+    .onConflictDoNothing({ target: venues.slug })
 
   console.warn(`Inserted ${SEED_VENUES.length} venues.`)
   process.exit(0)

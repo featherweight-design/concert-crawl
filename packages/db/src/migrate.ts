@@ -7,7 +7,8 @@ import { fileURLToPath } from 'url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const connectionString =
-  process.env['DATABASE_URL'] ?? 'postgresql://postgres:postgres@localhost:5433/concert_crawl_db'
+  process.env['DATABASE_URL'] ??
+  'postgresql://postgres:postgres@localhost:5433/concert_crawl_db'
 
 const migrationClient = postgres(connectionString, { max: 1 })
 

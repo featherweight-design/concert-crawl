@@ -12,7 +12,11 @@ import {
 } from 'drizzle-orm/pg-core'
 import { venues } from './venues.js'
 
-export const eventStatusEnum = pgEnum('event_status', ['upcoming', 'cancelled', 'postponed'])
+export const eventStatusEnum = pgEnum('event_status', [
+  'upcoming',
+  'cancelled',
+  'postponed',
+])
 
 export const events = pgTable(
   'events',
@@ -40,8 +44,12 @@ export const events = pgTable(
     extractionStrategy: text('extraction_strategy'),
     // search_vector is a generated column managed via raw SQL in migration
     rawHtml: text('raw_html'),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (table) => ({
     dateStatusIdx: index('events_date_status_idx').on(table.date, table.status),

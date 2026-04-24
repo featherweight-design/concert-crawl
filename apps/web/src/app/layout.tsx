@@ -14,11 +14,17 @@ export const viewport: Viewport = {
   themeColor: '#000000',
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
-        <body className="min-h-screen bg-background font-sans antialiased">{children}</body>
+        <body className="min-h-screen bg-background font-sans antialiased">
+          {children}
+        </body>
       </html>
     </ClerkProvider>
   )

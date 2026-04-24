@@ -11,6 +11,7 @@
 > **Note:** This is Phase 1 of 7. Complete the Pre-Work account setup checklist in the design spec before starting. See `docs/superpowers/specs/2026-04-23-denver-concert-crawler-design.md` for full context.
 
 > **Pre-requisites before Task 1:**
+>
 > - GitHub repo created (`concert-crawl`, private)
 > - Render account + Postgres instance created
 > - Clerk dev instance created (dev API keys available)
@@ -113,6 +114,7 @@ concert-crawl/
 ## Task 1: Root Workspace Scaffold
 
 **Files:**
+
 - Create: `package.json`
 - Create: `pnpm-workspace.yaml`
 - Create: `turbo.json`
@@ -263,6 +265,7 @@ git commit -m "chore: initialize monorepo with Turborepo and pnpm workspaces"
 ## Task 2: Shared Config Package
 
 **Files:**
+
 - Create: `packages/config/package.json`
 - Create: `packages/config/tsconfig.base.json`
 - Create: `packages/config/eslint-node.js`
@@ -358,6 +361,7 @@ git commit -m "chore: add shared config package (tsconfig, eslint presets)"
 ## Task 3: Commit Tooling — Husky, lint-staged, commitlint
 
 **Files:**
+
 - Create: `.commitlintrc.json`
 - Create: `.husky/pre-commit`
 
@@ -423,6 +427,7 @@ Expected: commit succeeds.
 ## Task 4: Shared Types Package
 
 **Files:**
+
 - Create: `packages/types/package.json`
 - Create: `packages/types/tsconfig.json`
 - Create: `packages/types/src/index.ts`
@@ -575,6 +580,7 @@ git commit -m "feat: add shared types package (Role, ApiResponse, domain enums)"
 ## Task 5: Database Package — Schema
 
 **Files:**
+
 - Create: `packages/db/package.json`
 - Create: `packages/db/tsconfig.json`
 - Create: `packages/db/drizzle.config.ts`
@@ -651,7 +657,9 @@ export default {
   out: './migrations',
   dialect: 'postgresql',
   dbCredentials: {
-    url: process.env['DATABASE_URL'] ?? 'postgresql://postgres:postgres@localhost:5432/concert_crawl',
+    url:
+      process.env['DATABASE_URL'] ??
+      'postgresql://postgres:postgres@localhost:5432/concert_crawl',
   },
 } satisfies Config
 ```
@@ -662,7 +670,15 @@ Create `packages/db/src/schema/schema.test.ts`:
 
 ```typescript
 import { describe, it, expect } from 'vitest'
-import { venues, events, userRoles, inviteCodes, auditLog, notifications, feedback } from './index.js'
+import {
+  venues,
+  events,
+  userRoles,
+  inviteCodes,
+  auditLog,
+  notifications,
+  feedback,
+} from './index.js'
 
 describe('database schema exports', () => {
   it('exports venues table', () => {
@@ -744,13 +760,19 @@ export const venues = pgTable('venues', {
   crawlNotes: text('crawl_notes'),
   crawlDelayMs: integer('crawl_delay_ms').notNull().default(3000),
   robotsTxtAllowed: boolean('robots_txt_allowed'),
-  robotsTxtCheckedAt: timestamp('robots_txt_checked_at', { withTimezone: true }),
+  robotsTxtCheckedAt: timestamp('robots_txt_checked_at', {
+    withTimezone: true,
+  }),
   consecutiveFailures: integer('consecutive_failures').notNull().default(0),
   blockedAt: timestamp('blocked_at', { withTimezone: true }),
   extractionStrategy: extractionStrategyEnum('extraction_strategy'),
   contactEmail: text('contact_email'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 })
 
 export type Venue = typeof venues.$inferSelect
@@ -807,8 +829,12 @@ export const events = pgTable(
     extractionStrategy: text('extraction_strategy'),
     // search_vector is a generated column managed via raw SQL in migration
     rawHtml: text('raw_html'),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (table) => ({
     dateStatusIdx: index('events_date_status_idx').on(table.date, table.status),
@@ -846,7 +872,9 @@ export const userRoles = pgTable('user_roles', {
   role: roleEnum('role').notNull(),
   permissions: jsonb('permissions').$type<string[]>().default([]),
   grantedBy: text('granted_by').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 })
 
 export const inviteCodes = pgTable('invite_codes', {
@@ -858,7 +886,9 @@ export const inviteCodes = pgTable('invite_codes', {
   expiresAt: timestamp('expires_at', { withTimezone: true }),
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
   revokedBy: text('revoked_by'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 })
 
 export const auditLog = pgTable('audit_log', {
@@ -867,7 +897,9 @@ export const auditLog = pgTable('audit_log', {
   action: text('action').notNull(), // e.g. "venue.create", "user.role.grant"
   targetId: text('target_id'),
   metadata: jsonb('metadata'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 })
 
 export type UserRole = typeof userRoles.$inferSelect
@@ -881,15 +913,26 @@ export type AuditLogEntry = typeof auditLog.$inferSelect
 import { pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { events } from './events.js'
 
-export const userEventStatusEnum = pgEnum('user_event_status', ['going', 'interested'])
-export const feedbackCategoryEnum = pgEnum('feedback_category', ['bug', 'suggestion', 'praise'])
+export const userEventStatusEnum = pgEnum('user_event_status', [
+  'going',
+  'interested',
+])
+export const feedbackCategoryEnum = pgEnum('feedback_category', [
+  'bug',
+  'suggestion',
+  'praise',
+])
 
 export const userEvents = pgTable('user_events', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: text('user_id').notNull(),
-  eventId: uuid('event_id').notNull().references(() => events.id, { onDelete: 'cascade' }),
+  eventId: uuid('event_id')
+    .notNull()
+    .references(() => events.id, { onDelete: 'cascade' }),
   status: userEventStatusEnum('status').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 })
 
 export const userArtistFollows = pgTable('user_artist_follows', {
@@ -897,7 +940,9 @@ export const userArtistFollows = pgTable('user_artist_follows', {
   userId: text('user_id').notNull(),
   artistName: text('artist_name').notNull(),
   spotifyArtistId: text('spotify_artist_id'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 })
 
 export const feedback = pgTable('feedback', {
@@ -906,16 +951,29 @@ export const feedback = pgTable('feedback', {
   pageUrl: text('page_url').notNull(),
   category: feedbackCategoryEnum('category').notNull(),
   message: text('message').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 })
 ```
 
 - [ ] **Step 10: Create `packages/db/src/schema/commerce.ts`**
 
 ```typescript
-import { boolean, numeric, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import {
+  boolean,
+  numeric,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from 'drizzle-orm/pg-core'
 
-export const subscriptionTierEnum = pgEnum('subscription_tier', ['free', 'premium'])
+export const subscriptionTierEnum = pgEnum('subscription_tier', [
+  'free',
+  'premium',
+])
 export const subscriptionStatusEnum = pgEnum('subscription_status', [
   'active',
   'cancelled',
@@ -930,9 +988,15 @@ export const subscriptions = pgTable('subscriptions', {
   tier: subscriptionTierEnum('tier').notNull().default('free'),
   founder: boolean('founder').notNull().default(false),
   status: subscriptionStatusEnum('status').notNull().default('active'),
-  currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  currentPeriodEnd: timestamp('current_period_end', {
+    withTimezone: true,
+  }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 })
 
 export const costTracking = pgTable('cost_tracking', {
@@ -940,7 +1004,9 @@ export const costTracking = pgTable('cost_tracking', {
   service: text('service').notNull(), // "claude", "render", etc.
   costUsd: numeric('cost_usd', { precision: 10, scale: 6 }).notNull(),
   tokensUsed: numeric('tokens_used'),
-  recordedAt: timestamp('recorded_at', { withTimezone: true }).notNull().defaultNow(),
+  recordedAt: timestamp('recorded_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
   metadata: text('metadata'), // JSON string for flexibility
 })
 ```
@@ -965,7 +1031,9 @@ export const notifications = pgTable('notifications', {
   actionUrl: text('action_url'),
   readAt: timestamp('read_at', { withTimezone: true }),
   metadata: text('metadata'), // JSON string
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 })
 ```
 
@@ -1027,6 +1095,7 @@ git commit -m "feat: add database package with full Drizzle schema"
 ## Task 6: Docker Compose + Migrations
 
 **Files:**
+
 - Create: `docker-compose.yml`
 - Create: `packages/db/src/migrate.ts`
 
@@ -1140,6 +1209,7 @@ git commit -m "feat: add Docker Compose for local Postgres and run initial migra
 ## Task 7: Database Seed Script
 
 **Files:**
+
 - Create: `packages/db/seed.ts`
 - Create: `packages/db/.env.example`
 
@@ -1295,6 +1365,7 @@ git commit -m "feat: add database seed script with 5 Denver venues"
 ## Task 8: Hono API — Scaffold + Health Endpoint
 
 **Files:**
+
 - Create: `apps/api/package.json`
 - Create: `apps/api/tsconfig.json`
 - Create: `apps/api/vitest.config.ts`
@@ -1400,7 +1471,7 @@ describe('GET /v1/health', () => {
 
   it('returns JSON with status, timestamp, and version', async () => {
     const res = await app.request('/v1/health')
-    const body = await res.json() as Record<string, unknown>
+    const body = (await res.json()) as Record<string, unknown>
     expect(body['status']).toBe('ok')
     expect(typeof body['timestamp']).toBe('string')
     expect(typeof body['version']).toBe('string')
@@ -1408,7 +1479,7 @@ describe('GET /v1/health', () => {
 
   it('returns a valid ISO 8601 timestamp', async () => {
     const res = await app.request('/v1/health')
-    const body = await res.json() as Record<string, unknown>
+    const body = (await res.json()) as Record<string, unknown>
     const date = new Date(body['timestamp'] as string)
     expect(date.toISOString()).toBe(body['timestamp'])
   })
@@ -1432,7 +1503,9 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   CLERK_SECRET_KEY: z.string().min(1),
   PORT: z.coerce.number().default(3001),
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  NODE_ENV: z
+    .enum(['development', 'test', 'production'])
+    .default('development'),
 })
 
 const parsed = envSchema.safeParse(process.env)
@@ -1564,6 +1637,7 @@ git commit -m "feat: add Hono API with health endpoint and Zod env validation"
 ## Task 9: Hono API — Auth + Role Middleware
 
 **Files:**
+
 - Create: `apps/api/src/middleware/auth.ts`
 - Create: `apps/api/src/middleware/role.ts`
 - Modify: `apps/api/src/routes/index.ts`
@@ -1621,7 +1695,10 @@ export const clerkAuth = clerkMiddleware()
 
 // requireAuth — use after clerkAuth on protected routes
 // Returns 401 if no valid session is present
-export const requireAuth: MiddlewareHandler = async (c: Context, next: Next) => {
+export const requireAuth: MiddlewareHandler = async (
+  c: Context,
+  next: Next,
+) => {
   const authHeader = c.req.header('Authorization')
 
   if (!authHeader?.startsWith('Bearer ')) {
@@ -1640,7 +1717,8 @@ export const requireAuth: MiddlewareHandler = async (c: Context, next: Next) => 
 // getAuthUser — call inside a route handler after requireAuth to get the userId
 export function getAuthUser(c: Context): { userId: string } {
   const auth = getAuth(c)
-  if (!auth?.userId) throw new Error('getAuthUser called outside of authenticated context')
+  if (!auth?.userId)
+    throw new Error('getAuthUser called outside of authenticated context')
   return { userId: auth.userId }
 }
 ```
@@ -1759,7 +1837,9 @@ export function requireRole(minimumRole: Role): MiddlewareHandler {
       return c.json({ success: false, error: 'Unauthorized' }, 401)
     }
 
-    const userRole = (auth.sessionClaims?.publicMetadata as { role?: Role } | undefined)?.role
+    const userRole = (
+      auth.sessionClaims?.publicMetadata as { role?: Role } | undefined
+    )?.role
 
     if (!userRole || getRoleLevel(userRole) < getRoleLevel(minimumRole)) {
       return c.json({ success: false, error: 'Forbidden' }, 403)
@@ -1798,6 +1878,7 @@ git commit -m "feat: add Clerk auth and role middleware to Hono API"
 ## Task 10: Bruno API Collection
 
 **Files:**
+
 - Create: `apps/api/bruno/bruno.json`
 - Create: `apps/api/bruno/health/health-check.bru`
 
@@ -1859,6 +1940,7 @@ git commit -m "chore: add Bruno API collection with health check"
 ## Task 11: Next.js Web App — Scaffold + Clerk Setup
 
 **Files:**
+
 - Create: `apps/web/package.json`
 - Create: `apps/web/tsconfig.json`
 - Create: `apps/web/next.config.ts`
@@ -2036,7 +2118,11 @@ export const viewport: Viewport = {
   themeColor: '#000000',
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
@@ -2080,6 +2166,7 @@ git commit -m "feat: scaffold Next.js web app with Clerk and Tailwind"
 ## Task 12: Next.js — Route Protection + Auth Utilities
 
 **Files:**
+
 - Create: `apps/web/middleware.ts`
 - Create: `apps/web/src/app/sign-in/[[...sign-in]]/page.tsx`
 - Create: `apps/web/src/app/sign-up/[[...sign-up]]/page.tsx`
@@ -2154,7 +2241,11 @@ Create `apps/web/src/app/(protected)/layout.tsx`:
 import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 
-export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
+export default async function ProtectedLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   const { userId } = await auth()
 
   if (!userId) {
@@ -2201,7 +2292,7 @@ export async function getCurrentUser(): Promise<AuthUser> {
     redirect('/sign-in')
   }
 
-  const role = ((user.publicMetadata as { role?: Role }) .role) ?? 'user'
+  const role = (user.publicMetadata as { role?: Role }).role ?? 'user'
 
   return {
     id: user.id,
@@ -2243,6 +2334,7 @@ pnpm dev
 Navigate to `http://localhost:3000`.
 
 Expected sequence:
+
 1. Root redirects to `/sign-in` (unauthenticated)
 2. Sign up with a test account via Clerk's UI
 3. Redirected to `/events` after sign-up
@@ -2261,6 +2353,7 @@ git commit -m "feat: add Clerk route protection and auth utilities to Next.js ap
 ## Task 13: Crawler App Stub
 
 **Files:**
+
 - Create: `apps/crawler/package.json`
 - Create: `apps/crawler/src/index.ts`
 
@@ -2289,7 +2382,9 @@ git commit -m "feat: add Clerk route protection and auth utilities to Next.js ap
 
 ```typescript
 // Crawler stub — implemented in Phase 3
-console.warn('🕷️  Concert Crawl crawler — not yet implemented. Coming in Phase 3.')
+console.warn(
+  '🕷️  Concert Crawl crawler — not yet implemented. Coming in Phase 3.',
+)
 process.exit(0)
 ```
 
@@ -2305,6 +2400,7 @@ git commit -m "chore: add crawler app stub (Phase 3)"
 ## Task 14: GitHub Actions CI Pipeline
 
 **Files:**
+
 - Create: `.github/workflows/ci.yml`
 - Create: `.github/pull_request_template.md`
 
@@ -2413,6 +2509,7 @@ Once CI passes, merge to `main`.
 ## Task 15: Render Deployment Config
 
 **Files:**
+
 - Create: `render.yaml`
 
 - [ ] **Step 1: Create `render.yaml`**
@@ -2436,9 +2533,9 @@ services:
           name: concert-crawl-db
           property: connectionString
       - key: CLERK_SECRET_KEY
-        sync: false  # Enter manually in Render dashboard
+        sync: false # Enter manually in Render dashboard
       - key: ALLOWED_ORIGIN
-        sync: false  # Set to your Next.js app URL
+        sync: false # Set to your Next.js app URL
 
   - type: web
     name: concert-crawl-web
@@ -2456,7 +2553,7 @@ services:
       - key: CLERK_SECRET_KEY
         sync: false
       - key: NEXT_PUBLIC_API_URL
-        sync: false  # Set to https://concert-crawl-api.onrender.com
+        sync: false # Set to https://concert-crawl-api.onrender.com
       - key: NEXT_PUBLIC_CLERK_SIGN_IN_URL
         value: /sign-in
       - key: NEXT_PUBLIC_CLERK_SIGN_UP_URL
@@ -2476,6 +2573,7 @@ databases:
 - [ ] **Step 2: Connect GitHub repo to Render**
 
 In the Render dashboard:
+
 1. New → Blueprint → connect the `concert-crawl` GitHub repo
 2. Render detects `render.yaml` and creates all services
 3. Set all `sync: false` environment variables manually in each service's dashboard
@@ -2483,6 +2581,7 @@ In the Render dashboard:
 - [ ] **Step 3: Trigger a manual deploy and verify**
 
 After environment variables are set:
+
 1. Trigger deploy for `concert-crawl-api`
 2. Once live, hit `https://concert-crawl-api.onrender.com/v1/health`
 
@@ -2504,6 +2603,7 @@ git push origin main
 ## Phase 1 Complete ✓
 
 **Milestone verification checklist:**
+
 - [ ] `pnpm install` succeeds from repo root
 - [ ] `docker compose up -d` starts Postgres
 - [ ] `pnpm db:migrate` runs without error

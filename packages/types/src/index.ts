@@ -1,6 +1,14 @@
 // User roles — mirrors Clerk publicMetadata.role
 export type Role = 'admin' | 'sub_admin' | 'user'
 
+// Ordered lowest → highest privilege. Used for role comparison across API and web.
+export const ROLE_HIERARCHY: readonly Role[] = ['user', 'sub_admin', 'admin']
+
+// Type guard — use instead of casting when reading role from external sources (e.g. Clerk metadata)
+export function isRole(value: unknown): value is Role {
+  return ROLE_HIERARCHY.includes(value as Role)
+}
+
 // Standard API response envelope
 export type ApiResponse<T> =
   | { success: true; data: T }

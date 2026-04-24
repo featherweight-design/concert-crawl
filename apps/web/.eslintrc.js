@@ -5,5 +5,11 @@ module.exports = {
     project: true,
     tsconfigRootDir: __dirname,
   },
-  ignorePatterns: ['**/*.test.ts', '**/*.test.tsx', '.next/', 'dist/', 'next-env.d.ts'],
+  ignorePatterns: [
+    '**/*.test.ts',
+    '**/*.test.tsx',
+    '.next/',
+    'dist/',
+    'next-env.d.ts',
+  ],
 }
