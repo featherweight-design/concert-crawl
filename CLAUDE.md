@@ -112,6 +112,17 @@ These were made deliberately — understand them before proposing changes.
 - **Branch naming:** `feat/short-description`, `fix/short-description`
 - **Never commit to `main` directly** — always via PR
 - **Never commit `.env` files** — use `.env.example` with placeholder values only
+- **Always open a PR for code changes** — never merge to main locally, never discard changes
+- **Always use `.github/pull_request_template.md`** when opening a PR
+
+### Session handoff
+
+Claude Code sessions are finite. To preserve continuity across sessions:
+
+- Commit all in-progress work before ending a session — a fresh Claude reads the code, not the chat
+- Leave a `## Next` section in `docs/superpowers/plans/` or update the relevant memory file with the immediate next step
+- After significant changes, update `CLAUDE.md` (architecture decisions, new conventions) and memory files (`~/.claude/projects/*/memory/`) with anything non-obvious
+- Optimize for cost-effectiveness: prefer smaller focused sessions over sprawling ones; use `/compact` when context grows large
 
 ### Code
 
