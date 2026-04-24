@@ -59,6 +59,7 @@ concert-crawl/
 ## Task 1: Extend Shared Types
 
 **Files:**
+
 - Modify: `packages/types/src/index.ts`
 - Test: `packages/types/src/index.test.ts`
 
@@ -128,7 +129,10 @@ export interface Venue {
   updatedAt: Date
 }
 
-export type NewVenue = Omit<Venue, 'id' | 'createdAt' | 'updatedAt' | 'lastCrawledAt' | 'consecutiveFailures'>
+export type NewVenue = Omit<
+  Venue,
+  'id' | 'createdAt' | 'updatedAt' | 'lastCrawledAt' | 'consecutiveFailures'
+>
 
 export interface InviteCode {
   id: string
@@ -171,6 +175,7 @@ git commit -m "feat: add Venue and InviteCode types to shared package"
 ## Task 2: API — Venue CRUD Routes
 
 **Files:**
+
 - Create: `apps/api/src/routes/admin/index.ts`
 - Create: `apps/api/src/routes/admin/venues.ts`
 - Modify: `apps/api/src/routes/index.ts`
@@ -187,7 +192,8 @@ import { createApp } from '../../app.js'
 // Mock Clerk auth — simulate admin user
 const mockGetAuth = vi.fn()
 vi.mock('@hono/clerk-auth', () => ({
-  clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) => next(),
+  clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
+    next(),
   getAuth: () => mockGetAuth(),
 }))
 
@@ -200,19 +206,21 @@ vi.mock('@concert-crawl/db', () => ({
     orderBy: vi.fn().mockReturnValue([]),
     insert: vi.fn().mockReturnThis(),
     values: vi.fn().mockReturnThis(),
-    returning: vi.fn().mockResolvedValue([{
-      id: 'venue-1',
-      name: 'Ogden Theatre',
-      slug: 'ogden-theatre',
-      websiteUrl: 'https://ogdentheatre.com',
-      city: 'Denver',
-      active: true,
-      verified: false,
-      consecutiveFailures: 0,
-      crawlDelayMs: 3000,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }]),
+    returning: vi.fn().mockResolvedValue([
+      {
+        id: 'venue-1',
+        name: 'Ogden Theatre',
+        slug: 'ogden-theatre',
+        websiteUrl: 'https://ogdentheatre.com',
+        city: 'Denver',
+        active: true,
+        verified: false,
+        consecutiveFailures: 0,
+        crawlDelayMs: 3000,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ]),
     update: vi.fn().mockReturnThis(),
     set: vi.fn().mockReturnThis(),
     delete: vi.fn().mockReturnThis(),
@@ -249,7 +257,7 @@ describe('Admin venue routes', () => {
     adminAuth()
     const res = await createApp().request('/v1/admin/venues')
     expect(res.status).toBe(200)
-    const body = await res.json() as { success: boolean; data: unknown[] }
+    const body = (await res.json()) as { success: boolean; data: unknown[] }
     expect(body.success).toBe(true)
     expect(Array.isArray(body.data)).toBe(true)
   })
@@ -301,7 +309,11 @@ import { getAuth } from '@hono/clerk-auth'
 
 const createVenueSchema = z.object({
   name: z.string().min(1).max(200),
-  slug: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/, 'Slug must be lowercase alphanumeric with hyphens'),
+  slug: z
+    .string()
+    .min(1)
+    .max(100)
+    .regex(/^[a-z0-9-]+$/, 'Slug must be lowercase alphanumeric with hyphens'),
   websiteUrl: z.string().url(),
   city: z.string().default('Denver'),
   crawlDelayMs: z.number().int().min(1000).max(30000).default(3000),
@@ -335,43 +347,51 @@ venuesAdminRouter.get('/:id', async (c) => {
 })
 
 // POST /v1/admin/venues — create venue
-venuesAdminRouter.post('/', zValidator('json', createVenueSchema), async (c) => {
-  const body = c.req.valid('json')
-  const auth = getAuth(c)
+venuesAdminRouter.post(
+  '/',
+  zValidator('json', createVenueSchema),
+  async (c) => {
+    const body = c.req.valid('json')
+    const auth = getAuth(c)
 
-  const [venue] = await db.insert(venues).values(body).returning()
+    const [venue] = await db.insert(venues).values(body).returning()
 
-  // Audit log written by the admin route group middleware (see admin/index.ts)
-  c.set('auditAction', 'venue.create')
-  c.set('auditTargetId', venue!.id)
-  c.set('auditActorId', auth!.userId)
+    // Audit log written by the admin route group middleware (see admin/index.ts)
+    c.set('auditAction', 'venue.create')
+    c.set('auditTargetId', venue!.id)
+    c.set('auditActorId', auth!.userId)
 
-  return c.json({ success: true, data: venue }, 201)
-})
+    return c.json({ success: true, data: venue }, 201)
+  },
+)
 
 // PATCH /v1/admin/venues/:id — update venue
-venuesAdminRouter.patch('/:id', zValidator('json', updateVenueSchema), async (c) => {
-  const { id } = c.req.param()
-  const body = c.req.valid('json')
-  const auth = getAuth(c)
+venuesAdminRouter.patch(
+  '/:id',
+  zValidator('json', updateVenueSchema),
+  async (c) => {
+    const { id } = c.req.param()
+    const body = c.req.valid('json')
+    const auth = getAuth(c)
 
-  const [existing] = await db.select().from(venues).where(eq(venues.id, id))
-  if (!existing) {
-    return c.json({ success: false, error: 'Venue not found' }, 404)
-  }
+    const [existing] = await db.select().from(venues).where(eq(venues.id, id))
+    if (!existing) {
+      return c.json({ success: false, error: 'Venue not found' }, 404)
+    }
 
-  const [updated] = await db
-    .update(venues)
-    .set({ ...body, updatedAt: new Date() })
-    .where(eq(venues.id, id))
-    .returning()
+    const [updated] = await db
+      .update(venues)
+      .set({ ...body, updatedAt: new Date() })
+      .where(eq(venues.id, id))
+      .returning()
 
-  c.set('auditAction', 'venue.update')
-  c.set('auditTargetId', id)
-  c.set('auditActorId', auth!.userId)
+    c.set('auditAction', 'venue.update')
+    c.set('auditTargetId', id)
+    c.set('auditActorId', auth!.userId)
 
-  return c.json({ success: true, data: updated })
-})
+    return c.json({ success: true, data: updated })
+  },
+)
 
 // DELETE /v1/admin/venues/:id — soft delete (set active = false)
 venuesAdminRouter.delete('/:id', async (c) => {
@@ -473,6 +493,7 @@ git commit -m "feat: add admin venue CRUD routes with role guard and audit loggi
 ## Task 3: API — Invite Code Routes
 
 **Files:**
+
 - Create: `apps/api/src/routes/admin/invite-codes.ts`
 - Test: `apps/api/src/routes/admin/invite-codes.test.ts`
 
@@ -486,7 +507,8 @@ import { createApp } from '../../app.js'
 
 const mockGetAuth = vi.fn()
 vi.mock('@hono/clerk-auth', () => ({
-  clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) => next(),
+  clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
+    next(),
   getAuth: () => mockGetAuth(),
 }))
 
@@ -498,17 +520,19 @@ vi.mock('@concert-crawl/db', () => ({
     where: vi.fn().mockReturnThis(),
     insert: vi.fn().mockReturnThis(),
     values: vi.fn().mockReturnThis(),
-    returning: vi.fn().mockResolvedValue([{
-      id: 'code-1',
-      code: 'BETA-ABCD',
-      createdBy: 'admin_123',
-      usedBy: null,
-      usedAt: null,
-      expiresAt: null,
-      revokedAt: null,
-      revokedBy: null,
-      createdAt: new Date(),
-    }]),
+    returning: vi.fn().mockResolvedValue([
+      {
+        id: 'code-1',
+        code: 'BETA-ABCD',
+        createdBy: 'admin_123',
+        usedBy: null,
+        usedAt: null,
+        expiresAt: null,
+        revokedAt: null,
+        revokedBy: null,
+        createdAt: new Date(),
+      },
+    ]),
     update: vi.fn().mockReturnThis(),
     set: vi.fn().mockReturnThis(),
   },
@@ -540,16 +564,22 @@ describe('Admin invite code routes', () => {
       body: JSON.stringify({}),
     })
     expect(res.status).toBe(201)
-    const body = await res.json() as { success: boolean; data: { code: string } }
+    const body = (await res.json()) as {
+      success: boolean
+      data: { code: string }
+    }
     expect(body.success).toBe(true)
     expect(typeof body.data.code).toBe('string')
   })
 
   it('POST /v1/admin/invite-codes/:id/revoke sets revokedAt and returns 200', async () => {
     adminAuth()
-    const res = await createApp().request('/v1/admin/invite-codes/code-1/revoke', {
-      method: 'POST',
-    })
+    const res = await createApp().request(
+      '/v1/admin/invite-codes/code-1/revoke',
+      {
+        method: 'POST',
+      },
+    )
     expect(res.status).toBe(200)
   })
 })
@@ -582,7 +612,10 @@ export const inviteCodesAdminRouter = new Hono()
 
 // GET /v1/admin/invite-codes — list all codes
 inviteCodesAdminRouter.get('/', async (c) => {
-  const codes = await db.select().from(inviteCodes).orderBy(inviteCodes.createdAt)
+  const codes = await db
+    .select()
+    .from(inviteCodes)
+    .orderBy(inviteCodes.createdAt)
   return c.json({ success: true, data: codes })
 })
 
@@ -612,7 +645,10 @@ inviteCodesAdminRouter.post('/:id/revoke', async (c) => {
   const { id } = c.req.param()
   const auth = getAuth(c)
 
-  const [existing] = await db.select().from(inviteCodes).where(eq(inviteCodes.id, id))
+  const [existing] = await db
+    .select()
+    .from(inviteCodes)
+    .where(eq(inviteCodes.id, id))
   if (!existing) {
     return c.json({ success: false, error: 'Invite code not found' }, 404)
   }
@@ -654,6 +690,7 @@ git commit -m "feat: add invite code generation and revocation routes"
 ## Task 4: Bruno — Admin API Collection
 
 **Files:**
+
 - Create: `apps/api/bruno/admin/list-venues.bru`
 - Create: `apps/api/bruno/admin/create-venue.bru`
 - Create: `apps/api/bruno/admin/generate-invite-code.bru`
@@ -780,6 +817,7 @@ git commit -m "chore: add Bruno admin API collection entries"
 ## Task 5: Install shadcn/ui in the Web App
 
 **Files:**
+
 - Modify: `apps/web/package.json`
 - Create: `apps/web/src/components/ui/` (generated by shadcn CLI)
 
@@ -790,6 +828,7 @@ cd apps/web && pnpm dlx shadcn@latest init
 ```
 
 When prompted:
+
 - Style: **Default**
 - Base color: **Slate**
 - CSS variables: **Yes**
@@ -824,6 +863,7 @@ git commit -m "chore: initialize shadcn/ui with default components"
 ## Task 6: Typed API Client
 
 **Files:**
+
 - Create: `apps/web/src/lib/api.ts`
 - Test: `apps/web/src/lib/api.test.ts`
 
@@ -841,7 +881,9 @@ describe('apiClient', () => {
 
   it('GET request returns parsed JSON on success', async () => {
     vi.mocked(fetch).mockResolvedValue(
-      new Response(JSON.stringify({ success: true, data: [] }), { status: 200 }),
+      new Response(JSON.stringify({ success: true, data: [] }), {
+        status: 200,
+      }),
     )
 
     const { apiClient } = await import('./api.js')
@@ -851,11 +893,15 @@ describe('apiClient', () => {
 
   it('throws on non-ok response', async () => {
     vi.mocked(fetch).mockResolvedValue(
-      new Response(JSON.stringify({ success: false, error: 'Forbidden' }), { status: 403 }),
+      new Response(JSON.stringify({ success: false, error: 'Forbidden' }), {
+        status: 403,
+      }),
     )
 
     const { apiClient } = await import('./api.js')
-    await expect(apiClient.get('/v1/admin/venues', 'test-token')).rejects.toThrow('Forbidden')
+    await expect(
+      apiClient.get('/v1/admin/venues', 'test-token'),
+    ).rejects.toThrow('Forbidden')
   })
 })
 ```
@@ -887,7 +933,11 @@ async function request<T>(
     },
   })
 
-  const body = await res.json() as { success: boolean; data?: T; error?: string }
+  const body = (await res.json()) as {
+    success: boolean
+    data?: T
+    error?: string
+  }
 
   if (!res.ok || !body.success) {
     throw new Error(body.error ?? `Request failed with status ${res.status}`)
@@ -897,8 +947,7 @@ async function request<T>(
 }
 
 export const apiClient = {
-  get: <T>(path: string, token: string) =>
-    request<T>(path, token),
+  get: <T>(path: string, token: string) => request<T>(path, token),
 
   post: <T>(path: string, token: string, data: unknown) =>
     request<T>(path, token, {
@@ -937,6 +986,7 @@ git commit -m "feat: add typed API client for Next.js web app"
 ## Task 7: Admin Layout + Dashboard
 
 **Files:**
+
 - Create: `apps/web/src/app/(protected)/admin/layout.tsx`
 - Create: `apps/web/src/app/(protected)/admin/page.tsx`
 - Modify: `apps/web/src/lib/auth.ts` — add `requireAdminUser()` helper
@@ -964,7 +1014,11 @@ const navItems = [
   { href: '/admin/invite-codes', label: 'Invite Codes' },
 ]
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   await requireAdminUser()
 
   return (
@@ -1005,22 +1059,30 @@ export default async function AdminDashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-        <p className="text-slate-500">Welcome back, {user.firstName ?? user.email}</p>
+        <p className="text-slate-500">
+          Welcome back, {user.firstName ?? user.email}
+        </p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-slate-500">Venues</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-500">
+              Venues
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">—</p>
-            <p className="text-xs text-slate-400">Populated after venue setup</p>
+            <p className="text-xs text-slate-400">
+              Populated after venue setup
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-slate-500">Invite Codes</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-500">
+              Invite Codes
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">—</p>
@@ -1028,7 +1090,9 @@ export default async function AdminDashboardPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-slate-500">Last Crawl</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-500">
+              Last Crawl
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">—</p>
@@ -1063,6 +1127,7 @@ git commit -m "feat: add admin layout with sidebar nav and dashboard page"
 ## Task 8: Venue Management UI
 
 **Files:**
+
 - Create: `apps/web/src/components/admin/venue-table.tsx`
 - Create: `apps/web/src/components/admin/venue-form.tsx`
 - Create: `apps/web/src/lib/actions/venues.ts`
@@ -1106,7 +1171,10 @@ export async function createVenue(formData: FormData): Promise<void> {
   redirect('/admin/venues')
 }
 
-export async function updateVenue(id: string, formData: FormData): Promise<void> {
+export async function updateVenue(
+  id: string,
+  formData: FormData,
+): Promise<void> {
   const token = await getToken()
 
   await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
@@ -1169,7 +1237,10 @@ export function VenueTable({ venues }: VenueTableProps) {
         {venues.map((venue) => (
           <TableRow key={venue.id}>
             <TableCell className="font-medium">
-              <Link href={`/admin/venues/${venue.id}`} className="hover:underline">
+              <Link
+                href={`/admin/venues/${venue.id}`}
+                className="hover:underline"
+              >
                 {venue.name}
               </Link>
             </TableCell>
@@ -1263,22 +1334,42 @@ export function VenueForm({ venue, action }: VenueFormProps) {
 
       <div className="space-y-1">
         <Label htmlFor="websiteUrl">Website URL</Label>
-        <Input id="websiteUrl" name="websiteUrl" type="url" defaultValue={venue?.websiteUrl} required />
+        <Input
+          id="websiteUrl"
+          name="websiteUrl"
+          type="url"
+          defaultValue={venue?.websiteUrl}
+          required
+        />
       </div>
 
       <div className="space-y-1">
         <Label htmlFor="city">City</Label>
-        <Input id="city" name="city" defaultValue={venue?.city ?? 'Denver'} required />
+        <Input
+          id="city"
+          name="city"
+          defaultValue={venue?.city ?? 'Denver'}
+          required
+        />
       </div>
 
       <div className="space-y-1">
         <Label htmlFor="contactEmail">Contact Email (optional)</Label>
-        <Input id="contactEmail" name="contactEmail" type="email" defaultValue={venue?.contactEmail ?? ''} />
+        <Input
+          id="contactEmail"
+          name="contactEmail"
+          type="email"
+          defaultValue={venue?.contactEmail ?? ''}
+        />
       </div>
 
       <div className="space-y-1">
         <Label htmlFor="crawlNotes">Crawl Notes (optional)</Label>
-        <Input id="crawlNotes" name="crawlNotes" defaultValue={venue?.crawlNotes ?? ''} />
+        <Input
+          id="crawlNotes"
+          name="crawlNotes"
+          defaultValue={venue?.crawlNotes ?? ''}
+        />
       </div>
 
       {venue && (
@@ -1405,6 +1496,7 @@ git commit -m "feat: add venue management UI with list, create, and edit pages"
 ## Task 9: Invite Code UI
 
 **Files:**
+
 - Create: `apps/web/src/components/admin/invite-code-table.tsx`
 - Create: `apps/web/src/components/admin/generate-invite-form.tsx`
 - Create: `apps/web/src/lib/actions/invite-codes.ts`
@@ -1463,10 +1555,14 @@ import {
 } from '@/components/ui/table'
 import { revokeInviteCode } from '@/lib/actions/invite-codes'
 
-function codeStatus(code: InviteCode): { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' } {
+function codeStatus(code: InviteCode): {
+  label: string
+  variant: 'default' | 'secondary' | 'destructive' | 'outline'
+} {
   if (code.revokedAt) return { label: 'Revoked', variant: 'destructive' }
   if (code.usedAt) return { label: 'Used', variant: 'secondary' }
-  if (code.expiresAt && new Date(code.expiresAt) < new Date()) return { label: 'Expired', variant: 'outline' }
+  if (code.expiresAt && new Date(code.expiresAt) < new Date())
+    return { label: 'Expired', variant: 'outline' }
   return { label: 'Active', variant: 'default' }
 }
 
@@ -1496,7 +1592,9 @@ export function InviteCodeTable({ codes }: { codes: InviteCode[] }) {
                 {code.usedBy ?? '—'}
               </TableCell>
               <TableCell className="text-slate-400 text-sm">
-                {code.expiresAt ? new Date(code.expiresAt).toLocaleDateString() : 'Never'}
+                {code.expiresAt
+                  ? new Date(code.expiresAt).toLocaleDateString()
+                  : 'Never'}
               </TableCell>
               <TableCell className="text-slate-400 text-sm">
                 {new Date(code.createdAt).toLocaleDateString()}
@@ -1573,7 +1671,10 @@ import { GenerateInviteForm } from '@/components/admin/generate-invite-form'
 export default async function InviteCodesPage() {
   const { getToken } = await auth()
   const token = await getToken()
-  const codes = await apiClient.get<InviteCode[]>('/v1/admin/invite-codes', token!)
+  const codes = await apiClient.get<InviteCode[]>(
+    '/v1/admin/invite-codes',
+    token!,
+  )
 
   return (
     <div className="space-y-8">
@@ -1608,6 +1709,7 @@ git commit -m "feat: add invite code management UI with generate and revoke"
 ## Phase 2 Complete ✓
 
 **Milestone verification checklist:**
+
 - [ ] `pnpm test` — all tests pass (types + API unit tests)
 - [ ] `pnpm typecheck` — no type errors
 - [ ] Admin can navigate to `/admin` and see dashboard

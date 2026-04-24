@@ -1,0 +1,10 @@
+{
+  "name": "@concert-crawl/config",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./tsconfig": "./tsconfig.base.json",
+    "./eslint-node": "./eslint-node.js",
+    "./eslint-next": "./eslint-next.js"
+  }
+}

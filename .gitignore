@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Environment files — never commit real secrets
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+.next/
+out/
+build/
+*.tsbuildinfo
+
+# Next.js generated files
+next-env.d.ts
+
+# Turborepo
+.turbo/
+
+# Drizzle generated migrations (tracked via packages/db/migrations instead)
+drizzle/
+
+# Test outputs
+coverage/
+playwright-report/
+test-results/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
