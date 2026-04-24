@@ -54,8 +54,15 @@ venuesAdminRouter.post(
 
     const [venue] = await db.insert(venues).values(body).returning()
 
+    if (!venue) {
+      return c.json(
+        { success: false, error: 'Venue created but no row was returned' },
+        500,
+      )
+    }
+
     c.set('auditAction', 'venue.create')
-    c.set('auditTargetId', venue!.id)
+    c.set('auditTargetId', venue.id)
     c.set('auditActorId', getAuthUser(c).userId)
 
     return c.json({ success: true, data: venue }, 201)
