@@ -31,12 +31,21 @@ adminRouter.use('*', async (c, next) => {
   const actorId = c.get('auditActorId')
 
   if (action && actorId) {
-    await db.insert(auditLog).values({
-      actorId,
-      action,
-      targetId: targetId ?? null,
-      metadata: null,
-    })
+    try {
+      await db.insert(auditLog).values({
+        actorId,
+        action,
+        targetId: targetId ?? null,
+        metadata: null,
+      })
+    } catch (error) {
+      console.error('Failed to write admin audit log', {
+        actorId,
+        action,
+        targetId: targetId ?? null,
+        error,
+      })
+    }
   }
 })
 
