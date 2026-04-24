@@ -62,9 +62,10 @@ export interface Venue {
   crawlNotes: string | null
   crawlDelayMs: number
   robotsTxtAllowed: boolean | null
+  robotsTxtCheckedAt: Date | null
   consecutiveFailures: number
   blockedAt: Date | null
-  extractionStrategy: 'structured_data' | 'llm' | 'manual' | null
+  extractionStrategy: ExtractionStrategy | null
   contactEmail: string | null
   createdAt: Date
   updatedAt: Date
