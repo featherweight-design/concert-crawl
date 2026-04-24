@@ -16,6 +16,9 @@ build/
 # Turborepo
 .turbo/
 
+# Drizzle generated migrations (tracked via packages/db/migrations instead)
+drizzle/
+
 # Test outputs
 coverage/
 playwright-report/
