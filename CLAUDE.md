@@ -267,7 +267,7 @@ Always commit work-in-progress before ending a session so a fresh Claude starts 
 
 Phase: **Phase 1 complete — Phase 2 (venue management) ready to begin**
 
-- Phase 1 PR open: `feat/phase-1-foundation` — CI in progress
+- Phase 1 merged: `feat/phase-1-foundation` — CI in progress
 - Phase 2 plan written: `docs/superpowers/plans/2026-04-23-phase-2-venue-management.md`
 - Domain purchase pending: `concertcrawl.com` via Cloudflare Registrar
 
