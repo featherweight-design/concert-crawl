@@ -1,6 +1,10 @@
 import type { Metadata, Viewport } from 'next'
 import { ClerkProvider } from '@clerk/nextjs'
 import './globals.css'
+import { Geist } from 'next/font/google'
+import { cn } from '@/lib/utils'
+
+const geist = Geist({ subsets: ['latin'], variable: '--font-sans' })
 
 export const metadata: Metadata = {
   title: 'Concert Crawl',
@@ -21,7 +25,11 @@ interface RootLayoutProps {
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <ClerkProvider>
-      <html lang="en" suppressHydrationWarning>
+      <html
+        lang="en"
+        suppressHydrationWarning
+        className={cn('font-sans', geist.variable)}
+      >
         <body className="min-h-screen bg-background font-sans antialiased">
           {children}
         </body>
