@@ -1,12 +1,12 @@
 import type { Config } from 'drizzle-kit'
 
 export default {
-  schema: './src/schema/index.ts',
+  schema: './src/schema/*.ts',
   out: './migrations',
   dialect: 'postgresql',
   dbCredentials: {
     url:
       process.env['DATABASE_URL'] ??
-      'postgresql://postgres:postgres@localhost:5432/concert_crawl_db',
+      'postgresql://postgres:postgres@localhost:5433/concert_crawl_db',
   },
 } satisfies Config

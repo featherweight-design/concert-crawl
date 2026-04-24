@@ -2,6 +2,7 @@
   "name": "@concert-crawl/db",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -14,7 +15,7 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "db:generate": "drizzle-kit generate",
+    "db:generate": "NODE_OPTIONS='--require=tsx/cjs' drizzle-kit generate",
     "db:migrate": "tsx src/migrate.ts",
     "db:seed": "tsx seed.ts"
   },
