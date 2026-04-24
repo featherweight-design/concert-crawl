@@ -1,0 +1,24 @@
+meta {
+  name: Generate Invite Code
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/admin/invite-codes
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  {}
+}
+
+assert {
+  res.status: eq 201
+  res.body.data.code: isDefined
+}
