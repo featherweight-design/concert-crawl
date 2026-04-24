@@ -49,7 +49,8 @@ export type FeedbackCategory = 'bug' | 'suggestion' | 'praise'
 // Subscription tiers
 export type SubscriptionTier = 'free' | 'premium'
 
-// Venue — mirrors the Drizzle inferred type from packages/db
+// Venue — represents the JSON-serialized API response shape.
+// Date fields are ISO 8601 strings because fetch().json() cannot revive Date objects.
 export interface Venue {
   id: string
   name: string
@@ -58,17 +59,17 @@ export interface Venue {
   city: string
   active: boolean
   verified: boolean
-  lastCrawledAt: Date | null
+  lastCrawledAt: string | null
   crawlNotes: string | null
   crawlDelayMs: number
   robotsTxtAllowed: boolean | null
-  robotsTxtCheckedAt: Date | null
+  robotsTxtCheckedAt: string | null
   consecutiveFailures: number
-  blockedAt: Date | null
+  blockedAt: string | null
   extractionStrategy: ExtractionStrategy | null
   contactEmail: string | null
-  createdAt: Date
-  updatedAt: Date
+  createdAt: string
+  updatedAt: string
 }
 
 export type NewVenue = Omit<
@@ -76,14 +77,16 @@ export type NewVenue = Omit<
   'id' | 'createdAt' | 'updatedAt' | 'lastCrawledAt' | 'consecutiveFailures'
 >
 
+// InviteCode — represents the JSON-serialized API response shape.
+// Date fields are ISO 8601 strings because fetch().json() cannot revive Date objects.
 export interface InviteCode {
   id: string
   code: string
   createdBy: string
   usedBy: string | null
-  usedAt: Date | null
-  expiresAt: Date | null
-  revokedAt: Date | null
+  usedAt: string | null
+  expiresAt: string | null
+  revokedAt: string | null
   revokedBy: string | null
-  createdAt: Date
+  createdAt: string
 }

@@ -47,7 +47,7 @@ describe('venue and invite code types', () => {
       id: string
       code: string
       createdBy: string
-      revokedAt: Date | null
+      revokedAt: string | null
       revokedBy: string | null
     }>()
   })
