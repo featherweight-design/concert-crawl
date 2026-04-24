@@ -5,7 +5,15 @@ import { db, auditLog } from '@concert-crawl/db'
 import { venuesAdminRouter } from './venues.js'
 import { inviteCodesAdminRouter } from './invite-codes.js'
 
-export const adminRouter = new Hono()
+type AdminVariables = {
+  Variables: {
+    auditAction?: string
+    auditTargetId?: string
+    auditActorId?: string
+  }
+}
+
+export const adminRouter = new Hono<AdminVariables>()
 
 // All admin routes require Clerk auth + admin role
 adminRouter.use('*', clerkAuth)
@@ -15,9 +23,9 @@ adminRouter.use('*', requireRole('admin'))
 adminRouter.use('*', async (c, next) => {
   await next()
 
-  const action = c.get('auditAction' as never) as string | undefined
-  const targetId = c.get('auditTargetId' as never) as string | undefined
-  const actorId = c.get('auditActorId' as never) as string | undefined
+  const action = c.get('auditAction')
+  const targetId = c.get('auditTargetId')
+  const actorId = c.get('auditActorId')
 
   if (action && actorId) {
     await db.insert(auditLog).values({

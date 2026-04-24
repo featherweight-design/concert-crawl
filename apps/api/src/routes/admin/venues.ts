@@ -5,6 +5,14 @@ import { db, venues } from '@concert-crawl/db'
 import { eq } from 'drizzle-orm'
 import { getAuth } from '@hono/clerk-auth'
 
+type AdminVariables = {
+  Variables: {
+    auditAction?: string
+    auditTargetId?: string
+    auditActorId?: string
+  }
+}
+
 const createVenueSchema = z.object({
   name: z.string().min(1).max(200),
   slug: z
@@ -24,7 +32,7 @@ const updateVenueSchema = createVenueSchema.partial().extend({
   verified: z.boolean().optional(),
 })
 
-export const venuesAdminRouter = new Hono()
+export const venuesAdminRouter = new Hono<AdminVariables>()
 
 // GET /v1/admin/venues — list all venues
 venuesAdminRouter.get('/', async (c) => {
@@ -54,9 +62,9 @@ venuesAdminRouter.post(
 
     const [venue] = await db.insert(venues).values(body).returning()
 
-    c.set('auditAction' as never, 'venue.create')
-    c.set('auditTargetId' as never, venue!.id)
-    c.set('auditActorId' as never, auth!.userId)
+    c.set('auditAction', 'venue.create')
+    c.set('auditTargetId', venue!.id)
+    c.set('auditActorId', auth?.userId as string)
 
     return c.json({ success: true, data: venue }, 201)
   },
@@ -82,9 +90,9 @@ venuesAdminRouter.patch(
       .where(eq(venues.id, id))
       .returning()
 
-    c.set('auditAction' as never, 'venue.update')
-    c.set('auditTargetId' as never, id)
-    c.set('auditActorId' as never, auth!.userId)
+    c.set('auditAction', 'venue.update')
+    c.set('auditTargetId', id)
+    c.set('auditActorId', auth?.userId as string)
 
     return c.json({ success: true, data: updated })
   },
@@ -105,9 +113,9 @@ venuesAdminRouter.delete('/:id', async (c) => {
     .set({ active: false, updatedAt: new Date() })
     .where(eq(venues.id, id))
 
-  c.set('auditAction' as never, 'venue.deactivate')
-  c.set('auditTargetId' as never, id)
-  c.set('auditActorId' as never, auth!.userId)
+  c.set('auditAction', 'venue.deactivate')
+  c.set('auditTargetId', id)
+  c.set('auditActorId', auth?.userId as string)
 
   return c.json({ success: true })
 })
