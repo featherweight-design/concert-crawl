@@ -61,7 +61,10 @@ async function seed() {
   process.exit(0)
 }
 
-seed().catch((err) => {
-  console.error('Seed failed:', err)
-  process.exit(1)
-})
+// Only run when executed directly (not when imported by tests)
+if (process.argv[1] === new URL(import.meta.url).pathname) {
+  seed().catch((err) => {
+    console.error('Seed failed:', err)
+    process.exit(1)
+  })
+}
