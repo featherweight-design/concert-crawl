@@ -16,8 +16,16 @@ function SubmitButton() {
 }
 
 export function GenerateInviteForm() {
+  const handleSubmit = (formData: FormData) => {
+    const expiresAt = formData.get('expiresAt')
+    if (expiresAt) {
+      formData.set('expiresAt', new Date(expiresAt as string).toISOString())
+    }
+    generateInviteCode(formData)
+  }
+
   return (
-    <form action={generateInviteCode} className="flex items-end gap-4">
+    <form action={handleSubmit} className="flex items-end gap-4">
       <div className="space-y-1">
         <Label htmlFor="expiresAt">Expires (optional)</Label>
         <Input id="expiresAt" name="expiresAt" type="date" />
