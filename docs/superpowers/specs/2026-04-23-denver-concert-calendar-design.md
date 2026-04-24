@@ -65,6 +65,9 @@ A production-ready concert calendar application that crawls Denver venue website
 | Error tracking | Sentry | [docs.sentry.io](https://docs.sentry.io) | Free tier, source maps, performance tracing |
 | Metrics | Grafana Cloud | [grafana.com/docs](https://grafana.com/docs/grafana-cloud/) | Free tier, OpenTelemetry-native, alerting |
 | Uptime | UptimeRobot | [uptimerobot.com](https://uptimerobot.com) | Free tier, 5-min checks, status pages |
+| Product analytics | PostHog | [posthog.com/docs](https://posthog.com/docs) | Free tier, open-source, privacy-respecting; event views, search queries, user flows |
+| API testing | Bruno | [usebruno.com](https://www.usebruno.com/docs) | Free, git-committable API collection; replaces Postman |
+| Commit tooling | Husky + lint-staged | [typicode.github.io/husky](https://typicode.github.io/husky/) | Pre-commit hooks for formatting + linting |
 
 ### Architectural Decision: GraphQL
 
@@ -87,7 +90,14 @@ All tables use UUID primary keys and include `created_at` / `updated_at` timesta
 | active | boolean | Controls whether crawler visits this venue |
 | verified | boolean | Human-approved flag (human-in-the-loop) |
 | last_crawled_at | timestamp | |
-| crawl_notes | text | Admin notes on crawl behavior |
+| crawl_notes | text | Admin notes on crawl behavior / extraction hints |
+| crawl_delay_ms | integer | Per-venue delay between requests; default 3000 |
+| robots_txt_allowed | boolean | Nullable; cached result of most recent robots.txt check |
+| robots_txt_checked_at | timestamp | Nullable; when robots.txt was last evaluated |
+| consecutive_failures | integer | Rolling count; reset to 0 on success; triggers pause at 3 |
+| blocked_at | timestamp | Nullable; set when venue returns 403/429; triggers admin alert |
+| extraction_strategy | enum | `structured_data` / `llm` / `manual`; set by crawler based on site |
+| contact_email | text | Nullable; venue contact for partnership/permission outreach |
 
 ### `events`
 | Field | Type | Notes |
@@ -109,6 +119,9 @@ All tables use UUID primary keys and include `created_at` / `updated_at` timesta
 | confidence_score | numeric | LLM extraction confidence (0–1) |
 | verified | boolean | Human-approved (human-in-the-loop) |
 | source_url | text | Page the event was extracted from |
+| source_hash | text | MD5 of source URL; used for deduplication upsert |
+| extraction_strategy | enum | `structured_data` / `llm` / `manual` |
+| search_vector | tsvector | Generated column; GIN-indexed for full-text search |
 | raw_html | text | Stored for debugging/reprocessing; purged after 30 days |
 
 ### `crawl_runs`
@@ -123,6 +136,9 @@ All tables use UUID primary keys and include `created_at` / `updated_at` timesta
 | events_created | integer | |
 | events_updated | integer | |
 | error_message | text | Nullable |
+| http_status_code | integer | Nullable; HTTP response code from venue site |
+| robots_txt_blocked | boolean | True if crawl was skipped due to robots.txt disallow |
+| extraction_strategy_used | enum | `structured_data` / `llm` / `manual` |
 | llm_tokens_used | integer | |
 | llm_cost_usd | numeric | |
 
@@ -211,6 +227,140 @@ All tables use UUID primary keys and include `created_at` / `updated_at` timesta
 
 ---
 
+## Timezone Strategy
+
+All datetimes stored as **UTC** in the database. Conversion to Mountain Time (America/Denver) happens at the API response layer and in the Next.js display layer. This is enforced via:
+- Drizzle column type: `timestamp('started_at', { withTimezone: true })`
+- API responses include timezone-aware ISO 8601 strings
+- Next.js uses `Intl.DateTimeFormat` with `timeZone: 'America/Denver'` for display
+
+Never store local time directly. Never assume timezone in the crawler.
+
+---
+
+## Event Deduplication
+
+The crawler runs daily. Without deduplication, every crawl creates duplicate events.
+
+**Strategy: composite uniqueness + upsert**
+
+A unique constraint on `(venue_id, date, artist)` prevents duplicate rows. The crawler uses an upsert (INSERT ... ON CONFLICT DO UPDATE) keyed on this constraint, updating `updated_at`, `ticket_url`, `ticket_price_min`, `ticket_price_max`, and `status` on conflict. New events are inserted; existing events are refreshed.
+
+`source_hash` (MD5 of the source URL) provides a secondary deduplication signal for cases where artist name varies slightly between crawls (e.g., "Radiohead" vs "RADIOHEAD"). Admin can review and merge near-duplicate events via the data refinement UI.
+
+---
+
+## Search Implementation
+
+**Choice: Postgres full-text search** (`tsvector` + `pg_trgm`) — no external service required at this data volume.
+
+**How it works:**
+- `events.search_vector` is a generated `tsvector` column combining `title`, `artist`, `description`, and `genre` fields with weighted priority (`artist` and `title` weighted higher)
+- A GIN index on `search_vector` makes full-text queries fast
+- Fuzzy matching via `pg_trgm` extension handles typos and partial matches ("radio" matches "Radiohead")
+- API query: `WHERE search_vector @@ plainto_tsquery('english', $query)`
+
+**Filter indexes** (see Database Indexes section) handle date range, venue, and genre filtering independently of full-text search.
+
+**Future:** If search volume or complexity grows beyond Postgres's capabilities, [Typesense](https://typesense.org) (self-hosted, free) is the preferred upgrade path — not Algolia (paid).
+
+---
+
+## Database Indexes
+
+Declared in Drizzle schema from day one. Missing indexes on a growing events table will cause slow queries that are painful to diagnose in production.
+
+| Table | Index | Type | Query it serves |
+|-------|-------|------|----------------|
+| `events` | `(date, status)` | B-tree | Calendar view, upcoming events listing |
+| `events` | `(venue_id)` | B-tree | Events by venue |
+| `events` | `(artist)` | B-tree | Artist filter, artist follow matching |
+| `events` | `search_vector` | GIN | Full-text search |
+| `events` | `(date, venue_id)` | B-tree composite | Deduplication upsert lookup |
+| `venues` | `(city, active)` | B-tree | Active venues by city |
+| `venues` | `(consecutive_failures)` | B-tree | Admin: venues nearing failure threshold |
+| `crawl_runs` | `(venue_id, started_at)` | B-tree | Crawl history per venue |
+| `notifications` | `(user_id, read_at)` | B-tree | Unread notification count |
+| `user_artist_follows` | `(artist_name)` | B-tree | Matching new events to followed artists |
+
+---
+
+## Crawl Ethics + Resilience
+
+**Crawl resilience is existential.** Without venue data, the product has nothing to show. Every engineering decision in the crawler must weigh both ethical compliance and operational continuity.
+
+### Extraction Priority (Cost + Reliability Hierarchy)
+
+The crawler attempts extraction in this order, stopping at the first success:
+
+1. **JSON-LD structured data** — check for `<script type="application/ld+json">` containing `@type: "Event"` or `@type: "MusicEvent"`. Many larger venues publish this for Google's benefit. Free, reliable, zero LLM cost.
+2. **Microdata / schema.org** — check for `itemtype="https://schema.org/Event"` markup. Same benefit as JSON-LD.
+3. **Claude Haiku LLM extraction** — send cleaned page HTML to Claude Haiku with a structured extraction prompt. Handles unstructured pages. Paid; prompt caching enabled to minimize token use.
+4. **Manual admin entry** — last resort for venues that block automated extraction entirely. Admin UI provides a manual event entry form per venue.
+
+`extraction_strategy` on both `venues` and `crawl_runs` tracks which path was taken, informing cost reporting and admin prioritization.
+
+### robots.txt Compliance
+
+```
+Check robots.txt before every crawl run (cached per venue, refreshed weekly).
+If User-agent: * disallows the events path → skip crawl, set robots_txt_allowed = false, notify admin.
+Never override a robots.txt disallow. No exceptions.
+```
+
+Caching the robots.txt check avoids re-fetching it every daily crawl. The `robots_txt_checked_at` field on `venues` controls the weekly refresh.
+
+### Honest Bot Identification
+
+```
+User-Agent: ConcertCrawl/1.0 (+https://concertcrawl.com/bot)
+```
+
+This is non-negotiable. Identifying honestly:
+- Gives venue operators the ability to contact us rather than just block
+- Is the ethical baseline for any web crawler
+- Avoids the legal grey area of impersonating a browser
+
+### Rate Limiting + Crawl Timing
+
+- **Default delay:** 3 seconds between requests to the same domain (`crawl_delay_ms` on `venues`, configurable per venue)
+- **Randomized jitter:** ±500ms added to each delay to avoid robotic fingerprinting
+- **Concurrent crawls:** maximum 3 venues crawled in parallel
+- **Daily schedule:** 3 AM Mountain Time (off-peak; minimizes load on venue servers)
+- **Exponential backoff:** on 5xx responses, wait 10s → 30s → 90s before retrying, then fail
+
+### Failure Detection + Response
+
+| Condition | Response |
+|-----------|----------|
+| HTTP 403 (Forbidden) | Set `blocked_at`, increment `consecutive_failures`, send admin notification immediately |
+| HTTP 429 (Rate Limited) | Exponential backoff; if persists, treat as 403 |
+| HTTP 5xx | Retry with backoff; log as `partial` if some events extracted |
+| `consecutive_failures` reaches 3 | Pause venue (`active = false`), admin notification with venue name and failure reason |
+| `robots_txt_allowed = false` | Skip crawl entirely; flag in admin UI for outreach |
+| Low `confidence_score` (< 0.7) | Write event as unverified; trigger admin notification for human review |
+| Site structure changed (all scores low) | Admin notification with suggestion to update `crawl_notes` / extraction hints |
+
+### Partnership Pathway
+
+Venues are potential allies, not just targets. If a venue's site is incompatible with automated crawling:
+
+1. Use `contact_email` on the `venues` table to reach out
+2. Explain what Concert Crawl does and the benefit to them (free promotion)
+3. Ask if they can provide a direct feed (RSS, JSON endpoint, or structured data markup)
+4. If they ask to be removed, comply within 24 hours — no exceptions
+
+The admin UI surfaces venues flagged for outreach. Building relationships with venues is a long-term competitive moat: a venue that provides a direct data feed is more reliable than one we scrape.
+
+### Attribution + Data Use
+
+- Every displayed event links to the original venue website and ticket URL
+- Raw HTML is stored for debugging only and purged after 30 days
+- Concert Crawl does not republish venue content — it surfaces structured metadata (artist, date, time, ticket link) that directs users back to the source
+- If a venue requests removal of their data, all associated events are soft-deleted within 24 hours
+
+---
+
 ## Application Layers
 
 ### Auth Layer (Clerk)
@@ -232,14 +382,22 @@ All tables use UUID primary keys and include `created_at` / `updated_at` timesta
 
 ### Crawler Service
 
-1. Render cron triggers crawler daily
-2. Crawler fetches active, verified venues from DB
-3. Playwright launches headless browser, navigates to venue website
-4. Raw HTML extracted and passed to Claude Haiku with structured extraction prompt (prompt caching enabled to reduce token costs)
-5. Extracted events written to DB with `confidence_score`; low-confidence events flagged for admin review
-6. Crawl run record written with token count and cost
-7. Cost record written to `cost_tracking`
-8. Future: ticket price crawls run hourly via BullMQ + Upstash Redis job queue targeting specific event URLs
+**Daily execution flow:**
+
+1. Render cron triggers crawler at 3 AM MT
+2. Crawler fetches all `active = true`, `verified = true` venues from DB
+3. For each venue (max 3 parallel, respecting `crawl_delay_ms` + ±500ms jitter):
+   a. Check cached `robots_txt_allowed`; skip if false
+   b. Playwright launches headless browser, navigates to venue website
+   c. **Attempt structured data extraction** (JSON-LD / microdata) — if events found, use them directly
+   d. **Fallback: Claude Haiku LLM extraction** — send cleaned HTML with structured prompt; prompt caching enabled
+   e. **Fallback: flag for manual entry** — if all automated strategies fail
+4. Extracted events upserted to DB on `(venue_id, date, artist)` uniqueness constraint
+5. Low-confidence events (`confidence_score < 0.7`) flagged as unverified; admin notification sent
+6. `crawl_runs` record written (strategy used, token count, cost, HTTP status, success/fail)
+7. `cost_tracking` record written per LLM call
+8. Venue `consecutive_failures` reset on success; incremented + admin alerted on failure
+9. Future: ticket price crawls run hourly via BullMQ + Upstash Redis targeting specific event ticket URLs
 
 ### In-App Notification System
 
@@ -605,12 +763,18 @@ Complete all of the following before writing any code. Most Phase 1 work is bloc
 
 ### Phase 1 — Foundation
 - Monorepo scaffold (Turborepo + pnpm workspaces)
-- Shared packages: `db` (Drizzle schema + migrations), `types`, `config`
-- Hono API: health endpoint, auth middleware, role middleware
+- Shared packages: `db` (Drizzle schema + migrations + indexes), `types`, `config`
+- Conventional commits + Husky + lint-staged (Prettier + ESLint on every commit)
+- `CLAUDE.md` initialized at repo root
+- Docker Compose for local Postgres
+- `.env.example` files per app
+- Hono API: health endpoint, auth middleware, role middleware, Zod validation
 - Next.js: app shell, Clerk auth integration, protected routing
+- Bruno API collection initialized (`apps/api/bruno/`)
+- DB seed script with sample Denver venues and events (`pnpm db:seed`)
 - Render deployment config (all 4 services)
-- GitHub Actions CI (type check + lint + unit tests)
-- **Milestone:** App deployed to Render, auth works end-to-end, API health check passes CI
+- GitHub Actions CI with full cache strategy (pnpm store, Turborepo, Playwright browsers)
+- **Milestone:** App deployed to Render, auth works end-to-end, API health check passes CI, PR run completes in under 5 minutes
 
 ### Phase 2 — Venue Management (Admin)
 - Admin UI: invite code generation, user access list
