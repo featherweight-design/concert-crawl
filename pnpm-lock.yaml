@@ -142,6 +142,9 @@ importers:
       '@concert-crawl/types':
         specifier: workspace:*
         version: link:../types
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.39
       drizzle-kit:
         specifier: ^0.29.0
         version: 0.29.1
@@ -153,7 +156,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.0.0
-        version: 2.1.9(@types/node@25.6.0)
+        version: 2.1.9(@types/node@20.19.39)
 
   packages/types:
     devDependencies:
