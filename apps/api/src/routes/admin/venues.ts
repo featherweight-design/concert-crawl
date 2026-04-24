@@ -3,15 +3,8 @@ import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { db, venues } from '@concert-crawl/db'
 import { eq } from 'drizzle-orm'
-import { getAuth } from '@hono/clerk-auth'
-
-type AdminVariables = {
-  Variables: {
-    auditAction?: string
-    auditTargetId?: string
-    auditActorId?: string
-  }
-}
+import { getAuthUser } from '../../middleware/auth.js'
+import type { AdminVariables } from './index.js'
 
 const createVenueSchema = z.object({
   name: z.string().min(1).max(200),
@@ -58,13 +51,12 @@ venuesAdminRouter.post(
   zValidator('json', createVenueSchema),
   async (c) => {
     const body = c.req.valid('json')
-    const auth = getAuth(c)
 
     const [venue] = await db.insert(venues).values(body).returning()
 
     c.set('auditAction', 'venue.create')
     c.set('auditTargetId', venue!.id)
-    c.set('auditActorId', auth?.userId as string)
+    c.set('auditActorId', getAuthUser(c).userId)
 
     return c.json({ success: true, data: venue }, 201)
   },
@@ -77,7 +69,6 @@ venuesAdminRouter.patch(
   async (c) => {
     const { id } = c.req.param()
     const body = c.req.valid('json')
-    const auth = getAuth(c)
 
     const [existing] = await db.select().from(venues).where(eq(venues.id, id))
     if (!existing) {
@@ -92,7 +83,7 @@ venuesAdminRouter.patch(
 
     c.set('auditAction', 'venue.update')
     c.set('auditTargetId', id)
-    c.set('auditActorId', auth?.userId as string)
+    c.set('auditActorId', getAuthUser(c).userId)
 
     return c.json({ success: true, data: updated })
   },
@@ -101,7 +92,6 @@ venuesAdminRouter.patch(
 // DELETE /v1/admin/venues/:id — soft delete (set active = false)
 venuesAdminRouter.delete('/:id', async (c) => {
   const { id } = c.req.param()
-  const auth = getAuth(c)
 
   const [existing] = await db.select().from(venues).where(eq(venues.id, id))
   if (!existing) {
@@ -115,7 +105,7 @@ venuesAdminRouter.delete('/:id', async (c) => {
 
   c.set('auditAction', 'venue.deactivate')
   c.set('auditTargetId', id)
-  c.set('auditActorId', auth?.userId as string)
+  c.set('auditActorId', getAuthUser(c).userId)
 
   return c.json({ success: true })
 })

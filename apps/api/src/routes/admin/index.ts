@@ -5,7 +5,7 @@ import { db, auditLog } from '@concert-crawl/db'
 import { venuesAdminRouter } from './venues.js'
 import { inviteCodesAdminRouter } from './invite-codes.js'
 
-type AdminVariables = {
+export type AdminVariables = {
   Variables: {
     auditAction?: string
     auditTargetId?: string
@@ -22,6 +22,9 @@ adminRouter.use('*', requireRole('admin'))
 // Write audit log entry after each mutating request
 adminRouter.use('*', async (c, next) => {
   await next()
+
+  // Only write audit log for mutating requests
+  if (['GET', 'HEAD', 'OPTIONS'].includes(c.req.method)) return
 
   const action = c.get('auditAction')
   const targetId = c.get('auditTargetId')
