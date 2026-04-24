@@ -300,6 +300,73 @@ Protected by role middleware in Next.js middleware layer.
 
 ---
 
+## Local Development
+
+Local is the primary development environment. Every service has a local equivalent — no cloud dependencies required to run the app during development.
+
+### Docker Compose Services
+
+```yaml
+# docker-compose.yml (repo root)
+services:
+  postgres:
+    image: postgres:16
+    ports: ["5432:5432"]
+  redis:          # future — ticket price queue
+    image: redis:alpine
+    ports: ["6379:6379"]
+```
+
+### Environment Tiers
+
+| Tier | Postgres | Auth | Payments | Email | Purpose |
+|------|----------|------|----------|-------|---------|
+| Local | Docker | Clerk dev instance | Stripe test mode | Resend dev (captured) | Feature development |
+| Staging | Render Postgres | Clerk staging instance | Stripe test mode | Resend dev | PR E2E tests, integration validation |
+| Production | Render Postgres | Clerk prod instance | Stripe live mode | Resend live | Real users |
+
+**Staging is the canary.** A dedicated canary environment adds infra overhead without meaningful benefit at this team size. Every PR is validated against staging before reaching production.
+
+### Per-App `.env.local`
+
+Each app reads from `.env.local` (git-ignored). A committed `.env.example` documents every required variable with descriptions but no values. This is what Claude works from — actual secrets are entered by the human directly into each environment.
+
+---
+
+## Database Safety + Disaster Recovery
+
+### Expand/Contract Migration Pattern
+
+Never make a breaking schema change in a single deploy. Every migration follows this sequence:
+
+1. **Expand** — add new columns as nullable; deploy code that handles both old and new schema
+2. **Backfill** — populate new columns for existing rows
+3. **Contract** — add constraints, remove old columns in a subsequent deploy
+
+This means any migration can be rolled back without data loss. Drizzle generates migration files that are reviewed and version-controlled before running.
+
+### Pre-Migration Safety Protocol (Production)
+
+1. Trigger a manual Postgres snapshot via Render API (scriptable, no human input required beyond authorization)
+2. Run migration on staging first — verify data integrity
+3. Human approves production migration run (human-in-the-loop gate)
+4. Run migration on production
+5. Monitor error rates for 15 minutes post-migration
+
+### Render PITR (Point-in-Time Recovery)
+
+Render Managed Postgres includes automated daily backups and PITR on paid plans. In a worst-case scenario, the database can be restored to any point before the migration. This is the primary disaster recovery mechanism — no blue/green database complexity required at this stage.
+
+### Rollback Playbook
+
+Documented in the repo at `docs/runbooks/db-rollback.md`:
+- How to identify the pre-migration snapshot
+- Render PITR restoration steps
+- How to revert the application deploy on Render
+- Who to notify and how
+
+---
+
 ## Security
 
 - Zod validation at all API boundaries
@@ -472,6 +539,65 @@ All implementation, configuration, and automation work that does not touch secre
 - Test suites (unit, integration, E2E, smoke)
 - Documentation
 - `.env.example` files listing required variables (never `.env` files with values)
+
+---
+
+## Pre-Work: Account Setup Checklist
+
+Complete all of the following before writing any code. Most Phase 1 work is blocked without these. Items marked **SECRET** must never be shared with Claude — enter them directly into Render's environment variable dashboard.
+
+### Version Control + CI
+- [ ] Create GitHub repository (`concert-crawl`, private)
+- [ ] Enable Dependabot (security updates)
+- [ ] Enable GitHub secret scanning
+- [ ] Enable GitHub branch protection on `main` (require PR + passing checks)
+- [ ] Subscribe to GitHub Pro ($4/month) for 3,000 CI minutes
+
+### Hosting (Render)
+- [ ] Create Render account + configure billing
+- [ ] Create Managed Postgres instance (note connection string — **SECRET**)
+- [ ] Create Web Service for `apps/api` (connect GitHub repo)
+- [ ] Create Web Service for `apps/web` (connect GitHub repo)
+- [ ] Create Cron Job for `apps/crawler` (daily schedule)
+- [ ] Note Render deploy webhook URLs for GitHub Actions
+
+### Auth (Clerk)
+- [ ] Create Clerk application
+- [ ] Create dev instance (for local development)
+- [ ] Create staging instance (for Render staging)
+- [ ] Create production instance
+- [ ] Copy `CLERK_SECRET_KEY` and `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` per environment — **SECRET**
+
+### LLM (Anthropic)
+- [ ] Create Anthropic account
+- [ ] Generate API key — **SECRET**
+- [ ] Set usage limits/alerts to cap unexpected spend
+
+### Payments (Stripe)
+- [ ] Create Stripe account + complete identity verification
+- [ ] Note test mode API keys (for local + staging) — **SECRET**
+- [ ] Note live mode API keys (for production) — **SECRET**
+- [ ] Configure Stripe webhook endpoints per environment
+
+### Email (Resend)
+- [ ] Create Resend account
+- [ ] Verify sending domain
+- [ ] Generate API key — **SECRET**
+
+### Observability
+- [ ] Create Sentry organization + project (copy DSN — **SECRET**)
+- [ ] Create Grafana Cloud account (copy credentials — **SECRET**)
+- [ ] Create UptimeRobot account + configure monitors (after first deploy)
+
+### Domain
+- [ ] Purchase `concertcrawl.com` (or chosen domain) via Squarespace
+- [ ] Configure DNS to point to Render after first deploy
+
+### Local Development
+- [ ] Install Docker Desktop (for local Postgres)
+- [ ] Install pnpm (`npm install -g pnpm`)
+- [ ] Clone repository
+- [ ] Copy `.env.example` → `.env.local` in each app and fill in dev values
 
 ---
 
