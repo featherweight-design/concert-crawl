@@ -11,5 +11,9 @@ module.exports = {
     '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     '@typescript-eslint/consistent-type-imports': 'error',
     'no-console': ['warn', { allow: ['warn', 'error'] }],
+    'id-length': [
+      'error',
+      { min: 2, exceptions: ['i', 'j', 'k', 'x', 'y', 'z', '_'] },
+    ],
   },
 }
