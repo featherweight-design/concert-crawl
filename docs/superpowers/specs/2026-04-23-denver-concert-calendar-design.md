@@ -1,4 +1,4 @@
-# Denver Concert Calendar — Design Spec
+# Concert Crawl — Design Spec
 
 **Date:** 2026-04-23
 **Status:** Draft — awaiting implementation planning
@@ -20,7 +20,7 @@ A production-ready concert calendar application that crawls Denver venue website
 
 ## System Architecture
 
-### Monorepo Structure (Turborepo + npm workspaces)
+### Monorepo Structure (Turborepo + pnpm workspaces)
 
 ```
 /
@@ -45,17 +45,30 @@ A production-ready concert calendar application that crawls Denver venue website
 
 ### Technology Decisions
 
-| Concern | Choice | Rationale |
-|---------|--------|-----------|
-| Frontend framework | Next.js 14+ (App Router) | SSR/SSG for SEO, natural progression from React |
-| Backend framework | Hono | TypeScript-first, lightweight, familiar from Fastify |
-| ORM | Drizzle | TypeScript-native, parameterized queries, excellent DX |
-| Auth | Clerk | Free tier (10k MAU), Next.js integration, supports Spotify OAuth |
-| Styling | Tailwind CSS + shadcn/ui | Responsive utilities, CSS variable theming, Radix accessibility |
-| Crawler | Playwright | Headless browser, handles JS-rendered sites |
-| LLM extraction | Claude Haiku (Anthropic SDK) | Low cost, high accuracy for structured extraction; prompt caching enabled |
-| Monorepo tooling | Turborepo | Build caching, task orchestration |
-| Containerization | Dockerfile per app | Render handles runtime; Dockerfiles ensure portability |
+| Concern | Choice | Docs | Rationale |
+|---------|--------|------|-----------|
+| Frontend framework | Next.js 14+ (App Router) | [nextjs.org/docs](https://nextjs.org/docs) | SSR/SSG for SEO, natural progression from React |
+| Backend framework | Hono | [hono.dev/docs](https://hono.dev/docs) | TypeScript-first, lightweight, familiar from Fastify |
+| ORM | Drizzle | [orm.drizzle.team](https://orm.drizzle.team/docs/overview) | TypeScript-native, parameterized queries, excellent DX |
+| Auth | Clerk | [clerk.com/docs](https://clerk.com/docs) | Free tier (10k MAU), Next.js integration, supports Spotify OAuth |
+| Styling | Tailwind CSS | [tailwindcss.com/docs](https://tailwindcss.com/docs) | Responsive utilities, CSS variable theming |
+| Component library | shadcn/ui | [ui.shadcn.com/docs](https://ui.shadcn.com/docs) | Radix primitives, accessible, CSS variable theming for dark/light mode |
+| Crawler | Playwright | [playwright.dev/docs](https://playwright.dev/docs/intro) | Headless browser, handles JS-rendered sites |
+| LLM extraction | Claude Haiku (Anthropic SDK) | [docs.anthropic.com](https://docs.anthropic.com) | Low cost, high accuracy for structured extraction; prompt caching enabled |
+| Monorepo tooling | Turborepo | [turbo.build/repo/docs](https://turbo.build/repo/docs) | Build caching, task orchestration |
+| Package manager | pnpm | [pnpm.io](https://pnpm.io/motivation) | Faster installs, efficient disk usage, native workspace support |
+| Validation | Zod | [zod.dev](https://zod.dev) | Runtime type validation at all API boundaries |
+| Containerization | Dockerfile per app | — | Render handles runtime; Dockerfiles ensure portability |
+| Email | Resend | [resend.com/docs](https://resend.com/docs) | Free tier, excellent DX, developer-first |
+| Payments | Stripe | [stripe.com/docs](https://stripe.com/docs) | Industry standard, excellent docs, webhook support |
+| Logging | Pino | [getpino.io](https://getpino.io/#/) | Fastest Node.js structured logger |
+| Error tracking | Sentry | [docs.sentry.io](https://docs.sentry.io) | Free tier, source maps, performance tracing |
+| Metrics | Grafana Cloud | [grafana.com/docs](https://grafana.com/docs/grafana-cloud/) | Free tier, OpenTelemetry-native, alerting |
+| Uptime | UptimeRobot | [uptimerobot.com](https://uptimerobot.com) | Free tier, 5-min checks, status pages |
+
+### Architectural Decision: GraphQL
+
+**Decision: Not included.** REST + Zod + the shared `types` package provides equivalent type safety across a single TypeScript client (Next.js). GraphQL's core value — letting multiple clients fetch varied shapes of the same data — does not apply at this stage. The resolver boilerplate adds meaningful complexity to Phase 1 without a clear payoff. Revisit if a mobile app or public API emerges in the future.
 
 ---
 
@@ -172,6 +185,20 @@ All tables use UUID primary keys and include `created_at` / `updated_at` timesta
 | status | enum | active / cancelled / past_due |
 | current_period_end | timestamp | |
 
+### `notifications`
+| Field | Type | Notes |
+|-------|------|-------|
+| id | uuid | PK |
+| user_id | text | Clerk user ID; nullable for system-level notifications |
+| type | enum | admin_alert / user_notification |
+| category | text | e.g., "crawl.low_confidence", "crawl.failed", "event.flagged" |
+| title | text | |
+| body | text | |
+| action_url | text | Nullable; deep link to relevant admin or app page |
+| read_at | timestamp | Nullable; null = unread |
+| metadata | jsonb | Additional context (e.g., event_id, crawl_run_id, confidence_score) |
+| created_at | timestamp | |
+
 ### `audit_log`
 | Field | Type | Notes |
 |-------|------|-------|
@@ -213,6 +240,25 @@ All tables use UUID primary keys and include `created_at` / `updated_at` timesta
 6. Crawl run record written with token count and cost
 7. Cost record written to `cost_tracking`
 8. Future: ticket price crawls run hourly via BullMQ + Upstash Redis job queue targeting specific event URLs
+
+### In-App Notification System
+
+Persistent, real-time notification layer used initially for admin alerts, expandable to user-facing notifications.
+
+**Delivery:** Server-Sent Events (SSE) via a Hono endpoint (`GET /v1/notifications/stream`) — one-way push from server to client, no WebSocket complexity required. Next.js connects on mount for authenticated sessions.
+
+**Persistence:** All notifications written to the `notifications` table. Unread count shown in a notification bell in both the admin and consumer nav. Mark-as-read via `PATCH /v1/notifications/:id`.
+
+**Admin alert triggers (Phase 1):**
+- Crawl completed with low-confidence events (`confidence_score < 0.7`)
+- Crawl failed for a venue
+- New event flagged for human review
+- Invite code used
+
+**User notification triggers (future):**
+- Artist follow has a new Denver show
+- Ticket price dropped below user threshold
+- Friend RSVPs to a show the user saved
 
 ### Admin UI (Next.js — `/admin` routes)
 
@@ -309,15 +355,28 @@ Playwright suite against production:
 
 Failure triggers Grafana alert + Sentry event.
 
+### Caching Strategy (Critical for Speed + Cost)
+
+A cold PR run without caching can exceed 15 minutes — unacceptable. With the following cache layers, target is **3–5 minutes per PR run**:
+
+| Cache | Tool | What it saves |
+|-------|------|--------------|
+| pnpm store | `actions/cache` on `~/.pnpm-store` | Dependency installs (biggest win) |
+| Turborepo task cache | `actions/cache` on `.turbo` | Build, lint, type-check outputs |
+| Playwright browsers | `actions/cache` on Playwright cache dir | ~400MB browser binary download |
+| Docker layer cache | `docker/build-push-action` cache | Container build steps |
+
+pnpm's content-addressable store means packages shared across workspaces are never downloaded twice. Turborepo skips tasks whose inputs haven't changed — a PR touching only `apps/web` won't re-run `apps/api` tests.
+
 ### Cost Estimate
 
 | Source | Est. minutes/month |
 |--------|-------------------|
-| PR checks (~20 PRs × 15 min) | ~300 min |
+| PR checks (~20 PRs × 4 min cached) | ~80 min |
 | Hourly smoke tests (24 × 2 min × 30 days) | ~1,440 min |
-| **Total** | ~1,740 min |
+| **Total** | ~1,520 min |
 
-Fits within GitHub Pro (3,000 min/month, $4/month). Cache aggressively (`node_modules`, Turborepo, Playwright browsers) to keep per-run time low.
+Fits comfortably within GitHub Pro (3,000 min/month, $4/month). The investment in caching configuration pays for itself within the first week of active development.
 
 ---
 
@@ -364,10 +423,62 @@ Three environments: `dev` → `staging` → `prod`. Nothing reaches prod without
 
 ---
 
+## Human vs. Agentic Development
+
+A clear boundary between what a human must do, what a human should do by policy, and what Claude can fully own.
+
+### Where a Human IS Required
+These tasks involve credentials, identity verification, billing, or external account creation that cannot and should not be delegated.
+
+| Task | Why human required |
+|------|--------------------|
+| Create Render account + configure billing | Identity + payment required |
+| Create GitHub repository + configure branch protection | Account ownership |
+| Create Clerk application + copy API keys | Secret generation; keys must never be shared with Claude |
+| Create Anthropic account + generate API key | Secret generation |
+| Create Sentry organization + copy DSN | Account ownership |
+| Create Grafana Cloud account + get credentials | Account ownership |
+| Create UptimeRobot account + configure monitors | Account ownership |
+| Create Stripe account + complete identity verification | Legal/financial identity required |
+| Create Resend account + verify sending domain | Domain ownership verification |
+| Set environment variables on Render | Secrets must be entered directly into Render dashboard, never committed or shared |
+| Purchase and configure domain (Squarespace) | Payment + ownership |
+| Configure DNS records | Domain account access |
+| Invite beta users | Human judgment on who gets access |
+
+### Where a Human SHOULD Be Required (by policy)
+These are technically automatable but require human judgment or carry irreversible consequences. The human-in-the-loop principle applies here.
+
+| Task | Why human gate matters |
+|------|------------------------|
+| Merging PRs to `main` | Final review before production deploy |
+| Deploying to production | Deliberate action, not automatic |
+| Running database migrations on production | Irreversible; human should verify before executing |
+| Granting admin or sub-admin roles | Access control; human accountability |
+| Revoking or invalidating invite codes | User-facing consequence |
+| Approving low-confidence crawled events | Core human-in-the-loop data quality gate |
+| Approving new venues for crawling | Ensures crawl targets are legitimate |
+| Spend approval above a set threshold | Cost control; human authorization required |
+| Any destructive operation (drop table, delete user) | Irreversible; requires explicit intent |
+
+### What Claude Can Fully Own
+All implementation, configuration, and automation work that does not touch secrets or require external account access.
+
+- Monorepo scaffold, all configuration files (`turbo.json`, `tsconfig.json`, `pnpm-workspace.yaml`, `.eslintrc`, etc.)
+- Drizzle schema, migrations, and seed scripts
+- All application code (API routes, frontend components, crawler logic)
+- GitHub Actions workflow files (using secrets injected by the human)
+- Dockerfile configuration
+- Test suites (unit, integration, E2E, smoke)
+- Documentation
+- `.env.example` files listing required variables (never `.env` files with values)
+
+---
+
 ## Phased Development Plan
 
 ### Phase 1 — Foundation
-- Monorepo scaffold (Turborepo + workspaces)
+- Monorepo scaffold (Turborepo + pnpm workspaces)
 - Shared packages: `db` (Drizzle schema + migrations), `types`, `config`
 - Hono API: health endpoint, auth middleware, role middleware
 - Next.js: app shell, Clerk auth integration, protected routing
