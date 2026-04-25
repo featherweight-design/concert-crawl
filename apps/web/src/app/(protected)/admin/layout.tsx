@@ -17,8 +17,8 @@ export default async function AdminLayout({
 
   return (
     <div className="flex min-h-screen">
-      <aside className="flex w-56 flex-col border-r bg-slate-50 p-4 dark:bg-slate-900">
-        <p className="mb-6 text-sm font-semibold uppercase tracking-wider text-slate-500">
+      <aside className="flex w-56 flex-col border-r bg-muted p-4">
+        <p className="mb-6 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Admin
         </p>
         <nav className="flex flex-col gap-1">
@@ -26,7 +26,7 @@ export default async function AdminLayout({
             <Link
               key={item.href}
               href={item.href}
-              className="rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-800"
+              className="rounded-md px-3 py-2 text-sm text-foreground hover:bg-accent hover:text-accent-foreground"
             >
               {item.label}
             </Link>
