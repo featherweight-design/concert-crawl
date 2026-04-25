@@ -1,5 +1,15 @@
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
 
+export class ApiError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string,
+  ) {
+    super(message)
+    this.name = 'ApiError'
+  }
+}
+
 async function request<T>(
   path: string,
   token: string,
@@ -14,6 +24,12 @@ async function request<T>(
     },
   })
 
+  // Guard against non-JSON responses (e.g. plain-text 500 from the server)
+  const contentType = res.headers.get('content-type') ?? ''
+  if (!contentType.includes('application/json')) {
+    throw new ApiError(res.status, `Request failed with status ${res.status}`)
+  }
+
   const body = (await res.json()) as {
     success: boolean
     data?: T
@@ -21,7 +37,10 @@ async function request<T>(
   }
 
   if (!res.ok || !body.success) {
-    throw new Error(body.error ?? `Request failed with status ${res.status}`)
+    throw new ApiError(
+      res.status,
+      body.error ?? `Request failed with status ${res.status}`,
+    )
   }
 
   return body.data as T
