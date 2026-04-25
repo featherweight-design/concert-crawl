@@ -8,7 +8,14 @@ import Link from 'next/link'
 export default async function VenuesPage() {
   const { getToken } = await auth()
   const token = await getToken()
-  const venues = await apiClient.get<Venue[]>('/v1/admin/venues', token!)
+
+  let venues: Venue[]
+  try {
+    venues = await apiClient.get<Venue[]>('/v1/admin/venues', token!)
+  } catch (err) {
+    console.error('[admin/venues] failed to load venues:', err)
+    throw err
+  }
 
   return (
     <div className="space-y-6">
