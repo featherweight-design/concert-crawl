@@ -9,6 +9,7 @@ describe('apiClient', () => {
     vi.mocked(fetch).mockResolvedValue(
       new Response(JSON.stringify({ success: true, data: [] }), {
         status: 200,
+        headers: { 'Content-Type': 'application/json' },
       }),
     )
 
@@ -21,6 +22,7 @@ describe('apiClient', () => {
     vi.mocked(fetch).mockResolvedValue(
       new Response(JSON.stringify({ success: false, error: 'Forbidden' }), {
         status: 403,
+        headers: { 'Content-Type': 'application/json' },
       }),
     )
 

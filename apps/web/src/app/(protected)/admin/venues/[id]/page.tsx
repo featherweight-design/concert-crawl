@@ -6,11 +6,11 @@ import { updateVenue } from '@/lib/actions/venues'
 import { notFound } from 'next/navigation'
 
 interface Props {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export default async function EditVenuePage({ params }: Props) {
-  const { id } = params
+  const { id } = await params
   const { getToken } = await auth()
   const token = await getToken()
 
