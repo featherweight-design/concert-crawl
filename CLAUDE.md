@@ -101,6 +101,7 @@ These were made deliberately — understand them before proposing changes.
 3. **Mobile-first** — 320px baseline, expand up; PWA-ready
 4. **Cost-conscious** — all LLM and infrastructure costs tracked in-app and visible to admin
 5. **Crawl ethics are existential** — respect robots.txt, rate limit, identify honestly; without venue data the product is nothing
+6. **Type safety is the first line of defence** — `as` casts are a last resort. They silence the compiler without verifying anything at runtime, and bugs they hide are hard to find. Prefer: (a) interface/declaration merging for library types you control (e.g. `CustomJwtSessionClaims`, `UserPublicMetadata`), (b) Zod `safeParse` for data crossing a system boundary (JWTs, API responses, env vars), (c) type guards for discriminated union narrowing. If a cast feels necessary, stop and find the right augmentation or validator instead.
 
 ---
 
@@ -112,6 +113,17 @@ These were made deliberately — understand them before proposing changes.
 - **Branch naming:** `feat/short-description`, `fix/short-description`
 - **Never commit to `main` directly** — always via PR
 - **Never commit `.env` files** — use `.env.example` with placeholder values only
+- **Always open a PR for code changes** — never merge to main locally, never discard changes
+- **Always use `.github/pull_request_template.md`** when opening a PR
+
+### Session handoff
+
+Claude Code sessions are finite. To preserve continuity across sessions:
+
+- Commit all in-progress work before ending a session — a fresh Claude reads the code, not the chat
+- Leave a `## Next` section in `docs/superpowers/plans/` or update the relevant memory file with the immediate next step
+- After significant changes, update `CLAUDE.md` (architecture decisions, new conventions) and memory files (`~/.claude/projects/*/memory/`) with anything non-obvious
+- Optimize for cost-effectiveness: prefer smaller focused sessions over sprawling ones; use `/compact` when context grows large
 
 ### Code
 
@@ -263,11 +275,54 @@ Always commit work-in-progress before ending a session so a fresh Claude starts 
 
 ---
 
+## RBAC Model
+
+Three roles: `admin`, `sub_admin`, `user` (ordered lowest → highest in `ROLE_HIERARCHY`).
+
+### Source of truth
+
+Clerk `publicMetadata.role` is the authoritative source. The `user_roles` DB table mirrors it for audit purposes only — it is not read for authorization decisions.
+
+### Two paths for reading the role
+
+| Context                         | How                                 | When to use                                                                                                                  |
+| ------------------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Web server components / actions | `currentUser().publicMetadata.role` | Live Clerk API call — always reflects the current role. Use for page-level access gates (`requireAdminUser`, `requireRole`). |
+| API middleware                  | `sessionClaims.metadata.role`       | Reads from the JWT snapshot — fast, no extra API call. Use in `requireRole` middleware on Hono routes.                       |
+
+**Trade-off:** If a role is changed in Clerk, the web sees it immediately. The API will not see it until the user signs out and back in (JWT is reissued). This is acceptable — role changes are rare and the user can be asked to re-authenticate.
+
+### JWT template
+
+The Clerk dashboard session token template must include:
+
+```json
+{ "metadata": "{{user.public_metadata}}" }
+```
+
+This populates `sessionClaims.metadata` in the JWT. Without it, the API's `requireRole` middleware always fails with 403.
+
+### TypeScript augmentation
+
+`apps/web/src/types/clerk.d.ts` augments two Clerk interfaces:
+
+- `CustomJwtSessionClaims` — types `sessionClaims.metadata.role` as `Role | undefined`
+- `UserPublicMetadata` — types `user.publicMetadata.role` as `Role | undefined`
+
+Both eliminate the need to cast. Never cast `publicMetadata` or `sessionClaims` to `Record<string, unknown>`.
+
+### Role provisioning
+
+- **Now (pre-Phase 3):** Set roles manually in the Clerk dashboard → User → Public Metadata: `{ "role": "admin" }`. User must sign out and back in after any change.
+- **Phase 3+:** Admin UI at `/admin/users` will call `PATCH /v1/admin/users/:userId/role`, which calls the Clerk Management API (`clerkClient.users.updateUserMetadata`) and writes an audit row to `user_roles` with `granted_by`. Role changes require admin privileges and are always logged.
+
+---
+
 ## Current Status
 
 Phase: **Phase 1 complete — Phase 2 (venue management) ready to begin**
 
-- Phase 1 PR open: `feat/phase-1-foundation` — CI in progress
+- Phase 1 merged: `feat/phase-1-foundation` — CI in progress
 - Phase 2 plan written: `docs/superpowers/plans/2026-04-23-phase-2-venue-management.md`
 - Domain purchase pending: `concertcrawl.com` via Cloudflare Registrar
 

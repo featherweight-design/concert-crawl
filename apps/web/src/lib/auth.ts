@@ -36,6 +36,11 @@ export async function requireRole(minimumRole: Role): Promise<AuthUser> {
   return user
 }
 
+// Convenience wrapper — redirects to / if user is not an admin
+export async function requireAdminUser(): Promise<AuthUser> {
+  return requireRole('admin')
+}
+
 // Returns the raw Clerk auth object (userId, sessionId, etc.)
 // Use in Server Actions and Route Handlers.
 export { auth }

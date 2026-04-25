@@ -1,5 +1,18 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { createApp } from '../app.js'
+
+vi.mock('drizzle-orm', () => ({ eq: vi.fn() }))
+vi.mock('@concert-crawl/db', () => ({
+  db: { select: vi.fn(), insert: vi.fn() },
+  venues: {},
+  auditLog: {},
+  inviteCodes: {},
+}))
+vi.mock('@hono/clerk-auth', () => ({
+  clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
+    next(),
+  getAuth: () => null,
+}))
 
 describe('GET /v1/health', () => {
   const app = createApp()

@@ -19,7 +19,7 @@ describe('requireRole middleware', () => {
   function makeApp(minimumRole: Role) {
     const app = new Hono()
     app.use('/route', requireRole(minimumRole))
-    app.get('/route', (c) => c.json({ ok: true }))
+    app.get('/route', (ctx) => ctx.json({ ok: true }))
     return app
   }
 
@@ -32,7 +32,7 @@ describe('requireRole middleware', () => {
   it('returns 403 when user has no role in metadata', async () => {
     mockGetAuth.mockReturnValue({
       userId: 'user_123',
-      sessionClaims: { publicMetadata: {} },
+      sessionClaims: { metadata: {} },
     })
     const res = await makeApp('admin').request('/route')
     expect(res.status).toBe(403)
@@ -41,7 +41,7 @@ describe('requireRole middleware', () => {
   it('returns 403 when user role is below minimum', async () => {
     mockGetAuth.mockReturnValue({
       userId: 'user_123',
-      sessionClaims: { publicMetadata: { role: 'user' } },
+      sessionClaims: { metadata: { role: 'user' } },
     })
     const res = await makeApp('admin').request('/route')
     expect(res.status).toBe(403)
@@ -50,7 +50,7 @@ describe('requireRole middleware', () => {
   it('allows exact role match', async () => {
     mockGetAuth.mockReturnValue({
       userId: 'user_123',
-      sessionClaims: { publicMetadata: { role: 'sub_admin' } },
+      sessionClaims: { metadata: { role: 'sub_admin' } },
     })
     const res = await makeApp('sub_admin').request('/route')
     expect(res.status).toBe(200)
@@ -59,7 +59,7 @@ describe('requireRole middleware', () => {
   it('allows higher role to access lower-role route', async () => {
     mockGetAuth.mockReturnValue({
       userId: 'user_123',
-      sessionClaims: { publicMetadata: { role: 'admin' } },
+      sessionClaims: { metadata: { role: 'admin' } },
     })
     const res = await makeApp('user').request('/route')
     expect(res.status).toBe(200)

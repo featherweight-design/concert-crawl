@@ -48,3 +48,45 @@ export type FeedbackCategory = 'bug' | 'suggestion' | 'praise'
 
 // Subscription tiers
 export type SubscriptionTier = 'free' | 'premium'
+
+// Venue — represents the JSON-serialized API response shape.
+// Date fields are ISO 8601 strings because fetch().json() cannot revive Date objects.
+export interface Venue {
+  id: string
+  name: string
+  slug: string
+  websiteUrl: string
+  city: string
+  active: boolean
+  verified: boolean
+  lastCrawledAt: string | null
+  crawlNotes: string | null
+  crawlDelayMs: number
+  robotsTxtAllowed: boolean | null
+  robotsTxtCheckedAt: string | null
+  consecutiveFailures: number
+  blockedAt: string | null
+  extractionStrategy: ExtractionStrategy | null
+  contactEmail: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type NewVenue = Omit<
+  Venue,
+  'id' | 'createdAt' | 'updatedAt' | 'lastCrawledAt' | 'consecutiveFailures'
+>
+
+// InviteCode — represents the JSON-serialized API response shape.
+// Date fields are ISO 8601 strings because fetch().json() cannot revive Date objects.
+export interface InviteCode {
+  id: string
+  code: string
+  createdBy: string
+  usedBy: string | null
+  usedAt: string | null
+  expiresAt: string | null
+  revokedAt: string | null
+  revokedBy: string | null
+  createdAt: string
+}

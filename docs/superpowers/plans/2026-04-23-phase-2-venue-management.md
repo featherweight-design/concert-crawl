@@ -329,13 +329,13 @@ const updateVenueSchema = createVenueSchema.partial().extend({
 export const venuesAdminRouter = new Hono()
 
 // GET /v1/admin/venues — list all venues
-venuesAdminRouter.get('/', async (c) => {
+venuesAdminRouter.get('/', async (ctx) => {
   const allVenues = await db.select().from(venues).orderBy(venues.name)
   return c.json({ success: true, data: allVenues })
 })
 
 // GET /v1/admin/venues/:id — get single venue
-venuesAdminRouter.get('/:id', async (c) => {
+venuesAdminRouter.get('/:id', async (ctx) => {
   const { id } = c.req.param()
   const [venue] = await db.select().from(venues).where(eq(venues.id, id))
 
@@ -350,9 +350,9 @@ venuesAdminRouter.get('/:id', async (c) => {
 venuesAdminRouter.post(
   '/',
   zValidator('json', createVenueSchema),
-  async (c) => {
+  async (ctx) => {
     const body = c.req.valid('json')
-    const auth = getAuth(c)
+    const auth = getAuth(ctx)
 
     const [venue] = await db.insert(venues).values(body).returning()
 
@@ -369,10 +369,10 @@ venuesAdminRouter.post(
 venuesAdminRouter.patch(
   '/:id',
   zValidator('json', updateVenueSchema),
-  async (c) => {
+  async (ctx) => {
     const { id } = c.req.param()
     const body = c.req.valid('json')
-    const auth = getAuth(c)
+    const auth = getAuth(ctx)
 
     const [existing] = await db.select().from(venues).where(eq(venues.id, id))
     if (!existing) {
@@ -394,9 +394,9 @@ venuesAdminRouter.patch(
 )
 
 // DELETE /v1/admin/venues/:id — soft delete (set active = false)
-venuesAdminRouter.delete('/:id', async (c) => {
+venuesAdminRouter.delete('/:id', async (ctx) => {
   const { id } = c.req.param()
-  const auth = getAuth(c)
+  const auth = getAuth(ctx)
 
   const [existing] = await db.select().from(venues).where(eq(venues.id, id))
   if (!existing) {
@@ -611,7 +611,7 @@ function generateCode(): string {
 export const inviteCodesAdminRouter = new Hono()
 
 // GET /v1/admin/invite-codes — list all codes
-inviteCodesAdminRouter.get('/', async (c) => {
+inviteCodesAdminRouter.get('/', async (ctx) => {
   const codes = await db
     .select()
     .from(inviteCodes)
@@ -620,8 +620,8 @@ inviteCodesAdminRouter.get('/', async (c) => {
 })
 
 // POST /v1/admin/invite-codes — generate a new code
-inviteCodesAdminRouter.post('/', async (c) => {
-  const auth = getAuth(c)
+inviteCodesAdminRouter.post('/', async (ctx) => {
+  const auth = getAuth(ctx)
   const body = await c.req.json<{ expiresAt?: string }>().catch(() => ({}))
 
   const [code] = await db
@@ -641,9 +641,9 @@ inviteCodesAdminRouter.post('/', async (c) => {
 })
 
 // POST /v1/admin/invite-codes/:id/revoke — revoke a code
-inviteCodesAdminRouter.post('/:id/revoke', async (c) => {
+inviteCodesAdminRouter.post('/:id/revoke', async (ctx) => {
   const { id } = c.req.param()
-  const auth = getAuth(c)
+  const auth = getAuth(ctx)
 
   const [existing] = await db
     .select()

@@ -1,0 +1,30 @@
+meta {
+  name: Create Venue
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/v1/admin/venues
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  {
+    "name": "Test Venue",
+    "slug": "test-venue",
+    "websiteUrl": "https://testvenue.com",
+    "city": "Denver"
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.success: eq true
+  res.body.data.id: isDefined
+}
