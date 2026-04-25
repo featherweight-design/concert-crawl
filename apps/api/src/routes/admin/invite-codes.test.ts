@@ -102,7 +102,7 @@ vi.mock('@concert-crawl/db', () => {
 function adminAuth() {
   mockGetAuth.mockReturnValue({
     userId: 'admin_123',
-    sessionClaims: { publicMetadata: { role: 'admin' } },
+    sessionClaims: { metadata: { role: 'admin' } },
   })
 }
 
