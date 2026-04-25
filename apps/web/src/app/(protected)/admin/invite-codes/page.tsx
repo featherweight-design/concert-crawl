@@ -7,10 +7,14 @@ import { GenerateInviteForm } from '@/components/admin/generate-invite-form'
 export default async function InviteCodesPage() {
   const { getToken } = await auth()
   const token = await getToken()
-  const codes = await apiClient.get<InviteCode[]>(
-    '/v1/admin/invite-codes',
-    token!,
-  )
+
+  let codes: InviteCode[]
+  try {
+    codes = await apiClient.get<InviteCode[]>('/v1/admin/invite-codes', token!)
+  } catch (err) {
+    console.error('[admin/invite-codes] failed to load invite codes:', err)
+    throw err
+  }
 
   return (
     <div className="space-y-8">
