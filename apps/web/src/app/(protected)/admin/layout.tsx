@@ -1,4 +1,5 @@
 import { requireAdminUser } from '@/lib/auth'
+import { UserButton } from '@clerk/nextjs'
 import Link from 'next/link'
 
 const navItems = [
@@ -16,7 +17,7 @@ export default async function AdminLayout({
 
   return (
     <div className="flex min-h-screen">
-      <aside className="w-56 border-r bg-slate-50 p-4 dark:bg-slate-900">
+      <aside className="flex w-56 flex-col border-r bg-slate-50 p-4 dark:bg-slate-900">
         <p className="mb-6 text-sm font-semibold uppercase tracking-wider text-slate-500">
           Admin
         </p>
@@ -31,6 +32,9 @@ export default async function AdminLayout({
             </Link>
           ))}
         </nav>
+        <div className="mt-auto pt-4 border-t">
+          <UserButton showName />
+        </div>
       </aside>
       <main className="flex-1 p-8">{children}</main>
     </div>
