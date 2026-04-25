@@ -1,7 +1,17 @@
 import { getAuth } from '@hono/clerk-auth'
 import type { MiddlewareHandler } from 'hono'
-import { ROLE_HIERARCHY, isRole } from '@concert-crawl/types'
+import { z } from 'zod'
+import { ROLE_HIERARCHY } from '@concert-crawl/types'
 import type { Role } from '@concert-crawl/types'
+
+// Validates the shape of the custom claims added by our Clerk JWT template:
+//   { "metadata": "{{user.public_metadata}}" }
+// Using Zod here avoids type-casting and catches malformed claims at runtime.
+const claimsSchema = z.object({
+  metadata: z
+    .object({ role: z.enum(['admin', 'sub_admin', 'user']) })
+    .optional(),
+})
 
 function getRoleLevel(role: Role): number {
   return ROLE_HIERARCHY.indexOf(role)
@@ -14,17 +24,19 @@ export function requireRole(minimumRole: Role): MiddlewareHandler {
     const auth = getAuth(ctx)
 
     if (!auth?.userId) {
+      console.warn(
+        '[requireRole] No userId on auth object — unauthenticated request',
+      )
       return ctx.json({ success: false, error: 'Unauthorized' }, 401)
     }
 
-    // publicMetadata is typed as {} by Clerk — cast to indexable so we can
-    // extract the role key safely before validating it with isRole()
-    const metadata = auth.sessionClaims?.publicMetadata as
-      | Record<string, unknown>
-      | undefined
-    const userRole = isRole(metadata?.['role']) ? metadata['role'] : undefined
+    const claims = claimsSchema.safeParse(auth.sessionClaims)
+    const userRole = claims.success ? claims.data.metadata?.role : undefined
 
     if (!userRole || getRoleLevel(userRole) < getRoleLevel(minimumRole)) {
+      console.warn(
+        `[requireRole] Forbidden: userId=${auth.userId} role=${userRole ?? 'none'} required=${minimumRole}`,
+      )
       return ctx.json({ success: false, error: 'Forbidden' }, 403)
     }
 
