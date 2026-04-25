@@ -76,6 +76,23 @@ pnpm db:seed      # Seed local database with Denver venues
 | CI       | GitHub Actions                              |
 | Hosting  | Render (API + Web), Render Postgres         |
 
+## API Client (Bruno)
+
+The API collection lives at `apps/api/bruno/` and is ready to open in [Bruno](https://www.usebruno.com) (free desktop app).
+
+**Setup:**
+
+1. Install Bruno from [usebruno.com](https://www.usebruno.com)
+2. Open Bruno → **Open Collection** → select `apps/api/bruno/`
+3. In the top-right environment selector, choose **local**
+4. Paste your Clerk dev session token into the `adminToken` variable:
+   - Sign in to the app at `http://localhost:3000`
+   - Open browser DevTools → Application → Cookies → find `__session`
+   - Alternatively, add a temporary `console.log(await getToken())` in a server component and copy the output
+5. Requests under `admin/` are pre-configured with `Bearer {{adminToken}}`
+
+The collection includes: health check, list venues, create venue, and generate invite code. Run `pnpm dev` before sending requests.
+
 ## Contributing
 
 - Branches: `feat/short-description`, `fix/short-description`
