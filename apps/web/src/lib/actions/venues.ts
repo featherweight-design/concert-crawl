@@ -55,3 +55,11 @@ export async function deactivateVenue(id: string): Promise<void> {
   await apiClient.delete(`/v1/admin/venues/${id}`, token)
   revalidatePath('/admin/venues')
 }
+
+export async function activateVenue(id: string): Promise<void> {
+  const token = await getToken()
+  await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
+    active: true,
+  })
+  revalidatePath('/admin/venues')
+}

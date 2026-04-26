@@ -50,6 +50,11 @@
       --input: 217.2 32.6% 17.5%;
       --ring: 212.7 26.8% 83.9%;
     }
+
+    /* Clerk UserButton username text doesn't read our CSS variables */
+    .cl-userButtonOuterIdentifier {
+      color: hsl(var(--foreground));
+    }
   }
 
   * {
