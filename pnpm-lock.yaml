@@ -204,6 +204,9 @@ importers:
       playwright:
         specifier: ^1.50.0
         version: 1.59.1
+      zod:
+        specifier: ^3.22.0
+        version: 3.25.76
     devDependencies:
       '@concert-crawl/config':
         specifier: workspace:*

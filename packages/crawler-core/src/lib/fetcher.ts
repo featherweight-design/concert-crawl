@@ -39,7 +39,7 @@ export async function fetchPage(
     })
 
     const response = await page.goto(url, {
-      waitUntil: 'domcontentloaded',
+      waitUntil: 'networkidle',
       timeout: 30_000,
     })
     const finalStatus = response?.status() ?? httpStatus
