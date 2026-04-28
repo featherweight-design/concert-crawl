@@ -26,6 +26,7 @@ export const crawlRuns = pgTable('crawl_runs', {
   eventsFound: integer('events_found').notNull().default(0),
   eventsInserted: integer('events_inserted').notNull().default(0),
   errorMessage: text('error_message'),
+  pageHash: text('page_hash'),
   durationMs: integer('duration_ms'),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()

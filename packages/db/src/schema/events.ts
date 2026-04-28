@@ -44,7 +44,6 @@ export const events = pgTable(
     sourceHash: text('source_hash'),
     extractionStrategy: text('extraction_strategy'),
     // search_vector is a generated column managed via raw SQL in migration
-    rawHtml: text('raw_html'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
