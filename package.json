@@ -6,6 +6,7 @@
     "build": "turbo run build",
     "test": "turbo run test",
     "lint": "turbo run lint",
+    "format": "prettier --write .",
     "typecheck": "turbo run typecheck",
     "db:generate": "turbo run db:generate --filter=@concert-crawl/db",
     "db:migrate": "turbo run db:migrate --filter=@concert-crawl/db",
