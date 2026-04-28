@@ -47,9 +47,22 @@ crawlAdminRouter.post(
       startedAt: new Date().toISOString(),
     })
 
-    crawlVenue(venueId, crawlRunId).finally(() => {
-      inProgressCrawls.delete(crawlRunId)
-    })
+    void (async () => {
+      try {
+        await crawlVenue(venueId, crawlRunId)
+      } catch (err) {
+        console.error(
+          JSON.stringify({
+            event: 'crawl.trigger.error',
+            crawlRunId,
+            venueId,
+            error: String(err),
+          }),
+        )
+      } finally {
+        inProgressCrawls.delete(crawlRunId)
+      }
+    })()
 
     ctx.set('auditAction', 'crawl.trigger')
     ctx.set('auditTargetId', venueId)

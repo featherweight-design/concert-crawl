@@ -23,7 +23,14 @@ function makeAnthropicResponse(
   },
 ) {
   return {
-    content: [{ type: 'text', text: JSON.stringify({ events }) }],
+    content: [
+      {
+        type: 'tool_use',
+        id: 'tool_abc123',
+        name: 'save_events',
+        input: { events },
+      },
+    ],
     usage,
   }
 }
