@@ -99,3 +99,7 @@ The collection includes: health check, list venues, create venue, and generate i
 - Commits follow [Conventional Commits](https://www.conventionalcommits.org) (enforced by commitlint)
 - All CI checks must pass before merging to `main`
 - Never commit `.env.local` files
+
+## NOOP
+
+NOOP commit: 1
