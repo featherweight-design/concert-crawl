@@ -9,6 +9,9 @@ import type { AdminVariables } from './index.js'
 
 // Tracks crawl runs that have been started but not yet written to DB.
 // Keyed by crawl_run_id. Entries are removed when crawlVenue resolves/rejects.
+// TODO: This map is process-local. A server restart mid-crawl will cause the
+// in-progress run to disappear, making the poll endpoint return 404. Fix before
+// horizontal scaling (multiple API instances) is needed.
 const inProgressCrawls = new Map<
   string,
   { venueId: string; startedAt: string }

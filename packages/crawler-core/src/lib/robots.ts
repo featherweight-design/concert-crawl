@@ -1,4 +1,6 @@
-const cache = new Map<string, boolean>()
+// Cache robots.txt text per domain — fetched once, re-evaluated per path.
+// null = fetch failed (fail-open); string = robots.txt content.
+const robotsTextCache = new Map<string, string | null>()
 
 function getDomain(url: string): string {
   return new URL(url).origin
@@ -13,7 +15,6 @@ function parseRobotsTxt(
   const specificAgent = userAgent.split('/')[0]?.toLowerCase() ?? ''
 
   // Collect applicable disallow rules for the most specific matching user-agent group
-  let currentAgents: string[] = []
   let specificRules: string[] = []
   let wildcardRules: string[] = []
   let inSpecificGroup = false
@@ -21,7 +22,6 @@ function parseRobotsTxt(
 
   for (const line of lines) {
     if (line.startsWith('#') || line === '') {
-      currentAgents = []
       inSpecificGroup = false
       inWildcardGroup = false
       continue
@@ -31,7 +31,6 @@ function parseRobotsTxt(
 
     if (lower.startsWith('user-agent:')) {
       const agent = line.substring('user-agent:'.length).trim().toLowerCase()
-      currentAgents = [agent]
       inSpecificGroup = agent === specificAgent
       inWildcardGroup = agent === '*'
     } else if (lower.startsWith('disallow:')) {
@@ -55,15 +54,14 @@ function parseRobotsTxt(
   return true
 }
 
-export async function isAllowed(
-  url: string,
+async function fetchRobotsTxt(
+  domain: string,
   userAgent: string,
-): Promise<boolean> {
-  const domain = getDomain(url)
+): Promise<string | null> {
   const cacheKey = `${domain}::${userAgent}`
 
-  if (cache.has(cacheKey)) {
-    return cache.get(cacheKey)!
+  if (robotsTextCache.has(cacheKey)) {
+    return robotsTextCache.get(cacheKey) ?? null
   }
 
   const robotsUrl = `${domain}/robots.txt`
@@ -82,23 +80,13 @@ export async function isAllowed(
           status: response.status,
         }),
       )
-      cache.set(cacheKey, true)
-      return true
+      robotsTextCache.set(cacheKey, null)
+      return null
     }
 
     const text = await response.text()
-    const urlPath = new URL(url).pathname
-    const allowed = parseRobotsTxt(text, userAgent, urlPath)
-
-    console.log(
-      JSON.stringify({
-        event: allowed ? 'robots.allowed' : 'robots.denied',
-        url,
-        domain,
-      }),
-    )
-    cache.set(cacheKey, allowed)
-    return allowed
+    robotsTextCache.set(cacheKey, text)
+    return text
   } catch (err) {
     console.log(
       JSON.stringify({
@@ -108,7 +96,34 @@ export async function isAllowed(
         error: String(err),
       }),
     )
-    cache.set(cacheKey, true)
+    robotsTextCache.set(cacheKey, null)
+    return null
+  }
+}
+
+export async function isAllowed(
+  url: string,
+  userAgent: string,
+): Promise<boolean> {
+  const domain = getDomain(url)
+  const urlPath = new URL(url).pathname
+
+  const robotsText = await fetchRobotsTxt(domain, userAgent)
+
+  // Fail open: if robots.txt couldn't be fetched, allow the crawl
+  if (robotsText === null) {
     return true
   }
+
+  const allowed = parseRobotsTxt(robotsText, userAgent, urlPath)
+
+  console.log(
+    JSON.stringify({
+      event: allowed ? 'robots.allowed' : 'robots.denied',
+      url,
+      domain,
+    }),
+  )
+
+  return allowed
 }

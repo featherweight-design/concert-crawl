@@ -9,7 +9,7 @@ import {
 } from '@concert-crawl/db'
 import type { CrawlRun } from '@concert-crawl/db'
 import { isAllowed } from './lib/robots.js'
-import { fetchPage } from './lib/fetcher.js'
+import { fetchPage, CrawlFetchError } from './lib/fetcher.js'
 import { extractJsonLd } from './lib/extractors/json-ld.js'
 import { extractWithLlm } from './lib/extractors/llm.js'
 import { calculateCost } from './lib/cost.js'
@@ -65,7 +65,8 @@ export async function crawlVenue(
         durationMs: Date.now() - startedAt,
       })
       .returning()
-    return crawlRun!
+    if (!crawlRun) throw new Error('crawl_runs insert returned no row')
+    return crawlRun
   }
 
   try {
@@ -118,6 +119,9 @@ export async function crawlVenue(
             description: sql`excluded.description`,
             imageUrl: sql`excluded.image_url`,
             status: sql`excluded.status`,
+            verified: sql`excluded.verified`,
+            extractionStrategy: sql`excluded.extraction_strategy`,
+            confidenceScore: sql`excluded.confidence_score`,
             updatedAt: new Date(),
           },
         })
@@ -126,8 +130,11 @@ export async function crawlVenue(
       eventsInserted = upserted.length
     }
 
-    // Notify admin on low-confidence LLM extractions
-    const lowConfidence = normalizedEvents.filter((e) => e.confidence < 0.7)
+    // Notify admin on low-confidence LLM extractions (structured data is always confidence=1.0)
+    const lowConfidence =
+      strategy === 'llm'
+        ? normalizedEvents.filter((e) => e.confidence < 0.7)
+        : []
     if (lowConfidence.length > 0) {
       await db.insert(notifications).values({
         type: 'admin_alert',
@@ -154,6 +161,7 @@ export async function crawlVenue(
         durationMs,
       })
       .returning()
+    if (!crawlRun) throw new Error('crawl_runs insert returned no row')
 
     if (tokenUsage) {
       const costUsd = calculateCost(tokenUsage)
@@ -185,11 +193,11 @@ export async function crawlVenue(
       }),
     )
 
-    return crawlRun!
+    return crawlRun
   } catch (err) {
     const isBlocked =
-      (err as NodeJS.ErrnoException).code === '403' ||
-      (err as NodeJS.ErrnoException).code === '429'
+      err instanceof CrawlFetchError &&
+      (err.httpStatus === 403 || err.httpStatus === 429)
 
     const [updatedVenue] = await db
       .update(venues)
@@ -201,9 +209,9 @@ export async function crawlVenue(
       .where(eq(venues.id, venueId))
       .returning()
 
-    const newFailureCount = updatedVenue?.consecutiveFailures ?? 3
+    const newFailureCount = updatedVenue?.consecutiveFailures ?? 0
 
-    if (newFailureCount === 3) {
+    if (newFailureCount >= 3) {
       await db.insert(notifications).values({
         type: 'admin_alert',
         category: 'crawl.failed',
@@ -228,6 +236,7 @@ export async function crawlVenue(
         durationMs,
       })
       .returning()
+    if (!crawlRun) throw new Error('crawl_runs insert returned no row')
 
     console.log(
       JSON.stringify({
@@ -238,6 +247,6 @@ export async function crawlVenue(
       }),
     )
 
-    return crawlRun!
+    return crawlRun
   }
 }

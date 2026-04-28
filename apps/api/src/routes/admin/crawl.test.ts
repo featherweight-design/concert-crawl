@@ -159,6 +159,12 @@ describe('Admin crawl routes', () => {
       }
       expect(body.success).toBe(true)
       expect(typeof body.data.crawlRunId).toBe('string')
+      expect(mockCrawlVenue).toHaveBeenCalledWith(
+        VENUE_ID,
+        expect.stringMatching(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+        ),
+      )
     })
   })
 
@@ -190,6 +196,71 @@ describe('Admin crawl routes', () => {
       expect(body.success).toBe(true)
       expect(body.data.id).toBe(RUN_ID)
       expect(body.data.status).toBe('success')
+    })
+
+    it('returns in_progress status when crawl is running', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      vi.mocked(db.select().from().where).mockResolvedValueOnce([mockVenue])
+      mockCrawlVenue.mockReturnValue(new Promise(() => {})) // never resolves
+
+      // Trigger a crawl to populate inProgressCrawls
+      const triggerRes = await createApp().request(
+        `/v1/admin/crawl/${VENUE_ID}`,
+        { method: 'POST' },
+      )
+      const triggerBody = (await triggerRes.json()) as {
+        success: boolean
+        data: { crawlRunId: string }
+      }
+      const { crawlRunId } = triggerBody.data
+
+      // Poll while crawl is still running
+      const pollRes = await createApp().request(
+        `/v1/admin/crawl/runs/${crawlRunId}`,
+      )
+      expect(pollRes.status).toBe(200)
+      const pollBody = (await pollRes.json()) as {
+        success: boolean
+        data: { status: string; venueId: string }
+      }
+      expect(pollBody.success).toBe(true)
+      expect(pollBody.data.status).toBe('in_progress')
+      expect(pollBody.data.venueId).toBe(VENUE_ID)
+    })
+  })
+
+  describe('GET /v1/admin/crawl/runs (list)', () => {
+    it('returns 400 when venueId is missing', async () => {
+      adminAuth()
+      const res = await createApp().request('/v1/admin/crawl/runs')
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 400 when venueId is not a UUID', async () => {
+      adminAuth()
+      const res = await createApp().request(
+        '/v1/admin/crawl/runs?venueId=not-a-uuid',
+      )
+      expect(res.status).toBe(400)
+    })
+
+    it('returns list of crawl runs for a venue', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      vi.mocked(
+        db.select().from().where().orderBy().limit,
+      ).mockResolvedValueOnce([mockCrawlRun])
+      const res = await createApp().request(
+        `/v1/admin/crawl/runs?venueId=${VENUE_ID}`,
+      )
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as {
+        success: boolean
+        data: (typeof mockCrawlRun)[]
+      }
+      expect(body.success).toBe(true)
+      expect(Array.isArray(body.data)).toBe(true)
     })
   })
 })

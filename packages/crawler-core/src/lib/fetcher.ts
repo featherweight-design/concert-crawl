@@ -2,6 +2,16 @@ import { chromium } from 'playwright'
 
 const HONEST_USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
 
+export class CrawlFetchError extends Error {
+  constructor(
+    public readonly httpStatus: number,
+    message: string,
+  ) {
+    super(message)
+    this.name = 'CrawlFetchError'
+  }
+}
+
 export interface FetchResult {
   html: string
   httpStatus: number
@@ -48,11 +58,10 @@ export async function fetchPage(
       console.log(
         JSON.stringify({ event: 'fetch.blocked', url, status: finalStatus }),
       )
-      const error = new Error(
+      throw new CrawlFetchError(
+        finalStatus,
         `HTTP ${finalStatus} — venue may have blocked crawler`,
       )
-      ;(error as NodeJS.ErrnoException).code = String(finalStatus)
-      throw error
     }
 
     if (finalStatus >= 400) {
