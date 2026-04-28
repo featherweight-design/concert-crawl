@@ -119,7 +119,6 @@ export async function crawlVenue(
             description: sql`excluded.description`,
             imageUrl: sql`excluded.image_url`,
             status: sql`excluded.status`,
-            verified: sql`excluded.verified`,
             extractionStrategy: sql`excluded.extraction_strategy`,
             confidenceScore: sql`excluded.confidence_score`,
             updatedAt: new Date(),
