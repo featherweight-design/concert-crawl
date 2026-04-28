@@ -1,0 +1,22 @@
+meta {
+  name: Get Crawl Run
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/v1/admin/crawl/runs/{{crawlRunId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+assert {
+  res.status: eq 200
+  res.body.id: isDefined
+  res.body.venueId: isDefined
+  res.body.status: isDefined
+}

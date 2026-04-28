@@ -14,6 +14,10 @@ auth:bearer {
   token: {{adminToken}}
 }
 
+vars:pre-request {
+  baseUrl: http://localhost:3001
+}
+
 assert {
   res.status: eq 200
   res.body.success: eq true
