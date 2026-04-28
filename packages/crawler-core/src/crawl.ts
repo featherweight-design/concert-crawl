@@ -13,7 +13,7 @@ import { fetchPage, CrawlFetchError } from './lib/fetcher.js'
 import { extractJsonLd } from './lib/extractors/json-ld.js'
 import { extractWithLlm } from './lib/extractors/llm.js'
 import { calculateCost } from './lib/cost.js'
-import { hashPage } from './lib/hash.js'
+import { hashPage, hashEvent } from './lib/hash.js'
 import type { NormalizedEvent, TokenUsage } from './types.js'
 
 const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
@@ -136,43 +136,103 @@ export async function crawlVenue(
     // Upsert events — insert on first crawl, update mutable fields on re-crawl
     let eventsInserted = 0
     if (normalizedEvents.length > 0) {
-      const eventValues = normalizedEvents.map((event) => ({
-        venueId,
-        title: event.title,
-        artist: event.artist,
-        date: event.date,
-        doorsTime: event.doorsTime ?? null,
-        showTime: event.showTime ?? null,
-        ticketUrl: event.ticketUrl ?? null,
-        description: event.description ?? null,
-        imageUrl: event.imageUrl ?? null,
-        sourceUrl: event.sourceUrl,
-        status: 'upcoming' as const,
-        confidenceScore: event.confidence.toFixed(2),
-        verified: strategy === 'structured_data',
-        extractionStrategy: strategy,
-        rawHtml: html,
+      // Compute sourceHash for each extracted event
+      const eventsWithHashes = normalizedEvents.map((event) => ({
+        ...event,
+        sourceHash: hashEvent({
+          title: event.title,
+          artist: event.artist,
+          date: event.date,
+          doorsTime: event.doorsTime ?? null,
+          showTime: event.showTime ?? null,
+        }),
       }))
 
-      const upserted = await db
-        .insert(events)
-        .values(eventValues)
-        .onConflictDoUpdate({
-          target: [events.venueId, events.date, events.artist],
-          set: {
-            title: sql`excluded.title`,
-            ticketUrl: sql`excluded.ticket_url`,
-            description: sql`excluded.description`,
-            imageUrl: sql`excluded.image_url`,
-            status: sql`excluded.status`,
-            extractionStrategy: sql`excluded.extraction_strategy`,
-            confidenceScore: sql`excluded.confidence_score`,
-            updatedAt: new Date(),
-          },
+      // Load existing events for this venue to compare hashes
+      const existingRows = await db
+        .select({
+          artist: events.artist,
+          date: events.date,
+          title: events.title,
+          sourceHash: events.sourceHash,
+          verified: events.verified,
         })
-        .returning()
+        .from(events)
+        .where(eq(events.venueId, venueId))
 
-      eventsInserted = upserted.length
+      const existingMap = new Map(
+        existingRows.map((e) => [`${e.artist}|${e.date}`, e]),
+      )
+
+      // Notify admin when a verified event's source data has changed
+      const changedVerified = eventsWithHashes.filter((e) => {
+        const existing = existingMap.get(`${e.artist}|${e.date}`)
+        return (
+          existing?.verified === true && existing.sourceHash !== e.sourceHash
+        )
+      })
+
+      if (changedVerified.length > 0) {
+        await db.insert(notifications).values(
+          changedVerified.map((e) => ({
+            type: 'admin_alert' as const,
+            category: 'crawl.verified_event_changed',
+            title: `Verified event may have changed: ${venue.name}`,
+            body: `Verified event may have changed: "${e.title}" at ${venue.name} on ${e.date}`,
+            metadata: JSON.stringify({ venueId, crawlRunId: id }),
+          })),
+        )
+      }
+
+      // Only upsert events that are new or have changed content
+      const eventsToUpsert = eventsWithHashes.filter((e) => {
+        const existing = existingMap.get(`${e.artist}|${e.date}`)
+        if (!existing) return true // new event
+        return existing.sourceHash !== e.sourceHash // content changed
+      })
+
+      if (eventsToUpsert.length > 0) {
+        const eventValues = eventsToUpsert.map((event) => ({
+          venueId,
+          title: event.title,
+          artist: event.artist,
+          date: event.date,
+          doorsTime: event.doorsTime ?? null,
+          showTime: event.showTime ?? null,
+          ticketUrl: event.ticketUrl ?? null,
+          description: event.description ?? null,
+          imageUrl: event.imageUrl ?? null,
+          sourceUrl: event.sourceUrl,
+          sourceHash: event.sourceHash,
+          status: 'upcoming' as const,
+          confidenceScore: event.confidence.toFixed(2),
+          verified: strategy === 'structured_data',
+          extractionStrategy: strategy,
+        }))
+
+        const upserted = await db
+          .insert(events)
+          .values(eventValues)
+          .onConflictDoUpdate({
+            target: [events.venueId, events.date, events.artist],
+            set: {
+              title: sql`excluded.title`,
+              doorsTime: sql`excluded.doors_time`,
+              showTime: sql`excluded.show_time`,
+              ticketUrl: sql`excluded.ticket_url`,
+              description: sql`excluded.description`,
+              imageUrl: sql`excluded.image_url`,
+              status: sql`excluded.status`,
+              extractionStrategy: sql`excluded.extraction_strategy`,
+              confidenceScore: sql`excluded.confidence_score`,
+              sourceHash: sql`excluded.source_hash`,
+              updatedAt: new Date(),
+            },
+          })
+          .returning()
+
+        eventsInserted = upserted.length
+      }
     }
 
     // Notify admin on low-confidence LLM extractions (structured data is always confidence=1.0)
