@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { db, venues, events, crawlRuns, notifications } from '@concert-crawl/db'
 import { eq, and, desc } from 'drizzle-orm'
 import { crawlVenue } from './crawl.js'
@@ -27,6 +27,11 @@ import { extractWithLlm } from './lib/extractors/llm.js'
 
 const mockFetchPage = vi.mocked(fetchPage)
 const mockExtractWithLlm = vi.mocked(extractWithLlm)
+
+beforeEach(() => {
+  mockFetchPage.mockClear()
+  mockExtractWithLlm.mockClear()
+})
 
 // Minimal venue fixture — inserted fresh per test
 async function seedVenue() {
@@ -97,7 +102,7 @@ describe('crawlVenue — page-level skip', () => {
         .where(eq(crawlRuns.venueId, venue.id))
         .orderBy(desc(crawlRuns.createdAt))
         .limit(1)
-      expect(skippedRun?.pageHash).toBeTruthy()
+      expect(skippedRun?.pageHash).toMatch(/^[0-9a-f]{64}$/)
     } finally {
       await cleanVenue(venue.id)
     }
@@ -125,7 +130,8 @@ describe('crawlVenue — page-level skip', () => {
       await crawlVenue(venue.id) // first crawl
       const run = await crawlVenue(venue.id) // second crawl — page changed
 
-      expect(run.eventsFound).toBeGreaterThan(0)
+      expect(run.eventsFound).toBe(1)
+      expect(run.eventsInserted).toBe(0) // sourceHash matches despite page change
     } finally {
       await cleanVenue(venue.id)
     }
@@ -158,6 +164,12 @@ describe('crawlVenue — event-level sourceHash', () => {
       // Same event returned again — hash will match, should not write
       const run2 = await crawlVenue(venue.id)
       expect(run2.eventsInserted).toBe(0) // unchanged — skipped
+
+      const allEvents = await db
+        .select()
+        .from(events)
+        .where(eq(events.venueId, venue.id))
+      expect(allEvents).toHaveLength(1)
     } finally {
       await cleanVenue(venue.id)
     }
@@ -207,10 +219,14 @@ describe('crawlVenue — event-level sourceHash', () => {
         .from(notifications)
         .where(eq(notifications.category, 'crawl.verified_event_changed'))
 
-      const venueAlert = allAlerts.find(
-        (a) =>
-          a.metadata != null && JSON.parse(a.metadata).venueId === venue.id,
-      )
+      const venueAlert = allAlerts.find((a) => {
+        try {
+          const meta = a.metadata ? JSON.parse(a.metadata) : {}
+          return meta.venueId === venue.id
+        } catch {
+          return false
+        }
+      })
 
       expect(venueAlert).toBeDefined()
       expect(venueAlert?.body).toContain('Metallica Live')
