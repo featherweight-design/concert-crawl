@@ -1,33 +1,83 @@
 import Anthropic from '@anthropic-ai/sdk'
-import type { LLMResult, NormalizedEvent } from '../../types.js'
+import { z } from 'zod'
+import type { LLMResult } from '../../types.js'
+
+const NormalizedEventSchema = z.object({
+  title: z.string(),
+  artist: z.string(),
+  date: z.string(),
+  doorsTime: z.string().nullable().optional(),
+  showTime: z.string().nullable().optional(),
+  ticketUrl: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  imageUrl: z.string().nullable().optional(),
+  confidence: z.number(),
+})
+
+const ToolInputSchema = z.object({
+  events: z.array(NormalizedEventSchema),
+})
 
 const MODEL = 'claude-haiku-4-5-20251001'
 
-const SYSTEM_PROMPT = `You are a concert event data extractor. Given HTML from a venue website, extract all upcoming concert events and return them as JSON.
-
-Return ONLY a JSON object with this exact structure:
-{
-  "events": [
-    {
-      "title": "Full event/show title",
-      "artist": "Main performing artist or band name",
-      "date": "YYYY-MM-DD",
-      "doorsTime": "HH:MM:SS or null",
-      "showTime": "HH:MM:SS or null",
-      "ticketUrl": "https://... or null",
-      "description": "Short description or null",
-      "imageUrl": "https://... or null",
-      "confidence": 0.0 to 1.0
-    }
-  ]
-}
+const SYSTEM_PROMPT = `You are a concert event data extractor. Given HTML from a venue website, call the save_events tool with all upcoming concert events you find.
 
 Rules:
 - date must be ISO format YYYY-MM-DD
 - confidence reflects how certain you are the extraction is accurate (0.0-1.0)
-- Return an empty events array if no concert events are found
 - Only include actual upcoming events, not past events
-- If artist is unclear, use the event title as the artist`
+- If artist is unclear, use the event title as the artist
+- Pass an empty events array if no concert events are found`
+
+const SAVE_EVENTS_TOOL: Anthropic.Tool = {
+  name: 'save_events',
+  description: 'Save all extracted upcoming concert events from the venue page',
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      events: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            title: { type: 'string', description: 'Full event/show title' },
+            artist: {
+              type: 'string',
+              description: 'Main performing artist or band name',
+            },
+            date: { type: 'string', description: 'ISO date YYYY-MM-DD' },
+            doorsTime: {
+              type: ['string', 'null'],
+              description: 'HH:MM:SS or null',
+            },
+            showTime: {
+              type: ['string', 'null'],
+              description: 'HH:MM:SS or null',
+            },
+            ticketUrl: {
+              type: ['string', 'null'],
+              description: 'Ticket purchase URL or null',
+            },
+            description: {
+              type: ['string', 'null'],
+              description: 'Short description or null',
+            },
+            imageUrl: {
+              type: ['string', 'null'],
+              description: 'Event image URL or null',
+            },
+            confidence: {
+              type: 'number',
+              description: 'Extraction confidence 0.0 to 1.0',
+            },
+          },
+          required: ['title', 'artist', 'date', 'confidence'],
+        },
+      },
+    },
+    required: ['events'],
+  },
+}
 
 function cleanHtml(html: string): string {
   return html
@@ -50,7 +100,9 @@ export async function extractWithLlm(
 
   const response = await client.messages.create({
     model: MODEL,
-    max_tokens: 4096,
+    max_tokens: 16384,
+    tools: [SAVE_EVENTS_TOOL],
+    tool_choice: { type: 'tool', name: 'save_events' },
     system: [
       {
         type: 'text',
@@ -74,29 +126,35 @@ export async function extractWithLlm(
     cacheWriteTokens: usage.cache_creation_input_tokens ?? 0,
   }
 
-  const textBlock = response.content.find((b) => b.type === 'text')
-  if (!textBlock || textBlock.type !== 'text') {
-    console.log(JSON.stringify({ event: 'llm.no_text_response', sourceUrl }))
+  const toolUseBlock = response.content.find((b) => b.type === 'tool_use')
+  if (!toolUseBlock || toolUseBlock.type !== 'tool_use') {
+    console.log(JSON.stringify({ event: 'llm.no_tool_use', sourceUrl }))
     return { events: [], usage: tokenUsage }
   }
 
-  let parsed: { events?: NormalizedEvent[] }
-  try {
-    parsed = JSON.parse(textBlock.text) as { events?: NormalizedEvent[] }
-  } catch {
+  const parsed = ToolInputSchema.safeParse(toolUseBlock.input)
+  if (!parsed.success) {
     console.log(
       JSON.stringify({
-        event: 'llm.parse_error',
+        event: 'llm.invalid_tool_input',
         sourceUrl,
-        raw: textBlock.text.substring(0, 200),
+        error: parsed.error.message,
       }),
     )
     return { events: [], usage: tokenUsage }
   }
 
-  const events = (parsed.events ?? []).map((e) => ({
-    ...e,
+  const events = parsed.data.events.map((e) => ({
+    title: e.title,
+    artist: e.artist,
+    date: e.date,
+    confidence: e.confidence,
     sourceUrl,
+    ...(e.doorsTime != null && { doorsTime: e.doorsTime }),
+    ...(e.showTime != null && { showTime: e.showTime }),
+    ...(e.ticketUrl != null && { ticketUrl: e.ticketUrl }),
+    ...(e.description != null && { description: e.description }),
+    ...(e.imageUrl != null && { imageUrl: e.imageUrl }),
   }))
 
   console.log(
