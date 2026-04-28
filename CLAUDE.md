@@ -320,10 +320,24 @@ Both eliminate the need to cast. Never cast `publicMetadata` or `sessionClaims` 
 
 ## Current Status
 
-Phase: **Phase 1 complete — Phase 2 (venue management) ready to begin**
+Phase: **Phase 3 complete — Phase 4 (design system / theming) next**
 
-- Phase 1 merged: `feat/phase-1-foundation` — CI in progress
-- Phase 2 plan written: `docs/superpowers/plans/2026-04-23-phase-2-venue-management.md`
-- Domain purchase pending: `concertcrawl.com` via Cloudflare Registrar
+- Phase 3 merged (PRs #14–17): Playwright crawler, Claude Haiku extraction, crawl trigger UI, crawl history table — staging validation in progress
+- Phase 4 plan: design system architecture (three themes: Electric, Jade, Light) — see `design/design_handoff_brand_and_theming/README.md`
+- Phase 5 will be consumer-facing UI (browse + calendar) — hi-fi handoff from Claude Design follows Phase 4
+- Domain: `concertcrawl.app` via Cloudflare Registrar (~$15/yr)
+
+### Revised Phase Sequence
+
+| Phase | Name                                 | Status                             |
+| ----- | ------------------------------------ | ---------------------------------- |
+| 1     | Foundation                           | ✅ Complete                        |
+| 2     | Venue Management (Admin)             | ✅ Complete                        |
+| 3     | Crawler v1                           | ✅ Complete (staging validation)   |
+| 4     | Design System / Theming Architecture | 🔜 Next                            |
+| 5     | Consumer Calendar UI                 | Blocked on Phase 4 + hi-fi handoff |
+| 6     | Observability + Testing              | —                                  |
+| 7     | Automation + Scheduling              | —                                  |
+| 8     | Beta Launch Prep                     | —                                  |
 
 See the phased development plan in the design spec for the full roadmap (Phases 1–7).

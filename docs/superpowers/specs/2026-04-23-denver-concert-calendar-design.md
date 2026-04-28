@@ -856,17 +856,32 @@ Complete all of the following before writing any code. Most Phase 1 work is bloc
 - Low-confidence event flagging
 - **Milestone:** Admin can trigger a crawl, events appear in DB, cost is recorded
 
-### Phase 4 — Consumer Calendar UI
+### Phase 4 — Design System / Theming Architecture
 
-- Calendar view (month/week/list)
+**Pure theming phase — no product UI features.** Establishes the token foundation that all consumer and admin UI work builds on.
+
+- Three-theme token system: Electric (dark default), Jade (alternate dark), Light (light default)
+- `src/theme/` module: `themes.ts` (THEMES export + ThemeName type), `ThemeProvider.tsx` (context, system-pref detection, localStorage sync), `applyTheme.ts` (writes CSS vars + `data-theme` to `<html>`), `index.css` (Electric tokens as `:root` defaults for SSR/no-JS fallback)
+- ~35 semantic tokens per theme (surfaces, text/icons, borders, brand, states, misc) — see `design/design_handoff_brand_and_theming/README.md` for full token contract and hex values
+- Inter (UI) + JetBrains Mono fonts wired up
+- Logo mark (SVG cluster path) + wordmark ("concert**crawl.**") implemented as React components
+- Replace existing `@media (prefers-color-scheme)` dark mode approach with the token system; all existing components migrated to `var(--token)` references
+- Component authoring rule enforced: never reference hex values in components — always `var(--token)`
+- Theme QA: every component tested in all three themes before merge
+- Settings → Appearance: user can override system default; persisted to localStorage
+- **Milestone:** All three themes render correctly across existing admin UI; token system documented for Claude Design to author hi-fi Phase 5 mocks against
+
+### Phase 5 — Consumer Calendar UI
+
+- Calendar view (month/week toggle — list ↔ calendar in same route, segmented control top-right)
 - Event detail pages with JSON-LD structured data
-- Search + filter (artist, venue, date range)
+- Search + filter (artist, venue, date range, genre, price range)
 - User profile (saved events)
-- Mobile-first responsive layout, dark/light mode
+- Mobile-first responsive layout (320px baseline → 768px → 1024px+)
 - PWA manifest
 - **Milestone:** Authenticated users can browse, search, and save events
 
-### Phase 5 — Observability + Testing
+### Phase 6 — Observability + Testing
 
 - Pino structured logging across API and crawler
 - Sentry error tracking (API + web)
@@ -878,7 +893,7 @@ Complete all of the following before writing any code. Most Phase 1 work is bloc
 - Grafana alerts on smoke test failure
 - **Milestone:** Full observability stack live; smoke tests running; alerts firing correctly
 
-### Phase 6 — Automation + Scheduling
+### Phase 7 — Automation + Scheduling
 
 - Render cron job for daily crawler (all active venues)
 - Crawl status dashboard in admin UI
@@ -886,7 +901,7 @@ Complete all of the following before writing any code. Most Phase 1 work is bloc
 - Email alerts on crawl failure (Resend)
 - **Milestone:** Fully automated daily crawls, admin visibility into crawl health
 
-### Phase 7 — Beta Launch Prep
+### Phase 8 — Beta Launch Prep
 
 - Seed with Denver venue list (~50–100 venues)
 - End-to-end beta flow: invite code → signup → browse events
