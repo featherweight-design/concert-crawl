@@ -87,7 +87,7 @@ export async function crawlVenue(
       .orderBy(desc(crawlRuns.createdAt))
       .limit(1)
 
-    if (lastRun?.pageHash === pageHash) {
+    if (lastRun?.pageHash != null && lastRun.pageHash === pageHash) {
       console.log(
         JSON.stringify({
           event: 'crawl.skipped',
