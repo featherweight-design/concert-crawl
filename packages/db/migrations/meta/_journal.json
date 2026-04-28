@@ -8,6 +8,13 @@
       "when": 1777043037141,
       "tag": "0000_mixed_blazing_skull",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777340036164,
+      "tag": "0001_groovy_rattler",
+      "breakpoints": true
     }
   ]
 }

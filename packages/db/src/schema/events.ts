@@ -8,6 +8,7 @@ import {
   text,
   time,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
 import { venues } from './venues.js'
@@ -55,7 +56,7 @@ export const events = pgTable(
     dateStatusIdx: index('events_date_status_idx').on(table.date, table.status),
     venueIdx: index('events_venue_id_idx').on(table.venueId),
     artistIdx: index('events_artist_idx').on(table.artist),
-    venueDateArtistIdx: index('events_venue_date_artist_idx').on(
+    venueDateArtistIdx: uniqueIndex('events_venue_date_artist_idx').on(
       table.venueId,
       table.date,
       table.artist,
