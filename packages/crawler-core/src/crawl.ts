@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm'
+import { and, desc, eq, sql } from 'drizzle-orm'
 import {
   db,
   venues,
@@ -13,6 +13,7 @@ import { fetchPage, CrawlFetchError } from './lib/fetcher.js'
 import { extractJsonLd } from './lib/extractors/json-ld.js'
 import { extractWithLlm } from './lib/extractors/llm.js'
 import { calculateCost } from './lib/cost.js'
+import { hashPage } from './lib/hash.js'
 import type { NormalizedEvent, TokenUsage } from './types.js'
 
 const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
@@ -74,6 +75,51 @@ export async function crawlVenue(
       venue.websiteUrl,
       venue.crawlDelayMs,
     )
+
+    const pageHash = hashPage(html)
+
+    const [lastRun] = await db
+      .select({ pageHash: crawlRuns.pageHash })
+      .from(crawlRuns)
+      .where(
+        and(eq(crawlRuns.venueId, venueId), eq(crawlRuns.status, 'success')),
+      )
+      .orderBy(desc(crawlRuns.createdAt))
+      .limit(1)
+
+    if (lastRun?.pageHash === pageHash) {
+      console.log(
+        JSON.stringify({
+          event: 'crawl.skipped',
+          venueId,
+          url: venue.websiteUrl,
+        }),
+      )
+      const [crawlRun] = await db
+        .insert(crawlRuns)
+        .values({
+          id,
+          venueId,
+          status: 'success',
+          httpStatusCode: httpStatus,
+          robotsTxtBlocked: 'no',
+          pageHash,
+          eventsFound: 0,
+          eventsInserted: 0,
+          durationMs: Date.now() - startedAt,
+        })
+        .returning()
+      if (!crawlRun) throw new Error('crawl_runs insert returned no row')
+      await db
+        .update(venues)
+        .set({
+          lastCrawledAt: new Date(),
+          consecutiveFailures: 0,
+          updatedAt: new Date(),
+        })
+        .where(eq(venues.id, venueId))
+      return crawlRun
+    }
 
     // Structured data first — LLM fallback only when needed
     let normalizedEvents: NormalizedEvent[] = extractJsonLd(html, finalUrl)
@@ -155,6 +201,7 @@ export async function crawlVenue(
         httpStatusCode: httpStatus,
         robotsTxtBlocked: 'no',
         extractionStrategyUsed: strategy,
+        pageHash,
         eventsFound: normalizedEvents.length,
         eventsInserted,
         durationMs,
