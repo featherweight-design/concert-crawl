@@ -15,6 +15,13 @@
       "when": 1777340036164,
       "tag": "0001_groovy_rattler",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777390476155,
+      "tag": "0002_even_crystal",
+      "breakpoints": true
     }
   ]
 }
