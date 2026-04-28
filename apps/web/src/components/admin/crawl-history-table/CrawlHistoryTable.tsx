@@ -1,7 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import type { CrawlRun } from '@concert-crawl/types'
 import { apiClient } from '@/lib/api'
-import { formatISODate, formatDurationMs } from '@/lib/time'
+import { formatISODate, formatDurationMs, DENVER_TIME_ZONE } from '@/lib/time'
 import { Badge } from '@/components/ui/badge'
 import {
   Table,
@@ -14,28 +14,15 @@ import {
 import { CRAWL_STATUS_BADGES } from './definitions/constants'
 import { copy } from './definitions/copy'
 
-const TIME_ZONE = 'America/Denver'
-
 async function fetchCrawlHistory(venueId: string): Promise<CrawlRun[]> {
   const { getToken } = await auth()
   const token = await getToken()
-  if (!token) return []
+  if (!token) throw new Error('Not authenticated')
 
-  try {
-    return await apiClient.get<CrawlRun[]>(
-      `/v1/admin/crawl/runs?venueId=${venueId}&limit=10`,
-      token,
-    )
-  } catch (err) {
-    console.error(
-      JSON.stringify({
-        event: 'crawl_history.fetch_error',
-        venueId,
-        error: String(err),
-      }),
-    )
-    return []
-  }
+  return apiClient.get<CrawlRun[]>(
+    `/v1/admin/crawl/runs?venueId=${venueId}&limit=10`,
+    token,
+  )
 }
 
 interface CrawlHistoryTableProps {
@@ -79,7 +66,8 @@ export const CrawlHistoryTable = async ({
               return (
                 <TableRow key={run.id}>
                   <TableCell className="whitespace-nowrap">
-                    {formatISODate(run.createdAt, TIME_ZONE)} {copy.timeSuffix}
+                    {formatISODate(run.createdAt, DENVER_TIME_ZONE)}{' '}
+                    {copy.timeSuffix}
                   </TableCell>
                   <TableCell>
                     {badgeConfig ? (
@@ -104,7 +92,9 @@ export const CrawlHistoryTable = async ({
                       ? formatDurationMs(run.durationMs)
                       : copy.noValue}
                   </TableCell>
-                  <TableCell className="text-xs text-red-500 max-w-xs truncate">
+                  <TableCell
+                    className={`text-xs max-w-xs truncate ${run.errorMessage ? 'text-red-500' : 'text-slate-500'}`}
+                  >
                     {run.errorMessage ?? copy.noValue}
                   </TableCell>
                 </TableRow>

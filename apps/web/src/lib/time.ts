@@ -1,3 +1,5 @@
+export const DENVER_TIME_ZONE = 'America/Denver'
+
 export const formatISODate = (
   iso: string,
   timeZone: string,

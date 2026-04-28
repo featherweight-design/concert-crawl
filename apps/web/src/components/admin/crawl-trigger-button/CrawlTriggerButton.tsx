@@ -67,14 +67,18 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
           pollInterval.current = null
           setTriggerState('error')
           setErrorMessage(
-            err instanceof ApiError ? err.message : copy.errors.pollFailed,
+            err instanceof ApiError || err instanceof Error
+              ? err.message
+              : copy.errors.pollFailed,
           )
         }
       }, POLL_INTERVAL_MS)
     } catch (err) {
       setTriggerState('error')
       setErrorMessage(
-        err instanceof ApiError ? err.message : copy.errors.triggerFailed,
+        err instanceof ApiError || err instanceof Error
+          ? err.message
+          : copy.errors.triggerFailed,
       )
     }
   }
