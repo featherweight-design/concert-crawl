@@ -92,8 +92,9 @@ Go to each service in the Render dashboard → **Environment** tab.
 1. Trigger a manual deploy for both **concert-crawl-api** and **concert-crawl-web** in the Render dashboard
 2. Wait for deploys to complete (watch the deploy logs)
 3. Verify API health: `curl https://concert-crawl-api.onrender.com/v1/health` → expect `200 OK`
-4. Open `https://concertcrawl.app` in a browser — verify the app loads and auth works
-5. Run the production smoke tests: `pnpm test:smoke` (Playwright, configured in Phase 3+)
+4. Verify CORS: `curl -I -X OPTIONS https://concert-crawl-api.onrender.com/v1/admin/venues -H "Origin: https://concertcrawl.app"` → response must include `access-control-allow-origin: https://concertcrawl.app`. If missing, check that `ALLOWED_ORIGIN=https://concertcrawl.app` is set on the **concert-crawl-api** service.
+5. Open `https://concertcrawl.app` in a browser — verify the app loads and auth works
+6. Run the production smoke tests: `pnpm test:smoke` (Playwright, configured in Phase 3+)
 
 ---
 
