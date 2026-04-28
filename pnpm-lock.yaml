@@ -32,6 +32,9 @@ importers:
       '@clerk/backend':
         specifier: ^1.0.0
         version: 1.34.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      '@concert-crawl/crawler-core':
+        specifier: workspace:*
+        version: link:../../packages/crawler-core
       '@concert-crawl/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -195,6 +198,9 @@ importers:
       '@concert-crawl/types':
         specifier: workspace:*
         version: link:../types
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(postgres@3.4.9)
       playwright:
         specifier: ^1.50.0
         version: 1.59.1

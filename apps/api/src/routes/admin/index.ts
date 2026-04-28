@@ -4,6 +4,7 @@ import { clerkAuth } from '../../middleware/auth.js'
 import { db, auditLog } from '@concert-crawl/db'
 import { venuesAdminRouter } from './venues.js'
 import { inviteCodesAdminRouter } from './invite-codes.js'
+import { crawlAdminRouter } from './crawl.js'
 
 export type AdminVariables = {
   Variables: {
@@ -51,3 +52,4 @@ adminRouter.use('*', async (ctx, next) => {
 
 adminRouter.route('/venues', venuesAdminRouter)
 adminRouter.route('/invite-codes', inviteCodesAdminRouter)
+adminRouter.route('/crawl', crawlAdminRouter)

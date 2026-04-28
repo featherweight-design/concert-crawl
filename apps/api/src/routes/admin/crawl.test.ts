@@ -1,0 +1,195 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { createApp } from '../../app.js'
+
+const mockGetAuth = vi.fn()
+vi.mock('@hono/clerk-auth', () => ({
+  clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
+    next(),
+  getAuth: () => mockGetAuth(),
+}))
+
+vi.mock('drizzle-orm', () => ({
+  eq: vi.fn(),
+  and: vi.fn(),
+  desc: vi.fn(),
+}))
+
+const mockCrawlVenue = vi.fn()
+vi.mock('@concert-crawl/crawler-core', () => ({
+  crawlVenue: (...args: unknown[]) => mockCrawlVenue(...args),
+}))
+
+vi.mock('@concert-crawl/db', () => ({
+  db: {
+    select: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnValue([]),
+    insert: vi.fn().mockReturnThis(),
+    values: vi.fn().mockReturnThis(),
+    returning: vi.fn().mockResolvedValue([]),
+  },
+  venues: {},
+  crawlRuns: {},
+  auditLog: {},
+  inviteCodes: {},
+}))
+
+const VENUE_ID = '00000000-0000-0000-0000-000000000001'
+const RUN_ID = '00000000-0000-0000-0000-000000000002'
+
+const mockVenue = {
+  id: VENUE_ID,
+  name: 'Red Rocks Amphitheatre',
+  slug: 'red-rocks',
+  websiteUrl: 'https://www.redrocksonline.com',
+  city: 'Denver',
+  active: true,
+  verified: true,
+  consecutiveFailures: 0,
+  crawlDelayMs: 3000,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+}
+
+const mockCrawlRun = {
+  id: RUN_ID,
+  venueId: VENUE_ID,
+  status: 'success',
+  httpStatusCode: 200,
+  robotsTxtBlocked: 'no',
+  extractionStrategyUsed: 'structured_data',
+  eventsFound: 5,
+  eventsInserted: 5,
+  errorMessage: null,
+  durationMs: 4200,
+  createdAt: new Date(),
+}
+
+function adminAuth() {
+  mockGetAuth.mockReturnValue({
+    userId: 'admin_123',
+    sessionClaims: { metadata: { role: 'admin' } },
+  })
+}
+
+describe('Admin crawl routes', () => {
+  beforeEach(() => {
+    mockGetAuth.mockReset()
+    mockCrawlVenue.mockReset()
+  })
+
+  describe('POST /v1/admin/crawl/:venueId', () => {
+    it('returns 401 for unauthenticated requests', async () => {
+      mockGetAuth.mockReturnValue(null)
+      const res = await createApp().request(`/v1/admin/crawl/${VENUE_ID}`, {
+        method: 'POST',
+      })
+      expect(res.status).toBe(401)
+    })
+
+    it('returns 403 for non-admin users', async () => {
+      mockGetAuth.mockReturnValue({
+        userId: 'user_123',
+        sessionClaims: { metadata: { role: 'user' } },
+      })
+      const res = await createApp().request(`/v1/admin/crawl/${VENUE_ID}`, {
+        method: 'POST',
+      })
+      expect(res.status).toBe(403)
+    })
+
+    it('returns 400 for non-UUID venueId', async () => {
+      adminAuth()
+      const res = await createApp().request('/v1/admin/crawl/not-a-uuid', {
+        method: 'POST',
+      })
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 404 when venue does not exist', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      vi.mocked(db.select().from().where).mockResolvedValueOnce([])
+      const res = await createApp().request(`/v1/admin/crawl/${VENUE_ID}`, {
+        method: 'POST',
+      })
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 400 when venue is inactive', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      vi.mocked(db.select().from().where).mockResolvedValueOnce([
+        { ...mockVenue, active: false },
+      ])
+      const res = await createApp().request(`/v1/admin/crawl/${VENUE_ID}`, {
+        method: 'POST',
+      })
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 400 when venue is not verified', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      vi.mocked(db.select().from().where).mockResolvedValueOnce([
+        { ...mockVenue, verified: false },
+      ])
+      const res = await createApp().request(`/v1/admin/crawl/${VENUE_ID}`, {
+        method: 'POST',
+      })
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 202 with crawlRunId and starts crawl for valid venue', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      vi.mocked(db.select().from().where).mockResolvedValueOnce([mockVenue])
+      mockCrawlVenue.mockResolvedValue(mockCrawlRun)
+
+      const res = await createApp().request(`/v1/admin/crawl/${VENUE_ID}`, {
+        method: 'POST',
+      })
+
+      expect(res.status).toBe(202)
+      const body = (await res.json()) as {
+        success: boolean
+        data: { crawlRunId: string }
+      }
+      expect(body.success).toBe(true)
+      expect(typeof body.data.crawlRunId).toBe('string')
+    })
+  })
+
+  describe('GET /v1/admin/crawl/runs/:id', () => {
+    it('returns 400 for non-UUID id', async () => {
+      adminAuth()
+      const res = await createApp().request('/v1/admin/crawl/runs/not-a-uuid')
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 404 when crawl run does not exist', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      vi.mocked(db.select().from().where).mockResolvedValueOnce([])
+      const res = await createApp().request(`/v1/admin/crawl/runs/${RUN_ID}`)
+      expect(res.status).toBe(404)
+    })
+
+    it('returns the crawl run record for a completed run', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      vi.mocked(db.select().from().where).mockResolvedValueOnce([mockCrawlRun])
+      const res = await createApp().request(`/v1/admin/crawl/runs/${RUN_ID}`)
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as {
+        success: boolean
+        data: typeof mockCrawlRun
+      }
+      expect(body.success).toBe(true)
+      expect(body.data.id).toBe(RUN_ID)
+      expect(body.data.status).toBe('success')
+    })
+  })
+})

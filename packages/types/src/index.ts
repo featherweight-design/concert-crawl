@@ -77,6 +77,22 @@ export type NewVenue = Omit<
   'id' | 'createdAt' | 'updatedAt' | 'lastCrawledAt' | 'consecutiveFailures'
 >
 
+// CrawlRun — represents the JSON-serialized API response shape.
+// 'in_progress' is a virtual status used during async crawl execution (not persisted to DB).
+export interface CrawlRun {
+  id: string
+  venueId: string
+  status: CrawlStatus | 'in_progress'
+  httpStatusCode: number | null
+  robotsTxtBlocked: string | null
+  extractionStrategyUsed: string | null
+  eventsFound: number
+  eventsInserted: number
+  errorMessage: string | null
+  durationMs: number | null
+  createdAt: string
+}
+
 // InviteCode — represents the JSON-serialized API response shape.
 // Date fields are ISO 8601 strings because fetch().json() cannot revive Date objects.
 export interface InviteCode {

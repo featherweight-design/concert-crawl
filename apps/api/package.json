@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@clerk/backend": "^1.0.0",
+    "@concert-crawl/crawler-core": "workspace:*",
     "@concert-crawl/db": "workspace:*",
     "@concert-crawl/types": "workspace:*",
     "@hono/clerk-auth": "^2.0.0",
