@@ -16,5 +16,6 @@ auth:bearer {
 
 assert {
   res.status: eq 202
-  res.body.crawlRunId: isDefined
+  res.body.success: eq true
+  res.body.data.crawlRunId: isDefined
 }

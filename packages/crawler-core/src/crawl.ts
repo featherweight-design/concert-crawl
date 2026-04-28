@@ -43,7 +43,7 @@ export async function crawlVenue(
     JSON.stringify({ event: 'crawl.start', venueId, venueName: venue.name }),
   )
 
-  // Check robots.txt — fail closed (never crawl if disallowed)
+  // Check robots.txt — fails open on fetch errors, blocks only on explicit Disallow
   const allowed = await isAllowed(venue.websiteUrl, USER_AGENT)
   if (!allowed) {
     console.log(
@@ -203,7 +203,7 @@ export async function crawlVenue(
 
     const newFailureCount = updatedVenue?.consecutiveFailures ?? 3
 
-    if (newFailureCount >= 3) {
+    if (newFailureCount === 3) {
       await db.insert(notifications).values({
         type: 'admin_alert',
         category: 'crawl.failed',

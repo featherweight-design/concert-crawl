@@ -72,7 +72,7 @@ crawlAdminRouter.post(
   },
 )
 
-// GET /v1/admin/crawl-runs/:id — poll a single crawl run by ID
+// GET /v1/admin/crawl/runs/:id — poll a single crawl run by ID
 crawlAdminRouter.get(
   '/runs/:id',
   zValidator('param', crawlRunIdSchema),
@@ -113,7 +113,7 @@ crawlAdminRouter.get(
   },
 )
 
-// GET /v1/admin/crawl-runs?venueId=:id&limit=10 — list crawl runs for a venue
+// GET /v1/admin/crawl/runs?venueId=:id&limit=10 — list crawl runs for a venue
 const listQuerySchema = z.object({
   venueId: z.string().uuid(),
   limit: z.coerce.number().int().min(1).max(50).default(10),

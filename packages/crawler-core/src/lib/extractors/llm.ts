@@ -2,16 +2,24 @@ import Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod'
 import type { LLMResult } from '../../types.js'
 
+const isoDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD')
+  .refine((v) => {
+    const d = new Date(`${v}T00:00:00.000Z`)
+    return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v
+  }, 'date must be a valid calendar date')
+
 const NormalizedEventSchema = z.object({
   title: z.string(),
   artist: z.string(),
-  date: z.string(),
+  date: isoDateSchema,
   doorsTime: z.string().nullable().optional(),
   showTime: z.string().nullable().optional(),
   ticketUrl: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   imageUrl: z.string().nullable().optional(),
-  confidence: z.number(),
+  confidence: z.number().min(0).max(1),
 })
 
 const ToolInputSchema = z.object({

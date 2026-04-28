@@ -16,7 +16,8 @@ auth:bearer {
 
 assert {
   res.status: eq 200
-  res.body.id: isDefined
-  res.body.venueId: isDefined
-  res.body.status: isDefined
+  res.body.success: eq true
+  res.body.data.id: isDefined
+  res.body.data.venueId: isDefined
+  res.body.data.status: isDefined
 }
