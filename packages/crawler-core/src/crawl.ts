@@ -87,7 +87,7 @@ export async function crawlVenue(
       .orderBy(desc(crawlRuns.createdAt))
       .limit(1)
 
-    if (lastRun?.pageHash != null && lastRun.pageHash === pageHash) {
+    if (lastRun?.pageHash !== null && lastRun?.pageHash === pageHash) {
       console.log(
         JSON.stringify({
           event: 'crawl.skipped',
@@ -170,7 +170,7 @@ export async function crawlVenue(
         return (
           existing &&
           existing.verified === true &&
-          existing.sourceHash != null &&
+          existing.sourceHash !== null &&
           existing.sourceHash !== e.sourceHash
         )
       })
@@ -191,7 +191,9 @@ export async function crawlVenue(
       const eventsToUpsert = eventsWithHashes.filter((e) => {
         const existing = existingMap.get(`${e.artist}|${e.date}`)
         if (!existing) return true // new event
-        return existing.sourceHash !== e.sourceHash // content changed
+        return (
+          existing.sourceHash !== null && existing.sourceHash !== e.sourceHash
+        ) // content changed
       })
 
       if (eventsToUpsert.length > 0) {
@@ -210,7 +212,7 @@ export async function crawlVenue(
           sourceUrl: event.sourceUrl,
           sourceHash: event.sourceHash,
           status: 'upcoming' as const,
-          confidenceScore: parseFloat(event.confidence.toFixed(2)),
+          confidenceScore: event.confidence.toFixed(2),
           verified: strategy === 'structured_data',
           extractionStrategy: strategy,
         }))
