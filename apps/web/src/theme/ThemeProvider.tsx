@@ -11,13 +11,21 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
+function isThemeName(value: string): value is ThemeName {
+  return Object.hasOwn(THEMES, value)
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeName>('electric')
+  const [theme, setThemeState] = useState<ThemeName>(() => {
+    if (typeof document === 'undefined') return 'electric'
+    const stored = document.documentElement.getAttribute('data-theme')
+    return stored && isThemeName(stored) ? stored : 'electric'
+  })
 
   useEffect(() => {
     const stored = document.documentElement.getAttribute('data-theme')
-    if (stored && stored in THEMES) {
-      setThemeState(stored as ThemeName)
+    if (stored && isThemeName(stored)) {
+      setThemeState(stored)
     }
   }, [])
 

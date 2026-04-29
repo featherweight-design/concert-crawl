@@ -78,6 +78,18 @@ describe('ThemeProvider', () => {
     expect(result.current.theme).toBe('light')
   })
 
+  it('ignores data-theme values that are not valid theme names', async () => {
+    document.documentElement.setAttribute('data-theme', 'toString')
+
+    const { result } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+    })
+
+    await act(async () => {})
+
+    expect(result.current.theme).toBe('electric')
+  })
+
   it('useTheme throws when called outside ThemeProvider', () => {
     expect(() => renderHook(() => useTheme())).toThrow(
       'useTheme must be used within ThemeProvider',
