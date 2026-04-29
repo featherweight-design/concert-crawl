@@ -158,8 +158,9 @@ export async function extractWithLlm(
     date: e.date,
     confidence: e.confidence,
     sourceUrl,
-    ...(e.doorsTime != null && { doorsTime: e.doorsTime }),
-    ...(e.showTime != null && { showTime: e.showTime }),
+    ...(e.doorsTime != null &&
+      e.doorsTime !== '' && { doorsTime: e.doorsTime }),
+    ...(e.showTime != null && e.showTime !== '' && { showTime: e.showTime }),
     ...(e.ticketUrl != null && { ticketUrl: e.ticketUrl }),
     ...(e.description != null && { description: e.description }),
     ...(e.imageUrl != null && { imageUrl: e.imageUrl }),

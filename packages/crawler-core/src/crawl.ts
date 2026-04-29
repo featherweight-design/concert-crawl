@@ -197,8 +197,10 @@ export async function crawlVenue(
           title: event.title,
           artist: event.artist,
           date: event.date,
-          doorsTime: event.doorsTime ?? null,
-          showTime: event.showTime ?? null,
+          doorsTime:
+            event.doorsTime && event.doorsTime !== '' ? event.doorsTime : null,
+          showTime:
+            event.showTime && event.showTime !== '' ? event.showTime : null,
           ticketUrl: event.ticketUrl ?? null,
           description: event.description ?? null,
           imageUrl: event.imageUrl ?? null,
