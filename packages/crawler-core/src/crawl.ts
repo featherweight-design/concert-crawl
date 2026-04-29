@@ -168,7 +168,10 @@ export async function crawlVenue(
       const changedVerified = eventsWithHashes.filter((e) => {
         const existing = existingMap.get(`${e.artist}|${e.date}`)
         return (
-          existing?.verified === true && existing.sourceHash !== e.sourceHash
+          existing &&
+          existing.verified === true &&
+          existing.sourceHash != null &&
+          existing.sourceHash !== e.sourceHash
         )
       })
 
@@ -207,7 +210,7 @@ export async function crawlVenue(
           sourceUrl: event.sourceUrl,
           sourceHash: event.sourceHash,
           status: 'upcoming' as const,
-          confidenceScore: event.confidence.toFixed(2),
+          confidenceScore: parseFloat(event.confidence.toFixed(2)),
           verified: strategy === 'structured_data',
           extractionStrategy: strategy,
         }))
