@@ -2,7 +2,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { THEMES, type ThemeName } from '@/theme/themes'
+import { THEMES, THEME_NAMES, type ThemeName } from '@/theme/themes'
 import { useTheme } from '@/theme'
 
 const THEME_LABELS: Record<ThemeName, string> = {
@@ -16,7 +16,7 @@ export function ThemePicker() {
 
   return (
     <div className="flex flex-wrap gap-3">
-      {(Object.keys(THEMES) as ThemeName[]).map((name) => {
+      {THEME_NAMES.map((name) => {
         const tokens = THEMES[name]
         const isSelected = theme === name
 

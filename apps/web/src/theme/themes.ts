@@ -86,3 +86,9 @@ export const THEMES: Record<ThemeName, Record<string, string>> = {
   jade,
   light,
 }
+
+export const THEME_NAMES = [
+  'electric',
+  'jade',
+  'light',
+] as const satisfies readonly ThemeName[]
