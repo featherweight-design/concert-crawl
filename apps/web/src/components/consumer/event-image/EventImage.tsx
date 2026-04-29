@@ -1,3 +1,6 @@
+'use client'
+
+import { useState } from 'react'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
 
@@ -10,6 +13,30 @@ interface EventImageProps {
   sizes?: string
 }
 
+function Fallback({
+  fallbackInitial,
+  alt,
+  className,
+}: {
+  fallbackInitial: string | undefined
+  alt: string
+  className: string | undefined
+}) {
+  return (
+    <div
+      className={cn(
+        'flex items-center justify-center bg-surface-2 text-fg-subtle select-none',
+        className,
+      )}
+      aria-label={alt}
+    >
+      <span className="text-2xl font-bold opacity-40">
+        {fallbackInitial ?? '♪'}
+      </span>
+    </div>
+  )
+}
+
 export function EventImage({
   src,
   alt,
@@ -18,19 +45,15 @@ export function EventImage({
   fill = false,
   sizes,
 }: EventImageProps) {
-  if (!src) {
+  const [errored, setErrored] = useState(false)
+
+  if (!src || errored) {
     return (
-      <div
-        className={cn(
-          'flex items-center justify-center bg-surface-2 text-fg-subtle select-none',
-          className,
-        )}
-        aria-label={alt}
-      >
-        <span className="text-2xl font-bold opacity-40">
-          {fallbackInitial ?? '♪'}
-        </span>
-      </div>
+      <Fallback
+        fallbackInitial={fallbackInitial}
+        alt={alt}
+        className={className}
+      />
     )
   }
 
@@ -44,6 +67,7 @@ export function EventImage({
           sizes={sizes ?? '(max-width: 768px) 100vw, 50vw'}
           className="object-cover"
           loading="lazy"
+          onError={() => setErrored(true)}
         />
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
@@ -52,12 +76,7 @@ export function EventImage({
           alt={alt}
           className="h-full w-full object-cover"
           loading="lazy"
-          onError={(err) => {
-            const target = err.currentTarget
-            target.style.display = 'none'
-            const fallback = target.nextElementSibling
-            if (fallback) (fallback as HTMLElement).style.display = 'flex'
-          }}
+          onError={() => setErrored(true)}
         />
       )}
       {/* image-tint overlay — blends hotlinked images into active theme */}

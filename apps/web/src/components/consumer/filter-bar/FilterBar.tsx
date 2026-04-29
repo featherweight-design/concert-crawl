@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { useCallback, useTransition } from 'react'
+import { useCallback, useEffect, useState, useTransition } from 'react'
 import type { VenuePublic } from '@concert-crawl/types'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
@@ -38,6 +38,13 @@ export function FilterBar({ venues, className }: FilterBarProps) {
   const from = searchParams.get('from') ?? ''
   const hasFilters = search || venueSlug || from
 
+  // Controlled local state for search — keeps input in sync when URL changes
+  // (e.g. clear button, browser back/forward) without cursor-jump on every keystroke
+  const [searchInput, setSearchInput] = useState(search)
+  useEffect(() => {
+    setSearchInput(search)
+  }, [search])
+
   return (
     <div
       className={cn(
@@ -50,8 +57,11 @@ export function FilterBar({ venues, className }: FilterBarProps) {
       <Input
         type="search"
         placeholder="Artist or show name…"
-        defaultValue={search}
-        onChange={(evt) => updateParam('search', evt.target.value)}
+        value={searchInput}
+        onChange={(evt) => {
+          setSearchInput(evt.target.value)
+          updateParam('search', evt.target.value)
+        }}
         className="sm:max-w-xs"
         aria-label="Search artists and shows"
       />

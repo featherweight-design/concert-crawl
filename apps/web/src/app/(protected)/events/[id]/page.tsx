@@ -28,16 +28,14 @@ async function fetchEvent(id: string): Promise<EventWithVenue | null> {
 }
 
 async function fetchRelated(
-  venueId: string,
+  venueSlug: string,
   excludeId: string,
 ): Promise<EventWithVenue[]> {
   try {
     const result = await publicApiClient.get<EventsListResponse>(
-      `/v1/events?limit=4&offset=0`,
+      `/v1/events?venueSlug=${encodeURIComponent(venueSlug)}&limit=4&offset=0`,
     )
-    return result.data
-      .filter((ev) => ev.venueId === venueId && ev.id !== excludeId)
-      .slice(0, 3)
+    return result.data.filter((ev) => ev.id !== excludeId).slice(0, 3)
   } catch {
     return []
   }
@@ -51,12 +49,12 @@ export default async function EventDetailPage({
 
   if (!event) notFound()
 
-  const related = await fetchRelated(event.venueId, event.id)
+  const related = await fetchRelated(event.venue.slug, event.id)
 
   const showTime = formatShowTime(event.showTime)
   const doorsTime = formatShowTime(event.doorsTime)
   const price = formatPrice(event.ticketPriceMin, event.ticketPriceMax)
-  const dateLabel = formatEventDate(event.date)
+  const dateLabel = formatEventDate(event.date, event.venue.timezone)
 
   const isCancelled = event.status === 'cancelled'
   const isPostponed = event.status === 'postponed'

@@ -85,7 +85,11 @@ export default async function VenueProfilePage({
           ) : (
             <div className="flex flex-col gap-2">
               {upcomingEvents.map((event) => (
-                <VenueEventRow key={event.id} event={event} />
+                <VenueEventRow
+                  key={event.id}
+                  event={event}
+                  timezone={venue.timezone}
+                />
               ))}
             </div>
           )}
@@ -95,10 +99,16 @@ export default async function VenueProfilePage({
   )
 }
 
-function VenueEventRow({ event }: { event: Event }) {
+function VenueEventRow({
+  event,
+  timezone,
+}: {
+  event: Event
+  timezone: string
+}) {
   const showTime = formatShowTime(event.showTime)
   const price = formatPrice(event.ticketPriceMin, event.ticketPriceMax)
-  const dateLabel = formatEventDate(event.date, {
+  const dateLabel = formatEventDate(event.date, timezone, {
     weekday: 'short',
     month: 'short',
     day: 'numeric',

@@ -1,0 +1,1 @@
+ALTER TABLE "venues" ADD COLUMN "timezone" text DEFAULT 'America/Denver' NOT NULL;

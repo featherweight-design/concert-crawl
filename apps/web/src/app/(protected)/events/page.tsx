@@ -24,7 +24,12 @@ async function fetchEvents(
   if (typeof params['venueSlug'] === 'string')
     qs.set('venueSlug', params['venueSlug'])
   if (typeof params['from'] === 'string') qs.set('from', params['from'])
-  if (typeof params['offset'] === 'string') qs.set('offset', params['offset'])
+  const offsetParam = params['offset']
+  if (typeof offsetParam === 'string' && /^\d+$/.test(offsetParam)) {
+    const parsed = Number(offsetParam)
+    if (Number.isSafeInteger(parsed) && parsed >= 0)
+      qs.set('offset', String(parsed))
+  }
   qs.set('limit', String(PAGE_LIMIT))
 
   return publicApiClient.get<EventsListResponse>(`/v1/events?${qs.toString()}`)

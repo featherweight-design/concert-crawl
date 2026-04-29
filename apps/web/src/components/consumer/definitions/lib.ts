@@ -1,7 +1,8 @@
-import { DENVER_TIME_ZONE } from '@/lib/time'
+import { localDateString } from '@/lib/time'
 
 export function formatEventDate(
   dateStr: string,
+  timezone = 'UTC',
   options: Intl.DateTimeFormatOptions = {
     weekday: 'long',
     month: 'long',
@@ -11,7 +12,7 @@ export function formatEventDate(
   // dateStr is YYYY-MM-DD — append T00:00 so Date parses in local context
   const date = new Date(`${dateStr}T00:00:00`)
   return new Intl.DateTimeFormat('en-US', {
-    timeZone: DENVER_TIME_ZONE,
+    timeZone: timezone,
     ...options,
   }).format(date)
 }
@@ -46,23 +47,30 @@ export function formatPrice(
   return null
 }
 
-export function isToday(dateStr: string): boolean {
-  const today = new Date()
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-  return dateStr === todayStr
+export function isToday(dateStr: string, timezone = 'UTC'): boolean {
+  return dateStr === localDateString(timezone)
 }
 
-export function isTomorrow(dateStr: string): boolean {
-  const tomorrow = new Date()
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
-  return dateStr === tomorrowStr
+export function isTomorrow(dateStr: string, timezone = 'UTC'): boolean {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date(Date.now() + 86_400_000))
+
+  const year = parts.find((part) => part.type === 'year')?.value
+  const month = parts.find((part) => part.type === 'month')?.value
+  const day = parts.find((part) => part.type === 'day')?.value
+
+  if (!year || !month || !day) return false
+  return dateStr === `${year}-${month}-${day}`
 }
 
-export function dateGroupLabel(dateStr: string): string {
-  if (isToday(dateStr)) return 'Tonight'
-  if (isTomorrow(dateStr)) return 'Tomorrow'
-  return formatEventDate(dateStr, {
+export function dateGroupLabel(dateStr: string, timezone = 'UTC'): string {
+  if (isToday(dateStr, timezone)) return 'Tonight'
+  if (isTomorrow(dateStr, timezone)) return 'Tomorrow'
+  return formatEventDate(dateStr, timezone, {
     weekday: 'long',
     month: 'long',
     day: 'numeric',

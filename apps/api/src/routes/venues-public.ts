@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { db, events, venues } from '@concert-crawl/db'
 import { type SQL, and, asc, eq, gte } from 'drizzle-orm'
+import { todayInTimezone } from '../lib/time.js'
 
 export const venuesPublicRouter = new Hono()
 
@@ -12,6 +13,7 @@ venuesPublicRouter.get('/', async (ctx) => {
       name: venues.name,
       slug: venues.slug,
       city: venues.city,
+      timezone: venues.timezone,
       websiteUrl: venues.websiteUrl,
       active: venues.active,
       verified: venues.verified,
@@ -33,6 +35,7 @@ venuesPublicRouter.get('/:slug', async (ctx) => {
       name: venues.name,
       slug: venues.slug,
       city: venues.city,
+      timezone: venues.timezone,
       websiteUrl: venues.websiteUrl,
       active: venues.active,
       verified: venues.verified,
@@ -44,7 +47,7 @@ venuesPublicRouter.get('/:slug', async (ctx) => {
     return ctx.json({ success: false, error: 'Venue not found' }, 404)
   }
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayInTimezone(venue.timezone)
 
   const conditions: SQL[] = [
     eq(events.venueId, venue.id),

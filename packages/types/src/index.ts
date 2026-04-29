@@ -57,6 +57,7 @@ export interface Venue {
   slug: string
   websiteUrl: string
   city: string
+  timezone: string
   active: boolean
   verified: boolean
   lastCrawledAt: string | null
@@ -119,7 +120,10 @@ export interface Event {
 
 // EventWithVenue — event joined with its venue, returned by the public events API
 export interface EventWithVenue extends Event {
-  venue: Pick<Venue, 'id' | 'name' | 'slug' | 'city' | 'websiteUrl'>
+  venue: Pick<
+    Venue,
+    'id' | 'name' | 'slug' | 'city' | 'websiteUrl' | 'timezone'
+  >
 }
 
 // Public events list query params
@@ -146,6 +150,7 @@ export interface VenuePublic {
   name: string
   slug: string
   city: string
+  timezone: string
   websiteUrl: string
   active: boolean
   verified: boolean

@@ -20,6 +20,7 @@ export const venues = pgTable('venues', {
   slug: text('slug').notNull().unique(),
   websiteUrl: text('website_url').notNull(),
   city: text('city').notNull().default('Denver'),
+  timezone: text('timezone').notNull().default('America/Denver'),
   active: boolean('active').notNull().default(true),
   verified: boolean('verified').notNull().default(false),
   lastCrawledAt: timestamp('last_crawled_at', { withTimezone: true }),

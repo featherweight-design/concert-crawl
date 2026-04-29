@@ -3,6 +3,7 @@ import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { db, events, venues } from '@concert-crawl/db'
 import { type SQL, and, asc, count, eq, gte, ilike, lte, or } from 'drizzle-orm'
+import { todayInTimezone } from '../lib/time.js'
 
 const listEventsSchema = z.object({
   from: z
@@ -21,17 +22,13 @@ const listEventsSchema = z.object({
 
 export const eventsRouter = new Hono()
 
-function todayDenver(): string {
-  return new Date().toISOString().slice(0, 10)
-}
-
 // GET /v1/events — public event listing with filters and pagination
 eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
   const { from, to, venueSlug, search, limit, offset } = ctx.req.valid('query')
 
   const conditions: SQL[] = [
     eq(events.status, 'upcoming'),
-    gte(events.date, from ?? todayDenver()),
+    gte(events.date, from ?? todayInTimezone('UTC')),
   ]
 
   if (to) {
@@ -96,6 +93,7 @@ eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
         name: venues.name,
         slug: venues.slug,
         city: venues.city,
+        timezone: venues.timezone,
         websiteUrl: venues.websiteUrl,
       },
     })
@@ -142,6 +140,7 @@ eventsRouter.get('/:id', async (ctx) => {
         name: venues.name,
         slug: venues.slug,
         city: venues.city,
+        timezone: venues.timezone,
         websiteUrl: venues.websiteUrl,
       },
     })
