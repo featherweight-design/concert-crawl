@@ -20,14 +20,20 @@ const mono = JetBrains_Mono({
 
 const themeScript = `
   (function() {
-    var stored = localStorage.getItem('cc-theme');
-    var system = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'electric' : 'light';
-    var theme = (stored === 'electric' || stored === 'jade' || stored === 'light') ? stored : system;
     var themes = ${JSON.stringify(THEMES)};
-    var tokens = themes[theme];
     var root = document.documentElement;
-    Object.keys(tokens).forEach(function(k) { root.style.setProperty('--' + k, tokens[k]); });
-    root.setAttribute('data-theme', theme);
+    try {
+      var stored = localStorage.getItem('cc-theme');
+      var system = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'electric' : 'light';
+      var theme = (stored === 'electric' || stored === 'jade' || stored === 'light') ? stored : system;
+      var tokens = themes[theme];
+      Object.keys(tokens).forEach(function(k) { root.style.setProperty('--' + k, tokens[k]); });
+      root.setAttribute('data-theme', theme);
+    } catch (e) {
+      var fallback = themes['light'];
+      Object.keys(fallback).forEach(function(k) { root.style.setProperty('--' + k, fallback[k]); });
+      root.setAttribute('data-theme', 'light');
+    }
   })();
 `
 

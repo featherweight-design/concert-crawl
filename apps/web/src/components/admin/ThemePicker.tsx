@@ -15,7 +15,7 @@ export function ThemePicker() {
   const { theme, setTheme } = useTheme()
 
   return (
-    <div className="flex flex-wrap gap-3">
+    <div role="radiogroup" aria-label="Theme" className="flex flex-wrap gap-3">
       {THEME_NAMES.map((name) => {
         const tokens = THEMES[name]
         const isSelected = theme === name
@@ -24,6 +24,8 @@ export function ThemePicker() {
           <button
             key={name}
             type="button"
+            role="radio"
+            aria-checked={isSelected}
             onClick={() => setTheme(name)}
             className={cn(
               'flex flex-col gap-3 rounded-xl border p-4 text-left transition-all',
