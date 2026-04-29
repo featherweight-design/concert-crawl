@@ -8,7 +8,7 @@ export default async function AdminDashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-        <p className="text-slate-500">
+        <p className="text-fg-muted">
           Welcome back, {user.firstName ?? user.email}
         </p>
       </div>
@@ -16,20 +16,20 @@ export default async function AdminDashboardPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-slate-500">
+            <CardTitle className="text-sm font-medium text-fg-muted">
               Venues
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">—</p>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-fg-subtle">
               Populated after venue setup
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-slate-500">
+            <CardTitle className="text-sm font-medium text-fg-muted">
               Invite Codes
             </CardTitle>
           </CardHeader>
@@ -39,13 +39,13 @@ export default async function AdminDashboardPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-slate-500">
+            <CardTitle className="text-sm font-medium text-fg-muted">
               Last Crawl
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">—</p>
-            <p className="text-xs text-slate-400">Crawler live in Phase 3</p>
+            <p className="text-xs text-fg-subtle">Crawler live in Phase 3</p>
           </CardContent>
         </Card>
       </div>

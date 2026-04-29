@@ -20,7 +20,7 @@ export default async function InviteCodesPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold">Invite Codes</h1>
-        <p className="text-slate-500 text-sm mt-1">
+        <p className="text-fg-muted text-sm mt-1">
           Generate codes to grant beta access. Codes are single-use.
         </p>
       </div>

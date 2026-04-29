@@ -38,7 +38,7 @@ export const CrawlHistoryTable = async ({
     <section aria-label={copy.heading}>
       <h2 className="text-lg font-semibold mb-3">{copy.heading}</h2>
       {runs.length === 0 ? (
-        <p className="text-sm text-slate-500">{copy.empty}</p>
+        <p className="text-sm text-fg-muted">{copy.empty}</p>
       ) : (
         <Table>
           <TableHeader>
@@ -93,7 +93,7 @@ export const CrawlHistoryTable = async ({
                       : copy.noValue}
                   </TableCell>
                   <TableCell
-                    className={`text-xs max-w-xs truncate ${run.errorMessage ? 'text-red-500' : 'text-slate-500'}`}
+                    className={`text-xs max-w-xs truncate ${run.errorMessage ? 'text-danger' : 'text-fg-muted'}`}
                   >
                     {run.errorMessage ?? copy.noValue}
                   </TableCell>

@@ -59,7 +59,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
           {/* Blocking script: runs before paint to apply saved/system theme */}
           <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         </head>
-        <body className="min-h-screen bg-bg font-sans antialiased">
+        <body className="min-h-screen bg-bg text-fg font-sans antialiased">
           <ThemeProvider>{children}</ThemeProvider>
         </body>
       </html>

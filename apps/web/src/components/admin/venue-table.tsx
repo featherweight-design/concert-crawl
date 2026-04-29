@@ -35,7 +35,7 @@ export function VenueTable({ venues }: VenueTableProps) {
             <TableCell className="font-medium">
               <Link
                 href={`/admin/venues/${venue.id}`}
-                className="hover:underline"
+                className="text-fg hover:underline"
               >
                 {venue.name}
               </Link>
@@ -51,7 +51,7 @@ export function VenueTable({ venues }: VenueTableProps) {
                 {venue.verified ? 'Verified' : 'Unverified'}
               </Badge>
             </TableCell>
-            <TableCell className="text-slate-400 text-sm">
+            <TableCell className="text-fg-muted text-sm">
               {venue.lastCrawledAt
                 ? new Date(venue.lastCrawledAt).toLocaleDateString()
                 : 'Never'}
@@ -75,7 +75,7 @@ export function VenueTable({ venues }: VenueTableProps) {
         ))}
         {venues.length === 0 && (
           <TableRow>
-            <TableCell colSpan={6} className="text-center text-slate-400">
+            <TableCell colSpan={6} className="text-center text-fg-muted">
               No venues yet. Add your first venue.
             </TableCell>
           </TableRow>

@@ -44,15 +44,15 @@ export function InviteCodeTable({ codes }: { codes: InviteCode[] }) {
               <TableCell>
                 <Badge variant={status.variant}>{status.label}</Badge>
               </TableCell>
-              <TableCell className="text-slate-400 text-sm">
+              <TableCell className="text-fg-muted text-sm">
                 {code.usedBy ?? '—'}
               </TableCell>
-              <TableCell className="text-slate-400 text-sm">
+              <TableCell className="text-fg-muted text-sm">
                 {code.expiresAt
                   ? new Date(code.expiresAt).toLocaleDateString()
                   : 'Never'}
               </TableCell>
-              <TableCell className="text-slate-400 text-sm">
+              <TableCell className="text-fg-muted text-sm">
                 {new Date(code.createdAt).toLocaleDateString()}
               </TableCell>
               <TableCell>
@@ -69,7 +69,7 @@ export function InviteCodeTable({ codes }: { codes: InviteCode[] }) {
         })}
         {codes.length === 0 && (
           <TableRow>
-            <TableCell colSpan={6} className="text-center text-slate-400">
+            <TableCell colSpan={6} className="text-center text-fg-muted">
               No invite codes yet.
             </TableCell>
           </TableRow>

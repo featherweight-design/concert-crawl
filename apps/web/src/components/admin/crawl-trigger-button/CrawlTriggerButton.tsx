@@ -104,7 +104,7 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
           {buttonLabel}
         </Button>
         {isLoading && (
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-fg-muted">
             {triggerState === 'triggering'
               ? copy.status.initiating
               : copy.status.waiting}
@@ -113,7 +113,7 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
       </div>
 
       {triggerState === 'error' && errorMessage && (
-        <p role="alert" className="text-sm text-red-500">
+        <p role="alert" className="text-sm text-danger">
           {errorMessage}
         </p>
       )}
@@ -128,7 +128,7 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
               </Badge>
             )}
           </header>
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-slate-600 dark:text-slate-400">
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-fg-muted">
             <dt>{copy.result.strategy}</dt>
             <dd>{result.extractionStrategyUsed ?? copy.result.noValue}</dd>
             <dt>{copy.result.eventsFound}</dt>
@@ -144,7 +144,7 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
             </dd>
           </dl>
           {result.errorMessage && (
-            <p role="alert" className="text-red-500 text-xs">
+            <p role="alert" className="text-danger text-xs">
               {result.errorMessage}
             </p>
           )}
