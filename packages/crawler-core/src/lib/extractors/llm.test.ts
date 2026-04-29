@@ -110,4 +110,26 @@ describe('extractWithLlm', () => {
     expect(result.usage.cacheReadTokens).toBe(5000)
     expect(result.usage.cacheWriteTokens).toBe(8000)
   })
+
+  it('drops empty-string doorsTime and showTime fields', async () => {
+    const mockEvents = [
+      {
+        title: 'Late Show',
+        artist: 'Night Owls',
+        date: '2026-10-01',
+        doorsTime: '',
+        showTime: '',
+        confidence: 0.88,
+      },
+    ]
+    mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents))
+
+    const result = await extractWithLlm(
+      '<html>late show page</html>',
+      SOURCE_URL,
+    )
+    expect(result.events).toHaveLength(1)
+    expect(result.events[0]).not.toHaveProperty('doorsTime')
+    expect(result.events[0]).not.toHaveProperty('showTime')
+  })
 })

@@ -329,4 +329,46 @@ describe('crawlVenue — event-level sourceHash', () => {
     expect(venueAlert).toBeDefined()
     expect(venueAlert?.body).toContain('Metallica Live')
   })
+
+  it('upserts existing event when sourceHash is null without changed-verified alert', async () => {
+    const venue = seedVenue()
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [METALLICA_EVENT],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    stores.events.push({
+      id: crypto.randomUUID(),
+      venueId: venue.id,
+      title: METALLICA_EVENT.title,
+      artist: METALLICA_EVENT.artist,
+      date: METALLICA_EVENT.date,
+      sourceHash: null,
+      verified: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+
+    const run = await crawlVenue(venue.id)
+
+    expect(run.eventsInserted).toBe(1)
+
+    const allEvents = await db
+      .select()
+      .from(events)
+      .where(eq(events.venueId, venue.id))
+    const hashedRow = allEvents.find((e) => e.sourceHash != null)
+    expect(hashedRow?.sourceHash).toMatch(/^[0-9a-f]{64}$/)
+
+    const allAlerts = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.category, 'crawl.verified_event_changed'))
+    expect(allAlerts).toHaveLength(0)
+  })
 })
