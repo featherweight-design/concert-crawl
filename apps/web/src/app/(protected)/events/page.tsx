@@ -42,7 +42,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     fetchVenues(),
   ])
 
-  const { data: events, total, limit, offset } = eventsResult
+  const { data: events, total, limit } = eventsResult
 
   // Identify tonight's first event for the hero slot
   const firstEventIsToday =

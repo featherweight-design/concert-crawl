@@ -51,7 +51,7 @@ export function FilterBar({ venues, className }: FilterBarProps) {
         type="search"
         placeholder="Artist or show name…"
         defaultValue={search}
-        onChange={(e) => updateParam('search', e.target.value)}
+        onChange={(evt) => updateParam('search', evt.target.value)}
         className="sm:max-w-xs"
         aria-label="Search artists and shows"
       />
@@ -59,14 +59,14 @@ export function FilterBar({ venues, className }: FilterBarProps) {
       {/* Venue filter */}
       <select
         value={venueSlug}
-        onChange={(e) => updateParam('venueSlug', e.target.value)}
+        onChange={(evt) => updateParam('venueSlug', evt.target.value)}
         className="h-8 rounded-lg border border-border bg-bg px-2.5 text-sm text-fg outline-none focus:border-border-focus focus:ring-2 focus:ring-border-focus/30 sm:max-w-[200px]"
         aria-label="Filter by venue"
       >
         <option value="">All venues</option>
-        {venues.map((v) => (
-          <option key={v.id} value={v.slug}>
-            {v.name}
+        {venues.map((venue) => (
+          <option key={venue.id} value={venue.slug}>
+            {venue.name}
           </option>
         ))}
       </select>
@@ -75,7 +75,7 @@ export function FilterBar({ venues, className }: FilterBarProps) {
       <input
         type="date"
         value={from}
-        onChange={(e) => updateParam('from', e.target.value)}
+        onChange={(evt) => updateParam('from', evt.target.value)}
         className="h-8 rounded-lg border border-border bg-bg px-2.5 text-sm text-fg outline-none focus:border-border-focus focus:ring-2 focus:ring-border-focus/30"
         aria-label="Filter by date"
       />

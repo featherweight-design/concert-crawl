@@ -81,7 +81,7 @@ export function HeroEventCard({
               target="_blank"
               rel="noopener noreferrer"
               className={buttonVariants({ variant: 'default', size: 'sm' })}
-              onClick={(e) => e.stopPropagation()}
+              onClick={(ev) => ev.stopPropagation()}
             >
               {copy.ticketsCta}
             </Link>

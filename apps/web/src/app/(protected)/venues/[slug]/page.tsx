@@ -135,7 +135,7 @@ function VenueEventRow({ event }: { event: Event }) {
             href={event.ticketUrl}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(ev) => ev.stopPropagation()}
             className={buttonVariants({ variant: 'outline', size: 'xs' })}
           >
             {copy.ticketsCta}

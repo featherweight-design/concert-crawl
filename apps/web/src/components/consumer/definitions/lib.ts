@@ -21,13 +21,13 @@ export function formatShowTime(timeStr: string | null): string | null {
   // timeStr is HH:MM:SS from Postgres time column
   const [hours, minutes] = timeStr.split(':').map(Number)
   if (hours === undefined || minutes === undefined) return null
-  const d = new Date()
-  d.setHours(hours, minutes, 0, 0)
+  const date = new Date()
+  date.setHours(hours, minutes, 0, 0)
   return new Intl.DateTimeFormat('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
-  }).format(d)
+  }).format(date)
 }
 
 export function formatPrice(

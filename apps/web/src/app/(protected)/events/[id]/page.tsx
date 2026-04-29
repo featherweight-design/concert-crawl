@@ -36,7 +36,7 @@ async function fetchRelated(
       `/v1/events?limit=4&offset=0`,
     )
     return result.data
-      .filter((e) => e.venueId === venueId && e.id !== excludeId)
+      .filter((ev) => ev.venueId === venueId && ev.id !== excludeId)
       .slice(0, 3)
   } catch {
     return []
@@ -165,9 +165,9 @@ export default async function EventDetailPage({
           {/* Genre tags */}
           {event.genre && event.genre.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {event.genre.map((g) => (
-                <Badge key={g} variant="secondary">
-                  {g}
+              {event.genre.map((genre) => (
+                <Badge key={genre} variant="secondary">
+                  {genre}
                 </Badge>
               ))}
             </div>
@@ -180,8 +180,8 @@ export default async function EventDetailPage({
                 More at {event.venue.name}
               </h2>
               <div className="flex flex-col gap-2">
-                {related.map((e) => (
-                  <EventCard key={e.id} event={e} />
+                {related.map((relatedEvent) => (
+                  <EventCard key={relatedEvent.id} event={relatedEvent} />
                 ))}
               </div>
             </section>

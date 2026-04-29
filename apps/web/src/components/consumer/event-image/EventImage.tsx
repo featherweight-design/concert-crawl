@@ -52,8 +52,8 @@ export function EventImage({
           alt={alt}
           className="h-full w-full object-cover"
           loading="lazy"
-          onError={(e) => {
-            const target = e.currentTarget
+          onError={(err) => {
+            const target = err.currentTarget
             target.style.display = 'none'
             const fallback = target.nextElementSibling
             if (fallback) (fallback as HTMLElement).style.display = 'flex'
