@@ -43,6 +43,10 @@ describe('THEMES', () => {
         }
       })
 
+      it('has exactly the required number of tokens', () => {
+        expect(Object.keys(THEMES[name]).length).toBe(REQUIRED_TOKENS.length)
+      })
+
       it('has no undefined or empty token values', () => {
         for (const [token, value] of Object.entries(THEMES[name])) {
           expect(typeof value, `--${token} is not a string`).toBe('string')
