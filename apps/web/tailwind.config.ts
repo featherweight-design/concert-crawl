@@ -1,7 +1,6 @@
 import type { Config } from 'tailwindcss'
 
 const config: Config = {
-  darkMode: ['class'],
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -10,7 +9,8 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-sans)'],
+        sans: ['var(--font-ui)'],
+        mono: ['var(--font-mono)'],
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -18,39 +18,25 @@ const config: Config = {
         sm: 'var(--radius-sm)',
       },
       colors: {
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
-        card: {
-          DEFAULT: 'hsl(var(--card))',
-          foreground: 'hsl(var(--card-foreground))',
-        },
-        popover: {
-          DEFAULT: 'hsl(var(--popover))',
-          foreground: 'hsl(var(--popover-foreground))',
-        },
-        primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))',
-        },
-        secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))',
-        },
-        muted: {
-          DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))',
-        },
-        accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))',
-        },
-        destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))',
-        },
-        border: 'hsl(var(--border))',
-        input: 'hsl(var(--input))',
-        ring: 'hsl(var(--ring))',
+        bg: 'var(--bg)',
+        'bg-elevated': 'var(--bg-elevated)',
+        'surface-1': 'var(--surface-1)',
+        'surface-2': 'var(--surface-2)',
+        'surface-3': 'var(--surface-3)',
+        fg: 'var(--fg)',
+        'fg-muted': 'var(--fg-muted)',
+        'fg-subtle': 'var(--fg-subtle)',
+        'fg-on-accent': 'var(--fg-on-accent)',
+        border: 'var(--border)',
+        'border-strong': 'var(--border-strong)',
+        'border-focus': 'var(--border-focus)',
+        accent: 'var(--accent)',
+        'accent-muted': 'var(--accent-muted)',
+        signal: 'var(--signal)',
+        'signal-muted': 'var(--signal-muted)',
+        success: 'var(--success)',
+        warning: 'var(--warning)',
+        danger: 'var(--danger)',
       },
     },
   },

@@ -1,10 +1,35 @@
 import type { Metadata, Viewport } from 'next'
 import { ClerkProvider } from '@clerk/nextjs'
 import './globals.css'
-import { Geist } from 'next/font/google'
+import { Inter, JetBrains_Mono } from 'next/font/google'
+import { ThemeProvider } from '@/theme'
+import { THEMES } from '@/theme/themes'
 import { cn } from '@/lib/utils'
 
-const geist = Geist({ subsets: ['latin'], variable: '--font-sans' })
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-ui',
+  weight: ['400', '500', '600', '700', '800', '900'],
+})
+
+const mono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono',
+  weight: ['400', '500', '600'],
+})
+
+const themeScript = `
+  (function() {
+    var stored = localStorage.getItem('cc-theme');
+    var system = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'electric' : 'light';
+    var theme = (stored === 'electric' || stored === 'jade' || stored === 'light') ? stored : system;
+    var themes = ${JSON.stringify(THEMES)};
+    var tokens = themes[theme];
+    var root = document.documentElement;
+    Object.keys(tokens).forEach(function(k) { root.style.setProperty('--' + k, tokens[k]); });
+    root.setAttribute('data-theme', theme);
+  })();
+`
 
 export const metadata: Metadata = {
   title: 'Concert Crawl',
@@ -28,10 +53,14 @@ export default function RootLayout({ children }: RootLayoutProps) {
       <html
         lang="en"
         suppressHydrationWarning
-        className={cn('font-sans', geist.variable)}
+        className={cn(inter.variable, mono.variable)}
       >
-        <body className="min-h-screen bg-background font-sans antialiased">
-          {children}
+        <head>
+          {/* Blocking script: runs before paint to apply saved/system theme */}
+          <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        </head>
+        <body className="min-h-screen bg-bg font-sans antialiased">
+          <ThemeProvider>{children}</ThemeProvider>
         </body>
       </html>
     </ClerkProvider>

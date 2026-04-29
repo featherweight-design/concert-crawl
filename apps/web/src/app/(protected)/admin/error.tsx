@@ -15,21 +15,21 @@ export default function AdminError({
 
   return (
     <div className="flex flex-col gap-3 p-6">
-      <h2 className="text-lg font-semibold text-destructive">
+      <h2 className="text-lg font-semibold text-danger">
         Something went wrong
       </h2>
-      <p className="text-sm text-muted-foreground">
+      <p className="text-sm text-fg-muted">
         If you were trying to access a restricted page, try signing out and back
         in to refresh your session. Otherwise, reload and try again.
       </p>
       {error.digest && (
-        <p className="font-mono text-xs text-muted-foreground">
+        <p className="font-mono text-xs text-fg-muted">
           Error ID: {error.digest}
         </p>
       )}
       <button
         onClick={reset}
-        className="w-fit rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground"
+        className="w-fit rounded-md bg-accent px-3 py-1.5 text-sm text-fg-on-accent"
       >
         Try again
       </button>

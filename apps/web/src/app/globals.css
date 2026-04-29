@@ -1,60 +1,39 @@
+/* apps/web/src/app/globals.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 215 20.2% 65.1%;
+    /* Electric theme — SSR / no-JS fallback; overwritten by inline script on the client */
+    --bg: #070a1a;
+    --bg-elevated: #0e1226;
+    --surface-1: #11162e;
+    --surface-2: #171d3a;
+    --surface-3: #1f2748;
+    --fg: #e8f3ff;
+    --fg-muted: #9aa8c7;
+    --fg-subtle: #5a6788;
+    --fg-on-accent: #070a1a;
+    --border: #1f2748;
+    --border-strong: #2c3661;
+    --border-focus: #7ae6ff;
+    --signal: #7ae6ff;
+    --signal-muted: #3fa3c2;
+    --accent: #ff7bd4;
+    --accent-muted: #b8559a;
+    --success: #7bffb0;
+    --warning: #ffd27a;
+    --danger: #ff7a8a;
+    --focus: #7ae6ff;
+    --overlay-hover: rgba(122, 230, 255, 0.08);
+    --overlay-press: rgba(122, 230, 255, 0.16);
+    --scrim: rgba(7, 10, 26, 0.72);
+    --image-tint: rgba(7, 10, 26, 0.2);
+
     --radius: 0.625rem;
     --radius-md: calc(var(--radius) - 2px);
     --radius-sm: calc(var(--radius) - 4px);
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --background: 222.2 84% 4.9%;
-      --foreground: 210 40% 98%;
-      --card: 222.2 84% 4.9%;
-      --card-foreground: 210 40% 98%;
-      --popover: 222.2 84% 4.9%;
-      --popover-foreground: 210 40% 98%;
-      --primary: 210 40% 98%;
-      --primary-foreground: 222.2 47.4% 11.2%;
-      --secondary: 217.2 32.6% 17.5%;
-      --secondary-foreground: 210 40% 98%;
-      --muted: 217.2 32.6% 17.5%;
-      --muted-foreground: 215 20.2% 65.1%;
-      --accent: 217.2 32.6% 17.5%;
-      --accent-foreground: 210 40% 98%;
-      --destructive: 0 62.8% 30.6%;
-      --destructive-foreground: 210 40% 98%;
-      --border: 217.2 32.6% 17.5%;
-      --input: 217.2 32.6% 17.5%;
-      --ring: 212.7 26.8% 83.9%;
-    }
-
-    /* Clerk UserButton username text doesn't read our CSS variables */
-    .cl-userButtonOuterIdentifier {
-      color: hsl(var(--foreground));
-    }
   }
 
   * {
@@ -62,9 +41,18 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    font-family: var(--font-ui);
     font-feature-settings:
       'rlig' 1,
       'calt' 1;
+  }
+
+  code,
+  pre {
+    font-family: var(--font-mono);
+  }
+
+  .cl-userButtonOuterIdentifier {
+    color: var(--fg);
   }
 }
