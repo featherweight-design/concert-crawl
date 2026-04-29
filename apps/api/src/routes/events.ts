@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { db, events, venues } from '@concert-crawl/db'
-import { SQL, and, asc, count, eq, gte, ilike, lte, or } from 'drizzle-orm'
+import { type SQL, and, asc, count, eq, gte, ilike, lte, or } from 'drizzle-orm'
 
 const listEventsSchema = z.object({
   from: z

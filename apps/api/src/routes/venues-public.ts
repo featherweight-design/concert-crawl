@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { db, events, venues } from '@concert-crawl/db'
-import { SQL, and, asc, eq, gte } from 'drizzle-orm'
+import { type SQL, and, asc, eq, gte } from 'drizzle-orm'
 
 export const venuesPublicRouter = new Hono()
 
