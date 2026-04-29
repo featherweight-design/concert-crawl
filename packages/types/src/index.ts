@@ -93,6 +93,70 @@ export interface CrawlRun {
   createdAt: string
 }
 
+// Event — represents the JSON-serialized API response shape.
+// Date/time fields are strings; date is YYYY-MM-DD, time is HH:MM:SS or null.
+export interface Event {
+  id: string
+  venueId: string
+  title: string
+  artist: string
+  date: string
+  doorsTime: string | null
+  showTime: string | null
+  ticketUrl: string | null
+  ticketPriceMin: string | null
+  ticketPriceMax: string | null
+  description: string | null
+  imageUrl: string | null
+  genre: string[] | null
+  status: EventStatus
+  confidenceScore: string | null
+  verified: boolean
+  sourceUrl: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+// EventWithVenue — event joined with its venue, returned by the public events API
+export interface EventWithVenue extends Event {
+  venue: Pick<Venue, 'id' | 'name' | 'slug' | 'city' | 'websiteUrl'>
+}
+
+// Public events list query params
+export interface EventsListParams {
+  from?: string
+  to?: string
+  venueSlug?: string
+  search?: string
+  limit?: number
+  offset?: number
+}
+
+// Public events list response
+export interface EventsListResponse {
+  data: EventWithVenue[]
+  total: number
+  limit: number
+  offset: number
+}
+
+// VenuePublic — public-facing venue shape (subset of Venue, no crawl internals)
+export interface VenuePublic {
+  id: string
+  name: string
+  slug: string
+  city: string
+  websiteUrl: string
+  active: boolean
+  verified: boolean
+}
+
+// VenueWithEvents — venue profile page response
+export interface VenueWithEvents {
+  venue: VenuePublic
+  upcomingEvents: Event[]
+}
+
 // InviteCode — represents the JSON-serialized API response shape.
 // Date fields are ISO 8601 strings because fetch().json() cannot revive Date objects.
 export interface InviteCode {

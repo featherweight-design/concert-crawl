@@ -12,14 +12,18 @@ export class ApiError extends Error {
 
 async function request<T>(
   path: string,
-  token: string,
+  token: string | null,
   options: RequestInit = {},
 ): Promise<T> {
+  const authHeaders: Record<string, string> = token
+    ? { Authorization: `Bearer ${token}` }
+    : {}
+
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
+      ...authHeaders,
       ...options.headers,
     },
   })
@@ -63,4 +67,9 @@ export const apiClient = {
 
   delete: <T>(path: string, token: string) =>
     request<T>(path, token, { method: 'DELETE' }),
+}
+
+// publicApiClient — for unauthenticated public endpoints (events, venues)
+export const publicApiClient = {
+  get: <T>(path: string) => request<T>(path, null),
 }
