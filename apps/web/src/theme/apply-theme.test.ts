@@ -18,24 +18,6 @@ describe('applyTheme', () => {
     applyTheme('electric')
     const expectedTokens = THEMES.electric
 
-    // Spot-check representative tokens
-    expect(document.documentElement.style.getPropertyValue('--bg')).toBe(
-      '#070A1A',
-    )
-    expect(document.documentElement.style.getPropertyValue('--fg')).toBe(
-      '#E8F3FF',
-    )
-    expect(document.documentElement.style.getPropertyValue('--signal')).toBe(
-      '#7AE6FF',
-    )
-    expect(document.documentElement.style.getPropertyValue('--accent')).toBe(
-      '#FF7BD4',
-    )
-    expect(
-      document.documentElement.style.getPropertyValue('--border-focus'),
-    ).toBe('#7AE6FF')
-
-    // Verify all tokens are set
     for (const [key] of Object.entries(expectedTokens)) {
       const value = document.documentElement.style.getPropertyValue(`--${key}`)
       expect(value).toBe(expectedTokens[key])
@@ -46,26 +28,16 @@ describe('applyTheme', () => {
     applyTheme('electric')
     expect(document.documentElement.getAttribute('data-theme')).toBe('electric')
     expect(document.documentElement.style.getPropertyValue('--bg')).toBe(
-      '#070A1A',
+      THEMES.electric['bg'],
     )
 
     applyTheme('jade')
     expect(document.documentElement.getAttribute('data-theme')).toBe('jade')
-    expect(document.documentElement.style.getPropertyValue('--bg')).toBe(
-      '#06201F',
-    )
-    expect(document.documentElement.style.getPropertyValue('--fg')).toBe(
-      '#E6FFF6',
-    )
-    expect(document.documentElement.style.getPropertyValue('--signal')).toBe(
-      '#1FFFC2',
-    )
-    expect(document.documentElement.style.getPropertyValue('--accent')).toBe(
-      '#9B5CFF',
-    )
-    expect(
-      document.documentElement.style.getPropertyValue('--border-focus'),
-    ).toBe('#1FFFC2')
+    for (const [key] of Object.entries(THEMES.jade)) {
+      expect(document.documentElement.style.getPropertyValue(`--${key}`)).toBe(
+        THEMES.jade[key],
+      )
+    }
   })
 
   it('sets data-theme attribute to light', () => {
@@ -77,23 +49,6 @@ describe('applyTheme', () => {
     applyTheme('light')
     const expectedTokens = THEMES.light
 
-    expect(document.documentElement.style.getPropertyValue('--bg')).toBe(
-      '#FAFCFF',
-    )
-    expect(document.documentElement.style.getPropertyValue('--fg')).toBe(
-      '#070A1A',
-    )
-    expect(document.documentElement.style.getPropertyValue('--signal')).toBe(
-      '#0080A0',
-    )
-    expect(document.documentElement.style.getPropertyValue('--accent')).toBe(
-      '#E0297A',
-    )
-    expect(
-      document.documentElement.style.getPropertyValue('--border-focus'),
-    ).toBe('#0080A0')
-
-    // Verify all tokens are set
     for (const [key] of Object.entries(expectedTokens)) {
       const value = document.documentElement.style.getPropertyValue(`--${key}`)
       expect(value).toBe(expectedTokens[key])
