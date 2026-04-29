@@ -6,7 +6,7 @@ import { THEMES, type ThemeName } from './themes'
 
 interface ThemeContextValue {
   theme: ThemeName
-  setTheme: (t: ThemeName) => void
+  setTheme: (theme: ThemeName) => void
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
@@ -21,10 +21,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  function setTheme(t: ThemeName) {
-    applyTheme(t)
-    localStorage.setItem('cc-theme', t)
-    setThemeState(t)
+  function setTheme(theme: ThemeName) {
+    applyTheme(theme)
+    localStorage.setItem('cc-theme', theme)
+    setThemeState(theme)
   }
 
   return (
