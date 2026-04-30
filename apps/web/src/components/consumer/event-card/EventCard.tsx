@@ -83,11 +83,11 @@ export function EventCard({ event, className }: EventCardProps) {
 
       {/* Price */}
       <div className="shrink-0">
-        {!isCancelled && priceDisplay ? (
+        {!isCancelled && !isPostponed && priceDisplay ? (
           <span className="text-[13px] font-extrabold text-signal">
             {priceDisplay}
           </span>
-        ) : !isCancelled ? (
+        ) : !isCancelled && !isPostponed ? (
           <span
             className="text-fg-subtle"
             style={{

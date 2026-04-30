@@ -62,8 +62,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   }
 
   const isFiltered = params['search'] ?? params['venueSlug'] ?? params['from']
-  const currentOffset =
-    typeof params['offset'] === 'string' ? parseInt(params['offset'], 10) : 0
+  const currentOffset = eventsResult.offset
 
   return (
     <div className="flex min-h-screen flex-col bg-bg">

@@ -56,6 +56,7 @@ export default async function EventDetailPage({
   const price = formatPrice(event.ticketPriceMin, event.ticketPriceMax)
   const dateLabel = formatEventDate(event.date, event.venue.timezone)
   const isCancelled = event.status === 'cancelled'
+  const isPostponed = event.status === 'postponed'
 
   const doorsShow =
     doorsTime && showTime
@@ -248,8 +249,32 @@ export default async function EventDetailPage({
           </div>
         )}
 
+        {/* Status banner */}
+        {(isCancelled || isPostponed) && (
+          <div
+            className="mt-5 rounded-[10px] border border-border px-4 py-3"
+            style={{ background: 'var(--surface-1)' }}
+          >
+            <p
+              className="uppercase text-signal"
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '9px',
+                letterSpacing: '0.06em',
+              }}
+            >
+              {isCancelled ? 'Cancelled' : 'Postponed'}
+            </p>
+            <p className="mt-1 text-[13px] leading-[1.55] text-fg-muted">
+              {isCancelled
+                ? 'This show has been cancelled.'
+                : 'This show has been postponed. Check back for updates.'}
+            </p>
+          </div>
+        )}
+
         {/* Get Tickets CTA */}
-        {event.ticketUrl && !isCancelled && (
+        {event.ticketUrl && !isCancelled && !isPostponed && (
           <a
             href={event.ticketUrl}
             target="_blank"
