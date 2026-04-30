@@ -1,17 +1,18 @@
+import { Fragment } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { EventWithVenue, EventsListResponse } from '@concert-crawl/types'
 import { publicApiClient } from '@/lib/api'
 import { AppHeader } from '@/components/consumer/app-header'
 import { EventImage } from '@/components/consumer/event-image'
-import { EventCard } from '@/components/consumer/event-card'
-import { buttonVariants } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { SmallEventRow } from '@/components/consumer/small-event-row'
+import { SectionHeader } from '@/components/consumer/section-header'
 import {
   formatEventDate,
   formatShowTime,
   formatPrice,
   artistInitial,
+  formatShortDate,
 } from '@/components/consumer/definitions/lib'
 import { copy } from '@/components/consumer/definitions/copy'
 
@@ -46,7 +47,6 @@ export default async function EventDetailPage({
 }: EventDetailPageProps) {
   const { id } = await params
   const event = await fetchEvent(id)
-
   if (!event) notFound()
 
   const related = await fetchRelated(event.venue.slug, event.id)
@@ -55,162 +55,438 @@ export default async function EventDetailPage({
   const doorsTime = formatShowTime(event.doorsTime)
   const price = formatPrice(event.ticketPriceMin, event.ticketPriceMax)
   const dateLabel = formatEventDate(event.date, event.venue.timezone)
-
   const isCancelled = event.status === 'cancelled'
-  const isPostponed = event.status === 'postponed'
+
+  const doorsShow =
+    doorsTime && showTime
+      ? `${doorsTime} / ${showTime}`
+      : (showTime ?? doorsTime ?? '—')
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <AppHeader />
+    <div className="flex min-h-screen flex-col bg-bg">
+      {/* Desktop-only AppHeader */}
+      <div className="hidden sm:block">
+        <AppHeader />
+      </div>
 
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6">
-        {/* Back link */}
+      {/* Hero — 320px, full-bleed */}
+      <div className="relative w-full shrink-0" style={{ height: 320 }}>
+        <EventImage
+          src={event.imageUrl}
+          alt={event.artist}
+          fallbackInitial={artistInitial(event.artist)}
+          className="h-full w-full"
+          fill
+          sizes="(max-width: 1024px) 100vw, 720px"
+        />
+        {/* Bottom scrim */}
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-20"
+          style={{ background: 'linear-gradient(transparent, var(--bg))' }}
+          aria-hidden
+        />
+        {/* Mobile: floating back button */}
         <Link
           href="/events"
-          className="mb-6 inline-flex items-center gap-1.5 text-sm text-fg-subtle hover:text-fg transition-colors"
+          aria-label="Back to browse"
+          className="absolute left-3.5 top-14 z-10 flex h-9 w-9 items-center justify-center rounded-full sm:hidden"
+          style={{ background: 'var(--scrim)' }}
         >
-          ← All shows
-        </Link>
-
-        <article className="flex flex-col gap-8">
-          {/* Hero image */}
-          <div className="relative aspect-[16/9] w-full overflow-hidden rounded-2xl sm:aspect-[21/9]">
-            <EventImage
-              src={event.imageUrl}
-              alt={event.artist}
-              fallbackInitial={artistInitial(event.artist)}
-              className="h-full w-full"
-              fill
-              sizes="(max-width: 1024px) 100vw, 1024px"
+          <svg
+            width="10"
+            height="16"
+            viewBox="0 0 10 16"
+            fill="none"
+            aria-hidden
+          >
+            <path
+              d="M8 2L2 8l6 6"
+              stroke="var(--fg)"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             />
-          </div>
+          </svg>
+        </Link>
+        {/* Mobile: floating save button (stub) */}
+        <button
+          aria-label="Save show"
+          className="absolute right-3.5 top-14 z-10 flex h-9 w-9 items-center justify-center rounded-full sm:hidden"
+          style={{ background: 'var(--scrim)' }}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 18 18"
+            fill="none"
+            aria-hidden
+          >
+            <path
+              d="M9 15l-6.5-6A3.5 3.5 0 019 4.5 3.5 3.5 0 0115.5 9L9 15z"
+              stroke="var(--fg)"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+        {/* Desktop: breadcrumb over hero */}
+        <div className="absolute bottom-4 left-6 hidden items-center gap-1.5 text-[13px] sm:flex">
+          <Link
+            href="/events"
+            className="flex items-center gap-1.5 text-fg-muted transition-colors hover:text-fg"
+          >
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden
+            >
+              <path
+                d="M11 4L5 8l6 4"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Browse
+          </Link>
+          <span
+            className="text-fg-subtle"
+            style={{ fontFamily: 'var(--font-mono)', fontSize: '11px' }}
+          >
+            /
+          </span>
+          <span className="font-medium text-fg">{event.artist}</span>
+        </div>
+      </div>
 
-          {/* Event header */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex flex-col gap-1">
-              <div className="flex flex-wrap items-center gap-2">
-                {isCancelled && (
-                  <Badge variant="destructive">{copy.cancelledLabel}</Badge>
-                )}
-                {isPostponed && (
-                  <Badge variant="secondary">{copy.postponedLabel}</Badge>
-                )}
-              </div>
-              <h1 className="text-2xl font-bold text-fg sm:text-3xl">
-                {event.artist}
-              </h1>
-              {event.title !== event.artist && (
-                <p className="text-base text-fg-muted">{event.title}</p>
-              )}
-            </div>
-
-            {event.ticketUrl && !isCancelled && (
-              <a
-                href={event.ticketUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={buttonVariants({ variant: 'default', size: 'lg' })}
+      {/* Scrollable content */}
+      <div className="relative -mt-5 flex-1 px-[18px] pb-10">
+        {/* Genre chips */}
+        {event.genre && event.genre.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-1">
+            {event.genre.map((genre) => (
+              <span
+                key={genre}
+                className="rounded-[4px] bg-surface-3 px-2 py-[3px] text-fg-muted"
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '9px',
+                  letterSpacing: '0.03em',
+                }}
               >
-                {copy.ticketsCta}
-              </a>
-            )}
+                {genre}
+              </span>
+            ))}
           </div>
+        )}
 
-          {/* Event meta */}
-          <div className="grid grid-cols-2 gap-4 rounded-xl border border-border bg-bg-elevated p-4 sm:grid-cols-4">
-            <MetaItem label="Date" value={dateLabel} />
-            {showTime && <MetaItem label={copy.showLabel} value={showTime} />}
-            {doorsTime && (
-              <MetaItem label={copy.doorsLabel} value={doorsTime} />
-            )}
-            {price && <MetaItem label="Price" value={price} highlight />}
-          </div>
+        {/* Title */}
+        <h1
+          className="text-fg"
+          style={{
+            fontFamily: 'var(--font-ui)',
+            fontWeight: 900,
+            fontSize: 26,
+            letterSpacing: '-0.03em',
+            lineHeight: 1.1,
+            margin: 0,
+          }}
+        >
+          {event.artist}
+        </h1>
+        {event.title !== event.artist && (
+          <p className="mt-1 text-[14px] font-medium text-fg-muted">
+            {event.title}
+          </p>
+        )}
 
-          {/* Venue */}
-          <div className="flex flex-col gap-1">
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-fg-subtle">
-              Venue
-            </h2>
-            <Link
-              href={`/venues/${event.venue.slug}`}
-              className="text-base font-medium text-fg hover:text-signal transition-colors"
+        {/* Info block */}
+        <div className="mt-4 border-y border-border py-1">
+          <InfoRow
+            icon={<IconPin />}
+            label="Venue"
+            value={event.venue.name}
+            href={`/venues/${event.venue.slug}`}
+          />
+          <InfoRow icon={<IconCalendar />} label="Date" value={dateLabel} />
+          <InfoRow
+            icon={<IconClock />}
+            label="Doors / Show"
+            value={doorsShow}
+          />
+          <InfoRow
+            icon={<IconTicket />}
+            label="Price"
+            value={price ?? 'TBA'}
+            signal={!!price}
+          />
+          <InfoRow icon={<IconUsers />} label="Ages" value="All Ages" />
+        </div>
+
+        {/* About */}
+        {event.description && (
+          <div className="mt-4">
+            <p
+              className="mb-1.5 uppercase text-fg-subtle"
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '9px',
+                letterSpacing: '0.06em',
+              }}
             >
-              {event.venue.name}
-            </Link>
-            <p className="text-sm text-fg-subtle">{event.venue.city}</p>
-            <a
-              href={event.venue.websiteUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-signal hover:underline"
+              About
+            </p>
+            <p
+              className="text-[13px] leading-[1.55] text-fg-muted"
+              style={{ textWrap: 'pretty' } as React.CSSProperties}
             >
-              Venue website →
-            </a>
+              {event.description}
+            </p>
           </div>
+        )}
 
-          {/* Description */}
-          {event.description && (
-            <div className="flex flex-col gap-2">
-              <h2 className="text-xs font-semibold uppercase tracking-widest text-fg-subtle">
-                About
-              </h2>
-              <p className="text-sm leading-relaxed text-fg-muted whitespace-pre-wrap">
-                {event.description}
-              </p>
-            </div>
-          )}
+        {/* Get Tickets CTA */}
+        {event.ticketUrl && !isCancelled && (
+          <a
+            href={event.ticketUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-5 flex h-12 w-full items-center justify-center rounded-[10px] text-fg-on-accent"
+            style={{
+              background: 'var(--accent)',
+              fontFamily: 'var(--font-ui)',
+              fontWeight: 800,
+              fontSize: 15,
+              letterSpacing: '-0.01em',
+            }}
+          >
+            {copy.ticketsCta} ↗
+          </a>
+        )}
 
-          {/* Genre tags */}
-          {event.genre && event.genre.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {event.genre.map((genre) => (
-                <Badge key={genre} variant="secondary">
-                  {genre}
-                </Badge>
-              ))}
-            </div>
-          )}
+        {/* Sign-up nudge */}
+        <p
+          className="mt-2.5 text-center text-fg-subtle"
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '9px',
+            letterSpacing: '0.02em',
+          }}
+        >
+          <Link href="/sign-up" className="text-signal">
+            Sign up
+          </Link>{' '}
+          to save this show
+        </p>
 
-          {/* Related shows at this venue */}
-          {related.length > 0 && (
-            <section aria-label="More at this venue">
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-fg-subtle">
-                More at {event.venue.name}
-              </h2>
-              <div className="flex flex-col gap-2">
-                {related.map((relatedEvent) => (
-                  <EventCard key={relatedEvent.id} event={relatedEvent} />
-                ))}
-              </div>
-            </section>
-          )}
-        </article>
-      </main>
+        {/* Related shows */}
+        {related.length > 0 && (
+          <div className="mt-6">
+            <SectionHeader
+              title={`More at ${event.venue.name}`}
+              count={`${related.length} show${related.length !== 1 ? 's' : ''}`}
+            />
+            {related.map((rel, i) => (
+              <Fragment key={rel.id}>
+                {i > 0 && (
+                  <div className="h-px bg-border" style={{ marginLeft: 50 }} />
+                )}
+                <SmallEventRow event={rel} date={formatShortDate(rel.date)} />
+              </Fragment>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
 
-function MetaItem({
-  label,
-  value,
-  highlight,
-}: {
+// ── Icon components (16×16, 1.5px stroke, --fg-subtle) ──────────
+
+function IconPin() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path
+        d="M8 1.5C5.24 1.5 3 3.74 3 6.5C3 10.25 8 14.5 8 14.5C8 14.5 13 10.25 13 6.5C13 3.74 10.76 1.5 8 1.5Z"
+        stroke="var(--fg-subtle)"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <circle
+        cx="8"
+        cy="6.5"
+        r="2"
+        stroke="var(--fg-subtle)"
+        strokeWidth="1.5"
+      />
+    </svg>
+  )
+}
+
+function IconCalendar() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <rect
+        x="2"
+        y="3"
+        width="12"
+        height="11"
+        rx="2"
+        stroke="var(--fg-subtle)"
+        strokeWidth="1.5"
+      />
+      <path d="M2 7h12" stroke="var(--fg-subtle)" strokeWidth="1.5" />
+      <path
+        d="M5.5 1.5v3M10.5 1.5v3"
+        stroke="var(--fg-subtle)"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+function IconClock() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <circle
+        cx="8"
+        cy="8"
+        r="6.5"
+        stroke="var(--fg-subtle)"
+        strokeWidth="1.5"
+      />
+      <path
+        d="M8 4.5V8l3 1.5"
+        stroke="var(--fg-subtle)"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function IconTicket() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path
+        d="M1.5 5a2 2 0 010 4v3.5h13V9a2 2 0 010-4V1.5h-13V5z"
+        stroke="var(--fg-subtle)"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M6 5.5v5"
+        stroke="var(--fg-subtle)"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeDasharray="1.5 2"
+      />
+    </svg>
+  )
+}
+
+function IconUsers() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <circle
+        cx="6"
+        cy="5"
+        r="2.5"
+        stroke="var(--fg-subtle)"
+        strokeWidth="1.5"
+      />
+      <path
+        d="M1 14c0-2.8 2.2-4.5 5-4.5s5 1.7 5 4.5"
+        stroke="var(--fg-subtle)"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <circle
+        cx="11.5"
+        cy="5.5"
+        r="2"
+        stroke="var(--fg-subtle)"
+        strokeWidth="1.2"
+      />
+      <path
+        d="M12.5 9.5c1.8.4 3 1.6 3 3.5"
+        stroke="var(--fg-subtle)"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+// ── InfoRow ──────────────────────────────────────────────────────
+
+interface InfoRowProps {
+  icon: React.ReactNode
   label: string
   value: string
-  highlight?: boolean
-}) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-xs text-fg-subtle">{label}</span>
-      <span
-        className={
-          highlight
-            ? 'text-sm font-semibold text-signal'
-            : 'text-sm font-medium text-fg'
-        }
-      >
-        {value}
-      </span>
-    </div>
+  signal?: boolean
+  href?: string
+}
+
+function InfoRow({ icon, label, value, signal = false, href }: InfoRowProps) {
+  const inner = (
+    <>
+      <div className="h-4 w-4 shrink-0">{icon}</div>
+      <div className="min-w-0 flex-1">
+        <p
+          className="uppercase text-fg-subtle"
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '9px',
+            letterSpacing: '0.06em',
+          }}
+        >
+          {label}
+        </p>
+        <p
+          className="mt-[1px] text-[14px] font-semibold tracking-[-0.01em]"
+          style={{ color: signal ? 'var(--signal)' : 'var(--fg)' }}
+        >
+          {value}
+        </p>
+      </div>
+      {href && (
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 16 16"
+          fill="none"
+          className="shrink-0 text-fg-subtle"
+          aria-hidden
+        >
+          <path
+            d="M6 4l4 4-4 4"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      )}
+    </>
   )
+
+  const baseClass = 'flex items-center gap-2.5 py-2'
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className={`${baseClass} transition-colors hover:text-signal`}
+      >
+        {inner}
+      </Link>
+    )
+  }
+  return <div className={baseClass}>{inner}</div>
 }

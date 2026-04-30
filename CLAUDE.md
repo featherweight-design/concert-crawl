@@ -320,24 +320,26 @@ Both eliminate the need to cast. Never cast `publicMetadata` or `sessionClaims` 
 
 ## Current Status
 
-Phase: **Phase 3 complete — Phase 4 (design system / theming) next**
+Phase: **Phase 5 complete — Phase 5b (design polish) next**
 
-- Phase 3 merged (PRs #14–17): Playwright crawler, Claude Haiku extraction, crawl trigger UI, crawl history table — staging validation in progress
-- Phase 4 plan: design system architecture (three themes: Electric, Jade, Light) — see `design/design_handoff_brand_and_theming/README.md`
-- Phase 5 will be consumer-facing UI (browse + calendar) — hi-fi handoff from Claude Design follows Phase 4
+- Phase 3 merged (PRs #14–17): Playwright crawler, Claude Haiku extraction, crawl trigger UI, crawl history table — staging validation complete
+- Phase 4 complete: design system (Electric/Jade/Light themes, ~35 tokens, Inter font, logo/wordmark)
+- Phase 5 complete (PR #21 merged 2026-04-29): public events + venues API, browse/detail/venue pages, staging validated
+- Phase 5b: hi-fi design polish — mocks from Claude Design ready; separate PR on `feat/phase-5b-design-polish`
 - Domain: `concertcrawl.app` via Cloudflare Registrar (~$15/yr)
 
 ### Revised Phase Sequence
 
-| Phase | Name                                 | Status                             |
-| ----- | ------------------------------------ | ---------------------------------- |
-| 1     | Foundation                           | ✅ Complete                        |
-| 2     | Venue Management (Admin)             | ✅ Complete                        |
-| 3     | Crawler v1                           | ✅ Complete (staging validation)   |
-| 4     | Design System / Theming Architecture | 🔜 Next                            |
-| 5     | Consumer Calendar UI                 | Blocked on Phase 4 + hi-fi handoff |
-| 6     | Observability + Testing              | —                                  |
-| 7     | Automation + Scheduling              | —                                  |
-| 8     | Beta Launch Prep                     | —                                  |
+| Phase | Name                                 | Status                                     |
+| ----- | ------------------------------------ | ------------------------------------------ |
+| 1     | Foundation                           | ✅ Complete                                |
+| 2     | Venue Management (Admin)             | ✅ Complete                                |
+| 3     | Crawler v1                           | ✅ Complete                                |
+| 4     | Design System / Theming Architecture | ✅ Complete                                |
+| 5     | Consumer Calendar UI (functional)    | ✅ Complete                                |
+| 5b    | Consumer UI Design Polish            | In progress — mocks ready, PR not yet open |
+| 6     | Observability + Testing              | —                                          |
+| 7     | Automation + Scheduling              | —                                          |
+| 8     | Beta Launch Prep                     | —                                          |
 
 See the phased development plan in the design spec for the full roadmap (Phases 1–7).

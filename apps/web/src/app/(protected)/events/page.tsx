@@ -1,7 +1,8 @@
-import { Suspense } from 'react'
+import { Fragment, Suspense } from 'react'
 import type { EventsListResponse, VenuePublic } from '@concert-crawl/types'
 import { publicApiClient } from '@/lib/api'
 import { AppHeader } from '@/components/consumer/app-header'
+import { BottomNav } from '@/components/consumer/bottom-nav'
 import { HeroEventCard } from '@/components/consumer/hero-event-card'
 import { EventCard } from '@/components/consumer/event-card'
 import { FilterBar } from '@/components/consumer/filter-bar'
@@ -31,7 +32,6 @@ async function fetchEvents(
       qs.set('offset', String(parsed))
   }
   qs.set('limit', String(PAGE_LIMIT))
-
   return publicApiClient.get<EventsListResponse>(`/v1/events?${qs.toString()}`)
 }
 
@@ -49,13 +49,11 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
   const { data: events, total, limit } = eventsResult
 
-  // Identify tonight's first event for the hero slot
   const firstEventIsToday =
-    events.length > 0 && events[0] && isToday(events[0].date)
+    events.length > 0 && events[0] !== undefined && isToday(events[0].date)
   const heroEvent = firstEventIsToday ? events[0] : null
   const listEvents = heroEvent ? events.slice(1) : events
 
-  // Group remaining events by date
   const groups = new Map<string, typeof events>()
   for (const event of listEvents) {
     const key = event.date
@@ -63,23 +61,22 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     groups.get(key)!.push(event)
   }
 
-  const isFiltered = params['search'] || params['venueSlug'] || params['from']
+  const isFiltered = params['search'] ?? params['venueSlug'] ?? params['from']
   const currentOffset =
     typeof params['offset'] === 'string' ? parseInt(params['offset'], 10) : 0
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col bg-bg">
       <AppHeader />
 
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-20 pt-4 sm:px-6 sm:pb-6">
         {/* Filter bar */}
-        <div className="mb-6">
+        <div className="mb-5">
           <Suspense>
             <FilterBar venues={venues} />
           </Suspense>
         </div>
 
-        {/* No results */}
         {events.length === 0 && (
           <EmptyState
             message={isFiltered ? copy.emptyFiltered : copy.emptyTonight}
@@ -89,32 +86,64 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
           />
         )}
 
-        {/* Hero: tonight's first event */}
         {heroEvent && (
-          <div className="mb-8">
+          <div className="mb-6">
             <HeroEventCard event={heroEvent} />
           </div>
         )}
 
-        {/* Date-grouped event list */}
         {groups.size > 0 && (
-          <div className="flex flex-col gap-8">
-            {Array.from(groups.entries()).map(([date, dateEvents]) => (
-              <section key={date} aria-label={dateGroupLabel(date)}>
-                <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-fg-subtle">
-                  {dateGroupLabel(date)}
-                </h2>
-                <div className="flex flex-col gap-2">
-                  {dateEvents.map((event) => (
-                    <EventCard key={event.id} event={event} />
-                  ))}
-                </div>
-              </section>
-            ))}
+          <div className="flex flex-col gap-6">
+            {Array.from(groups.entries()).map(([date, dateEvents]) => {
+              const label = dateGroupLabel(date)
+              const isTonight = label.toLowerCase() === 'tonight'
+              return (
+                <section key={date} aria-label={label}>
+                  {/* Day group header */}
+                  <div className="mb-1 flex items-center gap-2 py-2">
+                    <span
+                      className="shrink-0 text-[12px] uppercase"
+                      style={{
+                        fontFamily: 'var(--font-ui)',
+                        fontWeight: 800,
+                        letterSpacing: '0.05em',
+                        color: isTonight ? 'var(--accent)' : 'var(--fg)',
+                      }}
+                    >
+                      {label}
+                    </span>
+                    <div className="h-px flex-1 bg-border" />
+                    <span
+                      className="shrink-0 text-fg-subtle"
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '9px',
+                      }}
+                    >
+                      {dateEvents.length} show
+                      {dateEvents.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  {/* Event rows with dividers */}
+                  <div>
+                    {dateEvents.map((event, i) => (
+                      <Fragment key={event.id}>
+                        {i > 0 && (
+                          <div
+                            className="h-px bg-border"
+                            style={{ marginLeft: 58 }}
+                          />
+                        )}
+                        <EventCard event={event} />
+                      </Fragment>
+                    ))}
+                  </div>
+                </section>
+              )
+            })}
           </div>
         )}
 
-        {/* Load more */}
         {events.length > 0 && (
           <div className="mt-8">
             <Suspense>
@@ -127,6 +156,8 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
           </div>
         )}
       </main>
+
+      <BottomNav />
     </div>
   )
 }

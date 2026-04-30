@@ -1,13 +1,11 @@
 import Link from 'next/link'
 import type { EventWithVenue } from '@concert-crawl/types'
-import { buttonVariants } from '@/components/ui/button'
 import { EventImage } from '../event-image'
-import { formatShowTime, formatPrice, artistInitial } from '../definitions/lib'
+import { formatShowTime, venueShort, artistInitial } from '../definitions/lib'
 import { copy } from '../definitions/copy'
 
 interface HeroEventCardProps {
   event: EventWithVenue
-  // Phase 6+: pass label="Community Pick" when engagement-driven hero is active
   label?: string
 }
 
@@ -16,84 +14,113 @@ export function HeroEventCard({
   label = copy.heroTonight,
 }: HeroEventCardProps) {
   const showTime = formatShowTime(event.showTime)
-  const doorsTime = formatShowTime(event.doorsTime)
-  const price = formatPrice(event.ticketPriceMin, event.ticketPriceMax)
+  const priceDisplay =
+    event.ticketPriceMin != null
+      ? `$${parseFloat(event.ticketPriceMin).toFixed(0)}`
+      : null
 
   return (
-    <div className="relative w-full overflow-hidden rounded-2xl border border-border-strong bg-bg-elevated">
-      {/* Full-bleed image */}
-      <div className="relative aspect-[16/9] w-full sm:aspect-[21/9]">
+    <Link
+      href={`/events/${event.id}`}
+      className="relative block overflow-hidden rounded-[12px] border border-border-strong bg-surface-1"
+    >
+      {/* Hero image — fixed 180px height */}
+      <div className="relative h-[180px] w-full">
         <EventImage
           src={event.imageUrl}
           alt={event.artist}
           fallbackInitial={artistInitial(event.artist)}
           className="h-full w-full"
           fill
-          sizes="(max-width: 1024px) 100vw, 1024px"
+          sizes="(max-width: 1024px) 100vw, 720px"
         />
-        {/* Bottom gradient for text legibility */}
+        {/* Bottom scrim */}
         <div
           className="pointer-events-none absolute inset-0"
           style={{
             background:
-              'linear-gradient(to top, var(--bg-elevated) 0%, transparent 60%)',
+              'linear-gradient(180deg, transparent 30%, var(--bg) 100%)',
           }}
           aria-hidden
         />
-
-        {/* Tonight badge */}
-        <div className="absolute left-4 top-4">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-signal px-3 py-1 text-xs font-semibold text-bg">
-            <span className="size-1.5 rounded-full bg-bg/60 animate-pulse" />
-            {label}
+        {/* Tonight's pick badge */}
+        <div className="absolute left-2.5 top-2.5">
+          <span
+            className="rounded-[4px] bg-accent px-2 py-[3px] text-fg-on-accent"
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '9px',
+              fontWeight: 700,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+            }}
+          >
+            ★ {label}
           </span>
         </div>
       </div>
 
-      {/* Content overlay at bottom of image */}
-      <div className="px-4 pb-4 pt-3 sm:px-6">
-        <p className="text-xl font-bold text-fg sm:text-2xl">{event.artist}</p>
+      {/* Content — overlaps image by 40px */}
+      <div className="relative -mt-10 px-3.5 pb-3.5 pt-3">
+        <p
+          className="text-[20px] text-fg"
+          style={{
+            fontFamily: 'var(--font-ui)',
+            fontWeight: 800,
+            letterSpacing: '-0.02em',
+            lineHeight: 1.15,
+          }}
+        >
+          {event.artist}
+        </p>
         {event.title !== event.artist && (
-          <p className="mt-0.5 text-sm text-fg-muted">{event.title}</p>
-        )}
-        <p className="mt-1 text-sm text-fg-subtle">{event.venue.name}</p>
-
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-fg-muted">
-            {showTime && (
-              <span>
-                {copy.showLabel} {showTime}
-              </span>
-            )}
-            {doorsTime && (
-              <span className="text-fg-subtle">
-                {copy.doorsLabel} {doorsTime}
-              </span>
-            )}
-            {price && (
-              <span className="font-semibold text-signal">{price}</span>
-            )}
-          </div>
-
-          {event.ticketUrl && (
-            <Link
-              href={event.ticketUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={buttonVariants({ variant: 'default', size: 'sm' })}
-              onClick={(ev) => ev.stopPropagation()}
-            >
-              {copy.ticketsCta}
-            </Link>
-          )}
-          <Link
-            href={`/events/${event.id}`}
-            className={buttonVariants({ variant: 'outline', size: 'sm' })}
+          <p
+            className="mt-0.5 text-[12px] font-medium text-fg-muted"
+            style={{ lineHeight: 1.3 }}
           >
-            Details
-          </Link>
+            {event.title}
+          </p>
+        )}
+        <div
+          className="mt-2 flex items-center gap-1.5 text-fg-muted"
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '10px',
+            letterSpacing: '0.02em',
+          }}
+        >
+          <span className="text-signal">{venueShort(event.venue.name)}</span>
+          {showTime && (
+            <>
+              <span className="opacity-40">·</span>
+              <span>{showTime}</span>
+            </>
+          )}
+          {priceDisplay && (
+            <>
+              <span className="opacity-40">·</span>
+              <span className="text-signal">{priceDisplay}</span>
+            </>
+          )}
         </div>
+        {event.genre && event.genre.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {event.genre.map((genre) => (
+              <span
+                key={genre}
+                className="rounded-[4px] bg-surface-3 px-[7px] py-[2px] text-fg-muted"
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '9px',
+                  letterSpacing: '0.03em',
+                }}
+              >
+                {genre}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
-    </div>
+    </Link>
   )
 }

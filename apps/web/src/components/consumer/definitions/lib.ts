@@ -80,3 +80,21 @@ export function dateGroupLabel(dateStr: string, timezone = 'UTC'): string {
 export function artistInitial(artist: string): string {
   return artist.trim().charAt(0).toUpperCase()
 }
+
+export function venueShort(name: string): string {
+  return name
+    .replace(
+      /\s+(Amphitheatre|Amphitheater|Theatre|Theater|Ballroom|Auditorium|Hall|Arena)$/i,
+      '',
+    )
+    .trim()
+}
+
+export function formatShortDate(dateStr: string): string {
+  const date = new Date(dateStr + 'T12:00:00')
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+export function googleMapsUrl(address: string): string {
+  return `https://maps.google.com/?q=${encodeURIComponent(address)}`
+}
