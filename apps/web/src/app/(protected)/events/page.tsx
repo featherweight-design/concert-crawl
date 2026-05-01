@@ -87,13 +87,17 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
         : undefined
 
   if (view === 'cal') {
-    const monday = weekDays[0]?.date
-    const sunday = weekDays[6]?.date
-    if (monday && sunday) {
-      fetchParams = {
-        ...params,
-        from: monday,
-        to: sunday,
+    // Only default to current week when no date filter is active.
+    // If filterWhen or explicit from/to is set, fetchParams already has the right range.
+    if (!filterWhen && !fromParam && !toParam) {
+      const monday = weekDays[0]?.date
+      const sunday = weekDays[6]?.date
+      if (monday && sunday) {
+        fetchParams = {
+          ...params,
+          from: monday,
+          to: sunday,
+        }
       }
     }
 

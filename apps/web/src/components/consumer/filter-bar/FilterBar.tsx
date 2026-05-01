@@ -171,6 +171,8 @@ export function FilterBar({ venues, className }: FilterBarProps) {
       [FILTER_DEFS.where.queryKey]: '',
       [FILTER_DEFS.price.queryKey]: '',
       [FILTER_DEFS.vibe.queryKey]: '',
+      from: '',
+      to: '',
     })
     setOpenFilterKey(null)
   }, [updateParams])
@@ -279,7 +281,7 @@ export function FilterBar({ venues, className }: FilterBarProps) {
                 background: isActive ? 'var(--signal)' : 'var(--surface-1)',
               }}
               aria-expanded={isOpen}
-              aria-controls={`${key}-filter-options`}
+              aria-haspopup="dialog"
             >
               <span style={{ whiteSpace: 'nowrap' }}>{displayLabel}</span>
               <IconChevDown size={11} />
