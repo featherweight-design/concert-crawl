@@ -108,14 +108,20 @@ export interface WeekDayInfo {
 export function currentWeekDays(timezone = 'America/Denver'): WeekDayInfo[] {
   const today = localDateString(timezone)
   // Parse from the localized string — avoids local-timezone shifts on UTC servers.
-  const [y, m, d] = today.split('-').map(Number) as [number, number, number]
+  const [year, month, day] = today.split('-').map(Number) as [
+    number,
+    number,
+    number,
+  ]
   // Use UTC noon so DST transitions never push the date across a day boundary.
-  const todayNoon = new Date(Date.UTC(y, m - 1, d, 12))
+  const todayNoon = new Date(Date.UTC(year, month - 1, day, 12))
   const dow = todayNoon.getUTCDay() // 0 = Sun
   const mondayOffset = dow === 0 ? -6 : 1 - dow
 
   return Array.from({ length: 7 }).map((_, index) => {
-    const noon = new Date(Date.UTC(y, m - 1, d + mondayOffset + index, 12))
+    const noon = new Date(
+      Date.UTC(year, month - 1, day + mondayOffset + index, 12),
+    )
     const date = `${noon.getUTCFullYear()}-${String(noon.getUTCMonth() + 1).padStart(2, '0')}-${String(noon.getUTCDate()).padStart(2, '0')}`
     const label = new Intl.DateTimeFormat('en-US', {
       timeZone: timezone,
@@ -130,8 +136,12 @@ export function filterWhenToDateRange(
   timezone = 'America/Denver',
 ): { from: string; to: string } | null {
   const today = localDateString(timezone)
-  const [y, m, d] = today.split('-').map(Number) as [number, number, number]
-  const noon = new Date(Date.UTC(y, m - 1, d, 12))
+  const [year, month, day] = today.split('-').map(Number) as [
+    number,
+    number,
+    number,
+  ]
+  const noon = new Date(Date.UTC(year, month - 1, day, 12))
   const dow = noon.getUTCDay()
 
   const isoDate = (base: Date, offsetDays: number): string => {
