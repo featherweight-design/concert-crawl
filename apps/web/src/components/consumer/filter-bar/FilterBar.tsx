@@ -1,14 +1,81 @@
 'use client'
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { useCallback, useEffect, useState, useTransition } from 'react'
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import type { VenuePublic } from '@concert-crawl/types'
 import { cn } from '@/lib/utils'
-import { Input } from '@/components/ui/input'
+import { FilterPopover } from './FilterPopover'
+import { FilterSheet } from './FilterSheet'
+import {
+  FILTER_DEFS,
+  FILTER_ORDER,
+  type FilterKey,
+  getActiveFilterCount,
+  getActiveFilterLabel,
+  getFilterOptions,
+} from './filter-defs'
 
 interface FilterBarProps {
   venues: VenuePublic[]
   className?: string
+}
+
+function IconList({ size = 13 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path
+        d="M3 4h10M3 8h10M3 12h10"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+function IconCal({ size = 13 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden>
+      <rect
+        x="2"
+        y="3.25"
+        width="12"
+        height="10.75"
+        rx="1.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        fill="none"
+      />
+      <path d="M2 7h12" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M5.5 1.75v2.5M10.5 1.75v2.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+function IconChevDown({ size = 11 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden
+      style={{ flexShrink: 0 }}
+    >
+      <path
+        d="M4 6l4 4 4-4"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
 }
 
 export function FilterBar({ venues, className }: FilterBarProps) {
@@ -17,91 +84,260 @@ export function FilterBar({ venues, className }: FilterBarProps) {
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
 
-  const updateParam = useCallback(
-    (key: string, value: string) => {
+  const updateParams = useCallback(
+    (updates: Record<string, string>) => {
       const params = new URLSearchParams(searchParams.toString())
-      if (value) {
-        params.set(key, value)
-      } else {
-        params.delete(key)
+      for (const [key, value] of Object.entries(updates)) {
+        if (value) {
+          params.set(key, value)
+        } else {
+          params.delete(key)
+        }
       }
-      params.delete('offset') // reset pagination on filter change
+      params.delete('offset')
       startTransition(() => {
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+        const query = params.toString()
+        router.replace(query ? `${pathname}?${query}` : pathname, {
+          scroll: false,
+        })
       })
     },
-    [router, pathname, searchParams],
+    [pathname, router, searchParams],
   )
 
-  const search = searchParams.get('search') ?? ''
-  const venueSlug = searchParams.get('venueSlug') ?? ''
-  const from = searchParams.get('from') ?? ''
-  const hasFilters = search || venueSlug || from
+  const updateParam = useCallback(
+    (key: string, value: string) => updateParams({ [key]: value }),
+    [updateParams],
+  )
 
-  // Controlled local state for search — keeps input in sync when URL changes
-  // (e.g. clear button, browser back/forward) without cursor-jump on every keystroke
-  const [searchInput, setSearchInput] = useState(search)
+  const [openFilterKey, setOpenFilterKey] = useState<FilterKey | null>(null)
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null)
+  const [isDesktop, setIsDesktop] = useState(false)
+  const chipRefs = useRef<Record<FilterKey, HTMLButtonElement | null>>({
+    when: null,
+    where: null,
+    price: null,
+    vibe: null,
+  })
+
+  const filterValues: Partial<Record<FilterKey, string>> = {
+    when: searchParams.get('filterWhen') ?? '',
+    where: searchParams.get('filterWhere') ?? '',
+    price: searchParams.get('filterPrice') ?? '',
+    vibe: searchParams.get('filterVibe') ?? '',
+  }
+
+  const isCalendarView = (searchParams.get('view') ?? 'list') === 'cal'
+  const activeFilterCount = getActiveFilterCount(filterValues)
+
   useEffect(() => {
-    setSearchInput(search)
-  }, [search])
+    const media = window.matchMedia('(min-width: 640px)')
+    const apply = () => setIsDesktop(media.matches)
+    apply()
+    media.addEventListener('change', apply)
+    return () => media.removeEventListener('change', apply)
+  }, [])
+
+  useEffect(() => {
+    if (!openFilterKey || !isDesktop) return
+    const nextAnchor = chipRefs.current[openFilterKey]
+    setAnchorRect(nextAnchor?.getBoundingClientRect() ?? null)
+  }, [openFilterKey, isDesktop])
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpenFilterKey(null)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
+  const activeDef = openFilterKey ? FILTER_DEFS[openFilterKey] : null
+  const activeOptions = openFilterKey
+    ? getFilterOptions(openFilterKey, venues)
+    : []
+  const activeValue = openFilterKey ? (filterValues[openFilterKey] ?? '') : ''
+
+  const setFilterValue = useCallback(
+    (key: FilterKey, value: string) => {
+      updateParams({ [FILTER_DEFS[key].queryKey]: value })
+    },
+    [updateParams],
+  )
+
+  const clearAllFilters = useCallback(() => {
+    updateParams({
+      [FILTER_DEFS.when.queryKey]: '',
+      [FILTER_DEFS.where.queryKey]: '',
+      [FILTER_DEFS.price.queryKey]: '',
+      [FILTER_DEFS.vibe.queryKey]: '',
+    })
+    setOpenFilterKey(null)
+  }, [updateParams])
 
   return (
     <div
       className={cn(
-        'flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3',
+        'relative flex flex-col gap-3',
         isPending && 'opacity-70 pointer-events-none',
         className,
       )}
     >
-      {/* Search */}
-      <Input
-        type="search"
-        placeholder="Artist or show name…"
-        value={searchInput}
-        onChange={(evt) => {
-          setSearchInput(evt.target.value)
-          updateParam('search', evt.target.value)
-        }}
-        className="sm:max-w-xs"
-        aria-label="Search artists and shows"
-      />
+      {/* Heading row: title left, List/Cal toggle right */}
+      <div className="flex items-end justify-between">
+        <div className="flex flex-col gap-0.5">
+          <span
+            className="text-[10px] uppercase tracking-widest text-fg-muted"
+            style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}
+          >
+            Denver&nbsp;·&nbsp;This week
+          </span>
+          <h1
+            className="text-[28px] font-black leading-none tracking-tight text-fg"
+            style={{ letterSpacing: '-0.03em' }}
+          >
+            What&apos;s on?
+          </h1>
+        </div>
 
-      {/* Venue filter */}
-      <select
-        value={venueSlug}
-        onChange={(evt) => updateParam('venueSlug', evt.target.value)}
-        className="h-8 rounded-lg border border-border bg-bg px-2.5 text-sm text-fg outline-none focus:border-border-focus focus:ring-2 focus:ring-border-focus/30 sm:max-w-[200px]"
-        aria-label="Filter by venue"
-      >
-        <option value="">All venues</option>
-        {venues.map((venue) => (
-          <option key={venue.id} value={venue.slug}>
-            {venue.name}
-          </option>
-        ))}
-      </select>
+        {/* List / Cal toggle — Inter font, SVG icons */}
+        <div
+          className="inline-flex items-center"
+          style={{
+            padding: 3,
+            borderRadius: 8,
+            background: 'var(--surface-1)',
+            border: '1px solid var(--border)',
+          }}
+        >
+          {(
+            [
+              { key: 'list', label: 'List', Icon: IconList },
+              { key: 'cal', label: 'Cal', Icon: IconCal },
+            ] as const
+          ).map(({ key, label, Icon }) => {
+            const active = isCalendarView ? key === 'cal' : key === 'list'
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => updateParam('view', key)}
+                className="inline-flex items-center gap-1.5 transition-colors"
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: 6,
+                  fontFamily: 'Inter, system-ui',
+                  fontWeight: 600,
+                  fontSize: 12,
+                  letterSpacing: '-0.005em',
+                  color: active ? 'var(--fg-on-accent)' : 'var(--fg-muted)',
+                  background: active ? 'var(--signal)' : 'transparent',
+                }}
+                aria-pressed={active}
+              >
+                <Icon size={13} />
+                {label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
-      {/* Date filter */}
-      <input
-        type="date"
-        value={from}
-        onChange={(evt) => updateParam('from', evt.target.value)}
-        className="h-8 rounded-lg border border-border bg-bg px-2.5 text-sm text-fg outline-none focus:border-border-focus focus:ring-2 focus:ring-border-focus/30"
-        aria-label="Filter by date"
-      />
+      {/* Filter chips — Inter font, surface-1 inactive bg, placeholder as default label */}
+      <div className="flex flex-wrap items-center gap-2">
+        {FILTER_ORDER.map((key) => {
+          const value = filterValues[key] ?? ''
+          const activeLabel = value
+            ? getActiveFilterLabel(key, value, venues)
+            : null
+          const displayLabel = activeLabel ?? FILTER_DEFS[key].placeholder
+          const isActive = Boolean(value)
+          const isOpen = openFilterKey === key
 
-      {/* Clear filters */}
-      {hasFilters && (
+          return (
+            <button
+              key={key}
+              type="button"
+              ref={(element) => {
+                chipRefs.current[key] = element
+              }}
+              onClick={(event) => {
+                const nextOpen = isOpen ? null : key
+                setOpenFilterKey(nextOpen)
+                if (nextOpen) {
+                  setAnchorRect(event.currentTarget.getBoundingClientRect())
+                }
+              }}
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border px-3"
+              style={{
+                fontFamily: 'Inter, system-ui',
+                fontWeight: 600,
+                fontSize: 12.5,
+                letterSpacing: '-0.005em',
+                color: isActive ? 'var(--fg-on-accent)' : 'var(--fg)',
+                borderColor: isActive ? 'var(--signal)' : 'var(--border)',
+                background: isActive ? 'var(--signal)' : 'var(--surface-1)',
+              }}
+              aria-expanded={isOpen}
+              aria-controls={`${key}-filter-options`}
+            >
+              <span style={{ whiteSpace: 'nowrap' }}>{displayLabel}</span>
+              <IconChevDown size={11} />
+            </button>
+          )
+        })}
+
+        {activeFilterCount > 0 && (
+          <button
+            type="button"
+            onClick={clearAllFilters}
+            className="inline-flex h-9 items-center gap-1 rounded-full border border-dashed border-border-strong px-3"
+            style={{
+              fontFamily: 'Inter, system-ui',
+              fontWeight: 600,
+              fontSize: 12.5,
+              color: 'var(--fg-muted)',
+            }}
+          >
+            × Clear filters
+          </button>
+        )}
+      </div>
+
+      {activeDef && openFilterKey && (
+        <FilterSheet
+          open={!isDesktop}
+          title={activeDef.label}
+          placeholder={activeDef.placeholder}
+          options={activeOptions}
+          value={activeValue}
+          onClose={() => setOpenFilterKey(null)}
+          onSelect={(nextValue) => setFilterValue(openFilterKey, nextValue)}
+        />
+      )}
+
+      {activeDef && openFilterKey && (
+        <FilterPopover
+          open={isDesktop}
+          title={activeDef.label}
+          placeholder={activeDef.placeholder}
+          options={activeOptions}
+          value={activeValue}
+          anchorRect={anchorRect}
+          onClose={() => setOpenFilterKey(null)}
+          onSelect={(nextValue) => setFilterValue(openFilterKey, nextValue)}
+        />
+      )}
+
+      {(searchParams.get('search') || searchParams.get('venueSlug')) && (
         <button
           type="button"
           onClick={() => {
-            startTransition(() => {
-              router.replace(pathname, { scroll: false })
-            })
+            updateParams({ search: '', venueSlug: '', from: '' })
           }}
           className="text-sm text-fg-subtle hover:text-fg underline-offset-4 hover:underline"
         >
-          Clear
+          Clear search
         </button>
       )}
     </div>

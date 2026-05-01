@@ -98,3 +98,74 @@ export function formatShortDate(dateStr: string): string {
 export function googleMapsUrl(address: string): string {
   return `https://maps.google.com/?q=${encodeURIComponent(address)}`
 }
+
+export interface WeekDayInfo {
+  date: string
+  label: string
+  dayOfMonth: string
+}
+
+export function currentWeekDays(timezone = 'America/Denver'): WeekDayInfo[] {
+  const today = localDateString(timezone)
+  // Parse from the localized string — avoids local-timezone shifts on UTC servers.
+  const [y, m, d] = today.split('-').map(Number) as [number, number, number]
+  // Use UTC noon so DST transitions never push the date across a day boundary.
+  const todayNoon = new Date(Date.UTC(y, m - 1, d, 12))
+  const dow = todayNoon.getUTCDay() // 0 = Sun
+  const mondayOffset = dow === 0 ? -6 : 1 - dow
+
+  return Array.from({ length: 7 }).map((_, index) => {
+    const noon = new Date(Date.UTC(y, m - 1, d + mondayOffset + index, 12))
+    const date = `${noon.getUTCFullYear()}-${String(noon.getUTCMonth() + 1).padStart(2, '0')}-${String(noon.getUTCDate()).padStart(2, '0')}`
+    const label = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      weekday: 'short',
+    }).format(noon)
+    return { date, label, dayOfMonth: String(noon.getUTCDate()) }
+  })
+}
+
+export function filterWhenToDateRange(
+  value: string,
+  timezone = 'America/Denver',
+): { from: string; to: string } | null {
+  const today = localDateString(timezone)
+  const [y, m, d] = today.split('-').map(Number) as [number, number, number]
+  const noon = new Date(Date.UTC(y, m - 1, d, 12))
+  const dow = noon.getUTCDay()
+
+  const isoDate = (base: Date, offsetDays: number): string => {
+    const shifted = new Date(
+      Date.UTC(
+        base.getUTCFullYear(),
+        base.getUTCMonth(),
+        base.getUTCDate() + offsetDays,
+        12,
+      ),
+    )
+    return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, '0')}-${String(shifted.getUTCDate()).padStart(2, '0')}`
+  }
+
+  const mondayOffset = dow === 0 ? -6 : 1 - dow
+  const sundayOffset = dow === 0 ? 0 : 7 - dow
+  const satOffset = dow === 0 ? -1 : 6 - dow
+
+  switch (value) {
+    case 'tonight':
+      return { from: today, to: today }
+    case 'this-week':
+      return {
+        from: isoDate(noon, mondayOffset),
+        to: isoDate(noon, sundayOffset),
+      }
+    case 'this-weekend':
+      return { from: isoDate(noon, satOffset), to: isoDate(noon, sundayOffset) }
+    case 'next-week':
+      return {
+        from: isoDate(noon, mondayOffset + 7),
+        to: isoDate(noon, sundayOffset + 7),
+      }
+    default:
+      return null
+  }
+}
