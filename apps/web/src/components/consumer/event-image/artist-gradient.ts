@@ -2,7 +2,9 @@ const HUES = [280, 200, 340, 160, 30, 220, 310, 180, 50, 260] as const
 
 function artistHue(artist: string): number {
   if (!artist) return HUES[0]
-  const hash = artist.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+  const hash = artist
+    .split('')
+    .reduce((sum, char) => sum + char.charCodeAt(0), 0)
   const index = hash % HUES.length
   return HUES[index] ?? HUES[0]
 }
