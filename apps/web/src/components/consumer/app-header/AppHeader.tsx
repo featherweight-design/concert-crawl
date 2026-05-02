@@ -1,10 +1,22 @@
+'use client'
+
 import Link from 'next/link'
-import { UserButton } from '@clerk/nextjs'
+import { usePathname } from 'next/navigation'
 import { Search } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { ThemeToggle } from '../theme-toggle'
 import { CCMark } from '../cc-mark'
+import { UserAvatar } from './UserAvatar'
+
+const NAV_TABS = [
+  { label: 'Browse', href: '/events' },
+  { label: 'Search', href: '/search' },
+  { label: 'Saved', href: '/saved' },
+] as const
 
 export function AppHeader() {
+  const pathname = usePathname()
+
   return (
     <header className="w-full">
       {/* ── Mobile bar (hidden sm+) ─────────────────────── */}
@@ -44,24 +56,28 @@ export function AppHeader() {
             </span>
           </Link>
 
-          <nav className="flex gap-1">
-            {[
-              { label: 'Browse', href: '/events' },
-              { label: 'Search', href: '/search' },
-              { label: 'Saved', href: '/saved' },
-            ].map((tab) => (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                className="rounded-lg px-3.5 py-2 text-[13px] font-medium tracking-[-0.01em] text-fg-muted transition-colors hover:bg-surface-1 hover:text-fg"
-              >
-                {tab.label}
-              </Link>
-            ))}
+          <nav className="flex gap-1 overflow-x-auto">
+            {NAV_TABS.map((tab) => {
+              const isActive = pathname === tab.href
+              return (
+                <Link
+                  key={tab.href}
+                  href={tab.href}
+                  className={cn(
+                    'shrink-0 rounded-lg px-[14px] py-[8px] text-[13px] tracking-[-0.01em]',
+                    isActive
+                      ? 'bg-surface-2 font-bold text-fg'
+                      : 'bg-transparent font-medium text-fg-muted',
+                  )}
+                >
+                  {tab.label}
+                </Link>
+              )
+            })}
           </nav>
         </div>
 
-        {/* Right: search bar + user + theme */}
+        {/* Right: search bar + user avatar + theme */}
         <div className="flex items-center gap-3">
           <Link
             href="/search"
@@ -79,9 +95,7 @@ export function AppHeader() {
             </span>
           </Link>
 
-          <div className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface-2">
-            <UserButton />
-          </div>
+          <UserAvatar />
 
           <ThemeToggle />
         </div>
