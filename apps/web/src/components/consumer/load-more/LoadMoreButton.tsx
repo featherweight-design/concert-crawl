@@ -41,7 +41,7 @@ export function LoadMoreButton({
         onClick={handleLoadMore}
         disabled={isPending}
         className={cn(
-          'inline-flex h-10 items-center justify-center rounded-md border border-border-strong bg-surface-2 px-4 text-[13px] font-bold text-signal transition-colors',
+          'inline-flex h-10 items-center justify-center rounded-md border border-border-strong bg-surface-2 px-4 text-[13px] font-bold text-signal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-1',
           isPending && 'pointer-events-none opacity-60',
         )}
       >

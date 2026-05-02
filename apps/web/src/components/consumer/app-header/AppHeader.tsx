@@ -58,7 +58,7 @@ export function AppHeader() {
 
           <nav className="flex gap-1 overflow-x-auto">
             {NAV_TABS.map((tab) => {
-              const isActive = pathname === tab.href
+              const isActive = pathname.startsWith(tab.href)
               return (
                 <Link
                   key={tab.href}
@@ -81,6 +81,7 @@ export function AppHeader() {
         <div className="flex items-center gap-3">
           <Link
             href="/search"
+            aria-label="Search"
             className="flex h-9 w-9 items-center justify-center gap-2 rounded-lg border border-border bg-surface-1 px-3 text-fg-subtle lg:w-[280px] lg:justify-start"
           >
             <Search size={14} strokeWidth={1.5} className="shrink-0" />

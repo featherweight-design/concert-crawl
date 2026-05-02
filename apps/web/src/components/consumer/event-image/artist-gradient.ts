@@ -9,7 +9,7 @@ function artistHue(artist: string): number {
   return HUES[index] ?? HUES[0]
 }
 
-export function getArtistGradientStyle(artist: string): {
+export function getArtistGradientStyle(artist: string | undefined): {
   background: string
   color: string
 } {

@@ -234,11 +234,11 @@ In `FilterBar.tsx`, find the List/Cal toggle wrapper `<div>` at line 207:
           style={{
 ```
 
-Change `"inline-flex items-center"` to `"hidden sm:inline-flex items-center"`:
+Keep the toggle visible on mobile (text-only) by leaving `"inline-flex items-center"` and hiding only the icons via `hidden sm:inline-flex` on the `<Icon>` wrapper:
 
 ```tsx
         <div
-          className="hidden sm:inline-flex items-center"
+          className="inline-flex items-center"
           style={{
 ```
 

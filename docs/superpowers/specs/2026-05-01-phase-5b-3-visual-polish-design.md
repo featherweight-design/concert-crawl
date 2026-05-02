@@ -21,7 +21,7 @@ A single focused PR that resolves all post-filter-redesign visual discrepancies 
 - Use `usePathname()` from `next/navigation` to detect the current route.
 - Active link: `font-bold text-[--fg] bg-[--surface-2] rounded-lg px-[14px] py-[8px]`
 - Inactive link: `font-medium text-[--fg-muted] bg-transparent px-[14px] py-[8px]`
-- No extra hover state needed — active/inactive covers all cases per the mock.
+- Inactive links get a hover state: `hover:bg-surface-1 hover:text-fg` with `transition-colors`.
 
 ### User avatar
 
@@ -136,8 +136,8 @@ bg-[--surface-2] border border-[--border-strong] text-[--signal] font-bold text-
 
 1. Run `pnpm dev`, open http://localhost:3000
 2. Verify browse page at 390px (mobile), 768px (tablet), 1280px (desktop)
-3. Check: active nav link highlighted on `/browse`; initials avatar visible top-right
-4. Check: filter chips scroll horizontally on mobile; List/Cal toggle hidden on mobile
+3. Check: active nav link highlighted on `/events`; avatar visible top-right
+4. Check: filter chips scroll horizontally on mobile; List/Cal toggle visible on mobile (text-only, icons hidden at `sm`+)
 5. Check: artist fallback tiles show hue-shifted gradients (no two adjacent artists should look identical if they have different names)
 6. Check: date group headers show "Thu" not "Thursday"
 7. Check: Load More button matches token styling

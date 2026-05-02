@@ -37,9 +37,7 @@ describe('getArtistGradientStyle', () => {
   })
 
   it('falls back to hue 280 for undefined artist (index 0)', () => {
-    const { background } = getArtistGradientStyle(
-      undefined as unknown as string,
-    )
+    const { background } = getArtistGradientStyle(undefined)
     expect(background).toContain('oklch(0.35 0.08 280)')
   })
 
