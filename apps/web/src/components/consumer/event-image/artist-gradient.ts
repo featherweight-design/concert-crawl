@@ -4,8 +4,7 @@ function artistHue(artist: string): number {
   if (!artist) return HUES[0]
   const hash = artist.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
   const index = hash % HUES.length
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  return HUES[index]!
+  return HUES[index] ?? HUES[0]
 }
 
 export function getArtistGradientStyle(artist: string): {
