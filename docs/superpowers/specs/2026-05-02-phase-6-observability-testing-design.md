@@ -25,14 +25,14 @@ Milestone from spec: _Full observability stack live; smoke tests running; alerts
 
 These were made in lieu of user questions (user was unavailable). Flag any that need revision:
 
-1. **OpenTelemetry scope**: Traces only — HTTP request spans + Postgres query spans in `apps/api`. No custom business metrics (reserved for Phase 7+ when crawl automation adds meaningful signal).
-2. **Sentry scope**: Error tracking only. Performance monitoring disabled (stays on free tier).
+1. **Traces via Sentry**: Sentry's built-in performance tracing (`tracesSampleRate: 0.1`) is used for distributed traces. No separate OpenTelemetry SDK or Grafana Cloud account — Sentry covers both errors and traces in one vendor.
+2. **UptimeRobot dropped**: The Playwright smoke cron (every 6h) provides equivalent uptime signal with more meaningful checks. Sentry failure reporting on smoke test failures serves as the alert channel.
 3. **E2E is not a PR gate**: Staging isn't available at PR time. E2E runs post-merge as deploy verification. Unit + integration tests are the PR gate.
 4. **Integration test auth**: Clerk middleware mocked at the transport layer (same as unit tests). Real DB, synthetic auth context. No real Clerk test tenant needed.
 5. **Test DB**: Separate database `concert_crawl_test` in the Docker Postgres service. Environment variable `DATABASE_URL_TEST` points to it.
 6. **Playwright test user**: Credentials stored as GitHub Actions secrets (`E2E_TEST_USER_EMAIL`, `E2E_TEST_USER_PASSWORD`). `storageState` reused across tests in a session.
 7. **`apps/e2e/`**: New workspace app — all Playwright lives here (E2E + smoke). Not colocated with unit/integration tests.
-8. **Grafana alert chain**: Smoke test failures are captured as Sentry events tagged `source: smoke-test`. Grafana alert fires on new Sentry issues matching that tag. No direct OTLP→Grafana alert needed.
+8. **Smoke alert chain**: Smoke test failures are captured as Sentry events tagged `source: smoke-test`. Sentry's built-in alerts notify via email on new issues matching that tag — no Grafana needed.
 9. **`packages/logger`**: New shared package. Both `apps/api` and `apps/crawler` import from it. Avoids duplicating Pino config.
 
 ---
@@ -98,7 +98,9 @@ import * as Sentry from '@sentry/node'
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
   environment: process.env.SENTRY_ENVIRONMENT ?? 'local',
-  tracesSampleRate: 0, // traces handled by OTEL, not Sentry
+  // 10% sample rate — Sentry's built-in tracing handles distributed traces.
+  // No separate OTEL SDK needed.
+  tracesSampleRate: 0.1,
 })
 ```
 
@@ -128,50 +130,7 @@ Same pattern as API: `instrument.ts` + `Sentry.init()` at crawler entry point. C
 - `SENTRY_DSN`
 - `SENTRY_ENVIRONMENT` (set to `staging` / `production` in Render env groups)
 
-### 3. OpenTelemetry → Grafana Cloud
-
-**`apps/api` only** (web and crawler traces not worth the overhead at this stage).
-
-`src/instrument.ts` extended (runs before app boot, same file as Sentry init):
-
-```ts
-import { NodeSDK } from '@opentelemetry/sdk-node'
-import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node'
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
-import { Resource } from '@opentelemetry/resources'
-// Note: SEMRESATTRS_* constants are deprecated in newer @opentelemetry/semantic-conventions.
-// Use string literals to avoid the deprecation warnings:
-const sdk = new NodeSDK({
-  resource: new Resource({
-    'service.name': 'concert-crawl-api',
-    'deployment.environment': process.env.SENTRY_ENVIRONMENT ?? 'local',
-  }),
-  traceExporter: new OTLPTraceExporter({
-    url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
-    headers: {
-      Authorization: `Basic ${process.env.OTEL_EXPORTER_OTLP_HEADERS}`,
-    },
-  }),
-  instrumentations: [
-    getNodeAutoInstrumentations({
-      '@opentelemetry/instrumentation-fs': { enabled: false }, // too noisy
-    }),
-  ],
-})
-
-sdk.start()
-```
-
-OTEL is only active when `OTEL_EXPORTER_OTLP_ENDPOINT` is set — safe to leave unset in local dev.
-
-New `.env.example` entries for API:
-
-```
-OTEL_EXPORTER_OTLP_ENDPOINT=          # Grafana Cloud OTLP endpoint
-OTEL_EXPORTER_OTLP_HEADERS=           # base64(instanceId:apiToken)
-```
-
-### 4. New package.json entries (`packages/logger`)
+### 3. New package.json entries (`packages/logger`)
 
 Added to `pnpm-workspace.yaml` (if not auto-detected) and `turbo.json` pipeline.
 
@@ -398,7 +357,7 @@ export default defineConfig({
 | `/admin` redirects unauthenticated user      | Auth gate active                               |
 | Known venue slug page loads                  | Data freshness (e.g. `/venues/larimer-lounge`) |
 
-On failure, Sentry captures the error with tags `{ source: 'smoke-test', environment: 'production' }`. Grafana alert fires on new Sentry issues matching those tags.
+On failure, Sentry captures the error with tags `{ source: 'smoke-test', environment: 'production' }`. A Sentry alert rule fires on new issues matching those tags and notifies via email.
 
 ### GitHub Actions Workflows
 
@@ -490,24 +449,8 @@ Complete these before or alongside PR 6a. Values go into Render environment grou
    - Render `staging` env group: `SENTRY_DSN` (per service), `SENTRY_ENVIRONMENT=staging`
    - Render `production` env group: `SENTRY_DSN` (per service), `SENTRY_ENVIRONMENT=production`
 4. Configure source map upload: API and web build steps (`SENTRY_AUTH_TOKEN` as secret)
-5. Create alert: new issue in any project → notify via email
-
-### Grafana Cloud
-
-1. Create free account at grafana.com
-2. Create stack, note OTLP endpoint URL + instance ID + API token
-3. Add to Render `staging` and `production` env groups:
-   - `OTEL_EXPORTER_OTLP_ENDPOINT`
-   - `OTEL_EXPORTER_OTLP_HEADERS` (base64 of `instanceId:apiToken`)
-4. Create alert in Grafana: new Sentry issue with tag `source=smoke-test` → notify via email
-   - Connect via Sentry webhook (Sentry → Settings → Integrations → Webhooks → Grafana)
-
-### UptimeRobot
-
-1. Create free account
-2. Add HTTP monitor: `GET https://concertcrawl.app` — 5-min interval
-3. Add HTTP monitor: `GET https://concert-crawl-api.onrender.com/v1/health` — 5-min interval
-4. Alert contacts: email on down/up transitions
+5. Create alert rule: new issue in any project → notify via email
+6. Create alert rule: new issue with tag `source=smoke-test` → notify via email (for smoke test failures)
 
 ### GitHub Secrets / Vars (needed for CI)
 
@@ -527,13 +470,12 @@ Phase 6 is complete when all of the following are true:
 
 - [ ] `pnpm --filter api dev` shows structured JSON (or pretty-printed) Pino logs
 - [ ] A deliberate `throw new Error()` in an API route appears in Sentry within 60 seconds
-- [ ] OpenTelemetry traces from the API appear in Grafana Cloud
+- [ ] Sentry Performance tab shows traces for API requests (tracesSampleRate: 0.1)
 - [ ] `pnpm --filter api test:integration` passes against a local test DB
 - [ ] Integration test CI job is green on a PR
 - [ ] Playwright E2E suite passes against staging after a merge to `main`
 - [ ] Smoke tests pass against production
-- [ ] A manually triggered smoke test failure creates a Sentry event
-- [ ] UptimeRobot monitors are green
+- [ ] A manually triggered smoke test failure creates a Sentry event tagged `source: smoke-test`
 
 ---
 
@@ -545,8 +487,6 @@ Phase 6 is complete when all of the following are true:
 LOG_LEVEL=info
 SENTRY_DSN=
 SENTRY_ENVIRONMENT=local
-OTEL_EXPORTER_OTLP_ENDPOINT=
-OTEL_EXPORTER_OTLP_HEADERS=
 DATABASE_URL_TEST=postgresql://postgres:postgres@localhost:5432/concert_crawl_test
 ```
 

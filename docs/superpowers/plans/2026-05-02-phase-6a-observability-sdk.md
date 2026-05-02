@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add Pino structured logging, Sentry error tracking, and OpenTelemetry traces to `apps/api`, `apps/web`, and `apps/crawler` via a shared `packages/logger` package.
+**Goal:** Add Pino structured logging and Sentry error tracking + traces to `apps/api`, `apps/web`, and `apps/crawler` via a shared `packages/logger` package.
 
-**Architecture:** A new `packages/logger` workspace package exports `createLogger()` and a Hono request-logger middleware. `apps/api` imports from it, replacing `hono/logger`. Sentry is initialized in each app via a dedicated `instrument.ts` file imported before all other code. OpenTelemetry traces go to Grafana Cloud from `apps/api` only, using `skipOpenTelemetrySetup: true` in Sentry so the two SDKs don't conflict.
+**Architecture:** A new `packages/logger` workspace package exports `createLogger()` and a Hono request-logger middleware. `apps/api` imports from it, replacing `hono/logger`. Sentry is initialized in each app via a dedicated `instrument.ts` file imported before all other code. Sentry's built-in performance tracing (`tracesSampleRate: 0.1`) is used for distributed traces — no separate OpenTelemetry SDK or Grafana Cloud account needed.
 
-**Tech Stack:** `pino@^9`, `pino-pretty@^11`, `@sentry/node@^8`, `@sentry/nextjs@^8`, `@opentelemetry/sdk-node@^0.52`, `@opentelemetry/auto-instrumentations-node@^0.50`, `@opentelemetry/exporter-trace-otlp-http@^0.52`
+**Tech Stack:** `pino@^9`, `pino-pretty@^11`, `@sentry/node@^8`, `@sentry/nextjs@^8`
 
 ---
 
@@ -21,7 +21,7 @@
 - `packages/logger/src/middleware.ts` — `requestLogger()` Hono middleware
 - `packages/logger/src/index.test.ts`
 - `packages/logger/src/middleware.test.ts`
-- `apps/api/src/instrument.ts` — Sentry + OTEL init (imported first)
+- `apps/api/src/instrument.ts` — Sentry init with tracing enabled (imported first)
 - `apps/api/src/lib/logger.ts` — `apiLogger` singleton
 - `apps/web/sentry.client.config.ts`
 - `apps/web/sentry.server.config.ts`
@@ -32,8 +32,8 @@
 
 - `apps/api/src/app.ts` — replace `hono/logger`, add `requestLogger`, add `onError` Sentry handler
 - `apps/api/src/index.ts` — add `import './instrument.js'` as first import; replace `console.warn` with `apiLogger`
-- `apps/api/package.json` — add `@concert-crawl/logger`, `@sentry/node`, OTEL deps
-- `apps/api/.env.example` — add `LOG_LEVEL`, `SENTRY_ENVIRONMENT`, OTEL vars
+- `apps/api/package.json` — add `@concert-crawl/logger`, `@sentry/node`
+- `apps/api/.env.example` — add `LOG_LEVEL`, `SENTRY_ENVIRONMENT`
 - `apps/web/next.config.ts` — wrap with `withSentryConfig`
 - `apps/web/package.json` — add `@sentry/nextjs`
 - `apps/web/.env.example` — add `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_AUTH_TOKEN`
@@ -437,7 +437,7 @@ git commit -m "feat: replace hono/logger with pino requestLogger in apps/api"
 
 ---
 
-## Task 5: Add Sentry + OTEL to `apps/api`
+## Task 5: Add Sentry to `apps/api`
 
 **Files:**
 
@@ -450,59 +450,25 @@ git commit -m "feat: replace hono/logger with pino requestLogger in apps/api"
 - [ ] **Step 1: Install dependencies**
 
 ```bash
-pnpm add @sentry/node @opentelemetry/sdk-node @opentelemetry/auto-instrumentations-node @opentelemetry/exporter-trace-otlp-http --filter api
+pnpm add @sentry/node --filter api
 ```
 
-Expected: packages added to `apps/api/package.json` dependencies.
+Expected: package added to `apps/api/package.json` dependencies.
 
 - [ ] **Step 2: Create `apps/api/src/instrument.ts`**
 
-This file must be imported before all other app code so Sentry and OTEL can instrument modules at load time.
+This file must be imported before all other app code so Sentry can instrument modules at load time.
 
 ```ts
 import * as Sentry from '@sentry/node'
-import { NodeSDK } from '@opentelemetry/sdk-node'
-import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node'
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
-import { Resource } from '@opentelemetry/resources'
 
-// Initialize Sentry first, before OTEL, to avoid SDK conflicts.
-// skipOpenTelemetrySetup: true because we manage the OTEL SDK ourselves.
 Sentry.init({
   dsn: process.env['SENTRY_DSN'],
   environment: process.env['SENTRY_ENVIRONMENT'] ?? 'local',
-  tracesSampleRate: 0, // traces go to Grafana Cloud via OTEL, not Sentry
-  skipOpenTelemetrySetup: true,
+  // Sample 10% of traces in production. Sentry's built-in tracing handles
+  // distributed traces — no separate OTEL SDK needed.
+  tracesSampleRate: 0.1,
 })
-
-// OTEL is only active when the endpoint is configured.
-// Leaving OTEL_EXPORTER_OTLP_ENDPOINT unset in local dev is safe.
-if (process.env['OTEL_EXPORTER_OTLP_ENDPOINT']) {
-  const sdk = new NodeSDK({
-    resource: new Resource({
-      'service.name': 'concert-crawl-api',
-      'deployment.environment': process.env['SENTRY_ENVIRONMENT'] ?? 'local',
-    }),
-    traceExporter: new OTLPTraceExporter({
-      url: process.env['OTEL_EXPORTER_OTLP_ENDPOINT'],
-      headers: {
-        Authorization: `Basic ${process.env['OTEL_EXPORTER_OTLP_HEADERS'] ?? ''}`,
-      },
-    }),
-    instrumentations: [
-      getNodeAutoInstrumentations({
-        // fs instrumentation is too noisy for a web API
-        '@opentelemetry/instrumentation-fs': { enabled: false },
-      }),
-    ],
-  })
-
-  sdk.start()
-
-  process.on('SIGTERM', async () => {
-    await sdk.shutdown()
-  })
-}
 ```
 
 - [ ] **Step 3: Update `apps/api/src/index.ts`**
@@ -574,10 +540,6 @@ Add below the existing `SENTRY_DSN` line:
 ```
 SENTRY_ENVIRONMENT=local
 
-# OpenTelemetry (Grafana Cloud) — leave blank in local dev
-OTEL_EXPORTER_OTLP_ENDPOINT=
-OTEL_EXPORTER_OTLP_HEADERS=
-
 # Logging
 LOG_LEVEL=info
 
@@ -619,7 +581,7 @@ Expected: Pino JSON output (or pretty-printed in dev) appears in the API termina
 
 ```bash
 git add apps/api/src/instrument.ts apps/api/src/index.ts apps/api/src/app.ts apps/api/package.json apps/api/.env.example pnpm-lock.yaml
-git commit -m "feat: add sentry + otel instrumentation to apps/api"
+git commit -m "feat: add sentry instrumentation to apps/api"
 ```
 
 ---
@@ -649,7 +611,7 @@ import * as Sentry from '@sentry/nextjs'
 Sentry.init({
   dsn: process.env['NEXT_PUBLIC_SENTRY_DSN'],
   environment: process.env['NEXT_PUBLIC_SENTRY_ENVIRONMENT'] ?? 'local',
-  tracesSampleRate: 0,
+  tracesSampleRate: 0.1,
 })
 ```
 
@@ -661,7 +623,7 @@ import * as Sentry from '@sentry/nextjs'
 Sentry.init({
   dsn: process.env['SENTRY_DSN'],
   environment: process.env['SENTRY_ENVIRONMENT'] ?? 'local',
-  tracesSampleRate: 0,
+  tracesSampleRate: 0.1,
 })
 ```
 
@@ -673,7 +635,7 @@ import * as Sentry from '@sentry/nextjs'
 Sentry.init({
   dsn: process.env['SENTRY_DSN'],
   environment: process.env['SENTRY_ENVIRONMENT'] ?? 'local',
-  tracesSampleRate: 0,
+  tracesSampleRate: 0.1,
 })
 ```
 
@@ -765,8 +727,7 @@ import * as Sentry from '@sentry/node'
 Sentry.init({
   dsn: process.env['SENTRY_DSN'],
   environment: process.env['SENTRY_ENVIRONMENT'] ?? 'local',
-  tracesSampleRate: 0,
-  skipOpenTelemetrySetup: true,
+  tracesSampleRate: 0.1,
 })
 ```
 
@@ -867,7 +828,7 @@ git commit -m "test: verify sentry error capture (remove test throw)"
 ```bash
 git push -u origin feat/phase-6-observability-testing
 gh pr create \
-  --title "feat: phase 6a — observability SDK (pino, sentry, otel)" \
+  --title "feat: phase 6a — observability SDK (pino + sentry)" \
   --body "$(cat .github/pull_request_template.md)"
 ```
 
