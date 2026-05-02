@@ -2,7 +2,6 @@
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useTransition } from 'react'
-import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { copy } from '../definitions/copy'
 
@@ -42,8 +41,8 @@ export function LoadMoreButton({
         onClick={handleLoadMore}
         disabled={isPending}
         className={cn(
-          buttonVariants({ variant: 'outline' }),
-          isPending && 'opacity-60 pointer-events-none',
+          'inline-flex h-10 items-center justify-center rounded-md border border-border-strong bg-surface-2 px-4 text-[13px] font-bold text-signal transition-colors',
+          isPending && 'pointer-events-none opacity-60',
         )}
       >
         {isPending ? 'Loading…' : copy.loadMore}
