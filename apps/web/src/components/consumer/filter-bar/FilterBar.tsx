@@ -270,7 +270,7 @@ export function FilterBar({ venues, className }: FilterBarProps) {
                   setAnchorRect(event.currentTarget.getBoundingClientRect())
                 }
               }}
-              className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border px-3"
+              className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-3"
               style={{
                 fontFamily: 'Inter, system-ui',
                 fontWeight: 600,
@@ -293,7 +293,7 @@ export function FilterBar({ venues, className }: FilterBarProps) {
           <button
             type="button"
             onClick={clearAllFilters}
-            className="inline-flex h-9 cursor-pointer items-center gap-1 rounded-full border border-dashed border-border-strong px-3"
+            className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1 rounded-full border border-dashed border-border-strong px-3"
             style={{
               fontFamily: 'Inter, system-ui',
               fontWeight: 600,
