@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a `apps/e2e` Playwright workspace app with two suites: a staging E2E suite (runs post-merge against staging) and an hourly production smoke test cron (reports failures to Sentry).
+**Goal:** Add a `apps/e2e` Playwright workspace app with two suites: a staging E2E suite (runs post-merge against staging) and a production smoke test cron (reports failures to Sentry).
 
 **Architecture:** `apps/e2e/` is a new pnpm workspace package automatically discovered via `apps/*` in `pnpm-workspace.yaml`. Two Playwright configs — `playwright.config.ts` (staging, full E2E) and `playwright.smoke.config.ts` (prod, minimal smoke tests). Auth state is set up once per run via a Playwright `globalSetup` that signs in and saves `storageState`. Two GitHub Actions workflows: `staging-e2e.yml` triggers on push to `main` (waits for Render deploy); `smoke.yml` runs on a `0 * * * *` cron.
 
@@ -29,7 +29,7 @@
 - `apps/e2e/src/e2e/venue-detail.spec.ts` — venue detail page E2E
 - `apps/e2e/src/e2e/auth.spec.ts` — auth redirect and sign-in E2E
 - `.github/workflows/staging-e2e.yml` — post-merge staging E2E trigger
-- `.github/workflows/smoke.yml` — hourly prod smoke cron
+- `.github/workflows/smoke.yml` — prod smoke cron (every 6h, skippable via `SMOKE_ENABLED` repo var)
 
 ---
 
@@ -757,7 +757,7 @@ git commit -m "ci: add staging e2e workflow (triggers on push to main)"
 
 ---
 
-## Task 10: GitHub Actions — hourly smoke test cron
+## Task 10: GitHub Actions — smoke test cron (every 6h)
 
 **Files:**
 
@@ -770,8 +770,8 @@ name: Production Smoke Tests
 
 on:
   schedule:
-    # Every hour at :00
-    - cron: '0 * * * *'
+    # Every 6 hours — change to '0 * * * *' at launch if you want hourly
+    - cron: '0 */6 * * *'
   workflow_dispatch: # allow manual trigger for testing
 
 jobs:
@@ -779,6 +779,10 @@ jobs:
     name: Playwright smoke (production)
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Skip if SMOKE_ENABLED repo var is explicitly set to 'false'.
+    # Pre-launch: set SMOKE_ENABLED=false in GitHub repo vars (Settings → Variables).
+    # At launch: delete the var or set to 'true'. No code change needed.
+    if: vars.SMOKE_ENABLED != 'false'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -896,7 +900,7 @@ In GitHub → Settings → Secrets and variables → Actions:
 
 ```bash
 git add .github/workflows/smoke.yml apps/e2e/src/fixtures/smoke-setup.ts apps/e2e/playwright.smoke.config.ts
-git commit -m "ci: add hourly smoke test cron with sentry failure reporting"
+git commit -m "ci: add smoke test cron (every 6h, skippable via SMOKE_ENABLED repo var)"
 ```
 
 ---
@@ -971,5 +975,5 @@ After all three PRs (6a, 6b, 6c) merge to `main`, verify the full milestone:
 - [ ] OpenTelemetry traces appear in Grafana Cloud (requires `OTEL_EXPORTER_OTLP_ENDPOINT` set in Render)
 - [ ] Integration test CI job is green on every PR
 - [ ] Staging E2E job runs automatically after merge and passes
-- [ ] Smoke test cron runs hourly and passes (check Actions → smoke.yml → scheduled runs)
+- [ ] Smoke test cron runs every 6h and passes (check Actions → smoke.yml → scheduled runs); or set `SMOKE_ENABLED=false` in repo vars pre-launch to skip
 - [ ] UptimeRobot monitors configured and green (manual setup — see design spec external service checklist)
