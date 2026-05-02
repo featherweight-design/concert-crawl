@@ -12,10 +12,10 @@ export function UserAvatar() {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (event: MouseEvent) => {
       if (
         containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
+        !containerRef.current.contains(event.target as Node)
       ) {
         setOpen(false)
       }
