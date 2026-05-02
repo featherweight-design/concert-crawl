@@ -34,6 +34,7 @@ export function EventCard({ event, className }: EventCardProps) {
         <EventImage
           src={event.imageUrl}
           alt={event.artist}
+          artist={event.artist}
           fallbackInitial={artistInitial(event.artist)}
           className="h-full w-full"
         />

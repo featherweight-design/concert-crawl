@@ -3,10 +3,12 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
+import { getArtistGradientStyle } from './artist-gradient'
 
 interface EventImageProps {
   src: string | null
   alt: string
+  artist?: string
   fallbackInitial?: string
   className?: string
   fill?: boolean
@@ -14,23 +16,24 @@ interface EventImageProps {
 }
 
 function Fallback({
+  artist,
   fallbackInitial,
   alt,
   className,
 }: {
+  artist: string | undefined
   fallbackInitial: string | undefined
   alt: string
   className: string | undefined
 }) {
+  const gradientStyle = getArtistGradientStyle(artist ?? fallbackInitial ?? '')
   return (
     <div
-      className={cn(
-        'flex items-center justify-center bg-surface-2 text-fg-subtle select-none',
-        className,
-      )}
+      className={cn('flex items-center justify-center select-none', className)}
+      style={gradientStyle}
       aria-label={alt}
     >
-      <span className="text-2xl font-bold opacity-40">
+      <span className="text-2xl font-bold opacity-80">
         {fallbackInitial ?? '♪'}
       </span>
     </div>
@@ -40,6 +43,7 @@ function Fallback({
 export function EventImage({
   src,
   alt,
+  artist,
   fallbackInitial,
   className,
   fill = false,
@@ -50,6 +54,7 @@ export function EventImage({
   if (!src || errored) {
     return (
       <Fallback
+        artist={artist}
         fallbackInitial={fallbackInitial}
         alt={alt}
         className={className}

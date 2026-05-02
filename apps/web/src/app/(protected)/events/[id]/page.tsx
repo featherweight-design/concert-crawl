@@ -75,6 +75,7 @@ export default async function EventDetailPage({
         <EventImage
           src={event.imageUrl}
           alt={event.artist}
+          artist={event.artist}
           fallbackInitial={artistInitial(event.artist)}
           className="h-full w-full"
           fill
