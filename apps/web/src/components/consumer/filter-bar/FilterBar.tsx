@@ -204,7 +204,7 @@ export function FilterBar({ venues, className }: FilterBarProps) {
 
         {/* List / Cal toggle — Inter font, SVG icons */}
         <div
-          className="inline-flex items-center"
+          className="hidden sm:inline-flex items-center"
           style={{
             padding: 3,
             borderRadius: 8,
@@ -224,7 +224,7 @@ export function FilterBar({ venues, className }: FilterBarProps) {
                 key={key}
                 type="button"
                 onClick={() => updateParam('view', key)}
-                className="inline-flex items-center gap-1.5 transition-colors"
+                className="inline-flex cursor-pointer items-center gap-1.5 transition-colors"
                 style={{
                   padding: '6px 14px',
                   borderRadius: 6,
@@ -246,7 +246,7 @@ export function FilterBar({ venues, className }: FilterBarProps) {
       </div>
 
       {/* Filter chips — Inter font, surface-1 inactive bg, placeholder as default label */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-nowrap items-center gap-2 overflow-x-auto scrollbar-none">
         {FILTER_ORDER.map((key) => {
           const value = filterValues[key] ?? ''
           const activeLabel = value
@@ -270,7 +270,7 @@ export function FilterBar({ venues, className }: FilterBarProps) {
                   setAnchorRect(event.currentTarget.getBoundingClientRect())
                 }
               }}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full border px-3"
+              className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border px-3"
               style={{
                 fontFamily: 'Inter, system-ui',
                 fontWeight: 600,
@@ -293,7 +293,7 @@ export function FilterBar({ venues, className }: FilterBarProps) {
           <button
             type="button"
             onClick={clearAllFilters}
-            className="inline-flex h-9 items-center gap-1 rounded-full border border-dashed border-border-strong px-3"
+            className="inline-flex h-9 cursor-pointer items-center gap-1 rounded-full border border-dashed border-border-strong px-3"
             style={{
               fontFamily: 'Inter, system-ui',
               fontWeight: 600,
