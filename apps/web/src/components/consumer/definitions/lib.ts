@@ -71,7 +71,7 @@ export function dateGroupLabel(dateStr: string, timezone = 'UTC'): string {
   if (isToday(dateStr, timezone)) return 'Tonight'
   if (isTomorrow(dateStr, timezone)) return 'Tomorrow'
   return formatEventDate(dateStr, timezone, {
-    weekday: 'long',
+    weekday: 'short',
     month: 'long',
     day: 'numeric',
   })
