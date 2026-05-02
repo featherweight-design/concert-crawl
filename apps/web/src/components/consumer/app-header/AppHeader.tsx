@@ -67,7 +67,7 @@ export function AppHeader() {
                     'shrink-0 rounded-lg px-[14px] py-[8px] text-[13px] tracking-[-0.01em]',
                     isActive
                       ? 'bg-surface-2 font-bold text-fg'
-                      : 'bg-transparent font-medium text-fg-muted',
+                      : 'bg-transparent font-medium text-fg-muted transition-colors hover:bg-surface-1 hover:text-fg',
                   )}
                 >
                   {tab.label}
