@@ -202,9 +202,9 @@ export function FilterBar({ venues, className }: FilterBarProps) {
           </h1>
         </div>
 
-        {/* List / Cal toggle — Inter font, SVG icons */}
+        {/* List / Cal toggle — Inter font, SVG icons (icons hidden on mobile) */}
         <div
-          className="hidden sm:inline-flex items-center"
+          className="inline-flex items-center"
           style={{
             padding: 3,
             borderRadius: 8,
@@ -237,7 +237,9 @@ export function FilterBar({ venues, className }: FilterBarProps) {
                 }}
                 aria-pressed={active}
               >
-                <Icon size={13} />
+                <span className="hidden sm:inline-flex">
+                  <Icon size={13} />
+                </span>
                 {label}
               </button>
             )
@@ -246,7 +248,12 @@ export function FilterBar({ venues, className }: FilterBarProps) {
       </div>
 
       {/* Filter chips — Inter font, surface-1 inactive bg, placeholder as default label */}
-      <div className="flex flex-nowrap items-center gap-2 overflow-x-auto scrollbar-none">
+      <div
+        className="flex flex-nowrap items-center gap-2 overflow-x-auto scrollbar-none"
+        style={{
+          maskImage: 'linear-gradient(to right, black 85%, transparent)',
+        }}
+      >
         {FILTER_ORDER.map((key) => {
           const value = filterValues[key] ?? ''
           const activeLabel = value

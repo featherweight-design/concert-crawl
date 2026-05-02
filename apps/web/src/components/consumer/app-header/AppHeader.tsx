@@ -81,14 +81,14 @@ export function AppHeader() {
         <div className="flex items-center gap-3">
           <Link
             href="/search"
-            className="flex h-9 w-[280px] items-center gap-2 rounded-lg border border-border bg-surface-1 px-3 text-fg-subtle"
+            className="flex h-9 w-9 items-center justify-center gap-2 rounded-lg border border-border bg-surface-1 px-3 text-fg-subtle lg:w-[280px] lg:justify-start"
           >
-            <Search size={14} strokeWidth={1.5} />
-            <span className="flex-1 text-[13px]">
+            <Search size={14} strokeWidth={1.5} className="shrink-0" />
+            <span className="hidden flex-1 text-[13px] lg:block">
               Search artists or venues…
             </span>
             <span
-              className="rounded border border-border-strong px-1.5 py-0.5 text-[10px] text-fg-subtle"
+              className="hidden rounded border border-border-strong px-1.5 py-0.5 text-[10px] text-fg-subtle lg:block"
               style={{ fontFamily: 'var(--font-mono)' }}
             >
               ⌘K
