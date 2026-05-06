@@ -1,4 +1,5 @@
 import pino, { type Logger } from 'pino'
+import type {} from 'hono'
 
 // Extend Hono's context type map so c.get('requestId') is typed everywhere.
 declare module 'hono' {
