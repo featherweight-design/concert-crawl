@@ -93,6 +93,19 @@ The API collection lives at `apps/api/bruno/` and is ready to open in [Bruno](ht
 
 The collection includes: health check, list venues, create venue, and generate invite code. Run `pnpm dev` before sending requests.
 
+## 🔨 Tool Belt
+
+Third-party services this app depends on:
+
+- [Render](https://render.com): Hosting for the API, web app, and managed Postgres database
+- [Clerk](https://clerk.com): Authentication and user management (supports Spotify OAuth)
+- [Anthropic](https://anthropic.com): Claude Haiku LLM used as fallback for crawl data extraction
+- [Stripe](https://stripe.com): Payments and subscription billing
+- [Resend](https://resend.com): Transactional email delivery
+- [Sentry](https://sentry.io): Error tracking and distributed performance tracing across all three apps
+- [Cloudflare](https://cloudflare.com): Domain registrar for `concertcrawl.app`
+- [GitHub Actions](https://github.com/features/actions): CI/CD pipelines, integration test runner, E2E tests, and smoke test cron
+
 ## Contributing
 
 - Branches: `feat/short-description`, `fix/short-description`
