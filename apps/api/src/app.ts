@@ -1,12 +1,13 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { logger } from 'hono/logger'
+import { requestLogger } from '@concert-crawl/logger'
 import { registerRoutes } from './routes/index.js'
+import { apiLogger } from './lib/logger.js'
 
 export function createApp() {
   const app = new Hono()
 
-  app.use('*', logger())
+  app.use('*', requestLogger(apiLogger))
   app.use(
     '*',
     cors({

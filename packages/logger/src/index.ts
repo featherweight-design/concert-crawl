@@ -9,6 +9,7 @@ declare module 'hono' {
 }
 
 export type { Logger }
+export { requestLogger } from './middleware.js'
 
 export function createLogger(name: string): Logger {
   const level = process.env['LOG_LEVEL'] ?? 'info'
