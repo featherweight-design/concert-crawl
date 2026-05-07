@@ -8,6 +8,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.ts --passWithNoTests",
+    "test:all": "vitest run && vitest run --config vitest.integration.ts",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit"
   },
@@ -32,6 +34,7 @@
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
     "eslint": "^8.0.0",
+    "postgres": "^3.4.9",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0",
     "vitest": "^2.0.0"
