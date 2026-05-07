@@ -46,7 +46,8 @@ export const NotificationBell = () => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
+        event.target instanceof Node &&
+        !containerRef.current.contains(event.target)
       ) {
         setOpen(false)
       }
