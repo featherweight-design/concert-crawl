@@ -14,8 +14,9 @@ export { requestLogger } from './middleware.js'
 export function createLogger(name: string): Logger {
   const level = process.env['LOG_LEVEL'] ?? 'info'
 
-  // Skip pretty-printing in tests (avoids worker thread spawning issues)
-  // and in production (raw JSON is captured by Render's log aggregator).
+  // Skip pretty-printing in tests (pino-pretty spawns a ThreadStream that
+  // causes instability in Vitest) and in production (raw JSON is captured
+  // by Render's log aggregator).
   const isProduction = process.env['NODE_ENV'] === 'production'
   const isTest = process.env['NODE_ENV'] === 'test'
 
