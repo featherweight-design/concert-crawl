@@ -40,6 +40,17 @@ export type CrawlStatus = 'success' | 'failed' | 'partial'
 // Event status
 export type EventStatus = 'upcoming' | 'cancelled' | 'postponed'
 
+// Price source — identifies where ticket price data originated
+export type PriceSource =
+  | 'structured_data'
+  | 'ticketmaster'
+  | 'eventbrite'
+  | 'dice'
+  | 'songkick'
+  | 'bandsintown'
+  | 'seatgeek'
+  | 'community'
+
 // Notification types
 export type NotificationType = 'admin_alert' | 'user_notification'
 
@@ -107,6 +118,7 @@ export interface Event {
   ticketUrl: string | null
   ticketPriceMin: string | null
   ticketPriceMax: string | null
+  priceSource: PriceSource | null
   description: string | null
   imageUrl: string | null
   genre: string[] | null
@@ -114,6 +126,21 @@ export interface Event {
   confidenceScore: string | null
   verified: boolean
   sourceUrl: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+// PriceSubmission — community-submitted ticket price for an event
+export interface PriceSubmission {
+  id: string
+  eventId: string
+  userId: string
+  priceMin: string
+  priceMax: string | null
+  tierLabel: string | null
+  sourceNote: string | null
+  status: 'pending' | 'corroborated' | 'disputed' | 'stale'
+  corroborationCount: number
   createdAt: string
   updatedAt: string
 }
