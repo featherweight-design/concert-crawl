@@ -160,3 +160,55 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  integration-test:
+    name: Integration Tests
+    needs: install
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: concert_crawl_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache Turborepo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-int-test-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-int-test-${{ runner.os }}-
+
+      - name: Build workspace packages
+        run: pnpm turbo build --filter=!apps/web --filter=!apps/api --filter=!apps/crawler
+
+      - name: Run integration tests
+        run: pnpm --filter api test:integration
+        env:
+          DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/concert_crawl_test
