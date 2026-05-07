@@ -45,11 +45,13 @@ export default async function AdminPricesPage() {
   const { getToken } = await auth()
   const token = await getToken()
 
+  if (!token) throw new Error('Missing auth token')
+
   const [health, log, coverage, submissions] = await Promise.all([
-    apiClient.get<HealthData>('/v1/admin/prices/health', token!),
-    apiClient.get<LogRow[]>('/v1/admin/prices/log', token!),
-    apiClient.get<CoverageData>('/v1/admin/prices/coverage', token!),
-    apiClient.get<SubmissionRow[]>('/v1/admin/prices/submissions', token!),
+    apiClient.get<HealthData>('/v1/admin/prices/health', token),
+    apiClient.get<LogRow[]>('/v1/admin/prices/log', token),
+    apiClient.get<CoverageData>('/v1/admin/prices/coverage', token),
+    apiClient.get<SubmissionRow[]>('/v1/admin/prices/submissions', token),
   ])
 
   return (
@@ -91,7 +93,7 @@ export default async function AdminPricesPage() {
                   <td className="py-2 pr-4">{row.source}</td>
                   <td className="py-2 pr-4">
                     {row.totalCount > 0
-                      ? `${Math.round((row.hitCount / row.totalCount) * 100)}%`
+                      ? `${Math.round((Number(row.hitCount) / Number(row.totalCount)) * 100)}%`
                       : '—'}{' '}
                     ({row.hitCount}/{row.totalCount})
                   </td>
