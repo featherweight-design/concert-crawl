@@ -1,0 +1,238 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { createApp } from '../../app.js'
+
+const mockGetAuth = vi.fn()
+vi.mock('@hono/clerk-auth', () => ({
+  clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>
+    next(),
+  getAuth: () => mockGetAuth(),
+}))
+
+vi.mock('drizzle-orm', () => ({
+  eq: vi.fn((col, val) => ({ col, val, op: 'eq' })),
+  desc: vi.fn((col) => ({ col, dir: 'desc' })),
+  and: vi.fn((...args) => ({ args, op: 'and' })),
+  asc: vi.fn((col) => ({ col, dir: 'asc' })),
+  sql: vi.fn((parts, ...vals) => ({ parts, vals })),
+}))
+
+vi.mock('@concert-crawl/db', () => ({
+  db: {
+    select: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
+    offset: vi.fn().mockResolvedValue([]),
+    update: vi.fn().mockReturnThis(),
+    set: vi.fn().mockReturnThis(),
+    returning: vi.fn().mockResolvedValue([]),
+    delete: vi.fn().mockReturnThis(),
+    insert: vi.fn().mockReturnThis(),
+    values: vi.fn().mockReturnThis(),
+  },
+  events: {
+    id: 'id',
+    verified: 'verified',
+    venueId: 'venueId',
+    createdAt: 'createdAt',
+    date: 'date',
+  },
+  auditLog: {},
+  venues: {},
+  inviteCodes: {},
+  crawlRuns: {},
+  notifications: {},
+}))
+
+const EVENT_ID = '22222222-2222-2222-2222-222222222222'
+const VENUE_ID = '33333333-3333-3333-3333-333333333333'
+
+const mockEventRow = {
+  id: EVENT_ID,
+  venueId: VENUE_ID,
+  title: 'Test Show',
+  artist: 'Test Artist',
+  date: '2026-06-01',
+  verified: false,
+  confidenceScore: '0.6',
+  extractionStrategy: 'llm',
+  status: 'upcoming',
+  createdAt: new Date('2026-05-07T10:00:00Z'),
+  updatedAt: new Date('2026-05-07T10:00:00Z'),
+}
+
+function adminAuth() {
+  mockGetAuth.mockReturnValue({
+    userId: 'admin_123',
+    sessionClaims: { metadata: { role: 'admin' } },
+  })
+}
+
+describe('GET /v1/admin/events', () => {
+  beforeEach(() => {
+    mockGetAuth.mockReset()
+  })
+
+  it('returns 401 for unauthenticated requests', async () => {
+    mockGetAuth.mockReturnValue(null)
+    const res = await createApp().request('/v1/admin/events')
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 403 for non-admin users', async () => {
+    mockGetAuth.mockReturnValue({
+      userId: 'user_123',
+      sessionClaims: { metadata: { role: 'user' } },
+    })
+    const res = await createApp().request('/v1/admin/events')
+    expect(res.status).toBe(403)
+  })
+
+  it('returns 200 with events list', async () => {
+    adminAuth()
+    const { db } = await import('@concert-crawl/db')
+    vi.mocked(
+      db.select().from().where().orderBy().limit().offset,
+    ).mockResolvedValueOnce([mockEventRow])
+    const res = await createApp().request('/v1/admin/events')
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.success).toBe(true)
+    expect(Array.isArray(body.data)).toBe(true)
+    expect(body.data[0].id).toBe(EVENT_ID)
+  })
+
+  it('defaults to limit=50 and offset=0', async () => {
+    adminAuth()
+    const { db } = await import('@concert-crawl/db')
+    await createApp().request('/v1/admin/events')
+    expect(
+      vi.mocked(db.select().from().where().orderBy().limit),
+    ).toHaveBeenCalledWith(50)
+    expect(
+      vi.mocked(db.select().from().where().orderBy().limit().offset),
+    ).toHaveBeenCalledWith(0)
+  })
+
+  it('accepts limit and offset query params', async () => {
+    adminAuth()
+    const { db } = await import('@concert-crawl/db')
+    await createApp().request('/v1/admin/events?limit=10&offset=20')
+    expect(
+      vi.mocked(db.select().from().where().orderBy().limit),
+    ).toHaveBeenCalledWith(10)
+    expect(
+      vi.mocked(db.select().from().where().orderBy().limit().offset),
+    ).toHaveBeenCalledWith(20)
+  })
+
+  it('rejects limit > 100', async () => {
+    adminAuth()
+    const res = await createApp().request('/v1/admin/events?limit=200')
+    expect(res.status).toBe(400)
+  })
+})
+
+describe('PATCH /v1/admin/events/:id/verify', () => {
+  beforeEach(() => {
+    mockGetAuth.mockReset()
+  })
+
+  it('returns 401 for unauthenticated requests', async () => {
+    mockGetAuth.mockReturnValue(null)
+    const res = await createApp().request(
+      `/v1/admin/events/${EVENT_ID}/verify`,
+      { method: 'PATCH' },
+    )
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 403 for non-admin users', async () => {
+    mockGetAuth.mockReturnValue({
+      userId: 'user_123',
+      sessionClaims: { metadata: { role: 'user' } },
+    })
+    const res = await createApp().request(
+      `/v1/admin/events/${EVENT_ID}/verify`,
+      { method: 'PATCH' },
+    )
+    expect(res.status).toBe(403)
+  })
+
+  it('returns 200 and marks event as verified', async () => {
+    adminAuth()
+    const { db } = await import('@concert-crawl/db')
+    vi.mocked(db.update().set().where().returning).mockResolvedValueOnce([
+      { ...mockEventRow, verified: true },
+    ])
+    const res = await createApp().request(
+      `/v1/admin/events/${EVENT_ID}/verify`,
+      { method: 'PATCH' },
+    )
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.success).toBe(true)
+    expect(body.data.verified).toBe(true)
+  })
+
+  it('returns 404 when event not found', async () => {
+    adminAuth()
+    const { db } = await import('@concert-crawl/db')
+    vi.mocked(db.update().set().where().returning).mockResolvedValueOnce([])
+    const res = await createApp().request(
+      `/v1/admin/events/${EVENT_ID}/verify`,
+      { method: 'PATCH' },
+    )
+    expect(res.status).toBe(404)
+  })
+})
+
+describe('DELETE /v1/admin/events/:id', () => {
+  beforeEach(() => {
+    mockGetAuth.mockReset()
+  })
+
+  it('returns 401 for unauthenticated requests', async () => {
+    mockGetAuth.mockReturnValue(null)
+    const res = await createApp().request(`/v1/admin/events/${EVENT_ID}`, {
+      method: 'DELETE',
+    })
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 403 for non-admin users', async () => {
+    mockGetAuth.mockReturnValue({
+      userId: 'user_123',
+      sessionClaims: { metadata: { role: 'user' } },
+    })
+    const res = await createApp().request(`/v1/admin/events/${EVENT_ID}`, {
+      method: 'DELETE',
+    })
+    expect(res.status).toBe(403)
+  })
+
+  it('returns 200 and deletes the event', async () => {
+    adminAuth()
+    const { db } = await import('@concert-crawl/db')
+    vi.mocked(db.delete().where().returning).mockResolvedValueOnce([
+      mockEventRow,
+    ])
+    const res = await createApp().request(`/v1/admin/events/${EVENT_ID}`, {
+      method: 'DELETE',
+    })
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.success).toBe(true)
+  })
+
+  it('returns 404 when event not found', async () => {
+    adminAuth()
+    const { db } = await import('@concert-crawl/db')
+    vi.mocked(db.delete().where().returning).mockResolvedValueOnce([])
+    const res = await createApp().request(`/v1/admin/events/${EVENT_ID}`, {
+      method: 'DELETE',
+    })
+    expect(res.status).toBe(404)
+  })
+})
