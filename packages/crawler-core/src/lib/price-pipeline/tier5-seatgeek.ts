@@ -31,7 +31,7 @@ export async function tier5SeatGeek(
   }
 
   const sgEvent = data.events?.find((e) => e.stats?.lowest_price != null)
-  if (!sgEvent?.stats?.lowest_price) return null
+  if (sgEvent?.stats?.lowest_price == null) return null
 
   return {
     priceMin: sgEvent.stats.lowest_price,

@@ -72,12 +72,16 @@ async function fetchDice(
   const data = (await res.json()) as {
     data?: Array<{
       date: string
+      venue?: { city?: string }
       price?: { face_value: number; max_price?: number }
     }>
   }
 
   const match = data.data?.find(
-    (e) => e.date?.startsWith(ctx.date) && e.price?.face_value,
+    (e) =>
+      e.date?.startsWith(ctx.date) &&
+      e.venue?.city?.toLowerCase().includes('denver') &&
+      e.price?.face_value,
   )
   if (!match?.price) return null
 

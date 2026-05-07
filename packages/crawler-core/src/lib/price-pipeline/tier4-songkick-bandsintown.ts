@@ -7,37 +7,9 @@ async function fetchSongkick(
 ): Promise<PriceTierResult | null> {
   const apiKey = process.env['SONGKICK_API_KEY']
   if (!apiKey) return null
-
-  const url = new URL('https://api.songkick.com/api/3.0/events.json')
-  url.searchParams.set('artists', ctx.artist)
-  url.searchParams.set('location', `sk:${DENVER_SK_LOCATION_ID}`)
-  url.searchParams.set('min_date', ctx.date)
-  url.searchParams.set('max_date', ctx.date)
-  url.searchParams.set('apikey', apiKey)
-
-  let res: Response
-  try {
-    res = await fetch(url.toString(), { signal: AbortSignal.timeout(10_000) })
-  } catch {
-    return null
-  }
-
-  if (!res.ok) return null
-
-  const data = (await res.json()) as {
-    resultsPage?: {
-      results?: {
-        event?: Array<{
-          performance?: unknown[]
-          start?: { date: string }
-        }>
-      }
-    }
-  }
-
-  const skEvent = data.resultsPage?.results?.event?.[0]
-  if (!skEvent) return null
-
+  // Songkick's public API has been restricted since 2022; new key requests are paused.
+  // This tier is a stub for when API access resumes.
+  void ctx
   return null
 }
 
@@ -46,27 +18,8 @@ async function fetchBandsintown(
 ): Promise<PriceTierResult | null> {
   const appId = process.env['BANDSINTOWN_APP_ID']
   if (!appId) return null
-
-  const artist = encodeURIComponent(ctx.artist)
-  const url = `https://rest.bandsintown.com/artists/${artist}/events?app_id=${appId}&date=${ctx.date}`
-
-  let res: Response
-  try {
-    res = await fetch(url, { signal: AbortSignal.timeout(10_000) })
-  } catch {
-    return null
-  }
-
-  if (!res.ok) return null
-
-  const events = (await res.json()) as Array<{
-    datetime?: string
-    offers?: Array<{ type?: string; url?: string; status?: string }>
-  }>
-
-  const match = events.find((e) => e.datetime?.startsWith(ctx.date))
-  if (!match) return null
-
+  // Bandsintown links to ticketing but does not expose raw price data.
+  void ctx
   return null
 }
 
