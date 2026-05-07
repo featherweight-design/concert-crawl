@@ -1,6 +1,6 @@
 {
   "name": "@concert-crawl/e2e",
-  "version": "0.0.1",
+  "version": "0.0.0",
   "private": true,
   "scripts": {
     "test:e2e": "playwright test --config playwright.config.ts",
@@ -8,10 +8,12 @@
     "install-browsers": "playwright install --with-deps chromium",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@sentry/node": "^10.51.0"
+  },
   "devDependencies": {
     "@concert-crawl/config": "workspace:*",
     "@playwright/test": "^1.44.0",
-    "@sentry/node": "^8.0.0",
     "typescript": "^5.0.0"
   }
 }
