@@ -1,8 +1,14 @@
 import './instrument.js'
 import { createLogger } from '@concert-crawl/logger'
+import { runDailyCrawl } from './run.js'
 
 const logger = createLogger('crawler')
 
-// Crawler stub — implemented in Phase 7 (Automation + Scheduling)
-logger.warn('Concert Crawl crawler — not yet implemented. Coming in Phase 7.')
-process.exit(0)
+runDailyCrawl()
+  .then(() => {
+    process.exit(0)
+  })
+  .catch((err) => {
+    logger.error({ err }, 'Fatal error in daily crawl')
+    process.exit(1)
+  })
