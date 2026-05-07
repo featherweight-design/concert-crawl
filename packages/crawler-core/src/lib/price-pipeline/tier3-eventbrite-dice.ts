@@ -80,7 +80,7 @@ async function fetchDice(
   const match = data.data?.find(
     (e) =>
       e.date?.startsWith(ctx.date) &&
-      e.venue?.city?.toLowerCase().includes('denver') &&
+      (e.venue?.city?.toLowerCase() ?? '').includes('denver') &&
       e.price?.face_value,
   )
   if (!match?.price) return null

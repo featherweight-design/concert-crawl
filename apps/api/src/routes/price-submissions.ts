@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { and, desc, eq, gte, ne, sql } from 'drizzle-orm'
 import { db, events, priceSubmissions, userRoles } from '@concert-crawl/db'
-import { requireAuth, getAuthUser } from '../middleware/auth.js'
+import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js'
 
 const submissionBodySchema = z.object({
   priceMin: z.number().positive(),
@@ -19,7 +19,17 @@ priceSubmissionsRouter.get('/:id/price-submissions', async (ctx) => {
   const { id } = ctx.req.param()
 
   const rows = await db
-    .select()
+    .select({
+      id: priceSubmissions.id,
+      eventId: priceSubmissions.eventId,
+      priceMin: priceSubmissions.priceMin,
+      priceMax: priceSubmissions.priceMax,
+      tierLabel: priceSubmissions.tierLabel,
+      sourceNote: priceSubmissions.sourceNote,
+      status: priceSubmissions.status,
+      corroborationCount: priceSubmissions.corroborationCount,
+      createdAt: priceSubmissions.createdAt,
+    })
     .from(priceSubmissions)
     .where(
       and(
@@ -36,6 +46,7 @@ priceSubmissionsRouter.get('/:id/price-submissions', async (ctx) => {
 // POST /v1/events/:id/price-submissions — authenticated users submit price data
 priceSubmissionsRouter.post(
   '/:id/price-submissions',
+  clerkAuth,
   requireAuth,
   zValidator('json', submissionBodySchema, (result, ctx) => {
     if (!result.success)
@@ -97,7 +108,11 @@ priceSubmissionsRouter.post(
       // Mark the new submission as corroborated
       await db
         .update(priceSubmissions)
-        .set({ status: 'corroborated', updatedAt: sql`now()` })
+        .set({
+          status: 'corroborated',
+          corroborationCount: corroborating.length,
+          updatedAt: sql`now()`,
+        })
         .where(eq(priceSubmissions.id, newSub.id))
 
       // Update existing matching submissions and award cred

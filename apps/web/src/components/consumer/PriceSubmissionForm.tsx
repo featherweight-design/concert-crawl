@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useUser } from '@clerk/nextjs'
+import { useUser, useAuth } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,6 +21,7 @@ export function PriceSubmissionForm({
   isAxsEvent,
 }: PriceSubmissionFormProps) {
   const { isSignedIn } = useUser()
+  const { getToken } = useAuth()
   const [state, setState] = useState<FormState>('idle')
   const [priceMin, setPriceMin] = useState('')
   const [priceMax, setPriceMax] = useState('')
@@ -49,18 +50,21 @@ export function PriceSubmissionForm({
 
     setState('submitting')
     try {
+      const token = await getToken()
       const res = await fetch(
         `${apiUrl}/v1/events/${eventId}/price-submissions`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
           body: JSON.stringify({
             priceMin: min,
             priceMax: priceMax ? parseFloat(priceMax) : undefined,
             tierLabel: tierLabel || undefined,
             sourceNote: sourceNote || undefined,
           }),
-          credentials: 'include',
         },
       )
       setState(res.ok ? 'success' : 'error')

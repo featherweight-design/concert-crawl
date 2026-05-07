@@ -54,8 +54,7 @@ export function PriceDisplay({
   const formatted = formatPrice(priceMin, priceMax)
   const axs = isAxsVenue(ticketUrl)
 
-  if (formatted && priceSource) {
-    const label = sourceLabel(priceSource, venueName)
+  if (formatted) {
     const isSeatGeek = priceSource === 'seatgeek'
     const isCommunity = priceSource === 'community'
 
@@ -67,16 +66,19 @@ export function PriceDisplay({
             <span className="text-muted-foreground ml-1 text-xs">(resale)</span>
           )}
         </p>
-        {isCommunity ? (
-          <p
-            className="text-muted-foreground text-xs"
-            title="Prices submitted by Concert Crawl community members. Not verified by venue."
-          >
-            {label}
-          </p>
-        ) : (
-          <p className="text-muted-foreground text-xs">{label}</p>
-        )}
+        {priceSource &&
+          (isCommunity ? (
+            <p
+              className="text-muted-foreground text-xs"
+              title="Prices submitted by Concert Crawl community members. Not verified by venue."
+            >
+              {sourceLabel(priceSource, venueName)}
+            </p>
+          ) : (
+            <p className="text-muted-foreground text-xs">
+              {sourceLabel(priceSource, venueName)}
+            </p>
+          ))}
         {axs && isSeatGeek && (
           <p className="text-muted-foreground text-xs">
             AXS doesn&apos;t list face value publicly

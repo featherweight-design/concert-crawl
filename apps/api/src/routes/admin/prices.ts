@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { and, count, desc, eq, gte, max, sql } from 'drizzle-orm'
+import { and, count, desc, eq, max, sql } from 'drizzle-orm'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import {
@@ -11,6 +11,7 @@ import {
 } from '@concert-crawl/db'
 import { runPricePipeline } from '@concert-crawl/crawler-core'
 import { createLogger } from '@concert-crawl/logger'
+import { getAuthUser } from '../../middleware/auth.js'
 import type { AdminVariables } from './index.js'
 
 const logger = createLogger('admin:prices')
@@ -117,6 +118,7 @@ pricesAdminRouter.patch(
     if (!updated)
       return ctx.json({ success: false, error: 'Submission not found' }, 404)
 
+    ctx.set('auditActorId', getAuthUser(ctx).userId)
     ctx.set('auditAction', 'price.submission.update')
     ctx.set('auditTargetId', id)
 
@@ -158,6 +160,10 @@ pricesAdminRouter.post('/pipeline/:eventId', async (ctx) => {
       logger.error({ err, eventId }, 'on-demand price pipeline failed')
     }
   })()
+
+  ctx.set('auditActorId', getAuthUser(ctx).userId)
+  ctx.set('auditAction', 'price.pipeline.run')
+  ctx.set('auditTargetId', eventId)
 
   return ctx.json(
     { success: true, data: { eventId, message: 'Pipeline started' } },
