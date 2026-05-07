@@ -1,4 +1,5 @@
 import { requireAdminUser } from '@/lib/auth'
+import { NotificationBell } from '@/components/admin/notification-bell/NotificationBell'
 import { UserButton } from '@clerk/nextjs'
 import Link from 'next/link'
 
@@ -35,7 +36,10 @@ export default async function AdminLayout({
             </Link>
           ))}
         </nav>
-        <div className="mt-auto pt-4 border-t border-border">
+        <div className="mt-auto space-y-2 border-t border-border pt-4">
+          <div className="flex items-center justify-between">
+            <NotificationBell />
+          </div>
           <UserButton showName />
         </div>
       </aside>
