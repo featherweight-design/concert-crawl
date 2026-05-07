@@ -1,5 +1,7 @@
 import { Hono } from 'hono'
 import { and, count, desc, eq, gte, max, sql } from 'drizzle-orm'
+import { zValidator } from '@hono/zod-validator'
+import { z } from 'zod'
 import {
   db,
   events,
@@ -90,31 +92,37 @@ pricesAdminRouter.get('/submissions', async (ctx) => {
   return ctx.json({ success: true, data: rows })
 })
 
-// PATCH /v1/admin/prices/submissions/:id — approve (corroborated), dispute, or stale
-pricesAdminRouter.patch('/submissions/:id', async (ctx) => {
-  const { id } = ctx.req.param()
-  const body = (await ctx.req.json()) as {
-    status: 'corroborated' | 'disputed' | 'stale'
-  }
-  const validStatuses = ['corroborated', 'disputed', 'stale'] as const
-  if (!validStatuses.includes(body.status)) {
-    return ctx.json({ success: false, error: 'Invalid status' }, 422)
-  }
-
-  const [updated] = await db
-    .update(priceSubmissions)
-    .set({ status: body.status, updatedAt: sql`now()` })
-    .where(eq(priceSubmissions.id, id))
-    .returning()
-
-  if (!updated)
-    return ctx.json({ success: false, error: 'Submission not found' }, 404)
-
-  ctx.set('auditAction', 'price.submission.update')
-  ctx.set('auditTargetId', id)
-
-  return ctx.json({ success: true, data: updated })
+const patchSubmissionSchema = z.object({
+  status: z.enum(['corroborated', 'disputed', 'stale']),
 })
+
+// PATCH /v1/admin/prices/submissions/:id — approve (corroborated), dispute, or stale
+pricesAdminRouter.patch(
+  '/submissions/:id',
+  zValidator('json', patchSubmissionSchema, (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid status' }, 422)
+    }
+  }),
+  async (ctx) => {
+    const { id } = ctx.req.param()
+    const { status } = ctx.req.valid('json')
+
+    const [updated] = await db
+      .update(priceSubmissions)
+      .set({ status, updatedAt: sql`now()` })
+      .where(eq(priceSubmissions.id, id))
+      .returning()
+
+    if (!updated)
+      return ctx.json({ success: false, error: 'Submission not found' }, 404)
+
+    ctx.set('auditAction', 'price.submission.update')
+    ctx.set('auditTargetId', id)
+
+    return ctx.json({ success: true, data: updated })
+  },
+)
 
 // POST /v1/admin/prices/pipeline/:eventId — on-demand price pipeline run
 pricesAdminRouter.post('/pipeline/:eventId', async (ctx) => {
