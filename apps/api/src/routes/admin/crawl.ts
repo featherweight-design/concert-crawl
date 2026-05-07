@@ -193,18 +193,25 @@ crawlAdminRouter.get('/status', async (ctx) => {
 
   const runsByVenueId = new Map(latestRuns.map((run) => [run.venueId, run]))
 
+  // Build once, look up O(1) per venue
+  const inProgressByVenueId = new Map(
+    [...inProgressCrawls.entries()]
+      .filter(([, val]) => val.venueId !== undefined)
+      .map(([runId, val]) => [
+        val.venueId,
+        { runId, startedAt: val.startedAt },
+      ]),
+  )
+
   const data = venueList.map((venue) => {
     const lastRun = runsByVenueId.get(venue.id) ?? null
-    // Check if there's an in-progress crawl for this venue
-    const inProgressEntry = [...inProgressCrawls.entries()].find(
-      ([, val]) => val.venueId === venue.id,
-    )
+    const inProgressEntry = inProgressByVenueId.get(venue.id)
     const effectiveLastRun = inProgressEntry
       ? {
-          id: inProgressEntry[0],
+          id: inProgressEntry.runId,
           venueId: venue.id,
           status: 'in_progress' as const,
-          createdAt: inProgressEntry[1].startedAt,
+          createdAt: inProgressEntry.startedAt,
           eventsFound: 0,
           eventsInserted: 0,
           errorMessage: null,

@@ -1,5 +1,14 @@
 import { Resend } from 'resend'
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 export async function sendCrawlFailureEmail(
   venueName: string,
   consecutiveFailures: number,
@@ -16,7 +25,7 @@ export async function sendCrawlFailureEmail(
     to: adminEmail,
     subject: `Crawl failing: ${venueName}`,
     html: `
-      <p><strong>${venueName}</strong> has failed ${consecutiveFailures} consecutive crawls.</p>
+      <p><strong>${escapeHtml(venueName)}</strong> has failed ${consecutiveFailures} consecutive crawls.</p>
       <p>The venue has been flagged for review. Visit the
       <a href="${process.env.ADMIN_URL ?? 'https://concertcrawl.app'}/admin/crawl">admin crawl dashboard</a>
       to investigate and take action.</p>

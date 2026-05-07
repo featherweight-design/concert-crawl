@@ -337,17 +337,20 @@ export async function crawlVenue(
         body: `${newFailureCount} consecutive failures for ${venue.name}`,
         metadata: JSON.stringify({ venueId }),
       })
-      void sendCrawlFailureEmail(venue.name, newFailureCount).catch(
-        (emailErr) => {
-          console.log(
-            JSON.stringify({
-              event: 'crawl.email_error',
-              venueId,
-              error: String(emailErr),
-            }),
-          )
-        },
-      )
+
+      if (newFailureCount === 3) {
+        void sendCrawlFailureEmail(venue.name, newFailureCount).catch(
+          (emailErr) => {
+            console.log(
+              JSON.stringify({
+                event: 'crawl.email_error',
+                venueId,
+                error: String(emailErr),
+              }),
+            )
+          },
+        )
+      }
     }
 
     const durationMs = Date.now() - startedAt

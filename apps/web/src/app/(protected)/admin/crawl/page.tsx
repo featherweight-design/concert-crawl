@@ -42,7 +42,7 @@ export default async function CrawlStatusPage() {
       <div>
         <h1 className="text-2xl font-semibold text-fg">Crawl Status</h1>
         <p className="mt-1 text-sm text-fg-muted">
-          Daily crawl health for all active venues.
+          Daily crawl health for all venues.
         </p>
       </div>
 

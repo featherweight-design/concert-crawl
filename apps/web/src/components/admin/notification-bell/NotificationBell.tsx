@@ -57,28 +57,36 @@ export const NotificationBell = () => {
   }, [open])
 
   const markAsRead = async (id: string) => {
-    const token = await getToken()
-    if (!token) return
-    await apiClient.patch(`/v1/admin/notifications/${id}/read`, token, {})
-    setNotifications((prev) =>
-      prev.map((notif) =>
-        notif.id === id
-          ? { ...notif, readAt: new Date().toISOString() }
-          : notif,
-      ),
-    )
+    try {
+      const token = await getToken()
+      if (!token) return
+      await apiClient.patch(`/v1/admin/notifications/${id}/read`, token, {})
+      setNotifications((prev) =>
+        prev.map((notif) =>
+          notif.id === id
+            ? { ...notif, readAt: new Date().toISOString() }
+            : notif,
+        ),
+      )
+    } catch (err) {
+      console.error('Failed to mark notification as read', err)
+    }
   }
 
   const markAllRead = async () => {
-    const token = await getToken()
-    if (!token) return
-    await apiClient.post('/v1/admin/notifications/read-all', token, {})
-    setNotifications((prev) =>
-      prev.map((notif) => ({
-        ...notif,
-        readAt: notif.readAt ?? new Date().toISOString(),
-      })),
-    )
+    try {
+      const token = await getToken()
+      if (!token) return
+      await apiClient.post('/v1/admin/notifications/read-all', token, {})
+      setNotifications((prev) =>
+        prev.map((notif) => ({
+          ...notif,
+          readAt: notif.readAt ?? new Date().toISOString(),
+        })),
+      )
+    } catch (err) {
+      console.error('Failed to mark all notifications as read', err)
+    }
   }
 
   const unreadCount = notifications.filter(

@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { eq, desc, asc } from 'drizzle-orm'
+import { and, eq, desc, asc } from 'drizzle-orm'
 import { db, events } from '@concert-crawl/db'
 import { getAuthUser } from '../../middleware/auth.js'
 import type { AdminVariables } from './index.js'
@@ -73,11 +73,14 @@ eventsAdminRouter.delete(
 
     const [deleted] = await db
       .delete(events)
-      .where(eq(events.id, id))
+      .where(and(eq(events.id, id), eq(events.verified, false)))
       .returning()
 
     if (!deleted) {
-      return ctx.json({ success: false, error: 'Event not found' }, 404)
+      return ctx.json(
+        { success: false, error: 'Event not found or already verified' },
+        404,
+      )
     }
 
     const actor = getAuthUser(ctx)
