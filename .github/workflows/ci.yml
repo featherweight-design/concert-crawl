@@ -205,10 +205,7 @@ jobs:
           key: turbo-int-test-${{ runner.os }}-${{ github.sha }}
           restore-keys: turbo-int-test-${{ runner.os }}-
 
-      - name: Build workspace packages
-        run: pnpm turbo build --filter=@concert-crawl/db --filter=@concert-crawl/logger --filter=@concert-crawl/types --filter=@concert-crawl/crawler-core
-
       - name: Run integration tests
-        run: pnpm --filter api test:integration
+        run: pnpm turbo run test:integration --filter=@concert-crawl/api
         env:
           DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/concert_crawl_test
