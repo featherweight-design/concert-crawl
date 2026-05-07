@@ -4,7 +4,7 @@
 
 **Goal:** Automate daily crawls for all active venues, give admins full visibility into crawl health, send email alerts on crawl failure, and provide a data-refinement workflow for reviewing low-confidence events.
 
-**Architecture:** The crawler app's stub entrypoint is implemented as a batch runner (`apps/crawler/src/run.ts`) that fetches all active + verified venues from the DB and executes up to 3 concurrent calls to `crawlVenue` (already implemented in `@concert-crawl/crawler-core`). A GitHub Actions scheduled workflow triggers the process daily at 3 AM MT — this is cheaper (free tier covers a ~10-min daily job) and consistent with the existing `smoke.yml` pattern. Do NOT use Render cron services for the crawler — they cost ~$7/month each. Three new admin pages (Crawl Status, Event Review, Notifications) are backed by new Hono endpoints. Resend email is wired into `crawler-core` to fire an alert whenever a venue hits 3 consecutive failures.
+**Architecture:** The crawler app's stub entrypoint is implemented as a batch runner (`apps/crawler/src/run.ts`) that fetches all active + verified venues from the DB and executes up to 3 concurrent calls to `crawlVenue` (already implemented in `@concert-crawl/crawler-core`). A GitHub Actions scheduled workflow triggers the process daily at 3 AM MT — this is cheaper (free tier covers a ~10-min daily job) and consistent with the existing `smoke.yml` pattern. **Do NOT use Render cron services for the crawler — they cost ~$7/month each and the spec was written before this cost comparison was made; GHA is the deliberate override.** Three new admin pages (Crawl Status, Event Review, Notifications) are backed by new Hono endpoints. Resend email is wired into `crawler-core` to fire an alert whenever a venue hits 3 consecutive failures.
 
 **Tech Stack:** Hono + Zod (API), Drizzle ORM (DB), Next.js App Router (admin UI), Resend SDK (email), Vitest (tests), shadcn/ui (UI components), GitHub Actions cron (scheduler)
 
@@ -86,8 +86,10 @@ vi.mock('drizzle-orm', () => ({
   lt: vi.fn((col, val) => ({ col, val, op: 'lt' })),
 }))
 
+const NOTIF_ID = '11111111-1111-1111-1111-111111111111'
+
 const mockNotificationRow = {
-  id: 'notif-1',
+  id: NOTIF_ID,
   userId: null,
   type: 'admin_alert',
   category: 'crawl.failed',
@@ -152,7 +154,7 @@ describe('GET /v1/admin/notifications', () => {
     const body = await res.json()
     expect(body.success).toBe(true)
     expect(Array.isArray(body.data)).toBe(true)
-    expect(body.data[0].id).toBe('notif-1')
+    expect(body.data[0].id).toBe(NOTIF_ID)
   })
 
   it('defaults to limit=50', async () => {
@@ -185,7 +187,7 @@ describe('PATCH /v1/admin/notifications/:id/read', () => {
 
   it('returns 401 for unauthenticated requests', async () => {
     mockGetAuth.mockReturnValue(null)
-    const res = await createApp().request('/v1/admin/notifications/notif-1/read', {
+    const res = await createApp().request('/v1/admin/notifications/${NOTIF_ID}/read', {
       method: 'PATCH',
     })
     expect(res.status).toBe(401)
@@ -193,7 +195,7 @@ describe('PATCH /v1/admin/notifications/:id/read', () => {
 
   it('returns 200 and marks notification as read', async () => {
     adminAuth()
-    const res = await createApp().request('/v1/admin/notifications/notif-1/read', {
+    const res = await createApp().request('/v1/admin/notifications/${NOTIF_ID}/read', {
       method: 'PATCH',
     })
     expect(res.status).toBe(200)
@@ -205,7 +207,7 @@ describe('PATCH /v1/admin/notifications/:id/read', () => {
   it('returns 404 when notification not found', async () => {
     adminAuth()
     mockDb.returning.mockResolvedValue([])
-    const res = await createApp().request('/v1/admin/notifications/notif-1/read', {
+    const res = await createApp().request('/v1/admin/notifications/${NOTIF_ID}/read', {
       method: 'PATCH',
     })
     expect(res.status).toBe(404)
@@ -602,9 +604,12 @@ vi.mock('drizzle-orm', () => ({
   sql: vi.fn((parts, ...vals) => ({ parts, vals })),
 }))
 
+const EVENT_ID = '22222222-2222-2222-2222-222222222222'
+const VENUE_ID = '33333333-3333-3333-3333-333333333333'
+
 const mockEventRow = {
-  id: 'event-1',
-  venueId: 'venue-1',
+  id: EVENT_ID,
+  venueId: VENUE_ID,
   title: 'Test Show',
   artist: 'Test Artist',
   date: '2026-06-01',
@@ -692,7 +697,7 @@ describe('PATCH /v1/admin/events/:id/verify', () => {
 
   it('returns 401 for unauthenticated requests', async () => {
     mockGetAuth.mockReturnValue(null)
-    const res = await createApp().request('/v1/admin/events/event-1/verify', {
+    const res = await createApp().request('/v1/admin/events/${EVENT_ID}/verify', {
       method: 'PATCH',
     })
     expect(res.status).toBe(401)
@@ -700,7 +705,7 @@ describe('PATCH /v1/admin/events/:id/verify', () => {
 
   it('returns 200 and sets verified=true', async () => {
     adminAuth()
-    const res = await createApp().request('/v1/admin/events/event-1/verify', {
+    const res = await createApp().request('/v1/admin/events/${EVENT_ID}/verify', {
       method: 'PATCH',
     })
     expect(res.status).toBe(200)
@@ -712,7 +717,7 @@ describe('PATCH /v1/admin/events/:id/verify', () => {
   it('returns 404 when event not found', async () => {
     adminAuth()
     mockDb.returning.mockResolvedValue([])
-    const res = await createApp().request('/v1/admin/events/event-1/verify', {
+    const res = await createApp().request('/v1/admin/events/${EVENT_ID}/verify', {
       method: 'PATCH',
     })
     expect(res.status).toBe(404)
@@ -729,7 +734,7 @@ describe('DELETE /v1/admin/events/:id', () => {
 
   it('returns 401 for unauthenticated requests', async () => {
     mockGetAuth.mockReturnValue(null)
-    const res = await createApp().request('/v1/admin/events/event-1', {
+    const res = await createApp().request('/v1/admin/events/${EVENT_ID}', {
       method: 'DELETE',
     })
     expect(res.status).toBe(401)
@@ -737,7 +742,7 @@ describe('DELETE /v1/admin/events/:id', () => {
 
   it('returns 200 on successful delete', async () => {
     adminAuth()
-    const res = await createApp().request('/v1/admin/events/event-1', {
+    const res = await createApp().request('/v1/admin/events/${EVENT_ID}', {
       method: 'DELETE',
     })
     expect(res.status).toBe(200)
@@ -748,7 +753,7 @@ describe('DELETE /v1/admin/events/:id', () => {
   it('returns 404 when event not found', async () => {
     adminAuth()
     mockDb.returning.mockResolvedValue([])
-    const res = await createApp().request('/v1/admin/events/event-1', {
+    const res = await createApp().request('/v1/admin/events/${EVENT_ID}', {
       method: 'DELETE',
     })
     expect(res.status).toBe(404)
@@ -993,9 +998,9 @@ export async function sendCrawlFailureEmail(
     subject: `Crawl failing: ${venueName}`,
     html: `
       <p><strong>${venueName}</strong> has failed ${consecutiveFailures} consecutive crawls.</p>
-      <p>The venue has been automatically paused. Visit the
+      <p>The venue has been flagged for review. Visit the
       <a href="${process.env.ADMIN_URL ?? 'https://concertcrawl.app'}/admin/crawl">admin crawl dashboard</a>
-      to review and re-enable.</p>
+      to investigate and take action.</p>
     `,
   })
 }
@@ -1368,7 +1373,7 @@ jobs:
           restore-keys: playwright-${{ runner.os }}-
 
       - name: Install Playwright browsers
-        run: pnpm --filter @concert-crawl/crawler install-browsers
+        run: pnpm --filter @concert-crawl/crawler-core exec playwright install --with-deps chromium
 
       - name: Run daily crawl
         run: pnpm --filter @concert-crawl/crawler start
@@ -1429,7 +1434,7 @@ jobs:
           restore-keys: playwright-${{ runner.os }}-
 
       - name: Install Playwright browsers
-        run: pnpm --filter @concert-crawl/crawler install-browsers
+        run: pnpm --filter @concert-crawl/crawler-core exec playwright install --with-deps chromium
 
       - name: Run daily crawl
         run: pnpm --filter @concert-crawl/crawler start
@@ -1626,43 +1631,33 @@ export const CrawlStatusTable = ({ venues }: Props) => {
 Create `apps/web/src/app/(protected)/admin/crawl/page.tsx`:
 
 ```typescript
+import { auth } from '@clerk/nextjs/server'
+import { apiClient } from '@/lib/api'
 import { CrawlStatusTable } from '@/components/admin/crawl-status-table/CrawlStatusTable'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
-
-async function getCrawlStatus() {
-  const res = await fetch(`${API_URL}/v1/admin/crawl/status`, {
-    cache: 'no-store',
-    headers: {
-      // Server-side requests to the internal API need auth.
-      // Next.js forwards cookies automatically when using the App Router
-      // fetch — no explicit cookie passing needed here.
-    },
-  })
-
-  if (!res.ok) {
-    throw new Error(`Failed to fetch crawl status: ${res.status}`)
-  }
-
-  const json = await res.json()
-  return json.data as Array<{
+type CrawlStatusRow = {
+  id: string
+  name: string
+  active: boolean
+  verified: boolean
+  consecutiveFailures: number
+  blockedAt: string | null
+  lastCrawledAt: string | null
+  lastRun: {
     id: string
-    name: string
-    active: boolean
-    verified: boolean
-    consecutiveFailures: number
-    blockedAt: string | null
-    lastCrawledAt: string | null
-    lastRun: {
-      id: string
-      status: string
-      createdAt: string
-      eventsFound: number
-      eventsInserted: number
-      errorMessage: string | null
-      extractionStrategyUsed: string | null
-    } | null
-  }>
+    status: string
+    createdAt: string
+    eventsFound: number
+    eventsInserted: number
+    errorMessage: string | null
+    extractionStrategyUsed: string | null
+  } | null
+}
+
+async function getCrawlStatus(): Promise<CrawlStatusRow[]> {
+  const { getToken } = await auth()
+  const token = await getToken()
+  return apiClient.get<CrawlStatusRow[]>('/v1/admin/crawl/status', token!)
 }
 
 export default async function CrawlStatusPage() {
@@ -1711,17 +1706,6 @@ export default async function CrawlStatusPage() {
 }
 ```
 
-> **Note on auth:** The `getCrawlStatus` fetch is a server component request. In Next.js App Router, `fetch` in server components does not automatically forward cookies — you need to pass them explicitly using `cookies()` from `next/headers`. If the API requires auth cookies, add:
->
-> ```typescript
-> import { cookies } from 'next/headers'
-> // ...
-> const cookieStore = cookies()
-> headers: { Cookie: cookieStore.toString() }
-> ```
->
-> Check how other admin pages in the codebase make authenticated server-side API calls and match that pattern.
-
 - [ ] **Step 8.3: Type check**
 
 ```bash
@@ -1756,12 +1740,14 @@ Create `apps/web/src/components/admin/notification-bell/NotificationBell.tsx`:
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '@clerk/nextjs'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
+import { apiClient } from '@/lib/api'
 
 type Notification = {
   id: string
@@ -1773,22 +1759,24 @@ type Notification = {
   createdAt: string
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
-
 export const NotificationBell = () => {
+  const { getToken } = useAuth()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [open, setOpen] = useState(false)
 
   const fetchNotifications = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/v1/admin/notifications?limit=20`)
-      if (!res.ok) return
-      const json = await res.json()
-      setNotifications(json.data ?? [])
+      const token = await getToken()
+      if (!token) return
+      const data = await apiClient.get<Notification[]>(
+        '/v1/admin/notifications?limit=20',
+        token,
+      )
+      setNotifications(data ?? [])
     } catch {
       // Network errors are non-fatal for the bell
     }
-  }, [])
+  }, [getToken])
 
   useEffect(() => {
     fetchNotifications()
@@ -1797,16 +1785,18 @@ export const NotificationBell = () => {
   }, [fetchNotifications])
 
   const markAsRead = async (id: string) => {
-    await fetch(`${API_URL}/v1/admin/notifications/${id}/read`, {
-      method: 'PATCH',
-    })
+    const token = await getToken()
+    if (!token) return
+    await apiClient.patch(`/v1/admin/notifications/${id}/read`, token, {})
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n)),
     )
   }
 
   const markAllRead = async () => {
-    await fetch(`${API_URL}/v1/admin/notifications/read-all`, { method: 'POST' })
+    const token = await getToken()
+    if (!token) return
+    await apiClient.post('/v1/admin/notifications/read-all', token, {})
     setNotifications((prev) =>
       prev.map((n) => ({ ...n, readAt: n.readAt ?? new Date().toISOString() })),
     )
@@ -2079,32 +2069,29 @@ export const EventReviewTable = ({ initialEvents }: Props) => {
 Create `apps/web/src/app/(protected)/admin/events/page.tsx`:
 
 ```typescript
+import { auth } from '@clerk/nextjs/server'
+import { apiClient } from '@/lib/api'
 import { EventReviewTable } from '@/components/admin/event-review-table/EventReviewTable'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+type UnverifiedEvent = {
+  id: string
+  venueId: string
+  title: string
+  artist: string
+  date: string
+  confidenceScore: string | null
+  extractionStrategy: string | null
+  sourceUrl: string | null
+  verified: boolean
+}
 
-async function getUnverifiedEvents() {
-  const res = await fetch(
-    `${API_URL}/v1/admin/events?verified=false&limit=50`,
-    { cache: 'no-store' },
+async function getUnverifiedEvents(): Promise<UnverifiedEvent[]> {
+  const { getToken } = await auth()
+  const token = await getToken()
+  return apiClient.get<UnverifiedEvent[]>(
+    '/v1/admin/events?verified=false&limit=50',
+    token!,
   )
-
-  if (!res.ok) {
-    throw new Error(`Failed to fetch events: ${res.status}`)
-  }
-
-  const json = await res.json()
-  return json.data as Array<{
-    id: string
-    venueId: string
-    title: string
-    artist: string
-    date: string
-    confidenceScore: string | null
-    extractionStrategy: string | null
-    sourceUrl: string | null
-    verified: boolean
-  }>
 }
 
 export default async function EventReviewPage() {
@@ -2193,7 +2180,7 @@ Use `.github/pull_request_template.md`.
 
 Describe:
 - What the PR delivers (all 4 Phase 7 deliverables)
-- **Human action required:** Set `RESEND_API_KEY`, `ADMIN_EMAIL`, `SENTRY_DSN` in Render dashboard for both cron services after merge
+- **Human action required:** Add `DATABASE_URL`, `ANTHROPIC_API_KEY`, `RESEND_API_KEY`, `SENTRY_DSN` (secrets) and `ADMIN_EMAIL` (variable) in GitHub → Settings → Secrets and Variables → Actions, under both the `production` and `staging` environments, after merge
 - Note: `SMOKE_ENABLED` on prod smoke cron can remain `false` until beta launch
 
 ---
@@ -2204,7 +2191,7 @@ Describe:
 
 | Spec requirement | Task |
 |---|---|
-| Render cron job for daily crawler (all active venues) | Tasks 5 + 6 |
+| Daily crawler for all active venues (spec says Render cron; overridden to GitHub Actions — free vs ~$14/month) | Tasks 5 + 6 |
 | Crawl status dashboard in admin UI | Tasks 2 + 8 |
 | Admin data refinement tools (review low-confidence events) | Tasks 3 + 10 |
 | Email alerts on crawl failure (Resend) | Task 4 |
@@ -2219,7 +2206,5 @@ Describe:
 
 ### Gaps / deferred items
 
-- **Server-side auth on admin fetch calls (Tasks 8, 10):** The crawl status and event review pages use server component `fetch()` calls that may require explicit cookie forwarding. The plan notes this but defers to implementation — check existing admin pages for the established pattern.
 - **`ADMIN_URL` env var in crawler-core email:** `process.env.ADMIN_URL` is read directly in `email.ts`. This is fine for now but should be added to `apps/crawler/.env.example` (done in Task 4).
 - **Pagination on Event Review:** The page fetches 50 events max. A "Load More" button or pagination can be added post-beta if the queue grows large.
-- **Notification bell auth:** The `NotificationBell` fetches without an explicit auth header. It relies on the browser sending session cookies automatically. Verify this works with the Clerk auth setup; if not, use the same pattern as other client components that call the API.
