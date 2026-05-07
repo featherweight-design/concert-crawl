@@ -1,0 +1,53 @@
+name: Production Smoke Tests
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    name: Playwright smoke (production)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: vars.SMOKE_ENABLED != 'false'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('apps/e2e/package.json') }}
+          restore-keys: playwright-${{ runner.os }}-
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @concert-crawl/e2e install-browsers
+
+      - name: Run smoke tests
+        run: pnpm --filter @concert-crawl/e2e test:smoke
+        env:
+          PLAYWRIGHT_SMOKE_BASE_URL: ${{ vars.PROD_URL }}
+          PLAYWRIGHT_API_URL: ${{ vars.PROD_API_URL }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN_SMOKE }}
+
+      - name: Upload failure artifacts
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: smoke-failure-${{ github.run_id }}
+          path: apps/e2e/test-results/
+          retention-days: 3
