@@ -1,499 +1,437 @@
-# Concert Crawl — Admin UI Design Brief
+# Concert Crawl — Admin UI Design Handoff
 
-**Date:** 2026-05-07  
-**For:** Claude Design  
-**Context:** Phase 7 — Automation + Scheduling
+## Overview
 
----
+This handoff covers the **internal admin surface** for Concert Crawl — the operator-facing dashboard Hugh (and any future curator) uses to keep the curated concert dataset healthy. Concerns covered:
 
-## What This Brief Covers
+- **Cost-aware operations**: every LLM call costs money; running cost is surfaced everywhere.
+- **Crawl health**: per-venue scrape status, run history, error inspection.
+- **Event review queue**: confidence-weighted approval flow with diff against raw source.
+- **Reference data tables**: venues (sources/schedules), prices (snapshots), invite codes (referral receipts).
+- **Shell / chrome**: sidebar lockup, topbar, inbox panel, theme system.
 
-Two things need designing before Phase 7 implementation begins:
-
-1. **Admin UI redesign** — the existing admin area shares the token system but feels like a skeleton: no active nav states, raw HTML tables, placeholder dashboards, no status language. Bring it up to the same visual standard as the consumer app.
-2. **New Phase 7 admin screens** — three new surfaces that don't exist yet: a Crawl Status page (`/admin/crawl`), an Event Review page (`/admin/events`), and a Notification Bell component in the admin sidebar.
-
-The design files will live in `design/design_handoff_admin_ui/` alongside this README. Implementation follows the same format as previous handoffs: React prototypes as HTML files, source in `.jsx`, this README as the source of truth for decisions.
+The bundle is divided into a primitive kit, a shell, five page modules, and a shared canvas presenting every variant side-by-side.
 
 ---
 
-## Design System Reference
+## About the Design Files
 
-All admin UI must be authored against the token system — never hex values. Three themes must work: Electric, Jade, Light.
+**The HTML/JSX files in this bundle are design references, not production code.** They are in-browser React prototypes (JSX transpiled by Babel-standalone at runtime) so we could iterate quickly and present every state on a shared canvas. They are not how the admin UI should ship.
 
-### Tokens
+**Your task is to recreate these designs in the admin app's existing environment** — match the codebase's framework, component library, routing, state-management, and styling conventions. If no admin codebase exists yet, choose the most appropriate stack for the project (a reasonable default: React + TanStack Router + TanStack Table + Tailwind + Radix primitives, with the token system below mapped to Tailwind theme extensions).
 
-| Group        | Tokens                                                                         |
-| ------------ | ------------------------------------------------------------------------------ |
-| Surfaces     | `--bg`, `--bg-elevated`, `--surface-1`, `--surface-2`, `--surface-3`           |
-| Text & icons | `--fg`, `--fg-muted`, `--fg-subtle`, `--fg-on-accent`                          |
-| Borders      | `--border`, `--border-strong`, `--border-focus`                                |
-| Brand        | `--signal`, `--signal-muted`, `--accent`, `--accent-muted`                     |
-| States       | `--success`, `--warning`, `--danger`                                           |
-| Misc         | `--focus`, `--overlay-hover`, `--overlay-press`, `--scrim`, `--image-tint`     |
+The HTML prototypes are accurate about: layout, hierarchy, copy, color tokens, typography, status semantics, table column orders, badge variants, and empty/error states. They are not accurate about: state management (everything is local), data fetching (all data is hard-coded), or accessibility (focus rings and aria are minimal — production must implement properly).
 
-### Electric theme (primary reference)
+---
+
+## Fidelity
+
+**Hi-fi.** Pixel-perfect with finalized:
+
+- Color tokens (light + dark) in `admin-theme.jsx`
+- Typography scale and weights
+- Spacing and radii
+- Status semantics (success / warning / danger / signal / accent / neutral)
+- Iconography (Lucide-style line icons drawn inline in `admin-primitives.jsx`)
+- Component states (active, hover, selected, disabled)
+- Copywriting — every label, microcopy line, and column header is intentional
+
+---
+
+## File Map
+
+### Open this first
+
+| File                   | What it shows                                                                                                                                                                                                                                                                                                                          |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Admin UI Canvas.html` | The whole handoff on one design canvas — pan/zoom, drag-reorder, click-to-fullscreen any artboard. Sections: **Overview** (dashboard variants), **Crawl status**, **Event review**, **Data tables** (venues / prices / invites), **Shell** (sidebar variations + topbar), **Primitives** (the atomic kit), **States** (empty + error). |
+
+### Source JSX (the components)
+
+| File                   | Exports                                                                                                                                                                                          |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `admin-theme.jsx`      | `ADMIN_THEMES` (light + dark token sets), `ThemeProvider`, `adminTokenVars`                                                                                                                      |
+| `admin-primitives.jsx` | `AdminIcon`, `StatusBadge`, `MonoLabel`, `StatCard`, `SectionHead`, `AdminButton`, `ProgressBar`, `Sparkline`, `Spinner`, `RelTime`, `CostText`, `AdminTable` + `THead/TR/TH/TD`, `Panel`, `Kbd` |
+| `admin-shell.jsx`      | `AdminShell`, `Sidebar`, `AdminTopbar`, `InboxPanel`, `InboxRow`, `AdminBrowserFrame`, `NAV`                                                                                                     |
+| `admin-dashboard.jsx`  | `AdminDashboard` — composed of `MorningGreeting`, `StatRow`, `CostPanel`, `VenueHealthPanel`, `ActivityPanel`                                                                                    |
+| `admin-crawl.jsx`      | `AdminCrawlPage`, `RunningBanner`, `IssuesBanner`, `CrawlStats`, `CrawlSplitView`, `CrawlInspector`, `RunHistory`                                                                                |
+| `admin-events.jsx`     | `AdminEventsPage`, `EventFilterRail`, `EventQueueSplit`, `EventInspector`, `BulkActionBar`, `ConfidenceBar`                                                                                      |
+| `admin-tables.jsx`     | `AdminVenuesPage`, `AdminPricesPage`, `AdminInvitesPage` (+ `Sparkline`, `PriceDelta`, `HealthDot`, `InviteCreatorPanel`)                                                                        |
+| `design-canvas.jsx`    | Presentation chrome only — not part of the production app                                                                                                                                        |
+
+---
+
+## Design Tokens
+
+The admin surface ships with **two themes** — `light` (default) and `dark`. Both define the same token names; consumers always read via `var(--token)`. Full definitions in `admin-theme.jsx`.
+
+### Light theme (default)
 
 ```
---bg:            #070A1A
---bg-elevated:   #0E1226
---surface-1:     #11162E
---surface-2:     #171D3A
---surface-3:     #1F2748
---fg:            #E8F3FF
---fg-muted:      #9AA8C7
---fg-subtle:     #5A6788
---border:        #1F2748
---border-strong: #2C3661
---signal:        #7AE6FF   ← cyan (active states, CTAs)
---accent:        #FF7BD4   ← pink (badges, highlights)
---success:       #7BFFB0
---warning:       #FFD27A
---danger:        #FF7A8A
+/* Surfaces — warm paper neutrals */
+--bg:            #f7f5f0
+--bg-elevated:   #ffffff
+--surface-1:     #f0ede5
+--surface-2:     #e6e2d8
+--ink:           #1f1d18
+--paper:         #f7f5f0
+
+/* Foregrounds */
+--fg:            #1f1d18
+--fg-muted:      #5e5a52
+--fg-subtle:     #8a857a
+--fg-on-accent:  #ffffff
+
+/* Borders & overlays */
+--border:        #e2dfd6
+--border-strong: #c9c5b8
+--overlay-hover: rgba(31,29,24,0.05)
+
+/* Status palette */
+--success:       #2f7a4d   /* OK, approved */
+--warning:       #b87514   /* partial, low-conf, paused */
+--danger:        #b8381a   /* failed, blocked, revoked */
+--signal:        #1d5fbf   /* primary action, "live" */
+--accent:        #7a3aa8   /* editorial accent, LLM badge */
+
+/* Shadows */
+--shadow-sm: 0 1px 2px  rgba(31,29,24,0.06)
+--shadow-md: 0 4px 12px rgba(31,29,24,0.08)
+--shadow-lg: 0 12px 32px rgba(31,29,24,0.16)
 ```
+
+### Dark theme
+
+```
+--bg: #15140f       --bg-elevated: #1c1a14
+--surface-1: #23211a    --surface-2: #2c2922
+--fg: #eeeae0       --fg-muted: #9b968a    --fg-subtle: #6c6759
+--border: #2f2c24       --border-strong: #48443a
+--success: #5fc28a      --warning: #e2a04a     --danger: #ea6d50
+--signal: #7ab4ff       --accent: #c89bf0
+```
+
+**Implementation note**: wire tokens up as Tailwind theme extensions (or CSS vars on `:root` with a `data-admin-theme` attribute on `<html>`). Persist user choice in localStorage as `cc-admin-theme`. Default to system preference on first visit. The consumer app (`design_handoff_phase5b_screens`) uses a different theme system (`electric` / `jade` / `light`) — keep them isolated; the admin tokens above are admin-only.
 
 ### Typography
 
-- **UI text:** Inter (weights 400/500/600/700/800)
-- **Mono labels, status codes, UUIDs:** JetBrains Mono 700
+- **Inter** — UI text, headings, body. Weights used: 400, 500, 600, 700, 800.
+- **JetBrains Mono** — IDs, costs, timestamps, tabular numbers, small-caps labels (`MonoLabel`), badges set with `mono`.
+- Numbers should always render with `font-variant-numeric: tabular-nums` for column alignment.
+- Two font constants at the top of `admin-primitives.jsx`: `ADMIN_FONT`, `ADMIN_MONO`.
 
-### Component library
+### Type scale used
 
-shadcn/ui (Radix primitives, already installed). Use `Card`, `Table`, `Tabs`, `Badge`, `Button`, `Dialog`, `Popover`, `Tooltip` — don't design custom primitives when shadcn already covers the pattern.
+| Role                    | Size  | Weight                                |
+| ----------------------- | ----- | ------------------------------------- |
+| Page H1 (`SectionHead`) | 26    | 700                                   |
+| Greeting H1             | 26    | 700                                   |
+| Inspector H2            | 20–22 | 700                                   |
+| Panel title             | 14    | 700                                   |
+| Body                    | 13    | 400/500                               |
+| Stat number             | 30    | 700 (mono)                            |
+| Stat number (inline)    | 22    | 700 (mono)                            |
+| Mono label / eyebrow    | 10    | 700 (uppercase, 0.1em letter-spacing) |
+| Code/IDs                | 11–12 | 600 (mono)                            |
+| Kbd                     | 10    | 600 (mono)                            |
 
-### Prior art
+### Spacing
 
-- Consumer app screens: `design/design_handoff_phase5b_screens/` — event cards, filter chips, bottom sheets, search states
-- Brand & tokens: `design/design_handoff_brand_and_theming/` — logo mark, wordmark geometry, full token tables
+4px grid: 4 / 6 / 8 / 10 / 12 / 14 / 16 / 18 / 20 / 22 / 24 / 28 / 32. Page gutters `24–28px`. Card padding `16–22px`. Panel section gaps `18–24px`. Stat grids use `gap: 16`. Table cell padding `12px 14px` (header `10px 14px`).
 
----
+### Radii
 
-## Part 1 — Admin UI Redesign
+- Buttons / chips / inputs: `6–8px`
+- Cards / panels / tables: `12px`
+- Pills / badges: `999px` (full)
+- Browser frame chrome: `12px`
 
-### Current State Audit
+### Shadows
 
-The admin area exists and uses tokens correctly, but has several pain points that make it feel disconnected from the consumer app.
-
-#### Layout (`apps/web/src/app/(protected)/admin/layout.tsx`)
-
-```
-sidebar (w-56, bg-surface-1)
-  "Admin" label (small caps, fg-muted)
-  nav links (no active state — every link looks the same)
-  UserButton (Clerk, at the bottom)
-main (flex-1, p-8)
-```
-
-**Pain points:**
-- No active nav state — impossible to tell which page you're on without reading the URL
-- No logo or wordmark — admin feels like an orphan, not part of Concert Crawl
-- No notification bell — Phase 7 introduces the `notifications` table and SSE stream; there's nowhere to surface them
-- `UserButton` (Clerk component) is unstyled relative to the rest of the sidebar
-- No visual hierarchy between the "Admin" label and the nav items
-
-#### Dashboard (`/admin`)
-
-```
-h1 "Admin Dashboard" + welcome message
-3 stat cards (Card/CardHeader/CardContent):
-  Venues — "—" + "Populated after venue setup"
-  Invite Codes — "—"
-  Last Crawl — "—" + "Crawler live in Phase 3"
-```
-
-**Pain points:**
-- All three cards show placeholder dashes — the data exists now (venues, invite codes, crawl runs are all live)
-- No crawl health signal — the most operationally important thing to know at a glance is: did the last crawl succeed? How many events are pending review?
-- No recent activity — notifications, recent crawl runs, recent invite code redemptions
-- "Populated after venue setup" and "Crawler live in Phase 3" copy is stale — the app is in Phase 7
-
-#### Venues (`/admin/venues`, `/admin/venues/[id]`, `/admin/venues/new`)
-
-- List page uses a `VenueTable` component (custom, not a shadcn `Table`)
-- No visible status indicators for `consecutive_failures`, `blocked_at`, `robots_txt_allowed`
-- No last-crawled timestamp in the list
-- The "Add Venue" → `buttonVariants()` on a `Link` pattern is correct
-
-#### Prices (`/admin/prices`)
-
-- Uses raw `<table>` / `<thead>` / `<tbody>` / `<tr>` / `<td>` — not shadcn `Table`
-- Outcome values ("hit", "miss", "error") are styled with inline `text-green-600` / `text-destructive` — should use `--success`, `--danger` tokens or `Badge` components
-- Hit rate shown as `%` text — could be a progress bar or colored badge
-- Coverage percentage is a big number with plain text below — could be a more expressive stat
-
-#### Invite Codes (`/admin/invite-codes`)
-
-- `InviteCodeTable` renders codes with status (used/unused/revoked/expired) — unclear if status uses `Badge` or plain text
-- No copy-to-clipboard button on code values
-
-#### Settings (`/admin/settings`)
-
-- Just an `AppearanceSection` with a theme switcher — this is fine as-is
+Used sparingly. Stat cards and tables get a hairline border + `--bg-elevated`, no shadow. Use `--shadow-md` on the BulkActionBar (floating dock) and `--shadow-lg` on the AdminBrowserFrame's outer drop-shadow.
 
 ---
 
-### Redesign Goals
+## Information Architecture
 
-1. **Cohesion** — admin should feel like it was designed alongside the consumer app, not independently. Same design language: dark surfaces, electric cyan for active/interactive states, pink accent for highlights, generous spacing.
-2. **Operational clarity** — the admin is a tool for one or two people managing a live product. Information density matters more here than on the consumer side. Tables are appropriate; use them well.
-3. **Status at a glance** — crawl health, events pending review, blocked venues, notification count should be visible from the sidebar or dashboard without navigating.
-4. **Consistent patterns** — every list page should use shadcn `Table`. Every status value should use `Badge`. Every page should have a consistent heading block (page title + subtitle/action).
+The sidebar is the IA. Order matters.
+
+```
+Dashboard            /admin
+Venues               /admin/venues
+Crawl                /admin/crawl              (badge: count of failed/blocked runs, danger)
+Event review         /admin/events             (badge: count of pending events, warning)
+Prices               /admin/prices
+Invite codes         /admin/invite-codes
+Settings             /admin/settings
+```
+
+`Crawl` and `Event review` always show a numeric badge when there's pending work — these are the two pages that should pull Hugh's attention.
+
+Nav items defined in `NAV` const (`admin-shell.jsx`). Each is `{ key, label, icon, href, badge?: { count, kind } }`.
 
 ---
 
-### Redesign Specs
+## Sidebar variations
 
-#### Sidebar (revised)
+Three modes — implementation must support all three.
 
-**Structure:**
-```
-sidebar (w-64, bg-surface-1, border-r border-border)
-  ┌─────────────────────────────────┐
-  │  [logo mark 20px]  concert      │  ← logo mark + wordmark, links to /admin
-  │                    crawl.       │
-  ├─────────────────────────────────┤
-  │  ADMIN                          │  ← small caps label, fg-subtle, mono font
-  ├─────────────────────────────────┤
-  │  [icon]  Dashboard              │  ← nav items with icons
-  │  [icon]  Venues                 │
-  │  [icon]  Crawl     [● 2]        │  ← badge on Crawl if venues are blocked/failing
-  │  [icon]  Events    [● 5]        │  ← badge count for events pending review
-  │  [icon]  Prices                 │
-  │  [icon]  Invite Codes           │
-  │  [icon]  Settings               │
-  ├─────────────────────────────────┤  ← mt-auto
-  │  [🔔 3]  Notifications          │  ← bell icon + unread count, opens panel
-  │  [UserButton + name]            │  ← Clerk avatar + display name
-  └─────────────────────────────────┘
-```
+| Mode   | Width | Use                                                                                                                                      |
+| ------ | ----- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `full` | 240   | Default desktop. Labels + badges visible.                                                                                                |
+| `rail` | 64    | Icon-only collapse. Active item shown by left rail; badges become a single dot in the corner. Tooltip on hover (use the icon's `title`). |
+| `auto` | n/a   | Collapse to rail under 1280px viewport; expand on hover. The canvas renders the post-hover expanded state visually.                      |
 
-**Active state:** the active nav item should have a `--signal` left border (2px), `--surface-2` background, `--fg` text. Inactive items: `--fg-muted` text, transparent background, `--overlay-hover` on hover.
+State persists in localStorage as `cc-admin-sidebar`.
 
-**Nav icons:** use Lucide React icons (already in codebase). Suggested:
-- Dashboard → `LayoutDashboard`
-- Venues → `MapPin`
-- Crawl → `RefreshCw` (or `Activity`)
-- Events → `CalendarCheck`
-- Prices → `DollarSign`
-- Invite Codes → `Key`
-- Settings → `Settings`
-- Notifications → `Bell`
-
-**Badge pattern:** small circular badge on nav items (Venues, Crawl, Events) showing actionable counts — blocked venues, failing venues, events pending review. Use `--danger` background for failure counts, `--warning` for pending review counts.
-
-#### Dashboard (revised)
-
-**Page structure:**
-```
-Page header
-  h1 "Dashboard"
-  p "Good morning, Hugh · Last crawl: [time ago] · [status chip]"
-
-Stat row (3–4 cards, responsive grid)
-  Active Venues         — live count, link to /admin/venues
-  Events This Week      — new events from last 7 days
-  Pending Review        — events with confidence < 0.7, unverified; link to /admin/events
-  LLM Cost (30 days)    — rolling cost in USD
-
-Crawl health section
-  Table or card list: one row per venue
-    Venue name | Last crawl | Status chip | Events found | Quick action
-
-Recent notifications
-  Last 5 notifications, each with icon, title, time, read/unread dot
-  "View all" link to notification panel
-```
-
-**Status chip palette:**
-- `success` → green badge "OK"
-- `warning` → amber badge "Partial" or "Low confidence"
-- `danger` → red badge "Failed" or "Blocked"
-- neutral → `fg-muted` badge "Never crawled"
-
-#### Venues list (revised)
-
-Use shadcn `Table`. Columns:
-
-| Name | Status | Last Crawled | Strategy | Failures | Actions |
-| --- | --- | --- | --- | --- | --- |
-
-- **Status**: `Badge` — Active (success), Inactive (fg-muted), Blocked (danger), Robots disallowed (warning)
-- **Last Crawled**: relative time (e.g., "3h ago"), `JetBrains Mono` text, `fg-muted` if >24h
-- **Strategy**: `Badge` variant — `structured_data` (signal), `llm` (accent), `manual` (warning)
-- **Failures**: show `consecutive_failures` as a number with a `--warning` color if ≥ 2, `--danger` if = 3
-- **Actions**: `Edit` link, `Trigger crawl` button (if active and not blocked)
-
-#### Prices page (revised)
-
-- Migrate all four `<table>` instances to shadcn `Table` with `TableHeader`, `TableBody`, `TableRow`, `TableHead`, `TableCell`
-- **Pipeline Health**: replace outcome text with `Badge` — hit (success), miss (fg-muted), error (danger)
-- **Hit rate**: small horizontal progress bar (shadcn `Progress`) alongside the `%` text
-- **Coverage**: large stat number stays, but add a circular progress indicator or thick progress bar alongside it to make the coverage percentage more visually expressive
-- **Submissions**: status column should use `Badge` — pending (warning), approved (success), rejected (danger)
-
-#### Invite Codes (revised)
-
-- Add a copy-to-clipboard icon button next to each code value
-- Status `Badge`: active (success), used (fg-muted), expired (warning), revoked (danger)
-- `used_at` / `expires_at` columns should use relative time (e.g., "2 days ago")
+The sidebar's bottom region holds: theme toggle, account chip, "Inbox" toggle (NOT a bell icon — operationally we call it Inbox; unread count shows as a small dot on the icon when collapsed, as a badge when expanded).
 
 ---
 
-## Part 2 — New Phase 7 Screens
+## Components
 
-### Screen 1: Crawl Status (`/admin/crawl`)
+### `StatusBadge` — status taxonomy
 
-**Purpose:** Give the admin visibility into every crawl run — what succeeded, what failed, why, and how much it cost. Includes a manual trigger.
+`kind` × `variant` matrix. **Always use the named `kind`** rather than picking a color. The mapping is what carries the meaning.
 
-**Data sources:**
+| `kind`    | Meaning                           | Examples                                                          |
+| --------- | --------------------------------- | ----------------------------------------------------------------- |
+| `success` | All good, approved, OK            | "Active", "Success", "Approved", "Allowed"                        |
+| `warning` | Partial / low-confidence / paused | "Partial", "Low conf.", "Paused", "Possible duplicate"            |
+| `danger`  | Hard failure / blocked / revoked  | "Failed", "Blocked", "Revoked", "403", "No price"                 |
+| `signal`  | Live / running / primary          | "SSE LIVE", "Running", "Active" (invite), "structured" (strategy) |
+| `accent`  | LLM-related editorial accent      | "llm" (strategy badge)                                            |
+| `neutral` | Inert / draft / unknown           | "Draft", "Expired", "unchecked"                                   |
 
-From `crawl_runs` table:
-- `status`: `success` / `failed` / `partial`
-- `events_found`, `events_created`, `events_updated`
-- `error_message`, `http_status_code`
-- `robots_txt_blocked`, `extraction_strategy_used`
-- `llm_tokens_used`, `llm_cost_usd`
-- `started_at`, `completed_at`
+Variants:
 
-From `venues` table:
-- `name`, `consecutive_failures`, `blocked_at`, `last_crawled_at`, `active`, `robots_txt_allowed`
+- `soft` (default) — tinted bg, colored text
+- `outline` — outline + colored text, used for taxonomy chips like strategy
+- `mono` — JetBrains Mono, lower-case, tighter — for terminal-feel data badges (`structured`, `llm`, `403`, `+18% wow`, `SSE LIVE`)
 
-**Layout:**
+`dot` prop adds a 6px colored dot to the left for status rows.
 
+### `StatCard`
+
+```jsx
+<StatCard
+  label="LLM cost · 30d"
+  value="$28.74"
+  unit="of $40"            // optional
+  hint="71% of budget"     // optional second line, fg-muted
+  trend={{ dir: "up", text: "+18%", good: false }}  // optional, tinted by `good`
+  kind="signal"            // tints the icon chip; values: success | warning | danger | signal | accent | neutral
+  icon="cost"              // AdminIcon name
+  footer={<ProgressBar … />}  // optional any node
+  onClick={…}
+/>
 ```
-Page header
-  h1 "Crawl Status"
-  [Run All Venues] button (primary, top-right)
 
-Summary banner (conditional — shown only if there are issues)
-  "2 venues blocked · 1 venue paused due to failures"
-  Link to affected venue rows
+Always presented in a 4-column grid on desktop, gap 16. Numbers are `ADMIN_MONO`, weight 700, 30px, tabular.
 
-Venues health table
-  Venue | Active | Last Crawl | Status | Events Found | Strategy | Cost | Actions
+### `AdminTable`
 
-Crawl run history (below or tabbed)
-  Filterable by venue, status, date range
-  Venue | Run date | Duration | Status | Events | Strategy | LLM Cost | Error
-  Expandable row: error_message in full, raw HTTP status, robots_txt_blocked flag
-```
+`<AdminTable>` is a styled `<table>` wrapper with `<THead>`, `<TR>`, `<TH align width mono>`, `<TD align mono color width>` primitives. Header row is `--surface-1`; rows have a 1px `--border` separator on the bottom and a hover state of `--overlay-hover`. Numeric and timestamp columns get `mono` (which sets `font-variant-numeric: tabular-nums`).
 
-**Status indicators:**
+Use TanStack Table or equivalent in production. Columns defined per page:
 
-| State | Visual |
-| --- | --- |
-| success | `--success` badge "Success" |
-| partial | `--warning` badge "Partial" |
-| failed | `--danger` badge "Failed" |
-| blocked (403/blocked_at set) | `--danger` badge "Blocked" |
-| robots_txt_blocked | `--warning` badge "robots.txt" |
-| never crawled | `--fg-muted` badge "Never" |
-| in progress | `--signal` badge "Running" + spinner |
+- **Venues**: Venue · Source URL · robots.txt · Strategy · Schedule · Status · Health · Last crawl · Events · ⋯
+- **Crawl run history**: Run ID · Venue · Started · Duration · Status · Strategy · Events · LLM cost · Error
+- **Prices recent activity**: Event · Venue/Date · Opened · Current · Δ · 14-day sparkline · Last update · ›
+- **Invite codes**: Code · Invitee · Status · Created · Redeemed · Expires · Sent by · ⋯
 
-**Manual trigger:**
-- "Run All Venues" button triggers a crawl for all active, non-blocked venues
-- Per-venue "Trigger" button in the Actions column (only shown for active, non-blocked venues)
-- After trigger: **live SSE feedback** — the row immediately transitions to "Running" status (spinner) and updates to success/failure in real time without a page reload. Claude Design should spec the running state: spinner placement, any progress text (e.g. "12 venues crawled…"), and whether an abort button appears
+### `Panel`
 
-**LLM cost column:**
-- Format: `$0.0042` in `JetBrains Mono`, `fg-muted` if zero
-- Running total at the bottom of the history table
-- Consider a rolling 30-day cost card in the summary area
+`<Panel title action padding>` is the wrapper for sectioned content. `title` and `action` go in a 14px-fontSize header strip with a bottom border. `padding={0}` for tables (so the table flush-fits to the panel edge).
+
+### `AdminButton`
+
+Variants: `primary` (signal bg), `outline` (default for toolbars), `ghost` (transparent), `danger`, `success`. Sizes: `sm` (28px), `md` (32px). Props: `icon`, `iconRight` (both AdminIcon names), `fullWidth`, `disabled`.
+
+### `CostText`
+
+Renders a money value in mono with two decimals; zero/dim values render as `$0.00` in `--fg-subtle`. Always use this — never raw money strings.
+
+### `ConfidenceBar` (in `admin-events.jsx`)
+
+A 4px bar + numeric (0.00–1.00) fixed-width readout. Color thresholds: ≥0.80 success, ≥0.70 signal, ≥0.60 warning, <0.60 danger. Used in event-queue rows and the inspector vitals strip.
+
+### `Sparkline` (in `admin-tables.jsx`)
+
+Inline 80×24 SVG line chart for price history. Color follows the row's flag — `flag="spike"` → danger, `flag="soldout"` → fg-subtle, otherwise signal. Last point gets a 1.6px dot.
+
+### `BulkActionBar` (in `admin-events.jsx`)
+
+A floating dark dock that appears at the bottom of the event-review viewport whenever ≥1 row is selected. Shows the count, plus Approve all / Reject / Re-tag / Dismiss. Use `--shadow-lg` and `--ink` background regardless of theme (it's a focus-pulling overlay).
+
+### `Kbd`
+
+Small mono "key" rendered with a hairline border and `--surface-1`. Used in the event inspector's keyboard-cue strip (J/K/A/R) and any future palette/help screens.
 
 ---
 
-### Screen 2: Event Review (`/admin/events`)
+## Pages
 
-**Purpose:** Let the admin review events that the crawler extracted with low confidence (< 0.7) and mark them verified or reject them. This is the core human-in-the-loop gate for data quality.
+### 1. Dashboard (`/admin`)
 
-**Data sources:**
+Order, top to bottom:
 
-From `events` table:
-- `title`, `artist`, `date`, `doors_time`, `show_time`, `venue_id`
-- `confidence_score`, `verified`, `extraction_strategy`
-- `source_url`, `source_hash`
-- `ticket_url`, `ticket_price_min`, `ticket_price_max`
-- `description`, `image_url`, `genre[]`
+1. **Greeting block** — "Good afternoon, Hugh." + one-line operational summary. Right-aligned: `SSE LIVE` badge, "Run all venues" outline button, "Add venue" primary button.
+2. **Stat row** — 4 columns: Pending review · LLM cost (30d) · Crawl health · Active venues. Each is a `StatCard` with footer (action button, mini-bar chart, or progress bar).
+3. **Cost panel** — 30-day spend chart on the left (filled area, signal stroke), top-spend breakdown on the right (4 venues with mini progress bars). Header includes a `+18% wow` warning badge and an "Open billing" link.
+4. **Two-column row**:
+   - **Crawl health · today** — table with 8 rows (one per active venue). Columns: Venue · Status · Last crawl · Strategy · Events · Cost · ›
+   - **Activity** — filterable feed (All / Crawl / Events / Invites). Each row: 72px timestamp · 8px colored dot · two-line text+meta.
 
-**Layout:**
+Data shape examples in `admin-dashboard.jsx`: `VENUE_HEALTH`, `ACTIVITY`, `COST_DAYS`.
 
-```
-Page header
-  h1 "Event Review"
-  "[N] events pending review" (fg-muted subtitle)
-  Filter controls (top-right): confidence threshold, date range, venue, extraction strategy
+### 2. Crawl status (`/admin/crawl`)
 
-Filter bar (below header)
-  Confidence: user-configurable threshold (not fixed presets — admin sets "above X")
-  Venue: [All] or specific venue
-  Date: upcoming only (default) or all
+The page Hugh opens when something feels off.
 
-Review list
-  Each row = one unverified event
-  [Confidence badge] [Artist — Title] [Venue · Date] [Strategy badge] [Approve] [Reject] [Edit]
+1. **`SectionHead`** — eyebrow "Phase 7 · Automation", H1 "Crawl status". Actions: "All venues" · "Run all".
+2. **Running banner** _(only when a "Run all" sweep is in flight)_ — full-width, signal-tinted, with a spinner, `done of total` text, current venue name, signal progress bar, and a danger "Abort" button. Hidden when idle.
+3. **Issues banner** _(only when any venue is blocked/failing)_ — danger-tinted, summarizes the failures with a "Jump to issues" link.
+4. **Stat row** — Last sweep · Today's runs · Events ingested · LLM cost today.
+5. **Split view** (the main content):
+   - **Left rail (460px)**: latest run per venue. Each item: status dot · venue name (ellipsized) · `RelTime · duration · N ev` · status badge. Active item gets a `--surface-2` background and a 2px signal left border. Filter button in header strip.
+   - **Right inspector**: header (run ID + status badge + venue H2 + "Source URL" / "Re-crawl" actions); 4-column vitals strip (Started · Duration · HTTP · LLM cost); events block (Found / Created / Updated as 3 stat tiles); error block (only when failed — danger-tinted with consecutive-failure tally and remediation hint); source preview row; strategy row.
+6. **Run history** — full table with pagination, columns above. Last row in the visible page is a totals row (right-aligned, `--surface-1` bg, "Total LLM cost (page)" + sum).
 
-Bulk action bar (appears when rows are selected via multi-select)
-  [✓] N selected · [Approve Selected] [Reject Selected]
+`RUNS` array in `admin-crawl.jsx` documents the data shape per run.
 
-Empty state
-  "All clear — no events pending review." with a checkmark illustration
-```
+### 3. Event review (`/admin/events`)
 
-**Event row detail:**
+1. **`SectionHead`** — "Event review", subtitle "Hugh approves the queue. The newsletter only sends what's been touched here." Actions: "Saved views" · "New event".
+2. **Filter rail** — segmented pills (Pending / Low conf. / Duplicates / Approved / Rejected), each with a count chip. Right side: 3 `outline` filter buttons (All venues · Date · Source). Pills color by their `kind` when active.
+3. **Split view** (the actual queue):
+   - **Left list (480px)**: each row is `[checkbox] [title + confidence bar / venue · date · time / flag chips]`. Active row: surface-2 bg, signal left border. Header strip: "select-all" checkbox + sort label.
+   - **Right inspector**:
+     - Header: event ID, "Pending review" badge, flag badges (low confidence, possible duplicate), event title H2, venue/date subtitle, action cluster (Reject ghost / Edit outline / Approve success).
+     - Vitals strip: Confidence bar · Source · Discovered · Price range. (Price range goes danger when missing.)
+     - Duplicate banner (only when flagged) — warning tinted, with "Compare" + "Merge" buttons.
+     - **Two-column diff**:
+       - Left ("extracted, editable"): editable field rows (Title / Artist / Venue / Date / Doors / Show / Price low / Price high / Tags). Tag row supports `+ tag` chip.
+       - Right ("raw source · llm input"): `<pre>` showing the raw HTML the LLM was fed, with the price-extraction line highlighted in warning. Below, an `// llm reasoning` block in mono+muted color explaining the confidence reduction.
+     - Footer meta row: Run ID · LLM cost · Tokens · keyboard cues (J/K navigate · A approve · R reject).
+4. **`BulkActionBar`** docked at viewport bottom whenever ≥1 row is selected.
 
-Each row should show enough to make a decision without clicking through:
+Keyboard model: J/K traverse the queue, A/R approve/reject, ⌘Enter on the inspector also approves. (Implementation should use a roving-tabindex pattern.)
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│  [0.58]  Radiohead — In Rainbows Tour              [llm] badge   │
-│          Red Rocks Amphitheatre · Sat Jun 14, 2026               │
-│          $45–$120 · Doors 6pm · Show 8pm                         │
-│          source: redrocksonline.com/events/…                      │
-│                                        [Edit]  [Reject]  [Approve]│
-└──────────────────────────────────────────────────────────────────┘
-```
+### 4. Venues (`/admin/venues`)
 
-**Confidence badge:** numeric score (e.g., `0.58`) as a `Badge`:
-- ≥ 0.7: `--success` (shouldn't appear in the review queue, but handle gracefully)
-- 0.5–0.69: `--warning`
-- < 0.5: `--danger`
+Configure crawl targets — each row is essentially a Cloudflare Worker schedule.
 
-**Actions:**
-- **Approve** — sets `verified = true`, removes from review queue. Button: `--success` outline or filled.
-- **Reject** — soft-deletes the event. Button: `--danger` outline. Two-step inline confirmation (click Reject → confirm in place), though Claude Design may propose an alternative.
-- **Edit** — opens a modal or dedicated page with all editable fields pre-filled. Admin can correct extracted data before approving. Claude Design should choose the pattern based on form complexity.
+1. SectionHead with three actions: Status filter · "robots.txt audit" · "Add venue" primary.
+2. Stat row: Total / Active / Paused-or-blocked / Avg health 7d.
+3. Big table — bulk-checkbox column · Venue (name + sub-error) · Source URL (mono w/ external icon) · robots.txt badge (allowed / disallowed / unchecked) · Strategy badge · Schedule (mono) · Status badge · Health (dot + %) · Last crawl · Events · row menu.
 
-**Edit modal fields:**
-- Artist, Title, Date, Doors time, Show time, Ticket URL, Price min/max, Description, Genre tags
-- Source URL (read-only, for reference)
-- Confidence score (read-only)
-- "Save & Approve" as the primary CTA
+`VENUES` array in `admin-tables.jsx` is the canonical shape.
 
----
+### 5. Prices (`/admin/prices`)
 
-### Component: Notification Bell
+1. SectionHead, actions: Venue filter · "Δ > 15%" filter · "Snapshot now" primary.
+2. Stat row: Tracked events · Snapshots/24h · Price spikes (`Δ ≥ +15%`) · Sold out.
+3. Recent price activity table: Event · Venue/Date · Opened · Current · Δ (with `spike`/`sold out` badge) · 14-day sparkline · Last update · ›.
 
-**Purpose:** Persistent alert surface in the admin sidebar for crawl failures, low-confidence extractions, blocked venues, and invite code redemptions. Powered by the `notifications` table and SSE stream.
+`PriceDelta` formats deltas with a colored arrow; `+` is danger (price up = bad for fan), `-` is success. The string `"sold out"` is a special case for `delta = -1`.
 
-**Data sources:**
+### 6. Invite codes (`/admin/invite-codes`)
 
-From `notifications` table:
-- `type`: `admin_alert` / `user_notification`
-- `category`: `crawl.failed`, `crawl.low_confidence`, `event.flagged`, `invite_code.used`, `crawl.blocked`
-- `title`, `body`, `action_url`, `read_at`, `metadata`, `created_at`
+Concert Crawl is invite-only — every code is a referral receipt.
 
-API: `GET /v1/notifications/stream` (SSE), `PATCH /v1/notifications/:id` (mark read), `POST /v1/notifications/mark-all-read`
+1. SectionHead — "Mint code" primary action.
+2. Stat row: Outstanding · Redeemed all-time · Conversion · Subscribers (with patron/free split).
+3. **Invite creator panel** — 4-column inline form: recipient email (text input) · tier toggle (Free / Patron) · expires preset (7d / 30d / never) · "Mint code" button. Recipient is optional — blank means manual share.
+4. Code log table: Code (mono pill on `--surface-1`) · Invitee · Status · Created · Redeemed · Expires · Sent by (avatar chip + name) · ⋯.
 
-**Sidebar position:** between the nav items and the UserButton, pinned to the bottom of the sidebar nav section.
-
-**Bell button (collapsed state):**
-```
-[🔔]  Notifications   [3]
-       ↑ icon          ↑ unread count badge
-```
-
-- Count badge: filled circle, `--danger` background, white text. Hidden if count = 0.
-- Active state (panel open): `--signal` icon + `--surface-2` background, same as other active nav states.
-- If unread count > 9: show "9+"
-
-**Notification panel (expanded — opens as a fixed panel or wide popover anchored to the bell button):**
-
-```
-┌────────────────────────────────────┐
-│  Notifications          [Mark all read]│
-├────────────────────────────────────┤
-│  [🚨]  Crawl failed · Red Rocks     │  ← unread (bg-surface-2)
-│        HTTP 403 — venue blocked     │
-│        2m ago · View crawl →        │
-├────────────────────────────────────┤
-│  [⚠️]  5 events need review        │  ← unread
-│        Bluebird Theater · low conf. │
-│        15m ago · Review →           │
-├────────────────────────────────────┤
-│  [🔑]  Invite code used             │  ← read (bg-transparent, fg-muted)
-│        user@example.com redeemed    │
-│        1h ago                       │
-├────────────────────────────────────┤
-│  [View all notifications]           │
-└────────────────────────────────────┘
-```
-
-**Category icons (Lucide):**
-- `crawl.failed` → `AlertCircle` (`--danger`)
-- `crawl.blocked` → `ShieldOff` (`--danger`)
-- `crawl.low_confidence` → `AlertTriangle` (`--warning`)
-- `event.flagged` → `Flag` (`--warning`)
-- `invite_code.used` → `Key` (`--signal`)
-
-**Read/unread treatment:**
-- Unread: `--surface-2` background, `--fg` title
-- Read: transparent background, `--fg-muted` title
-- Hover (either state): `--overlay-hover` overlay
-
-**Real-time updates:**
-- The bell icon count should update live via SSE without a page reload
-- When a new notification arrives while the panel is closed, the count increments and the bell icon subtly pulses (scale 1 → 1.15 → 1 over 300ms, using `--signal` color)
-- When the panel is open, new notifications prepend to the list with a brief slide-down animation
-
-**Panel size and positioning:**
-- Width: 360px
-- Max height: 480px, scrollable
-- Anchored to the bell button — opens upward if the button is near the bottom of the sidebar
-- Placement and interaction pattern is a design decision — overlay popover and dedicated notifications page are both viable; choose based on data density.
+Status taxonomy: `active` (signal, dot) · `redeemed` (success, dot) · `expired` (neutral) · `revoked` (danger, dot).
 
 ---
 
-## Open Questions
+## Interactions & Behavior
 
-All questions resolved. See below for Claude Design's reference.
-
-### Resolved (for Claude Design's reference)
-
-5. **Manual crawl trigger UX** — live SSE feedback. Running state, progress text, and abort button presence are design decisions.
-1. **Sidebar** — collapsible to icon-only mode. Trigger and breakpoint behavior are design decisions.
-2. **Mobile** — the admin should be mobile-friendly. Data-dense views (tables, history) should use horizontal scroll and flexible breakpoints rather than strict mobile-first layouts.
-3. **Notification panel** — overlay popover or a dedicated notifications page; Claude Design should choose based on data density.
-4. **Branding** — sidebar should show the Concert Crawl logo mark/wordmark alongside an "Admin" declaration. Exact lockup is a design decision.
-6. **Crawl history** — paginated. Page size and controls are a design decision.
-7. **Event edit** — modal or dedicated page; Claude Design should choose based on form complexity.
-8. **Rejection confirmation** — two-step inline is acceptable; Claude Design may propose an alternative.
-9. **Bulk approve** — multi-select with a user-configurable confidence threshold (not a fixed "above 0.7"). Design should include a threshold input or slider that gates the bulk action.
-10. **Dashboard stat cards** — design for extensibility; the exact stats shown are a design decision. Useful candidates: active venues, events this week, events pending review, LLM cost (30d), blocked venues, invite codes remaining.
-11. **Activity feed** — track all event types (crawl runs, notifications, invite code uses) but surface them in a filterable UI. Separation vs. unified feed is a design decision.
+- **Theme switch**: instant CSS-var swap, no transition. Persist in localStorage `cc-admin-theme`.
+- **Sidebar collapse**: 180ms width transition. Persist in localStorage `cc-admin-sidebar`.
+- **Sidebar nav**: clicking a top-level item navigates and updates `active`. Badge counts come from server-side counts (poll or SSE).
+- **Crawl "Run all"**: kicks off a server-side sweep, opens an SSE stream. The `RunningBanner` shows live `done/total` and the current venue. Abort sends a kill signal. On completion, banner dismisses and a toast posts.
+- **Event approve/reject**: optimistic update — row removes from queue immediately, undo toast for 6s. Bulk actions are confirmation-modal protected for >10 events.
+- **Inspector navigation (J/K)**: cycles through the visible queue/list. Selecting wraps at the ends. Inspector content fades in 120ms.
+- **Sparklines**: render only after data loads — no skeleton; use a 24px-tall placeholder div instead.
+- **Filter chips**: single-select per dimension; clicking the active chip resets to "All".
+- **Editable fields in Event inspector**: contenteditable-style inputs; commit on blur, ⌘Enter, or `Approve` click. Show validation inline (no toasts for field errors).
+- **`SSE LIVE` badge**: pulses gently (opacity 0.6 → 1.0 over 2s) only while the SSE connection is open. Switches to `SSE CLOSED` (neutral) on disconnect.
 
 ---
 
-## File Deliverables Expected
+## State Management
 
-Following the format of prior handoffs:
+Recommended approach (the prototypes do this in-component; production should lift):
 
-```
-design/design_handoff_admin_ui/
-  README.md                        ← this file (source of truth)
-  Admin Layout.html                ← sidebar redesign + all nav states in all 3 themes
-  Dashboard.html                   ← revised dashboard with live stats
-  Venues.html                      ← revised venues list
-  Prices.html                      ← revised prices page
-  Crawl Status.html                ← new Phase 7 screen
-  Event Review.html                ← new Phase 7 screen
-  Notification Bell.html           ← bell component in all states
-  layout.jsx                       ← sidebar source
-  dashboard.jsx                    ← dashboard source
-  crawl-status.jsx                 ← crawl status source
-  event-review.jsx                 ← event review source
-  notification-bell.jsx            ← bell source
-  primitives.jsx                   ← shared admin primitives (badges, stat cards, tables)
-```
+- **Server state**: TanStack Query (or equivalent). Keys: `["venues"]`, `["runs", { venueId, range }]`, `["events", { status, venueId, dateRange }]`, `["prices", { eventId }]`, `["invites"]`, `["crawl-cost", "30d"]`.
+- **Live data**: a single SSE connection at `/admin/stream` multiplexes crawl progress, run completions, new events, invite redemptions. Fan out to query caches via custom event handlers.
+- **UI state** (local): selected row IDs (Set), filter pills, sidebar mode, theme, inbox open, queue cursor.
+- **Mutations**: optimistic with rollback. The undo affordance is part of the toast component — implement before shipping bulk approval.
 
 ---
 
-## Fidelity Target
+## Empty / Error / Loading States
 
-**Hi-fi.** Same standard as the Phase 5b consumer screens. Pixel-perfect with finalized:
-- Colors from the token system (no hex values in components)
-- Typography: Inter + JetBrains Mono, weights and sizes locked
-- All interactive states: default / hover / active / focused / disabled
-- All data states: loaded / empty / error / loading skeleton
-- All three themes working
+The canvas's "States" section shows two of these:
 
-Implementation will follow directly from these files — the engineer reading them should not need to make any design decisions.
+- **Queue clear**: green check chip, "Queue is clear." H1, subcopy "Every event has been reviewed. Next sweep runs at 18:00 MT.", "Run sweep now" outline button.
+- **Crawl failed (venue blocked)**: danger-tinted card, alert chip, "Crawl failed · venue blocked", subcopy with consecutive-failure context, "View source" + "Re-crawl" actions.
+
+You will also need (not drawn — please implement using the same patterns):
+
+- **Loading**: skeleton rows for tables (3–5 rows of `--surface-1` blocks at row height); for stat cards, render the chrome with `—` placeholder values; never spin the whole page.
+- **Network error**: full-bleed danger card with retry; do NOT clear stale data.
+- **Permission denied** (non-admin): redirect to consumer app with a brief flash.
+- **Empty venues**: "No venues configured." + Add venue CTA — only relevant on first install.
+
+---
+
+## Assets
+
+- **Icons**: drawn inline as Lucide-style SVG strokes inside `AdminIcon` — `dashboard, venues, crawl, events, prices, invites, settings, refresh, plus, x, check, alert, more, chevR, chevL, chevsL, chevsR, edit, filter, search, external, db, activity, users, cost, arrowUp, arrowDn, arrowUR, arrowDR`. Replace with the project's icon library (Lucide React works directly) — names are aligned where possible.
+- **Wordmark**: not finalized for admin; can use the consumer wordmark or render the text "concertcrawl./admin" in Inter 800.
+- **Avatars**: tiny mono initial chip on `--ink` background — fine to keep until real avatars exist.
+- No raster assets are used; no font files need shipping (Inter + JetBrains Mono are loaded from the system or via Google Fonts).
+
+---
+
+## Out of Scope (intentionally deferred)
+
+These were discussed but not designed — coming later:
+
+- **Settings page** — slot reserved in nav, page not designed.
+- **Audit log** — likely a sub-page of Settings.
+- **User/team management** — single-user (Hugh) for the foreseeable future.
+- **Analytics / engagement metrics** — open question whether these belong in admin or a separate ops dashboard.
+- **Mobile admin** — no mobile breakpoints. Admin is desktop-only by design (≥1280px).
+
+---
+
+## Implementation Checklist
+
+- [ ] Stand up theme system: 2 themes as CSS vars, `cc-admin-theme` localStorage, `data-admin-theme` attr on `<html>`, instant switch.
+- [ ] Build primitive kit (`StatusBadge`, `StatCard`, `AdminTable`, `Panel`, `AdminButton`, `ProgressBar`, `Sparkline`, `MonoLabel`, `CostText`, `RelTime`, `Kbd`).
+- [ ] Build shell (`Sidebar` with 3 modes, `AdminTopbar` with breadcrumb + theme toggle + inbox + account, `InboxPanel`).
+- [ ] Implement Dashboard page.
+- [ ] Implement Crawl status page (split view + run history + SSE running banner).
+- [ ] Implement Event review page (split view + filter rail + bulk action dock + keyboard nav).
+- [ ] Implement Venues / Prices / Invite codes tables.
+- [ ] Wire SSE stream + TanStack Query caches.
+- [ ] Empty + error + loading states across all pages.
+- [ ] Accessibility pass: focus rings, ARIA on tables, keyboard nav for queue, skip links.
+- [ ] Authz gate (admin-only, redirect non-admins).
+
+---
+
+## Open Items
+
+- Confirm the API contracts (run, event, venue, price-snapshot, invite shapes) match the JS data shapes in the prototype JSX files; adjust component prop types to match.
+- Decide whether the inbox panel is a separate notifications service or is computed from the same activity feed shown on the dashboard.
+- Confirm the cost budget value ($40/mo) and budget-reset cadence — currently hard-coded in the dashboard's CostPanel.
+- Confirm "consecutive-failure → auto-pause" threshold (currently shown as 4) — needs product sign-off.
+- Confidence-threshold value for the "Low conf." pill (currently 0.70) — should be tunable from Settings.
