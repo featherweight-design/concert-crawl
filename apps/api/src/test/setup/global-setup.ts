@@ -21,11 +21,15 @@ export async function setup(): Promise<void> {
   const client = postgres(testDbUrl, { max: 1 })
   const db = drizzle(client)
 
-  await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER })
-
-  await client.end()
-
-  console.log('[test] Migrations complete.')
+  try {
+    await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER })
+    await client.end()
+    console.log('[test] Migrations complete.')
+  } catch (error) {
+    console.error('[test] Migration failed:', error)
+    await client.end()
+    throw error
+  }
 }
 
 export async function teardown(): Promise<void> {
