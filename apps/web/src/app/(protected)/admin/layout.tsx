@@ -8,6 +8,7 @@ const navItems = [
   { href: '/admin/venues', label: 'Venues' },
   { href: '/admin/crawl', label: 'Crawl Status' },
   { href: '/admin/events', label: 'Event Review' },
+  { href: '/admin/prices', label: 'Prices' },
   { href: '/admin/invite-codes', label: 'Invite Codes' },
   { href: '/admin/settings', label: 'Settings' },
 ]
