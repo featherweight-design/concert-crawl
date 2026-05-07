@@ -30,13 +30,14 @@ test.describe('browse events page', () => {
 
     await expect(firstChip).toHaveAttribute('aria-pressed', 'true')
 
-    await expect(page.locator('[data-testid="event-card"]').first())
-      .toBeVisible({
-        timeout: 8_000,
-      })
-      .catch(() => {
-        // No events for this venue is a valid state — just verify no error page
-      })
+    const filteredCount = await page
+      .locator('[data-testid="event-card"]')
+      .count()
+    if (filteredCount > 0) {
+      await expect(
+        page.locator('[data-testid="event-card"]').first(),
+      ).toBeVisible()
+    }
 
     console.log(`Filtered by venue: ${chipLabel}`)
   })

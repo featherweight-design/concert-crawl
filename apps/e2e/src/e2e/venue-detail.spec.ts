@@ -5,16 +5,6 @@ test.describe('venue detail page', () => {
     await page.goto('/events')
     await page.waitForLoadState('networkidle')
 
-    const venueChip = page.locator('[data-testid="venue-chip"]').first()
-    const isVisible = await venueChip.isVisible()
-    if (!isVisible) {
-      test.skip(
-        true,
-        'No venue chips on staging — cannot navigate to venue detail',
-      )
-      return
-    }
-
     const venueLink = page.locator('[data-testid="venue-name-link"]').first()
     const linkVisible = await venueLink.isVisible()
     if (!linkVisible) {

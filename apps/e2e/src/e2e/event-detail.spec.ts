@@ -8,6 +8,15 @@ test.describe('event detail page', () => {
     const firstCard = page.locator('[data-testid="event-card"]').first()
     await expect(firstCard).toBeVisible()
 
+    const cardCount = await page.locator('[data-testid="event-card"]').count()
+    if (cardCount === 0) {
+      test.skip(
+        true,
+        'No events on staging — cannot test event detail navigation',
+      )
+      return
+    }
+
     await firstCard.click()
     await page.waitForLoadState('networkidle')
 
