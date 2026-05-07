@@ -5,6 +5,8 @@ import Link from 'next/link'
 const navItems = [
   { href: '/admin', label: 'Dashboard' },
   { href: '/admin/venues', label: 'Venues' },
+  { href: '/admin/crawl', label: 'Crawl Status' },
+  { href: '/admin/events', label: 'Event Review' },
   { href: '/admin/invite-codes', label: 'Invite Codes' },
   { href: '/admin/settings', label: 'Settings' },
 ]
