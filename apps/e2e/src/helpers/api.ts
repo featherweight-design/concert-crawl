@@ -22,7 +22,7 @@ export async function healthCheck(
       request,
       '/v1/health',
     )
-    return status === 200 && (body as { status: string }).status === 'ok'
+    return status === 200 && body.status === 'ok'
   } catch {
     return false
   }
