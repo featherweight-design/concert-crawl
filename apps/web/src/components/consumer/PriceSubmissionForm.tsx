@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useUser } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -29,9 +30,9 @@ export function PriceSubmissionForm({
   if (!isSignedIn) {
     return (
       <p className="text-muted-foreground text-sm">
-        <a href="/sign-in" className="underline">
+        <Link href="/sign-in" className="underline">
           Sign in
-        </a>{' '}
+        </Link>{' '}
         to submit a price.
       </p>
     )
@@ -41,8 +42,8 @@ export function PriceSubmissionForm({
     ? "AXS doesn't publish pricing. Know what face value tickets cost? Submit a price →"
     : 'Know the ticket price? Help the community.'
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (evt: React.FormEvent) => {
+    evt.preventDefault()
     const min = parseFloat(priceMin)
     if (isNaN(min) || min <= 0) return
 
@@ -92,7 +93,7 @@ export function PriceSubmissionForm({
               step="0.01"
               placeholder="35"
               value={priceMin}
-              onChange={(e) => setPriceMin(e.target.value)}
+              onChange={(evt) => setPriceMin(evt.target.value)}
               required
               className="h-8 text-sm"
             />
@@ -108,7 +109,7 @@ export function PriceSubmissionForm({
               step="0.01"
               placeholder="75"
               value={priceMax}
-              onChange={(e) => setPriceMax(e.target.value)}
+              onChange={(evt) => setPriceMax(evt.target.value)}
               className="h-8 text-sm"
             />
           </div>
@@ -121,7 +122,7 @@ export function PriceSubmissionForm({
             id="tierLabel"
             placeholder="GA"
             value={tierLabel}
-            onChange={(e) => setTierLabel(e.target.value)}
+            onChange={(evt) => setTierLabel(evt.target.value)}
             maxLength={50}
             className="h-8 text-sm"
           />
@@ -134,7 +135,7 @@ export function PriceSubmissionForm({
             id="sourceNote"
             placeholder="box office"
             value={sourceNote}
-            onChange={(e) => setSourceNote(e.target.value)}
+            onChange={(evt) => setSourceNote(evt.target.value)}
             maxLength={200}
             className="h-8 text-sm"
           />
