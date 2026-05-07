@@ -106,6 +106,32 @@ describe('GET /v1/events/:id — integration', () => {
     await clearTables()
   })
 
+  it('includes priceSource in event detail response', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      priceSource: 'ticketmaster',
+      ticketPriceMin: '45',
+      ticketPriceMax: '90',
+      date: '2027-06-01',
+    })
+
+    const eventsRes = await app.request('/v1/events')
+    const listBody = (await eventsRes.json()) as {
+      success: boolean
+      data: { data: Array<{ id: string }> }
+    }
+    const eventId = listBody.data.data[0]?.id
+    expect(eventId).toBeDefined()
+
+    const res = await app.request(`/v1/events/${eventId}`)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { priceSource: string | null }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.priceSource).toBe('ticketmaster')
+  })
+
   it('returns event with venue data', async () => {
     const venue = await seedVenue({
       name: 'Fillmore Auditorium',
