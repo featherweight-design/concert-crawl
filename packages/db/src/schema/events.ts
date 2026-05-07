@@ -19,6 +19,17 @@ export const eventStatusEnum = pgEnum('event_status', [
   'postponed',
 ])
 
+export const priceSourceEnum = pgEnum('price_source', [
+  'structured_data',
+  'ticketmaster',
+  'eventbrite',
+  'dice',
+  'songkick',
+  'bandsintown',
+  'seatgeek',
+  'community',
+])
+
 export const events = pgTable(
   'events',
   {
@@ -34,6 +45,7 @@ export const events = pgTable(
     ticketUrl: text('ticket_url'),
     ticketPriceMin: numeric('ticket_price_min', { precision: 10, scale: 2 }),
     ticketPriceMax: numeric('ticket_price_max', { precision: 10, scale: 2 }),
+    priceSource: priceSourceEnum('price_source'),
     description: text('description'),
     imageUrl: text('image_url'),
     genre: text('genre').array(),

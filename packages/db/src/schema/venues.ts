@@ -34,6 +34,7 @@ export const venues = pgTable('venues', {
   blockedAt: timestamp('blocked_at', { withTimezone: true }),
   extractionStrategy: extractionStrategyEnum('extraction_strategy'),
   contactEmail: text('contact_email'),
+  priceUrl: text('price_url'),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),

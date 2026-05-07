@@ -1,4 +1,5 @@
 import {
+  integer,
   jsonb,
   pgEnum,
   pgTable,
@@ -14,6 +15,7 @@ export const userRoles = pgTable('user_roles', {
   userId: text('user_id').notNull(), // Clerk user ID — source of truth is Clerk publicMetadata
   role: roleEnum('role').notNull(),
   permissions: jsonb('permissions').$type<string[]>().default([]),
+  priceCredScore: integer('price_cred_score').notNull().default(0),
   grantedBy: text('granted_by').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
