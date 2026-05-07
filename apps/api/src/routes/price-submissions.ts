@@ -113,6 +113,8 @@ priceSubmissionsRouter.post(
           .where(eq(priceSubmissions.id, s.id))
 
         const credDelta = wasFirstCorroboration ? 10 : 2
+        // TODO: if the user has no user_roles row (registered but never assigned a role),
+        // this UPDATE silently affects 0 rows and cred is lost. Consider insert-on-conflict.
         await db
           .update(userRoles)
           .set({
