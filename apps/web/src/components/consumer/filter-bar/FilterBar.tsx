@@ -277,6 +277,7 @@ export function FilterBar({ venues, className }: FilterBarProps) {
                   setAnchorRect(event.currentTarget.getBoundingClientRect())
                 }
               }}
+              data-testid={key === 'where' ? 'venue-chip' : undefined}
               className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-3"
               style={{
                 fontFamily: 'Inter, system-ui',

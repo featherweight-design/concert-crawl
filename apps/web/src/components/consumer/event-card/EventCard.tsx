@@ -24,6 +24,7 @@ export function EventCard({ event, className }: EventCardProps) {
   return (
     <Link
       href={`/events/${event.id}`}
+      data-testid="event-card"
       className={cn(
         'group flex items-center gap-2.5 py-2.5 transition-colors',
         className,
@@ -72,7 +73,14 @@ export function EventCard({ event, className }: EventCardProps) {
             letterSpacing: '0.02em',
           }}
         >
-          <span>{venueShort(event.venue.name)}</span>
+          <Link
+            href={`/venues/${event.venue.slug}`}
+            data-testid="venue-name-link"
+            className="hover:underline"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span>{venueShort(event.venue.name)}</span>
+          </Link>
           {showTime && (
             <>
               <span className="opacity-40">·</span>

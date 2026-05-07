@@ -212,6 +212,7 @@ export default async function EventDetailPage({
             label="Venue"
             value={event.venue.name}
             href={`/venues/${event.venue.slug}`}
+            data-testid="event-venue-name"
           />
           <InfoRow icon={<IconCalendar />} label="Date" value={dateLabel} />
           <InfoRow
@@ -457,9 +458,17 @@ interface InfoRowProps {
   value: string
   signal?: boolean
   href?: string
+  'data-testid'?: string
 }
 
-function InfoRow({ icon, label, value, signal = false, href }: InfoRowProps) {
+function InfoRow({
+  icon,
+  label,
+  value,
+  signal = false,
+  href,
+  'data-testid': dataTestId,
+}: InfoRowProps) {
   const inner = (
     <>
       <div className="h-4 w-4 shrink-0">{icon}</div>
@@ -508,11 +517,16 @@ function InfoRow({ icon, label, value, signal = false, href }: InfoRowProps) {
     return (
       <Link
         href={href}
+        data-testid={dataTestId}
         className={`${baseClass} transition-colors hover:text-signal`}
       >
         {inner}
       </Link>
     )
   }
-  return <div className={baseClass}>{inner}</div>
+  return (
+    <div data-testid={dataTestId} className={baseClass}>
+      {inner}
+    </div>
+  )
 }
