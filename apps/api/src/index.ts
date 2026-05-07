@@ -1,6 +1,8 @@
+import './instrument.js'
 import { serve } from '@hono/node-server'
 import { createApp } from './app.js'
 import { env } from './env.js'
+import { apiLogger } from './lib/logger.js'
 
 const app = createApp()
 
@@ -10,6 +12,6 @@ serve(
     port: env.PORT,
   },
   () => {
-    console.warn(`🎸 Concert Crawl API running on http://localhost:${env.PORT}`)
+    apiLogger.info({ port: env.PORT }, '🎸 Concert Crawl API running')
   },
 )
