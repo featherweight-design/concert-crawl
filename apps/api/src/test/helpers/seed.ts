@@ -1,10 +1,10 @@
 import { sql } from 'drizzle-orm'
-import { events, venues } from '@concert-crawl/db'
+import { events, priceSubmissions, venues } from '@concert-crawl/db'
 import { testDb } from './db.js'
 
 export async function clearTables(): Promise<void> {
   await testDb.execute(
-    sql`TRUNCATE events, venues, crawl_runs, audit_log, invite_codes, user_roles RESTART IDENTITY CASCADE`,
+    sql`TRUNCATE events, venues, crawl_runs, audit_log, invite_codes, user_roles, price_retrieval_log, price_submissions RESTART IDENTITY CASCADE`,
   )
 }
 
@@ -47,4 +47,25 @@ export async function seedEvent(
 
   if (!event) throw new Error('seedEvent: insert returned no rows')
   return event
+}
+
+export async function seedPriceSubmission(
+  eventId: string,
+  userId: string,
+  overrides: Partial<typeof priceSubmissions.$inferInsert> = {},
+): Promise<typeof priceSubmissions.$inferSelect> {
+  const [submission] = await testDb
+    .insert(priceSubmissions)
+    .values({
+      eventId,
+      userId,
+      priceMin: '35',
+      status: 'pending',
+      corroborationCount: 0,
+      ...overrides,
+    })
+    .returning()
+  if (!submission)
+    throw new Error('seedPriceSubmission: insert returned no rows')
+  return submission
 }
