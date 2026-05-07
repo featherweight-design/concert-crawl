@@ -4,11 +4,9 @@ import type { PipelineContext } from '../types.js'
 vi.mock('@concert-crawl/db', () => ({
   db: {
     insert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue([]) }),
-    update: vi
-      .fn()
-      .mockReturnValue({
-        set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([]) }),
-      }),
+    update: vi.fn().mockReturnValue({
+      set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([]) }),
+    }),
   },
   priceRetrievalLog: {},
   events: { id: 'id' },
@@ -33,6 +31,8 @@ const { runPricePipeline } = await import('../index.js')
 const { tier1StructuredData } = await import('../tier1-structured-data.js')
 const { tier2Ticketmaster } = await import('../tier2-ticketmaster.js')
 const { tier3EventbriteDice } = await import('../tier3-eventbrite-dice.js')
+const { tier4SongkickBandsintown } =
+  await import('../tier4-songkick-bandsintown.js')
 const { tier5SeatGeek } = await import('../tier5-seatgeek.js')
 const { tier6Community } = await import('../tier6-community.js')
 const { db } = await import('@concert-crawl/db')
@@ -68,6 +68,7 @@ describe('runPricePipeline', () => {
     expect(tier2Ticketmaster).not.toHaveBeenCalled()
     const insertMock = vi.mocked(db.insert)
     expect(insertMock).toHaveBeenCalledWith(expect.anything())
+    expect(vi.mocked(db.update)).toHaveBeenCalled()
   })
 
   it('logs a miss and continues to next tier when tier returns null', async () => {
@@ -96,6 +97,7 @@ describe('runPricePipeline', () => {
 
   it('reaches tier 6 when all previous tiers return null', async () => {
     await runPricePipeline(ctx)
+    expect(tier4SongkickBandsintown).toHaveBeenCalledWith(ctx)
     expect(tier6Community).toHaveBeenCalledWith(ctx)
   })
 })
