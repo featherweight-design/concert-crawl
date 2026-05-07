@@ -206,7 +206,7 @@ jobs:
           restore-keys: turbo-int-test-${{ runner.os }}-
 
       - name: Build workspace packages
-        run: pnpm turbo build --filter=!apps/web --filter=!apps/api --filter=!apps/crawler
+        run: pnpm turbo build --filter=@concert-crawl/db --filter=@concert-crawl/logger --filter=@concert-crawl/types --filter=@concert-crawl/crawler-core
 
       - name: Run integration tests
         run: pnpm --filter api test:integration
