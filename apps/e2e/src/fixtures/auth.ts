@@ -6,19 +6,19 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
   const email = process.env['E2E_TEST_USER_EMAIL']
   const password = process.env['E2E_TEST_USER_PASSWORD']
 
+  const authDir = path.resolve('.auth')
+  const authFile = path.join(authDir, 'user.json')
+  fs.mkdirSync(authDir, { recursive: true })
+
   if (!email || !password) {
     console.warn(
       '[e2e] E2E_TEST_USER_EMAIL or E2E_TEST_USER_PASSWORD not set — skipping auth setup.',
     )
+    fs.writeFileSync(authFile, JSON.stringify({ cookies: [], origins: [] }))
     return
   }
 
   const baseURL = config.projects[0]?.use.baseURL ?? 'http://localhost:3000'
-  const authDir = path.resolve('apps/e2e/.auth')
-  const authFile = path.join(authDir, 'user.json')
-
-  fs.mkdirSync(authDir, { recursive: true })
-
   const browser = await chromium.launch()
   const page = await browser.newPage()
 

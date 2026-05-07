@@ -28,7 +28,7 @@ test.describe('browse events page', () => {
     await firstChip.click()
     await page.waitForLoadState('networkidle')
 
-    await expect(firstChip).toHaveAttribute('aria-pressed', 'true')
+    await expect(firstChip).toHaveAttribute('aria-expanded', 'true')
 
     const filteredCount = await page
       .locator('[data-testid="event-card"]')

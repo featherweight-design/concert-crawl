@@ -22,16 +22,17 @@ export function EventCard({ event, className }: EventCardProps) {
       : null
 
   return (
-    <Link
-      href={`/events/${event.id}`}
+    <div
       data-testid="event-card"
-      className={cn(
-        'group flex items-center gap-2.5 py-2.5 transition-colors',
-        className,
-      )}
+      className={cn('group flex items-center gap-2.5 py-2.5', className)}
     >
-      {/* Thumbnail — 48×48 */}
-      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md">
+      {/* Thumbnail — 48×48, links to event detail */}
+      <Link
+        href={`/events/${event.id}`}
+        className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md"
+        tabIndex={-1}
+        aria-hidden
+      >
         <EventImage
           src={event.imageUrl}
           alt={event.artist}
@@ -39,15 +40,18 @@ export function EventCard({ event, className }: EventCardProps) {
           fallbackInitial={artistInitial(event.artist)}
           className="h-full w-full"
         />
-      </div>
+      </Link>
 
       {/* Info */}
       <div className="flex min-w-0 flex-1 flex-col">
         {isCancelled || isPostponed ? (
           <div className="flex items-center gap-2">
-            <p className="truncate text-sm font-bold text-fg transition-colors group-hover:text-signal">
+            <Link
+              href={`/events/${event.id}`}
+              className="truncate text-sm font-bold text-fg transition-colors hover:text-signal"
+            >
               {event.artist}
-            </p>
+            </Link>
             {isCancelled && (
               <Badge variant="destructive">{copy.cancelledLabel}</Badge>
             )}
@@ -56,9 +60,12 @@ export function EventCard({ event, className }: EventCardProps) {
             )}
           </div>
         ) : (
-          <p className="truncate text-sm font-bold text-fg transition-colors group-hover:text-signal">
+          <Link
+            href={`/events/${event.id}`}
+            className="truncate text-sm font-bold text-fg transition-colors hover:text-signal"
+          >
             {event.artist}
-          </p>
+          </Link>
         )}
         {event.title !== event.artist && (
           <p className="truncate text-[12px] font-medium text-fg-muted">
@@ -77,7 +84,6 @@ export function EventCard({ event, className }: EventCardProps) {
             href={`/venues/${event.venue.slug}`}
             data-testid="venue-name-link"
             className="hover:underline"
-            onClick={(ev) => ev.stopPropagation()}
           >
             <span>{venueShort(event.venue.name)}</span>
           </Link>
@@ -90,8 +96,8 @@ export function EventCard({ event, className }: EventCardProps) {
         </p>
       </div>
 
-      {/* Price */}
-      <div className="shrink-0">
+      {/* Price — links to event detail */}
+      <Link href={`/events/${event.id}`} className="shrink-0" tabIndex={-1}>
         {!isCancelled && !isPostponed && priceDisplay ? (
           <span className="text-[13px] font-extrabold text-signal">
             {priceDisplay}
@@ -108,7 +114,7 @@ export function EventCard({ event, className }: EventCardProps) {
             tba
           </span>
         ) : null}
-      </div>
-    </Link>
+      </Link>
+    </div>
   )
 }

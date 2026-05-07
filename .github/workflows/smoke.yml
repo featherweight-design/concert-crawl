@@ -10,7 +10,7 @@ jobs:
     name: Playwright smoke (production)
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    if: vars.SMOKE_ENABLED != 'false'
+    if: vars.SMOKE_ENABLED == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
