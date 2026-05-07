@@ -3,6 +3,7 @@ import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { eq, desc, and, isNull } from 'drizzle-orm'
 import { db, notifications } from '@concert-crawl/db'
+import { getAuthUser } from '../../middleware/auth.js'
 import type { AdminVariables } from './index.js'
 
 const notifIdSchema = z.object({ id: z.string().uuid() })
@@ -33,12 +34,17 @@ notificationsAdminRouter.get(
 // POST /v1/admin/notifications/read-all — mark all unread admin alerts as read
 // NOTE: registered before /:id/read to prevent Hono matching "read-all" as an :id param
 notificationsAdminRouter.post('/read-all', async (ctx) => {
+  const { userId } = getAuthUser(ctx)
+
   await db
     .update(notifications)
     .set({ readAt: new Date() })
     .where(
       and(eq(notifications.type, 'admin_alert'), isNull(notifications.readAt)),
     )
+
+  ctx.set('auditAction', 'notification.read_all')
+  ctx.set('auditActorId', userId)
 
   return ctx.json({ success: true })
 })
@@ -62,6 +68,11 @@ notificationsAdminRouter.patch(
         404,
       )
     }
+
+    const { userId } = getAuthUser(ctx)
+    ctx.set('auditAction', 'notification.mark_read')
+    ctx.set('auditTargetId', id)
+    ctx.set('auditActorId', userId)
 
     return ctx.json({ success: true, data: updated })
   },

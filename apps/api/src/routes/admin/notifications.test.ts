@@ -75,6 +75,15 @@ describe('GET /v1/admin/notifications', () => {
     expect(res.status).toBe(401)
   })
 
+  it('returns 403 for non-admin users', async () => {
+    mockGetAuth.mockReturnValue({
+      userId: 'user_123',
+      sessionClaims: { metadata: { role: 'user' } },
+    })
+    const res = await createApp().request('/v1/admin/notifications')
+    expect(res.status).toBe(403)
+  })
+
   it('returns 200 with notifications list', async () => {
     adminAuth()
     const { db } = await import('@concert-crawl/db')
@@ -130,6 +139,20 @@ describe('PATCH /v1/admin/notifications/:id/read', () => {
     expect(res.status).toBe(401)
   })
 
+  it('returns 403 for non-admin users', async () => {
+    mockGetAuth.mockReturnValue({
+      userId: 'user_123',
+      sessionClaims: { metadata: { role: 'user' } },
+    })
+    const res = await createApp().request(
+      `/v1/admin/notifications/${NOTIF_ID}/read`,
+      {
+        method: 'PATCH',
+      },
+    )
+    expect(res.status).toBe(403)
+  })
+
   it('returns 200 and marks notification as read', async () => {
     adminAuth()
     const { db } = await import('@concert-crawl/db')
@@ -165,6 +188,25 @@ describe('PATCH /v1/admin/notifications/:id/read', () => {
 describe('POST /v1/admin/notifications/read-all', () => {
   beforeEach(() => {
     mockGetAuth.mockReset()
+  })
+
+  it('returns 401 for unauthenticated requests', async () => {
+    mockGetAuth.mockReturnValue(null)
+    const res = await createApp().request('/v1/admin/notifications/read-all', {
+      method: 'POST',
+    })
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 403 for non-admin users', async () => {
+    mockGetAuth.mockReturnValue({
+      userId: 'user_123',
+      sessionClaims: { metadata: { role: 'user' } },
+    })
+    const res = await createApp().request('/v1/admin/notifications/read-all', {
+      method: 'POST',
+    })
+    expect(res.status).toBe(403)
   })
 
   it('returns 200 and marks all admin_alert notifications as read', async () => {
