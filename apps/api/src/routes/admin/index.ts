@@ -5,6 +5,7 @@ import { db, auditLog } from '@concert-crawl/db'
 import { venuesAdminRouter } from './venues.js'
 import { inviteCodesAdminRouter } from './invite-codes.js'
 import { crawlAdminRouter } from './crawl.js'
+import { notificationsAdminRouter } from './notifications.js'
 
 export type AdminVariables = {
   Variables: {
@@ -53,3 +54,4 @@ adminRouter.use('*', async (ctx, next) => {
 adminRouter.route('/venues', venuesAdminRouter)
 adminRouter.route('/invite-codes', inviteCodesAdminRouter)
 adminRouter.route('/crawl', crawlAdminRouter)
+adminRouter.route('/notifications', notificationsAdminRouter)
