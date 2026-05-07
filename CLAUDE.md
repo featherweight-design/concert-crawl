@@ -320,26 +320,38 @@ Both eliminate the need to cast. Never cast `publicMetadata` or `sessionClaims` 
 
 ## Current Status
 
-Phase: **Phase 5 complete — Phase 5b (design polish) next**
+Phase: **Phase 6 in progress — 6a complete, 6b (integration tests) next**
 
-- Phase 3 merged (PRs #14–17): Playwright crawler, Claude Haiku extraction, crawl trigger UI, crawl history table — staging validation complete
-- Phase 4 complete: design system (Electric/Jade/Light themes, ~35 tokens, Inter font, logo/wordmark)
-- Phase 5 complete (PR #21 merged 2026-04-29): public events + venues API, browse/detail/venue pages, staging validated
-- Phase 5b: hi-fi design polish — mocks from Claude Design ready; separate PR on `feat/phase-5b-design-polish`
+- Phase 5b complete (PRs #22–24): three-part design polish — consumer UI, filter redesign, nav/avatar/gradients/typography
+- Phase 6a complete (PR #26 merged 2026-05-07): pino + Sentry SDK across all three apps (`packages/logger`, `apps/api`, `apps/web`, `apps/crawler`)
+- Phase 6b next: Vitest integration tests for `apps/api` against a real Postgres database (plan: `docs/superpowers/plans/2026-05-02-phase-6b-integration-tests.md`)
+- Phase 6c queued: Playwright E2E + smoke test suite (`apps/e2e`) — staging E2E post-merge + prod smoke cron via GitHub Actions
 - Domain: `concertcrawl.app` via Cloudflare Registrar (~$15/yr)
 
 ### Revised Phase Sequence
 
-| Phase | Name                                 | Status                                     |
-| ----- | ------------------------------------ | ------------------------------------------ |
-| 1     | Foundation                           | ✅ Complete                                |
-| 2     | Venue Management (Admin)             | ✅ Complete                                |
-| 3     | Crawler v1                           | ✅ Complete                                |
-| 4     | Design System / Theming Architecture | ✅ Complete                                |
-| 5     | Consumer Calendar UI (functional)    | ✅ Complete                                |
-| 5b    | Consumer UI Design Polish            | In progress — mocks ready, PR not yet open |
-| 6     | Observability + Testing              | —                                          |
-| 7     | Automation + Scheduling              | —                                          |
-| 8     | Beta Launch Prep                     | —                                          |
+| Phase | Name                                 | Status                   |
+| ----- | ------------------------------------ | ------------------------ |
+| 1     | Foundation                           | ✅ Complete              |
+| 2     | Venue Management (Admin)             | ✅ Complete              |
+| 3     | Crawler v1                           | ✅ Complete              |
+| 4     | Design System / Theming Architecture | ✅ Complete              |
+| 5     | Consumer Calendar UI (functional)    | ✅ Complete              |
+| 5b    | Consumer UI Design Polish            | ✅ Complete (PRs #22–24) |
+| 6a    | Observability SDK                    | ✅ Complete (PR #26)     |
+| 6b    | Integration Tests                    | Next — plan ready        |
+| 6c    | E2E + Smoke Tests                    | Queued — plan ready      |
+| 7     | Automation + Scheduling              | —                        |
+| 8     | Beta Launch Prep                     | —                        |
 
 See the phased development plan in the design spec for the full roadmap (Phases 1–7).
+
+### Keeping this section current
+
+**Update this section whenever:**
+
+- A PR is merged — mark the corresponding phase/sub-phase complete with the PR number and merge date
+- A new phase or sub-phase begins — add a row to the table and update the summary line at the top
+- A plan file is created — link it in the relevant row's notes
+
+This keeps any future Claude session (or human) immediately oriented without needing to run `gh pr list`.
