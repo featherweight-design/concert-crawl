@@ -9,6 +9,7 @@ import {
 } from '@concert-crawl/db'
 import type { CrawlRun } from '@concert-crawl/db'
 import { isAllowed } from './lib/robots.js'
+import { sendCrawlFailureEmail } from './lib/email.js'
 import { fetchPage, CrawlFetchError } from './lib/fetcher.js'
 import { extractJsonLd } from './lib/extractors/json-ld.js'
 import { extractWithLlm } from './lib/extractors/llm.js'
@@ -336,6 +337,17 @@ export async function crawlVenue(
         body: `${newFailureCount} consecutive failures for ${venue.name}`,
         metadata: JSON.stringify({ venueId }),
       })
+      void sendCrawlFailureEmail(venue.name, newFailureCount).catch(
+        (emailErr) => {
+          console.log(
+            JSON.stringify({
+              event: 'crawl.email_error',
+              venueId,
+              error: String(emailErr),
+            }),
+          )
+        },
+      )
     }
 
     const durationMs = Date.now() - startedAt
