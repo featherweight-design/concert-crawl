@@ -98,9 +98,9 @@ priceSubmissionsRouter.post(
       )
 
     const tolerance = 0.15
-    const corroborating = existing.filter((s) => {
+    const corroborating = existing.filter((sub) => {
       const diff =
-        Math.abs(parseFloat(s.priceMin) - body.priceMin) / body.priceMin
+        Math.abs(parseFloat(sub.priceMin) - body.priceMin) / body.priceMin
       return diff <= tolerance
     })
 
@@ -116,16 +116,16 @@ priceSubmissionsRouter.post(
         .where(eq(priceSubmissions.id, newSub.id))
 
       // Update existing matching submissions and award cred
-      for (const s of corroborating) {
-        const wasFirstCorroboration = s.corroborationCount === 0
+      for (const sub of corroborating) {
+        const wasFirstCorroboration = sub.corroborationCount === 0
         await db
           .update(priceSubmissions)
           .set({
             status: 'corroborated',
-            corroborationCount: s.corroborationCount + 1,
+            corroborationCount: sub.corroborationCount + 1,
             updatedAt: sql`now()`,
           })
-          .where(eq(priceSubmissions.id, s.id))
+          .where(eq(priceSubmissions.id, sub.id))
 
         const credDelta = wasFirstCorroboration ? 10 : 2
         // TODO: if the user has no user_roles row (registered but never assigned a role),
@@ -135,7 +135,7 @@ priceSubmissionsRouter.post(
           .set({
             priceCredScore: sql`${userRoles.priceCredScore} + ${credDelta}`,
           })
-          .where(eq(userRoles.userId, s.userId))
+          .where(eq(userRoles.userId, sub.userId))
       }
     }
 

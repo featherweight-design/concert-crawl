@@ -35,10 +35,10 @@ pricesAdminRouter.get('/health', async (ctx) => {
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
   const autoFlagged = stats.filter(
-    (s) =>
-      Number(s.hitCount) === 0 &&
-      s.lastAttemptedAt != null &&
-      new Date(s.lastAttemptedAt) < thirtyDaysAgo,
+    (stat) =>
+      Number(stat.hitCount) === 0 &&
+      stat.lastAttemptedAt != null &&
+      new Date(stat.lastAttemptedAt) < thirtyDaysAgo,
   )
 
   return ctx.json({ success: true, data: { stats, autoFlagged } })
