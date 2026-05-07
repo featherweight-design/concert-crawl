@@ -4,9 +4,9 @@
 
 **Goal:** Automate daily crawls for all active venues, give admins full visibility into crawl health, send email alerts on crawl failure, and provide a data-refinement workflow for reviewing low-confidence events.
 
-**Architecture:** The crawler app's stub entrypoint is implemented as a batch runner (`apps/crawler/src/run.ts`) that fetches all active + verified venues from the DB and executes up to 3 concurrent calls to `crawlVenue` (already implemented in `@concert-crawl/crawler-core`). Render's cron service triggers the process daily at 3 AM MT. Three new admin pages (Crawl Status, Event Review, Notifications) are backed by new Hono endpoints. Resend email is wired into `crawler-core` to fire an alert whenever a venue hits 3 consecutive failures.
+**Architecture:** The crawler app's stub entrypoint is implemented as a batch runner (`apps/crawler/src/run.ts`) that fetches all active + verified venues from the DB and executes up to 3 concurrent calls to `crawlVenue` (already implemented in `@concert-crawl/crawler-core`). A GitHub Actions scheduled workflow triggers the process daily at 3 AM MT — this is cheaper (free tier covers a ~10-min daily job) and consistent with the existing `smoke.yml` pattern. Do NOT use Render cron services for the crawler — they cost ~$7/month each. Three new admin pages (Crawl Status, Event Review, Notifications) are backed by new Hono endpoints. Resend email is wired into `crawler-core` to fire an alert whenever a venue hits 3 consecutive failures.
 
-**Tech Stack:** Hono + Zod (API), Drizzle ORM (DB), Next.js App Router (admin UI), Resend SDK (email), Vitest (tests), shadcn/ui (UI components), Render cron (scheduler)
+**Tech Stack:** Hono + Zod (API), Drizzle ORM (DB), Next.js App Router (admin UI), Resend SDK (email), Vitest (tests), shadcn/ui (UI components), GitHub Actions cron (scheduler)
 
 ---
 
@@ -52,7 +52,8 @@ Before starting:
 - `apps/crawler/package.json` — add `@concert-crawl/db`, `@concert-crawl/crawler-core`, `vitest` deps
 - `apps/crawler/.env.example` — add `RESEND_API_KEY`, `ADMIN_EMAIL`
 - `apps/web/src/app/(protected)/admin/layout.tsx` — add Crawl Status + Event Review nav items; add NotificationBell
-- `render.yaml` — add cron service for crawler
+- `.github/workflows/crawler.yml` — daily cron at 3 AM MT (prod)
+- `.github/workflows/crawler-staging.yml` — daily cron at 4 AM MT (staging)
 
 ---
 
@@ -1316,98 +1317,141 @@ git commit -m "feat: implement crawler daily runner — batch all active venues,
 
 ---
 
-## Task 6: Render Cron Job
+## Task 6: GitHub Actions Cron Workflows
+
+**Decision rationale:** GitHub Actions is free for this workload (~10-min daily job, well within the 2,000 min/month free tier). Render cron services cost ~$7/month each ($14/month for prod + staging). Do NOT switch this to Render — the cost difference is not justified. Pattern follows the existing `smoke.yml` workflow.
 
 **Files:**
-- Modify: `render.yaml`
+- Create: `.github/workflows/crawler.yml`
+- Create: `.github/workflows/crawler-staging.yml`
 
-- [ ] **Step 6.1: Add cron service to `render.yaml`**
+- [ ] **Step 6.1: Create prod crawler workflow**
 
-Add a new `services` entry before the `databases:` key. The crawler runs as a Render cron job — it is a Node process that executes, then exits.
-
-```yaml
-  - type: cron
-    name: concert-crawl-crawler
-    runtime: node
-    region: oregon
-    plan: starter
-    # 3 AM MT = 10 AM UTC (MST/UTC-7). Runs 4 AM MT during MDT (UTC-6) — acceptable off-peak window.
-    schedule: "0 10 * * *"
-    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/crawler
-    startCommand: node apps/crawler/dist/index.js
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: DATABASE_URL
-        fromDatabase:
-          name: concert-crawl-db
-          property: connectionString
-      - key: ANTHROPIC_API_KEY
-        sync: false # Enter manually in Render dashboard — SECRET
-      - key: RESEND_API_KEY
-        sync: false # Enter manually in Render dashboard — SECRET
-      - key: ADMIN_EMAIL
-        sync: false # Admin alert destination
-      - key: ADMIN_URL
-        value: https://concertcrawl.app
-      - key: SENTRY_DSN
-        sync: false
-      - key: SENTRY_ENVIRONMENT
-        value: production
-      - key: LOG_LEVEL
-        value: info
-```
-
-Also add a staging crawler cron for manual testing (schedule at 4 AM MT / 11 AM UTC, or trigger manually):
+Create `.github/workflows/crawler.yml`:
 
 ```yaml
-  - type: cron
-    name: concert-crawl-crawler-staging
-    runtime: node
-    region: oregon
-    plan: starter
-    # 4 AM MT = 11 AM UTC — slightly offset from prod to avoid simultaneous runs
-    schedule: "0 11 * * *"
-    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/crawler
-    startCommand: node apps/crawler/dist/index.js
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: DATABASE_URL
-        fromDatabase:
-          name: concert-crawl-db-staging
-          property: connectionString
-      - key: ANTHROPIC_API_KEY
-        sync: false
-      - key: RESEND_API_KEY
-        sync: false
-      - key: ADMIN_EMAIL
-        sync: false
-      - key: ADMIN_URL
-        value: https://concert-crawl-web-staging.onrender.com
-      - key: SENTRY_DSN
-        sync: false
-      - key: SENTRY_ENVIRONMENT
-        value: staging
-      - key: LOG_LEVEL
-        value: info
+name: Daily Crawler (Production)
+
+on:
+  schedule:
+    # 3 AM MT = 10 AM UTC (MST/UTC-7). Runs at 4 AM MT during MDT (UTC-6) — acceptable off-peak window.
+    - cron: '0 10 * * *'
+  workflow_dispatch:
+
+jobs:
+  crawl:
+    name: Run daily crawler (production)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('apps/crawler/package.json') }}
+          restore-keys: playwright-${{ runner.os }}-
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @concert-crawl/crawler install-browsers
+
+      - name: Run daily crawl
+        run: pnpm --filter @concert-crawl/crawler start
+        env:
+          NODE_ENV: production
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
+          ADMIN_URL: https://concertcrawl.app
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_ENVIRONMENT: production
+          LOG_LEVEL: info
 ```
 
-> **Human action required:** After merging this PR, the cron env vars (`ANTHROPIC_API_KEY`, `RESEND_API_KEY`, `ADMIN_EMAIL`, `SENTRY_DSN`) must be entered manually in the Render dashboard for both cron services. Never commit real values.
+> **Human action required:** Add these secrets + variables in GitHub → Settings → Secrets and Variables → Actions (under the `production` environment): `DATABASE_URL`, `ANTHROPIC_API_KEY`, `RESEND_API_KEY`, `SENTRY_DSN` (secrets) and `ADMIN_EMAIL` (variable). Never commit real values.
 
-- [ ] **Step 6.2: Verify render.yaml is valid YAML**
+- [ ] **Step 6.2: Create staging crawler workflow**
 
-```bash
-npx js-yaml render.yaml > /dev/null && echo "valid"
+Create `.github/workflows/crawler-staging.yml`:
+
+```yaml
+name: Daily Crawler (Staging)
+
+on:
+  schedule:
+    # 4 AM MT = 11 AM UTC — offset from prod to avoid simultaneous runs
+    - cron: '0 11 * * *'
+  workflow_dispatch:
+
+jobs:
+  crawl:
+    name: Run daily crawler (staging)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: staging
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('apps/crawler/package.json') }}
+          restore-keys: playwright-${{ runner.os }}-
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @concert-crawl/crawler install-browsers
+
+      - name: Run daily crawl
+        run: pnpm --filter @concert-crawl/crawler start
+        env:
+          NODE_ENV: production
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
+          ADMIN_URL: https://concert-crawl-web-staging.onrender.com
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_ENVIRONMENT: staging
+          LOG_LEVEL: info
 ```
 
-Expected: `valid`
+> **Human action required:** Add the same secrets + variables under the `staging` environment in GitHub Actions, pointing to staging DB and services.
 
 - [ ] **Step 6.3: Commit**
 
 ```bash
-git add render.yaml
-git commit -m "feat: add Render cron services for daily crawler (prod + staging)"
+git add .github/workflows/crawler.yml .github/workflows/crawler-staging.yml
+git commit -m "feat: add GitHub Actions cron workflows for daily crawler (prod + staging)"
 ```
 
 ---
