@@ -21,6 +21,13 @@ export function EventCard({ event, className }: EventCardProps) {
       ? `$${parseFloat(event.ticketPriceMin).toFixed(0)}`
       : null
 
+  const priceSourceBadge =
+    event.priceSource === 'seatgeek'
+      ? 'resale'
+      : event.priceSource === 'community'
+        ? 'community'
+        : null
+
   return (
     <div
       data-testid="event-card"
@@ -97,22 +104,22 @@ export function EventCard({ event, className }: EventCardProps) {
       </div>
 
       {/* Price — links to event detail */}
-      <Link href={`/events/${event.id}`} className="shrink-0" tabIndex={-1}>
+      <Link
+        href={`/events/${event.id}`}
+        className="shrink-0 text-right"
+        tabIndex={-1}
+      >
         {!isCancelled && !isPostponed && priceDisplay ? (
-          <span className="text-[13px] font-extrabold text-signal">
+          <span className="text-sm font-medium">
             {priceDisplay}
+            {priceSourceBadge && (
+              <span className="text-muted-foreground ml-1 text-xs">
+                ({priceSourceBadge})
+              </span>
+            )}
           </span>
         ) : !isCancelled && !isPostponed ? (
-          <span
-            className="text-fg-subtle"
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: '9px',
-              letterSpacing: '0.03em',
-            }}
-          >
-            tba
-          </span>
+          <span className="text-muted-foreground text-sm">TBA</span>
         ) : null}
       </Link>
     </div>

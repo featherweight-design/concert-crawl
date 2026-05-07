@@ -7,10 +7,11 @@ import { AppHeader } from '@/components/consumer/app-header'
 import { EventImage } from '@/components/consumer/event-image'
 import { SmallEventRow } from '@/components/consumer/small-event-row'
 import { SectionHeader } from '@/components/consumer/section-header'
+import { PriceDisplay } from '@/components/consumer/PriceDisplay'
+import { PriceSubmissionForm } from '@/components/consumer/PriceSubmissionForm'
 import {
   formatEventDate,
   formatShowTime,
-  formatPrice,
   artistInitial,
   formatShortDate,
 } from '@/components/consumer/definitions/lib'
@@ -53,7 +54,6 @@ export default async function EventDetailPage({
 
   const showTime = formatShowTime(event.showTime)
   const doorsTime = formatShowTime(event.doorsTime)
-  const price = formatPrice(event.ticketPriceMin, event.ticketPriceMax)
   const dateLabel = formatEventDate(event.date, event.venue.timezone)
   const isCancelled = event.status === 'cancelled'
   const isPostponed = event.status === 'postponed'
@@ -220,14 +220,45 @@ export default async function EventDetailPage({
             label="Doors / Show"
             value={doorsShow}
           />
-          <InfoRow
-            icon={<IconTicket />}
-            label="Price"
-            value={price ?? 'TBA'}
-            signal={!!price}
-          />
+          <div className="flex items-start gap-2.5 py-2">
+            <div className="h-4 w-4 shrink-0 pt-[1px]">
+              <IconTicket />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p
+                className="uppercase text-fg-subtle"
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '9px',
+                  letterSpacing: '0.06em',
+                }}
+              >
+                Price
+              </p>
+              <div className="mt-[1px]">
+                <PriceDisplay
+                  priceMin={event.ticketPriceMin}
+                  priceMax={event.ticketPriceMax}
+                  priceSource={event.priceSource}
+                  venueName={event.venue.name}
+                  ticketUrl={event.ticketUrl}
+                />
+              </div>
+            </div>
+          </div>
           <InfoRow icon={<IconUsers />} label="Ages" value="All Ages" />
         </div>
+
+        {/* Price submission form — shown when no authoritative price exists */}
+        {!event.ticketPriceMin && (
+          <div className="mt-4">
+            <PriceSubmissionForm
+              eventId={event.id}
+              apiUrl={process.env.NEXT_PUBLIC_API_URL ?? ''}
+              isAxsEvent={event.ticketUrl?.includes('axs.com') ?? false}
+            />
+          </div>
+        )}
 
         {/* About */}
         {event.description && (
