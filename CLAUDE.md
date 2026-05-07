@@ -115,6 +115,7 @@ These were made deliberately — understand them before proposing changes.
 - **Never commit `.env` files** — use `.env.example` with placeholder values only
 - **Always open a PR for code changes** — never merge to main locally, never discard changes
 - **Always use `.github/pull_request_template.md`** when opening a PR
+- **All feature work must be done in a git worktree** — the primary repo directory (`/Users/huey/Projects/concert-crawl`) is reserved for the user's own use and testing. Use `git worktree add` to create an isolated workspace before starting any implementation. The `superpowers:using-git-worktrees` skill governs this.
 
 ### Session handoff
 
@@ -132,6 +133,7 @@ Claude Code sessions are finite. To preserve continuity across sessions:
 - **No direct Clerk imports** outside `packages/auth`
 - **All API routes** namespaced under `/v1/`
 - **Drizzle only** for DB access — no raw SQL except in migration files
+- **No single-character variable names** — ESLint enforces a minimum identifier length of 2. Use descriptive names (`err` not `e`, `idx` not `i`, `ctx` not `c`). This applies to all identifiers: variables, parameters, and destructured bindings.
 
 ### Testing
 
@@ -320,29 +322,31 @@ Both eliminate the need to cast. Never cast `publicMetadata` or `sessionClaims` 
 
 ## Current Status
 
-Phase: **Phase 6 in progress — 6a complete, 6b (integration tests) next**
+Phase: **Phase 6 complete — Price Transparency in review (PR #32); Phase 7 (Automation + Scheduling) next**
 
-- Phase 5b complete (PRs #22–24): three-part design polish — consumer UI, filter redesign, nav/avatar/gradients/typography
-- Phase 6a complete (PR #26 merged 2026-05-07): pino + Sentry SDK across all three apps (`packages/logger`, `apps/api`, `apps/web`, `apps/crawler`)
-- Phase 6b next: Vitest integration tests for `apps/api` against a real Postgres database (plan: `docs/superpowers/plans/2026-05-02-phase-6b-integration-tests.md`)
-- Phase 6c queued: Playwright E2E + smoke test suite (`apps/e2e`) — staging E2E post-merge + prod smoke cron via GitHub Actions
+- Phase 6a complete (PR #26 merged 2026-05-07): pino + Sentry SDK across all three apps
+- Phase 6b complete (PR #28 merged 2026-05-07): Vitest integration tests for `apps/api` (20 tests, real Postgres)
+- Phase 6c complete (PR #29 merged 2026-05-07): Playwright `apps/e2e` package — staging E2E suite + prod smoke cron (every 6h, `SMOKE_ENABLED=false` until launch)
+- Price transparency spec merged (PR #30): `docs/superpowers/specs/2026-05-06-price-transparency-design.md`
+- Price transparency implementation open (PR #32, 2026-05-07): 6-tier pipeline, community submissions, admin dashboard — pending merge
 - Domain: `concertcrawl.app` via Cloudflare Registrar (~$15/yr)
 
 ### Revised Phase Sequence
 
-| Phase | Name                                 | Status                   |
-| ----- | ------------------------------------ | ------------------------ |
-| 1     | Foundation                           | ✅ Complete              |
-| 2     | Venue Management (Admin)             | ✅ Complete              |
-| 3     | Crawler v1                           | ✅ Complete              |
-| 4     | Design System / Theming Architecture | ✅ Complete              |
-| 5     | Consumer Calendar UI (functional)    | ✅ Complete              |
-| 5b    | Consumer UI Design Polish            | ✅ Complete (PRs #22–24) |
-| 6a    | Observability SDK                    | ✅ Complete (PR #26)     |
-| 6b    | Integration Tests                    | Next — plan ready        |
-| 6c    | E2E + Smoke Tests                    | Queued — plan ready      |
-| 7     | Automation + Scheduling              | —                        |
-| 8     | Beta Launch Prep                     | —                        |
+| Phase | Name                                 | Status                                   |
+| ----- | ------------------------------------ | ---------------------------------------- |
+| 1     | Foundation                           | ✅ Complete                              |
+| 2     | Venue Management (Admin)             | ✅ Complete                              |
+| 3     | Crawler v1                           | ✅ Complete                              |
+| 4     | Design System / Theming Architecture | ✅ Complete                              |
+| 5     | Consumer Calendar UI (functional)    | ✅ Complete                              |
+| 5b    | Consumer UI Design Polish            | ✅ Complete (PRs #22–24)                 |
+| 6a    | Observability SDK                    | ✅ Complete (PR #26)                     |
+| 6b    | Integration Tests                    | ✅ Complete (PR #28)                     |
+| 6c    | E2E + Smoke Tests                    | ✅ Complete (PR #29)                     |
+| 7     | Automation + Scheduling              | —                                        |
+| 8     | Beta Launch Prep                     | —                                        |
+| —     | Price Transparency                   | PR #32 open (2026-05-07) — pending merge |
 
 See the phased development plan in the design spec for the full roadmap (Phases 1–7).
 
