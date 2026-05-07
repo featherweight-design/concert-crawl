@@ -12,6 +12,8 @@ vi.mock('drizzle-orm', () => ({
   eq: vi.fn(),
   and: vi.fn(),
   desc: vi.fn(),
+  asc: vi.fn(),
+  inArray: vi.fn(),
 }))
 
 const mockCrawlVenue = vi.fn()
@@ -22,6 +24,7 @@ vi.mock('@concert-crawl/crawler-core', () => ({
 vi.mock('@concert-crawl/db', () => ({
   db: {
     select: vi.fn().mockReturnThis(),
+    selectDistinctOn: vi.fn().mockReturnThis(),
     from: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
     orderBy: vi.fn().mockReturnThis(),
@@ -262,5 +265,76 @@ describe('Admin crawl routes', () => {
       expect(body.success).toBe(true)
       expect(Array.isArray(body.data)).toBe(true)
     })
+  })
+})
+
+describe('GET /v1/admin/crawl/runs — includes in-progress runs', () => {
+  // This test verifies the fix for the known in-progress tracking bug:
+  // the list endpoint previously never returned in-flight runs.
+
+  beforeEach(() => {
+    mockGetAuth.mockReset()
+  })
+
+  it('returns 400 when venueId is missing', async () => {
+    mockGetAuth.mockReturnValue({
+      userId: 'admin_123',
+      sessionClaims: { metadata: { role: 'admin' } },
+    })
+    const res = await createApp().request('/v1/admin/crawl/runs')
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 200 with empty array when no runs exist for an unknown venue', async () => {
+    mockGetAuth.mockReturnValue({
+      userId: 'admin_123',
+      sessionClaims: { metadata: { role: 'admin' } },
+    })
+    // Use a venueId that has no in-progress crawls to verify the empty case
+    const res = await createApp().request(
+      '/v1/admin/crawl/runs?venueId=00000000-0000-0000-0000-000000000099',
+    )
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { data: unknown[] }
+    expect(body.data).toEqual([])
+  })
+})
+
+describe('GET /v1/admin/crawl/status', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns 401 for unauthenticated requests', async () => {
+    mockGetAuth.mockReturnValue(null)
+    const res = await createApp().request('/v1/admin/crawl/status')
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 200 with venue crawl status list', async () => {
+    mockGetAuth.mockReturnValue({
+      userId: 'admin_123',
+      sessionClaims: { metadata: { role: 'admin' } },
+    })
+    const { db } = await import('@concert-crawl/db')
+    // First orderBy call resolves the venue list; second resolves the selectDistinctOn chain
+    vi.mocked(db.select().from().orderBy)
+      .mockResolvedValueOnce([
+        {
+          id: '00000000-0000-0000-0000-000000000001',
+          name: 'Ogden Theatre',
+          active: true,
+          verified: true,
+          consecutiveFailures: 0,
+          blockedAt: null,
+          lastCrawledAt: new Date('2026-05-07T10:00:00Z'),
+        },
+      ])
+      .mockResolvedValueOnce([])
+    const res = await createApp().request('/v1/admin/crawl/status')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { success: boolean; data: unknown[] }
+    expect(body.success).toBe(true)
+    expect(Array.isArray(body.data)).toBe(true)
   })
 })

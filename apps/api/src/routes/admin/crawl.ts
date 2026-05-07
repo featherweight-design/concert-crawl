@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { eq, and, desc } from 'drizzle-orm'
+import { eq, and, desc, asc, inArray } from 'drizzle-orm'
 import { db, venues, crawlRuns } from '@concert-crawl/db'
 import { crawlVenue } from '@concert-crawl/crawler-core'
 import { getAuthUser } from '../../middleware/auth.js'
@@ -128,13 +128,92 @@ crawlAdminRouter.get(
   async (ctx) => {
     const { venueId, limit } = ctx.req.valid('query')
 
-    const runs = await db
+    const dbRuns = await db
       .select()
       .from(crawlRuns)
       .where(and(eq(crawlRuns.venueId, venueId)))
       .orderBy(desc(crawlRuns.createdAt))
       .limit(limit)
 
-    return ctx.json({ success: true, data: runs })
+    // Prepend any in-progress run for this venue
+    const inProgressForVenue = [...inProgressCrawls.entries()]
+      .filter(([, val]) => val.venueId === venueId)
+      .map(([runId, val]) => ({
+        id: runId,
+        venueId: val.venueId,
+        status: 'in_progress' as const,
+        httpStatusCode: null,
+        robotsTxtBlocked: null,
+        extractionStrategyUsed: null,
+        eventsFound: 0,
+        eventsInserted: 0,
+        errorMessage: null,
+        durationMs: null,
+        createdAt: val.startedAt,
+      }))
+
+    return ctx.json({ success: true, data: [...inProgressForVenue, ...dbRuns] })
   },
 )
+
+// GET /v1/admin/crawl/status — all venues with their most recent crawl run
+crawlAdminRouter.get('/status', async (ctx) => {
+  const venueList = await db
+    .select({
+      id: venues.id,
+      name: venues.name,
+      active: venues.active,
+      verified: venues.verified,
+      consecutiveFailures: venues.consecutiveFailures,
+      blockedAt: venues.blockedAt,
+      lastCrawledAt: venues.lastCrawledAt,
+    })
+    .from(venues)
+    .orderBy(asc(venues.name))
+
+  const venueIds = venueList.map((venue) => venue.id)
+
+  const latestRuns =
+    venueIds.length > 0
+      ? await db
+          .selectDistinctOn([crawlRuns.venueId], {
+            id: crawlRuns.id,
+            venueId: crawlRuns.venueId,
+            status: crawlRuns.status,
+            createdAt: crawlRuns.createdAt,
+            eventsFound: crawlRuns.eventsFound,
+            eventsInserted: crawlRuns.eventsInserted,
+            errorMessage: crawlRuns.errorMessage,
+            extractionStrategyUsed: crawlRuns.extractionStrategyUsed,
+          })
+          .from(crawlRuns)
+          .where(inArray(crawlRuns.venueId, venueIds))
+          .orderBy(crawlRuns.venueId, desc(crawlRuns.createdAt))
+      : []
+
+  const runsByVenueId = new Map(latestRuns.map((run) => [run.venueId, run]))
+
+  const data = venueList.map((venue) => {
+    const lastRun = runsByVenueId.get(venue.id) ?? null
+    // Check if there's an in-progress crawl for this venue
+    const inProgressEntry = [...inProgressCrawls.entries()].find(
+      ([, val]) => val.venueId === venue.id,
+    )
+    const effectiveLastRun = inProgressEntry
+      ? {
+          id: inProgressEntry[0],
+          venueId: venue.id,
+          status: 'in_progress' as const,
+          createdAt: inProgressEntry[1].startedAt,
+          eventsFound: 0,
+          eventsInserted: 0,
+          errorMessage: null,
+          extractionStrategyUsed: null,
+        }
+      : lastRun
+
+    return { ...venue, lastRun: effectiveLastRun }
+  })
+
+  return ctx.json({ success: true, data })
+})
