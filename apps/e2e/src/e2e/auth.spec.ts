@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 
 test.describe('unauthenticated access', () => {
   test('admin route redirects to sign-in', async ({ browser }) => {
-    const context = await browser.newContext({ storageState: undefined })
+    const context = await browser.newContext({})
     const page = await context.newPage()
 
     await page.goto('/admin')
@@ -15,7 +15,7 @@ test.describe('unauthenticated access', () => {
   })
 
   test('public browse page is accessible without auth', async ({ browser }) => {
-    const context = await browser.newContext({ storageState: undefined })
+    const context = await browser.newContext({})
     const page = await context.newPage()
 
     await page.goto('/events')

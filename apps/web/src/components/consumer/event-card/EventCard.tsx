@@ -77,7 +77,7 @@ export function EventCard({ event, className }: EventCardProps) {
             href={`/venues/${event.venue.slug}`}
             data-testid="venue-name-link"
             className="hover:underline"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(ev) => ev.stopPropagation()}
           >
             <span>{venueShort(event.venue.name)}</span>
           </Link>
