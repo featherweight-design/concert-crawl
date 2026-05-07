@@ -7,6 +7,7 @@ export default defineConfig({
   retries: 1,
   workers: 1,
   reporter: [['list'], ['html', { open: 'never' }]],
+  globalSetup: './src/fixtures/smoke-setup.ts',
   use: {
     baseURL:
       process.env['PLAYWRIGHT_SMOKE_BASE_URL'] ?? 'https://concertcrawl.app',
