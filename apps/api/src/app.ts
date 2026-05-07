@@ -19,12 +19,12 @@ export function createApp() {
 
   registerRoutes(app)
 
-  app.onError((err, c) => {
+  app.onError((err, ctx) => {
     Sentry.captureException(err, {
-      extra: { requestId: c.get('requestId') },
+      extra: { requestId: ctx.get('requestId') },
     })
-    apiLogger.error({ err, requestId: c.get('requestId') }, 'Unhandled error')
-    return c.json({ success: false, error: 'Internal server error' }, 500)
+    apiLogger.error({ err, requestId: ctx.get('requestId') }, 'Unhandled error')
+    return ctx.json({ success: false, error: 'Internal server error' }, 500)
   })
 
   return app

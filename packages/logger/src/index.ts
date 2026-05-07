@@ -19,10 +19,14 @@ export function createLogger(name: string): Logger {
   const isProduction = process.env['NODE_ENV'] === 'production'
   const isTest = process.env['NODE_ENV'] === 'test'
 
-  const transport =
+  // pino.transport returns ThreadStream (typed as `any` in pino's own .d.ts),
+  // so we annotate explicitly to keep the call-site type-safe.
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  const transport: pino.DestinationStream | undefined =
     !isProduction && !isTest
       ? pino.transport({ target: 'pino-pretty', options: { colorize: true } })
       : undefined
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
   return pino({ name, level }, transport)
 }

@@ -2,10 +2,10 @@ import type { MiddlewareHandler } from 'hono'
 import type { Logger } from 'pino'
 
 export function requestLogger(logger: Logger): MiddlewareHandler {
-  return async (c, next) => {
+  return async (ctx, next) => {
     // Preserve any requestId set by upstream middleware (e.g. a gateway)
-    if (!c.get('requestId')) {
-      c.set('requestId', crypto.randomUUID())
+    if (!ctx.get('requestId')) {
+      ctx.set('requestId', crypto.randomUUID())
     }
 
     const start = Date.now()
@@ -13,10 +13,10 @@ export function requestLogger(logger: Logger): MiddlewareHandler {
     const durationMs = Date.now() - start
 
     logger.info({
-      requestId: c.get('requestId'),
-      method: c.req.method,
-      path: c.req.path,
-      status: c.res.status,
+      requestId: ctx.get('requestId'),
+      method: ctx.req.method,
+      path: ctx.req.path,
+      status: ctx.res.status,
       durationMs,
     })
   }
