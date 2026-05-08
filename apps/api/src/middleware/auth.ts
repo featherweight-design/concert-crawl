@@ -32,3 +32,10 @@ export function getAuthUser(ctx: Context): { userId: string } {
     throw new Error('getAuthUser called outside of authenticated context')
   return { userId: auth.userId }
 }
+
+// getAuthOptional — returns userId if authenticated, null if not; for optional-auth routes
+export function getAuthOptional(ctx: Context): { userId: string } | null {
+  const auth = getAuth(ctx)
+  if (!auth?.userId) return null
+  return { userId: auth.userId }
+}
