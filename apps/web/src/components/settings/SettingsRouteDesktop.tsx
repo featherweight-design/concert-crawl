@@ -74,6 +74,7 @@ export function SettingsRouteDesktop({
               displayRole={profile.displayRole}
               city={profile.city}
               joined={profile.joined}
+              cred={profile.cred}
             />
             {!profile.handle && (
               <div

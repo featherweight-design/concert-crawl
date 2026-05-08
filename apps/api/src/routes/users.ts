@@ -7,6 +7,7 @@ import { zValidator } from '@hono/zod-validator'
 import {
   db,
   userProfiles,
+  userRoles,
   priceSubmissions,
   subscriptions,
   events,
@@ -119,6 +120,12 @@ usersRouter.get('/me', async (ctx) => {
     .from(priceSubmissions)
     .where(eq(priceSubmissions.userId, auth.userId))
 
+  const [credRow] = await db
+    .select({ priceCredScore: userRoles.priceCredScore })
+    .from(userRoles)
+    .where(eq(userRoles.userId, auth.userId))
+    .limit(1)
+
   const email = clerkUser.emailAddresses[0]?.emailAddress ?? ''
   const rawRole = (clerkUser.publicMetadata as { role?: unknown }).role
   const authRole = typeof rawRole === 'string' ? rawRole : undefined
@@ -139,6 +146,7 @@ usersRouter.get('/me', async (ctx) => {
       clerkUser.createdAt ? new Date(clerkUser.createdAt) : new Date(),
     ),
     submissionCount: submissionCountRow?.value ?? 0,
+    cred: credRow?.priceCredScore ?? 0,
   }
 
   return ctx.json({ success: true, data: response })

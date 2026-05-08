@@ -41,6 +41,14 @@ export function SubmissionItem({ submission }: SubmissionItemProps) {
           {priceRange}
         </span>
         <StatusPill status={submission.status} />
+        {submission.status === 'confirmed' && (
+          <span
+            className="text-[10px] font-bold uppercase tracking-[0.12em]"
+            style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}
+          >
+            +1 cred
+          </span>
+        )}
       </div>
     </Link>
   )

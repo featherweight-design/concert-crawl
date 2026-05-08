@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Avatar } from './Avatar'
+import { CredChip } from './CredChip'
 import { SETTINGS_COPY } from './definitions/copy'
 import type { AvatarColor, DisplayRole } from '@concert-crawl/types'
 
@@ -9,6 +10,7 @@ interface ProfileHeroProps {
   displayRole: DisplayRole
   city: string | null
   joined: string
+  cred: number
 }
 
 const ROLE_LABEL: Record<DisplayRole, string> = {
@@ -24,6 +26,7 @@ export function ProfileHero({
   displayRole,
   city,
   joined,
+  cred,
 }: ProfileHeroProps) {
   return (
     <Link
@@ -54,6 +57,15 @@ export function ProfileHero({
         </div>
 
         <span className="text-[12px] text-fg-subtle">Since {joined}</span>
+
+        <div className="mt-1 flex items-center gap-2">
+          <CredChip cred={cred} size="md" showTooltip />
+          {cred === 0 && !handle && (
+            <span className="text-[11.5px] text-fg-subtle">
+              Submit a price to start earning.
+            </span>
+          )}
+        </div>
       </div>
     </Link>
   )

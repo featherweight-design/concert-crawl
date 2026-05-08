@@ -233,6 +233,7 @@ export interface UserProfileResponse {
   displayRole: DisplayRole
   joined: string // formatted "Apr 2026"
   submissionCount: number
+  cred: number // lifetime cumulative confirmed-submission count
 }
 
 // Single submission row as returned by GET /v1/users/me/submissions

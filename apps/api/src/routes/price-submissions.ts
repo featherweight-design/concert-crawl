@@ -117,7 +117,6 @@ priceSubmissionsRouter.post(
 
       // Update existing matching submissions and award cred
       for (const sub of corroborating) {
-        const wasFirstCorroboration = sub.corroborationCount === 0
         await db
           .update(priceSubmissions)
           .set({
@@ -127,14 +126,13 @@ priceSubmissionsRouter.post(
           })
           .where(eq(priceSubmissions.id, sub.id))
 
-        const credDelta = wasFirstCorroboration ? 10 : 2
         if (sub.userId) {
           // TODO: if the user has no user_roles row (registered but never assigned a role),
           // this UPDATE silently affects 0 rows and cred is lost. Consider insert-on-conflict.
           await db
             .update(userRoles)
             .set({
-              priceCredScore: sql`${userRoles.priceCredScore} + ${credDelta}`,
+              priceCredScore: sql`${userRoles.priceCredScore} + 1`,
             })
             .where(eq(userRoles.userId, sub.userId))
         }

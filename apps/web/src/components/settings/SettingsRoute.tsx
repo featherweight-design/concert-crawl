@@ -24,6 +24,7 @@ export function SettingsRoute({ profile, submissions }: SettingsRouteProps) {
         displayRole={profile.displayRole}
         city={profile.city}
         joined={profile.joined}
+        cred={profile.cred}
       />
 
       {/* Divider */}
