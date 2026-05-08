@@ -1,7 +1,5 @@
 import type { PipelineContext, PriceTierResult } from './types.js'
 
-const DENVER_SK_LOCATION_ID = '37551'
-
 async function fetchSongkick(
   ctx: PipelineContext,
 ): Promise<PriceTierResult | null> {

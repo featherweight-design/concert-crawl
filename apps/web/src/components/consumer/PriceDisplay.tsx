@@ -289,7 +289,7 @@ export function PriceDisplay({
         </p>
         {sourceName && (
           <div style={{ marginTop: 6 }}>
-            <SourceLink name={sourceName} url={ticketUrl} />
+            <SourceLink name={sourceName} url={null} />
           </div>
         )}
       </div>

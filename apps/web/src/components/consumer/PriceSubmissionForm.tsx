@@ -58,6 +58,10 @@ export function PriceSubmissionForm({
     setState('submitting')
     try {
       const token = await getToken()
+      if (!token) {
+        setState('error')
+        return
+      }
       const res = await fetch(
         `${apiUrl}/v1/events/${eventId}/price-submissions`,
         {

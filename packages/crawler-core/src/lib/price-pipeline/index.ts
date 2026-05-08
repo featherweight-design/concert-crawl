@@ -75,47 +75,46 @@ export async function runPricePipeline(ctx: PipelineContext): Promise<void> {
     return
   }
 
-  // Tier 3 — run Eventbrite + Dice in parallel, log each source separately
+  // Tier 3 — run Eventbrite + Dice in parallel, log both before any early return
   const t3Start = Date.now()
   const tier3 = await tier3EventbriteDice(ctx).catch(() => ({
     eventbrite: null,
     dice: null,
   }))
   const t3Latency = Date.now() - t3Start
-  await logAttempt(
-    ctx,
-    'eventbrite',
-    tier3.eventbrite ? 'hit' : 'miss',
-    t3Latency,
-  )
+  await Promise.all([
+    logAttempt(ctx, 'eventbrite', tier3.eventbrite ? 'hit' : 'miss', t3Latency),
+    logAttempt(ctx, 'dice', tier3.dice ? 'hit' : 'miss', t3Latency),
+  ])
   if (tier3.eventbrite) {
     await updateEventPrice(ctx.eventId, tier3.eventbrite)
     return
   }
-  await logAttempt(ctx, 'dice', tier3.dice ? 'hit' : 'miss', t3Latency)
   if (tier3.dice) {
     await updateEventPrice(ctx.eventId, tier3.dice)
     return
   }
 
-  // Tier 4 — run Songkick + Bandsintown in parallel, log each source separately
+  // Tier 4 — run Songkick + Bandsintown in parallel, log both before any early return
   const t4Start = Date.now()
   const tier4 = await tier4SongkickBandsintown(ctx).catch(() => ({
     songkick: null,
     bandsintown: null,
   }))
   const t4Latency = Date.now() - t4Start
-  await logAttempt(ctx, 'songkick', tier4.songkick ? 'hit' : 'miss', t4Latency)
+  await Promise.all([
+    logAttempt(ctx, 'songkick', tier4.songkick ? 'hit' : 'miss', t4Latency),
+    logAttempt(
+      ctx,
+      'bandsintown',
+      tier4.bandsintown ? 'hit' : 'miss',
+      t4Latency,
+    ),
+  ])
   if (tier4.songkick) {
     await updateEventPrice(ctx.eventId, tier4.songkick)
     return
   }
-  await logAttempt(
-    ctx,
-    'bandsintown',
-    tier4.bandsintown ? 'hit' : 'miss',
-    t4Latency,
-  )
   if (tier4.bandsintown) {
     await updateEventPrice(ctx.eventId, tier4.bandsintown)
     return
