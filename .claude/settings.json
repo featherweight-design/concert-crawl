@@ -1,47 +1,10 @@
 {
-  "env": {
-    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "80"
-  },
-  "permissions": {
-    "allow": [
-      "Bash(pnpm lint)",
-      "Bash(pnpm typecheck)",
-      "Bash(pnpm tsc --noEmit)",
-      "Bash(pnpm --filter @concert-crawl/api lint)",
-      "Bash(pnpm --filter @concert-crawl/web lint)",
-      "Bash(pnpm --filter web exec tsc --noEmit)",
-      "Bash(pnpm --filter * typecheck)",
-      "Bash(pnpm --filter * lint)",
-      "Bash(pnpm --filter * test run)",
-      "Bash(claude mcp list)",
-      "mcp__render__list_services",
-      "mcp__render__list_deploys",
-      "mcp__render__list_workspaces"
-    ]
-  },
-  "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .claude/hooks/prune-merged-worktrees.sh",
-            "timeout": 30,
-            "statusMessage": "Pruning stale worktrees..."
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .claude/hooks/session-budget-warn.sh"
-          }
-        ]
-      }
-    ]
-  }
+  "allowedTools": [
+    "Bash(git *)",
+    "Bash(pnpm *)",
+    "Bash(gh *)",
+    "Bash(cp -r *)",
+    "Bash(mkdir *)",
+    "Bash(cat *)"
+  ]
 }
