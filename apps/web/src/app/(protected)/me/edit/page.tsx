@@ -1,5 +1,4 @@
-import { auth } from '@clerk/nextjs/server'
-import { redirect } from 'next/navigation'
+import { auth } from '@/lib/auth'
 import Link from 'next/link'
 import { fetchMe } from '@/lib/users'
 import { EditProfileForm } from '@/components/settings/EditProfileForm'
@@ -9,7 +8,7 @@ export const metadata = { title: 'Edit profile — Concert Crawl' }
 export default async function EditProfilePage() {
   const { getToken } = await auth()
   const token = await getToken()
-  if (!token) redirect('/sign-in')
+  if (!token) return null
 
   const profile = await fetchMe(token)
 

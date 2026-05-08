@@ -1,5 +1,4 @@
-import { auth } from '@clerk/nextjs/server'
-import { redirect } from 'next/navigation'
+import { auth } from '@/lib/auth'
 import { fetchMe, fetchMySubmissions } from '@/lib/users'
 import { SettingsRoute } from '@/components/settings/SettingsRoute'
 import { SettingsRouteDesktop } from '@/components/settings/SettingsRouteDesktop'
@@ -9,7 +8,7 @@ export const metadata = { title: 'Settings — Concert Crawl' }
 export default async function MePage() {
   const { getToken } = await auth()
   const token = await getToken()
-  if (!token) redirect('/sign-in')
+  if (!token) return null
 
   const [profile, submissions] = await Promise.all([
     fetchMe(token),
