@@ -1,7 +1,13 @@
 import { auth } from '@clerk/nextjs/server'
 import { requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
-import { Plus } from 'lucide-react'
+import {
+  Plus,
+  MapPin,
+  Activity,
+  AlertTriangle,
+  ShieldCheck,
+} from 'lucide-react'
 import Link from 'next/link'
 import {
   SectionHead,
@@ -12,6 +18,7 @@ import {
   TH,
   TD,
   StatusBadge,
+  StatCard,
   Panel,
 } from '@/components/admin/primitives'
 import type { Venue } from '@concert-crawl/types'
@@ -39,6 +46,9 @@ export default async function AdminVenuesPage() {
     })
   const activeVenues = venues.filter((venue) => venue.active)
   const inactiveVenues = venues.filter((venue) => !venue.active)
+  const blockedVenueCount = venues.filter(
+    (venue) => venue.blockedAt !== null,
+  ).length
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -60,44 +70,35 @@ export default async function AdminVenuesPage() {
           gap: 16,
         }}
       >
-        {[
-          { label: 'Total', value: venues.length },
-          { label: 'Active', value: activeVenues.length },
-          { label: 'Inactive', value: inactiveVenues.length },
-          {
-            label: 'Verified',
-            value: venues.filter((venue) => venue.verified).length,
-          },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            style={{
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border)',
-              borderRadius: 12,
-              padding: '16px 20px',
-            }}
-          >
-            <div
-              style={{
-                fontSize: 12,
-                color: 'var(--fg-muted)',
-                marginBottom: 6,
-              }}
-            >
-              {stat.label}
-            </div>
-            <div
-              style={{
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 30,
-                fontWeight: 700,
-              }}
-            >
-              {stat.value}
-            </div>
-          </div>
-        ))}
+        <StatCard
+          label="Total"
+          value={String(venues.length)}
+          icon={MapPin}
+          kind="neutral"
+        />
+        <StatCard
+          label="Active"
+          value={String(activeVenues.length)}
+          icon={Activity}
+          kind="success"
+        />
+        <StatCard
+          label="Inactive"
+          value={String(inactiveVenues.length)}
+          icon={AlertTriangle}
+          kind="warning"
+          hint={
+            blockedVenueCount > 0
+              ? `${String(blockedVenueCount)} blocked`
+              : undefined
+          }
+        />
+        <StatCard
+          label="Verified"
+          value={String(venues.filter((venue) => venue.verified).length)}
+          icon={ShieldCheck}
+          kind="signal"
+        />
       </div>
 
       <Panel title="All venues" padding={0}>
@@ -109,6 +110,9 @@ export default async function AdminVenuesPage() {
               <TH>Status</TH>
               <TH>Verified</TH>
               <TH>Crawl delay</TH>
+              <TH>robots.txt</TH>
+              <TH>Strategy</TH>
+              <TH>Health</TH>
               <TH></TH>
             </tr>
           </THead>
@@ -143,6 +147,63 @@ export default async function AdminVenuesPage() {
                 </TD>
                 <TD mono color="var(--fg-muted)">
                   {`${venue.crawlDelayMs / 1000}s`}
+                </TD>
+                <TD>
+                  {venue.robotsTxtAllowed === null ? (
+                    <StatusBadge kind="neutral">unchecked</StatusBadge>
+                  ) : venue.robotsTxtAllowed ? (
+                    <StatusBadge kind="success" dot>
+                      allowed
+                    </StatusBadge>
+                  ) : (
+                    <StatusBadge kind="danger" dot>
+                      blocked
+                    </StatusBadge>
+                  )}
+                </TD>
+                <TD>
+                  {venue.extractionStrategy ? (
+                    <StatusBadge
+                      kind={
+                        venue.extractionStrategy === 'llm' ? 'accent' : 'signal'
+                      }
+                      variant="outline"
+                    >
+                      {venue.extractionStrategy}
+                    </StatusBadge>
+                  ) : (
+                    <span style={{ color: 'var(--fg-subtle)' }}>—</span>
+                  )}
+                </TD>
+                <TD>
+                  <div
+                    style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                  >
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        background:
+                          venue.consecutiveFailures === 0
+                            ? 'var(--success)'
+                            : venue.consecutiveFailures >= 3
+                              ? 'var(--danger)'
+                              : 'var(--warning)',
+                      }}
+                    />
+                    <span
+                      style={{
+                        fontSize: 12,
+                        color: 'var(--fg-muted)',
+                        fontFamily: "'JetBrains Mono', monospace",
+                      }}
+                    >
+                      {venue.consecutiveFailures === 0
+                        ? '100%'
+                        : `${String(Math.max(0, 100 - venue.consecutiveFailures * 20))}%`}
+                    </span>
+                  </div>
                 </TD>
                 <TD>
                   <Link href={`/admin/venues/${venue.id}`}>
