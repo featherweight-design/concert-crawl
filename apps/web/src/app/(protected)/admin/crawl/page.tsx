@@ -1,8 +1,13 @@
 import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
-import { RefreshCw } from 'lucide-react'
-import { SectionHead, AdminButton } from '@/components/admin/primitives'
+import { RefreshCw, Activity, CheckSquare, DollarSign } from 'lucide-react'
+import {
+  SectionHead,
+  AdminButton,
+  StatCard,
+} from '@/components/admin/primitives'
 import { CrawlSplitView } from '@/components/admin/crawl/CrawlSplitView'
+import { IssuesBanner } from '@/components/admin/crawl/IssuesBanner'
 import type { CrawlRun } from '@concert-crawl/types'
 
 interface CrawlStatusRow {
@@ -81,6 +86,57 @@ export default async function AdminCrawlPage() {
           </>
         }
       />
+
+      <IssuesBanner
+        blockedVenues={status.filter(
+          (row) => row.status === 'blocked' || row.status === 'failed',
+        )}
+      />
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: 16,
+        }}
+      >
+        <StatCard
+          label="Last sweep"
+          value={
+            runs[0]?.startedAt
+              ? `${String(Math.round((Date.now() - new Date(runs[0].startedAt).getTime()) / 60000))}m ago`
+              : '—'
+          }
+          icon={RefreshCw}
+          kind="neutral"
+        />
+        <StatCard
+          label="Today's runs"
+          value={String(
+            runs.filter(
+              (run) =>
+                new Date(run.createdAt).toDateString() ===
+                new Date().toDateString(),
+            ).length,
+          )}
+          icon={Activity}
+          kind="signal"
+        />
+        <StatCard
+          label="Events ingested"
+          value={String(runs.reduce((sum, run) => sum + run.eventsInserted, 0))}
+          icon={CheckSquare}
+          kind="success"
+          hint="today"
+        />
+        <StatCard
+          label="LLM cost · today"
+          value={`$${runs.reduce((sum, run) => sum + (run.llmCostUsd ?? 0), 0).toFixed(2)}`}
+          icon={DollarSign}
+          kind="signal"
+        />
+      </div>
+
       <CrawlSplitView initialStatus={status} initialRuns={runs} />
     </div>
   )
