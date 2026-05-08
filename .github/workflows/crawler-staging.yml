@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     environment: staging
+    if: vars.CRAWL_ENABLED == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4

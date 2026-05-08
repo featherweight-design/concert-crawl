@@ -98,6 +98,25 @@ Go to each service in the Render dashboard → **Environment** tab.
 
 ---
 
+## Step 6 — Enable the Production Crawler
+
+The daily crawler is gated by `CRAWL_ENABLED` in the GitHub `production` environment. It is set to `false` by default and must be explicitly enabled when you are ready for live crawls.
+
+**Do not enable until:**
+
+- At least one successful staging crawl run has completed (verify in Actions tab)
+- Production DB has venue records seeded
+- Step 5 above passes (API healthy, app loads)
+
+**To enable:**
+
+1. Go to the repository on GitHub → **Settings** → **Environments** → `production`
+2. Under **Environment variables**, find `CRAWL_ENABLED`
+3. Change the value from `false` to `true` and save
+4. The crawler will run at the next scheduled trigger (3 AM MT), or trigger it manually via **Actions** → **Daily Crawler (Production)** → **Run workflow**
+
+---
+
 ## Rollback
 
 If a deploy breaks production:
