@@ -1,4 +1,6 @@
-export type { PriceSource } from '@concert-crawl/types'
+import type { PriceSource } from '@concert-crawl/types'
+
+export type { PriceSource }
 
 export interface PriceTierResult {
   priceMin: number
