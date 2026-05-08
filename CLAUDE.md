@@ -322,32 +322,35 @@ Both eliminate the need to cast. Never cast `publicMetadata` or `sessionClaims` 
 
 ## Current Status
 
-Phase: **Price Transparency complete — Phase 7 (Automation + Scheduling) next**
+Phase: **Phase 7.5 (Identity Imagery) in flight — Admin UI Redesign next**
 
 - Phase 6a complete (PR #26 merged 2026-05-07): pino + Sentry SDK across all three apps
 - Phase 6b complete (PR #28 merged 2026-05-07): Vitest integration tests for `apps/api` (20 tests, real Postgres)
 - Phase 6c complete (PR #29 merged 2026-05-07): Playwright `apps/e2e` package — staging E2E suite + prod smoke cron (every 6h, `SMOKE_ENABLED=false` until launch)
 - Price transparency spec merged (PR #30): `docs/superpowers/specs/2026-05-06-price-transparency-design.md`
 - Price transparency implementation complete (PR #32 merged 2026-05-08): 6-tier pipeline, community submissions, admin dashboard
-- Price transparency cleanup (PR #33, 2026-05-08): PriceSource consolidation + price_retrieval_log.source enum migration
+- Price transparency cleanup complete (PR #37 merged 2026-05-08): PriceSource consolidation + price_retrieval_log.source enum migration
 - Domain: `concertcrawl.app` via Cloudflare Registrar (~$15/yr)
 
 ### Revised Phase Sequence
 
-| Phase | Name                                 | Status                                 |
-| ----- | ------------------------------------ | -------------------------------------- |
-| 1     | Foundation                           | ✅ Complete                            |
-| 2     | Venue Management (Admin)             | ✅ Complete                            |
-| 3     | Crawler v1                           | ✅ Complete                            |
-| 4     | Design System / Theming Architecture | ✅ Complete                            |
-| 5     | Consumer Calendar UI (functional)    | ✅ Complete                            |
-| 5b    | Consumer UI Design Polish            | ✅ Complete (PRs #22–24)               |
-| 6a    | Observability SDK                    | ✅ Complete (PR #26)                   |
-| 6b    | Integration Tests                    | ✅ Complete (PR #28)                   |
-| 6c    | E2E + Smoke Tests                    | ✅ Complete (PR #29)                   |
-| 7     | Automation + Scheduling              | —                                      |
-| 8     | Beta Launch Prep                     | —                                      |
-| —     | Price Transparency                   | ✅ Complete (PR #32 merged 2026-05-08) |
+| Phase | Name                                 | Status                                      |
+| ----- | ------------------------------------ | ------------------------------------------- |
+| 1     | Foundation                           | ✅ Complete                                 |
+| 2     | Venue Management (Admin)             | ✅ Complete                                 |
+| 3     | Crawler v1                           | ✅ Complete                                 |
+| 4     | Design System / Theming Architecture | ✅ Complete                                 |
+| 5     | Consumer Calendar UI (functional)    | ✅ Complete                                 |
+| 5b    | Consumer UI Design Polish            | ✅ Complete (PRs #22–24)                    |
+| 6a    | Observability SDK                    | ✅ Complete (PR #26)                        |
+| 6b    | Integration Tests                    | ✅ Complete (PR #28)                        |
+| 6c    | E2E + Smoke Tests                    | ✅ Complete (PR #29)                        |
+| 7     | Automation + Scheduling              | ✅ Complete (PR #34 merged 2026-05-07)      |
+| 7.5   | Identity Imagery (generative art)    | 🔄 In flight                                |
+| 7.6   | Admin UI Redesign                    | — (next after 7.5)                          |
+| 7.7   | UI Clean-up / Polish                 | — (Hugh reviews UI; provides punch list)    |
+| 8     | Beta Launch Prep                     | —                                           |
+| —     | Price Transparency                   | ✅ Complete (PRs #32, #37 merged 2026-05-08)|
 
 See the phased development plan in the design spec for the full roadmap (Phases 1–7).
 
