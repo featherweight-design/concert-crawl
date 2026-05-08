@@ -58,8 +58,9 @@ export const EventQueueSplit = ({ initialEvents, token: _token }: Props) => {
         if (!tok) return
         await apiClient.patch(`/v1/admin/events/${id}/verify`, tok, {})
         setEvents((prev) => prev.filter((ev) => ev.id !== id))
-        const nextIdx = Math.min(selectedIdx, filtered.length - 2)
-        setSelectedId(filtered[nextIdx]?.id ?? null)
+        const remaining = filtered.filter((ev) => ev.id !== id)
+        const nextIdx = Math.min(selectedIdx, remaining.length - 1)
+        setSelectedId(remaining[nextIdx]?.id ?? null)
       } finally {
         setProcessing(null)
       }
@@ -76,8 +77,9 @@ export const EventQueueSplit = ({ initialEvents, token: _token }: Props) => {
         if (!tok) return
         await apiClient.delete(`/v1/admin/events/${id}`, tok)
         setEvents((prev) => prev.filter((ev) => ev.id !== id))
-        const nextIdx = Math.min(selectedIdx, filtered.length - 2)
-        setSelectedId(filtered[nextIdx]?.id ?? null)
+        const remaining = filtered.filter((ev) => ev.id !== id)
+        const nextIdx = Math.min(selectedIdx, remaining.length - 1)
+        setSelectedId(remaining[nextIdx]?.id ?? null)
       } finally {
         setProcessing(null)
       }

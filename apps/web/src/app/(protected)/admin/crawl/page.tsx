@@ -17,16 +17,50 @@ interface CrawlStatusRow {
   error: string | null
 }
 
+interface RawVenueStatus {
+  id: string
+  name: string
+  active: boolean
+  verified: boolean
+  consecutiveFailures: number
+  blockedAt: string | null
+  lastCrawledAt: string | null
+  lastRun: {
+    id: string
+    venueId: string
+    status: string
+    createdAt: string
+    eventsFound: number
+    eventsInserted: number
+    errorMessage: string | null
+    extractionStrategyUsed: string | null
+  } | null
+}
+
+function toStatusRow(venue: RawVenueStatus): CrawlStatusRow {
+  return {
+    venueId: venue.id,
+    venueName: venue.name,
+    status: venue.lastRun?.status ?? 'never',
+    lastRunAt: venue.lastRun?.createdAt ?? null,
+    eventsFound: venue.lastRun?.eventsFound ?? 0,
+    strategy: venue.lastRun?.extractionStrategyUsed ?? '—',
+    cost: 0,
+    error: venue.lastRun?.errorMessage ?? null,
+  }
+}
+
 export default async function AdminCrawlPage() {
   await requireAdminUser()
   const { getToken } = await auth()
   const token = await getToken()
   if (!token) return null
 
-  const [status, runs] = await Promise.all([
-    apiClient.get<CrawlStatusRow[]>('/v1/admin/crawl/status', token),
+  const [rawStatus, runs] = await Promise.all([
+    apiClient.get<RawVenueStatus[]>('/v1/admin/crawl/status', token),
     apiClient.get<CrawlRun[]>('/v1/admin/crawl/runs?limit=50', token),
   ])
+  const status = rawStatus.map(toStatusRow)
 
   return (
     <div

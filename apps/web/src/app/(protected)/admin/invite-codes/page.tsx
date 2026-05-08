@@ -1,4 +1,5 @@
 import { auth } from '@clerk/nextjs/server'
+import { revalidatePath } from 'next/cache'
 import { requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
 import type { InviteCode } from '@concert-crawl/types'
@@ -33,6 +34,15 @@ function deriveStatus(code: InviteCode): DerivedStatus {
   return 'active'
 }
 
+async function mintInviteCode() {
+  'use server'
+  const { getToken } = await auth()
+  const token = await getToken()
+  if (!token) return
+  await apiClient.post('/v1/admin/invite-codes', token, {})
+  revalidatePath('/admin/invite-codes')
+}
+
 export default async function AdminInviteCodesPage() {
   await requireAdminUser()
   const { getToken } = await auth()
@@ -59,9 +69,11 @@ export default async function AdminInviteCodesPage() {
       <SectionHead
         title="Invite codes"
         actions={
-          <AdminButton variant="primary" icon={Plus}>
-            Mint code
-          </AdminButton>
+          <form action={mintInviteCode}>
+            <AdminButton variant="primary" icon={Plus} type="submit">
+              Mint code
+            </AdminButton>
+          </form>
         }
       />
 

@@ -18,7 +18,7 @@ export const Sparkline = ({
   const range = max - min || 1
 
   const points = data.map((val, idx) => {
-    const pointX = (idx / (data.length - 1)) * width
+    const pointX = (idx / Math.max(data.length - 1, 1)) * width
     const pointY = height - ((val - min) / range) * (height - 4) - 2
     return `${pointX},${pointY}`
   })
@@ -29,7 +29,7 @@ export const Sparkline = ({
       : flag === 'soldout'
         ? 'var(--fg-subtle)'
         : 'var(--signal)'
-  const lastPointX = width
+  const lastPointX = data.length > 1 ? width : width / 2
   const lastPointY =
     height - ((data[data.length - 1]! - min) / range) * (height - 4) - 2
 

@@ -9,16 +9,24 @@ import {
   TR,
   TH,
   TD,
-  Sparkline,
+  StatusBadge,
+  RelTime,
 } from '@/components/admin/primitives'
+import type { StatusKind } from '@/components/admin/primitives'
 
 interface PriceActivity {
   eventId: string
   eventTitle: string | null
   venueName: string | null
   date: string | null
-  currentPrice: number | null
+  outcome: 'hit' | 'miss' | 'error'
   updatedAt: string
+}
+
+const OUTCOME_KIND: Record<string, StatusKind> = {
+  hit: 'success',
+  miss: 'warning',
+  error: 'danger',
 }
 
 export default async function AdminPricesPage() {
@@ -44,8 +52,7 @@ export default async function AdminPricesPage() {
             <THead>
               <tr>
                 <TH>Event</TH>
-                <TH>Current</TH>
-                <TH>14-day trend</TH>
+                <TH>Outcome</TH>
                 <TH>Updated</TH>
               </tr>
             </THead>
@@ -63,14 +70,16 @@ export default async function AdminPricesPage() {
                         : ''}
                     </div>
                   </TD>
-                  <TD mono>
-                    {row.currentPrice != null ? `$${row.currentPrice}` : '—'}
-                  </TD>
                   <TD>
-                    <Sparkline data={[]} />
+                    <StatusBadge
+                      kind={OUTCOME_KIND[row.outcome] ?? 'neutral'}
+                      dot
+                    >
+                      {row.outcome}
+                    </StatusBadge>
                   </TD>
-                  <TD color="var(--fg-muted)" mono>
-                    {new Date(row.updatedAt).toLocaleDateString()}
+                  <TD color="var(--fg-muted)">
+                    <RelTime iso={row.updatedAt} />
                   </TD>
                 </TR>
               ))}
