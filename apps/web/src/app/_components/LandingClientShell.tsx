@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { CCWordmark } from '@/components/brand/cc-wordmark/CCWordmark'
 import { BetaPill } from '@/components/brand/beta-pill/BetaPill'
-import { GigPosterStack } from '@/components/brand/gig-poster/GigPosterStack'
+import { GigPosterStack } from '@/components/brand/gig-poster-stack/GigPosterStack'
 import { WaitlistModal } from '@/components/waitlist/WaitlistModal'
 import { CCMark } from '@/components/consumer/cc-mark/CCMark'
 import type { Show } from '@/components/brand/gig-poster/GigPoster'
@@ -30,6 +30,55 @@ interface LandingClientShellProps {
 
 export default function LandingClientShell({ shows }: LandingClientShellProps) {
   const [waitlistOpen, setWaitlistOpen] = useState(false)
+
+  const ctaWaitlist = (
+    <button
+      onClick={() => setWaitlistOpen(true)}
+      style={{
+        all: 'unset',
+        cursor: 'pointer',
+        textAlign: 'center',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: 52,
+        borderRadius: 10,
+        background: 'var(--signal)',
+        color: 'var(--fg-on-accent)',
+        fontFamily: 'Inter, system-ui',
+        fontWeight: 800,
+        fontSize: 16,
+        letterSpacing: '-0.01em',
+        boxShadow: '0 12px 32px -12px var(--signal)',
+      }}
+    >
+      Join the waitlist
+    </button>
+  )
+
+  const ctaCode = (
+    <Link
+      href="/auth/code"
+      style={{
+        all: 'unset',
+        cursor: 'pointer',
+        textAlign: 'center',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: 52,
+        borderRadius: 10,
+        background: 'transparent',
+        color: 'var(--fg)',
+        border: '1px solid var(--border-strong)',
+        fontFamily: 'Inter, system-ui',
+        fontWeight: 600,
+        fontSize: 15,
+      }}
+    >
+      I have a code →
+    </Link>
+  )
 
   return (
     <div
@@ -79,51 +128,57 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
         </div>
       </header>
 
-      {/* Scrollable body */}
+      {/* Main content — single column on mobile, two-column grid on desktop */}
       <main
-        style={{
-          flex: 1,
-          padding: '24px 22px 48px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 32,
-        }}
+        className="flex-1 flex flex-col gap-8 md:grid md:grid-cols-2 md:items-start md:gap-x-16 md:gap-y-10"
+        style={{ padding: '24px 22px 48px' }}
       >
-        {/* Hero text */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <h1
-            style={{
-              margin: 0,
-              fontFamily: 'Inter, system-ui',
-              fontWeight: 900,
-              fontSize: 'clamp(36px, 10vw, 84px)',
-              letterSpacing: '-0.035em',
-              lineHeight: 0.95,
-            }}
+        {/* Left column: hero text + CTAs (desktop) */}
+        <div className="flex flex-col gap-8">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <h1
+              style={{
+                margin: 0,
+                fontFamily: 'Inter, system-ui',
+                fontWeight: 900,
+                fontSize: 'clamp(36px, 10vw, 84px)',
+                letterSpacing: '-0.035em',
+                lineHeight: 0.95,
+              }}
+            >
+              See who&apos;s
+              <br />
+              playing
+              <br />
+              <span style={{ color: 'var(--accent)' }}>tonight.</span>
+            </h1>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 15,
+                fontWeight: 500,
+                color: 'var(--fg-muted)',
+                lineHeight: 1.4,
+                maxWidth: '44ch',
+              }}
+            >
+              Every show in Denver, in one place — sorted, savable, shareable.
+              Built by fans, not algorithms.
+            </p>
+          </div>
+
+          {/* CTAs — desktop only (shown in left column alongside stack) */}
+          <div
+            className="hidden md:flex flex-col gap-3"
+            style={{ maxWidth: 400 }}
           >
-            See who&apos;s
-            <br />
-            playing
-            <br />
-            <span style={{ color: 'var(--accent)' }}>tonight.</span>
-          </h1>
-          <p
-            style={{
-              margin: 0,
-              fontSize: 15,
-              fontWeight: 500,
-              color: 'var(--fg-muted)',
-              lineHeight: 1.4,
-              maxWidth: '44ch',
-            }}
-          >
-            Every show in Denver, in one place — sorted, savable, shareable.
-            Built by fans, not algorithms.
-          </p>
+            {ctaWaitlist}
+            {ctaCode}
+          </div>
         </div>
 
-        {/* Poster stack */}
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
+        {/* Right column: poster stack */}
+        <div className="flex justify-center md:justify-end">
           <GigPosterStack
             shows={shows}
             width={290}
@@ -132,55 +187,17 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
           />
         </div>
 
-        {/* CTAs */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <Link
-            href="/auth/code"
-            style={{
-              all: 'unset',
-              cursor: 'pointer',
-              textAlign: 'center',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: 52,
-              borderRadius: 10,
-              background: 'var(--signal)',
-              color: 'var(--fg-on-accent)',
-              fontFamily: 'Inter, system-ui',
-              fontWeight: 800,
-              fontSize: 16,
-              letterSpacing: '-0.01em',
-              boxShadow: '0 12px 32px -12px var(--signal)',
-            }}
-          >
-            I have a code →
-          </Link>
-          <button
-            onClick={() => setWaitlistOpen(true)}
-            style={{
-              all: 'unset',
-              cursor: 'pointer',
-              textAlign: 'center',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: 52,
-              borderRadius: 10,
-              background: 'transparent',
-              color: 'var(--fg)',
-              border: '1px solid var(--border-strong)',
-              fontFamily: 'Inter, system-ui',
-              fontWeight: 600,
-              fontSize: 15,
-            }}
-          >
-            Join the waitlist
-          </button>
+        {/* CTAs — mobile only (below poster stack) */}
+        <div className="flex flex-col gap-3 md:hidden">
+          {ctaWaitlist}
+          {ctaCode}
         </div>
 
         {/* Vibes */}
-        <section style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <section
+          className="md:col-span-2"
+          style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+        >
           <div
             style={{
               fontFamily: "'JetBrains Mono', monospace",
@@ -236,6 +253,7 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
 
         {/* Footer */}
         <footer
+          className="md:col-span-2"
           style={{ paddingTop: 16, borderTop: '1px solid var(--border)' }}
         >
           <div

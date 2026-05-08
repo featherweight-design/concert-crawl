@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
-import { GigPoster, pickPalette } from './GigPoster'
-import type { Show } from './GigPoster'
+import { GigPoster, pickPalette } from '../gig-poster/GigPoster'
+import type { Show } from '../gig-poster/GigPoster'
 
 interface GigPosterStackProps {
   shows: Show[]
