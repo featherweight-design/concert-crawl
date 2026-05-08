@@ -28,7 +28,18 @@ interface CrawlStatusRow {
 interface Props {
   initialStatus: CrawlStatusRow[]
   initialRuns: CrawlRun[]
-  token: string
+}
+
+function extractErrorMessage(rawBody: unknown, fallback: string): string {
+  if (
+    rawBody !== null &&
+    typeof rawBody === 'object' &&
+    'error' in rawBody &&
+    typeof (rawBody as { error?: unknown })['error'] === 'string'
+  ) {
+    return (rawBody as { error: string })['error']
+  }
+  return fallback
 }
 
 const STATUS_KIND: Record<
@@ -56,15 +67,8 @@ export const CrawlSplitView = ({ initialStatus, initialRuns }: Props) => {
     try {
       const res = await fetch(`/api/admin/crawl/${venueId}`, { method: 'POST' })
       if (!res.ok) {
-        const body: unknown = await res.json().catch(() => ({}))
-        const errorMsg =
-          body !== null &&
-          typeof body === 'object' &&
-          'error' in body &&
-          typeof (body as Record<string, unknown>)['error'] === 'string'
-            ? String((body as Record<string, unknown>)['error'])
-            : `HTTP ${res.status}`
-        throw new Error(errorMsg)
+        const rawBody: unknown = await res.json().catch(() => ({}))
+        throw new Error(extractErrorMessage(rawBody, `HTTP ${res.status}`))
       }
     } catch (err) {
       setTriggerError(

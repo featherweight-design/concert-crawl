@@ -1,5 +1,4 @@
-import { auth } from '@clerk/nextjs/server'
-import { requireAdminUser } from '@/lib/auth'
+import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
 import { RefreshCw } from 'lucide-react'
 import { SectionHead, AdminButton } from '@/components/admin/primitives'
@@ -82,7 +81,7 @@ export default async function AdminCrawlPage() {
           </>
         }
       />
-      <CrawlSplitView initialStatus={status} initialRuns={runs} token={token} />
+      <CrawlSplitView initialStatus={status} initialRuns={runs} />
     </div>
   )
 }
