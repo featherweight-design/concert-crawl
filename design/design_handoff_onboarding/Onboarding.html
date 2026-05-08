@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Concert Crawl — Onboarding</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: #0A0E22; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 999px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<!-- Canvas + frames -->
+<script type="text/babel" src="design-canvas.jsx"></script>
+
+<!-- Theme + brand chrome (CCClusterMark / CCWordmark / BetaPill live in landing-screens.jsx) -->
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="landing-screens.jsx"></script>
+
+<!-- Onboarding -->
+<script type="text/babel" src="onboarding-screens.jsx"></script>
+
+<!-- Tweaks panel -->
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+
+<script type="text/babel">
+// ── Frames (match Auth Gate) ─────────────────────────────────────
+function PhoneFrame({ children }) {
+  return (
+    <div style={{
+      width: 393, height: 852,
+      background: "#070A1A",
+      borderRadius: 28,
+      overflow: "hidden",
+      border: "1px solid rgba(255,255,255,0.08)",
+      boxShadow: "0 24px 60px -20px rgba(0,0,0,0.55)",
+      position: "relative",
+    }}>{children}</div>
+  );
+}
+
+function DesktopShell({ children, width = 1280, height = 820 }) {
+  return (
+    <div style={{
+      width, height,
+      background: "#070A1A",
+      borderRadius: 14,
+      border: "1px solid rgba(255,255,255,0.10)",
+      overflow: "hidden",
+      boxShadow: "0 32px 80px -24px rgba(0,0,0,0.6)",
+      position: "relative",
+    }}>{children}</div>
+  );
+}
+
+// ── App ─────────────────────────────────────────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "stepCount": 5,
+  "includeHow": true
+}/*EDITMODE-END*/;
+
+function OnboardingApp() {
+  const [theme, setTheme] = window.useThemeState
+    ? window.useThemeState("electric")
+    : React.useState("electric");
+
+  const [tweaks, setTweak] = window.useTweaks
+    ? window.useTweaks(TWEAK_DEFAULTS)
+    : [TWEAK_DEFAULTS, () => {}];
+
+  const flow = window.ob_resolveFlow(
+    Number(tweaks.stepCount) || 5,
+    !!tweaks.includeHow,
+    false
+  );
+
+  // Build per-step artboards
+  const mobileArtboards = flow.map((stepKey, i) => (
+    <window.DCArtboard
+      key={`m-${stepKey}-${i}`}
+      id={`m-${stepKey}-${i}`}
+      label={`mobile · step ${i + 1} · ${window.OB_STEPS[stepKey]?.short || stepKey}`}
+      width={393}
+      height={852}
+    >
+      <PhoneFrame>
+        <window.OnboardingMobile
+          theme={theme}
+          flow={flow}
+          initialStep={i}
+        />
+      </PhoneFrame>
+    </window.DCArtboard>
+  ));
+
+  const desktopArtboards = flow.map((stepKey, i) => (
+    <window.DCArtboard
+      key={`d-${stepKey}-${i}`}
+      id={`d-${stepKey}-${i}`}
+      label={`desktop · step ${i + 1} · ${window.OB_STEPS[stepKey]?.short || stepKey}`}
+      width={1280}
+      height={820}
+    >
+      <DesktopShell>
+        <window.OnboardingDesktop
+          theme={theme}
+          flow={flow}
+          initialStep={i}
+        />
+      </DesktopShell>
+    </window.DCArtboard>
+  ));
+
+  return (
+    <>
+      <window.DesignCanvas
+        title="Concert Crawl · Onboarding"
+        subtitle="Post-code-acceptance, pre-Clerk. Founder welcome → How it works → You're in. Light but purposeful — no preference capture in the beta."
+      >
+        {/* Flow context */}
+        <window.DCSection
+          id="context"
+          title="0 · Flow context"
+          subtitle="The seam: Landing → Code Entry → [ Onboarding ] → Clerk → Browse. Onboarding sits before Clerk so we never invite a stranger to register an account before telling them what they signed up for."
+        >
+          <window.DCArtboard id="flow-map" label="flow map" width={1280} height={260}>
+            <FlowMap />
+          </window.DCArtboard>
+        </window.DCSection>
+
+        {/* Mobile flow */}
+        <window.DCSection
+          id="mobile-flow"
+          title={`1 · Mobile flow (${flow.length} step${flow.length === 1 ? "" : "s"})`}
+          subtitle={`Order: ${flow.map(k => window.OB_STEPS[k]?.short || k).join(" → ")}. Toggle step count + included steps via Tweaks (bottom-right).`}
+        >
+          {mobileArtboards}
+        </window.DCSection>
+
+        {/* Desktop flow */}
+        <window.DCSection
+          id="desktop-flow"
+          title="2 · Desktop flow"
+          subtitle="Same content, centered card. Mirrors Auth Gate desktop chrome."
+        >
+          {desktopArtboards}
+        </window.DCSection>
+
+        {/* All steps reference (regardless of current flow) */}
+        <window.DCSection
+          id="all-steps"
+          title="3 · All step types — reference"
+          subtitle="Every step rendered standalone, so reviewers can compare without flipping through the flow."
+        >
+          {["welcome", "how", "today", "notyet", "done"].map(stepKey => (
+            <window.DCArtboard
+              key={`ref-${stepKey}`}
+              id={`ref-${stepKey}`}
+              label={`reference · ${window.OB_STEPS[stepKey]?.short || stepKey}`}
+              width={393}
+              height={852}
+            >
+              <PhoneFrame>
+                <window.OnboardingMobile
+                  theme={theme}
+                  flow={[stepKey, "done"]}
+                  initialStep={0}
+                />
+              </PhoneFrame>
+            </window.DCArtboard>
+          ))}
+        </window.DCSection>
+      </window.DesignCanvas>
+
+      {/* Theme switcher */}
+      {window.ThemeSwitcher && (
+        <window.ThemeSwitcher value={theme} onChange={setTheme} position="bottom-left" />
+      )}
+
+      {/* Tweaks panel — wired via tweaks-panel.jsx */}
+      {window.TweaksPanel && (
+        <window.TweaksPanel title="Tweaks">
+          <window.TweakSection label="Flow shape">
+            <window.TweakRadio
+              label="Step count"
+              value={String(tweaks.stepCount)}
+              options={[
+                { value: "2", label: "2" },
+                { value: "3", label: "3" },
+                { value: "4", label: "4" },
+                { value: "5", label: "5" },
+              ]}
+              onChange={v => setTweak("stepCount", Number(v))}
+            />
+            <window.TweakToggle
+              label="Include 'How it works'"
+              value={!!tweaks.includeHow}
+              onChange={v => setTweak("includeHow", v)}
+            />
+          </window.TweakSection>
+        </window.TweaksPanel>
+      )}
+    </>
+  );
+}
+
+// ── Flow context map (a small diagram for the canvas top) ────────
+function FlowMap() {
+  const node = (label, kind, current = false) => ({ label, kind, current });
+  const nodes = [
+    node("Landing",      "ext"),
+    node("Code Entry",   "ext"),
+    node("Onboarding",   "this", true),
+    node("Clerk sign-up","ext"),
+    node("Browse",       "ext"),
+  ];
+  return (
+    <div style={{
+      width: "100%", height: "100%",
+      background: "#070A1A",
+      color: "#E8F3FF",
+      fontFamily: "Inter, system-ui",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: 20,
+      borderRadius: 14,
+      border: "1px solid rgba(255,255,255,0.08)",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
+        {nodes.map((n, i) => (
+          <React.Fragment key={n.label}>
+            <div style={{
+              padding: "14px 18px",
+              borderRadius: 10,
+              background: n.current ? "rgba(122,230,255,0.08)" : "rgba(255,255,255,0.04)",
+              border: n.current
+                ? "1.5px solid #7AE6FF"
+                : "1px solid rgba(255,255,255,0.10)",
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              color: n.current ? "#7AE6FF" : "#9AA8C7",
+              boxShadow: n.current ? "0 0 24px -6px #7AE6FF" : "none",
+            }}>{n.label}</div>
+            {i < nodes.length - 1 && (
+              <span style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 16, color: "#5A6788",
+              }}>→</span>
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("app")).render(<OnboardingApp />);
+</script>
+</body>
+</html>
