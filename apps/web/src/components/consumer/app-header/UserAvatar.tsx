@@ -13,9 +13,11 @@ export function UserAvatar() {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target
       if (
+        target instanceof Node &&
         containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
+        !containerRef.current.contains(target)
       ) {
         setOpen(false)
       }
@@ -73,7 +75,11 @@ export function UserAvatar() {
           <div className="mx-2 h-px bg-border" />
           <button
             type="button"
-            onClick={() => signOut()}
+            onClick={() => {
+              void signOut().catch((err) =>
+                console.error('Sign out failed', err),
+              )
+            }}
             className="w-full cursor-pointer px-4 py-2 text-left text-[13px] text-fg-muted hover:bg-surface-1 hover:text-fg"
           >
             Sign out

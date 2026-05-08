@@ -17,8 +17,11 @@ export function MobileProfileEntry() {
       try {
         const data = await fetchMe(token)
         setProfile(data)
-      } catch {
-        // silently fall back to anonymous avatar
+      } catch (err) {
+        console.warn(
+          'MobileProfileEntry: could not load profile, showing anonymous avatar',
+          err,
+        )
       }
     })()
   }, [getToken])
