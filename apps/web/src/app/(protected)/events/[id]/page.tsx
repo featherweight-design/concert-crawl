@@ -8,7 +8,7 @@ import { EventImage } from '@/components/consumer/event-image'
 import { SmallEventRow } from '@/components/consumer/small-event-row'
 import { SectionHeader } from '@/components/consumer/section-header'
 import { PriceDisplay } from '@/components/consumer/PriceDisplay'
-import { PriceSubmissionForm } from '@/components/consumer/PriceSubmissionForm'
+import { PriceSection } from '@/components/consumer/PriceSection'
 import {
   formatEventDate,
   formatShowTime,
@@ -231,16 +231,23 @@ export default async function EventDetailPage({
           ticketUrl={event.ticketUrl}
         />
 
-        {/* Price submission form — shown when no authoritative price exists */}
-        {!event.ticketPriceMin && (
-          <div className="mt-4">
-            <PriceSubmissionForm
-              eventId={event.id}
-              apiUrl={process.env.NEXT_PUBLIC_API_URL ?? ''}
-              isAxsEvent={event.ticketUrl?.includes('axs.com') ?? false}
-            />
-          </div>
-        )}
+        {/* Community price section */}
+        <div className="mt-4">
+          <PriceSection
+            eventId={event.id}
+            artistName={event.artist}
+            venueName={event.venue.name}
+            eventDate={event.date}
+          />
+        </div>
+
+        {/* Submit a price CTA */}
+        <a
+          href={`/events/${event.id}/submit-price`}
+          className="block text-center text-sm text-signal underline py-1"
+        >
+          Submit a price you saw →
+        </a>
 
         {/* About */}
         {event.description && (
