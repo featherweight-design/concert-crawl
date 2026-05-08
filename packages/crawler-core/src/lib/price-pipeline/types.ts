@@ -1,12 +1,4 @@
-export type PriceSource =
-  | 'structured_data'
-  | 'ticketmaster'
-  | 'eventbrite'
-  | 'dice'
-  | 'songkick'
-  | 'bandsintown'
-  | 'seatgeek'
-  | 'community'
+export type { PriceSource } from '@concert-crawl/types'
 
 export interface PriceTierResult {
   priceMin: number

@@ -1,6 +1,7 @@
 import { eq, sql } from 'drizzle-orm'
 import { db, events, priceRetrievalLog } from '@concert-crawl/db'
-import type { PipelineContext, PriceTierResult, PriceSource } from './types.js'
+import type { PriceSource } from '@concert-crawl/types'
+import type { PipelineContext, PriceTierResult } from './types.js'
 import { tier1StructuredData } from './tier1-structured-data.js'
 import { tier2Ticketmaster } from './tier2-ticketmaster.js'
 import { tier3EventbriteDice } from './tier3-eventbrite-dice.js'
@@ -133,4 +134,5 @@ export async function runPricePipeline(ctx: PipelineContext): Promise<void> {
   }
 }
 
-export type { PipelineContext, PriceTierResult, PriceSource } from './types.js'
+export type { PipelineContext, PriceTierResult } from './types.js'
+export type { PriceSource } from '@concert-crawl/types'
