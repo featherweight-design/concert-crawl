@@ -2,14 +2,14 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 
-type AdminTheme = 'light' | 'dark'
+export type AdminTheme = 'light' | 'dark' | 'electric' | 'jade'
+const VALID_THEMES: AdminTheme[] = ['light', 'dark', 'electric', 'jade']
 const STORAGE_KEY = 'cc-admin-theme'
 
 const ThemeContext = createContext<{
   theme: AdminTheme
-  toggle: () => void
-  setTheme: (theme: AdminTheme) => void
-}>({ theme: 'light', toggle: () => {}, setTheme: () => {} })
+  setTheme: (name: AdminTheme) => void
+}>({ theme: 'light', setTheme: () => {} })
 
 export const useAdminTheme = () => useContext(ThemeContext)
 
@@ -22,30 +22,23 @@ export const AdminThemeProvider = ({
 
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY)
-    const stored: AdminTheme | null =
-      raw === 'light' || raw === 'dark' ? raw : null
+    const stored: AdminTheme | null = VALID_THEMES.includes(raw as AdminTheme)
+      ? (raw as AdminTheme)
+      : null
     const preferred = window.matchMedia('(prefers-color-scheme: dark)').matches
       ? 'dark'
       : 'light'
     setThemeState(stored ?? preferred)
   }, [])
 
-  const toggle = () => {
-    setThemeState((prev) => {
-      const next: AdminTheme = prev === 'light' ? 'dark' : 'light'
-      localStorage.setItem(STORAGE_KEY, next)
-      return next
-    })
-  }
-
-  const setTheme = (newTheme: AdminTheme) => {
-    setThemeState(newTheme)
-    localStorage.setItem(STORAGE_KEY, newTheme)
-    document.documentElement.setAttribute('data-admin-theme', newTheme)
+  const setTheme = (name: AdminTheme) => {
+    setThemeState(name)
+    localStorage.setItem(STORAGE_KEY, name)
+    document.documentElement.setAttribute('data-admin-theme', name)
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, toggle, setTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme }}>
       <div data-admin-theme={theme} style={{ display: 'contents' }}>
         {children}
       </div>

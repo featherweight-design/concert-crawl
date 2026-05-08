@@ -1,21 +1,42 @@
 'use client'
 
 import { useAdminTheme } from '@/components/admin/shell/AdminThemeProvider'
+import type { AdminTheme } from '@/components/admin/shell/AdminThemeProvider'
 
-const ADMIN_THEMES = [
+const ADMIN_THEMES: {
+  id: AdminTheme
+  label: string
+  bg: string
+  signal: string
+  accent: string
+}[] = [
   {
-    id: 'light' as const,
+    id: 'light',
     label: 'Light',
     bg: '#f7f5f0',
     signal: '#1d5fbf',
     accent: '#7a3aa8',
   },
   {
-    id: 'dark' as const,
+    id: 'dark',
     label: 'Dark',
     bg: '#15140f',
     signal: '#7ab4ff',
     accent: '#c89bf0',
+  },
+  {
+    id: 'electric',
+    label: 'Electric',
+    bg: '#070A1A',
+    signal: '#7AE6FF',
+    accent: '#FF7BD4',
+  },
+  {
+    id: 'jade',
+    label: 'Jade',
+    bg: '#06201F',
+    signal: '#1FFFC2',
+    accent: '#9B5CFF',
   },
 ]
 
