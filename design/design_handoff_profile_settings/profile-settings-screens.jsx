@@ -452,7 +452,7 @@ function DangerZone({ onSignOut = () => {}, onDelete = () => {} }) {
             <div style={{ fontFamily: "Inter, system-ui", fontSize: 14, fontWeight: 800, color: "var(--danger)", letterSpacing: "-0.005em" }}>Delete account</div>
           </div>
           <div style={{ fontFamily: "Inter, system-ui", fontSize: 12.5, lineHeight: 1.5, color: "var(--fg-muted)", letterSpacing: "-0.005em" }}>
-            <strong style={{ color: "var(--fg)" }}>This is permanent.</strong> Your handle, email, and every price you've submitted will be deleted. You can't undo it. Other fans' confirmations on your prices stay (they belong to them).
+            <strong style={{ color: "var(--fg)" }}>This is permanent.</strong> Your handle, email, and profile will be deleted. Prices you've submitted stay in the public record but are anonymized — your name is removed. You can't undo it.
           </div>
           <div style={{ marginTop: 4 }}>
             <PSDangerButton small onClick={onDelete}>Delete my account</PSDangerButton>

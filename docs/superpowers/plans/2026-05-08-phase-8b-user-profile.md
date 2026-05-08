@@ -932,7 +932,7 @@ export const SETTINGS_COPY = {
       tagline: 'days remaining',
       subline: 'Upgrade to keep your access.',
     },
-    pastDue: {
+    'past-due': {
       badge: 'Past due',
       tagline: 'Payment failed.',
       cta: 'Update billing →',

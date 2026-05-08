@@ -323,7 +323,7 @@ Both eliminate the need to cast. Never cast `publicMetadata` or `sessionClaims` 
 
 ## Current Status
 
-Phase: **Phase 8 (Beta Launch Prep) — in progress**
+Phase: **Phase 8b (Beta Launch Prep — Saving Shows + User Profile) — next**
 
 - Phase 6a complete (PR #26 merged 2026-05-07): pino + Sentry SDK across all three apps
 - Phase 6b complete (PR #28 merged 2026-05-07): Vitest integration tests for `apps/api` (20 tests, real Postgres)
