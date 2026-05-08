@@ -64,6 +64,13 @@
       "when": 1778247000000,
       "tag": "0008_price_transparency_v2",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1778267514236,
+      "tag": "0009_colorful_firebird",
+      "breakpoints": true
     }
   ]
 }

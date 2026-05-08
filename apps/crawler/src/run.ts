@@ -1,10 +1,51 @@
 import { createLogger } from '@concert-crawl/logger'
-import { db, venues } from '@concert-crawl/db'
+import { db, venues, crawlTriggers } from '@concert-crawl/db'
 import { eq, and } from 'drizzle-orm'
 import { crawlVenue } from '@concert-crawl/crawler-core'
 
 const logger = createLogger('crawler')
 const MAX_CONCURRENT = 3
+
+export async function runTriggeredCrawls(): Promise<{ processed: number }> {
+  const pending = await db
+    .select({ id: crawlTriggers.id, venueId: crawlTriggers.venueId })
+    .from(crawlTriggers)
+    .where(eq(crawlTriggers.status, 'pending'))
+
+  if (pending.length === 0) {
+    logger.info('No pending crawl triggers')
+    return { processed: 0 }
+  }
+
+  logger.info({ count: pending.length }, 'Processing pending crawl triggers')
+
+  for (const trigger of pending) {
+    await db
+      .update(crawlTriggers)
+      .set({ status: 'processing', updatedAt: new Date() })
+      .where(eq(crawlTriggers.id, trigger.id))
+
+    try {
+      const crawlRunId = crypto.randomUUID()
+      await crawlVenue(trigger.venueId, crawlRunId)
+      await db
+        .update(crawlTriggers)
+        .set({ status: 'done', crawlRunId, updatedAt: new Date() })
+        .where(eq(crawlTriggers.id, trigger.id))
+    } catch (err) {
+      logger.error(
+        { err, triggerId: trigger.id, venueId: trigger.venueId },
+        'Triggered crawl failed',
+      )
+      await db
+        .update(crawlTriggers)
+        .set({ status: 'failed', updatedAt: new Date() })
+        .where(eq(crawlTriggers.id, trigger.id))
+    }
+  }
+
+  return { processed: pending.length }
+}
 
 export async function runDailyCrawl(): Promise<{
   succeeded: number

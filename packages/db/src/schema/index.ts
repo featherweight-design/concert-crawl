@@ -1,6 +1,7 @@
 export * from './venues.js'
 export * from './events.js'
 export * from './crawl-runs.js'
+export * from './crawl-triggers.js'
 export * from './users.js'
 export * from './social.js'
 export * from './commerce.js'

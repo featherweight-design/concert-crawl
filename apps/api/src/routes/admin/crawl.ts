@@ -2,29 +2,19 @@ import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { eq, desc, asc, inArray } from 'drizzle-orm'
-import { db, venues, crawlRuns } from '@concert-crawl/db'
-import { crawlVenue } from '@concert-crawl/crawler-core'
+import { db, venues, crawlRuns, crawlTriggers } from '@concert-crawl/db'
 import { getAuthUser } from '../../middleware/auth.js'
 import type { AdminVariables } from './index.js'
-
-// Tracks crawl runs that have been started but not yet written to DB.
-// Keyed by crawl_run_id. Entries are removed when crawlVenue resolves/rejects.
-// TODO: This map is process-local. A server restart mid-crawl will cause the
-// in-progress run to disappear, making the poll endpoint return 404. Fix before
-// horizontal scaling (multiple API instances) is needed.
-const inProgressCrawls = new Map<
-  string,
-  { venueId: string; startedAt: string }
->()
 
 const venueIdSchema = z.object({
   venueId: z.string().uuid('venueId must be a UUID'),
 })
 const crawlRunIdSchema = z.object({ id: z.string().uuid('id must be a UUID') })
+const triggerIdSchema = z.object({ id: z.string().uuid('id must be a UUID') })
 
 export const crawlAdminRouter = new Hono<AdminVariables>()
 
-// POST /v1/admin/crawl/:venueId — trigger an async crawl
+// POST /v1/admin/crawl/:venueId — queue a crawl trigger (handled by crawler service)
 crawlAdminRouter.post(
   '/:venueId',
   zValidator('param', venueIdSchema),
@@ -44,34 +34,41 @@ crawlAdminRouter.post(
       )
     }
 
-    const crawlRunId = crypto.randomUUID()
-    inProgressCrawls.set(crawlRunId, {
-      venueId,
-      startedAt: new Date().toISOString(),
-    })
+    const inserted = await db
+      .insert(crawlTriggers)
+      .values({ venueId, triggeredBy: getAuthUser(ctx).userId })
+      .returning()
 
-    void (async () => {
-      try {
-        await crawlVenue(venueId, crawlRunId)
-      } catch (err) {
-        console.error(
-          JSON.stringify({
-            event: 'crawl.trigger.error',
-            crawlRunId,
-            venueId,
-            error: String(err),
-          }),
-        )
-      } finally {
-        inProgressCrawls.delete(crawlRunId)
-      }
-    })()
+    const trigger = inserted[0]
+    if (!trigger) {
+      return ctx.json(
+        { success: false, error: 'Failed to create crawl trigger' },
+        500,
+      )
+    }
 
     ctx.set('auditAction', 'crawl.trigger')
     ctx.set('auditTargetId', venueId)
     ctx.set('auditActorId', getAuthUser(ctx).userId)
 
-    return ctx.json({ success: true, data: { crawlRunId } }, 202)
+    return ctx.json({ success: true, data: { triggerId: trigger.id } }, 202)
+  },
+)
+
+// GET /v1/admin/crawl/triggers/:id — poll a single trigger by ID
+crawlAdminRouter.get(
+  '/triggers/:id',
+  zValidator('param', triggerIdSchema),
+  async (ctx) => {
+    const { id } = ctx.req.valid('param')
+    const [trigger] = await db
+      .select()
+      .from(crawlTriggers)
+      .where(eq(crawlTriggers.id, id))
+    if (!trigger) {
+      return ctx.json({ success: false, error: 'Trigger not found' }, 404)
+    }
+    return ctx.json({ success: true, data: trigger })
   },
 )
 
@@ -81,27 +78,6 @@ crawlAdminRouter.get(
   zValidator('param', crawlRunIdSchema),
   async (ctx) => {
     const { id } = ctx.req.valid('param')
-
-    // Check in-memory first — the DB row won't exist until the crawl finishes
-    const inProgress = inProgressCrawls.get(id)
-    if (inProgress) {
-      return ctx.json({
-        success: true,
-        data: {
-          id,
-          venueId: inProgress.venueId,
-          status: 'in_progress',
-          httpStatusCode: null,
-          robotsTxtBlocked: null,
-          extractionStrategyUsed: null,
-          eventsFound: 0,
-          eventsInserted: 0,
-          errorMessage: null,
-          durationMs: null,
-          createdAt: inProgress.startedAt,
-        },
-      })
-    }
 
     const [crawlRun] = await db
       .select()
@@ -149,31 +125,6 @@ crawlAdminRouter.get(
       .orderBy(desc(crawlRuns.createdAt))
       .limit(limit)
 
-    if (venueId !== undefined) {
-      // Prepend any in-progress run for this specific venue
-      const inProgressForVenue = [...inProgressCrawls.entries()]
-        .filter(([, val]) => val.venueId === venueId)
-        .map(([runId, val]) => ({
-          id: runId,
-          venueId: val.venueId,
-          venueName: null as string | null,
-          status: 'in_progress' as const,
-          httpStatusCode: null,
-          robotsTxtBlocked: null,
-          extractionStrategyUsed: null,
-          eventsFound: 0,
-          eventsInserted: 0,
-          errorMessage: null,
-          durationMs: null,
-          createdAt: val.startedAt,
-        }))
-
-      return ctx.json({
-        success: true,
-        data: [...inProgressForVenue, ...dbRuns],
-      })
-    }
-
     return ctx.json({ success: true, data: dbRuns })
   },
 )
@@ -215,33 +166,9 @@ crawlAdminRouter.get('/status', async (ctx) => {
 
   const runsByVenueId = new Map(latestRuns.map((run) => [run.venueId, run]))
 
-  // Build once, look up O(1) per venue
-  const inProgressByVenueId = new Map(
-    [...inProgressCrawls.entries()]
-      .filter(([, val]) => val.venueId !== undefined)
-      .map(([runId, val]) => [
-        val.venueId,
-        { runId, startedAt: val.startedAt },
-      ]),
-  )
-
   const data = venueList.map((venue) => {
     const lastRun = runsByVenueId.get(venue.id) ?? null
-    const inProgressEntry = inProgressByVenueId.get(venue.id)
-    const effectiveLastRun = inProgressEntry
-      ? {
-          id: inProgressEntry.runId,
-          venueId: venue.id,
-          status: 'in_progress' as const,
-          createdAt: inProgressEntry.startedAt,
-          eventsFound: 0,
-          eventsInserted: 0,
-          errorMessage: null,
-          extractionStrategyUsed: null,
-        }
-      : lastRun
-
-    return { ...venue, lastRun: effectiveLastRun }
+    return { ...venue, lastRun }
   })
 
   return ctx.json({ success: true, data })

@@ -1,14 +1,19 @@
 import './instrument.js'
 import { createLogger } from '@concert-crawl/logger'
-import { runDailyCrawl } from './run.js'
+import { runDailyCrawl, runTriggeredCrawls } from './run.js'
 
 const logger = createLogger('crawler')
 
-runDailyCrawl()
+async function main() {
+  await runTriggeredCrawls()
+  await runDailyCrawl()
+}
+
+main()
   .then(() => {
     process.exit(0)
   })
   .catch((err) => {
-    logger.error({ err }, 'Fatal error in daily crawl')
+    logger.error({ err }, 'Fatal error in crawler')
     process.exit(1)
   })

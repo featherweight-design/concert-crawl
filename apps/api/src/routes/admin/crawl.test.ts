@@ -3,7 +3,7 @@ import { createApp } from '../../app.js'
 
 const mockGetAuth = vi.fn()
 vi.mock('@hono/clerk-auth', () => ({
-  clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
+  clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>
     next(),
   getAuth: () => mockGetAuth(),
 }))
@@ -14,11 +14,6 @@ vi.mock('drizzle-orm', () => ({
   desc: vi.fn(),
   asc: vi.fn(),
   inArray: vi.fn(),
-}))
-
-const mockCrawlVenue = vi.fn()
-vi.mock('@concert-crawl/crawler-core', () => ({
-  crawlVenue: (...args: unknown[]) => mockCrawlVenue(...args),
 }))
 
 vi.mock('@concert-crawl/db', () => ({
@@ -33,15 +28,19 @@ vi.mock('@concert-crawl/db', () => ({
     insert: vi.fn().mockReturnThis(),
     values: vi.fn().mockReturnThis(),
     returning: vi.fn().mockResolvedValue([]),
+    update: vi.fn().mockReturnThis(),
+    set: vi.fn().mockReturnThis(),
   },
   venues: {},
   crawlRuns: {},
+  crawlTriggers: {},
   auditLog: {},
   inviteCodes: {},
 }))
 
 const VENUE_ID = '00000000-0000-0000-0000-000000000001'
 const RUN_ID = '00000000-0000-0000-0000-000000000002'
+const TRIGGER_ID = '00000000-0000-0000-0000-000000000003'
 
 const mockVenue = {
   id: VENUE_ID,
@@ -71,6 +70,16 @@ const mockCrawlRun = {
   createdAt: new Date(),
 }
 
+const mockTrigger = {
+  id: TRIGGER_ID,
+  venueId: VENUE_ID,
+  status: 'pending',
+  crawlRunId: null,
+  triggeredBy: 'admin_123',
+  createdAt: new Date(),
+  updatedAt: new Date(),
+}
+
 function adminAuth() {
   mockGetAuth.mockReturnValue({
     userId: 'admin_123',
@@ -81,7 +90,6 @@ function adminAuth() {
 describe('Admin crawl routes', () => {
   beforeEach(() => {
     mockGetAuth.mockReset()
-    mockCrawlVenue.mockReset()
   })
 
   describe('POST /v1/admin/crawl/:venueId', () => {
@@ -146,11 +154,13 @@ describe('Admin crawl routes', () => {
       expect(res.status).toBe(400)
     })
 
-    it('returns 202 with crawlRunId and starts crawl for valid venue', async () => {
+    it('returns 202 with triggerId and queues crawl trigger for valid venue', async () => {
       adminAuth()
       const { db } = await import('@concert-crawl/db')
       vi.mocked(db.select().from().where).mockResolvedValueOnce([mockVenue])
-      mockCrawlVenue.mockResolvedValue(mockCrawlRun)
+      vi.mocked(db.insert({}).values().returning).mockResolvedValueOnce([
+        mockTrigger,
+      ])
 
       const res = await createApp().request(`/v1/admin/crawl/${VENUE_ID}`, {
         method: 'POST',
@@ -159,16 +169,47 @@ describe('Admin crawl routes', () => {
       expect(res.status).toBe(202)
       const body = (await res.json()) as {
         success: boolean
-        data: { crawlRunId: string }
+        data: { triggerId: string }
       }
       expect(body.success).toBe(true)
-      expect(typeof body.data.crawlRunId).toBe('string')
-      expect(mockCrawlVenue).toHaveBeenCalledWith(
-        VENUE_ID,
-        expect.stringMatching(
-          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
-        ),
+      expect(typeof body.data.triggerId).toBe('string')
+    })
+  })
+
+  describe('GET /v1/admin/crawl/triggers/:id', () => {
+    it('returns 400 for non-UUID id', async () => {
+      adminAuth()
+      const res = await createApp().request(
+        '/v1/admin/crawl/triggers/not-a-uuid',
       )
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 404 when trigger does not exist', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      vi.mocked(db.select().from().where).mockResolvedValueOnce([])
+      const res = await createApp().request(
+        `/v1/admin/crawl/triggers/${TRIGGER_ID}`,
+      )
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 200 with trigger data', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      vi.mocked(db.select().from().where).mockResolvedValueOnce([mockTrigger])
+      const res = await createApp().request(
+        `/v1/admin/crawl/triggers/${TRIGGER_ID}`,
+      )
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as {
+        success: boolean
+        data: typeof mockTrigger
+      }
+      expect(body.success).toBe(true)
+      expect(body.data.id).toBe(TRIGGER_ID)
+      expect(body.data.status).toBe('pending')
     })
   })
 
@@ -200,37 +241,6 @@ describe('Admin crawl routes', () => {
       expect(body.success).toBe(true)
       expect(body.data.id).toBe(RUN_ID)
       expect(body.data.status).toBe('success')
-    })
-
-    it('returns in_progress status when crawl is running', async () => {
-      adminAuth()
-      const { db } = await import('@concert-crawl/db')
-      vi.mocked(db.select().from().where).mockResolvedValueOnce([mockVenue])
-      mockCrawlVenue.mockReturnValue(new Promise(() => {})) // never resolves
-
-      // Trigger a crawl to populate inProgressCrawls
-      const triggerRes = await createApp().request(
-        `/v1/admin/crawl/${VENUE_ID}`,
-        { method: 'POST' },
-      )
-      const triggerBody = (await triggerRes.json()) as {
-        success: boolean
-        data: { crawlRunId: string }
-      }
-      const { crawlRunId } = triggerBody.data
-
-      // Poll while crawl is still running
-      const pollRes = await createApp().request(
-        `/v1/admin/crawl/runs/${crawlRunId}`,
-      )
-      expect(pollRes.status).toBe(200)
-      const pollBody = (await pollRes.json()) as {
-        success: boolean
-        data: { status: string; venueId: string }
-      }
-      expect(pollBody.success).toBe(true)
-      expect(pollBody.data.status).toBe('in_progress')
-      expect(pollBody.data.venueId).toBe(VENUE_ID)
     })
   })
 
@@ -272,10 +282,7 @@ describe('Admin crawl routes', () => {
   })
 })
 
-describe('GET /v1/admin/crawl/runs — includes in-progress runs', () => {
-  // This test verifies the fix for the known in-progress tracking bug:
-  // the list endpoint previously never returned in-flight runs.
-
+describe('GET /v1/admin/crawl/runs — returns DB data only (no in-memory map)', () => {
   beforeEach(() => {
     mockGetAuth.mockReset()
   })
@@ -297,7 +304,6 @@ describe('GET /v1/admin/crawl/runs — includes in-progress runs', () => {
       userId: 'admin_123',
       sessionClaims: { metadata: { role: 'admin' } },
     })
-    // Use a venueId that has no in-progress crawls to verify the empty case
     const res = await createApp().request(
       '/v1/admin/crawl/runs?venueId=00000000-0000-0000-0000-000000000099',
     )
