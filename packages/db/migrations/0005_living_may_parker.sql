@@ -1,0 +1,1 @@
+ALTER TABLE "price_retrieval_log" ALTER COLUMN "source" SET DATA TYPE "price_source" USING "source"::"price_source";
