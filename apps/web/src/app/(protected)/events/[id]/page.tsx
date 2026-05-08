@@ -220,34 +220,17 @@ export default async function EventDetailPage({
             label="Doors / Show"
             value={doorsShow}
           />
-          <div className="flex items-start gap-2.5 py-2">
-            <div className="h-4 w-4 shrink-0 pt-[1px]">
-              <IconTicket />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p
-                className="uppercase text-fg-subtle"
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '9px',
-                  letterSpacing: '0.06em',
-                }}
-              >
-                Price
-              </p>
-              <div className="mt-[1px]">
-                <PriceDisplay
-                  priceMin={event.ticketPriceMin}
-                  priceMax={event.ticketPriceMax}
-                  priceSource={event.priceSource}
-                  venueName={event.venue.name}
-                  ticketUrl={event.ticketUrl}
-                />
-              </div>
-            </div>
-          </div>
           <InfoRow icon={<IconUsers />} label="Ages" value="All Ages" />
         </div>
+
+        {/* Price block — always rendered; collapses to quiet no-price state */}
+        <PriceDisplay
+          priceMin={event.ticketPriceMin}
+          priceMax={event.ticketPriceMax}
+          priceSource={event.priceSource}
+          venueName={event.venue.name}
+          ticketUrl={event.ticketUrl}
+        />
 
         {/* Price submission form — shown when no authoritative price exists */}
         {!event.ticketPriceMin && (
@@ -423,26 +406,6 @@ function IconClock() {
         strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-function IconTicket() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path
-        d="M1.5 5a2 2 0 010 4v3.5h13V9a2 2 0 010-4V1.5h-13V5z"
-        stroke="var(--fg-subtle)"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M6 5.5v5"
-        stroke="var(--fg-subtle)"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeDasharray="1.5 2"
       />
     </svg>
   )

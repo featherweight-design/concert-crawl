@@ -205,6 +205,12 @@ export function PriceDisplay({
   const max = parsedMax !== null && !isNaN(parsedMax) ? parsedMax : null
   const isAxs = ticketUrl?.includes('axs.com') ?? false
 
+  const sectionStyle: React.CSSProperties = {
+    padding: '12px 0',
+    borderTop: '1px solid var(--border)',
+    borderBottom: '1px solid var(--border)',
+  }
+
   const editorialText: React.CSSProperties = {
     fontFamily: 'var(--font-ui)',
     fontSize: 13,
@@ -222,9 +228,12 @@ export function PriceDisplay({
       ? 'Check their site closer to the show or call the box office.'
       : "We'll yell once tickets actually exist."
     return (
-      <p style={editorialText}>
-        {headline} <span style={{ color: 'var(--fg-subtle)' }}>{subline}</span>
-      </p>
+      <div style={sectionStyle}>
+        <p style={editorialText}>
+          {headline}{' '}
+          <span style={{ color: 'var(--fg-subtle)' }}>{subline}</span>
+        </p>
+      </div>
     )
   }
 
@@ -233,7 +242,7 @@ export function PriceDisplay({
   // Community source
   if (kind === 'community') {
     return (
-      <div>
+      <div style={sectionStyle}>
         <div style={{ marginBottom: 4 }}>
           <TrustMark kind="community" />
         </div>
@@ -265,7 +274,7 @@ export function PriceDisplay({
   // Resale source (SeatGeek)
   if (kind === 'resale') {
     return (
-      <div>
+      <div style={sectionStyle}>
         <div style={{ marginBottom: 4 }}>
           <TrustMark kind="resale" />
         </div>
@@ -289,7 +298,7 @@ export function PriceDisplay({
 
   // Primary source (default)
   return (
-    <div>
+    <div style={sectionStyle}>
       <p style={editorialText}>
         <span style={{ color: 'var(--fg)', fontWeight: 700 }}>{faceStr}</span>
         <span> face.</span>
