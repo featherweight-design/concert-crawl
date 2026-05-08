@@ -430,10 +430,10 @@ export const EventQueueSplit = ({ initialEvents, token: _token }: Props) => {
           >
             {selectedIds.size} selected
           </span>
-          <AdminButton variant="success" size="sm">
+          <AdminButton variant="success" size="sm" disabled>
             Approve all
           </AdminButton>
-          <AdminButton variant="danger" size="sm">
+          <AdminButton variant="danger" size="sm" disabled>
             Reject
           </AdminButton>
           <AdminButton

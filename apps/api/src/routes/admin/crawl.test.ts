@@ -235,10 +235,13 @@ describe('Admin crawl routes', () => {
   })
 
   describe('GET /v1/admin/crawl/runs (list)', () => {
-    it('returns 400 when venueId is missing', async () => {
+    it('returns 200 with empty array when venueId is omitted', async () => {
       adminAuth()
       const res = await createApp().request('/v1/admin/crawl/runs')
-      expect(res.status).toBe(400)
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as { success: boolean; data: unknown[] }
+      expect(body.success).toBe(true)
+      expect(Array.isArray(body.data)).toBe(true)
     })
 
     it('returns 400 when venueId is not a UUID', async () => {
@@ -277,13 +280,16 @@ describe('GET /v1/admin/crawl/runs — includes in-progress runs', () => {
     mockGetAuth.mockReset()
   })
 
-  it('returns 400 when venueId is missing', async () => {
+  it('returns 200 with empty array when venueId is omitted', async () => {
     mockGetAuth.mockReturnValue({
       userId: 'admin_123',
       sessionClaims: { metadata: { role: 'admin' } },
     })
     const res = await createApp().request('/v1/admin/crawl/runs')
-    expect(res.status).toBe(400)
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { success: boolean; data: unknown[] }
+    expect(body.success).toBe(true)
+    expect(Array.isArray(body.data)).toBe(true)
   })
 
   it('returns 200 with empty array when no runs exist for an unknown venue', async () => {

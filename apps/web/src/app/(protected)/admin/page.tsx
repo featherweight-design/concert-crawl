@@ -136,21 +136,6 @@ export default async function AdminDashboardPage() {
             {blockedCount > 0 ? `${blockedCount} blocked` : 'all healthy'}
           </div>
         </div>
-        <div
-          style={{
-            marginLeft: 'auto',
-            display: 'flex',
-            gap: 8,
-            alignItems: 'center',
-          }}
-        >
-          <StatusBadge kind="signal" variant="mono" dot>
-            SSE LIVE
-          </StatusBadge>
-          <AdminButton variant="primary" icon={MapPin}>
-            Add venue
-          </AdminButton>
-        </div>
       </div>
 
       {/* Stat row */}

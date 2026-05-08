@@ -20,7 +20,9 @@ export const AdminThemeProvider = ({
   const [theme, setTheme] = useState<AdminTheme>('light')
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY) as AdminTheme | null
+    const raw = localStorage.getItem(STORAGE_KEY)
+    const stored: AdminTheme | null =
+      raw === 'light' || raw === 'dark' ? raw : null
     const preferred = window.matchMedia('(prefers-color-scheme: dark)').matches
       ? 'dark'
       : 'light'
