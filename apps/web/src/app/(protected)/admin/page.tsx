@@ -24,6 +24,7 @@ import {
   RelTime,
 } from '@/components/admin/primitives'
 import type { StatusKind } from '@/components/admin/primitives'
+import { ActivityFeed } from '@/components/admin/dashboard/ActivityFeed'
 
 interface CrawlStatusRow {
   venueId: string
@@ -123,6 +124,21 @@ export default async function AdminDashboardPage() {
   ).length
   const totalCost = runs.reduce((sum, run) => sum + (run.llmCostUsd ?? 0), 0)
 
+  const recentCost = runs
+    .slice(0, 7)
+    .reduce((sum, run) => sum + (run.llmCostUsd ?? 0), 0)
+  const priorCost = runs
+    .slice(7, 14)
+    .reduce((sum, run) => sum + (run.llmCostUsd ?? 0), 0)
+  const costTrend =
+    priorCost > 0
+      ? {
+          dir: recentCost > priorCost ? ('up' as const) : ('down' as const),
+          text: `${Math.round((Math.abs(recentCost - priorCost) / priorCost) * 100)}% wow`,
+          good: recentCost <= priorCost,
+        }
+      : undefined
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* Greeting */}
@@ -184,6 +200,7 @@ export default async function AdminDashboardPage() {
           value={`$${totalCost.toFixed(2)}`}
           icon={DollarSign}
           kind="signal"
+          trend={costTrend}
           footer={
             <ProgressBar
               value={Math.round((totalCost / 40) * 100)}
@@ -256,49 +273,7 @@ export default async function AdminDashboardPage() {
         </Panel>
 
         <Panel title="Recent activity">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {runs.slice(0, 8).map((run) => (
-              <div
-                key={run.id}
-                style={{
-                  display: 'flex',
-                  gap: 12,
-                  alignItems: 'flex-start',
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 11,
-                    color: 'var(--fg-subtle)',
-                    fontVariantNumeric: 'tabular-nums',
-                    minWidth: 56,
-                    fontFamily: "'JetBrains Mono', monospace",
-                  }}
-                >
-                  {run.startedAt
-                    ? new Date(run.startedAt).toLocaleTimeString('en-US', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })
-                    : new Date(run.createdAt).toLocaleTimeString('en-US', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                </span>
-                <div style={{ flex: 1, fontSize: 13 }}>
-                  <div style={{ color: 'var(--fg)', fontWeight: 500 }}>
-                    {run.status === 'success'
-                      ? `${run.venueName ?? 'Venue'} crawl ok`
-                      : `${run.venueName ?? 'Venue'} crawl ${run.status}`}
-                  </div>
-                  <div style={{ color: 'var(--fg-muted)', fontSize: 12 }}>
-                    {run.eventsFound} events ·{' '}
-                    {run.extractionStrategyUsed ?? '—'}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <ActivityFeed runs={runs} />
         </Panel>
       </div>
     </div>
