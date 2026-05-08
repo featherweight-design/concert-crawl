@@ -2,7 +2,6 @@
 
 import { useAdminTheme } from './AdminThemeProvider'
 import { UserButton } from '@clerk/nextjs'
-import { Sun, Moon } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import { NAV } from './nav'
 
@@ -17,7 +16,7 @@ const useBreadcrumb = () => {
 }
 
 export const AdminTopbar = () => {
-  const { theme, toggle } = useAdminTheme()
+  const { theme, setTheme } = useAdminTheme()
   const breadcrumb = useBreadcrumb()
 
   return (
@@ -37,24 +36,42 @@ export const AdminTopbar = () => {
         {breadcrumb}
       </span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button
-          onClick={toggle}
-          title={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
+        <div
+          role="group"
+          aria-label="Theme"
           style={{
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 32,
-            height: 32,
-            borderRadius: 6,
-            background: 'transparent',
+            background: 'var(--surface-1)',
+            borderRadius: 8,
+            padding: 2,
+            gap: 2,
             border: '1px solid var(--border)',
-            cursor: 'pointer',
-            color: 'var(--fg-muted)',
           }}
         >
-          {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
-        </button>
+          {(['light', 'dark'] as const).map((themeOption) => (
+            <button
+              key={themeOption}
+              onClick={() => setTheme(themeOption)}
+              aria-pressed={theme === themeOption}
+              style={{
+                height: 26,
+                padding: '0 10px',
+                borderRadius: 6,
+                fontSize: 12,
+                fontWeight: 500,
+                border: 'none',
+                cursor: 'pointer',
+                background:
+                  theme === themeOption ? 'var(--bg-elevated)' : 'transparent',
+                color: theme === themeOption ? 'var(--fg)' : 'var(--fg-muted)',
+                boxShadow: theme === themeOption ? 'var(--shadow-sm)' : 'none',
+                transition: 'background 0.1s, color 0.1s',
+              }}
+            >
+              {themeOption.charAt(0).toUpperCase() + themeOption.slice(1)}
+            </button>
+          ))}
+        </div>
         <UserButton />
       </div>
     </header>
