@@ -1,53 +1,271 @@
+import { auth } from '@clerk/nextjs/server'
+import {
+  DollarSign,
+  Activity,
+  CheckSquare,
+  MapPin,
+  ChevronRight,
+} from 'lucide-react'
 import { requireAdminUser } from '@/lib/auth'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { apiClient } from '@/lib/api'
+import type { CrawlRun, Venue } from '@concert-crawl/types'
+import {
+  StatCard,
+  Panel,
+  AdminTable,
+  THead,
+  TR,
+  TH,
+  TD,
+  StatusBadge,
+  AdminButton,
+  ProgressBar,
+  CostText,
+  RelTime,
+} from '@/components/admin/primitives'
+import type { StatusKind } from '@/components/admin/primitives'
+
+interface CrawlStatusRow {
+  venueId: string
+  venueName: string
+  status: string
+  lastRunAt: string | null
+  eventsFound: number
+  strategy: string
+  cost: number
+  error: string | null
+}
+
+async function fetchDashboardData(token: string) {
+  const [status, venues, runs] = await Promise.all([
+    apiClient.get<CrawlStatusRow[]>('/v1/admin/crawl/status', token),
+    apiClient.get<Venue[]>('/v1/admin/venues', token),
+    apiClient.get<CrawlRun[]>('/v1/admin/crawl/runs?limit=20', token),
+  ])
+  return { status, venues, runs }
+}
+
+const STATUS_KIND: Record<string, StatusKind> = {
+  success: 'success',
+  failed: 'danger',
+  blocked: 'danger',
+  partial: 'warning',
+  paused: 'warning',
+  never: 'neutral',
+}
 
 export default async function AdminDashboardPage() {
   const user = await requireAdminUser()
+  const { getToken } = await auth()
+  const token = await getToken()
+  if (!token) return null
+
+  const firstName = user.firstName ?? user.email
+
+  const { status, venues, runs } = await fetchDashboardData(token)
+
+  const hour = new Date().getHours()
+  const greeting =
+    hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+
+  const greenCount = status.filter((row) => row.status === 'success').length
+  const blockedCount = status.filter(
+    (row) => row.status === 'blocked' || row.status === 'failed',
+  ).length
+  const totalCost = runs.reduce((sum, run) => sum + (run.llmCostUsd ?? 0), 0)
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-        <p className="text-fg-muted">
-          Welcome back, {user.firstName ?? user.email}
-        </p>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {/* Greeting */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 14,
+          flexWrap: 'wrap',
+        }}
+      >
+        <div>
+          <h1
+            style={{
+              margin: 0,
+              fontFamily: "'Inter', sans-serif",
+              fontSize: 26,
+              fontWeight: 700,
+              color: 'var(--fg)',
+              letterSpacing: '-0.025em',
+            }}
+          >
+            {greeting}, {firstName}.
+          </h1>
+          <div style={{ marginTop: 4, fontSize: 13, color: 'var(--fg-muted)' }}>
+            {greenCount} of {status.length} venues green ·{' '}
+            {blockedCount > 0 ? `${blockedCount} blocked` : 'all healthy'}
+          </div>
+        </div>
+        <div
+          style={{
+            marginLeft: 'auto',
+            display: 'flex',
+            gap: 8,
+            alignItems: 'center',
+          }}
+        >
+          <StatusBadge kind="signal" variant="mono" dot>
+            SSE LIVE
+          </StatusBadge>
+          <AdminButton variant="primary" icon={MapPin}>
+            Add venue
+          </AdminButton>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-fg-muted">
-              Venues
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">—</p>
-            <p className="text-xs text-fg-subtle">
-              Populated after venue setup
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-fg-muted">
-              Invite Codes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">—</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-fg-muted">
-              Last Crawl
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">—</p>
-            <p className="text-xs text-fg-subtle">Crawler live in Phase 3</p>
-          </CardContent>
-        </Card>
+      {/* Stat row */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: 16,
+        }}
+      >
+        <StatCard
+          label="Pending review"
+          value="0"
+          unit="events"
+          icon={CheckSquare}
+          kind="warning"
+          footer={
+            <AdminButton
+              variant="ghost"
+              size="sm"
+              iconRight={ChevronRight}
+              fullWidth
+            >
+              Open queue
+            </AdminButton>
+          }
+        />
+        <StatCard
+          label="LLM cost · 30d"
+          value={`$${totalCost.toFixed(2)}`}
+          icon={DollarSign}
+          kind="signal"
+          footer={
+            <ProgressBar
+              value={Math.round((totalCost / 40) * 100)}
+              kind="signal"
+              showLabel={false}
+            />
+          }
+        />
+        <StatCard
+          label="Crawl health"
+          value={`${greenCount}/${status.length}`}
+          unit="green"
+          icon={Activity}
+          kind={blockedCount > 0 ? 'warning' : 'success'}
+          hint={
+            blockedCount > 0 ? `${blockedCount} blocked` : 'All venues healthy'
+          }
+        />
+        <StatCard
+          label="Active venues"
+          value={String(venues.filter((venue) => venue.active).length)}
+          unit="venues"
+          icon={MapPin}
+          kind="neutral"
+        />
+      </div>
+
+      {/* Health table + Activity feed */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <Panel title="Crawl health · today" padding={0}>
+          <AdminTable>
+            <THead>
+              <tr>
+                <TH>Venue</TH>
+                <TH>Status</TH>
+                <TH>Last crawl</TH>
+                <TH align="right" mono>
+                  Events
+                </TH>
+                <TH align="right" mono>
+                  Cost
+                </TH>
+              </tr>
+            </THead>
+            <tbody>
+              {status.map((row) => (
+                <TR key={row.venueId}>
+                  <TD>{row.venueName}</TD>
+                  <TD>
+                    <StatusBadge
+                      kind={STATUS_KIND[row.status] ?? 'neutral'}
+                      dot
+                    >
+                      {row.status}
+                    </StatusBadge>
+                  </TD>
+                  <TD color="var(--fg-muted)">
+                    {row.lastRunAt ? <RelTime iso={row.lastRunAt} /> : '—'}
+                  </TD>
+                  <TD align="right" mono>
+                    {row.eventsFound}
+                  </TD>
+                  <TD align="right">
+                    <CostText value={row.cost} />
+                  </TD>
+                </TR>
+              ))}
+            </tbody>
+          </AdminTable>
+        </Panel>
+
+        <Panel title="Recent activity">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {runs.slice(0, 8).map((run) => (
+              <div
+                key={run.id}
+                style={{
+                  display: 'flex',
+                  gap: 12,
+                  alignItems: 'flex-start',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--fg-subtle)',
+                    fontVariantNumeric: 'tabular-nums',
+                    minWidth: 56,
+                    fontFamily: "'JetBrains Mono', monospace",
+                  }}
+                >
+                  {run.startedAt
+                    ? new Date(run.startedAt).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : new Date(run.createdAt).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                </span>
+                <div style={{ flex: 1, fontSize: 13 }}>
+                  <div style={{ color: 'var(--fg)', fontWeight: 500 }}>
+                    {run.status === 'success'
+                      ? `${run.venueName ?? 'Venue'} crawl ok`
+                      : `${run.venueName ?? 'Venue'} crawl ${run.status}`}
+                  </div>
+                  <div style={{ color: 'var(--fg-muted)', fontSize: 12 }}>
+                    {run.eventsFound} events ·{' '}
+                    {run.extractionStrategyUsed ?? '—'}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Panel>
       </div>
     </div>
   )
