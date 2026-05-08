@@ -13,6 +13,7 @@ import {
   googleMapsUrl,
 } from '@/components/consumer/definitions/lib'
 import { copy } from '@/components/consumer/definitions/copy'
+import { IdentityArt } from '@/components/consumer/identity-art/IdentityArt'
 
 interface VenueProfilePageProps {
   params: Promise<{ slug: string }>
@@ -37,20 +38,6 @@ export default async function VenueProfilePage({
 
   const { venue, upcomingEvents } = result
 
-  // Initials from first two words
-  const words = venue.name.split(' ')
-  const initials =
-    words.length >= 2
-      ? (words[0]?.charAt(0) ?? '') + (words[1]?.charAt(0) ?? '')
-      : venue.name.charAt(0)
-
-  // Deterministic gradient hue from venue name
-  const hues = [30, 160, 260, 80, 320, 200]
-  const hueIdx =
-    venue.name.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0) %
-    hues.length
-  const hue = hues[hueIdx] ?? 200
-
   const mapsAddress = `${venue.name}, ${venue.city}`
 
   return (
@@ -62,27 +49,12 @@ export default async function VenueProfilePage({
 
       {/* Hero — 320px */}
       <div className="relative w-full shrink-0" style={{ height: 320 }}>
-        {/* Gradient placeholder — replace with real imagery later */}
-        <div
-          className="flex h-full w-full items-center justify-center"
-          style={{
-            background: `linear-gradient(160deg, oklch(0.28 0.08 ${hue}), oklch(0.18 0.06 ${hue + 40}))`,
-          }}
-        >
-          <span
-            className="select-none"
-            style={{
-              fontFamily: 'var(--font-ui)',
-              fontWeight: 800,
-              fontSize: 106,
-              color: `oklch(0.60 0.12 ${hue})`,
-              opacity: 0.5,
-              letterSpacing: '-0.03em',
-            }}
-          >
-            {initials}
-          </span>
-        </div>
+        <IdentityArt
+          kind="venue"
+          name={venue.name}
+          scale="hero"
+          className="absolute inset-0"
+        />
         {/* Image tint */}
         <div
           className="pointer-events-none absolute inset-0"
