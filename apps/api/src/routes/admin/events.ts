@@ -64,6 +64,40 @@ eventsAdminRouter.patch(
   },
 )
 
+// PATCH /v1/admin/events/:id — partial update (verified, status)
+eventsAdminRouter.patch(
+  '/:id',
+  zValidator('param', eventIdSchema),
+  zValidator(
+    'json',
+    z.object({
+      verified: z.boolean().optional(),
+      status: z.enum(['upcoming', 'cancelled', 'postponed']).optional(),
+    }),
+  ),
+  async (ctx) => {
+    const { id } = ctx.req.valid('param')
+    const body = ctx.req.valid('json')
+
+    const [updated] = await db
+      .update(events)
+      .set({ ...body, updatedAt: new Date() })
+      .where(eq(events.id, id))
+      .returning()
+
+    if (!updated) {
+      return ctx.json({ success: false, error: 'Not found' } as const, 404)
+    }
+
+    const actor = getAuthUser(ctx)
+    ctx.set('auditAction', 'event.update')
+    ctx.set('auditTargetId', id)
+    ctx.set('auditActorId', actor.userId)
+
+    return ctx.json({ success: true, data: updated } as const)
+  },
+)
+
 // DELETE /v1/admin/events/:id — reject and remove an unverified event
 eventsAdminRouter.delete(
   '/:id',

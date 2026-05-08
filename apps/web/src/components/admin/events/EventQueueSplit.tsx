@@ -9,7 +9,10 @@ import {
   Panel,
   Kbd,
 } from '@/components/admin/primitives'
+import { EventFilterRail } from './EventFilterRail'
 import { Check, X } from 'lucide-react'
+
+type StatusFilter = 'low_conf' | 'unverified' | 'verified'
 
 interface AdminEvent {
   id: string
@@ -39,6 +42,7 @@ export const EventQueueSplit = ({ initialEvents, token: _token }: Props) => {
     events[0]?.id ?? null,
   )
   const [filter, setFilter] = useState<FilterKind>('pending')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter | null>(null)
   const [processing, setProcessing] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
@@ -202,6 +206,17 @@ export const EventQueueSplit = ({ initialEvents, token: _token }: Props) => {
             overflowY: 'auto',
           }}
         >
+          <div
+            style={{
+              padding: '10px 14px',
+              borderBottom: '1px solid var(--border)',
+            }}
+          >
+            <EventFilterRail
+              activeFilter={statusFilter}
+              onFilterChange={setStatusFilter}
+            />
+          </div>
           {filtered.map((ev) => {
             const conf = Number(ev.confidenceScore ?? 0)
             const active = ev.id === selectedId
@@ -240,16 +255,42 @@ export const EventQueueSplit = ({ initialEvents, token: _token }: Props) => {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div
                     style={{
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: 'var(--fg)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
                       marginBottom: 2,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
                     }}
                   >
-                    {ev.artist || ev.title}
+                    <span
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: 'var(--fg)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        flex: 1,
+                        minWidth: 0,
+                      }}
+                    >
+                      {ev.artist || ev.title}
+                    </span>
+                    {ev.confidenceScore !== null &&
+                      parseFloat(ev.confidenceScore) < 0.7 && (
+                        <span
+                          style={{
+                            padding: '1px 6px',
+                            borderRadius: 999,
+                            fontSize: 10,
+                            background: 'rgba(184,117,20,0.12)',
+                            color: 'var(--warning)',
+                            border: '1px solid rgba(184,117,20,0.25)',
+                            flexShrink: 0,
+                          }}
+                        >
+                          low conf.
+                        </span>
+                      )}
                   </div>
                   <div
                     style={{
