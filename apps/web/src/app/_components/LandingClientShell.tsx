@@ -31,31 +31,7 @@ interface LandingClientShellProps {
 export default function LandingClientShell({ shows }: LandingClientShellProps) {
   const [waitlistOpen, setWaitlistOpen] = useState(false)
 
-  const ctaWaitlist = (
-    <button
-      onClick={() => setWaitlistOpen(true)}
-      style={{
-        all: 'unset',
-        cursor: 'pointer',
-        textAlign: 'center',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: 52,
-        borderRadius: 10,
-        background: 'var(--signal)',
-        color: 'var(--fg-on-accent)',
-        fontFamily: 'Inter, system-ui',
-        fontWeight: 800,
-        fontSize: 16,
-        letterSpacing: '-0.01em',
-        boxShadow: '0 12px 32px -12px var(--signal)',
-      }}
-    >
-      Join the waitlist
-    </button>
-  )
-
+  // "I have a code" is the primary action — it's the path for beta users
   const ctaCode = (
     <Link
       href="/auth/code"
@@ -67,6 +43,36 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
         alignItems: 'center',
         justifyContent: 'center',
         height: 52,
+        paddingLeft: 20,
+        paddingRight: 20,
+        borderRadius: 10,
+        background: 'var(--signal)',
+        color: 'var(--fg-on-accent)',
+        fontFamily: 'Inter, system-ui',
+        fontWeight: 800,
+        fontSize: 16,
+        letterSpacing: '-0.01em',
+        boxShadow: '0 8px 24px -8px var(--signal)',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      I have a code →
+    </Link>
+  )
+
+  const ctaWaitlist = (
+    <button
+      onClick={() => setWaitlistOpen(true)}
+      style={{
+        all: 'unset',
+        cursor: 'pointer',
+        textAlign: 'center',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: 52,
+        paddingLeft: 20,
+        paddingRight: 20,
         borderRadius: 10,
         background: 'transparent',
         color: 'var(--fg)',
@@ -74,10 +80,11 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
         fontFamily: 'Inter, system-ui',
         fontWeight: 600,
         fontSize: 15,
+        whiteSpace: 'nowrap',
       }}
     >
-      I have a code →
-    </Link>
+      Join the waitlist
+    </button>
   )
 
   return (
@@ -167,13 +174,10 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
             </p>
           </div>
 
-          {/* CTAs — desktop only (shown in left column alongside stack) */}
-          <div
-            className="hidden md:flex flex-col gap-3"
-            style={{ maxWidth: 400 }}
-          >
-            {ctaWaitlist}
+          {/* CTAs — desktop only (horizontal row: code primary, waitlist secondary) */}
+          <div className="hidden md:flex flex-row gap-3">
             {ctaCode}
+            {ctaWaitlist}
           </div>
         </div>
 
@@ -187,10 +191,10 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
           />
         </div>
 
-        {/* CTAs — mobile only (below poster stack) */}
+        {/* CTAs — mobile only (stacked: code primary, waitlist secondary) */}
         <div className="flex flex-col gap-3 md:hidden">
-          {ctaWaitlist}
           {ctaCode}
+          {ctaWaitlist}
         </div>
 
         {/* Vibes */}

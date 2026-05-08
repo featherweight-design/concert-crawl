@@ -11,6 +11,17 @@ interface GigPosterStackProps {
   intervalMs?: number
 }
 
+const LAYERS = [
+  { x: 0, y: 0, rr: -1.5, scale: 1 },
+  { x: 14, y: 10, rr: 3.5, scale: 0.985 },
+  { x: -10, y: 20, rr: -5, scale: 0.97 },
+] as const
+
+// Starting position for the incoming card — just behind the back layer, initially hidden
+const INCOMING_REST = { x: -16, y: 34, rr: -7, scale: 0.955 }
+
+const LAYER_BRIGHTNESS = [1, 0.97, 0.94, 0.91] as const
+
 export function GigPosterStack({
   shows,
   width = 320,
@@ -24,7 +35,7 @@ export function GigPosterStack({
     if (phase !== 'rest') return
     setPhase('advancing')
     setTimeout(() => {
-      setIdx((ii) => (ii + 1) % shows.length)
+      setIdx((prev) => (prev + 1) % shows.length)
       setPhase('rest')
     }, 900)
   }, [phase, shows.length])
@@ -37,18 +48,14 @@ export function GigPosterStack({
 
   if (shows.length === 0) return null
 
+  // 4 cards: front (leaving), mid, back, incoming (hidden in rest, slides in during advance)
   const order: Show[] = [
     shows[idx % shows.length]!,
     shows[(idx + 1) % shows.length]!,
     shows[(idx + 2) % shows.length]!,
+    shows[(idx + 3) % shows.length]!,
   ]
   const palettes = order.map((ss) => pickPalette(ss.artist))
-
-  const layers = [
-    { x: 0, y: 0, rr: -1.5, scale: 1 },
-    { x: 14, y: 10, rr: 3.5, scale: 0.985 },
-    { x: -10, y: 20, rr: -5, scale: 0.97 },
-  ]
 
   const padX = Math.max(28, Math.round(width * 0.1))
   const padY = Math.max(36, Math.round(height * 0.1))
@@ -66,27 +73,37 @@ export function GigPosterStack({
         cursor: 'pointer',
       }}
     >
-      {layers.map((layer, ii) => {
-        const isTop = ii === 0
-        const isMid = ii === 1
-
+      {([0, 1, 2, 3] as const).map((ii) => {
         let transform: string
         let opacity: number
+
         if (phase === 'advancing') {
-          if (isTop) {
-            transform = `translate(${layer.x - 24}px, ${layer.y - 110}px) rotate(${layer.rr - 12}deg) scale(${layer.scale * 1.04})`
+          if (ii === 0) {
+            transform = `translate(${LAYERS[0].x - 24}px, ${LAYERS[0].y - 110}px) rotate(${LAYERS[0].rr - 12}deg) scale(${LAYERS[0].scale * 1.04})`
             opacity = 0
-          } else if (isMid) {
-            transform = `translate(${layers[0]!.x}px, ${layers[0]!.y}px) rotate(${layers[0]!.rr}deg) scale(${layers[0]!.scale})`
+          } else if (ii === 1) {
+            transform = `translate(${LAYERS[0].x}px, ${LAYERS[0].y}px) rotate(${LAYERS[0].rr}deg) scale(${LAYERS[0].scale})`
+            opacity = 1
+          } else if (ii === 2) {
+            transform = `translate(${LAYERS[1].x}px, ${LAYERS[1].y}px) rotate(${LAYERS[1].rr}deg) scale(${LAYERS[1].scale})`
             opacity = 1
           } else {
-            transform = `translate(${layers[1]!.x}px, ${layers[1]!.y}px) rotate(${layers[1]!.rr}deg) scale(${layers[1]!.scale})`
+            // incoming slides into back position
+            transform = `translate(${LAYERS[2].x}px, ${LAYERS[2].y}px) rotate(${LAYERS[2].rr}deg) scale(${LAYERS[2].scale})`
             opacity = 1
           }
         } else {
-          transform = `translate(${layer.x}px, ${layer.y}px) rotate(${layer.rr}deg) scale(${layer.scale})`
-          opacity = 1
+          if (ii === 3) {
+            transform = `translate(${INCOMING_REST.x}px, ${INCOMING_REST.y}px) rotate(${INCOMING_REST.rr}deg) scale(${INCOMING_REST.scale})`
+            opacity = 0
+          } else {
+            const layer = LAYERS[ii]
+            transform = `translate(${layer.x}px, ${layer.y}px) rotate(${layer.rr}deg) scale(${layer.scale})`
+            opacity = 1
+          }
         }
+
+        const brightness = LAYER_BRIGHTNESS[ii]
 
         return (
           <div
@@ -104,12 +121,7 @@ export function GigPosterStack({
                   : 'transform 0.4s ease-out, opacity 0.4s ease-out',
               opacity,
               willChange: 'transform, opacity',
-              filter:
-                ii === 2
-                  ? 'brightness(0.94)'
-                  : ii === 1
-                    ? 'brightness(0.97)'
-                    : 'none',
+              filter: brightness < 1 ? `brightness(${brightness})` : 'none',
             }}
           >
             <GigPoster
@@ -121,6 +133,36 @@ export function GigPosterStack({
           </div>
         )
       })}
+
+      {/* Indicator dots */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 6,
+          left: 0,
+          right: 0,
+          display: 'flex',
+          justifyContent: 'center',
+          gap: 6,
+          zIndex: 20,
+        }}
+      >
+        {shows.map((_, dotIndex) => (
+          <div
+            key={dotIndex}
+            style={{
+              width: dotIndex === idx ? 7 : 5,
+              height: dotIndex === idx ? 7 : 5,
+              borderRadius: '50%',
+              background:
+                dotIndex === idx
+                  ? 'rgba(255, 255, 255, 0.85)'
+                  : 'rgba(255, 255, 255, 0.28)',
+              transition: 'all 0.3s ease',
+            }}
+          />
+        ))}
+      </div>
     </div>
   )
 }
