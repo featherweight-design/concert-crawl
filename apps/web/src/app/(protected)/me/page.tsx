@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth'
 import { fetchMe, fetchMySubmissions } from '@/lib/users'
 import { SettingsRoute } from '@/components/settings/SettingsRoute'
 import { SettingsRouteDesktop } from '@/components/settings/SettingsRouteDesktop'
+import { ThemeSync } from '@/components/settings/ThemeSync'
 
 export const metadata = { title: 'Settings — Concert Crawl' }
 
@@ -17,6 +18,7 @@ export default async function MePage() {
 
   return (
     <>
+      <ThemeSync serverTheme={profile.theme} />
       {/* Mobile (< sm) */}
       <div className="sm:hidden">
         <SettingsRoute profile={profile} submissions={submissions} />
