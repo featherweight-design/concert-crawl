@@ -53,7 +53,7 @@ export default async function VenueProfilePage({
           kind="venue"
           name={venue.name}
           scale="hero"
-          className="absolute inset-0"
+          style={{ position: 'absolute', inset: 0 }}
         />
         {/* Image tint */}
         <div

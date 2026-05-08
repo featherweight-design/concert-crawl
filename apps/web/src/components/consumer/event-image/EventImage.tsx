@@ -34,6 +34,7 @@ export function EventImage({
         name={artist ?? alt}
         kind="artist"
         scale={identityScale}
+        aria-label={alt}
         {...(className !== undefined && { className })}
       />
     )

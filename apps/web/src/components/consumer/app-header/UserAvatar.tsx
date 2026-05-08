@@ -53,7 +53,7 @@ export function UserAvatar() {
         ) : (
           <span
             className="flex h-full w-full items-center justify-center text-[13px] font-bold text-fg-muted"
-            style={{ background: 'var(--bg-subtle)' }}
+            style={{ background: 'var(--surface-1)' }}
           >
             {initials}
           </span>

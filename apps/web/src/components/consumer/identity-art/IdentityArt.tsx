@@ -41,6 +41,7 @@ export interface IdentityArtProps {
   rotateOverride?: 0 | 1 | 2 | 3
   className?: string
   style?: React.CSSProperties
+  'aria-label'?: string
 }
 
 // ── Hash ──────────────────────────────────────────────────────
@@ -589,6 +590,7 @@ export const IdentityArt = ({
   rotateOverride,
   className,
   style,
+  'aria-label': ariaLabel,
 }: IdentityArtProps) => {
   const resolved = identityFor(name, kind, {
     ...(templateOverride !== undefined && { templateOverride }),
@@ -615,6 +617,8 @@ export const IdentityArt = ({
   return (
     <div
       className={className}
+      aria-label={ariaLabel}
+      role={ariaLabel ? 'img' : undefined}
       style={{
         position: 'relative',
         width: width != null ? width : '100%',
