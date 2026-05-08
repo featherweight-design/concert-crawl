@@ -73,6 +73,11 @@ export function DisputeForm({ submission, eventId }: DisputeFormProps) {
     setSubmitting(true)
     try {
       const token = await getToken()
+      if (!token) {
+        setErrorMsg('You must be signed in to file a dispute.')
+        setSubmitting(false)
+        return
+      }
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/v1/submissions/${submission.id}/dispute`,
         {
@@ -113,7 +118,7 @@ export function DisputeForm({ submission, eventId }: DisputeFormProps) {
 
       <div className="grid grid-cols-2 gap-3">
         <SPNumberField
-          label="Floor *"
+          label="Floor"
           value={floor}
           onChange={setFloor}
           placeholder="35"

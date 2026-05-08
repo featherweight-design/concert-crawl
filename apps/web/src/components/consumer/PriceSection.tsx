@@ -68,6 +68,7 @@ export function PriceSection({
                 ...sub,
                 confirms: data.data.confirms,
                 status: data.data.status,
+                byYou: true,
               }
             : sub,
         ),
@@ -84,6 +85,7 @@ export function PriceSection({
       <CommunityPriceChip
         topSubmission={topSubmission}
         submissionCount={submissions.length}
+        currentUserId={userId ?? null}
         onConfirm={handleQuickConfirm}
         onOpenVerify={() => setVerifyOpen(true)}
       />

@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { and, eq, sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { db, priceSubmissions, submissionConfirms } from '@concert-crawl/db'
 import { SP_POLICY } from '@concert-crawl/types'
 import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js'
@@ -56,20 +56,22 @@ submissionsRouter.post('/:id/confirm', clerkAuth, requireAuth, async (ctx) => {
   let newCount = submission.corroborationCount
 
   if (inserted.length > 0) {
-    newCount = submission.corroborationCount + 1
-    newStatus =
-      newCount >= SP_POLICY.confirmsRequired
-        ? 'corroborated'
-        : submission.status
-
-    await db
+    const [updated] = await db
       .update(priceSubmissions)
       .set({
-        corroborationCount: newCount,
-        status: newStatus,
+        corroborationCount: sql`${priceSubmissions.corroborationCount} + 1`,
+        status: sql`CASE WHEN ${priceSubmissions.corroborationCount} + 1 >= ${SP_POLICY.confirmsRequired} THEN 'corroborated'::price_submission_status ELSE ${priceSubmissions.status} END`,
         updatedAt: sql`now()`,
       })
       .where(eq(priceSubmissions.id, submissionId))
+      .returning({
+        corroborationCount: priceSubmissions.corroborationCount,
+        status: priceSubmissions.status,
+      })
+    if (updated) {
+      newCount = updated.corroborationCount
+      newStatus = updated.status
+    }
   }
 
   return ctx.json({
@@ -78,18 +80,23 @@ submissionsRouter.post('/:id/confirm', clerkAuth, requireAuth, async (ctx) => {
   })
 })
 
-const disputeBodySchema = z.object({
-  floor: z.number().int().min(SP_POLICY.floorMin).max(SP_POLICY.floorMax),
-  ceiling: z.number().int().min(1).max(SP_POLICY.ceilingMax).optional(),
-  vendor: z.enum([
-    'AXS',
-    'Ticketmaster',
-    'SeatGeek',
-    'DICE',
-    'Eventbrite',
-    'VenueBoxOffice',
-  ]),
-})
+const disputeBodySchema = z
+  .object({
+    floor: z.number().int().min(SP_POLICY.floorMin).max(SP_POLICY.floorMax),
+    ceiling: z.number().int().min(1).max(SP_POLICY.ceilingMax).optional(),
+    vendor: z.enum([
+      'AXS',
+      'Ticketmaster',
+      'SeatGeek',
+      'DICE',
+      'Eventbrite',
+      'VenueBoxOffice',
+    ]),
+  })
+  .refine((data) => !data.ceiling || data.ceiling >= data.floor, {
+    message: "Ceiling can't be below floor.",
+    path: ['ceiling'],
+  })
 
 // POST /v1/submissions/:id/dispute
 submissionsRouter.post(
@@ -183,6 +190,10 @@ const patchBodySchema = z
   .refine((data) => Object.keys(data).length > 0, {
     message: 'At least one field required',
   })
+  .refine(
+    (data) => !data.floor || !data.ceiling || data.ceiling >= data.floor,
+    { message: "Ceiling can't be below floor.", path: ['ceiling'] },
+  )
 
 // PATCH /v1/submissions/:id
 submissionsRouter.patch(

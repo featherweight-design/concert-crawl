@@ -5,6 +5,7 @@ import type { SubmissionWithMeta } from '@concert-crawl/types'
 interface CommunityPriceChipProps {
   topSubmission: SubmissionWithMeta
   submissionCount: number
+  currentUserId: string | null
   onConfirm: () => void
   onOpenVerify: () => void
 }
@@ -12,10 +13,15 @@ interface CommunityPriceChipProps {
 export function CommunityPriceChip({
   topSubmission,
   submissionCount,
+  currentUserId,
   onConfirm,
   onOpenVerify,
 }: CommunityPriceChipProps) {
   const isCorroborated = topSubmission.status === 'corroborated'
+  const canConfirm =
+    !topSubmission.byYou &&
+    currentUserId != null &&
+    topSubmission.userId !== currentUserId
 
   return (
     <div className="rounded-xl bg-surface-1 border border-border p-[14px] flex flex-col gap-[10px]">
@@ -56,9 +62,14 @@ export function CommunityPriceChip({
 
       {/* Actions */}
       <div className="flex items-center justify-between pt-2 border-t border-dashed border-border">
-        <button onClick={onConfirm} className="text-sm text-signal font-medium">
-          Saw the same
-        </button>
+        {canConfirm && (
+          <button
+            onClick={onConfirm}
+            className="text-sm text-signal font-medium"
+          >
+            Saw the same
+          </button>
+        )}
         <button
           onClick={onOpenVerify}
           className="text-sm text-fg-muted underline"

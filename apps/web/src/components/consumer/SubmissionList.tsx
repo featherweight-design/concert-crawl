@@ -110,6 +110,7 @@ export function SubmissionList({
 
   async function handleConfirm(submissionId: string) {
     const token = await getToken()
+    if (!token) return
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/v1/submissions/${submissionId}/confirm`,
       {
@@ -128,6 +129,7 @@ export function SubmissionList({
                 ...sub,
                 confirms: data.data.confirms,
                 status: data.data.status,
+                byYou: true,
               }
             : sub,
         ),

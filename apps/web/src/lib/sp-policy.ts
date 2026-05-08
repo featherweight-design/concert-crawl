@@ -24,9 +24,7 @@ export function validateSubmission(
   const warnings: ValidationResult['warnings'] = {}
 
   const floorNum = Number(input.floor)
-  if (!input.floor) {
-    errors.floor = 'Enter a floor price.'
-  } else if (isNaN(floorNum) || floorNum < SP_POLICY.floorMin) {
+  if (!input.floor || isNaN(floorNum) || floorNum < SP_POLICY.floorMin) {
     errors.floor = 'Has to be at least $1.'
   } else if (floorNum > SP_POLICY.floorMax) {
     errors.floor = 'Cap is $2000 — pick a number that exists.'

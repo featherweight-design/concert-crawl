@@ -89,6 +89,11 @@ export function SubmitForm({
     setPhase('submitting')
     try {
       const token = await getToken()
+      if (!token) {
+        setErrorMsg('You must be signed in to submit a price.')
+        setPhase('error')
+        return
+      }
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/v1/events/${event.id}/price-submissions`,
         {
@@ -110,6 +115,7 @@ export function SubmitForm({
       if (!res.ok) {
         if (res.status === 409) {
           setPhase('alreadySubmitted')
+          router.refresh()
           return
         }
         throw new Error(data.error ?? 'Submission failed')
@@ -209,7 +215,7 @@ export function SubmitForm({
       {/* Floor + Ceiling */}
       <div className="grid grid-cols-2 gap-3">
         <SPNumberField
-          label="Floor *"
+          label="Floor"
           value={formState.floor}
           onChange={(val) => setFormState((prev) => ({ ...prev, floor: val }))}
           placeholder="35"

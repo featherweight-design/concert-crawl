@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { and, desc, eq, ne, sql } from 'drizzle-orm'
+import { and, desc, eq, gt, ne, sql } from 'drizzle-orm'
 import { db, events, priceSubmissions } from '@concert-crawl/db'
 import { SP_POLICY } from '@concert-crawl/types'
 import {
@@ -11,20 +11,25 @@ import {
   getAuthOptional,
 } from '../middleware/auth.js'
 
-const submissionBodySchema = z.object({
-  priceMin: z.number().int().min(SP_POLICY.floorMin).max(SP_POLICY.floorMax),
-  priceMax: z.number().int().min(1).max(SP_POLICY.ceilingMax).optional(),
-  tier: z.enum(['GA', 'Reserved', 'VIP', 'Pit', 'Lawn']),
-  vendor: z.enum([
-    'AXS',
-    'Ticketmaster',
-    'SeatGeek',
-    'DICE',
-    'Eventbrite',
-    'VenueBoxOffice',
-  ]),
-  howFound: z.enum(['bought_myself', 'saw_listing', 'at_the_venue']),
-})
+const submissionBodySchema = z
+  .object({
+    priceMin: z.number().int().min(SP_POLICY.floorMin).max(SP_POLICY.floorMax),
+    priceMax: z.number().int().min(1).max(SP_POLICY.ceilingMax).optional(),
+    tier: z.enum(['GA', 'Reserved', 'VIP', 'Pit', 'Lawn']),
+    vendor: z.enum([
+      'AXS',
+      'Ticketmaster',
+      'SeatGeek',
+      'DICE',
+      'Eventbrite',
+      'VenueBoxOffice',
+    ]),
+    howFound: z.enum(['bought_myself', 'saw_listing', 'at_the_venue']),
+  })
+  .refine((data) => !data.priceMax || data.priceMax >= data.priceMin, {
+    message: "Ceiling can't be below floor.",
+    path: ['priceMax'],
+  })
 
 export const priceSubmissionsRouter = new Hono()
 
@@ -53,6 +58,11 @@ priceSubmissionsRouter.get('/:id/price-submissions', clerkAuth, async (ctx) => {
           SELECT COUNT(*)::int FROM submission_confirms
           WHERE submission_confirms.submission_id = ${priceSubmissions.id}
         )`,
+      byYou: sql<boolean>`EXISTS (
+          SELECT 1 FROM submission_confirms sc
+          WHERE sc.submission_id = ${priceSubmissions.id}
+            AND sc.user_id = ${userId}
+        )`,
     })
     .from(priceSubmissions)
     .where(
@@ -66,7 +76,7 @@ priceSubmissionsRouter.get('/:id/price-submissions', clerkAuth, async (ctx) => {
   const submissions = subRows.map((row) => ({
     ...row,
     confirms: Number(row.confirms),
-    byYou: userId != null && row.userId === userId,
+    byYou: Boolean(row.byYou),
   }))
 
   const userSubmission =
@@ -149,7 +159,7 @@ priceSubmissionsRouter.post(
         and(
           eq(priceSubmissions.eventId, eventId),
           eq(priceSubmissions.userId, userId),
-          sql`${priceSubmissions.createdAt} > ${cutoff}`,
+          gt(priceSubmissions.createdAt, cutoff),
         ),
       )
       .limit(1)
