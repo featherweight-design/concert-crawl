@@ -1,11 +1,10 @@
-import { auth } from '@clerk/nextjs/server'
-import { requireAdminUser } from '@/lib/auth'
+import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
 import type { InviteCode } from '@concert-crawl/types'
-import { mintInviteCode } from './actions'
-import { Plus } from 'lucide-react'
+import { Ticket, CheckCircle, XCircle, Users } from 'lucide-react'
 import {
   SectionHead,
+  StatCard,
   Panel,
   AdminTable,
   THead,
@@ -13,9 +12,9 @@ import {
   TH,
   TD,
   StatusBadge,
-  AdminButton,
 } from '@/components/admin/primitives'
 import type { StatusKind } from '@/components/admin/primitives'
+import { InviteCreatorPanel } from '@/components/admin/invite-codes/InviteCreatorPanel'
 
 type DerivedStatus = 'active' | 'redeemed' | 'expired' | 'revoked'
 
@@ -60,16 +59,7 @@ export default async function AdminInviteCodesPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <SectionHead
-        title="Invite codes"
-        actions={
-          <form action={mintInviteCode}>
-            <AdminButton variant="primary" icon={Plus} type="submit">
-              Mint code
-            </AdminButton>
-          </form>
-        }
-      />
+      <SectionHead title="Invite codes" />
 
       <div
         style={{
@@ -78,42 +68,34 @@ export default async function AdminInviteCodesPage() {
           gap: 16,
         }}
       >
-        {[
-          { label: 'Outstanding', value: outstanding },
-          { label: 'Redeemed', value: redeemed },
-          { label: 'Total issued', value: codes.length },
-          { label: 'Revoked', value: revoked },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            style={{
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border)',
-              borderRadius: 12,
-              padding: '16px 20px',
-            }}
-          >
-            <div
-              style={{
-                fontSize: 12,
-                color: 'var(--fg-muted)',
-                marginBottom: 6,
-              }}
-            >
-              {stat.label}
-            </div>
-            <div
-              style={{
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 30,
-                fontWeight: 700,
-              }}
-            >
-              {stat.value}
-            </div>
-          </div>
-        ))}
+        <StatCard
+          label="Outstanding"
+          value={String(outstanding)}
+          icon={Ticket}
+          kind="signal"
+          hint="unredeemed active codes"
+        />
+        <StatCard
+          label="Redeemed"
+          value={String(redeemed)}
+          icon={CheckCircle}
+          kind="success"
+        />
+        <StatCard
+          label="Total issued"
+          value={String(codes.length)}
+          icon={Users}
+          kind="neutral"
+        />
+        <StatCard
+          label="Revoked"
+          value={String(revoked)}
+          icon={XCircle}
+          kind="danger"
+        />
       </div>
+
+      <InviteCreatorPanel />
 
       <Panel title="Code log" padding={0}>
         <AdminTable>
@@ -124,6 +106,7 @@ export default async function AdminInviteCodesPage() {
               <TH>Created</TH>
               <TH>Redeemed</TH>
               <TH>Expires</TH>
+              <TH>Sent by</TH>
             </tr>
           </THead>
           <tbody>
@@ -162,6 +145,19 @@ export default async function AdminInviteCodesPage() {
                     {code.expiresAt != null
                       ? new Date(code.expiresAt).toLocaleDateString()
                       : 'Never'}
+                  </TD>
+                  <TD mono color="var(--fg-muted)">
+                    <span
+                      style={{
+                        padding: '2px 6px',
+                        background: 'var(--surface-1)',
+                        borderRadius: 4,
+                        border: '1px solid var(--border)',
+                        fontSize: 11,
+                      }}
+                    >
+                      {code.createdBy.slice(-8)}
+                    </span>
                   </TD>
                 </TR>
               )
