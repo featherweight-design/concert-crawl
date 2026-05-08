@@ -46,6 +46,70 @@ services:
       - key: NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL
         value: /events
 
+  - type: cron
+    name: concert-crawl-crawler-triggers
+    runtime: node
+    region: oregon
+    plan: starter
+    schedule: "*/10 * * * *"
+    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/crawler-core --filter=@concert-crawl/logger && npx playwright install --with-deps chromium
+    startCommand: pnpm --filter @concert-crawl/crawler start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CRAWL_MODE
+        value: triggers
+      - key: DATABASE_URL
+        fromDatabase:
+          name: concert-crawl-db
+          property: connectionString
+      - key: ANTHROPIC_API_KEY
+        sync: false # Enter manually in Render dashboard
+      - key: RESEND_API_KEY
+        sync: false # Enter manually in Render dashboard
+      - key: ADMIN_EMAIL
+        sync: false # Your email address for failure notifications
+      - key: ADMIN_URL
+        value: https://concertcrawl.app
+      - key: SENTRY_DSN
+        sync: false # Enter manually in Render dashboard
+      - key: SENTRY_ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: info
+
+  - type: cron
+    name: concert-crawl-crawler-daily
+    runtime: node
+    region: oregon
+    plan: starter
+    schedule: "0 9 * * *"  # 3 AM MT (UTC-6 standard / UTC-7 daylight)
+    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/crawler-core --filter=@concert-crawl/logger && npx playwright install --with-deps chromium
+    startCommand: pnpm --filter @concert-crawl/crawler start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CRAWL_MODE
+        value: daily
+      - key: DATABASE_URL
+        fromDatabase:
+          name: concert-crawl-db
+          property: connectionString
+      - key: ANTHROPIC_API_KEY
+        sync: false # Enter manually in Render dashboard
+      - key: RESEND_API_KEY
+        sync: false # Enter manually in Render dashboard
+      - key: ADMIN_EMAIL
+        sync: false # Your email address for failure notifications
+      - key: ADMIN_URL
+        value: https://concertcrawl.app
+      - key: SENTRY_DSN
+        sync: false # Enter manually in Render dashboard
+      - key: SENTRY_ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: info
+
   # --- Staging ---
 
   - type: web
@@ -92,6 +156,70 @@ services:
         value: /events
       - key: NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL
         value: /events
+
+  - type: cron
+    name: concert-crawl-crawler-triggers-staging
+    runtime: node
+    region: oregon
+    plan: starter
+    schedule: "*/10 * * * *"
+    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/crawler-core --filter=@concert-crawl/logger && npx playwright install --with-deps chromium
+    startCommand: pnpm --filter @concert-crawl/crawler start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CRAWL_MODE
+        value: triggers
+      - key: DATABASE_URL
+        fromDatabase:
+          name: concert-crawl-db-staging
+          property: connectionString
+      - key: ANTHROPIC_API_KEY
+        sync: false # Enter manually in Render dashboard
+      - key: RESEND_API_KEY
+        sync: false # Enter manually in Render dashboard
+      - key: ADMIN_EMAIL
+        sync: false # Your email address for failure notifications
+      - key: ADMIN_URL
+        sync: false # Set to staging API URL, e.g. https://concert-crawl-api-staging.onrender.com
+      - key: SENTRY_DSN
+        sync: false # Enter manually in Render dashboard
+      - key: SENTRY_ENVIRONMENT
+        value: staging
+      - key: LOG_LEVEL
+        value: info
+
+  - type: cron
+    name: concert-crawl-crawler-daily-staging
+    runtime: node
+    region: oregon
+    plan: starter
+    schedule: "0 9 * * *"  # 3 AM MT (UTC-6 standard / UTC-7 daylight)
+    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/crawler-core --filter=@concert-crawl/logger && npx playwright install --with-deps chromium
+    startCommand: pnpm --filter @concert-crawl/crawler start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CRAWL_MODE
+        value: daily
+      - key: DATABASE_URL
+        fromDatabase:
+          name: concert-crawl-db-staging
+          property: connectionString
+      - key: ANTHROPIC_API_KEY
+        sync: false # Enter manually in Render dashboard
+      - key: RESEND_API_KEY
+        sync: false # Enter manually in Render dashboard
+      - key: ADMIN_EMAIL
+        sync: false # Your email address for failure notifications
+      - key: ADMIN_URL
+        sync: false # Set to staging API URL, e.g. https://concert-crawl-api-staging.onrender.com
+      - key: SENTRY_DSN
+        sync: false # Enter manually in Render dashboard
+      - key: SENTRY_ENVIRONMENT
+        value: staging
+      - key: LOG_LEVEL
+        value: info
 
 databases:
   - name: concert-crawl-db

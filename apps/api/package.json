@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@clerk/backend": "^1.0.0",
-    "@concert-crawl/crawler-core": "workspace:*",
+    "@concert-crawl/price-pipeline": "workspace:*",
     "@concert-crawl/db": "workspace:*",
     "@concert-crawl/logger": "workspace:*",
     "@concert-crawl/types": "workspace:*",

@@ -9,7 +9,7 @@ import {
   priceSubmissions,
   venues,
 } from '@concert-crawl/db'
-import { runPricePipeline } from '@concert-crawl/crawler-core'
+import { runPricePipeline } from '@concert-crawl/price-pipeline'
 import { createLogger } from '@concert-crawl/logger'
 import { getAuthUser } from '../../middleware/auth.js'
 import type { AdminVariables } from './index.js'
