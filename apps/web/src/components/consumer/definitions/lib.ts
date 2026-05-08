@@ -77,10 +77,6 @@ export function dateGroupLabel(dateStr: string, timezone = 'UTC'): string {
   })
 }
 
-export function artistInitial(artist: string): string {
-  return artist.trim().charAt(0).toUpperCase()
-}
-
 export function venueShort(name: string): string {
   return name
     .replace(
