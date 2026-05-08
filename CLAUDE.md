@@ -116,6 +116,7 @@ These were made deliberately — understand them before proposing changes.
 - **Always open a PR for code changes** — never merge to main locally, never discard changes
 - **Always use `.github/pull_request_template.md`** when opening a PR
 - **All feature work must be done in a git worktree** — the primary repo directory (`/Users/huey/Projects/concert-crawl`) is reserved for the user's own use and testing. Worktrees live in `.worktrees/` at the project root (gitignored). Use `git worktree add .worktrees/<branch-name> -b <branch-name>` directly — do NOT use the `EnterWorktree` tool, which hardcodes `.claude/worktrees/` and cannot be configured.
+- **Keep the main repo working directory clean** — any changes made there (config edits, new plan docs, etc.) must be copied into the active worktree and committed to the feature branch before the session ends. Check `git -C /Users/huey/Projects/concert-crawl status` at the end of any session to catch stray changes.
 
 ### Session handoff
 
@@ -335,23 +336,23 @@ Phase: **Phase 7.6 (Admin UI Redesign) — in flight**
 
 ### Revised Phase Sequence
 
-| Phase | Name                                 | Status                                      |
-| ----- | ------------------------------------ | ------------------------------------------- |
-| 1     | Foundation                           | ✅ Complete                                 |
-| 2     | Venue Management (Admin)             | ✅ Complete                                 |
-| 3     | Crawler v1                           | ✅ Complete                                 |
-| 4     | Design System / Theming Architecture | ✅ Complete                                 |
-| 5     | Consumer Calendar UI (functional)    | ✅ Complete                                 |
-| 5b    | Consumer UI Design Polish            | ✅ Complete (PRs #22–24)                    |
-| 6a    | Observability SDK                    | ✅ Complete (PR #26)                        |
-| 6b    | Integration Tests                    | ✅ Complete (PR #28)                        |
-| 6c    | E2E + Smoke Tests                    | ✅ Complete (PR #29)                        |
-| 7     | Automation + Scheduling              | ✅ Complete (PR #34 merged 2026-05-07)      |
-| 7.5   | Identity Imagery (generative art)    | ✅ Complete (PR #39 merged 2026-05-08)      |
-| 7.6   | Admin UI Redesign                    | 🔄 In flight                                |
+| Phase | Name                                 | Status                                                                    |
+| ----- | ------------------------------------ | ------------------------------------------------------------------------- |
+| 1     | Foundation                           | ✅ Complete                                                               |
+| 2     | Venue Management (Admin)             | ✅ Complete                                                               |
+| 3     | Crawler v1                           | ✅ Complete                                                               |
+| 4     | Design System / Theming Architecture | ✅ Complete                                                               |
+| 5     | Consumer Calendar UI (functional)    | ✅ Complete                                                               |
+| 5b    | Consumer UI Design Polish            | ✅ Complete (PRs #22–24)                                                  |
+| 6a    | Observability SDK                    | ✅ Complete (PR #26)                                                      |
+| 6b    | Integration Tests                    | ✅ Complete (PR #28)                                                      |
+| 6c    | E2E + Smoke Tests                    | ✅ Complete (PR #29)                                                      |
+| 7     | Automation + Scheduling              | ✅ Complete (PR #34 merged 2026-05-07)                                    |
+| 7.5   | Identity Imagery (generative art)    | ✅ Complete (PR #39 merged 2026-05-08)                                    |
+| 7.6   | Admin UI Redesign                    | 🔄 In flight                                                              |
 | 8     | Beta Launch Prep                     | — (landing page, auth gate, onboarding, saving shows, user profile, etc.) |
-| 9     | UI Polish / Final Gate               | — (full UI review before private beta opens) |
-| —     | Price Transparency                   | ✅ Complete (PRs #32, #37 merged 2026-05-08)|
+| 9     | UI Polish / Final Gate               | — (full UI review before private beta opens)                              |
+| —     | Price Transparency                   | ✅ Complete (PRs #32, #37 merged 2026-05-08)                              |
 
 See the phased development plan in the design spec for the full roadmap (Phases 1–7).
 
