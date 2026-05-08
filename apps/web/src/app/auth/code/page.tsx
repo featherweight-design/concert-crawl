@@ -1,0 +1,275 @@
+'use client'
+
+import { useState, useTransition } from 'react'
+import Link from 'next/link'
+import { validateAndSetInviteCode } from './actions'
+
+type CodeState = 'empty' | 'typing' | 'submitting' | 'error'
+type ErrorKind =
+  | 'invalid_format'
+  | 'notfound'
+  | 'used'
+  | 'expired'
+  | 'ratelimit'
+  | 'server_error'
+  | null
+
+const ERROR_MESSAGES: Record<NonNullable<ErrorKind>, string> = {
+  invalid_format: 'Code format is BETA-XXXX-XXXX. Check for typos.',
+  notfound: 'Code not found. Double-check for typos.',
+  used: 'This code has already been redeemed.',
+  expired: 'This code has expired.',
+  ratelimit: 'Too many attempts. Try again in a few minutes.',
+  server_error: 'Something went wrong. Try again.',
+}
+
+function formatCodeInput(raw: string): string {
+  const clean = raw.toUpperCase().replace(/[^A-Z0-9-]/g, '')
+  if (!clean.startsWith('BETA-')) {
+    if ('BETA-'.startsWith(clean)) return clean
+    if (clean.startsWith('BETA')) return `BETA-${clean.slice(4)}`
+    return clean
+  }
+  const rest = clean.slice(5).replace(/-/g, '')
+  if (rest.length <= 4) return `BETA-${rest}`
+  return `BETA-${rest.slice(0, 4)}-${rest.slice(4, 8)}`
+}
+
+export default function InviteCodePage() {
+  const [code, setCode] = useState('')
+  const [errorKind, setErrorKind] = useState<ErrorKind>(null)
+  const [isPending, startTransition] = useTransition()
+
+  const codeState: CodeState = isPending
+    ? 'submitting'
+    : errorKind
+      ? 'error'
+      : code.length > 0
+        ? 'typing'
+        : 'empty'
+
+  void codeState
+
+  const isComplete = /^BETA-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(code)
+
+  function handleChange(ev: React.ChangeEvent<HTMLInputElement>) {
+    setErrorKind(null)
+    setCode(formatCodeInput(ev.target.value))
+  }
+
+  function handleSubmit(ev: React.FormEvent) {
+    ev.preventDefault()
+    if (!isComplete || isPending) return
+    startTransition(async () => {
+      const result = await validateAndSetInviteCode(code)
+      if (!result.ok) setErrorKind(result.error)
+    })
+  }
+
+  return (
+    <div
+      style={{
+        minHeight: '100dvh',
+        background: 'var(--bg)',
+        color: 'var(--fg)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px 22px',
+        fontFamily: 'Inter, system-ui',
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 400,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 28,
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div
+            style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 10,
+              fontWeight: 700,
+              color: 'var(--signal)',
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+            }}
+          >
+            Step 1 of 2
+          </div>
+          <h1
+            style={{
+              margin: 0,
+              fontFamily: 'Inter, system-ui',
+              fontWeight: 900,
+              fontSize: 28,
+              letterSpacing: '-0.03em',
+              lineHeight: 1.1,
+            }}
+          >
+            Enter your invite code
+          </h1>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 14,
+              color: 'var(--fg-muted)',
+              lineHeight: 1.5,
+            }}
+          >
+            Concert Crawl is invite-only right now. Your code looks like{' '}
+            <span
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                color: 'var(--fg)',
+              }}
+            >
+              BETA-XXXX-XXXX
+            </span>
+            .
+          </p>
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <input
+              type="text"
+              value={code}
+              onChange={handleChange}
+              placeholder="BETA-XXXX-XXXX"
+              maxLength={14}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              disabled={isPending}
+              aria-label="Invite code"
+              style={{
+                width: '100%',
+                boxSizing: 'border-box',
+                height: 64,
+                padding: '0 20px',
+                textAlign: 'center',
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 22,
+                fontWeight: 600,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                background: 'var(--surface-1)',
+                border: `1.5px solid ${errorKind ? 'var(--danger)' : isComplete ? 'var(--signal)' : 'var(--border-strong)'}`,
+                borderRadius: 12,
+                color: 'var(--fg)',
+                outline: 'none',
+                transition: 'border-color 0.15s',
+              }}
+            />
+            {errorKind && (
+              <div
+                style={{
+                  fontSize: 13,
+                  color: 'var(--danger)',
+                  textAlign: 'center',
+                  lineHeight: 1.4,
+                }}
+              >
+                {ERROR_MESSAGES[errorKind]}
+              </div>
+            )}
+            {!errorKind && (
+              <div
+                style={{
+                  fontSize: 12,
+                  color: 'var(--fg-subtle)',
+                  textAlign: 'center',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {code.length === 0
+                  ? 'Format: BETA-XXXX-XXXX'
+                  : isComplete
+                    ? 'Looks good ✓'
+                    : `${14 - code.length} characters remaining`}
+              </div>
+            )}
+          </div>
+
+          <button
+            type="submit"
+            disabled={!isComplete || isPending}
+            style={{
+              all: 'unset',
+              cursor: !isComplete || isPending ? 'not-allowed' : 'pointer',
+              textAlign: 'center',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: 52,
+              borderRadius: 10,
+              background:
+                !isComplete || isPending ? 'var(--surface-2)' : 'var(--signal)',
+              color:
+                !isComplete || isPending
+                  ? 'var(--fg-subtle)'
+                  : 'var(--fg-on-accent)',
+              fontFamily: 'Inter, system-ui',
+              fontWeight: 800,
+              fontSize: 16,
+              opacity: !isComplete || isPending ? 0.7 : 1,
+              transition: 'background 0.15s, opacity 0.15s',
+              boxShadow:
+                isComplete && !isPending
+                  ? '0 12px 32px -12px var(--signal)'
+                  : 'none',
+            }}
+          >
+            {isPending ? 'Checking…' : 'Continue →'}
+          </button>
+        </form>
+
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+            alignItems: 'center',
+          }}
+        >
+          <button
+            onClick={() => {
+              /* future: open waitlist modal */
+            }}
+            style={{
+              all: 'unset',
+              cursor: 'pointer',
+              fontSize: 13,
+              color: 'var(--fg-muted)',
+              textDecoration: 'underline',
+              textDecorationColor: 'var(--border-strong)',
+            }}
+          >
+            Don&apos;t have a code? Join the waitlist
+          </button>
+          <Link
+            href="/"
+            style={{
+              fontSize: 13,
+              color: 'var(--fg-subtle)',
+              textDecoration: 'none',
+            }}
+          >
+            ← Back to landing
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
