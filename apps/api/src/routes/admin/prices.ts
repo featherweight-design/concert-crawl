@@ -18,6 +18,39 @@ const logger = createLogger('admin:prices')
 
 export const pricesAdminRouter = new Hono<AdminVariables>()
 
+// GET /v1/admin/prices/events — upcoming events with current price data + last retrieval info
+pricesAdminRouter.get('/events', async (ctx) => {
+  const rows = await db
+    .select({
+      eventId: events.id,
+      eventTitle: events.title,
+      artist: events.artist,
+      venueName: venues.name,
+      date: events.date,
+      ticketUrl: events.ticketUrl,
+      priceMin: events.ticketPriceMin,
+      priceMax: events.ticketPriceMax,
+      priceSource: events.priceSource,
+      lastRetrievedAt: sql<string | null>`(
+        SELECT MAX(attempted_at) FROM price_retrieval_log
+        WHERE event_id = ${events.id}
+      )`,
+      lastOutcome: sql<string | null>`(
+        SELECT outcome FROM price_retrieval_log
+        WHERE event_id = ${events.id}
+        ORDER BY attempted_at DESC
+        LIMIT 1
+      )`,
+    })
+    .from(events)
+    .leftJoin(venues, eq(events.venueId, venues.id))
+    .where(eq(events.status, 'upcoming'))
+    .orderBy(desc(events.date))
+    .limit(100)
+
+  return ctx.json({ success: true, data: rows } as const)
+})
+
 // GET /v1/admin/prices/health — per-source × per-venue success rates
 pricesAdminRouter.get('/health', async (ctx) => {
   const stats = await db
