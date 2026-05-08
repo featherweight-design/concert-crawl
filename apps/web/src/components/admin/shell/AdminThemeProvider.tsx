@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 
 export type AdminTheme = 'light' | 'dark' | 'electric' | 'jade'
-const VALID_THEMES: AdminTheme[] = ['light', 'dark', 'electric', 'jade']
+export const VALID_THEMES: AdminTheme[] = ['light', 'dark', 'electric', 'jade']
 const STORAGE_KEY = 'cc-admin-theme'
 
 const ThemeContext = createContext<{
@@ -34,7 +34,6 @@ export const AdminThemeProvider = ({
   const setTheme = (name: AdminTheme) => {
     setThemeState(name)
     localStorage.setItem(STORAGE_KEY, name)
-    document.documentElement.setAttribute('data-admin-theme', name)
   }
 
   return (

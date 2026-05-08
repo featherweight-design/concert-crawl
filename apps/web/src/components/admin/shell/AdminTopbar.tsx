@@ -1,7 +1,6 @@
 'use client'
 
-import { useAdminTheme } from './AdminThemeProvider'
-import type { AdminTheme } from './AdminThemeProvider'
+import { useAdminTheme, VALID_THEMES } from './AdminThemeProvider'
 import { UserButton } from '@clerk/nextjs'
 import { usePathname } from 'next/navigation'
 import { NAV } from './nav'
@@ -49,35 +48,29 @@ export const AdminTopbar = () => {
             border: '1px solid var(--border)',
           }}
         >
-          {(['light', 'dark', 'electric', 'jade'] as AdminTheme[]).map(
-            (themeOption) => (
-              <button
-                key={themeOption}
-                onClick={() => setTheme(themeOption)}
-                aria-pressed={theme === themeOption}
-                style={{
-                  height: 26,
-                  padding: '0 10px',
-                  borderRadius: 6,
-                  fontSize: 12,
-                  fontWeight: 500,
-                  border: 'none',
-                  cursor: 'pointer',
-                  background:
-                    theme === themeOption
-                      ? 'var(--bg-elevated)'
-                      : 'transparent',
-                  color:
-                    theme === themeOption ? 'var(--fg)' : 'var(--fg-muted)',
-                  boxShadow:
-                    theme === themeOption ? 'var(--shadow-sm)' : 'none',
-                  transition: 'background 0.1s, color 0.1s',
-                }}
-              >
-                {themeOption.charAt(0).toUpperCase() + themeOption.slice(1)}
-              </button>
-            ),
-          )}
+          {VALID_THEMES.map((themeOption) => (
+            <button
+              key={themeOption}
+              onClick={() => setTheme(themeOption)}
+              aria-pressed={theme === themeOption}
+              style={{
+                height: 26,
+                padding: '0 10px',
+                borderRadius: 6,
+                fontSize: 12,
+                fontWeight: 500,
+                border: 'none',
+                cursor: 'pointer',
+                background:
+                  theme === themeOption ? 'var(--bg-elevated)' : 'transparent',
+                color: theme === themeOption ? 'var(--fg)' : 'var(--fg-muted)',
+                boxShadow: theme === themeOption ? 'var(--shadow-sm)' : 'none',
+                transition: 'background 0.1s, color 0.1s',
+              }}
+            >
+              {themeOption.charAt(0).toUpperCase() + themeOption.slice(1)}
+            </button>
+          ))}
         </div>
         <UserButton />
       </div>
