@@ -205,3 +205,50 @@ export interface InviteCode {
   revokedBy: string | null
   createdAt: string
 }
+
+// Avatar color token keys — survive theme switches
+export type AvatarColor = 'signal' | 'accent' | 'success' | 'warning'
+
+// User-selectable theme
+export type UserTheme = 'electric' | 'jade' | 'light'
+
+// Plan state — founder is the beta default; paid/trial/past-due are post-beta
+export type UserPlan = 'founder' | 'paid' | 'trial' | 'past-due'
+
+// User-facing role — separate from auth Role (admin/sub_admin/user)
+export type DisplayRole = 'fan' | 'crew' | 'artist' | 'staff'
+
+// Submission status as shown in the UI (mapped from DB enum)
+export type SubmissionDisplayStatus = 'confirmed' | 'pending' | 'disputed'
+
+// Full user profile as returned by GET /v1/users/me
+export interface UserProfileResponse {
+  id: string // Clerk user ID
+  email: string // from Clerk
+  handle: string | null
+  city: string | null
+  avatarColor: AvatarColor | null
+  theme: UserTheme
+  plan: UserPlan
+  displayRole: DisplayRole
+  joined: string // formatted "Apr 2026"
+  submissionCount: number
+}
+
+// Single submission row as returned by GET /v1/users/me/submissions
+export interface UserSubmissionItem {
+  id: string
+  eventId: string
+  artist: string
+  venue: string
+  date: string // ISO YYYY-MM-DD
+  priceMin: number // cents (integer)
+  priceMax: number | null
+  status: SubmissionDisplayStatus
+}
+
+// Handle availability check response
+export interface HandleAvailabilityResponse {
+  available: boolean
+  reason?: 'taken' | 'reserved'
+}
