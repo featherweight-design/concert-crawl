@@ -551,7 +551,7 @@ export const identityFor = (
   const tplPool = ia_templatesFor(kind)
   const tplIdx = (hash >>> 0) % tplPool.length
   const palIdx = (hash >>> 8) % IA_PALETTES.length
-  const rotate: [number, number] = [(hash >>> 16) & 3, (hash >>> 18) & 1]
+  const rotate = (hash >>> 16) & 3
   const template = opts.templateOverride
     ? (IA_TEMPLATES.find((tpl) => tpl.id === opts.templateOverride) ??
       tplPool[tplIdx]!)
@@ -594,7 +594,7 @@ export const IdentityArt = ({
     templateOverride,
     paletteOverride,
   })
-  const rot = (rotateOverride != null ? rotateOverride : resolved.rotate[0]) % 4
+  const rot = (rotateOverride != null ? rotateOverride : resolved.rotate) % 4
   const rng = ia_rngFromHash(resolved.hash)
   const tpl = resolved.template.render({
     rng,
