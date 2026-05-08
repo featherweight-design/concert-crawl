@@ -6,6 +6,7 @@ import {
   text,
   timestamp,
   uuid,
+  varchar,
 } from 'drizzle-orm/pg-core'
 
 export const roleEnum = pgEnum('role', ['admin', 'sub_admin', 'user'])
@@ -47,6 +48,15 @@ export const auditLog = pgTable('audit_log', {
     .defaultNow(),
 })
 
+export const waitlistEntries = pgTable('waitlist_entries', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 255 }),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  ip: varchar('ip', { length: 45 }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+
 export type UserRole = typeof userRoles.$inferSelect
 export type InviteCode = typeof inviteCodes.$inferSelect
 export type AuditLogEntry = typeof auditLog.$inferSelect
+export type WaitlistEntry = typeof waitlistEntries.$inferSelect

@@ -43,6 +43,13 @@
       "when": 1778206746019,
       "tag": "0005_living_may_parker",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1778217441073,
+      "tag": "0006_strong_lizard",
+      "breakpoints": true
     }
   ]
 }
