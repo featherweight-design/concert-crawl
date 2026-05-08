@@ -360,6 +360,37 @@ Phase: **Phase 8 (Beta Launch Prep) — in progress**
 
 See the phased development plan in the design spec for the full roadmap (Phases 1–7).
 
+---
+
+## Design Backlog
+
+Tracked here so every session has the full picture. Move items to the phase table when implementation begins.
+
+### Pre-beta (must ship before private beta opens)
+
+| Item | Notes |
+|---|---|
+| **Saved / Watching surface** | Heart button → saves to DB, syncs to phone calendar; in progress (Phase 8b) |
+| **Feedback modal** | Fulfills onboarding step 5's "tell us when we're wrong" promise |
+| **Empty state** | Dedicated component — calendar uses inline today variant |
+| **Beta invite gate** | Consumer-side counterpart to admin invites table: need-invite screen, expired-code screen, redeem flow |
+| **App-wide loading + error sweep** | Shared loading/error system across Submit-a-Price / Verify / calendar / settings |
+| **404 — "we couldn't find that show"** | Share-link entry point |
+| **Sign-out → landing transition** | One designed screen post-Clerk-signout |
+| **Onboarding "returning user" edge** | Abandoned-flow recovery via magic link |
+
+### Post-beta / pre-launch
+
+| Item | Notes |
+|---|---|
+| **Stripe / tier selection** | Monetization gate |
+| **Public profile pages** | Read-only `/u/<handle>`; Settings model already supports it, needs consumer surface |
+| **Notification system** | Promotes the stubbed Watch row in Settings; brings back avatar unread dot with concrete triggers |
+| **Crew / artist / staff role surfacing** | `<RoleBadge>` is wired but only `fan` ships in beta |
+| **Photo upload** | Intentionally deferred indefinitely — tracked so we don't accidentally ship a half-promise |
+
+---
+
 ### Keeping this section current
 
 **Update this section whenever:**
