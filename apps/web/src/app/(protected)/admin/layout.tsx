@@ -43,10 +43,18 @@ export default async function AdminLayout({
         (venue) =>
           venue.blockedAt !== null || venue.lastRun?.status === 'failed',
       ).length
+    } else {
+      console.warn('[admin layout] badge count fetch failed', {
+        reason: statusRes.reason,
+      })
     }
 
     if (eventsRes.status === 'fulfilled') {
       pendingEvents = eventsRes.value.length
+    } else {
+      console.warn('[admin layout] pending events fetch failed', {
+        reason: eventsRes.reason,
+      })
     }
   }
 
