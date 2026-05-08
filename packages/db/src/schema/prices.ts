@@ -54,7 +54,7 @@ export const priceSubmissions = pgTable('price_submissions', {
   eventId: uuid('event_id')
     .notNull()
     .references(() => events.id, { onDelete: 'cascade' }),
-  userId: text('user_id').notNull(),
+  userId: text('user_id'),
   priceMin: numeric('price_min', { precision: 10, scale: 2 }).notNull(),
   priceMax: numeric('price_max', { precision: 10, scale: 2 }),
   tierLabel: text('tier_label'),

@@ -50,6 +50,13 @@
       "when": 1778217441073,
       "tag": "0006_strong_lizard",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1778263799261,
+      "tag": "0007_tearful_gideon",
+      "breakpoints": true
     }
   ]
 }
