@@ -591,8 +591,8 @@ export const IdentityArt = ({
   style,
 }: IdentityArtProps) => {
   const resolved = identityFor(name, kind, {
-    templateOverride,
-    paletteOverride,
+    ...(templateOverride !== undefined && { templateOverride }),
+    ...(paletteOverride !== undefined && { paletteOverride }),
   })
   const rot = (rotateOverride != null ? rotateOverride : resolved.rotate) % 4
   const rng = ia_rngFromHash(resolved.hash)

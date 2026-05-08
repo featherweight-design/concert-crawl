@@ -3,48 +3,25 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
-import { getArtistGradientStyle } from './artist-gradient'
+import { IdentityArt } from '../identity-art/IdentityArt'
+
+type IdentityScale = 'hero' | 'tile' | 'micro'
 
 interface EventImageProps {
   src: string | null
   alt: string
   artist?: string
-  fallbackInitial?: string
+  identityScale?: IdentityScale
   className?: string
   fill?: boolean
   sizes?: string
-}
-
-function Fallback({
-  artist,
-  fallbackInitial,
-  alt,
-  className,
-}: {
-  artist: string | undefined
-  fallbackInitial: string | undefined
-  alt: string
-  className: string | undefined
-}) {
-  const gradientStyle = getArtistGradientStyle(artist ?? fallbackInitial ?? '')
-  return (
-    <div
-      className={cn('flex items-center justify-center select-none', className)}
-      style={gradientStyle}
-      aria-label={alt}
-    >
-      <span className="text-2xl font-bold opacity-80">
-        {fallbackInitial ?? '♪'}
-      </span>
-    </div>
-  )
 }
 
 export function EventImage({
   src,
   alt,
   artist,
-  fallbackInitial,
+  identityScale = 'tile',
   className,
   fill = false,
   sizes,
@@ -53,11 +30,11 @@ export function EventImage({
 
   if (!src || errored) {
     return (
-      <Fallback
-        artist={artist}
-        fallbackInitial={fallbackInitial}
-        alt={alt}
-        className={className}
+      <IdentityArt
+        name={artist ?? alt}
+        kind="artist"
+        scale={identityScale}
+        {...(className !== undefined && { className })}
       />
     )
   }
