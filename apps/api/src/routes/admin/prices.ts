@@ -134,7 +134,7 @@ pricesAdminRouter.get('/activity', async (ctx) => {
       eventTitle: events.title,
       venueName: venues.name,
       date: events.date,
-      currentPrice: priceRetrievalLog.priceMin,
+      outcome: priceRetrievalLog.outcome,
       updatedAt: priceRetrievalLog.attemptedAt,
     })
     .from(priceRetrievalLog)
