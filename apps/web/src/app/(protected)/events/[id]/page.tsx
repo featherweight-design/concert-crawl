@@ -12,7 +12,6 @@ import { PriceSubmissionForm } from '@/components/consumer/PriceSubmissionForm'
 import {
   formatEventDate,
   formatShowTime,
-  formatPrice,
   formatShortDate,
 } from '@/components/consumer/definitions/lib'
 import { copy } from '@/components/consumer/definitions/copy'
