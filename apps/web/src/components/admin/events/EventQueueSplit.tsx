@@ -48,6 +48,9 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
 
   const filtered = events.filter((ev) => {
     if (filter === 'low-conf') return Number(ev.confidenceScore) < 0.7
+    if (statusFilter === 'low_conf') return Number(ev.confidenceScore) < 0.7
+    if (statusFilter === 'unverified') return !ev.verified
+    if (statusFilter === 'verified') return ev.verified
     return true
   })
 
@@ -311,6 +314,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                     {new Date(ev.date).toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',
+                      timeZone: 'America/Denver',
                     })}
                   </div>
                   <ConfidenceBar score={conf} />

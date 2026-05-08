@@ -1,6 +1,6 @@
 'use client'
 
-import type { LucideIcon } from 'lucide-react'
+import * as LucideIcons from 'lucide-react'
 import type { StatusKind } from './utils'
 import { KIND_COLORS } from './utils'
 
@@ -11,7 +11,7 @@ interface StatCardProps {
   hint?: string
   trend?: { dir: 'up' | 'down'; text: string; good: boolean }
   kind?: StatusKind
-  icon: LucideIcon
+  iconName: string
   footer?: React.ReactNode
   onClick?: () => void
 }
@@ -23,10 +23,16 @@ export const StatCard = ({
   hint,
   trend,
   kind = 'neutral',
-  icon: Icon,
+  iconName,
   footer,
   onClick,
 }: StatCardProps) => {
+  const Icon = (
+    LucideIcons as unknown as Record<
+      string,
+      React.ComponentType<{ size: number; color: string }>
+    >
+  )[iconName]
   const colors = KIND_COLORS[kind]
 
   return (
@@ -111,7 +117,7 @@ export const StatCard = ({
             flexShrink: 0,
           }}
         >
-          <Icon size={18} color={colors.fg} />
+          {Icon && <Icon size={18} color={colors.fg} />}
         </div>
       </div>
       {footer && <div>{footer}</div>}

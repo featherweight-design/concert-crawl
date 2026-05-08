@@ -28,6 +28,7 @@ export function EventFilterRail({ activeFilter, onFilterChange }: Props) {
       }}
     >
       <button
+        type="button"
         onClick={() => onFilterChange(null)}
         style={{
           height: 28,
@@ -49,6 +50,7 @@ export function EventFilterRail({ activeFilter, onFilterChange }: Props) {
       </button>
       {FILTERS.map((filterItem) => (
         <button
+          type="button"
           key={filterItem.id}
           onClick={() =>
             onFilterChange(

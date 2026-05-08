@@ -1,6 +1,6 @@
 import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
-import { RefreshCw, Activity, CheckSquare, DollarSign } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 import {
   SectionHead,
   AdminButton,
@@ -65,6 +65,10 @@ export default async function AdminCrawlPage() {
     apiClient.get<CrawlRun[]>('/v1/admin/crawl/runs?limit=50', token),
   ])
   const status = rawStatus.map(toStatusRow)
+  const todayStr = new Date().toDateString()
+  const todayRuns = runs.filter(
+    (run) => new Date(run.createdAt).toDateString() === todayStr,
+  )
 
   return (
     <div
@@ -107,32 +111,28 @@ export default async function AdminCrawlPage() {
               ? `${String(Math.round((Date.now() - new Date(runs[0].startedAt).getTime()) / 60000))}m ago`
               : '—'
           }
-          icon={RefreshCw}
+          iconName="RefreshCw"
           kind="neutral"
         />
         <StatCard
           label="Today's runs"
-          value={String(
-            runs.filter(
-              (run) =>
-                new Date(run.createdAt).toDateString() ===
-                new Date().toDateString(),
-            ).length,
-          )}
-          icon={Activity}
+          value={String(todayRuns.length)}
+          iconName="Activity"
           kind="signal"
         />
         <StatCard
           label="Events ingested"
-          value={String(runs.reduce((sum, run) => sum + run.eventsInserted, 0))}
-          icon={CheckSquare}
+          value={String(
+            todayRuns.reduce((sum, run) => sum + run.eventsInserted, 0),
+          )}
+          iconName="CheckSquare"
           kind="success"
           hint="today"
         />
         <StatCard
           label="LLM cost · today"
-          value={`$${runs.reduce((sum, run) => sum + (run.llmCostUsd ?? 0), 0).toFixed(2)}`}
-          icon={DollarSign}
+          value={`$${todayRuns.reduce((sum, run) => sum + (run.llmCostUsd ?? 0), 0).toFixed(2)}`}
+          iconName="DollarSign"
           kind="signal"
         />
       </div>

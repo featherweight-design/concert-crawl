@@ -1,7 +1,6 @@
 import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
 import type { InviteCode } from '@concert-crawl/types'
-import { Ticket, CheckCircle, XCircle, Users } from 'lucide-react'
 import {
   SectionHead,
   StatCard,
@@ -71,26 +70,26 @@ export default async function AdminInviteCodesPage() {
         <StatCard
           label="Outstanding"
           value={String(outstanding)}
-          icon={Ticket}
+          iconName="Ticket"
           kind="signal"
           hint="unredeemed active codes"
         />
         <StatCard
           label="Redeemed"
           value={String(redeemed)}
-          icon={CheckCircle}
+          iconName="CheckCircle"
           kind="success"
         />
         <StatCard
           label="Total issued"
           value={String(codes.length)}
-          icon={Users}
+          iconName="Users"
           kind="neutral"
         />
         <StatCard
           label="Revoked"
           value={String(revoked)}
-          icon={XCircle}
+          iconName="XCircle"
           kind="danger"
         />
       </div>

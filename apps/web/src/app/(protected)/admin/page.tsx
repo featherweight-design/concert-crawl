@@ -1,10 +1,4 @@
-import {
-  DollarSign,
-  Activity,
-  CheckSquare,
-  MapPin,
-  ChevronRight,
-} from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
 import type { CrawlRun, Venue } from '@concert-crawl/types'
@@ -181,7 +175,7 @@ export default async function AdminDashboardPage() {
           label="Pending review"
           value="0"
           unit="events"
-          icon={CheckSquare}
+          iconName="CheckSquare"
           kind="warning"
           footer={
             <AdminButton
@@ -197,7 +191,7 @@ export default async function AdminDashboardPage() {
         <StatCard
           label="LLM cost · 30d"
           value={`$${totalCost.toFixed(2)}`}
-          icon={DollarSign}
+          iconName="DollarSign"
           kind="signal"
           {...(costTrend !== undefined ? { trend: costTrend } : {})}
           footer={
@@ -212,7 +206,7 @@ export default async function AdminDashboardPage() {
           label="Crawl health"
           value={`${greenCount}/${status.length}`}
           unit="green"
-          icon={Activity}
+          iconName="Activity"
           kind={blockedCount > 0 ? 'warning' : 'success'}
           hint={
             blockedCount > 0 ? `${blockedCount} blocked` : 'All venues healthy'
@@ -222,7 +216,7 @@ export default async function AdminDashboardPage() {
           label="Active venues"
           value={String(venues.filter((venue) => venue.active).length)}
           unit="venues"
-          icon={MapPin}
+          iconName="MapPin"
           kind="neutral"
         />
       </div>

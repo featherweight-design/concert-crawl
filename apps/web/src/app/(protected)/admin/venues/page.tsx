@@ -1,12 +1,6 @@
 import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
-import {
-  Plus,
-  MapPin,
-  Activity,
-  AlertTriangle,
-  ShieldCheck,
-} from 'lucide-react'
+import { Plus } from 'lucide-react'
 import Link from 'next/link'
 import {
   SectionHead,
@@ -72,19 +66,19 @@ export default async function AdminVenuesPage() {
         <StatCard
           label="Total"
           value={String(venues.length)}
-          icon={MapPin}
+          iconName="MapPin"
           kind="neutral"
         />
         <StatCard
           label="Active"
           value={String(activeVenues.length)}
-          icon={Activity}
+          iconName="Activity"
           kind="success"
         />
         <StatCard
           label="Inactive"
           value={String(inactiveVenues.length)}
-          icon={AlertTriangle}
+          iconName="AlertTriangle"
           kind="warning"
           {...(blockedVenueCount > 0
             ? { hint: `${String(blockedVenueCount)} blocked` }
@@ -93,7 +87,7 @@ export default async function AdminVenuesPage() {
         <StatCard
           label="Verified"
           value={String(venues.filter((venue) => venue.verified).length)}
-          icon={ShieldCheck}
+          iconName="ShieldCheck"
           kind="signal"
         />
       </div>

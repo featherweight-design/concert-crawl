@@ -1,6 +1,5 @@
 import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
-import { DollarSign, TrendingUp, AlertTriangle } from 'lucide-react'
 import {
   SectionHead,
   StatCard,
@@ -63,13 +62,13 @@ export default async function AdminPricesPage() {
         <StatCard
           label="Tracked events"
           value={String(priceEvents.length)}
-          icon={DollarSign}
+          iconName="DollarSign"
           kind="neutral"
         />
         <StatCard
           label="With prices"
           value={String(withPrices.length)}
-          icon={TrendingUp}
+          iconName="TrendingUp"
           kind="success"
           {...(priceEvents.length > 0
             ? {
@@ -80,13 +79,13 @@ export default async function AdminPricesPage() {
         <StatCard
           label="No price data"
           value={String(noPrices.length)}
-          icon={AlertTriangle}
+          iconName="AlertTriangle"
           kind="warning"
         />
         <StatCard
           label="Recent hits"
           value={String(recentHits.length)}
-          icon={DollarSign}
+          iconName="DollarSign"
           kind="signal"
           hint="last retrieval ok"
         />

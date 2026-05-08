@@ -13,7 +13,7 @@ export async function mintInviteCodeWithOptions(
 ): Promise<{ ok: boolean; code?: string; error?: string }> {
   const { getToken } = await auth()
   const token = await getToken()
-  if (!token) throw new Error('Not authenticated')
+  if (!token) return { ok: false, error: 'Not authenticated' }
 
   const expiresAt =
     opts.expiresIn === '7d'
