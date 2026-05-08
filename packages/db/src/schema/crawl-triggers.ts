@@ -15,7 +15,7 @@ export const crawlTriggers = pgTable('crawl_triggers', {
     .references(() => venues.id, { onDelete: 'cascade' }),
   status: crawlTriggerStatusEnum('status').notNull().default('pending'),
   crawlRunId: uuid('crawl_run_id'),
-  triggeredBy: uuid('triggered_by'),
+  triggeredBy: text('triggered_by'),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),

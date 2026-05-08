@@ -83,7 +83,7 @@ services:
     runtime: node
     region: oregon
     plan: starter
-    schedule: "0 9 * * *"  # 3 AM MT (UTC-6 standard / UTC-7 daylight)
+    schedule: "0 9 * * *"  # 3 AM MT (UTC-7 standard / UTC-6 daylight)
     buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/crawler-core --filter=@concert-crawl/logger && npx playwright install --with-deps chromium
     startCommand: pnpm --filter @concert-crawl/crawler start
     envVars:
@@ -194,7 +194,7 @@ services:
     runtime: node
     region: oregon
     plan: starter
-    schedule: "0 9 * * *"  # 3 AM MT (UTC-6 standard / UTC-7 daylight)
+    schedule: "0 9 * * *"  # 3 AM MT (UTC-7 standard / UTC-6 daylight)
     buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/crawler-core --filter=@concert-crawl/logger && npx playwright install --with-deps chromium
     startCommand: pnpm --filter @concert-crawl/crawler start
     envVars:

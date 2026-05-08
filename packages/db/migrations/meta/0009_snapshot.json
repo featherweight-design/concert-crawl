@@ -1359,7 +1359,7 @@
         },
         "triggered_by": {
           "name": "triggered_by",
-          "type": "uuid",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },

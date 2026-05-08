@@ -7,35 +7,35 @@ const logger = createLogger('crawler')
 const MAX_CONCURRENT = 3
 
 export async function runTriggeredCrawls(): Promise<{ processed: number }> {
-  const pending = await db
-    .select({ id: crawlTriggers.id, venueId: crawlTriggers.venueId })
-    .from(crawlTriggers)
+  const claimed = await db
+    .update(crawlTriggers)
+    .set({ status: 'processing', updatedAt: new Date() })
     .where(eq(crawlTriggers.status, 'pending'))
+    .returning({ id: crawlTriggers.id, venueId: crawlTriggers.venueId })
 
-  if (pending.length === 0) {
+  if (claimed.length === 0) {
     logger.info('No pending crawl triggers')
     return { processed: 0 }
   }
 
-  logger.info({ count: pending.length }, 'Processing pending crawl triggers')
+  logger.info({ count: claimed.length }, 'Processing pending crawl triggers')
 
-  for (const trigger of pending) {
-    await db
-      .update(crawlTriggers)
-      .set({ status: 'processing', updatedAt: new Date() })
-      .where(eq(crawlTriggers.id, trigger.id))
-
+  for (const trigger of claimed) {
     try {
-      const crawlRunId = crypto.randomUUID()
-      await crawlVenue(trigger.venueId, crawlRunId)
+      const crawlRun = await crawlVenue(trigger.venueId)
+      const triggerStatus = crawlRun.status === 'failed' ? 'failed' : 'done'
       await db
         .update(crawlTriggers)
-        .set({ status: 'done', crawlRunId, updatedAt: new Date() })
+        .set({
+          status: triggerStatus,
+          crawlRunId: crawlRun.id,
+          updatedAt: new Date(),
+        })
         .where(eq(crawlTriggers.id, trigger.id))
     } catch (err) {
       logger.error(
         { err, triggerId: trigger.id, venueId: trigger.venueId },
-        'Triggered crawl failed',
+        'Triggered crawl threw unexpectedly',
       )
       await db
         .update(crawlTriggers)
@@ -44,7 +44,7 @@ export async function runTriggeredCrawls(): Promise<{ processed: number }> {
     }
   }
 
-  return { processed: pending.length }
+  return { processed: claimed.length }
 }
 
 export async function runDailyCrawl(): Promise<{

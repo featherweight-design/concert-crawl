@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS "crawl_triggers" (
 	"venue_id" uuid NOT NULL,
 	"status" "crawl_trigger_status" DEFAULT 'pending' NOT NULL,
 	"crawl_run_id" uuid,
-	"triggered_by" uuid,
+	"triggered_by" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
