@@ -86,11 +86,9 @@ export default async function AdminVenuesPage() {
           value={String(inactiveVenues.length)}
           icon={AlertTriangle}
           kind="warning"
-          hint={
-            blockedVenueCount > 0
-              ? `${String(blockedVenueCount)} blocked`
-              : undefined
-          }
+          {...(blockedVenueCount > 0
+            ? { hint: `${String(blockedVenueCount)} blocked` }
+            : {})}
         />
         <StatCard
           label="Verified"

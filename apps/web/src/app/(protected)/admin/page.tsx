@@ -199,7 +199,7 @@ export default async function AdminDashboardPage() {
           value={`$${totalCost.toFixed(2)}`}
           icon={DollarSign}
           kind="signal"
-          trend={costTrend}
+          {...(costTrend !== undefined ? { trend: costTrend } : {})}
           footer={
             <ProgressBar
               value={Math.round((totalCost / 40) * 100)}

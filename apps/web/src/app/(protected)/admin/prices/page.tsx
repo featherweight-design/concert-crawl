@@ -71,11 +71,11 @@ export default async function AdminPricesPage() {
           value={String(withPrices.length)}
           icon={TrendingUp}
           kind="success"
-          hint={
-            priceEvents.length > 0
-              ? `${Math.round((withPrices.length / priceEvents.length) * 100)}% coverage`
-              : undefined
-          }
+          {...(priceEvents.length > 0
+            ? {
+                hint: `${Math.round((withPrices.length / priceEvents.length) * 100)}% coverage`,
+              }
+            : {})}
         />
         <StatCard
           label="No price data"
