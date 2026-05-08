@@ -1,46 +1,89 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { and, desc, eq, gte, isNull, ne, or, sql } from 'drizzle-orm'
-import { db, events, priceSubmissions, userRoles } from '@concert-crawl/db'
-import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js'
+import { and, desc, eq, ne, sql } from 'drizzle-orm'
+import { db, events, priceSubmissions } from '@concert-crawl/db'
+import { SP_POLICY } from '@concert-crawl/types'
+import {
+  clerkAuth,
+  requireAuth,
+  getAuthUser,
+  getAuthOptional,
+} from '../middleware/auth.js'
 
 const submissionBodySchema = z.object({
-  priceMin: z.number().positive(),
-  priceMax: z.number().positive().optional(),
-  tierLabel: z.string().max(50).optional(),
-  sourceNote: z.string().max(200).optional(),
+  priceMin: z.number().int().min(SP_POLICY.floorMin).max(SP_POLICY.floorMax),
+  priceMax: z.number().int().min(1).max(SP_POLICY.ceilingMax).optional(),
+  tier: z.enum(['GA', 'Reserved', 'VIP', 'Pit', 'Lawn']),
+  vendor: z.enum([
+    'AXS',
+    'Ticketmaster',
+    'SeatGeek',
+    'DICE',
+    'Eventbrite',
+    'VenueBoxOffice',
+  ]),
+  howFound: z.enum(['bought_myself', 'saw_listing', 'at_the_venue']),
 })
 
 export const priceSubmissionsRouter = new Hono()
 
-// GET /v1/events/:id/price-submissions — public list of corroborated submissions
-priceSubmissionsRouter.get('/:id/price-submissions', async (ctx) => {
-  const { id } = ctx.req.param()
+// GET /v1/events/:id/price-submissions — optional auth; returns all non-stale submissions
+priceSubmissionsRouter.get('/:id/price-submissions', clerkAuth, async (ctx) => {
+  const { id: eventId } = ctx.req.param()
+  const authUser = getAuthOptional(ctx)
+  const userId = authUser?.userId ?? null
 
-  const rows = await db
+  const subRows = await db
     .select({
       id: priceSubmissions.id,
       eventId: priceSubmissions.eventId,
+      userId: priceSubmissions.userId,
       priceMin: priceSubmissions.priceMin,
       priceMax: priceSubmissions.priceMax,
-      tierLabel: priceSubmissions.tierLabel,
-      sourceNote: priceSubmissions.sourceNote,
+      tier: priceSubmissions.tier,
+      vendor: priceSubmissions.vendor,
+      howFound: priceSubmissions.howFound,
+      disputedSubmissionId: priceSubmissions.disputedSubmissionId,
       status: priceSubmissions.status,
       corroborationCount: priceSubmissions.corroborationCount,
       createdAt: priceSubmissions.createdAt,
+      updatedAt: priceSubmissions.updatedAt,
+      confirms: sql<number>`(
+          SELECT COUNT(*)::int FROM submission_confirms
+          WHERE submission_confirms.submission_id = ${priceSubmissions.id}
+        )`,
     })
     .from(priceSubmissions)
     .where(
       and(
-        eq(priceSubmissions.eventId, id),
-        eq(priceSubmissions.status, 'corroborated'),
+        eq(priceSubmissions.eventId, eventId),
+        ne(priceSubmissions.status, 'stale'),
       ),
     )
     .orderBy(desc(priceSubmissions.createdAt))
-    .limit(10)
 
-  return ctx.json({ success: true, data: rows })
+  const submissions = subRows.map((row) => ({
+    ...row,
+    confirms: Number(row.confirms),
+    byYou: userId != null && row.userId === userId,
+  }))
+
+  const userSubmission =
+    userId != null
+      ? (submissions.find(
+          (sub) => sub.userId === userId && sub.status === 'pending',
+        ) ?? null)
+      : null
+
+  return ctx.json({
+    success: true,
+    data: {
+      submissions,
+      alreadySubmitted: userSubmission != null,
+      userSubmission,
+    },
+  })
 })
 
 // POST /v1/events/:id/price-submissions — authenticated users submit price data
@@ -50,11 +93,18 @@ priceSubmissionsRouter.post(
   requireAuth,
   zValidator('json', submissionBodySchema, (result, ctx) => {
     if (!result.success)
-      return ctx.json({ success: false, error: 'Invalid input' }, 422)
+      return ctx.json(
+        {
+          success: false,
+          error: 'Invalid input',
+          details: result.error.flatten(),
+        },
+        422,
+      )
   }),
   async (ctx) => {
     const { id: eventId } = ctx.req.param()
-    const userId = getAuthUser(ctx).userId
+    const { userId } = getAuthUser(ctx)
     const body = ctx.req.valid('json')
 
     const [event] = await db
@@ -65,83 +115,64 @@ priceSubmissionsRouter.post(
     if (!event)
       return ctx.json({ success: false, error: 'Event not found' }, 404)
 
-    const [newSub] = await db
-      .insert(priceSubmissions)
-      .values({
-        eventId,
-        userId,
-        priceMin: String(body.priceMin),
-        priceMax: body.priceMax != null ? String(body.priceMax) : null,
-        tierLabel: body.tierLabel ?? null,
-        sourceNote: body.sourceNote ?? null,
-      })
-      .returning()
-    if (!newSub)
-      return ctx.json(
-        { success: false, error: 'Failed to create submission' },
-        500,
-      )
-
-    // Corroboration check: find pending submissions from other users in the last 7 days
-    // that are within 15% of the submitted price
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    // 409 — existing pending submission
     const existing = await db
       .select()
       .from(priceSubmissions)
       .where(
         and(
           eq(priceSubmissions.eventId, eventId),
-          or(
-            isNull(priceSubmissions.userId),
-            ne(priceSubmissions.userId, userId),
-          ),
+          eq(priceSubmissions.userId, userId),
           eq(priceSubmissions.status, 'pending'),
-          gte(priceSubmissions.createdAt, sevenDaysAgo),
         ),
       )
-
-    const tolerance = 0.15
-    const corroborating = existing.filter((sub) => {
-      const diff =
-        Math.abs(parseFloat(sub.priceMin) - body.priceMin) / body.priceMin
-      return diff <= tolerance
-    })
-
-    if (corroborating.length > 0) {
-      // Mark the new submission as corroborated
-      await db
-        .update(priceSubmissions)
-        .set({
-          status: 'corroborated',
-          corroborationCount: corroborating.length,
-          updatedAt: sql`now()`,
-        })
-        .where(eq(priceSubmissions.id, newSub.id))
-
-      // Update existing matching submissions and award cred
-      for (const sub of corroborating) {
-        await db
-          .update(priceSubmissions)
-          .set({
-            status: 'corroborated',
-            corroborationCount: sub.corroborationCount + 1,
-            updatedAt: sql`now()`,
-          })
-          .where(eq(priceSubmissions.id, sub.id))
-
-        if (sub.userId) {
-          // TODO: if the user has no user_roles row (registered but never assigned a role),
-          // this UPDATE silently affects 0 rows and cred is lost. Consider insert-on-conflict.
-          await db
-            .update(userRoles)
-            .set({
-              priceCredScore: sql`${userRoles.priceCredScore} + 1`,
-            })
-            .where(eq(userRoles.userId, sub.userId))
-        }
-      }
+      .limit(1)
+    if (existing.length > 0) {
+      return ctx.json(
+        {
+          success: false,
+          error: 'Already submitted',
+          submission: existing[0],
+        },
+        409,
+      )
     }
 
-    return ctx.json({ success: true, data: newSub }, 201)
+    // 429 — rate limit: 1 submission per user per event per 24h
+    const cutoff = new Date(
+      Date.now() - SP_POLICY.rateLimitHours * 60 * 60 * 1000,
+    )
+    const recent = await db
+      .select()
+      .from(priceSubmissions)
+      .where(
+        and(
+          eq(priceSubmissions.eventId, eventId),
+          eq(priceSubmissions.userId, userId),
+          sql`${priceSubmissions.createdAt} > ${cutoff}`,
+        ),
+      )
+      .limit(1)
+    if (recent.length > 0) {
+      return ctx.json(
+        { success: false, error: 'Rate limit: 1 submission per 24h' },
+        429,
+      )
+    }
+
+    const [created] = await db
+      .insert(priceSubmissions)
+      .values({
+        eventId,
+        userId,
+        priceMin: String(body.priceMin),
+        priceMax: body.priceMax != null ? String(body.priceMax) : null,
+        tier: body.tier,
+        vendor: body.vendor,
+        howFound: body.howFound,
+      })
+      .returning()
+
+    return ctx.json({ success: true, data: created }, 201)
   },
 )
