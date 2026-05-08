@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { useUser, useClerk } from '@clerk/nextjs'
 
 export function UserAvatar() {
@@ -62,6 +63,14 @@ export function UserAvatar() {
 
       {open && (
         <div className="absolute right-0 top-11 z-50 min-w-[160px] rounded-lg border border-border bg-bg-elevated py-1 shadow-lg">
+          <Link
+            href="/me"
+            onClick={() => setOpen(false)}
+            className="block w-full px-4 py-2 text-left text-[13px] text-fg-muted hover:bg-surface-1 hover:text-fg"
+          >
+            Settings
+          </Link>
+          <div className="mx-2 h-px bg-border" />
           <button
             type="button"
             onClick={() => signOut()}

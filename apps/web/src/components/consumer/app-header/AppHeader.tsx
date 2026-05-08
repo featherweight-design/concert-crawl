@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { ThemeToggle } from '../theme-toggle'
 import { CCMark } from '../cc-mark'
 import { UserAvatar } from './UserAvatar'
+import { MobileProfileEntry } from './MobileProfileEntry'
 
 const NAV_TABS = [
   { label: 'Browse', href: '/events' },
@@ -31,13 +32,16 @@ export function AppHeader() {
             <span className="text-accent">crawl.</span>
           </span>
         </Link>
-        <Link
-          href="/search"
-          aria-label="Search"
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-border-strong"
-        >
-          <Search size={16} className="text-fg-muted" strokeWidth={1.5} />
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/search"
+            aria-label="Search"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-border-strong"
+          >
+            <Search size={16} className="text-fg-muted" strokeWidth={1.5} />
+          </Link>
+          <MobileProfileEntry />
+        </div>
       </div>
 
       {/* ── Desktop TopNav (shown sm+) ──────────────────── */}
