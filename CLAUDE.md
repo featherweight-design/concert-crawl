@@ -323,7 +323,7 @@ Both eliminate the need to cast. Never cast `publicMetadata` or `sessionClaims` 
 
 ## Current Status
 
-Phase: **Phase 7.6 (Admin UI Redesign) — in flight**
+Phase: **Phase 8a (Beta Launch Prep — Landing + Auth Gate + Onboarding) — in flight**
 
 - Phase 6a complete (PR #26 merged 2026-05-07): pino + Sentry SDK across all three apps
 - Phase 6b complete (PR #28 merged 2026-05-07): Vitest integration tests for `apps/api` (20 tests, real Postgres)
@@ -334,25 +334,44 @@ Phase: **Phase 7.6 (Admin UI Redesign) — in flight**
 - Phase 7.5 complete (PR #39 merged 2026-05-08): IdentityArt generative engine — 5 templates × 8 palettes, wired to all image surfaces
 - Domain: `concertcrawl.app` via Cloudflare Registrar (~$15/yr)
 
+### Phase 8 — Beta Launch Prep
+
+Everything needed to open the private beta to real users, split into three sub-phases:
+
+| Sub-phase | Scope                                        | Status       | Branch / Notes                                                                      |
+| --------- | -------------------------------------------- | ------------ | ----------------------------------------------------------------------------------- |
+| 8a        | Landing page + Auth gate + Onboarding flow   | 🔄 In flight | `feat/phase-8-auth-onboarding`; design assets in `design/design_handoff_phase5b_screens/` + onboarding (TBD) |
+| 8b        | Saving shows + User profile                  | —            | —                                                                                   |
+| 8c        | Email + invite-code delivery                 | —            | Resend integration; `invite_codes` table already in schema                          |
+
+**Phase 8a scope (this branch):**
+
+- `/` — Public landing page (unauthenticated). Wordmark, animated gig-poster hero (IdentityArt), waitlist CTA, "I have a code" link.
+- `/auth/code` — Invite-code entry (pre-Clerk). Format: `BETA-XXXX-XXXX`. Validates code server-side, then hands off to Clerk sign-up.
+- `/onboarding` — Post-Clerk multi-step flow (genre + venue preferences, display name, optional Spotify connect). Writes to `user_preferences` table. Redirects to `/browse` on completion.
+- Clerk redirect logic: unauthenticated `/browse` → `/`; authenticated but no invite validated → `/auth/code`; authenticated + invite valid but onboarding incomplete → `/onboarding`.
+
 ### Revised Phase Sequence
 
-| Phase | Name                                 | Status                                                                    |
-| ----- | ------------------------------------ | ------------------------------------------------------------------------- |
-| 1     | Foundation                           | ✅ Complete                                                               |
-| 2     | Venue Management (Admin)             | ✅ Complete                                                               |
-| 3     | Crawler v1                           | ✅ Complete                                                               |
-| 4     | Design System / Theming Architecture | ✅ Complete                                                               |
-| 5     | Consumer Calendar UI (functional)    | ✅ Complete                                                               |
-| 5b    | Consumer UI Design Polish            | ✅ Complete (PRs #22–24)                                                  |
-| 6a    | Observability SDK                    | ✅ Complete (PR #26)                                                      |
-| 6b    | Integration Tests                    | ✅ Complete (PR #28)                                                      |
-| 6c    | E2E + Smoke Tests                    | ✅ Complete (PR #29)                                                      |
-| 7     | Automation + Scheduling              | ✅ Complete (PR #34 merged 2026-05-07)                                    |
-| 7.5   | Identity Imagery (generative art)    | ✅ Complete (PR #39 merged 2026-05-08)                                    |
-| 7.6   | Admin UI Redesign                    | 🔄 In flight                                                              |
-| 8     | Beta Launch Prep                     | — (landing page, auth gate, onboarding, saving shows, user profile, etc.) |
-| 9     | UI Polish / Final Gate               | — (full UI review before private beta opens)                              |
-| —     | Price Transparency                   | ✅ Complete (PRs #32, #37 merged 2026-05-08)                              |
+| Phase | Name                                 | Status                                      |
+| ----- | ------------------------------------ | ------------------------------------------- |
+| 1     | Foundation                           | ✅ Complete                                 |
+| 2     | Venue Management (Admin)             | ✅ Complete                                 |
+| 3     | Crawler v1                           | ✅ Complete                                 |
+| 4     | Design System / Theming Architecture | ✅ Complete                                 |
+| 5     | Consumer Calendar UI (functional)    | ✅ Complete                                 |
+| 5b    | Consumer UI Design Polish            | ✅ Complete (PRs #22–24)                    |
+| 6a    | Observability SDK                    | ✅ Complete (PR #26)                        |
+| 6b    | Integration Tests                    | ✅ Complete (PR #28)                        |
+| 6c    | E2E + Smoke Tests                    | ✅ Complete (PR #29)                        |
+| 7     | Automation + Scheduling              | ✅ Complete (PR #34 merged 2026-05-07)      |
+| 7.5   | Identity Imagery (generative art)    | ✅ Complete (PR #39 merged 2026-05-08)      |
+| 7.6   | Admin UI Redesign                    | 🔄 In flight (separate branch)              |
+| 8a    | Beta Launch — Landing + Auth Gate + Onboarding | 🔄 In flight (this branch)          |
+| 8b    | Beta Launch — Saving shows + User profile | —                                      |
+| 8c    | Beta Launch — Email + invite-code delivery | —                                     |
+| 9     | UI Polish / Final Gate               | — (full UI review before private beta opens)|
+| —     | Price Transparency                   | ✅ Complete (PRs #32, #37 merged 2026-05-08)|
 
 See the phased development plan in the design spec for the full roadmap (Phases 1–7).
 
