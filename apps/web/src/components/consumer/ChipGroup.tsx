@@ -10,7 +10,7 @@ interface ChipGroupProps {
   options: ChipOption[]
   value: string | null
   onChange: (value: string) => void
-  error?: string
+  error?: string | undefined
 }
 
 export function ChipGroup({

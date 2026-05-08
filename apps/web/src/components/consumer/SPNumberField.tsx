@@ -7,8 +7,8 @@ interface SPNumberFieldProps {
   placeholder?: string
   hint?: string
   required?: boolean
-  error?: string
-  warning?: string
+  error?: string | undefined
+  warning?: string | undefined
 }
 
 export function SPNumberField({
