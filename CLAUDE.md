@@ -115,7 +115,7 @@ These were made deliberately — understand them before proposing changes.
 - **Never commit `.env` files** — use `.env.example` with placeholder values only
 - **Always open a PR for code changes** — never merge to main locally, never discard changes
 - **Always use `.github/pull_request_template.md`** when opening a PR
-- **All feature work must be done in a git worktree** — the primary repo directory (`/Users/huey/Projects/concert-crawl`) is reserved for the user's own use and testing. Use `git worktree add` to create an isolated workspace before starting any implementation. The `superpowers:using-git-worktrees` skill governs this.
+- **All feature work must be done in a git worktree** — the primary repo directory (`/Users/huey/Projects/concert-crawl`) is reserved for the user's own use and testing. Worktrees live in `.worktrees/` at the project root (gitignored). Use `git worktree add .worktrees/<branch-name> -b <branch-name>` directly — do NOT use the `EnterWorktree` tool, which hardcodes `.claude/worktrees/` and cannot be configured.
 
 ### Session handoff
 
