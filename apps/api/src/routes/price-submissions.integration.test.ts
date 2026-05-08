@@ -10,7 +10,7 @@ const { authState } = vi.hoisted(() => ({
 }))
 
 vi.mock('@hono/clerk-auth', () => ({
-  clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
+  clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>
     next(),
   getAuth: () => authState.current,
 }))
@@ -36,6 +36,13 @@ function clearAuth(): void {
   authState.current = null
 }
 
+const TEST_BODY = {
+  priceMin: 35,
+  tier: 'GA',
+  vendor: 'Ticketmaster',
+  howFound: 'bought_myself',
+}
+
 describe('POST /v1/events/:id/price-submissions', () => {
   let eventId: string
 
@@ -51,7 +58,7 @@ describe('POST /v1/events/:id/price-submissions', () => {
     const res = await app.request(`/v1/events/${eventId}/price-submissions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ priceMin: 25 }),
+      body: JSON.stringify(TEST_BODY),
     })
     expect(res.status).toBe(401)
   })
@@ -64,19 +71,20 @@ describe('POST /v1/events/:id/price-submissions', () => {
         'Content-Type': 'application/json',
         Authorization: 'Bearer test-token',
       },
-      body: JSON.stringify({ priceMin: 35, priceMax: 65, tierLabel: 'GA' }),
+      body: JSON.stringify({ ...TEST_BODY, priceMax: 65 }),
     })
     expect(res.status).toBe(201)
     const body = (await res.json()) as {
       success: boolean
-      data: { status: string; priceMin: string }
+      data: { status: string; priceMin: string; tier: string }
     }
     expect(body.success).toBe(true)
     expect(body.data.status).toBe('pending')
     expect(parseFloat(body.data.priceMin)).toBe(35)
+    expect(body.data.tier).toBe('GA')
   })
 
-  it('returns 422 when priceMin is missing', async () => {
+  it('returns 422 when required fields are missing', async () => {
     setAuth()
     const res = await app.request(`/v1/events/${eventId}/price-submissions`, {
       method: 'POST',
@@ -88,10 +96,40 @@ describe('POST /v1/events/:id/price-submissions', () => {
     })
     expect(res.status).toBe(422)
   })
+
+  it('returns 409 when user already has a pending submission', async () => {
+    setAuth()
+    await seedPriceSubmission(eventId, 'user_abc123')
+    const res = await app.request(`/v1/events/${eventId}/price-submissions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
+      body: JSON.stringify(TEST_BODY),
+    })
+    expect(res.status).toBe(409)
+  })
+
+  it('returns 429 when user submits within 24h (non-pending submission exists)', async () => {
+    setAuth()
+    await seedPriceSubmission(eventId, 'user_abc123', {
+      status: 'corroborated',
+    })
+    const res = await app.request(`/v1/events/${eventId}/price-submissions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
+      body: JSON.stringify(TEST_BODY),
+    })
+    expect(res.status).toBe(429)
+  })
 })
 
 describe('GET /v1/events/:id/price-submissions', () => {
-  it('returns corroborated submissions for an event', async () => {
+  it('returns submissions with enriched shape', async () => {
     clearAuth()
     await clearTables()
     const venue = await seedVenue()
@@ -104,9 +142,32 @@ describe('GET /v1/events/:id/price-submissions', () => {
     const res = await app.request(`/v1/events/${event.id}/price-submissions`)
     const body = (await res.json()) as {
       success: boolean
-      data: Array<{ status: string }>
+      data: {
+        submissions: Array<{ status: string; confirms: number; byYou: boolean }>
+        alreadySubmitted: boolean
+        userSubmission: null
+      }
     }
     expect(body.success).toBe(true)
-    expect(body.data[0]?.status).toBe('corroborated')
+    expect(body.data.submissions[0]?.status).toBe('corroborated')
+    expect(typeof body.data.submissions[0]?.confirms).toBe('number')
+    expect(body.data.alreadySubmitted).toBe(false)
+    expect(body.data.userSubmission).toBeNull()
+  })
+
+  it('filters out stale submissions', async () => {
+    clearAuth()
+    await clearTables()
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id)
+    await seedPriceSubmission(event.id, 'user_1', { status: 'stale' })
+
+    const res = await app.request(`/v1/events/${event.id}/price-submissions`)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { submissions: Array<unknown> }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.submissions).toHaveLength(0)
   })
 })
