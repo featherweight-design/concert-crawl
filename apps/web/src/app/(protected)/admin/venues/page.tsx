@@ -1,5 +1,4 @@
-import { auth } from '@clerk/nextjs/server'
-import { requireAdminUser } from '@/lib/auth'
+import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
 import {
   Plus,

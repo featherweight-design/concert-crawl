@@ -1,5 +1,4 @@
-import { auth } from '@clerk/nextjs/server'
-import { requireAdminUser } from '@/lib/auth'
+import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
 import { SectionHead, AdminButton } from '@/components/admin/primitives'
 import { EventQueueSplit } from '@/components/admin/events/EventQueueSplit'
@@ -47,7 +46,7 @@ export default async function AdminEventsPage() {
           </AdminButton>
         }
       />
-      <EventQueueSplit initialEvents={events} token={token} />
+      <EventQueueSplit initialEvents={events} />
     </div>
   )
 }

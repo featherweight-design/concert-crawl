@@ -1,4 +1,3 @@
-import { auth } from '@clerk/nextjs/server'
 import {
   DollarSign,
   Activity,
@@ -6,7 +5,7 @@ import {
   MapPin,
   ChevronRight,
 } from 'lucide-react'
-import { requireAdminUser } from '@/lib/auth'
+import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
 import type { CrawlRun, Venue } from '@concert-crawl/types'
 import {

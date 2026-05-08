@@ -32,10 +32,9 @@ type FilterKind = 'pending' | 'low-conf' | 'all'
 
 interface Props {
   initialEvents: AdminEvent[]
-  token: string
 }
 
-export const EventQueueSplit = ({ initialEvents, token: _token }: Props) => {
+export const EventQueueSplit = ({ initialEvents }: Props) => {
   const { getToken } = useAuth()
   const [events, setEvents] = useState(initialEvents)
   const [selectedId, setSelectedId] = useState<string | null>(
@@ -45,6 +44,7 @@ export const EventQueueSplit = ({ initialEvents, token: _token }: Props) => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter | null>(null)
   const [processing, setProcessing] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const filtered = events.filter((ev) => {
     if (filter === 'low-conf') return Number(ev.confidenceScore) < 0.7
@@ -57,6 +57,7 @@ export const EventQueueSplit = ({ initialEvents, token: _token }: Props) => {
   const approve = useCallback(
     async (id: string) => {
       setProcessing(id)
+      setActionError(null)
       try {
         const tok = await getToken()
         if (!tok) return
@@ -65,6 +66,9 @@ export const EventQueueSplit = ({ initialEvents, token: _token }: Props) => {
         const remaining = filtered.filter((ev) => ev.id !== id)
         const nextIdx = Math.min(selectedIdx, remaining.length - 1)
         setSelectedId(remaining[nextIdx]?.id ?? null)
+      } catch (err) {
+        console.error('[EventQueueSplit] action failed:', err)
+        setActionError(err instanceof Error ? err.message : 'Action failed')
       } finally {
         setProcessing(null)
       }
@@ -76,6 +80,7 @@ export const EventQueueSplit = ({ initialEvents, token: _token }: Props) => {
     async (id: string) => {
       if (!confirm('Delete this event? Cannot be undone.')) return
       setProcessing(id)
+      setActionError(null)
       try {
         const tok = await getToken()
         if (!tok) return
@@ -84,6 +89,9 @@ export const EventQueueSplit = ({ initialEvents, token: _token }: Props) => {
         const remaining = filtered.filter((ev) => ev.id !== id)
         const nextIdx = Math.min(selectedIdx, remaining.length - 1)
         setSelectedId(remaining[nextIdx]?.id ?? null)
+      } catch (err) {
+        console.error('[EventQueueSplit] action failed:', err)
+        setActionError(err instanceof Error ? err.message : 'Action failed')
       } finally {
         setProcessing(null)
       }
@@ -342,6 +350,20 @@ export const EventQueueSplit = ({ initialEvents, token: _token }: Props) => {
                     Approve
                   </AdminButton>
                 </div>
+                {actionError && (
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: 'var(--danger)',
+                      padding: '6px 10px',
+                      borderRadius: 6,
+                      background: 'rgba(220,38,38,0.08)',
+                      border: '1px solid rgba(220,38,38,0.2)',
+                    }}
+                  >
+                    {actionError}
+                  </div>
+                )}
 
                 {/* Vitals */}
                 <div
