@@ -43,6 +43,7 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
     profile.avatarColor,
   )
   const [handleError, setHandleError] = useState<HandleError>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [checkingAvailability, setCheckingAvailability] = useState(false)
 
@@ -107,6 +108,10 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
       })
       router.push('/me')
       router.refresh()
+    } catch (err) {
+      setSaveError(
+        err instanceof Error ? err.message : 'Something went wrong. Try again.',
+      )
     } finally {
       setSaving(false)
     }
@@ -230,6 +235,11 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
       >
         {saving ? 'Saving…' : checkingAvailability ? 'Checking…' : 'Save'}
       </button>
+      {saveError && (
+        <span className="text-[12px]" style={{ color: 'var(--danger)' }}>
+          {saveError}
+        </span>
+      )}
     </div>
   )
 }

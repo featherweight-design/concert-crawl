@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { SubmissionItem } from './SubmissionItem'
 import { SETTINGS_COPY } from './definitions/copy'
 import { SUBMISSION_CAP_MOBILE } from './definitions/constants'
@@ -33,12 +32,9 @@ export function MySubmissionsList({
             <SubmissionItem key={sub.id} submission={sub} />
           ))}
           {hasMore && (
-            <Link
-              href="/me/submissions"
-              className="px-4 py-3 text-[13px] font-medium text-fg-muted transition-colors hover:text-fg"
-            >
+            <span className="px-4 py-3 text-[13px] text-fg-subtle">
               {SETTINGS_COPY.seeAllSubmissions(totalCount)}
-            </Link>
+            </span>
           )}
         </div>
       )}

@@ -19,6 +19,7 @@ export function ThemePickerInline() {
 
   async function handleSelectTheme(name: ThemeName) {
     if (name === theme || isSaving) return
+    const previous = theme
     setTheme(name)
     setIsSaving(true)
     try {
@@ -26,6 +27,8 @@ export function ThemePickerInline() {
       if (token) {
         await patchMe(token, { theme: name })
       }
+    } catch {
+      setTheme(previous)
     } finally {
       setIsSaving(false)
     }

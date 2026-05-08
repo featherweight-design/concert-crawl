@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { and, desc, eq, gte, ne, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, isNull, ne, or, sql } from 'drizzle-orm'
 import { db, events, priceSubmissions, userRoles } from '@concert-crawl/db'
 import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js'
 
@@ -91,7 +91,10 @@ priceSubmissionsRouter.post(
       .where(
         and(
           eq(priceSubmissions.eventId, eventId),
-          ne(priceSubmissions.userId, userId),
+          or(
+            isNull(priceSubmissions.userId),
+            ne(priceSubmissions.userId, userId),
+          ),
           eq(priceSubmissions.status, 'pending'),
           gte(priceSubmissions.createdAt, sevenDaysAgo),
         ),

@@ -1,7 +1,7 @@
 // apps/api/src/routes/users.ts
 import { Hono } from 'hono'
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
-import { eq, count } from 'drizzle-orm'
+import { eq, count, ne, and } from 'drizzle-orm'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import {
@@ -180,7 +180,12 @@ usersRouter.patch('/me', zValidator('json', patchSchema), async (ctx) => {
     const [existingHandle] = await db
       .select({ id: userProfiles.id })
       .from(userProfiles)
-      .where(eq(userProfiles.handle, body.handle))
+      .where(
+        and(
+          eq(userProfiles.handle, body.handle),
+          ne(userProfiles.userId, auth.userId),
+        ),
+      )
       .limit(1)
     if (existingHandle) {
       return ctx.json(
@@ -254,7 +259,12 @@ usersRouter.get('/me/submissions', async (ctx) => {
     .from(priceSubmissions)
     .leftJoin(events, eq(priceSubmissions.eventId, events.id))
     .leftJoin(venues, eq(events.venueId, venues.id))
-    .where(eq(priceSubmissions.userId, auth.userId))
+    .where(
+      and(
+        eq(priceSubmissions.userId, auth.userId),
+        ne(priceSubmissions.status, 'stale'),
+      ),
+    )
     .orderBy(priceSubmissions.createdAt)
 
   const data: UserSubmissionItem[] = rows.map((row) => ({

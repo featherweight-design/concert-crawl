@@ -14,7 +14,7 @@ export function DangerZone() {
       <div className="flex flex-col gap-1">
         <button
           type="button"
-          onClick={() => void signOut()}
+          onClick={() => void signOut().catch(console.error)}
           className="flex cursor-pointer flex-col gap-0.5 rounded-xl px-4 py-3 text-left transition-colors hover:bg-surface-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
         >
           <span className="text-[14px] font-semibold text-fg">
