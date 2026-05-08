@@ -131,27 +131,136 @@ export const AdminSidebar = () => {
         }}
       >
         {mode === 'full' ? (
-          <span
-            style={{
-              fontFamily: "'Inter', sans-serif",
-              fontWeight: 800,
-              fontSize: 13,
-              color: 'var(--fg)',
-            }}
-          >
-            concertcrawl./admin
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* Logo mark */}
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                background: '#0d0c09',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <circle cx="9" cy="9" r="2.5" fill="#c89bf0" />
+                <circle cx="3" cy="4" r="1.5" fill="#7ab4ff" opacity="0.8" />
+                <circle cx="15" cy="3" r="1" fill="#c89bf0" opacity="0.6" />
+                <circle cx="14" cy="14" r="1.5" fill="#7ab4ff" opacity="0.7" />
+                <circle cx="4" cy="13" r="1" fill="#c89bf0" opacity="0.5" />
+                <line
+                  x1="3"
+                  y1="4"
+                  x2="9"
+                  y2="9"
+                  stroke="#7ab4ff"
+                  strokeWidth="0.75"
+                  opacity="0.4"
+                />
+                <line
+                  x1="9"
+                  y1="9"
+                  x2="14"
+                  y2="14"
+                  stroke="#c89bf0"
+                  strokeWidth="0.75"
+                  opacity="0.4"
+                />
+                <line
+                  x1="15"
+                  y1="3"
+                  x2="9"
+                  y2="9"
+                  stroke="#7ab4ff"
+                  strokeWidth="0.75"
+                  opacity="0.4"
+                />
+              </svg>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <div
+                style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontWeight: 800,
+                  fontSize: 13,
+                  lineHeight: 1,
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                <span style={{ color: 'var(--fg)' }}>concert</span>
+                <span style={{ color: 'var(--accent)' }}>crawl.</span>
+              </div>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  height: 14,
+                  padding: '0 5px',
+                  borderRadius: 999,
+                  background: 'rgba(122,58,168,0.18)',
+                  color: 'var(--accent)',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 9,
+                  fontWeight: 700,
+                  textTransform: 'uppercase' as const,
+                  letterSpacing: '0.08em',
+                  alignSelf: 'flex-start',
+                }}
+              >
+                ADMIN
+              </div>
+            </div>
+          </div>
         ) : (
-          <span
+          <div
             style={{
-              fontFamily: "'Inter', sans-serif",
-              fontWeight: 800,
-              fontSize: 13,
-              color: 'var(--fg)',
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              background: '#0d0c09',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            cc/
-          </span>
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <circle cx="9" cy="9" r="2.5" fill="#c89bf0" />
+              <circle cx="3" cy="4" r="1.5" fill="#7ab4ff" opacity="0.8" />
+              <circle cx="15" cy="3" r="1" fill="#c89bf0" opacity="0.6" />
+              <circle cx="14" cy="14" r="1.5" fill="#7ab4ff" opacity="0.7" />
+              <circle cx="4" cy="13" r="1" fill="#c89bf0" opacity="0.5" />
+              <line
+                x1="3"
+                y1="4"
+                x2="9"
+                y2="9"
+                stroke="#7ab4ff"
+                strokeWidth="0.75"
+                opacity="0.4"
+              />
+              <line
+                x1="9"
+                y1="9"
+                x2="14"
+                y2="14"
+                stroke="#c89bf0"
+                strokeWidth="0.75"
+                opacity="0.4"
+              />
+              <line
+                x1="15"
+                y1="3"
+                x2="9"
+                y2="9"
+                stroke="#7ab4ff"
+                strokeWidth="0.75"
+                opacity="0.4"
+              />
+            </svg>
+          </div>
         )}
       </div>
 
