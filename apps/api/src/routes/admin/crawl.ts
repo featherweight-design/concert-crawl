@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { eq, and, desc, asc, inArray } from 'drizzle-orm'
+import { eq, desc, asc, inArray } from 'drizzle-orm'
 import { db, venues, crawlRuns } from '@concert-crawl/db'
 import { crawlVenue } from '@concert-crawl/crawler-core'
 import { getAuthUser } from '../../middleware/auth.js'

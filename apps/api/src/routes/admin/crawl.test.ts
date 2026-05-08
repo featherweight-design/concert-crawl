@@ -26,6 +26,7 @@ vi.mock('@concert-crawl/db', () => ({
     select: vi.fn().mockReturnThis(),
     selectDistinctOn: vi.fn().mockReturnThis(),
     from: vi.fn().mockReturnThis(),
+    leftJoin: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
     orderBy: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnValue([]),
@@ -252,7 +253,7 @@ describe('Admin crawl routes', () => {
       adminAuth()
       const { db } = await import('@concert-crawl/db')
       vi.mocked(
-        db.select().from().where().orderBy().limit,
+        db.select().from().leftJoin().where().orderBy().limit,
       ).mockResolvedValueOnce([mockCrawlRun])
       const res = await createApp().request(
         `/v1/admin/crawl/runs?venueId=${VENUE_ID}`,
