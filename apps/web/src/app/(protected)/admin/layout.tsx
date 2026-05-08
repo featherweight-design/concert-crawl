@@ -1,17 +1,8 @@
+import './admin.css'
 import { requireAdminUser } from '@/lib/auth'
-import { NotificationBell } from '@/components/admin/notification-bell/NotificationBell'
-import { UserButton } from '@clerk/nextjs'
-import Link from 'next/link'
-
-const navItems = [
-  { href: '/admin', label: 'Dashboard' },
-  { href: '/admin/venues', label: 'Venues' },
-  { href: '/admin/crawl', label: 'Crawl Status' },
-  { href: '/admin/events', label: 'Event Review' },
-  { href: '/admin/prices', label: 'Prices' },
-  { href: '/admin/invite-codes', label: 'Invite Codes' },
-  { href: '/admin/settings', label: 'Settings' },
-]
+import { AdminThemeProvider } from '@/components/admin/shell/AdminThemeProvider'
+import { AdminSidebar } from '@/components/admin/shell/AdminSidebar'
+import { AdminTopbar } from '@/components/admin/shell/AdminTopbar'
 
 export default async function AdminLayout({
   children,
@@ -21,30 +12,14 @@ export default async function AdminLayout({
   await requireAdminUser()
 
   return (
-    <div className="flex min-h-screen">
-      <aside className="flex w-56 flex-col border-r border-border bg-surface-1 p-4">
-        <p className="mb-6 text-sm font-semibold uppercase tracking-wider text-fg-muted">
-          Admin
-        </p>
-        <nav className="flex flex-col gap-1">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-md px-3 py-2 text-sm text-fg hover:bg-surface-2"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="mt-auto space-y-2 border-t border-border pt-4">
-          <div className="flex items-center justify-between">
-            <NotificationBell />
-          </div>
-          <UserButton showName />
+    <AdminThemeProvider>
+      <div className="flex h-screen overflow-hidden bg-[var(--bg)] text-[var(--fg)]">
+        <AdminSidebar />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <AdminTopbar />
+          <main className="flex-1 overflow-y-auto p-6 lg:p-8">{children}</main>
         </div>
-      </aside>
-      <main className="flex-1 p-8">{children}</main>
-    </div>
+      </div>
+    </AdminThemeProvider>
   )
 }
