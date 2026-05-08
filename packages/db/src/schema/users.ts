@@ -50,7 +50,6 @@ export const auditLog = pgTable('audit_log', {
 
 export const waitlistEntries = pgTable('waitlist_entries', {
   id: uuid('id').primaryKey().defaultRandom(),
-  name: varchar('name', { length: 255 }),
   email: varchar('email', { length: 255 }).notNull().unique(),
   ip: varchar('ip', { length: 45 }),
   createdAt: timestamp('created_at', { withTimezone: true })

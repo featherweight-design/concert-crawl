@@ -24,15 +24,23 @@ const inputStyle: React.CSSProperties = {
 }
 
 export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
-  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [state, setState] = useState<ModalState>('idle')
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // Reset state and inputs each time the modal opens
   useEffect(() => {
-    if (open && state !== 'success') {
-      setTimeout(() => inputRef.current?.focus(), 100)
+    if (open) {
+      setState('idle')
+      setEmail('')
     }
+  }, [open])
+
+  // Auto-focus the email input when the modal opens (not on success screen)
+  useEffect(() => {
+    if (!open || state === 'success') return
+    const timer = setTimeout(() => inputRef.current?.focus(), 100)
+    return () => clearTimeout(timer)
   }, [open, state])
 
   useEffect(() => {
@@ -54,7 +62,7 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
       const res = await fetch(`${apiUrl}/v1/waitlist`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email }),
+        body: JSON.stringify({ email }),
       })
       if (!res.ok) {
         setState('error')
@@ -228,8 +236,8 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
                 lineHeight: 1.45,
               }}
             >
-              We&apos;re letting people in slowly. Drop your name and email —
-              we&apos;ll ping you when there&apos;s room.
+              We&apos;re letting people in slowly. Drop your email — we&apos;ll
+              ping you when there&apos;s room.
             </p>
 
             {state === 'error' && (
@@ -271,33 +279,10 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
                     fontWeight: 700,
                   }}
                 >
-                  Name
-                </span>
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={name}
-                  onChange={(ev) => setName(ev.target.value)}
-                  placeholder="Jordan Reyes"
-                  style={inputStyle}
-                />
-              </label>
-              <label
-                style={{ display: 'flex', flexDirection: 'column', gap: 6 }}
-              >
-                <span
-                  style={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: 10,
-                    color: 'var(--fg-muted)',
-                    letterSpacing: '0.10em',
-                    textTransform: 'uppercase',
-                    fontWeight: 700,
-                  }}
-                >
                   Email <span style={{ color: 'var(--accent)' }}>*</span>
                 </span>
                 <input
+                  ref={inputRef}
                   type="email"
                   value={email}
                   onChange={(ev) => setEmail(ev.target.value)}

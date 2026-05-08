@@ -20,18 +20,20 @@ export default async function AuthCompletePage() {
     try {
       const token = await getToken()
       const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
-      await fetch(`${apiUrl}/v1/auth/redeem-code`, {
+      const res = await fetch(`${apiUrl}/v1/auth/redeem-code`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ code: verified.code }),
       })
+      // Clear cookie only after a definitive response (success or already-used)
+      if (res.ok || res.status === 409) {
+        cookieStore.delete(INVITE_COOKIE_NAME)
+      }
     } catch {
-      // Redemption failed — not fatal, user still gets in
-    } finally {
-      cookieStore.delete(INVITE_COOKIE_NAME)
+      // Network failure — leave cookie so the next load can retry
     }
   }
 

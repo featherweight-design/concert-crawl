@@ -1,4 +1,4 @@
-// Server-only — uses Node.js crypto. Do not import in middleware.ts (Edge Runtime).
+import 'server-only'
 import { createHmac, timingSafeEqual } from 'crypto'
 
 export const INVITE_COOKIE_NAME = 'invite_verified'
@@ -43,6 +43,8 @@ export function verifyInviteCookie(
     const now = Math.floor(Date.now() / 1000)
     if (payload.iat > now) return null
     if (now - payload.iat > INVITE_COOKIE_MAX_AGE) return null
+
+    if (typeof payload.code !== 'string' || !payload.code) return null
 
     return { code: payload.code }
   } catch {

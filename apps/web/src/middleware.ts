@@ -12,10 +12,23 @@ const isAlwaysPublic = createRouteMatcher([
 // Accessible to unauthenticated users IF they have the invite cookie
 const isInviteGated = createRouteMatcher(['/onboarding(.*)', '/sign-up(.*)'])
 
+// Pre-auth routes: public pages that authenticated users have no reason to visit
+const isPreAuth = createRouteMatcher([
+  '/auth/code(.*)',
+  '/onboarding(.*)',
+  '/sign-up(.*)',
+])
+
 export default clerkMiddleware(async (auth, req) => {
-  // Authenticated users bypass all invite gates
   const { userId } = await auth()
-  if (userId) return
+
+  // Authenticated users skip directly to the app; no reason to see pre-auth pages
+  if (userId) {
+    if (isPreAuth(req)) {
+      return NextResponse.redirect(new URL('/events', req.url))
+    }
+    return
+  }
 
   if (isAlwaysPublic(req)) return
 

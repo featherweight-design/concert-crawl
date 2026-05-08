@@ -181,12 +181,12 @@ On success: redirect to `/onboarding`.
 
 ## Code Redemption
 
-After Clerk sign-up completes, a post-sign-up server action:
+After Clerk sign-up completes, `/auth/complete` (server component):
 
 1. Reads the `invite_verified` cookie (extracts signed code)
-2. Calls `POST /v1/auth/redeem-code` with `userId` from the new Clerk session
+2. Calls `POST /v1/auth/redeem-code` with `{ code }` in the body; `userId` is derived server-side from the Clerk auth token
 3. API sets `usedBy = userId`, `usedAt = now()` on the invite code row
-4. Clears the `invite_verified` cookie
+4. Clears the `invite_verified` cookie on success (or on 409 already-used); leaves it on network failure so the next load can retry
 5. Redirects to `/events`
 
 ### API endpoint

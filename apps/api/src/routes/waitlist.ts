@@ -5,7 +5,6 @@ import { db, waitlistEntries } from '@concert-crawl/db'
 import { checkRateLimit } from '../lib/rate-limit.js'
 
 const waitlistSchema = z.object({
-  name: z.string().max(255).optional(),
   email: z.string().email(),
 })
 
@@ -19,12 +18,9 @@ waitlistRouter.post('/', zValidator('json', waitlistSchema), async (ctx) => {
     return ctx.json({ success: false, error: 'Too many requests' }, 429)
   }
 
-  const { name, email } = ctx.req.valid('json')
+  const { email } = ctx.req.valid('json')
 
-  await db
-    .insert(waitlistEntries)
-    .values({ name: name ?? null, email, ip })
-    .onConflictDoNothing()
+  await db.insert(waitlistEntries).values({ email, ip }).onConflictDoNothing()
 
   // Always return 200 — no email enumeration
   return ctx.json({ success: true })
