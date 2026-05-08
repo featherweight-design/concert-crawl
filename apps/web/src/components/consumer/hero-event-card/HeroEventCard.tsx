@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { EventWithVenue } from '@concert-crawl/types'
 import { EventImage } from '../event-image'
-import { formatShowTime, venueShort, artistInitial } from '../definitions/lib'
+import { formatShowTime, venueShort } from '../definitions/lib'
 import { copy } from '../definitions/copy'
 
 interface HeroEventCardProps {
@@ -30,7 +30,7 @@ export function HeroEventCard({
           src={event.imageUrl}
           alt={event.artist}
           artist={event.artist}
-          fallbackInitial={artistInitial(event.artist)}
+          identityScale="hero"
           className="h-full w-full"
           fill
           sizes="(max-width: 1024px) 100vw, 720px"

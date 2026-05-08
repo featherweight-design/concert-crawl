@@ -3,7 +3,7 @@ import type { EventWithVenue } from '@concert-crawl/types'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { EventImage } from '../event-image'
-import { formatShowTime, artistInitial, venueShort } from '../definitions/lib'
+import { formatShowTime, venueShort } from '../definitions/lib'
 import { copy } from '../definitions/copy'
 
 interface EventCardProps {
@@ -118,7 +118,7 @@ export function EventCard({ event, className }: EventCardProps) {
           src={event.imageUrl}
           alt={event.artist}
           artist={event.artist}
-          fallbackInitial={artistInitial(event.artist)}
+          identityScale="tile"
           className="h-full w-full"
         />
       </Link>

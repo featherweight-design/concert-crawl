@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { EventWithVenue, Event } from '@concert-crawl/types'
 import { EventImage } from '../event-image'
-import { formatShowTime, artistInitial } from '../definitions/lib'
+import { formatShowTime } from '../definitions/lib'
 
 interface SmallEventRowProps {
   event: EventWithVenue | Event
@@ -42,7 +42,7 @@ export function SmallEventRow({
           src={event.imageUrl}
           alt={event.artist}
           artist={event.artist}
-          fallbackInitial={artistInitial(event.artist)}
+          identityScale="micro"
           className="h-full w-full"
         />
       </div>

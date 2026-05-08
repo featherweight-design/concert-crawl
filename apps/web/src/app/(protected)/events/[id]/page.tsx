@@ -12,7 +12,7 @@ import { PriceSubmissionForm } from '@/components/consumer/PriceSubmissionForm'
 import {
   formatEventDate,
   formatShowTime,
-  artistInitial,
+  formatPrice,
   formatShortDate,
 } from '@/components/consumer/definitions/lib'
 import { copy } from '@/components/consumer/definitions/copy'
@@ -76,7 +76,7 @@ export default async function EventDetailPage({
           src={event.imageUrl}
           alt={event.artist}
           artist={event.artist}
-          fallbackInitial={artistInitial(event.artist)}
+          identityScale="hero"
           className="h-full w-full"
           fill
           sizes="(max-width: 1024px) 100vw, 720px"

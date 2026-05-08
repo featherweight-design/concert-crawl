@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import { useUser, useClerk } from '@clerk/nextjs'
-import { getArtistGradientStyle } from '../event-image/artist-gradient'
 
 export function UserAvatar() {
   const { user } = useUser()
@@ -34,10 +33,6 @@ export function UserAvatar() {
         : (user.emailAddresses[0]?.emailAddress.charAt(0) ?? '?').toUpperCase()
   }
 
-  const gradientStyle = getArtistGradientStyle(
-    user?.firstName ?? user?.emailAddresses[0]?.emailAddress,
-  )
-
   return (
     <div ref={containerRef} className="relative">
       <button
@@ -57,8 +52,8 @@ export function UserAvatar() {
           />
         ) : (
           <span
-            className="flex h-full w-full items-center justify-center text-[13px] font-bold"
-            style={gradientStyle}
+            className="flex h-full w-full items-center justify-center text-[13px] font-bold text-fg-muted"
+            style={{ background: 'var(--bg-subtle)' }}
           >
             {initials}
           </span>
