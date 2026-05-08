@@ -51,6 +51,32 @@ export type PriceSource =
   | 'seatgeek'
   | 'community'
 
+// Ticket tier
+export type Tier = 'GA' | 'Reserved' | 'VIP' | 'Pit' | 'Lawn'
+
+// Ticket vendor
+export type Vendor =
+  | 'AXS'
+  | 'Ticketmaster'
+  | 'SeatGeek'
+  | 'DICE'
+  | 'Eventbrite'
+  | 'VenueBoxOffice'
+
+// How the submitter found the price
+export type HowFound = 'bought_myself' | 'saw_listing' | 'at_the_venue'
+
+// Shared validation policy — server enforces, client mirrors for UX
+export const SP_POLICY = {
+  floorMin: 1,
+  floorMax: 2000,
+  ceilingMax: 2000,
+  confirmsRequired: 2,
+  rateLimitHours: 24,
+  outlierLowFactor: 0.4,
+  outlierHighFactor: 2.5,
+} as const
+
 // Notification types
 export type NotificationType = 'admin_alert' | 'user_notification'
 
@@ -140,12 +166,27 @@ export interface PriceSubmission {
   userId: string
   priceMin: string
   priceMax: string | null
-  tierLabel: string | null
-  sourceNote: string | null
+  tier: Tier
+  vendor: Vendor
+  howFound: HowFound
+  disputedSubmissionId: string | null
   status: 'pending' | 'corroborated' | 'disputed' | 'stale'
   corroborationCount: number
   createdAt: string
   updatedAt: string
+}
+
+// SubmissionWithMeta — single submission + peer-confirm metadata
+export interface SubmissionWithMeta extends PriceSubmission {
+  confirms: number
+  byYou: boolean
+}
+
+// SubmissionListResponse — response for GET /v1/events/:id/price-submissions
+export interface SubmissionListResponse {
+  submissions: SubmissionWithMeta[]
+  alreadySubmitted: boolean
+  userSubmission: SubmissionWithMeta | null
 }
 
 // EventWithVenue — event joined with its venue, returned by the public events API
