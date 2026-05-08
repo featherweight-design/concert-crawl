@@ -47,6 +47,33 @@ export const CrawlSplitView = ({ initialStatus, initialRuns }: Props) => {
   const [selectedId, setSelectedId] = useState<string | null>(
     initialStatus[0]?.venueId ?? null,
   )
+  const [triggering, setTriggering] = useState<string | null>(null)
+  const [triggerError, setTriggerError] = useState<string | null>(null)
+
+  async function handleTrigger(venueId: string) {
+    setTriggering(venueId)
+    setTriggerError(null)
+    try {
+      const res = await fetch(`/api/admin/crawl/${venueId}`, { method: 'POST' })
+      if (!res.ok) {
+        const body: unknown = await res.json().catch(() => ({}))
+        const errorMsg =
+          body !== null &&
+          typeof body === 'object' &&
+          'error' in body &&
+          typeof (body as Record<string, unknown>)['error'] === 'string'
+            ? String((body as Record<string, unknown>)['error'])
+            : `HTTP ${res.status}`
+        throw new Error(errorMsg)
+      }
+    } catch (err) {
+      setTriggerError(
+        err instanceof Error ? err.message : 'Crawl trigger failed',
+      )
+    } finally {
+      setTriggering(null)
+    }
+  }
 
   const selected = initialStatus.find((row) => row.venueId === selectedId)
   const selectedRuns = initialRuns.filter((run) => run.venueId === selectedId)
@@ -145,7 +172,37 @@ export const CrawlSplitView = ({ initialStatus, initialRuns }: Props) => {
       >
         {selected ? (
           <>
-            <Panel title={selected.venueName}>
+            <Panel
+              title={selected.venueName}
+              action={
+                <button
+                  onClick={() => handleTrigger(selected.venueId)}
+                  disabled={triggering === selected.venueId}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    height: 28,
+                    padding: '0 10px',
+                    borderRadius: 6,
+                    fontSize: 12,
+                    fontWeight: 500,
+                    border: '1px solid var(--border-strong)',
+                    background: 'transparent',
+                    color:
+                      triggering === selected.venueId
+                        ? 'var(--fg-subtle)'
+                        : 'var(--fg)',
+                    cursor:
+                      triggering === selected.venueId
+                        ? 'not-allowed'
+                        : 'pointer',
+                  }}
+                >
+                  {triggering === selected.venueId ? 'Triggering…' : 'Re-crawl'}
+                </button>
+              }
+            >
               <div
                 style={{
                   display: 'grid',
@@ -206,6 +263,20 @@ export const CrawlSplitView = ({ initialStatus, initialRuns }: Props) => {
                   }}
                 >
                   {selected.error}
+                </div>
+              )}
+              {triggerError && (
+                <div
+                  style={{
+                    marginTop: 8,
+                    padding: '8px 10px',
+                    borderRadius: 6,
+                    background: 'rgba(184,56,26,0.08)',
+                    color: 'var(--danger)',
+                    fontSize: 12,
+                  }}
+                >
+                  {triggerError}
                 </div>
               )}
             </Panel>
