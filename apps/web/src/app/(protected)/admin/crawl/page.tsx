@@ -1,75 +1,54 @@
 import { auth } from '@clerk/nextjs/server'
+import { requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
-import { CrawlStatusTable } from '@/components/admin/crawl-status-table/CrawlStatusTable'
+import { RefreshCw } from 'lucide-react'
+import { SectionHead, AdminButton } from '@/components/admin/primitives'
+import { CrawlSplitView } from '@/components/admin/crawl/CrawlSplitView'
+import type { CrawlRun } from '@concert-crawl/types'
 
-type CrawlStatusRow = {
-  id: string
-  name: string
-  active: boolean
-  verified: boolean
-  consecutiveFailures: number
-  blockedAt: string | null
-  lastCrawledAt: string | null
-  lastRun: {
-    id: string
-    status: string
-    createdAt: string
-    eventsFound: number
-    eventsInserted: number
-    errorMessage: string | null
-    extractionStrategyUsed: string | null
-  } | null
+interface CrawlStatusRow {
+  venueId: string
+  venueName: string
+  status: string
+  lastRunAt: string | null
+  eventsFound: number
+  strategy: string
+  cost: number
+  error: string | null
 }
 
-async function getCrawlStatus(): Promise<CrawlStatusRow[]> {
+export default async function AdminCrawlPage() {
+  await requireAdminUser()
   const { getToken } = await auth()
   const token = await getToken()
-  return apiClient.get<CrawlStatusRow[]>('/v1/admin/crawl/status', token!)
-}
+  if (!token) return null
 
-export default async function CrawlStatusPage() {
-  const venues = await getCrawlStatus()
-
-  const totalVenues = venues.length
-  const failing = venues.filter(
-    (venue) => venue.consecutiveFailures >= 1,
-  ).length
-  const blocked = venues.filter((venue) => venue.blockedAt !== null).length
-  const neverCrawled = venues.filter((venue) => venue.lastRun === null).length
+  const [status, runs] = await Promise.all([
+    apiClient.get<CrawlStatusRow[]>('/v1/admin/crawl/status', token),
+    apiClient.get<CrawlRun[]>('/v1/admin/crawl/runs?limit=50', token),
+  ])
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-fg">Crawl Status</h1>
-        <p className="mt-1 text-sm text-fg-muted">
-          Daily crawl health for all venues.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {[
-          { label: 'Total venues', value: totalVenues },
-          { label: 'Failing', value: failing, danger: failing > 0 },
-          { label: 'Blocked', value: blocked, danger: blocked > 0 },
-          { label: 'Never crawled', value: neverCrawled },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            className="rounded-lg border border-border bg-surface-1 p-4"
-          >
-            <p className="text-sm text-fg-muted">{stat.label}</p>
-            <p
-              className={`mt-1 text-2xl font-semibold ${
-                stat.danger ? 'text-red-500' : 'text-fg'
-              }`}
-            >
-              {stat.value}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      <CrawlStatusTable venues={venues} />
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 24,
+        height: '100%',
+      }}
+    >
+      <SectionHead
+        eyebrow="Phase 7 · Automation"
+        title="Crawl status"
+        actions={
+          <>
+            <AdminButton variant="outline" icon={RefreshCw}>
+              Run all
+            </AdminButton>
+          </>
+        }
+      />
+      <CrawlSplitView initialStatus={status} initialRuns={runs} token={token} />
     </div>
   )
 }
