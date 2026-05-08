@@ -8,7 +8,8 @@ const STORAGE_KEY = 'cc-admin-theme'
 const ThemeContext = createContext<{
   theme: AdminTheme
   toggle: () => void
-}>({ theme: 'light', toggle: () => {} })
+  setTheme: (theme: AdminTheme) => void
+}>({ theme: 'light', toggle: () => {}, setTheme: () => {} })
 
 export const useAdminTheme = () => useContext(ThemeContext)
 
@@ -17,7 +18,7 @@ export const AdminThemeProvider = ({
 }: {
   children: React.ReactNode
 }) => {
-  const [theme, setTheme] = useState<AdminTheme>('light')
+  const [theme, setThemeState] = useState<AdminTheme>('light')
 
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -26,19 +27,25 @@ export const AdminThemeProvider = ({
     const preferred = window.matchMedia('(prefers-color-scheme: dark)').matches
       ? 'dark'
       : 'light'
-    setTheme(stored ?? preferred)
+    setThemeState(stored ?? preferred)
   }, [])
 
   const toggle = () => {
-    setTheme((prev) => {
+    setThemeState((prev) => {
       const next: AdminTheme = prev === 'light' ? 'dark' : 'light'
       localStorage.setItem(STORAGE_KEY, next)
       return next
     })
   }
 
+  const setTheme = (newTheme: AdminTheme) => {
+    setThemeState(newTheme)
+    localStorage.setItem(STORAGE_KEY, newTheme)
+    document.documentElement.setAttribute('data-admin-theme', newTheme)
+  }
+
   return (
-    <ThemeContext.Provider value={{ theme, toggle }}>
+    <ThemeContext.Provider value={{ theme, toggle, setTheme }}>
       <div data-admin-theme={theme} style={{ display: 'contents' }}>
         {children}
       </div>

@@ -1,55 +1,86 @@
-// apps/web/src/components/admin/ThemePicker.tsx
 'use client'
 
-import { cn } from '@/lib/utils'
-import { THEMES, THEME_NAMES, type ThemeName } from '@/theme/themes'
-import { useTheme } from '@/theme'
+import { useAdminTheme } from '@/components/admin/shell/AdminThemeProvider'
 
-const THEME_LABELS: Record<ThemeName, string> = {
-  electric: 'Electric',
-  jade: 'Jade',
-  light: 'Light',
-}
+const ADMIN_THEMES = [
+  {
+    id: 'light' as const,
+    label: 'Light',
+    bg: '#f7f5f0',
+    signal: '#1d5fbf',
+    accent: '#7a3aa8',
+  },
+  {
+    id: 'dark' as const,
+    label: 'Dark',
+    bg: '#15140f',
+    signal: '#7ab4ff',
+    accent: '#c89bf0',
+  },
+]
 
 export function ThemePicker() {
-  const { theme, setTheme } = useTheme()
+  const { theme, setTheme } = useAdminTheme()
 
   return (
-    <div role="radiogroup" aria-label="Theme" className="flex flex-wrap gap-3">
-      {THEME_NAMES.map((name) => {
-        const tokens = THEMES[name]
-        const isSelected = theme === name
-
+    <div
+      role="radiogroup"
+      aria-label="Admin theme"
+      style={{ display: 'flex', gap: 12 }}
+    >
+      {ADMIN_THEMES.map((themeOption) => {
+        const isSelected = theme === themeOption.id
         return (
           <button
-            key={name}
+            key={themeOption.id}
             type="button"
             role="radio"
             aria-checked={isSelected}
-            onClick={() => setTheme(name)}
-            className={cn(
-              'flex flex-col gap-3 rounded-xl border p-4 text-left transition-all',
-              isSelected
-                ? 'border-border-focus ring-2 ring-border-focus'
-                : 'border-border hover:border-border-strong',
-            )}
+            onClick={() => setTheme(themeOption.id)}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
+              borderRadius: 12,
+              padding: 16,
+              border: isSelected
+                ? '2px solid var(--signal)'
+                : '1px solid var(--border)',
+              background: 'var(--bg-elevated)',
+              cursor: 'pointer',
+              outline: isSelected ? '2px solid var(--signal)' : 'none',
+              outlineOffset: 2,
+            }}
           >
-            <div className="flex gap-1.5">
+            <div style={{ display: 'flex', gap: 6 }}>
               <span
-                className="size-4 rounded-full ring-1 ring-black/10"
-                style={{ background: tokens.bg }}
+                style={{
+                  width: 16,
+                  height: 16,
+                  borderRadius: '50%',
+                  background: themeOption.bg,
+                  border: '1px solid rgba(0,0,0,0.15)',
+                }}
               />
               <span
-                className="size-4 rounded-full"
-                style={{ background: tokens.signal }}
+                style={{
+                  width: 16,
+                  height: 16,
+                  borderRadius: '50%',
+                  background: themeOption.signal,
+                }}
               />
               <span
-                className="size-4 rounded-full"
-                style={{ background: tokens.accent }}
+                style={{
+                  width: 16,
+                  height: 16,
+                  borderRadius: '50%',
+                  background: themeOption.accent,
+                }}
               />
             </div>
-            <span className="text-sm font-medium text-fg">
-              {THEME_LABELS[name]}
+            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg)' }}>
+              {themeOption.label}
             </span>
           </button>
         )
