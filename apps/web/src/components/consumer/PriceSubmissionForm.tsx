@@ -30,8 +30,15 @@ export function PriceSubmissionForm({
 
   if (!isSignedIn) {
     return (
-      <p className="text-muted-foreground text-sm">
-        <Link href="/sign-in" className="underline">
+      <p
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 10,
+          color: 'var(--fg-subtle)',
+          letterSpacing: '0.02em',
+        }}
+      >
+        <Link href="/sign-in" className="text-signal underline">
           Sign in
         </Link>{' '}
         to submit a price.
@@ -40,7 +47,7 @@ export function PriceSubmissionForm({
   }
 
   const prompt = isAxsEvent
-    ? "AXS doesn't publish pricing. Know what face value tickets cost? Submit a price →"
+    ? "AXS doesn't publish pricing. Know what face value costs? Submit it →"
     : 'Know the ticket price? Help the community.'
 
   const handleSubmit = async (evt: React.FormEvent) => {
@@ -75,15 +82,31 @@ export function PriceSubmissionForm({
 
   if (state === 'success') {
     return (
-      <p className="text-muted-foreground text-sm">
-        Thanks! Your submission is pending corroboration.
+      <p
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 10,
+          color: 'var(--success)',
+          letterSpacing: '0.02em',
+        }}
+      >
+        Got it. Your submission is pending corroboration from other fans.
       </p>
     )
   }
 
   return (
     <div className="space-y-3">
-      <p className="text-muted-foreground text-sm">{prompt}</p>
+      <p
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 10,
+          color: 'var(--fg-subtle)',
+          letterSpacing: '0.02em',
+        }}
+      >
+        {prompt}
+      </p>
       <form onSubmit={handleSubmit} className="space-y-2">
         <div className="flex gap-2">
           <div className="flex-1">
@@ -145,7 +168,7 @@ export function PriceSubmissionForm({
           />
         </div>
         {state === 'error' && (
-          <p className="text-destructive text-xs">
+          <p className="text-xs" style={{ color: 'var(--destructive)' }}>
             Something went wrong. Try again.
           </p>
         )}
@@ -153,6 +176,16 @@ export function PriceSubmissionForm({
           {state === 'submitting' ? 'Submitting…' : 'Submit price'}
         </Button>
       </form>
+      <p
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 9,
+          color: 'var(--fg-subtle)',
+          letterSpacing: '0.02em',
+        }}
+      >
+        Community prices are unverified until corroborated by other fans.
+      </p>
     </div>
   )
 }

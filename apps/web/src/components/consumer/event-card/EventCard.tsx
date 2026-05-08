@@ -11,22 +11,96 @@ interface EventCardProps {
   className?: string
 }
 
+type SourceKind = 'primary' | 'resale' | 'community'
+
+function resolveKind(
+  priceSource: EventWithVenue['priceSource'],
+): SourceKind | null {
+  if (!priceSource) return null
+  if (priceSource === 'seatgeek') return 'resale'
+  if (priceSource === 'community') return 'community'
+  return 'primary'
+}
+
+// ── PriceChip — inline price with trust tell ─────────────────────
+// No directional arrows: we lack historical data for delta detection.
+// Trust tell: "R" = resale, "C" = community.
+
+function PriceChip({
+  price,
+  kind,
+}: {
+  price: string
+  kind: SourceKind | null
+}) {
+  const trustTell =
+    kind === 'resale'
+      ? {
+          letter: 'R',
+          color: 'var(--warning)',
+          bg: 'color-mix(in oklab, var(--warning) 14%, transparent)',
+        }
+      : kind === 'community'
+        ? {
+            letter: 'C',
+            color: 'var(--fg-muted)',
+            bg: 'color-mix(in oklab, var(--fg-muted) 12%, transparent)',
+          }
+        : null
+
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 3,
+        flexShrink: 0,
+      }}
+    >
+      <span
+        style={{
+          fontFamily: 'var(--font-ui)',
+          fontWeight: 800,
+          fontSize: 13,
+          color: 'var(--signal)',
+          letterSpacing: '-0.01em',
+        }}
+      >
+        {price}
+      </span>
+      {trustTell && (
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 8,
+            color: trustTell.color,
+            letterSpacing: '0.06em',
+            marginLeft: 1,
+            opacity: 0.85,
+            padding: '1px 3px',
+            borderRadius: 3,
+            background: trustTell.bg,
+            lineHeight: 1,
+          }}
+        >
+          {trustTell.letter}
+        </span>
+      )}
+    </span>
+  )
+}
+
 export function EventCard({ event, className }: EventCardProps) {
   const showTime = formatShowTime(event.showTime)
   const isCancelled = event.status === 'cancelled'
   const isPostponed = event.status === 'postponed'
 
-  const priceDisplay =
+  const priceChipText =
     event.ticketPriceMin != null
-      ? `$${parseFloat(event.ticketPriceMin).toFixed(0)}`
+      ? `$${Math.round(parseFloat(event.ticketPriceMin))}`
       : null
 
-  const priceSourceBadge =
-    event.priceSource === 'seatgeek'
-      ? 'resale'
-      : event.priceSource === 'community'
-        ? 'community'
-        : null
+  const sourceKind = resolveKind(event.priceSource)
 
   return (
     <div
@@ -103,23 +177,25 @@ export function EventCard({ event, className }: EventCardProps) {
         </p>
       </div>
 
-      {/* Price — links to event detail */}
+      {/* Price chip — links to event detail */}
       <Link
         href={`/events/${event.id}`}
         className="shrink-0 text-right"
         tabIndex={-1}
       >
-        {!isCancelled && !isPostponed && priceDisplay ? (
-          <span className="text-sm font-medium">
-            {priceDisplay}
-            {priceSourceBadge && (
-              <span className="text-muted-foreground ml-1 text-xs">
-                ({priceSourceBadge})
-              </span>
-            )}
-          </span>
+        {!isCancelled && !isPostponed && priceChipText ? (
+          <PriceChip price={priceChipText} kind={sourceKind} />
         ) : !isCancelled && !isPostponed ? (
-          <span className="text-muted-foreground text-sm">TBA</span>
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '9.5px',
+              color: 'var(--fg-subtle)',
+              letterSpacing: '0.04em',
+            }}
+          >
+            tba
+          </span>
         ) : null}
       </Link>
     </div>

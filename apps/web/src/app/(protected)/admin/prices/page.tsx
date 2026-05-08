@@ -134,13 +134,14 @@ export default async function AdminPricesPage() {
                   <td className="py-2 pr-4">{row.source}</td>
                   <td className="py-2 pr-4">
                     <span
-                      className={
-                        row.outcome === 'hit'
-                          ? 'text-green-600'
-                          : row.outcome === 'error'
-                            ? 'text-destructive'
-                            : 'text-fg-muted'
-                      }
+                      style={{
+                        color:
+                          row.outcome === 'hit'
+                            ? 'var(--success)'
+                            : row.outcome === 'error'
+                              ? 'var(--destructive)'
+                              : 'var(--fg-muted)',
+                      }}
                     >
                       {row.outcome}
                     </span>
