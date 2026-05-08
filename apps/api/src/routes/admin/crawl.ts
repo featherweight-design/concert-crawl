@@ -116,10 +116,10 @@ crawlAdminRouter.get(
   },
 )
 
-// GET /v1/admin/crawl/runs?venueId=:id&limit=10 — list crawl runs for a venue
+// GET /v1/admin/crawl/runs?venueId=:id&limit=10 — list crawl runs (optionally filtered by venue)
 const listQuerySchema = z.object({
-  venueId: z.string().uuid(),
-  limit: z.coerce.number().int().min(1).max(50).default(10),
+  venueId: z.string().uuid().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(10),
 })
 
 crawlAdminRouter.get(
@@ -129,30 +129,52 @@ crawlAdminRouter.get(
     const { venueId, limit } = ctx.req.valid('query')
 
     const dbRuns = await db
-      .select()
+      .select({
+        id: crawlRuns.id,
+        venueId: crawlRuns.venueId,
+        venueName: venues.name,
+        status: crawlRuns.status,
+        httpStatusCode: crawlRuns.httpStatusCode,
+        robotsTxtBlocked: crawlRuns.robotsTxtBlocked,
+        extractionStrategyUsed: crawlRuns.extractionStrategyUsed,
+        eventsFound: crawlRuns.eventsFound,
+        eventsInserted: crawlRuns.eventsInserted,
+        errorMessage: crawlRuns.errorMessage,
+        durationMs: crawlRuns.durationMs,
+        createdAt: crawlRuns.createdAt,
+      })
       .from(crawlRuns)
-      .where(and(eq(crawlRuns.venueId, venueId)))
+      .leftJoin(venues, eq(crawlRuns.venueId, venues.id))
+      .where(venueId !== undefined ? eq(crawlRuns.venueId, venueId) : undefined)
       .orderBy(desc(crawlRuns.createdAt))
       .limit(limit)
 
-    // Prepend any in-progress run for this venue
-    const inProgressForVenue = [...inProgressCrawls.entries()]
-      .filter(([, val]) => val.venueId === venueId)
-      .map(([runId, val]) => ({
-        id: runId,
-        venueId: val.venueId,
-        status: 'in_progress' as const,
-        httpStatusCode: null,
-        robotsTxtBlocked: null,
-        extractionStrategyUsed: null,
-        eventsFound: 0,
-        eventsInserted: 0,
-        errorMessage: null,
-        durationMs: null,
-        createdAt: val.startedAt,
-      }))
+    if (venueId !== undefined) {
+      // Prepend any in-progress run for this specific venue
+      const inProgressForVenue = [...inProgressCrawls.entries()]
+        .filter(([, val]) => val.venueId === venueId)
+        .map(([runId, val]) => ({
+          id: runId,
+          venueId: val.venueId,
+          venueName: null as string | null,
+          status: 'in_progress' as const,
+          httpStatusCode: null,
+          robotsTxtBlocked: null,
+          extractionStrategyUsed: null,
+          eventsFound: 0,
+          eventsInserted: 0,
+          errorMessage: null,
+          durationMs: null,
+          createdAt: val.startedAt,
+        }))
 
-    return ctx.json({ success: true, data: [...inProgressForVenue, ...dbRuns] })
+      return ctx.json({
+        success: true,
+        data: [...inProgressForVenue, ...dbRuns],
+      })
+    }
+
+    return ctx.json({ success: true, data: dbRuns })
   },
 )
 

@@ -126,6 +126,26 @@ pricesAdminRouter.patch(
   },
 )
 
+// GET /v1/admin/prices/activity — last 50 price retrieval attempts with event + venue context
+pricesAdminRouter.get('/activity', async (ctx) => {
+  const rows = await db
+    .select({
+      eventId: priceRetrievalLog.eventId,
+      eventTitle: events.title,
+      venueName: venues.name,
+      date: events.date,
+      currentPrice: priceRetrievalLog.priceMin,
+      updatedAt: priceRetrievalLog.attemptedAt,
+    })
+    .from(priceRetrievalLog)
+    .leftJoin(events, eq(priceRetrievalLog.eventId, events.id))
+    .leftJoin(venues, eq(events.venueId, venues.id))
+    .orderBy(desc(priceRetrievalLog.attemptedAt))
+    .limit(50)
+
+  return ctx.json({ success: true, data: rows })
+})
+
 // POST /v1/admin/prices/pipeline/:eventId — on-demand price pipeline run
 pricesAdminRouter.post('/pipeline/:eventId', async (ctx) => {
   const { eventId } = ctx.req.param()

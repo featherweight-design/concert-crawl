@@ -103,6 +103,9 @@ export interface CrawlRun {
   errorMessage: string | null
   durationMs: number | null
   createdAt: string
+  llmCostUsd?: number | null
+  venueName?: string | null
+  startedAt?: string | null
 }
 
 // Event — represents the JSON-serialized API response shape.
