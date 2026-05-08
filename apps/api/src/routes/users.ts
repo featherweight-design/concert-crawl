@@ -76,6 +76,7 @@ function derivePlan(
   if (sub.founder) return 'founder'
   if (sub.tier === 'premium' && sub.status === 'active') return 'paid'
   if (sub.tier === 'premium' && sub.status === 'past_due') return 'past-due'
+  if (sub.tier === 'free' && sub.status === 'active') return 'trial'
   return 'founder'
 }
 
@@ -220,7 +221,18 @@ usersRouter.get('/me/submissions', async (ctx) => {
   if (!auth?.userId)
     return ctx.json({ success: false, error: 'Unauthorized' }, 401)
 
-  const rows = await db
+  type SubmissionRow = {
+    id: string
+    eventId: string
+    artist: string | null
+    venue: string | null
+    date: string | null
+    priceMin: string
+    priceMax: string | null
+    status: string | null
+  }
+
+  const rows: SubmissionRow[] = await db
     .select({
       id: priceSubmissions.id,
       eventId: priceSubmissions.eventId,
