@@ -6,8 +6,13 @@ import { usePathname } from 'next/navigation'
 import * as LucideIcons from 'lucide-react'
 import { NAV, type NavItem } from './nav'
 
-type SidebarMode = 'full' | 'rail'
+type SidebarMode = 'full' | 'rail' | 'auto'
 const STORAGE_KEY = 'cc-admin-sidebar'
+
+interface AdminSidebarProps {
+  badgeCounts?: { crawl: number; events: number }
+  user: { firstName: string | null; email: string }
+}
 
 const NavIcon = ({ name, size }: { name: string; size: number }) => {
   const Icon = (
@@ -23,12 +28,15 @@ const NavLink = ({
   item,
   mode,
   active,
+  count,
 }: {
   item: NavItem
-  mode: SidebarMode
+  mode: 'full' | 'rail'
   active: boolean
+  count: number
 }) => {
   const [hovered, setHovered] = useState(false)
+  const showBadge = item.badge !== undefined
 
   return (
     <Link
@@ -61,18 +69,43 @@ const NavLink = ({
     >
       <NavIcon name={item.iconName} size={16} />
       {mode === 'full' && <span style={{ flex: 1 }}>{item.label}</span>}
-      {mode === 'full' && item.badge && (
-        <span
-          style={{
-            width: 6,
-            height: 6,
-            borderRadius: '50%',
-            background: `var(--${item.badge.kind})`,
-            flexShrink: 0,
-          }}
-        />
-      )}
-      {mode === 'rail' && item.badge && (
+      {/* Full mode: numeric badge or dot */}
+      {mode === 'full' &&
+        showBadge &&
+        (count > 0 ? (
+          <span
+            style={{
+              marginLeft: 'auto',
+              minWidth: 18,
+              height: 18,
+              padding: '0 5px',
+              borderRadius: 999,
+              background: `var(--${item.badge?.kind ?? 'danger'})`,
+              color: '#fff',
+              fontSize: 10,
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontFamily: "'JetBrains Mono', monospace",
+              flexShrink: 0,
+            }}
+          >
+            {count}
+          </span>
+        ) : (
+          <span
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: `var(--${item.badge?.kind ?? 'danger'})`,
+              flexShrink: 0,
+            }}
+          />
+        ))}
+      {/* Rail mode: dot */}
+      {mode === 'rail' && showBadge && (
         <span
           style={{
             position: 'absolute',
@@ -81,7 +114,7 @@ const NavLink = ({
             width: 6,
             height: 6,
             borderRadius: '50%',
-            background: `var(--${item.badge.kind})`,
+            background: `var(--${item.badge?.kind ?? 'danger'})`,
           }}
         />
       )}
@@ -89,24 +122,47 @@ const NavLink = ({
   )
 }
 
-export const AdminSidebar = () => {
-  const [mode, setMode] = useState<SidebarMode>('full')
+export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
+  const [mode, setMode] = useState<SidebarMode>('auto')
+  const [viewportMode, setViewportMode] = useState<'full' | 'rail'>('full')
   const pathname = usePathname()
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY) as SidebarMode | null
-    if (stored) setMode(stored)
+    const resolvedMode: SidebarMode =
+      stored === 'full' || stored === 'rail' || stored === 'auto'
+        ? stored
+        : 'auto'
+    setMode(resolvedMode)
+
+    const mq = window.matchMedia('(min-width: 1280px)')
+    const updateViewport = () => setViewportMode(mq.matches ? 'full' : 'rail')
+    updateViewport()
+    mq.addEventListener('change', updateViewport)
+    return () => mq.removeEventListener('change', updateViewport)
   }, [])
 
   const toggleMode = () => {
     setMode((prev) => {
-      const next: SidebarMode = prev === 'full' ? 'rail' : 'full'
+      const cycle: SidebarMode[] = ['full', 'rail', 'auto']
+      const idx = cycle.indexOf(prev)
+      const next = cycle[(idx + 1) % cycle.length] ?? 'auto'
       localStorage.setItem(STORAGE_KEY, next)
       return next
     })
   }
 
-  const width = mode === 'full' ? 240 : 64
+  const effectiveMode: 'full' | 'rail' = mode === 'auto' ? viewportMode : mode
+  const width = effectiveMode === 'full' ? 240 : 64
+
+  const getCount = (key: string): number => {
+    if (!badgeCounts) return 0
+    if (key === 'crawl') return badgeCounts.crawl
+    if (key === 'events') return badgeCounts.events
+    return 0
+  }
+
+  const userInitial = (user.firstName ?? user.email).charAt(0).toUpperCase()
 
   return (
     <aside
@@ -124,13 +180,13 @@ export const AdminSidebar = () => {
       {/* Wordmark */}
       <div
         style={{
-          padding: mode === 'full' ? '16px 16px 12px' : '16px 0 12px',
+          padding: effectiveMode === 'full' ? '16px 16px 12px' : '16px 0 12px',
           display: 'flex',
-          justifyContent: mode === 'rail' ? 'center' : 'flex-start',
+          justifyContent: effectiveMode === 'rail' ? 'center' : 'flex-start',
           borderBottom: '1px solid var(--border)',
         }}
       >
-        {mode === 'full' ? (
+        {effectiveMode === 'full' ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {/* Logo mark */}
             <div
@@ -274,17 +330,140 @@ export const AdminSidebar = () => {
           gap: 2,
         }}
       >
-        {NAV.map((item) => {
+        {NAV.map((item, idx) => {
+          const prevItem = idx > 0 ? NAV[idx - 1] : null
+          const isNewSection = item.section !== prevItem?.section
           const active =
             pathname === item.href ||
             (item.href !== '/admin' && pathname.startsWith(item.href))
+          const count = getCount(item.key)
+
           return (
-            <NavLink key={item.key} item={item} mode={mode} active={active} />
+            <div key={item.key}>
+              {isNewSection &&
+                effectiveMode === 'full' &&
+                item.section === 'account' && (
+                  <>
+                    <div
+                      style={{
+                        height: 1,
+                        background: 'var(--border)',
+                        margin: '6px 0',
+                      }}
+                    />
+                    <div
+                      style={{
+                        padding: '4px 10px',
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: 'var(--fg-subtle)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.1em',
+                      }}
+                    >
+                      Account
+                    </div>
+                  </>
+                )}
+              <NavLink
+                item={item}
+                mode={effectiveMode}
+                active={active}
+                count={count}
+              />
+            </div>
           )
         })}
       </nav>
 
-      {/* Bottom */}
+      {/* User card */}
+      <div
+        style={{
+          paddingTop: 8,
+          borderTop: '1px solid var(--border)',
+          padding: '8px 8px 0',
+        }}
+      >
+        {effectiveMode === 'full' ? (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 10px',
+              borderRadius: 7,
+            }}
+          >
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                background: 'var(--accent)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 11,
+                fontWeight: 700,
+                color: '#fff',
+                flexShrink: 0,
+              }}
+            >
+              {userInitial}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: 'var(--fg)',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {user.firstName ?? user.email}
+              </div>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: 'var(--fg-subtle)',
+                  fontFamily: "'JetBrains Mono', monospace",
+                }}
+              >
+                admin
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              padding: '8px 0',
+            }}
+          >
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                background: 'var(--accent)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 11,
+                fontWeight: 700,
+                color: '#fff',
+              }}
+            >
+              {userInitial}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom controls */}
       <div
         style={{
           padding: '12px 8px',
@@ -296,11 +475,17 @@ export const AdminSidebar = () => {
       >
         <button
           onClick={toggleMode}
-          title={mode === 'full' ? 'Collapse sidebar' : 'Expand sidebar'}
+          title={
+            mode === 'full'
+              ? 'Switch to rail'
+              : mode === 'rail'
+                ? 'Switch to auto'
+                : 'Switch to full'
+          }
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: mode === 'rail' ? 'center' : 'flex-start',
+            justifyContent: effectiveMode === 'rail' ? 'center' : 'flex-start',
             gap: 10,
             padding: '6px 10px',
             background: 'transparent',
@@ -312,10 +497,18 @@ export const AdminSidebar = () => {
           }}
         >
           <NavIcon
-            name={mode === 'full' ? 'PanelLeftClose' : 'PanelLeft'}
+            name={effectiveMode === 'full' ? 'PanelLeftClose' : 'PanelLeft'}
             size={16}
           />
-          {mode === 'full' && 'Collapse'}
+          {effectiveMode === 'full' && (
+            <span>
+              {mode === 'auto'
+                ? 'Auto'
+                : mode === 'full'
+                  ? 'Collapse'
+                  : 'Expand'}
+            </span>
+          )}
         </button>
       </div>
     </aside>
