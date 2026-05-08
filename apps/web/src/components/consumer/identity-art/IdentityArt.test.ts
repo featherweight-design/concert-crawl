@@ -24,6 +24,9 @@ describe('ia_getInitials', () => {
   it('returns "??" for empty string', () => {
     expect(ia_getInitials('')).toBe('??')
   })
+  it('falls back to first 2 chars of original cleaned string when all words are stop words', () => {
+    expect(ia_getInitials('The And Of')).toBe('TH')
+  })
 })
 
 describe('ia_isDark', () => {
@@ -103,6 +106,14 @@ describe('identityFor', () => {
   it('paletteOverride selects the named palette', () => {
     const result = identityFor('Any Name', 'artist', { paletteOverride: 'p4' })
     expect(result.palette.id).toBe('p4')
+  })
+
+  it('unknown templateOverride falls back to the hash-derived template', () => {
+    const withUnknown = identityFor('Test', 'artist', {
+      templateOverride: 'nonexistent',
+    })
+    const withoutOverride = identityFor('Test', 'artist')
+    expect(withUnknown.template.id).toBe(withoutOverride.template.id)
   })
 })
 

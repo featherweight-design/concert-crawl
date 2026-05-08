@@ -216,8 +216,8 @@ const tpl_stripes = ({
   const angle = ia_pick(rng, [0, 30, 45, 60, 90, 120, 135])
   const stripeCount = scale === 'hero' ? 8 : scale === 'tile' ? 6 : 4
   const stripeW = 400 / stripeCount
-  const offsetX = 6,
-    offsetY = 4
+  const offsetX = 6
+  const offsetY = 4
   const widthMul = 0.55 + rng() * 0.25
   const stripes = Array.from({ length: stripeCount }, (_, idx) => idx)
     .filter((idx) => idx % 2 === 0)
@@ -404,7 +404,7 @@ const tpl_blueprint = ({
   const stageCx = fpX + fpW * (0.4 + rng() * 0.2)
   const stageCy = fpY + fpH * (0.6 + rng() * 0.25)
   const sweepAngle = ia_pick(rng, [-25, -15, 15, 25])
-  const isLight = /^#[EF]/i.test(palette.bg)
+  const isLight = !ia_isDark(palette.bg)
   const gridStroke = isLight ? 'rgba(25,20,24,0.18)' : 'rgba(241,230,213,0.18)'
   const heavyStroke = isLight ? 'rgba(25,20,24,0.32)' : 'rgba(241,230,213,0.32)'
   const blend = ia_blend(palette)
@@ -491,9 +491,9 @@ const tpl_blueprint = ({
               stroke={palette.secondary}
               strokeWidth={1.2}
             />
-            {[0, 0.25, 0.5, 0.75, 1].map((tick, idx) => (
+            {[0, 0.25, 0.5, 0.75, 1].map((tick) => (
               <line
-                key={idx}
+                key={tick}
                 x1={fpX + fpW * tick}
                 y1={fpY + fpH + 12}
                 x2={fpX + fpW * tick}
@@ -610,7 +610,7 @@ export const IdentityArt = ({
   const chipBg = dark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.78)'
   const chipFg = dark ? '#FFFFFF' : '#15131A'
   const chipFs = scale === 'hero' ? 44 : 22
-  const isLightPaper = /^#[EF]/i.test(resolved.palette.bg)
+  const isLightPaper = !ia_isDark(resolved.palette.bg)
 
   return (
     <div
