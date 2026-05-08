@@ -22,6 +22,13 @@ export default function AdminError({
         If you were trying to access a restricted page, try signing out and back
         in to refresh your session. Otherwise, reload and try again.
       </p>
+      {process.env.NODE_ENV === 'development' && (
+        <pre className="rounded bg-surface-1 p-3 text-xs text-danger overflow-auto max-h-48">
+          {error.message}
+          {'\n\n'}
+          {error.stack}
+        </pre>
+      )}
       {error.digest && (
         <p className="font-mono text-xs text-fg-muted">
           Error ID: {error.digest}

@@ -1,3 +1,5 @@
+'use client'
+
 import type { LucideIcon } from 'lucide-react'
 import type { StatusKind } from './utils'
 import { KIND_COLORS } from './utils'

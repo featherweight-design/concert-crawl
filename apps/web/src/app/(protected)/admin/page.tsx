@@ -71,9 +71,25 @@ function toStatusRow(venue: RawVenueStatus): CrawlStatusRow {
 
 async function fetchDashboardData(token: string) {
   const [rawStatus, venues, runs] = await Promise.all([
-    apiClient.get<RawVenueStatus[]>('/v1/admin/crawl/status', token),
-    apiClient.get<Venue[]>('/v1/admin/venues', token),
-    apiClient.get<CrawlRun[]>('/v1/admin/crawl/runs?limit=20', token),
+    apiClient
+      .get<RawVenueStatus[]>('/v1/admin/crawl/status', token)
+      .catch((err: unknown) => {
+        throw new Error(
+          `Failed to load crawl status: ${err instanceof Error ? err.message : String(err)}`,
+        )
+      }),
+    apiClient.get<Venue[]>('/v1/admin/venues', token).catch((err: unknown) => {
+      throw new Error(
+        `Failed to load venues: ${err instanceof Error ? err.message : String(err)}`,
+      )
+    }),
+    apiClient
+      .get<CrawlRun[]>('/v1/admin/crawl/runs?limit=20', token)
+      .catch((err: unknown) => {
+        throw new Error(
+          `Failed to load crawl runs: ${err instanceof Error ? err.message : String(err)}`,
+        )
+      }),
   ])
   return { status: rawStatus.map(toStatusRow), venues, runs }
 }

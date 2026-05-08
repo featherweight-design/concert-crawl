@@ -16,13 +16,27 @@ import {
 } from '@/components/admin/primitives'
 import type { Venue } from '@concert-crawl/types'
 
+function safeHostname(url: string): string {
+  try {
+    return new URL(url).hostname
+  } catch {
+    return url
+  }
+}
+
 export default async function AdminVenuesPage() {
   await requireAdminUser()
   const { getToken } = await auth()
   const token = await getToken()
   if (!token) return null
 
-  const venues = await apiClient.get<Venue[]>('/v1/admin/venues', token)
+  const venues = await apiClient
+    .get<Venue[]>('/v1/admin/venues', token)
+    .catch((err: unknown) => {
+      throw new Error(
+        `Failed to load venues: ${err instanceof Error ? err.message : String(err)}`,
+      )
+    })
   const activeVenues = venues.filter((venue) => venue.active)
   const inactiveVenues = venues.filter((venue) => !venue.active)
 
@@ -114,7 +128,7 @@ export default async function AdminVenuesPage() {
                     rel="noopener noreferrer"
                     style={{ color: 'var(--signal)', textDecoration: 'none' }}
                   >
-                    {new URL(venue.websiteUrl).hostname}
+                    {safeHostname(venue.websiteUrl)}
                   </a>
                 </TD>
                 <TD>

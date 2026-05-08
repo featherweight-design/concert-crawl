@@ -1,8 +1,8 @@
 import { auth } from '@clerk/nextjs/server'
-import { revalidatePath } from 'next/cache'
 import { requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
 import type { InviteCode } from '@concert-crawl/types'
+import { mintInviteCode } from './actions'
 import { Plus } from 'lucide-react'
 import {
   SectionHead,
@@ -34,25 +34,19 @@ function deriveStatus(code: InviteCode): DerivedStatus {
   return 'active'
 }
 
-async function mintInviteCode() {
-  'use server'
-  const { getToken } = await auth()
-  const token = await getToken()
-  if (!token) return
-  await apiClient.post('/v1/admin/invite-codes', token, {})
-  revalidatePath('/admin/invite-codes')
-}
-
 export default async function AdminInviteCodesPage() {
   await requireAdminUser()
   const { getToken } = await auth()
   const token = await getToken()
   if (!token) return null
 
-  const codes = await apiClient.get<InviteCode[]>(
-    '/v1/admin/invite-codes',
-    token,
-  )
+  const codes = await apiClient
+    .get<InviteCode[]>('/v1/admin/invite-codes', token)
+    .catch((err: unknown) => {
+      throw new Error(
+        `Failed to load invite codes: ${err instanceof Error ? err.message : String(err)}`,
+      )
+    })
 
   const outstanding = codes.filter(
     (code) => deriveStatus(code) === 'active',
