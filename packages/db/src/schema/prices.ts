@@ -1,4 +1,5 @@
 import {
+  AnyPgColumn,
   index,
   integer,
   numeric,
@@ -22,6 +23,29 @@ export const priceSubmissionStatusEnum = pgEnum('price_submission_status', [
   'corroborated',
   'disputed',
   'stale',
+])
+
+export const submissionTierEnum = pgEnum('submission_tier', [
+  'GA',
+  'Reserved',
+  'VIP',
+  'Pit',
+  'Lawn',
+])
+
+export const submissionVendorEnum = pgEnum('submission_vendor', [
+  'AXS',
+  'Ticketmaster',
+  'SeatGeek',
+  'DICE',
+  'Eventbrite',
+  'VenueBoxOffice',
+])
+
+export const submissionHowFoundEnum = pgEnum('submission_how_found', [
+  'bought_myself',
+  'saw_listing',
+  'at_the_venue',
 ])
 
 export const priceRetrievalLog = pgTable(
@@ -57,8 +81,12 @@ export const priceSubmissions = pgTable('price_submissions', {
   userId: text('user_id'),
   priceMin: numeric('price_min', { precision: 10, scale: 2 }).notNull(),
   priceMax: numeric('price_max', { precision: 10, scale: 2 }),
-  tierLabel: text('tier_label'),
-  sourceNote: text('source_note'),
+  tier: submissionTierEnum('tier').notNull(),
+  vendor: submissionVendorEnum('vendor').notNull(),
+  howFound: submissionHowFoundEnum('how_found').notNull(),
+  disputedSubmissionId: uuid('disputed_submission_id').references(
+    (): AnyPgColumn => priceSubmissions.id,
+  ),
   status: priceSubmissionStatusEnum('status').notNull().default('pending'),
   corroborationCount: integer('corroboration_count').notNull().default(0),
   createdAt: timestamp('created_at', { withTimezone: true })
