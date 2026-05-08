@@ -37,7 +37,11 @@ export function verifyInviteCookie(
     const payloadStr = Buffer.from(payloadB64, 'base64url').toString()
     const payload = JSON.parse(payloadStr) as { code: string; iat: number }
 
+    if (typeof payload.iat !== 'number' || !Number.isFinite(payload.iat))
+      return null
+
     const now = Math.floor(Date.now() / 1000)
+    if (payload.iat > now) return null
     if (now - payload.iat > INVITE_COOKIE_MAX_AGE) return null
 
     return { code: payload.code }

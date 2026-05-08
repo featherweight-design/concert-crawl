@@ -3,6 +3,8 @@ interface RateLimitEntry {
   resetAt: number
 }
 
+// In-memory store: limits are per-instance and reset on deploy/restart.
+// Suitable for single-container deployments; replace with Redis/Upstash for multi-instance.
 const store = new Map<string, RateLimitEntry>()
 
 export function checkRateLimit(

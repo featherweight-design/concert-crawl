@@ -3,8 +3,8 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { validateAndSetInviteCode } from './actions'
+import { WaitlistModal } from '@/components/waitlist/WaitlistModal'
 
-type CodeState = 'empty' | 'typing' | 'submitting' | 'error'
 type ErrorKind =
   | 'invalid_format'
   | 'notfound'
@@ -39,16 +39,7 @@ export default function InviteCodePage() {
   const [code, setCode] = useState('')
   const [errorKind, setErrorKind] = useState<ErrorKind>(null)
   const [isPending, startTransition] = useTransition()
-
-  const codeState: CodeState = isPending
-    ? 'submitting'
-    : errorKind
-      ? 'error'
-      : code.length > 0
-        ? 'typing'
-        : 'empty'
-
-  void codeState
+  const [waitlistOpen, setWaitlistOpen] = useState(false)
 
   const isComplete = /^BETA-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(code)
 
@@ -244,9 +235,7 @@ export default function InviteCodePage() {
           }}
         >
           <button
-            onClick={() => {
-              /* future: open waitlist modal */
-            }}
+            onClick={() => setWaitlistOpen(true)}
             style={{
               all: 'unset',
               cursor: 'pointer',
@@ -270,6 +259,11 @@ export default function InviteCodePage() {
           </Link>
         </div>
       </div>
+
+      <WaitlistModal
+        open={waitlistOpen}
+        onClose={() => setWaitlistOpen(false)}
+      />
     </div>
   )
 }

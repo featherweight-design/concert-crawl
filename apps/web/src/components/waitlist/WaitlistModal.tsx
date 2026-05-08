@@ -51,11 +51,15 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
     setState('submitting')
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
-      await fetch(`${apiUrl}/v1/waitlist`, {
+      const res = await fetch(`${apiUrl}/v1/waitlist`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email }),
       })
+      if (!res.ok) {
+        setState('error')
+        return
+      }
       setState('success')
     } catch {
       setState('error')

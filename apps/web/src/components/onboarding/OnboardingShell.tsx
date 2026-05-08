@@ -33,7 +33,7 @@ export function OnboardingShell() {
       router.push('/sign-up')
       return
     }
-    setIndex((ii) => ii + 1)
+    setIndex((ii) => Math.min(ii + 1, total - 1))
   }
 
   function goBack() {

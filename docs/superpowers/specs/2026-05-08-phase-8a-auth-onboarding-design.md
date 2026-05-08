@@ -79,12 +79,12 @@ apps/web/src/app/
 
 ### New components
 
-| Component | Location | Description |
-|-----------|----------|-------------|
-| `CCWordmark` | `components/brand/cc-wordmark/` | Wordmark SVG, uses `--fg` token |
-| `BetaPill` | `components/brand/beta-pill/` | "BETA" badge, uses `--signal` token |
-| `GigPosterStack` | `components/brand/gig-poster-stack/` | 3 `IdentityArt` cards, rotated/offset, subtle CSS animation |
-| `WaitlistModal` | `components/waitlist/waitlist-modal/` | Email input, calls `POST /v1/waitlist`, success/already-on-list states |
+| Component        | Location                              | Description                                                            |
+| ---------------- | ------------------------------------- | ---------------------------------------------------------------------- |
+| `CCWordmark`     | `components/brand/cc-wordmark/`       | Wordmark SVG, uses `--fg` token                                        |
+| `BetaPill`       | `components/brand/beta-pill/`         | "BETA" badge, uses `--signal` token                                    |
+| `GigPosterStack` | `components/brand/gig-poster-stack/`  | 3 `IdentityArt` cards, rotated/offset, subtle CSS animation            |
+| `WaitlistModal`  | `components/waitlist/waitlist-modal/` | Email input, calls `POST /v1/waitlist`, success/already-on-list states |
 
 ---
 
@@ -95,7 +95,7 @@ apps/web/src/app/
 New table `waitlist_entries` (Drizzle migration):
 
 ```ts
-waitlistEntries = pgTable("waitlist_entries", {
+waitlistEntries = pgTable('waitlist_entries', {
   id: uuid().primaryKey().defaultRandom(),
   email: varchar({ length: 255 }).notNull().unique(),
   ip: varchar({ length: 45 }),
@@ -109,7 +109,7 @@ waitlistEntries = pgTable("waitlist_entries", {
 
 - Zod: `{ email: z.string().email() }`
 - IP rate limit: 5 attempts/hour per IP
-- Returns 200 on success or 409 if already registered — both show success UI (no enumeration)
+- Always returns 200 (both new and duplicate emails) — intentional; 409 would allow email enumeration via status codes
 - No email confirmation sent
 
 ---
@@ -132,33 +132,33 @@ On success: redirect to `/onboarding`.
 - IP rate limit: 10 attempts/hour
 - Looks up code in `invite_codes` table
 - Typed error responses: `used`, `expired`, `notfound`, `ratelimit`
-- On success: sets `invite_verified` HttpOnly cookie (signed HMAC, 1-hour TTL), returns `{ ok: true }`
+- On success: returns `{ ok: true }` — the `invite_verified` HttpOnly cookie is set by the Next.js Server Action (`apps/web/src/app/auth/code/actions.ts`) after this call succeeds
 
 ### Cookie spec
 
-| Field | Value |
-|-------|-------|
-| Name | `invite_verified` |
-| Value | HMAC-signed `{ code, iat }` payload |
-| Flags | `HttpOnly`, `Secure`, `SameSite=Lax` |
-| Max-age | 3600s (1 hour) |
-| Signing key | `INVITE_COOKIE_SECRET` env var |
+| Field       | Value                                |
+| ----------- | ------------------------------------ |
+| Name        | `invite_verified`                    |
+| Value       | HMAC-signed `{ code, iat }` payload  |
+| Flags       | `HttpOnly`, `Secure`, `SameSite=Lax` |
+| Max-age     | 3600s (1 hour)                       |
+| Signing key | `INVITE_COOKIE_SECRET` env var       |
 
 ---
 
 ## Onboarding
 
-**File:** `(onboarding)/onboarding/page.tsx` — client component. Protected by middleware (invite cookie required).
+**File:** `app/onboarding/page.tsx` — client component. Pre-Clerk informational flow, gated by invite cookie. On completion, redirects to `/sign-up`.
 
 ### Steps (hard-coded, no skipping)
 
-| Index | Key | Component | Description |
-|-------|-----|-----------|-------------|
-| 0 | `welcome` | `FounderNote` | Personal note from the founder ⚠️ *see pre-launch checklist* |
-| 1 | `how` | `HowItWorks` | Crawls Denver venues daily, always accurate |
-| 2 | `today` | `WhatItDoesToday` | Search, filter, save shows |
-| 3 | `notyet` | `WhatItDoesntYet` | Honest about beta limitations |
-| 4 | `done` | `YoureIn` | Final CTA: "Continue to sign-up →" → `/sign-up` |
+| Index | Key       | Component         | Description                                                  |
+| ----- | --------- | ----------------- | ------------------------------------------------------------ |
+| 0     | `welcome` | `FounderNote`     | Personal note from the founder ⚠️ _see pre-launch checklist_ |
+| 1     | `how`     | `HowItWorks`      | Crawls Denver venues daily, always accurate                  |
+| 2     | `today`   | `WhatItDoesToday` | Search, filter, save shows                                   |
+| 3     | `notyet`  | `WhatItDoesntYet` | Honest about beta limitations                                |
+| 4     | `done`    | `YoureIn`         | Final CTA: "Continue to sign-up →" → `/sign-up`              |
 
 **No DB writes.** Pure informational UI.
 
@@ -194,17 +194,17 @@ After Clerk sign-up completes, a post-sign-up server action:
 `POST /v1/auth/redeem-code` — requires Clerk auth.
 
 - Idempotent: if `usedBy` already equals this `userId`, returns 200 (handles double-submit / refresh)
-- Returns 409 if code was already used by a *different* user
+- Returns 409 if code was already used by a _different_ user
 
 ---
 
 ## New Environment Variables
 
-| Variable | Apps | How to create |
-|----------|------|---------------|
-| `INVITE_COOKIE_SECRET` | `apps/web`, `apps/api` | `openssl rand -hex 32` — use the **same value** in both apps |
+| Variable               | Apps            | How to create                                                                                   |
+| ---------------------- | --------------- | ----------------------------------------------------------------------------------------------- |
+| `INVITE_COOKIE_SECRET` | `apps/web` only | `openssl rand -hex 32` — used by the Server Action and server layouts to sign/verify the cookie |
 
-Add to `.env.example` in both apps with a placeholder description. Must be set in Render (staging + prod) before deployment.
+Add to `.env.example` in `apps/web` with a placeholder description. Must be set in Render (staging + prod) before deployment.
 
 ---
 

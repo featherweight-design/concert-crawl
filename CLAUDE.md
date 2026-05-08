@@ -338,40 +338,41 @@ Phase: **Phase 8a (Beta Launch Prep — Landing + Auth Gate + Onboarding) — in
 
 Everything needed to open the private beta to real users, split into three sub-phases:
 
-| Sub-phase | Scope                                        | Status       | Branch / Notes                                                                      |
-| --------- | -------------------------------------------- | ------------ | ----------------------------------------------------------------------------------- |
-| 8a        | Landing page + Auth gate + Onboarding flow   | 🔄 In flight | `feat/phase-8-auth-onboarding`; design assets in `design/design_handoff_phase5b_screens/` + onboarding (TBD) |
-| 8b        | Saving shows + User profile                  | —            | —                                                                                   |
-| 8c        | Email + invite-code delivery                 | —            | Resend integration; `invite_codes` table already in schema                          |
+| Sub-phase | Scope                                      | Status       | Branch / Notes                                                                                               |
+| --------- | ------------------------------------------ | ------------ | ------------------------------------------------------------------------------------------------------------ |
+| 8a        | Landing page + Auth gate + Onboarding flow | 🔄 In flight | `feat/phase-8-auth-onboarding`; design assets in `design/design_handoff_phase5b_screens/` + onboarding (TBD) |
+| 8b        | Saving shows + User profile                | —            | —                                                                                                            |
+| 8c        | Email + invite-code delivery               | —            | Resend integration; `invite_codes` table already in schema                                                   |
 
 **Phase 8a scope (this branch):**
 
 - `/` — Public landing page (unauthenticated). Wordmark, animated gig-poster hero (IdentityArt), waitlist CTA, "I have a code" link.
-- `/auth/code` — Invite-code entry (pre-Clerk). Format: `BETA-XXXX-XXXX`. Validates code server-side, then hands off to Clerk sign-up.
-- `/onboarding` — Post-Clerk multi-step flow (genre + venue preferences, display name, optional Spotify connect). Writes to `user_preferences` table. Redirects to `/browse` on completion.
-- Clerk redirect logic: unauthenticated `/browse` → `/`; authenticated but no invite validated → `/auth/code`; authenticated + invite valid but onboarding incomplete → `/onboarding`.
+- `/auth/code` — Invite-code entry (pre-Clerk). Format: `BETA-XXXX-XXXX`. Validates code server-side; on success, Server Action sets HMAC-signed `invite_verified` HttpOnly cookie and redirects to `/onboarding`.
+- `/onboarding` — Pre-Clerk informational 5-step flow (FounderNote → HowItWorks → WhatItDoesToday → WhatItDoesntYet → YoureIn). No DB writes. Gated by invite cookie. Final step redirects to `/sign-up`.
+- `/sign-up` — Clerk sign-up. Gated by invite cookie (both middleware presence-check and server layout HMAC verification).
+- `/auth/complete` — Post-sign-up server component. Verifies cookie, calls `POST /v1/auth/redeem-code`, clears cookie, redirects to `/events`.
 
 ### Revised Phase Sequence
 
-| Phase | Name                                 | Status                                      |
-| ----- | ------------------------------------ | ------------------------------------------- |
-| 1     | Foundation                           | ✅ Complete                                 |
-| 2     | Venue Management (Admin)             | ✅ Complete                                 |
-| 3     | Crawler v1                           | ✅ Complete                                 |
-| 4     | Design System / Theming Architecture | ✅ Complete                                 |
-| 5     | Consumer Calendar UI (functional)    | ✅ Complete                                 |
-| 5b    | Consumer UI Design Polish            | ✅ Complete (PRs #22–24)                    |
-| 6a    | Observability SDK                    | ✅ Complete (PR #26)                        |
-| 6b    | Integration Tests                    | ✅ Complete (PR #28)                        |
-| 6c    | E2E + Smoke Tests                    | ✅ Complete (PR #29)                        |
-| 7     | Automation + Scheduling              | ✅ Complete (PR #34 merged 2026-05-07)      |
-| 7.5   | Identity Imagery (generative art)    | ✅ Complete (PR #39 merged 2026-05-08)      |
-| 7.6   | Admin UI Redesign                    | 🔄 In flight (separate branch)              |
-| 8a    | Beta Launch — Landing + Auth Gate + Onboarding | 🔄 In flight (this branch)          |
-| 8b    | Beta Launch — Saving shows + User profile | —                                      |
-| 8c    | Beta Launch — Email + invite-code delivery | —                                     |
-| 9     | UI Polish / Final Gate               | — (full UI review before private beta opens)|
-| —     | Price Transparency                   | ✅ Complete (PRs #32, #37 merged 2026-05-08)|
+| Phase | Name                                           | Status                                       |
+| ----- | ---------------------------------------------- | -------------------------------------------- |
+| 1     | Foundation                                     | ✅ Complete                                  |
+| 2     | Venue Management (Admin)                       | ✅ Complete                                  |
+| 3     | Crawler v1                                     | ✅ Complete                                  |
+| 4     | Design System / Theming Architecture           | ✅ Complete                                  |
+| 5     | Consumer Calendar UI (functional)              | ✅ Complete                                  |
+| 5b    | Consumer UI Design Polish                      | ✅ Complete (PRs #22–24)                     |
+| 6a    | Observability SDK                              | ✅ Complete (PR #26)                         |
+| 6b    | Integration Tests                              | ✅ Complete (PR #28)                         |
+| 6c    | E2E + Smoke Tests                              | ✅ Complete (PR #29)                         |
+| 7     | Automation + Scheduling                        | ✅ Complete (PR #34 merged 2026-05-07)       |
+| 7.5   | Identity Imagery (generative art)              | ✅ Complete (PR #39 merged 2026-05-08)       |
+| 7.6   | Admin UI Redesign                              | 🔄 In flight (separate branch)               |
+| 8a    | Beta Launch — Landing + Auth Gate + Onboarding | 🔄 In flight (this branch)                   |
+| 8b    | Beta Launch — Saving shows + User profile      | —                                            |
+| 8c    | Beta Launch — Email + invite-code delivery     | —                                            |
+| 9     | UI Polish / Final Gate                         | — (full UI review before private beta opens) |
+| —     | Price Transparency                             | ✅ Complete (PRs #32, #37 merged 2026-05-08) |
 
 See the phased development plan in the design spec for the full roadmap (Phases 1–7).
 

@@ -53,7 +53,9 @@ export const waitlistEntries = pgTable('waitlist_entries', {
   name: varchar('name', { length: 255 }),
   email: varchar('email', { length: 255 }).notNull().unique(),
   ip: varchar('ip', { length: 45 }),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 })
 
 export type UserRole = typeof userRoles.$inferSelect

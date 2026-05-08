@@ -16,26 +16,33 @@ vi.mock('@hono/clerk-auth', () => ({
   getAuth: () => mockGetAuth(),
 }))
 
+const mockSelectChain = {
+  from: vi.fn().mockReturnThis(),
+  where: vi.fn().mockResolvedValue([mockCode]),
+}
+const mockUpdateChain = {
+  set: vi.fn().mockReturnThis(),
+  where: vi.fn().mockReturnThis(),
+  returning: vi.fn().mockResolvedValue([{ id: 'code-id-1' }]),
+}
+
 vi.mock('@concert-crawl/db', () => ({
   db: {
-    select: vi.fn().mockReturnThis(),
-    from: vi.fn().mockReturnThis(),
-    where: vi.fn().mockResolvedValue([mockCode]),
-    update: vi.fn().mockReturnThis(),
-    set: vi.fn().mockReturnThis(),
-    returning: vi
-      .fn()
-      .mockResolvedValue([
-        { ...mockCode, usedBy: 'user_123', usedAt: new Date() },
-      ]),
+    select: vi.fn(() => mockSelectChain),
+    update: vi.fn(() => mockUpdateChain),
   },
   inviteCodes: {},
 }))
 
-vi.mock('drizzle-orm', () => ({ eq: vi.fn(), and: vi.fn() }))
+vi.mock('drizzle-orm', () => ({
+  eq: vi.fn(),
+  and: vi.fn(),
+  isNull: vi.fn(),
+  or: vi.fn(),
+  gt: vi.fn(),
+}))
 
 import { createApp } from '../../app.js'
-import { inviteCodes } from '@concert-crawl/db'
 
 const app = createApp()
 
@@ -73,8 +80,7 @@ describe('POST /v1/auth/redeem-code', () => {
 
   it('returns 200 (idempotent) if already redeemed by same user', async () => {
     authedUser('user_123')
-    const { db } = await import('@concert-crawl/db')
-    vi.mocked(db.select().from(inviteCodes).where).mockResolvedValueOnce([
+    mockSelectChain.where.mockResolvedValueOnce([
       { ...mockCode, usedBy: 'user_123', usedAt: new Date() },
     ])
     const res = await app.request('/v1/auth/redeem-code', {
@@ -90,8 +96,7 @@ describe('POST /v1/auth/redeem-code', () => {
 
   it('returns 409 if already used by different user', async () => {
     authedUser('user_new')
-    const { db } = await import('@concert-crawl/db')
-    vi.mocked(db.select().from(inviteCodes).where).mockResolvedValueOnce([
+    mockSelectChain.where.mockResolvedValueOnce([
       { ...mockCode, usedBy: 'user_other', usedAt: new Date() },
     ])
     const res = await app.request('/v1/auth/redeem-code', {

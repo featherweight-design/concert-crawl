@@ -62,7 +62,6 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
           <Link
             href="/auth/code"
             style={{
-              display: 'none',
               padding: '8px 14px',
               borderRadius: 8,
               border: '1px solid var(--border-strong)',
@@ -73,7 +72,7 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
               textDecoration: 'none',
               whiteSpace: 'nowrap',
             }}
-            className="md:inline-flex items-center"
+            className="hidden md:inline-flex items-center"
           >
             I have a code →
           </Link>
