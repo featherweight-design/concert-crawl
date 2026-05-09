@@ -150,7 +150,9 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
       <CrawlSplitView
         initialStatus={status}
         initialRuns={runs}
-        initialSelectedId={initialVenueId}
+        {...(initialVenueId !== undefined && {
+          initialSelectedId: initialVenueId,
+        })}
       />
     </div>
   )
