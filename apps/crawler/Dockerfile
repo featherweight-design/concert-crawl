@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/playwright/node:20-jammy
+FROM mcr.microsoft.com/playwright:v1.59.1-jammy
 
 # Playwright browsers are pre-installed in /ms-playwright by the base image
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
