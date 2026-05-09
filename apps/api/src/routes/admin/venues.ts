@@ -1,8 +1,8 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { db, venues } from '@concert-crawl/db'
-import { eq } from 'drizzle-orm'
+import { db, venues, events } from '@concert-crawl/db'
+import { count, eq } from 'drizzle-orm'
 import { getAuthUser } from '../../middleware/auth.js'
 import type { AdminVariables } from './index.js'
 
@@ -27,10 +27,25 @@ const updateVenueSchema = createVenueSchema.partial().extend({
 
 export const venuesAdminRouter = new Hono<AdminVariables>()
 
-// GET /v1/admin/venues — list all venues
+// GET /v1/admin/venues — list all venues with upcoming event counts
 venuesAdminRouter.get('/', async (ctx) => {
   const allVenues = await db.select().from(venues).orderBy(venues.name)
-  return ctx.json({ success: true, data: allVenues })
+
+  const eventCounts = await db
+    .select({ venueId: events.venueId, total: count(events.id) })
+    .from(events)
+    .groupBy(events.venueId)
+
+  const countByVenueId = new Map(
+    eventCounts.map((row) => [row.venueId, row.total]),
+  )
+
+  const venuesWithCounts = allVenues.map((venue) => ({
+    ...venue,
+    eventCount: countByVenueId.get(venue.id) ?? 0,
+  }))
+
+  return ctx.json({ success: true, data: venuesWithCounts })
 })
 
 // GET /v1/admin/venues/:id — get single venue

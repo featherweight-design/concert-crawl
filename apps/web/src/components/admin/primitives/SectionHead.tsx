@@ -1,10 +1,16 @@
 interface SectionHeadProps {
   eyebrow?: string
   title: string
+  subtitle?: string
   actions?: React.ReactNode
 }
 
-export const SectionHead = ({ eyebrow, title, actions }: SectionHeadProps) => (
+export const SectionHead = ({
+  eyebrow,
+  title,
+  subtitle,
+  actions,
+}: SectionHeadProps) => (
   <div
     style={{
       display: 'flex',
@@ -42,6 +48,17 @@ export const SectionHead = ({ eyebrow, title, actions }: SectionHeadProps) => (
       >
         {title}
       </h1>
+      {subtitle && (
+        <p
+          style={{
+            margin: '4px 0 0',
+            fontSize: 13,
+            color: 'var(--fg-muted)',
+          }}
+        >
+          {subtitle}
+        </p>
+      )}
     </div>
     {actions && (
       <div

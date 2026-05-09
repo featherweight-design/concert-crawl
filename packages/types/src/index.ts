@@ -115,6 +115,11 @@ export type NewVenue = Omit<
   'id' | 'createdAt' | 'updatedAt' | 'lastCrawledAt' | 'consecutiveFailures'
 >
 
+// VenueWithEventCount — admin list view only, includes upcoming event count
+export interface VenueWithEventCount extends Venue {
+  eventCount: number
+}
+
 // CrawlRun — represents the JSON-serialized API response shape.
 // 'in_progress' is a virtual status used during async crawl execution (not persisted to DB).
 export interface CrawlRun {

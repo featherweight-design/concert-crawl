@@ -63,3 +63,53 @@ export async function activateVenue(id: string): Promise<void> {
   })
   revalidatePath('/admin/venues')
 }
+
+export async function verifyVenue(id: string): Promise<void> {
+  const token = await getToken()
+  await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
+    verified: true,
+  })
+  revalidatePath('/admin/venues')
+  revalidatePath(`/admin/venues/${id}`)
+  redirect(`/admin/venues/${id}`)
+}
+
+export async function unverifyVenue(id: string): Promise<void> {
+  const token = await getToken()
+  await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
+    verified: false,
+  })
+  revalidatePath('/admin/venues')
+  revalidatePath(`/admin/venues/${id}`)
+  redirect(`/admin/venues/${id}`)
+}
+
+export async function bulkVerifyVenues(ids: string[]): Promise<void> {
+  const token = await getToken()
+  await Promise.all(
+    ids.map((id) =>
+      apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
+        verified: true,
+      }),
+    ),
+  )
+  revalidatePath('/admin/venues')
+}
+
+export async function bulkActivateVenues(ids: string[]): Promise<void> {
+  const token = await getToken()
+  await Promise.all(
+    ids.map((id) =>
+      apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, { active: true }),
+    ),
+  )
+  revalidatePath('/admin/venues')
+}
+
+export async function bulkDeactivateVenues(ids: string[]): Promise<void> {
+  const token = await getToken()
+  await Promise.all(
+    ids.map((id) => apiClient.delete(`/v1/admin/venues/${id}`, token)),
+  )
+  revalidatePath('/admin/venues')
+}

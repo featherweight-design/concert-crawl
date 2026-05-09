@@ -81,10 +81,7 @@ export function VenueForm({ venue, action }: VenueFormProps) {
       </div>
 
       {venue && (
-        <>
-          <input type="hidden" name="active" value={String(venue.active)} />
-          <input type="hidden" name="verified" value={String(venue.verified)} />
-        </>
+        <input type="hidden" name="active" value={String(venue.active)} />
       )}
 
       <SubmitButton />
