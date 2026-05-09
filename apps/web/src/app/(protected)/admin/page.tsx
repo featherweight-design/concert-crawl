@@ -1,7 +1,8 @@
 import { ChevronRight } from 'lucide-react'
+import Link from 'next/link'
 import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
-import type { CrawlRun, Venue } from '@concert-crawl/types'
+import type { CrawlRun, Event, Venue } from '@concert-crawl/types'
 import {
   StatCard,
   Panel,
@@ -15,56 +16,26 @@ import {
   ProgressBar,
   CostText,
   RelTime,
+  Sparkline,
 } from '@/components/admin/primitives'
 import type { StatusKind } from '@/components/admin/primitives'
 import { ActivityFeed } from '@/components/admin/dashboard/ActivityFeed'
-
-interface CrawlStatusRow {
-  venueId: string
-  venueName: string
-  status: string
-  lastRunAt: string | null
-  eventsFound: number
-  strategy: string
-  cost: number
-  error: string | null
-}
-
-interface RawVenueStatus {
-  id: string
-  name: string
-  active: boolean
-  verified: boolean
-  consecutiveFailures: number
-  blockedAt: string | null
-  lastCrawledAt: string | null
-  lastRun: {
-    id: string
-    venueId: string
-    status: string
-    createdAt: string
-    eventsFound: number
-    eventsInserted: number
-    errorMessage: string | null
-    extractionStrategyUsed: string | null
-  } | null
-}
-
-function toStatusRow(venue: RawVenueStatus): CrawlStatusRow {
-  return {
-    venueId: venue.id,
-    venueName: venue.name,
-    status: venue.lastRun?.status ?? 'never',
-    lastRunAt: venue.lastRun?.createdAt ?? null,
-    eventsFound: venue.lastRun?.eventsFound ?? 0,
-    strategy: venue.lastRun?.extractionStrategyUsed ?? '—',
-    cost: 0,
-    error: venue.lastRun?.errorMessage ?? null,
-  }
-}
+import { RunAllVenuesButton } from '@/components/admin/dashboard/RunAllVenuesButton'
+import {
+  LLM_BUDGET_USD,
+  toStatusRow,
+  buildPendingReviewHint,
+  buildCrawlHealthHint,
+  buildActiveVenuesHint,
+  buildSparklineData,
+} from '@/components/admin/dashboard/lib/dashboard'
+import type {
+  RawVenueStatus,
+  CrawlStatusRow,
+} from '@/components/admin/dashboard/lib/dashboard'
 
 async function fetchDashboardData(token: string) {
-  const [rawStatus, venues, runs] = await Promise.all([
+  const [rawStatus, venues, runs, pendingEvents] = await Promise.all([
     apiClient
       .get<RawVenueStatus[]>('/v1/admin/crawl/status', token)
       .catch((err: unknown) => {
@@ -84,8 +55,11 @@ async function fetchDashboardData(token: string) {
           `Failed to load crawl runs: ${err instanceof Error ? err.message : String(err)}`,
         )
       }),
+    apiClient
+      .get<Event[]>('/v1/admin/events?verified=false&limit=100', token)
+      .catch(() => [] as Event[]),
   ])
-  return { status: rawStatus.map(toStatusRow), venues, runs }
+  return { status: rawStatus.map(toStatusRow), venues, runs, pendingEvents }
 }
 
 const STATUS_KIND: Record<string, StatusKind> = {
@@ -105,7 +79,8 @@ export default async function AdminDashboardPage() {
 
   const firstName = user.firstName ?? user.email
 
-  const { status, venues, runs } = await fetchDashboardData(token)
+  const { status, venues, runs, pendingEvents } =
+    await fetchDashboardData(token)
 
   const hour = new Date().getHours()
   const greeting =
@@ -132,13 +107,41 @@ export default async function AdminDashboardPage() {
         }
       : undefined
 
+  const pendingHint = buildPendingReviewHint(pendingEvents, venues)
+  const crawlHealthHint = buildCrawlHealthHint(status)
+  const activeVenuesHint = buildActiveVenuesHint(venues)
+  const sparklineData = buildSparklineData(runs)
+
+  async function triggerAllVenues() {
+    'use server'
+    const { getToken: getActionToken } = await auth()
+    const actionToken = await getActionToken()
+    if (!actionToken) return
+    const apiUrl = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
+    const activeVenues = venues.filter(
+      (venue) => venue.active && venue.verified,
+    )
+    await Promise.allSettled(
+      activeVenues.map((venue) =>
+        fetch(`${apiUrl}/v1/admin/crawl/${venue.id}`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${actionToken}`,
+            'Content-Type': 'application/json',
+          },
+        }),
+      ),
+    )
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* Greeting */}
       <div
         style={{
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
           gap: 14,
           flexWrap: 'wrap',
         }}
@@ -161,6 +164,14 @@ export default async function AdminDashboardPage() {
             {blockedCount > 0 ? `${blockedCount} blocked` : 'all healthy'}
           </div>
         </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <RunAllVenuesButton action={triggerAllVenues} />
+          <Link href="/admin/venues/new" style={{ textDecoration: 'none' }}>
+            <AdminButton variant="outline" size="sm">
+              + Add venue
+            </AdminButton>
+          </Link>
+        </div>
       </div>
 
       {/* Stat row */}
@@ -171,23 +182,32 @@ export default async function AdminDashboardPage() {
           gap: 16,
         }}
       >
+        {/* Pending review */}
         <StatCard
           label="Pending review"
-          value="0"
+          value={String(pendingEvents.length)}
           unit="events"
           iconName="CheckSquare"
           kind="warning"
+          {...(pendingHint ? { hint: pendingHint } : {})}
           footer={
-            <AdminButton
-              variant="ghost"
-              size="sm"
-              iconRight={ChevronRight}
-              fullWidth
+            <Link
+              href="/admin/events"
+              style={{ textDecoration: 'none', display: 'block' }}
             >
-              Open queue
-            </AdminButton>
+              <AdminButton
+                variant="ghost"
+                size="sm"
+                iconRight={ChevronRight}
+                fullWidth
+              >
+                Open queue
+              </AdminButton>
+            </Link>
           }
         />
+
+        {/* LLM cost */}
         <StatCard
           label="LLM cost · 30d"
           value={`$${totalCost.toFixed(2)}`}
@@ -196,28 +216,39 @@ export default async function AdminDashboardPage() {
           {...(costTrend !== undefined ? { trend: costTrend } : {})}
           footer={
             <ProgressBar
-              value={Math.round((totalCost / 40) * 100)}
+              value={Math.min(
+                Math.round((totalCost / LLM_BUDGET_USD) * 100),
+                100,
+              )}
               kind="signal"
               showLabel={false}
             />
           }
         />
+
+        {/* Crawl health */}
         <StatCard
           label="Crawl health"
           value={`${greenCount}/${status.length}`}
           unit="green"
           iconName="Activity"
           kind={blockedCount > 0 ? 'warning' : 'success'}
-          hint={
-            blockedCount > 0 ? `${blockedCount} blocked` : 'All venues healthy'
+          {...(crawlHealthHint ? { hint: crawlHealthHint } : {})}
+          footer={
+            sparklineData.length > 0 ? (
+              <Sparkline data={sparklineData} height={24} />
+            ) : undefined
           }
         />
+
+        {/* Active venues */}
         <StatCard
           label="Active venues"
           value={String(venues.filter((venue) => venue.active).length)}
           unit="venues"
           iconName="MapPin"
           kind="neutral"
+          {...(activeVenuesHint ? { hint: activeVenuesHint } : {})}
         />
       </div>
 
