@@ -46,3 +46,6 @@ pnpm-debug.log*
 
 # Git worktrees
 .worktrees/
+
+# Claude Code auto-memory (session-local, not project state)
+.claude/projects/
