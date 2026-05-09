@@ -1,0 +1,11 @@
+.git
+.worktrees
+node_modules
+**/node_modules
+**/.env.local
+**/.env.*.local
+**/dist
+**/.next
+apps/e2e
+docs
+.claude
