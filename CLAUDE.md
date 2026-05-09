@@ -153,6 +153,25 @@ Claude Code sessions are finite. To preserve continuity across sessions:
 - ESLint handles correctness
 - Never skip pre-commit hooks (`--no-verify`)
 
+### Issue Tracking
+
+Issues live in GitHub Issues (repo: `HartiganHM/concert-crawl`). The board is a GitHub Projects v2 named **Concert Crawl**.
+
+**Label taxonomy:**
+
+| Prefix | Values | Purpose |
+|--------|--------|---------|
+| `type:` | `bug`, `feature`, `polish`, `chore` | What kind of work |
+| `source:` | `beta-feedback`, `internal` | Where it came from |
+| `phase:` | `pre-beta`, `beta`, `launch` | When it ships |
+| `priority:` | `blocker`, `high`, `normal` | Relative urgency |
+
+**Workflows:**
+
+- **Opening an issue:** `gh issue create --title "..." --label "type: feature,phase: pre-beta,priority: blocker,source: internal"` (always include one label from each prefix)
+- **Linking a PR to an issue:** include `Closes #N` in the PR body — GitHub auto-closes the issue when the PR merges to `main`
+- **When user says "open an issue for X":** create it with `gh issue create` using the correct labels; do not skip the label step
+
 ---
 
 ## What Claude Can Own
