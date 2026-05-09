@@ -3,21 +3,36 @@
 import { useAdminTheme, VALID_THEMES } from './AdminThemeProvider'
 import { UserButton } from '@clerk/nextjs'
 import { usePathname } from 'next/navigation'
+import Link from 'next/link'
 import { NAV } from './nav'
 
-const useBreadcrumb = () => {
+interface Crumb {
+  label: string
+  href?: string
+}
+
+const useBreadcrumbs = (): Crumb[] => {
   const pathname = usePathname()
-  const item = NAV.find((nav) =>
+  const section = NAV.find((nav) =>
     nav.href !== '/admin'
       ? pathname.startsWith(nav.href)
       : pathname === '/admin',
   )
-  return item?.label ?? 'Admin'
+  if (!section) return [{ label: 'Admin' }]
+
+  if (pathname === section.href) return [{ label: section.label }]
+
+  const sub = pathname.slice(section.href.length).replace(/^\//, '')
+  let subLabel = 'Details'
+  if (sub === 'new') subLabel = 'New venue'
+  else if (sub && sub !== '') subLabel = 'Edit venue'
+
+  return [{ label: section.label, href: section.href }, { label: subLabel }]
 }
 
 export const AdminTopbar = () => {
   const { theme, setTheme } = useAdminTheme()
-  const breadcrumb = useBreadcrumb()
+  const crumbs = useBreadcrumbs()
 
   return (
     <header
@@ -32,9 +47,32 @@ export const AdminTopbar = () => {
         background: 'var(--bg-elevated)',
       }}
     >
-      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)' }}>
-        {breadcrumb}
-      </span>
+      <nav aria-label="Breadcrumb" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {crumbs.map((crumb, idx) => (
+          <span key={crumb.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {idx > 0 && (
+              <span style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>/</span>
+            )}
+            {crumb.href ? (
+              <Link
+                href={crumb.href}
+                style={{
+                  fontSize: 14,
+                  fontWeight: idx === crumbs.length - 1 ? 600 : 400,
+                  color: 'var(--fg-muted)',
+                  textDecoration: 'none',
+                }}
+              >
+                {crumb.label}
+              </Link>
+            ) : (
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)' }}>
+                {crumb.label}
+              </span>
+            )}
+          </span>
+        ))}
+      </nav>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div
           role="group"

@@ -14,9 +14,10 @@ import {
   StatusBadge,
   RelTime,
 } from '@/components/admin/primitives'
-import { ShieldCheck, Play, Pause } from 'lucide-react'
+import { ShieldCheck, ShieldOff, Play, Pause } from 'lucide-react'
 import {
   bulkVerifyVenues,
+  bulkUnverifyVenues,
   bulkActivateVenues,
   bulkDeactivateVenues,
 } from '@/lib/actions/venues'
@@ -32,11 +33,7 @@ function sourceUrl(url: string): string {
 
 function venueSubNotes(venue: VenueWithEventCount): string[] {
   const notes: string[] = []
-  if (venue.blockedAt !== null) notes.push('Blocked')
   if (venue.robotsTxtAllowed === false) notes.push('robots.txt disallows')
-  if (venue.extractionStrategy === 'llm' && venue.consecutiveFailures > 0) {
-    notes.push('low confidence')
-  }
   if (venue.crawlNotes) notes.push(venue.crawlNotes)
   return notes
 }
@@ -60,6 +57,10 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
 
   const allSelected = venues.length > 0 && selected.size === venues.length
   const someSelected = selected.size > 0
+
+  const selectedVenues = venues.filter((venue) => selected.has(venue.id))
+  const anyUnverified = selectedVenues.some((venue) => !venue.verified)
+  const anyVerified = selectedVenues.some((venue) => venue.verified)
 
   function toggleAll() {
     if (allSelected) {
@@ -121,15 +122,28 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
               >
                 {selected.size} selected
               </span>
-              <AdminButton
-                variant="success"
-                size="sm"
-                icon={ShieldCheck}
-                disabled={isPending}
-                onClick={() => runBulkAction(bulkVerifyVenues)}
-              >
-                Verify
-              </AdminButton>
+              {anyUnverified && (
+                <AdminButton
+                  variant="success"
+                  size="sm"
+                  icon={ShieldCheck}
+                  disabled={isPending}
+                  onClick={() => runBulkAction(bulkVerifyVenues)}
+                >
+                  Verify
+                </AdminButton>
+              )}
+              {anyVerified && (
+                <AdminButton
+                  variant="outline"
+                  size="sm"
+                  icon={ShieldOff}
+                  disabled={isPending}
+                  onClick={() => runBulkAction(bulkUnverifyVenues)}
+                >
+                  Unverify
+                </AdminButton>
+              )}
               <AdminButton
                 variant="outline"
                 size="sm"
@@ -208,7 +222,6 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
             <TH>Venue</TH>
             <TH>Source URL</TH>
             <TH>robots.txt</TH>
-            <TH>Strategy</TH>
             <TH>Status</TH>
             <TH>Health</TH>
             <TH>Last crawl</TH>
@@ -234,7 +247,19 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
                   />
                 </TD>
                 <TD>
-                  <div style={{ fontWeight: 500 }}>{venue.name}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <ShieldCheck
+                      size={13}
+                      style={{
+                        flexShrink: 0,
+                        color: venue.verified
+                          ? 'var(--success)'
+                          : 'var(--fg-subtle)',
+                      }}
+                      aria-label={venue.verified ? 'Verified' : 'Unverified'}
+                    />
+                    <span style={{ fontWeight: 500 }}>{venue.name}</span>
+                  </div>
                   {notes.map((note, idx) => (
                     <div
                       key={`${venue.id}-note-${idx}`}
@@ -242,6 +267,7 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
                         fontSize: 11,
                         color: 'var(--fg-subtle)',
                         marginTop: 2,
+                        paddingLeft: 19,
                       }}
                     >
                       {note}
@@ -272,23 +298,20 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
                   )}
                 </TD>
                 <TD>
-                  {venue.extractionStrategy ? (
-                    <StatusBadge
-                      kind={
-                        venue.extractionStrategy === 'llm' ? 'accent' : 'signal'
-                      }
-                      variant="outline"
+                  {status === 'blocked' ? (
+                    <Link
+                      href={`/admin/crawl?venueId=${venue.id}`}
+                      style={{ textDecoration: 'none' }}
                     >
-                      {venue.extractionStrategy}
-                    </StatusBadge>
+                      <StatusBadge kind={STATUS_BADGE_KIND[status]} dot>
+                        Blocked ↗
+                      </StatusBadge>
+                    </Link>
                   ) : (
-                    <span style={{ color: 'var(--fg-subtle)' }}>—</span>
+                    <StatusBadge kind={STATUS_BADGE_KIND[status]} dot>
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </StatusBadge>
                   )}
-                </TD>
-                <TD>
-                  <StatusBadge kind={STATUS_BADGE_KIND[status]} dot>
-                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                  </StatusBadge>
                 </TD>
                 <TD>
                   <div

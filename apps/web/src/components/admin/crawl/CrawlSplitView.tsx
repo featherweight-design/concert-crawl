@@ -28,6 +28,7 @@ interface CrawlStatusRow {
 interface Props {
   initialStatus: CrawlStatusRow[]
   initialRuns: CrawlRun[]
+  initialSelectedId?: string
 }
 
 function extractErrorMessage(rawBody: unknown, fallback: string): string {
@@ -54,9 +55,13 @@ const STATUS_KIND: Record<
   never: 'neutral',
 }
 
-export const CrawlSplitView = ({ initialStatus, initialRuns }: Props) => {
+export const CrawlSplitView = ({
+  initialStatus,
+  initialRuns,
+  initialSelectedId,
+}: Props) => {
   const [selectedId, setSelectedId] = useState<string | null>(
-    initialStatus[0]?.venueId ?? null,
+    initialSelectedId ?? initialStatus[0]?.venueId ?? null,
   )
   const [triggering, setTriggering] = useState<string | null>(null)
   const [triggerError, setTriggerError] = useState<string | null>(null)

@@ -54,11 +54,21 @@ function toStatusRow(venue: RawVenueStatus): CrawlStatusRow {
   }
 }
 
-export default async function AdminCrawlPage() {
+interface Props {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}
+
+export default async function AdminCrawlPage({ searchParams }: Props) {
   await requireAdminUser()
   const { getToken } = await auth()
   const token = await getToken()
   if (!token) return null
+
+  const resolvedParams = await searchParams
+  const rawVenueId = resolvedParams.venueId
+  const initialVenueId = Array.isArray(rawVenueId)
+    ? rawVenueId[0]
+    : rawVenueId
 
   const [rawStatus, runs] = await Promise.all([
     apiClient.get<RawVenueStatus[]>('/v1/admin/crawl/status', token),
@@ -137,7 +147,11 @@ export default async function AdminCrawlPage() {
         />
       </div>
 
-      <CrawlSplitView initialStatus={status} initialRuns={runs} />
+      <CrawlSplitView
+        initialStatus={status}
+        initialRuns={runs}
+        initialSelectedId={initialVenueId}
+      />
     </div>
   )
 }
