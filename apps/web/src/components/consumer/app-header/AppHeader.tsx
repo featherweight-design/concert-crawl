@@ -12,7 +12,7 @@ import { MobileProfileEntry } from './MobileProfileEntry'
 const NAV_TABS = [
   { label: 'Browse', href: '/events' },
   { label: 'Search', href: '/search' },
-  { label: 'Saved', href: '/saved' },
+  { label: 'Watching', href: '/watching' },
 ] as const
 
 export function AppHeader() {
