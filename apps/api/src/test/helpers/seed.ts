@@ -3,6 +3,7 @@ import {
   events,
   priceSubmissions,
   submissionConfirms,
+  userEvents,
   userProfiles,
   venues,
 } from '@concert-crawl/db'
@@ -10,8 +11,26 @@ import { testDb } from './db.js'
 
 export async function clearTables(): Promise<void> {
   await testDb.execute(
-    sql`TRUNCATE submission_confirms, price_submissions, events, venues, crawl_runs, audit_log, invite_codes, user_roles, price_retrieval_log, user_profiles RESTART IDENTITY CASCADE`,
+    sql`TRUNCATE submission_confirms, price_submissions, user_events, events, venues, crawl_runs, audit_log, invite_codes, user_roles, price_retrieval_log, user_profiles RESTART IDENTITY CASCADE`,
   )
+}
+
+export async function seedUserEvent(
+  userId: string,
+  eventId: string,
+  overrides: Partial<typeof userEvents.$inferInsert> = {},
+): Promise<typeof userEvents.$inferSelect> {
+  const [row] = await testDb
+    .insert(userEvents)
+    .values({
+      userId,
+      eventId,
+      status: 'watching',
+      ...overrides,
+    })
+    .returning()
+  if (!row) throw new Error('seedUserEvent: insert returned no rows')
+  return row
 }
 
 export async function seedVenue(
