@@ -1,7 +1,7 @@
 meta {
   name: Get Crawl Run
   type: http
-  seq: 2
+  seq: 4
 }
 
 get {
@@ -12,6 +12,10 @@ get {
 
 auth:bearer {
   token: {{adminToken}}
+}
+
+params:path {
+  crawlRunId: 00000000-0000-0000-0000-000000000005
 }
 
 assert {

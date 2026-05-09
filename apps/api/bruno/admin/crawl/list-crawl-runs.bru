@@ -5,13 +5,17 @@ meta {
 }
 
 get {
-  url: {{baseUrl}}/v1/admin/crawl/runs?venueId={{venueId}}&limit=20
+  url: {{baseUrl}}/v1/admin/crawl/runs
   body: none
   auth: bearer
 }
 
 auth:bearer {
   token: {{adminToken}}
+}
+
+params:query {
+  limit: 20
 }
 
 assert {

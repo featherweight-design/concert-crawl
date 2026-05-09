@@ -1,0 +1,21 @@
+meta {
+  name: List Price Submissions
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/v1/events/{{eventId}}/price-submissions
+  body: none
+  auth: none
+}
+
+params:path {
+  eventId: 00000000-0000-0000-0000-000000000001
+}
+
+assert {
+  res.status: eq 200
+  res.body.success: eq true
+  res.body.data: isDefined
+}

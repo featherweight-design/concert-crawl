@@ -1,0 +1,21 @@
+meta {
+  name: Price Activity
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/v1/admin/prices/activity
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+assert {
+  res.status: eq 200
+  res.body.success: eq true
+  res.body.data: isDefined
+}

@@ -1,11 +1,11 @@
 meta {
-  name: List Venues
+  name: List Notifications
   type: http
   seq: 1
 }
 
 get {
-  url: {{baseUrl}}/v1/admin/venues
+  url: {{baseUrl}}/v1/admin/notifications
   body: none
   auth: bearer
 }
@@ -14,11 +14,12 @@ auth:bearer {
   token: {{adminToken}}
 }
 
-vars:pre-request {
-  baseUrl: http://localhost:3001
+params:query {
+  limit: 20
 }
 
 assert {
   res.status: eq 200
   res.body.success: eq true
+  res.body.data: isDefined
 }

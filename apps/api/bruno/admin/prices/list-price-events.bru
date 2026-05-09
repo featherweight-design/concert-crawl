@@ -1,0 +1,21 @@
+meta {
+  name: List Price Events
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/v1/admin/prices/events
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+assert {
+  res.status: eq 200
+  res.body.success: eq true
+  res.body.data: isDefined
+}

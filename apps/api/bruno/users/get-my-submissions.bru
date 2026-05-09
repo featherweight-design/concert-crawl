@@ -1,0 +1,26 @@
+meta {
+  name: Get My Submissions
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/v1/users/me/submissions
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{userToken}}
+}
+
+params:query {
+  limit: 20
+  offset: 0
+}
+
+assert {
+  res.status: eq 200
+  res.body.success: eq true
+  res.body.data: isDefined
+}

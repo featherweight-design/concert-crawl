@@ -1,0 +1,21 @@
+meta {
+  name: List Price Submissions (Admin)
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/v1/admin/prices/submissions
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+assert {
+  res.status: eq 200
+  res.body.success: eq true
+  res.body.data: isDefined
+}

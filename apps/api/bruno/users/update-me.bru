@@ -1,0 +1,27 @@
+meta {
+  name: Update My Profile
+  type: http
+  seq: 2
+}
+
+patch {
+  url: {{baseUrl}}/v1/users/me
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{userToken}}
+}
+
+body:json {
+  {
+    "handle": "myhandle",
+    "theme": "electric"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.success: eq true
+}

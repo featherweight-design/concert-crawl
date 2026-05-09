@@ -1,0 +1,24 @@
+meta {
+  name: Revoke Invite Code
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/admin/invite-codes/{{inviteCodeId}}/revoke
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+params:path {
+  inviteCodeId: 00000000-0000-0000-0000-000000000004
+}
+
+assert {
+  res.status: eq 200
+  res.body.success: eq true
+}

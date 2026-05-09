@@ -1,0 +1,21 @@
+meta {
+  name: List Venues (Admin)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/v1/admin/venues
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+assert {
+  res.status: eq 200
+  res.body.success: eq true
+  res.body.data: isDefined
+}

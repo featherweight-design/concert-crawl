@@ -1,0 +1,23 @@
+meta {
+  name: Delete Submission
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/v1/submissions/{{submissionId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{userToken}}
+}
+
+params:path {
+  submissionId: 00000000-0000-0000-0000-000000000002
+}
+
+assert {
+  res.status: eq 204
+}

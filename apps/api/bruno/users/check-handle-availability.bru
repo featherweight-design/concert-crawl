@@ -1,0 +1,24 @@
+meta {
+  name: Check Handle Availability
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/v1/users/handle-availability
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{userToken}}
+}
+
+params:query {
+  handle: myhandle
+}
+
+assert {
+  res.status: eq 200
+  res.body.available: isDefined
+}

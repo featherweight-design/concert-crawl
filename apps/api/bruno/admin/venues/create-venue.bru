@@ -1,7 +1,7 @@
 meta {
   name: Create Venue
   type: http
-  seq: 2
+  seq: 3
 }
 
 post {
@@ -16,10 +16,11 @@ auth:bearer {
 
 body:json {
   {
-    "name": "Test Venue",
-    "slug": "test-venue",
-    "websiteUrl": "https://testvenue.com",
-    "city": "Denver"
+    "name": "Bluebird Theater",
+    "slug": "bluebird-theater",
+    "websiteUrl": "https://bluebirdtheater.net",
+    "city": "Denver",
+    "crawlDelayMs": 3000
   }
 }
 

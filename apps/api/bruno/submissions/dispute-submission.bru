@@ -1,0 +1,32 @@
+meta {
+  name: Dispute Submission
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/submissions/{{submissionId}}/dispute
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{userToken}}
+}
+
+params:path {
+  submissionId: 00000000-0000-0000-0000-000000000002
+}
+
+body:json {
+  {
+    "floor": 25,
+    "ceiling": 50,
+    "vendor": "AXS"
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.success: eq true
+}

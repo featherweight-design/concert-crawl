@@ -1,0 +1,31 @@
+meta {
+  name: Update Venue
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/v1/admin/venues/{{venueId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+params:path {
+  venueId: 00000000-0000-0000-0000-000000000003
+}
+
+body:json {
+  {
+    "active": true,
+    "crawlDelayMs": 5000
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.success: eq true
+}

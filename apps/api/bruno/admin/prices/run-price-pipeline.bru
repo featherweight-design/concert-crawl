@@ -1,0 +1,24 @@
+meta {
+  name: Run Price Pipeline
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/v1/admin/prices/pipeline/{{eventId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+params:path {
+  eventId: 00000000-0000-0000-0000-000000000001
+}
+
+assert {
+  res.status: eq 202
+  res.body.success: eq true
+}
