@@ -1,0 +1,31 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [main]
+
+# Serialize all staging deploys. cancel-in-progress: false means a queued
+# deploy waits for the running one to finish rather than being replaced.
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy-api:
+    name: Deploy API (staging)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Trigger Render deploy
+        run: |
+          curl --fail -X POST "${{ secrets.RENDER_DEPLOY_HOOK_API_STAGING }}"
+
+  deploy-web:
+    name: Deploy Web (staging)
+    needs: deploy-api
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Trigger Render deploy
+        run: |
+          curl --fail -X POST "${{ secrets.RENDER_DEPLOY_HOOK_WEB_STAGING }}"
