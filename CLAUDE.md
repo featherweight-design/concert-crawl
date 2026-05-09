@@ -419,18 +419,19 @@ Full forward plan: `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md`
 |---|---|
 | **Architecture diagram in README** | Mermaid flowchart: apps, packages, Render services, external services, data flow. Renders natively on GitHub. |
 | **Cost tracking admin** | `cost_tracking` table exists. Admin UI + manual entry form + monthly summary dashboard. |
+| **Phase 7.1 Trust chrome** | Additive display layer on price transparency: TrustMark pill (RESALE/COMMUNITY), VerifiedStamp (attribution + 7d staleness), revised SourceLink. Design complete: `design_handoff_price_transparency/README_PHASE_7_1.md`. Ships standalone, eng issue #96. |
 | **404 page** | "We couldn't find that show." |
 | **Sign-out → landing transition** | Polish. |
 | **Returning-user onboarding edge** | Abandoned-flow recovery. |
 | **Stripe integration** | Subscription tiers, upgrade flow, gifted premium mechanism. |
 | **Concert history** | Past attended shows. `user_events.status = 'attended'`. Empty state first experience. |
 | **Calendar export** | iCal + Google Calendar. Supporter tier feature. |
-| **Shareable show cards** | IdentityArt cards for saved/attended shows. 9:16, 1:1, link preview formats. |
+| **Shareable show cards** | IdentityArt generative cards for saved/attended shows. 9:16, 1:1, link preview formats. Built around generative art — no photo swap. Design handoff: `design/design_handoff_shareable_cards/`. |
 | **"Who else is watching"** | Aggregate count on event cards/detail. Number only — no names. |
 | **Setlist preview** | Setlist.fm API. Collapsed in Event Detail. Degrades gracefully. |
 | **Venue first-timer guide** | Static per-venue info card: parking, bag policy, age restriction, doors gap. |
 | **"Last time in Denver"** | Derived from crawl history. Lives on Event Detail / artist surfaces. |
-| **Spotify sync** | Clerk OAuth → Spotify API → populate `user_artist_follows`. Premium feature. |
+| **Spotify sync** | Clerk OAuth → Spotify API → populate `user_artist_follows`. Premium feature. User-gated; platform-level artist photo integration is a separate post-launch item. |
 | **Teaser UI** | Locked/preview states for artist following + price alerts (not built yet — just shown). |
 
 ### Launch features (not beta)
@@ -441,8 +442,10 @@ Full forward plan: `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md`
 | **Price drop alerts** | Compare price snapshots. Alert when `price_min` drops for a watched event. |
 | **Notification preferences settings** | Per-artist instant vs. digest, 60-day threshold, delivery time. |
 | **Support act spotlight** | Opener given card-level prominence on event detail. |
-| **Concert passport** | Visual shareable grid of attended shows. |
+| **Concert passport** | Visual shareable grid of attended shows. Includes per-venue passport card ("10 shows at Red Rocks") using venue identity art — design together, same visual language. |
+| **Venue passport card** | Per-venue attended show recap card. Generative venue identity art + typographic layout listing artists, show count, date range. Issue #99. |
 | **Public profile pages** | `/u/<handle>` — read-only. Settings model supports it. |
+| **Artist images via Spotify treatment** | Platform-level Spotify Client Credentials API for artist photos + graphic treatment overlay (pop-art style). No user OAuth required. Ships after Spotify sync is proven. |
 
 ### Intentionally deferred
 
@@ -452,6 +455,7 @@ Full forward plan: `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md`
 | **Concert Roulette** | Hold as a surprise for post-launch. Don't tease. |
 | **AI recommendations** | Taste-based from Spotify + history. Post-launch. |
 | **Multi-city** | Post-launch. Denver-only through launch. |
+| **Real photo swap (Bandsintown)** | Decided 2026-05-09: generative art stays through launch. Bandsintown is not a tracked dependency. Artist treatment via Spotify is post-launch (see above). No Phase 8 design pass on photos. |
 
 ---
 

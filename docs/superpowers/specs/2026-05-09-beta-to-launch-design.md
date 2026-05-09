@@ -119,10 +119,10 @@ Hugh is on vacation May 27 – June 13. Beta opens May 25 and runs unattended du
 | Week | Dates | Focus |
 |---|---|---|
 | 1 | Jun 16–22 | Beta feedback review + bug triage. Reactive by design — let findings drive it. Error/loading sweep. |
-| 2 | Jun 23–29 | Cost tracking admin feature + polish (404 page, sign-out → landing transition, returning-user onboarding edge). |
+| 2 | Jun 23–29 | Cost tracking admin + Phase 7.1 Trust chrome (TrustMark, VerifiedStamp, revised SourceLink — issue #96) + polish (404 page, sign-out → landing transition, returning-user onboarding edge). |
 | 3 | Jun 30 – Jul 6 | Stripe integration: subscription tiers, upgrade flow, gifted premium mechanism in auth layer. |
 | 4 | Jul 7–13 | First premium features: concert history, calendar export (iCal + Google), supporter badge. |
-| 5 | Jul 14–20 | Surprise features: shareable show cards (IdentityArt) + "who else is watching" aggregate count. |
+| 5 | Jul 14–20 | Surprise features: shareable show cards (IdentityArt generative — issue #72) + "who else is watching" aggregate count. |
 | 6 | Jul 21–27 | Engaging features: setlist preview, venue first-timer guide, "last time in Denver" data point. |
 | 7 | Jul 28 – Aug 3 | Spotify sync import (connect account → populate `user_artist_follows`). Teaser UI for artist following notifications (shell only — alerts are a launch feature). |
 
@@ -220,6 +220,8 @@ Features that make users share the app or return to it more often. Not algorithm
 | **Shareable show cards** | IdentityArt-generated cards for saved/attended shows. Instagram story (9:16), square (1:1), link preview. | Beta |
 | **"Who else is watching"** | Aggregate count of Concert Crawl users who saved a show. Number only — no names. | Beta |
 | **Concert passport** | Visual grid of attended shows, styled like stamps. Designed to screenshot and share. Natural extension of concert history. | Launch |
+| **Venue passport card** | Per-venue attended show recap card ("10 shows at Red Rocks"). Uses venue identity art (generative, on-brand) + typographic layout listing artists, show count, date range. Issue #99. Design alongside Concert passport — same visual language. | Launch |
+| **Artist images via Spotify treatment** | Platform-level Spotify Client Credentials API for artist photos + graphic treatment overlay (pop-art style over licensed image). No user OAuth required. Ships after Spotify sync is proven. Decided 2026-05-09: generative art stays through launch; this is next step for artist imagery. | Post-launch |
 | **Setlist preview** | Most recent tour setlist via Setlist.fm API (free, no approval). Collapsed by default in Event Detail. Degrades gracefully if no data. | Launch |
 | **Venue first-timer guide** | Static per-venue card: parking, entry policy, age restriction, bag rules, "bring cash or not", doors-to-show gap. Editorial, not crawled. Red Rocks especially. | Launch |
 | **Support act spotlight** | Surface the opener prominently — same card weight as headliner. How people discover new artists. | Launch |
@@ -247,8 +249,8 @@ Features behind the Supporter or Premium paywall at launch.
 
 ### Beta bucket (needed before or during beta period)
 
-1. **Event Detail v2** — Port price trail + sourcing from price transparency into layout. Add submit-a-price entry point inline. Add setlist preview stub (collapsed). Add "who else is watching" as togglable element. Core layout from phase5b stands — this is additive.
-2. **Shareable show cards** — Three formats: 9:16, 1:1, link preview. Hooks into IdentityArt engine.
+1. **Event Detail v2** — Port price trail + sourcing from price transparency into layout. Add submit-a-price entry point inline. Add setlist preview stub (collapsed). Add "who else is watching" as togglable element. Core layout from phase5b stands — this is additive. Design handoff: `design/design_handoff_event_detail_v2/`.
+2. **Shareable show cards** — Three formats: 9:16, 1:1, link preview. Built around IdentityArt generative engine — not photo-based. Design handoff: `design/design_handoff_shareable_cards/`.
 3. **Monetization upgrade flow** — Tier comparison (Supporter / Premium / Founder), payment modal, trial CTA, Founder urgency treatment.
 4. **Concert history / passport view** — Past attended shows. Empty state is the primary experience ("Your concert history starts here"). No import/backfill at launch.
 
