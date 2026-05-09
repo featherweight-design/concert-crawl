@@ -6,21 +6,13 @@ import type { CrawlRun, Event, Venue } from '@concert-crawl/types'
 import {
   StatCard,
   Panel,
-  AdminTable,
-  THead,
-  TR,
-  TH,
-  TD,
-  StatusBadge,
   AdminButton,
   ProgressBar,
-  CostText,
-  RelTime,
   Sparkline,
 } from '@/components/admin/primitives'
-import type { StatusKind } from '@/components/admin/primitives'
 import { ActivityFeed } from '@/components/admin/dashboard/ActivityFeed'
 import { RunAllVenuesButton } from '@/components/admin/dashboard/RunAllVenuesButton'
+import { CrawlHealthTable } from '@/components/admin/dashboard/CrawlHealthTable'
 import {
   LLM_BUDGET_USD,
   toStatusRow,
@@ -60,15 +52,6 @@ async function fetchDashboardData(token: string) {
       .catch(() => [] as Event[]),
   ])
   return { status: rawStatus.map(toStatusRow), venues, runs, pendingEvents }
-}
-
-const STATUS_KIND: Record<string, StatusKind> = {
-  success: 'success',
-  failed: 'danger',
-  blocked: 'danger',
-  partial: 'warning',
-  paused: 'warning',
-  never: 'neutral',
 }
 
 export default async function AdminDashboardPage() {
@@ -255,45 +238,7 @@ export default async function AdminDashboardPage() {
       {/* Health table + Activity feed */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <Panel title="Crawl health · today" padding={0}>
-          <AdminTable>
-            <THead>
-              <tr>
-                <TH>Venue</TH>
-                <TH>Status</TH>
-                <TH>Last crawl</TH>
-                <TH align="right" mono>
-                  Events
-                </TH>
-                <TH align="right" mono>
-                  Cost
-                </TH>
-              </tr>
-            </THead>
-            <tbody>
-              {status.map((row) => (
-                <TR key={row.venueId}>
-                  <TD>{row.venueName}</TD>
-                  <TD>
-                    <StatusBadge
-                      kind={STATUS_KIND[row.status] ?? 'neutral'}
-                      dot
-                    >
-                      {row.status}
-                    </StatusBadge>
-                  </TD>
-                  <TD color="var(--fg-muted)">
-                    {row.lastRunAt ? <RelTime iso={row.lastRunAt} /> : '—'}
-                  </TD>
-                  <TD align="right" mono>
-                    {row.eventsFound}
-                  </TD>
-                  <TD align="right">
-                    <CostText value={row.cost} />
-                  </TD>
-                </TR>
-              ))}
-            </tbody>
-          </AdminTable>
+          <CrawlHealthTable rows={status} />
         </Panel>
 
         <Panel title="Recent activity">

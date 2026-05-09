@@ -3,11 +3,13 @@
 import { useState } from 'react'
 import type { CrawlRun } from '@concert-crawl/types'
 
-type FilterTab = 'all' | 'crawl'
+type FilterTab = 'all' | 'crawl' | 'events' | 'invites'
 
 const TABS: { id: FilterTab; label: string }[] = [
   { id: 'all', label: 'All' },
   { id: 'crawl', label: 'Crawl' },
+  { id: 'events', label: 'Events' },
+  { id: 'invites', label: 'Invites' },
 ]
 
 interface Props {
@@ -48,52 +50,71 @@ export function ActivityFeed({ runs }: Props) {
       </div>
 
       {/* Activity items */}
-      {filtered.slice(0, 8).map((run) => (
+      {tab === 'events' || tab === 'invites' ? (
         <div
-          key={run.id}
           style={{
-            display: 'flex',
-            gap: 12,
-            alignItems: 'flex-start',
-            paddingBottom: 10,
+            padding: '24px 0',
+            textAlign: 'center',
+            color: 'var(--fg-subtle)',
+            fontSize: 13,
           }}
         >
-          <span
-            style={{
-              fontSize: 11,
-              color: 'var(--fg-subtle)',
-              fontVariantNumeric: 'tabular-nums',
-              minWidth: 56,
-              fontFamily: "'JetBrains Mono', monospace",
-            }}
-          >
-            {new Date(run.startedAt ?? run.createdAt).toLocaleTimeString(
-              'en-US',
-              {
-                hour: '2-digit',
-                minute: '2-digit',
-              },
-            )}
-          </span>
-          <div style={{ flex: 1, fontSize: 13 }}>
-            <div style={{ color: 'var(--fg)', fontWeight: 500 }}>
-              {run.status === 'success'
-                ? `${run.venueName ?? 'Venue'} crawl ok`
-                : `${run.venueName ?? 'Venue'} crawl ${run.status}`}
-            </div>
-            <div style={{ color: 'var(--fg-muted)', fontSize: 12 }}>
-              {run.eventsFound} events · {run.extractionStrategyUsed ?? '—'}
-            </div>
-          </div>
+          No recent activity.
         </div>
-      ))}
+      ) : (
+        <>
+          {filtered.slice(0, 8).map((run) => (
+            <div
+              key={run.id}
+              style={{
+                display: 'flex',
+                gap: 12,
+                alignItems: 'flex-start',
+                paddingBottom: 10,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 11,
+                  color: 'var(--fg-subtle)',
+                  fontVariantNumeric: 'tabular-nums',
+                  minWidth: 56,
+                  fontFamily: "'JetBrains Mono', monospace",
+                }}
+              >
+                {new Date(run.startedAt ?? run.createdAt).toLocaleTimeString(
+                  'en-US',
+                  {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  },
+                )}
+              </span>
+              <div style={{ flex: 1, fontSize: 13 }}>
+                <div style={{ color: 'var(--fg)', fontWeight: 500 }}>
+                  {run.status === 'success'
+                    ? `${run.venueName ?? 'Venue'} crawl ok`
+                    : `${run.venueName ?? 'Venue'} crawl ${run.status}`}
+                </div>
+                <div style={{ color: 'var(--fg-muted)', fontSize: 12 }}>
+                  {run.eventsFound} events · {run.extractionStrategyUsed ?? '—'}
+                </div>
+              </div>
+            </div>
+          ))}
 
-      {filtered.length === 0 && (
-        <div
-          style={{ color: 'var(--fg-subtle)', fontSize: 13, padding: '12px 0' }}
-        >
-          No activity yet.
-        </div>
+          {filtered.length === 0 && (
+            <div
+              style={{
+                color: 'var(--fg-subtle)',
+                fontSize: 13,
+                padding: '12px 0',
+              }}
+            >
+              No activity yet.
+            </div>
+          )}
+        </>
       )}
     </div>
   )
