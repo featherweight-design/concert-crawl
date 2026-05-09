@@ -114,7 +114,7 @@ describe('extractJsonLd', () => {
     const event = events[0]!
     expect(event.ticketUrl).toBe('https://example.com/tickets/full')
     expect(event.description).toBe('A full event description')
-    expect(event.imageUrl).toBe('https://example.com/image.jpg')
+    expect(event.imageUrl).toBeUndefined()
   })
 
   it('handles malformed JSON-LD gracefully', () => {

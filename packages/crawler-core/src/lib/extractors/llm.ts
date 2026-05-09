@@ -18,7 +18,6 @@ const NormalizedEventSchema = z.object({
   showTime: z.string().nullable().optional(),
   ticketUrl: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
-  imageUrl: z.string().nullable().optional(),
   confidence: z.number().min(0).max(1),
 })
 
@@ -69,10 +68,6 @@ const SAVE_EVENTS_TOOL: Anthropic.Tool = {
             description: {
               type: ['string', 'null'],
               description: 'Short description or null',
-            },
-            imageUrl: {
-              type: ['string', 'null'],
-              description: 'Event image URL or null',
             },
             confidence: {
               type: 'number',
@@ -163,7 +158,6 @@ export async function extractWithLlm(
     ...(e.showTime != null && e.showTime !== '' && { showTime: e.showTime }),
     ...(e.ticketUrl != null && { ticketUrl: e.ticketUrl }),
     ...(e.description != null && { description: e.description }),
-    ...(e.imageUrl != null && { imageUrl: e.imageUrl }),
   }))
 
   console.log(

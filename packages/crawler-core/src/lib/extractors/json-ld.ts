@@ -55,7 +55,6 @@ function mapToNormalizedEvent(
   const ticketUrl = typeof obj['url'] === 'string' ? obj['url'] : undefined
   const description =
     typeof obj['description'] === 'string' ? obj['description'] : undefined
-  const imageUrl = typeof obj['image'] === 'string' ? obj['image'] : undefined
 
   const event: NormalizedEvent = {
     title: name,
@@ -68,7 +67,6 @@ function mapToNormalizedEvent(
   if (showTime !== undefined) event.showTime = showTime
   if (ticketUrl !== undefined) event.ticketUrl = ticketUrl
   if (description !== undefined) event.description = description
-  if (imageUrl !== undefined) event.imageUrl = imageUrl
   return event
 }
 

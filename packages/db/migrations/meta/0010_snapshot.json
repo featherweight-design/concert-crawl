@@ -1,6 +1,6 @@
 {
-  "id": "b93d05d1-5ca1-46c4-96bf-5e7110e1e71a",
-  "prevId": "693e0cc4-8f78-46ae-92cf-189568c65423",
+  "id": "693e0cc4-8f78-46ae-92cf-189568c65423",
+  "prevId": "bea69a07-9cf5-4a70-ab79-07d9bed09daf",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -945,37 +945,9 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
-        },
-        "saved_price": {
-          "name": "saved_price",
-          "type": "numeric(10, 2)",
-          "primaryKey": false,
-          "notNull": false
         }
       },
-      "indexes": {
-        "user_events_user_event_idx": {
-          "name": "user_events_user_event_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "event_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "user_events_event_id_events_id_fk": {
           "name": "user_events_event_id_events_id_fk",
@@ -1478,7 +1450,7 @@
     "public.user_event_status": {
       "name": "user_event_status",
       "schema": "public",
-      "values": ["going", "interested", "watching"]
+      "values": ["going", "interested"]
     },
     "public.notification_type": {
       "name": "notification_type",
