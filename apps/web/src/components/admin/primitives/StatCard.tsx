@@ -120,7 +120,17 @@ export const StatCard = ({
           {Icon && <Icon size={18} color={colors.fg} />}
         </div>
       </div>
-      {footer && <div>{footer}</div>}
+      {footer && (
+        <div
+          style={{
+            borderTop: '1px solid var(--border)',
+            paddingTop: 12,
+            marginTop: 4,
+          }}
+        >
+          {footer}
+        </div>
+      )}
     </div>
   )
 }

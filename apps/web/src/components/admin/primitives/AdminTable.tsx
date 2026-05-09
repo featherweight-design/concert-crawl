@@ -31,15 +31,19 @@ export const THead = ({ children }: { children: React.ReactNode }) => (
 export const TR = ({
   children,
   active,
+  onClick,
 }: {
   children: React.ReactNode
   active?: boolean
+  onClick?: () => void
 }) => (
   <tr
+    onClick={onClick}
     style={{
       borderBottom: '1px solid var(--border)',
       background: active ? 'var(--surface-2)' : undefined,
       borderLeft: active ? '2px solid var(--signal)' : '2px solid transparent',
+      cursor: onClick ? 'pointer' : undefined,
     }}
     onMouseEnter={(ev) => {
       if (!active)
