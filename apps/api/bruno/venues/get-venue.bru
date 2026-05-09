@@ -17,5 +17,5 @@ params:path {
 assert {
   res.status: eq 200
   res.body.success: eq true
-  res.body.data.slug: isDefined
+  res.body.data.venue.slug: isDefined
 }

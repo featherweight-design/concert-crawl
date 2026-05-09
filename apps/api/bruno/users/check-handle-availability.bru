@@ -20,5 +20,6 @@ params:query {
 
 assert {
   res.status: eq 200
-  res.body.available: isDefined
+  res.body.success: eq true
+  res.body.data.available: isDefined
 }
