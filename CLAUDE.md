@@ -12,7 +12,8 @@ Concert Crawl aggregates live music events from Denver venue websites into a sin
 
 **Key documents:**
 
-- Full design spec: `docs/superpowers/specs/2026-04-23-denver-concert-calendar-design.md`
+- Original design spec: `docs/superpowers/specs/2026-04-23-denver-concert-calendar-design.md`
+- **Beta-to-launch plan (current):** `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md`
 - DB rollback runbook: `docs/runbooks/db-rollback.md` (to be written)
 
 ---
@@ -24,11 +25,14 @@ Concert Crawl aggregates live music events from Denver venue websites into a sin
 ├── apps/
 │   ├── web/        # Next.js 14+ (App Router) — UI + admin
 │   ├── api/        # Hono — REST API (/v1/...)
-│   └── crawler/    # Playwright + Claude Haiku extraction
+│   └── crawler/    # Playwright + Claude Haiku extraction (runs as Render Cron Job)
 ├── packages/
-│   ├── db/         # Drizzle ORM schema + migrations (shared)
-│   ├── types/      # Shared TypeScript types
-│   └── config/     # Shared ESLint, TypeScript, Tailwind configs
+│   ├── config/         # Shared ESLint, TypeScript, Tailwind configs
+│   ├── crawler-core/   # Playwright + extraction logic (separated from API in PR #51)
+│   ├── db/             # Drizzle ORM schema + migrations (shared)
+│   ├── logger/         # Shared Pino logger
+│   ├── price-pipeline/ # Price fetch + submission pipeline (extracted from API in PR #46)
+│   └── types/          # Shared TypeScript types
 ├── docs/
 │   ├── superpowers/specs/  # Design specs
 │   └── runbooks/           # Operational playbooks
@@ -193,7 +197,7 @@ Three roles: `admin`, `sub_admin`, `user`
 **Non-negotiable crawl rules:**
 
 - Always check `robots.txt` before crawling; never override a disallow
-- Identify with honest user agent: `ConcertCrawl/1.0 (+https://concertcrawl.com/bot)`
+- Identify with honest user agent: `ConcertCrawl/1.0 (+https://concertcrawl.app/bot)`
 - Minimum 3-second delay between requests per domain (configurable per venue)
 - Schedule daily crawl at 3 AM MT (off-peak)
 - 3 consecutive failures → pause venue + notify admin via in-app notification
@@ -323,7 +327,7 @@ Both eliminate the need to cast. Never cast `publicMetadata` or `sessionClaims` 
 
 ## Current Status
 
-Phase: **Phase 8b (Beta Launch Prep — Saving Shows + User Profile) — next**
+Phase: **Pre-Beta Sprint — target open May 25, 2026**
 
 - Phase 6a complete (PR #26 merged 2026-05-07): pino + Sentry SDK across all three apps
 - Phase 6b complete (PR #28 merged 2026-05-07): Vitest integration tests for `apps/api` (20 tests, real Postgres)
@@ -335,59 +339,100 @@ Phase: **Phase 8b (Beta Launch Prep — Saving Shows + User Profile) — next**
 - Phase 7.6 complete (PR #44 merged 2026-05-08): Admin UI redesign — new design system, dashboard, crawl/events/venues/prices/invite-codes pages; RSC boundary fixes, today-stats fix, statusFilter wired, admin auth on crawl trigger
 - Phase 8a complete (PR #43 merged 2026-05-08): landing page, waitlist modal, invite code gate, onboarding flow, Clerk sign-up gate, code redemption; DB migration 0006
 - Phase 8a follow-up complete (PR #45 merged 2026-05-08): CTA priority flip, horizontal desktop layout, animation gap fix (4th card), indicator dots, dynamic hero shows from API
+- Price transparency v2 complete (PR #46 merged 2026-05-08): community submissions, confirm/dispute, admin review
+- Phase 8b Part 1 complete (PR #49 merged 2026-05-08): user profile + settings (handle, avatar, theme, submissions)
+- AdminTable theme fix complete (PR #50 merged 2026-05-08): electric/jade theme support in admin
+- Betterment: crawler separated from API service (PR #51 merged 2026-05-08): crawler-core package, Render Cron Job
 - Domain: `concertcrawl.app` via Cloudflare Registrar (~$15/yr)
 
-### Revised Phase Sequence
+### Phase Sequence
 
-| Phase | Name                                 | Status                                                                    |
-| ----- | ------------------------------------ | ------------------------------------------------------------------------- |
-| 1     | Foundation                           | ✅ Complete                                                               |
-| 2     | Venue Management (Admin)             | ✅ Complete                                                               |
-| 3     | Crawler v1                           | ✅ Complete                                                               |
-| 4     | Design System / Theming Architecture | ✅ Complete                                                               |
-| 5     | Consumer Calendar UI (functional)    | ✅ Complete                                                               |
-| 5b    | Consumer UI Design Polish            | ✅ Complete (PRs #22–24)                                                  |
-| 6a    | Observability SDK                    | ✅ Complete (PR #26)                                                      |
-| 6b    | Integration Tests                    | ✅ Complete (PR #28)                                                      |
-| 6c    | E2E + Smoke Tests                    | ✅ Complete (PR #29)                                                      |
-| 7     | Automation + Scheduling              | ✅ Complete (PR #34 merged 2026-05-07)                                    |
-| 7.5   | Identity Imagery (generative art)    | ✅ Complete (PR #39 merged 2026-05-08)                                    |
-| 7.6   | Admin UI Redesign                    | ✅ Complete (PR #44 merged 2026-05-08)                                    |
-| 8a    | Beta Launch Prep — Landing + Auth    | ✅ Complete (PRs #43, #45 merged 2026-05-08)                              |
-| 8b    | Beta Launch Prep — Saving + Profile  | 🔄 Next (saving shows, user profile)                                      |
-| 9     | UI Polish / Final Gate               | — (full UI review before private beta opens)                              |
-| —     | Price Transparency                   | ✅ Complete (PRs #32, #37 merged 2026-05-08)                              |
+| Phase | Name | Status |
+| ----- | ---- | ------ |
+| 1 | Foundation | ✅ Complete |
+| 2 | Venue Management (Admin) | ✅ Complete |
+| 3 | Crawler v1 | ✅ Complete |
+| 4 | Design System / Theming Architecture | ✅ Complete |
+| 5 | Consumer Calendar UI (functional) | ✅ Complete |
+| 5b | Consumer UI Design Polish | ✅ Complete (PRs #22–24) |
+| 6a | Observability SDK | ✅ Complete (PR #26) |
+| 6b | Integration Tests | ✅ Complete (PR #28) |
+| 6c | E2E + Smoke Tests | ✅ Complete (PR #29) |
+| 7 | Automation + Scheduling | ✅ Complete (PR #34) |
+| 7.5 | IdentityArt generative engine | ✅ Complete (PR #39) |
+| 7.6 | Admin UI Redesign | ✅ Complete (PRs #44, #50) |
+| 8a | Beta Launch Prep — Landing + Auth | ✅ Complete (PRs #43, #45) |
+| 8b pt.1 | User Profile + Settings | ✅ Complete (PR #49) |
+| — | Price Transparency v1 | ✅ Complete (PRs #32, #37) |
+| — | Price Transparency v2 | ✅ Complete (PR #46) |
+| — | Betterment: Crawler separation | ✅ Complete (PR #51) |
+| **8b pt.2** | **Saving Shows (Watching)** | 🔄 **In progress — pre-beta blocker** |
+| Pre-beta | UI interactions audit + bug fixes | 🔄 In progress |
+| Beta period | Jun 16 – Aug 3 (see beta-to-launch spec) | — |
+| Launch prep | Aug 4–17 | — |
+| **Launch** | **~Aug 18–22, 2026** | — |
 
-See the phased development plan in the design spec for the full roadmap (Phases 1–7).
+Full forward plan: `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md`
 
 ---
 
 ## Design Backlog
 
-Tracked here so every session has the full picture. Move items to the phase table when implementation begins.
-
-### Pre-beta (must ship before private beta opens)
+### Pre-beta hard blockers (must ship before May 25)
 
 | Item | Notes |
 |---|---|
-| **Saved / Watching surface** | Heart button → saves to DB, syncs to phone calendar; in progress (Phase 8b) |
-| **Feedback modal** | Fulfills onboarding step 5's "tell us when we're wrong" promise |
-| **Empty state** | Dedicated component — calendar uses inline today variant |
-| **Beta invite gate** | Consumer-side counterpart to admin invites table: need-invite screen, expired-code screen, redeem flow |
-| **App-wide loading + error sweep** | Shared loading/error system across Submit-a-Price / Verify / calendar / settings |
-| **404 — "we couldn't find that show"** | Share-link entry point |
-| **Sign-out → landing transition** | One designed screen post-Clerk-signout |
-| **Onboarding "returning user" edge** | Abandoned-flow recovery via magic link |
+| **Saving shows (Watching)** | Heart button → `user_events` table. Design handoff: `design/design_handoff_watching/`. |
+| **Browse filters wired** | Filter chips exist but selecting them doesn't update the event list. |
+| **Search nav item** | Routes to search page but currently a dead link. |
+| **UI interactions sweep** | Walk every clickable element on every route. Log and fix dead interactions. |
+| **Invite code error states** | Invalid code, expired code, no-code wall — at the code-entry step (before onboarding). |
+| **Feedback modal** | In-app, auth-only, rate-limited (1/hour). Category + message → `feedback` table. |
+| **Empty states** | Browse (no filter results), search (no results), Watching (no saved shows). |
+| **FounderNote content** | Hugh writes the personal message for onboarding step 1. |
+| **FounderNote admin page** | `app_config` table + admin editor so copy can update without redeploy. |
+| **Legal for beta** | One-page "private beta, don't share" doc. Full T&C + Privacy Policy before public launch. |
+| **Seed additional venues** | Add Mission Ballroom + Fillmore before May 25 (crawlers are working). |
 
-### Post-beta / pre-launch
+### Beta period deliverables (Jun 16 – Aug 3)
 
 | Item | Notes |
 |---|---|
-| **Stripe / tier selection** | Monetization gate |
-| **Public profile pages** | Read-only `/u/<handle>`; Settings model already supports it, needs consumer surface |
-| **Notification system** | Promotes the stubbed Watch row in Settings; brings back avatar unread dot with concrete triggers |
-| **Crew / artist / staff role surfacing** | `<RoleBadge>` is wired but only `fan` ships in beta |
-| **Photo upload** | Intentionally deferred indefinitely — tracked so we don't accidentally ship a half-promise |
+| **Architecture diagram in README** | Mermaid flowchart: apps, packages, Render services, external services, data flow. Renders natively on GitHub. |
+| **Cost tracking admin** | `cost_tracking` table exists. Admin UI + manual entry form + monthly summary dashboard. |
+| **404 page** | "We couldn't find that show." |
+| **Sign-out → landing transition** | Polish. |
+| **Returning-user onboarding edge** | Abandoned-flow recovery. |
+| **Stripe integration** | Subscription tiers, upgrade flow, gifted premium mechanism. |
+| **Concert history** | Past attended shows. `user_events.status = 'attended'`. Empty state first experience. |
+| **Calendar export** | iCal + Google Calendar. Supporter tier feature. |
+| **Shareable show cards** | IdentityArt cards for saved/attended shows. 9:16, 1:1, link preview formats. |
+| **"Who else is watching"** | Aggregate count on event cards/detail. Number only — no names. |
+| **Setlist preview** | Setlist.fm API. Collapsed in Event Detail. Degrades gracefully. |
+| **Venue first-timer guide** | Static per-venue info card: parking, bag policy, age restriction, doors gap. |
+| **"Last time in Denver"** | Derived from crawl history. Lives on Event Detail / artist surfaces. |
+| **Spotify sync** | Clerk OAuth → Spotify API → populate `user_artist_follows`. Premium feature. |
+| **Teaser UI** | Locked/preview states for artist following + price alerts (not built yet — just shown). |
+
+### Launch features (not beta)
+
+| Item | Notes |
+|---|---|
+| **Artist following + new show alerts** | Background job, Resend delivery. Smart batching. See notification design principles in spec. |
+| **Price drop alerts** | Compare price snapshots. Alert when `price_min` drops for a watched event. |
+| **Notification preferences settings** | Per-artist instant vs. digest, 60-day threshold, delivery time. |
+| **Support act spotlight** | Opener given card-level prominence on event detail. |
+| **Concert passport** | Visual shareable grid of attended shows. |
+| **Public profile pages** | `/u/<handle>` — read-only. Settings model supports it. |
+
+### Intentionally deferred
+
+| Item | Notes |
+|---|---|
+| **Photo upload** | Deferred indefinitely. Tracked so we don't accidentally ship a half-promise. |
+| **Concert Roulette** | Hold as a surprise for post-launch. Don't tease. |
+| **AI recommendations** | Taste-based from Spotify + history. Post-launch. |
+| **Multi-city** | Post-launch. Denver-only through launch. |
 
 ---
 
