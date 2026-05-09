@@ -25,10 +25,7 @@ export const AdminThemeProvider = ({
     const stored: AdminTheme | null = VALID_THEMES.includes(raw as AdminTheme)
       ? (raw as AdminTheme)
       : null
-    const preferred = window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? 'dark'
-      : 'light'
-    setThemeState(stored ?? preferred)
+    setThemeState(stored ?? 'electric')
   }, [])
 
   const setTheme = (name: AdminTheme) => {
