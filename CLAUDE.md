@@ -130,6 +130,8 @@ Claude Code sessions are finite. To preserve continuity across sessions:
 - Leave a `## Next` section in `docs/superpowers/plans/` or update the relevant memory file with the immediate next step
 - After significant changes, update `CLAUDE.md` (architecture decisions, new conventions) and memory files (`~/.claude/projects/*/memory/`) with anything non-obvious
 - Optimize for cost-effectiveness: prefer smaller focused sessions over sprawling ones; use `/compact` when context grows large
+- **When opening a PR** — update the Phase Sequence table and Current Status bullet list in this file to reflect the new work, then commit the CLAUDE.md change as part of the branch
+- **When starting a new session** — run `gh pr list --state merged --limit 10` to check for merges since the last CLAUDE.md update; if any are unrecorded, update Current Status and the Phase Sequence table before doing anything else
 
 ### Code
 
@@ -159,12 +161,12 @@ Issues live in GitHub Issues (repo: `HartiganHM/concert-crawl`). The board is a 
 
 **Label taxonomy:**
 
-| Prefix | Values | Purpose |
-|--------|--------|---------|
-| `type:` | `bug`, `feature`, `polish`, `chore` | What kind of work |
-| `source:` | `beta-feedback`, `internal` | Where it came from |
-| `phase:` | `pre-beta`, `beta`, `launch` | When it ships |
-| `priority:` | `blocker`, `high`, `normal` | Relative urgency |
+| Prefix      | Values                              | Purpose            |
+| ----------- | ----------------------------------- | ------------------ |
+| `type:`     | `bug`, `feature`, `polish`, `chore` | What kind of work  |
+| `source:`   | `beta-feedback`, `internal`         | Where it came from |
+| `phase:`    | `pre-beta`, `beta`, `launch`        | When it ships      |
+| `priority:` | `blocker`, `high`, `normal`         | Relative urgency   |
 
 **Workflows:**
 
@@ -362,34 +364,39 @@ Phase: **Pre-Beta Sprint — target open May 25, 2026**
 - Phase 8b Part 1 complete (PR #49 merged 2026-05-08): user profile + settings (handle, avatar, theme, submissions)
 - AdminTable theme fix complete (PR #50 merged 2026-05-08): electric/jade theme support in admin
 - Betterment: crawler separated from API service (PR #51 merged 2026-05-08): crawler-core + price-pipeline packages, two Render Cron Jobs
+- Legal pages complete (PR #108 merged 2026-05-09): beta agreement, T&C stub, Privacy Policy stub
+- Invite code error states complete (PR #43/onboarding flow): invalid code, expired code, no-code wall handled in onboarding — pending manual confirmation by Hugh
+- Venue seeding complete (ongoing — 10-12 venues crawled and live before private beta)
+- Empty state design handoff added (PR #118 merged 2026-05-09): design assets for empty states
 - Domain: `concertcrawl.app` via Cloudflare Registrar (~$15/yr)
 
 ### Phase Sequence
 
-| Phase | Name | Status |
-| ----- | ---- | ------ |
-| 1 | Foundation | ✅ Complete |
-| 2 | Venue Management (Admin) | ✅ Complete |
-| 3 | Crawler v1 | ✅ Complete |
-| 4 | Design System / Theming Architecture | ✅ Complete |
-| 5 | Consumer Calendar UI (functional) | ✅ Complete |
-| 5b | Consumer UI Design Polish | ✅ Complete (PRs #22–24) |
-| 6a | Observability SDK | ✅ Complete (PR #26) |
-| 6b | Integration Tests | ✅ Complete (PR #28) |
-| 6c | E2E + Smoke Tests | ✅ Complete (PR #29) |
-| 7 | Automation + Scheduling | ✅ Complete (PR #34) |
-| 7.5 | IdentityArt generative engine | ✅ Complete (PR #39) |
-| 7.6 | Admin UI Redesign | ✅ Complete (PRs #44, #50) |
-| 8a | Beta Launch Prep — Landing + Auth | ✅ Complete (PRs #43, #45) |
-| 8b pt.1 | User Profile + Settings | ✅ Complete (PR #49) |
-| — | Price Transparency v1 | ✅ Complete (PRs #32, #37) |
-| — | Price Transparency v2 | ✅ Complete (PR #46) |
-| — | Betterment: Crawler separation | ✅ Complete (PR #51) |
-| **8b pt.2** | **Saving Shows (Watching)** | 🔄 **In progress — pre-beta blocker** |
-| Pre-beta | UI interactions audit + bug fixes | 🔄 In progress |
-| Beta period | Jun 16 – Aug 3 (see beta-to-launch spec) | — |
-| Launch prep | Aug 4–17 | — |
-| **Launch** | **~Aug 18–22, 2026** | — |
+| Phase       | Name                                     | Status                            |
+| ----------- | ---------------------------------------- | --------------------------------- |
+| 1           | Foundation                               | ✅ Complete                       |
+| 2           | Venue Management (Admin)                 | ✅ Complete                       |
+| 3           | Crawler v1                               | ✅ Complete                       |
+| 4           | Design System / Theming Architecture     | ✅ Complete                       |
+| 5           | Consumer Calendar UI (functional)        | ✅ Complete                       |
+| 5b          | Consumer UI Design Polish                | ✅ Complete (PRs #22–24)          |
+| 6a          | Observability SDK                        | ✅ Complete (PR #26)              |
+| 6b          | Integration Tests                        | ✅ Complete (PR #28)              |
+| 6c          | E2E + Smoke Tests                        | ✅ Complete (PR #29)              |
+| 7           | Automation + Scheduling                  | ✅ Complete (PR #34)              |
+| 7.5         | IdentityArt generative engine            | ✅ Complete (PR #39)              |
+| 7.6         | Admin UI Redesign                        | ✅ Complete (PRs #44, #50)        |
+| 8a          | Beta Launch Prep — Landing + Auth        | ✅ Complete (PRs #43, #45)        |
+| 8b pt.1     | User Profile + Settings                  | ✅ Complete (PR #49)              |
+| —           | Price Transparency v1                    | ✅ Complete (PRs #32, #37)        |
+| —           | Price Transparency v2                    | ✅ Complete (PR #46)              |
+| —           | Betterment: Crawler separation           | ✅ Complete (PR #51)              |
+| **8b pt.2** | **Saving Shows (Watching)**              | 🔄 **In PR #117 — pending merge** |
+| —           | Legal pages                              | ✅ Complete (PR #108)             |
+| Pre-beta    | UI interactions audit + bug fixes        | 🔄 In progress                    |
+| Beta period | Jun 16 – Aug 3 (see beta-to-launch spec) | —                                 |
+| Launch prep | Aug 4–17                                 | —                                 |
+| **Launch**  | **~Aug 18–22, 2026**                     | —                                 |
 
 Full forward plan: `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md`
 
@@ -399,62 +406,62 @@ Full forward plan: `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md`
 
 ### Pre-beta hard blockers (must ship before May 25)
 
-| Item | Notes |
-|---|---|
-| **Saving shows (Watching)** | Heart button → `user_events` table. Design handoff: `design/design_handoff_watching/`. |
-| **Browse filters wired** | Filter chips exist but selecting them doesn't update the event list. |
-| **Search nav item** | Routes to search page but currently a dead link. |
-| **UI interactions sweep** | Walk every clickable element on every route. Log and fix dead interactions. |
-| **Invite code error states** | Invalid code, expired code, no-code wall — at the code-entry step (before onboarding). |
-| **Feedback modal** | In-app, auth-only, rate-limited (1/hour). Category + message → `feedback` table. |
-| **Empty states** | Browse (no filter results), search (no results), Watching (no saved shows). |
-| **FounderNote content** | Hugh writes the personal message for onboarding step 1. |
-| **FounderNote admin page** | `app_config` table + admin editor so copy can update without redeploy. |
-| **Legal for beta** | One-page "private beta, don't share" doc. Full T&C + Privacy Policy before public launch. |
-| **Seed additional venues** | Add Mission Ballroom + Fillmore before May 25 (crawlers are working). |
+| Item                         | Notes                                                                                                                                        |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Saving shows (Watching)**  | ✅ PR #117 — pending merge. Heart button → `user_events` table. Design handoff: `design/design_handoff_watching/`.                           |
+| **Browse filters wired**     | Filter chips exist but selecting them doesn't update the event list.                                                                         |
+| **Search nav item**          | Routes to search page but currently a dead link.                                                                                             |
+| **UI interactions sweep**    | Walk every clickable element on every route. Log and fix dead interactions.                                                                  |
+| **Invite code error states** | ⚠️ Believed complete via Phase 8a onboarding flow (PR #43) — Hugh confirming via manual test.                                                |
+| **Feedback modal**           | In-app, auth-only, rate-limited (1/hour). Category + message → `feedback` table.                                                             |
+| **Empty states**             | Browse (no filter results), search (no results), Watching (no saved shows). Design handoff: `design/design_handoff_empty_states/` (PR #118). |
+| **FounderNote content**      | Hugh writes the personal message for onboarding step 1.                                                                                      |
+| **FounderNote admin page**   | `app_config` table + admin editor so copy can update without redeploy.                                                                       |
+| **Legal for beta**           | ✅ Complete (PR #108): beta agreement, T&C stub, Privacy Policy stub.                                                                        |
+| **Seed additional venues**   | ✅ Complete: 10-12 venues crawled and live before private beta.                                                                              |
 
 ### Beta period deliverables (Jun 16 – Aug 3)
 
-| Item | Notes |
-|---|---|
-| **Architecture diagram in README** | Mermaid flowchart: apps, packages, Render services, external services, data flow. Renders natively on GitHub. |
-| **Cost tracking admin** | `cost_tracking` table exists. Admin UI + manual entry form + monthly summary dashboard. |
-| **Phase 7.1 Trust chrome** | Additive display layer on price transparency: TrustMark pill (RESALE/COMMUNITY), VerifiedStamp (attribution + 7d staleness), revised SourceLink. Design complete: `design_handoff_price_transparency/README_PHASE_7_1.md`. Ships standalone, eng issue #96. |
-| **404 page** | "We couldn't find that show." |
-| **Sign-out → landing transition** | Polish. |
-| **Returning-user onboarding edge** | Abandoned-flow recovery. |
-| **Stripe integration** | Subscription tiers, upgrade flow, gifted premium mechanism. |
-| **Concert history** | Past attended shows. `user_events.status = 'attended'`. Empty state first experience. |
-| **Calendar export** | iCal + Google Calendar. Supporter tier feature. |
-| **Shareable show cards** | IdentityArt generative cards for saved/attended shows. 9:16, 1:1, link preview formats. Built around generative art — no photo swap. Design handoff: `design/design_handoff_shareable_cards/`. |
-| **"Who else is watching"** | Aggregate count on event cards/detail. Number only — no names. |
-| **Setlist preview** | Setlist.fm API. Collapsed in Event Detail. Degrades gracefully. |
-| **Venue first-timer guide** | Static per-venue info card: parking, bag policy, age restriction, doors gap. |
-| **"Last time in Denver"** | Derived from crawl history. Lives on Event Detail / artist surfaces. |
-| **Spotify sync** | Clerk OAuth → Spotify API → populate `user_artist_follows`. Premium feature. User-gated; platform-level artist photo integration is a separate post-launch item. |
-| **Teaser UI** | Locked/preview states for artist following + price alerts (not built yet — just shown). |
+| Item                               | Notes                                                                                                                                                                                                                                                       |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Architecture diagram in README** | Mermaid flowchart: apps, packages, Render services, external services, data flow. Renders natively on GitHub.                                                                                                                                               |
+| **Cost tracking admin**            | `cost_tracking` table exists. Admin UI + manual entry form + monthly summary dashboard.                                                                                                                                                                     |
+| **Phase 7.1 Trust chrome**         | Additive display layer on price transparency: TrustMark pill (RESALE/COMMUNITY), VerifiedStamp (attribution + 7d staleness), revised SourceLink. Design complete: `design_handoff_price_transparency/README_PHASE_7_1.md`. Ships standalone, eng issue #96. |
+| **404 page**                       | "We couldn't find that show."                                                                                                                                                                                                                               |
+| **Sign-out → landing transition**  | Polish.                                                                                                                                                                                                                                                     |
+| **Returning-user onboarding edge** | Abandoned-flow recovery.                                                                                                                                                                                                                                    |
+| **Stripe integration**             | Subscription tiers, upgrade flow, gifted premium mechanism.                                                                                                                                                                                                 |
+| **Concert history**                | Past attended shows. `user_events.status = 'attended'`. Empty state first experience.                                                                                                                                                                       |
+| **Calendar export**                | iCal + Google Calendar. Supporter tier feature.                                                                                                                                                                                                             |
+| **Shareable show cards**           | IdentityArt generative cards for saved/attended shows. 9:16, 1:1, link preview formats. Built around generative art — no photo swap. Design handoff: `design/design_handoff_shareable_cards/`.                                                              |
+| **"Who else is watching"**         | Aggregate count on event cards/detail. Number only — no names.                                                                                                                                                                                              |
+| **Setlist preview**                | Setlist.fm API. Collapsed in Event Detail. Degrades gracefully.                                                                                                                                                                                             |
+| **Venue first-timer guide**        | Static per-venue info card: parking, bag policy, age restriction, doors gap.                                                                                                                                                                                |
+| **"Last time in Denver"**          | Derived from crawl history. Lives on Event Detail / artist surfaces.                                                                                                                                                                                        |
+| **Spotify sync**                   | Clerk OAuth → Spotify API → populate `user_artist_follows`. Premium feature. User-gated; platform-level artist photo integration is a separate post-launch item.                                                                                            |
+| **Teaser UI**                      | Locked/preview states for artist following + price alerts (not built yet — just shown).                                                                                                                                                                     |
 
 ### Launch features (not beta)
 
-| Item | Notes |
-|---|---|
-| **Artist following + new show alerts** | Background job, Resend delivery. Smart batching. See notification design principles in spec. |
-| **Price drop alerts** | Compare price snapshots. Alert when `price_min` drops for a watched event. |
-| **Notification preferences settings** | Per-artist instant vs. digest, 60-day threshold, delivery time. |
-| **Support act spotlight** | Opener given card-level prominence on event detail. |
-| **Concert passport** | Visual shareable grid of attended shows. Includes per-venue passport card ("10 shows at Red Rocks") using venue identity art — design together, same visual language. |
-| **Venue passport card** | Per-venue attended show recap card. Generative venue identity art + typographic layout listing artists, show count, date range. Issue #99. |
-| **Public profile pages** | `/u/<handle>` — read-only. Settings model supports it. |
+| Item                                    | Notes                                                                                                                                                                    |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Artist following + new show alerts**  | Background job, Resend delivery. Smart batching. See notification design principles in spec.                                                                             |
+| **Price drop alerts**                   | Compare price snapshots. Alert when `price_min` drops for a watched event.                                                                                               |
+| **Notification preferences settings**   | Per-artist instant vs. digest, 60-day threshold, delivery time.                                                                                                          |
+| **Support act spotlight**               | Opener given card-level prominence on event detail.                                                                                                                      |
+| **Concert passport**                    | Visual shareable grid of attended shows. Includes per-venue passport card ("10 shows at Red Rocks") using venue identity art — design together, same visual language.    |
+| **Venue passport card**                 | Per-venue attended show recap card. Generative venue identity art + typographic layout listing artists, show count, date range. Issue #99.                               |
+| **Public profile pages**                | `/u/<handle>` — read-only. Settings model supports it.                                                                                                                   |
 | **Artist images via Spotify treatment** | Platform-level Spotify Client Credentials API for artist photos + graphic treatment overlay (pop-art style). No user OAuth required. Ships after Spotify sync is proven. |
 
 ### Intentionally deferred
 
-| Item | Notes |
-|---|---|
-| **Photo upload** | Deferred indefinitely. Tracked so we don't accidentally ship a half-promise. |
-| **Concert Roulette** | Hold as a surprise for post-launch. Don't tease. |
-| **AI recommendations** | Taste-based from Spotify + history. Post-launch. |
-| **Multi-city** | Post-launch. Denver-only through launch. |
+| Item                              | Notes                                                                                                                                                                                        |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Photo upload**                  | Deferred indefinitely. Tracked so we don't accidentally ship a half-promise.                                                                                                                 |
+| **Concert Roulette**              | Hold as a surprise for post-launch. Don't tease.                                                                                                                                             |
+| **AI recommendations**            | Taste-based from Spotify + history. Post-launch.                                                                                                                                             |
+| **Multi-city**                    | Post-launch. Denver-only through launch.                                                                                                                                                     |
 | **Real photo swap (Bandsintown)** | Decided 2026-05-09: generative art stays through launch. Bandsintown is not a tracked dependency. Artist treatment via Spotify is post-launch (see above). No Phase 8 design pass on photos. |
 
 ---
@@ -466,5 +473,7 @@ Full forward plan: `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md`
 - A PR is merged — mark the corresponding phase/sub-phase complete with the PR number and merge date
 - A new phase or sub-phase begins — add a row to the table and update the summary line at the top
 - A plan file is created — link it in the relevant row's notes
+- **When opening a PR** — update Phase Sequence + Current Status in this file and commit the change on the feature branch before opening the PR
+- **At the start of every session** — run `gh pr list --state merged --limit 10`, check for unrecorded merges, and update this file before doing any other work
 
 This keeps any future Claude session (or human) immediately oriented without needing to run `gh pr list`.
