@@ -128,11 +128,11 @@ export function WatchingRouteDesktop({
 
       const revert = () => {
         setShows((prev) =>
-          [...prev, show].sort((a, b) => {
-            if (a.date !== b.date) return a.date < b.date ? -1 : 1
-            if (!a.showTime) return 1
-            if (!b.showTime) return -1
-            return a.showTime < b.showTime ? -1 : 1
+          [...prev, show].sort((sa, sb) => {
+            if (sa.date !== sb.date) return sa.date < sb.date ? -1 : 1
+            if (!sa.showTime) return 1
+            if (!sb.showTime) return -1
+            return sa.showTime < sb.showTime ? -1 : 1
           }),
         )
       }
