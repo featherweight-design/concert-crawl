@@ -250,49 +250,82 @@ export function WatchingItem({ show, density, onRemove }: WatchingItemProps) {
           >
             SOLD OUT
           </span>
-        ) : isPresale || show.currentPrice === null ? (
+        ) : isPresale ? (
+          <>
+            <span
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: cfg.priceSize,
+                fontWeight: 700,
+                color: 'var(--fg-subtle)',
+              }}
+            >
+              —
+            </span>
+            <span
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: '0.10em',
+                textTransform: 'uppercase',
+                color: 'var(--fg-subtle)',
+              }}
+            >
+              presale
+            </span>
+          </>
+        ) : show.currentPrice === null ? (
           <span
             style={{
               fontFamily: 'var(--font-mono)',
               fontSize: cfg.priceSize,
+              fontWeight: 700,
               color: 'var(--fg-subtle)',
             }}
           >
             —
           </span>
         ) : (
-          <span
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-            }}
-          >
+          <>
             <span
               style={{
                 fontFamily: 'var(--font-mono)',
                 fontSize: cfg.priceSize,
-                fontWeight: 700,
-                color: 'var(--fg)',
+                fontWeight: 800,
                 letterSpacing: '-0.01em',
+                color:
+                  show.currentPrice < (show.savedPrice ?? Infinity)
+                    ? 'var(--success)'
+                    : 'var(--fg)',
               }}
             >
               ${Math.round(show.currentPrice)}
             </span>
             {stale && (
               <span
-                title={`as of ${formatRelTime(show.updatedAt)}`}
+                title={`Last checked ${formatRelTime(show.updatedAt)} — could be stale`}
                 style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: '50%',
-                  background: 'var(--warning)',
-                  display: 'inline-block',
-                  flexShrink: 0,
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 9,
+                  fontWeight: 700,
+                  letterSpacing: '0.14em',
+                  textTransform: 'uppercase',
+                  color: 'var(--warning)',
+                  border:
+                    '1px solid color-mix(in oklch, var(--warning) 50%, transparent)',
+                  background:
+                    'color-mix(in oklch, var(--warning) 10%, transparent)',
+                  padding: '1px 5px',
+                  borderRadius: 2,
+                  cursor: 'help',
+                  whiteSpace: 'nowrap',
                 }}
-              />
+              >
+                Stale · {formatRelTime(show.updatedAt)}
+              </span>
             )}
-          </span>
+          </>
         )}
 
         {/* Delta tag */}

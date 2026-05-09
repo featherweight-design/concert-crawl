@@ -8,8 +8,13 @@ export function SourcePill({ sourceKind }: SourcePillProps) {
   const isResale = sourceKind === 'resale'
   const color = isResale ? 'var(--warning)' : 'var(--signal)'
 
+  const tooltip = isResale
+    ? 'Resale price — secondary market, not face value'
+    : 'Community price — submitted by a fan'
+
   return (
     <span
+      title={tooltip}
       style={{
         display: 'inline-block',
         fontFamily: 'var(--font-mono)',

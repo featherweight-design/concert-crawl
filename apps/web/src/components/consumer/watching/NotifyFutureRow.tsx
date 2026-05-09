@@ -7,7 +7,7 @@ export function NotifyFutureRow() {
         gap: 14,
         padding: '14px 16px',
         background: 'var(--surface-2)',
-        border: '1px solid var(--border)',
+        border: '1px dashed var(--border-strong)',
         borderRadius: 12,
         opacity: 0.72,
         position: 'relative',

@@ -35,13 +35,19 @@ export function DeltaTag({ savedPrice, currentPrice }: DeltaTagProps) {
       : null
 
   if (status === 'fresh') {
+    const freshTitle =
+      savedPrice !== null
+        ? `Was $${Math.round(savedPrice)} when you saved`
+        : undefined
     return (
       <span
+        title={freshTitle}
         style={{
           fontFamily: 'var(--font-mono)',
           fontSize: 10,
           color: 'var(--fg-subtle)',
           letterSpacing: '0.04em',
+          cursor: freshTitle ? 'help' : undefined,
         }}
       >
         flat
