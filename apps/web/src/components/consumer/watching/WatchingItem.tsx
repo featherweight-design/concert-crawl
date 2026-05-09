@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import type { WatchingShow } from '@concert-crawl/types'
 import { EventImage } from '../event-image'
 import { DeltaTag } from './DeltaTag'
@@ -100,6 +101,7 @@ interface WatchingItemProps {
 
 export function WatchingItem({ show, density, onRemove }: WatchingItemProps) {
   const cfg = DENSITY_CONFIG[density]
+  const router = useRouter()
   const isSoldOut = show.watchStatus === 'soldout'
   const isPresale = show.watchStatus === 'presale'
   const stale = isStale(show.updatedAt)
@@ -135,7 +137,7 @@ export function WatchingItem({ show, density, onRemove }: WatchingItemProps) {
           'var(--surface-1)'
       }}
       onClick={() => {
-        window.location.href = `/events/${show.eventId}`
+        router.push(`/events/${show.eventId}`)
       }}
     >
       {/* Identity art */}
@@ -336,8 +338,10 @@ export function WatchingItem({ show, density, onRemove }: WatchingItemProps) {
           />
         )}
 
-        {/* Source pill */}
-        <SourcePill sourceKind={show.sourceKind} />
+        {/* Source pill — only meaningful when a live price is shown */}
+        {!isSoldOut && !isPresale && show.currentPrice !== null && (
+          <SourcePill sourceKind={show.sourceKind} />
+        )}
       </div>
 
       {/* Remove button — absolutely positioned top-right inside padR */}

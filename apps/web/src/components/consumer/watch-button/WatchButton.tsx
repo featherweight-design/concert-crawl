@@ -8,14 +8,9 @@ const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
 interface WatchButtonProps {
   eventId: string
   initialWatching: boolean
-  savedPrice: number | null
 }
 
-export function WatchButton({
-  eventId,
-  initialWatching,
-  savedPrice: _savedPrice,
-}: WatchButtonProps) {
+export function WatchButton({ eventId, initialWatching }: WatchButtonProps) {
   const [isWatching, setIsWatching] = useState(initialWatching)
   const [isPending, setIsPending] = useState(false)
   const { getToken } = useAuth()

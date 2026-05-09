@@ -184,13 +184,7 @@ export function EventCard({
       </div>
 
       {/* Watch button */}
-      <WatchButton
-        eventId={event.id}
-        initialWatching={isWatching}
-        savedPrice={
-          event.ticketPriceMin != null ? parseFloat(event.ticketPriceMin) : null
-        }
-      />
+      <WatchButton eventId={event.id} initialWatching={isWatching} />
 
       {/* Price chip — links to event detail */}
       <Link

@@ -115,10 +115,21 @@ export function WatchingRoute({ initialShows }: WatchingRouteProps) {
       // Optimistic remove
       setShows((prev) => prev.filter((sv) => sv.userEventId !== userEventId))
 
+      const revert = () => {
+        setShows((prev) =>
+          [...prev, show].sort((a, b) => {
+            if (a.date !== b.date) return a.date < b.date ? -1 : 1
+            if (!a.showTime) return 1
+            if (!b.showTime) return -1
+            return a.showTime < b.showTime ? -1 : 1
+          }),
+        )
+      }
+
       try {
         const token = await getToken()
         if (!token) {
-          setShows((prev) => [...prev, show])
+          revert()
           return
         }
         await fetch(`${API_URL}/v1/watching/${show.eventId}`, {
@@ -126,8 +137,7 @@ export function WatchingRoute({ initialShows }: WatchingRouteProps) {
           headers: { Authorization: `Bearer ${token}` },
         })
       } catch {
-        // Revert
-        setShows((prev) => [...prev, show])
+        revert()
       }
     },
     [shows, getToken],

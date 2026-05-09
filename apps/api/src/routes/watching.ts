@@ -25,9 +25,9 @@ function mapSourceKind(
 function resolveWatchStatus(
   priceSource: string | null,
   ticketPriceMin: string | null,
+  eventStatus: string,
 ): 'live' | 'soldout' | 'presale' {
-  // Events table doesn't have a soldout status — upcoming/cancelled/postponed
-  // Use presale when no price and no source; live otherwise
+  if (eventStatus === 'cancelled') return 'soldout'
   if (!priceSource && !ticketPriceMin) return 'presale'
   return 'live'
 }
@@ -94,6 +94,7 @@ watchingRouter.get('/', async (ctx) => {
     watchStatus: resolveWatchStatus(
       row.priceSource ?? null,
       row.ticketPriceMin ?? null,
+      row.eventStatus,
     ),
     updatedAt: row.updatedAt.toISOString(),
     imageUrl: row.imageUrl ?? null,
@@ -115,36 +116,28 @@ watchingRouter.put('/:eventId', async (ctx) => {
   }
   const eventId = parsed.data
 
-  // Check if already watching
+  // Check for any existing row for this user+event (regardless of status),
+  // so we don't violate the unique (user_id, event_id) index on insert.
   const [existing] = await db
-    .select({ id: userEvents.id })
+    .select({ id: userEvents.id, status: userEvents.status })
     .from(userEvents)
     .where(
       and(
         eq(userEvents.userId, authInfo.userId),
         eq(userEvents.eventId, eventId),
-        eq(userEvents.status, 'watching'),
       ),
     )
     .limit(1)
 
-  if (existing) {
+  if (existing?.status === 'watching') {
     // Already watching — remove it
-    await db
-      .delete(userEvents)
-      .where(
-        and(
-          eq(userEvents.userId, authInfo.userId),
-          eq(userEvents.eventId, eventId),
-          eq(userEvents.status, 'watching'),
-        ),
-      )
+    await db.delete(userEvents).where(eq(userEvents.id, existing.id))
 
     const response: WatchToggleResponse = { watching: false, savedPrice: null }
     return ctx.json({ success: true, data: response })
   }
 
-  // Not watching — fetch current price and insert
+  // Not watching — fetch current price and upsert to watching
   const [eventRow] = await db
     .select({ ticketPriceMin: events.ticketPriceMin })
     .from(events)
@@ -160,16 +153,22 @@ watchingRouter.put('/:eventId', async (ctx) => {
   const savedPriceStr = savedPrice !== null ? String(savedPrice) : null
 
   try {
-    await db.insert(userEvents).values({
-      userId: authInfo.userId,
-      eventId,
-      status: 'watching',
-      savedPrice: savedPriceStr,
-    })
+    await db
+      .insert(userEvents)
+      .values({
+        userId: authInfo.userId,
+        eventId,
+        status: 'watching',
+        savedPrice: savedPriceStr,
+      })
+      .onConflictDoUpdate({
+        target: [userEvents.userId, userEvents.eventId],
+        set: { status: 'watching', savedPrice: savedPriceStr },
+      })
   } catch (err) {
     apiLogger.warn(
       { err, userId: authInfo.userId, eventId },
-      'watch insert failed',
+      'watch upsert failed',
     )
     return ctx.json({ success: false, error: 'Failed to save watch' }, 500)
   }
