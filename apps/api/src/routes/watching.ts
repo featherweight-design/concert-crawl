@@ -2,9 +2,12 @@
 import { Hono } from 'hono'
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
 import { eq, and, gte } from 'drizzle-orm'
+import { z } from 'zod'
 import { db, userEvents, events, venues } from '@concert-crawl/db'
 import type { WatchingShow, WatchToggleResponse } from '@concert-crawl/types'
 import { apiLogger } from '../lib/logger.js'
+
+const uuidSchema = z.string().uuid()
 
 export const watchingRouter = new Hono()
 
@@ -105,7 +108,12 @@ watchingRouter.put('/:eventId', async (ctx) => {
   if (!authInfo?.userId)
     return ctx.json({ success: false, error: 'Unauthorized' }, 401)
 
-  const eventId = ctx.req.param('eventId')
+  const eventIdRaw = ctx.req.param('eventId')
+  const parsed = uuidSchema.safeParse(eventIdRaw)
+  if (!parsed.success) {
+    return ctx.json({ success: false, error: 'Invalid event ID' }, 400)
+  }
+  const eventId = parsed.data
 
   // Check if already watching
   const [existing] = await db
