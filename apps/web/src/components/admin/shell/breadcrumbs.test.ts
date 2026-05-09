@@ -11,12 +11,9 @@ describe('buildBreadcrumbs', () => {
     ])
   })
 
-  it('returns Admin + Dashboard on the admin root', () => {
+  it('returns unlinked Admin + Dashboard on the admin root to avoid a self-link', () => {
     const crumbs = buildBreadcrumbs('/admin', NAV)
-    expect(crumbs).toEqual([
-      { label: 'Admin', href: '/admin' },
-      { label: 'Dashboard' },
-    ])
+    expect(crumbs).toEqual([{ label: 'Admin' }, { label: 'Dashboard' }])
   })
 
   it('returns section link + sub-label on a new-entity page', () => {

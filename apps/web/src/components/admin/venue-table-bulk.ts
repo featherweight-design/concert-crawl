@@ -1,5 +1,3 @@
-import type { VenueWithEventCount } from '@concert-crawl/types'
-
 export interface BulkVisibility {
   showVerify: boolean
   showUnverify: boolean
@@ -8,7 +6,7 @@ export interface BulkVisibility {
 }
 
 export function deriveBulkVisibility(
-  venues: VenueWithEventCount[],
+  venues: Array<{ active: boolean; verified: boolean }>,
 ): BulkVisibility {
   return {
     showVerify: venues.some((venue) => !venue.verified),

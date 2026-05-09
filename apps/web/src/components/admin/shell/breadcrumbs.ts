@@ -15,7 +15,11 @@ export function buildBreadcrumbs(pathname: string, nav: NavItem[]): Crumb[] {
   if (!section) return [{ label: 'Admin', href: '/admin' }]
 
   if (pathname === section.href) {
-    return [{ label: 'Admin', href: '/admin' }, { label: section.label }]
+    const adminCrumb: Crumb =
+      pathname === '/admin'
+        ? { label: 'Admin' }
+        : { label: 'Admin', href: '/admin' }
+    return [adminCrumb, { label: section.label }]
   }
 
   const sub = pathname.slice(section.href.length).replace(/^\//, '')
