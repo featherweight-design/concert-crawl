@@ -161,16 +161,16 @@ Single source of truth: `w_classifyDelta(savedPrice, currentPrice)` in `watching
 ## Empty State (`WatchingEmpty`)
 
 When `shows.length === 0`. Centered single-column block:
-- Bookmark glyph (filled, 32px, color `--fg-subtle`).
-- Headline: `Nothing watched yet` — Inter, 20px, 700.
-- Body: 1–2 lines explaining the surface, mono 12px, `--fg-muted`.
-- CTA button to `Browse` — primary, `--accent` bg, `--fg-on-accent` text.
+- Bookmark glyph (dashed border box, 64px, color `--fg-subtle`).
+- Headline: `Crickets.` — Inter, 26px, 900.
+- Body: 1–2 lines explaining the surface, Inter 13.5px, `--fg-muted`.
+- CTA button to `Browse tonight's shows` — `--signal` bg, `--fg-on-accent` text.
 
 ---
 
 ## Notify-Future Row (`NotifyFutureRow`)
 
-Optional teaser at the bottom of the list (controlled by `showNotifyTeaser`). Greyed-out row stub with bell icon and copy `"Price alerts — coming soon"`. Visually muted — `--surface-1` bg, dashed `--border`, color `--fg-subtle`. **Not interactive.** Remove this when alerts ship.
+Optional teaser at the bottom of the list (controlled by `showNotifyTeaser`). Greyed-out row stub with bell icon, title `"Price drop alerts"`, and subline `"Coming soon."`. Visually muted — `--surface-2` bg, color `--fg-subtle`, "SOON" badge. **Not interactive.** Remove this when alerts ship.
 
 ---
 
@@ -286,8 +286,8 @@ type WatchingShow = Show & {
   savedAt: string;        // ISO — when the user tapped Watch
   savedPrice: number;     // face price observed at save-time
   currentPrice: number;   // current face price (from your pricing pipeline)
-  priceSource?: "resale" | "community" | "primary";
-  status: "available" | "soldout" | "presale";
+  sourceKind?: "resale" | "community" | "primary";
+  status: "live" | "soldout" | "presale";
   observedAt?: string;    // ISO — last time pricing was refreshed
 };
 ```

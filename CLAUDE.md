@@ -25,13 +25,13 @@ Concert Crawl aggregates live music events from Denver venue websites into a sin
 ├── apps/
 │   ├── web/        # Next.js 14+ (App Router) — UI + admin
 │   ├── api/        # Hono — REST API (/v1/...)
-│   └── crawler/    # Playwright + Claude Haiku extraction (runs as Render Cron Job)
+│   └── crawler/    # Playwright + Claude Haiku extraction (runs as two Render Cron Jobs: triggers every 10 min, daily at 3 AM MT)
 ├── packages/
 │   ├── config/         # Shared ESLint, TypeScript, Tailwind configs
 │   ├── crawler-core/   # Playwright + extraction logic (separated from API in PR #51)
 │   ├── db/             # Drizzle ORM schema + migrations (shared)
 │   ├── logger/         # Shared Pino logger
-│   ├── price-pipeline/ # Price fetch + submission pipeline (extracted from API in PR #46)
+│   ├── price-pipeline/ # Price fetch + submission pipeline (extracted from packages/crawler-core in PR #51)
 │   └── types/          # Shared TypeScript types
 ├── docs/
 │   ├── superpowers/specs/  # Design specs
@@ -342,7 +342,7 @@ Phase: **Pre-Beta Sprint — target open May 25, 2026**
 - Price transparency v2 complete (PR #46 merged 2026-05-08): community submissions, confirm/dispute, admin review
 - Phase 8b Part 1 complete (PR #49 merged 2026-05-08): user profile + settings (handle, avatar, theme, submissions)
 - AdminTable theme fix complete (PR #50 merged 2026-05-08): electric/jade theme support in admin
-- Betterment: crawler separated from API service (PR #51 merged 2026-05-08): crawler-core package, Render Cron Job
+- Betterment: crawler separated from API service (PR #51 merged 2026-05-08): crawler-core + price-pipeline packages, two Render Cron Jobs
 - Domain: `concertcrawl.app` via Cloudflare Registrar (~$15/yr)
 
 ### Phase Sequence

@@ -34,10 +34,10 @@ As of 2026-05-09, the following phases are complete and merged to `main`:
 ```
 packages/
 ├── config/          # Shared ESLint, TypeScript, Tailwind
-├── crawler-core/    # Playwright + extraction logic (separated from API)
+├── crawler-core/    # Playwright + extraction logic (separated from API in PR #51)
 ├── db/              # Drizzle ORM schema + migrations
 ├── logger/          # Shared Pino logger
-├── price-pipeline/  # Price fetch + submission pipeline (extracted from API)
+├── price-pipeline/  # Price fetch + submission pipeline (extracted from packages/crawler-core in PR #51)
 └── types/           # Shared TypeScript types
 ```
 
@@ -96,8 +96,9 @@ Hard blockers — nothing ships to beta users without these:
 | Item | Notes |
 |---|---|
 | **Saving shows (Watching)** | Heart button → `user_events` table, Phase 8b Part 2. Design handoff complete (`design_handoff_watching/`). |
-| **Browse filters wired** | Date, venue, price, vibe → URL params, `applyFilters()` hooked up. Currently broken. |
-| **Search nav item** | Routes to search page and returns results. Currently a dead link. |
+| **Browse filters wired** | Date, venue, price, vibe → URL params, `applyFilters()` hooked up. Currently broken. Designs complete: `design_handoff_phase5b_screens/Browse Home.html` + `Browse Desktop.html`. |
+| **Search implementation** | Command palette (⌘K on desktop, full-screen on mobile). Four states: empty, artist match, venue match, no results. Currently a dead nav link. Designs complete: `design_handoff_phase5b_screens/Search Desktop.html` + `Search Mobile.html`. |
+| **Artist genre data** | `genre: text[]` exists on the events table but is sparsely populated. LLM extraction must be verified to consistently output genre tags before Event Detail v2 can surface them. Audit crawler output and patch extraction prompt if needed. |
 | **Full UI interactions sweep** | Walk every clickable element on every route. Log dead interactions. Fix blockers. |
 | **Invite code error states** | Invalid code, expired code, no-code wall (separate from onboarding flow — these are code-entry failures). |
 | **Feedback modal** | In-app, auth-only, rate-limited (1/hour). Category + message + auto-captured page URL → `feedback` table. |
@@ -305,7 +306,8 @@ flowchart TD
     subgraph Render
         Web["apps/web\nNext.js 14+\nRender Web Service"]
         API["apps/api\nHono REST\nRender Web Service"]
-        Crawler["apps/crawler\nPlaywright + Haiku\nRender Cron Job (3 AM MT)"]
+        CrawlerTriggers["apps/crawler (triggers)\nRender Cron Job (*/10 min)"]
+        CrawlerDaily["apps/crawler (daily)\nRender Cron Job (3 AM MT)"]
         DB[("Render Postgres\nDrizzle ORM")]
     end
 
@@ -331,9 +333,11 @@ flowchart TD
     Browser -->|HTTPS| Web
     Web -->|REST /v1/...| API
     API --> DB
-    Crawler --> CrawlerCore
-    Crawler --> PricePipeline
-    Crawler --> DB
+    CrawlerTriggers --> CrawlerCore
+    CrawlerTriggers --> DB
+    CrawlerDaily --> CrawlerCore
+    CrawlerDaily --> PricePipeline
+    CrawlerDaily --> DB
     CrawlerCore --> Anthropic
     PricePipeline --> TicketmasterAPI
     API --> Clerk
@@ -344,7 +348,8 @@ flowchart TD
     API --> SetlistFM
     API --> Sentry
     Web --> Sentry
-    Crawler --> Sentry
+    CrawlerTriggers --> Sentry
+    CrawlerDaily --> Sentry
 ```
 
 **Placement:** Root `README.md`, after the project summary and before the local development section.

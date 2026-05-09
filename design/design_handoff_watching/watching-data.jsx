@@ -11,7 +11,7 @@
 //   "fresh"     — show hasn't moved much (<$2 swing); muted treatment
 //   "drop"      — current < saved; success-tinted delta
 //   "spike"     — current > saved; muted-warning delta (we don't paint screen red)
-//   "soldout"   — vendor reports no inventory; row dimmed, struck-through price
+//   "soldout"   — vendor reports no inventory; row dimmed, SOLD OUT pill replaces price column
 //   "stale"     — observedAt > 24h; warning dot on price, copy "as of …"
 //   "noprice"   — never had a face; row stays in list but price column reads em-dash
 

@@ -306,7 +306,7 @@ function NotifyFutureRow() {
           Price drop alerts
         </div>
         <div style={{ fontSize: 12, color: "var(--fg-subtle)", letterSpacing: "-0.005em", marginTop: 2 }}>
-          Coming soon. We'll ping you when watched prices move.
+          Coming soon.
         </div>
       </div>
       <span style={{
