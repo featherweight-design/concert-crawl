@@ -12,6 +12,7 @@ vi.mock('@hono/clerk-auth', () => ({
 // Mock drizzle-orm operators used in venue routes
 vi.mock('drizzle-orm', () => ({
   eq: vi.fn(),
+  count: vi.fn(),
 }))
 
 // Mock the database
@@ -21,6 +22,7 @@ vi.mock('@concert-crawl/db', () => ({
     from: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
     orderBy: vi.fn().mockReturnValue([]),
+    groupBy: vi.fn().mockResolvedValue([]),
     insert: vi.fn().mockReturnThis(),
     values: vi.fn().mockReturnThis(),
     returning: vi.fn().mockResolvedValue([
@@ -43,6 +45,7 @@ vi.mock('@concert-crawl/db', () => ({
     delete: vi.fn().mockReturnThis(),
   },
   venues: {},
+  events: {},
   auditLog: {},
   inviteCodes: {},
 }))
