@@ -21,10 +21,7 @@ import {
   buildActiveVenuesHint,
   buildSparklineData,
 } from '@/components/admin/dashboard/lib/dashboard'
-import type {
-  RawVenueStatus,
-  CrawlStatusRow,
-} from '@/components/admin/dashboard/lib/dashboard'
+import type { RawVenueStatus } from '@/components/admin/dashboard/lib/dashboard'
 
 async function fetchDashboardData(token: string) {
   const [rawStatus, venues, runs, pendingEvents] = await Promise.all([
