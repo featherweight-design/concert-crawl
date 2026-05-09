@@ -60,9 +60,12 @@ export const CrawlSplitView = ({
   initialRuns,
   initialSelectedId,
 }: Props) => {
-  const [selectedId, setSelectedId] = useState<string | null>(
-    initialSelectedId ?? initialStatus[0]?.venueId ?? null,
-  )
+  const resolvedInitialId =
+    initialSelectedId &&
+    initialStatus.some((row) => row.venueId === initialSelectedId)
+      ? initialSelectedId
+      : (initialStatus[0]?.venueId ?? null)
+  const [selectedId, setSelectedId] = useState<string | null>(resolvedInitialId)
   const [triggering, setTriggering] = useState<string | null>(null)
   const [triggerError, setTriggerError] = useState<string | null>(null)
 

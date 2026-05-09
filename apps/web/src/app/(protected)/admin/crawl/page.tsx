@@ -66,9 +66,8 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
 
   const resolvedParams = await searchParams
   const rawVenueId = resolvedParams.venueId
-  const initialVenueId = Array.isArray(rawVenueId)
-    ? rawVenueId[0]
-    : rawVenueId
+  const initialVenueId =
+    (Array.isArray(rawVenueId) ? rawVenueId[0] : rawVenueId) || undefined
 
   const [rawStatus, runs] = await Promise.all([
     apiClient.get<RawVenueStatus[]>('/v1/admin/crawl/status', token),

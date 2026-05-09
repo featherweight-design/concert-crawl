@@ -24,8 +24,12 @@ const useBreadcrumbs = (): Crumb[] => {
 
   const sub = pathname.slice(section.href.length).replace(/^\//, '')
   let subLabel = 'Details'
-  if (sub === 'new') subLabel = 'New venue'
-  else if (sub && sub !== '') subLabel = 'Edit venue'
+  if (section.key === 'venues') {
+    if (sub === 'new') subLabel = 'New venue'
+    else if (sub) subLabel = 'Edit venue'
+  } else if (sub === 'new') {
+    subLabel = 'New'
+  }
 
   return [{ label: section.label, href: section.href }, { label: subLabel }]
 }
@@ -47,9 +51,15 @@ export const AdminTopbar = () => {
         background: 'var(--bg-elevated)',
       }}
     >
-      <nav aria-label="Breadcrumb" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <nav
+        aria-label="Breadcrumb"
+        style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+      >
         {crumbs.map((crumb, idx) => (
-          <span key={crumb.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span
+            key={crumb.label}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
             {idx > 0 && (
               <span style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>/</span>
             )}
@@ -66,7 +76,9 @@ export const AdminTopbar = () => {
                 {crumb.label}
               </Link>
             ) : (
-              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)' }}>
+              <span
+                style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)' }}
+              >
                 {crumb.label}
               </span>
             )}
