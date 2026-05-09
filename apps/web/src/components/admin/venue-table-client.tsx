@@ -26,6 +26,7 @@ import {
   venueHealthPercent,
   type VenueStatus,
 } from '@/lib/admin/venue-status'
+import { deriveBulkVisibility } from './venue-table-bulk'
 
 function sourceUrl(url: string): string {
   return url.replace(/^https?:\/\//, '')
@@ -59,8 +60,8 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
   const someSelected = selected.size > 0
 
   const selectedVenues = venues.filter((venue) => selected.has(venue.id))
-  const anyUnverified = selectedVenues.some((venue) => !venue.verified)
-  const anyVerified = selectedVenues.some((venue) => venue.verified)
+  const { showVerify, showUnverify, showActivate, showDeactivate } =
+    deriveBulkVisibility(selectedVenues)
 
   function toggleAll() {
     if (allSelected) {
@@ -122,7 +123,7 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
               >
                 {selected.size} selected
               </span>
-              {anyUnverified && (
+              {showVerify && (
                 <AdminButton
                   variant="success"
                   size="sm"
@@ -133,7 +134,7 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
                   Verify
                 </AdminButton>
               )}
-              {anyVerified && (
+              {showUnverify && (
                 <AdminButton
                   variant="outline"
                   size="sm"
@@ -144,24 +145,28 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
                   Unverify
                 </AdminButton>
               )}
-              <AdminButton
-                variant="outline"
-                size="sm"
-                icon={Play}
-                disabled={isPending}
-                onClick={() => runBulkAction(bulkActivateVenues)}
-              >
-                Activate
-              </AdminButton>
-              <AdminButton
-                variant="danger"
-                size="sm"
-                icon={Pause}
-                disabled={isPending}
-                onClick={() => runBulkAction(bulkDeactivateVenues)}
-              >
-                Deactivate
-              </AdminButton>
+              {showActivate && (
+                <AdminButton
+                  variant="outline"
+                  size="sm"
+                  icon={Play}
+                  disabled={isPending}
+                  onClick={() => runBulkAction(bulkActivateVenues)}
+                >
+                  Activate
+                </AdminButton>
+              )}
+              {showDeactivate && (
+                <AdminButton
+                  variant="danger"
+                  size="sm"
+                  icon={Pause}
+                  disabled={isPending}
+                  onClick={() => runBulkAction(bulkDeactivateVenues)}
+                >
+                  Deactivate
+                </AdminButton>
+              )}
             </>
           ) : (
             <span
@@ -247,7 +252,9 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
                   />
                 </TD>
                 <TD>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div
+                    style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                  >
                     <ShieldCheck
                       size={13}
                       style={{

@@ -5,33 +5,11 @@ import { UserButton } from '@clerk/nextjs'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { NAV } from './nav'
+import { buildBreadcrumbs } from './breadcrumbs'
 
-interface Crumb {
-  label: string
-  href?: string
-}
-
-const useBreadcrumbs = (): Crumb[] => {
+const useBreadcrumbs = () => {
   const pathname = usePathname()
-  const section = NAV.find((nav) =>
-    nav.href !== '/admin'
-      ? pathname.startsWith(nav.href)
-      : pathname === '/admin',
-  )
-  if (!section) return [{ label: 'Admin' }]
-
-  if (pathname === section.href) return [{ label: section.label }]
-
-  const sub = pathname.slice(section.href.length).replace(/^\//, '')
-  let subLabel = 'Details'
-  if (section.key === 'venues') {
-    if (sub === 'new') subLabel = 'New venue'
-    else if (sub) subLabel = 'Edit venue'
-  } else if (sub === 'new') {
-    subLabel = 'New'
-  }
-
-  return [{ label: section.label, href: section.href }, { label: subLabel }]
+  return buildBreadcrumbs(pathname, NAV)
 }
 
 export const AdminTopbar = () => {
