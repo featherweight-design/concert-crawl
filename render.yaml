@@ -48,12 +48,11 @@ services:
 
   - type: cron
     name: concert-crawl-crawler-triggers
-    runtime: node
+    runtime: docker
     region: oregon
     plan: starter
     schedule: "*/10 * * * *"
-    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/crawler-core --filter=@concert-crawl/logger && npx playwright install --with-deps chromium
-    startCommand: pnpm --filter @concert-crawl/crawler start
+    dockerfilePath: apps/crawler/Dockerfile
     envVars:
       - key: NODE_ENV
         value: production
@@ -80,12 +79,11 @@ services:
 
   - type: cron
     name: concert-crawl-crawler-daily
-    runtime: node
+    runtime: docker
     region: oregon
     plan: starter
     schedule: "0 9 * * *"  # 3 AM MT (UTC-7 standard / UTC-6 daylight)
-    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/crawler-core --filter=@concert-crawl/logger && npx playwright install --with-deps chromium
-    startCommand: pnpm --filter @concert-crawl/crawler start
+    dockerfilePath: apps/crawler/Dockerfile
     envVars:
       - key: NODE_ENV
         value: production
@@ -159,12 +157,11 @@ services:
 
   - type: cron
     name: concert-crawl-crawler-triggers-staging
-    runtime: node
+    runtime: docker
     region: oregon
     plan: starter
     schedule: "*/10 * * * *"
-    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/crawler-core --filter=@concert-crawl/logger && npx playwright install --with-deps chromium
-    startCommand: pnpm --filter @concert-crawl/crawler start
+    dockerfilePath: apps/crawler/Dockerfile
     envVars:
       - key: NODE_ENV
         value: production
@@ -191,12 +188,11 @@ services:
 
   - type: cron
     name: concert-crawl-crawler-daily-staging
-    runtime: node
+    runtime: docker
     region: oregon
     plan: starter
     schedule: "0 9 * * *"  # 3 AM MT (UTC-7 standard / UTC-6 daylight)
-    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/crawler-core --filter=@concert-crawl/logger && npx playwright install --with-deps chromium
-    startCommand: pnpm --filter @concert-crawl/crawler start
+    dockerfilePath: apps/crawler/Dockerfile
     envVars:
       - key: NODE_ENV
         value: production
