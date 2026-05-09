@@ -87,7 +87,25 @@ Go to each service in the Render dashboard → **Environment** tab.
 
 ---
 
-## Step 5 — Deploy and Verify
+## Step 5 — Configure GitHub Production Environment Secrets
+
+The production deploy workflow uses GitHub environment secrets to call Render deploy hooks. These must be set before the workflow can trigger production deploys.
+
+1. Go to the repository on GitHub → **Settings** → **Environments** → `production`
+2. Under **Environment secrets**, add the following:
+
+| Secret                   | Value                                                                                     |
+| ------------------------ | ----------------------------------------------------------------------------------------- |
+| `RENDER_DEPLOY_HOOK_API` | Render dashboard → `concert-crawl-api` → Settings → Deploy Hook → generate and copy URL  |
+| `RENDER_DEPLOY_HOOK_WEB` | Render dashboard → `concert-crawl-web` → Settings → Deploy Hook → generate and copy URL  |
+
+3. In the Render dashboard, set **Auto-Deploy → No** on both `concert-crawl-api` and `concert-crawl-web` — GitHub Actions is now the deploy trigger, not Render's native GitHub integration.
+
+> The staging environment uses the same secret names with values pointing to the staging Render services. See `.github/workflows/deploy-staging.yml` — a `deploy-production.yml` workflow should mirror it when production deploys are automated.
+
+---
+
+## Step 6 — Deploy and Verify
 
 1. Trigger a manual deploy for both **concert-crawl-api** and **concert-crawl-web** in the Render dashboard
 2. Wait for deploys to complete (watch the deploy logs)
@@ -98,7 +116,7 @@ Go to each service in the Render dashboard → **Environment** tab.
 
 ---
 
-## Step 6 — Enable the Production Crawler
+## Step 7 — Enable the Production Crawler
 
 The daily crawler is gated by `CRAWL_ENABLED` in the GitHub `production` environment. It is set to `false` by default and must be explicitly enabled when you are ready for live crawls.
 
@@ -106,7 +124,7 @@ The daily crawler is gated by `CRAWL_ENABLED` in the GitHub `production` environ
 
 - At least one successful staging crawl run has completed (verify in Actions tab)
 - Production DB has venue records seeded
-- Step 5 above passes (API healthy, app loads)
+- Step 6 above passes (API healthy, app loads)
 
 **To enable:**
 
