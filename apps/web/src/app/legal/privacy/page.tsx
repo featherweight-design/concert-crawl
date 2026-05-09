@@ -3,6 +3,7 @@ import Link from 'next/link'
 
 export const metadata: Metadata = {
   title: 'Privacy Policy — Concert Crawl',
+  robots: { index: false },
 }
 
 function Section({
@@ -83,7 +84,7 @@ export default function PrivacyPage() {
               {[
                 'Clerk — authentication and account management',
                 'Render — cloud hosting and compute',
-                'Sentry — error tracking (captures stack traces, not personal data)',
+                'Sentry — error tracking (diagnostic data such as stack traces; not explicitly configured for PII minimization)',
                 'Resend — transactional email delivery',
                 'Stripe — payment processing (when subscriptions go live)',
               ].map((item) => (
@@ -102,17 +103,24 @@ export default function PrivacyPage() {
           <Section title="Cookies and local storage">
             <p>
               We store your theme preference in your browser&apos;s localStorage. We
-              use session cookies set by Clerk for authentication. We don&apos;t use
-              tracking cookies or third-party analytics scripts.
+              use session cookies set by Clerk for authentication. During the
+              private beta, we also set a short-lived cookie (
+              <code className="rounded bg-surface-2 px-1 font-mono text-xs">
+                invite_verified
+              </code>
+              ) after a valid invite code is entered — it expires after 1 hour
+              and is used only to allow access to the sign-up flow. We don&apos;t
+              use tracking cookies or third-party analytics scripts.
             </p>
           </Section>
 
           <Section title="Data retention">
             <p>
               Your account data is kept for as long as your account is active.
-              Deleted accounts are removed within 30 days. Price submission
-              history may be retained in anonymized form to preserve data quality
-              for other users.
+              When you delete your account, your profile and saved shows are
+              deleted immediately. Price submissions you&apos;ve made are anonymized
+              (your user ID is removed) rather than deleted, to preserve
+              corroboration data for other users.
             </p>
           </Section>
 
@@ -123,7 +131,7 @@ export default function PrivacyPage() {
                 'Edit your profile at any time from Settings',
                 'Delete your account from the Settings page',
                 'Request a copy of your data by emailing us',
-                'Opt out of non-transactional email from your notification settings',
+                'We currently only send transactional emails (e.g., account-related notices). No marketing emails.',
               ].map((item) => (
                 <li key={item} className="flex gap-2">
                   <span className="mt-px shrink-0 text-accent">—</span>

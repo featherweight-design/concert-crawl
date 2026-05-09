@@ -3,6 +3,7 @@ import Link from 'next/link'
 
 export const metadata: Metadata = {
   title: 'Terms of Service — Concert Crawl',
+  robots: { index: false },
 }
 
 function Section({
