@@ -1,0 +1,171 @@
+// apps/api/src/routes/watching.ts
+import { Hono } from 'hono'
+import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
+import { eq, and, gte } from 'drizzle-orm'
+import { db, userEvents, events, venues } from '@concert-crawl/db'
+import type { WatchingShow, WatchToggleResponse } from '@concert-crawl/types'
+import { apiLogger } from '../lib/logger.js'
+
+export const watchingRouter = new Hono()
+
+watchingRouter.use('*', clerkMiddleware())
+
+function mapSourceKind(
+  priceSource: string | null,
+): 'primary' | 'resale' | 'community' | null {
+  if (!priceSource) return null
+  if (priceSource === 'seatgeek') return 'resale'
+  if (priceSource === 'community') return 'community'
+  return 'primary'
+}
+
+function resolveWatchStatus(
+  priceSource: string | null,
+  ticketPriceMin: string | null,
+): 'live' | 'soldout' | 'presale' {
+  // Events table doesn't have a soldout status — upcoming/cancelled/postponed
+  // Use presale when no price and no source; live otherwise
+  if (!priceSource && !ticketPriceMin) return 'presale'
+  return 'live'
+}
+
+function parsePrice(raw: string | null): number | null {
+  if (!raw) return null
+  const parsed = parseFloat(raw)
+  if (Number.isNaN(parsed)) return null
+  return parsed
+}
+
+// GET /v1/watching — return user's watched upcoming shows
+watchingRouter.get('/', async (ctx) => {
+  const authInfo = getAuth(ctx)
+  if (!authInfo?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+
+  const today = new Date().toISOString().slice(0, 10)
+
+  const rows = await db
+    .select({
+      userEventId: userEvents.id,
+      eventId: userEvents.eventId,
+      savedPrice: userEvents.savedPrice,
+      savedAt: userEvents.createdAt,
+      artist: events.artist,
+      date: events.date,
+      showTime: events.showTime,
+      ticketUrl: events.ticketUrl,
+      ticketPriceMin: events.ticketPriceMin,
+      priceSource: events.priceSource,
+      eventStatus: events.status,
+      imageUrl: events.imageUrl,
+      updatedAt: events.updatedAt,
+      venueName: venues.name,
+      venueSlug: venues.slug,
+    })
+    .from(userEvents)
+    .innerJoin(events, eq(userEvents.eventId, events.id))
+    .innerJoin(venues, eq(events.venueId, venues.id))
+    .where(
+      and(
+        eq(userEvents.userId, authInfo.userId),
+        eq(userEvents.status, 'watching'),
+        gte(events.date, today),
+      ),
+    )
+    .orderBy(events.date)
+
+  const data: WatchingShow[] = rows.map((row) => ({
+    userEventId: row.userEventId,
+    eventId: row.eventId,
+    artist: row.artist,
+    venueName: row.venueName,
+    venueSlug: row.venueSlug,
+    date: row.date,
+    showTime: row.showTime ?? null,
+    ticketUrl: row.ticketUrl ?? null,
+    savedAt: row.savedAt.toISOString(),
+    savedPrice: parsePrice(row.savedPrice ?? null),
+    currentPrice: parsePrice(row.ticketPriceMin ?? null),
+    sourceKind: mapSourceKind(row.priceSource ?? null),
+    eventStatus: row.eventStatus,
+    watchStatus: resolveWatchStatus(
+      row.priceSource ?? null,
+      row.ticketPriceMin ?? null,
+    ),
+    updatedAt: row.updatedAt.toISOString(),
+    imageUrl: row.imageUrl ?? null,
+  }))
+
+  return ctx.json({ success: true, data })
+})
+
+// PUT /v1/watching/:eventId — toggle watch on/off
+watchingRouter.put('/:eventId', async (ctx) => {
+  const authInfo = getAuth(ctx)
+  if (!authInfo?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+
+  const eventId = ctx.req.param('eventId')
+
+  // Check if already watching
+  const [existing] = await db
+    .select({ id: userEvents.id })
+    .from(userEvents)
+    .where(
+      and(
+        eq(userEvents.userId, authInfo.userId),
+        eq(userEvents.eventId, eventId),
+        eq(userEvents.status, 'watching'),
+      ),
+    )
+    .limit(1)
+
+  if (existing) {
+    // Already watching — remove it
+    await db
+      .delete(userEvents)
+      .where(
+        and(
+          eq(userEvents.userId, authInfo.userId),
+          eq(userEvents.eventId, eventId),
+          eq(userEvents.status, 'watching'),
+        ),
+      )
+
+    const response: WatchToggleResponse = { watching: false, savedPrice: null }
+    return ctx.json({ success: true, data: response })
+  }
+
+  // Not watching — fetch current price and insert
+  const [eventRow] = await db
+    .select({ ticketPriceMin: events.ticketPriceMin })
+    .from(events)
+    .where(eq(events.id, eventId))
+    .limit(1)
+
+  if (!eventRow) {
+    return ctx.json({ success: false, error: 'Event not found' }, 404)
+  }
+
+  const currentPriceRaw = eventRow.ticketPriceMin ?? null
+  const savedPrice = parsePrice(currentPriceRaw)
+  const savedPriceStr = savedPrice !== null ? String(savedPrice) : null
+
+  try {
+    await db.insert(userEvents).values({
+      userId: authInfo.userId,
+      eventId,
+      status: 'watching',
+      savedPrice: savedPriceStr,
+    })
+  } catch (err) {
+    apiLogger.warn(
+      { err, userId: authInfo.userId, eventId },
+      'watch insert failed',
+    )
+    return ctx.json({ success: false, error: 'Failed to save watch' }, 500)
+  }
+
+  const response: WatchToggleResponse = { watching: true, savedPrice }
+  return ctx.json({ success: true, data: response })
+})

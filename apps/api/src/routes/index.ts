@@ -8,6 +8,7 @@ import { submissionsRouter } from './submissions.js'
 import { waitlistRouter } from './waitlist.js'
 import { authRouter } from './auth/index.js'
 import { usersRouter } from './users.js'
+import { watchingRouter } from './watching.js'
 
 export function registerRoutes(app: Hono) {
   app.route('/v1/health', healthRouter)
@@ -19,4 +20,5 @@ export function registerRoutes(app: Hono) {
   app.route('/v1/waitlist', waitlistRouter)
   app.route('/v1/auth', authRouter)
   app.route('/v1/users', usersRouter)
+  app.route('/v1/watching', watchingRouter)
 }
