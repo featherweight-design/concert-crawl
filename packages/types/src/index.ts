@@ -299,3 +299,29 @@ export interface HandleAvailabilityResponse {
   available: boolean
   reason?: 'taken' | 'reserved'
 }
+
+// WatchingShow — a single upcoming show saved by the user, with price delta context
+export interface WatchingShow {
+  userEventId: string
+  eventId: string
+  artist: string
+  venueName: string
+  venueSlug: string
+  date: string // ISO YYYY-MM-DD
+  showTime: string | null
+  ticketUrl: string | null
+  savedAt: string // ISO — when the user saved the show
+  savedPrice: number | null // dollars (from ticket_price_min at save time)
+  currentPrice: number | null // dollars, from events.ticketPriceMin at query time
+  sourceKind: 'primary' | 'resale' | 'community' | null
+  eventStatus: 'upcoming' | 'cancelled' | 'postponed'
+  watchStatus: 'live' | 'soldout' | 'presale'
+  updatedAt: string // ISO — last time event row was updated (for stale check)
+  imageUrl: string | null
+}
+
+// WatchToggleResponse — returned by PUT /v1/watching/:eventId
+export interface WatchToggleResponse {
+  watching: boolean
+  savedPrice: number | null
+}
