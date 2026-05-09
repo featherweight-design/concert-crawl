@@ -1,7 +1,5 @@
 'use client'
 
-import { useAdminTheme, VALID_THEMES } from './AdminThemeProvider'
-import { UserButton } from '@clerk/nextjs'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { NAV } from './nav'
@@ -13,7 +11,6 @@ const useBreadcrumbs = () => {
 }
 
 export const AdminTopbar = () => {
-  const { theme, setTheme } = useAdminTheme()
   const crumbs = useBreadcrumbs()
 
   return (
@@ -23,7 +20,7 @@ export const AdminTopbar = () => {
         flexShrink: 0,
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'flex-start',
         padding: '0 24px',
         borderBottom: '1px solid var(--border)',
         background: 'var(--bg-elevated)',
@@ -63,45 +60,6 @@ export const AdminTopbar = () => {
           </span>
         ))}
       </nav>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div
-          role="group"
-          aria-label="Theme"
-          style={{
-            display: 'flex',
-            background: 'var(--surface-1)',
-            borderRadius: 8,
-            padding: 2,
-            gap: 2,
-            border: '1px solid var(--border)',
-          }}
-        >
-          {VALID_THEMES.map((themeOption) => (
-            <button
-              key={themeOption}
-              onClick={() => setTheme(themeOption)}
-              aria-pressed={theme === themeOption}
-              style={{
-                height: 26,
-                padding: '0 10px',
-                borderRadius: 6,
-                fontSize: 12,
-                fontWeight: 500,
-                border: 'none',
-                cursor: 'pointer',
-                background:
-                  theme === themeOption ? 'var(--bg-elevated)' : 'transparent',
-                color: theme === themeOption ? 'var(--fg)' : 'var(--fg-muted)',
-                boxShadow: theme === themeOption ? 'var(--shadow-sm)' : 'none',
-                transition: 'background 0.1s, color 0.1s',
-              }}
-            >
-              {themeOption.charAt(0).toUpperCase() + themeOption.slice(1)}
-            </button>
-          ))}
-        </div>
-        <UserButton />
-      </div>
     </header>
   )
 }
