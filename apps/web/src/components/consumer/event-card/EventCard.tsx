@@ -3,12 +3,14 @@ import type { EventWithVenue } from '@concert-crawl/types'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { EventImage } from '../event-image'
+import { WatchButton } from '../watch-button'
 import { formatShowTime, venueShort } from '../definitions/lib'
 import { copy } from '../definitions/copy'
 
 interface EventCardProps {
   event: EventWithVenue
   className?: string
+  isWatching?: boolean
 }
 
 type SourceKind = 'primary' | 'resale' | 'community'
@@ -90,7 +92,11 @@ function PriceChip({
   )
 }
 
-export function EventCard({ event, className }: EventCardProps) {
+export function EventCard({
+  event,
+  className,
+  isWatching = false,
+}: EventCardProps) {
   const showTime = formatShowTime(event.showTime)
   const isCancelled = event.status === 'cancelled'
   const isPostponed = event.status === 'postponed'
@@ -176,6 +182,15 @@ export function EventCard({ event, className }: EventCardProps) {
           )}
         </p>
       </div>
+
+      {/* Watch button */}
+      <WatchButton
+        eventId={event.id}
+        initialWatching={isWatching}
+        savedPrice={
+          event.ticketPriceMin != null ? parseFloat(event.ticketPriceMin) : null
+        }
+      />
 
       {/* Price chip — links to event detail */}
       <Link
