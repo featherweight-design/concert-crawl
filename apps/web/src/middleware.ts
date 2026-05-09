@@ -7,6 +7,7 @@ const isAlwaysPublic = createRouteMatcher([
   '/auth/code(.*)',
   '/sign-in(.*)',
   '/api/webhooks(.*)',
+  '/legal(.*)',
 ])
 
 // Accessible to unauthenticated users IF they have the invite cookie
