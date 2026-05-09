@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { db, venues, events } from '@concert-crawl/db'
-import { count, eq } from 'drizzle-orm'
+import { and, count, eq, gte } from 'drizzle-orm'
 import { getAuthUser } from '../../middleware/auth.js'
 import type { AdminVariables } from './index.js'
 
@@ -31,9 +31,11 @@ export const venuesAdminRouter = new Hono<AdminVariables>()
 venuesAdminRouter.get('/', async (ctx) => {
   const allVenues = await db.select().from(venues).orderBy(venues.name)
 
+  const today = new Date().toISOString().slice(0, 10)
   const eventCounts = await db
     .select({ venueId: events.venueId, total: count(events.id) })
     .from(events)
+    .where(and(eq(events.status, 'upcoming'), gte(events.date, today)))
     .groupBy(events.venueId)
 
   const countByVenueId = new Map(

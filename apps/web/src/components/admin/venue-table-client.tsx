@@ -20,14 +20,11 @@ import {
   bulkActivateVenues,
   bulkDeactivateVenues,
 } from '@/lib/actions/venues'
-
-type VenueStatus = 'active' | 'paused' | 'blocked'
-
-function deriveVenueStatus(venue: VenueWithEventCount): VenueStatus {
-  if (venue.blockedAt !== null) return 'blocked'
-  if (!venue.active) return 'paused'
-  return 'active'
-}
+import {
+  deriveVenueStatus,
+  venueHealthPercent,
+  type VenueStatus,
+} from '@/lib/admin/venue-status'
 
 function sourceUrl(url: string): string {
   return url.replace(/^https?:\/\//, '')
@@ -42,12 +39,6 @@ function venueSubNotes(venue: VenueWithEventCount): string[] {
   }
   if (venue.crawlNotes) notes.push(venue.crawlNotes)
   return notes
-}
-
-function healthPercent(venue: VenueWithEventCount): number {
-  return venue.consecutiveFailures === 0
-    ? 100
-    : Math.max(0, 100 - venue.consecutiveFailures * 20)
 }
 
 const STATUS_BADGE_KIND: Record<VenueStatus, 'success' | 'warning' | 'danger'> =
@@ -175,6 +166,7 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
         </div>
 
         <select
+          aria-label="Filter by status"
           value={currentFilter ?? ''}
           onChange={handleFilterChange}
           style={{
@@ -228,7 +220,7 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
           {venues.map((venue) => {
             const status = deriveVenueStatus(venue)
             const notes = venueSubNotes(venue)
-            const health = healthPercent(venue)
+            const health = venueHealthPercent(venue)
 
             return (
               <TR key={venue.id}>
@@ -243,9 +235,9 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
                 </TD>
                 <TD>
                   <div style={{ fontWeight: 500 }}>{venue.name}</div>
-                  {notes.map((note) => (
+                  {notes.map((note, idx) => (
                     <div
-                      key={note}
+                      key={`${venue.id}-note-${idx}`}
                       style={{
                         fontSize: 11,
                         color: 'var(--fg-subtle)',

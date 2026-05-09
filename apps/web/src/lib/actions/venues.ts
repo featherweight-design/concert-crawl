@@ -41,7 +41,6 @@ export async function updateVenue(
     websiteUrl: formData.get('websiteUrl'),
     city: formData.get('city') || 'Denver',
     active: formData.get('active') === 'true',
-    verified: formData.get('verified') === 'true',
     crawlNotes: formData.get('crawlNotes') || undefined,
     contactEmail: formData.get('contactEmail') || undefined,
   })

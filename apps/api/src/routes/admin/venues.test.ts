@@ -12,6 +12,8 @@ vi.mock('@hono/clerk-auth', () => ({
 // Mock drizzle-orm operators used in venue routes
 vi.mock('drizzle-orm', () => ({
   eq: vi.fn(),
+  and: vi.fn(),
+  gte: vi.fn(),
   count: vi.fn(),
 }))
 
