@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useClerk } from '@clerk/nextjs'
 import * as LucideIcons from 'lucide-react'
+import { LogOut } from 'lucide-react'
 import { NAV, type NavItem } from './nav'
 
 type SidebarMode = 'full' | 'rail' | 'auto'
@@ -125,6 +127,9 @@ const NavLink = ({
 export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
   const [mode, setMode] = useState<SidebarMode>('auto')
   const [viewportMode, setViewportMode] = useState<'full' | 'rail'>('full')
+  const [signOutOpen, setSignOutOpen] = useState(false)
+  const userCardRef = useRef<HTMLDivElement>(null)
+  const { signOut } = useClerk()
   const pathname = usePathname()
 
   useEffect(() => {
@@ -141,6 +146,20 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
     mq.addEventListener('change', updateViewport)
     return () => mq.removeEventListener('change', updateViewport)
   }, [])
+
+  useEffect(() => {
+    if (!signOutOpen) return
+    const handleMouseDown = (evt: MouseEvent) => {
+      if (
+        userCardRef.current &&
+        !userCardRef.current.contains(evt.target as Node)
+      ) {
+        setSignOutOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleMouseDown)
+    return () => document.removeEventListener('mousedown', handleMouseDown)
+  }, [signOutOpen])
 
   const toggleMode = () => {
     setMode((prev) => {
@@ -378,20 +397,72 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
 
       {/* User card */}
       <div
+        ref={userCardRef}
         style={{
-          paddingTop: 8,
-          borderTop: '1px solid var(--border)',
+          position: 'relative',
           padding: '8px 8px 0',
+          borderTop: '1px solid var(--border)',
         }}
       >
-        {effectiveMode === 'full' ? (
+        {signOutOpen && (
           <div
+            style={{
+              position: 'absolute',
+              bottom: 'calc(100% + 4px)',
+              left: 8,
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              boxShadow: 'var(--shadow-md)',
+              minWidth: 160,
+              zIndex: 50,
+              padding: 4,
+            }}
+          >
+            <button
+              onClick={() => {
+                void signOut({ redirectUrl: '/' })
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                width: '100%',
+                padding: '7px 10px',
+                background: 'transparent',
+                border: 'none',
+                borderRadius: 6,
+                cursor: 'pointer',
+                color: 'var(--fg-muted)',
+                fontSize: 13,
+                textAlign: 'left',
+              }}
+              onMouseEnter={(evt) => {
+                evt.currentTarget.style.background = 'var(--overlay-hover)'
+              }}
+              onMouseLeave={(evt) => {
+                evt.currentTarget.style.background = 'transparent'
+              }}
+            >
+              <LogOut size={14} />
+              Sign out
+            </button>
+          </div>
+        )}
+        {effectiveMode === 'full' ? (
+          <button
+            onClick={() => setSignOutOpen((prev) => !prev)}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: 8,
+              width: '100%',
               padding: '8px 10px',
               borderRadius: 7,
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              textAlign: 'left',
             }}
           >
             <div
@@ -434,7 +505,7 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
                 admin
               </div>
             </div>
-          </div>
+          </button>
         ) : (
           <div
             style={{
@@ -443,7 +514,8 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
               padding: '8px 0',
             }}
           >
-            <div
+            <button
+              onClick={() => setSignOutOpen((prev) => !prev)}
               style={{
                 width: 28,
                 height: 28,
@@ -455,10 +527,12 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
                 fontSize: 11,
                 fontWeight: 700,
                 color: '#fff',
+                border: 'none',
+                cursor: 'pointer',
               }}
             >
               {userInitial}
-            </div>
+            </button>
           </div>
         )}
       </div>
