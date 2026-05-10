@@ -1,0 +1,1 @@
+export { CCWordmark } from './CCWordmark'

@@ -7,6 +7,8 @@ import { useClerk } from '@clerk/nextjs'
 import * as LucideIcons from 'lucide-react'
 import { LogOut } from 'lucide-react'
 import { NAV, type NavItem } from './nav'
+import { CCMark } from '@/components/brand/cc-mark'
+import { CCWordmark } from '@/components/brand/cc-wordmark'
 
 type SidebarMode = 'full' | 'rail' | 'auto'
 const STORAGE_KEY = 'cc-admin-sidebar'
@@ -207,67 +209,19 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
       >
         {effectiveMode === 'full' ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {/* Logo mark */}
             <div
               style={{
                 width: 32,
                 height: 32,
                 borderRadius: 8,
-                background: '#0d0c09',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                overflow: 'hidden',
                 flexShrink: 0,
               }}
             >
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                <circle cx="9" cy="9" r="2.5" fill="#c89bf0" />
-                <circle cx="3" cy="4" r="1.5" fill="#7ab4ff" opacity="0.8" />
-                <circle cx="15" cy="3" r="1" fill="#c89bf0" opacity="0.6" />
-                <circle cx="14" cy="14" r="1.5" fill="#7ab4ff" opacity="0.7" />
-                <circle cx="4" cy="13" r="1" fill="#c89bf0" opacity="0.5" />
-                <line
-                  x1="3"
-                  y1="4"
-                  x2="9"
-                  y2="9"
-                  stroke="#7ab4ff"
-                  strokeWidth="0.75"
-                  opacity="0.4"
-                />
-                <line
-                  x1="9"
-                  y1="9"
-                  x2="14"
-                  y2="14"
-                  stroke="#c89bf0"
-                  strokeWidth="0.75"
-                  opacity="0.4"
-                />
-                <line
-                  x1="15"
-                  y1="3"
-                  x2="9"
-                  y2="9"
-                  stroke="#7ab4ff"
-                  strokeWidth="0.75"
-                  opacity="0.4"
-                />
-              </svg>
+              <CCMark size={32} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <div
-                style={{
-                  fontFamily: "'Inter', sans-serif",
-                  fontWeight: 800,
-                  fontSize: 13,
-                  lineHeight: 1,
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                <span style={{ color: 'var(--fg)' }}>concert</span>
-                <span style={{ color: 'var(--accent)' }}>crawl.</span>
-              </div>
+              <CCWordmark size={13} />
               <div
                 style={{
                   display: 'inline-flex',
@@ -295,46 +249,10 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
               width: 32,
               height: 32,
               borderRadius: 8,
-              background: '#0d0c09',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              overflow: 'hidden',
             }}
           >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <circle cx="9" cy="9" r="2.5" fill="#c89bf0" />
-              <circle cx="3" cy="4" r="1.5" fill="#7ab4ff" opacity="0.8" />
-              <circle cx="15" cy="3" r="1" fill="#c89bf0" opacity="0.6" />
-              <circle cx="14" cy="14" r="1.5" fill="#7ab4ff" opacity="0.7" />
-              <circle cx="4" cy="13" r="1" fill="#c89bf0" opacity="0.5" />
-              <line
-                x1="3"
-                y1="4"
-                x2="9"
-                y2="9"
-                stroke="#7ab4ff"
-                strokeWidth="0.75"
-                opacity="0.4"
-              />
-              <line
-                x1="9"
-                y1="9"
-                x2="14"
-                y2="14"
-                stroke="#c89bf0"
-                strokeWidth="0.75"
-                opacity="0.4"
-              />
-              <line
-                x1="15"
-                y1="3"
-                x2="9"
-                y2="9"
-                stroke="#7ab4ff"
-                strokeWidth="0.75"
-                opacity="0.4"
-              />
-            </svg>
+            <CCMark size={32} />
           </div>
         )}
       </div>
@@ -359,10 +277,9 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
 
           return (
             <div key={item.key}>
-              {isNewSection &&
-                effectiveMode === 'full' &&
-                item.section === 'account' && (
-                  <>
+              {isNewSection && effectiveMode === 'full' && (
+                <>
+                  {item.section === 'account' && (
                     <div
                       style={{
                         height: 1,
@@ -370,20 +287,21 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
                         margin: '6px 0',
                       }}
                     />
-                    <div
-                      style={{
-                        padding: '4px 10px',
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: 'var(--fg-subtle)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.1em',
-                      }}
-                    >
-                      Account
-                    </div>
-                  </>
-                )}
+                  )}
+                  <div
+                    style={{
+                      padding: '4px 10px',
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: 'var(--fg-subtle)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.1em',
+                    }}
+                  >
+                    {item.section === 'account' ? 'Account' : 'Operations'}
+                  </div>
+                </>
+              )}
               <NavLink
                 item={item}
                 mode={effectiveMode}
