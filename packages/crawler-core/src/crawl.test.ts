@@ -168,6 +168,7 @@ function seedVenue(overrides: Record<string, unknown> = {}) {
     active: true,
     verified: true,
     consecutiveFailures: 0,
+    crawlDelayMs: 3000,
     crawlWaitUntil: 'networkidle' as const,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -335,28 +336,6 @@ describe('crawlVenue — event-level sourceHash', () => {
     expect(venueAlert?.body).toContain('Metallica Live')
   })
 
-  it('passes venue crawlWaitUntil to fetchPage', async () => {
-    const venue = seedVenue({ crawlWaitUntil: 'load' as const })
-    mockFetchPage.mockResolvedValue({
-      html: HTML_V1,
-      httpStatus: 200,
-      finalUrl: venue.websiteUrl,
-    })
-    mockExtractWithLlm.mockResolvedValue({
-      events: [],
-      usage: { inputTokens: 10, outputTokens: 5 },
-    })
-
-    await crawlVenue(venue.id, mockBrowser)
-
-    expect(mockFetchPage).toHaveBeenCalledWith(
-      venue.websiteUrl,
-      mockBrowser,
-      venue.crawlDelayMs,
-      'load',
-    )
-  })
-
   it('upserts existing event when sourceHash is null without changed-verified alert', async () => {
     const venue = seedVenue()
     mockFetchPage.mockResolvedValue({
@@ -397,5 +376,29 @@ describe('crawlVenue — event-level sourceHash', () => {
       .from(notifications)
       .where(eq(notifications.category, 'crawl.verified_event_changed'))
     expect(allAlerts).toHaveLength(0)
+  })
+})
+
+describe('crawlVenue — fetch options', () => {
+  it('passes venue crawlWaitUntil and crawlDelayMs to fetchPage', async () => {
+    const venue = seedVenue({ crawlWaitUntil: 'load' as const })
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [],
+      usage: { inputTokens: 10, outputTokens: 5 },
+    })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    expect(mockFetchPage).toHaveBeenCalledWith(
+      venue.websiteUrl,
+      mockBrowser,
+      3000,
+      'load',
+    )
   })
 })
