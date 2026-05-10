@@ -336,6 +336,7 @@ describe('GET /v1/admin/crawl/status', () => {
         {
           id: '00000000-0000-0000-0000-000000000001',
           name: 'Ogden Theatre',
+          websiteUrl: 'https://www.ogdentheatre.com',
           active: true,
           verified: true,
           consecutiveFailures: 0,

@@ -135,6 +135,7 @@ crawlAdminRouter.get('/status', async (ctx) => {
     .select({
       id: venues.id,
       name: venues.name,
+      websiteUrl: venues.websiteUrl,
       active: venues.active,
       verified: venues.verified,
       consecutiveFailures: venues.consecutiveFailures,
@@ -158,6 +159,8 @@ crawlAdminRouter.get('/status', async (ctx) => {
             eventsInserted: crawlRuns.eventsInserted,
             errorMessage: crawlRuns.errorMessage,
             extractionStrategyUsed: crawlRuns.extractionStrategyUsed,
+            httpStatusCode: crawlRuns.httpStatusCode,
+            durationMs: crawlRuns.durationMs,
           })
           .from(crawlRuns)
           .where(inArray(crawlRuns.venueId, venueIds))
