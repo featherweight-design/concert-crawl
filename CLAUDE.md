@@ -372,31 +372,31 @@ Phase: **Pre-Beta Sprint — target open May 25, 2026**
 
 ### Phase Sequence
 
-| Phase       | Name                                     | Status                            |
-| ----------- | ---------------------------------------- | --------------------------------- |
-| 1           | Foundation                               | ✅ Complete                       |
-| 2           | Venue Management (Admin)                 | ✅ Complete                       |
-| 3           | Crawler v1                               | ✅ Complete                       |
-| 4           | Design System / Theming Architecture     | ✅ Complete                       |
-| 5           | Consumer Calendar UI (functional)        | ✅ Complete                       |
-| 5b          | Consumer UI Design Polish                | ✅ Complete (PRs #22–24)          |
-| 6a          | Observability SDK                        | ✅ Complete (PR #26)              |
-| 6b          | Integration Tests                        | ✅ Complete (PR #28)              |
-| 6c          | E2E + Smoke Tests                        | ✅ Complete (PR #29)              |
-| 7           | Automation + Scheduling                  | ✅ Complete (PR #34)              |
-| 7.5         | IdentityArt generative engine            | ✅ Complete (PR #39)              |
-| 7.6         | Admin UI Redesign                        | ✅ Complete (PRs #44, #50)        |
-| 8a          | Beta Launch Prep — Landing + Auth        | ✅ Complete (PRs #43, #45)        |
-| 8b pt.1     | User Profile + Settings                  | ✅ Complete (PR #49)              |
-| —           | Price Transparency v1                    | ✅ Complete (PRs #32, #37)        |
-| —           | Price Transparency v2                    | ✅ Complete (PR #46)              |
-| —           | Betterment: Crawler separation           | ✅ Complete (PR #51)              |
+| Phase       | Name                                     | Status                                      |
+| ----------- | ---------------------------------------- | ------------------------------------------- |
+| 1           | Foundation                               | ✅ Complete                                 |
+| 2           | Venue Management (Admin)                 | ✅ Complete                                 |
+| 3           | Crawler v1                               | ✅ Complete                                 |
+| 4           | Design System / Theming Architecture     | ✅ Complete                                 |
+| 5           | Consumer Calendar UI (functional)        | ✅ Complete                                 |
+| 5b          | Consumer UI Design Polish                | ✅ Complete (PRs #22–24)                    |
+| 6a          | Observability SDK                        | ✅ Complete (PR #26)                        |
+| 6b          | Integration Tests                        | ✅ Complete (PR #28)                        |
+| 6c          | E2E + Smoke Tests                        | ✅ Complete (PR #29)                        |
+| 7           | Automation + Scheduling                  | ✅ Complete (PR #34)                        |
+| 7.5         | IdentityArt generative engine            | ✅ Complete (PR #39)                        |
+| 7.6         | Admin UI Redesign                        | ✅ Complete (PRs #44, #50)                  |
+| 8a          | Beta Launch Prep — Landing + Auth        | ✅ Complete (PRs #43, #45)                  |
+| 8b pt.1     | User Profile + Settings                  | ✅ Complete (PR #49)                        |
+| —           | Price Transparency v1                    | ✅ Complete (PRs #32, #37)                  |
+| —           | Price Transparency v2                    | ✅ Complete (PR #46)                        |
+| —           | Betterment: Crawler separation           | ✅ Complete (PR #51)                        |
 | **8b pt.2** | **Saving Shows (Watching)**              | ✅ **Complete (PR #117 merged 2026-05-09)** |
-| —           | Legal pages                              | ✅ Complete (PR #108)             |
-| Pre-beta    | UI interactions audit + bug fixes        | 🔄 In progress                    |
-| Beta period | Jun 16 – Aug 3 (see beta-to-launch spec) | —                                 |
-| Launch prep | Aug 4–17                                 | —                                 |
-| **Launch**  | **~Aug 18–22, 2026**                     | —                                 |
+| —           | Legal pages                              | ✅ Complete (PR #108)                       |
+| Pre-beta    | UI interactions audit + bug fixes        | 🔄 In progress                              |
+| Beta period | Jun 16 – Aug 3 (see beta-to-launch spec) | —                                           |
+| Launch prep | Aug 4–17                                 | —                                           |
+| **Launch**  | **~Aug 18–22, 2026**                     | —                                           |
 
 Full forward plan: `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md`
 
@@ -408,8 +408,8 @@ Full forward plan: `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md`
 
 | Item                         | Notes                                                                                                                                        |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Saving shows (Watching)**  | ✅ Complete (PR #117 merged 2026-05-09). Heart button → `user_events` table. Design handoff: `design/design_handoff_watching/`.               |
-| **Browse filters wired**     | Filter chips exist but selecting them doesn't update the event list.                                                                         |
+| **Saving shows (Watching)**  | ✅ Complete (PR #117 merged 2026-05-09). Heart button → `user_events` table. Design handoff: `design/design_handoff_watching/`.              |
+| **Browse filters wired**     | 🔄 In PR #TBD — Price + Vibe filter chips wired end-to-end; LLM genre-tagging pipeline added to crawler.                                     |
 | **Search nav item**          | Routes to search page but currently a dead link.                                                                                             |
 | **UI interactions sweep**    | Walk every clickable element on every route. Log and fix dead interactions.                                                                  |
 | **Invite code error states** | ⚠️ Believed complete via Phase 8a onboarding flow (PR #43) — Hugh confirming via manual test.                                                |
