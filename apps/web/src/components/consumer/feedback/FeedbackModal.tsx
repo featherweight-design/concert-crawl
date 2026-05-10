@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
+import { useUser } from '@clerk/nextjs'
 import { useTheme } from '@/theme/ThemeProvider'
 import { CCMark } from '../cc-mark'
 
@@ -26,6 +27,8 @@ interface FeedbackModalProps {
 export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
   const pathname = usePathname()
   const { theme } = useTheme()
+  const { user } = useUser()
+  const userEmail = user?.emailAddresses[0]?.emailAddress ?? 'anonymous'
   const [state, setState] = useState<ModalState>('form')
   const [category, setCategory] = useState<FeedbackCategory | null>(null)
   const [message, setMessage] = useState('')
@@ -102,6 +105,17 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
 
   if (!open) return null
 
+  const ctxData: CtxData = {
+    route: pathname,
+    theme,
+    build: APP_VERSION,
+    device:
+      typeof navigator !== 'undefined'
+        ? navigator.userAgent.slice(0, 120)
+        : 'unknown',
+    user: userEmail,
+  }
+
   return (
     <>
       {/* Scrim */}
@@ -126,6 +140,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
           setMessage={setMessage}
           catError={catError}
           msgError={msgError}
+          ctxData={ctxData}
           onSubmit={handleSubmit}
           onClose={handleClose}
           onReset={reset}
@@ -139,6 +154,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
           setMessage={setMessage}
           catError={catError}
           msgError={msgError}
+          ctxData={ctxData}
           onSubmit={handleSubmit}
           onClose={handleClose}
           onReset={reset}
@@ -150,6 +166,14 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
 
 // ── Shared form fields ─────────────────────────────────────────────────────
 
+interface CtxData {
+  route: string
+  theme: string
+  build: string
+  device: string
+  user: string
+}
+
 interface FormProps {
   state: ModalState
   category: FeedbackCategory | null
@@ -158,6 +182,7 @@ interface FormProps {
   setMessage: (msg: string) => void
   catError: boolean
   msgError: boolean
+  ctxData: CtxData
 }
 
 function FormFields({
@@ -168,6 +193,7 @@ function FormFields({
   setMessage,
   catError,
   msgError,
+  ctxData,
 }: FormProps) {
   const disabled = state === 'loading'
 
@@ -278,6 +304,8 @@ function FormFields({
           </HelpText>
         )}
       </div>
+
+      <ContextDisclosure ctx={ctxData} />
     </div>
   )
 }
@@ -338,7 +366,13 @@ function SuccessState({
   )
 }
 
-function ErrorState({ onReset }: { onReset: () => void }) {
+function ErrorState({
+  onReset,
+  onClose,
+}: {
+  onReset: () => void
+  onClose: () => void
+}) {
   return (
     <div
       style={{
@@ -380,6 +414,7 @@ function ErrorState({ onReset }: { onReset: () => void }) {
         }}
       >
         <SubmitButton onClick={onReset}>Try again</SubmitButton>
+        <SecondaryButton onClick={onClose}>Save and come back</SecondaryButton>
       </div>
     </div>
   )
@@ -495,7 +530,9 @@ function MobileSheet({
         {state === 'success' && (
           <SuccessState onClose={onClose} onReset={onReset} />
         )}
-        {state === 'error' && <ErrorState onReset={onReset} />}
+        {state === 'error' && (
+          <ErrorState onReset={onReset} onClose={onClose} />
+        )}
         {showForm && <FormFields state={state} {...formProps} />}
       </div>
 
@@ -602,7 +639,9 @@ function DesktopCard({
         {state === 'success' && (
           <SuccessState onClose={onClose} onReset={onReset} />
         )}
-        {state === 'error' && <ErrorState onReset={onReset} />}
+        {state === 'error' && (
+          <ErrorState onReset={onReset} onClose={onClose} />
+        )}
         {showForm && <FormFields state={state} {...formProps} />}
       </div>
 
@@ -625,6 +664,138 @@ function DesktopCard({
               Send →
             </SubmitButton>
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Context disclosure ────────────────────────────────────────────────────
+
+function ContextDisclosure({ ctx }: { ctx: CtxData }) {
+  const [open, setOpen] = useState(false)
+  const rows: { key: string; value: string }[] = [
+    { key: 'Route', value: ctx.route },
+    { key: 'Theme', value: ctx.theme },
+    { key: 'Build', value: ctx.build },
+    { key: 'Device', value: ctx.device },
+    { key: 'User', value: ctx.user },
+  ]
+  return (
+    <div
+      style={{
+        border: '1px solid var(--border)',
+        borderRadius: 10,
+        background: 'var(--surface-1)',
+        overflow: 'hidden',
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        style={{
+          all: 'unset',
+          cursor: 'pointer',
+          width: '100%',
+          boxSizing: 'border-box',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '10px 12px',
+        }}
+      >
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 10 10"
+          style={{
+            color: 'var(--fg-muted)',
+            transform: open ? 'rotate(0deg)' : 'rotate(-90deg)',
+            transition: 'transform .15s',
+            flexShrink: 0,
+          }}
+        >
+          <path
+            d="M2 4l3 3 3-3"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+          />
+        </svg>
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            fontWeight: 700,
+            color: 'var(--fg-muted)',
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+          }}
+        >
+          Auto-attached · what we&apos;ll send
+        </span>
+        <span style={{ flex: 1 }} />
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            fontWeight: 700,
+            color: 'var(--fg-subtle)',
+            letterSpacing: '0.10em',
+          }}
+        >
+          5 fields
+        </span>
+      </button>
+      {open && (
+        <div
+          style={{
+            padding: '4px 12px 12px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+            borderTop: '1px solid var(--border)',
+          }}
+        >
+          {rows.map((row) => (
+            <div
+              key={row.key}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '60px 1fr',
+                gap: 10,
+                alignItems: 'baseline',
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: 'var(--fg-subtle)',
+                  letterSpacing: '0.10em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {row.key}
+              </span>
+              <span
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: 'var(--fg)',
+                  letterSpacing: '0.01em',
+                  wordBreak: 'break-all',
+                  lineHeight: 1.4,
+                }}
+              >
+                {row.value}
+              </span>
+            </div>
+          ))}
         </div>
       )}
     </div>
