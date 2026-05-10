@@ -106,22 +106,22 @@ Go to each service in the Render dashboard → **Environment** tab. `DATABASE_UR
 | `SENTRY_AUTH_TOKEN`                   | Auth token from Step 3 (source map uploads)                   |
 | `NODE_ENV`                            | `production`                                                  |
 
-> `NEXT_PUBLIC_APP_VERSION` is auto-injected at build time from `RENDER_GIT_COMMIT` — no manual setup required.
+> `NEXT_PUBLIC_APP_VERSION` is auto-injected at build time: the version prefix comes from the `version` field in root `package.json` (bumped automatically by `semantic-release`), and the commit hash suffix comes from `RENDER_GIT_COMMIT`. No manual setup required.
 
 ### concert-crawl-crawler-triggers and concert-crawl-crawler-daily
 
 Both crawler cron jobs need the same set of variables. Set them on each service separately in the Render dashboard.
 
-| Variable             | Value                                                             |
-| -------------------- | ----------------------------------------------------------------- |
+| Variable             | Value                                                              |
+| -------------------- | ------------------------------------------------------------------ |
 | `DATABASE_URL`       | Auto-set via `fromDatabase` in render.yaml — verify it's populated |
-| `ANTHROPIC_API_KEY`  | From Anthropic console                                            |
-| `RESEND_API_KEY`     | From Step 3                                                       |
-| `ADMIN_EMAIL`        | Your email address for crawl failure notifications                |
-| `SENTRY_DSN`         | Crawler project DSN from Step 3                                   |
-| `SENTRY_ENVIRONMENT` | `production`                                                      |
-| `LOG_LEVEL`          | `info`                                                            |
-| `NODE_ENV`           | `production`                                                      |
+| `ANTHROPIC_API_KEY`  | From Anthropic console                                             |
+| `RESEND_API_KEY`     | From Step 3                                                        |
+| `ADMIN_EMAIL`        | Your email address for crawl failure notifications                 |
+| `SENTRY_DSN`         | Crawler project DSN from Step 3                                    |
+| `SENTRY_ENVIRONMENT` | `production`                                                       |
+| `LOG_LEVEL`          | `info`                                                             |
+| `NODE_ENV`           | `production`                                                       |
 
 > `CRAWL_MODE` and `ADMIN_URL` are hardcoded in `render.yaml` — do not override them.
 
@@ -135,56 +135,58 @@ Go to the repository on GitHub → **Settings** → **Environments**.
 
 ### `production` environment — Secrets
 
-| Secret                  | Value                                                                                    |
-| ----------------------- | ---------------------------------------------------------------------------------------- |
-| `RENDER_DEPLOY_HOOK_API` | Render → `concert-crawl-api` → Settings → Deploy Hook → generate and copy URL          |
-| `RENDER_DEPLOY_HOOK_WEB` | Render → `concert-crawl-web` → Settings → Deploy Hook → generate and copy URL          |
-| `DATABASE_URL`           | Production DB connection string (from Render Postgres dashboard)                        |
-| `ANTHROPIC_API_KEY`      | Same value as in Render env vars above                                                  |
-| `RESEND_API_KEY`         | Same value as in Render env vars above                                                  |
-| `SENTRY_DSN`             | Crawler project DSN from Step 3                                                         |
+| Secret                   | Value                                                                         |
+| ------------------------ | ----------------------------------------------------------------------------- |
+| `RENDER_DEPLOY_HOOK_API` | Render → `concert-crawl-api` → Settings → Deploy Hook → generate and copy URL |
+| `RENDER_DEPLOY_HOOK_WEB` | Render → `concert-crawl-web` → Settings → Deploy Hook → generate and copy URL |
+| `DATABASE_URL`           | Production DB connection string (from Render Postgres dashboard)              |
+| `ANTHROPIC_API_KEY`      | Same value as in Render env vars above                                        |
+| `RESEND_API_KEY`         | Same value as in Render env vars above                                        |
+| `SENTRY_DSN`             | Crawler project DSN from Step 3                                               |
 
 ### `production` environment — Variables (not secrets)
 
-| Variable         | Value                                                                    |
-| ---------------- | ------------------------------------------------------------------------ |
-| `CRAWL_ENABLED`  | `false` initially — see Step 9 for when to enable                       |
-| `ADMIN_EMAIL`    | Your email address for crawl failure notifications                       |
+| Variable        | Value                                              |
+| --------------- | -------------------------------------------------- |
+| `CRAWL_ENABLED` | `false` initially — see Step 9 for when to enable  |
+| `ADMIN_EMAIL`   | Your email address for crawl failure notifications |
 
 ### `staging` environment — Variables
 
-| Variable         | Value  |
-| ---------------- | ------ |
-| `CRAWL_ENABLED`  | `true` |
+| Variable        | Value  |
+| --------------- | ------ |
+| `CRAWL_ENABLED` | `true` |
 
 ### Repository-level variables (Settings → Variables, not environment-scoped)
 
 These are used by the smoke test workflow, which has no environment scope.
 
-| Variable        | Value                                          |
-| --------------- | ---------------------------------------------- |
-| `SMOKE_ENABLED` | `false` initially — set to `true` at launch    |
-| `PROD_URL`      | `https://concertcrawl.app`                     |
-| `PROD_API_URL`  | `https://concert-crawl-api.onrender.com`       |
+| Variable        | Value                                       |
+| --------------- | ------------------------------------------- |
+| `SMOKE_ENABLED` | `false` initially — set to `true` at launch |
+| `PROD_URL`      | `https://concertcrawl.app`                  |
+| `PROD_API_URL`  | `https://concert-crawl-api.onrender.com`    |
 
 ### Repository-level secrets
 
-| Secret              | Value                                                             |
-| ------------------- | ----------------------------------------------------------------- |
-| `SENTRY_DSN_SMOKE`  | Sentry DSN for smoke test error reporting (API or dedicated project) |
+| Secret             | Value                                                                |
+| ------------------ | -------------------------------------------------------------------- |
+| `SENTRY_DSN_SMOKE` | Sentry DSN for smoke test error reporting (API or dedicated project) |
 
 3. In the Render dashboard, set **Auto-Deploy → No** on `concert-crawl-api` and `concert-crawl-web` — GitHub Actions (`deploy-staging.yml`) is the deploy trigger. The crawler cron jobs are always-on via Render's native scheduler and do not use deploy hooks.
 
-> A `deploy-production.yml` workflow (mirroring `deploy-staging.yml`) is needed to automate production deploys via GitHub Actions. Until that workflow exists, trigger production deploys manually from the Render dashboard.
+> A `deploy-production.yml` workflow triggered on the `release: published` GitHub event is needed to automate production deploys. Each merge to `main` that contains a releasable commit (`feat:` or `fix:`) automatically creates a GitHub Release via `release.yml`. Until `deploy-production.yml` exists, trigger production deploys manually from the Render dashboard after a release appears in the GitHub Releases tab.
 
 ---
 
 ## Step 6 — Seed the Production Database and Set Up Admin
 
 1. **Seed venues:**
+
    ```bash
    DATABASE_URL=<prod-connection-string> pnpm db:seed
    ```
+
    Verify venue records appear at `https://concert-crawl-api.onrender.com/v1/venues`.
 
 2. **Create the admin user:**
@@ -276,7 +278,7 @@ If a deploy breaks production:
 ## Notes
 
 - `DATABASE_URL` is injected automatically by Render via the `fromDatabase` reference in `render.yaml` — do not set it manually on Render services
-- `NEXT_PUBLIC_APP_VERSION` is injected at build time from `RENDER_GIT_COMMIT` — no manual setup needed
+- `NEXT_PUBLIC_APP_VERSION` is injected at build time: version prefix from root `package.json` (auto-bumped by `semantic-release`), commit hash suffix from `RENDER_GIT_COMMIT` — no manual setup needed
 - Keep all `sk_live_*` keys out of git — Render dashboard and GitHub secrets only
 - Staging uses the same `render.yaml` structure with separate Clerk dev keys and staging DB
 - After a role change in Clerk, the user must sign out and back in before the API sees the new role (JWT reissue)
