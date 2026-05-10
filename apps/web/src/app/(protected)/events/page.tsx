@@ -185,9 +185,21 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
         {events.length === 0 && view === 'list' && (
           <EmptyState
-            message={isFiltered ? copy.emptyFiltered : copy.emptyTonight}
+            state={isFiltered ? 'filtered' : 'no-data'}
+            eyebrow={
+              isFiltered ? copy.emptyFilteredEyebrow : copy.emptyTonightEyebrow
+            }
+            title={
+              isFiltered ? copy.emptyFilteredTitle : copy.emptyTonightTitle
+            }
+            body={isFiltered ? copy.emptyFilteredBody : copy.emptyTonightBody}
             {...(isFiltered
-              ? { action: { label: copy.emptyFilteredCta, href: '/events' } }
+              ? {
+                  secondaryCta: {
+                    label: copy.emptyFilteredCta,
+                    href: '/events',
+                  },
+                }
               : {})}
           />
         )}
@@ -217,9 +229,13 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
         )}
 
         {view === 'cal' && groups.size === 0 && (
-          <p className="py-12 text-center text-sm text-fg-muted">
-            No shows on this day.
-          </p>
+          <EmptyState
+            state="no-data"
+            density="dense"
+            eyebrow={copy.emptyCalEyebrow}
+            title={copy.emptyCalTitle}
+            body={copy.emptyCalBody}
+          />
         )}
 
         {groups.size > 0 && (
