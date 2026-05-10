@@ -144,6 +144,7 @@ export async function crawlVenue(
 
     // Upsert events — insert on first crawl, update mutable fields on re-crawl
     let eventsInserted = 0
+    let eventsUpdated = 0
     if (normalizedEvents.length > 0) {
       // Compute sourceHash for each extracted event
       const eventsWithHashes = normalizedEvents.map((event) => ({
@@ -226,7 +227,15 @@ export async function crawlVenue(
           extractionStrategy: strategy,
         }))
 
-        const upserted = await db
+        for (const evt of eventsToUpsert) {
+          if (existingMap.has(`${evt.artist}|${evt.date}`)) {
+            eventsUpdated++
+          } else {
+            eventsInserted++
+          }
+        }
+
+        await db
           .insert(events)
           .values(eventValues)
           .onConflictDoUpdate({
@@ -245,9 +254,6 @@ export async function crawlVenue(
               updatedAt: new Date(),
             },
           })
-          .returning()
-
-        eventsInserted = upserted.length
       }
     }
 
@@ -267,6 +273,7 @@ export async function crawlVenue(
     }
 
     const durationMs = Date.now() - startedAt
+    const llmCostUsd = tokenUsage ? calculateCost(tokenUsage) : null
 
     const [crawlRun] = await db
       .insert(crawlRuns)
@@ -280,16 +287,17 @@ export async function crawlVenue(
         pageHash,
         eventsFound: normalizedEvents.length,
         eventsInserted,
+        eventsUpdated,
+        llmCostUsd,
         durationMs,
       })
       .returning()
     if (!crawlRun) throw new Error('crawl_runs insert returned no row')
 
-    if (tokenUsage) {
-      const costUsd = calculateCost(tokenUsage)
+    if (tokenUsage && llmCostUsd !== null) {
       await db.insert(costTracking).values({
         service: 'claude',
-        costUsd: costUsd.toFixed(6),
+        costUsd: llmCostUsd.toFixed(6),
         tokensUsed: String(tokenUsage.inputTokens + tokenUsage.outputTokens),
         metadata: JSON.stringify({ crawlRunId: id, venueId, ...tokenUsage }),
       })
@@ -311,6 +319,8 @@ export async function crawlVenue(
         strategy,
         eventsFound: normalizedEvents.length,
         eventsInserted,
+        eventsUpdated,
+        llmCostUsd,
         durationMs,
       }),
     )
