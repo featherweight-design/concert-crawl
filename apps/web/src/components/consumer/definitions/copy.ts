@@ -31,6 +31,11 @@ export const copy = {
     "Bookmark a show and we'll watch its price for you — drops, spikes, sell-outs. We're patient.",
   watchingEmptyCta: "Browse tonight's shows",
 
+  // ── Search ─────────────────────────────────────────────────────────
+  searchNoResultsEyebrow: 'No results',
+  searchNoResultsBody: "Try another spelling, or browse what's on tonight.",
+  searchNoResultsCta: 'Browse all shows',
+
   // ── Shared / misc ──────────────────────────────────────────────────
   loadMore: 'Load more shows',
   ticketsCta: 'Get tickets',
