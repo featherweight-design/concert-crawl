@@ -1,5 +1,6 @@
 import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
+import { FeedbackPill } from '@/components/consumer/feedback'
 
 interface ProtectedLayoutProps {
   children: React.ReactNode
@@ -14,5 +15,10 @@ export default async function ProtectedLayout({
     redirect('/sign-in')
   }
 
-  return <>{children}</>
+  return (
+    <>
+      {children}
+      <FeedbackPill />
+    </>
+  )
 }
