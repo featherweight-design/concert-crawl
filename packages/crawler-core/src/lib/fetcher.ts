@@ -26,6 +26,7 @@ export async function fetchPage(
   url: string,
   browser: Browser,
   crawlDelayMs = 3000,
+  waitUntil: 'networkidle' | 'load' | 'domcontentloaded' = 'networkidle',
 ): Promise<FetchResult> {
   const delay = Math.max(0, jitter(crawlDelayMs))
   if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay))
@@ -49,7 +50,7 @@ export async function fetchPage(
     })
 
     const response = await page.goto(url, {
-      waitUntil: 'networkidle',
+      waitUntil,
       timeout: 30_000,
     })
     const finalStatus = response?.status() ?? httpStatus

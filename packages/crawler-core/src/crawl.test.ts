@@ -158,7 +158,7 @@ beforeEach(() => {
 })
 
 // Push a venue directly into the in-memory store — no DB round-trip needed.
-function seedVenue() {
+function seedVenue(overrides: Record<string, unknown> = {}) {
   const venue = {
     id: crypto.randomUUID(),
     name: 'Test Venue',
@@ -168,8 +168,10 @@ function seedVenue() {
     active: true,
     verified: true,
     consecutiveFailures: 0,
+    crawlWaitUntil: 'networkidle' as const,
     createdAt: new Date(),
     updatedAt: new Date(),
+    ...overrides,
   }
   stores.venues.push(venue)
   return venue
@@ -331,6 +333,28 @@ describe('crawlVenue — event-level sourceHash', () => {
 
     expect(venueAlert).toBeDefined()
     expect(venueAlert?.body).toContain('Metallica Live')
+  })
+
+  it('passes venue crawlWaitUntil to fetchPage', async () => {
+    const venue = seedVenue({ crawlWaitUntil: 'load' as const })
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [],
+      usage: { inputTokens: 10, outputTokens: 5 },
+    })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    expect(mockFetchPage).toHaveBeenCalledWith(
+      venue.websiteUrl,
+      mockBrowser,
+      venue.crawlDelayMs,
+      'load',
+    )
   })
 
   it('upserts existing event when sourceHash is null without changed-verified alert', async () => {

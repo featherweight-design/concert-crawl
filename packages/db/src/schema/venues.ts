@@ -14,6 +14,12 @@ export const extractionStrategyEnum = pgEnum('extraction_strategy', [
   'manual',
 ])
 
+export const crawlWaitUntilEnum = pgEnum('crawl_wait_until', [
+  'networkidle',
+  'load',
+  'domcontentloaded',
+])
+
 export const venues = pgTable('venues', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
@@ -33,6 +39,9 @@ export const venues = pgTable('venues', {
   consecutiveFailures: integer('consecutive_failures').notNull().default(0),
   blockedAt: timestamp('blocked_at', { withTimezone: true }),
   extractionStrategy: extractionStrategyEnum('extraction_strategy'),
+  crawlWaitUntil: crawlWaitUntilEnum('crawl_wait_until')
+    .notNull()
+    .default('networkidle'),
   contactEmail: text('contact_email'),
   priceUrl: text('price_url'),
   createdAt: timestamp('created_at', { withTimezone: true })

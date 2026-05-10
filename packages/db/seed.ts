@@ -47,6 +47,7 @@ export const SEED_VENUES: NewVenue[] = [
     active: true,
     verified: true,
     crawlDelayMs: 3000,
+    crawlWaitUntil: 'load' as const,
   },
   {
     name: 'Gothic Theatre',
