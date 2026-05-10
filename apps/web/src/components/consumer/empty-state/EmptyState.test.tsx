@@ -72,7 +72,7 @@ describe('EmptyState', () => {
     expect(screen.getByText('err')).toBeTruthy()
   })
 
-  it('renders primaryCta as Link when href is provided', () => {
+  it('renders primaryCta as Link', () => {
     render(
       <EmptyState
         eyebrow="Watching"
@@ -85,20 +85,7 @@ describe('EmptyState', () => {
     expect(link.getAttribute('href')).toBe('/events')
   })
 
-  it('renders primaryCta as button when onClick is provided', () => {
-    const handleClick = vi.fn()
-    render(
-      <EmptyState
-        eyebrow="Filtered"
-        title="Crickets."
-        body="Try widening."
-        primaryCta={{ label: 'Clear filters', onClick: handleClick }}
-      />,
-    )
-    expect(screen.getByRole('button', { name: 'Clear filters' })).toBeTruthy()
-  })
-
-  it('renders secondaryCta as Link when href is provided', () => {
+  it('renders secondaryCta as Link', () => {
     render(
       <EmptyState
         eyebrow="Filtered"
@@ -111,7 +98,7 @@ describe('EmptyState', () => {
     expect(link.getAttribute('href')).toBe('/events')
   })
 
-  it('renders no CTA section when neither primaryCta nor secondaryCta is given', () => {
+  it('renders no links when no CTAs are given', () => {
     render(
       <EmptyState
         eyebrow="Search"
@@ -120,7 +107,6 @@ describe('EmptyState', () => {
       />,
     )
     expect(screen.queryByRole('link')).toBeNull()
-    expect(screen.queryByRole('button')).toBeNull()
   })
 
   it('applies className to wrapper', () => {

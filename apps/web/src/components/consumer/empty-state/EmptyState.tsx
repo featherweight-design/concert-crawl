@@ -4,8 +4,7 @@ import { cn } from '@/lib/utils'
 
 interface EmptyStateCta {
   label: string
-  href?: string
-  onClick?: () => void
+  href: string
 }
 
 export interface EmptyStateProps {
@@ -26,32 +25,25 @@ function EmptyStatePrimary({
   cta: EmptyStateCta
   dense: boolean
 }) {
-  const style: React.CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    background: 'var(--signal)',
-    color: 'var(--fg-on-accent)',
-    borderRadius: 999,
-    padding: dense ? '9px 16px' : '11px 20px',
-    fontFamily: 'var(--font-ui)',
-    fontSize: dense ? 12.5 : 13.5,
-    fontWeight: 700,
-    letterSpacing: '-0.005em',
-    textDecoration: 'none',
-    cursor: 'pointer',
-    border: 'none',
-  }
-  if (cta.href) {
-    return (
-      <Link href={cta.href} style={style}>
-        {cta.label}
-      </Link>
-    )
-  }
   return (
-    <button type="button" onClick={cta.onClick} style={style}>
+    <Link
+      href={cta.href}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        background: 'var(--signal)',
+        color: 'var(--fg-on-accent)',
+        borderRadius: 999,
+        padding: dense ? '9px 16px' : '11px 20px',
+        fontFamily: 'var(--font-ui)',
+        fontSize: dense ? 12.5 : 13.5,
+        fontWeight: 700,
+        letterSpacing: '-0.005em',
+        textDecoration: 'none',
+      }}
+    >
       {cta.label}
-    </button>
+    </Link>
   )
 }
 
@@ -62,33 +54,26 @@ function EmptyStateSecondary({
   cta: EmptyStateCta
   dense: boolean
 }) {
-  const style: React.CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    background: 'transparent',
-    color: 'var(--fg-muted)',
-    padding: dense ? '8px 0' : '10px 0',
-    fontFamily: 'var(--font-ui)',
-    fontSize: dense ? 12 : 13,
-    fontWeight: 600,
-    letterSpacing: '-0.005em',
-    textDecoration: 'none',
-    cursor: 'pointer',
-    border: 'none',
-    borderBottom: '1px dashed var(--border-strong)',
-    borderRadius: 0,
-  }
-  if (cta.href) {
-    return (
-      <Link href={cta.href} style={style}>
-        {cta.label}
-      </Link>
-    )
-  }
   return (
-    <button type="button" onClick={cta.onClick} style={style}>
+    <Link
+      href={cta.href}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        background: 'transparent',
+        color: 'var(--fg-muted)',
+        padding: dense ? '8px 0' : '10px 0',
+        fontFamily: 'var(--font-ui)',
+        fontSize: dense ? 12 : 13,
+        fontWeight: 600,
+        letterSpacing: '-0.005em',
+        textDecoration: 'none',
+        borderBottom: '1px dashed var(--border-strong)',
+        borderRadius: 0,
+      }}
+    >
       {cta.label}
-    </button>
+    </Link>
   )
 }
 
