@@ -40,11 +40,20 @@ describe('classifyGenres', () => {
 
   it('returns tagged results with token usage', async () => {
     mockCreate.mockResolvedValue(
-      makeToolResponse([{ eventId: 'evt-uuid-1', genres: ['metal', 'rock'] }]),
+      makeToolResponse([
+        {
+          eventId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+          genres: ['metal', 'rock'],
+        },
+      ]),
     )
 
     const { results, tokenUsage } = await classifyGenres([
-      { id: 'evt-uuid-1', title: 'Metal Night', artist: 'Metallica' },
+      {
+        id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        title: 'Metal Night',
+        artist: 'Metallica',
+      },
     ])
 
     expect(results).toHaveLength(1)
@@ -58,7 +67,11 @@ describe('classifyGenres', () => {
     mockCreate.mockResolvedValue(makeToolResponse([]))
 
     await classifyGenres([
-      { id: 'evt-uuid-1', title: 'Test', artist: 'Artist' },
+      {
+        id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        title: 'Test',
+        artist: 'Artist',
+      },
     ])
 
     const call = mockCreate.mock.calls[0]?.[0]
@@ -70,7 +83,11 @@ describe('classifyGenres', () => {
     mockCreate.mockResolvedValue(makeToolResponse([]))
 
     await classifyGenres([
-      { id: 'evt-uuid-1', title: 'Test', artist: 'Artist' },
+      {
+        id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        title: 'Test',
+        artist: 'Artist',
+      },
     ])
 
     const call = mockCreate.mock.calls[0]?.[0]
@@ -81,7 +98,11 @@ describe('classifyGenres', () => {
     mockCreate.mockResolvedValue(makeToolResponse([]))
 
     await classifyGenres([
-      { id: 'evt-uuid-1', title: 'Test', artist: 'Artist' },
+      {
+        id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        title: 'Test',
+        artist: 'Artist',
+      },
     ])
 
     const call = mockCreate.mock.calls[0]?.[0]
@@ -100,7 +121,11 @@ describe('classifyGenres', () => {
     })
 
     const { results } = await classifyGenres([
-      { id: 'evt-uuid-1', title: 'Test', artist: 'Artist' },
+      {
+        id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        title: 'Test',
+        artist: 'Artist',
+      },
     ])
 
     expect(results).toHaveLength(0)

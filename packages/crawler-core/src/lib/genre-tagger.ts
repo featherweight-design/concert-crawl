@@ -78,19 +78,22 @@ const TAG_GENRES_TOOL: Anthropic.Tool = {
 const TagResponseSchema = z.object({
   results: z.array(
     z.object({
-      eventId: z.string(),
-      genres: z.array(
-        z.enum([
-          'rock',
-          'indie',
-          'hip-hop',
-          'electronic',
-          'country',
-          'jazz',
-          'pop',
-          'metal',
-        ]),
-      ),
+      eventId: z.string().uuid(),
+      genres: z
+        .array(
+          z.enum([
+            'rock',
+            'indie',
+            'hip-hop',
+            'electronic',
+            'country',
+            'jazz',
+            'pop',
+            'metal',
+          ]),
+        )
+        .min(1)
+        .max(3),
     }),
   ),
 })
@@ -118,7 +121,7 @@ export async function classifyGenres(eventInputs: GenreTagInput[]): Promise<{
         role: 'user',
         content: `Tag these concert events with genres:\n${JSON.stringify(
           eventInputs.map((ev) => ({
-            id: ev.id,
+            eventId: ev.id,
             title: ev.title,
             artist: ev.artist,
           })),
