@@ -23,6 +23,14 @@ vi.mock('drizzle-orm', () => ({
   and: vi.fn(),
 }))
 
+// Mock Playwright — return a minimal browser-shaped object
+const mockBrowser = { close: vi.fn().mockResolvedValue(undefined) }
+vi.mock('playwright', () => ({
+  chromium: {
+    launch: vi.fn().mockResolvedValue(mockBrowser),
+  },
+}))
+
 // Mock crawlVenue and tagEventsWithGenres
 const mockCrawlVenue = vi
   .fn()
@@ -50,16 +58,32 @@ describe('runDailyCrawl', () => {
     mockDbChain.from.mockReturnThis()
     mockDbChain.where.mockResolvedValue(mockVenues)
     mockCrawlVenue.mockResolvedValue({ id: 'run-uuid-1', status: 'success' })
+    mockBrowser.close.mockResolvedValue(undefined)
   })
 
-  it('calls crawlVenue for each active venue', async () => {
+  it('calls crawlVenue for each active venue, passing the shared browser', async () => {
+    const { chromium } = await import('playwright')
     const { runDailyCrawl } = await import('./run.js')
     await runDailyCrawl()
+    const browser = await vi.mocked(chromium.launch).mock.results[0]?.value
     expect(mockCrawlVenue).toHaveBeenCalledTimes(4)
-    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-1')
-    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-2')
-    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-3')
-    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-4')
+    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-1', browser)
+    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-2', browser)
+    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-3', browser)
+    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-4', browser)
+  })
+
+  it('closes the browser after all crawls complete', async () => {
+    const { runDailyCrawl } = await import('./run.js')
+    await runDailyCrawl()
+    expect(mockBrowser.close).toHaveBeenCalledTimes(1)
+  })
+
+  it('closes the browser even when a crawl throws', async () => {
+    mockCrawlVenue.mockRejectedValueOnce(new Error('blocked'))
+    const { runDailyCrawl } = await import('./run.js')
+    await runDailyCrawl()
+    expect(mockBrowser.close).toHaveBeenCalledTimes(1)
   })
 
   it('returns succeeded and failed counts', async () => {
@@ -76,12 +100,10 @@ describe('runDailyCrawl', () => {
       .mockResolvedValue({ id: 'run-uuid-1', status: 'success' })
     const { runDailyCrawl } = await import('./run.js')
     await runDailyCrawl()
-    // All 4 venues attempted despite first failure
     expect(mockCrawlVenue).toHaveBeenCalledTimes(4)
   })
 
   it('processes no more than 3 venues concurrently per batch', async () => {
-    // Track concurrent invocations
     let maxConcurrent = 0
     let currentConcurrent = 0
     mockCrawlVenue.mockImplementation(async () => {
