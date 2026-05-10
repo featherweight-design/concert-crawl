@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '../theme-toggle'
-import { CCMark } from '../cc-mark'
+import { CCMark } from '@/components/brand/cc-mark'
 import { UserMenu } from '../user-menu'
 import { MobileProfileEntry } from './MobileProfileEntry'
 

@@ -25,14 +25,14 @@ export function CCMark({ size = 24 }: CCMarkProps) {
       <circle cx="72" cy="24" r="20" fill="var(--accent)" opacity="0.22" />
       <circle cx="72" cy="24" r="12" fill="var(--accent)" opacity="0.42" />
       <circle cx="72" cy="24" r="7" fill="var(--signal)" />
-      {TRAIL.map((dot, i) => (
+      {TRAIL.map((dot, idx) => (
         <circle
-          key={i}
+          key={idx}
           cx={dot.cx}
           cy={dot.cy}
           r={dot.radius}
           fill="var(--signal)"
-          opacity={0.35 + i * 0.09}
+          opacity={0.35 + idx * 0.09}
         />
       ))}
     </svg>

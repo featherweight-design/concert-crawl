@@ -6,7 +6,7 @@ import { CCWordmark } from '@/components/brand/cc-wordmark/CCWordmark'
 import { BetaPill } from '@/components/brand/beta-pill/BetaPill'
 import { GigPosterStack } from '@/components/brand/gig-poster-stack/GigPosterStack'
 import { WaitlistModal } from '@/components/waitlist/WaitlistModal'
-import { CCMark } from '@/components/consumer/cc-mark/CCMark'
+import { CCMark } from '@/components/brand/cc-mark'
 import type { Show } from '@/components/brand/gig-poster/GigPoster'
 
 const VIBES = [
