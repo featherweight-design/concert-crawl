@@ -1,4 +1,4 @@
-import { Eyebrow, StepHeading, Lede } from './_primitives'
+import { Eyebrow, Lede, StepHeading } from './_primitives'
 
 export function YoureIn() {
   return (
@@ -8,66 +8,19 @@ export function YoureIn() {
         One last thing.
         <br />
         <span style={{ color: 'var(--accent)' }}>
-          Tell us when we&apos;re wrong.
+          You&apos;ll be shaping the app.
         </span>
       </StepHeading>
       <Lede>
-        When something changes — a new feature, a new city, a new way prices
-        work — we&apos;ll let you know in-app and ask what you think. Loved it.
-        Hated it. Either way, send it.
+        You&apos;re not just here to use the thing — you&apos;re here to make
+        it better. When something changes, we&apos;ll ask what you think. When
+        something breaks, we want to know.
       </Lede>
-      <div
-        style={{
-          padding: '14px',
-          background: 'var(--surface-1)',
-          border: '1px solid var(--border)',
-          borderRadius: 12,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: 10,
-            fontWeight: 700,
-            color: 'var(--fg-muted)',
-            letterSpacing: '0.10em',
-            textTransform: 'uppercase',
-          }}
-        >
-          <span
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: 3,
-              background: 'var(--signal)',
-              boxShadow: '0 0 8px var(--signal)',
-            }}
-          />
-          Beta channel · always open
-        </div>
-        <div
-          style={{
-            fontFamily: 'Inter, system-ui',
-            fontSize: 14,
-            lineHeight: 1.5,
-            color: 'var(--fg)',
-            letterSpacing: '-0.005em',
-          }}
-        >
-          The &quot;give feedback&quot; button stays in the menu. You can also
-          just email{' '}
-          <span style={{ color: 'var(--signal)', fontWeight: 700 }}>
-            hugh@concertcrawl.app
-          </span>{' '}
-          — it goes to me directly.
-        </div>
-      </div>
+      <Lede>
+        The Give Feedback button lives in your menu — always there, never
+        buried. Tap it and you&apos;ll see a quick category picker and a
+        free-form message field. Thirty seconds. I read every one.
+      </Lede>
     </div>
   )
 }
