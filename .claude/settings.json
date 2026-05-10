@@ -5,20 +5,6 @@
     "Bash(gh *)",
     "Bash(cp -r *)",
     "Bash(mkdir *)",
-    "Bash(cat *)",
-    "Bash(cd *)"
-  ],
-  "permissions": {
-    "allow": [
-      "mcp__render__list_services",
-      "mcp__render__list_workspaces",
-      "mcp__render__list_logs",
-      "mcp__render__list_deploys",
-      "mcp__render__select_workspace",
-      "mcp__render__query_render_postgres",
-      "mcp__render__get_service",
-      "mcp__sentry__search_issues",
-      "mcp__render__list_postgres_instances"
-    ]
-  }
+    "Bash(cat *)"
+  ]
 }
