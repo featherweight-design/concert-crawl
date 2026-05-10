@@ -2,7 +2,21 @@ import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { db, events, venues } from '@concert-crawl/db'
-import { type SQL, and, asc, count, eq, gte, ilike, lte, or } from 'drizzle-orm'
+import {
+  type SQL,
+  and,
+  asc,
+  count,
+  eq,
+  gte,
+  ilike,
+  isNotNull,
+  isNull,
+  lt,
+  lte,
+  or,
+  sql,
+} from 'drizzle-orm'
 import { todayInTimezone } from '../lib/time.js'
 
 const listEventsSchema = z.object({
@@ -16,6 +30,19 @@ const listEventsSchema = z.object({
     .optional(),
   venueSlug: z.string().optional(),
   search: z.string().max(200).optional(),
+  filterPrice: z.enum(['under-25', '25-50', '50-plus', 'tbd']).optional(),
+  filterVibe: z
+    .enum([
+      'rock',
+      'indie',
+      'hip-hop',
+      'electronic',
+      'country',
+      'jazz',
+      'pop',
+      'metal',
+    ])
+    .optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   offset: z.coerce.number().int().min(0).default(0),
 })
@@ -24,7 +51,16 @@ export const eventsRouter = new Hono()
 
 // GET /v1/events — public event listing with filters and pagination
 eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
-  const { from, to, venueSlug, search, limit, offset } = ctx.req.valid('query')
+  const {
+    from,
+    to,
+    venueSlug,
+    search,
+    limit,
+    offset,
+    filterPrice,
+    filterVibe,
+  } = ctx.req.valid('query')
 
   const conditions: SQL[] = [
     eq(events.status, 'upcoming'),
@@ -56,6 +92,30 @@ eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
       ilike(events.artist, `%${search}%`),
     )
     if (searchCondition) conditions.push(searchCondition)
+  }
+
+  const priceCondition =
+    filterPrice === 'under-25'
+      ? and(isNotNull(events.ticketPriceMin), lt(events.ticketPriceMin, '25'))
+      : filterPrice === '25-50'
+        ? and(
+            isNotNull(events.ticketPriceMin),
+            gte(events.ticketPriceMin, '25'),
+            lt(events.ticketPriceMin, '50'),
+          )
+        : filterPrice === '50-plus'
+          ? and(
+              isNotNull(events.ticketPriceMin),
+              gte(events.ticketPriceMin, '50'),
+            )
+          : filterPrice === 'tbd'
+            ? and(isNull(events.ticketPriceMin), isNull(events.ticketPriceMax))
+            : undefined
+
+  if (priceCondition) conditions.push(priceCondition)
+
+  if (filterVibe) {
+    conditions.push(sql`${events.genre} && ARRAY[${filterVibe}]::text[]`)
   }
 
   const where = and(...conditions)
