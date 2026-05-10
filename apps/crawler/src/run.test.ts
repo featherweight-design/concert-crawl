@@ -23,10 +23,14 @@ vi.mock('drizzle-orm', () => ({
   and: vi.fn(),
 }))
 
-// Mock crawlVenue
-const mockCrawlVenue = vi.fn().mockResolvedValue(undefined)
+// Mock crawlVenue and tagEventsWithGenres
+const mockCrawlVenue = vi
+  .fn()
+  .mockResolvedValue({ id: 'run-uuid-1', status: 'success' })
+const mockTagEventsWithGenres = vi.fn().mockResolvedValue(undefined)
 vi.mock('@concert-crawl/crawler-core', () => ({
   crawlVenue: mockCrawlVenue,
+  tagEventsWithGenres: mockTagEventsWithGenres,
 }))
 
 // Mock logger
@@ -45,7 +49,7 @@ describe('runDailyCrawl', () => {
     mockDbChain.select.mockReturnThis()
     mockDbChain.from.mockReturnThis()
     mockDbChain.where.mockResolvedValue(mockVenues)
-    mockCrawlVenue.mockResolvedValue(undefined)
+    mockCrawlVenue.mockResolvedValue({ id: 'run-uuid-1', status: 'success' })
   })
 
   it('calls crawlVenue for each active venue', async () => {
@@ -69,7 +73,7 @@ describe('runDailyCrawl', () => {
   it('continues processing remaining venues when one fails', async () => {
     mockCrawlVenue
       .mockRejectedValueOnce(new Error('venue-1 blocked'))
-      .mockResolvedValue(undefined)
+      .mockResolvedValue({ id: 'run-uuid-1', status: 'success' })
     const { runDailyCrawl } = await import('./run.js')
     await runDailyCrawl()
     // All 4 venues attempted despite first failure
@@ -85,6 +89,7 @@ describe('runDailyCrawl', () => {
       maxConcurrent = Math.max(maxConcurrent, currentConcurrent)
       await new Promise((resolve) => setTimeout(resolve, 10))
       currentConcurrent--
+      return { id: 'run-uuid-1', status: 'success' }
     })
 
     const { runDailyCrawl } = await import('./run.js')
