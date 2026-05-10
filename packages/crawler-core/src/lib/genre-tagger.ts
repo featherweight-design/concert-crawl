@@ -9,15 +9,7 @@ import type { TokenUsage } from '../types.js'
 const logger = createLogger('genre-tagger')
 const MODEL = 'claude-haiku-4-5-20251001'
 
-export type GenreLabel =
-  | 'rock'
-  | 'indie'
-  | 'hip-hop'
-  | 'electronic'
-  | 'country'
-  | 'jazz'
-  | 'pop'
-  | 'metal'
+export const GENRE_TAG_BATCH_SIZE = 50
 
 export interface GenreTagInput {
   id: string
@@ -27,13 +19,14 @@ export interface GenreTagInput {
 
 interface GenreTagResult {
   eventId: string
-  genres: GenreLabel[]
+  genres: string[]
 }
 
-const SYSTEM_PROMPT = `You are a music genre classifier. Given concert events, classify each into 1–3 genres from this list only: rock, indie, hip-hop, electronic, country, jazz, pop, metal.
+const SYSTEM_PROMPT = `You are a music genre classifier. Given concert events, classify each into 1–3 genres.
+
+Use lowercase, common genre names (e.g. rock, indie, hip-hop, electronic, country, jazz, pop, metal, reggae, soul, blues, r&b, folk, classical, funk, latin, punk, alternative, gospel, world). Prefer well-known genre names over invented ones.
 
 Rules:
-- Only use genres from the list above — no other values allowed
 - Prefer fewer genres over more when uncertain
 - Base classification on artist name and event title`
 
@@ -51,19 +44,7 @@ const TAG_GENRES_TOOL: Anthropic.Tool = {
             eventId: { type: 'string', description: 'The event UUID' },
             genres: {
               type: 'array',
-              items: {
-                type: 'string',
-                enum: [
-                  'rock',
-                  'indie',
-                  'hip-hop',
-                  'electronic',
-                  'country',
-                  'jazz',
-                  'pop',
-                  'metal',
-                ],
-              },
+              items: { type: 'string' },
               description: '1–3 genre labels for this event',
             },
           },
@@ -75,28 +56,22 @@ const TAG_GENRES_TOOL: Anthropic.Tool = {
   },
 }
 
-const TagResponseSchema = z.object({
-  results: z.array(
-    z.object({
-      eventId: z.string().uuid(),
-      genres: z
-        .array(
-          z.enum([
-            'rock',
-            'indie',
-            'hip-hop',
-            'electronic',
-            'country',
-            'jazz',
-            'pop',
-            'metal',
-          ]),
-        )
-        .min(1)
-        .max(3),
-    }),
-  ),
+const SingleResultSchema = z.object({
+  eventId: z.string().uuid(),
+  genres: z.array(z.string().min(1)).min(1).max(3),
 })
+
+const TagResponseSchema = z.object({
+  results: z.array(z.unknown()).catch([]),
+})
+
+export function chunkArray<T>(arr: T[], size: number): T[][] {
+  const chunks: T[][] = []
+  for (let idx = 0; idx < arr.length; idx += size) {
+    chunks.push(arr.slice(idx, idx + size))
+  }
+  return chunks
+}
 
 export async function classifyGenres(eventInputs: GenreTagInput[]): Promise<{
   results: GenreTagResult[]
@@ -153,17 +128,33 @@ export async function classifyGenres(eventInputs: GenreTagInput[]): Promise<{
     return { results: [], tokenUsage }
   }
 
-  return { results: parsed.data.results, tokenUsage }
+  const results: GenreTagResult[] = []
+  for (const item of parsed.data.results) {
+    const itemParsed = SingleResultSchema.safeParse(item)
+    if (itemParsed.success) {
+      results.push(itemParsed.data)
+    }
+  }
+
+  return { results, tokenUsage }
 }
 
 export async function tagEventsWithGenres(
   venueId: string,
   crawlRunId?: string,
 ): Promise<void> {
-  const untagged = await db
+  const rows = await db
     .select({ id: events.id, title: events.title, artist: events.artist })
     .from(events)
     .where(and(eq(events.venueId, venueId), isNull(events.genre)))
+
+  const untagged: GenreTagInput[] = rows.map(
+    (row: { id: string; title: string | null; artist: string | null }) => ({
+      id: row.id,
+      title: row.title ?? '',
+      artist: row.artist ?? '',
+    }),
+  )
 
   if (untagged.length === 0) {
     logger.info({ venueId }, 'No untagged events — skipping genre tagging')
@@ -173,30 +164,52 @@ export async function tagEventsWithGenres(
   logger.info({ venueId, count: untagged.length }, 'Tagging events with genres')
 
   try {
-    const { results, tokenUsage } = await classifyGenres(untagged)
+    const batches = chunkArray(untagged, GENRE_TAG_BATCH_SIZE)
+    const allResults: GenreTagResult[] = []
+    let totalTokenUsage: TokenUsage = {
+      inputTokens: 0,
+      outputTokens: 0,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0,
+    }
 
-    for (const { eventId, genres } of results) {
+    for (const batch of batches) {
+      const { results, tokenUsage } = await classifyGenres(batch)
+      allResults.push(...results)
+      totalTokenUsage = {
+        inputTokens: totalTokenUsage.inputTokens + tokenUsage.inputTokens,
+        outputTokens: totalTokenUsage.outputTokens + tokenUsage.outputTokens,
+        cacheReadTokens:
+          totalTokenUsage.cacheReadTokens + tokenUsage.cacheReadTokens,
+        cacheWriteTokens:
+          totalTokenUsage.cacheWriteTokens + tokenUsage.cacheWriteTokens,
+      }
+    }
+
+    for (const { eventId, genres } of allResults) {
       await db
         .update(events)
         .set({ genre: genres })
         .where(eq(events.id, eventId))
     }
 
-    const costUsd = calculateCost(tokenUsage)
+    const costUsd = calculateCost(totalTokenUsage)
     await db.insert(costTracking).values({
       service: 'genre-tagger',
       costUsd: costUsd.toFixed(6),
-      tokensUsed: String(tokenUsage.inputTokens + tokenUsage.outputTokens),
+      tokensUsed: String(
+        totalTokenUsage.inputTokens + totalTokenUsage.outputTokens,
+      ),
       metadata: JSON.stringify({
         crawlRunId,
         venueId,
-        eventsTagged: results.length,
-        ...tokenUsage,
+        eventsTagged: allResults.length,
+        ...totalTokenUsage,
       }),
     })
 
     logger.info(
-      { venueId, eventsTagged: results.length, costUsd },
+      { venueId, eventsTagged: allResults.length, costUsd },
       'Genre tagging complete',
     )
   } catch (err) {
