@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Search } from 'lucide-react'
@@ -8,6 +9,7 @@ import { ThemeToggle } from '../theme-toggle'
 import { CCMark } from '@/components/brand/cc-mark'
 import { UserMenu } from '../user-menu'
 import { MobileProfileEntry } from './MobileProfileEntry'
+import { SearchPalette } from '../search-palette/SearchPalette'
 
 const NAV_TABS = [
   { label: 'Browse', href: '/events' },
@@ -17,6 +19,18 @@ const NAV_TABS = [
 
 export function AppHeader() {
   const pathname = usePathname()
+  const [paletteOpen, setPaletteOpen] = useState(false)
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+        event.preventDefault()
+        setPaletteOpen(true)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   return (
     <header className="w-full">
@@ -83,10 +97,10 @@ export function AppHeader() {
 
         {/* Right: search bar + user avatar + theme */}
         <div className="flex items-center gap-3">
-          <Link
-            href="/search"
+          <button
+            onClick={() => setPaletteOpen(true)}
             aria-label="Search"
-            className="flex h-9 w-9 items-center justify-center gap-2 rounded-lg border border-border bg-surface-1 px-3 text-fg-subtle lg:w-[280px] lg:justify-start"
+            className="flex h-9 w-9 cursor-pointer items-center justify-center gap-2 rounded-lg border border-border bg-surface-1 px-3 text-fg-subtle lg:w-[280px] lg:justify-start"
           >
             <Search size={14} strokeWidth={1.5} className="shrink-0" />
             <span className="hidden flex-1 text-[13px] lg:block">
@@ -98,13 +112,15 @@ export function AppHeader() {
             >
               ⌘K
             </span>
-          </Link>
+          </button>
 
           <UserMenu />
 
           <ThemeToggle />
         </div>
       </div>
+
+      <SearchPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </header>
   )
 }
