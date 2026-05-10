@@ -124,8 +124,9 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
   if (totalUpdated > 0) eventsHintParts.push(`${totalUpdated} updated`)
   const eventsHint = eventsHintParts.join(' · ') || 'today'
 
-  const lastSweepValue = todayRuns[0]?.createdAt
-    ? `${String(Math.round((Date.now() - new Date(todayRuns[0].createdAt).getTime()) / 60000))}m ago`
+  const mostRecentRun = runs[0]
+  const lastSweepValue = mostRecentRun?.createdAt
+    ? `${String(Math.round((Date.now() - new Date(mostRecentRun.createdAt).getTime()) / 60000))}m ago`
     : '—'
 
   return (
