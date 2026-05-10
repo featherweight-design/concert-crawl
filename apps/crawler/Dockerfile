@@ -11,6 +11,6 @@ COPY . .
 
 RUN pnpm install --frozen-lockfile
 
-RUN pnpm turbo build --filter=@concert-crawl/crawler-core --filter=@concert-crawl/logger
+RUN pnpm turbo build --filter=@concert-crawl/crawler-core --filter=@concert-crawl/logger --filter=@concert-crawl/price-pipeline
 
 CMD ["pnpm", "--filter", "@concert-crawl/crawler", "start"]
