@@ -1,16 +1,10 @@
 import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
-import { Plus } from 'lucide-react'
-import Link from 'next/link'
-import {
-  SectionHead,
-  AdminButton,
-  StatCard,
-  Panel,
-} from '@/components/admin/primitives'
+import { SectionHead, StatCard, Panel } from '@/components/admin/primitives'
 import type { VenueWithEventCount } from '@concert-crawl/types'
 import { VenueTableClient } from '@/components/admin/venue-table-client'
 import { deriveVenueStatus, venueHealthPercent } from '@/lib/admin/venue-status'
+import { AddVenueModal } from '@/components/admin/AddVenueModal'
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -60,13 +54,7 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
       <SectionHead
         title="Venues"
         subtitle="Configure crawl targets. Crawls run daily at 3 AM MT."
-        actions={
-          <Link href="/admin/venues/new">
-            <AdminButton variant="primary" icon={Plus}>
-              Add venue
-            </AdminButton>
-          </Link>
-        }
+        actions={<AddVenueModal />}
       />
 
       <div

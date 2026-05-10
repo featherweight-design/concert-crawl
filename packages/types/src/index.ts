@@ -120,6 +120,21 @@ export interface VenueWithEventCount extends Venue {
   eventCount: number
 }
 
+// CrawlHealth — 7-day crawl health stats returned by GET /v1/admin/venues/:id
+export interface CrawlHealth {
+  sevenDayPercent: number
+  sparkline: { date: string; success: boolean }[]
+  lastCrawledAt: string | null
+  avgDurationMs: number | null
+  eventsTracked: number
+  consecutiveFails: number
+}
+
+// VenueWithCrawlHealth — admin detail view includes crawl health stats
+export interface VenueWithCrawlHealth extends Venue {
+  crawlHealth: CrawlHealth
+}
+
 // CrawlRun — represents the JSON-serialized API response shape.
 // 'in_progress' is a virtual status used during async crawl execution (not persisted to DB).
 export interface CrawlRun {

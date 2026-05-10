@@ -10,7 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import Link from 'next/link'
-import { activateVenue, deactivateVenue } from '@/lib/actions/venues'
+import { activateVenue, pauseVenue } from '@/lib/actions/venues'
 
 interface VenueTableProps {
   venues: Venue[]
@@ -58,7 +58,7 @@ export function VenueTable({ venues }: VenueTableProps) {
             </TableCell>
             <TableCell>
               {venue.active ? (
-                <form action={deactivateVenue.bind(null, venue.id)}>
+                <form action={pauseVenue.bind(null, venue.id)}>
                   <Button variant="ghost" size="sm" type="submit">
                     Deactivate
                   </Button>

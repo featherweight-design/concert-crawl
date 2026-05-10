@@ -1,25 +1,10 @@
 {
-  "permissions": {
-    "allow": [
-      "Bash(git *)",
-      "Bash(pnpm *)",
-      "Bash(gh *)",
-      "Bash(cp -r *)",
-      "Bash(mkdir *)",
-      "Bash(cat *)",
-      "Bash(cd *)"
-    ]
-  },
-  "hooks": {
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .claude/hooks/session-budget-warn.sh"
-          }
-        ]
-      }
-    ]
-  }
+  "allowedTools": [
+    "Bash(git *)",
+    "Bash(pnpm *)",
+    "Bash(gh *)",
+    "Bash(cp -r *)",
+    "Bash(mkdir *)",
+    "Bash(cat *)"
+  ]
 }

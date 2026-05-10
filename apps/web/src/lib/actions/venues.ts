@@ -2,8 +2,7 @@
 
 import { auth } from '@clerk/nextjs/server'
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
-import { apiClient } from '@/lib/api'
+import { apiClient, ApiError } from '@/lib/api'
 import type { Venue } from '@concert-crawl/types'
 
 async function getToken(): Promise<string> {
@@ -13,46 +12,102 @@ async function getToken(): Promise<string> {
   return token
 }
 
-export async function createVenue(formData: FormData): Promise<void> {
+export interface CreateVenueResult {
+  success: boolean
+  data?: Venue
+  error?: string
+  field?: string
+}
+
+export async function createVenue(
+  formData: FormData,
+): Promise<CreateVenueResult> {
   const token = await getToken()
 
-  await apiClient.post<Venue>('/v1/admin/venues', token, {
-    name: formData.get('name'),
-    slug: formData.get('slug'),
-    websiteUrl: formData.get('websiteUrl'),
-    city: formData.get('city') || 'Denver',
-    crawlNotes: formData.get('crawlNotes') || undefined,
-    contactEmail: formData.get('contactEmail') || undefined,
-  })
+  try {
+    const venue = await apiClient.post<Venue>('/v1/admin/venues', token, {
+      name: formData.get('name'),
+      slug: formData.get('slug'),
+      websiteUrl: formData.get('websiteUrl'),
+      city: formData.get('city') || 'Denver',
+      active: formData.get('active') !== 'false',
+    })
+    revalidatePath('/admin/venues')
+    return { success: true, data: venue }
+  } catch (err: unknown) {
+    if (err instanceof ApiError && err.status === 409) {
+      return { success: false, error: 'Slug already in use', field: 'slug' }
+    }
+    throw err
+  }
+}
 
-  revalidatePath('/admin/venues')
-  redirect('/admin/venues')
+export async function createVenueAndCrawl(
+  formData: FormData,
+): Promise<CreateVenueResult> {
+  const token = await getToken()
+
+  const result = await createVenue(formData)
+  if (!result.success || !result.data) return result
+
+  try {
+    await apiClient.post(`/v1/admin/crawl/${result.data.id}`, token, {})
+  } catch {
+    // Crawl trigger failure is non-fatal — venue was created
+  }
+
+  return result
 }
 
 export async function updateVenue(
   id: string,
   formData: FormData,
-): Promise<void> {
+): Promise<{ success: boolean; error?: string; field?: string }> {
   const token = await getToken()
 
-  await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
-    name: formData.get('name'),
-    slug: formData.get('slug'),
-    websiteUrl: formData.get('websiteUrl'),
-    city: formData.get('city') || 'Denver',
-    active: formData.get('active') === 'true',
-    crawlNotes: formData.get('crawlNotes') || undefined,
-    contactEmail: formData.get('contactEmail') || undefined,
-  })
-
-  revalidatePath('/admin/venues')
-  redirect('/admin/venues')
+  try {
+    await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
+      name: formData.get('name'),
+      slug: formData.get('slug'),
+      websiteUrl: formData.get('websiteUrl'),
+      city: formData.get('city') || 'Denver',
+      active: formData.get('active') === 'true',
+    })
+    revalidatePath('/admin/venues')
+    revalidatePath(`/admin/venues/${id}`)
+    return { success: true }
+  } catch (err: unknown) {
+    if (
+      err &&
+      typeof err === 'object' &&
+      'status' in err &&
+      (err as { status: number }).status === 409
+    ) {
+      return { success: false, error: 'Slug already in use', field: 'slug' }
+    }
+    throw err
+  }
 }
 
-export async function deactivateVenue(id: string): Promise<void> {
+export async function pauseVenue(id: string): Promise<void> {
   const token = await getToken()
-  await apiClient.delete(`/v1/admin/venues/${id}`, token)
+  await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
+    active: false,
+  })
   revalidatePath('/admin/venues')
+  revalidatePath(`/admin/venues/${id}`)
+}
+
+export async function deleteVenue(
+  id: string,
+): Promise<{ eventsDetached: number }> {
+  const token = await getToken()
+  const result = await apiClient.delete<{ eventsDetached: number }>(
+    `/v1/admin/venues/${id}`,
+    token,
+  )
+  revalidatePath('/admin/venues')
+  return result
 }
 
 export async function activateVenue(id: string): Promise<void> {
@@ -70,7 +125,6 @@ export async function verifyVenue(id: string): Promise<void> {
   })
   revalidatePath('/admin/venues')
   revalidatePath(`/admin/venues/${id}`)
-  redirect(`/admin/venues/${id}`)
 }
 
 export async function unverifyVenue(id: string): Promise<void> {
@@ -80,7 +134,6 @@ export async function unverifyVenue(id: string): Promise<void> {
   })
   revalidatePath('/admin/venues')
   revalidatePath(`/admin/venues/${id}`)
-  redirect(`/admin/venues/${id}`)
 }
 
 export async function bulkVerifyVenues(ids: string[]): Promise<void> {
@@ -120,7 +173,11 @@ export async function bulkActivateVenues(ids: string[]): Promise<void> {
 export async function bulkDeactivateVenues(ids: string[]): Promise<void> {
   const token = await getToken()
   await Promise.all(
-    ids.map((id) => apiClient.delete(`/v1/admin/venues/${id}`, token)),
+    ids.map((id) =>
+      apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
+        active: false,
+      }),
+    ),
   )
   revalidatePath('/admin/venues')
 }
