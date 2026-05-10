@@ -1,7 +1,7 @@
 import { createLogger } from '@concert-crawl/logger'
 import { db, venues, crawlTriggers } from '@concert-crawl/db'
 import { eq, and } from 'drizzle-orm'
-import { crawlVenue } from '@concert-crawl/crawler-core'
+import { crawlVenue, tagEventsWithGenres } from '@concert-crawl/crawler-core'
 
 const logger = createLogger('crawler')
 const MAX_CONCURRENT = 3
@@ -23,6 +23,7 @@ export async function runTriggeredCrawls(): Promise<{ processed: number }> {
   for (const trigger of claimed) {
     try {
       const crawlRun = await crawlVenue(trigger.venueId)
+      await tagEventsWithGenres(trigger.venueId, crawlRun.id)
       const triggerStatus = crawlRun.status === 'failed' ? 'failed' : 'done'
       await db
         .update(crawlTriggers)
@@ -77,6 +78,9 @@ export async function runDailyCrawl(): Promise<{
     for (const [idx, result] of results.entries()) {
       if (result.status === 'fulfilled') {
         succeeded++
+        if (batch[idx]?.id) {
+          await tagEventsWithGenres(batch[idx].id, result.value.id)
+        }
         logger.info(
           { venueId: batch[idx]?.id, name: batch[idx]?.name },
           'Crawl succeeded',
