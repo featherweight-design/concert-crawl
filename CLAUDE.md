@@ -429,7 +429,7 @@ Full forward plan: `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md`
 | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | **Saving shows (Watching)**  | ✅ Complete (PR #117 merged 2026-05-09). Heart button → `user_events` table. Design handoff: `design/design_handoff_watching/`.    |
 | **Browse filters wired**     | ✅ Complete (PR #130 merged 2026-05-10). Price + Vibe filter chips end-to-end; LLM genre-tagging pipeline in crawler.              |
-| **Search nav item**          | ✅ Complete (PR #TBD): `/search` mobile page, `SearchPalette` desktop (⌘K), `useSearch` hook, popular endpoint, venue name search. |
+| **Search nav item**          | ✅ Complete (PR #171): `/search` mobile page, `SearchPalette` desktop (⌘K), `useSearch` hook, popular endpoint, venue name search. |
 | **UI interactions sweep**    | Walk every clickable element on every route. Log and fix dead interactions.                                                        |
 | **Invite code error states** | ⚠️ Believed complete via Phase 8a onboarding flow (PR #43) — Hugh confirming via manual test.                                      |
 | **Feedback modal**           | ✅ Complete (PR #146 merged 2026-05-10). Auth-only, rate-limited (1/hour), category + message → `feedback` table.                  |
