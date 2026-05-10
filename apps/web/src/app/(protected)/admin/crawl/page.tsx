@@ -138,14 +138,14 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
           value={lastSweepValue}
           iconName="RefreshCw"
           kind="neutral"
-          hint={sweepHint || undefined}
+          hint={sweepHint}
         />
         <StatCard
           label="Today's runs"
           value={String(todayRuns.length)}
           iconName="Activity"
           kind="signal"
-          hint={runsBreakdown || undefined}
+          hint={runsBreakdown}
         />
         <StatCard
           label="Events ingested"
