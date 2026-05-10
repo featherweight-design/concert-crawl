@@ -4,6 +4,9 @@ import { withSentryConfig } from '@sentry/nextjs'
 const config: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@concert-crawl/types'],
+  env: {
+    NEXT_PUBLIC_APP_VERSION: `v0.4.2-beta · ${process.env['RENDER_GIT_COMMIT']?.slice(0, 7) ?? 'dev'}`,
+  },
 }
 
 export default withSentryConfig(config, {
