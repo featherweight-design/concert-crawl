@@ -1,4 +1,5 @@
 import {
+  doublePrecision,
   integer,
   pgEnum,
   pgTable,
@@ -28,6 +29,8 @@ export const crawlRuns = pgTable('crawl_runs', {
   errorMessage: text('error_message'),
   pageHash: text('page_hash'),
   durationMs: integer('duration_ms'),
+  llmCostUsd: doublePrecision('llm_cost_usd'),
+  eventsUpdated: integer('events_updated').notNull().default(0),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
