@@ -78,7 +78,9 @@ export async function runTriggeredCrawls(): Promise<{ processed: number }> {
       try {
         const crawlRun = await crawlVenue(trigger.venueId, browser)
         await tagEventsWithGenres(trigger.venueId, crawlRun.id)
-        await runPricesForVenue(trigger.venueId)
+        if (crawlRun.status !== 'failed') {
+          await runPricesForVenue(trigger.venueId)
+        }
         const triggerStatus = crawlRun.status === 'failed' ? 'failed' : 'done'
         await db
           .update(crawlTriggers)
@@ -153,7 +155,9 @@ export async function runDailyCrawl(): Promise<{
                 'Genre tagging failed — crawl data saved, genres skipped',
               )
             }
-            await runPricesForVenue(batch[idx].id)
+            if (result.value.status !== 'failed') {
+              await runPricesForVenue(batch[idx].id)
+            }
           }
           logger.info(
             { venueId: batch[idx]?.id, name: batch[idx]?.name },

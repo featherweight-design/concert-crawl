@@ -186,17 +186,15 @@ describe('runDailyCrawl', () => {
   })
 
   it('does not fail the daily crawl when runPricePipeline throws', async () => {
-    mockDbChain.where
-      .mockResolvedValueOnce(mockVenues)
-      .mockResolvedValue([
-        {
-          id: 'evt-1',
-          venueId: 'venue-1',
-          artist: 'Band A',
-          date: '2026-06-01',
-          ticketUrl: null,
-        },
-      ])
+    mockDbChain.where.mockResolvedValueOnce(mockVenues).mockResolvedValue([
+      {
+        id: 'evt-1',
+        venueId: 'venue-1',
+        artist: 'Band A',
+        date: '2026-06-01',
+        ticketUrl: null,
+      },
+    ])
     mockRunPricePipeline.mockRejectedValue(new Error('price fetch failed'))
 
     const { runDailyCrawl } = await import('./run.js')
@@ -206,19 +204,35 @@ describe('runDailyCrawl', () => {
     expect(result.failed).toBe(0)
   })
 
+  it('skips price pipeline when crawlVenue resolves with status: failed', async () => {
+    mockCrawlVenue.mockResolvedValue({ id: 'run-uuid-1', status: 'failed' })
+    mockDbChain.where.mockResolvedValueOnce(mockVenues).mockResolvedValue([
+      {
+        id: 'evt-1',
+        venueId: 'venue-1',
+        artist: 'Band A',
+        date: '2026-06-01',
+        ticketUrl: null,
+      },
+    ])
+
+    const { runDailyCrawl } = await import('./run.js')
+    await runDailyCrawl()
+
+    expect(mockRunPricePipeline).not.toHaveBeenCalled()
+  })
+
   it('skips price pipeline for venues that failed to crawl', async () => {
     mockCrawlVenue.mockRejectedValueOnce(new Error('blocked'))
-    mockDbChain.where
-      .mockResolvedValueOnce(mockVenues)
-      .mockResolvedValue([
-        {
-          id: 'evt-1',
-          venueId: 'venue-2',
-          artist: 'Band A',
-          date: '2026-06-01',
-          ticketUrl: null,
-        },
-      ])
+    mockDbChain.where.mockResolvedValueOnce(mockVenues).mockResolvedValue([
+      {
+        id: 'evt-1',
+        venueId: 'venue-2',
+        artist: 'Band A',
+        date: '2026-06-01',
+        ticketUrl: null,
+      },
+    ])
 
     const { runDailyCrawl } = await import('./run.js')
     await runDailyCrawl()
@@ -324,6 +338,24 @@ describe('runTriggeredCrawls', () => {
       date: '2026-06-15',
       ticketUrl: null,
     })
+  })
+
+  it('skips price pipeline when crawlVenue resolves with status: failed', async () => {
+    mockCrawlVenue.mockResolvedValue({ id: 'run-uuid-1', status: 'failed' })
+    mockDbChain.where.mockResolvedValue([
+      {
+        id: 'evt-a',
+        venueId: 'venue-a',
+        artist: 'Artist X',
+        date: '2026-06-15',
+        ticketUrl: null,
+      },
+    ])
+
+    const { runTriggeredCrawls } = await import('./run.js')
+    await runTriggeredCrawls()
+
+    expect(mockRunPricePipeline).not.toHaveBeenCalled()
   })
 
   it('does not fail triggered crawl when runPricePipeline throws', async () => {
