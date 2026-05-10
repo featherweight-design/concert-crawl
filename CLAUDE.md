@@ -377,40 +377,42 @@ Phase: **Pre-Beta Sprint — target open May 25, 2026**
 - Feedback modal + user menu redesign complete (PR #146 merged 2026-05-10): identity card, theme switcher, beta channel, admin section, feedback submission
 - Genre tagger resilience (PR #147 merged 2026-05-10): open enum for unknown genres, batch size limit
 - Active Claude workers: admin/crawl UI fixes (issues #148–163), admin sidebar polish (issue #139), search implementation (issue #57)
+- Admin sidebar polish in PR #167 (issue #139): badge contrast, CCMark centralization, Invite Codes icon, OPERATIONS label
 
 ### Phase Sequence
 
-| Phase       | Name                                     | Status                                      |
-| ----------- | ---------------------------------------- | ------------------------------------------- |
-| 1           | Foundation                               | ✅ Complete                                 |
-| 2           | Venue Management (Admin)                 | ✅ Complete                                 |
-| 3           | Crawler v1                               | ✅ Complete                                 |
-| 4           | Design System / Theming Architecture     | ✅ Complete                                 |
-| 5           | Consumer Calendar UI (functional)        | ✅ Complete                                 |
-| 5b          | Consumer UI Design Polish                | ✅ Complete (PRs #22–24)                    |
-| 6a          | Observability SDK                        | ✅ Complete (PR #26)                        |
-| 6b          | Integration Tests                        | ✅ Complete (PR #28)                        |
-| 6c          | E2E + Smoke Tests                        | ✅ Complete (PR #29)                        |
-| 7           | Automation + Scheduling                  | ✅ Complete (PR #34)                        |
-| 7.5         | IdentityArt generative engine            | ✅ Complete (PR #39)                        |
-| 7.6         | Admin UI Redesign                        | ✅ Complete (PRs #44, #50)                  |
-| 8a          | Beta Launch Prep — Landing + Auth        | ✅ Complete (PRs #43, #45)                  |
-| 8b pt.1     | User Profile + Settings                  | ✅ Complete (PR #49)                        |
-| —           | Price Transparency v1                    | ✅ Complete (PRs #32, #37)                  |
-| —           | Price Transparency v2                    | ✅ Complete (PR #46)                        |
-| —           | Betterment: Crawler separation           | ✅ Complete (PR #51)                        |
-| **8b pt.2** | **Saving Shows (Watching)**              | ✅ **Complete (PR #117 merged 2026-05-09)** |
-| —           | Legal pages                              | ✅ Complete (PR #108)                       |
-| —           | Watching bug fixes                       | ✅ Complete (PR #140 merged 2026-05-10)     |
-| —           | Admin dashboard polish                   | ✅ Complete (PR #127 merged 2026-05-10)     |
-| —           | Browse filters + LLM genre tagging       | ✅ Complete (PR #130 merged 2026-05-10)     |
-| —           | Empty states                             | ✅ Complete (PR #145 merged 2026-05-10)     |
-| —           | Feedback modal + user menu redesign      | ✅ Complete (PR #146 merged 2026-05-10)     |
+| Phase       | Name                                     | Status                                         |
+| ----------- | ---------------------------------------- | ---------------------------------------------- |
+| 1           | Foundation                               | ✅ Complete                                    |
+| 2           | Venue Management (Admin)                 | ✅ Complete                                    |
+| 3           | Crawler v1                               | ✅ Complete                                    |
+| 4           | Design System / Theming Architecture     | ✅ Complete                                    |
+| 5           | Consumer Calendar UI (functional)        | ✅ Complete                                    |
+| 5b          | Consumer UI Design Polish                | ✅ Complete (PRs #22–24)                       |
+| 6a          | Observability SDK                        | ✅ Complete (PR #26)                           |
+| 6b          | Integration Tests                        | ✅ Complete (PR #28)                           |
+| 6c          | E2E + Smoke Tests                        | ✅ Complete (PR #29)                           |
+| 7           | Automation + Scheduling                  | ✅ Complete (PR #34)                           |
+| 7.5         | IdentityArt generative engine            | ✅ Complete (PR #39)                           |
+| 7.6         | Admin UI Redesign                        | ✅ Complete (PRs #44, #50)                     |
+| 8a          | Beta Launch Prep — Landing + Auth        | ✅ Complete (PRs #43, #45)                     |
+| 8b pt.1     | User Profile + Settings                  | ✅ Complete (PR #49)                           |
+| —           | Price Transparency v1                    | ✅ Complete (PRs #32, #37)                     |
+| —           | Price Transparency v2                    | ✅ Complete (PR #46)                           |
+| —           | Betterment: Crawler separation           | ✅ Complete (PR #51)                           |
+| **8b pt.2** | **Saving Shows (Watching)**              | ✅ **Complete (PR #117 merged 2026-05-09)**    |
+| —           | Legal pages                              | ✅ Complete (PR #108)                          |
+| —           | Watching bug fixes                       | ✅ Complete (PR #140 merged 2026-05-10)        |
+| —           | Admin dashboard polish                   | ✅ Complete (PR #127 merged 2026-05-10)        |
+| —           | Browse filters + LLM genre tagging       | ✅ Complete (PR #130 merged 2026-05-10)        |
+| —           | Empty states                             | ✅ Complete (PR #145 merged 2026-05-10)        |
+| —           | Feedback modal + user menu redesign      | ✅ Complete (PR #146 merged 2026-05-10)        |
 | —           | Crawler: shared browser + genre fixes    | ✅ Complete (PRs #144, #147 merged 2026-05-10) |
-| Pre-beta    | UI interactions audit + bug fixes        | 🔄 In progress (admin/crawl, sidebar, search) |
-| Beta period | Jun 16 – Aug 3 (see beta-to-launch spec) | —                                           |
-| Launch prep | Aug 4–17                                 | —                                           |
-| **Launch**  | **~Aug 18–22, 2026**                     | —                                           |
+| —           | Admin sidebar polish                     | 🔄 In PR #167 (issue #139)                     |
+| Pre-beta    | UI interactions audit + bug fixes        | 🔄 In progress (admin/crawl, sidebar, search)  |
+| Beta period | Jun 16 – Aug 3 (see beta-to-launch spec) | —                                              |
+| Launch prep | Aug 4–17                                 | —                                              |
+| **Launch**  | **~Aug 18–22, 2026**                     | —                                              |
 
 Full forward plan: `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md`
 
