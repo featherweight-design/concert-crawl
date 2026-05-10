@@ -63,8 +63,8 @@ function jitter(ms: number): number {
 
 export async function fetchPage(
   url: string,
-  crawlDelayMs = 3000,
   browser: Browser,
+  crawlDelayMs = 3000,
 ): Promise<FetchResult> {
   const delay = Math.max(0, jitter(crawlDelayMs))
   if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay))
@@ -240,7 +240,7 @@ Expected: all tests pass (same count as before — 5 tests across 2 describe blo
 - [ ] **Step 3: Commit Tasks 1–3**
 
 ```bash
-cd /Users/huey/Projects/concert-crawl/.worktrees/fix/shared-playwright-browser
+cd <worktree-root>
 git add packages/crawler-core/src/lib/fetcher.ts packages/crawler-core/src/crawl.ts packages/crawler-core/src/crawl.test.ts
 git commit -m "refactor(crawler-core): accept Browser param in fetchPage and crawlVenue"
 ```
@@ -562,7 +562,7 @@ Expected: no errors.
 - [ ] **Step 5: Commit Task 4 + 5**
 
 ```bash
-cd /Users/huey/Projects/concert-crawl/.worktrees/fix/shared-playwright-browser
+cd <worktree-root>
 git add apps/crawler/src/run.ts apps/crawler/src/run.test.ts
 git commit -m "fix(crawler): share single Playwright browser instance across venue crawls
 

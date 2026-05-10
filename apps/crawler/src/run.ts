@@ -1,7 +1,8 @@
 import { chromium } from 'playwright'
+import type { Browser } from 'playwright'
 import { createLogger } from '@concert-crawl/logger'
 import { db, venues, crawlTriggers } from '@concert-crawl/db'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, inArray } from 'drizzle-orm'
 import { crawlVenue, tagEventsWithGenres } from '@concert-crawl/crawler-core'
 
 const logger = createLogger('crawler')
@@ -21,7 +22,26 @@ export async function runTriggeredCrawls(): Promise<{ processed: number }> {
 
   logger.info({ count: claimed.length }, 'Processing pending crawl triggers')
 
-  const browser = await chromium.launch({ headless: true })
+  let browser: Browser
+  try {
+    browser = await chromium.launch({ headless: true })
+  } catch (launchErr: unknown) {
+    logger.error(
+      { launchErr },
+      'Browser launch failed — marking triggers as failed',
+    )
+    await db
+      .update(crawlTriggers)
+      .set({ status: 'failed', updatedAt: new Date() })
+      .where(
+        inArray(
+          crawlTriggers.id,
+          claimed.map((trigger) => trigger.id),
+        ),
+      )
+    return { processed: 0 }
+  }
+
   try {
     for (const trigger of claimed) {
       try {
@@ -69,6 +89,10 @@ export async function runDailyCrawl(): Promise<{
     .where(and(eq(venues.active, true), eq(venues.verified, true)))
 
   logger.info({ venueCount: activeVenues.length }, 'Fetched active venues')
+
+  if (activeVenues.length === 0) {
+    return { succeeded: 0, failed: 0, total: 0 }
+  }
 
   let succeeded = 0
   let failed = 0
