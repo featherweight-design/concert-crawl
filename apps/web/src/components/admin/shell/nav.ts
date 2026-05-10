@@ -54,7 +54,7 @@ export const NAV: NavItem[] = [
     key: 'invite-codes',
     label: 'Invite codes',
     href: '/admin/invite-codes',
-    iconName: 'Ticket',
+    iconName: 'Key',
     section: 'operations',
   },
   {
