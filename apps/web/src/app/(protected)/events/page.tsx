@@ -200,7 +200,12 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                     href: '/events',
                   },
                 }
-              : {})}
+              : {
+                  primaryCta: {
+                    label: copy.emptyTonightCta,
+                    href: '/events?filterWhen=this-week',
+                  },
+                })}
           />
         )}
 

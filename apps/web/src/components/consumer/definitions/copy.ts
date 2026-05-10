@@ -4,6 +4,7 @@ export const copy = {
   emptyTonightTitle: 'No shows tonight, grandpa.',
   emptyTonightBody:
     'Slow night on the calendar. Browse the rest of the week — usually picks up by the weekend.',
+  emptyTonightCta: 'View this week',
 
   // ── Browse — filtered (filter active, zero results) ────────────────
   emptyFilteredEyebrow: 'Filtered',
