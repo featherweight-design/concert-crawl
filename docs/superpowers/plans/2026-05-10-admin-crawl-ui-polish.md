@@ -2,310 +2,74 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Bring the admin Crawl Status page in line with the design mocks (Images #1/#2), fixing layout, stat detail lines, venue list precision, run detail panel, selectable runs, venue/status filtering, and Re-crawl button feedback.
+**Goal:** Bring the admin `/admin/crawl` page fully in line with the design spec, closing all remaining gaps from issues #174–#182 (plus related #151, #158, #160) that are not yet addressed by prior commits on this branch.
 
-**Architecture:** All changes are frontend-only plus a small API additive select (websiteUrl, durationMs, consecutiveFailures, blockedAt in the status endpoint). No DB migrations needed. All filter logic is client-side in CrawlSplitView.
+**Architecture:** All changes are confined to `apps/web`. The three files to touch are `page.tsx`, `CrawlSplitView.tsx`, and `IssuesBanner.tsx`. One new Next.js API route is added for run-all. No DB or Hono API changes needed beyond what prior commits already added.
 
-**Tech Stack:** Next.js 14 App Router, React client components, Hono API, Vitest (mocked unit tests for helpers, API tests for route changes), Intl.DateTimeFormat for MT formatting.
+**Tech Stack:** Next.js 14 App Router, React client components, TypeScript strict, Lucide icons (via `StatCard`), inline styles (project convention for admin), `next/navigation` for client routing.
 
-**Closes:** #148 #151 #152 #153 #157 #158 #159 #160 #161 #163
-
----
-
-## File map
-
-| File                                                           | Change                                                                                           |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `apps/api/src/routes/admin/crawl.ts`                           | Add `websiteUrl`, `durationMs`, `consecutiveFailures`, `blockedAt` to status endpoint SELECT     |
-| `apps/api/src/routes/admin/crawl.test.ts`                      | Update status test mock to include new fields                                                    |
-| `apps/web/src/app/(protected)/admin/crawl/page.tsx`            | Remove eyebrow; extend `CrawlStatusRow` + `RawVenueStatus`; compute stat hints                   |
-| `apps/web/src/app/(protected)/admin/crawl/crawl-stats.test.ts` | New — unit tests for stat helper functions                                                       |
-| `apps/web/src/components/admin/primitives/StatCard.tsx`        | Uppercase + letter-spaced labels                                                                 |
-| `apps/web/src/components/admin/crawl/IssuesBanner.tsx`         | Redesign with detailed text and "Jump to issues" scroll                                          |
-| `apps/web/src/components/admin/crawl/CrawlSplitView.tsx`       | Venue list filter, exact timestamps, selectable runs, run detail redesign, Re-crawl queued state |
+**Worktree:** `/Users/huey/Projects/concert-crawl/.worktrees/fix-admin-crawl-ui-polish`
+**Branch:** `fix/admin-crawl-ui-polish`
 
 ---
 
-## Task 1: API — extend status endpoint with venue fields
+## Context — what prior commits already addressed
 
-**Files:**
+Prior commits on this branch already fixed: #148 (eyebrow), #152 (sweep hint), #153 (runs breakdown), #157 (status filter), #158 (stat card labels), #159 (venue row timestamps), #160 (run detail fields), #161 (selectable runs), #163 (queued state).
 
-- Modify: `apps/api/src/routes/admin/crawl.ts`
-- Modify: `apps/api/src/routes/admin/crawl.test.ts`
+**Remaining open issues this plan addresses:**
 
-- [ ] **Step 1: Update the status endpoint SELECT to include websiteUrl, durationMs, consecutiveFailures, blockedAt**
-
-In `apps/api/src/routes/admin/crawl.ts`, replace the `venueList` select inside `GET /status`:
-
-```typescript
-// OLD
-const venueList = await db
-  .select({
-    id: venues.id,
-    name: venues.name,
-    active: venues.active,
-    verified: venues.verified,
-    consecutiveFailures: venues.consecutiveFailures,
-    blockedAt: venues.blockedAt,
-    lastCrawledAt: venues.lastCrawledAt,
-  })
-  .from(venues)
-  .orderBy(asc(venues.name))
-
-// NEW
-const venueList = await db
-  .select({
-    id: venues.id,
-    name: venues.name,
-    websiteUrl: venues.websiteUrl,
-    active: venues.active,
-    verified: venues.verified,
-    consecutiveFailures: venues.consecutiveFailures,
-    blockedAt: venues.blockedAt,
-    lastCrawledAt: venues.lastCrawledAt,
-  })
-  .from(venues)
-  .orderBy(asc(venues.name))
-```
-
-Also add `durationMs` and `httpStatusCode` to the `latestRuns` selectDistinctOn:
-
-```typescript
-// OLD latestRuns select (lines ~152-165)
-const latestRuns =
-  venueIds.length > 0
-    ? await db
-        .selectDistinctOn([crawlRuns.venueId], {
-          id: crawlRuns.id,
-          venueId: crawlRuns.venueId,
-          status: crawlRuns.status,
-          createdAt: crawlRuns.createdAt,
-          eventsFound: crawlRuns.eventsFound,
-          eventsInserted: crawlRuns.eventsInserted,
-          errorMessage: crawlRuns.errorMessage,
-          extractionStrategyUsed: crawlRuns.extractionStrategyUsed,
-        })
-
-// NEW
-const latestRuns =
-  venueIds.length > 0
-    ? await db
-        .selectDistinctOn([crawlRuns.venueId], {
-          id: crawlRuns.id,
-          venueId: crawlRuns.venueId,
-          status: crawlRuns.status,
-          createdAt: crawlRuns.createdAt,
-          eventsFound: crawlRuns.eventsFound,
-          eventsInserted: crawlRuns.eventsInserted,
-          errorMessage: crawlRuns.errorMessage,
-          extractionStrategyUsed: crawlRuns.extractionStrategyUsed,
-          httpStatusCode: crawlRuns.httpStatusCode,
-          durationMs: crawlRuns.durationMs,
-        })
-```
-
-- [ ] **Step 2: Update the status test mock to include the new fields**
-
-In `apps/api/src/routes/admin/crawl.test.ts`, find the `GET /v1/admin/crawl/status` test block (around line 316). Update the mock venue object returned by `db.select().from().orderBy`:
-
-```typescript
-// In the 'returns 200 with venue crawl status list' test, update the first mockResolvedValueOnce:
-vi.mocked(db.select().from().orderBy)
-  .mockResolvedValueOnce([
-    {
-      id: '00000000-0000-0000-0000-000000000001',
-      name: 'Ogden Theatre',
-      websiteUrl: 'https://www.ogdentheatre.com',
-      active: true,
-      verified: true,
-      consecutiveFailures: 0,
-      blockedAt: null,
-      lastCrawledAt: new Date('2026-05-07T10:00:00Z'),
-    },
-  ])
-  .mockResolvedValueOnce([])
-```
-
-- [ ] **Step 3: Run the API tests to verify they pass**
-
-```bash
-cd /path/to/worktree
-pnpm --filter @concert-crawl/api test --run
-```
-
-Expected: all tests pass (the status test assertions only check `body.success === true` and `Array.isArray(body.data)`, so adding fields won't break them).
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add apps/api/src/routes/admin/crawl.ts apps/api/src/routes/admin/crawl.test.ts
-git commit -m "fix(api): add websiteUrl, httpStatusCode, durationMs to crawl status endpoint"
-```
+| Issue | Title                                                                     |
+| ----- | ------------------------------------------------------------------------- |
+| #174  | Venue list status badges don't match design spec (need dot + capitalized) |
+| #175  | BUG: Venue shows "blocked" badge when last run was success                |
+| #176  | Run history table not scrollable / no sticky header                       |
+| #177  | Venues panel header not sticky                                            |
+| #178  | "Run all" button misplaced — should be in page header                     |
+| #179  | Venue crawl filter button visual design doesn't match spec                |
+| #180  | Right panel cards have gap — should be flush                              |
+| #181  | Venue title in detail panel too small                                     |
+| #182  | "Started" field shows time only — missing date/day                        |
+| #160  | Error section: raw error dump — needs structured display for 403/blocked  |
+| #158  | Events Ingested stat card has wrong icon                                  |
 
 ---
 
-## Task 2: page.tsx — remove eyebrow, extend CrawlStatusRow, compute stat hints
+## File Map
+
+| File                                                     | Action | Purpose                                                                                                                             |
+| -------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web/src/app/(protected)/admin/crawl/page.tsx`      | Modify | Add page header with Run all button; fix Events Ingested icon; add `lastRunStatus` to `CrawlStatusRow`                              |
+| `apps/web/src/components/admin/crawl/CrawlSplitView.tsx` | Modify | All split-view fixes: badge with dot, sticky header, flush panels, large title, date in Started, scrollable table, structured error |
+| `apps/web/src/components/admin/crawl/IssuesBanner.tsx`   | Modify | Wire Jump to issues via router.push to select blocked venue                                                                         |
+| `apps/web/src/app/api/admin/crawl/run-all/route.ts`      | Create | Next.js POST handler proxying to `/v1/admin/crawl`                                                                                  |
+
+---
+
+## Task 1: Fix venue list badge — show last run status + dot + capitalized (#174, #175)
 
 **Files:**
 
 - Modify: `apps/web/src/app/(protected)/admin/crawl/page.tsx`
-- Create: `apps/web/src/app/(protected)/admin/crawl/crawl-stats.test.ts`
+- Modify: `apps/web/src/components/admin/crawl/CrawlSplitView.tsx`
 
-- [ ] **Step 1: Write failing unit tests for the two new stat helper functions**
+**Problem:** `deriveVenueStatus()` returns `'blocked'` whenever `venue.blockedAt != null`, regardless of the last run. The venue list badge reads `row.status` (venue-level), so a venue that ran successfully today can still show "blocked" if it was blocked in the past.
 
-Create `apps/web/src/app/(protected)/admin/crawl/crawl-stats.test.ts`:
+**Fix:** Add a `lastRunStatus` field that always holds the last run's actual status. The badge uses `lastRunStatus`. The `status` field (venue-level) stays for IssuesBanner filtering. The dot color uses `status` so blocked venues still have a red dot even if the last run succeeded.
 
-```typescript
-import { describe, it, expect } from 'vitest'
-import { formatSweepHint, formatRunsBreakdown } from './crawl-stats'
+- [ ] **Step 1: Add `lastRunStatus` to `CrawlStatusRow` and `toStatusRow` in `page.tsx`**
 
-describe('formatSweepHint', () => {
-  it('returns empty string when no runs provided', () => {
-    expect(formatSweepHint([])).toBe('')
-  })
+In `apps/web/src/app/(protected)/admin/crawl/page.tsx`:
 
-  it('returns a date + time range string when runs are present', () => {
-    // All runs on the same day, ordered desc by createdAt
-    const runs = [
-      { createdAt: '2026-05-07T19:42:00Z' }, // 12:42 MT (UTC-7)
-      { createdAt: '2026-05-07T19:14:00Z' }, // 12:14 MT
-    ] as { createdAt: string }[]
-    const hint = formatSweepHint(runs)
-    // Should contain "May 7" and two times separated by "–"
-    expect(hint).toMatch(/May 7/)
-    expect(hint).toContain('–')
-    expect(hint).toContain('12:42')
-    expect(hint).toContain('12:14')
-  })
-
-  it('returns just the time (no range) when only one run', () => {
-    const runs = [{ createdAt: '2026-05-07T19:42:00Z' }] as {
-      createdAt: string
-    }[]
-    const hint = formatSweepHint(runs)
-    expect(hint).toMatch(/May 7/)
-    // No dash range when only one run
-    expect(hint).not.toContain('–')
-  })
-})
-
-describe('formatRunsBreakdown', () => {
-  it('returns empty string when no runs', () => {
-    expect(formatRunsBreakdown([])).toBe('')
-  })
-
-  it('formats counts for all statuses present', () => {
-    const runs = [
-      { status: 'success' },
-      { status: 'success' },
-      { status: 'partial' },
-      { status: 'failed' },
-    ] as { status: string }[]
-    expect(formatRunsBreakdown(runs)).toBe('2 ok · 1 partial · 1 failed')
-  })
-
-  it('omits zero-count statuses', () => {
-    const runs = [{ status: 'success' }, { status: 'success' }] as {
-      status: string
-    }[]
-    expect(formatRunsBreakdown(runs)).toBe('2 ok')
-  })
-})
-```
-
-- [ ] **Step 2: Run the tests to confirm they fail**
-
-```bash
-pnpm --filter @concert-crawl/web test --run crawl-stats
-```
-
-Expected: FAIL — `crawl-stats` module not found.
-
-- [ ] **Step 3: Create the crawl-stats.ts helper module**
-
-Create `apps/web/src/app/(protected)/admin/crawl/crawl-stats.ts`:
+Find the `CrawlStatusRow` interface and add `lastRunStatus: string` after the `status` field:
 
 ```typescript
-const MT_TIMEZONE = 'America/Denver'
-
-/**
- * Given a list of runs ordered newest-first, returns a hint string
- * showing the sweep date and time range, e.g. "May 7 · 12:14–12:42".
- * Uses the first run as sweep end and the last as sweep start.
- */
-export function formatSweepHint(runs: { createdAt: string }[]): string {
-  if (runs.length === 0) return ''
-
-  const endDate = new Date(runs[0].createdAt)
-  const startDate = new Date(runs[runs.length - 1].createdAt)
-
-  const dateStr = endDate.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    timeZone: MT_TIMEZONE,
-  })
-
-  const fmtTime = (date: Date) =>
-    date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-      timeZone: MT_TIMEZONE,
-    })
-
-  if (runs.length === 1) return `${dateStr} · ${fmtTime(endDate)}`
-  return `${dateStr} · ${fmtTime(startDate)}–${fmtTime(endDate)}`
-}
-
-/**
- * Given today's runs, returns a breakdown string e.g. "20 ok · 1 partial · 2 failed · 1 blocked".
- * Only includes statuses with at least one run.
- */
-export function formatRunsBreakdown(runs: { status: string }[]): string {
-  if (runs.length === 0) return ''
-
-  const counts: Record<string, number> = {}
-  for (const run of runs) {
-    counts[run.status] = (counts[run.status] ?? 0) + 1
-  }
-
-  return [
-    counts['success'] ? `${counts['success']} ok` : null,
-    counts['partial'] ? `${counts['partial']} partial` : null,
-    counts['failed'] ? `${counts['failed']} failed` : null,
-    counts['blocked'] ? `${counts['blocked']} blocked` : null,
-  ]
-    .filter(Boolean)
-    .join(' · ')
-}
-```
-
-- [ ] **Step 4: Run tests to confirm they pass**
-
-```bash
-pnpm --filter @concert-crawl/web test --run crawl-stats
-```
-
-Expected: all 6 tests pass.
-
-- [ ] **Step 5: Rewrite page.tsx with all the changes**
-
-Replace the full contents of `apps/web/src/app/(protected)/admin/crawl/page.tsx`:
-
-```typescript
-import { auth, requireAdminUser } from '@/lib/auth'
-import { apiClient } from '@/lib/api'
-import { StatCard } from '@/components/admin/primitives'
-import { CrawlSplitView } from '@/components/admin/crawl/CrawlSplitView'
-import { IssuesBanner } from '@/components/admin/crawl/IssuesBanner'
-import { formatSweepHint, formatRunsBreakdown } from './crawl-stats'
-import type { CrawlRun } from '@concert-crawl/types'
-
 export interface CrawlStatusRow {
   venueId: string
   venueName: string
   websiteUrl: string
-  status: string
+  status: string // venue-level: used by IssuesBanner and dot color
+  lastRunStatus: string // last run's actual status: used by the venue list badge
   lastRunAt: string | null
   eventsFound: number
   durationMs: number | null
@@ -316,36 +80,18 @@ export interface CrawlStatusRow {
   cost: number
   error: string | null
 }
+```
 
-interface RawVenueStatus {
-  id: string
-  name: string
-  websiteUrl: string
-  active: boolean
-  verified: boolean
-  consecutiveFailures: number
-  blockedAt: string | null
-  lastCrawledAt: string | null
-  lastRun: {
-    id: string
-    venueId: string
-    status: string
-    createdAt: string
-    eventsFound: number
-    eventsInserted: number
-    errorMessage: string | null
-    extractionStrategyUsed: string | null
-    httpStatusCode: number | null
-    durationMs: number | null
-  } | null
-}
+Find `toStatusRow` and add `lastRunStatus` to its return:
 
+```typescript
 function toStatusRow(venue: RawVenueStatus): CrawlStatusRow {
   return {
     venueId: venue.id,
     venueName: venue.name,
     websiteUrl: venue.websiteUrl,
-    status: venue.lastRun?.status ?? 'never',
+    status: deriveVenueStatus(venue),
+    lastRunStatus: venue.lastRun?.status ?? 'never',
     lastRunAt: venue.lastRun?.createdAt ?? null,
     eventsFound: venue.lastRun?.eventsFound ?? 0,
     durationMs: venue.lastRun?.durationMs ?? null,
@@ -357,212 +103,363 @@ function toStatusRow(venue: RawVenueStatus): CrawlStatusRow {
     error: venue.lastRun?.errorMessage ?? null,
   }
 }
+```
 
-interface Props {
-  searchParams: Promise<Record<string, string | string[] | undefined>>
-}
+- [ ] **Step 2: Add `lastRunStatus` to the `CrawlStatusRow` interface in `CrawlSplitView.tsx`**
 
-export default async function AdminCrawlPage({ searchParams }: Props) {
-  await requireAdminUser()
-  const { getToken } = await auth()
-  const token = await getToken()
-  if (!token) return null
+In `apps/web/src/components/admin/crawl/CrawlSplitView.tsx`, find the local `CrawlStatusRow` interface and add `lastRunStatus: string` after `status`:
 
-  const resolvedParams = await searchParams
-  const rawVenueId = resolvedParams.venueId
-  const initialVenueId =
-    (Array.isArray(rawVenueId) ? rawVenueId[0] : rawVenueId) || undefined
-
-  const [rawStatus, runs] = await Promise.all([
-    apiClient.get<RawVenueStatus[]>('/v1/admin/crawl/status', token),
-    apiClient.get<CrawlRun[]>('/v1/admin/crawl/runs?limit=50', token),
-  ])
-  const status = rawStatus.map(toStatusRow)
-  const todayStr = new Date().toDateString()
-  const todayRuns = runs.filter(
-    (run) => new Date(run.createdAt).toDateString() === todayStr,
-  )
-
-  const sweepHint = formatSweepHint(runs.slice(0, 50))
-  const runsBreakdown = formatRunsBreakdown(todayRuns)
-
-  const lastRunRelative = runs[0]?.createdAt
-    ? `${String(Math.round((Date.now() - new Date(runs[0].createdAt).getTime()) / 60000))}m ago`
-    : '—'
-
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 24,
-        height: '100%',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <div>
-          <h1
-            style={{
-              fontSize: 24,
-              fontWeight: 700,
-              color: 'var(--fg)',
-              margin: 0,
-            }}
-          >
-            Crawl status
-          </h1>
-          <p
-            style={{
-              fontSize: 13,
-              color: 'var(--fg-muted)',
-              margin: '4px 0 0',
-            }}
-          >
-            Every venue crawl, run by run. The dataset is only as fresh as this
-            page.
-          </p>
-        </div>
-      </div>
-
-      <IssuesBanner
-        blockedVenues={status.filter(
-          (row) => row.status === 'blocked' || row.status === 'failed',
-        )}
-      />
-
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 16,
-        }}
-      >
-        <StatCard
-          label="Last sweep"
-          value={lastRunRelative}
-          hint={sweepHint || undefined}
-          iconName="RefreshCw"
-          kind="neutral"
-        />
-        <StatCard
-          label="Today's runs"
-          value={String(todayRuns.length)}
-          hint={runsBreakdown || undefined}
-          iconName="Activity"
-          kind="signal"
-        />
-        <StatCard
-          label="Events ingested"
-          value={String(
-            todayRuns.reduce((sum, run) => sum + run.eventsInserted, 0),
-          )}
-          hint="today"
-          iconName="CheckSquare"
-          kind="success"
-        />
-        <StatCard
-          label="LLM cost · today"
-          value={`$${todayRuns.reduce((sum, run) => sum + (run.llmCostUsd ?? 0), 0).toFixed(2)}`}
-          iconName="DollarSign"
-          kind="signal"
-        />
-      </div>
-
-      <CrawlSplitView
-        initialStatus={status}
-        initialRuns={runs}
-        {...(initialVenueId !== undefined && {
-          initialSelectedId: initialVenueId,
-        })}
-      />
-    </div>
-  )
+```typescript
+interface CrawlStatusRow {
+  venueId: string
+  venueName: string
+  websiteUrl: string
+  status: string
+  lastRunStatus: string
+  lastRunAt: string | null
+  eventsFound: number
+  durationMs: number | null
+  httpStatusCode: number | null
+  consecutiveFailures: number
+  blockedAt: string | null
+  strategy: string
+  cost: number
+  error: string | null
 }
 ```
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 3: Update the venue list badge to use `lastRunStatus` with dot + capitalized text**
+
+In `CrawlSplitView.tsx`, find the `StatusBadge` inside the venue list `filteredStatus.map(...)`. Replace:
+
+```tsx
+<StatusBadge kind={STATUS_KIND[row.status] ?? 'neutral'} variant="soft">
+  {row.status}
+</StatusBadge>
+```
+
+With:
+
+```tsx
+<StatusBadge kind={STATUS_KIND[row.lastRunStatus] ?? 'neutral'} dot>
+  {row.lastRunStatus.charAt(0).toUpperCase() + row.lastRunStatus.slice(1)}
+</StatusBadge>
+```
+
+Note: The dot color `span` above the badge (using `STATUS_KIND[row.status]`) stays as-is — it correctly shows venue-level status.
+
+- [ ] **Step 4: Run typecheck**
 
 ```bash
-git add apps/web/src/app/(protected)/admin/crawl/
-git commit -m "fix(web): remove phase eyebrow, extend CrawlStatusRow, add sweep/run-breakdown hints"
+cd /Users/huey/Projects/concert-crawl/.worktrees/fix-admin-crawl-ui-polish
+pnpm --filter @concert-crawl/web typecheck
+```
+
+Expected: No errors.
+
+- [ ] **Step 5: Commit**
+
+```bash
+cd /Users/huey/Projects/concert-crawl/.worktrees/fix-admin-crawl-ui-polish
+git add apps/web/src/app/\(protected\)/admin/crawl/page.tsx \
+        apps/web/src/components/admin/crawl/CrawlSplitView.tsx
+git commit -m "fix(admin/crawl): venue badge shows last run status (not venue-level) with dot + capitalized text"
 ```
 
 ---
 
-## Task 3: StatCard — uppercase labels
+## Task 2: Make venue panel header sticky + update label (#177, #179)
 
 **Files:**
 
-- Modify: `apps/web/src/components/admin/primitives/StatCard.tsx`
+- Modify: `apps/web/src/components/admin/crawl/CrawlSplitView.tsx`
 
-- [ ] **Step 1: Add textTransform and letterSpacing to the label div**
+The header div inside the left rail needs `position: sticky` so it stays visible when scrolling. The label changes to "Latest run · per venue N" with the count bolded. The select stays (spec shows a filter control here).
 
-In `apps/web/src/components/admin/primitives/StatCard.tsx`, find the label div (currently line ~62–69). Replace its style:
+- [ ] **Step 1: Update the venue panel header in `CrawlSplitView.tsx`**
 
-```typescript
-// OLD
+Find the header div inside the left rail (the one with `padding: '10px 14px'` and `borderBottom` and `display: flex`). Add sticky styles and update the label:
+
+```tsx
 <div
   style={{
-    fontSize: 12,
-    fontWeight: 500,
-    color: 'var(--fg-muted)',
-    marginBottom: 6,
+    padding: '10px 14px',
+    borderBottom: '1px solid var(--border)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    flexShrink: 0,
+    position: 'sticky',
+    top: 0,
+    zIndex: 1,
+    background: 'var(--bg-elevated)',
   }}
 >
-  {label}
-</div>
-
-// NEW
-<div
-  style={{
-    fontSize: 11,
-    fontWeight: 600,
-    color: 'var(--fg-muted)',
-    marginBottom: 6,
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.07em',
-  }}
->
-  {label}
+  <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--fg-muted)' }}>
+    Latest run · per venue{' '}
+    <span style={{ fontWeight: 700, color: 'var(--fg)' }}>
+      {filteredStatus.length}
+    </span>
+  </span>
+  <select
+    value={statusFilter}
+    onChange={(ev) => setStatusFilter(ev.target.value)}
+    style={{
+      fontSize: 11,
+      fontWeight: 600,
+      color: 'var(--fg-muted)',
+      background: 'var(--bg-elevated)',
+      border: '1px solid var(--border)',
+      borderRadius: 6,
+      padding: '2px 6px',
+      cursor: 'pointer',
+    }}
+  >
+    {STATUS_FILTER_OPTIONS.map((opt) => (
+      <option key={opt.value} value={opt.value}>
+        {opt.label}
+      </option>
+    ))}
+  </select>
 </div>
 ```
+
+- [ ] **Step 2: Run typecheck**
+
+```bash
+cd /Users/huey/Projects/concert-crawl/.worktrees/fix-admin-crawl-ui-polish
+pnpm --filter @concert-crawl/web typecheck
+```
+
+Expected: No errors.
+
+- [ ] **Step 3: Commit**
+
+```bash
+cd /Users/huey/Projects/concert-crawl/.worktrees/fix-admin-crawl-ui-polish
+git add apps/web/src/components/admin/crawl/CrawlSplitView.tsx
+git commit -m "fix(admin/crawl): sticky venues panel header with 'Latest run · per venue N' label"
+```
+
+---
+
+## Task 3: Add "Run all" button to page header + create API route (#178)
+
+**Files:**
+
+- Modify: `apps/web/src/app/(protected)/admin/crawl/page.tsx`
+- Modify: `apps/web/src/components/admin/crawl/CrawlSplitView.tsx` (add `CrawlRunAllButton` export)
+- Create: `apps/web/src/app/api/admin/crawl/run-all/route.ts`
+
+`page.tsx` is a React Server Component — it can't have click handlers. Solution: add a `CrawlRunAllButton` client component inside `CrawlSplitView.tsx` (which is already `'use client'`) and import it into `page.tsx`.
+
+- [ ] **Step 1: Create the Next.js run-all API route**
+
+Create `apps/web/src/app/api/admin/crawl/run-all/route.ts`:
+
+```typescript
+import { auth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { isRole } from '@concert-crawl/types'
+
+const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
+
+export async function POST() {
+  const { getToken, sessionClaims } = await auth()
+  const token = await getToken()
+  if (!token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  const role = isRole(sessionClaims?.metadata?.role)
+    ? sessionClaims.metadata.role
+    : null
+  if (role !== 'admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  const upstream = await fetch(`${API_URL}/v1/admin/crawl`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  })
+
+  const body: unknown = await upstream.json().catch(() => ({}))
+  return NextResponse.json(body, { status: upstream.status })
+}
+```
+
+Note: The `POST /v1/admin/crawl` (no venueId) endpoint is added by the `feat/admin-crawl-data-and-run-all` PR. Once that merges, this route works end-to-end. Until then, the button shows its error state gracefully.
+
+- [ ] **Step 2: Add `CrawlRunAllButton` to `CrawlSplitView.tsx`**
+
+Add this exported component at the bottom of `CrawlSplitView.tsx` (after the `CrawlSplitView` export):
+
+```tsx
+export const CrawlRunAllButton = () => {
+  const [state, setState] = useState<
+    'idle' | 'triggering' | 'queued' | 'error'
+  >('idle')
+
+  async function handleRunAll() {
+    setState('triggering')
+    try {
+      const res = await fetch('/api/admin/crawl/run-all', { method: 'POST' })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      setState('queued')
+      setTimeout(() => setState('idle'), 5000)
+    } catch {
+      setState('error')
+      setTimeout(() => setState('idle'), 4000)
+    }
+  }
+
+  const label =
+    state === 'triggering'
+      ? 'Queuing…'
+      : state === 'queued'
+        ? 'Queued ✓'
+        : state === 'error'
+          ? 'Error — retry?'
+          : 'Run all'
+
+  return (
+    <button
+      onClick={handleRunAll}
+      disabled={state === 'triggering' || state === 'queued'}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        height: 32,
+        padding: '0 14px',
+        borderRadius: 8,
+        fontSize: 13,
+        fontWeight: 600,
+        border: '1px solid var(--border-strong)',
+        background: state === 'queued' ? 'rgba(47,122,77,0.1)' : 'transparent',
+        color:
+          state === 'queued'
+            ? 'var(--success)'
+            : state === 'error'
+              ? 'var(--danger)'
+              : 'var(--fg)',
+        cursor:
+          state === 'triggering' || state === 'queued'
+            ? 'not-allowed'
+            : 'pointer',
+      }}
+    >
+      ↻ {label}
+    </button>
+  )
+}
+```
+
+- [ ] **Step 3: Import `CrawlRunAllButton` in `page.tsx` and add to page header**
+
+In `apps/web/src/app/(protected)/admin/crawl/page.tsx`, update the import:
+
+```typescript
+import {
+  CrawlSplitView,
+  CrawlRunAllButton,
+} from '@/components/admin/crawl/CrawlSplitView'
+```
+
+Find the page title block (the `<div>` containing `<h1>Crawl status</h1>`). Replace it with a two-column header row:
+
+```tsx
+<div
+  style={{
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 16,
+  }}
+>
+  <div>
+    <h1
+      style={{
+        fontSize: 22,
+        fontWeight: 700,
+        color: 'var(--fg)',
+        margin: 0,
+      }}
+    >
+      Crawl status
+    </h1>
+    <p style={{ fontSize: 13, color: 'var(--fg-muted)', margin: '4px 0 0' }}>
+      Every venue crawl, run by run. The dataset is only as fresh as this page.
+    </p>
+  </div>
+  <CrawlRunAllButton />
+</div>
+```
+
+- [ ] **Step 4: Run typecheck**
+
+```bash
+cd /Users/huey/Projects/concert-crawl/.worktrees/fix-admin-crawl-ui-polish
+pnpm --filter @concert-crawl/web typecheck
+```
+
+Expected: No errors.
+
+- [ ] **Step 5: Commit**
+
+```bash
+cd /Users/huey/Projects/concert-crawl/.worktrees/fix-admin-crawl-ui-polish
+git add apps/web/src/app/\(protected\)/admin/crawl/page.tsx \
+        apps/web/src/components/admin/crawl/CrawlSplitView.tsx \
+        "apps/web/src/app/api/admin/crawl/run-all/route.ts"
+git commit -m "fix(admin/crawl): move Run all to page header; add run-all Next.js API route"
+```
+
+---
+
+## Task 4: Fix Events Ingested stat card icon (#158)
+
+**Files:**
+
+- Modify: `apps/web/src/app/(protected)/admin/crawl/page.tsx`
+
+Current: `iconName="CheckSquare"`. Spec shows a calendar/checklist icon. Fix: `CalendarCheck2`.
+
+- [ ] **Step 1: Change the icon**
+
+Find the `StatCard` for "Events ingested" and change `iconName="CheckSquare"` to `iconName="CalendarCheck2"`.
 
 - [ ] **Step 2: Commit**
 
 ```bash
-git add apps/web/src/components/admin/primitives/StatCard.tsx
-git commit -m "fix(web): uppercase + letter-spaced StatCard labels to match design"
+cd /Users/huey/Projects/concert-crawl/.worktrees/fix-admin-crawl-ui-polish
+git add apps/web/src/app/\(protected\)/admin/crawl/page.tsx
+git commit -m "fix(admin/crawl): update Events Ingested stat card icon to CalendarCheck2"
 ```
 
 ---
 
-## Task 4: IssuesBanner redesign
+## Task 5: Wire "Jump to issues" to select blocked venue via URL param (#151)
 
 **Files:**
 
 - Modify: `apps/web/src/components/admin/crawl/IssuesBanner.tsx`
 
-The design shows:
+Currently `jumpToIssues` calls `scrollIntoView` but may not select the venue in the split view. Using `router.push(?venueId=xxx)` causes a soft navigation so `page.tsx` re-renders with `initialSelectedId` pointing to the blocked venue, which selects it in `CrawlSplitView`.
 
-- A banner icon (warning) on the left
-- Headline: "N venue blocked · N venue paused due to robots.txt"
-- Sub-line: venue names with context (e.g. "Red Rocks (3rd consecutive 403)")
-- "Jump to issues ›" link on the right that scrolls to the first problematic venue in the list
+- [ ] **Step 1: Update `IssuesBanner.tsx` to use `useRouter`**
 
-The `IssuesBanner` receives `blockedVenues: Array<{ venueId: string; venueName: string; status: string }>`. Add `consecutiveFailures` and `blockedAt` to make the sub-line richer.
+Replace the entire file:
 
-- [ ] **Step 1: Update the IssuesBanner props type and page.tsx to pass new fields**
+```tsx
+'use client'
 
-First, update the Props interface in `IssuesBanner.tsx`:
+import { useRouter } from 'next/navigation'
 
-```typescript
-interface BlockedVenueInfo {
+interface IssueVenue {
   venueId: string
   venueName: string
   status: string
@@ -571,108 +468,100 @@ interface BlockedVenueInfo {
 }
 
 interface Props {
-  blockedVenues: BlockedVenueInfo[]
-}
-```
-
-In `page.tsx`, the `status.filter(...)` call already passes full `CrawlStatusRow` objects (which now include `consecutiveFailures` and `blockedAt`), so no change needed there — TypeScript will check the shape.
-
-- [ ] **Step 2: Rewrite IssuesBanner.tsx**
-
-```typescript
-interface BlockedVenueInfo {
-  venueId: string
-  venueName: string
-  status: string
-  consecutiveFailures: number
-  blockedAt: string | null
-}
-
-interface Props {
-  blockedVenues: BlockedVenueInfo[]
-}
-
-function venueLabel(venue: BlockedVenueInfo): string {
-  if (venue.status === 'blocked') {
-    return `${venue.venueName} (${venue.consecutiveFailures}rd consecutive 403)`
-  }
-  return `${venue.venueName} (disallowed)`
+  blockedVenues: IssueVenue[]
 }
 
 export function IssuesBanner({ blockedVenues }: Props) {
+  const router = useRouter()
+
   if (blockedVenues.length === 0) return null
 
-  const blocked = blockedVenues.filter((venue) => venue.status === 'blocked')
-  const failed = blockedVenues.filter((venue) => venue.status === 'failed')
+  const blocked = blockedVenues.filter((row) => row.status === 'blocked')
+  const failed = blockedVenues.filter((row) => row.status === 'failed')
+  const paused = blockedVenues.filter((row) => row.status === 'paused')
 
-  const headline = [
-    blocked.length > 0
-      ? `${blocked.length} venue${blocked.length > 1 ? 's' : ''} blocked`
-      : null,
-    failed.length > 0
-      ? `${failed.length} venue${failed.length > 1 ? 's' : ''} paused due to robots.txt`
-      : null,
-  ]
-    .filter(Boolean)
-    .join(' · ')
+  const parts: string[] = []
+  if (blocked.length > 0)
+    parts.push(
+      `${blocked.length} venue${blocked.length > 1 ? 's' : ''} blocked`,
+    )
+  if (failed.length > 0)
+    parts.push(`${failed.length} venue${failed.length > 1 ? 's' : ''} failed`)
+  if (paused.length > 0)
+    parts.push(`${paused.length} venue${paused.length > 1 ? 's' : ''} paused`)
 
-  const subLine = blockedVenues.map(venueLabel).join(' · ')
+  const headline = parts.join(' · ')
 
-  function handleJump() {
-    const firstId = blockedVenues[0]?.venueId
-    if (!firstId) return
-    const el = document.getElementById(`venue-row-${firstId}`)
-    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  function jumpToIssues() {
+    const firstVenue = blockedVenues[0]
+    if (!firstVenue) return
+    router.push(`?venueId=${firstVenue.venueId}`)
   }
 
   return (
     <div
       style={{
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         gap: 12,
-        padding: '12px 16px',
+        padding: '10px 14px',
         borderRadius: 10,
         background: 'rgba(184,56,26,0.08)',
         border: '1px solid rgba(184,56,26,0.25)',
       }}
     >
       <span
-        style={{
-          fontSize: 16,
-          flexShrink: 0,
-          color: 'var(--danger)',
-        }}
+        style={{ color: 'var(--danger)', fontSize: 14, flexShrink: 0 }}
         aria-hidden
       >
         ⚠
       </span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{ fontSize: 13, fontWeight: 600, color: 'var(--danger)' }}
-        >
+        <span style={{ fontSize: 13, color: 'var(--danger)', fontWeight: 600 }}>
           {headline}
+        </span>
+        <div
+          style={{
+            marginTop: 4,
+            display: 'flex',
+            flexWrap: 'wrap' as const,
+            gap: '4px 10px',
+          }}
+        >
+          {blockedVenues.map((venue) => (
+            <span
+              key={venue.venueId}
+              style={{ fontSize: 12, color: 'var(--fg-muted)' }}
+            >
+              {venue.venueName}
+              {venue.consecutiveFailures > 0 && (
+                <span style={{ color: 'var(--fg-subtle)' }}>
+                  {' '}
+                  ({venue.consecutiveFailures}×)
+                </span>
+              )}
+              {venue.status === 'blocked' && venue.blockedAt && (
+                <span style={{ color: 'var(--fg-subtle)' }}>
+                  {' '}
+                  · HTTP blocked
+                </span>
+              )}
+            </span>
+          ))}
         </div>
-        {subLine && (
-          <div
-            style={{ fontSize: 12, color: 'var(--fg-muted)', marginTop: 2 }}
-          >
-            {subLine}
-          </div>
-        )}
       </div>
       <button
-        onClick={handleJump}
+        onClick={jumpToIssues}
         style={{
+          flexShrink: 0,
           fontSize: 12,
           fontWeight: 500,
-          color: 'var(--fg-muted)',
-          background: 'none',
+          color: 'var(--danger)',
+          background: 'transparent',
           border: 'none',
           cursor: 'pointer',
-          whiteSpace: 'nowrap',
-          flexShrink: 0,
-          padding: '2px 4px',
+          padding: '2px 0',
+          whiteSpace: 'nowrap' as const,
         }}
       >
         Jump to issues ›
@@ -682,457 +571,254 @@ export function IssuesBanner({ blockedVenues }: Props) {
 }
 ```
 
-Note: `IssuesBanner` must be `'use client'` because it uses `handleJump` with `document`. Add `'use client'` at the top.
+- [ ] **Step 2: Run typecheck**
+
+```bash
+cd /Users/huey/Projects/concert-crawl/.worktrees/fix-admin-crawl-ui-polish
+pnpm --filter @concert-crawl/web typecheck
+```
+
+Expected: No errors.
 
 - [ ] **Step 3: Commit**
 
 ```bash
+cd /Users/huey/Projects/concert-crawl/.worktrees/fix-admin-crawl-ui-polish
 git add apps/web/src/components/admin/crawl/IssuesBanner.tsx
-git commit -m "fix(web): redesign IssuesBanner with breakdown text and Jump to issues link"
+git commit -m "fix(admin/crawl): Jump to issues navigates to blocked venue via URL param"
 ```
 
 ---
 
-## Task 5: CrawlSplitView — venue list filter
+## Task 6: Right panel — flush panels, large venue title, better button labels (#180, #181, #160)
 
 **Files:**
 
 - Modify: `apps/web/src/components/admin/crawl/CrawlSplitView.tsx`
 
-- [ ] **Step 1: Add statusFilter state and filter UI above the venue list**
+Three changes to the right inspector:
 
-In `CrawlSplitView.tsx`, add filter state and the filtered list computation after the existing state declarations:
+1. Remove `gap: 16` between the two panels → `gap: 0`, wrap both in a single bordered container
+2. Render venue title as a large `<h2>` instead of the Panel's 14px header
+3. Update Source button label to "Source URL" with icon; Re-crawl gets "↻" prefix
 
-```typescript
-const STATUS_FILTER_OPTIONS = [
-  { value: null, label: 'All venues' },
-  { value: 'failed', label: 'Failed' },
-  { value: 'blocked', label: 'Blocked' },
-  { value: 'partial', label: 'Partial' },
-  { value: 'success', label: 'Success' },
-  { value: 'never', label: 'Never crawled' },
-] as const
+- [ ] **Step 1: Replace the right inspector container**
 
-// Add this state after existing useState declarations:
-const [statusFilter, setStatusFilter] = useState<string | null>(null)
-const [filterOpen, setFilterOpen] = useState(false)
+In `CrawlSplitView.tsx`, find:
 
-const filteredStatus = statusFilter
-  ? initialStatus.filter((row) => row.status === statusFilter)
-  : initialStatus
+```tsx
+{/* Right inspector */}
+<div
+  style={{
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
+    overflowY: 'auto',
+  }}
+>
 ```
 
-Replace all references to `initialStatus` in the venue list render with `filteredStatus`.
+Replace with:
 
-- [ ] **Step 2: Update the venue list header to include venue count and Filter button**
-
-Replace the left-rail header div:
-
-```typescript
-// OLD
+```tsx
+{/* Right inspector */}
 <div
   style={{
-    padding: '10px 14px',
-    borderBottom: '1px solid var(--border)',
-    fontSize: 12,
-    fontWeight: 600,
-    color: 'var(--fg-muted)',
-  }}
->
-  {initialStatus.length} venues
-</div>
-
-// NEW
-<div
-  style={{
-    padding: '10px 14px',
-    borderBottom: '1px solid var(--border)',
+    flex: 1,
     display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
+    border: '1px solid var(--border)',
+    borderRadius: 12,
+    background: 'var(--bg-elevated)',
+    overflow: 'hidden',
+    minHeight: 0,
   }}
 >
-  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--fg-muted)' }}>
-    Latest run · per venue {initialStatus.length}
-  </span>
-  <div style={{ position: 'relative' }}>
-    <button
-      onClick={() => setFilterOpen((prev) => !prev)}
+```
+
+- [ ] **Step 2: Replace the venue detail Panel with an inline section**
+
+Find `<Panel title={selected.venueName} action={...}>` and replace it with a plain `<div>` that has a larger title heading. The action buttons (Source URL, Re-crawl) move into the heading row.
+
+Replace from `<Panel title={selected.venueName} action={...}>` through to `</Panel>` (the first Panel, not the Run history one) with:
+
+```tsx
+{
+  /* Venue detail — inline, not in a Panel */
+}
+;<div
+  style={{
+    padding: '16px 20px',
+    borderBottom: '1px solid var(--border)',
+    flexShrink: 0,
+  }}
+>
+  {/* Header: venue name + action buttons */}
+  <div
+    style={{
+      display: 'flex',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: 12,
+      marginBottom: 16,
+    }}
+  >
+    <h2
       style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 4,
-        fontSize: 12,
-        fontWeight: 500,
-        color: statusFilter ? 'var(--fg)' : 'var(--fg-muted)',
-        background: 'none',
-        border: '1px solid var(--border)',
-        borderRadius: 6,
-        padding: '3px 8px',
-        cursor: 'pointer',
+        fontSize: 22,
+        fontWeight: 700,
+        color: 'var(--fg)',
+        margin: 0,
+        lineHeight: 1.2,
       }}
     >
-      ⊘ {statusFilter ?? 'Filter'}
-    </button>
-    {filterOpen && (
-      <div
+      {selected.venueName}
+    </h2>
+    <div
+      style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}
+    >
+      {selected.websiteUrl && (
+        <a
+          href={selected.websiteUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+            height: 28,
+            padding: '0 10px',
+            borderRadius: 6,
+            fontSize: 12,
+            fontWeight: 500,
+            border: '1px solid var(--border)',
+            color: 'var(--fg-muted)',
+            textDecoration: 'none',
+          }}
+        >
+          ↗ Source URL
+        </a>
+      )}
+      <button
+        onClick={() => handleTrigger(selected.venueId)}
+        disabled={
+          venueRecrawlState === 'triggering' || venueRecrawlState === 'queued'
+        }
         style={{
-          position: 'absolute',
-          right: 0,
-          top: '100%',
-          marginTop: 4,
-          background: 'var(--bg-elevated)',
-          border: '1px solid var(--border)',
-          borderRadius: 8,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
-          zIndex: 10,
-          minWidth: 140,
-          overflow: 'hidden',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 5,
+          height: 28,
+          padding: '0 10px',
+          borderRadius: 6,
+          fontSize: 12,
+          fontWeight: 500,
+          border: '1px solid var(--border-strong)',
+          background:
+            venueRecrawlState === 'queued'
+              ? 'rgba(255,170,0,0.1)'
+              : 'transparent',
+          color:
+            venueRecrawlState === 'triggering' || venueRecrawlState === 'queued'
+              ? 'var(--fg-subtle)'
+              : 'var(--fg)',
+          cursor:
+            venueRecrawlState === 'triggering' || venueRecrawlState === 'queued'
+              ? 'not-allowed'
+              : 'pointer',
         }}
       >
-        {STATUS_FILTER_OPTIONS.map((opt) => (
-          <button
-            key={String(opt.value)}
-            onClick={() => {
-              setStatusFilter(opt.value)
-              setFilterOpen(false)
-            }}
-            style={{
-              display: 'block',
-              width: '100%',
-              padding: '8px 12px',
-              textAlign: 'left',
-              fontSize: 12,
-              background:
-                statusFilter === opt.value ? 'var(--surface-2)' : 'transparent',
-              color: 'var(--fg)',
-              border: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
-    )}
-  </div>
-</div>
-```
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add apps/web/src/components/admin/crawl/CrawlSplitView.tsx
-git commit -m "fix(web): add status filter to venue list in CrawlSplitView"
-```
-
----
-
-## Task 6: CrawlSplitView — exact timestamps and duration in venue list rows
-
-The venue row sub-line currently shows `<RelTime iso={row.lastRunAt} /> · {row.eventsFound} ev`.
-Design requires: `12:42:08 · 0.8s · 0 ev` (exact HH:MM:SS MT time + duration).
-
-**Files:**
-
-- Modify: `apps/web/src/components/admin/crawl/CrawlSplitView.tsx`
-
-- [ ] **Step 1: Add time formatting helpers at the top of CrawlSplitView.tsx**
-
-Add after the imports:
-
-```typescript
-const MT_TIMEZONE = 'America/Denver'
-
-function fmtTimeMT(iso: string): string {
-  return new Date(iso).toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-    timeZone: MT_TIMEZONE,
-  })
-}
-
-function fmtDuration(ms: number | null): string | null {
-  if (ms === null) return null
-  return `${(ms / 1000).toFixed(1)}s`
-}
-```
-
-- [ ] **Step 2: Update the venue row sub-line**
-
-Find the venue sub-line (currently using `<RelTime>`). Replace:
-
-```typescript
-// OLD
-<div style={{ fontSize: 12, color: 'var(--fg-muted)' }}>
-  {row.lastRunAt ? <RelTime iso={row.lastRunAt} /> : 'never'} ·{' '}
-  {row.eventsFound} ev
-</div>
-
-// NEW
-<div style={{ fontSize: 12, color: 'var(--fg-muted)', fontVariantNumeric: 'tabular-nums' }}>
-  {row.lastRunAt ? fmtTimeMT(row.lastRunAt) : 'never'}
-  {fmtDuration(row.durationMs) ? ` · ${fmtDuration(row.durationMs)}` : ''}
-  {' · '}{row.eventsFound} ev
-</div>
-```
-
-- [ ] **Step 3: Add `id` to each venue row button for Jump-to-issues scroll target**
-
-Add `id={`venue-row-${row.venueId}`}` to each venue `<button>` element.
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add apps/web/src/components/admin/crawl/CrawlSplitView.tsx
-git commit -m "fix(web): show exact MT timestamps and duration in venue list rows"
-```
-
----
-
-## Task 7: CrawlSplitView — selectable past runs
-
-The run history table rows are currently non-interactive. The user should be able to click a past run to promote it to the detail section.
-
-**Files:**
-
-- Modify: `apps/web/src/components/admin/crawl/CrawlSplitView.tsx`
-
-- [ ] **Step 1: Add selectedRunId state**
-
-Add a second state for the selected run ID. When a venue is selected, reset to the most recent run (null = auto = first):
-
-```typescript
-const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
-
-// When venue selection changes, clear the run selection
-// (wrap the existing setSelectedId call)
-function handleSelectVenue(venueId: string) {
-  setSelectedId(venueId)
-  setSelectedRunId(null)
-}
-```
-
-Update all `onClick={() => setSelectedId(row.venueId)}` calls to `onClick={() => handleSelectVenue(row.venueId)}`.
-
-- [ ] **Step 2: Derive the active run from selectedRunId**
-
-Replace the current `selectedRuns` derivation:
-
-```typescript
-// OLD
-const selected = initialStatus.find((row) => row.venueId === selectedId)
-const selectedRuns = initialRuns.filter((run) => run.venueId === selectedId)
-
-// NEW
-const selected = initialStatus.find((row) => row.venueId === selectedId)
-const selectedRuns = initialRuns.filter((run) => run.venueId === selectedId)
-const activeRun = selectedRunId
-  ? (selectedRuns.find((run) => run.id === selectedRunId) ?? selectedRuns[0])
-  : selectedRuns[0]
-```
-
-- [ ] **Step 3: Make history table rows clickable**
-
-Replace `<TR key={run.id}>` with an interactive row:
-
-```typescript
-<TR
-  key={run.id}
-  onClick={() => setSelectedRunId(run.id)}
-  style={{
-    cursor: 'pointer',
-    background: run.id === activeRun?.id ? 'var(--surface-2)' : undefined,
-  }}
->
-```
-
-Note: `TR` may need a `style` and `onClick` prop. Check `TR` component signature in `apps/web/src/components/admin/primitives/`. If `TR` doesn't accept these, wrap with a `<tr>` that does, or add the props to `TR`.
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add apps/web/src/components/admin/crawl/CrawlSplitView.tsx
-git commit -m "fix(web): make run history rows clickable to select a past run"
-```
-
----
-
-## Task 8: CrawlSplitView — run detail panel redesign
-
-The right panel needs: Run ID badge, status badge, Source URL button, STARTED/DURATION/HTTP/LLM COST stats grid, redesigned error section.
-
-**Files:**
-
-- Modify: `apps/web/src/components/admin/crawl/CrawlSplitView.tsx`
-
-- [ ] **Step 1: Add a time formatter for STARTED**
-
-Add helper:
-
-```typescript
-function fmtStarted(iso: string): string {
-  const date = new Date(iso)
-  const today = new Date()
-  const isSameDay =
-    date.toLocaleDateString('en-US', { timeZone: MT_TIMEZONE }) ===
-    today.toLocaleDateString('en-US', { timeZone: MT_TIMEZONE })
-
-  const timeStr = date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-    timeZone: MT_TIMEZONE,
-  })
-
-  if (isSameDay) return `Today, ${timeStr}`
-
-  const dateStr = date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    timeZone: MT_TIMEZONE,
-  })
-  return `${dateStr}, ${timeStr}`
-}
-
-function runIdLabel(id: string): string {
-  return `R-${id.slice(0, 8)}`
-}
-```
-
-- [ ] **Step 2: Rewrite the Panel title area and stats grid**
-
-Replace the entire `<Panel title={selected.venueName} action={...}>` block. The panel now shows:
-
-1. Above the Panel: run ID badge + status badge row
-2. Panel title: venue name
-3. Panel action: Source URL button + Re-crawl button
-4. Stats grid: STARTED, DURATION, HTTP, LLM COST (4 columns)
-5. EVENTS section: found, created, updated (3 columns)
-6. ERROR section (if error): redesigned with title + detail lines
-
-```typescript
-{selected ? (
-  <>
-    {/* Run ID + status row above panel */}
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingLeft: 2 }}>
-      {activeRun && (
-        <>
-          <span style={{ fontSize: 12, color: 'var(--fg-muted)', fontFamily: 'monospace' }}>
-            {runIdLabel(activeRun.id)}
-          </span>
-          <span style={{ color: 'var(--border)' }}>·</span>
-        </>
-      )}
-      <StatusBadge kind={STATUS_KIND[selected.status] ?? 'neutral'} dot>
-        {selected.status}
-      </StatusBadge>
+        {venueRecrawlState === 'triggering'
+          ? '↻ Triggering…'
+          : venueRecrawlState === 'queued'
+            ? '↻ Queued'
+            : '↻ Re-crawl'}
+      </button>
     </div>
-
-    <Panel
-      title={selected.venueName}
-      action={
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <a
-            href={selected.websiteUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              height: 28,
-              padding: '0 10px',
-              borderRadius: 6,
-              fontSize: 12,
-              fontWeight: 500,
-              border: '1px solid var(--border)',
-              color: 'var(--fg-muted)',
-              textDecoration: 'none',
-            }}
-          >
-            ↗ Source URL
-          </a>
-          <button
-            onClick={() => handleTrigger(selected.venueId)}
-            disabled={recrawlState[selected.venueId] === 'triggering' || recrawlState[selected.venueId] === 'queued'}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              height: 28,
-              padding: '0 10px',
-              borderRadius: 6,
-              fontSize: 12,
-              fontWeight: 500,
-              border: '1px solid var(--border-strong)',
-              background:
-                recrawlState[selected.venueId] === 'queued'
-                  ? 'var(--surface-2)'
-                  : 'var(--signal)',
-              color:
-                recrawlState[selected.venueId] === 'triggering' ||
-                recrawlState[selected.venueId] === 'queued'
-                  ? 'var(--fg-subtle)'
-                  : '#fff',
-              cursor:
-                recrawlState[selected.venueId] === 'triggering' ||
-                recrawlState[selected.venueId] === 'queued'
-                  ? 'not-allowed'
-                  : 'pointer',
-            }}
-          >
-            {recrawlState[selected.venueId] === 'triggering'
-              ? 'Triggering…'
-              : recrawlState[selected.venueId] === 'queued'
-                ? 'Queued'
-                : 'Re-crawl'}
-          </button>
-        </div>
-      }
-    >
-      {/* STARTED / DURATION / HTTP / LLM COST */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+  </div>
+  {/* Run detail content (unchanged from existing) */}
+  {activeRun ? (
+    <>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          marginBottom: 14,
+        }}
+      >
+        <code
+          style={{
+            fontSize: 12,
+            color: 'var(--fg-muted)',
+            fontFamily: "'JetBrains Mono', monospace",
+          }}
+        >
+          {shortRunId(activeRun.id)}
+        </code>
+        <StatusBadge kind={STATUS_KIND[activeRun.status] ?? 'neutral'} dot>
+          {activeRun.status.charAt(0).toUpperCase() + activeRun.status.slice(1)}
+        </StatusBadge>
+      </div>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: 16,
+          marginBottom: 14,
+        }}
+      >
         {[
           {
             label: 'Started',
-            value: activeRun
-              ? fmtStarted(activeRun.startedAt ?? activeRun.createdAt)
-              : '—',
+            value: fmtDateTimeMT(activeRun.startedAt ?? activeRun.createdAt),
           },
           {
             label: 'Duration',
-            value: activeRun?.durationMs
+            value: activeRun.durationMs
               ? `${(activeRun.durationMs / 1000).toFixed(1)}s`
               : '—',
           },
           {
             label: 'HTTP',
-            value: activeRun?.httpStatusCode
+            value: activeRun.httpStatusCode
               ? String(activeRun.httpStatusCode)
               : '—',
-            danger: activeRun?.httpStatusCode
-              ? activeRun.httpStatusCode >= 400
-              : false,
+            danger:
+              activeRun.httpStatusCode !== null &&
+              activeRun.httpStatusCode >= 400,
           },
           {
-            label: 'LLM cost',
-            value: `$${(activeRun?.llmCostUsd ?? 0).toFixed(2)}`,
+            label: 'LLM Cost',
+            value:
+              activeRun.llmCostUsd != null
+                ? `$${activeRun.llmCostUsd.toFixed(2)}`
+                : '$0.00',
           },
         ].map((stat) => (
           <div key={stat.label}>
-            <div style={{ fontSize: 11, color: 'var(--fg-subtle)', marginBottom: 4, textTransform: 'uppercase' as const, letterSpacing: '0.07em' }}>
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase' as const,
+                color: 'var(--fg-subtle)',
+                marginBottom: 4,
+              }}
+            >
               {stat.label}
             </div>
             <div
               style={{
                 fontSize: 14,
                 fontWeight: 600,
-                color: 'danger' in stat && stat.danger ? 'var(--danger)' : 'var(--fg)',
-                fontVariantNumeric: 'tabular-nums',
+                color:
+                  'danger' in stat && stat.danger
+                    ? 'var(--danger)'
+                    : 'var(--fg)',
+                fontFamily: "'JetBrains Mono', monospace",
               }}
             >
               {stat.value}
@@ -1140,211 +826,532 @@ Replace the entire `<Panel title={selected.venueName} action={...}>` block. The 
           </div>
         ))}
       </div>
-
-      {/* EVENTS section */}
-      <div style={{ marginTop: 20 }}>
-        <div style={{ fontSize: 11, color: 'var(--fg-subtle)', marginBottom: 10, textTransform: 'uppercase' as const, letterSpacing: '0.07em' }}>
-          Events
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-          {[
-            { label: 'Found', value: activeRun?.eventsFound ?? selected.eventsFound },
-            { label: 'Created', value: activeRun?.eventsInserted ?? 0 },
-            { label: 'Updated', value: 0 },
-          ].map((ev) => (
-            <div
-              key={ev.label}
-              style={{
-                background: 'var(--surface-2)',
-                borderRadius: 8,
-                padding: '12px 16px',
-                textAlign: 'center',
-              }}
-            >
-              <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--fg)', fontVariantNumeric: 'tabular-nums' }}>
-                {ev.value}
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--fg-muted)', marginTop: 4, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>
-                {ev.label}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ERROR section */}
-      {selected.error && (
-        <div style={{ marginTop: 16 }}>
-          <div style={{ fontSize: 11, color: 'var(--fg-subtle)', marginBottom: 8, textTransform: 'uppercase' as const, letterSpacing: '0.07em' }}>
-            Error
-          </div>
-          <div
-            style={{
-              padding: '12px 14px',
-              borderRadius: 8,
-              background: 'rgba(184,56,26,0.08)',
-              border: '1px solid rgba(184,56,26,0.2)',
-            }}
-          >
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--danger)', marginBottom: 6 }}>
-              {activeRun?.httpStatusCode
-                ? `HTTP ${activeRun.httpStatusCode} · ${selected.error.split('\n')[0]}`
-                : selected.error.split('\n')[0]}
-            </div>
-            {selected.consecutiveFailures > 0 && (
-              <div style={{ fontSize: 12, color: 'var(--fg-muted)', marginBottom: 4 }}>
-                Consecutive failures: {selected.consecutiveFailures} · Will pause venue on next failure.
-              </div>
-            )}
-            {selected.error.split('\n').slice(1).map((line, idx) => (
-              <div key={idx} style={{ fontSize: 12, color: 'var(--fg-muted)' }}>
-                {line}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Re-crawl trigger error */}
-      {recrawlState[selected.venueId] === 'error' && triggerError && (
+      <div style={{ marginBottom: activeRun.errorMessage ? 14 : 0 }}>
         <div
           style={{
-            marginTop: 8,
-            padding: '8px 10px',
-            borderRadius: 6,
-            background: 'rgba(184,56,26,0.08)',
-            color: 'var(--danger)',
-            fontSize: 12,
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase' as const,
+            color: 'var(--fg-subtle)',
+            marginBottom: 4,
           }}
         >
-          {triggerError}
+          Events
         </div>
+        <div style={{ fontSize: 14, color: 'var(--fg)' }}>
+          <span style={{ fontWeight: 600 }}>{activeRun.eventsFound}</span>
+          <span style={{ color: 'var(--fg-muted)' }}> found · </span>
+          <span style={{ fontWeight: 600 }}>{activeRun.eventsInserted}</span>
+          <span style={{ color: 'var(--fg-muted)' }}> inserted</span>
+        </div>
+      </div>
+      {activeRun.errorMessage && (
+        <ErrorBlock
+          errorMessage={activeRun.errorMessage}
+          httpStatusCode={activeRun.httpStatusCode}
+          consecutiveFailures={selected.consecutiveFailures}
+          blockedAt={selected.blockedAt}
+        />
       )}
-    </Panel>
-
-    <Panel title="Run history" padding={0}>
-      {/* ... existing history table, updated with clickable rows from Task 7 ... */}
-    </Panel>
-  </>
-) : (
-  /* ... empty state ... */
-)}
+    </>
+  ) : (
+    <div style={{ fontSize: 13, color: 'var(--fg-muted)' }}>No runs yet</div>
+  )}
+  {venueRecrawlError && (
+    <div
+      style={{
+        marginTop: 8,
+        padding: '8px 10px',
+        borderRadius: 6,
+        background: 'rgba(184,56,26,0.08)',
+        color: 'var(--danger)',
+        fontSize: 12,
+      }}
+    >
+      {venueRecrawlError}
+    </div>
+  )}
+</div>
 ```
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: Replace the Run history Panel with an inline section**
 
-```bash
-git add apps/web/src/components/admin/crawl/CrawlSplitView.tsx
-git commit -m "fix(web): redesign run detail panel with Run ID, Source URL, STARTED/DURATION/HTTP grid, redesigned error section"
+Find `<Panel title="Run history" padding={0}>` through its closing `</Panel>` and replace with:
+
+```tsx
+{
+  /* Run history — flush below venue detail */
+}
+;<div
+  style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
+>
+  <div
+    style={{
+      padding: '10px 16px',
+      borderBottom: '1px solid var(--border)',
+      fontSize: 14,
+      fontWeight: 700,
+      color: 'var(--fg)',
+      flexShrink: 0,
+    }}
+  >
+    Run history
+  </div>
+  <div style={{ overflowY: 'auto', flex: 1 }}>
+    <AdminTable>
+      <THead>
+        <tr>
+          <TH>Run</TH>
+          <TH>Started</TH>
+          <TH>Status</TH>
+          <TH align="right" mono>
+            Events
+          </TH>
+          <TH align="right" mono>
+            Duration
+          </TH>
+          <TH align="right" mono>
+            LLM cost
+          </TH>
+        </tr>
+      </THead>
+      <tbody>
+        {selectedRuns.map((run) => (
+          <TR
+            key={run.id}
+            active={run.id === activeRunId}
+            onClick={() => setSelectedRunId(run.id)}
+          >
+            <TD color="var(--fg-muted)">
+              <code
+                style={{
+                  fontSize: 11,
+                  fontFamily: "'JetBrains Mono', monospace",
+                }}
+              >
+                {shortRunId(run.id)}
+              </code>
+            </TD>
+            <TD color="var(--fg-muted)">
+              {fmtDateTimeMT(run.startedAt ?? run.createdAt)}
+            </TD>
+            <TD>
+              <StatusBadge kind={STATUS_KIND[run.status] ?? 'neutral'} dot>
+                {run.status.charAt(0).toUpperCase() + run.status.slice(1)}
+              </StatusBadge>
+            </TD>
+            <TD align="right" mono>
+              {run.eventsFound}
+            </TD>
+            <TD align="right" mono color="var(--fg-muted)">
+              {run.durationMs ? `${(run.durationMs / 1000).toFixed(1)}s` : '—'}
+            </TD>
+            <TD align="right">
+              <CostText value={run.llmCostUsd ?? 0} />
+            </TD>
+          </TR>
+        ))}
+      </tbody>
+    </AdminTable>
+  </div>
+</div>
 ```
+
+Also remove the import of `Panel` from primitives if it's no longer used — check all usages first.
+
+- [ ] **Step 4: Typecheck — will fail until Tasks 7 and 8 are done (fmtDateTimeMT and ErrorBlock)**
+
+Proceed to Tasks 7 and 8 before running typecheck.
 
 ---
 
-## Task 9: CrawlSplitView — Re-crawl persistent "Queued" state
-
-Replace the `triggering: string | null` state with a richer per-venue state map so the "Queued" state persists after the API call resolves.
+## Task 7: Add `fmtDateTimeMT` — "Started" shows date + time (#182)
 
 **Files:**
 
 - Modify: `apps/web/src/components/admin/crawl/CrawlSplitView.tsx`
 
-- [ ] **Step 1: Replace state types**
+Add a new formatter that shows "Today, HH:MM:SS" for today or "May 9, HH:MM:SS" for other days.
+
+- [ ] **Step 1: Add `fmtDateTimeMT` after `fmtTimeMT` in `CrawlSplitView.tsx`**
 
 ```typescript
-// OLD
-const [triggering, setTriggering] = useState<string | null>(null)
-const [triggerError, setTriggerError] = useState<string | null>(null)
-
-// NEW
-type RecrawlState = 'triggering' | 'queued' | 'error'
-const [recrawlState, setRecrawlState] = useState<Record<string, RecrawlState>>(
-  {},
-)
-const [triggerError, setTriggerError] = useState<string | null>(null)
-```
-
-- [ ] **Step 2: Update handleTrigger**
-
-```typescript
-async function handleTrigger(venueId: string) {
-  setRecrawlState((prev) => ({ ...prev, [venueId]: 'triggering' }))
-  setTriggerError(null)
-  try {
-    const res = await fetch(`/api/admin/crawl/${venueId}`, { method: 'POST' })
-    if (!res.ok) {
-      const rawBody: unknown = await res.json().catch(() => ({}))
-      throw new Error(extractErrorMessage(rawBody, `HTTP ${res.status}`))
-    }
-    // Stay "queued" — indicates the trigger was accepted
-    setRecrawlState((prev) => ({ ...prev, [venueId]: 'queued' }))
-  } catch (err) {
-    setRecrawlState((prev) => ({ ...prev, [venueId]: 'error' }))
-    setTriggerError(err instanceof Error ? err.message : 'Crawl trigger failed')
+function fmtDateTimeMT(iso: string): string {
+  const date = new Date(iso)
+  const nowDateMT = new Date().toLocaleDateString('en-US', {
+    timeZone: MT_TIMEZONE,
+  })
+  const thisDateMT = date.toLocaleDateString('en-US', {
+    timeZone: MT_TIMEZONE,
+  })
+  const timePart = date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+    timeZone: MT_TIMEZONE,
+  })
+  if (thisDateMT === nowDateMT) {
+    return `Today, ${timePart}`
   }
+  const datePart = date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    timeZone: MT_TIMEZONE,
+  })
+  return `${datePart}, ${timePart}`
 }
 ```
 
-The button and error display were already updated in Task 8 to use `recrawlState[selected.venueId]`.
+The venue list rows still use `fmtTimeMT` (time-only is fine there for the compact format). Only the detail panel and run history table use `fmtDateTimeMT`.
 
-- [ ] **Step 3: Commit**
+---
 
-```bash
-git add apps/web/src/components/admin/crawl/CrawlSplitView.tsx
-git commit -m "fix(web): Re-crawl button persists Queued state after successful trigger"
+## Task 8: Structured error display for blocked/failed runs (#160)
+
+**Files:**
+
+- Modify: `apps/web/src/components/admin/crawl/CrawlSplitView.tsx`
+
+The spec shows a structured error card for 403/blocked: icon + bold title + body lines. Raw errors (timeouts, etc.) show in a readable monospace block — not a raw dump.
+
+- [ ] **Step 1: Add `ErrorBlock` component before `CrawlSplitView` export**
+
+```tsx
+interface ErrorBlockProps {
+  errorMessage: string
+  httpStatusCode: number | null
+  consecutiveFailures: number
+  blockedAt: string | null
+}
+
+function ErrorBlock({
+  errorMessage,
+  httpStatusCode,
+  consecutiveFailures,
+  blockedAt,
+}: ErrorBlockProps) {
+  const isHttpBlock =
+    httpStatusCode !== null &&
+    (httpStatusCode === 403 || httpStatusCode === 429)
+
+  const title = isHttpBlock
+    ? `HTTP ${httpStatusCode} · venue blocked`
+    : errorMessage.length > 100
+      ? `${errorMessage.slice(0, 100)}…`
+      : errorMessage
+
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 700,
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase' as const,
+          color: 'var(--fg-subtle)',
+          marginBottom: 6,
+        }}
+      >
+        Error
+      </div>
+      <div
+        style={{
+          padding: '10px 12px',
+          borderRadius: 8,
+          background: 'rgba(184,56,26,0.08)',
+          border: '1px solid rgba(184,56,26,0.2)',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 8,
+            marginBottom: isHttpBlock ? 8 : 0,
+          }}
+        >
+          <span style={{ color: 'var(--danger)', fontSize: 14, flexShrink: 0 }}>
+            ⊘
+          </span>
+          <span
+            style={{ fontSize: 13, fontWeight: 600, color: 'var(--danger)' }}
+          >
+            {title}
+          </span>
+        </div>
+        {isHttpBlock && (
+          <div style={{ paddingLeft: 22 }}>
+            <p
+              style={{
+                fontSize: 12,
+                color: 'var(--fg-muted)',
+                margin: '2px 0',
+              }}
+            >
+              Consecutive failures: {consecutiveFailures}
+              {consecutiveFailures >= 2
+                ? ' · Will pause venue on next failure.'
+                : '.'}
+            </p>
+            {blockedAt && (
+              <p
+                style={{
+                  fontSize: 12,
+                  color: 'var(--fg-muted)',
+                  margin: '2px 0',
+                }}
+              >
+                HTTP {httpStatusCode} first observed:{' '}
+                {new Date(blockedAt).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}{' '}
+                · Try requesting a new IP allowlist.
+              </p>
+            )}
+          </div>
+        )}
+        {!isHttpBlock && (
+          <div
+            style={{
+              marginTop: 6,
+              fontSize: 11,
+              color: 'var(--fg-muted)',
+              fontFamily: "'JetBrains Mono', monospace",
+              wordBreak: 'break-all' as const,
+              whiteSpace: 'pre-wrap' as const,
+            }}
+          >
+            {errorMessage}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 ```
 
 ---
 
-## Task 10: Full CrawlSplitView integration — assemble all changes
+## Task 9: Run typecheck + lint + commit Tasks 6–8 together
 
-After tasks 5–9 applied incrementally, verify the component compiles cleanly. Remove `RelTime` import if it's no longer used in the venue list (it may still be needed in the history table).
+Tasks 6, 7, and 8 all modify `CrawlSplitView.tsx` and must be applied together before the build is clean.
 
 - [ ] **Step 1: Run typecheck**
 
 ```bash
+cd /Users/huey/Projects/concert-crawl/.worktrees/fix-admin-crawl-ui-polish
 pnpm --filter @concert-crawl/web typecheck
 ```
 
-Expected: 0 errors.
+Expected: No errors. If `Panel` is unused, remove its import. If `THead` needs a style update for sticky, do it here.
 
-- [ ] **Step 2: Run all tests**
-
-```bash
-pnpm --filter @concert-crawl/api test --run
-pnpm --filter @concert-crawl/web test --run
-```
-
-Expected: all pass.
-
-- [ ] **Step 3: Run lint**
+- [ ] **Step 2: Run lint**
 
 ```bash
+cd /Users/huey/Projects/concert-crawl/.worktrees/fix-admin-crawl-ui-polish
 pnpm --filter @concert-crawl/web lint
-pnpm --filter @concert-crawl/api lint
 ```
 
-- [ ] **Step 4: Final commit (if any loose files remain)**
+Expected: No new errors.
+
+- [ ] **Step 3: Commit**
 
 ```bash
-git status
-# Stage anything unstaged
-git add -p
-git commit -m "fix(web): admin crawl UI polish — assemble full CrawlSplitView changes"
+cd /Users/huey/Projects/concert-crawl/.worktrees/fix-admin-crawl-ui-polish
+git add apps/web/src/components/admin/crawl/CrawlSplitView.tsx
+git commit -m "fix(admin/crawl): flush panels, large venue title, fmtDateTimeMT, structured error display, dot badges in run table"
 ```
 
 ---
 
-## Self-review checklist
+## Task 10: Make run history table header sticky (#176)
 
-- [x] #148 Remove "Phase 7 · Automation" — handled in Task 2 (eyebrow removed from page.tsx)
-- [x] #151 Issues banner redesign + Jump to issues — Task 4
-- [x] #152 Last sweep date/time range hint — Task 2 (formatSweepHint)
-- [x] #153 Today's runs breakdown hint — Task 2 (formatRunsBreakdown)
-- [x] #157 Venue list filter — Task 5
-- [x] #158 Stat card uppercase labels — Task 3
-- [x] #159 Exact timestamps + duration in venue list — Task 6
-- [x] #160 Run detail panel redesign (Run ID, Source URL, HTTP, Duration, error) — Task 8
-- [x] #161 Selectable past runs — Task 7
-- [x] #163 Re-crawl persistent Queued state — Task 9
-- [ ] TR component accepts onClick+style — verify in Task 7 Step 3, add props if needed
-- [ ] `CrawlStatusRow` export from page.tsx is imported nowhere else — confirm no circular dep
+**Files:**
+
+- Modify: `apps/web/src/components/admin/primitives/AdminTable.tsx`
+
+The run history table needs a sticky `<thead>` so column labels stay visible while scrolling.
+
+- [ ] **Step 1: Read `AdminTable.tsx` to find `THead`**
+
+```bash
+cat /Users/huey/Projects/concert-crawl/.worktrees/fix-admin-crawl-ui-polish/apps/web/src/components/admin/primitives/AdminTable.tsx
+```
+
+- [ ] **Step 2: Add `sticky` prop to `THead` if it doesn't already have one**
+
+If `THead` renders a plain `<thead>`, add sticky positioning:
+
+```tsx
+interface THeadProps {
+  children: React.ReactNode
+  sticky?: boolean
+}
+
+export const THead = ({ children, sticky = false }: THeadProps) => (
+  <thead
+    style={
+      sticky
+        ? {
+            position: 'sticky',
+            top: 0,
+            zIndex: 1,
+            background: 'var(--bg-elevated)',
+          }
+        : undefined
+    }
+  >
+    {children}
+  </thead>
+)
+```
+
+If `THead` already has different props, extend carefully without breaking existing usages.
+
+- [ ] **Step 3: Update the Run history `THead` in `CrawlSplitView.tsx` to use sticky**
+
+Change `<THead>` to `<THead sticky>` in the run history table section added in Task 6.
+
+- [ ] **Step 4: Run typecheck**
+
+```bash
+cd /Users/huey/Projects/concert-crawl/.worktrees/fix-admin-crawl-ui-polish
+pnpm --filter @concert-crawl/web typecheck
+```
+
+Expected: No errors.
+
+- [ ] **Step 5: Commit**
+
+```bash
+cd /Users/huey/Projects/concert-crawl/.worktrees/fix-admin-crawl-ui-polish
+git add apps/web/src/components/admin/primitives/AdminTable.tsx \
+        apps/web/src/components/admin/crawl/CrawlSplitView.tsx
+git commit -m "fix(admin/crawl): sticky run history table header"
+```
+
+---
+
+## Task 11: Final checks and push
+
+- [ ] **Step 1: Full monorepo typecheck**
+
+```bash
+cd /Users/huey/Projects/concert-crawl/.worktrees/fix-admin-crawl-ui-polish
+pnpm typecheck
+```
+
+Expected: No errors.
+
+- [ ] **Step 2: Full monorepo lint**
+
+```bash
+cd /Users/huey/Projects/concert-crawl/.worktrees/fix-admin-crawl-ui-polish
+pnpm lint
+```
+
+Expected: No errors.
+
+- [ ] **Step 3: Run tests**
+
+```bash
+cd /Users/huey/Projects/concert-crawl/.worktrees/fix-admin-crawl-ui-polish
+pnpm test
+```
+
+Expected: All pass.
+
+- [ ] **Step 4: Push**
+
+```bash
+cd /Users/huey/Projects/concert-crawl/.worktrees/fix-admin-crawl-ui-polish
+git push -u origin fix/admin-crawl-ui-polish
+```
+
+- [ ] **Step 5: Open PR**
+
+```bash
+gh pr create \
+  --title "fix(admin/crawl): UI polish — badges, layout, sticky headers, error display, Run all placement" \
+  --body "$(cat <<'EOF'
+## What does this PR do?
+
+Closes all remaining visual and behavioral gaps between the admin `/admin/crawl` page and the design spec, building on prior commits on this branch that already addressed #148, #151–#153, #157–#163.
+
+**Bug fixes:**
+- #175: Venue list badge now shows last run status (not venue-level blocked status) — a venue that ran successfully today no longer shows "blocked" just because it was blocked in the past
+
+**Layout:**
+- #178: "Run all" button moved to page header per spec; adds `POST /api/admin/crawl/run-all` route
+- #180: Right panel venue detail + run history are now flush (single bordered container, no gap)
+- #181: Venue title in detail panel increased to 22px display heading
+- #176: Run history table is scrollable with sticky column header
+- #177: Venues panel header is now sticky
+
+**Polish:**
+- #174: Venue list status badges use dot indicator + capitalized text to match spec
+- #182: "Started" field shows "Today, HH:MM:SS" or "May 9, HH:MM:SS" (includes date)
+- #160: Error section shows structured card for HTTP 403/429 (blocked), monospace block for other errors
+- #160: Source URL and Re-crawl buttons have icon prefixes and correct labels
+- Events Ingested stat card icon updated to CalendarCheck2
+
+## How to test
+
+1. Go to `/admin/crawl` (requires admin role)
+2. Verify venue list badges show dot + capitalized last-run status (not venue blocked status)
+3. Verify "Run all" button is in the top-right of the page header, not inside the venues list
+4. Verify venue detail + run history panels are flush with no gap between them
+5. Verify venue title is large (22px)
+6. Verify "Started" shows "Today, HH:MM:SS" for today's runs
+7. Verify run history table scrolls independently with header staying fixed
+8. Click a failed 403 run — verify structured error card with icon and body text
+9. Click a timeout/other error run — verify raw error in readable monospace
+10. If a blocked venue exists, verify IssuesBanner "Jump to issues" selects that venue
+
+## Screen recordings / captures
+
+<!-- Attach before/after screenshots -->
+
+## Checklist
+
+- [ ] Tests pass locally (`pnpm test`)
+- [ ] Types pass (`pnpm typecheck`)
+- [ ] No new lint errors (`pnpm lint`)
+- [ ] Relevant documentation updated
+
+Closes #174
+Closes #175
+Closes #176
+Closes #177
+Closes #178
+Closes #179
+Closes #180
+Closes #181
+Closes #182
+EOF
+)"
+```
+
+---
+
+## Spec Coverage Check
+
+| Issue | Requirement                                       | Task        |
+| ----- | ------------------------------------------------- | ----------- |
+| #174  | Status badges: dot + capitalized + correct colors | Task 1      |
+| #175  | BUG: badge shows last run status not venue status | Task 1      |
+| #176  | Run history scrollable + sticky header            | Tasks 6, 10 |
+| #177  | Venues panel header sticky                        | Task 2      |
+| #178  | Run all button in page header                     | Task 3      |
+| #179  | Venue panel header label redesign                 | Task 2      |
+| #180  | Right panel cards flush (no gap)                  | Task 6      |
+| #181  | Venue title larger                                | Task 6      |
+| #182  | Started field includes date                       | Task 7      |
+| #160  | Structured error for 403/blocked                  | Task 8      |
+| #160  | Source URL / Re-crawl button labels               | Task 6      |
+| #158  | Events Ingested icon                              | Task 4      |
+| #151  | Jump to issues selects venue                      | Task 5      |
