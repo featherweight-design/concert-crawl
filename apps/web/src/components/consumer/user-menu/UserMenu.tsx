@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useUser, useClerk } from '@clerk/nextjs'
+import { useAuth, useUser, useClerk } from '@clerk/nextjs'
 import { useTheme } from '@/theme/ThemeProvider'
 import type { ThemeName } from '@/theme/themes'
 import { FeedbackModal } from '../feedback/FeedbackModal'
@@ -24,11 +24,12 @@ const THEMES: { key: ThemeName; label: string; gradient: string }[] = [
   {
     key: 'light',
     label: 'Light',
-    gradient: 'linear-gradient(135deg, #FAFCFF 50%, #FF7BD4 50%)',
+    gradient: 'linear-gradient(135deg, #FAFCFF 50%, #E0297A 50%)',
   },
 ]
 
 export function UserMenu() {
+  const { getToken } = useAuth()
   const { user } = useUser()
   const { signOut } = useClerk()
   const router = useRouter()
@@ -75,11 +76,20 @@ export function UserMenu() {
   }, [open])
 
   useEffect(() => {
-    fetch(`${API_URL}/v1/users/me/submissions/count`, {
-      credentials: 'include',
-    })
-      .then((res) => res.json())
+    let cancelled = false
+    getToken()
+      .then((token) => {
+        if (!token || cancelled) return
+        return fetch(`${API_URL}/v1/users/me/submissions/count`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      })
+      .then((res) => {
+        if (!res || cancelled) return res?.json()
+        return res.json()
+      })
       .then((body: unknown) => {
+        if (cancelled) return
         if (
           body !== null &&
           typeof body === 'object' &&
@@ -97,7 +107,10 @@ export function UserMenu() {
       .catch((err: unknown) => {
         console.error('Failed to fetch submission count', err)
       })
-  }, [])
+    return () => {
+      cancelled = true
+    }
+  }, [getToken])
 
   const handleSignOut = useCallback(() => {
     void signOut().catch((err: unknown) =>
@@ -319,12 +332,9 @@ function MenuBody({
             {email}
           </span>
         </div>
-        <button
-          type="button"
-          aria-label="Account"
+        <span
+          aria-hidden="true"
           style={{
-            all: 'unset',
-            cursor: 'pointer',
             width: 28,
             height: 28,
             borderRadius: 8,
@@ -333,6 +343,7 @@ function MenuBody({
             justifyContent: 'center',
             color: 'var(--fg-muted)',
             border: '1px solid var(--border)',
+            flexShrink: 0,
           }}
         >
           <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
@@ -344,7 +355,7 @@ function MenuBody({
               strokeLinejoin="round"
             />
           </svg>
-        </button>
+        </span>
       </div>
 
       {/* You section */}
@@ -710,11 +721,14 @@ function MenuRow({
       </Link>
     )
   }
-  return (
-    <button type="button" onClick={onClick} style={rowStyle}>
-      {inner}
-    </button>
-  )
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} style={rowStyle}>
+        {inner}
+      </button>
+    )
+  }
+  return <div style={rowStyle}>{inner}</div>
 }
 
 function ShieldIcon() {
