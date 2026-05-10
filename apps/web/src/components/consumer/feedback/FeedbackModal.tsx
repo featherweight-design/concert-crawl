@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { useTheme } from '@/theme/ThemeProvider'
 import { CCMark } from '../cc-mark'
@@ -75,14 +75,32 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
       })
       if (!res.ok) throw new Error(`${res.status}`)
       setState('success')
-    } catch {
+    } catch (err) {
+      console.error('Feedback submission failed', err)
       setState('error')
     }
   }, [category, message, pathname, theme])
 
-  if (!open) return null
+  const [isMobile, setIsMobile] = useState(false)
 
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 639px)')
+    setIsMobile(mql.matches)
+    const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches)
+    mql.addEventListener('change', handler)
+    return () => mql.removeEventListener('change', handler)
+  }, [])
+
+  useEffect(() => {
+    if (!open) return
+    const handleKeyDown = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') handleClose()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [open, handleClose])
+
+  if (!open) return null
 
   return (
     <>
@@ -195,6 +213,7 @@ function FormFields({
                 key={cat.key}
                 type="button"
                 disabled={disabled}
+                aria-pressed={active}
                 onClick={() => setCategory(cat.key)}
                 style={{
                   all: 'unset',
@@ -386,6 +405,9 @@ function MobileSheet({
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Feedback"
       style={{
         position: 'fixed',
         left: 0,
@@ -509,6 +531,9 @@ function DesktopCard({
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Feedback"
       style={{
         position: 'fixed',
         top: '50%',
@@ -618,7 +643,7 @@ function Eyebrow({
   return (
     <div
       style={{
-        fontFamily: "'JetBrains Mono', monospace",
+        fontFamily: 'var(--font-mono)',
         fontSize: 10,
         fontWeight: 700,
         color: error ? 'var(--warning)' : 'var(--fg-subtle)',
@@ -687,7 +712,7 @@ function HeaderRail({ state }: { state: ModalState }) {
       />
       <span
         style={{
-          fontFamily: "'JetBrains Mono', monospace",
+          fontFamily: 'var(--font-mono)',
           fontSize: 10,
           color: accent,
           letterSpacing: '0.16em',
@@ -701,7 +726,7 @@ function HeaderRail({ state }: { state: ModalState }) {
       <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
       <span
         style={{
-          fontFamily: "'JetBrains Mono', monospace",
+          fontFamily: 'var(--font-mono)',
           fontSize: 10,
           color: 'var(--fg-subtle)',
           letterSpacing: '0.14em',
@@ -735,7 +760,7 @@ function StatusRail({ tone }: { tone: 'success' | 'error' }) {
       />
       <span
         style={{
-          fontFamily: "'JetBrains Mono', monospace",
+          fontFamily: 'var(--font-mono)',
           fontSize: 10,
           color: accent,
           letterSpacing: '0.16em',
@@ -749,7 +774,7 @@ function StatusRail({ tone }: { tone: 'success' | 'error' }) {
       <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
       <span
         style={{
-          fontFamily: "'JetBrains Mono', monospace",
+          fontFamily: 'var(--font-mono)',
           fontSize: 10,
           color: 'var(--fg-subtle)',
           letterSpacing: '0.14em',
