@@ -12,6 +12,10 @@ import {
   CostText,
 } from '@/components/admin/primitives'
 import type { CrawlRun } from '@concert-crawl/types'
+import {
+  formatCostValue,
+  formatEventsBreakdown,
+} from '@/app/(protected)/admin/crawl/crawl-stats'
 
 const MT_TIMEZONE = 'America/Denver'
 
@@ -22,12 +26,14 @@ interface CrawlStatusRow {
   status: string
   lastRunAt: string | null
   eventsFound: number
+  eventsInserted: number
+  eventsUpdated: number
+  llmCostUsd: number | null
   durationMs: number | null
   httpStatusCode: number | null
   consecutiveFailures: number
   blockedAt: string | null
   strategy: string
-  cost: number
   error: string | null
 }
 
@@ -103,6 +109,28 @@ export const CrawlSplitView = ({
     Record<string, 'triggering' | 'queued' | 'error'>
   >({})
   const [recrawlError, setRecrawlError] = useState<Record<string, string>>({})
+  const [runAllState, setRunAllState] = useState<
+    'idle' | 'triggering' | 'queued' | 'error'
+  >('idle')
+  const [runAllError, setRunAllError] = useState<string | null>(null)
+
+  async function handleRunAll() {
+    setRunAllState('triggering')
+    setRunAllError(null)
+    try {
+      const res = await fetch('/api/admin/crawl', { method: 'POST' })
+      if (!res.ok) {
+        const rawBody: unknown = await res.json().catch(() => ({}))
+        throw new Error(extractErrorMessage(rawBody, `HTTP ${res.status}`))
+      }
+      setRunAllState('queued')
+    } catch (err) {
+      setRunAllState('error')
+      setRunAllError(
+        err instanceof Error ? err.message : 'Run all trigger failed',
+      )
+    }
+  }
 
   async function handleTrigger(venueId: string) {
     setRecrawlState((prev) => ({ ...prev, [venueId]: 'triggering' }))
@@ -178,27 +206,74 @@ export const CrawlSplitView = ({
           >
             {filteredStatus.length} venues
           </span>
-          <select
-            value={statusFilter}
-            onChange={(ev) => setStatusFilter(ev.target.value)}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <select
+              value={statusFilter}
+              onChange={(ev) => setStatusFilter(ev.target.value)}
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                color: 'var(--fg-muted)',
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border)',
+                borderRadius: 6,
+                padding: '2px 6px',
+                cursor: 'pointer',
+              }}
+            >
+              {STATUS_FILTER_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => void handleRunAll()}
+              disabled={
+                runAllState === 'triggering' || runAllState === 'queued'
+              }
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                color:
+                  runAllState === 'triggering' || runAllState === 'queued'
+                    ? 'var(--fg-subtle)'
+                    : 'var(--fg)',
+                background:
+                  runAllState === 'queued'
+                    ? 'rgba(255,170,0,0.1)'
+                    : 'var(--bg-elevated)',
+                border: '1px solid var(--border-strong)',
+                borderRadius: 6,
+                padding: '2px 8px',
+                cursor:
+                  runAllState === 'triggering' || runAllState === 'queued'
+                    ? 'not-allowed'
+                    : 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {runAllState === 'triggering'
+                ? 'Triggering…'
+                : runAllState === 'queued'
+                  ? 'All queued'
+                  : 'Run all'}
+            </button>
+          </div>
+        </div>
+        {runAllError && (
+          <div
             style={{
-              fontSize: 11,
-              fontWeight: 600,
-              color: 'var(--fg-muted)',
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border)',
-              borderRadius: 6,
-              padding: '2px 6px',
-              cursor: 'pointer',
+              padding: '6px 14px',
+              fontSize: 12,
+              color: 'var(--danger)',
+              borderBottom: '1px solid var(--border)',
+              background: 'rgba(184,56,26,0.06)',
             }}
           >
-            {STATUS_FILTER_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </div>
+            {runAllError}
+          </div>
+        )}
         {filteredStatus.map((row) => (
           <button
             key={row.venueId}
@@ -378,7 +453,7 @@ export const CrawlSplitView = ({
                     {[
                       {
                         label: 'Started',
-                        value: `${fmtTimeMT(activeRun.startedAt ?? activeRun.createdAt)} MT`,
+                        value: `${fmtTimeMT(activeRun.createdAt)} MT`,
                       },
                       {
                         label: 'Duration',
@@ -394,10 +469,7 @@ export const CrawlSplitView = ({
                       },
                       {
                         label: 'LLM Cost',
-                        value:
-                          activeRun.llmCostUsd != null
-                            ? `$${activeRun.llmCostUsd.toFixed(2)}`
-                            : '$0.00',
+                        value: formatCostValue(activeRun.llmCostUsd),
                       },
                     ].map((stat) => (
                       <div key={stat.label}>
@@ -442,20 +514,11 @@ export const CrawlSplitView = ({
                       Events
                     </div>
                     <div style={{ fontSize: 14, color: 'var(--fg)' }}>
-                      <span style={{ fontWeight: 600 }}>
-                        {activeRun.eventsFound}
-                      </span>
-                      <span style={{ color: 'var(--fg-muted)' }}>
-                        {' '}
-                        found ·{' '}
-                      </span>
-                      <span style={{ fontWeight: 600 }}>
-                        {activeRun.eventsInserted}
-                      </span>
-                      <span style={{ color: 'var(--fg-muted)' }}>
-                        {' '}
-                        inserted
-                      </span>
+                      {formatEventsBreakdown(
+                        activeRun.eventsFound,
+                        activeRun.eventsInserted,
+                        activeRun.eventsUpdated,
+                      )}
                     </div>
                   </div>
                   {activeRun.errorMessage && (
@@ -532,7 +595,7 @@ export const CrawlSplitView = ({
                         </code>
                       </TD>
                       <TD color="var(--fg-muted)">
-                        {fmtTimeMT(run.startedAt ?? run.createdAt)} MT
+                        {fmtTimeMT(run.createdAt)} MT
                       </TD>
                       <TD>
                         <StatusBadge

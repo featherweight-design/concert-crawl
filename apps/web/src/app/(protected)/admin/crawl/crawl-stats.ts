@@ -55,3 +55,40 @@ export function formatRunsBreakdown(runs: { status: string }[]): string {
     .filter(Boolean)
     .join(' · ')
 }
+
+/**
+ * Sums llmCostUsd across runs and returns a formatted cost string, e.g. "$0.0012".
+ * Returns empty string when no runs had LLM cost.
+ */
+export function formatLlmCostTotal(
+  runs: { llmCostUsd?: number | null }[],
+): string {
+  const total = runs.reduce((acc, run) => acc + (run.llmCostUsd ?? 0), 0)
+  if (total === 0) return ''
+  return `$${total.toFixed(4)}`
+}
+
+/**
+ * Formats a single llmCostUsd value for display in the run detail panel.
+ * Returns "—" when null or zero.
+ */
+export function formatCostValue(cost: number | null | undefined): string {
+  if (cost == null || cost === 0) return '—'
+  return `$${cost.toFixed(4)}`
+}
+
+/**
+ * Formats the events breakdown for a run detail panel, e.g. "5 found · 3 inserted · 2 updated".
+ * Omits zero-count segments.
+ */
+export function formatEventsBreakdown(
+  eventsFound: number,
+  eventsInserted: number,
+  eventsUpdated: number,
+): string {
+  const parts: string[] = []
+  if (eventsFound > 0) parts.push(`${eventsFound} found`)
+  if (eventsInserted > 0) parts.push(`${eventsInserted} inserted`)
+  if (eventsUpdated > 0) parts.push(`${eventsUpdated} updated`)
+  return parts.join(' · ') || '0 found'
+}

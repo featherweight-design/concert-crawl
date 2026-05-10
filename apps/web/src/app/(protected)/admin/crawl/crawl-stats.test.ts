@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { formatSweepHint, formatRunsBreakdown } from './crawl-stats'
+import {
+  formatSweepHint,
+  formatRunsBreakdown,
+  formatLlmCostTotal,
+  formatCostValue,
+  formatEventsBreakdown,
+} from './crawl-stats'
 
 describe('formatSweepHint', () => {
   it('returns empty string when no runs provided', () => {
@@ -54,5 +60,53 @@ describe('formatRunsBreakdown', () => {
   it('returns empty string for unknown statuses (no CrawlRun.status=blocked)', () => {
     const runs = [{ status: 'blocked' }] as { status: string }[]
     expect(formatRunsBreakdown(runs)).toBe('')
+  })
+})
+
+describe('formatLlmCostTotal', () => {
+  it('returns empty string when no runs', () => {
+    expect(formatLlmCostTotal([])).toBe('')
+  })
+
+  it('returns empty string when all costs are null', () => {
+    expect(
+      formatLlmCostTotal([{ llmCostUsd: null }, { llmCostUsd: null }]),
+    ).toBe('')
+  })
+
+  it('sums costs and formats as dollar amount', () => {
+    expect(
+      formatLlmCostTotal([{ llmCostUsd: 0.001 }, { llmCostUsd: 0.0005 }]),
+    ).toBe('$0.0015')
+  })
+})
+
+describe('formatCostValue', () => {
+  it('returns dash for null', () => {
+    expect(formatCostValue(null)).toBe('—')
+  })
+
+  it('returns dash for zero', () => {
+    expect(formatCostValue(0)).toBe('—')
+  })
+
+  it('formats non-zero cost with 4 decimal places', () => {
+    expect(formatCostValue(0.0012)).toBe('$0.0012')
+  })
+})
+
+describe('formatEventsBreakdown', () => {
+  it('returns "0 found" when all counts are zero', () => {
+    expect(formatEventsBreakdown(0, 0, 0)).toBe('0 found')
+  })
+
+  it('includes all non-zero segments', () => {
+    expect(formatEventsBreakdown(5, 3, 2)).toBe(
+      '5 found · 3 inserted · 2 updated',
+    )
+  })
+
+  it('omits zero-count segments', () => {
+    expect(formatEventsBreakdown(4, 4, 0)).toBe('4 found · 4 inserted')
   })
 })

@@ -73,6 +73,7 @@ function makeCrawlRun(overrides: Partial<CrawlRun> = {}): CrawlRun {
     extractionStrategyUsed: null,
     eventsFound: 5,
     eventsInserted: 5,
+    eventsUpdated: 0,
     errorMessage: null,
     durationMs: 1000,
     createdAt: '2026-05-01T00:00:00Z',

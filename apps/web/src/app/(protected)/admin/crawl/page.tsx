@@ -3,7 +3,11 @@ import { apiClient } from '@/lib/api'
 import { StatCard } from '@/components/admin/primitives'
 import { CrawlSplitView } from '@/components/admin/crawl/CrawlSplitView'
 import { IssuesBanner } from '@/components/admin/crawl/IssuesBanner'
-import { formatSweepHint, formatRunsBreakdown } from './crawl-stats'
+import {
+  formatSweepHint,
+  formatRunsBreakdown,
+  formatLlmCostTotal,
+} from './crawl-stats'
 import type { CrawlRun } from '@concert-crawl/types'
 
 export interface CrawlStatusRow {
@@ -13,12 +17,14 @@ export interface CrawlStatusRow {
   status: string
   lastRunAt: string | null
   eventsFound: number
+  eventsInserted: number
+  eventsUpdated: number
+  llmCostUsd: number | null
   durationMs: number | null
   httpStatusCode: number | null
   consecutiveFailures: number
   blockedAt: string | null
   strategy: string
-  cost: number
   error: string | null
 }
 
@@ -38,6 +44,8 @@ interface RawVenueStatus {
     createdAt: string
     eventsFound: number
     eventsInserted: number
+    eventsUpdated: number
+    llmCostUsd: number | null
     errorMessage: string | null
     extractionStrategyUsed: string | null
     httpStatusCode: number | null
@@ -59,12 +67,14 @@ function toStatusRow(venue: RawVenueStatus): CrawlStatusRow {
     status: deriveVenueStatus(venue),
     lastRunAt: venue.lastRun?.createdAt ?? null,
     eventsFound: venue.lastRun?.eventsFound ?? 0,
+    eventsInserted: venue.lastRun?.eventsInserted ?? 0,
+    eventsUpdated: venue.lastRun?.eventsUpdated ?? 0,
+    llmCostUsd: venue.lastRun?.llmCostUsd ?? null,
     durationMs: venue.lastRun?.durationMs ?? null,
     httpStatusCode: venue.lastRun?.httpStatusCode ?? null,
     consecutiveFailures: venue.consecutiveFailures,
     blockedAt: venue.blockedAt,
     strategy: venue.lastRun?.extractionStrategyUsed ?? '—',
-    cost: 0,
     error: venue.lastRun?.errorMessage ?? null,
   }
 }
@@ -102,9 +112,8 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
   const sweepHint = formatSweepHint(todayRuns)
   const runsBreakdown = formatRunsBreakdown(todayRuns)
 
-  const mostRecentRun = runs[0]
-  const lastSweepValue = mostRecentRun?.createdAt
-    ? `${String(Math.round((Date.now() - new Date(mostRecentRun.createdAt).getTime()) / 60000))}m ago`
+  const lastSweepValue = todayRuns[0]?.createdAt
+    ? `${String(Math.round((Date.now() - new Date(todayRuns[0].createdAt).getTime()) / 60000))}m ago`
     : '—'
 
   return (
@@ -170,7 +179,7 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
         />
         <StatCard
           label="LLM cost · today"
-          value={`$${todayRuns.reduce((sum, run) => sum + (run.llmCostUsd ?? 0), 0).toFixed(2)}`}
+          value={formatLlmCostTotal(todayRuns) || '$0.00'}
           iconName="DollarSign"
           kind="signal"
         />
