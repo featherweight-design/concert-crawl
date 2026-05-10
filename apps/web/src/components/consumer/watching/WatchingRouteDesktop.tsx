@@ -7,7 +7,7 @@ import { useAuth } from '@clerk/nextjs'
 import type { WatchingShow } from '@concert-crawl/types'
 import { cn } from '@/lib/utils'
 import { CCMark } from '../cc-mark'
-import { UserAvatar } from '../app-header/UserAvatar'
+import { UserMenu } from '../user-menu'
 import { WatchingItem } from './WatchingItem'
 import { WatchingEmpty } from './WatchingEmpty'
 import { NotifyFutureRow } from './NotifyFutureRow'
@@ -242,8 +242,8 @@ export function WatchingRouteDesktop({
           </nav>
         </div>
 
-        {/* Right: avatar */}
-        <UserAvatar />
+        {/* Right: user menu */}
+        <UserMenu />
       </div>
 
       {/* Main content */}

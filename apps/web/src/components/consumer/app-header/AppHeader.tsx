@@ -6,7 +6,7 @@ import { Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '../theme-toggle'
 import { CCMark } from '../cc-mark'
-import { UserAvatar } from './UserAvatar'
+import { UserMenu } from '../user-menu'
 import { MobileProfileEntry } from './MobileProfileEntry'
 
 const NAV_TABS = [
@@ -100,7 +100,7 @@ export function AppHeader() {
             </span>
           </Link>
 
-          <UserAvatar />
+          <UserMenu />
 
           <ThemeToggle />
         </div>
