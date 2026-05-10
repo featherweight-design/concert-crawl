@@ -47,7 +47,7 @@ export function CrawlHealthTable({ rows }: { rows: CrawlStatusRow[] }) {
         {rows.map((row) => (
           <TR
             key={row.venueId}
-            onClick={() => router.push(`/admin/crawl?venue=${row.venueId}`)}
+            onClick={() => router.push(`/admin/crawl?venueId=${row.venueId}`)}
           >
             <TD>{row.venueName}</TD>
             <TD>

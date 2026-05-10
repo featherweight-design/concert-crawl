@@ -231,6 +231,53 @@ describe('buildCrawlHealthHint', () => {
     ]
     expect(buildCrawlHealthHint(rows)).toBe('Bluebird · 2nd failure')
   })
+
+  it('uses th for 11/12/13 (not 11st/12nd/13rd)', () => {
+    expect(
+      buildCrawlHealthHint([
+        makeStatusRow({
+          venueName: 'A',
+          blockedAt: '2026-05-01T00:00:00Z',
+          consecutiveFailures: 11,
+        }),
+      ]),
+    ).toContain('11th failure')
+    expect(
+      buildCrawlHealthHint([
+        makeStatusRow({
+          venueName: 'A',
+          blockedAt: '2026-05-01T00:00:00Z',
+          consecutiveFailures: 12,
+        }),
+      ]),
+    ).toContain('12th failure')
+    expect(
+      buildCrawlHealthHint([
+        makeStatusRow({
+          venueName: 'A',
+          blockedAt: '2026-05-01T00:00:00Z',
+          consecutiveFailures: 21,
+        }),
+      ]),
+    ).toContain('21st failure')
+  })
+
+  it('picks worst blocked venue (highest consecutiveFailures)', () => {
+    const rows = [
+      makeStatusRow({
+        venueName: 'Bluebird',
+        blockedAt: '2026-05-01T00:00:00Z',
+        consecutiveFailures: 2,
+      }),
+      makeStatusRow({
+        venueId: 'v2',
+        venueName: 'Gothic',
+        blockedAt: '2026-05-01T00:00:00Z',
+        consecutiveFailures: 5,
+      }),
+    ]
+    expect(buildCrawlHealthHint(rows)).toContain('Gothic')
+  })
 })
 
 // --- buildActiveVenuesHint ---
@@ -287,13 +334,14 @@ describe('buildSparklineData', () => {
     expect(buildSparklineData([])).toEqual([])
   })
 
-  it('maps success → 1, failed → 0', () => {
+  it('maps success → 1, failed → 0, oldest→newest order', () => {
     const runs = [
-      makeCrawlRun({ status: 'success' }),
+      makeCrawlRun({ status: 'success' }), // newest
       makeCrawlRun({ status: 'failed' }),
-      makeCrawlRun({ status: 'partial' }),
+      makeCrawlRun({ status: 'partial' }), // oldest
     ]
-    expect(buildSparklineData(runs)).toEqual([1, 0, 0])
+    // After slice(0,8).reverse(): oldest first → [partial(0), failed(0), success(1)]
+    expect(buildSparklineData(runs)).toEqual([0, 0, 1])
   })
 
   it('caps at 8 runs', () => {

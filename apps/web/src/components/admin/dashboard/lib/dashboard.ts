@@ -84,23 +84,28 @@ export function buildPendingReviewHint(
     .join(', ')
 }
 
+function ordinal(nn: number): string {
+  const abs = Math.abs(nn)
+  const mod100 = abs % 100
+  if (mod100 >= 11 && mod100 <= 13) return `${nn}th`
+  const mod10 = abs % 10
+  if (mod10 === 1) return `${nn}st`
+  if (mod10 === 2) return `${nn}nd`
+  if (mod10 === 3) return `${nn}rd`
+  return `${nn}th`
+}
+
 // Returns a hint string for the crawl health card
-// "{venueName} blocked · {N}rd failure" if any blocked
+// "{venueName} blocked · {N}th failure" if any blocked (picks worst)
 // Or venue with most consecutive failures if any failing
 // Or empty string if all healthy
 export function buildCrawlHealthHint(rows: CrawlStatusRow[]): string {
-  const blocked = rows.find((row) => row.blockedAt !== null)
-  if (blocked) {
-    const failures = blocked.consecutiveFailures
-    const suffix =
-      failures === 1
-        ? 'st'
-        : failures === 2
-          ? 'nd'
-          : failures === 3
-            ? 'rd'
-            : 'th'
-    return `${blocked.venueName} blocked · ${failures}${suffix} failure`
+  const blockedRows = rows.filter((row) => row.blockedAt !== null)
+  if (blockedRows.length > 0) {
+    const worst = blockedRows.reduce((aa, bb) =>
+      bb.consecutiveFailures > aa.consecutiveFailures ? bb : aa,
+    )
+    return `${worst.venueName} blocked · ${ordinal(worst.consecutiveFailures)} failure`
   }
 
   const mostFailing = rows
@@ -108,16 +113,7 @@ export function buildCrawlHealthHint(rows: CrawlStatusRow[]): string {
     .sort((aa, bb) => bb.consecutiveFailures - aa.consecutiveFailures)[0]
 
   if (mostFailing) {
-    const failures = mostFailing.consecutiveFailures
-    const suffix =
-      failures === 1
-        ? 'st'
-        : failures === 2
-          ? 'nd'
-          : failures === 3
-            ? 'rd'
-            : 'th'
-    return `${mostFailing.venueName} · ${failures}${suffix} failure`
+    return `${mostFailing.venueName} · ${ordinal(mostFailing.consecutiveFailures)} failure`
   }
 
   return ''
@@ -147,8 +143,11 @@ export function buildActiveVenuesHint(venues: Venue[]): string {
   return parts.join(' · ')
 }
 
-// Returns array of 1 (success) or 0 (failure) for last 8 runs, sorted by createdAt DESC
-// Input is already sorted descending — take first 8
+// Returns array of 1 (success) or 0 (failure) for last 8 runs, oldest→newest order
+// Input is already sorted descending — take first 8 then reverse so sparkline reads left→right
 export function buildSparklineData(runs: CrawlRun[]): number[] {
-  return runs.slice(0, 8).map((run) => (run.status === 'success' ? 1 : 0))
+  return runs
+    .slice(0, 8)
+    .reverse()
+    .map((run) => (run.status === 'success' ? 1 : 0))
 }

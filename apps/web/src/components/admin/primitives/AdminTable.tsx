@@ -39,6 +39,18 @@ export const TR = ({
 }) => (
   <tr
     onClick={onClick}
+    {...(onClick
+      ? {
+          onKeyDown: (evt: React.KeyboardEvent<HTMLTableRowElement>) => {
+            if (evt.key === 'Enter' || evt.key === ' ') {
+              evt.preventDefault()
+              onClick()
+            }
+          },
+          tabIndex: 0,
+          role: 'button',
+        }
+      : {})}
     style={{
       borderBottom: '1px solid var(--border)',
       background: active ? 'var(--surface-2)' : undefined,

@@ -68,9 +68,10 @@ export default async function AdminDashboardPage() {
 
   const greenCount = status.filter((row) => row.status === 'success').length
   const blockedCount = status.filter(
-    (row) => row.status === 'blocked' || row.status === 'failed',
+    (row) => row.blockedAt !== null || row.status === 'failed',
   ).length
   const totalCost = runs.reduce((sum, run) => sum + (run.llmCostUsd ?? 0), 0)
+  const llmBudgetPct = Math.round((totalCost / LLM_BUDGET_USD) * 100)
 
   const recentCost = runs
     .slice(0, 7)
@@ -97,18 +98,24 @@ export default async function AdminDashboardPage() {
     const { getToken: getActionToken } = await auth()
     const actionToken = await getActionToken()
     if (!actionToken) return
-    const apiUrl = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
-    const activeVenues = venues.filter(
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+    const venuesRes = await fetch(`${apiUrl}/v1/admin/venues`, {
+      headers: { Authorization: `Bearer ${actionToken}` },
+    })
+    if (!venuesRes.ok) return
+    const venuesData = (await venuesRes.json()) as {
+      success: boolean
+      data: Venue[]
+    }
+    if (!venuesData.success) return
+    const activeVenues = venuesData.data.filter(
       (venue) => venue.active && venue.verified,
     )
     await Promise.allSettled(
       activeVenues.map((venue) =>
         fetch(`${apiUrl}/v1/admin/crawl/${venue.id}`, {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${actionToken}`,
-            'Content-Type': 'application/json',
-          },
+          headers: { Authorization: `Bearer ${actionToken}` },
         }),
       ),
     )
@@ -168,7 +175,7 @@ export default async function AdminDashboardPage() {
           value={String(pendingEvents.length)}
           unit="events"
           iconName="CheckSquare"
-          kind="warning"
+          kind={pendingEvents.length > 0 ? 'warning' : 'neutral'}
           {...(pendingHint ? { hint: pendingHint } : {})}
           footer={
             <Link
@@ -195,14 +202,16 @@ export default async function AdminDashboardPage() {
           kind="signal"
           {...(costTrend !== undefined ? { trend: costTrend } : {})}
           footer={
-            <ProgressBar
-              value={Math.min(
-                Math.round((totalCost / LLM_BUDGET_USD) * 100),
-                100,
-              )}
-              kind="signal"
-              showLabel={false}
-            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ fontSize: 11, color: 'var(--fg-subtle)' }}>
+                {`Budget $${LLM_BUDGET_USD} · ${llmBudgetPct}% used`}
+              </div>
+              <ProgressBar
+                value={Math.min(llmBudgetPct, 100)}
+                kind="signal"
+                showLabel={false}
+              />
+            </div>
           }
         />
 

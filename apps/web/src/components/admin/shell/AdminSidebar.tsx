@@ -516,6 +516,8 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
           >
             <button
               onClick={() => setSignOutOpen((prev) => !prev)}
+              aria-label="User menu"
+              title="User menu"
               style={{
                 width: 28,
                 height: 28,
