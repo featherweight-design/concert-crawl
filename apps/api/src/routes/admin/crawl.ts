@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { eq, desc, asc, inArray } from 'drizzle-orm'
+import { and, eq, desc, asc, inArray } from 'drizzle-orm'
 import { db, venues, crawlRuns, crawlTriggers } from '@concert-crawl/db'
 import { getAuthUser } from '../../middleware/auth.js'
 import type { AdminVariables } from './index.js'
@@ -13,6 +13,40 @@ const crawlRunIdSchema = z.object({ id: z.string().uuid('id must be a UUID') })
 const triggerIdSchema = z.object({ id: z.string().uuid('id must be a UUID') })
 
 export const crawlAdminRouter = new Hono<AdminVariables>()
+
+// POST /v1/admin/crawl — queue crawl triggers for all active + verified venues
+crawlAdminRouter.post('/', async (ctx) => {
+  const activeVenues = await db
+    .select({ id: venues.id })
+    .from(venues)
+    .where(and(eq(venues.active, true), eq(venues.verified, true)))
+
+  if (activeVenues.length === 0) {
+    return ctx.json({ success: true, data: { triggerIds: [], count: 0 } })
+  }
+
+  const actor = getAuthUser(ctx).userId
+  const inserted = await db
+    .insert(crawlTriggers)
+    .values(
+      activeVenues.map((venue) => ({ venueId: venue.id, triggeredBy: actor })),
+    )
+    .returning({ id: crawlTriggers.id, venueId: crawlTriggers.venueId })
+
+  ctx.set('auditAction', 'crawl.trigger_all')
+  ctx.set('auditActorId', actor)
+
+  return ctx.json(
+    {
+      success: true,
+      data: {
+        triggerIds: inserted.map((row) => row.id),
+        count: inserted.length,
+      },
+    },
+    202,
+  )
+})
 
 // POST /v1/admin/crawl/:venueId — queue a crawl trigger (handled by crawler service)
 crawlAdminRouter.post(
@@ -115,8 +149,10 @@ crawlAdminRouter.get(
         extractionStrategyUsed: crawlRuns.extractionStrategyUsed,
         eventsFound: crawlRuns.eventsFound,
         eventsInserted: crawlRuns.eventsInserted,
+        eventsUpdated: crawlRuns.eventsUpdated,
         errorMessage: crawlRuns.errorMessage,
         durationMs: crawlRuns.durationMs,
+        llmCostUsd: crawlRuns.llmCostUsd,
         createdAt: crawlRuns.createdAt,
       })
       .from(crawlRuns)
@@ -154,13 +190,15 @@ crawlAdminRouter.get('/status', async (ctx) => {
             id: crawlRuns.id,
             venueId: crawlRuns.venueId,
             status: crawlRuns.status,
+            httpStatusCode: crawlRuns.httpStatusCode,
             createdAt: crawlRuns.createdAt,
             eventsFound: crawlRuns.eventsFound,
             eventsInserted: crawlRuns.eventsInserted,
+            eventsUpdated: crawlRuns.eventsUpdated,
             errorMessage: crawlRuns.errorMessage,
             extractionStrategyUsed: crawlRuns.extractionStrategyUsed,
-            httpStatusCode: crawlRuns.httpStatusCode,
             durationMs: crawlRuns.durationMs,
+            llmCostUsd: crawlRuns.llmCostUsd,
           })
           .from(crawlRuns)
           .where(inArray(crawlRuns.venueId, venueIds))

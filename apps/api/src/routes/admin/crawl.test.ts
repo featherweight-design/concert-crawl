@@ -92,6 +92,66 @@ describe('Admin crawl routes', () => {
     mockGetAuth.mockReset()
   })
 
+  describe('POST /v1/admin/crawl (bulk trigger)', () => {
+    it('returns 401 for unauthenticated requests', async () => {
+      mockGetAuth.mockReturnValue(null)
+      const res = await createApp().request('/v1/admin/crawl', {
+        method: 'POST',
+      })
+      expect(res.status).toBe(401)
+    })
+
+    it('returns 403 for non-admin users', async () => {
+      mockGetAuth.mockReturnValue({
+        userId: 'user_123',
+        sessionClaims: { metadata: { role: 'user' } },
+      })
+      const res = await createApp().request('/v1/admin/crawl', {
+        method: 'POST',
+      })
+      expect(res.status).toBe(403)
+    })
+
+    it('returns 200 with empty triggerIds when no active venues exist', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      vi.mocked(db.select().from().where).mockResolvedValueOnce([])
+      const res = await createApp().request('/v1/admin/crawl', {
+        method: 'POST',
+      })
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as {
+        success: boolean
+        data: { triggerIds: string[]; count: number }
+      }
+      expect(body.success).toBe(true)
+      expect(body.data.triggerIds).toEqual([])
+      expect(body.data.count).toBe(0)
+    })
+
+    it('returns 202 with triggerIds when active venues exist', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      vi.mocked(db.select().from().where).mockResolvedValueOnce([
+        { id: VENUE_ID },
+      ])
+      vi.mocked(db.insert({}).values().returning).mockResolvedValueOnce([
+        { id: TRIGGER_ID, venueId: VENUE_ID },
+      ])
+      const res = await createApp().request('/v1/admin/crawl', {
+        method: 'POST',
+      })
+      expect(res.status).toBe(202)
+      const body = (await res.json()) as {
+        success: boolean
+        data: { triggerIds: string[]; count: number }
+      }
+      expect(body.success).toBe(true)
+      expect(body.data.triggerIds).toEqual([TRIGGER_ID])
+      expect(body.data.count).toBe(1)
+    })
+  })
+
   describe('POST /v1/admin/crawl/:venueId', () => {
     it('returns 401 for unauthenticated requests', async () => {
       mockGetAuth.mockReturnValue(null)

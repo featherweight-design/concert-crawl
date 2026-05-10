@@ -131,6 +131,7 @@ export interface CrawlRun {
   extractionStrategyUsed: string | null
   eventsFound: number
   eventsInserted: number
+  eventsUpdated: number
   errorMessage: string | null
   durationMs: number | null
   createdAt: string
