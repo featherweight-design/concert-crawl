@@ -198,12 +198,19 @@ pricesAdminRouter.post('/pipeline/:eventId', async (ctx) => {
     .limit(1)
 
   if (!event) return ctx.json({ success: false, error: 'Event not found' }, 404)
+  if (!event.venueId)
+    return ctx.json(
+      { success: false, error: 'Event has no associated venue' },
+      422,
+    )
+
+  const narrowedVenueId = event.venueId
 
   void (async () => {
     try {
       await runPricePipeline({
         eventId: event.id,
-        venueId: event.venueId,
+        venueId: narrowedVenueId,
         artist: event.artist,
         date: event.date,
         priceUrl: event.venue.priceUrl,

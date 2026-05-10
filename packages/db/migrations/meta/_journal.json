@@ -106,6 +106,13 @@
       "when": 1778622900000,
       "tag": "0014_add_llm_cost_events_updated",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1778622901000,
+      "tag": "0015_venue_hard_delete",
+      "breakpoints": true
     }
   ]
 }

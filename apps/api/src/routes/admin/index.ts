@@ -14,6 +14,7 @@ export type AdminVariables = {
     auditAction?: string
     auditTargetId?: string
     auditActorId?: string
+    auditMeta?: Record<string, unknown>
   }
 }
 
@@ -33,6 +34,7 @@ adminRouter.use('*', async (ctx, next) => {
   const action = ctx.get('auditAction')
   const targetId = ctx.get('auditTargetId')
   const actorId = ctx.get('auditActorId')
+  const auditMeta = ctx.get('auditMeta') ?? null
 
   if (action && actorId) {
     try {
@@ -40,7 +42,7 @@ adminRouter.use('*', async (ctx, next) => {
         actorId,
         action,
         targetId: targetId ?? null,
-        metadata: null,
+        metadata: auditMeta,
       })
     } catch (error) {
       console.error('Failed to write admin audit log', {

@@ -16,7 +16,15 @@ vi.mock('@hono/clerk-auth', () => ({
 }))
 
 import { createApp } from '../../app.js'
-import { clearTables, seedVenue } from '../../test/helpers/seed.js'
+import {
+  clearTables,
+  seedCrawlRun,
+  seedEvent,
+  seedVenue,
+} from '../../test/helpers/seed.js'
+import { testDb } from '../../test/helpers/db.js'
+import { events } from '@concert-crawl/db'
+import { eq } from 'drizzle-orm'
 
 const app = createApp()
 
@@ -93,6 +101,69 @@ describe('GET /v1/admin/venues — integration', () => {
   })
 })
 
+describe('GET /v1/admin/venues/:id — integration (crawl health)', () => {
+  beforeEach(async () => {
+    clearAuth()
+    await clearTables()
+  })
+
+  it('returns 404 for unknown venue', async () => {
+    setAuth('admin')
+    const res = await app.request(
+      '/v1/admin/venues/00000000-0000-0000-0000-000000000000',
+    )
+    expect(res.status).toBe(404)
+  })
+
+  it('includes crawlHealth in response', async () => {
+    setAuth('admin')
+    const venue = await seedVenue({ name: 'Fox Theatre', slug: 'fox-theatre' })
+    await seedCrawlRun(venue.id, { status: 'success', durationMs: 1500 })
+    await seedCrawlRun(venue.id, { status: 'failed', durationMs: 800 })
+    await seedEvent(venue.id)
+
+    const res = await app.request(`/v1/admin/venues/${venue.id}`)
+    expect(res.status).toBe(200)
+
+    const body = (await res.json()) as {
+      success: boolean
+      data: {
+        id: string
+        crawlHealth: {
+          sevenDayPercent: number
+          sparkline: { date: string; success: boolean }[]
+          lastCrawledAt: string | null
+          avgDurationMs: number | null
+          eventsTracked: number
+          consecutiveFails: number
+        }
+      }
+    }
+
+    expect(body.success).toBe(true)
+    expect(body.data.id).toBe(venue.id)
+    expect(body.data.crawlHealth).toBeDefined()
+    expect(body.data.crawlHealth.sparkline).toBeInstanceOf(Array)
+    expect(body.data.crawlHealth.eventsTracked).toBe(1)
+    expect(body.data.crawlHealth.consecutiveFails).toBe(0)
+    expect(typeof body.data.crawlHealth.sevenDayPercent).toBe('number')
+  })
+
+  it('returns zero eventsTracked when no events', async () => {
+    setAuth('admin')
+    const venue = await seedVenue({ name: 'Empty Venue', slug: 'empty-venue' })
+
+    const res = await app.request(`/v1/admin/venues/${venue.id}`)
+    expect(res.status).toBe(200)
+
+    const body = (await res.json()) as {
+      success: boolean
+      data: { crawlHealth: { eventsTracked: number } }
+    }
+    expect(body.data.crawlHealth.eventsTracked).toBe(0)
+  })
+})
+
 describe('POST /v1/admin/venues — integration', () => {
   beforeEach(async () => {
     clearAuth()
@@ -145,5 +216,159 @@ describe('POST /v1/admin/venues — integration', () => {
     expect(body.data.name).toBe('Bluebird Theater')
     expect(body.data.slug).toBe('bluebird-theater')
     expect(body.data.id).toBeDefined()
+  })
+
+  it('returns 409 when slug is already in use', async () => {
+    setAuth('admin')
+    await seedVenue({ name: 'Existing Venue', slug: 'taken-slug' })
+
+    const res = await app.request('/v1/admin/venues', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'New Venue',
+        slug: 'taken-slug',
+        websiteUrl: 'https://newvenue.example.com',
+      }),
+    })
+    expect(res.status).toBe(409)
+    const body = (await res.json()) as {
+      success: boolean
+      error: string
+      field: string
+    }
+    expect(body.success).toBe(false)
+    expect(body.error).toBe('Slug already in use')
+    expect(body.field).toBe('slug')
+  })
+})
+
+describe('PATCH /v1/admin/venues/:id — integration', () => {
+  beforeEach(async () => {
+    clearAuth()
+    await clearTables()
+  })
+
+  it('returns 409 when slug is taken by another venue', async () => {
+    setAuth('admin')
+    const venue1 = await seedVenue({ name: 'Venue One', slug: 'venue-one' })
+    await seedVenue({ name: 'Venue Two', slug: 'venue-two' })
+
+    const res = await app.request(`/v1/admin/venues/${venue1.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'venue-two' }),
+    })
+    expect(res.status).toBe(409)
+    const body = (await res.json()) as {
+      success: boolean
+      error: string
+      field: string
+    }
+    expect(body.success).toBe(false)
+    expect(body.error).toBe('Slug already in use')
+    expect(body.field).toBe('slug')
+  })
+
+  it('allows updating to the same slug on the same venue', async () => {
+    setAuth('admin')
+    const venue = await seedVenue({ name: 'Ogden', slug: 'ogden' })
+
+    const res = await app.request(`/v1/admin/venues/${venue.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: 'ogden', name: 'Ogden Theatre' }),
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { name: string; slug: string }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.name).toBe('Ogden Theatre')
+    expect(body.data.slug).toBe('ogden')
+  })
+})
+
+describe('DELETE /v1/admin/venues/:id — integration (hard delete)', () => {
+  beforeEach(async () => {
+    clearAuth()
+    await clearTables()
+  })
+
+  it('returns 404 for unknown venue', async () => {
+    setAuth('admin')
+    const res = await app.request(
+      '/v1/admin/venues/00000000-0000-0000-0000-000000000000',
+      { method: 'DELETE' },
+    )
+    expect(res.status).toBe(404)
+  })
+
+  it('hard deletes venue and returns eventsDetached count', async () => {
+    setAuth('admin')
+    const venue = await seedVenue({
+      name: 'Venue To Delete',
+      slug: 'delete-me',
+    })
+    await seedEvent(venue.id)
+    await seedEvent(venue.id, { artist: 'Second Artist', date: '2026-07-01' })
+
+    const res = await app.request(`/v1/admin/venues/${venue.id}`, {
+      method: 'DELETE',
+    })
+    expect(res.status).toBe(200)
+
+    const body = (await res.json()) as {
+      success: boolean
+      data: { eventsDetached: number }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.eventsDetached).toBe(2)
+  })
+
+  it('nulls venue_id on events but keeps events in DB', async () => {
+    setAuth('admin')
+    const venue = await seedVenue({ name: 'Venue X', slug: 'venue-x' })
+    const event = await seedEvent(venue.id)
+
+    await app.request(`/v1/admin/venues/${venue.id}`, { method: 'DELETE' })
+
+    const [detachedEvent] = await testDb
+      .select({ venueId: events.venueId })
+      .from(events)
+      .where(eq(events.id, event.id))
+
+    expect(detachedEvent).toBeDefined()
+    expect(detachedEvent?.venueId).toBeNull()
+  })
+
+  it('venue is gone from DB after delete', async () => {
+    setAuth('admin')
+    const venue = await seedVenue({ name: 'Gone Venue', slug: 'gone-venue' })
+
+    await app.request(`/v1/admin/venues/${venue.id}`, { method: 'DELETE' })
+
+    const getRes = await app.request(`/v1/admin/venues/${venue.id}`)
+    expect(getRes.status).toBe(404)
+  })
+
+  it('returns 0 eventsDetached when venue had no events', async () => {
+    setAuth('admin')
+    const venue = await seedVenue({
+      name: 'No Events Venue',
+      slug: 'no-events-venue',
+    })
+
+    const res = await app.request(`/v1/admin/venues/${venue.id}`, {
+      method: 'DELETE',
+    })
+    expect(res.status).toBe(200)
+
+    const body = (await res.json()) as {
+      success: boolean
+      data: { eventsDetached: number }
+    }
+    expect(body.data.eventsDetached).toBe(0)
   })
 })

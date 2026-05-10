@@ -34,9 +34,9 @@ export const events = pgTable(
   'events',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    venueId: uuid('venue_id')
-      .notNull()
-      .references(() => venues.id, { onDelete: 'cascade' }),
+    venueId: uuid('venue_id').references(() => venues.id, {
+      onDelete: 'set null',
+    }),
     title: text('title').notNull(),
     artist: text('artist').notNull(),
     date: date('date').notNull(),

@@ -1,8 +1,8 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { db, venues, events } from '@concert-crawl/db'
-import { and, count, eq, gte } from 'drizzle-orm'
+import { db, venues, events, crawlRuns } from '@concert-crawl/db'
+import { and, avg, count, desc, eq, gte, isNotNull, ne } from 'drizzle-orm'
 import { getAuthUser } from '../../middleware/auth.js'
 import type { AdminVariables } from './index.js'
 
@@ -10,14 +10,16 @@ const createVenueSchema = z.object({
   name: z.string().min(1).max(200),
   slug: z
     .string()
-    .min(1)
-    .max(100)
-    .regex(/^[a-z0-9-]+$/, 'Slug must be lowercase alphanumeric with hyphens'),
+    .min(2)
+    .max(60)
+    .regex(
+      /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/,
+      'Slug must be lowercase alphanumeric with hyphens, starting and ending with alphanumeric',
+    ),
   websiteUrl: z.string().url(),
   city: z.string().default('Denver'),
+  active: z.boolean().default(true),
   crawlDelayMs: z.number().int().min(1000).max(30000).default(3000),
-  contactEmail: z.string().email().optional(),
-  crawlNotes: z.string().optional(),
 })
 
 const updateVenueSchema = createVenueSchema.partial().extend({
@@ -35,7 +37,13 @@ venuesAdminRouter.get('/', async (ctx) => {
   const eventCounts = await db
     .select({ venueId: events.venueId, total: count(events.id) })
     .from(events)
-    .where(and(eq(events.status, 'upcoming'), gte(events.date, today)))
+    .where(
+      and(
+        eq(events.status, 'upcoming'),
+        gte(events.date, today),
+        isNotNull(events.venueId),
+      ),
+    )
     .groupBy(events.venueId)
 
   const countByVenueId = new Map(
@@ -50,7 +58,75 @@ venuesAdminRouter.get('/', async (ctx) => {
   return ctx.json({ success: true, data: venuesWithCounts })
 })
 
-// GET /v1/admin/venues/:id — get single venue
+// GET /v1/admin/venues/robots-check?url=<encoded> — advisory robots.txt check
+venuesAdminRouter.get('/robots-check', async (ctx) => {
+  const rawUrl = ctx.req.query('url')
+  if (!rawUrl) {
+    return ctx.json(
+      { success: false, error: 'Missing required query param: url' },
+      400,
+    )
+  }
+
+  let parsedUrl: URL
+  try {
+    parsedUrl = new URL(rawUrl)
+  } catch {
+    return ctx.json({ success: false, error: 'Invalid URL format' }, 400)
+  }
+
+  const robotsUrl = `${parsedUrl.protocol}//${parsedUrl.host}/robots.txt`
+
+  try {
+    const response = await fetch(robotsUrl, {
+      headers: {
+        'User-Agent': 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)',
+      },
+      signal: AbortSignal.timeout(5000),
+    })
+
+    if (!response.ok) {
+      return ctx.json({ allowed: true, checkedAt: new Date().toISOString() })
+    }
+
+    const text = await response.text()
+    const lines = text.split('\n').map((line) => line.trim())
+
+    let inConcertCrawlBlock = false
+    let inWildcardBlock = false
+    let concertCrawlDisallowed = false
+    let wildcardDisallowed = false
+
+    for (const line of lines) {
+      const lower = line.toLowerCase()
+      if (lower.startsWith('user-agent:')) {
+        const agent = line.slice('user-agent:'.length).trim().toLowerCase()
+        inConcertCrawlBlock = agent === 'concertcrawl'
+        inWildcardBlock = agent === '*'
+      } else if (lower.startsWith('disallow:')) {
+        const path = line.slice('disallow:'.length).trim()
+        if (path === '/' || path === '') {
+          if (inConcertCrawlBlock) concertCrawlDisallowed = true
+          if (inWildcardBlock) wildcardDisallowed = true
+        }
+      }
+    }
+
+    const disallowed = concertCrawlDisallowed || wildcardDisallowed
+
+    return ctx.json({
+      allowed: !disallowed,
+      checkedAt: new Date().toISOString(),
+    })
+  } catch {
+    return ctx.json({
+      allowed: null,
+      error: 'Could not fetch robots.txt',
+    })
+  }
+})
+
+// GET /v1/admin/venues/:id — get single venue with crawl health stats
 venuesAdminRouter.get('/:id', async (ctx) => {
   const { id } = ctx.req.param()
   const [venue] = await db.select().from(venues).where(eq(venues.id, id))
@@ -59,15 +135,99 @@ venuesAdminRouter.get('/:id', async (ctx) => {
     return ctx.json({ success: false, error: 'Venue not found' }, 404)
   }
 
-  return ctx.json({ success: true, data: venue })
+  // Last 7 days sparkline
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+  sevenDaysAgo.setHours(0, 0, 0, 0)
+
+  const recentRuns = await db
+    .select({
+      id: crawlRuns.id,
+      status: crawlRuns.status,
+      durationMs: crawlRuns.durationMs,
+      createdAt: crawlRuns.createdAt,
+    })
+    .from(crawlRuns)
+    .where(
+      and(eq(crawlRuns.venueId, id), gte(crawlRuns.createdAt, sevenDaysAgo)),
+    )
+    .orderBy(desc(crawlRuns.createdAt))
+
+  // Build sparkline: one entry per calendar day over the past 7 days
+  const dayMap = new Map<string, boolean>()
+  for (const run of recentRuns) {
+    const dayKey = run.createdAt.toISOString().slice(0, 10)
+    if (!dayMap.has(dayKey)) {
+      dayMap.set(dayKey, run.status === 'success')
+    }
+  }
+
+  const sparkline: { date: string; success: boolean }[] = []
+  for (let dayOffset = 6; dayOffset >= 0; dayOffset--) {
+    const day = new Date()
+    day.setDate(day.getDate() - dayOffset)
+    const dayKey = day.toISOString().slice(0, 10)
+    if (dayMap.has(dayKey)) {
+      sparkline.push({ date: dayKey, success: dayMap.get(dayKey)! })
+    }
+  }
+
+  const successDays = sparkline.filter((entry) => entry.success).length
+  const sevenDayPercent =
+    sparkline.length > 0
+      ? Math.round((successDays / sparkline.length) * 100)
+      : 0
+
+  const avgDurationResult = await db
+    .select({ avg: avg(crawlRuns.durationMs) })
+    .from(crawlRuns)
+    .where(
+      and(eq(crawlRuns.venueId, id), gte(crawlRuns.createdAt, sevenDaysAgo)),
+    )
+
+  const avgDurationMs = avgDurationResult[0]?.avg
+    ? Math.round(Number(avgDurationResult[0].avg))
+    : null
+
+  const [eventsCountResult] = await db
+    .select({ total: count(events.id) })
+    .from(events)
+    .where(eq(events.venueId, id))
+
+  const eventsTracked = eventsCountResult?.total ?? 0
+
+  const lastCrawledAt = venue.lastCrawledAt?.toISOString() ?? null
+
+  const crawlHealth = {
+    sevenDayPercent,
+    sparkline,
+    lastCrawledAt,
+    avgDurationMs,
+    eventsTracked,
+    consecutiveFails: venue.consecutiveFailures,
+  }
+
+  return ctx.json({ success: true, data: { ...venue, crawlHealth } })
 })
 
-// POST /v1/admin/venues — create venue
+// POST /v1/admin/venues — create venue with slug uniqueness check
 venuesAdminRouter.post(
   '/',
   zValidator('json', createVenueSchema),
   async (ctx) => {
     const body = ctx.req.valid('json')
+
+    const [slugConflict] = await db
+      .select({ id: venues.id })
+      .from(venues)
+      .where(eq(venues.slug, body.slug))
+
+    if (slugConflict) {
+      return ctx.json(
+        { success: false, error: 'Slug already in use', field: 'slug' },
+        409,
+      )
+    }
 
     const [venue] = await db.insert(venues).values(body).returning()
 
@@ -86,7 +246,7 @@ venuesAdminRouter.post(
   },
 )
 
-// PATCH /v1/admin/venues/:id — update venue
+// PATCH /v1/admin/venues/:id — update venue with slug uniqueness check
 venuesAdminRouter.patch(
   '/:id',
   zValidator('json', updateVenueSchema),
@@ -97,6 +257,20 @@ venuesAdminRouter.patch(
     const [existing] = await db.select().from(venues).where(eq(venues.id, id))
     if (!existing) {
       return ctx.json({ success: false, error: 'Venue not found' }, 404)
+    }
+
+    if (body.slug && body.slug !== existing.slug) {
+      const [slugConflict] = await db
+        .select({ id: venues.id })
+        .from(venues)
+        .where(and(eq(venues.slug, body.slug), ne(venues.id, id)))
+
+      if (slugConflict) {
+        return ctx.json(
+          { success: false, error: 'Slug already in use', field: 'slug' },
+          409,
+        )
+      }
     }
 
     const [updated] = await db
@@ -113,7 +287,7 @@ venuesAdminRouter.patch(
   },
 )
 
-// DELETE /v1/admin/venues/:id — soft delete (set active = false)
+// DELETE /v1/admin/venues/:id — hard delete; nulls venue_id on events, cascades crawl_runs
 venuesAdminRouter.delete('/:id', async (ctx) => {
   const { id } = ctx.req.param()
 
@@ -122,14 +296,24 @@ venuesAdminRouter.delete('/:id', async (ctx) => {
     return ctx.json({ success: false, error: 'Venue not found' }, 404)
   }
 
-  await db
-    .update(venues)
-    .set({ active: false, updatedAt: new Date() })
-    .where(eq(venues.id, id))
+  // Count events before detaching
+  const [eventCountResult] = await db
+    .select({ total: count(events.id) })
+    .from(events)
+    .where(eq(events.venueId, id))
 
-  ctx.set('auditAction', 'venue.deactivate')
+  const eventsDetached = eventCountResult?.total ?? 0
+
+  // Null out venue_id on events so they remain published
+  await db.update(events).set({ venueId: null }).where(eq(events.venueId, id))
+
+  // Hard delete venue; crawl_runs cascade-delete automatically
+  await db.delete(venues).where(eq(venues.id, id))
+
+  ctx.set('auditAction', 'venue.delete')
   ctx.set('auditTargetId', id)
   ctx.set('auditActorId', getAuthUser(ctx).userId)
+  ctx.set('auditMeta', { snapshot: existing, eventsDetached })
 
-  return ctx.json({ success: true })
+  return ctx.json({ success: true, data: { eventsDetached } })
 })
