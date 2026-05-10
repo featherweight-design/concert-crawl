@@ -369,6 +369,7 @@ Phase: **Pre-Beta Sprint — target open May 25, 2026**
 - Venue seeding complete (ongoing — 10-12 venues crawled and live before private beta)
 - Empty state design handoff added (PR #118 merged 2026-05-09): design assets for empty states
 - Domain: `concertcrawl.app` via Cloudflare Registrar (~$15/yr)
+- Watching bug fixes in PR (fix/watching-bugs): IdentityArt thumbnail in WatchingItem (#124); watch state rehydration on Browse via auth + fetchWatching (#125)
 
 ### Phase Sequence
 

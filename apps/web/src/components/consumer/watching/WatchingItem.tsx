@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { WatchingShow } from '@concert-crawl/types'
-import { EventImage } from '../event-image'
+import { IdentityArt } from '../identity-art/IdentityArt'
 import { DeltaTag } from './DeltaTag'
 import { SourcePill } from './SourcePill'
 
@@ -155,12 +155,12 @@ export function WatchingItem({ show, density, onRemove }: WatchingItemProps) {
           flexShrink: 0,
         }}
       >
-        <EventImage
-          src={show.imageUrl}
-          alt={show.artist}
-          artist={show.artist}
-          identityScale="tile"
+        <IdentityArt
+          name={show.artist}
+          kind="artist"
+          scale="tile"
           className="h-full w-full"
+          aria-label={show.artist}
         />
       </Link>
 

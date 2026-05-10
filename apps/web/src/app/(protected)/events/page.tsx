@@ -1,6 +1,12 @@
 import { Fragment, Suspense } from 'react'
-import type { EventsListResponse, VenuePublic } from '@concert-crawl/types'
+import type {
+  EventsListResponse,
+  VenuePublic,
+  WatchingShow,
+} from '@concert-crawl/types'
 import { publicApiClient } from '@/lib/api'
+import { auth } from '@/lib/auth'
+import { fetchWatching } from '@/lib/watching'
 import { AppHeader } from '@/components/consumer/app-header'
 import { BottomNav } from '@/components/consumer/bottom-nav'
 import { HeroEventCard } from '@/components/consumer/hero-event-card'
@@ -17,6 +23,8 @@ import {
 } from '@/components/consumer/definitions/lib'
 import { copy } from '@/components/consumer/definitions/copy'
 import { WeekStrip } from '@/components/consumer/week-strip'
+
+export const dynamic = 'force-dynamic'
 
 const PAGE_LIMIT = 20
 
@@ -116,10 +124,20 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     if (validSelectedDate) selectedDate = validSelectedDate
   }
 
-  const [eventsResult, venues] = await Promise.all([
+  const { getToken } = await auth()
+  const token = await getToken()
+
+  const watchedShowsPromise: Promise<WatchingShow[]> = token
+    ? fetchWatching(token).catch(() => [])
+    : Promise.resolve([])
+
+  const [eventsResult, venues, watchedShows] = await Promise.all([
     fetchEvents(fetchParams),
     fetchVenues(),
+    watchedShowsPromise,
   ])
+
+  const watchedIds = new Set(watchedShows.map((show) => show.eventId))
 
   const { data: events, total, limit } = eventsResult
 
@@ -250,7 +268,10 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                             style={{ marginLeft: 58 }}
                           />
                         )}
-                        <EventCard event={event} />
+                        <EventCard
+                          event={event}
+                          isWatching={watchedIds.has(event.id)}
+                        />
                       </Fragment>
                     ))}
                   </div>
