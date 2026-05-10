@@ -86,3 +86,9 @@
   .onboarding-mobile { display: none !important; }
   .onboarding-desktop { display: block !important; }
 }
+
+/* Onboarding step heading — 28px mobile, 34px desktop */
+.ob-step-heading { font-size: 34px; }
+@media (max-width: 1239px) {
+  .ob-step-heading { font-size: 28px; }
+}

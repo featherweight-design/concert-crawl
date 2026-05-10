@@ -24,13 +24,14 @@ export function Eyebrow({
 export function StepHeading({ children }: { children: React.ReactNode }) {
   return (
     <h1
+      className="ob-step-heading"
       style={{
         margin: 0,
         fontFamily: 'Inter, system-ui',
         fontWeight: 900,
-        fontSize: 34,
         letterSpacing: '-0.03em',
         lineHeight: 1.05,
+        textWrap: 'balance',
         color: 'var(--fg)',
       }}
     >
@@ -49,6 +50,7 @@ export function Lede({ children }: { children: React.ReactNode }) {
         lineHeight: 1.55,
         color: 'var(--fg-muted)',
         letterSpacing: '-0.005em',
+        textWrap: 'pretty',
       }}
     >
       {children}

@@ -92,8 +92,28 @@ export function OnboardingShell() {
         </header>
 
         {/* Progress strip */}
-        <div style={{ flexShrink: 0, padding: '4px 22px 8px' }}>
+        <div
+          style={{
+            flexShrink: 0,
+            padding: '4px 22px 8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
           <ProgressDots total={total} index={index} />
+          <span
+            style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: 'var(--fg-subtle)',
+            }}
+          >
+            {STEP_LABELS[stepKey]}
+          </span>
         </div>
 
         {/* Scrollable body */}
@@ -103,12 +123,18 @@ export function OnboardingShell() {
             minHeight: 0,
             overflowY: 'auto',
             padding: '10px 22px 8px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'safe center',
           }}
         >
-          <StepContent stepKey={stepKey} />
+          <div
+            style={{
+              minHeight: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'safe center',
+            }}
+          >
+            <StepContent stepKey={stepKey} />
+          </div>
         </div>
 
         {/* Nav */}
@@ -342,12 +368,18 @@ function OnboardingDesktop({
               minHeight: 0,
               overflowY: 'auto',
               padding: '8px 32px 12px',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'safe center',
             }}
           >
-            <StepContent stepKey={stepKey} />
+            <div
+              style={{
+                minHeight: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'safe center',
+              }}
+            >
+              <StepContent stepKey={stepKey} />
+            </div>
           </div>
 
           {/* Card nav */}
