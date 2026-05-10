@@ -378,6 +378,7 @@ Phase: **Pre-Beta Sprint — target open May 25, 2026**
 - Genre tagger resilience (PR #147 merged 2026-05-10): open enum for unknown genres, batch size limit
 - Active Claude workers: admin/crawl UI fixes (issues #148–163), admin sidebar polish (issue #139), search implementation (issue #57)
 - Admin sidebar polish in PR #167 (issue #139): badge contrast, CCMark centralization, Invite Codes icon, OPERATIONS label
+- Admin crawl data + run-all in PR (feat/admin-crawl-data-and-run-all): DB migration 0014 (llm_cost_usd, events_updated), crawler writes new fields, API selects them + bulk trigger endpoint, "Run all" button in CrawlSplitView; closes #150, #155, #156
 
 ### Phase Sequence
 
@@ -409,6 +410,7 @@ Phase: **Pre-Beta Sprint — target open May 25, 2026**
 | —           | Feedback modal + user menu redesign      | ✅ Complete (PR #146 merged 2026-05-10)        |
 | —           | Crawler: shared browser + genre fixes    | ✅ Complete (PRs #144, #147 merged 2026-05-10) |
 | —           | Admin sidebar polish                     | 🔄 In PR #167 (issue #139)                     |
+| —           | Admin crawl data + run-all               | 🔄 In PR (feat/admin-crawl-data-and-run-all)   |
 | Pre-beta    | UI interactions audit + bug fixes        | 🔄 In progress (admin/crawl, sidebar, search)  |
 | Beta period | Jun 16 – Aug 3 (see beta-to-launch spec) | —                                              |
 | Launch prep | Aug 4–17                                 | —                                              |
