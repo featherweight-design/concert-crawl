@@ -108,7 +108,10 @@ describe('useSearch — debounce', () => {
       await Promise.resolve()
     })
 
-    expect(fetch).toHaveBeenCalledWith(expect.stringContaining('search=rad'))
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('search=rad'),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    )
   })
 
   it('derives artist results with earliest next show', async () => {

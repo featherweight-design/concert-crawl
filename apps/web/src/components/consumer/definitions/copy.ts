@@ -33,7 +33,9 @@ export const copy = {
 
   // ── Search ─────────────────────────────────────────────────────────
   searchNoResultsEyebrow: 'No results',
-  searchNoResultsBody: "Try another spelling, or browse what's on tonight.",
+  searchNoResultsTitle: 'Nothing under that name.',
+  searchNoResultsBody:
+    'No bookings right now. Try another spelling, or browse what’s on tonight.',
   searchNoResultsCta: 'Browse all shows',
 
   // ── Shared / misc ──────────────────────────────────────────────────

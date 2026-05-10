@@ -175,10 +175,9 @@ describe('SearchResultsState', () => {
 })
 
 describe('SearchEmptyState', () => {
-  it('renders "Nothing for" with the query', () => {
+  it('renders the no-results title', () => {
     render(<SearchEmptyState query="thee oh sees" />)
-    expect(screen.getByText(/Nothing for/)).toBeTruthy()
-    expect(screen.getByText(/thee oh sees/)).toBeTruthy()
+    expect(screen.getByText(/Nothing under that name/)).toBeTruthy()
   })
 
   it('renders browse CTA linking to /events', () => {

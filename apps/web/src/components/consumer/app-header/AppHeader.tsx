@@ -23,10 +23,16 @@ export function AppHeader() {
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
-        event.preventDefault()
-        setPaletteOpen(true)
-      }
+      if (!((event.metaKey || event.ctrlKey) && event.key === 'k')) return
+      const target = event.target as HTMLElement
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target.isContentEditable
+      )
+        return
+      event.preventDefault()
+      setPaletteOpen(true)
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)

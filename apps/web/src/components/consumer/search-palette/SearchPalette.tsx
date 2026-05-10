@@ -41,11 +41,11 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
     }
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const { artistResults, venueResults, navigateTo } = search
+
   useEffect(() => {
     if (!open) return
 
-    const artistResults = search.artistResults
-    const venueResults = search.venueResults
     const totalResults = artistResults.length + venueResults.length
 
     function handleKeyDown(event: KeyboardEvent) {
@@ -68,13 +68,13 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
         if (currentIdx < artistCount) {
           const artist = artistResults[currentIdx]
           if (artist) {
-            search.navigateTo('artist', artist.name)
+            navigateTo('artist', artist.name)
             onClose()
           }
         } else {
           const venue = venueResults[currentIdx - artistCount]
           if (venue) {
-            search.navigateTo('venue', { slug: venue.slug })
+            navigateTo('venue', { slug: venue.slug })
             onClose()
           }
         }
@@ -83,7 +83,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [open, search, onClose])
+  }, [open, artistResults, venueResults, navigateTo, onClose])
 
   if (!open) return null
 

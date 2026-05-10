@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? ''
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 const RECENT_KEY = 'cc_recent_searches'
 const MAX_RECENT = 5
 const DEBOUNCE_MS = 300
@@ -98,6 +98,7 @@ export function useSearch() {
   const [venueResults, setVenueResults] = useState<VenueResult[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     setRecentSearches(readRecent())
@@ -112,6 +113,7 @@ export function useSearch() {
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
+    abortRef.current?.abort()
 
     const trimmed = query.trim()
     if (!trimmed) {
@@ -123,8 +125,11 @@ export function useSearch() {
 
     setIsLoading(true)
     debounceRef.current = setTimeout(() => {
+      const controller = new AbortController()
+      abortRef.current = controller
       fetch(
         `${API_URL}/v1/events?search=${encodeURIComponent(trimmed)}&limit=100`,
+        { signal: controller.signal },
       )
         .then((res) => res.json())
         .then((body: { success: boolean; data: { data: EventRow[] } }) => {
@@ -134,11 +139,14 @@ export function useSearch() {
           }
         })
         .catch(() => {})
-        .finally(() => setIsLoading(false))
+        .finally(() => {
+          if (!controller.signal.aborted) setIsLoading(false)
+        })
     }, DEBOUNCE_MS)
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
+      abortRef.current?.abort()
     }
   }, [query])
 
@@ -150,9 +158,11 @@ export function useSearch() {
 
   const navigateTo = useCallback(
     (type: 'artist' | 'venue', value: string | { slug: string }) => {
-      const updated = addToRecent(query, recentSearches)
-      setRecentSearches(updated)
-      writeRecent(updated)
+      if (query.trim()) {
+        const updated = addToRecent(query.trim(), recentSearches)
+        setRecentSearches(updated)
+        writeRecent(updated)
+      }
 
       if (type === 'artist' && typeof value === 'string') {
         router.push(`/events?search=${encodeURIComponent(value)}`)
