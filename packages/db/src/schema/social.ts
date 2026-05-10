@@ -1,4 +1,5 @@
 import {
+  jsonb,
   numeric,
   pgEnum,
   pgTable,
@@ -16,8 +17,9 @@ export const userEventStatusEnum = pgEnum('user_event_status', [
 ])
 export const feedbackCategoryEnum = pgEnum('feedback_category', [
   'bug',
-  'suggestion',
+  'idea',
   'praise',
+  'other',
 ])
 
 export const userEvents = pgTable(
@@ -58,6 +60,7 @@ export const feedback = pgTable('feedback', {
   pageUrl: text('page_url').notNull(),
   category: feedbackCategoryEnum('category').notNull(),
   message: text('message').notNull(),
+  metadata: jsonb('metadata'),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
