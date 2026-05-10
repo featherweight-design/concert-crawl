@@ -51,8 +51,8 @@ describe('formatRunsBreakdown', () => {
     expect(formatRunsBreakdown(runs)).toBe('2 ok')
   })
 
-  it('includes blocked count', () => {
+  it('returns empty string for unknown statuses (no CrawlRun.status=blocked)', () => {
     const runs = [{ status: 'blocked' }] as { status: string }[]
-    expect(formatRunsBreakdown(runs)).toBe('1 blocked')
+    expect(formatRunsBreakdown(runs)).toBe('')
   })
 })

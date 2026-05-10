@@ -378,7 +378,7 @@ export const CrawlSplitView = ({
                     {[
                       {
                         label: 'Started',
-                        value: `${fmtTimeMT(activeRun.createdAt)} MT`,
+                        value: `${fmtTimeMT(activeRun.startedAt ?? activeRun.createdAt)} MT`,
                       },
                       {
                         label: 'Duration',
@@ -532,7 +532,7 @@ export const CrawlSplitView = ({
                         </code>
                       </TD>
                       <TD color="var(--fg-muted)">
-                        {fmtTimeMT(run.createdAt)} MT
+                        {fmtTimeMT(run.startedAt ?? run.createdAt)} MT
                       </TD>
                       <TD>
                         <StatusBadge

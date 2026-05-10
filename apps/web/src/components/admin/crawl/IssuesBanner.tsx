@@ -70,7 +70,10 @@ export function IssuesBanner({ blockedVenues }: Props) {
                 </span>
               )}
               {venue.status === 'blocked' && venue.blockedAt && (
-                <span style={{ color: 'var(--fg-subtle)' }}> · disallowed</span>
+                <span style={{ color: 'var(--fg-subtle)' }}>
+                  {' '}
+                  · HTTP blocked
+                </span>
               )}
             </span>
           ))}

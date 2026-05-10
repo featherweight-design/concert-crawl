@@ -35,8 +35,9 @@ export function formatSweepHint(runs: { createdAt: string }[]): string {
 
 /**
  * Given today's runs, returns a breakdown string e.g.
- * "20 ok · 1 partial · 2 failed · 1 blocked".
+ * "20 ok · 1 partial · 2 failed".
  * Only includes statuses with at least one run.
+ * CrawlRun.status is 'success' | 'partial' | 'failed' — there is no 'blocked' value.
  */
 export function formatRunsBreakdown(runs: { status: string }[]): string {
   if (runs.length === 0) return ''
@@ -50,7 +51,6 @@ export function formatRunsBreakdown(runs: { status: string }[]): string {
     counts['success'] ? `${counts['success']} ok` : null,
     counts['partial'] ? `${counts['partial']} partial` : null,
     counts['failed'] ? `${counts['failed']} failed` : null,
-    counts['blocked'] ? `${counts['blocked']} blocked` : null,
   ]
     .filter(Boolean)
     .join(' · ')

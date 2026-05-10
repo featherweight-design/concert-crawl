@@ -45,12 +45,18 @@ interface RawVenueStatus {
   } | null
 }
 
+function deriveVenueStatus(venue: RawVenueStatus): string {
+  if (venue.blockedAt != null) return 'blocked'
+  if (!venue.active) return 'paused'
+  return venue.lastRun?.status ?? 'never'
+}
+
 function toStatusRow(venue: RawVenueStatus): CrawlStatusRow {
   return {
     venueId: venue.id,
     venueName: venue.name,
     websiteUrl: venue.websiteUrl,
-    status: venue.lastRun?.status ?? 'never',
+    status: deriveVenueStatus(venue),
     lastRunAt: venue.lastRun?.createdAt ?? null,
     eventsFound: venue.lastRun?.eventsFound ?? 0,
     durationMs: venue.lastRun?.durationMs ?? null,
@@ -83,16 +89,22 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
     apiClient.get<CrawlRun[]>('/v1/admin/crawl/runs?limit=50', token),
   ])
   const status = rawStatus.map(toStatusRow)
-  const todayStr = new Date().toDateString()
+  const todayStrMT = new Date().toLocaleDateString('en-US', {
+    timeZone: 'America/Denver',
+  })
   const todayRuns = runs.filter(
-    (run) => new Date(run.createdAt).toDateString() === todayStr,
+    (run) =>
+      new Date(run.createdAt).toLocaleDateString('en-US', {
+        timeZone: 'America/Denver',
+      }) === todayStrMT,
   )
 
   const sweepHint = formatSweepHint(todayRuns)
   const runsBreakdown = formatRunsBreakdown(todayRuns)
 
-  const lastSweepValue = todayRuns[0]?.createdAt
-    ? `${String(Math.round((Date.now() - new Date(todayRuns[0].createdAt).getTime()) / 60000))}m ago`
+  const mostRecentRun = runs[0]
+  const lastSweepValue = mostRecentRun?.createdAt
+    ? `${String(Math.round((Date.now() - new Date(mostRecentRun.createdAt).getTime()) / 60000))}m ago`
     : '—'
 
   return (
