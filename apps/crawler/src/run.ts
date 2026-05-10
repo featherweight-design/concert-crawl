@@ -22,6 +22,7 @@ async function runPricesForVenue(venueId: string): Promise<void> {
     .where(and(eq(events.venueId, venueId), isNull(events.ticketPriceMin)))
 
   for (const event of unpricedEvents) {
+    if (event.venueId === null) continue
     try {
       await runPricePipeline({
         eventId: event.id,
