@@ -299,6 +299,34 @@ describe('GET /v1/events — filterPrice', () => {
   })
 })
 
+describe('GET /v1/events — search', () => {
+  beforeEach(async () => {
+    await clearTables()
+  })
+
+  it('searches by venue name', async () => {
+    const venue = await seedVenue({
+      name: 'Bluebird Theater',
+      slug: 'bluebird-theater',
+    })
+    await seedEvent(venue.id, {
+      title: 'Rock Night',
+      artist: 'Test Band',
+      date: '2027-06-01',
+    })
+
+    const res = await app.request('/v1/events?search=Bluebird')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { data: { title: string }[]; total: number }
+    }
+    expect(body.data.data).toHaveLength(1)
+    expect(body.data.data[0]?.title).toBe('Rock Night')
+    expect(body.data.total).toBe(1)
+  })
+})
+
 describe('GET /v1/events — filterVibe', () => {
   beforeEach(async () => {
     await clearTables()

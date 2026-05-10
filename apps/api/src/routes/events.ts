@@ -90,6 +90,7 @@ eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
     const searchCondition = or(
       ilike(events.title, `%${search}%`),
       ilike(events.artist, `%${search}%`),
+      ilike(venues.name, `%${search}%`),
     )
     if (searchCondition) conditions.push(searchCondition)
   }
@@ -123,6 +124,7 @@ eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
   const countResult = await db
     .select({ total: count() })
     .from(events)
+    .innerJoin(venues, eq(events.venueId, venues.id))
     .where(where)
 
   const total = countResult[0]?.total ?? 0
