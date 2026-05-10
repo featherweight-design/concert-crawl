@@ -409,7 +409,7 @@ Full forward plan: `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md`
 | Item                         | Notes                                                                                                                                        |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Saving shows (Watching)**  | ✅ Complete (PR #117 merged 2026-05-09). Heart button → `user_events` table. Design handoff: `design/design_handoff_watching/`.              |
-| **Browse filters wired**     | 🔄 In PR #TBD — Price + Vibe filter chips wired end-to-end; LLM genre-tagging pipeline added to crawler.                                     |
+| **Browse filters wired**     | 🔄 In PR #130 — Price + Vibe filter chips wired end-to-end; LLM genre-tagging pipeline added to crawler.                                     |
 | **Search nav item**          | Routes to search page but currently a dead link.                                                                                             |
 | **UI interactions sweep**    | Walk every clickable element on every route. Log and fix dead interactions.                                                                  |
 | **Invite code error states** | ⚠️ Believed complete via Phase 8a onboarding flow (PR #43) — Hugh confirming via manual test.                                                |
