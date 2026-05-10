@@ -1,0 +1,681 @@
+'use client'
+
+import { useState, useRef, useEffect, useCallback } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useUser, useClerk } from '@clerk/nextjs'
+import { useTheme } from '@/theme/ThemeProvider'
+import type { ThemeName } from '@/theme/themes'
+import { FeedbackModal } from '../feedback/FeedbackModal'
+
+const APP_VERSION = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev'
+const THEMES: { key: ThemeName; label: string; gradient: string }[] = [
+  {
+    key: 'electric',
+    label: 'Electric',
+    gradient: 'linear-gradient(135deg, #070A1A 50%, #FF7BD4 50%)',
+  },
+  {
+    key: 'jade',
+    label: 'Jade',
+    gradient: 'linear-gradient(135deg, #06201F 50%, #1FFFC2 50%)',
+  },
+  {
+    key: 'light',
+    label: 'Light',
+    gradient: 'linear-gradient(135deg, #FAFCFF 50%, #FF7BD4 50%)',
+  },
+]
+
+export function UserMenu() {
+  const { user } = useUser()
+  const { signOut } = useClerk()
+  const router = useRouter()
+  const { theme, setTheme } = useTheme()
+  const [open, setOpen] = useState(false)
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 639px)')
+    setIsMobile(mql.matches)
+    const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches)
+    mql.addEventListener('change', handler)
+    return () => mql.removeEventListener('change', handler)
+  }, [])
+
+  // Close on click-outside
+  useEffect(() => {
+    const handleClickOutside = (ev: MouseEvent) => {
+      const target = ev.target
+      if (
+        target instanceof Node &&
+        containerRef.current &&
+        !containerRef.current.contains(target)
+      ) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const handleSignOut = useCallback(() => {
+    void signOut().catch((err: unknown) =>
+      console.error('Sign out failed', err),
+    )
+  }, [signOut])
+
+  // Derive user display values
+  const firstName = user?.firstName ?? ''
+  const lastName = user?.lastName ?? ''
+  const initials =
+    firstName || lastName
+      ? (firstName.charAt(0) + lastName.charAt(0)).toUpperCase()
+      : (user?.emailAddresses[0]?.emailAddress.charAt(0) ?? '?').toUpperCase()
+  const email = user?.emailAddresses[0]?.emailAddress ?? ''
+
+  // UserPublicMetadata is augmented in apps/web/src/types/clerk.d.ts — no cast needed
+  const isAdmin = user?.publicMetadata?.role === 'admin'
+
+  // Build version display: "v0.4.2-beta · abc1234" or just "dev"
+  const buildParts = APP_VERSION.split(' · ')
+  const buildLabel = buildParts[0] ?? APP_VERSION
+  const commitLabel = buildParts[1] ?? ''
+
+  return (
+    <>
+      <div ref={containerRef} className="relative">
+        {/* Avatar trigger */}
+        <button
+          type="button"
+          onClick={() => setOpen((prev) => !prev)}
+          aria-label="Account menu"
+          aria-expanded={open}
+          className="relative h-9 w-9 shrink-0 cursor-pointer overflow-hidden rounded-full border border-[var(--border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal)]"
+          style={{ background: 'var(--surface-1)' }}
+        >
+          <span
+            className="flex h-full w-full items-center justify-center text-[13px] font-bold"
+            style={{ color: 'var(--fg-muted)' }}
+          >
+            {initials}
+          </span>
+        </button>
+
+        {/* Desktop popover */}
+        {open && !isMobile && (
+          <UserMenuPopover
+            initials={initials}
+            email={email}
+            isAdmin={isAdmin}
+            theme={theme}
+            setTheme={setTheme}
+            buildLabel={buildLabel}
+            commitLabel={commitLabel}
+            onFeedback={() => {
+              setOpen(false)
+              setFeedbackOpen(true)
+            }}
+            onSettings={() => {
+              setOpen(false)
+              void router.push('/me')
+            }}
+            onSignOut={handleSignOut}
+          />
+        )}
+      </div>
+
+      {/* Mobile sheet rendered outside container so it's not clipped */}
+      {open && isMobile && (
+        <>
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 90,
+              background: 'var(--scrim)',
+            }}
+            onClick={() => setOpen(false)}
+          />
+          <UserMenuSheet
+            initials={initials}
+            email={email}
+            isAdmin={isAdmin}
+            theme={theme}
+            setTheme={setTheme}
+            buildLabel={buildLabel}
+            commitLabel={commitLabel}
+            onFeedback={() => {
+              setOpen(false)
+              setFeedbackOpen(true)
+            }}
+            onSettings={() => {
+              setOpen(false)
+              void router.push('/me')
+            }}
+            onSignOut={handleSignOut}
+          />
+        </>
+      )}
+
+      <FeedbackModal
+        open={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+      />
+    </>
+  )
+}
+
+// ── Shared props ──────────────────────────────────────────────────────────
+
+interface MenuBodyProps {
+  initials: string
+  email: string
+  isAdmin: boolean
+  theme: ThemeName
+  setTheme: (theme: ThemeName) => void
+  buildLabel: string
+  commitLabel: string
+  onFeedback: () => void
+  onSettings: () => void
+  onSignOut: () => void
+}
+
+// ── Menu body (shared between popover and sheet) ──────────────────────────
+
+function MenuBody({
+  initials,
+  email,
+  isAdmin,
+  theme,
+  setTheme,
+  buildLabel,
+  commitLabel,
+  onFeedback,
+  onSettings,
+  onSignOut,
+}: MenuBodyProps) {
+  return (
+    <>
+      {/* Identity card */}
+      <div
+        style={{
+          padding: '14px 14px 12px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          borderBottom: '1px solid var(--border)',
+        }}
+      >
+        <div
+          style={{
+            position: 'relative',
+            width: 42,
+            height: 42,
+            borderRadius: 21,
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border-strong)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontFamily: 'var(--font-ui)',
+            fontWeight: 800,
+            fontSize: 17,
+            color: 'var(--fg)',
+            flexShrink: 0,
+          }}
+        >
+          <span
+            style={{
+              position: 'absolute',
+              inset: -2,
+              borderRadius: 23,
+              background:
+                'radial-gradient(circle at 30% 30%, var(--accent) 0%, transparent 70%)',
+              opacity: 0.35,
+              pointerEvents: 'none',
+            }}
+          />
+          <span style={{ position: 'relative' }}>{initials}</span>
+        </div>
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4,
+          }}
+        >
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              fontWeight: 700,
+              color: 'var(--accent)',
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+            }}
+          >
+            Beta · founder
+          </span>
+          <span
+            style={{
+              fontFamily: 'var(--font-ui)',
+              fontSize: 14,
+              fontWeight: 700,
+              color: 'var(--fg)',
+              letterSpacing: '-0.005em',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {email}
+          </span>
+        </div>
+      </div>
+
+      {/* You section */}
+      <SectionLabel>You</SectionLabel>
+      <MenuRow label="Submitted prices" href="/me/submissions" kbd="P" last />
+
+      {/* App section */}
+      <SectionLabel>App</SectionLabel>
+      <MenuRow
+        label="Theme"
+        trailing={
+          <div style={{ display: 'flex', gap: 4 }}>
+            {THEMES.map((tOpt) => (
+              <button
+                key={tOpt.key}
+                type="button"
+                onClick={() => setTheme(tOpt.key)}
+                aria-label={`Switch to ${tOpt.label} theme`}
+                aria-pressed={theme === tOpt.key}
+                style={{
+                  all: 'unset',
+                  cursor: 'pointer',
+                  width: 12,
+                  height: 12,
+                  borderRadius: 4,
+                  background: tOpt.gradient,
+                  border: '1px solid var(--border-strong)',
+                  boxShadow:
+                    theme === tOpt.key ? '0 0 0 1.5px var(--signal)' : 'none',
+                }}
+              />
+            ))}
+          </div>
+        }
+      />
+      <MenuRow label="Settings" onClick={onSettings} kbd="⌘," />
+      <MenuRow label="Notifications" meta="On" last />
+
+      {/* Admin section */}
+      {isAdmin && (
+        <>
+          <SectionLabel>Operations</SectionLabel>
+          <MenuRow
+            label="Admin"
+            href="/admin"
+            meta="⌘⇧A"
+            last
+            leading={
+              <span
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: 6,
+                  background: 'var(--surface-2)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--signal)',
+                  flexShrink: 0,
+                }}
+              >
+                <ShieldIcon />
+              </span>
+            }
+          />
+        </>
+      )}
+
+      {/* Beta channel */}
+      <SectionLabel>Beta channel</SectionLabel>
+      <MenuRow
+        label="Send feedback"
+        meta="BETA"
+        hot
+        last
+        onClick={onFeedback}
+        leading={
+          <span
+            style={{
+              width: 22,
+              height: 22,
+              borderRadius: 6,
+              background: 'var(--surface-2)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--accent)',
+              flexShrink: 0,
+            }}
+          >
+            <ChatIcon />
+          </span>
+        }
+      />
+
+      {/* Sign out */}
+      <div style={{ borderTop: '1px solid var(--border)' }} />
+      <MenuRow label="Sign out" danger last onClick={onSignOut} />
+
+      {/* Status footer */}
+      <div
+        style={{
+          padding: '10px 14px',
+          borderTop: '1px solid var(--border)',
+          background: 'var(--surface-1)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+        }}
+      >
+        <span
+          style={{
+            width: 5,
+            height: 5,
+            borderRadius: 5,
+            background: 'var(--signal)',
+            boxShadow: '0 0 5px var(--signal)',
+            animation: 'umPulse 2.2s ease-in-out infinite',
+          }}
+        />
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            fontWeight: 700,
+            color: 'var(--fg-muted)',
+            letterSpacing: '0.10em',
+            textTransform: 'uppercase',
+          }}
+        >
+          {buildLabel}
+        </span>
+        <span style={{ flex: 1 }} />
+        {commitLabel && (
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              fontWeight: 600,
+              color: 'var(--fg-subtle)',
+              letterSpacing: '0.08em',
+            }}
+          >
+            {commitLabel}
+          </span>
+        )}
+      </div>
+    </>
+  )
+}
+
+// ── Popover (desktop) ─────────────────────────────────────────────────────
+
+function UserMenuPopover(props: MenuBodyProps) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Account menu"
+      style={{
+        position: 'absolute',
+        right: 0,
+        top: 'calc(100% + 8px)',
+        zIndex: 100,
+        width: 280,
+        background: 'var(--bg-elevated)',
+        border: '1px solid var(--border-strong)',
+        borderRadius: 14,
+        boxShadow: '0 24px 64px rgba(0,0,0,0.45), 0 4px 12px rgba(0,0,0,0.2)',
+        overflow: 'hidden',
+        fontFamily: 'var(--font-ui)',
+        color: 'var(--fg)',
+      }}
+    >
+      <MenuBody {...props} />
+    </div>
+  )
+}
+
+// ── Bottom sheet (mobile) ─────────────────────────────────────────────────
+
+function UserMenuSheet(props: MenuBodyProps) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Account menu"
+      style={{
+        position: 'fixed',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 100,
+        background: 'var(--bg-elevated)',
+        borderTopLeftRadius: 22,
+        borderTopRightRadius: 22,
+        border: '1px solid var(--border)',
+        borderBottom: 'none',
+        boxShadow: '0 -16px 48px rgba(0,0,0,0.45)',
+        overflow: 'hidden',
+        fontFamily: 'var(--font-ui)',
+        color: 'var(--fg)',
+      }}
+    >
+      {/* Drag handle */}
+      <div
+        style={{
+          height: 18,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <div
+          style={{
+            width: 36,
+            height: 4,
+            borderRadius: 2,
+            background: 'var(--border-strong)',
+          }}
+        />
+      </div>
+      <MenuBody {...props} />
+    </div>
+  )
+}
+
+// ── Primitives ────────────────────────────────────────────────────────────
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        padding: '10px 14px 4px',
+        fontFamily: 'var(--font-mono)',
+        fontSize: 10,
+        fontWeight: 700,
+        color: 'var(--fg-subtle)',
+        letterSpacing: '0.14em',
+        textTransform: 'uppercase',
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+interface MenuRowProps {
+  label: string
+  meta?: string
+  kbd?: string
+  hot?: boolean
+  danger?: boolean
+  last?: boolean
+  leading?: React.ReactNode
+  trailing?: React.ReactNode
+  href?: string
+  onClick?: () => void
+}
+
+function MenuRow({
+  label,
+  meta,
+  kbd,
+  hot = false,
+  danger = false,
+  last = false,
+  leading,
+  trailing,
+  href,
+  onClick,
+}: MenuRowProps) {
+  const color = danger ? 'var(--warning)' : 'var(--fg)'
+  const rowStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    padding: '12px 14px',
+    borderBottom: last ? 'none' : '1px solid var(--border)',
+    background: hot ? 'var(--overlay-hover)' : 'transparent',
+    cursor: 'pointer',
+    width: '100%',
+    boxSizing: 'border-box',
+    textDecoration: 'none',
+    color,
+  }
+
+  const inner = (
+    <>
+      {hot && (
+        <span
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: 6,
+            background: 'var(--accent)',
+            boxShadow: '0 0 6px var(--accent)',
+            animation: 'umPulse 1.6s ease-in-out infinite',
+            flexShrink: 0,
+          }}
+        />
+      )}
+      {leading}
+      <span
+        style={{
+          flex: 1,
+          minWidth: 0,
+          fontFamily: 'var(--font-ui)',
+          fontSize: 13.5,
+          fontWeight: hot ? 800 : 600,
+          color,
+          letterSpacing: '-0.005em',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {label}
+      </span>
+      {trailing}
+      {meta != null && (
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            fontWeight: 700,
+            color: hot ? 'var(--accent)' : 'var(--fg-subtle)',
+            letterSpacing: '0.10em',
+            textTransform: 'uppercase',
+          }}
+        >
+          {meta}
+        </span>
+      )}
+      {kbd && (
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            fontWeight: 700,
+            color: 'var(--fg-subtle)',
+            padding: '2px 6px',
+            borderRadius: 4,
+            border: '1px solid var(--border)',
+            background: 'var(--surface-1)',
+            letterSpacing: '0.08em',
+          }}
+        >
+          {kbd}
+        </span>
+      )}
+    </>
+  )
+
+  if (href) {
+    return (
+      <Link href={href} style={rowStyle}>
+        {inner}
+      </Link>
+    )
+  }
+  return (
+    <button type="button" onClick={onClick} style={rowStyle}>
+      {inner}
+    </button>
+  )
+}
+
+function ShieldIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
+      <path
+        d="M8 1.5l5.5 2v4.2c0 3.4-2.4 6.4-5.5 7.3-3.1-0.9-5.5-3.9-5.5-7.3V3.5L8 1.5z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M5.5 8.2l1.8 1.8L10.5 7"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function ChatIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
+      <path
+        d="M2 4h12v7H6.5L4 13.5V11H2V4z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <circle cx="6" cy="7.5" r="0.8" fill="currentColor" />
+      <circle cx="8" cy="7.5" r="0.8" fill="currentColor" />
+      <circle cx="10" cy="7.5" r="0.8" fill="currentColor" />
+    </svg>
+  )
+}
