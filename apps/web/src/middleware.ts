@@ -34,8 +34,8 @@ export default clerkMiddleware(async (auth, req) => {
   // Returning users: redeemed code but never completed sign-up.
   // invite_verified cookie is set but no Clerk session → send to onboarding.
   if (req.nextUrl.pathname === '/') {
-    const hasInviteCookie = req.cookies.has('invite_verified')
-    if (hasInviteCookie) {
+    const inviteCookie = req.cookies.get('invite_verified')?.value
+    if (inviteCookie) {
       return NextResponse.redirect(new URL('/onboarding', req.url))
     }
   }

@@ -148,7 +148,9 @@ export function OnboardingShell() {
         >
           {/* Primary CTA */}
           <button
+            type="button"
             onClick={goNext}
+            className="ob-btn-primary"
             style={{
               all: 'unset',
               cursor: 'pointer',
@@ -180,8 +182,10 @@ export function OnboardingShell() {
             }}
           >
             <button
+              type="button"
               onClick={goBack}
               disabled={isFirst}
+              className="ob-btn-back"
               style={{
                 all: 'unset',
                 cursor: isFirst ? 'default' : 'pointer',
@@ -393,7 +397,9 @@ function OnboardingDesktop({
             }}
           >
             <button
+              type="button"
               onClick={onNext}
+              className="ob-btn-primary"
               style={{
                 all: 'unset',
                 cursor: 'pointer',
@@ -424,8 +430,10 @@ function OnboardingDesktop({
               }}
             >
               <button
+                type="button"
                 onClick={onBack}
                 disabled={isFirst}
+                className="ob-btn-back"
                 style={{
                   all: 'unset',
                   cursor: isFirst ? 'default' : 'pointer',

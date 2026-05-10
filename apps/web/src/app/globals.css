@@ -92,3 +92,12 @@
 @media (max-width: 1239px) {
   .ob-step-heading { font-size: 28px; }
 }
+
+/* Onboarding button focus rings — restores :focus-visible after all:unset */
+.ob-btn-primary:focus-visible {
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--signal);
+}
+.ob-btn-back:focus-visible {
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--signal);
+  border-radius: 4px;
+}

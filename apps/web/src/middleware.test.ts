@@ -8,6 +8,8 @@ vi.mock('@clerk/nextjs/server', () => ({
     patterns.some((pattern) => {
       // Strip trailing (.*) glob for simple path matching
       const base = pattern.replace(/\(.*\)$/, '')
+      // Exact-only for '/' — startsWith('/') would match every path
+      if (base === '/') return req.nextUrl.pathname === '/'
       return (
         req.nextUrl.pathname === base || req.nextUrl.pathname.startsWith(base)
       )
