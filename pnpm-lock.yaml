@@ -108,6 +108,9 @@ importers:
       '@concert-crawl/logger':
         specifier: workspace:*
         version: link:../../packages/logger
+      '@concert-crawl/price-pipeline':
+        specifier: workspace:*
+        version: link:../../packages/price-pipeline
       '@sentry/node':
         specifier: ^10.51.0
         version: 10.51.0

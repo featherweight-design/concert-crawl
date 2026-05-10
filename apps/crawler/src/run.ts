@@ -1,12 +1,43 @@
 import { chromium } from 'playwright'
 import type { Browser } from 'playwright'
 import { createLogger } from '@concert-crawl/logger'
-import { db, venues, crawlTriggers } from '@concert-crawl/db'
-import { eq, and, inArray } from 'drizzle-orm'
+import { db, venues, crawlTriggers, events } from '@concert-crawl/db'
+import { eq, and, inArray, isNull } from 'drizzle-orm'
 import { crawlVenue, tagEventsWithGenres } from '@concert-crawl/crawler-core'
+import { runPricePipeline } from '@concert-crawl/price-pipeline'
 
 const logger = createLogger('crawler')
 const MAX_CONCURRENT = 3
+
+async function runPricesForVenue(venueId: string): Promise<void> {
+  const unpricedEvents = await db
+    .select({
+      id: events.id,
+      venueId: events.venueId,
+      artist: events.artist,
+      date: events.date,
+      ticketUrl: events.ticketUrl,
+    })
+    .from(events)
+    .where(and(eq(events.venueId, venueId), isNull(events.ticketPriceMin)))
+
+  for (const event of unpricedEvents) {
+    try {
+      await runPricePipeline({
+        eventId: event.id,
+        venueId: event.venueId,
+        artist: event.artist,
+        date: event.date,
+        ticketUrl: event.ticketUrl,
+      })
+    } catch (priceErr: unknown) {
+      logger.error(
+        { priceErr, eventId: event.id },
+        'Price pipeline failed for event — skipping',
+      )
+    }
+  }
+}
 
 export async function runTriggeredCrawls(): Promise<{ processed: number }> {
   const claimed = await db
@@ -47,6 +78,7 @@ export async function runTriggeredCrawls(): Promise<{ processed: number }> {
       try {
         const crawlRun = await crawlVenue(trigger.venueId, browser)
         await tagEventsWithGenres(trigger.venueId, crawlRun.id)
+        await runPricesForVenue(trigger.venueId)
         const triggerStatus = crawlRun.status === 'failed' ? 'failed' : 'done'
         await db
           .update(crawlTriggers)
@@ -121,6 +153,7 @@ export async function runDailyCrawl(): Promise<{
                 'Genre tagging failed — crawl data saved, genres skipped',
               )
             }
+            await runPricesForVenue(batch[idx].id)
           }
           logger.info(
             { venueId: batch[idx]?.id, name: batch[idx]?.name },

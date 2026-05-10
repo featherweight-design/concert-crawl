@@ -24,12 +24,27 @@ vi.mock('@concert-crawl/db', () => ({
   db: mockDbChain,
   venues: { id: 'id', name: 'name', active: 'active', verified: 'verified' },
   crawlTriggers: { id: 'id', venueId: 'venueId', status: 'status' },
+  events: {
+    id: 'id',
+    venueId: 'venueId',
+    artist: 'artist',
+    date: 'date',
+    ticketUrl: 'ticketUrl',
+    ticketPriceMin: 'ticketPriceMin',
+  },
 }))
 
 vi.mock('drizzle-orm', () => ({
   eq: vi.fn(),
   and: vi.fn(),
   inArray: vi.fn(),
+  isNull: vi.fn(),
+}))
+
+// Mock price pipeline
+const mockRunPricePipeline = vi.fn().mockResolvedValue(undefined)
+vi.mock('@concert-crawl/price-pipeline', () => ({
+  runPricePipeline: mockRunPricePipeline,
 }))
 
 // Mock Playwright — return a minimal browser-shaped object
@@ -69,6 +84,7 @@ describe('runDailyCrawl', () => {
     mockDbChain.update.mockReturnValue(mockDbUpdate)
     mockCrawlVenue.mockResolvedValue({ id: 'run-uuid-1', status: 'success' })
     mockBrowser.close.mockResolvedValue(undefined)
+    mockRunPricePipeline.mockResolvedValue(undefined)
   })
 
   it('calls crawlVenue for each active venue, passing the shared browser', async () => {
@@ -139,6 +155,77 @@ describe('runDailyCrawl', () => {
     expect(mockCrawlVenue).not.toHaveBeenCalled()
     expect(vi.mocked(chromium.launch)).not.toHaveBeenCalled()
   })
+
+  it('calls runPricePipeline for unpriced events after each successful crawl', async () => {
+    const mockEvents = [
+      {
+        id: 'evt-1',
+        venueId: 'venue-1',
+        artist: 'Band A',
+        date: '2026-06-01',
+        ticketUrl: 'https://tickets.example.com/1',
+      },
+    ]
+    // First where() resolves venues; subsequent calls resolve unpriced events per venue
+    mockDbChain.where
+      .mockResolvedValueOnce(mockVenues)
+      .mockResolvedValue(mockEvents)
+
+    const { runDailyCrawl } = await import('./run.js')
+    await runDailyCrawl()
+
+    // 4 venues × 1 event each = 4 pipeline calls
+    expect(mockRunPricePipeline).toHaveBeenCalledTimes(4)
+    expect(mockRunPricePipeline).toHaveBeenCalledWith({
+      eventId: 'evt-1',
+      venueId: 'venue-1',
+      artist: 'Band A',
+      date: '2026-06-01',
+      ticketUrl: 'https://tickets.example.com/1',
+    })
+  })
+
+  it('does not fail the daily crawl when runPricePipeline throws', async () => {
+    mockDbChain.where
+      .mockResolvedValueOnce(mockVenues)
+      .mockResolvedValue([
+        {
+          id: 'evt-1',
+          venueId: 'venue-1',
+          artist: 'Band A',
+          date: '2026-06-01',
+          ticketUrl: null,
+        },
+      ])
+    mockRunPricePipeline.mockRejectedValue(new Error('price fetch failed'))
+
+    const { runDailyCrawl } = await import('./run.js')
+    const result = await runDailyCrawl()
+
+    expect(result.succeeded).toBe(4)
+    expect(result.failed).toBe(0)
+  })
+
+  it('skips price pipeline for venues that failed to crawl', async () => {
+    mockCrawlVenue.mockRejectedValueOnce(new Error('blocked'))
+    mockDbChain.where
+      .mockResolvedValueOnce(mockVenues)
+      .mockResolvedValue([
+        {
+          id: 'evt-1',
+          venueId: 'venue-2',
+          artist: 'Band A',
+          date: '2026-06-01',
+          ticketUrl: null,
+        },
+      ])
+
+    const { runDailyCrawl } = await import('./run.js')
+    await runDailyCrawl()
+
+    // venue-1 failed (batch 1 of 3), venues 2+3+4 succeeded = 3 price pipeline runs
+    expect(mockRunPricePipeline).toHaveBeenCalledTimes(3)
+  })
 })
 
 describe('runTriggeredCrawls', () => {
@@ -155,8 +242,12 @@ describe('runTriggeredCrawls', () => {
       .mockResolvedValueOnce(mockTriggers)
       .mockResolvedValue([])
     mockDbChain.update.mockReturnValue(mockDbUpdate)
+    mockDbChain.select.mockReturnThis()
+    mockDbChain.from.mockReturnThis()
+    mockDbChain.where.mockResolvedValue([])
     mockCrawlVenue.mockResolvedValue({ id: 'run-uuid-1', status: 'success' })
     mockBrowser.close.mockResolvedValue(undefined)
+    mockRunPricePipeline.mockResolvedValue(undefined)
   })
 
   it('returns processed: 0 without launching a browser when no pending triggers exist', async () => {
@@ -206,6 +297,50 @@ describe('runTriggeredCrawls', () => {
   it('returns processed count equal to number of claimed triggers', async () => {
     const { runTriggeredCrawls } = await import('./run.js')
     const result = await runTriggeredCrawls()
+    expect(result.processed).toBe(2)
+  })
+
+  it('calls runPricePipeline for unpriced events after each triggered crawl', async () => {
+    const mockEvents = [
+      {
+        id: 'evt-a',
+        venueId: 'venue-a',
+        artist: 'Artist X',
+        date: '2026-06-15',
+        ticketUrl: null,
+      },
+    ]
+    mockDbChain.where.mockResolvedValue(mockEvents)
+
+    const { runTriggeredCrawls } = await import('./run.js')
+    await runTriggeredCrawls()
+
+    // 2 triggers × 1 event each = 2 pipeline calls
+    expect(mockRunPricePipeline).toHaveBeenCalledTimes(2)
+    expect(mockRunPricePipeline).toHaveBeenCalledWith({
+      eventId: 'evt-a',
+      venueId: 'venue-a',
+      artist: 'Artist X',
+      date: '2026-06-15',
+      ticketUrl: null,
+    })
+  })
+
+  it('does not fail triggered crawl when runPricePipeline throws', async () => {
+    mockDbChain.where.mockResolvedValue([
+      {
+        id: 'evt-a',
+        venueId: 'venue-a',
+        artist: 'Artist X',
+        date: '2026-06-15',
+        ticketUrl: null,
+      },
+    ])
+    mockRunPricePipeline.mockRejectedValue(new Error('price fetch failed'))
+
+    const { runTriggeredCrawls } = await import('./run.js')
+    const result = await runTriggeredCrawls()
+
     expect(result.processed).toBe(2)
   })
 })
