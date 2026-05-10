@@ -45,8 +45,19 @@ export function UserMenu() {
     return () => mql.removeEventListener('change', handler)
   }, [])
 
-  // Close on click-outside
+  // Close on Escape key
   useEffect(() => {
+    if (!open) return
+    const handleKeyDown = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [open])
+
+  // Close on click-outside (only registered when open)
+  useEffect(() => {
+    if (!open) return
     const handleClickOutside = (ev: MouseEvent) => {
       const target = ev.target
       if (
@@ -59,7 +70,7 @@ export function UserMenu() {
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  }, [open])
 
   const handleSignOut = useCallback(() => {
     void signOut().catch((err: unknown) =>
@@ -93,6 +104,7 @@ export function UserMenu() {
           onClick={() => setOpen((prev) => !prev)}
           aria-label="Account menu"
           aria-expanded={open}
+          aria-haspopup="menu"
           className="relative h-9 w-9 shrink-0 cursor-pointer overflow-hidden rounded-full border border-[var(--border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal)]"
           style={{ background: 'var(--surface-1)' }}
         >
@@ -432,8 +444,7 @@ function MenuBody({
 function UserMenuPopover(props: MenuBodyProps) {
   return (
     <div
-      role="dialog"
-      aria-modal="true"
+      role="menu"
       aria-label="Account menu"
       style={{
         position: 'absolute',
@@ -460,8 +471,7 @@ function UserMenuPopover(props: MenuBodyProps) {
 function UserMenuSheet(props: MenuBodyProps) {
   return (
     <div
-      role="dialog"
-      aria-modal="true"
+      role="menu"
       aria-label="Account menu"
       style={{
         position: 'fixed',
