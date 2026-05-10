@@ -381,6 +381,7 @@ Phase: **Pre-Beta Sprint — target open May 25, 2026**
 - Active Claude workers: admin/crawl UI fixes (issues #148–163), admin sidebar polish (issue #139)
 - Admin sidebar polish in PR #167 (issue #139): badge contrast, CCMark centralization, Invite Codes icon, OPERATIONS label
 - Admin crawl data + run-all in PR (feat/admin-crawl-data-and-run-all): DB migration 0014 (llm_cost_usd, events_updated), crawler writes new fields, API selects them + bulk trigger endpoint, "Run all" button in CrawlSplitView; closes #150, #155, #156
+- Auto-versioning + release notes in PR #183 (feat/auto-versioning, issue #154): semantic-release on root package.json, CI→Release→Deploy-Staging pipeline chain, version injected from package.json into next.config.ts
 
 ### Phase Sequence
 
@@ -415,6 +416,7 @@ Phase: **Pre-Beta Sprint — target open May 25, 2026**
 | —           | Admin crawl data + run-all               | 🔄 In PR (feat/admin-crawl-data-and-run-all)   |
 | —           | Search nav item                          | ✅ Complete (PR #171, issue #57)               |
 | —           | Onboarding polish                        | 🔄 In PR #173 (issues #134, #135, #138, #80)   |
+| —           | Auto-versioning + release notes          | 🔄 In PR #183 (feat/auto-versioning, issue #154) |
 | Pre-beta    | UI interactions audit + bug fixes        | 🔄 In progress (admin/crawl, sidebar)          |
 | Beta period | Jun 16 – Aug 3 (see beta-to-launch spec) | —                                              |
 | Launch prep | Aug 4–17                                 | —                                              |
