@@ -44,7 +44,7 @@ export function OnboardingShell() {
   return (
     <div
       style={{
-        minHeight: '100dvh',
+        height: '100dvh',
         background: 'var(--bg)',
         color: 'var(--fg)',
         display: 'flex',
@@ -75,7 +75,14 @@ export function OnboardingShell() {
         </div>
       </header>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 22px 24px' }}>
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          padding: '8px 22px 24px',
+        }}
+      >
         <StepContent stepKey={FLOW[index]!} />
       </div>
 
