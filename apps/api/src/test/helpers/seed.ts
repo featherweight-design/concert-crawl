@@ -11,7 +11,7 @@ import { testDb } from './db.js'
 
 export async function clearTables(): Promise<void> {
   await testDb.execute(
-    sql`TRUNCATE submission_confirms, price_submissions, user_events, events, venues, crawl_runs, audit_log, invite_codes, user_roles, price_retrieval_log, user_profiles RESTART IDENTITY CASCADE`,
+    sql`TRUNCATE submission_confirms, price_submissions, user_events, events, venues, crawl_runs, audit_log, invite_codes, user_roles, price_retrieval_log, user_profiles, feedback RESTART IDENTITY CASCADE`,
   )
 }
 

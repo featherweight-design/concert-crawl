@@ -108,9 +108,17 @@ describe('POST /v1/feedback', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0]?.category).toBe('idea')
     expect(rows[0]?.message).toBe('Love this app.')
+    expect(rows[0]?.userId).toBe('user-insert-abc')
+    expect(rows[0]?.pageUrl).toBe('/events')
+    expect(rows[0]?.metadata).toMatchObject({
+      theme: 'electric',
+      build: 'dev',
+      device: 'Mac',
+    })
   })
 
   it('returns 429 on second submission within the hour', async () => {
+    // Use a unique userId per test run to avoid in-memory rate-limit store pollution
     const userId = `rate-limit-user-${Date.now()}`
     setAuth(userId)
 
@@ -133,6 +141,6 @@ describe('POST /v1/feedback', () => {
       body: JSON.stringify({ ...payload, message: 'Second report' }),
     })
     expect(secondRes.status).toBe(429)
-    expect(secondRes.headers.get('Retry-After')).toBeTruthy()
+    expect(Number(secondRes.headers.get('Retry-After'))).toBeGreaterThan(0)
   })
 })
