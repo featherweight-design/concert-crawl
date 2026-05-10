@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
-import { useUser } from '@clerk/nextjs'
+import { useAuth, useUser } from '@clerk/nextjs'
 import { useTheme } from '@/theme/ThemeProvider'
 import { CCMark } from '../cc-mark'
 
@@ -27,6 +27,7 @@ interface FeedbackModalProps {
 export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
   const pathname = usePathname()
   const { theme } = useTheme()
+  const { getToken } = useAuth()
   const { user } = useUser()
   const userEmail = user?.emailAddresses[0]?.emailAddress ?? 'anonymous'
   const [state, setState] = useState<ModalState>('form')
@@ -59,6 +60,12 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
 
     setState('loading')
 
+    const token = await getToken()
+    if (!token) {
+      setState('error')
+      return
+    }
+
     const device =
       typeof navigator !== 'undefined'
         ? navigator.userAgent.slice(0, 120)
@@ -67,8 +74,10 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     try {
       const res = await fetch(`${API_URL}/v1/feedback`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           category,
           message: message.trim(),
@@ -82,7 +91,17 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
       console.error('Feedback submission failed', err)
       setState('error')
     }
-  }, [category, message, pathname, theme])
+  }, [category, getToken, message, pathname, theme])
+
+  const handleCategoryChange = useCallback((cat: FeedbackCategory) => {
+    setCategory(cat)
+    setCatError(false)
+  }, [])
+
+  const handleMessageChange = useCallback((msg: string) => {
+    setMessage(msg)
+    setMsgError(false)
+  }, [])
 
   const [isMobile, setIsMobile] = useState(false)
 
@@ -135,9 +154,9 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
         <MobileSheet
           state={state}
           category={category}
-          setCategory={setCategory}
+          setCategory={handleCategoryChange}
           message={message}
-          setMessage={setMessage}
+          setMessage={handleMessageChange}
           catError={catError}
           msgError={msgError}
           ctxData={ctxData}
@@ -149,9 +168,9 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
         <DesktopCard
           state={state}
           category={category}
-          setCategory={setCategory}
+          setCategory={handleCategoryChange}
           message={message}
-          setMessage={setMessage}
+          setMessage={handleMessageChange}
           catError={catError}
           msgError={msgError}
           ctxData={ctxData}
@@ -402,8 +421,8 @@ function ErrorState({
           letterSpacing: '-0.005em',
         }}
       >
-        We couldn&apos;t push that to the queue just now. Your message is saved
-        on this device — try again in a sec, or send it later.
+        We couldn&apos;t push that to the queue just now. Your message is still
+        here — try again in a sec.
       </div>
       <div
         style={{
@@ -414,7 +433,7 @@ function ErrorState({
         }}
       >
         <SubmitButton onClick={onReset}>Try again</SubmitButton>
-        <SecondaryButton onClick={onClose}>Save and come back</SecondaryButton>
+        <SecondaryButton onClick={onClose}>Come back later</SecondaryButton>
       </div>
     </div>
   )
