@@ -1,21 +1,22 @@
 import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
-import { RefreshCw } from 'lucide-react'
-import {
-  SectionHead,
-  AdminButton,
-  StatCard,
-} from '@/components/admin/primitives'
+import { StatCard } from '@/components/admin/primitives'
 import { CrawlSplitView } from '@/components/admin/crawl/CrawlSplitView'
 import { IssuesBanner } from '@/components/admin/crawl/IssuesBanner'
+import { formatSweepHint, formatRunsBreakdown } from './crawl-stats'
 import type { CrawlRun } from '@concert-crawl/types'
 
-interface CrawlStatusRow {
+export interface CrawlStatusRow {
   venueId: string
   venueName: string
+  websiteUrl: string
   status: string
   lastRunAt: string | null
   eventsFound: number
+  durationMs: number | null
+  httpStatusCode: number | null
+  consecutiveFailures: number
+  blockedAt: string | null
   strategy: string
   cost: number
   error: string | null
@@ -24,6 +25,7 @@ interface CrawlStatusRow {
 interface RawVenueStatus {
   id: string
   name: string
+  websiteUrl: string
   active: boolean
   verified: boolean
   consecutiveFailures: number
@@ -38,6 +40,8 @@ interface RawVenueStatus {
     eventsInserted: number
     errorMessage: string | null
     extractionStrategyUsed: string | null
+    httpStatusCode: number | null
+    durationMs: number | null
   } | null
 }
 
@@ -45,9 +49,14 @@ function toStatusRow(venue: RawVenueStatus): CrawlStatusRow {
   return {
     venueId: venue.id,
     venueName: venue.name,
+    websiteUrl: venue.websiteUrl,
     status: venue.lastRun?.status ?? 'never',
     lastRunAt: venue.lastRun?.createdAt ?? null,
     eventsFound: venue.lastRun?.eventsFound ?? 0,
+    durationMs: venue.lastRun?.durationMs ?? null,
+    httpStatusCode: venue.lastRun?.httpStatusCode ?? null,
+    consecutiveFailures: venue.consecutiveFailures,
+    blockedAt: venue.blockedAt,
     strategy: venue.lastRun?.extractionStrategyUsed ?? '—',
     cost: 0,
     error: venue.lastRun?.errorMessage ?? null,
@@ -79,6 +88,13 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
     (run) => new Date(run.createdAt).toDateString() === todayStr,
   )
 
+  const sweepHint = formatSweepHint(todayRuns)
+  const runsBreakdown = formatRunsBreakdown(todayRuns)
+
+  const lastSweepValue = todayRuns[0]?.createdAt
+    ? `${String(Math.round((Date.now() - new Date(todayRuns[0].createdAt).getTime()) / 60000))}m ago`
+    : '—'
+
   return (
     <div
       style={{
@@ -88,17 +104,18 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
         height: '100%',
       }}
     >
-      <SectionHead
-        eyebrow="Phase 7 · Automation"
-        title="Crawl status"
-        actions={
-          <>
-            <AdminButton variant="outline" icon={RefreshCw}>
-              Run all
-            </AdminButton>
-          </>
-        }
-      />
+      <div>
+        <h1
+          style={{
+            fontSize: 22,
+            fontWeight: 700,
+            color: 'var(--fg)',
+            margin: 0,
+          }}
+        >
+          Crawl status
+        </h1>
+      </div>
 
       <IssuesBanner
         blockedVenues={status.filter(
@@ -115,19 +132,17 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
       >
         <StatCard
           label="Last sweep"
-          value={
-            runs[0]?.startedAt
-              ? `${String(Math.round((Date.now() - new Date(runs[0].startedAt).getTime()) / 60000))}m ago`
-              : '—'
-          }
+          value={lastSweepValue}
           iconName="RefreshCw"
           kind="neutral"
+          hint={sweepHint || undefined}
         />
         <StatCard
           label="Today's runs"
           value={String(todayRuns.length)}
           iconName="Activity"
           kind="signal"
+          hint={runsBreakdown || undefined}
         />
         <StatCard
           label="Events ingested"
