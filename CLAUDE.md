@@ -369,7 +369,14 @@ Phase: **Pre-Beta Sprint — target open May 25, 2026**
 - Venue seeding complete (ongoing — 10-12 venues crawled and live before private beta)
 - Empty state design handoff added (PR #118 merged 2026-05-09): design assets for empty states
 - Domain: `concertcrawl.app` via Cloudflare Registrar (~$15/yr)
-- Watching bug fixes in PR (fix/watching-bugs): IdentityArt thumbnail in WatchingItem (#124); watch state rehydration on Browse via auth + fetchWatching (#125)
+- Watching bug fixes complete (PR #140 merged 2026-05-10): IdentityArt thumbnail in WatchingItem; watch state rehydration on Browse via auth + fetchWatching
+- Admin dashboard polish complete (PR #127 merged 2026-05-10): topbar, sign-out popover, stat cards, crawl health table, activity feed
+- Browse filters + genre tagging complete (PR #130 merged 2026-05-10): Price + Vibe filter chips wired end-to-end; LLM genre-tagging pipeline in crawler
+- Crawler: shared browser instance (PR #144 merged 2026-05-10): single Playwright browser across venue crawls
+- Empty states complete (PR #145 merged 2026-05-10): hybrid design wired into browse (list + calendar), venue page, and watching
+- Feedback modal + user menu redesign complete (PR #146 merged 2026-05-10): identity card, theme switcher, beta channel, admin section, feedback submission
+- Genre tagger resilience (PR #147 merged 2026-05-10): open enum for unknown genres, batch size limit
+- Active Claude workers: admin/crawl UI fixes (issues #148–163), admin sidebar polish (issue #139), search implementation (issue #57)
 
 ### Phase Sequence
 
@@ -394,7 +401,13 @@ Phase: **Pre-Beta Sprint — target open May 25, 2026**
 | —           | Betterment: Crawler separation           | ✅ Complete (PR #51)                        |
 | **8b pt.2** | **Saving Shows (Watching)**              | ✅ **Complete (PR #117 merged 2026-05-09)** |
 | —           | Legal pages                              | ✅ Complete (PR #108)                       |
-| Pre-beta    | UI interactions audit + bug fixes        | 🔄 In progress                              |
+| —           | Watching bug fixes                       | ✅ Complete (PR #140 merged 2026-05-10)     |
+| —           | Admin dashboard polish                   | ✅ Complete (PR #127 merged 2026-05-10)     |
+| —           | Browse filters + LLM genre tagging       | ✅ Complete (PR #130 merged 2026-05-10)     |
+| —           | Empty states                             | ✅ Complete (PR #145 merged 2026-05-10)     |
+| —           | Feedback modal + user menu redesign      | ✅ Complete (PR #146 merged 2026-05-10)     |
+| —           | Crawler: shared browser + genre fixes    | ✅ Complete (PRs #144, #147 merged 2026-05-10) |
+| Pre-beta    | UI interactions audit + bug fixes        | 🔄 In progress (admin/crawl, sidebar, search) |
 | Beta period | Jun 16 – Aug 3 (see beta-to-launch spec) | —                                           |
 | Launch prep | Aug 4–17                                 | —                                           |
 | **Launch**  | **~Aug 18–22, 2026**                     | —                                           |
@@ -410,12 +423,12 @@ Full forward plan: `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md`
 | Item                         | Notes                                                                                                                           |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | **Saving shows (Watching)**  | ✅ Complete (PR #117 merged 2026-05-09). Heart button → `user_events` table. Design handoff: `design/design_handoff_watching/`. |
-| **Browse filters wired**     | 🔄 In PR #130 — Price + Vibe filter chips wired end-to-end; LLM genre-tagging pipeline added to crawler.                        |
-| **Search nav item**          | Routes to search page but currently a dead link.                                                                                |
+| **Browse filters wired**     | ✅ Complete (PR #130 merged 2026-05-10). Price + Vibe filter chips end-to-end; LLM genre-tagging pipeline in crawler.           |
+| **Search nav item**          | 🔄 In progress — active Claude worker on issue #57.                                                                             |
 | **UI interactions sweep**    | Walk every clickable element on every route. Log and fix dead interactions.                                                     |
 | **Invite code error states** | ⚠️ Believed complete via Phase 8a onboarding flow (PR #43) — Hugh confirming via manual test.                                   |
-| **Feedback modal**           | In-app, auth-only, rate-limited (1/hour). Category + message → `feedback` table.                                                |
-| **Empty states**             | ✅ Complete (this PR). Hybrid design wired into browse (list + calendar), venue page, and watching.                             |
+| **Feedback modal**           | ✅ Complete (PR #146 merged 2026-05-10). Auth-only, rate-limited (1/hour), category + message → `feedback` table.               |
+| **Empty states**             | ✅ Complete (PR #145 merged 2026-05-10). Hybrid design wired into browse (list + calendar), venue page, and watching.           |
 | **FounderNote content**      | Hugh writes the personal message for onboarding step 1.                                                                         |
 | **FounderNote admin page**   | `app_config` table + admin editor so copy can update without redeploy.                                                          |
 | **Legal for beta**           | ✅ Complete (PR #108): beta agreement, T&C stub, Privacy Policy stub.                                                           |
