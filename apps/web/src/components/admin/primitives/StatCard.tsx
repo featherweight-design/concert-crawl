@@ -59,8 +59,10 @@ export const StatCard = ({
         <div style={{ flex: 1 }}>
           <div
             style={{
-              fontSize: 12,
-              fontWeight: 500,
+              fontSize: 11,
+              fontWeight: 600,
+              textTransform: 'uppercase' as const,
+              letterSpacing: '0.07em',
               color: 'var(--fg-muted)',
               marginBottom: 6,
             }}

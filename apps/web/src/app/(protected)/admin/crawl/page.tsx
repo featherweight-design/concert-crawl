@@ -119,7 +119,10 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
 
       <IssuesBanner
         blockedVenues={status.filter(
-          (row) => row.status === 'blocked' || row.status === 'failed',
+          (row) =>
+            row.status === 'blocked' ||
+            row.status === 'failed' ||
+            row.status === 'paused',
         )}
       />
 
