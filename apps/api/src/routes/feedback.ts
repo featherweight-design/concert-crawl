@@ -8,8 +8,8 @@ import { apiLogger } from '../lib/logger.js'
 
 const feedbackSchema = z.object({
   category: z.enum(['bug', 'idea', 'praise', 'other']),
-  message: z.string().min(1, 'Message is required'),
-  pageUrl: z.string(),
+  message: z.string().min(1, 'Message is required').max(2000),
+  pageUrl: z.string().max(2048),
   metadata: z
     .object({
       theme: z.string().optional(),
@@ -54,13 +54,18 @@ feedbackRouter.post('/', async (ctx) => {
 
   const { category, message, pageUrl, metadata } = parsed.data
 
-  await db.insert(feedback).values({
-    userId: authInfo.userId,
-    pageUrl,
-    category,
-    message,
-    metadata: metadata ?? null,
-  })
+  try {
+    await db.insert(feedback).values({
+      userId: authInfo.userId,
+      pageUrl,
+      category,
+      message,
+      metadata: metadata ?? null,
+    })
+  } catch (err) {
+    apiLogger.error({ err, userId: authInfo.userId }, 'feedback insert failed')
+    return ctx.json({ success: false, error: 'Failed to submit feedback' }, 500)
+  }
 
   apiLogger.info(
     { userId: authInfo.userId, category, pageUrl },
