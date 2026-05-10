@@ -42,6 +42,10 @@ async function fetchEvents(
     if (Number.isSafeInteger(parsed) && parsed >= 0)
       qs.set('offset', String(parsed))
   }
+  if (typeof params['filterPrice'] === 'string')
+    qs.set('filterPrice', params['filterPrice'])
+  if (typeof params['filterVibe'] === 'string')
+    qs.set('filterVibe', params['filterVibe'])
   qs.set('limit', String(PAGE_LIMIT))
   return publicApiClient.get<EventsListResponse>(`/v1/events?${qs.toString()}`)
 }
