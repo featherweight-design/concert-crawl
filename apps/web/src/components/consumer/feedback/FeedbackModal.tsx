@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { useAuth, useUser } from '@clerk/nextjs'
 import { useTheme } from '@/theme/ThemeProvider'
-import { CCMark } from '../cc-mark'
+import { CCMark } from '@/components/brand/cc-mark'
 
 type FeedbackCategory = 'bug' | 'idea' | 'praise' | 'other'
 type ModalState = 'form' | 'loading' | 'success' | 'error'
