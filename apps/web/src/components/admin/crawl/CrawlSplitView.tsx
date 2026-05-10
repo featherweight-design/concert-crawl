@@ -19,6 +19,8 @@ import {
 
 const MT_TIMEZONE = 'America/Denver'
 
+const MT_TIMEZONE = 'America/Denver'
+
 interface CrawlStatusRow {
   venueId: string
   venueName: string
