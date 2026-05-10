@@ -160,7 +160,7 @@ export function WatchingItem({ show, density, onRemove }: WatchingItemProps) {
           kind="artist"
           scale="tile"
           className="h-full w-full"
-          aria-label={show.artist}
+          aria-hidden
         />
       </Link>
 

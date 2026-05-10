@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { render } from '@testing-library/react'
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import React from 'react'
 import type { WatchingShow } from '@concert-crawl/types'
 
@@ -9,10 +9,16 @@ vi.mock('next/link', () => ({
   default: ({
     children,
     href,
+    ...rest
   }: {
     children: React.ReactNode
     href: string
-  }) => <a href={href}>{children}</a>,
+    [key: string]: unknown
+  }) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
 }))
 
 vi.mock('next/navigation', () => ({
@@ -23,7 +29,12 @@ vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: vi.fn() }),
 }))
 
+vi.mock('../identity-art/IdentityArt', () => ({
+  IdentityArt: vi.fn(() => <svg data-testid="identity-art" />),
+}))
+
 import { WatchingItem } from './WatchingItem'
+import { IdentityArt } from '../identity-art/IdentityArt'
 
 const baseShow: WatchingShow = {
   userEventId: 'ue-1',
@@ -45,14 +56,15 @@ const baseShow: WatchingShow = {
 }
 
 describe('WatchingItem thumbnail', () => {
-  it('renders IdentityArt SVG, not a venue img element', () => {
-    const { container } = render(
+  beforeEach(() => vi.clearAllMocks())
+
+  it('renders IdentityArt, not a venue img element', () => {
+    const { getByTestId, container } = render(
       <WatchingItem show={baseShow} density="cozy" onRemove={() => {}} />,
     )
 
-    // Should render an SVG (IdentityArt) in the thumbnail slot
-    const svgs = container.querySelectorAll('svg')
-    expect(svgs.length).toBeGreaterThan(0)
+    // IdentityArt is rendered in the thumbnail slot
+    expect(getByTestId('identity-art')).toBeTruthy()
 
     // Should NOT render an img element with the venue imageUrl
     const imgEl = container.querySelector(`img[src="${baseShow.imageUrl}"]`)
@@ -61,20 +73,19 @@ describe('WatchingItem thumbnail', () => {
 
   it('renders correctly even when imageUrl is null', () => {
     const show = { ...baseShow, imageUrl: null }
-    const { container } = render(
+    const { getByTestId } = render(
       <WatchingItem show={show} density="cozy" onRemove={() => {}} />,
     )
 
-    const svgs = container.querySelectorAll('svg')
-    expect(svgs.length).toBeGreaterThan(0)
+    expect(getByTestId('identity-art')).toBeTruthy()
   })
 
-  it('uses the artist name as the IdentityArt seed', () => {
-    const { getByLabelText } = render(
-      <WatchingItem show={baseShow} density="cozy" onRemove={() => {}} />,
-    )
+  it('passes the artist name as the IdentityArt name prop', () => {
+    render(<WatchingItem show={baseShow} density="cozy" onRemove={() => {}} />)
 
-    // IdentityArt receives aria-label={show.artist}
-    expect(getByLabelText('Radiohead')).toBeTruthy()
+    expect(vi.mocked(IdentityArt)).toHaveBeenCalledWith(
+      expect.objectContaining({ name: baseShow.artist }),
+      undefined,
+    )
   })
 })
