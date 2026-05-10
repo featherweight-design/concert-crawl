@@ -66,6 +66,9 @@ const TagResponseSchema = z.object({
 })
 
 export function chunkArray<T>(arr: T[], size: number): T[][] {
+  if (size <= 0) {
+    throw new Error(`chunkArray: size must be a positive integer, got ${size}`)
+  }
   const chunks: T[][] = []
   for (let idx = 0; idx < arr.length; idx += size) {
     chunks.push(arr.slice(idx, idx + size))
@@ -134,6 +137,13 @@ export async function classifyGenres(eventInputs: GenreTagInput[]): Promise<{
     if (itemParsed.success) {
       results.push(itemParsed.data)
     }
+  }
+
+  if (eventInputs.length > 0 && results.length === 0) {
+    logger.warn(
+      { inputCount: eventInputs.length },
+      'genre-tagger: LLM returned no usable results for non-empty input',
+    )
   }
 
   return { results, tokenUsage }

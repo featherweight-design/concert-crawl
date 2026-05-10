@@ -1,11 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockCreate = vi.fn()
+const mockLoggerWarn = vi.fn()
+const mockLoggerError = vi.fn()
+const mockLoggerInfo = vi.fn()
 
 vi.mock('@anthropic-ai/sdk', () => ({
   default: vi.fn().mockImplementation(() => ({
     messages: { create: mockCreate },
   })),
+}))
+
+vi.mock('@concert-crawl/logger', () => ({
+  createLogger: () => ({
+    warn: mockLoggerWarn,
+    error: mockLoggerError,
+    info: mockLoggerInfo,
+  }),
 }))
 
 // Dynamic import after mock registration
@@ -228,6 +239,38 @@ describe('classifyGenres', () => {
 
     expect(results).toHaveLength(0)
   })
+
+  it('logs a warning when inputs were provided but no results were returned', async () => {
+    mockCreate.mockResolvedValue({
+      content: [
+        {
+          type: 'tool_use',
+          id: 'tool_abc',
+          name: 'tag_genres',
+          input: {},
+        },
+      ],
+      usage: {
+        input_tokens: 10,
+        output_tokens: 5,
+        cache_read_input_tokens: 0,
+        cache_creation_input_tokens: 0,
+      },
+    })
+
+    await classifyGenres([
+      {
+        id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        title: 'Test',
+        artist: 'Artist',
+      },
+    ])
+
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      expect.objectContaining({ inputCount: 1 }),
+      expect.stringContaining('genre-tagger'),
+    )
+  })
 })
 
 describe('chunkArray', () => {
@@ -247,6 +290,14 @@ describe('chunkArray', () => {
 
   it('returns single-element chunks when size is 1', () => {
     expect(chunkArray([1, 2, 3], 1)).toEqual([[1], [2], [3]])
+  })
+
+  it('throws when size is zero', () => {
+    expect(() => chunkArray([1, 2, 3], 0)).toThrow()
+  })
+
+  it('throws when size is negative', () => {
+    expect(() => chunkArray([1, 2, 3], -1)).toThrow()
   })
 })
 
