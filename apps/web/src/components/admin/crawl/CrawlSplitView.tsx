@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   StatusBadge,
   AdminTable,
@@ -135,9 +135,7 @@ function ErrorBlock({
 
   const title = isHttpBlock
     ? `HTTP ${httpStatusCode} · venue blocked`
-    : errorMessage.length > 100
-      ? `${errorMessage.slice(0, 100)}…`
-      : errorMessage
+    : 'Crawl failed'
 
   return (
     <div>
@@ -166,7 +164,7 @@ function ErrorBlock({
             display: 'flex',
             alignItems: 'flex-start',
             gap: 8,
-            marginBottom: isHttpBlock ? 8 : 0,
+            marginBottom: 8,
           }}
         >
           <span style={{ color: 'var(--danger)', fontSize: 14, flexShrink: 0 }}>
@@ -205,6 +203,7 @@ function ErrorBlock({
                   month: 'short',
                   day: 'numeric',
                   year: 'numeric',
+                  timeZone: MT_TIMEZONE,
                 })}{' '}
                 · Try requesting a new IP allowlist.
               </p>
@@ -274,6 +273,27 @@ export const CrawlSplitView = ({
     }
   }
 
+  // Sync selectedId when IssuesBanner navigates to a new venueId via router.push
+  useEffect(() => {
+    if (initialSelectedId !== undefined) {
+      setSelectedId(initialSelectedId)
+    }
+  }, [initialSelectedId])
+
+  const filteredStatus = statusFilter
+    ? initialStatus.filter((row) => row.status === statusFilter)
+    : initialStatus
+
+  // Clear selection when the active filter hides the currently selected venue
+  useEffect(() => {
+    if (
+      selectedId &&
+      !filteredStatus.some((row) => row.venueId === selectedId)
+    ) {
+      setSelectedId(null)
+    }
+  }, [statusFilter, filteredStatus, selectedId])
+
   async function handleTrigger(venueId: string) {
     setRecrawlState((prev) => ({ ...prev, [venueId]: 'triggering' }))
     setRecrawlError((prev) => {
@@ -300,10 +320,6 @@ export const CrawlSplitView = ({
       }))
     }
   }
-
-  const filteredStatus = statusFilter
-    ? initialStatus.filter((row) => row.status === statusFilter)
-    : initialStatus
 
   const selected = initialStatus.find((row) => row.venueId === selectedId)
   const selectedRuns = initialRuns.filter((run) => run.venueId === selectedId)
@@ -559,7 +575,7 @@ export const CrawlSplitView = ({
                 <h2
                   style={{
                     margin: 0,
-                    fontSize: 20,
+                    fontSize: 22,
                     fontWeight: 700,
                     letterSpacing: '-0.02em',
                     color: 'var(--fg)',
@@ -958,78 +974,84 @@ export const CrawlRunHistoryTable = ({
       }
       padding={0}
     >
-      <AdminTable>
-        <THead>
-          <tr>
-            <TH width={92}>Run</TH>
-            <TH>Venue</TH>
-            <TH>Started</TH>
-            <TH>Duration</TH>
-            <TH>Status</TH>
-            <TH>Strategy</TH>
-            <TH align="right">Events</TH>
-            <TH align="right">LLM cost</TH>
-            <TH>Error</TH>
-          </tr>
-        </THead>
-        <tbody>
-          {initialRuns.map((run) => (
-            <TR key={run.id}>
-              <TD mono color="var(--fg-muted)">
-                {shortRunId(run.id)}
-              </TD>
-              <TD>
-                <span style={{ fontWeight: 600 }}>{run.venueName ?? '—'}</span>
-              </TD>
-              <TD mono color="var(--fg-muted)">
-                {fmtDateTimeMT(run.startedAt ?? run.createdAt)}
-              </TD>
-              <TD mono color="var(--fg-muted)">
-                {run.durationMs
-                  ? `${(run.durationMs / 1000).toFixed(1)}s`
-                  : '—'}
-              </TD>
-              <TD>
-                <StatusBadge kind={STATUS_KIND[run.status] ?? 'neutral'} dot>
-                  {run.status.charAt(0).toUpperCase() + run.status.slice(1)}
-                </StatusBadge>
-              </TD>
-              <TD>
-                <StatusBadge
-                  kind={
-                    run.extractionStrategyUsed === 'structured'
-                      ? 'signal'
-                      : run.extractionStrategyUsed === 'llm'
-                        ? 'warning'
-                        : 'neutral'
+      <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+        <AdminTable>
+          <THead sticky>
+            <tr>
+              <TH width={92}>Run</TH>
+              <TH>Venue</TH>
+              <TH>Started</TH>
+              <TH>Duration</TH>
+              <TH>Status</TH>
+              <TH>Strategy</TH>
+              <TH align="right">Events</TH>
+              <TH align="right">LLM cost</TH>
+              <TH>Error</TH>
+            </tr>
+          </THead>
+          <tbody>
+            {initialRuns.map((run) => (
+              <TR key={run.id}>
+                <TD mono color="var(--fg-muted)">
+                  {shortRunId(run.id)}
+                </TD>
+                <TD>
+                  <span style={{ fontWeight: 600 }}>
+                    {run.venueName ?? '—'}
+                  </span>
+                </TD>
+                <TD mono color="var(--fg-muted)">
+                  {fmtDateTimeMT(run.startedAt ?? run.createdAt)}
+                </TD>
+                <TD mono color="var(--fg-muted)">
+                  {run.durationMs
+                    ? `${(run.durationMs / 1000).toFixed(1)}s`
+                    : '—'}
+                </TD>
+                <TD>
+                  <StatusBadge kind={STATUS_KIND[run.status] ?? 'neutral'} dot>
+                    {run.status.charAt(0).toUpperCase() + run.status.slice(1)}
+                  </StatusBadge>
+                </TD>
+                <TD>
+                  <StatusBadge
+                    kind={
+                      run.extractionStrategyUsed === 'structured'
+                        ? 'signal'
+                        : run.extractionStrategyUsed === 'llm'
+                          ? 'warning'
+                          : 'neutral'
+                    }
+                  >
+                    {run.extractionStrategyUsed ?? '—'}
+                  </StatusBadge>
+                </TD>
+                <TD
+                  align="right"
+                  mono
+                  color={run.eventsFound ? 'var(--fg)' : 'var(--fg-subtle)'}
+                >
+                  {run.eventsFound ?? '—'}
+                </TD>
+                <TD align="right">
+                  <CostText value={run.llmCostUsd ?? 0} />
+                </TD>
+                <TD
+                  color={
+                    run.errorMessage ? 'var(--danger)' : 'var(--fg-subtle)'
                   }
                 >
-                  {run.extractionStrategyUsed ?? '—'}
-                </StatusBadge>
-              </TD>
-              <TD
-                align="right"
-                mono
-                color={run.eventsFound ? 'var(--fg)' : 'var(--fg-subtle)'}
-              >
-                {run.eventsFound || '—'}
-              </TD>
-              <TD align="right">
-                <CostText value={run.llmCostUsd ?? 0} />
-              </TD>
-              <TD
-                color={run.errorMessage ? 'var(--danger)' : 'var(--fg-subtle)'}
-              >
-                {run.errorMessage ? (
-                  <span style={{ fontSize: 12 }}>{run.errorMessage}</span>
-                ) : (
-                  '—'
-                )}
-              </TD>
-            </TR>
-          ))}
-        </tbody>
-      </AdminTable>
+                  {run.errorMessage ? (
+                    <span style={{ fontSize: 12 }}>{run.errorMessage}</span>
+                  ) : (
+                    '—'
+                  )}
+                </TD>
+              </TR>
+            ))}
+          </tbody>
+        </AdminTable>
+      </div>
     </Panel>
   )
 }
