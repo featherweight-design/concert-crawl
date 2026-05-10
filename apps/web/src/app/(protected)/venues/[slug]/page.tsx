@@ -217,7 +217,13 @@ export default async function VenueProfilePage({
           />
 
           {upcomingEvents.length === 0 ? (
-            <EmptyState message={copy.venueNoShows} />
+            <EmptyState
+              state="no-data"
+              density="dense"
+              eyebrow={copy.venueEmptyEyebrow}
+              title={copy.venueEmptyTitle}
+              body={copy.venueNoShows}
+            />
           ) : (
             <div>
               {upcomingEvents.map((event: Event, i: number) => (
