@@ -9,6 +9,7 @@ import {
   TH,
   TD,
   CostText,
+  Panel,
 } from '@/components/admin/primitives'
 import type { CrawlRun } from '@concert-crawl/types'
 import {
@@ -143,7 +144,7 @@ function ErrorBlock({
       : errorMessage
 
   return (
-    <div style={{ marginTop: 14 }}>
+    <div>
       <div
         style={{
           fontSize: 10,
@@ -246,7 +247,6 @@ export const CrawlSplitView = ({
 
   const [selectedId, setSelectedId] = useState<string | null>(resolvedInitialId)
   const [statusFilter, setStatusFilter] = useState('')
-  const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
   const [recrawlState, setRecrawlState] = useState<
     Record<string, 'triggering' | 'queued' | 'error'>
   >({})
@@ -311,8 +311,7 @@ export const CrawlSplitView = ({
 
   const selected = initialStatus.find((row) => row.venueId === selectedId)
   const selectedRuns = initialRuns.filter((run) => run.venueId === selectedId)
-  const activeRunId = selectedRunId ?? selectedRuns[0]?.id ?? null
-  const activeRun = selectedRuns.find((run) => run.id === activeRunId) ?? null
+  const activeRun = selectedRuns[0] ?? null
 
   const venueRecrawlState = selectedId ? recrawlState[selectedId] : undefined
   const venueRecrawlError = selectedId ? recrawlError[selectedId] : undefined
@@ -429,10 +428,7 @@ export const CrawlSplitView = ({
           <button
             key={row.venueId}
             id={`venue-row-${row.venueId}`}
-            onClick={() => {
-              setSelectedId(row.venueId)
-              setSelectedRunId(null)
-            }}
+            onClick={() => setSelectedId(row.venueId)}
             style={{
               width: '100%',
               display: 'flex',
@@ -477,9 +473,23 @@ export const CrawlSplitView = ({
                 {row.durationMs != null
                   ? ` · ${(row.durationMs / 1000).toFixed(1)}s`
                   : ''}
+                {' · '}
+                <span
+                  style={{
+                    color:
+                      row.eventsFound > 0
+                        ? 'var(--fg-muted)'
+                        : 'var(--fg-subtle)',
+                  }}
+                >
+                  {row.eventsFound} ev
+                </span>
               </div>
             </div>
-            <StatusBadge kind={STATUS_KIND[row.lastRunStatus] ?? 'neutral'} dot>
+            <StatusBadge
+              kind={STATUS_KIND[row.lastRunStatus] ?? 'neutral'}
+              dot={row.lastRunStatus !== 'never'}
+            >
               {row.lastRunStatus.charAt(0).toUpperCase() +
                 row.lastRunStatus.slice(1)}
             </StatusBadge>
@@ -502,42 +512,67 @@ export const CrawlSplitView = ({
       >
         {selected ? (
           <>
-            {/* Venue detail section */}
+            {/* Header */}
             <div
               style={{
-                padding: '16px 20px',
+                padding: '16px 22px',
                 borderBottom: '1px solid var(--border)',
+                background: 'var(--surface-1)',
                 flexShrink: 0,
               }}
             >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  justifyContent: 'space-between',
-                  gap: 12,
-                  marginBottom: 16,
-                }}
-              >
-                <h2
-                  style={{
-                    fontSize: 22,
-                    fontWeight: 700,
-                    color: 'var(--fg)',
-                    margin: 0,
-                    lineHeight: 1.2,
-                  }}
-                >
-                  {selected.venueName}
-                </h2>
+              {activeRun && (
                 <div
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
-                    flexShrink: 0,
+                    marginBottom: 6,
                   }}
                 >
+                  <code
+                    style={{
+                      fontSize: 12,
+                      color: 'var(--fg-muted)',
+                      fontFamily: "'JetBrains Mono', monospace",
+                    }}
+                  >
+                    {shortRunId(activeRun.id)}
+                  </code>
+                  <span style={{ color: 'var(--fg-subtle)', fontSize: 12 }}>
+                    ·
+                  </span>
+                  <StatusBadge
+                    kind={STATUS_KIND[activeRun.status] ?? 'neutral'}
+                    dot
+                  >
+                    {activeRun.status.charAt(0).toUpperCase() +
+                      activeRun.status.slice(1)}
+                  </StatusBadge>
+                </div>
+              )}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-end',
+                  justifyContent: 'space-between',
+                  gap: 16,
+                  flexWrap: 'wrap' as const,
+                }}
+              >
+                <h2
+                  style={{
+                    margin: 0,
+                    fontSize: 20,
+                    fontWeight: 700,
+                    letterSpacing: '-0.02em',
+                    color: 'var(--fg)',
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {selected.venueName}
+                </h2>
+                <div style={{ display: 'flex', gap: 8 }}>
                   {selected.websiteUrl && (
                     <a
                       href={selected.websiteUrl}
@@ -600,131 +635,6 @@ export const CrawlSplitView = ({
                   </button>
                 </div>
               </div>
-              {activeRun ? (
-                <>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      marginBottom: 14,
-                    }}
-                  >
-                    <code
-                      style={{
-                        fontSize: 12,
-                        color: 'var(--fg-muted)',
-                        fontFamily: "'JetBrains Mono', monospace",
-                      }}
-                    >
-                      {shortRunId(activeRun.id)}
-                    </code>
-                    <StatusBadge
-                      kind={STATUS_KIND[activeRun.status] ?? 'neutral'}
-                      dot
-                    >
-                      {activeRun.status.charAt(0).toUpperCase() +
-                        activeRun.status.slice(1)}
-                    </StatusBadge>
-                  </div>
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(4, 1fr)',
-                      gap: 16,
-                      marginBottom: 14,
-                    }}
-                  >
-                    {[
-                      {
-                        label: 'Started',
-                        value: fmtDateTimeMT(
-                          activeRun.startedAt ?? activeRun.createdAt,
-                        ),
-                        danger: false,
-                      },
-                      {
-                        label: 'Duration',
-                        value: activeRun.durationMs
-                          ? `${(activeRun.durationMs / 1000).toFixed(1)}s`
-                          : '—',
-                        danger: false,
-                      },
-                      {
-                        label: 'HTTP',
-                        value: activeRun.httpStatusCode
-                          ? String(activeRun.httpStatusCode)
-                          : '—',
-                        danger:
-                          activeRun.httpStatusCode !== null &&
-                          activeRun.httpStatusCode >= 400,
-                      },
-                      {
-                        label: 'LLM Cost',
-                        value: formatCostValue(activeRun.llmCostUsd),
-                      },
-                    ].map((stat) => (
-                      <div key={stat.label}>
-                        <div
-                          style={{
-                            fontSize: 10,
-                            fontWeight: 700,
-                            letterSpacing: '0.08em',
-                            textTransform: 'uppercase' as const,
-                            color: 'var(--fg-subtle)',
-                            marginBottom: 4,
-                          }}
-                        >
-                          {stat.label}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: 14,
-                            fontWeight: 600,
-                            color: stat.danger ? 'var(--danger)' : 'var(--fg)',
-                            fontFamily: "'JetBrains Mono', monospace",
-                          }}
-                        >
-                          {stat.value}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        letterSpacing: '0.08em',
-                        textTransform: 'uppercase' as const,
-                        color: 'var(--fg-subtle)',
-                        marginBottom: 4,
-                      }}
-                    >
-                      Events
-                    </div>
-                    <div style={{ fontSize: 14, color: 'var(--fg)' }}>
-                      {formatEventsBreakdown(
-                        activeRun.eventsFound,
-                        activeRun.eventsInserted,
-                        activeRun.eventsUpdated,
-                      )}
-                    </div>
-                  </div>
-                  {activeRun.errorMessage && (
-                    <ErrorBlock
-                      errorMessage={activeRun.errorMessage}
-                      httpStatusCode={activeRun.httpStatusCode}
-                      consecutiveFailures={selected.consecutiveFailures}
-                      blockedAt={selected.blockedAt}
-                    />
-                  )}
-                </>
-              ) : (
-                <div style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
-                  No runs yet
-                </div>
-              )}
               {venueRecrawlError && (
                 <div
                   style={{
@@ -741,90 +651,275 @@ export const CrawlSplitView = ({
               )}
             </div>
 
-            {/* Run history section — flush below venue detail */}
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                flex: 1,
-                minHeight: 0,
-              }}
-            >
+            {/* Vitals — separate section with border dividers */}
+            {activeRun && (
               <div
                 style={{
-                  padding: '10px 16px',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(4, 1fr)',
+                  gap: 0,
                   borderBottom: '1px solid var(--border)',
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: 'var(--fg)',
                   flexShrink: 0,
                 }}
               >
-                Run history
+                {[
+                  {
+                    label: 'Started',
+                    value: fmtDateTimeMT(
+                      activeRun.startedAt ?? activeRun.createdAt,
+                    ),
+                    danger: false,
+                  },
+                  {
+                    label: 'Duration',
+                    value: activeRun.durationMs
+                      ? `${(activeRun.durationMs / 1000).toFixed(1)}s`
+                      : '—',
+                    danger: false,
+                  },
+                  {
+                    label: 'HTTP',
+                    value: activeRun.httpStatusCode
+                      ? String(activeRun.httpStatusCode)
+                      : '—',
+                    danger:
+                      activeRun.httpStatusCode !== null &&
+                      activeRun.httpStatusCode >= 400,
+                  },
+                  {
+                    label: 'LLM Cost',
+                    value: formatCostValue(activeRun.llmCostUsd),
+                    danger: false,
+                  },
+                ].map((stat, idx) => (
+                  <div
+                    key={stat.label}
+                    style={{
+                      padding: '14px 18px',
+                      borderRight: idx < 3 ? '1px solid var(--border)' : 'none',
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase' as const,
+                        color: 'var(--fg-subtle)',
+                        marginBottom: 4,
+                      }}
+                    >
+                      {stat.label}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 600,
+                        color: stat.danger ? 'var(--danger)' : 'var(--fg)',
+                        fontFamily: "'JetBrains Mono', monospace",
+                      }}
+                    >
+                      {stat.value}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div style={{ overflowY: 'auto', flex: 1 }}>
-                <AdminTable>
-                  <THead sticky>
-                    <tr>
-                      <TH>Run</TH>
-                      <TH>Started</TH>
-                      <TH>Status</TH>
-                      <TH align="right" mono>
-                        Events
-                      </TH>
-                      <TH align="right" mono>
-                        Duration
-                      </TH>
-                      <TH align="right" mono>
-                        LLM cost
-                      </TH>
-                    </tr>
-                  </THead>
-                  <tbody>
-                    {selectedRuns.map((run) => (
-                      <TR
-                        key={run.id}
-                        active={run.id === activeRunId}
-                        onClick={() => setSelectedRunId(run.id)}
-                      >
-                        <TD color="var(--fg-muted)">
-                          <code
+            )}
+
+            {/* Content */}
+            <div
+              style={{
+                padding: '20px 22px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 18,
+                overflowY: 'auto',
+                flex: 1,
+              }}
+            >
+              {activeRun ? (
+                <>
+                  {/* Events mini cards */}
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase' as const,
+                        color: 'var(--fg-subtle)',
+                        marginBottom: 10,
+                      }}
+                    >
+                      Events
+                    </div>
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(3, 1fr)',
+                        gap: 12,
+                      }}
+                    >
+                      {[
+                        {
+                          label: 'Found',
+                          value: activeRun.eventsFound as string | number,
+                          color:
+                            activeRun.eventsFound > 0
+                              ? 'var(--fg)'
+                              : 'var(--fg-subtle)',
+                        },
+                        {
+                          label: 'Created',
+                          value: activeRun.eventsInserted as string | number,
+                          color:
+                            activeRun.eventsInserted > 0
+                              ? 'var(--success)'
+                              : 'var(--fg-subtle)',
+                        },
+                        {
+                          label: 'Updated',
+                          value: activeRun.eventsUpdated as string | number,
+                          color:
+                            activeRun.eventsUpdated > 0
+                              ? 'var(--fg)'
+                              : 'var(--fg-subtle)',
+                        },
+                      ].map((stat) => (
+                        <div
+                          key={stat.label}
+                          style={{
+                            padding: '14px 16px',
+                            borderRadius: 8,
+                            background: 'var(--surface-1)',
+                            border: '1px solid var(--border)',
+                          }}
+                        >
+                          <div
                             style={{
-                              fontSize: 11,
                               fontFamily: "'JetBrains Mono', monospace",
+                              fontSize: 22,
+                              fontWeight: 700,
+                              color: stat.color,
+                              fontVariantNumeric: 'tabular-nums',
+                              letterSpacing: '-0.02em',
                             }}
                           >
-                            {shortRunId(run.id)}
-                          </code>
-                        </TD>
-                        <TD color="var(--fg-muted)">
-                          {fmtDateTimeMT(run.startedAt ?? run.createdAt)}
-                        </TD>
-                        <TD>
-                          <StatusBadge
-                            kind={STATUS_KIND[run.status] ?? 'neutral'}
-                            dot
+                            {stat.value}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              letterSpacing: '0.08em',
+                              textTransform: 'uppercase' as const,
+                              color: 'var(--fg-subtle)',
+                              marginTop: 4,
+                            }}
                           >
-                            {run.status.charAt(0).toUpperCase() +
-                              run.status.slice(1)}
-                          </StatusBadge>
-                        </TD>
-                        <TD align="right" mono>
-                          {run.eventsFound}
-                        </TD>
-                        <TD align="right" mono color="var(--fg-muted)">
-                          {run.durationMs
-                            ? `${(run.durationMs / 1000).toFixed(1)}s`
-                            : '—'}
-                        </TD>
-                        <TD align="right">
-                          <CostText value={run.llmCostUsd ?? 0} />
-                        </TD>
-                      </TR>
-                    ))}
-                  </tbody>
-                </AdminTable>
-              </div>
+                            {stat.label}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Error block */}
+                  {activeRun.errorMessage && (
+                    <ErrorBlock
+                      errorMessage={activeRun.errorMessage}
+                      httpStatusCode={activeRun.httpStatusCode}
+                      consecutiveFailures={selected.consecutiveFailures}
+                      blockedAt={selected.blockedAt}
+                    />
+                  )}
+
+                  {/* Source preview */}
+                  {selected.websiteUrl && (
+                    <div>
+                      <div
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          letterSpacing: '0.08em',
+                          textTransform: 'uppercase' as const,
+                          color: 'var(--fg-subtle)',
+                          marginBottom: 8,
+                        }}
+                      >
+                        Source
+                      </div>
+                      <div
+                        style={{
+                          padding: '12px 14px',
+                          background: 'var(--surface-1)',
+                          borderRadius: 8,
+                          border: '1px solid var(--border)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: 13,
+                            color: 'var(--fg-subtle)',
+                            flexShrink: 0,
+                          }}
+                        >
+                          ↗
+                        </span>
+                        <span
+                          style={{
+                            fontFamily: "'JetBrains Mono', monospace",
+                            fontSize: 12,
+                            color: 'var(--fg-muted)',
+                            flex: 1,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap' as const,
+                          }}
+                        >
+                          {selected.websiteUrl}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Strategy */}
+                  {selected.strategy && selected.strategy !== '—' && (
+                    <div>
+                      <div
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          letterSpacing: '0.08em',
+                          textTransform: 'uppercase' as const,
+                          color: 'var(--fg-subtle)',
+                          marginBottom: 8,
+                        }}
+                      >
+                        Strategy
+                      </div>
+                      <StatusBadge
+                        kind={
+                          selected.strategy === 'structured'
+                            ? 'signal'
+                            : selected.strategy === 'llm'
+                              ? 'warning'
+                              : 'neutral'
+                        }
+                      >
+                        {selected.strategy}
+                      </StatusBadge>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
+                  No runs yet
+                </div>
+              )}
             </div>
           </>
         ) : (
@@ -843,6 +938,103 @@ export const CrawlSplitView = ({
         )}
       </div>
     </div>
+  )
+}
+
+export const CrawlRunHistoryTable = ({
+  initialRuns,
+}: {
+  initialRuns: CrawlRun[]
+}) => {
+  return (
+    <Panel
+      title="Run history"
+      action={
+        <span
+          style={{
+            fontSize: 12,
+            color: 'var(--fg-subtle)',
+            fontWeight: 400,
+          }}
+        >
+          showing {initialRuns.length}
+        </span>
+      }
+      padding={0}
+    >
+      <AdminTable>
+        <THead>
+          <tr>
+            <TH width={92}>Run</TH>
+            <TH>Venue</TH>
+            <TH>Started</TH>
+            <TH>Duration</TH>
+            <TH>Status</TH>
+            <TH>Strategy</TH>
+            <TH align="right">Events</TH>
+            <TH align="right">LLM cost</TH>
+            <TH>Error</TH>
+          </tr>
+        </THead>
+        <tbody>
+          {initialRuns.map((run) => (
+            <TR key={run.id}>
+              <TD mono color="var(--fg-muted)">
+                {shortRunId(run.id)}
+              </TD>
+              <TD>
+                <span style={{ fontWeight: 600 }}>{run.venueName ?? '—'}</span>
+              </TD>
+              <TD mono color="var(--fg-muted)">
+                {fmtDateTimeMT(run.startedAt ?? run.createdAt)}
+              </TD>
+              <TD mono color="var(--fg-muted)">
+                {run.durationMs
+                  ? `${(run.durationMs / 1000).toFixed(1)}s`
+                  : '—'}
+              </TD>
+              <TD>
+                <StatusBadge kind={STATUS_KIND[run.status] ?? 'neutral'} dot>
+                  {run.status.charAt(0).toUpperCase() + run.status.slice(1)}
+                </StatusBadge>
+              </TD>
+              <TD>
+                <StatusBadge
+                  kind={
+                    run.extractionStrategyUsed === 'structured'
+                      ? 'signal'
+                      : run.extractionStrategyUsed === 'llm'
+                        ? 'warning'
+                        : 'neutral'
+                  }
+                >
+                  {run.extractionStrategyUsed ?? '—'}
+                </StatusBadge>
+              </TD>
+              <TD
+                align="right"
+                mono
+                color={run.eventsFound ? 'var(--fg)' : 'var(--fg-subtle)'}
+              >
+                {run.eventsFound || '—'}
+              </TD>
+              <TD align="right">
+                <CostText value={run.llmCostUsd ?? 0} />
+              </TD>
+              <TD
+                color={run.errorMessage ? 'var(--danger)' : 'var(--fg-subtle)'}
+              >
+                {run.errorMessage ? (
+                  <span style={{ fontSize: 12 }}>{run.errorMessage}</span>
+                ) : (
+                  '—'
+                )}
+              </TD>
+            </TR>
+          ))}
+        </tbody>
+      </AdminTable>
+    </Panel>
   )
 }
 

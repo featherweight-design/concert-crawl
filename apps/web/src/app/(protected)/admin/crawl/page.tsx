@@ -4,6 +4,7 @@ import { StatCard } from '@/components/admin/primitives'
 import {
   CrawlSplitView,
   CrawlRunAllButton,
+  CrawlRunHistoryTable,
 } from '@/components/admin/crawl/CrawlSplitView'
 import { IssuesBanner } from '@/components/admin/crawl/IssuesBanner'
 import {
@@ -228,6 +229,8 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
           initialSelectedId: initialVenueId,
         })}
       />
+
+      <CrawlRunHistoryTable initialRuns={runs} />
     </div>
   )
 }
