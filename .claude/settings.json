@@ -9,5 +9,17 @@
       "Bash(cat *)",
       "Bash(cd *)"
     ]
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/session-budget-warn.sh"
+          }
+        ]
+      }
+    ]
   }
 }
