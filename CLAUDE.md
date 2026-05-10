@@ -120,7 +120,7 @@ These were made deliberately — understand them before proposing changes.
 - **Always open a PR for code changes** — never merge to main locally, never discard changes
 - **Always use `.github/pull_request_template.md`** when opening a PR
 - **All feature work must be done in a git worktree** — the primary repo directory (`/Users/huey/Projects/concert-crawl`) is reserved for the user's own use and testing. Worktrees live in `.worktrees/` at the project root (gitignored). Use `git worktree add .worktrees/<branch-name> -b <branch-name>` directly — do NOT use the `EnterWorktree` tool, which hardcodes `.claude/worktrees/` and cannot be configured.
-- **Keep the main repo working directory clean** — any changes made there (config edits, new plan docs, etc.) must be copied into the active worktree and committed to the feature branch before the session ends. Check `git -C /Users/huey/Projects/concert-crawl status` at the end of any session to catch stray changes.
+- **⚠️ NEVER leave uncommitted files in the main repo directory** — this is a hard rule that is violated every session. The main repo (`/Users/huey/Projects/concert-crawl`) must always be clean (`git status` = nothing to commit). If you write or modify any file while working in a worktree, write it directly in the worktree path, not the main repo path. At the end of every session — and before any `git push` — run `git -C /Users/huey/Projects/concert-crawl status` and either commit stray changes to the appropriate worktree branch or restore them.
 
 ### Session handoff
 
