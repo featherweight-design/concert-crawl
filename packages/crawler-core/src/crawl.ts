@@ -1,3 +1,4 @@
+import type { Browser } from 'playwright'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import {
   db,
@@ -21,6 +22,7 @@ const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
 
 export async function crawlVenue(
   venueId: string,
+  browser: Browser,
   crawlRunId?: string,
 ): Promise<CrawlRun> {
   const id = crawlRunId ?? crypto.randomUUID()
@@ -74,6 +76,7 @@ export async function crawlVenue(
   try {
     const { html, httpStatus, finalUrl } = await fetchPage(
       venue.websiteUrl,
+      browser,
       venue.crawlDelayMs,
     )
 

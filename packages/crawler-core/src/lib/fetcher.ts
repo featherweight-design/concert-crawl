@@ -1,4 +1,4 @@
-import { chromium } from 'playwright'
+import type { Browser } from 'playwright'
 
 const HONEST_USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
 
@@ -24,16 +24,16 @@ function jitter(ms: number): number {
 
 export async function fetchPage(
   url: string,
+  browser: Browser,
   crawlDelayMs = 3000,
 ): Promise<FetchResult> {
   const delay = Math.max(0, jitter(crawlDelayMs))
   if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay))
 
-  const browser = await chromium.launch({ headless: true })
+  const context = await browser.newContext({
+    userAgent: HONEST_USER_AGENT,
+  })
   try {
-    const context = await browser.newContext({
-      userAgent: HONEST_USER_AGENT,
-    })
     const page = await context.newPage()
 
     console.log(JSON.stringify({ event: 'fetch.start', url }))
@@ -84,6 +84,6 @@ export async function fetchPage(
     )
     return { html, httpStatus: finalStatus, finalUrl }
   } finally {
-    await browser.close()
+    await context.close()
   }
 }

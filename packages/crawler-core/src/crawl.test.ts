@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { eq, and, desc } from 'drizzle-orm'
+import type { Browser } from 'playwright'
 import { crawlVenue } from './crawl.js'
+
+const mockBrowser = {} as Browser
 
 // In-memory stores — vi.hoisted ensures these are available inside vi.mock factories
 const stores = vi.hoisted(() => ({
@@ -201,9 +204,9 @@ describe('crawlVenue — page-level skip', () => {
       usage: { inputTokens: 100, outputTokens: 50 },
     })
 
-    await crawlVenue(venue.id) // first crawl — extracts event, stores pageHash
+    await crawlVenue(venue.id, mockBrowser) // first crawl — extracts event, stores pageHash
 
-    const run = await crawlVenue(venue.id) // second crawl — same HTML, should skip
+    const run = await crawlVenue(venue.id, mockBrowser) // second crawl — same HTML, should skip
 
     expect(run.eventsFound).toBe(0)
     expect(run.eventsInserted).toBe(0)
@@ -237,8 +240,8 @@ describe('crawlVenue — page-level skip', () => {
       usage: { inputTokens: 100, outputTokens: 50 },
     })
 
-    await crawlVenue(venue.id) // first crawl
-    const run = await crawlVenue(venue.id) // second crawl — page changed
+    await crawlVenue(venue.id, mockBrowser) // first crawl
+    const run = await crawlVenue(venue.id, mockBrowser) // second crawl — page changed
 
     expect(run.eventsFound).toBe(1)
     expect(run.eventsInserted).toBe(0) // sourceHash matches despite page change
@@ -264,10 +267,10 @@ describe('crawlVenue — event-level sourceHash', () => {
       usage: { inputTokens: 100, outputTokens: 50 },
     })
 
-    const run1 = await crawlVenue(venue.id)
+    const run1 = await crawlVenue(venue.id, mockBrowser)
     expect(run1.eventsInserted).toBe(1) // new event inserted
 
-    const run2 = await crawlVenue(venue.id) // same event content, different page hash
+    const run2 = await crawlVenue(venue.id, mockBrowser) // same event content, different page hash
     expect(run2.eventsInserted).toBe(0) // unchanged — skipped
 
     const allEvents = await db
@@ -302,7 +305,7 @@ describe('crawlVenue — event-level sourceHash', () => {
         usage: { inputTokens: 100, outputTokens: 50 },
       })
 
-    await crawlVenue(venue.id) // first crawl — inserts unverified event
+    await crawlVenue(venue.id, mockBrowser) // first crawl — inserts unverified event
 
     // Mark event as verified in the in-memory store
     await db
@@ -310,7 +313,7 @@ describe('crawlVenue — event-level sourceHash', () => {
       .set({ verified: true })
       .where(and(eq(events.venueId, venue.id), eq(events.artist, 'Metallica')))
 
-    await crawlVenue(venue.id) // second crawl — verified event content changed
+    await crawlVenue(venue.id, mockBrowser) // second crawl — verified event content changed
 
     const allAlerts = await db
       .select()
@@ -354,7 +357,7 @@ describe('crawlVenue — event-level sourceHash', () => {
       updatedAt: new Date(),
     })
 
-    const run = await crawlVenue(venue.id)
+    const run = await crawlVenue(venue.id, mockBrowser)
 
     expect(run.eventsInserted).toBe(1)
 
