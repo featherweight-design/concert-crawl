@@ -407,19 +407,19 @@ Full forward plan: `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md`
 
 ### Pre-beta hard blockers (must ship before May 25)
 
-| Item                         | Notes                                                                                                                                        |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Saving shows (Watching)**  | ✅ Complete (PR #117 merged 2026-05-09). Heart button → `user_events` table. Design handoff: `design/design_handoff_watching/`.              |
-| **Browse filters wired**     | 🔄 In PR #130 — Price + Vibe filter chips wired end-to-end; LLM genre-tagging pipeline added to crawler.                                     |
-| **Search nav item**          | Routes to search page but currently a dead link.                                                                                             |
-| **UI interactions sweep**    | Walk every clickable element on every route. Log and fix dead interactions.                                                                  |
-| **Invite code error states** | ⚠️ Believed complete via Phase 8a onboarding flow (PR #43) — Hugh confirming via manual test.                                                |
-| **Feedback modal**           | In-app, auth-only, rate-limited (1/hour). Category + message → `feedback` table.                                                             |
-| **Empty states**             | Browse (no filter results), search (no results), Watching (no saved shows). Design handoff: `design/design_handoff_empty_states/` (PR #118). |
-| **FounderNote content**      | Hugh writes the personal message for onboarding step 1.                                                                                      |
-| **FounderNote admin page**   | `app_config` table + admin editor so copy can update without redeploy.                                                                       |
-| **Legal for beta**           | ✅ Complete (PR #108): beta agreement, T&C stub, Privacy Policy stub.                                                                        |
-| **Seed additional venues**   | ✅ Complete: 10-12 venues crawled and live before private beta.                                                                              |
+| Item                         | Notes                                                                                                                           |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| **Saving shows (Watching)**  | ✅ Complete (PR #117 merged 2026-05-09). Heart button → `user_events` table. Design handoff: `design/design_handoff_watching/`. |
+| **Browse filters wired**     | 🔄 In PR #130 — Price + Vibe filter chips wired end-to-end; LLM genre-tagging pipeline added to crawler.                        |
+| **Search nav item**          | Routes to search page but currently a dead link.                                                                                |
+| **UI interactions sweep**    | Walk every clickable element on every route. Log and fix dead interactions.                                                     |
+| **Invite code error states** | ⚠️ Believed complete via Phase 8a onboarding flow (PR #43) — Hugh confirming via manual test.                                   |
+| **Feedback modal**           | In-app, auth-only, rate-limited (1/hour). Category + message → `feedback` table.                                                |
+| **Empty states**             | ✅ Complete (this PR). Hybrid design wired into browse (list + calendar), venue page, and watching.                             |
+| **FounderNote content**      | Hugh writes the personal message for onboarding step 1.                                                                         |
+| **FounderNote admin page**   | `app_config` table + admin editor so copy can update without redeploy.                                                          |
+| **Legal for beta**           | ✅ Complete (PR #108): beta agreement, T&C stub, Privacy Policy stub.                                                           |
+| **Seed additional venues**   | ✅ Complete: 10-12 venues crawled and live before private beta.                                                                 |
 
 ### Beta period deliverables (Jun 16 – Aug 3)
 
