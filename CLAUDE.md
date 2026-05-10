@@ -382,45 +382,47 @@ Phase: **Pre-Beta Sprint — target open May 25, 2026**
 - Admin sidebar polish in PR #167 (issue #139): badge contrast, CCMark centralization, Invite Codes icon, OPERATIONS label
 - Admin crawl data + run-all in PR (feat/admin-crawl-data-and-run-all): DB migration 0014 (llm_cost_usd, events_updated), crawler writes new fields, API selects them + bulk trigger endpoint, "Run all" button in CrawlSplitView; closes #150, #155, #156
 - Auto-versioning + release notes in PR #183 (feat/auto-versioning, issue #154): semantic-release on root package.json, CI→Release→Deploy-Staging pipeline chain, version injected from package.json into next.config.ts
+- Admin venue forms in PR (feat/admin-venue-forms, issue #187): Add Venue modal inline on Venues table, full Venue Details redesign (2-col layout, crawl health sparkline, danger zone), type-to-confirm hard delete, DB migration for events.venue_id nullable FK
 
 ### Phase Sequence
 
-| Phase       | Name                                     | Status                                         |
-| ----------- | ---------------------------------------- | ---------------------------------------------- |
-| 1           | Foundation                               | ✅ Complete                                    |
-| 2           | Venue Management (Admin)                 | ✅ Complete                                    |
-| 3           | Crawler v1                               | ✅ Complete                                    |
-| 4           | Design System / Theming Architecture     | ✅ Complete                                    |
-| 5           | Consumer Calendar UI (functional)        | ✅ Complete                                    |
-| 5b          | Consumer UI Design Polish                | ✅ Complete (PRs #22–24)                       |
-| 6a          | Observability SDK                        | ✅ Complete (PR #26)                           |
-| 6b          | Integration Tests                        | ✅ Complete (PR #28)                           |
-| 6c          | E2E + Smoke Tests                        | ✅ Complete (PR #29)                           |
-| 7           | Automation + Scheduling                  | ✅ Complete (PR #34)                           |
-| 7.5         | IdentityArt generative engine            | ✅ Complete (PR #39)                           |
-| 7.6         | Admin UI Redesign                        | ✅ Complete (PRs #44, #50)                     |
-| 8a          | Beta Launch Prep — Landing + Auth        | ✅ Complete (PRs #43, #45)                     |
-| 8b pt.1     | User Profile + Settings                  | ✅ Complete (PR #49)                           |
-| —           | Price Transparency v1                    | ✅ Complete (PRs #32, #37)                     |
-| —           | Price Transparency v2                    | ✅ Complete (PR #46)                           |
-| —           | Betterment: Crawler separation           | ✅ Complete (PR #51)                           |
-| **8b pt.2** | **Saving Shows (Watching)**              | ✅ **Complete (PR #117 merged 2026-05-09)**    |
-| —           | Legal pages                              | ✅ Complete (PR #108)                          |
-| —           | Watching bug fixes                       | ✅ Complete (PR #140 merged 2026-05-10)        |
-| —           | Admin dashboard polish                   | ✅ Complete (PR #127 merged 2026-05-10)        |
-| —           | Browse filters + LLM genre tagging       | ✅ Complete (PR #130 merged 2026-05-10)        |
-| —           | Empty states                             | ✅ Complete (PR #145 merged 2026-05-10)        |
-| —           | Feedback modal + user menu redesign      | ✅ Complete (PR #146 merged 2026-05-10)        |
-| —           | Crawler: shared browser + genre fixes    | ✅ Complete (PRs #144, #147 merged 2026-05-10) |
-| —           | Admin sidebar polish                     | 🔄 In PR #167 (issue #139)                     |
-| —           | Admin crawl data + run-all               | 🔄 In PR (feat/admin-crawl-data-and-run-all)   |
-| —           | Search nav item                          | ✅ Complete (PR #171, issue #57)               |
-| —           | Onboarding polish                        | 🔄 In PR #173 (issues #134, #135, #138, #80)   |
+| Phase       | Name                                     | Status                                           |
+| ----------- | ---------------------------------------- | ------------------------------------------------ |
+| 1           | Foundation                               | ✅ Complete                                      |
+| 2           | Venue Management (Admin)                 | ✅ Complete                                      |
+| 3           | Crawler v1                               | ✅ Complete                                      |
+| 4           | Design System / Theming Architecture     | ✅ Complete                                      |
+| 5           | Consumer Calendar UI (functional)        | ✅ Complete                                      |
+| 5b          | Consumer UI Design Polish                | ✅ Complete (PRs #22–24)                         |
+| 6a          | Observability SDK                        | ✅ Complete (PR #26)                             |
+| 6b          | Integration Tests                        | ✅ Complete (PR #28)                             |
+| 6c          | E2E + Smoke Tests                        | ✅ Complete (PR #29)                             |
+| 7           | Automation + Scheduling                  | ✅ Complete (PR #34)                             |
+| 7.5         | IdentityArt generative engine            | ✅ Complete (PR #39)                             |
+| 7.6         | Admin UI Redesign                        | ✅ Complete (PRs #44, #50)                       |
+| 8a          | Beta Launch Prep — Landing + Auth        | ✅ Complete (PRs #43, #45)                       |
+| 8b pt.1     | User Profile + Settings                  | ✅ Complete (PR #49)                             |
+| —           | Price Transparency v1                    | ✅ Complete (PRs #32, #37)                       |
+| —           | Price Transparency v2                    | ✅ Complete (PR #46)                             |
+| —           | Betterment: Crawler separation           | ✅ Complete (PR #51)                             |
+| **8b pt.2** | **Saving Shows (Watching)**              | ✅ **Complete (PR #117 merged 2026-05-09)**      |
+| —           | Legal pages                              | ✅ Complete (PR #108)                            |
+| —           | Watching bug fixes                       | ✅ Complete (PR #140 merged 2026-05-10)          |
+| —           | Admin dashboard polish                   | ✅ Complete (PR #127 merged 2026-05-10)          |
+| —           | Browse filters + LLM genre tagging       | ✅ Complete (PR #130 merged 2026-05-10)          |
+| —           | Empty states                             | ✅ Complete (PR #145 merged 2026-05-10)          |
+| —           | Feedback modal + user menu redesign      | ✅ Complete (PR #146 merged 2026-05-10)          |
+| —           | Crawler: shared browser + genre fixes    | ✅ Complete (PRs #144, #147 merged 2026-05-10)   |
+| —           | Admin sidebar polish                     | 🔄 In PR #167 (issue #139)                       |
+| —           | Admin crawl data + run-all               | 🔄 In PR (feat/admin-crawl-data-and-run-all)     |
+| —           | Search nav item                          | ✅ Complete (PR #171, issue #57)                 |
+| —           | Onboarding polish                        | 🔄 In PR #173 (issues #134, #135, #138, #80)     |
 | —           | Auto-versioning + release notes          | 🔄 In PR #183 (feat/auto-versioning, issue #154) |
-| Pre-beta    | UI interactions audit + bug fixes        | 🔄 In progress (admin/crawl, sidebar)          |
-| Beta period | Jun 16 – Aug 3 (see beta-to-launch spec) | —                                              |
-| Launch prep | Aug 4–17                                 | —                                              |
-| **Launch**  | **~Aug 18–22, 2026**                     | —                                              |
+| —           | Admin venue forms                        | 🔄 In PR (feat/admin-venue-forms, issue #187)    |
+| Pre-beta    | UI interactions audit + bug fixes        | 🔄 In progress (admin/crawl, sidebar)            |
+| Beta period | Jun 16 – Aug 3 (see beta-to-launch spec) | —                                                |
+| Launch prep | Aug 4–17                                 | —                                                |
+| **Launch**  | **~Aug 18–22, 2026**                     | —                                                |
 
 Full forward plan: `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md`
 
