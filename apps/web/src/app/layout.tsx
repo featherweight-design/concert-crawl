@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { ClerkProvider } from '@clerk/nextjs'
 import './globals.css'
-import { Inter, JetBrains_Mono } from 'next/font/google'
+import { Inter, JetBrains_Mono, Caveat } from 'next/font/google'
 import { ThemeProvider } from '@/theme'
 import { THEMES } from '@/theme/themes'
 import { cn } from '@/lib/utils'
@@ -16,6 +16,12 @@ const mono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-mono',
   weight: ['400', '500', '600', '700'],
+})
+
+const caveat = Caveat({
+  subsets: ['latin'],
+  variable: '--font-handwriting',
+  weight: ['400', '600', '700'],
 })
 
 const themeScript = `
@@ -59,7 +65,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
       <html
         lang="en"
         suppressHydrationWarning
-        className={cn(inter.variable, mono.variable)}
+        className={cn(inter.variable, mono.variable, caveat.variable)}
       >
         <head>
           {/* Blocking script: runs before paint to apply saved/system theme */}

@@ -61,7 +61,7 @@ export function FounderNote() {
         </div>
         <div
           style={{
-            fontFamily: "'Caveat', 'Inter', system-ui",
+            fontFamily: "var(--font-handwriting), 'Caveat', system-ui",
             fontSize: 24,
             fontWeight: 600,
             color: 'var(--fg)',
