@@ -112,14 +112,14 @@ describe('Admin crawl routes', () => {
       expect(res.status).toBe(403)
     })
 
-    it('returns 200 with empty triggerIds when no active venues exist', async () => {
+    it('returns 202 with empty triggerIds when no active venues exist', async () => {
       adminAuth()
       const { db } = await import('@concert-crawl/db')
       vi.mocked(db.select().from().where).mockResolvedValueOnce([])
       const res = await createApp().request('/v1/admin/crawl', {
         method: 'POST',
       })
-      expect(res.status).toBe(200)
+      expect(res.status).toBe(202)
       const body = (await res.json()) as {
         success: boolean
         data: { triggerIds: string[]; count: number }

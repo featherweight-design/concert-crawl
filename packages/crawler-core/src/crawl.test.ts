@@ -142,7 +142,14 @@ vi.mock('./lib/extractors/llm.js', () => ({
 
 import { fetchPage } from './lib/fetcher.js'
 import { extractWithLlm } from './lib/extractors/llm.js'
-import { db, venues, events, crawlRuns, notifications } from '@concert-crawl/db'
+import {
+  db,
+  venues,
+  events,
+  crawlRuns,
+  notifications,
+  costTracking,
+} from '@concert-crawl/db'
 
 const mockFetchPage = vi.mocked(fetchPage)
 const mockExtractWithLlm = vi.mocked(extractWithLlm)
@@ -402,5 +409,80 @@ describe('crawlVenue — fetch options', () => {
       3000,
       'load',
     )
+  })
+})
+
+describe('crawlVenue — LLM cost tracking', () => {
+  it('persists non-null llmCostUsd and writes cost_tracking row when LLM is used', async () => {
+    const venue = seedVenue()
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [METALLICA_EVENT],
+      usage: {
+        inputTokens: 200,
+        outputTokens: 80,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+      },
+    })
+
+    const run = await crawlVenue(venue.id, mockBrowser)
+
+    expect(run.llmCostUsd).not.toBeNull()
+    expect(typeof run.llmCostUsd).toBe('number')
+    expect(run.llmCostUsd).toBeGreaterThan(0)
+
+    const allCostRows = await db.select().from(costTracking)
+    const costRow = allCostRows.find((row: any) => {
+      try {
+        const meta = row.metadata ? JSON.parse(row.metadata) : {}
+        return meta.venueId === venue.id
+      } catch {
+        return false
+      }
+    })
+    expect(costRow).toBeDefined()
+    expect(costRow?.service).toBe('claude')
+  })
+
+  it('stores null llmCostUsd and writes no cost_tracking row when structured-data extraction is used', async () => {
+    const venue = seedVenue()
+
+    const jsonLdHtml = `<html><head>
+      <script type="application/ld+json">${JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'Event',
+        name: 'Metallica Live',
+        startDate: '2026-08-15T20:00:00',
+        location: { '@type': 'Place', name: 'Test Venue' },
+        url: 'https://test-venue.example.com/tickets',
+      })}</script>
+    </head><body></body></html>`
+
+    mockFetchPage.mockResolvedValue({
+      html: jsonLdHtml,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+
+    const run = await crawlVenue(venue.id, mockBrowser)
+
+    expect(run.llmCostUsd).toBeNull()
+    expect(mockExtractWithLlm).not.toHaveBeenCalled()
+
+    const allCostRows = await db.select().from(costTracking)
+    const costRow = allCostRows.find((row: any) => {
+      try {
+        const meta = row.metadata ? JSON.parse(row.metadata) : {}
+        return meta.venueId === venue.id
+      } catch {
+        return false
+      }
+    })
+    expect(costRow).toBeUndefined()
   })
 })

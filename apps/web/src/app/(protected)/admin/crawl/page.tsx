@@ -111,6 +111,18 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
 
   const sweepHint = formatSweepHint(todayRuns)
   const runsBreakdown = formatRunsBreakdown(todayRuns)
+  const totalInserted = todayRuns.reduce(
+    (sum, run) => sum + run.eventsInserted,
+    0,
+  )
+  const totalUpdated = todayRuns.reduce(
+    (sum, run) => sum + run.eventsUpdated,
+    0,
+  )
+  const eventsHintParts: string[] = []
+  if (totalInserted > 0) eventsHintParts.push(`${totalInserted} new`)
+  if (totalUpdated > 0) eventsHintParts.push(`${totalUpdated} updated`)
+  const eventsHint = eventsHintParts.join(' · ') || 'today'
 
   const lastSweepValue = todayRuns[0]?.createdAt
     ? `${String(Math.round((Date.now() - new Date(todayRuns[0].createdAt).getTime()) / 60000))}m ago`
@@ -170,12 +182,10 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
         />
         <StatCard
           label="Events ingested"
-          value={String(
-            todayRuns.reduce((sum, run) => sum + run.eventsInserted, 0),
-          )}
+          value={String(totalInserted + totalUpdated)}
           iconName="CheckSquare"
           kind="success"
-          hint="today"
+          hint={eventsHint}
         />
         <StatCard
           label="LLM cost · today"

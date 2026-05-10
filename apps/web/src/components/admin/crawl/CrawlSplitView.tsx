@@ -113,16 +113,20 @@ export const CrawlSplitView = ({
     'idle' | 'triggering' | 'queued' | 'error'
   >('idle')
   const [runAllError, setRunAllError] = useState<string | null>(null)
+  const [runAllCount, setRunAllCount] = useState<number | null>(null)
 
   async function handleRunAll() {
     setRunAllState('triggering')
     setRunAllError(null)
+    setRunAllCount(null)
     try {
       const res = await fetch('/api/admin/crawl', { method: 'POST' })
       if (!res.ok) {
         const rawBody: unknown = await res.json().catch(() => ({}))
         throw new Error(extractErrorMessage(rawBody, `HTTP ${res.status}`))
       }
+      const body = (await res.json()) as { data?: { count?: number } }
+      setRunAllCount(body.data?.count ?? null)
       setRunAllState('queued')
     } catch (err) {
       setRunAllState('error')
@@ -256,7 +260,9 @@ export const CrawlSplitView = ({
               {runAllState === 'triggering'
                 ? 'Triggering…'
                 : runAllState === 'queued'
-                  ? 'All queued'
+                  ? runAllCount !== null
+                    ? `${runAllCount} queued`
+                    : 'Queued'
                   : 'Run all'}
             </button>
           </div>

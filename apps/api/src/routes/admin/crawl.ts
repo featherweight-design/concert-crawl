@@ -22,7 +22,7 @@ crawlAdminRouter.post('/', async (ctx) => {
     .where(and(eq(venues.active, true), eq(venues.verified, true)))
 
   if (activeVenues.length === 0) {
-    return ctx.json({ success: true, data: { triggerIds: [], count: 0 } })
+    return ctx.json({ success: true, data: { triggerIds: [], count: 0 } }, 202)
   }
 
   const actor = getAuthUser(ctx).userId

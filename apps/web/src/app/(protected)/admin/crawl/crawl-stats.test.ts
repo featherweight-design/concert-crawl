@@ -74,7 +74,7 @@ describe('formatLlmCostTotal', () => {
     ).toBe('')
   })
 
-  it('sums costs and formats as dollar amount', () => {
+  it('sums costs and formats as dollar amount with 4 decimal places', () => {
     expect(
       formatLlmCostTotal([{ llmCostUsd: 0.001 }, { llmCostUsd: 0.0005 }]),
     ).toBe('$0.0015')
