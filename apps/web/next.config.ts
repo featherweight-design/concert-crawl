@@ -1,11 +1,12 @@
 import type { NextConfig } from 'next'
 import { withSentryConfig } from '@sentry/nextjs'
+import rootPkg from '../../package.json'
 
 const config: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@concert-crawl/types'],
   env: {
-    NEXT_PUBLIC_APP_VERSION: `v0.4.2-beta · ${process.env['RENDER_GIT_COMMIT']?.slice(0, 7) ?? 'dev'}`,
+    NEXT_PUBLIC_APP_VERSION: `v${rootPkg.version} · ${process.env['RENDER_GIT_COMMIT']?.slice(0, 7) ?? 'dev'}`,
   },
 }
 
