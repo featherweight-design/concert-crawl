@@ -228,6 +228,25 @@ usersRouter.patch('/me', zValidator('json', patchSchema), async (ctx) => {
   return ctx.json({ success: true })
 })
 
+// GET /v1/users/me/submissions/count — count of non-stale price submissions for current user
+usersRouter.get('/me/submissions/count', async (ctx) => {
+  const auth = getAuth(ctx)
+  if (!auth?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+
+  const [row] = await db
+    .select({ value: count() })
+    .from(priceSubmissions)
+    .where(
+      and(
+        eq(priceSubmissions.userId, auth.userId),
+        ne(priceSubmissions.status, 'stale'),
+      ),
+    )
+
+  return ctx.json({ success: true, data: { count: row?.value ?? 0 } })
+})
+
 // GET /v1/users/me/submissions
 usersRouter.get('/me/submissions', async (ctx) => {
   const auth = getAuth(ctx)

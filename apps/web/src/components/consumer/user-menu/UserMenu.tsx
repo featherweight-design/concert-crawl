@@ -9,6 +9,7 @@ import type { ThemeName } from '@/theme/themes'
 import { FeedbackModal } from '../feedback/FeedbackModal'
 
 const APP_VERSION = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev'
+const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? ''
 const THEMES: { key: ThemeName; label: string; gradient: string }[] = [
   {
     key: 'electric',
@@ -35,6 +36,7 @@ export function UserMenu() {
   const [open, setOpen] = useState(false)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [submissionCount, setSubmissionCount] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -71,6 +73,31 @@ export function UserMenu() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [open])
+
+  useEffect(() => {
+    fetch(`${API_URL}/v1/users/me/submissions/count`, {
+      credentials: 'include',
+    })
+      .then((res) => res.json())
+      .then((body: unknown) => {
+        if (
+          body !== null &&
+          typeof body === 'object' &&
+          'data' in body &&
+          body.data !== null &&
+          typeof body.data === 'object' &&
+          'count' in body.data &&
+          typeof (body.data as Record<string, unknown>).count === 'number'
+        ) {
+          setSubmissionCount(
+            (body.data as Record<string, unknown>).count as number,
+          )
+        }
+      })
+      .catch((err: unknown) => {
+        console.error('Failed to fetch submission count', err)
+      })
+  }, [])
 
   const handleSignOut = useCallback(() => {
     void signOut().catch((err: unknown) =>
@@ -126,6 +153,7 @@ export function UserMenu() {
             setTheme={setTheme}
             buildLabel={buildLabel}
             commitLabel={commitLabel}
+            submissionCount={submissionCount}
             onFeedback={() => {
               setOpen(false)
               setFeedbackOpen(true)
@@ -159,6 +187,7 @@ export function UserMenu() {
             setTheme={setTheme}
             buildLabel={buildLabel}
             commitLabel={commitLabel}
+            submissionCount={submissionCount}
             onFeedback={() => {
               setOpen(false)
               setFeedbackOpen(true)
@@ -193,6 +222,7 @@ interface MenuBodyProps {
   onFeedback: () => void
   onSettings: () => void
   onSignOut: () => void
+  submissionCount: number
 }
 
 // ── Menu body (shared between popover and sheet) ──────────────────────────
@@ -208,6 +238,7 @@ function MenuBody({
   onFeedback,
   onSettings,
   onSignOut,
+  submissionCount,
 }: MenuBodyProps) {
   return (
     <>
@@ -288,11 +319,43 @@ function MenuBody({
             {email}
           </span>
         </div>
+        <button
+          type="button"
+          aria-label="Account"
+          style={{
+            all: 'unset',
+            cursor: 'pointer',
+            width: 28,
+            height: 28,
+            borderRadius: 8,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--fg-muted)',
+            border: '1px solid var(--border)',
+          }}
+        >
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+            <path
+              d="M3 4.5l3 3 3-3"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
       </div>
 
       {/* You section */}
       <SectionLabel>You</SectionLabel>
-      <MenuRow label="Submitted prices" href="/me/submissions" kbd="P" last />
+      <MenuRow
+        label="Submitted prices"
+        href="/me/submissions"
+        {...(submissionCount > 0 ? { meta: `${submissionCount} live` } : {})}
+        kbd="P"
+        last
+      />
 
       {/* App section */}
       <SectionLabel>App</SectionLabel>
