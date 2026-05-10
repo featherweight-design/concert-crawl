@@ -764,7 +764,7 @@ export const CrawlSplitView = ({
               </div>
               <div style={{ overflowY: 'auto', flex: 1 }}>
                 <AdminTable>
-                  <THead>
+                  <THead sticky>
                     <tr>
                       <TH>Run</TH>
                       <TH>Started</TH>

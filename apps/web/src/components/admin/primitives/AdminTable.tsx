@@ -24,8 +24,20 @@ export const AdminTable = ({
   </div>
 )
 
-export const THead = ({ children }: { children: React.ReactNode }) => (
-  <thead style={{ background: 'var(--surface-1)' }}>{children}</thead>
+interface THeadProps {
+  children: React.ReactNode
+  sticky?: boolean
+}
+
+export const THead = ({ children, sticky = false }: THeadProps) => (
+  <thead
+    style={{
+      background: 'var(--surface-1)',
+      ...(sticky ? { position: 'sticky' as const, top: 0, zIndex: 1 } : {}),
+    }}
+  >
+    {children}
+  </thead>
 )
 
 export const TR = ({
