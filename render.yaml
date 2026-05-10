@@ -44,7 +44,7 @@ services:
       - key: NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL
         value: /events
       - key: NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL
-        value: /events
+        value: /auth/complete
 
   - type: cron
     name: concert-crawl-crawler-triggers
@@ -153,7 +153,7 @@ services:
       - key: NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL
         value: /events
       - key: NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL
-        value: /events
+        value: /auth/complete
 
   - type: cron
     name: concert-crawl-crawler-triggers-staging

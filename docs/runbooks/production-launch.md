@@ -148,7 +148,7 @@ Go to the repository on GitHub → **Settings** → **Environments**.
 
 | Variable         | Value                                                                    |
 | ---------------- | ------------------------------------------------------------------------ |
-| `CRAWL_ENABLED`  | `false` initially — see Step 8 for when to enable                       |
+| `CRAWL_ENABLED`  | `false` initially — see Step 9 for when to enable                       |
 | `ADMIN_EMAIL`    | Your email address for crawl failure notifications                       |
 
 ### `staging` environment — Variables
