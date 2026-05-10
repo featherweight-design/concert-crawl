@@ -43,7 +43,7 @@ feedbackRouter.post('/', async (ctx) => {
     )
   }
 
-  const body = await ctx.req.json().catch(() => null)
+  const body: unknown = await ctx.req.json().catch(() => null)
   const parsed = feedbackSchema.safeParse(body)
   if (!parsed.success) {
     return ctx.json(
