@@ -4,15 +4,35 @@ import type { ArtistResult, VenueResult } from '../../../lib/search/useSearch'
 interface SearchResultsStateProps {
   artistResults: ArtistResult[]
   venueResults: VenueResult[]
+  selectedIdx?: number
+  onHover?: (idx: number) => void
   onNavigateTo: (
     type: 'artist' | 'venue',
     value: string | { slug: string },
   ) => void
 }
 
-function SectionHeader({ label }: { label: string }) {
+function SectionHeader({
+  icon,
+  label,
+}: {
+  icon?: React.ReactNode
+  label: string
+}) {
   return (
-    <div style={{ padding: '0 16px 8px' }}>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '0 16px 8px',
+      }}
+    >
+      {icon && (
+        <span style={{ color: 'var(--fg-muted)', display: 'inline-flex' }}>
+          {icon}
+        </span>
+      )}
       <span
         style={{
           fontFamily: 'var(--font-mono)',
@@ -38,6 +58,8 @@ function Divider() {
 export function SearchResultsState({
   artistResults,
   venueResults,
+  selectedIdx = -1,
+  onHover,
   onNavigateTo,
 }: SearchResultsStateProps) {
   return (
@@ -46,12 +68,16 @@ export function SearchResultsState({
     >
       {artistResults.length > 0 && (
         <>
-          <SectionHeader label={`Artists · ${artistResults.length}`} />
+          <SectionHeader
+            icon={<User size={13} strokeWidth={1.5} />}
+            label={`Artists · ${artistResults.length}`}
+          />
           {artistResults.map((artist, idx) => (
             <div key={artist.name}>
               {idx > 0 && <Divider />}
               <button
                 onClick={() => onNavigateTo('artist', artist.name)}
+                onMouseEnter={() => onHover?.(idx)}
                 style={{
                   all: 'unset',
                   cursor: 'pointer',
@@ -61,6 +87,8 @@ export function SearchResultsState({
                   padding: '12px 16px',
                   width: '100%',
                   boxSizing: 'border-box' as const,
+                  background:
+                    selectedIdx === idx ? 'var(--surface-2)' : 'transparent',
                 }}
               >
                 <div
@@ -114,69 +142,80 @@ export function SearchResultsState({
 
       {venueResults.length > 0 && (
         <>
-          <SectionHeader label={`Venues · ${venueResults.length}`} />
-          {venueResults.map((venue, idx) => (
-            <div key={venue.slug}>
-              {idx > 0 && <Divider />}
-              <button
-                onClick={() => onNavigateTo('venue', { slug: venue.slug })}
-                style={{
-                  all: 'unset',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: '12px 16px',
-                  width: '100%',
-                  boxSizing: 'border-box' as const,
-                }}
-              >
-                <div
+          <SectionHeader
+            icon={<MapPin size={13} strokeWidth={1.5} />}
+            label={`Venues · ${venueResults.length}`}
+          />
+          {venueResults.map((venue, idx) => {
+            const venueIdx = artistResults.length + idx
+            return (
+              <div key={venue.slug}>
+                {idx > 0 && <Divider />}
+                <button
+                  onClick={() => onNavigateTo('venue', { slug: venue.slug })}
+                  onMouseEnter={() => onHover?.(venueIdx)}
                   style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 8,
-                    background: 'var(--surface-2)',
-                    border: '1px solid var(--border)',
+                    all: 'unset',
+                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'var(--fg-muted)',
-                    flexShrink: 0,
+                    gap: 12,
+                    padding: '12px 16px',
+                    width: '100%',
+                    boxSizing: 'border-box' as const,
+                    background:
+                      selectedIdx === venueIdx
+                        ? 'var(--surface-2)'
+                        : 'transparent',
                   }}
                 >
-                  <MapPin size={18} strokeWidth={1.5} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
                   <div
                     style={{
-                      fontFamily: 'var(--font-ui)',
-                      fontWeight: 700,
-                      fontSize: 14,
-                      color: 'var(--fg)',
-                      letterSpacing: '-0.01em',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {venue.name}
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: 10,
+                      width: 40,
+                      height: 40,
+                      borderRadius: 8,
+                      background: 'var(--surface-2)',
+                      border: '1px solid var(--border)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                       color: 'var(--fg-muted)',
-                      letterSpacing: '0.02em',
+                      flexShrink: 0,
                     }}
                   >
-                    {venue.showCount} upcoming show
-                    {venue.showCount !== 1 ? 's' : ''}
+                    <MapPin size={18} strokeWidth={1.5} />
                   </div>
-                </div>
-              </button>
-            </div>
-          ))}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontFamily: 'var(--font-ui)',
+                        fontWeight: 700,
+                        fontSize: 14,
+                        color: 'var(--fg)',
+                        letterSpacing: '-0.01em',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {venue.name}
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 10,
+                        color: 'var(--fg-muted)',
+                        letterSpacing: '0.02em',
+                      }}
+                    >
+                      {venue.showCount} upcoming show
+                      {venue.showCount !== 1 ? 's' : ''}
+                    </div>
+                  </div>
+                </button>
+              </div>
+            )
+          })}
         </>
       )}
     </div>

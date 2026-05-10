@@ -201,6 +201,11 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
             <SearchResultsState
               artistResults={search.artistResults}
               venueResults={search.venueResults}
+              selectedIdx={selectedIdx}
+              onHover={(idx) => {
+                selectedIdxRef.current = idx
+                setSelectedIdx(idx)
+              }}
               onNavigateTo={(type, value) => {
                 search.navigateTo(type, value)
                 onClose()

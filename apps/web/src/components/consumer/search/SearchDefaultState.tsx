@@ -1,5 +1,15 @@
 import { History, Flame } from 'lucide-react'
 import type { PopularEvent } from '../../../lib/search/useSearch'
+import { IdentityArt } from '../identity-art/IdentityArt'
+
+function formatDayLabel(dateStr: string): string {
+  const date = new Date(dateStr)
+  return date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })
+}
 
 interface SearchDefaultStateProps {
   recentSearches: string[]
@@ -132,6 +142,22 @@ export function SearchDefaultState({
             >
               <div
                 style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 8,
+                  overflow: 'hidden',
+                  flexShrink: 0,
+                }}
+              >
+                <IdentityArt
+                  name={event.artist}
+                  kind="artist"
+                  width={40}
+                  height={40}
+                />
+              </div>
+              <div
+                style={{
                   flex: 1,
                   minWidth: 0,
                   display: 'flex',
@@ -159,9 +185,12 @@ export function SearchDefaultState({
                     fontSize: 10,
                     color: 'var(--fg-muted)',
                     letterSpacing: '0.02em',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
                   }}
                 >
-                  {event.venue.name}
+                  {event.venue.name} · {formatDayLabel(event.date)}
                 </span>
               </div>
               <span
