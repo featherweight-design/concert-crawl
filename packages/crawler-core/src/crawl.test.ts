@@ -362,7 +362,9 @@ describe('crawlVenue — event-level sourceHash', () => {
 
     const run = await crawlVenue(venue.id, mockBrowser)
 
-    expect(run.eventsInserted).toBe(1)
+    // null-hash backfill counts as an update to an existing event, not a new insertion
+    expect(run.eventsInserted).toBe(0)
+    expect(run.eventsUpdated).toBe(1)
 
     const allEvents = await db
       .select()
