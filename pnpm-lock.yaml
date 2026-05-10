@@ -254,6 +254,9 @@ importers:
       '@concert-crawl/db':
         specifier: workspace:*
         version: link:../db
+      '@concert-crawl/logger':
+        specifier: workspace:*
+        version: link:../logger
       '@concert-crawl/types':
         specifier: workspace:*
         version: link:../types
