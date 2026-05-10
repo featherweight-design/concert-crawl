@@ -19,7 +19,7 @@ import { createApp } from '../app.js'
 import { clearTables } from '../test/helpers/seed.js'
 import { testDb } from '../test/helpers/db.js'
 import { feedback } from '@concert-crawl/db'
-import { eq, sql } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 
 const app = createApp()
 
@@ -37,7 +37,6 @@ function clearAuth(): void {
 beforeEach(async () => {
   clearAuth()
   await clearTables()
-  await testDb.execute(sql`TRUNCATE feedback RESTART IDENTITY CASCADE`)
 })
 
 describe('POST /v1/feedback', () => {

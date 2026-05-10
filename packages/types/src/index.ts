@@ -81,7 +81,7 @@ export const SP_POLICY = {
 export type NotificationType = 'admin_alert' | 'user_notification'
 
 // Feedback categories
-export type FeedbackCategory = 'bug' | 'suggestion' | 'praise'
+export type FeedbackCategory = 'bug' | 'idea' | 'praise' | 'other'
 
 // Subscription tiers
 export type SubscriptionTier = 'free' | 'premium'

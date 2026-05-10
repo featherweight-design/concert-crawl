@@ -47,7 +47,11 @@ feedbackRouter.post('/', async (ctx) => {
   const parsed = feedbackSchema.safeParse(body)
   if (!parsed.success) {
     return ctx.json(
-      { success: false, error: parsed.error.flatten().fieldErrors },
+      {
+        success: false,
+        error: 'Invalid input',
+        details: parsed.error.flatten(),
+      },
       422,
     )
   }
