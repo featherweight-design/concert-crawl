@@ -391,7 +391,7 @@ Phase: **Pre-Beta Sprint — target open May 25, 2026**
 | —           | Price Transparency v1                    | ✅ Complete (PRs #32, #37)        |
 | —           | Price Transparency v2                    | ✅ Complete (PR #46)              |
 | —           | Betterment: Crawler separation           | ✅ Complete (PR #51)              |
-| **8b pt.2** | **Saving Shows (Watching)**              | 🔄 **In PR #117 — pending merge** |
+| **8b pt.2** | **Saving Shows (Watching)**              | ✅ **Complete (PR #117 merged 2026-05-09)** |
 | —           | Legal pages                              | ✅ Complete (PR #108)             |
 | Pre-beta    | UI interactions audit + bug fixes        | 🔄 In progress                    |
 | Beta period | Jun 16 – Aug 3 (see beta-to-launch spec) | —                                 |
@@ -408,7 +408,7 @@ Full forward plan: `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md`
 
 | Item                         | Notes                                                                                                                                        |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Saving shows (Watching)**  | ✅ PR #117 — pending merge. Heart button → `user_events` table. Design handoff: `design/design_handoff_watching/`.                           |
+| **Saving shows (Watching)**  | ✅ Complete (PR #117 merged 2026-05-09). Heart button → `user_events` table. Design handoff: `design/design_handoff_watching/`.               |
 | **Browse filters wired**     | Filter chips exist but selecting them doesn't update the event list.                                                                         |
 | **Search nav item**          | Routes to search page but currently a dead link.                                                                                             |
 | **UI interactions sweep**    | Walk every clickable element on every route. Log and fix dead interactions.                                                                  |
