@@ -77,3 +77,12 @@
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
+
+/* Onboarding responsive layout */
+.onboarding-mobile { display: flex; }
+.onboarding-desktop { display: none; }
+
+@media (min-width: 1240px) {
+  .onboarding-mobile { display: none !important; }
+  .onboarding-desktop { display: block !important; }
+}
