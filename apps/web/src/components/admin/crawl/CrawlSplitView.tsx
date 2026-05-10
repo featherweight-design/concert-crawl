@@ -26,6 +26,7 @@ interface CrawlStatusRow {
   venueName: string
   websiteUrl: string
   status: string
+  lastRunStatus: string
   lastRunAt: string | null
   eventsFound: number
   eventsInserted: number
@@ -201,16 +202,19 @@ export const CrawlSplitView = ({
             justifyContent: 'space-between',
             gap: 8,
             flexShrink: 0,
+            position: 'sticky',
+            top: 0,
+            zIndex: 1,
+            background: 'var(--bg-elevated)',
           }}
         >
           <span
-            style={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: 'var(--fg-muted)',
-            }}
+            style={{ fontSize: 12, fontWeight: 500, color: 'var(--fg-muted)' }}
           >
-            {filteredStatus.length} venues
+            Latest run · per venue{' '}
+            <span style={{ fontWeight: 700, color: 'var(--fg)' }}>
+              {filteredStatus.length}
+            </span>
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <select
@@ -336,11 +340,9 @@ export const CrawlSplitView = ({
                   : ''}
               </div>
             </div>
-            <StatusBadge
-              kind={STATUS_KIND[row.status] ?? 'neutral'}
-              variant="soft"
-            >
-              {row.status}
+            <StatusBadge kind={STATUS_KIND[row.lastRunStatus] ?? 'neutral'} dot>
+              {row.lastRunStatus.charAt(0).toUpperCase() +
+                row.lastRunStatus.slice(1)}
             </StatusBadge>
           </button>
         ))}

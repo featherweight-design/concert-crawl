@@ -15,6 +15,7 @@ export interface CrawlStatusRow {
   venueName: string
   websiteUrl: string
   status: string
+  lastRunStatus: string
   lastRunAt: string | null
   eventsFound: number
   eventsInserted: number
@@ -65,6 +66,7 @@ function toStatusRow(venue: RawVenueStatus): CrawlStatusRow {
     venueName: venue.name,
     websiteUrl: venue.websiteUrl,
     status: deriveVenueStatus(venue),
+    lastRunStatus: venue.lastRun?.status ?? 'never',
     lastRunAt: venue.lastRun?.createdAt ?? null,
     eventsFound: venue.lastRun?.eventsFound ?? 0,
     eventsInserted: venue.lastRun?.eventsInserted ?? 0,
@@ -184,7 +186,7 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
         <StatCard
           label="Events ingested"
           value={String(totalInserted + totalUpdated)}
-          iconName="CheckSquare"
+          iconName="CalendarCheck2"
           kind="success"
           hint={eventsHint}
         />
