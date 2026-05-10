@@ -649,3 +649,62 @@ export const CrawlSplitView = ({
     </div>
   )
 }
+
+export const CrawlRunAllButton = () => {
+  const [state, setState] = useState<
+    'idle' | 'triggering' | 'queued' | 'error'
+  >('idle')
+
+  async function handleRunAll() {
+    setState('triggering')
+    try {
+      const res = await fetch('/api/admin/crawl/run-all', { method: 'POST' })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      setState('queued')
+      setTimeout(() => setState('idle'), 5000)
+    } catch {
+      setState('error')
+      setTimeout(() => setState('idle'), 4000)
+    }
+  }
+
+  const label =
+    state === 'triggering'
+      ? 'Queuing…'
+      : state === 'queued'
+        ? 'Queued ✓'
+        : state === 'error'
+          ? 'Error — retry?'
+          : 'Run all'
+
+  return (
+    <button
+      onClick={handleRunAll}
+      disabled={state === 'triggering' || state === 'queued'}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        height: 32,
+        padding: '0 14px',
+        borderRadius: 8,
+        fontSize: 13,
+        fontWeight: 600,
+        border: '1px solid var(--border-strong)',
+        background: state === 'queued' ? 'rgba(47,122,77,0.1)' : 'transparent',
+        color:
+          state === 'queued'
+            ? 'var(--success)'
+            : state === 'error'
+              ? 'var(--danger)'
+              : 'var(--fg)',
+        cursor:
+          state === 'triggering' || state === 'queued'
+            ? 'not-allowed'
+            : 'pointer',
+      }}
+    >
+      ↻ {label}
+    </button>
+  )
+}

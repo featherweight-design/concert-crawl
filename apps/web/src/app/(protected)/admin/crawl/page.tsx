@@ -1,7 +1,10 @@
 import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
 import { StatCard } from '@/components/admin/primitives'
-import { CrawlSplitView } from '@/components/admin/crawl/CrawlSplitView'
+import {
+  CrawlSplitView,
+  CrawlRunAllButton,
+} from '@/components/admin/crawl/CrawlSplitView'
 import { IssuesBanner } from '@/components/admin/crawl/IssuesBanner'
 import {
   formatSweepHint,
@@ -140,17 +143,37 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
         height: '100%',
       }}
     >
-      <div>
-        <h1
-          style={{
-            fontSize: 22,
-            fontWeight: 700,
-            color: 'var(--fg)',
-            margin: 0,
-          }}
-        >
-          Crawl status
-        </h1>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: 16,
+        }}
+      >
+        <div>
+          <h1
+            style={{
+              fontSize: 22,
+              fontWeight: 700,
+              color: 'var(--fg)',
+              margin: 0,
+            }}
+          >
+            Crawl status
+          </h1>
+          <p
+            style={{
+              fontSize: 13,
+              color: 'var(--fg-muted)',
+              margin: '4px 0 0',
+            }}
+          >
+            Every venue crawl, run by run. The dataset is only as fresh as this
+            page.
+          </p>
+        </div>
+        <CrawlRunAllButton />
       </div>
 
       <IssuesBanner
