@@ -31,17 +31,9 @@ export function SubmissionItem({
       className="flex flex-col gap-1.5 px-3.5 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
       style={isLast ? undefined : { borderBottom: '1px solid var(--border)' }}
     >
-      {/* Row 1: status pill + date */}
+      {/* Row 1: status pill */}
       <div className="flex items-center gap-2">
         <StatusPill status={submission.status} />
-        {submission.date && (
-          <span
-            className="ml-auto text-[10px] text-fg-subtle"
-            style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}
-          >
-            {formatDate(submission.date)}
-          </span>
-        )}
       </div>
 
       {/* Row 2: artist name */}
@@ -49,16 +41,17 @@ export function SubmissionItem({
         {submission.artist}
       </span>
 
-      {/* Row 3: price + venue */}
-      <div className="flex flex-wrap items-baseline gap-2">
+      {/* Row 3: price left, venue · date right */}
+      <div className="flex items-baseline justify-between gap-2">
         <span className="text-[16px] font-black leading-none tracking-[-0.02em] text-fg">
           {priceLabel}
         </span>
         <span
-          className="text-[10px] text-fg-muted"
+          className="shrink-0 text-[10px] text-fg-muted"
           style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}
         >
           {submission.venue}
+          {submission.date && ` · ${formatDate(submission.date)}`}
         </span>
       </div>
 

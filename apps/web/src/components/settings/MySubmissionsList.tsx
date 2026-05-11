@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { SubmissionItem } from './SubmissionItem'
 import { SETTINGS_COPY } from './definitions/copy'
 import { SUBMISSION_CAP_MOBILE } from './definitions/constants'
@@ -53,12 +54,13 @@ export function MySubmissionsList({
       </div>
 
       {hasMore && (
-        <p
-          className="w-full py-2.5 text-center text-[11px] font-bold uppercase tracking-[0.10em]"
+        <Link
+          href="/me"
+          className="w-full py-2.5 text-center text-[11px] font-bold uppercase tracking-[0.10em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
           style={{ fontFamily: 'var(--font-mono)', color: 'var(--signal)' }}
         >
           {SETTINGS_COPY.seeAllSubmissions(totalCount)}
-        </p>
+        </Link>
       )}
     </div>
   )

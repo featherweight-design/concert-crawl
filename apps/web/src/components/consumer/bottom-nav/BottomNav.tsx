@@ -7,13 +7,6 @@ import { useAuth } from '@clerk/nextjs'
 import { fetchMe } from '@/lib/users'
 import type { AvatarColor } from '@concert-crawl/types'
 
-const COLOR_VAR: Record<AvatarColor, string> = {
-  signal: 'var(--signal)',
-  accent: 'var(--accent)',
-  success: 'var(--success)',
-  warning: 'var(--warning)',
-}
-
 const STATIC_TABS = [
   {
     key: 'browse',
@@ -101,8 +94,9 @@ interface MeAvatarProps {
 
 function MeAvatar({ handle, avatarColor, isActive }: MeAvatarProps) {
   const letter = handle ? handle.charAt(0).toUpperCase() : '?'
-  const bgColor = avatarColor ? COLOR_VAR[avatarColor] : 'var(--signal)'
-  const ringColor = avatarColor ? COLOR_VAR[avatarColor] : 'var(--signal)'
+  const tone = avatarColor ?? 'signal'
+  const tintBg = `color-mix(in oklch, var(--${tone}) 22%, var(--surface-1))`
+  const tintBorder = `color-mix(in oklch, var(--${tone}) 50%, transparent)`
 
   return (
     <div
@@ -115,13 +109,13 @@ function MeAvatar({ handle, avatarColor, isActive }: MeAvatarProps) {
         alignItems: 'center',
         justifyContent: 'center',
         flexShrink: 0,
-        background: bgColor,
-        color: 'var(--bg)',
+        background: tintBg,
+        color: `var(--${tone})`,
         fontSize: 10,
         fontWeight: 800,
         fontFamily: 'var(--font-ui)',
         userSelect: 'none',
-        outline: isActive ? `2px solid ${ringColor}` : 'none',
+        outline: isActive ? `2px solid ${tintBorder}` : 'none',
         outlineOffset: 2,
       }}
     >

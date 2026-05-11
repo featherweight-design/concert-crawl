@@ -7,13 +7,6 @@ interface AvatarProps {
   className?: string
 }
 
-const COLOR_VAR: Record<AvatarColor, string> = {
-  signal: 'var(--signal)',
-  accent: 'var(--accent)',
-  success: 'var(--success)',
-  warning: 'var(--warning)',
-}
-
 export function Avatar({
   handle,
   avatarColor,
@@ -22,9 +15,11 @@ export function Avatar({
 }: AvatarProps) {
   const letter = handle ? handle.charAt(0).toUpperCase() : '?'
   const isAnonymous = !handle
-
-  const bgColor = avatarColor ? COLOR_VAR[avatarColor] : undefined
   const fontSize = Math.round(size * 0.4)
+
+  const tone = avatarColor ?? 'signal'
+  const tintBg = `color-mix(in oklch, var(--${tone}) 22%, var(--surface-1))`
+  const tintBorder = `1.5px solid color-mix(in oklch, var(--${tone}) 50%, transparent)`
 
   return (
     <div
@@ -37,11 +32,9 @@ export function Avatar({
         alignItems: 'center',
         justifyContent: 'center',
         flexShrink: 0,
-        background: isAnonymous
-          ? 'transparent'
-          : (bgColor ?? 'var(--surface-2)'),
-        border: isAnonymous ? '2px dashed var(--fg-subtle)' : 'none',
-        color: isAnonymous ? 'var(--fg-subtle)' : 'var(--bg)',
+        background: isAnonymous ? 'var(--surface-2)' : tintBg,
+        border: isAnonymous ? '1px dashed var(--border-strong)' : tintBorder,
+        color: isAnonymous ? 'var(--fg-subtle)' : `var(--${tone})`,
         fontSize,
         fontWeight: 800,
         fontFamily: 'var(--font-ui)',
