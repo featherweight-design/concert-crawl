@@ -27,6 +27,7 @@ export async function fetchPage(
   browser: Browser,
   crawlDelayMs = 3000,
   waitUntil: 'networkidle' | 'load' | 'domcontentloaded' = 'networkidle',
+  waitForSelector?: string,
 ): Promise<FetchResult> {
   const delay = Math.max(0, jitter(crawlDelayMs))
   if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay))
@@ -49,10 +50,18 @@ export async function fetchPage(
       }
     })
 
+    // When a CSS selector is provided, use domcontentloaded for navigation
+    // (fast connection) then let waitForSelector handle SPA render timing —
+    // avoids networkidle/load timeouts on pages with persistent third-party requests.
     const response = await page.goto(url, {
-      waitUntil,
+      waitUntil: waitForSelector ? 'domcontentloaded' : waitUntil,
       timeout: 30_000,
     })
+
+    if (waitForSelector) {
+      await page.waitForSelector(waitForSelector, { timeout: 30_000 })
+    }
+
     const finalStatus = response?.status() ?? httpStatus
 
     if (finalStatus === 403 || finalStatus === 429) {
