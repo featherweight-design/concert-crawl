@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/HartiganHM/concert-crawl/compare/v1.3.1...v1.4.0) (2026-05-11)
+
+
+### Features
+
+* **observability:** wire up Sentry Structured Logs across all three apps ([c56d987](https://github.com/HartiganHM/concert-crawl/commit/c56d9873973ac05d8e61001072925ca80db63b11)), closes [#225](https://github.com/HartiganHM/concert-crawl/issues/225)
+
 ## [1.3.1](https://github.com/HartiganHM/concert-crawl/compare/v1.3.0...v1.3.1) (2026-05-11)
 
 
