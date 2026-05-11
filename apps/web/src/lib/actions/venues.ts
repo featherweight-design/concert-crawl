@@ -66,12 +66,31 @@ export async function updateVenue(
   const token = await getToken()
 
   try {
+    const crawlDelayRaw = formData.get('crawlDelayMs')
+    const crawlDelayNum = crawlDelayRaw ? Number(String(crawlDelayRaw)) : undefined
+    const crawlDelayMs =
+      crawlDelayNum !== undefined &&
+      Number.isFinite(crawlDelayNum) &&
+      Number.isInteger(crawlDelayNum)
+        ? crawlDelayNum
+        : undefined
+
+    const crawlWaitUntilRaw = String(formData.get('crawlWaitUntil') ?? '')
+    const VALID_WAIT_UNTIL = ['networkidle', 'load', 'domcontentloaded'] as const
+    const crawlWaitUntil = (
+      VALID_WAIT_UNTIL as readonly string[]
+    ).includes(crawlWaitUntilRaw)
+      ? (crawlWaitUntilRaw as (typeof VALID_WAIT_UNTIL)[number])
+      : undefined
+
     await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
       name: formData.get('name'),
       slug: formData.get('slug'),
       websiteUrl: formData.get('websiteUrl'),
       city: formData.get('city') || 'Denver',
       active: formData.get('active') === 'true',
+      crawlWaitUntil,
+      crawlDelayMs,
     })
     revalidatePath('/admin/venues')
     revalidatePath(`/admin/venues/${id}`)

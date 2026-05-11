@@ -51,6 +51,7 @@ function makeVenue(overrides: Partial<Venue> = {}): Venue {
     lastCrawledAt: null,
     crawlNotes: null,
     crawlDelayMs: 3000,
+    crawlWaitUntil: 'networkidle' as const,
     robotsTxtAllowed: null,
     robotsTxtCheckedAt: null,
     consecutiveFailures: 0,

@@ -20,6 +20,9 @@ const createVenueSchema = z.object({
   city: z.string().default('Denver'),
   active: z.boolean().default(true),
   crawlDelayMs: z.number().int().min(1000).max(30000).default(3000),
+  crawlWaitUntil: z
+    .enum(['networkidle', 'load', 'domcontentloaded'])
+    .default('networkidle'),
 })
 
 const updateVenueSchema = createVenueSchema.partial().extend({

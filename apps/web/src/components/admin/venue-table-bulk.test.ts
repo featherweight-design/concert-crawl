@@ -19,6 +19,7 @@ function makeVenue(
     robotsTxtCheckedAt: null,
     crawlNotes: null,
     crawlDelayMs: 3000,
+    crawlWaitUntil: 'networkidle' as const,
     extractionStrategy: null,
     contactEmail: null,
     consecutiveFailures: 0,

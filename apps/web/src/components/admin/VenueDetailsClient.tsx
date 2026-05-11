@@ -186,6 +186,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
   const slugRef = useRef<HTMLInputElement>(null)
   const websiteUrlRef = useRef<HTMLInputElement>(null)
   const cityRef = useRef<HTMLInputElement>(null)
+  const crawlDelayRef = useRef<HTMLInputElement>(null)
   const [active, setActive] = useState(venue.active)
   const [slugManual, setSlugManual] = useState(true)
 
@@ -194,13 +195,17 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
   const [slugVal, setSlugVal] = useState(venue.slug)
   const [urlVal, setUrlVal] = useState(venue.websiteUrl)
   const [cityVal, setCityVal] = useState(venue.city)
+  const [waitUntilVal, setWaitUntilVal] = useState(venue.crawlWaitUntil)
+  const [crawlDelayVal, setCrawlDelayVal] = useState(venue.crawlDelayMs)
 
   const isDirty =
     nameVal !== venue.name ||
     slugVal !== venue.slug ||
     urlVal !== venue.websiteUrl ||
     cityVal !== venue.city ||
-    active !== venue.active
+    active !== venue.active ||
+    waitUntilVal !== venue.crawlWaitUntil ||
+    crawlDelayVal !== venue.crawlDelayMs
 
   // Save state
   const [saveState, setSaveState] = useState<
@@ -219,6 +224,8 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     setUrlVal(venue.websiteUrl)
     setCityVal(venue.city)
     setActive(venue.active)
+    setWaitUntilVal(venue.crawlWaitUntil)
+    setCrawlDelayVal(venue.crawlDelayMs)
     setSaveState('idle')
     setSaveError(null)
     setFieldErrors({})
@@ -226,6 +233,8 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     if (slugRef.current) slugRef.current.value = venue.slug
     if (websiteUrlRef.current) websiteUrlRef.current.value = venue.websiteUrl
     if (cityRef.current) cityRef.current.value = venue.city
+    if (crawlDelayRef.current)
+      crawlDelayRef.current.value = String(venue.crawlDelayMs)
   }
 
   async function handleSave() {
@@ -239,6 +248,8 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     formData.set('websiteUrl', urlVal.trim())
     formData.set('city', cityVal.trim() || 'Denver')
     formData.set('active', String(active))
+    formData.set('crawlWaitUntil', waitUntilVal)
+    formData.set('crawlDelayMs', String(crawlDelayVal))
 
     try {
       const result = await updateVenue(venue.id, formData)
@@ -575,6 +586,147 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                 />
               </button>
             </div>
+          </div>
+
+          <div
+            style={{
+              borderTop: '1px solid var(--border)',
+              paddingTop: 20,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 20,
+            }}
+          >
+            <MonoLabel>Crawl settings</MonoLabel>
+
+            {/* Wait strategy */}
+            <Field
+              label="Wait strategy"
+              htmlFor="edit-venue-wait-until"
+              hint={
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--fg-muted)',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {waitUntilVal === 'networkidle' && (
+                    <>
+                      <strong style={{ color: 'var(--fg)' }}>
+                        Network idle
+                      </strong>{' '}
+                      — waits until no network requests have fired for 500ms.
+                      Most reliable for SPAs that load event data via API calls,
+                      but will time out on sites with persistent WebSocket
+                      connections or polling scripts.
+                    </>
+                  )}
+                  {waitUntilVal === 'load' && (
+                    <>
+                      <strong style={{ color: 'var(--fg)' }}>Load</strong> —
+                      waits for the page&apos;s{' '}
+                      <code
+                        style={{
+                          fontFamily: 'monospace',
+                          background: 'var(--surface-1)',
+                          padding: '1px 3px',
+                          borderRadius: 3,
+                        }}
+                      >
+                        load
+                      </code>{' '}
+                      event. Faster and more forgiving — good for sites that
+                      embed event data in the initial HTML (JSON-LD, microdata)
+                      or that never fully quiesce. Use this when{' '}
+                      <strong style={{ color: 'var(--fg)' }}>
+                        Network idle times out
+                      </strong>
+                      .
+                    </>
+                  )}
+                  {waitUntilVal === 'domcontentloaded' && (
+                    <>
+                      <strong style={{ color: 'var(--fg)' }}>
+                        DOM content loaded
+                      </strong>{' '}
+                      — fires as soon as the HTML is parsed, before stylesheets
+                      or images load. Fastest option, but may miss content
+                      injected by deferred scripts. Only use if{' '}
+                      <strong style={{ color: 'var(--fg)' }}>Load</strong> still
+                      times out or if the venue page is fully server-rendered
+                      with no client-side hydration.
+                    </>
+                  )}
+                </div>
+              }
+            >
+              <select
+                id="edit-venue-wait-until"
+                value={waitUntilVal}
+                disabled={isDisabled}
+                onChange={(evt) =>
+                  setWaitUntilVal(
+                    evt.target.value as
+                      | 'networkidle'
+                      | 'load'
+                      | 'domcontentloaded',
+                  )
+                }
+                style={{
+                  ...inputStyle(false, isDisabled),
+                  height: 32,
+                  appearance: 'none',
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 10px center',
+                  paddingRight: 28,
+                  cursor: isDisabled ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <option value="networkidle">
+                  networkidle — wait for quiet network
+                </option>
+                <option value="load">load — wait for page load event</option>
+                <option value="domcontentloaded">
+                  domcontentloaded — wait for HTML parse only
+                </option>
+              </select>
+            </Field>
+
+            {/* Crawl delay */}
+            <Field
+              label="Crawl delay (ms)"
+              htmlFor="edit-venue-crawl-delay"
+              hint={
+                <span style={{ fontSize: 11, color: 'var(--fg-muted)' }}>
+                  Minimum wait between this venue&apos;s page requests. Default
+                  is 3000ms (3 seconds). Increase if the venue is rate-limiting
+                  or returning 429 errors; decrease only for venues that
+                  explicitly permit faster crawls. Range: 1000–30000ms.
+                </span>
+              }
+            >
+              <input
+                ref={crawlDelayRef}
+                id="edit-venue-crawl-delay"
+                type="number"
+                min={1000}
+                max={30000}
+                step={500}
+                defaultValue={venue.crawlDelayMs}
+                disabled={isDisabled}
+                onChange={(evt) => {
+                  const parsed = Number(evt.target.value)
+                  setCrawlDelayVal(
+                    Number.isFinite(parsed) && Number.isInteger(parsed)
+                      ? parsed
+                      : NaN,
+                  )
+                }}
+                style={inputStyle(false, isDisabled)}
+              />
+            </Field>
           </div>
         </Panel>
 
