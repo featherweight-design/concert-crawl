@@ -1,15 +1,20 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
+import { type ThemeName, THEME_NAMES } from '@/theme/themes'
 
-export type AdminTheme = 'light' | 'dark' | 'electric' | 'jade'
-export const VALID_THEMES: AdminTheme[] = ['light', 'dark', 'electric', 'jade']
+export type AdminTheme = ThemeName
+export const VALID_THEMES = THEME_NAMES
 const STORAGE_KEY = 'cc-admin-theme'
+
+function isAdminTheme(value: string | null): value is AdminTheme {
+  return value !== null && THEME_NAMES.some((name) => name === value)
+}
 
 const ThemeContext = createContext<{
   theme: AdminTheme
   setTheme: (name: AdminTheme) => void
-}>({ theme: 'light', setTheme: () => {} })
+}>({ theme: 'electric', setTheme: () => {} })
 
 export const useAdminTheme = () => useContext(ThemeContext)
 
@@ -18,14 +23,11 @@ export const AdminThemeProvider = ({
 }: {
   children: React.ReactNode
 }) => {
-  const [theme, setThemeState] = useState<AdminTheme>('light')
+  const [theme, setThemeState] = useState<AdminTheme>('electric')
 
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY)
-    const stored: AdminTheme | null = VALID_THEMES.includes(raw as AdminTheme)
-      ? (raw as AdminTheme)
-      : null
-    setThemeState(stored ?? 'electric')
+    setThemeState(isAdminTheme(raw) ? raw : 'electric')
   }, [])
 
   const setTheme = (name: AdminTheme) => {
