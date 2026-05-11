@@ -106,7 +106,7 @@ export function SetlistPreview({
       {open && (
         <div style={{ paddingBottom: 12 }}>
           <ol style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-            {setlist.songs.map((song, idx) => (
+            {setlist.songs.map((song: string, idx: number) => (
               <li
                 key={idx}
                 style={{
@@ -162,7 +162,7 @@ export function SetlistPreview({
                     aria-hidden
                   />
                 </li>
-                {setlist.encore!.map((song, idx) => (
+                {setlist.encore!.map((song: string, idx: number) => (
                   <li
                     key={`encore-${idx}`}
                     style={{
