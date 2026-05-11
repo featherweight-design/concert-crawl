@@ -1,3 +1,11 @@
+## [1.4.2](https://github.com/HartiganHM/concert-crawl/compare/v1.4.1...v1.4.2) (2026-05-11)
+
+
+### Bug Fixes
+
+* **crawler:** deduplicate LLM-extracted events before batch upsert ([3f8af7d](https://github.com/HartiganHM/concert-crawl/commit/3f8af7da809a2be397e57f2720d84f55d3cd9d6c)), closes [#232](https://github.com/HartiganHM/concert-crawl/issues/232)
+* **crawler:** move event dedup up-front to also cover changedVerified ([a7c9ea0](https://github.com/HartiganHM/concert-crawl/commit/a7c9ea072d513c655354ffe7c45c3ef996da4e6b))
+
 ## [1.4.1](https://github.com/HartiganHM/concert-crawl/compare/v1.4.0...v1.4.1) (2026-05-11)
 
 
