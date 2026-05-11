@@ -1,3 +1,24 @@
+# [1.2.0](https://github.com/HartiganHM/concert-crawl/compare/v1.1.2...v1.2.0) (2026-05-11)
+
+
+### Bug Fixes
+
+* address Copilot review feedback on profile-v2 ([740a3c9](https://github.com/HartiganHM/concert-crawl/commit/740a3c9002e663a7c6ea7898adadc6aa5dd3f695))
+* **api:** restore UUID validation on GET /v1/events/:id lost during rebase ([ced1fbe](https://github.com/HartiganHM/concert-crawl/commit/ced1fbe4dafc15827ef57d9c8e02da0984789d05))
+* **ci:** resolve migration conflict + add trust-community to genre themes ([70a2954](https://github.com/HartiganHM/concert-crawl/commit/70a2954d49563c7316d2109ea2d0e38ec5c7b59a))
+* **test:** retry clearTables on deadlock to prevent flaky CI ([2ea02b9](https://github.com/HartiganHM/concert-crawl/commit/2ea02b9bb2f897ffc26604c8dd3edaa1072654ae))
+* **test:** serialize clearTables with pg_advisory_xact_lock ([7470ce0](https://github.com/HartiganHM/concert-crawl/commit/7470ce022eea61188f25bda5529c0c5f86d1fdc3))
+* **web:** add explicit types to SetlistPreview map callbacks ([51a4552](https://github.com/HartiganHM/concert-crawl/commit/51a4552f370a460bf6a842c074f6431e4e390a56))
+* **web:** add setlist card wrapper and reorder layout to match design spec ([4db418b](https://github.com/HartiganHM/concert-crawl/commit/4db418b96489a0245a172045213d3f8b58ce3d3b))
+* **web:** align ProfileHero, SubmissionItem, and MySubmissionsList with design spec ([789d5f9](https://github.com/HartiganHM/concert-crawl/commit/789d5f9fdbeaaeee71175578049c7b3bfd7307c4))
+* **web:** use generative Avatar in desktop UserMenu trigger ([6f1b870](https://github.com/HartiganHM/concert-crawl/commit/6f1b87071b00204e5b02a6b2f58057345957bc73))
+
+
+### Features
+
+* **api:** atomically increment cred on submission confirmation ([0b13aa5](https://github.com/HartiganHM/concert-crawl/commit/0b13aa58dfa4805d6d55b22bdc9cb5f9ebc9c483))
+* event detail v2 — WatchShowButton, SetlistPreview, SoldOutCta, trust chrome ([e5fa7ce](https://github.com/HartiganHM/concert-crawl/commit/e5fa7ce26003f3605b00f07c644ac60fe453e650)), closes [#195](https://github.com/HartiganHM/concert-crawl/issues/195) [#74](https://github.com/HartiganHM/concert-crawl/issues/74)
+
 ## [1.1.2](https://github.com/HartiganHM/concert-crawl/compare/v1.1.1...v1.1.2) (2026-05-11)
 
 
