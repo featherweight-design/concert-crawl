@@ -1,6 +1,14 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { fetchPage } from './fetcher.js'
 import type { Browser, BrowserContext, Page, Response } from 'playwright'
+
+// jitter(0) = Math.floor(random * 1000) - 500; with random=0.5 → 0ms delay
+beforeEach(() => {
+  vi.spyOn(Math, 'random').mockReturnValue(0.5)
+})
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 function makeMockPage(overrides: Partial<Page> = {}): Page {
   return {
