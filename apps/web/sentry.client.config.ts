@@ -5,8 +5,4 @@ Sentry.init({
   environment: process.env['NEXT_PUBLIC_SENTRY_ENVIRONMENT'] ?? 'local',
   tracesSampleRate: 0.1,
   enableLogs: true,
-  beforeSendLog: (log) => {
-    if (log.level === 'debug') return null
-    return log
-  },
 })
