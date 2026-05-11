@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/HartiganHM/concert-crawl/compare/v1.1.0...v1.1.1) (2026-05-11)
+
+
+### Bug Fixes
+
+* **release:** disable successComment + failComment in semantic-release ([5edcea0](https://github.com/HartiganHM/concert-crawl/commit/5edcea054ad39d2c0378d201f24ad0801774a979))
+
 # [1.1.0](https://github.com/HartiganHM/concert-crawl/compare/v1.0.0...v1.1.0) (2026-05-11)
 
 
