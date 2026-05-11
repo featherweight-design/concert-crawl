@@ -1,3 +1,10 @@
+## [1.7.1](https://github.com/HartiganHM/concert-crawl/compare/v1.7.0...v1.7.1) (2026-05-11)
+
+
+### Bug Fixes
+
+* **scripts/clean-worktrees:** address Copilot review feedback ([55d8798](https://github.com/HartiganHM/concert-crawl/commit/55d8798e9237f376ef887de00c1fa4bd37df5b9c))
+
 # [1.7.0](https://github.com/HartiganHM/concert-crawl/compare/v1.6.3...v1.7.0) (2026-05-11)
 
 
