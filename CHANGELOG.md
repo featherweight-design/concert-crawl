@@ -1,3 +1,22 @@
+# [1.6.0](https://github.com/HartiganHM/concert-crawl/compare/v1.5.0...v1.6.0) (2026-05-11)
+
+
+### Bug Fixes
+
+* **crawler:** check HTTP status before waitForSelector; normalize empty selector to null ([6622a85](https://github.com/HartiganHM/concert-crawl/commit/6622a856ad6736c7e85c4fd381b5ccd0d785bcf1))
+* **tests:** correct mock chaining and add crawlWaitForSelector to fixtures ([c8dd47f](https://github.com/HartiganHM/concert-crawl/commit/c8dd47f13ea00fb008be191a9ab287f2193368b0))
+
+
+### Features
+
+* **api:** add crawlWaitForSelector to venue update schema ([7226027](https://github.com/HartiganHM/concert-crawl/commit/7226027d22a324d12a22ad5fad793075435c5d59))
+* **crawler-core:** add waitForSelector support to fetchPage ([bc4590d](https://github.com/HartiganHM/concert-crawl/commit/bc4590d7e1ac48b1326e0e25742b9ebb9fa69ee8))
+* **crawler-core:** forward crawlWaitForSelector from venue to fetchPage ([0d411a0](https://github.com/HartiganHM/concert-crawl/commit/0d411a08f3733b37ba50d871f941f64edf36eac8))
+* **db:** add crawl_wait_for_selector column to venues ([3c90e95](https://github.com/HartiganHM/concert-crawl/commit/3c90e955df867bc12b087202ba1f1f832b6a2393))
+* **types:** add crawlWaitForSelector to Venue interface ([abb6dff](https://github.com/HartiganHM/concert-crawl/commit/abb6dff316cc2e5a7b3f9ea5f449f21c6c12e175))
+* **web:** add crawlWaitForSelector field to venue admin settings ([66a871c](https://github.com/HartiganHM/concert-crawl/commit/66a871c847193f0a06852311eb1e3e5964cbe621))
+* **web:** forward crawlWaitForSelector in updateVenue action ([d804967](https://github.com/HartiganHM/concert-crawl/commit/d804967674d9c487886c6b4726144141b5f6baa5))
+
 # [1.5.0](https://github.com/HartiganHM/concert-crawl/compare/v1.4.2...v1.5.0) (2026-05-11)
 
 
