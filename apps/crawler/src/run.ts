@@ -84,6 +84,26 @@ export async function runTriggeredCrawls(): Promise<{ processed: number }> {
             new Error(crawlRun.errorMessage ?? 'Crawl failed'),
             { extra: { venueId: trigger.venueId, triggerId: trigger.id } },
           )
+          Sentry.logger.warn('crawl.failed', {
+            venue_id: trigger.venueId,
+            trigger_id: trigger.id,
+            status: 'failed',
+            error_message: crawlRun.errorMessage ?? null,
+            events_found: crawlRun.eventsFound,
+            duration_ms: crawlRun.durationMs,
+          })
+        } else {
+          Sentry.logger.info('crawl.complete', {
+            venue_id: trigger.venueId,
+            trigger_id: trigger.id,
+            status: 'success',
+            events_found: crawlRun.eventsFound,
+            events_inserted: crawlRun.eventsInserted,
+            events_updated: crawlRun.eventsUpdated ?? 0,
+            duration_ms: crawlRun.durationMs,
+            extraction_strategy: crawlRun.extractionStrategyUsed ?? null,
+            llm_cost_usd: crawlRun.llmCostUsd ?? null,
+          })
         }
         try {
           await tagEventsWithGenres(trigger.venueId, crawlRun.id)
@@ -108,6 +128,11 @@ export async function runTriggeredCrawls(): Promise<{ processed: number }> {
       } catch (err) {
         Sentry.captureException(err, {
           extra: { triggerId: trigger.id, venueId: trigger.venueId },
+        })
+        Sentry.logger.error('crawl.error', {
+          venue_id: trigger.venueId,
+          trigger_id: trigger.id,
+          error: String(err),
         })
         logger.error(
           { err, triggerId: trigger.id, venueId: trigger.venueId },
@@ -169,12 +194,31 @@ export async function runDailyCrawl(): Promise<{
               new Error(result.value.errorMessage ?? 'Crawl failed'),
               { extra: { venueId: batch[idx]?.id, name: batch[idx]?.name } },
             )
+            Sentry.logger.warn('crawl.failed', {
+              venue_id: batch[idx]?.id,
+              venue_name: batch[idx]?.name,
+              status: 'failed',
+              error_message: result.value.errorMessage ?? null,
+              events_found: result.value.eventsFound,
+              duration_ms: result.value.durationMs,
+            })
             logger.error(
               { venueId: batch[idx]?.id, name: batch[idx]?.name },
               'Crawl failed',
             )
           } else {
             succeeded++
+            Sentry.logger.info('crawl.complete', {
+              venue_id: batch[idx]?.id,
+              venue_name: batch[idx]?.name,
+              status: 'success',
+              events_found: result.value.eventsFound,
+              events_inserted: result.value.eventsInserted,
+              events_updated: result.value.eventsUpdated ?? 0,
+              duration_ms: result.value.durationMs,
+              extraction_strategy: result.value.extractionStrategyUsed ?? null,
+              llm_cost_usd: result.value.llmCostUsd ?? null,
+            })
             logger.info(
               { venueId: batch[idx]?.id, name: batch[idx]?.name },
               'Crawl succeeded',
@@ -197,6 +241,11 @@ export async function runDailyCrawl(): Promise<{
           failed++
           Sentry.captureException(result.reason, {
             extra: { venueId: batch[idx]?.id, name: batch[idx]?.name },
+          })
+          Sentry.logger.error('crawl.error', {
+            venue_id: batch[idx]?.id,
+            venue_name: batch[idx]?.name,
+            error: String(result.reason),
           })
           logger.error(
             {

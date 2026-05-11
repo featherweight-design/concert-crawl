@@ -388,6 +388,7 @@ Phase: **Pre-Beta Sprint — target open May 25, 2026**
 - Event Detail v2 in PR (feat/event-detail-v2, issue #195): WatchShowButton (3-state), SetlistPreview (collapsible), SoldOutCta, SubmitPriceCardCta, trust chrome (TrustMark inline + --trust-community token), DB migration 0017 (setlist jsonb), API watch endpoints (POST/DELETE /v1/events/:id/watch)
 - Venue crawl config UI in PR (feat/venue-crawl-config-ui, issue #210): crawlWaitUntil + crawlDelayMs exposed in Venue Details admin form with helper text; fixes Cervantes timeout
 - Crawler Sentry errors in PR (fix/crawler-sentry-errors, issue #212): explicit Sentry.captureException on crawlRun.status === 'failed' and unexpected throws in runDailyCrawl + runTriggeredCrawls
+- Sentry Structured Logs in PR (feat/sentry-logs, issue #225): enableLogs across all three apps, wide-event crawler logs (crawl.complete/crawl.failed/crawl.error) with venue_id, events_found, duration_ms, extraction_strategy
 
 ### Phase Sequence
 
@@ -429,6 +430,7 @@ Phase: **Pre-Beta Sprint — target open May 25, 2026**
 | —           | Event Detail v2                          | 🔄 In PR (feat/event-detail-v2, issue #195)       |
 | —           | Venue crawl config UI                    | 🔄 In PR (feat/venue-crawl-config-ui, issue #210) |
 | —           | Crawler Sentry errors                    | 🔄 In PR (fix/crawler-sentry-errors, issue #212)  |
+| —           | Sentry Structured Logs                   | 🔄 In PR (feat/sentry-logs, issue #225)           |
 | Pre-beta    | UI interactions audit + bug fixes        | 🔄 In progress (admin/crawl, sidebar)             |
 | Beta period | Jun 16 – Aug 3 (see beta-to-launch spec) | —                                                 |
 | Launch prep | Aug 4–17                                 | —                                                 |

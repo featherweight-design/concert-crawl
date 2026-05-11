@@ -2,8 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock Sentry
 const mockSentryCaptureException = vi.fn()
+const mockSentryLoggerInfo = vi.fn()
+const mockSentryLoggerWarn = vi.fn()
+const mockSentryLoggerError = vi.fn()
 vi.mock('@sentry/node', () => ({
   captureException: mockSentryCaptureException,
+  logger: {
+    info: mockSentryLoggerInfo,
+    warn: mockSentryLoggerWarn,
+    error: mockSentryLoggerError,
+  },
 }))
 
 // Mock DB
@@ -80,6 +88,18 @@ vi.mock('@concert-crawl/logger', () => ({
   }),
 }))
 
+const SUCCESSFUL_CRAWL_RUN = {
+  id: 'run-uuid-1',
+  status: 'success',
+  eventsFound: 5,
+  eventsInserted: 3,
+  eventsUpdated: 2,
+  durationMs: 1200,
+  extractionStrategyUsed: 'structured_data',
+  llmCostUsd: null,
+  errorMessage: null,
+}
+
 describe('runDailyCrawl', () => {
   beforeEach(() => {
     vi.resetModules()
@@ -88,10 +108,13 @@ describe('runDailyCrawl', () => {
     mockDbChain.from.mockReturnThis()
     mockDbChain.where.mockResolvedValue(mockVenues)
     mockDbChain.update.mockReturnValue(mockDbUpdate)
-    mockCrawlVenue.mockResolvedValue({ id: 'run-uuid-1', status: 'success' })
+    mockCrawlVenue.mockResolvedValue(SUCCESSFUL_CRAWL_RUN)
     mockBrowser.close.mockResolvedValue(undefined)
     mockRunPricePipeline.mockResolvedValue(undefined)
     mockSentryCaptureException.mockReset()
+    mockSentryLoggerInfo.mockReset()
+    mockSentryLoggerWarn.mockReset()
+    mockSentryLoggerError.mockReset()
   })
 
   it('calls crawlVenue for each active venue, passing the shared browser', async () => {
@@ -287,6 +310,61 @@ describe('runDailyCrawl', () => {
 
     expect(mockSentryCaptureException).not.toHaveBeenCalled()
   })
+
+  it('calls Sentry.logger.info with crawl result attributes after a successful crawl', async () => {
+    const { runDailyCrawl } = await import('./run.js')
+    await runDailyCrawl()
+
+    expect(mockSentryLoggerInfo).toHaveBeenCalledWith(
+      'crawl.complete',
+      expect.objectContaining({
+        venue_id: 'venue-1',
+        status: 'success',
+        events_found: 5,
+        events_inserted: 3,
+        duration_ms: 1200,
+        extraction_strategy: 'structured_data',
+      }),
+    )
+  })
+
+  it('calls Sentry.logger.warn with error details when crawlVenue resolves with status: failed', async () => {
+    mockCrawlVenue.mockResolvedValueOnce({
+      id: 'run-uuid-1',
+      status: 'failed',
+      eventsFound: 0,
+      durationMs: 500,
+      errorMessage: 'Timeout 30000ms exceeded',
+    })
+
+    const { runDailyCrawl } = await import('./run.js')
+    await runDailyCrawl()
+
+    expect(mockSentryLoggerWarn).toHaveBeenCalledWith(
+      'crawl.failed',
+      expect.objectContaining({
+        venue_id: 'venue-1',
+        status: 'failed',
+        error_message: 'Timeout 30000ms exceeded',
+        duration_ms: 500,
+      }),
+    )
+  })
+
+  it('calls Sentry.logger.error when crawlVenue throws', async () => {
+    mockCrawlVenue.mockRejectedValueOnce(new Error('blocked'))
+
+    const { runDailyCrawl } = await import('./run.js')
+    await runDailyCrawl()
+
+    expect(mockSentryLoggerError).toHaveBeenCalledWith(
+      'crawl.error',
+      expect.objectContaining({
+        venue_id: 'venue-1',
+        error: 'Error: blocked',
+      }),
+    )
+  })
 })
 
 describe('runTriggeredCrawls', () => {
@@ -306,10 +384,13 @@ describe('runTriggeredCrawls', () => {
     mockDbChain.select.mockReturnThis()
     mockDbChain.from.mockReturnThis()
     mockDbChain.where.mockResolvedValue([])
-    mockCrawlVenue.mockResolvedValue({ id: 'run-uuid-1', status: 'success' })
+    mockCrawlVenue.mockResolvedValue(SUCCESSFUL_CRAWL_RUN)
     mockBrowser.close.mockResolvedValue(undefined)
     mockRunPricePipeline.mockResolvedValue(undefined)
     mockSentryCaptureException.mockReset()
+    mockSentryLoggerInfo.mockReset()
+    mockSentryLoggerWarn.mockReset()
+    mockSentryLoggerError.mockReset()
   })
 
   it('returns processed: 0 without launching a browser when no pending triggers exist', async () => {
@@ -468,5 +549,60 @@ describe('runTriggeredCrawls', () => {
     await runTriggeredCrawls()
 
     expect(mockSentryCaptureException).not.toHaveBeenCalled()
+  })
+
+  it('calls Sentry.logger.info with crawl result attributes after a successful triggered crawl', async () => {
+    const { runTriggeredCrawls } = await import('./run.js')
+    await runTriggeredCrawls()
+
+    expect(mockSentryLoggerInfo).toHaveBeenCalledWith(
+      'crawl.complete',
+      expect.objectContaining({
+        venue_id: 'venue-a',
+        status: 'success',
+        events_found: 5,
+        events_inserted: 3,
+        duration_ms: 1200,
+        extraction_strategy: 'structured_data',
+      }),
+    )
+  })
+
+  it('calls Sentry.logger.warn when triggered crawlVenue resolves with status: failed', async () => {
+    mockCrawlVenue.mockResolvedValueOnce({
+      id: 'run-uuid-1',
+      status: 'failed',
+      eventsFound: 0,
+      durationMs: 300,
+      errorMessage: 'HTTP 403 Forbidden',
+    })
+
+    const { runTriggeredCrawls } = await import('./run.js')
+    await runTriggeredCrawls()
+
+    expect(mockSentryLoggerWarn).toHaveBeenCalledWith(
+      'crawl.failed',
+      expect.objectContaining({
+        venue_id: 'venue-a',
+        status: 'failed',
+        error_message: 'HTTP 403 Forbidden',
+        duration_ms: 300,
+      }),
+    )
+  })
+
+  it('calls Sentry.logger.error when triggered crawlVenue throws', async () => {
+    mockCrawlVenue.mockRejectedValueOnce(new Error('network timeout'))
+
+    const { runTriggeredCrawls } = await import('./run.js')
+    await runTriggeredCrawls()
+
+    expect(mockSentryLoggerError).toHaveBeenCalledWith(
+      'crawl.error',
+      expect.objectContaining({
+        venue_id: 'venue-a',
+        error: 'Error: network timeout',
+      }),
+    )
   })
 })
