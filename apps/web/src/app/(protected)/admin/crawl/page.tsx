@@ -141,7 +141,6 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
         display: 'flex',
         flexDirection: 'column',
         gap: 24,
-        height: '100%',
       }}
     >
       <div

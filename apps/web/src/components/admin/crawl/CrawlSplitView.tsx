@@ -328,7 +328,7 @@ export const CrawlSplitView = ({
   const venueRecrawlError = selectedId ? recrawlError[selectedId] : undefined
 
   return (
-    <div style={{ display: 'flex', gap: 16, flex: 1, minHeight: 400 }}>
+    <div style={{ display: 'flex', gap: 16, height: 560 }}>
       {/* Left rail */}
       <div
         style={{
