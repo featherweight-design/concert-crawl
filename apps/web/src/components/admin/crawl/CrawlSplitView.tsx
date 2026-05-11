@@ -1080,7 +1080,7 @@ export const CrawlRunHistoryTable = ({
             fontSize: 13,
           }}
         >
-          <span style={{ fontSize: 22 }}>↻</span>
+          <RefreshCw size={28} style={{ opacity: 0.4 }} />
           No runs yet — trigger a crawl to see history here
         </div>
       ) : (
