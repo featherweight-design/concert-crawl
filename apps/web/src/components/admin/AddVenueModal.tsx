@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Dialog } from '@base-ui/react/dialog'
 import {
@@ -11,6 +11,7 @@ import {
   AlertCircle,
   Play,
   X,
+  ChevronRight,
 } from 'lucide-react'
 import { createVenue, createVenueAndCrawl } from '@/lib/actions/venues'
 import { AdminButton } from '@/components/admin/primitives'
@@ -27,6 +28,8 @@ function slugify(name: string): string {
 }
 
 type SubmitState = 'idle' | 'validating' | 'submitting' | 'success' | 'error'
+type FocusedField = 'name' | 'slug' | 'url' | 'city' | null
+type RobotsState = 'idle' | 'checking' | 'allowed' | 'disallowed' | 'unknown'
 
 interface FieldError {
   name?: string | undefined
@@ -47,10 +50,9 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
   const [bannerError, setBannerError] = useState<string | null>(null)
   const [slugManual, setSlugManual] = useState(false)
   const [active, setActive] = useState(true)
-  const [robotsResult, setRobotsResult] = useState<{
-    allowed: boolean | null
-    checked: boolean
-  }>({ allowed: null, checked: false })
+  const [robotsState, setRobotsState] = useState<RobotsState>('idle')
+  const [urlValue, setUrlValue] = useState('')
+  const [focusedField, setFocusedField] = useState<FocusedField>(null)
 
   const nameRef = useRef<HTMLInputElement>(null)
   const slugRef = useRef<HTMLInputElement>(null)
@@ -65,7 +67,9 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
     setBannerError(null)
     setSlugManual(false)
     setActive(true)
-    setRobotsResult({ allowed: null, checked: false })
+    setRobotsState('idle')
+    setUrlValue('')
+    setFocusedField(null)
     if (nameRef.current) nameRef.current.value = ''
     if (slugRef.current) slugRef.current.value = ''
     if (websiteUrlRef.current) websiteUrlRef.current.value = ''
@@ -94,6 +98,7 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
 
   const checkRobots = useCallback(async (url: string) => {
     if (!url) return
+    setRobotsState('checking')
     try {
       const parsed = new URL(url)
       const res = await fetch(
@@ -101,14 +106,23 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
       )
       if (res.ok) {
         const data = (await res.json()) as { allowed: boolean | null }
-        setRobotsResult({ allowed: data.allowed, checked: true })
+        setRobotsState(
+          data.allowed === null
+            ? 'unknown'
+            : data.allowed
+              ? 'allowed'
+              : 'disallowed',
+        )
+      } else {
+        setRobotsState('unknown')
       }
     } catch {
-      // Non-blocking — silent failure
+      setRobotsState('unknown')
     }
   }, [])
 
   function handleUrlBlur(evt: React.FocusEvent<HTMLInputElement>) {
+    setFocusedField(null)
     const url = evt.target.value.trim()
     setErrors((prev) => ({ ...prev, websiteUrl: undefined }))
     if (url) void checkRobots(url)
@@ -206,6 +220,8 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [open, disabled]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const showFavicon = urlValue && robotsState !== 'checking'
+
   return (
     <>
       <AdminButton
@@ -248,9 +264,9 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
               style={{
                 background: 'var(--bg-elevated)',
                 border: '1px solid var(--border)',
-                borderRadius: 12,
+                borderRadius: 14,
                 width: '100%',
-                maxWidth: 560,
+                maxWidth: 580,
                 boxShadow:
                   '0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.2)',
                 fontFamily: "'Inter', sans-serif",
@@ -258,83 +274,71 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
               }}
             >
               {/* Header */}
-              <div style={{ padding: '24px 24px 0' }}>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    justifyContent: 'space-between',
-                    gap: 12,
-                  }}
-                >
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 600,
-                        letterSpacing: '0.1em',
-                        textTransform: 'uppercase',
-                        color: 'var(--fg-muted)',
-                        marginBottom: 6,
-                      }}
-                    >
-                      New Venue
-                    </div>
-                    <Dialog.Title
-                      style={{
-                        margin: 0,
-                        fontSize: 22,
-                        fontWeight: 700,
-                        color: 'var(--fg)',
-                        lineHeight: 1.2,
-                      }}
-                    >
-                      Add a crawl target
-                    </Dialog.Title>
-                    <p
-                      style={{
-                        margin: '6px 0 0',
-                        fontSize: 13,
-                        color: 'var(--fg-muted)',
-                        lineHeight: 1.4,
-                      }}
-                    >
-                      Point us at an events page. We&apos;ll respect robots.txt
-                      and crawl daily at 3 AM MT.
-                    </p>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'space-between',
+                  padding: '20px 22px 14px',
+                  borderBottom: '1px solid var(--border)',
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                      color: 'var(--fg-muted)',
+                      marginBottom: 6,
+                    }}
+                  >
+                    new venue
                   </div>
-                  <Dialog.Close
-                    render={
-                      <button
-                        type="button"
-                        style={{
-                          flexShrink: 0,
-                          width: 28,
-                          height: 28,
-                          borderRadius: 6,
-                          border: '1px solid var(--border)',
-                          background: 'transparent',
-                          color: 'var(--fg-muted)',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          marginTop: 2,
-                        }}
-                        aria-label="Close"
-                        onClick={resetState}
-                      >
-                        <X size={14} />
-                      </button>
-                    }
-                  />
+                  <Dialog.Title
+                    style={{
+                      margin: 0,
+                      fontSize: 20,
+                      fontWeight: 700,
+                      color: 'var(--fg)',
+                      letterSpacing: '-0.02em',
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    Add a crawl target
+                  </Dialog.Title>
+                  <div
+                    style={{
+                      marginTop: 4,
+                      fontSize: 12.5,
+                      color: 'var(--fg-muted)',
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    Point us at an events page. We&apos;ll respect robots.txt
+                    and crawl daily at 3 AM MT.
+                  </div>
                 </div>
-                <div
-                  style={{
-                    marginTop: 20,
-                    height: 1,
-                    background: 'var(--border)',
-                  }}
+                <Dialog.Close
+                  render={
+                    <button
+                      type="button"
+                      style={{
+                        all: 'unset',
+                        cursor: 'pointer',
+                        padding: 6,
+                        borderRadius: 6,
+                        color: 'var(--fg-muted)',
+                        display: 'flex',
+                        flexShrink: 0,
+                      }}
+                      aria-label="Close"
+                      onClick={resetState}
+                    >
+                      <X size={16} />
+                    </button>
+                  }
                 />
               </div>
 
@@ -342,11 +346,11 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
               {bannerError && (
                 <div
                   style={{
-                    margin: '16px 24px 0',
+                    margin: '16px 22px 0',
                     padding: '10px 12px',
                     background: 'rgba(184,56,26,0.1)',
                     border: '1px solid rgba(184,56,26,0.25)',
-                    borderRadius: 6,
+                    borderRadius: 8,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
@@ -360,7 +364,7 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
               )}
 
               {/* Form */}
-              <div style={{ padding: '20px 24px' }}>
+              <div style={{ padding: 22 }}>
                 <div
                   style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
                 >
@@ -377,7 +381,13 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
                       placeholder="e.g. Bluebird Theater"
                       disabled={disabled}
                       onChange={handleNameChange}
-                      style={inputStyle(!!errors.name, disabled)}
+                      onFocus={() => setFocusedField('name')}
+                      onBlur={() => setFocusedField(null)}
+                      style={inputStyle(
+                        !!errors.name,
+                        disabled,
+                        focusedField === 'name',
+                      )}
                     />
                   </Field>
 
@@ -388,54 +398,47 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
                     <div
                       style={{
                         display: 'flex',
-                        alignItems: 'center',
+                        alignItems: 'baseline',
                         justifyContent: 'space-between',
+                        marginBottom: 6,
                       }}
                     >
-                      <label
-                        htmlFor="add-venue-slug"
-                        style={{
-                          fontSize: 12,
-                          fontWeight: 500,
-                          color: 'var(--fg-muted)',
-                        }}
-                      >
+                      <label htmlFor="add-venue-slug" style={labelStyle}>
                         Slug
                       </label>
                       <span
                         style={{
-                          fontSize: 9,
-                          fontWeight: 600,
-                          letterSpacing: '0.08em',
+                          fontSize: 10,
+                          fontWeight: 700,
+                          letterSpacing: '0.04em',
                           textTransform: 'uppercase',
                           color: 'var(--fg-muted)',
                         }}
                       >
-                        Auto-generated
+                        auto-generated
                       </span>
                     </div>
                     <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        border: `1px solid ${errors.slug ? 'var(--danger)' : 'var(--border)'}`,
-                        borderRadius: 6,
-                        background: disabled ? 'var(--surface-1)' : 'var(--bg)',
-                        overflow: 'hidden',
-                        opacity: disabled ? 0.66 : 1,
-                      }}
+                      style={compositeWrapperStyle(
+                        !!errors.slug,
+                        disabled,
+                        focusedField === 'slug',
+                      )}
                     >
                       <span
                         style={{
-                          padding: '0 8px 0 10px',
-                          fontSize: 13,
+                          padding: '0 10px',
+                          fontSize: 12,
+                          fontFamily: 'var(--font-mono, monospace)',
+                          letterSpacing: '0.02em',
                           color: 'var(--fg-muted)',
                           whiteSpace: 'nowrap',
                           flexShrink: 0,
-                          height: 32,
+                          height: 38,
                           display: 'flex',
                           alignItems: 'center',
                           borderRight: '1px solid var(--border)',
+                          background: 'var(--surface-1)',
                         }}
                       >
                         concertcrawl.app/v/
@@ -447,15 +450,19 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
                         placeholder="bluebird-theater"
                         disabled={disabled}
                         onChange={handleSlugChange}
+                        onFocus={() => setFocusedField('slug')}
+                        onBlur={() => setFocusedField(null)}
                         style={{
                           flex: 1,
-                          height: 32,
-                          padding: '0 8px',
+                          height: 38,
+                          padding: '0 12px',
                           border: 'none',
                           background: 'transparent',
                           color: 'var(--fg)',
-                          fontSize: 13,
-                          fontFamily: "'Inter', sans-serif",
+                          fontSize: 12.5,
+                          fontFamily: 'var(--font-mono, monospace)',
+                          fontWeight: 500,
+                          letterSpacing: '0.01em',
                           outline: 'none',
                           cursor: disabled ? 'not-allowed' : 'text',
                           minWidth: 0,
@@ -467,29 +474,44 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
                         disabled={disabled}
                         title="Regenerate slug from name"
                         style={{
-                          flexShrink: 0,
-                          width: 32,
-                          height: 32,
-                          border: 'none',
-                          borderLeft: '1px solid var(--border)',
-                          background: 'var(--surface-1)',
-                          color: 'var(--fg-muted)',
+                          all: 'unset',
                           cursor: disabled ? 'not-allowed' : 'pointer',
+                          flexShrink: 0,
+                          width: 38,
+                          height: 38,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
+                          borderLeft: '1px solid var(--border)',
+                          color: 'var(--fg-muted)',
+                          background: 'var(--surface-1)',
                         }}
                       >
                         <RefreshCw size={13} />
                       </button>
                     </div>
-                    {errors.slug && (
-                      <span style={{ fontSize: 11, color: 'var(--danger)' }}>
+                    {errors.slug ? (
+                      <span
+                        style={{
+                          marginTop: 6,
+                          fontSize: 12,
+                          color: 'var(--danger)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
+                      >
                         {errors.slug}
                       </span>
-                    )}
-                    {!errors.slug && (
-                      <span style={{ fontSize: 11, color: 'var(--fg-muted)' }}>
+                    ) : (
+                      <span
+                        style={{
+                          marginTop: 6,
+                          fontSize: 12,
+                          color: 'var(--fg-muted)',
+                          lineHeight: 1.4,
+                        }}
+                      >
                         Used in the public URL. Auto-derived from the venue
                         name.
                       </span>
@@ -497,60 +519,115 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
                   </div>
 
                   {/* Source URL */}
-                  <Field
-                    label="Source URL"
-                    htmlFor="add-venue-url"
-                    error={errors.websiteUrl}
-                    hint={
-                      robotsResult.checked ? (
-                        <span
+                  <div
+                    style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'baseline',
+                        justifyContent: 'space-between',
+                        marginBottom: 6,
+                      }}
+                    >
+                      <label htmlFor="add-venue-url" style={labelStyle}>
+                        Source URL
+                      </label>
+                      <RobotsChip state={robotsState} hasUrl={!!urlValue} />
+                    </div>
+                    <div
+                      style={compositeWrapperStyle(
+                        !!errors.websiteUrl,
+                        disabled,
+                        focusedField === 'url',
+                      )}
+                    >
+                      <input
+                        ref={websiteUrlRef}
+                        id="add-venue-url"
+                        type="url"
+                        placeholder="https://www.bluebirdtheater.net/calendar/"
+                        disabled={disabled}
+                        onFocus={() => setFocusedField('url')}
+                        onBlur={handleUrlBlur}
+                        onChange={() => {
+                          const val = websiteUrlRef.current?.value.trim() ?? ''
+                          setUrlValue(val)
+                          setErrors((prev) => ({
+                            ...prev,
+                            websiteUrl: undefined,
+                          }))
+                          setRobotsState('idle')
+                        }}
+                        style={{
+                          flex: 1,
+                          height: 38,
+                          padding: '0 12px',
+                          border: 'none',
+                          background: 'transparent',
+                          color: 'var(--fg)',
+                          fontSize: 12.5,
+                          fontFamily: 'var(--font-mono, monospace)',
+                          fontWeight: 500,
+                          letterSpacing: '0.01em',
+                          outline: 'none',
+                          cursor: disabled ? 'not-allowed' : 'text',
+                          minWidth: 0,
+                        }}
+                      />
+                      {showFavicon && (
+                        <div
                           style={{
-                            fontSize: 11,
-                            color:
-                              robotsResult.allowed === false
-                                ? 'var(--danger)'
-                                : 'var(--fg-muted)',
+                            padding: '0 8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            flexShrink: 0,
                           }}
                         >
-                          {robotsResult.allowed === false
-                            ? '⚠ robots.txt disallows crawling (advisory only)'
-                            : '✓ robots.txt allows crawling'}
-                        </span>
-                      ) : (
-                        <span
-                          style={{ fontSize: 11, color: 'var(--fg-muted)' }}
-                        >
-                          The events page we&apos;ll crawl. Usually a /calendar,
-                          /events, or /shows path.
-                        </span>
-                      )
-                    }
-                  >
-                    <input
-                      ref={websiteUrlRef}
-                      id="add-venue-url"
-                      type="url"
-                      placeholder="https://www.bluebirdtheater.net/calendar/"
-                      disabled={disabled}
-                      onBlur={handleUrlBlur}
-                      onChange={() => {
-                        setErrors((prev) => ({
-                          ...prev,
-                          websiteUrl: undefined,
-                        }))
-                        setRobotsResult({ allowed: null, checked: false })
-                      }}
-                      style={inputStyle(!!errors.websiteUrl, disabled)}
-                    />
-                  </Field>
+                          <FaviconChip url={urlValue} />
+                        </div>
+                      )}
+                    </div>
+                    {errors.websiteUrl ? (
+                      <span
+                        style={{
+                          marginTop: 6,
+                          fontSize: 12,
+                          color: 'var(--danger)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
+                      >
+                        {errors.websiteUrl}
+                      </span>
+                    ) : (
+                      <span
+                        style={{
+                          marginTop: 6,
+                          fontSize: 12,
+                          color: 'var(--fg-muted)',
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        The events page we&apos;ll crawl. Usually a /calendar,
+                        /events, or /shows path.
+                      </span>
+                    )}
+                  </div>
 
                   {/* City + Initial status */}
-                  <div style={{ display: 'flex', gap: 12 }}>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 200px',
+                      gap: 14,
+                    }}
+                  >
                     <Field
                       label="City"
                       htmlFor="add-venue-city"
                       error={errors.city}
-                      style={{ flex: 1 }}
                     >
                       <input
                         ref={cityRef}
@@ -561,84 +638,29 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
                         onChange={() =>
                           setErrors((prev) => ({ ...prev, city: undefined }))
                         }
-                        style={inputStyle(!!errors.city, disabled)}
+                        onFocus={() => setFocusedField('city')}
+                        onBlur={() => setFocusedField(null)}
+                        style={inputStyle(
+                          !!errors.city,
+                          disabled,
+                          focusedField === 'city',
+                        )}
                       />
                     </Field>
 
-                    {/* Initial status segmented control */}
                     <div
                       style={{
-                        flex: 1,
                         display: 'flex',
                         flexDirection: 'column',
                         gap: 4,
                       }}
                     >
-                      <label
-                        style={{
-                          fontSize: 12,
-                          fontWeight: 500,
-                          color: 'var(--fg-muted)',
-                        }}
-                      >
-                        Initial status
-                      </label>
-                      <div
-                        style={{
-                          display: 'flex',
-                          border: '1px solid var(--border)',
-                          borderRadius: 6,
-                          overflow: 'hidden',
-                          height: 32,
-                          opacity: disabled ? 0.66 : 1,
-                        }}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => !disabled && setActive(true)}
-                          disabled={disabled}
-                          style={{
-                            flex: 1,
-                            border: 'none',
-                            background: active
-                              ? 'var(--signal)'
-                              : 'transparent',
-                            color: active ? '#fff' : 'var(--fg-muted)',
-                            fontSize: 13,
-                            fontWeight: active ? 600 : 400,
-                            cursor: disabled ? 'not-allowed' : 'pointer',
-                            fontFamily: "'Inter', sans-serif",
-                          }}
-                        >
-                          Active
-                        </button>
-                        <div
-                          style={{
-                            width: 1,
-                            background: 'var(--border)',
-                            flexShrink: 0,
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => !disabled && setActive(false)}
-                          disabled={disabled}
-                          style={{
-                            flex: 1,
-                            border: 'none',
-                            background: !active
-                              ? 'var(--surface-1)'
-                              : 'transparent',
-                            color: !active ? 'var(--fg)' : 'var(--fg-muted)',
-                            fontSize: 13,
-                            fontWeight: !active ? 600 : 400,
-                            cursor: disabled ? 'not-allowed' : 'pointer',
-                            fontFamily: "'Inter', sans-serif",
-                          }}
-                        >
-                          Paused
-                        </button>
-                      </div>
+                      <label style={labelStyle}>Initial status</label>
+                      <SegToggle
+                        active={active}
+                        onToggle={setActive}
+                        disabled={disabled}
+                      />
                     </div>
                   </div>
                 </div>
@@ -647,38 +669,28 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
               {/* Footer */}
               <div
                 style={{
-                  padding: '0 24px 20px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  gap: 8,
+                  padding: '14px 18px 14px 22px',
+                  borderTop: '1px solid var(--border)',
+                  background: 'var(--surface-1)',
+                  gap: 12,
                 }}
               >
                 <span
                   style={{
-                    fontSize: 11,
+                    fontSize: 11.5,
                     color: 'var(--fg-muted)',
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
-                    gap: 4,
+                    gap: 6,
                   }}
                 >
-                  <kbd
-                    style={{
-                      padding: '1px 5px',
-                      borderRadius: 4,
-                      border: '1px solid var(--border)',
-                      background: 'var(--surface-1)',
-                      fontSize: 10,
-                      fontFamily: 'monospace',
-                    }}
-                  >
-                    Esc
-                  </kbd>
-                  cancel
+                  <Kbd>Esc</Kbd> cancel
                 </span>
 
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <Dialog.Close
                     render={
                       <AdminButton
@@ -715,7 +727,7 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
                     type="button"
                     disabled={disabled}
                     onClick={() => void handleSubmit(true)}
-                    style={{ gap: 8 }}
+                    style={{ gap: 6 }}
                   >
                     {submitState === 'submitting' ? (
                       <Loader2
@@ -727,22 +739,33 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
                     ) : (
                       <Play size={13} />
                     )}
-                    {submitState === 'submitting'
-                      ? 'Saving…'
-                      : submitState === 'success'
-                        ? 'Saved'
-                        : 'Save & crawl now'}
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 8,
+                      }}
+                    >
+                      {submitState === 'submitting'
+                        ? 'Saving…'
+                        : submitState === 'success'
+                          ? 'Saved'
+                          : 'Save & crawl now'}
+                      {submitState === 'idle' || submitState === 'error' ? (
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            gap: 2,
+                            opacity: 0.7,
+                          }}
+                        >
+                          <Kbd>⌘</Kbd>
+                          <Kbd>↵</Kbd>
+                        </span>
+                      ) : null}
+                    </span>
                     {submitState === 'idle' || submitState === 'error' ? (
-                      <span
-                        style={{
-                          fontSize: 10,
-                          opacity: 0.7,
-                          fontFamily: 'monospace',
-                          marginLeft: 4,
-                        }}
-                      >
-                        ⌘↵
-                      </span>
+                      <ChevronRight size={13} style={{ opacity: 0.7 }} />
                     ) : null}
                   </AdminButton>
                 </div>
@@ -755,55 +778,285 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
   )
 }
 
+// ── Atoms ────────────────────────────────────────────────────────────────────
+
 function Field({
   label,
   htmlFor,
   error,
-  hint,
   style,
   children,
 }: {
   label: string
   htmlFor: string
   error?: string | undefined
-  hint?: React.ReactNode
   style?: React.CSSProperties
   children: React.ReactNode
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, ...style }}>
-      <label
-        htmlFor={htmlFor}
-        style={{ fontSize: 12, fontWeight: 500, color: 'var(--fg-muted)' }}
-      >
+      <label htmlFor={htmlFor} style={{ ...labelStyle, marginBottom: 6 }}>
         {label}
       </label>
       {children}
       {error && (
-        <span style={{ fontSize: 11, color: 'var(--danger)' }}>{error}</span>
+        <span
+          style={{
+            marginTop: 6,
+            fontSize: 12,
+            color: 'var(--danger)',
+            lineHeight: 1.4,
+          }}
+        >
+          {error}
+        </span>
       )}
-      {!error && hint && hint}
     </div>
   )
+}
+
+function SegToggle({
+  active,
+  onToggle,
+  disabled,
+}: {
+  active: boolean
+  onToggle: (val: boolean) => void
+  disabled: boolean
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        padding: 3,
+        background: 'var(--surface-1)',
+        borderRadius: 8,
+        border: '1px solid var(--border)',
+        height: 38,
+        boxSizing: 'border-box',
+        opacity: disabled ? 0.66 : 1,
+      }}
+    >
+      {([true, false] as const).map((val) => {
+        const isActive = active === val
+        return (
+          <button
+            key={String(val)}
+            type="button"
+            onClick={() => !disabled && onToggle(val)}
+            disabled={disabled}
+            style={{
+              all: 'unset',
+              cursor: disabled ? 'not-allowed' : 'pointer',
+              flex: 1,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 5,
+              fontFamily: "'Inter', sans-serif",
+              fontSize: 12.5,
+              fontWeight: 600,
+              color: isActive ? 'var(--fg-on-accent)' : 'var(--fg-muted)',
+              background: isActive ? 'var(--signal)' : 'transparent',
+              transition: 'background .12s, color .12s',
+            }}
+          >
+            {val ? 'Active' : 'Paused'}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function RobotsChip({
+  state,
+  hasUrl,
+}: {
+  state: RobotsState
+  hasUrl: boolean
+}) {
+  if (!hasUrl || state === 'idle') return null
+  if (state === 'checking') {
+    return (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 5,
+          fontSize: 10,
+          fontWeight: 700,
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+          color: 'var(--fg-muted)',
+          fontFamily: 'var(--font-mono, monospace)',
+        }}
+      >
+        checking robots.txt…
+      </span>
+    )
+  }
+  const config = {
+    allowed: { color: 'var(--success)', text: 'robots ok' },
+    disallowed: { color: 'var(--danger)', text: 'robots blocked' },
+    unknown: { color: 'var(--fg-muted)', text: 'unchecked' },
+  } as const
+  const { color, text } = config[state as keyof typeof config] ?? config.unknown
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        padding: '1px 7px',
+        borderRadius: 999,
+        border: `1px solid ${color}`,
+        background: `color-mix(in oklab, ${color} 12%, transparent)`,
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase',
+        color,
+        fontFamily: 'var(--font-mono, monospace)',
+      }}
+    >
+      {text}
+    </span>
+  )
+}
+
+function FaviconChip({ url }: { url: string }) {
+  const host = useMemo(() => {
+    try {
+      return new URL(url.startsWith('http') ? url : `https://${url}`).hostname
+    } catch {
+      return null
+    }
+  }, [url])
+  if (!host) return null
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 5,
+        padding: '2px 7px 2px 4px',
+        borderRadius: 999,
+        background: 'var(--surface-1)',
+        border: '1px solid var(--border)',
+        fontSize: 11,
+        fontWeight: 600,
+        color: 'var(--fg-muted)',
+        letterSpacing: '0.02em',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      <img
+        src={`https://www.google.com/s2/favicons?domain=${host}&sz=32`}
+        alt=""
+        width="13"
+        height="13"
+        style={{ borderRadius: 3 }}
+        onError={(evt) => {
+          ;(evt.currentTarget as HTMLImageElement).style.visibility = 'hidden'
+        }}
+      />
+      {host}
+    </span>
+  )
+}
+
+function Kbd({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1px 5px',
+        borderRadius: 4,
+        border: '1px solid var(--border)',
+        background: 'var(--surface-1)',
+        fontSize: 10,
+        fontFamily: 'var(--font-mono, monospace)',
+        color: 'var(--fg-muted)',
+        lineHeight: 1.4,
+      }}
+    >
+      {children}
+    </kbd>
+  )
+}
+
+// ── Shared styles ─────────────────────────────────────────────────────────────
+
+const labelStyle: React.CSSProperties = {
+  fontFamily: "'Inter', sans-serif",
+  fontSize: 12,
+  fontWeight: 600,
+  color: 'var(--fg)',
+  letterSpacing: '-0.005em',
 }
 
 function inputStyle(
   hasError: boolean,
   isDisabled: boolean,
+  focused: boolean = false,
 ): React.CSSProperties {
+  const borderColor = hasError
+    ? 'var(--danger)'
+    : focused
+      ? 'var(--signal)'
+      : 'var(--border)'
+  const ring = hasError
+    ? '0 0 0 3px color-mix(in oklab, var(--danger) 18%, transparent)'
+    : focused
+      ? '0 0 0 3px color-mix(in oklab, var(--signal) 22%, transparent)'
+      : 'none'
   return {
     width: '100%',
-    height: 32,
-    padding: '0 10px',
-    borderRadius: 6,
-    border: `1px solid ${hasError ? 'var(--danger)' : 'var(--border)'}`,
-    background: isDisabled ? 'var(--surface-1)' : 'var(--bg)',
+    height: 38,
+    padding: '0 12px',
+    borderRadius: 8,
+    border: `1px solid ${borderColor}`,
+    background: isDisabled ? 'var(--surface-1)' : 'var(--bg-elevated)',
     color: 'var(--fg)',
-    fontSize: 13,
+    fontSize: 13.5,
     fontFamily: "'Inter', sans-serif",
+    fontWeight: 500,
+    letterSpacing: '-0.005em',
     outline: 'none',
     boxSizing: 'border-box',
     opacity: isDisabled ? 0.66 : 1,
     cursor: isDisabled ? 'not-allowed' : 'text',
+    transition: 'border-color .12s, box-shadow .12s',
+    boxShadow: ring,
+  }
+}
+
+function compositeWrapperStyle(
+  hasError: boolean,
+  isDisabled: boolean,
+  focused: boolean = false,
+): React.CSSProperties {
+  const borderColor = hasError
+    ? 'var(--danger)'
+    : focused
+      ? 'var(--signal)'
+      : 'var(--border)'
+  const ring = hasError
+    ? '0 0 0 3px color-mix(in oklab, var(--danger) 18%, transparent)'
+    : focused
+      ? '0 0 0 3px color-mix(in oklab, var(--signal) 22%, transparent)'
+      : 'none'
+  return {
+    display: 'flex',
+    alignItems: 'center',
+    borderRadius: 8,
+    border: `1px solid ${borderColor}`,
+    background: isDisabled ? 'var(--surface-1)' : 'var(--bg-elevated)',
+    overflow: 'hidden',
+    opacity: isDisabled ? 0.66 : 1,
+    boxShadow: ring,
+    transition: 'border-color .12s, box-shadow .12s',
   }
 }
