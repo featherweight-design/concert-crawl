@@ -1,3 +1,11 @@
+## [1.1.2](https://github.com/HartiganHM/concert-crawl/compare/v1.1.1...v1.1.2) (2026-05-11)
+
+
+### Bug Fixes
+
+* **admin:** add genre theme CSS vars + drop dead dark selector ([fa5fea8](https://github.com/HartiganHM/concert-crawl/commit/fa5fea891de5b4b6f9d24280ddd7669383050706))
+* **admin:** wire all 9 themes into admin theme picker ([1eb2a65](https://github.com/HartiganHM/concert-crawl/commit/1eb2a650dcc3462bd99a4e5ea59057a8eaa3e870)), closes [#207](https://github.com/HartiganHM/concert-crawl/issues/207)
+
 ## [1.1.1](https://github.com/HartiganHM/concert-crawl/compare/v1.1.0...v1.1.1) (2026-05-11)
 
 
