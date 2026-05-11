@@ -105,6 +105,33 @@ pnpm dev
 | API      | http://localhost:3001 |
 | Postgres | localhost:5433        |
 
+## Local Development — Seeding with Staging Data
+
+For a prod-like local environment, you can sync real venue and event data from staging into your local Postgres, then layer on representative synthetic user data (profiles, watching, price submissions, feedback, etc.).
+
+**One-time setup (run after `pnpm db:migrate`):**
+
+```bash
+# Wipe local DB, re-migrate, then apply staging snapshot + seed
+docker compose down -v && docker compose up -d
+pnpm db:migrate
+pnpm db:sync-local
+```
+
+`pnpm db:sync-local` applies `scripts/staging-snapshot.sql` (real venue + event data from staging) then runs `pnpm db:seed` (synthetic users, roles, watching, price submissions, feedback).
+
+The script is fully idempotent — safe to re-run after a fresh `docker compose down -v && docker compose up -d`.
+
+**Synthetic users seeded:**
+
+| Handle    | Clerk user ID                      | Role      |
+| --------- | ---------------------------------- | --------- |
+| `hugh`    | `user_3CoSI01LtxRAvremTpL0yDfuEJ6` | admin     |
+| `jess_r`  | `user_fake_jess_0001`              | user      |
+| `marco_d` | `user_fake_marco_0002`             | user      |
+| `amy_k`   | `user_fake_amy_0003`               | sub_admin |
+| `ghost`   | `user_fake_ghost_0004`             | user      |
+
 ## Common Commands
 
 ```bash
