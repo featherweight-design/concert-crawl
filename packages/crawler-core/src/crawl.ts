@@ -206,8 +206,20 @@ export async function crawlVenue(
         ) // null hash backfill or content changed
       })
 
-      if (eventsToUpsert.length > 0) {
-        const eventValues = eventsToUpsert.map((event) => ({
+      // Deduplicate by (artist, date) — Postgres ON CONFLICT cannot resolve
+      // intra-batch conflicts when two rows in the same INSERT share the same
+      // unique key. LLM extraction can produce duplicate entries for the same
+      // show; keep only the first occurrence.
+      const seenEventKeys = new Set<string>()
+      const dedupedToUpsert = eventsToUpsert.filter((evt) => {
+        const key = `${evt.artist}|${evt.date}`
+        if (seenEventKeys.has(key)) return false
+        seenEventKeys.add(key)
+        return true
+      })
+
+      if (dedupedToUpsert.length > 0) {
+        const eventValues = dedupedToUpsert.map((event) => ({
           venueId,
           title: event.title,
           artist: event.artist,
@@ -227,7 +239,7 @@ export async function crawlVenue(
           extractionStrategy: strategy,
         }))
 
-        for (const evt of eventsToUpsert) {
+        for (const evt of dedupedToUpsert) {
           if (existingMap.has(`${evt.artist}|${evt.date}`)) {
             eventsUpdated++
           } else {
