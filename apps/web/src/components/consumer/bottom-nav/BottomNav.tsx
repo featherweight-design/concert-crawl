@@ -1,9 +1,20 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useAuth } from '@clerk/nextjs'
+import { fetchMe } from '@/lib/users'
+import type { AvatarColor } from '@concert-crawl/types'
 
-const TABS = [
+const COLOR_VAR: Record<AvatarColor, string> = {
+  signal: 'var(--signal)',
+  accent: 'var(--accent)',
+  success: 'var(--success)',
+  warning: 'var(--warning)',
+}
+
+const STATIC_TABS = [
   {
     key: 'browse',
     label: 'browse',
@@ -80,33 +91,80 @@ const TABS = [
       </svg>
     ),
   },
-  {
-    key: 'me',
-    label: 'me',
-    href: '/me',
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
-        <circle cx="9" cy="6" r="3.5" stroke="currentColor" strokeWidth="1.5" />
-        <path
-          d="M2.5 16.5c0-3.5 3-5.5 6.5-5.5s6.5 2 6.5 5.5"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-      </svg>
-    ),
-  },
 ] as const
+
+interface MeAvatarProps {
+  handle: string | null
+  avatarColor: AvatarColor | null
+  isActive: boolean
+}
+
+function MeAvatar({ handle, avatarColor, isActive }: MeAvatarProps) {
+  const letter = handle ? handle.charAt(0).toUpperCase() : '?'
+  const bgColor = avatarColor ? COLOR_VAR[avatarColor] : 'var(--signal)'
+  const ringColor = avatarColor ? COLOR_VAR[avatarColor] : 'var(--signal)'
+
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        width: 22,
+        height: 22,
+        borderRadius: '50%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+        background: bgColor,
+        color: 'var(--bg)',
+        fontSize: 10,
+        fontWeight: 800,
+        fontFamily: 'var(--font-ui)',
+        userSelect: 'none',
+        outline: isActive ? `2px solid ${ringColor}` : 'none',
+        outlineOffset: 2,
+      }}
+    >
+      {letter}
+    </div>
+  )
+}
 
 export function BottomNav() {
   const pathname = usePathname()
+  const { getToken, isSignedIn } = useAuth()
+  const [avatarHandle, setAvatarHandle] = useState<string | null>(null)
+  const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(null)
+
+  useEffect(() => {
+    if (!isSignedIn) return
+    let cancelled = false
+    void (async () => {
+      const token = await getToken()
+      if (!token || cancelled) return
+      try {
+        const profile = await fetchMe(token)
+        if (!cancelled) {
+          setAvatarHandle(profile.handle)
+          setAvatarColor(profile.avatarColor)
+        }
+      } catch (err) {
+        console.warn('BottomNav: could not load profile', err)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [getToken, isSignedIn])
+
+  const isMeActive = pathname.startsWith('/me')
 
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-40 flex h-[52px] items-center justify-around border-t border-border bg-bg-elevated pb-0.5 sm:hidden"
       aria-label="Main navigation"
     >
-      {TABS.map((tab) => {
+      {STATIC_TABS.map((tab) => {
         const isActive = pathname.startsWith(tab.href)
         return (
           <Link
@@ -128,6 +186,26 @@ export function BottomNav() {
           </Link>
         )
       })}
+      <Link
+        href="/me"
+        className="flex flex-col items-center gap-[3px]"
+        style={{ color: isMeActive ? 'var(--signal)' : 'var(--fg-subtle)' }}
+      >
+        <MeAvatar
+          handle={avatarHandle}
+          avatarColor={avatarColor}
+          isActive={isMeActive}
+        />
+        <span
+          className="text-[9px] tracking-[0.04em]"
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontWeight: isMeActive ? 700 : 500,
+          }}
+        >
+          me
+        </span>
+      </Link>
     </nav>
   )
 }
