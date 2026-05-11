@@ -706,7 +706,7 @@ export const CrawlSplitView = ({
                         venueRecrawlState === 'queued'
                           ? 'var(--fg-subtle)'
                           : 'var(--signal)',
-                      color: '#fff',
+                      color: 'var(--signal-fg, #0f172a)',
                       cursor:
                         venueRecrawlState === 'triggering' ||
                         venueRecrawlState === 'queued'
