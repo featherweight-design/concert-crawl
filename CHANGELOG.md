@@ -1,3 +1,22 @@
+# [1.7.0](https://github.com/HartiganHM/concert-crawl/compare/v1.6.3...v1.7.0) (2026-05-11)
+
+
+### Bug Fixes
+
+* **admin/venues:** active field bug, composite focus rings, verified tests ([e8b7bff](https://github.com/HartiganHM/concert-crawl/commit/e8b7bff1a3912d44c1ecd642b781c20c0d1c63a6))
+* **admin/venues:** align all minor values to design spec ([09897c0](https://github.com/HartiganHM/concert-crawl/commit/09897c0a3704dbbaceacb5f629c68ae5406fc7f5))
+* **admin/venues:** make venue name a link and remove Edit button ([0aedbe2](https://github.com/HartiganHM/concert-crawl/commit/0aedbe2d8d89c4087080d868f49f46bf709be64f))
+* **admin/venues:** paddingBottom and title flexWrap from design review ([f25cdd5](https://github.com/HartiganHM/concert-crawl/commit/f25cdd5f1575c4e5fd277aa285bbd5dcf9686594))
+* **admin/venues:** remove duplicate active toggle, fix View all link ([30da577](https://github.com/HartiganHM/concert-crawl/commit/30da57720589f4bd04586dad528beb69bcda09ce))
+* **admin:** address user-reported venue details issues ([389e070](https://github.com/HartiganHM/concert-crawl/commit/389e07049c2595c29c0c87993d6738bfb41f317f))
+* **admin:** resolve lint errors from merge — remove unused imports, suppress favicon img warning ([bdcf54f](https://github.com/HartiganHM/concert-crawl/commit/bdcf54f87460e04dcf834d2baf96891a70c31c23))
+
+
+### Features
+
+* **admin/venues:** redesign venue details page to match design spec ([18e0edc](https://github.com/HartiganHM/concert-crawl/commit/18e0edcc612fbf2b3f6728ceb8323f6e06aff47b)), closes [#245](https://github.com/HartiganHM/concert-crawl/issues/245) [#246](https://github.com/HartiganHM/concert-crawl/issues/246) [#247](https://github.com/HartiganHM/concert-crawl/issues/247) [#248](https://github.com/HartiganHM/concert-crawl/issues/248) [#249](https://github.com/HartiganHM/concert-crawl/issues/249) [#250](https://github.com/HartiganHM/concert-crawl/issues/250)
+* **admin/venues:** track verifiedBy + verifiedAt on venue verification ([4888f31](https://github.com/HartiganHM/concert-crawl/commit/4888f3165c3ca15e4fa0cedb199848835a5198a4)), closes [#251](https://github.com/HartiganHM/concert-crawl/issues/251)
+
 ## [1.6.3](https://github.com/HartiganHM/concert-crawl/compare/v1.6.2...v1.6.3) (2026-05-11)
 
 

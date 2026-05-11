@@ -1,6 +1,6 @@
 {
   "name": "concert-crawl",
-  "version": "1.6.3",
+  "version": "1.7.0",
   "private": true,
   "scripts": {
     "dev": "turbo run dev",
