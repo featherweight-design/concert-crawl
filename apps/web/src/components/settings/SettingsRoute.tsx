@@ -4,6 +4,7 @@ import { PlanCard } from './PlanCard'
 import { ThemePickerInline } from './ThemePickerInline'
 import { MySubmissionsList } from './MySubmissionsList'
 import { DangerZone } from './DangerZone'
+import { WatchingTeaser } from './WatchingTeaser'
 import { SETTINGS_COPY } from './definitions/copy'
 import type {
   UserProfileResponse,
@@ -13,6 +14,17 @@ import type {
 interface SettingsRouteProps {
   profile: UserProfileResponse
   submissions: UserSubmissionItem[]
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle"
+      style={{ fontFamily: 'var(--font-mono)' }}
+    >
+      {children}
+    </div>
+  )
 }
 
 export function SettingsRoute({ profile, submissions }: SettingsRouteProps) {
@@ -32,8 +44,8 @@ export function SettingsRoute({ profile, submissions }: SettingsRouteProps) {
       </div>
 
       <div className="flex flex-col gap-6 pb-24">
-        {/* Hero */}
-        <div className="px-1">
+        {/* Hero — no section label */}
+        <div className="px-5 pt-2">
           <ProfileHero
             handle={profile.handle}
             avatarColor={profile.avatarColor}
@@ -44,25 +56,20 @@ export function SettingsRoute({ profile, submissions }: SettingsRouteProps) {
           />
         </div>
 
-        {/* Divider */}
         <div className="mx-4 h-px bg-border" />
 
         {/* Plan */}
         <div className="px-4">
+          <SectionLabel>{SETTINGS_COPY.planSection}</SectionLabel>
           <PlanCard plan={profile.plan} />
         </div>
 
         {/* Appearance */}
         <div className="flex flex-col gap-2 px-4">
           <div className="flex items-center justify-between">
+            <SectionLabel>{SETTINGS_COPY.appearanceSection}</SectionLabel>
             <span
-              className="text-[12px] font-bold uppercase tracking-[0.08em] text-fg-muted"
-              style={{ fontFamily: 'var(--font-mono)' }}
-            >
-              Appearance
-            </span>
-            <span
-              className="text-[10px] font-semibold uppercase tracking-[0.06em] text-fg-subtle"
+              className="mb-2 text-[10px] font-semibold uppercase tracking-[0.06em] text-fg-subtle"
               style={{ fontFamily: 'var(--font-mono)' }}
             >
               tap to switch
@@ -76,15 +83,10 @@ export function SettingsRoute({ profile, submissions }: SettingsRouteProps) {
         {/* Submissions */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between px-4">
-            <span
-              className="text-[12px] font-bold uppercase tracking-[0.08em] text-fg-muted"
-              style={{ fontFamily: 'var(--font-mono)' }}
-            >
-              My submissions
-            </span>
+            <SectionLabel>{SETTINGS_COPY.submissionsSection}</SectionLabel>
             {profile.submissionCount > 0 && (
               <span
-                className="text-[10px] text-fg-subtle"
+                className="mb-2 text-[10px] text-fg-subtle"
                 style={{ fontFamily: 'var(--font-mono)' }}
               >
                 {profile.submissionCount} total
@@ -99,40 +101,125 @@ export function SettingsRoute({ profile, submissions }: SettingsRouteProps) {
 
         <div className="mx-4 h-px bg-border" />
 
-        {/* Account rows */}
-        <div className="flex flex-col gap-1 px-0">
-          <span className="px-5 text-[13px] font-semibold text-fg">
-            {SETTINGS_COPY.accountSection}
-          </span>
-          {/* Email — link-out to Clerk */}
-          <div className="flex items-center justify-between px-5 py-3">
-            <span className="text-[14px] text-fg">{SETTINGS_COPY.emailRow}</span>
-            <span className="text-[13px] text-fg-muted">{profile.email}</span>
+        {/* Account */}
+        <div className="flex flex-col gap-2 px-4">
+          <SectionLabel>{SETTINGS_COPY.accountSection}</SectionLabel>
+          <div className="overflow-hidden rounded-xl border border-border bg-surface-1">
+            {/* Email row */}
+            <div className="flex items-center gap-3 px-4 py-3.5">
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 16 16"
+                fill="none"
+                aria-hidden
+                className="shrink-0 text-fg-muted"
+              >
+                <rect
+                  x="2.5"
+                  y="3.5"
+                  width="11"
+                  height="9"
+                  rx="1.5"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                />
+                <path
+                  d="M3 5l5 4 5-4"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span className="flex-1 text-[14px] font-medium text-fg">
+                {SETTINGS_COPY.emailRow}
+              </span>
+              <span className="truncate text-[13px] text-fg-muted">
+                {profile.email}
+              </span>
+            </div>
+            <div className="mx-4 h-px bg-border" />
+            {/* Password row */}
+            <div className="flex items-center gap-3 px-4 py-3.5">
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 16 16"
+                fill="none"
+                aria-hidden
+                className="shrink-0 text-fg-muted"
+              >
+                <rect
+                  x="3"
+                  y="7"
+                  width="10"
+                  height="7"
+                  rx="1.5"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                />
+                <path
+                  d="M5.5 7V5.5a2.5 2.5 0 015 0V7"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <span className="flex-1 text-[14px] font-medium text-fg">
+                {SETTINGS_COPY.passwordRow}
+              </span>
+              <a
+                href="https://accounts.clerk.dev/user"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-[0.06em] text-fg-subtle transition-colors hover:text-fg-muted"
+                style={{ fontFamily: 'var(--font-mono)' }}
+              >
+                Clerk
+                <svg
+                  width="11"
+                  height="11"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  aria-hidden
+                >
+                  <path
+                    d="M5 11l6-6M6 5h5v5"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </a>
+            </div>
           </div>
-          {/* Password — link-out to Clerk */}
-          <div className="flex items-center justify-between px-5 py-3">
-            <span className="text-[14px] text-fg">
-              {SETTINGS_COPY.passwordRow}
-            </span>
-            <a
-              href="https://accounts.clerk.dev/user"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[13px] text-fg-muted underline-offset-2 hover:underline"
-            >
-              {SETTINGS_COPY.clerkLinkLabel}
-            </a>
-          </div>
+        </div>
+
+        {/* Lists */}
+        <div className="px-4">
+          <SectionLabel>{SETTINGS_COPY.listsSection}</SectionLabel>
+          <WatchingTeaser />
         </div>
 
         <div className="mx-4 h-px bg-border" />
 
         {/* Danger zone */}
-        <div className="px-0">
+        <div className="flex flex-col gap-2 px-4">
+          <SectionLabel>{SETTINGS_COPY.dangerSection}</SectionLabel>
           <DangerZone
             handle={profile.handle}
             submissionCount={profile.submissionCount}
           />
+        </div>
+
+        {/* Version footer */}
+        <div
+          className="pb-4 pt-2 text-center text-[9px] font-semibold uppercase tracking-[0.10em] text-fg-subtle"
+          style={{ fontFamily: 'var(--font-mono)' }}
+        >
+          concertcrawl · beta · Denver
         </div>
       </div>
     </>

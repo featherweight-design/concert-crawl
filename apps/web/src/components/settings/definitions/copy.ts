@@ -19,8 +19,8 @@ export const SETTINGS_COPY = {
       badge: 'Founder',
       yourPlanLabel: 'Your plan',
       tagline: 'Free for life.',
-      body: "You showed up during the private beta — you keep Concert Crawl free, forever. No card needed.",
-      subline: "— Yes, even when we charge new users.",
+      body: 'You showed up during the private beta — you keep Concert Crawl free, forever. No card needed.',
+      subline: '— Yes, even when we charge new users.',
     },
     paid: {
       badge: 'Supporter',
@@ -54,9 +54,12 @@ export const SETTINGS_COPY = {
     deleteButtonArmed: 'Delete my account permanently',
     deleteButtonDisabled: 'Type DELETE to enable',
   },
+  planSection: 'Your plan',
   appearanceSection: 'Appearance',
   accountSection: 'Account',
   submissionsSection: 'My submissions',
+  listsSection: 'Lists',
+  dangerSection: 'Danger zone',
   seeAllSubmissions: (submissionCount: number) =>
     `See all ${submissionCount} →`,
   emailRow: 'Email',

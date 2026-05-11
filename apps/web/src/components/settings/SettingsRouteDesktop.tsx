@@ -25,8 +25,8 @@ type NavSection =
 const NAV_ITEMS: { key: NavSection; label: string }[] = [
   { key: 'profile', label: 'Profile' },
   { key: 'plan', label: 'Plan' },
-  { key: 'appearance', label: 'Appearance' },
   { key: 'submissions', label: 'My submissions' },
+  { key: 'appearance', label: 'Appearance' },
   { key: 'account', label: 'Account' },
   { key: 'danger', label: 'Danger zone' },
 ]
@@ -191,9 +191,7 @@ export function SettingsRouteDesktop({
       {!isAnon ? (
         <div className="rounded-xl border border-border bg-surface-1 px-4 py-3.5 text-[13px] leading-relaxed text-fg-muted">
           Other fans see{' '}
-          <strong style={{ color: 'var(--signal)' }}>
-            @{profile.handle}
-          </strong>{' '}
+          <strong style={{ color: 'var(--signal)' }}>@{profile.handle}</strong>{' '}
           on every price you&apos;ve submitted, and can tag you on
           confirmations. Drop the handle any time to go anonymous — your
           existing submissions get reattributed.
@@ -275,9 +273,7 @@ export function SettingsRouteDesktop({
               />
               <div className="flex min-w-0 flex-col gap-0.5">
                 <span className="truncate text-[13px] font-bold text-fg">
-                  {profile.handle
-                    ? `@${profile.handle}`
-                    : 'anonymous fan'}
+                  {profile.handle ? `@${profile.handle}` : 'anonymous fan'}
                 </span>
                 <span
                   className="text-[10px] text-fg-muted"
