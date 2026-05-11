@@ -177,6 +177,7 @@ function seedVenue(overrides: Record<string, unknown> = {}) {
     consecutiveFailures: 0,
     crawlDelayMs: 3000,
     crawlWaitUntil: 'networkidle' as const,
+    crawlWaitForSelector: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -440,6 +441,53 @@ describe('crawlVenue — fetch options', () => {
       mockBrowser,
       3000,
       'load',
+      undefined,
+    )
+  })
+
+  it('passes crawlWaitForSelector to fetchPage when set on venue', async () => {
+    const venue = seedVenue({ crawlWaitForSelector: '.event-list-item' })
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [],
+      usage: { inputTokens: 0, outputTokens: 0 },
+    })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    expect(mockFetchPage).toHaveBeenCalledWith(
+      venue.websiteUrl,
+      mockBrowser,
+      venue.crawlDelayMs,
+      venue.crawlWaitUntil,
+      '.event-list-item',
+    )
+  })
+
+  it('passes undefined to fetchPage when crawlWaitForSelector is null', async () => {
+    const venue = seedVenue({ crawlWaitForSelector: null })
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [],
+      usage: { inputTokens: 0, outputTokens: 0 },
+    })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    expect(mockFetchPage).toHaveBeenCalledWith(
+      venue.websiteUrl,
+      mockBrowser,
+      venue.crawlDelayMs,
+      venue.crawlWaitUntil,
+      undefined,
     )
   })
 })

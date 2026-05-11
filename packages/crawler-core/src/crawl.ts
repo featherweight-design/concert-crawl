@@ -79,6 +79,7 @@ export async function crawlVenue(
       browser,
       venue.crawlDelayMs,
       venue.crawlWaitUntil,
+      venue.crawlWaitForSelector ?? undefined,
     )
 
     const pageHash = hashPage(html)
