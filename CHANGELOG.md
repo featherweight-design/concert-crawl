@@ -1,3 +1,15 @@
+# [1.1.0](https://github.com/HartiganHM/concert-crawl/compare/v1.0.0...v1.1.0) (2026-05-11)
+
+
+### Bug Fixes
+
+* **themes:** address Copilot review + add design handoff assets ([4cad1f5](https://github.com/HartiganHM/concert-crawl/commit/4cad1f56e476ee7d90b425419cc00ad66d890827))
+
+
+### Features
+
+* **themes:** add 6 genre themes + redesign picker for 9-theme system ([6c16846](https://github.com/HartiganHM/concert-crawl/commit/6c16846c92b302911c9220c2a3e3a1b9f3fb66a7)), closes [#FF2EC8](https://github.com/HartiganHM/concert-crawl/issues/FF2EC8)
+
 # 1.0.0 (2026-05-11)
 
 
