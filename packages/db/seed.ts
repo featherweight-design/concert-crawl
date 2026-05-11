@@ -242,12 +242,12 @@ export const SEED_NOTIFICATIONS = [
     actionUrl: '/admin/events?venueSlug=ogden-theatre&confidence=low',
   },
   {
-    userId: null,
+    userId: FAKE_USER_IDS.hugh,
     type: 'admin_alert' as const,
-    category: 'system.health',
-    title: 'Daily crawl completed',
-    body: '12 venues processed. 1 failure, 1 blocked.',
-    actionUrl: '/admin/crawls',
+    category: 'crawl.low_confidence',
+    title: 'Low-confidence events: Mission Ballroom',
+    body: '2 events extracted with confidence score below 0.7.',
+    actionUrl: '/admin/events?venueSlug=mission-ballroom&confidence=low',
   },
 ]
 
@@ -400,16 +400,18 @@ async function seed() {
     const eventIds = recentEvents.map((evt) => evt.id)
 
     const userEventRows = [
-      // Hugh watches 6 events
+      // Hugh watches 6 events — some with saved prices
       {
         userId: FAKE_USER_IDS.hugh,
         eventId: eventIds[0]!,
         status: 'watching' as const,
+        savedPrice: '35.00',
       },
       {
         userId: FAKE_USER_IDS.hugh,
         eventId: eventIds[1]!,
         status: 'going' as const,
+        savedPrice: '45.00',
       },
       {
         userId: FAKE_USER_IDS.hugh,
@@ -431,11 +433,12 @@ async function seed() {
         eventId: eventIds[5]!,
         status: 'going' as const,
       },
-      // jess_r watches 5 events
+      // jess_r watches 5 events — some with saved prices
       {
         userId: FAKE_USER_IDS.jess,
         eventId: eventIds[6]!,
         status: 'watching' as const,
+        savedPrice: '22.00',
       },
       {
         userId: FAKE_USER_IDS.jess,
