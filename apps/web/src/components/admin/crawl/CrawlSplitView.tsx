@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
+import { ExternalLink, RefreshCw, Filter } from 'lucide-react'
 import {
   StatusBadge,
   AdminTable,
@@ -239,38 +241,28 @@ export const CrawlSplitView = ({
       ? initialSelectedId
       : (initialStatus[0]?.venueId ?? null)
 
+  const router = useRouter()
+  const pathname = usePathname()
+
   const [selectedId, setSelectedId] = useState<string | null>(resolvedInitialId)
+
+  const selectVenue = useCallback(
+    (venueId: string | null) => {
+      setSelectedId(venueId)
+      const params = new URLSearchParams()
+      if (venueId) params.set('venueId', venueId)
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    },
+    [router, pathname],
+  )
   const [statusFilter, setStatusFilter] = useState('')
+  const [venueNameFilter, setVenueNameFilter] = useState('')
+  const [filterOpen, setFilterOpen] = useState(false)
+  const filterRef = useRef<HTMLDivElement>(null)
   const [recrawlState, setRecrawlState] = useState<
     Record<string, 'triggering' | 'queued' | 'error'>
   >({})
   const [recrawlError, setRecrawlError] = useState<Record<string, string>>({})
-  const [runAllState, setRunAllState] = useState<
-    'idle' | 'triggering' | 'queued' | 'error'
-  >('idle')
-  const [runAllError, setRunAllError] = useState<string | null>(null)
-  const [runAllCount, setRunAllCount] = useState<number | null>(null)
-
-  async function handleRunAll() {
-    setRunAllState('triggering')
-    setRunAllError(null)
-    setRunAllCount(null)
-    try {
-      const res = await fetch('/api/admin/crawl', { method: 'POST' })
-      if (!res.ok) {
-        const rawBody: unknown = await res.json().catch(() => ({}))
-        throw new Error(extractErrorMessage(rawBody, `HTTP ${res.status}`))
-      }
-      const body = (await res.json()) as { data?: { count?: number } }
-      setRunAllCount(body.data?.count ?? null)
-      setRunAllState('queued')
-    } catch (err) {
-      setRunAllState('error')
-      setRunAllError(
-        err instanceof Error ? err.message : 'Run all trigger failed',
-      )
-    }
-  }
 
   // Sync selectedId when IssuesBanner navigates to a new venueId via router.push
   useEffect(() => {
@@ -279,9 +271,33 @@ export const CrawlSplitView = ({
     }
   }, [initialSelectedId])
 
-  const filteredStatus = statusFilter
-    ? initialStatus.filter((row) => row.status === statusFilter)
-    : initialStatus
+  // Close filter panel on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        filterRef.current &&
+        !filterRef.current.contains(event.target as Node)
+      ) {
+        setFilterOpen(false)
+      }
+    }
+    if (filterOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [filterOpen])
+
+  const filteredStatus = initialStatus.filter((row) => {
+    if (statusFilter && row.status !== statusFilter) return false
+    if (
+      venueNameFilter &&
+      !row.venueName.toLowerCase().includes(venueNameFilter.toLowerCase())
+    )
+      return false
+    return true
+  })
+
+  const filtersActive = statusFilter !== '' || venueNameFilter !== ''
 
   // Clear selection when the active filter hides the currently selected venue
   useEffect(() => {
@@ -289,9 +305,9 @@ export const CrawlSplitView = ({
       selectedId &&
       !filteredStatus.some((row) => row.venueId === selectedId)
     ) {
-      setSelectedId(null)
+      selectVenue(null)
     }
-  }, [statusFilter, filteredStatus, selectedId])
+  }, [statusFilter, venueNameFilter, filteredStatus, selectedId, selectVenue])
 
   async function handleTrigger(venueId: string) {
     setRecrawlState((prev) => ({ ...prev, [venueId]: 'triggering' }))
@@ -365,81 +381,143 @@ export const CrawlSplitView = ({
               {filteredStatus.length}
             </span>
           </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <select
-              value={statusFilter}
-              onChange={(ev) => setStatusFilter(ev.target.value)}
+          <div ref={filterRef} style={{ position: 'relative' }}>
+            <button
+              onClick={() => setFilterOpen((prev) => !prev)}
               style={{
-                fontSize: 11,
-                fontWeight: 600,
-                color: 'var(--fg-muted)',
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                height: 28,
+                padding: '0 10px',
                 borderRadius: 6,
-                padding: '2px 6px',
+                fontSize: 12,
+                fontWeight: 600,
+                border: `1px solid ${filtersActive ? 'var(--signal)' : 'var(--border)'}`,
+                background: filtersActive
+                  ? 'rgba(var(--signal-rgb, 99,102,241),0.08)'
+                  : 'transparent',
+                color: filtersActive ? 'var(--signal)' : 'var(--fg-muted)',
                 cursor: 'pointer',
               }}
             >
-              {STATUS_FILTER_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={() => void handleRunAll()}
-              disabled={
-                runAllState === 'triggering' || runAllState === 'queued'
-              }
-              style={{
-                fontSize: 11,
-                fontWeight: 600,
-                color:
-                  runAllState === 'triggering' || runAllState === 'queued'
-                    ? 'var(--fg-subtle)'
-                    : 'var(--fg)',
-                background:
-                  runAllState === 'queued'
-                    ? 'rgba(255,170,0,0.1)'
-                    : 'var(--bg-elevated)',
-                border: '1px solid var(--border-strong)',
-                borderRadius: 6,
-                padding: '2px 8px',
-                cursor:
-                  runAllState === 'triggering' || runAllState === 'queued'
-                    ? 'not-allowed'
-                    : 'pointer',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {runAllState === 'triggering'
-                ? 'Triggering…'
-                : runAllState === 'queued'
-                  ? runAllCount !== null
-                    ? `${runAllCount} queued`
-                    : 'Queued'
-                  : 'Run all'}
+              <Filter size={13} />
+              Filter
             </button>
+            {filterOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 6px)',
+                  right: 0,
+                  zIndex: 10,
+                  width: 220,
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 10,
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+                  padding: 12,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 10,
+                }}
+              >
+                <div>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      color: 'var(--fg-subtle)',
+                      marginBottom: 4,
+                    }}
+                  >
+                    Status
+                  </label>
+                  <select
+                    value={statusFilter}
+                    onChange={(ev) => setStatusFilter(ev.target.value)}
+                    style={{
+                      width: '100%',
+                      fontSize: 12,
+                      color: 'var(--fg)',
+                      background: 'var(--surface-1)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 6,
+                      padding: '4px 8px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {STATUS_FILTER_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      color: 'var(--fg-subtle)',
+                      marginBottom: 4,
+                    }}
+                  >
+                    Venue
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Search venues…"
+                    value={venueNameFilter}
+                    onChange={(ev) => setVenueNameFilter(ev.target.value)}
+                    style={{
+                      width: '100%',
+                      fontSize: 12,
+                      color: 'var(--fg)',
+                      background: 'var(--surface-1)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 6,
+                      padding: '4px 8px',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+                {filtersActive && (
+                  <button
+                    onClick={() => {
+                      setStatusFilter('')
+                      setVenueNameFilter('')
+                    }}
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: 'var(--fg-muted)',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      padding: 0,
+                    }}
+                  >
+                    Clear filters
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
-        {runAllError && (
-          <div
-            style={{
-              padding: '6px 14px',
-              fontSize: 12,
-              color: 'var(--danger)',
-              borderBottom: '1px solid var(--border)',
-              background: 'rgba(184,56,26,0.06)',
-            }}
-          >
-            {runAllError}
-          </div>
-        )}
         {filteredStatus.map((row) => (
           <button
             key={row.venueId}
             id={`venue-row-${row.venueId}`}
-            onClick={() => setSelectedId(row.venueId)}
+            onClick={() => selectVenue(row.venueId)}
             style={{
               width: '100%',
               display: 'flex',
@@ -592,18 +670,19 @@ export const CrawlSplitView = ({
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: 5,
-                        height: 28,
-                        padding: '0 10px',
-                        borderRadius: 6,
-                        fontSize: 12,
+                        gap: 6,
+                        height: 32,
+                        padding: '0 12px',
+                        borderRadius: 8,
+                        fontSize: 13,
                         fontWeight: 500,
                         border: '1px solid var(--border)',
                         color: 'var(--fg-muted)',
                         textDecoration: 'none',
                       }}
                     >
-                      ↗ Source URL
+                      <ExternalLink size={15} />
+                      Source URL
                     </a>
                   )}
                   <button
@@ -615,22 +694,19 @@ export const CrawlSplitView = ({
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: 5,
-                      height: 28,
-                      padding: '0 10px',
-                      borderRadius: 6,
-                      fontSize: 12,
-                      fontWeight: 500,
-                      border: '1px solid var(--border-strong)',
+                      gap: 6,
+                      height: 32,
+                      padding: '0 12px',
+                      borderRadius: 8,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      border: 'none',
                       background:
-                        venueRecrawlState === 'queued'
-                          ? 'rgba(255,170,0,0.1)'
-                          : 'transparent',
-                      color:
                         venueRecrawlState === 'triggering' ||
                         venueRecrawlState === 'queued'
                           ? 'var(--fg-subtle)'
-                          : 'var(--fg)',
+                          : 'var(--signal)',
+                      color: '#fff',
                       cursor:
                         venueRecrawlState === 'triggering' ||
                         venueRecrawlState === 'queued'
@@ -638,11 +714,12 @@ export const CrawlSplitView = ({
                           : 'pointer',
                     }}
                   >
+                    <RefreshCw size={15} />
                     {venueRecrawlState === 'triggering'
-                      ? '↻ Triggering…'
+                      ? 'Triggering…'
                       : venueRecrawlState === 'queued'
-                        ? '↻ Queued'
-                        : '↻ Re-crawl'}
+                        ? 'Queued'
+                        : 'Re-crawl'}
                   </button>
                 </div>
               </div>
@@ -954,9 +1031,18 @@ export const CrawlSplitView = ({
 
 export const CrawlRunHistoryTable = ({
   initialRuns,
+  venueId,
 }: {
   initialRuns: CrawlRun[]
+  venueId?: string | null
 }) => {
+  const displayRuns = venueId
+    ? initialRuns.filter((run) => run.venueId === venueId)
+    : initialRuns
+  const selectedVenueName = venueId
+    ? (initialRuns.find((run) => run.venueId === venueId)?.venueName ?? null)
+    : null
+
   return (
     <Panel
       title="Run history"
@@ -968,12 +1054,20 @@ export const CrawlRunHistoryTable = ({
             fontWeight: 400,
           }}
         >
-          showing {initialRuns.length}
+          {selectedVenueName ? (
+            <>
+              <span style={{ color: 'var(--fg-muted)', fontWeight: 500 }}>
+                {selectedVenueName}
+              </span>
+              {' · '}
+            </>
+          ) : null}
+          showing {displayRuns.length}
         </span>
       }
       padding={0}
     >
-      {initialRuns.length === 0 ? (
+      {displayRuns.length === 0 ? (
         <div
           style={{
             minHeight: 300,
@@ -1006,7 +1100,7 @@ export const CrawlRunHistoryTable = ({
               </tr>
             </THead>
             <tbody>
-              {initialRuns.map((run) => (
+              {displayRuns.map((run) => (
                 <TR key={run.id}>
                   <TD mono color="var(--fg-muted)">
                     {shortRunId(run.id)}
@@ -1130,7 +1224,8 @@ export const CrawlRunAllButton = () => {
             : 'pointer',
       }}
     >
-      ↻ {label}
+      <RefreshCw size={15} />
+      {label}
     </button>
   )
 }

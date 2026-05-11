@@ -229,7 +229,10 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
         })}
       />
 
-      <CrawlRunHistoryTable initialRuns={runs} />
+      <CrawlRunHistoryTable
+        initialRuns={runs}
+        venueId={initialVenueId ?? null}
+      />
     </div>
   )
 }
