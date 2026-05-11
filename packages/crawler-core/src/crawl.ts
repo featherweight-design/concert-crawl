@@ -146,17 +146,30 @@ export async function crawlVenue(
     let eventsInserted = 0
     let eventsUpdated = 0
     if (normalizedEvents.length > 0) {
-      // Compute sourceHash for each extracted event
-      const eventsWithHashes = normalizedEvents.map((event) => ({
-        ...event,
-        sourceHash: hashEvent({
-          title: event.title,
-          artist: event.artist,
-          date: event.date,
-          doorsTime: event.doorsTime ?? null,
-          showTime: event.showTime ?? null,
-        }),
-      }))
+      // Compute sourceHash for each extracted event, then deduplicate by
+      // (artist, date) — LLM extraction can return the same show twice.
+      // Deduping here (rather than later) keeps changedVerified and
+      // eventsToUpsert both clean, avoiding duplicate admin alerts and
+      // the Postgres "ON CONFLICT DO UPDATE cannot affect row a second time"
+      // error that otherwise kills the entire batch insert.
+      const seenEventKeys = new Set<string>()
+      const eventsWithHashes = normalizedEvents
+        .map((event) => ({
+          ...event,
+          sourceHash: hashEvent({
+            title: event.title,
+            artist: event.artist,
+            date: event.date,
+            doorsTime: event.doorsTime ?? null,
+            showTime: event.showTime ?? null,
+          }),
+        }))
+        .filter((evt) => {
+          const key = `${evt.artist}|${evt.date}`
+          if (seenEventKeys.has(key)) return false
+          seenEventKeys.add(key)
+          return true
+        })
 
       // Load existing events for this venue to compare hashes
       const existingRows = await db
@@ -206,20 +219,8 @@ export async function crawlVenue(
         ) // null hash backfill or content changed
       })
 
-      // Deduplicate by (artist, date) — Postgres ON CONFLICT cannot resolve
-      // intra-batch conflicts when two rows in the same INSERT share the same
-      // unique key. LLM extraction can produce duplicate entries for the same
-      // show; keep only the first occurrence.
-      const seenEventKeys = new Set<string>()
-      const dedupedToUpsert = eventsToUpsert.filter((evt) => {
-        const key = `${evt.artist}|${evt.date}`
-        if (seenEventKeys.has(key)) return false
-        seenEventKeys.add(key)
-        return true
-      })
-
-      if (dedupedToUpsert.length > 0) {
-        const eventValues = dedupedToUpsert.map((event) => ({
+      if (eventsToUpsert.length > 0) {
+        const eventValues = eventsToUpsert.map((event) => ({
           venueId,
           title: event.title,
           artist: event.artist,
@@ -239,7 +240,7 @@ export async function crawlVenue(
           extractionStrategy: strategy,
         }))
 
-        for (const evt of dedupedToUpsert) {
+        for (const evt of eventsToUpsert) {
           if (existingMap.has(`${evt.artist}|${evt.date}`)) {
             eventsUpdated++
           } else {
