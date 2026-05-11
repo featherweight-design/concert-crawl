@@ -1,3 +1,12 @@
+## [1.6.3](https://github.com/HartiganHM/concert-crawl/compare/v1.6.2...v1.6.3) (2026-05-11)
+
+
+### Bug Fixes
+
+* **admin:** add venue design alignment + admin-created venues verified by default ([87b45ee](https://github.com/HartiganHM/concert-crawl/commit/87b45ee0ca2d61ce8a87a4097b02d732dea4fd20)), closes [#243](https://github.com/HartiganHM/concert-crawl/issues/243)
+* **admin:** address Copilot review — a11y and Kbd dedup ([3766551](https://github.com/HartiganHM/concert-crawl/commit/3766551d37f50a1ead8bc9580660d695f17c54f9))
+* **admin:** align add venue modal precisely to design spec ([72d4709](https://github.com/HartiganHM/concert-crawl/commit/72d4709694175578fb33996f52d6f516c858eb14))
+
 ## [1.6.2](https://github.com/HartiganHM/concert-crawl/compare/v1.6.1...v1.6.2) (2026-05-11)
 
 
