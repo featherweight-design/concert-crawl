@@ -52,15 +52,13 @@ export function MySubmissionsList({
         ))}
       </div>
 
-      {/* "See all →" button */}
       {hasMore && (
-        <button
-          type="button"
+        <p
           className="w-full py-2.5 text-center text-[11px] font-bold uppercase tracking-[0.10em]"
           style={{ fontFamily: 'var(--font-mono)', color: 'var(--signal)' }}
         >
           {SETTINGS_COPY.seeAllSubmissions(totalCount)}
-        </button>
+        </p>
       )}
     </div>
   )

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef, useEffect } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { patchMe, checkHandleAvailability } from '@/lib/users'
@@ -120,134 +121,160 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
   }
 
   return (
-    <form
-      id={EDIT_PROFILE_FORM_ID}
-      onSubmit={(evt) => {
-        evt.preventDefault()
-        void handleSave()
-      }}
-      className="flex flex-col gap-6 px-4 py-6"
-    >
-      {/* Avatar preview */}
-      <div className="flex flex-col items-center gap-3">
-        <Avatar handle={handle || null} avatarColor={avatarColor} size={72} />
-        {handle && (
-          <span className="text-[15px] font-bold text-fg">@{handle}</span>
-        )}
-      </div>
-
-      {/* Handle field */}
-      <div className="flex flex-col gap-1.5">
-        <label
-          className="text-[13px] font-semibold text-fg"
-          htmlFor="handle-input"
+    <div className="mx-auto max-w-md">
+      {/* Header with Cancel + Save wired to isSaveDisabled */}
+      <div className="flex items-center justify-between border-b border-border px-4 py-4">
+        <Link
+          href="/me"
+          className="text-[14px] font-medium text-fg-muted hover:text-fg"
         >
-          Handle
-        </label>
-        <div className="relative">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[14px] text-fg-muted">
-            @
-          </span>
-          <input
-            id="handle-input"
-            type="text"
-            value={handle}
-            onChange={(evt) => handleHandleChange(evt.target.value)}
-            placeholder={SETTINGS_COPY.handlePlaceholder}
-            maxLength={20}
-            autoCorrect="off"
-            autoCapitalize="none"
-            spellCheck={false}
-            className="w-full rounded-xl border border-border bg-surface-1 py-3 pl-8 pr-4 text-[14px] text-fg placeholder:text-fg-subtle focus:border-border-focus focus:outline-none"
-            style={handleError ? { borderColor: 'var(--danger)' } : undefined}
-          />
-        </div>
-        {handleError && (
-          <span className="text-[12px]" style={{ color: 'var(--danger)' }}>
-            {SETTINGS_COPY.handleErrors[handleError]}
-          </span>
-        )}
-        {!handleError && !isGoingAnonymous && (
-          <span className="text-[12px] text-fg-subtle">
-            {SETTINGS_COPY.handleHint}
-          </span>
-        )}
-        {isGoingAnonymous && (
-          <div
-            className="rounded-xl p-3 text-[12px] leading-relaxed text-fg-muted"
-            style={{ background: 'var(--surface-2)' }}
-          >
-            {SETTINGS_COPY.goingAnonymousWarning}
-          </div>
-        )}
-      </div>
-
-      {/* City field */}
-      <div className="flex flex-col gap-1.5">
-        <label
-          className="text-[13px] font-semibold text-fg"
-          htmlFor="city-input"
+          ← Cancel
+        </Link>
+        <span className="text-[15px] font-bold text-fg">Edit profile</span>
+        <button
+          type="submit"
+          form={EDIT_PROFILE_FORM_ID}
+          disabled={isSaveDisabled}
+          className="text-[14px] font-semibold disabled:opacity-50"
+          style={{
+            color: isSaveDisabled ? 'var(--fg-muted)' : 'var(--signal)',
+          }}
         >
-          City
-        </label>
-        <input
-          id="city-input"
-          type="text"
-          value={city}
-          onChange={(evt) => setCity(evt.target.value)}
-          placeholder={SETTINGS_COPY.cityPlaceholder}
-          maxLength={100}
-          className="w-full rounded-xl border border-border bg-surface-1 px-4 py-3 text-[14px] text-fg placeholder:text-fg-subtle focus:outline-none"
-        />
-        <span className="text-[12px] text-fg-subtle">
-          {SETTINGS_COPY.cityHint}
-        </span>
+          Save
+        </button>
       </div>
 
-      {/* Avatar color picker */}
-      <div className="flex flex-col gap-2">
-        <span className="text-[13px] font-semibold text-fg">Avatar color</span>
-        <div className="flex gap-3">
-          {AVATAR_COLORS.map((color) => {
-            const isSelected = avatarColor === color
-            return (
-              <button
-                key={color}
-                type="button"
-                onClick={() => setAvatarColor(color)}
-                aria-label={`Avatar color: ${color}`}
-                aria-pressed={isSelected}
-                className="relative h-8 w-8 cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
-                style={{
-                  background: COLOR_VAR[color],
-                  outline: isSelected
-                    ? `3px solid ${COLOR_VAR[color]}`
-                    : '3px solid transparent',
-                  outlineOffset: '3px',
-                }}
-              />
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Save */}
-      <button
-        type="submit"
-        disabled={isSaveDisabled}
-        className="rounded-xl py-3.5 text-[15px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-        style={{
-          background: isSaveDisabled ? 'var(--surface-2)' : 'var(--signal)',
-          color: isSaveDisabled ? 'var(--fg-muted)' : 'var(--bg)',
+      <form
+        id={EDIT_PROFILE_FORM_ID}
+        onSubmit={(evt) => {
+          evt.preventDefault()
+          void handleSave()
         }}
+        className="flex flex-col gap-6 px-4 py-6"
       >
-        {saving ? 'Saving…' : checkingAvailability ? 'Checking…' : 'Save'}
-      </button>
-      {saveError && (
-        <span className="text-[12px]" style={{ color: 'var(--danger)' }}>
-          {saveError}
-        </span>
-      )}
-    </form>
+        {/* Avatar preview */}
+        <div className="flex flex-col items-center gap-3">
+          <Avatar handle={handle || null} avatarColor={avatarColor} size={72} />
+          {handle && (
+            <span className="text-[15px] font-bold text-fg">@{handle}</span>
+          )}
+        </div>
+
+        {/* Handle field */}
+        <div className="flex flex-col gap-1.5">
+          <label
+            className="text-[13px] font-semibold text-fg"
+            htmlFor="handle-input"
+          >
+            Handle
+          </label>
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[14px] text-fg-muted">
+              @
+            </span>
+            <input
+              id="handle-input"
+              type="text"
+              value={handle}
+              onChange={(evt) => handleHandleChange(evt.target.value)}
+              placeholder={SETTINGS_COPY.handlePlaceholder}
+              maxLength={20}
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              className="w-full rounded-xl border border-border bg-surface-1 py-3 pl-8 pr-4 text-[14px] text-fg placeholder:text-fg-subtle focus:border-border-focus focus:outline-none"
+              style={handleError ? { borderColor: 'var(--danger)' } : undefined}
+            />
+          </div>
+          {handleError && (
+            <span className="text-[12px]" style={{ color: 'var(--danger)' }}>
+              {SETTINGS_COPY.handleErrors[handleError]}
+            </span>
+          )}
+          {!handleError && !isGoingAnonymous && (
+            <span className="text-[12px] text-fg-subtle">
+              {SETTINGS_COPY.handleHint}
+            </span>
+          )}
+          {isGoingAnonymous && (
+            <div
+              className="rounded-xl p-3 text-[12px] leading-relaxed text-fg-muted"
+              style={{ background: 'var(--surface-2)' }}
+            >
+              {SETTINGS_COPY.goingAnonymousWarning}
+            </div>
+          )}
+        </div>
+
+        {/* City field */}
+        <div className="flex flex-col gap-1.5">
+          <label
+            className="text-[13px] font-semibold text-fg"
+            htmlFor="city-input"
+          >
+            City
+          </label>
+          <input
+            id="city-input"
+            type="text"
+            value={city}
+            onChange={(evt) => setCity(evt.target.value)}
+            placeholder={SETTINGS_COPY.cityPlaceholder}
+            maxLength={100}
+            className="w-full rounded-xl border border-border bg-surface-1 px-4 py-3 text-[14px] text-fg placeholder:text-fg-subtle focus:outline-none"
+          />
+          <span className="text-[12px] text-fg-subtle">
+            {SETTINGS_COPY.cityHint}
+          </span>
+        </div>
+
+        {/* Avatar color picker */}
+        <div className="flex flex-col gap-2">
+          <span className="text-[13px] font-semibold text-fg">
+            Avatar color
+          </span>
+          <div className="flex gap-3">
+            {AVATAR_COLORS.map((color) => {
+              const isSelected = avatarColor === color
+              return (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => setAvatarColor(color)}
+                  aria-label={`Avatar color: ${color}`}
+                  aria-pressed={isSelected}
+                  className="relative h-8 w-8 cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+                  style={{
+                    background: COLOR_VAR[color],
+                    outline: isSelected
+                      ? `3px solid ${COLOR_VAR[color]}`
+                      : '3px solid transparent',
+                    outlineOffset: '3px',
+                  }}
+                />
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Save */}
+        <button
+          type="submit"
+          disabled={isSaveDisabled}
+          className="rounded-xl py-3.5 text-[15px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+          style={{
+            background: isSaveDisabled ? 'var(--surface-2)' : 'var(--signal)',
+            color: isSaveDisabled ? 'var(--fg-muted)' : 'var(--bg)',
+          }}
+        >
+          {saving ? 'Saving…' : checkingAvailability ? 'Checking…' : 'Save'}
+        </button>
+        {saveError && (
+          <span className="text-[12px]" style={{ color: 'var(--danger)' }}>
+            {saveError}
+          </span>
+        )}
+      </form>
+    </div>
   )
 }

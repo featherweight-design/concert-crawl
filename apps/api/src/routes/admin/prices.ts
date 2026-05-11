@@ -143,40 +143,53 @@ pricesAdminRouter.patch(
     const { id } = ctx.req.param()
     const { status } = ctx.req.valid('json')
 
-    const [existing] = await db
-      .select({ userId: priceSubmissions.userId, status: priceSubmissions.status })
-      .from(priceSubmissions)
-      .where(eq(priceSubmissions.id, id))
-      .limit(1)
+    type TxResult =
+      | { ok: true; updated: typeof priceSubmissions.$inferSelect }
+      | { ok: false }
 
-    if (!existing)
+    const result: TxResult = await db.transaction(async (tx) => {
+      const [existing] = await tx
+        .select({
+          userId: priceSubmissions.userId,
+          status: priceSubmissions.status,
+        })
+        .from(priceSubmissions)
+        .where(eq(priceSubmissions.id, id))
+        .limit(1)
+        .for('update')
+
+      if (!existing) return { ok: false }
+
+      const [updated] = await tx
+        .update(priceSubmissions)
+        .set({ status, updatedAt: sql`now()` })
+        .where(eq(priceSubmissions.id, id))
+        .returning()
+
+      if (!updated) return { ok: false }
+
+      if (
+        status === 'corroborated' &&
+        existing.status !== 'corroborated' &&
+        existing.userId !== null
+      ) {
+        await tx
+          .update(userRoles)
+          .set({ priceCredScore: sql`${userRoles.priceCredScore} + 1` })
+          .where(eq(userRoles.userId, existing.userId))
+      }
+
+      return { ok: true, updated }
+    })
+
+    if (!result.ok)
       return ctx.json({ success: false, error: 'Submission not found' }, 404)
-
-    const [updated] = await db
-      .update(priceSubmissions)
-      .set({ status, updatedAt: sql`now()` })
-      .where(eq(priceSubmissions.id, id))
-      .returning()
-
-    if (!updated)
-      return ctx.json({ success: false, error: 'Submission not found' }, 404)
-
-    if (
-      status === 'corroborated' &&
-      existing.status !== 'corroborated' &&
-      existing.userId !== null
-    ) {
-      await db
-        .update(userRoles)
-        .set({ priceCredScore: sql`${userRoles.priceCredScore} + 1` })
-        .where(eq(userRoles.userId, existing.userId))
-    }
 
     ctx.set('auditActorId', getAuthUser(ctx).userId)
     ctx.set('auditAction', 'price.submission.update')
     ctx.set('auditTargetId', id)
 
-    return ctx.json({ success: true, data: updated })
+    return ctx.json({ success: true, data: result.updated })
   },
 )
 

@@ -13,7 +13,6 @@ import { fetchMe } from '@/lib/users'
 import type { AvatarColor } from '@concert-crawl/types'
 
 const APP_VERSION = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev'
-const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? ''
 
 export function UserMenu() {
   const { getToken } = useAuth()
@@ -66,43 +65,6 @@ export function UserMenu() {
 
   useEffect(() => {
     let cancelled = false
-    getToken()
-      .then((token) => {
-        if (!token || cancelled) return
-        return fetch(`${API_URL}/v1/users/me/submissions/count`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-      })
-      .then((res) => {
-        if (!res || cancelled) return res?.json()
-        return res.json()
-      })
-      .then((body: unknown) => {
-        if (cancelled) return
-        if (
-          body !== null &&
-          typeof body === 'object' &&
-          'data' in body &&
-          body.data !== null &&
-          typeof body.data === 'object' &&
-          'count' in body.data &&
-          typeof (body.data as Record<string, unknown>).count === 'number'
-        ) {
-          setSubmissionCount(
-            (body.data as Record<string, unknown>).count as number,
-          )
-        }
-      })
-      .catch((err: unknown) => {
-        console.error('Failed to fetch submission count', err)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [getToken])
-
-  useEffect(() => {
-    let cancelled = false
     void (async () => {
       const token = await getToken()
       if (!token || cancelled) return
@@ -111,9 +73,10 @@ export function UserMenu() {
         if (!cancelled) {
           setAvatarHandle(profile.handle)
           setAvatarColor(profile.avatarColor)
+          setSubmissionCount(profile.submissionCount)
         }
       } catch (err) {
-        console.warn('UserMenu: could not load profile for avatar', err)
+        console.warn('UserMenu: could not load profile', err)
       }
     })()
     return () => {
