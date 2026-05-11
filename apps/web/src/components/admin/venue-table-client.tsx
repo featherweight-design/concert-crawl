@@ -231,7 +231,6 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
             <TH>Health</TH>
             <TH>Last crawl</TH>
             <TH>Events</TH>
-            <TH></TH>
           </tr>
         </THead>
         <tbody>
@@ -265,7 +264,22 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
                       }}
                       aria-label={venue.verified ? 'Verified' : 'Unverified'}
                     />
-                    <span style={{ fontWeight: 500 }}>{venue.name}</span>
+                    <Link
+                      href={`/admin/venues/${venue.id}`}
+                      style={{
+                        fontWeight: 500,
+                        color: 'var(--fg)',
+                        textDecoration: 'none',
+                      }}
+                      onMouseEnter={(evt) =>
+                        (evt.currentTarget.style.textDecoration = 'underline')
+                      }
+                      onMouseLeave={(evt) =>
+                        (evt.currentTarget.style.textDecoration = 'none')
+                      }
+                    >
+                      {venue.name}
+                    </Link>
                   </div>
                   {notes.map((note, idx) => (
                     <div
@@ -362,13 +376,6 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
                   ) : (
                     <span style={{ color: 'var(--fg-subtle)' }}>—</span>
                   )}
-                </TD>
-                <TD>
-                  <Link href={`/admin/venues/${venue.id}`}>
-                    <AdminButton variant="ghost" size="sm">
-                      Edit
-                    </AdminButton>
-                  </Link>
                 </TD>
               </TR>
             )
