@@ -13,6 +13,8 @@ import {
 } from './definitions/constants'
 import type { AvatarColor, UserProfileResponse } from '@concert-crawl/types'
 
+export const EDIT_PROFILE_FORM_ID = 'edit-profile-form'
+
 interface EditProfileFormProps {
   profile: UserProfileResponse
 }
@@ -118,7 +120,14 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
   }
 
   return (
-    <div className="flex flex-col gap-6 px-4 py-6">
+    <form
+      id={EDIT_PROFILE_FORM_ID}
+      onSubmit={(evt) => {
+        evt.preventDefault()
+        void handleSave()
+      }}
+      className="flex flex-col gap-6 px-4 py-6"
+    >
       {/* Avatar preview */}
       <div className="flex flex-col items-center gap-3">
         <Avatar handle={handle || null} avatarColor={avatarColor} size={72} />
@@ -224,8 +233,7 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
 
       {/* Save */}
       <button
-        type="button"
-        onClick={() => void handleSave()}
+        type="submit"
         disabled={isSaveDisabled}
         className="rounded-xl py-3.5 text-[15px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
         style={{
@@ -240,6 +248,6 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
           {saveError}
         </span>
       )}
-    </div>
+    </form>
   )
 }

@@ -1,7 +1,10 @@
 import { auth } from '@/lib/auth'
 import Link from 'next/link'
 import { fetchMe } from '@/lib/users'
-import { EditProfileForm } from '@/components/settings/EditProfileForm'
+import {
+  EditProfileForm,
+  EDIT_PROFILE_FORM_ID,
+} from '@/components/settings/EditProfileForm'
 
 export const metadata = { title: 'Edit profile — Concert Crawl' }
 
@@ -23,7 +26,14 @@ export default async function EditProfilePage() {
           ← Cancel
         </Link>
         <span className="text-[15px] font-bold text-fg">Edit profile</span>
-        <div className="w-16" />
+        <button
+          type="submit"
+          form={EDIT_PROFILE_FORM_ID}
+          className="text-[14px] font-semibold"
+          style={{ color: 'var(--signal)' }}
+        >
+          Save
+        </button>
       </div>
 
       <EditProfileForm profile={profile} />

@@ -6,6 +6,7 @@ import {
   submissionConfirms,
   userEvents,
   userProfiles,
+  userRoles,
   venues,
 } from '@concert-crawl/db'
 import { testDb } from './db.js'
@@ -114,6 +115,24 @@ export async function seedPriceSubmission(
   if (!submission)
     throw new Error('seedPriceSubmission: insert returned no rows')
   return submission
+}
+
+export async function seedUserRole(
+  userId: string,
+  overrides: Partial<typeof userRoles.$inferInsert> = {},
+): Promise<typeof userRoles.$inferSelect> {
+  const [row] = await testDb
+    .insert(userRoles)
+    .values({
+      userId,
+      role: 'user',
+      grantedBy: 'system',
+      priceCredScore: 0,
+      ...overrides,
+    })
+    .returning()
+  if (!row) throw new Error('seedUserRole: insert returned no rows')
+  return row
 }
 
 export async function seedSubmissionConfirm(

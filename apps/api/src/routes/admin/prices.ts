@@ -7,6 +7,7 @@ import {
   events,
   priceRetrievalLog,
   priceSubmissions,
+  userRoles,
   venues,
 } from '@concert-crawl/db'
 import { runPricePipeline } from '@concert-crawl/price-pipeline'
@@ -142,6 +143,15 @@ pricesAdminRouter.patch(
     const { id } = ctx.req.param()
     const { status } = ctx.req.valid('json')
 
+    const [existing] = await db
+      .select({ userId: priceSubmissions.userId, status: priceSubmissions.status })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.id, id))
+      .limit(1)
+
+    if (!existing)
+      return ctx.json({ success: false, error: 'Submission not found' }, 404)
+
     const [updated] = await db
       .update(priceSubmissions)
       .set({ status, updatedAt: sql`now()` })
@@ -150,6 +160,17 @@ pricesAdminRouter.patch(
 
     if (!updated)
       return ctx.json({ success: false, error: 'Submission not found' }, 404)
+
+    if (
+      status === 'corroborated' &&
+      existing.status !== 'corroborated' &&
+      existing.userId !== null
+    ) {
+      await db
+        .update(userRoles)
+        .set({ priceCredScore: sql`${userRoles.priceCredScore} + 1` })
+        .where(eq(userRoles.userId, existing.userId))
+    }
 
     ctx.set('auditActorId', getAuthUser(ctx).userId)
     ctx.set('auditAction', 'price.submission.update')

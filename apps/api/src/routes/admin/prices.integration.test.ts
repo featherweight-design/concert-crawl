@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { eq } from 'drizzle-orm'
+import { userRoles } from '@concert-crawl/db'
 
 const { authState } = vi.hoisted(() => ({
   authState: {
@@ -16,7 +18,14 @@ vi.mock('@hono/clerk-auth', () => ({
 }))
 
 import { createApp } from '../../app.js'
-import { clearTables, seedEvent, seedVenue } from '../../test/helpers/seed.js'
+import {
+  clearTables,
+  seedEvent,
+  seedPriceSubmission,
+  seedUserRole,
+  seedVenue,
+} from '../../test/helpers/seed.js'
+import { testDb } from '../../test/helpers/db.js'
 
 const app = createApp()
 
@@ -96,6 +105,88 @@ describe('POST /v1/admin/prices/pipeline/:eventId', () => {
       {
         method: 'POST',
         headers: ADMIN_HEADERS,
+      },
+    )
+    expect(res.status).toBe(404)
+  })
+})
+
+describe('PATCH /v1/admin/prices/submissions/:id', () => {
+  beforeEach(() => {
+    setAdminAuth()
+    return clearTables()
+  })
+
+  it('increments priceCredScore when transitioning pending → corroborated', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id)
+    const userId = 'user_cred_test'
+    await seedUserRole(userId)
+    const submission = await seedPriceSubmission(event.id, userId)
+
+    const res = await app.request(`/v1/admin/prices/submissions/${submission.id}`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ status: 'corroborated' }),
+    })
+    expect(res.status).toBe(200)
+
+    const [role] = await testDb
+      .select({ priceCredScore: userRoles.priceCredScore })
+      .from(userRoles)
+      .where(eq(userRoles.userId, userId))
+      .limit(1)
+    expect(role?.priceCredScore).toBe(1)
+  })
+
+  it('does not double-increment when status is already corroborated', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id)
+    const userId = 'user_no_double'
+    await seedUserRole(userId)
+    const submission = await seedPriceSubmission(event.id, userId, {
+      status: 'corroborated',
+    })
+
+    const res = await app.request(`/v1/admin/prices/submissions/${submission.id}`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ status: 'corroborated' }),
+    })
+    expect(res.status).toBe(200)
+
+    const [role] = await testDb
+      .select({ priceCredScore: userRoles.priceCredScore })
+      .from(userRoles)
+      .where(eq(userRoles.userId, userId))
+      .limit(1)
+    expect(role?.priceCredScore).toBe(0)
+  })
+
+  it('does not increment for anonymous submissions (null userId)', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id)
+    const submission = await seedPriceSubmission(event.id, 'placeholder', {
+      userId: null,
+    })
+
+    const res = await app.request(`/v1/admin/prices/submissions/${submission.id}`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ status: 'corroborated' }),
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { success: boolean }
+    expect(body.success).toBe(true)
+  })
+
+  it('returns 404 for missing submission', async () => {
+    const res = await app.request(
+      '/v1/admin/prices/submissions/00000000-0000-0000-0000-000000000000',
+      {
+        method: 'PATCH',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({ status: 'corroborated' }),
       },
     )
     expect(res.status).toBe(404)
