@@ -1,5 +1,5 @@
 import { config } from 'dotenv'
-config({ path: new URL('../../.env.local', import.meta.url).pathname })
+config({ path: new URL('../.env.local', import.meta.url).pathname })
 
 import * as Sentry from '@sentry/node'
 
