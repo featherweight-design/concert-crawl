@@ -51,61 +51,6 @@ function slugify(name: string): string {
 
 // ── Local primitives ──────────────────────────────────────────
 
-function SegToggle({
-  options,
-  value,
-  onChange,
-  disabled,
-}: {
-  options: { key: string; label: string }[]
-  value: string
-  onChange: (key: string) => void
-  disabled?: boolean
-}) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        padding: 3,
-        background: 'var(--surface-1)',
-        borderRadius: 8,
-        border: '1px solid var(--border)',
-        height: 38,
-        boxSizing: 'border-box',
-      }}
-    >
-      {options.map((opt) => {
-        const active = value === opt.key
-        return (
-          <button
-            key={opt.key}
-            type="button"
-            onClick={() => onChange(opt.key)}
-            disabled={disabled}
-            style={{
-              all: 'unset',
-              cursor: disabled ? 'not-allowed' : 'pointer',
-              flex: 1,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: 5,
-              fontFamily: "'Inter', sans-serif",
-              fontSize: 12.5,
-              fontWeight: 600,
-              color: active ? 'var(--fg-on-accent)' : 'var(--fg-muted)',
-              background: active ? 'var(--signal)' : 'transparent',
-              transition: 'background .12s, color .12s',
-            }}
-          >
-            {opt.label}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
 function FaviconChip({ url }: { url: string }) {
   const host = useMemo(() => {
     try {
@@ -477,7 +422,6 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
   const [slugVal, setSlugVal] = useState(venue.slug)
   const [urlVal, setUrlVal] = useState(venue.websiteUrl)
   const [cityVal, setCityVal] = useState(venue.city)
-  const [activeVal, setActiveVal] = useState(venue.active)
   const [waitUntilVal, setWaitUntilVal] = useState(venue.crawlWaitUntil)
   const [crawlDelayVal, setCrawlDelayVal] = useState(venue.crawlDelayMs)
   const [waitForSelectorVal, setWaitForSelectorVal] = useState(
@@ -490,7 +434,6 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     slugVal !== venue.slug ||
     urlVal !== venue.websiteUrl ||
     cityVal !== venue.city ||
-    activeVal !== venue.active ||
     waitUntilVal !== venue.crawlWaitUntil ||
     crawlDelayVal !== venue.crawlDelayMs ||
     (waitForSelectorVal || null) !== venue.crawlWaitForSelector
@@ -511,7 +454,6 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     setSlugVal(venue.slug)
     setUrlVal(venue.websiteUrl)
     setCityVal(venue.city)
-    setActiveVal(venue.active)
     setWaitUntilVal(venue.crawlWaitUntil)
     setCrawlDelayVal(venue.crawlDelayMs)
     setWaitForSelectorVal(venue.crawlWaitForSelector ?? '')
@@ -536,7 +478,6 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     formData.set('slug', slugVal.trim())
     formData.set('websiteUrl', urlVal.trim())
     formData.set('city', cityVal.trim() || 'Denver')
-    formData.set('active', String(activeVal))
     formData.set('crawlWaitUntil', waitUntilVal)
     formData.set('crawlDelayMs', String(crawlDelayVal))
     formData.set('crawlWaitForSelector', waitForSelectorVal.trim())
@@ -905,35 +846,16 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
               </div>
             </Field>
 
-            {/* City + Status grid */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 220px',
-                gap: 14,
-              }}
-            >
-              <Field label="City" htmlFor="edit-venue-city">
-                <StyledInput
-                  id="edit-venue-city"
-                  inputRef={cityRef}
-                  defaultValue={venue.city}
-                  disabled={isDisabled}
-                  onChange={(evt) => setCityVal(evt.target.value)}
-                />
-              </Field>
-              <Field label="Status" htmlFor="edit-venue-status">
-                <SegToggle
-                  options={[
-                    { key: 'active', label: 'Active' },
-                    { key: 'paused', label: 'Paused' },
-                  ]}
-                  value={activeVal ? 'active' : 'paused'}
-                  onChange={(key) => setActiveVal(key === 'active')}
-                  disabled={isDisabled}
-                />
-              </Field>
-            </div>
+            {/* City */}
+            <Field label="City" htmlFor="edit-venue-city">
+              <StyledInput
+                id="edit-venue-city"
+                inputRef={cityRef}
+                defaultValue={venue.city}
+                disabled={isDisabled}
+                onChange={(evt) => setCityVal(evt.target.value)}
+              />
+            </Field>
           </div>
 
           {/* Crawl settings */}
@@ -1254,7 +1176,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
             title="Recent runs"
             action={
               <Link
-                href={`/admin/crawls?venue=${venue.id}`}
+                href={`/admin/crawl?venueId=${venue.id}`}
                 style={{
                   fontFamily: "'Inter', sans-serif",
                   fontSize: 11,
