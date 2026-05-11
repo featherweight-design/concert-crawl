@@ -601,13 +601,26 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
         : 'var(--danger)'
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 20,
+        paddingBottom: 80,
+        position: 'relative',
+      }}
+    >
       {/* Header */}
       <SectionHead
         eyebrow="Venue details"
         title={
           <span
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 12,
+              flexWrap: 'wrap',
+            }}
           >
             {venue.name}
             <StatusBadge kind={venue.verified ? 'success' : 'warning'} dot>
