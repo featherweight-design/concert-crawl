@@ -101,6 +101,7 @@ export interface Venue {
   crawlNotes: string | null
   crawlDelayMs: number
   crawlWaitUntil: 'networkidle' | 'load' | 'domcontentloaded'
+  crawlWaitForSelector: string | null
   robotsTxtAllowed: boolean | null
   robotsTxtCheckedAt: string | null
   consecutiveFailures: number
