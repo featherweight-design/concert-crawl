@@ -55,7 +55,7 @@ export async function fetchPage(
     // avoids networkidle/load timeouts on pages with persistent third-party requests.
     const response = await page.goto(url, {
       waitUntil: waitForSelector ? 'domcontentloaded' : waitUntil,
-      timeout: 30_000,
+      timeout: 60_000,
     })
 
     const finalStatus = response?.status() ?? httpStatus

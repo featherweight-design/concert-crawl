@@ -23,6 +23,28 @@ function makeMockBrowser(page: Page): Browser {
   } as unknown as Browser
 }
 
+describe('fetchPage — navigation timeout', () => {
+  it('navigates with a 60-second timeout', async () => {
+    const page = makeMockPage()
+    const browser = makeMockBrowser(page)
+    await fetchPage('https://example.com', browser, 0)
+    expect(page.goto).toHaveBeenCalledWith(
+      'https://example.com',
+      expect.objectContaining({ timeout: 60_000 }),
+    )
+  })
+
+  it('passes the waitUntil strategy to page.goto when no selector is provided', async () => {
+    const page = makeMockPage()
+    const browser = makeMockBrowser(page)
+    await fetchPage('https://example.com', browser, 0, 'load')
+    expect(page.goto).toHaveBeenCalledWith(
+      'https://example.com',
+      expect.objectContaining({ waitUntil: 'load' }),
+    )
+  })
+})
+
 describe('fetchPage — waitForSelector', () => {
   it('calls page.waitForSelector and forces domcontentloaded when selector is provided', async () => {
     const page = makeMockPage()
@@ -32,7 +54,7 @@ describe('fetchPage — waitForSelector', () => {
 
     expect(page.goto).toHaveBeenCalledWith('https://example.com', {
       waitUntil: 'domcontentloaded',
-      timeout: 30_000,
+      timeout: 60_000,
     })
     expect(page.waitForSelector).toHaveBeenCalledWith('.event-card', {
       timeout: 30_000,
@@ -47,7 +69,7 @@ describe('fetchPage — waitForSelector', () => {
 
     expect(page.goto).toHaveBeenCalledWith('https://example.com', {
       waitUntil: 'networkidle',
-      timeout: 30_000,
+      timeout: 60_000,
     })
     expect(page.waitForSelector).not.toHaveBeenCalled()
   })

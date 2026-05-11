@@ -159,7 +159,7 @@ describe('runDailyCrawl', () => {
     expect(mockCrawlVenue).toHaveBeenCalledTimes(4)
   })
 
-  it('processes no more than 3 venues concurrently per batch', async () => {
+  it('processes venues sequentially — never more than one concurrently', async () => {
     let maxConcurrent = 0
     let currentConcurrent = 0
     mockCrawlVenue.mockImplementation(async () => {
@@ -172,7 +172,7 @@ describe('runDailyCrawl', () => {
 
     const { runDailyCrawl } = await import('./run.js')
     await runDailyCrawl()
-    expect(maxConcurrent).toBeLessThanOrEqual(3)
+    expect(maxConcurrent).toBeLessThanOrEqual(1)
   })
 
   it('returns zero counts without launching a browser when no active venues exist', async () => {

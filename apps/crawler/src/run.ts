@@ -8,7 +8,7 @@ import { crawlVenue, tagEventsWithGenres } from '@concert-crawl/crawler-core'
 import { runPricePipeline } from '@concert-crawl/price-pipeline'
 
 const logger = createLogger('crawler')
-const MAX_CONCURRENT = 3
+const MAX_CONCURRENT = 1
 
 async function runPricesForVenue(venueId: string): Promise<void> {
   const unpricedEvents = await db
