@@ -1,3 +1,11 @@
+## [1.7.2](https://github.com/HartiganHM/concert-crawl/compare/v1.7.1...v1.7.2) (2026-05-11)
+
+
+### Bug Fixes
+
+* **admin/crawl:** address Copilot review feedback ([a249e7b](https://github.com/HartiganHM/concert-crawl/commit/a249e7b7e398e62cdd46c1f6c4a3c39e424e0eda))
+* auto-migrate on dev start; fetch per-venue crawl run history ([8f754d7](https://github.com/HartiganHM/concert-crawl/commit/8f754d7d4b4a4ff8d040ace04ca286430ee8f6e3)), closes [#253](https://github.com/HartiganHM/concert-crawl/issues/253)
+
 ## [1.7.1](https://github.com/HartiganHM/concert-crawl/compare/v1.7.0...v1.7.1) (2026-05-11)
 
 
