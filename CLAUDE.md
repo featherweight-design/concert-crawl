@@ -387,6 +387,7 @@ Phase: **Pre-Beta Sprint — target open May 25, 2026**
 - Profile & Settings v2 in PR (feat/profile-v2, issue #196): cred score system (atomic +1 on submission corroboration, regression tests), Save button wired to edit profile page header, generative Avatar in desktop UserMenu trigger
 - Event Detail v2 in PR (feat/event-detail-v2, issue #195): WatchShowButton (3-state), SetlistPreview (collapsible), SoldOutCta, SubmitPriceCardCta, trust chrome (TrustMark inline + --trust-community token), DB migration 0017 (setlist jsonb), API watch endpoints (POST/DELETE /v1/events/:id/watch)
 - Venue crawl config UI in PR (feat/venue-crawl-config-ui, issue #210): crawlWaitUntil + crawlDelayMs exposed in Venue Details admin form with helper text; fixes Cervantes timeout
+- Crawler Sentry errors in PR (fix/crawler-sentry-errors, issue #212): explicit Sentry.captureException on crawlRun.status === 'failed' and unexpected throws in runDailyCrawl + runTriggeredCrawls
 
 ### Phase Sequence
 
@@ -427,6 +428,7 @@ Phase: **Pre-Beta Sprint — target open May 25, 2026**
 | —           | Profile & Settings v2                    | 🔄 In PR (feat/profile-v2, issue #196)            |
 | —           | Event Detail v2                          | 🔄 In PR (feat/event-detail-v2, issue #195)       |
 | —           | Venue crawl config UI                    | 🔄 In PR (feat/venue-crawl-config-ui, issue #210) |
+| —           | Crawler Sentry errors                    | 🔄 In PR (fix/crawler-sentry-errors, issue #212)  |
 | Pre-beta    | UI interactions audit + bug fixes        | 🔄 In progress (admin/crawl, sidebar)             |
 | Beta period | Jun 16 – Aug 3 (see beta-to-launch spec) | —                                                 |
 | Launch prep | Aug 4–17                                 | —                                                 |

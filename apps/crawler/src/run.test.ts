@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+// Mock Sentry
+const mockSentryCaptureException = vi.fn()
+vi.mock('@sentry/node', () => ({
+  captureException: mockSentryCaptureException,
+}))
+
 // Mock DB
 const mockVenues = [
   { id: 'venue-1', name: 'Ogden Theatre' },
@@ -85,6 +91,7 @@ describe('runDailyCrawl', () => {
     mockCrawlVenue.mockResolvedValue({ id: 'run-uuid-1', status: 'success' })
     mockBrowser.close.mockResolvedValue(undefined)
     mockRunPricePipeline.mockResolvedValue(undefined)
+    mockSentryCaptureException.mockReset()
   })
 
   it('calls crawlVenue for each active venue, passing the shared browser', async () => {
@@ -240,6 +247,46 @@ describe('runDailyCrawl', () => {
     // venue-1 failed (batch 1 of 3), venues 2+3+4 succeeded = 3 price pipeline runs
     expect(mockRunPricePipeline).toHaveBeenCalledTimes(3)
   })
+
+  it('calls Sentry.captureException when crawlVenue resolves with status: failed', async () => {
+    mockCrawlVenue.mockResolvedValueOnce({
+      id: 'run-uuid-1',
+      status: 'failed',
+      errorMessage: 'Timeout 30000ms exceeded',
+    })
+
+    const { runDailyCrawl } = await import('./run.js')
+    await runDailyCrawl()
+
+    expect(mockSentryCaptureException).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Timeout 30000ms exceeded' }),
+      expect.objectContaining({
+        extra: expect.objectContaining({ venueId: 'venue-1' }),
+      }),
+    )
+  })
+
+  it('calls Sentry.captureException when crawlVenue rejects', async () => {
+    const crawlError = new Error('blocked')
+    mockCrawlVenue.mockRejectedValueOnce(crawlError)
+
+    const { runDailyCrawl } = await import('./run.js')
+    await runDailyCrawl()
+
+    expect(mockSentryCaptureException).toHaveBeenCalledWith(
+      crawlError,
+      expect.objectContaining({
+        extra: expect.objectContaining({ venueId: 'venue-1' }),
+      }),
+    )
+  })
+
+  it('does not call Sentry.captureException for successful crawls', async () => {
+    const { runDailyCrawl } = await import('./run.js')
+    await runDailyCrawl()
+
+    expect(mockSentryCaptureException).not.toHaveBeenCalled()
+  })
 })
 
 describe('runTriggeredCrawls', () => {
@@ -262,6 +309,7 @@ describe('runTriggeredCrawls', () => {
     mockCrawlVenue.mockResolvedValue({ id: 'run-uuid-1', status: 'success' })
     mockBrowser.close.mockResolvedValue(undefined)
     mockRunPricePipeline.mockResolvedValue(undefined)
+    mockSentryCaptureException.mockReset()
   })
 
   it('returns processed: 0 without launching a browser when no pending triggers exist', async () => {
@@ -374,5 +422,51 @@ describe('runTriggeredCrawls', () => {
     const result = await runTriggeredCrawls()
 
     expect(result.processed).toBe(2)
+  })
+
+  it('calls Sentry.captureException when crawlVenue resolves with status: failed', async () => {
+    mockCrawlVenue.mockResolvedValueOnce({
+      id: 'run-uuid-1',
+      status: 'failed',
+      errorMessage: 'Timeout 30000ms exceeded',
+    })
+
+    const { runTriggeredCrawls } = await import('./run.js')
+    await runTriggeredCrawls()
+
+    expect(mockSentryCaptureException).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Timeout 30000ms exceeded' }),
+      expect.objectContaining({
+        extra: expect.objectContaining({
+          venueId: 'venue-a',
+          triggerId: 'trigger-1',
+        }),
+      }),
+    )
+  })
+
+  it('calls Sentry.captureException when crawlVenue throws unexpectedly', async () => {
+    const crawlError = new Error('blocked')
+    mockCrawlVenue.mockRejectedValueOnce(crawlError)
+
+    const { runTriggeredCrawls } = await import('./run.js')
+    await runTriggeredCrawls()
+
+    expect(mockSentryCaptureException).toHaveBeenCalledWith(
+      crawlError,
+      expect.objectContaining({
+        extra: expect.objectContaining({
+          triggerId: 'trigger-1',
+          venueId: 'venue-a',
+        }),
+      }),
+    )
+  })
+
+  it('does not call Sentry.captureException for successful crawls', async () => {
+    const { runTriggeredCrawls } = await import('./run.js')
+    await runTriggeredCrawls()
+
+    expect(mockSentryCaptureException).not.toHaveBeenCalled()
   })
 })

@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node'
 import { chromium } from 'playwright'
 import type { Browser } from 'playwright'
 import { createLogger } from '@concert-crawl/logger'
@@ -78,6 +79,12 @@ export async function runTriggeredCrawls(): Promise<{ processed: number }> {
     for (const trigger of claimed) {
       try {
         const crawlRun = await crawlVenue(trigger.venueId, browser)
+        if (crawlRun.status === 'failed') {
+          Sentry.captureException(
+            new Error(crawlRun.errorMessage ?? 'Crawl failed'),
+            { extra: { venueId: trigger.venueId, triggerId: trigger.id } },
+          )
+        }
         await tagEventsWithGenres(trigger.venueId, crawlRun.id)
         if (crawlRun.status !== 'failed') {
           await runPricesForVenue(trigger.venueId)
@@ -92,6 +99,9 @@ export async function runTriggeredCrawls(): Promise<{ processed: number }> {
           })
           .where(eq(crawlTriggers.id, trigger.id))
       } catch (err) {
+        Sentry.captureException(err, {
+          extra: { triggerId: trigger.id, venueId: trigger.venueId },
+        })
         logger.error(
           { err, triggerId: trigger.id, venueId: trigger.venueId },
           'Triggered crawl threw unexpectedly',
@@ -147,6 +157,12 @@ export async function runDailyCrawl(): Promise<{
       for (const [idx, result] of results.entries()) {
         if (result.status === 'fulfilled') {
           succeeded++
+          if (result.value.status === 'failed') {
+            Sentry.captureException(
+              new Error(result.value.errorMessage ?? 'Crawl failed'),
+              { extra: { venueId: batch[idx]?.id, name: batch[idx]?.name } },
+            )
+          }
           if (batch[idx]?.id) {
             try {
               await tagEventsWithGenres(batch[idx].id, result.value.id)
@@ -166,6 +182,9 @@ export async function runDailyCrawl(): Promise<{
           )
         } else {
           failed++
+          Sentry.captureException(result.reason, {
+            extra: { venueId: batch[idx]?.id, name: batch[idx]?.name },
+          })
           logger.error(
             {
               venueId: batch[idx]?.id,
