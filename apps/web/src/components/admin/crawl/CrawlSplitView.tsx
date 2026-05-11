@@ -1063,7 +1063,11 @@ export const CrawlSplitView = ({
           )}
         </div>
       </div>
-      <CrawlRunHistoryTable initialRuns={initialRuns} venueId={selectedId} />
+      <CrawlRunHistoryTable
+        initialRuns={initialRuns}
+        venueId={selectedId}
+        selectedVenueName={selected?.venueName ?? null}
+      />
     </>
   )
 }
@@ -1071,16 +1075,15 @@ export const CrawlSplitView = ({
 export const CrawlRunHistoryTable = ({
   initialRuns,
   venueId,
+  selectedVenueName,
 }: {
   initialRuns: CrawlRun[]
   venueId?: string | null
+  selectedVenueName?: string | null
 }) => {
   const displayRuns = venueId
     ? initialRuns.filter((run) => run.venueId === venueId)
     : initialRuns
-  const selectedVenueName = venueId
-    ? (initialRuns.find((run) => run.venueId === venueId)?.venueName ?? null)
-    : null
 
   return (
     <Panel

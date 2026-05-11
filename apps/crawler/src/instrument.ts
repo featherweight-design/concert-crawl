@@ -1,5 +1,6 @@
+import { fileURLToPath } from 'node:url'
 import { config } from 'dotenv'
-config({ path: new URL('../.env.local', import.meta.url).pathname })
+config({ path: fileURLToPath(new URL('../.env.local', import.meta.url)) })
 
 import * as Sentry from '@sentry/node'
 
