@@ -58,10 +58,6 @@ export async function fetchPage(
       timeout: 30_000,
     })
 
-    if (waitForSelector) {
-      await page.waitForSelector(waitForSelector, { timeout: 30_000 })
-    }
-
     const finalStatus = response?.status() ?? httpStatus
 
     if (finalStatus === 403 || finalStatus === 429) {
@@ -79,6 +75,10 @@ export async function fetchPage(
         JSON.stringify({ event: 'fetch.error', url, status: finalStatus }),
       )
       throw new Error(`HTTP ${finalStatus}`)
+    }
+
+    if (waitForSelector) {
+      await page.waitForSelector(waitForSelector, { timeout: 30_000 })
     }
 
     const html = await page.content()

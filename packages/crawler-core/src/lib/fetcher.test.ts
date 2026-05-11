@@ -52,6 +52,18 @@ describe('fetchPage — waitForSelector', () => {
     expect(page.waitForSelector).not.toHaveBeenCalled()
   })
 
+  it('throws CrawlFetchError before calling waitForSelector when response is 403', async () => {
+    const page = makeMockPage({
+      goto: vi.fn().mockResolvedValue({ status: () => 403 } as unknown as Response),
+    })
+    const browser = makeMockBrowser(page)
+
+    await expect(
+      fetchPage('https://example.com', browser, 0, 'networkidle', '.event-card'),
+    ).rejects.toThrow('HTTP 403')
+    expect(page.waitForSelector).not.toHaveBeenCalled()
+  })
+
   it('returns html and status on success', async () => {
     const page = makeMockPage()
     const browser = makeMockBrowser(page)

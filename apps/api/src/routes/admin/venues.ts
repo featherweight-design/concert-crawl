@@ -23,7 +23,12 @@ const createVenueSchema = z.object({
   crawlWaitUntil: z
     .enum(['networkidle', 'load', 'domcontentloaded'])
     .default('networkidle'),
-  crawlWaitForSelector: z.string().nullable().optional(),
+  crawlWaitForSelector: z
+    .string()
+    .max(200)
+    .transform((val) => val.trim() || null)
+    .nullable()
+    .optional(),
 })
 
 const updateVenueSchema = createVenueSchema.partial().extend({
