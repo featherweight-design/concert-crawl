@@ -4,49 +4,8 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { useTheme } from '@/theme/ThemeProvider'
 import { THEMES, THEME_META, type ThemeName } from '@/theme/themes'
+import { MiniMark } from '@/theme/MiniMark'
 import { patchMe } from '@/lib/users'
-
-function MiniMark({
-  tokens,
-  size = 22,
-}: {
-  tokens: Record<string, string>
-  size?: number
-}) {
-  const dotPositions: [number, number][] = [
-    [14, 38],
-    [18, 34],
-    [22, 30],
-    [26, 26],
-    [30, 22],
-    [34, 18],
-    [14, 32],
-  ]
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 48 48"
-      aria-hidden="true"
-      style={{ flexShrink: 0 }}
-    >
-      <rect width="48" height="48" rx="10" fill={tokens['surface-2']} />
-      <circle cx="34" cy="14" r="9" fill={tokens['accent']} opacity="0.22" />
-      <circle cx="34" cy="14" r="5" fill={tokens['accent-2']} opacity="0.45" />
-      <circle cx="34" cy="14" r="3" fill={tokens['signal']} />
-      {dotPositions.map(([cx, cy], idx) => (
-        <circle
-          key={idx}
-          cx={cx}
-          cy={cy}
-          r="1.6"
-          fill={tokens['fg']}
-          opacity={0.45 + idx * 0.07}
-        />
-      ))}
-    </svg>
-  )
-}
 
 function ThemeSwatch({
   name,
@@ -70,6 +29,7 @@ function ThemeSwatch({
       aria-pressed={active}
       onClick={onClick}
       disabled={disabled}
+      className="theme-swatch-btn"
       style={{
         all: 'unset',
         cursor: disabled ? 'wait' : 'pointer',
@@ -302,7 +262,7 @@ export function ThemePickerInline() {
             textTransform: 'uppercase',
           }}
         >
-          9 themes
+          {themeKeys.length} themes
         </span>
       </div>
 

@@ -31,7 +31,7 @@ const themeScript = `
     try {
       var stored = localStorage.getItem('cc-theme');
       var system = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'electric' : 'light';
-      var theme = (stored === 'electric' || stored === 'jade' || stored === 'light') ? stored : system;
+      var theme = (stored && stored in themes) ? stored : system;
       var tokens = themes[theme];
       Object.keys(tokens).forEach(function(k) { root.style.setProperty('--' + k, tokens[k]); });
       root.setAttribute('data-theme', theme);

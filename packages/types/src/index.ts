@@ -272,7 +272,16 @@ export interface InviteCode {
 export type AvatarColor = 'signal' | 'accent' | 'success' | 'warning'
 
 // User-selectable theme
-export type UserTheme = 'electric' | 'jade' | 'light'
+export type UserTheme =
+  | 'electric'
+  | 'jade'
+  | 'light'
+  | 'pulse'
+  | 'forge'
+  | 'bluenote'
+  | 'drip'
+  | 'cedar'
+  | 'gloss'
 
 // Plan state — founder is the beta default; paid/trial/past-due are post-beta
 export type UserPlan = 'founder' | 'paid' | 'trial' | 'past-due'
