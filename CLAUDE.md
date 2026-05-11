@@ -383,6 +383,7 @@ Phase: **Pre-Beta Sprint — target open May 25, 2026**
 - Admin crawl data + run-all in PR (feat/admin-crawl-data-and-run-all): DB migration 0014 (llm_cost_usd, events_updated), crawler writes new fields, API selects them + bulk trigger endpoint, "Run all" button in CrawlSplitView; closes #150, #155, #156
 - Auto-versioning + release notes in PR #183 (feat/auto-versioning, issue #154): semantic-release on root package.json, CI→Release→Deploy-Staging pipeline chain, version injected from package.json into next.config.ts
 - Admin venue forms in PR (feat/admin-venue-forms, issue #187): Add Venue modal inline on Venues table, full Venue Details redesign (2-col layout, crawl health sparkline, danger zone), type-to-confirm hard delete, DB migration for events.venue_id nullable FK
+- Genre themes in PR (feat/genre-themes, issue #194): 6 genre themes (Pulse/Forge/Blue Note/Drip/Cedar/Gloss) + redesigned 9-theme picker; DB migration 0016
 
 ### Phase Sequence
 
@@ -419,6 +420,7 @@ Phase: **Pre-Beta Sprint — target open May 25, 2026**
 | —           | Onboarding polish                        | 🔄 In PR #173 (issues #134, #135, #138, #80)     |
 | —           | Auto-versioning + release notes          | 🔄 In PR #183 (feat/auto-versioning, issue #154) |
 | —           | Admin venue forms                        | 🔄 In PR (feat/admin-venue-forms, issue #187)    |
+| —           | Genre themes + picker redesign           | 🔄 In PR (feat/genre-themes, issue #194)         |
 | Pre-beta    | UI interactions audit + bug fixes        | 🔄 In progress (admin/crawl, sidebar)            |
 | Beta period | Jun 16 – Aug 3 (see beta-to-launch spec) | —                                                |
 | Launch prep | Aug 4–17                                 | —                                                |
