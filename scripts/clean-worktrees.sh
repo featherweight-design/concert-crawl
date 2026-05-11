@@ -8,21 +8,29 @@
 
 set -euo pipefail
 
-REPO_ROOT=$(git rev-parse --show-toplevel)
 DRY_RUN=false
-
 [[ "${1:-}" == "--dry-run" ]] && DRY_RUN=true && echo "Dry run — no changes will be made."
 echo ""
 
-# Collect branches that have an open PR so we never remove active work
-open_branches=$(gh pr list --state open --json headRefName --jq '.[].headRefName' 2>/dev/null || echo "")
+# Derive the primary worktree path from the first entry in the worktree list
+# (always the primary, regardless of which worktree this script is run from)
+PRIMARY_WORKTREE=$(git worktree list --porcelain | awk '/^worktree / { print substr($0, 10); exit }')
+
+# Fail fast if gh is unavailable or unauthenticated — an empty result would
+# cause every worktree to look PR-less and get deleted
+if ! open_branches=$(gh pr list --state open --json headRefName --jq '.[].headRefName' 2>&1); then
+  echo "ERROR: Could not fetch open PRs via gh:" >&2
+  echo "  $open_branches" >&2
+  echo "  Run 'gh auth login' or check your network connection." >&2
+  exit 1
+fi
 
 removed=0
 skipped=0
 
 while IFS='|' read -r wt_path branch; do
-  # Always keep the main worktree
-  [[ "$wt_path" == "$REPO_ROOT" ]] && continue
+  # Always keep the primary worktree
+  [[ "$wt_path" == "$PRIMARY_WORKTREE" ]] && continue
 
   # Skip detached HEADs (no branch)
   if [[ -z "$branch" ]]; then
@@ -37,7 +45,7 @@ while IFS='|' read -r wt_path branch; do
   else
     echo "REMOVE: $wt_path  [$branch]"
     if [[ "$DRY_RUN" == false ]]; then
-      git worktree remove --force "$wt_path"
+      git worktree remove "$wt_path"
       git branch -D "$branch" 2>/dev/null || true
     fi
     ((removed++)) || true
@@ -49,7 +57,7 @@ done < <(git worktree list --porcelain | awk '
   END          { if (path != "") print path "|" branch }
 ')
 
-git worktree prune
+[[ "$DRY_RUN" == false ]] && git worktree prune
 
 echo ""
 if [[ "$DRY_RUN" == true ]]; then
