@@ -11,10 +11,23 @@ import {
 } from '@concert-crawl/db'
 import { testDb } from './db.js'
 
-export async function clearTables(): Promise<void> {
-  await testDb.execute(
-    sql`TRUNCATE submission_confirms, price_submissions, user_events, events, venues, crawl_runs, audit_log, invite_codes, user_roles, price_retrieval_log, user_profiles, feedback RESTART IDENTITY CASCADE`,
-  )
+export async function clearTables(retries = 3): Promise<void> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      await testDb.execute(
+        sql`TRUNCATE submission_confirms, price_submissions, user_events, events, venues, crawl_runs, audit_log, invite_codes, user_roles, price_retrieval_log, user_profiles, feedback RESTART IDENTITY CASCADE`,
+      )
+      return
+    } catch (err) {
+      const isDeadlock =
+        err !== null &&
+        typeof err === 'object' &&
+        'code' in err &&
+        err.code === '40P01'
+      if (!isDeadlock || attempt === retries) throw err
+      await new Promise((resolve) => setTimeout(resolve, 50 * attempt))
+    }
+  }
 }
 
 export async function seedUserEvent(
