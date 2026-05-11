@@ -1,3 +1,19 @@
+# [1.5.0](https://github.com/HartiganHM/concert-crawl/compare/v1.4.2...v1.5.0) (2026-05-11)
+
+
+### Bug Fixes
+
+* **db:** add savedPrice to user_events and 2nd low-confidence notification per spec ([321ac88](https://github.com/HartiganHM/concert-crawl/commit/321ac88f549790fa1f8ad0cbafbe20dce9bfead9))
+* **db:** address Copilot review — handle/role conflict safety, orderBy, submission guards ([9f77d45](https://github.com/HartiganHM/concert-crawl/commit/9f77d45f230034355ce0ba365fe9e7762e03c016))
+
+
+### Features
+
+* **db:** add db:sync-local script and README seeding docs ([7cb323c](https://github.com/HartiganHM/concert-crawl/commit/7cb323c0c0ebf39882b0750263f23c645094c72c))
+* **db:** add staging snapshot SQL for local dev ([a693786](https://github.com/HartiganHM/concert-crawl/commit/a693786f2231d306068e2bbe46eeb462a9a14ad8))
+* **db:** comprehensive UI state coverage in seed data ([fd7a6fb](https://github.com/HartiganHM/concert-crawl/commit/fd7a6fb35c697256a655be2b3bbabdeb565a1b4d))
+* **db:** expand seed with synthetic users, roles, and event-linked data ([2ff0ab4](https://github.com/HartiganHM/concert-crawl/commit/2ff0ab4faae1084ba71ea8d6d7a0974e468963fe))
+
 ## [1.4.2](https://github.com/HartiganHM/concert-crawl/compare/v1.4.1...v1.4.2) (2026-05-11)
 
 
