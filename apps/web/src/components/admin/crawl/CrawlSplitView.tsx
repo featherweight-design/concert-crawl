@@ -269,19 +269,21 @@ export const CrawlSplitView = ({
   useEffect(() => {
     if (!selectedId) {
       setVenueRuns([])
+      setVenueRunsLoading(false)
       return
     }
     let cancelled = false
+    setVenueRuns([])
     setVenueRunsLoading(true)
     fetch(
       `/api/admin/crawl/runs?venueId=${selectedId}&limit=${VENUE_RUNS_LIMIT}`,
     )
       .then((res) => res.json())
       .then((body: { success: boolean; data: CrawlRun[] }) => {
-        if (!cancelled && body.success) setVenueRuns(body.data)
+        if (!cancelled) setVenueRuns(body.success ? body.data : [])
       })
       .catch(() => {
-        // silently fall back to initialRuns filter on fetch failure
+        if (!cancelled) setVenueRuns([])
       })
       .finally(() => {
         if (!cancelled) setVenueRunsLoading(false)
@@ -357,8 +359,10 @@ export const CrawlSplitView = ({
   }
 
   const selected = initialStatus.find((row) => row.venueId === selectedId)
-  const selectedRuns = initialRuns.filter((run) => run.venueId === selectedId)
-  const activeRun = selectedRuns[0] ?? null
+  const activeRun =
+    (selectedId ? venueRuns[0] : null) ??
+    initialRuns.find((run) => run.venueId === selectedId) ??
+    null
 
   const venueRecrawlState = selectedId ? recrawlState[selectedId] : undefined
   const venueRecrawlError = selectedId ? recrawlError[selectedId] : undefined
@@ -1135,7 +1139,7 @@ export const CrawlRunHistoryTable = ({
       }
       padding={0}
     >
-      {displayRuns.length === 0 ? (
+      {displayRuns.length === 0 && !loading ? (
         <div
           style={{
             minHeight: 300,

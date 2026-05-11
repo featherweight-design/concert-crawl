@@ -28,6 +28,14 @@ export async function GET(req: Request) {
     headers: { Authorization: `Bearer ${token}` },
   })
 
+  const contentType = upstream.headers.get('content-type') ?? ''
+  if (!contentType.includes('application/json')) {
+    return NextResponse.json(
+      { error: `Upstream error ${upstream.status}` },
+      { status: upstream.status },
+    )
+  }
+
   const body = await upstream.json()
   return NextResponse.json(body, { status: upstream.status })
 }
