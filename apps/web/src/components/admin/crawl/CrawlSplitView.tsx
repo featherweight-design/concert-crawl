@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { useState, useEffect, useRef } from 'react'
 import { ExternalLink, RefreshCw, Filter } from 'lucide-react'
 import {
   StatusBadge,
@@ -241,20 +240,11 @@ export const CrawlSplitView = ({
       ? initialSelectedId
       : (initialStatus[0]?.venueId ?? null)
 
-  const router = useRouter()
-  const pathname = usePathname()
-
   const [selectedId, setSelectedId] = useState<string | null>(resolvedInitialId)
 
-  const selectVenue = useCallback(
-    (venueId: string | null) => {
-      setSelectedId(venueId)
-      const params = new URLSearchParams()
-      if (venueId) params.set('venueId', venueId)
-      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-    },
-    [router, pathname],
-  )
+  function selectVenue(venueId: string | null) {
+    setSelectedId(venueId)
+  }
   const [statusFilter, setStatusFilter] = useState('')
   const [venueNameFilter, setVenueNameFilter] = useState('')
   const [filterOpen, setFilterOpen] = useState(false)
@@ -307,7 +297,7 @@ export const CrawlSplitView = ({
     ) {
       selectVenue(null)
     }
-  }, [statusFilter, venueNameFilter, filteredStatus, selectedId, selectVenue])
+  }, [statusFilter, venueNameFilter, filteredStatus, selectedId, setSelectedId])
 
   async function handleTrigger(venueId: string) {
     setRecrawlState((prev) => ({ ...prev, [venueId]: 'triggering' }))
@@ -344,329 +334,360 @@ export const CrawlSplitView = ({
   const venueRecrawlError = selectedId ? recrawlError[selectedId] : undefined
 
   return (
-    <div style={{ display: 'flex', gap: 16, height: 560 }}>
-      {/* Left rail */}
-      <div
-        style={{
-          width: 460,
-          flexShrink: 0,
-          border: '1px solid var(--border)',
-          borderRadius: 12,
-          background: 'var(--bg-elevated)',
-          overflowY: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
+    <>
+      <div style={{ display: 'flex', gap: 16, height: 560 }}>
+        {/* Left rail */}
         <div
           style={{
-            padding: '10px 14px',
-            borderBottom: '1px solid var(--border)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 8,
+            width: 460,
             flexShrink: 0,
-            position: 'sticky',
-            top: 0,
-            zIndex: 1,
+            border: '1px solid var(--border)',
+            borderRadius: 12,
             background: 'var(--bg-elevated)',
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
-          <span
-            style={{ fontSize: 12, fontWeight: 500, color: 'var(--fg-muted)' }}
-          >
-            Latest run · per venue{' '}
-            <span style={{ fontWeight: 700, color: 'var(--fg)' }}>
-              {filteredStatus.length}
-            </span>
-          </span>
-          <div ref={filterRef} style={{ position: 'relative' }}>
-            <button
-              onClick={() => setFilterOpen((prev) => !prev)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                height: 28,
-                padding: '0 10px',
-                borderRadius: 6,
-                fontSize: 12,
-                fontWeight: 600,
-                border: `1px solid ${filtersActive ? 'var(--signal)' : 'var(--border)'}`,
-                background: filtersActive
-                  ? 'rgba(var(--signal-rgb, 99,102,241),0.08)'
-                  : 'transparent',
-                color: filtersActive ? 'var(--signal)' : 'var(--fg-muted)',
-                cursor: 'pointer',
-              }}
-            >
-              <Filter size={13} />
-              Filter
-            </button>
-            {filterOpen && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 6px)',
-                  right: 0,
-                  zIndex: 10,
-                  width: 220,
-                  background: 'var(--bg-elevated)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 10,
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
-                  padding: 12,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 10,
-                }}
-              >
-                <div>
-                  <label
-                    style={{
-                      display: 'block',
-                      fontSize: 10,
-                      fontWeight: 700,
-                      letterSpacing: '0.08em',
-                      textTransform: 'uppercase',
-                      color: 'var(--fg-subtle)',
-                      marginBottom: 4,
-                    }}
-                  >
-                    Status
-                  </label>
-                  <select
-                    value={statusFilter}
-                    onChange={(ev) => setStatusFilter(ev.target.value)}
-                    style={{
-                      width: '100%',
-                      fontSize: 12,
-                      color: 'var(--fg)',
-                      background: 'var(--surface-1)',
-                      border: '1px solid var(--border)',
-                      borderRadius: 6,
-                      padding: '4px 8px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {STATUS_FILTER_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label
-                    style={{
-                      display: 'block',
-                      fontSize: 10,
-                      fontWeight: 700,
-                      letterSpacing: '0.08em',
-                      textTransform: 'uppercase',
-                      color: 'var(--fg-subtle)',
-                      marginBottom: 4,
-                    }}
-                  >
-                    Venue
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Search venues…"
-                    value={venueNameFilter}
-                    onChange={(ev) => setVenueNameFilter(ev.target.value)}
-                    style={{
-                      width: '100%',
-                      fontSize: 12,
-                      color: 'var(--fg)',
-                      background: 'var(--surface-1)',
-                      border: '1px solid var(--border)',
-                      borderRadius: 6,
-                      padding: '4px 8px',
-                      outline: 'none',
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-                {filtersActive && (
-                  <button
-                    onClick={() => {
-                      setStatusFilter('')
-                      setVenueNameFilter('')
-                    }}
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: 'var(--fg-muted)',
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      padding: 0,
-                    }}
-                  >
-                    Clear filters
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-        {filteredStatus.map((row) => (
-          <button
-            key={row.venueId}
-            id={`venue-row-${row.venueId}`}
-            onClick={() => selectVenue(row.venueId)}
+          <div
             style={{
-              width: '100%',
+              padding: '10px 14px',
+              borderBottom: '1px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
-              gap: 10,
-              padding: '12px 14px',
-              borderBottom: '1px solid var(--border)',
-              background:
-                row.venueId === selectedId ? 'var(--surface-2)' : 'transparent',
-              borderLeft:
-                row.venueId === selectedId
-                  ? '2px solid var(--signal)'
-                  : '2px solid transparent',
-              cursor: 'pointer',
-              textAlign: 'left',
+              justifyContent: 'space-between',
+              gap: 8,
+              flexShrink: 0,
+              position: 'sticky',
+              top: 0,
+              zIndex: 1,
+              background: 'var(--bg-elevated)',
             }}
           >
             <span
               style={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: `var(--${STATUS_KIND[row.status] ?? 'neutral'})`,
-                flexShrink: 0,
+                fontSize: 12,
+                fontWeight: 500,
+                color: 'var(--fg-muted)',
               }}
-            />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div
+            >
+              Latest run · per venue{' '}
+              <span style={{ fontWeight: 700, color: 'var(--fg)' }}>
+                {filteredStatus.length}
+              </span>
+            </span>
+            <div ref={filterRef} style={{ position: 'relative' }}>
+              <button
+                onClick={() => setFilterOpen((prev) => !prev)}
                 style={{
-                  fontSize: 13,
-                  fontWeight: 500,
-                  color: 'var(--fg)',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  height: 28,
+                  padding: '0 10px',
+                  borderRadius: 6,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  border: `1px solid ${filtersActive ? 'var(--signal)' : 'var(--border)'}`,
+                  background: filtersActive
+                    ? 'rgba(var(--signal-rgb, 99,102,241),0.08)'
+                    : 'transparent',
+                  color: filtersActive ? 'var(--signal)' : 'var(--fg-muted)',
+                  cursor: 'pointer',
                 }}
               >
-                {row.venueName}
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--fg-muted)' }}>
-                {row.lastRunAt ? `${fmtTimeMT(row.lastRunAt)} MT` : 'never'}
-                {row.durationMs != null
-                  ? ` · ${(row.durationMs / 1000).toFixed(1)}s`
-                  : ''}
-                {' · '}
-                <span
+                <Filter size={13} />
+                Filter
+              </button>
+              {filterOpen && (
+                <div
                   style={{
-                    color:
-                      row.eventsFound > 0
-                        ? 'var(--fg-muted)'
-                        : 'var(--fg-subtle)',
+                    position: 'absolute',
+                    top: 'calc(100% + 6px)',
+                    right: 0,
+                    zIndex: 10,
+                    width: 220,
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 10,
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+                    padding: 12,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 10,
                   }}
                 >
-                  {row.eventsFound} ev
-                </span>
-              </div>
+                  <div>
+                    <label
+                      style={{
+                        display: 'block',
+                        fontSize: 10,
+                        fontWeight: 700,
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                        color: 'var(--fg-subtle)',
+                        marginBottom: 4,
+                      }}
+                    >
+                      Status
+                    </label>
+                    <select
+                      value={statusFilter}
+                      onChange={(ev) => setStatusFilter(ev.target.value)}
+                      style={{
+                        width: '100%',
+                        fontSize: 12,
+                        color: 'var(--fg)',
+                        background: 'var(--surface-1)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 6,
+                        padding: '4px 8px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {STATUS_FILTER_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label
+                      style={{
+                        display: 'block',
+                        fontSize: 10,
+                        fontWeight: 700,
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                        color: 'var(--fg-subtle)',
+                        marginBottom: 4,
+                      }}
+                    >
+                      Venue
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Search venues…"
+                      value={venueNameFilter}
+                      onChange={(ev) => setVenueNameFilter(ev.target.value)}
+                      style={{
+                        width: '100%',
+                        fontSize: 12,
+                        color: 'var(--fg)',
+                        background: 'var(--surface-1)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 6,
+                        padding: '4px 8px',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+                  {filtersActive && (
+                    <button
+                      onClick={() => {
+                        setStatusFilter('')
+                        setVenueNameFilter('')
+                      }}
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: 'var(--fg-muted)',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        padding: 0,
+                      }}
+                    >
+                      Clear filters
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
-            <StatusBadge
-              kind={STATUS_KIND[row.lastRunStatus] ?? 'neutral'}
-              dot={row.lastRunStatus !== 'never'}
-            >
-              {row.lastRunStatus.charAt(0).toUpperCase() +
-                row.lastRunStatus.slice(1)}
-            </StatusBadge>
-          </button>
-        ))}
-      </div>
-
-      {/* Right inspector — single bordered container, no gap between sections */}
-      <div
-        style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          border: '1px solid var(--border)',
-          borderRadius: 12,
-          background: 'var(--bg-elevated)',
-          overflow: 'hidden',
-          minHeight: 0,
-        }}
-      >
-        {selected ? (
-          <>
-            {/* Header */}
-            <div
+          </div>
+          {filteredStatus.map((row) => (
+            <button
+              key={row.venueId}
+              id={`venue-row-${row.venueId}`}
+              onClick={() => selectVenue(row.venueId)}
               style={{
-                padding: '16px 22px',
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '12px 14px',
                 borderBottom: '1px solid var(--border)',
-                background: 'var(--surface-1)',
-                flexShrink: 0,
+                background:
+                  row.venueId === selectedId
+                    ? 'var(--surface-2)'
+                    : 'transparent',
+                borderLeft:
+                  row.venueId === selectedId
+                    ? '2px solid var(--signal)'
+                    : '2px solid transparent',
+                cursor: 'pointer',
+                textAlign: 'left',
               }}
             >
-              {activeRun && (
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: `var(--${STATUS_KIND[row.status] ?? 'neutral'})`,
+                  flexShrink: 0,
+                }}
+              />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 500,
+                    color: 'var(--fg)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {row.venueName}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--fg-muted)' }}>
+                  {row.lastRunAt ? `${fmtTimeMT(row.lastRunAt)} MT` : 'never'}
+                  {row.durationMs != null
+                    ? ` · ${(row.durationMs / 1000).toFixed(1)}s`
+                    : ''}
+                  {' · '}
+                  <span
+                    style={{
+                      color:
+                        row.eventsFound > 0
+                          ? 'var(--fg-muted)'
+                          : 'var(--fg-subtle)',
+                    }}
+                  >
+                    {row.eventsFound} ev
+                  </span>
+                </div>
+              </div>
+              <StatusBadge
+                kind={STATUS_KIND[row.lastRunStatus] ?? 'neutral'}
+                dot={row.lastRunStatus !== 'never'}
+              >
+                {row.lastRunStatus.charAt(0).toUpperCase() +
+                  row.lastRunStatus.slice(1)}
+              </StatusBadge>
+            </button>
+          ))}
+        </div>
+
+        {/* Right inspector — single bordered container, no gap between sections */}
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            border: '1px solid var(--border)',
+            borderRadius: 12,
+            background: 'var(--bg-elevated)',
+            overflow: 'hidden',
+            minHeight: 0,
+          }}
+        >
+          {selected ? (
+            <>
+              {/* Header */}
+              <div
+                style={{
+                  padding: '16px 22px',
+                  borderBottom: '1px solid var(--border)',
+                  background: 'var(--surface-1)',
+                  flexShrink: 0,
+                }}
+              >
+                {activeRun && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      marginBottom: 6,
+                    }}
+                  >
+                    <code
+                      style={{
+                        fontSize: 12,
+                        color: 'var(--fg-muted)',
+                        fontFamily: "'JetBrains Mono', monospace",
+                      }}
+                    >
+                      {shortRunId(activeRun.id)}
+                    </code>
+                    <span style={{ color: 'var(--fg-subtle)', fontSize: 12 }}>
+                      ·
+                    </span>
+                    <StatusBadge
+                      kind={STATUS_KIND[activeRun.status] ?? 'neutral'}
+                      dot
+                    >
+                      {activeRun.status.charAt(0).toUpperCase() +
+                        activeRun.status.slice(1)}
+                    </StatusBadge>
+                  </div>
+                )}
                 <div
                   style={{
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    marginBottom: 6,
+                    alignItems: 'flex-end',
+                    justifyContent: 'space-between',
+                    gap: 16,
+                    flexWrap: 'wrap' as const,
                   }}
                 >
-                  <code
+                  <h2
                     style={{
-                      fontSize: 12,
-                      color: 'var(--fg-muted)',
-                      fontFamily: "'JetBrains Mono', monospace",
+                      margin: 0,
+                      fontSize: 22,
+                      fontWeight: 700,
+                      letterSpacing: '-0.02em',
+                      color: 'var(--fg)',
+                      lineHeight: 1.2,
                     }}
                   >
-                    {shortRunId(activeRun.id)}
-                  </code>
-                  <span style={{ color: 'var(--fg-subtle)', fontSize: 12 }}>
-                    ·
-                  </span>
-                  <StatusBadge
-                    kind={STATUS_KIND[activeRun.status] ?? 'neutral'}
-                    dot
-                  >
-                    {activeRun.status.charAt(0).toUpperCase() +
-                      activeRun.status.slice(1)}
-                  </StatusBadge>
-                </div>
-              )}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-end',
-                  justifyContent: 'space-between',
-                  gap: 16,
-                  flexWrap: 'wrap' as const,
-                }}
-              >
-                <h2
-                  style={{
-                    margin: 0,
-                    fontSize: 22,
-                    fontWeight: 700,
-                    letterSpacing: '-0.02em',
-                    color: 'var(--fg)',
-                    lineHeight: 1.2,
-                  }}
-                >
-                  {selected.venueName}
-                </h2>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {selected.websiteUrl && (
-                    <a
-                      href={selected.websiteUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    {selected.venueName}
+                  </h2>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {selected.websiteUrl && (
+                      <a
+                        href={selected.websiteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          height: 32,
+                          padding: '0 12px',
+                          borderRadius: 8,
+                          fontSize: 13,
+                          fontWeight: 500,
+                          border: '1px solid var(--border)',
+                          color: 'var(--fg-muted)',
+                          textDecoration: 'none',
+                        }}
+                      >
+                        <ExternalLink size={15} />
+                        Source URL
+                      </a>
+                    )}
+                    <button
+                      onClick={() => handleTrigger(selected.venueId)}
+                      disabled={
+                        venueRecrawlState === 'triggering' ||
+                        venueRecrawlState === 'queued'
+                      }
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -675,357 +696,336 @@ export const CrawlSplitView = ({
                         padding: '0 12px',
                         borderRadius: 8,
                         fontSize: 13,
-                        fontWeight: 500,
-                        border: '1px solid var(--border)',
-                        color: 'var(--fg-muted)',
-                        textDecoration: 'none',
+                        fontWeight: 600,
+                        border: 'none',
+                        background:
+                          venueRecrawlState === 'triggering' ||
+                          venueRecrawlState === 'queued'
+                            ? 'var(--fg-subtle)'
+                            : 'var(--signal)',
+                        color: 'var(--signal-fg, #0f172a)',
+                        cursor:
+                          venueRecrawlState === 'triggering' ||
+                          venueRecrawlState === 'queued'
+                            ? 'not-allowed'
+                            : 'pointer',
                       }}
                     >
-                      <ExternalLink size={15} />
-                      Source URL
-                    </a>
-                  )}
-                  <button
-                    onClick={() => handleTrigger(selected.venueId)}
-                    disabled={
-                      venueRecrawlState === 'triggering' ||
-                      venueRecrawlState === 'queued'
-                    }
+                      <RefreshCw size={15} />
+                      {venueRecrawlState === 'triggering'
+                        ? 'Triggering…'
+                        : venueRecrawlState === 'queued'
+                          ? 'Queued'
+                          : 'Re-crawl'}
+                    </button>
+                  </div>
+                </div>
+                {venueRecrawlError && (
+                  <div
                     style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      height: 32,
-                      padding: '0 12px',
-                      borderRadius: 8,
-                      fontSize: 13,
-                      fontWeight: 600,
-                      border: 'none',
-                      background:
-                        venueRecrawlState === 'triggering' ||
-                        venueRecrawlState === 'queued'
-                          ? 'var(--fg-subtle)'
-                          : 'var(--signal)',
-                      color: 'var(--signal-fg, #0f172a)',
-                      cursor:
-                        venueRecrawlState === 'triggering' ||
-                        venueRecrawlState === 'queued'
-                          ? 'not-allowed'
-                          : 'pointer',
+                      marginTop: 8,
+                      padding: '8px 10px',
+                      borderRadius: 6,
+                      background: 'rgba(184,56,26,0.08)',
+                      color: 'var(--danger)',
+                      fontSize: 12,
                     }}
                   >
-                    <RefreshCw size={15} />
-                    {venueRecrawlState === 'triggering'
-                      ? 'Triggering…'
-                      : venueRecrawlState === 'queued'
-                        ? 'Queued'
-                        : 'Re-crawl'}
-                  </button>
-                </div>
+                    {venueRecrawlError}
+                  </div>
+                )}
               </div>
-              {venueRecrawlError && (
+
+              {/* Vitals — separate section with border dividers */}
+              {activeRun && (
                 <div
                   style={{
-                    marginTop: 8,
-                    padding: '8px 10px',
-                    borderRadius: 6,
-                    background: 'rgba(184,56,26,0.08)',
-                    color: 'var(--danger)',
-                    fontSize: 12,
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(4, 1fr)',
+                    gap: 0,
+                    borderBottom: '1px solid var(--border)',
+                    flexShrink: 0,
                   }}
                 >
-                  {venueRecrawlError}
+                  {[
+                    {
+                      label: 'Started',
+                      value: fmtDateTimeMT(
+                        activeRun.startedAt ?? activeRun.createdAt,
+                      ),
+                      danger: false,
+                    },
+                    {
+                      label: 'Duration',
+                      value: activeRun.durationMs
+                        ? `${(activeRun.durationMs / 1000).toFixed(1)}s`
+                        : '—',
+                      danger: false,
+                    },
+                    {
+                      label: 'HTTP',
+                      value: activeRun.httpStatusCode
+                        ? String(activeRun.httpStatusCode)
+                        : '—',
+                      danger:
+                        activeRun.httpStatusCode !== null &&
+                        activeRun.httpStatusCode >= 400,
+                    },
+                    {
+                      label: 'LLM Cost',
+                      value: formatCostValue(activeRun.llmCostUsd),
+                      danger: false,
+                    },
+                  ].map((stat, idx) => (
+                    <div
+                      key={stat.label}
+                      style={{
+                        padding: '14px 18px',
+                        borderRight:
+                          idx < 3 ? '1px solid var(--border)' : 'none',
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          letterSpacing: '0.08em',
+                          textTransform: 'uppercase' as const,
+                          color: 'var(--fg-subtle)',
+                          marginBottom: 4,
+                        }}
+                      >
+                        {stat.label}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 600,
+                          color: stat.danger ? 'var(--danger)' : 'var(--fg)',
+                          fontFamily: "'JetBrains Mono', monospace",
+                        }}
+                      >
+                        {stat.value}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
-            </div>
 
-            {/* Vitals — separate section with border dividers */}
-            {activeRun && (
+              {/* Content */}
               <div
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(4, 1fr)',
-                  gap: 0,
-                  borderBottom: '1px solid var(--border)',
-                  flexShrink: 0,
+                  padding: '20px 22px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 18,
+                  overflowY: 'auto',
+                  flex: 1,
                 }}
               >
-                {[
-                  {
-                    label: 'Started',
-                    value: fmtDateTimeMT(
-                      activeRun.startedAt ?? activeRun.createdAt,
-                    ),
-                    danger: false,
-                  },
-                  {
-                    label: 'Duration',
-                    value: activeRun.durationMs
-                      ? `${(activeRun.durationMs / 1000).toFixed(1)}s`
-                      : '—',
-                    danger: false,
-                  },
-                  {
-                    label: 'HTTP',
-                    value: activeRun.httpStatusCode
-                      ? String(activeRun.httpStatusCode)
-                      : '—',
-                    danger:
-                      activeRun.httpStatusCode !== null &&
-                      activeRun.httpStatusCode >= 400,
-                  },
-                  {
-                    label: 'LLM Cost',
-                    value: formatCostValue(activeRun.llmCostUsd),
-                    danger: false,
-                  },
-                ].map((stat, idx) => (
-                  <div
-                    key={stat.label}
-                    style={{
-                      padding: '14px 18px',
-                      borderRight: idx < 3 ? '1px solid var(--border)' : 'none',
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        letterSpacing: '0.08em',
-                        textTransform: 'uppercase' as const,
-                        color: 'var(--fg-subtle)',
-                        marginBottom: 4,
-                      }}
-                    >
-                      {stat.label}
+                {activeRun ? (
+                  <>
+                    {/* Events mini cards */}
+                    <div>
+                      <div
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          letterSpacing: '0.08em',
+                          textTransform: 'uppercase' as const,
+                          color: 'var(--fg-subtle)',
+                          marginBottom: 10,
+                        }}
+                      >
+                        Events
+                      </div>
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(3, 1fr)',
+                          gap: 12,
+                        }}
+                      >
+                        {[
+                          {
+                            label: 'Found',
+                            value: activeRun.eventsFound as string | number,
+                            color:
+                              activeRun.eventsFound > 0
+                                ? 'var(--fg)'
+                                : 'var(--fg-subtle)',
+                          },
+                          {
+                            label: 'Created',
+                            value: activeRun.eventsInserted as string | number,
+                            color:
+                              activeRun.eventsInserted > 0
+                                ? 'var(--success)'
+                                : 'var(--fg-subtle)',
+                          },
+                          {
+                            label: 'Updated',
+                            value: activeRun.eventsUpdated as string | number,
+                            color:
+                              activeRun.eventsUpdated > 0
+                                ? 'var(--fg)'
+                                : 'var(--fg-subtle)',
+                          },
+                        ].map((stat) => (
+                          <div
+                            key={stat.label}
+                            style={{
+                              padding: '14px 16px',
+                              borderRadius: 8,
+                              background: 'var(--surface-1)',
+                              border: '1px solid var(--border)',
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontFamily: "'JetBrains Mono', monospace",
+                                fontSize: 22,
+                                fontWeight: 700,
+                                color: stat.color,
+                                fontVariantNumeric: 'tabular-nums',
+                                letterSpacing: '-0.02em',
+                              }}
+                            >
+                              {stat.value}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 700,
+                                letterSpacing: '0.08em',
+                                textTransform: 'uppercase' as const,
+                                color: 'var(--fg-subtle)',
+                                marginTop: 4,
+                              }}
+                            >
+                              {stat.label}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <div
-                      style={{
-                        fontSize: 14,
-                        fontWeight: 600,
-                        color: stat.danger ? 'var(--danger)' : 'var(--fg)',
-                        fontFamily: "'JetBrains Mono', monospace",
-                      }}
-                    >
-                      {stat.value}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
 
-            {/* Content */}
-            <div
-              style={{
-                padding: '20px 22px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 18,
-                overflowY: 'auto',
-                flex: 1,
-              }}
-            >
-              {activeRun ? (
-                <>
-                  {/* Events mini cards */}
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        letterSpacing: '0.08em',
-                        textTransform: 'uppercase' as const,
-                        color: 'var(--fg-subtle)',
-                        marginBottom: 10,
-                      }}
-                    >
-                      Events
-                    </div>
-                    <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(3, 1fr)',
-                        gap: 12,
-                      }}
-                    >
-                      {[
-                        {
-                          label: 'Found',
-                          value: activeRun.eventsFound as string | number,
-                          color:
-                            activeRun.eventsFound > 0
-                              ? 'var(--fg)'
-                              : 'var(--fg-subtle)',
-                        },
-                        {
-                          label: 'Created',
-                          value: activeRun.eventsInserted as string | number,
-                          color:
-                            activeRun.eventsInserted > 0
-                              ? 'var(--success)'
-                              : 'var(--fg-subtle)',
-                        },
-                        {
-                          label: 'Updated',
-                          value: activeRun.eventsUpdated as string | number,
-                          color:
-                            activeRun.eventsUpdated > 0
-                              ? 'var(--fg)'
-                              : 'var(--fg-subtle)',
-                        },
-                      ].map((stat) => (
+                    {/* Error block */}
+                    {activeRun.errorMessage && (
+                      <ErrorBlock
+                        errorMessage={activeRun.errorMessage}
+                        httpStatusCode={activeRun.httpStatusCode}
+                        consecutiveFailures={selected.consecutiveFailures}
+                        blockedAt={selected.blockedAt}
+                      />
+                    )}
+
+                    {/* Source preview */}
+                    {selected.websiteUrl && (
+                      <div>
                         <div
-                          key={stat.label}
                           style={{
-                            padding: '14px 16px',
-                            borderRadius: 8,
-                            background: 'var(--surface-1)',
-                            border: '1px solid var(--border)',
+                            fontSize: 10,
+                            fontWeight: 700,
+                            letterSpacing: '0.08em',
+                            textTransform: 'uppercase' as const,
+                            color: 'var(--fg-subtle)',
+                            marginBottom: 8,
                           }}
                         >
-                          <div
+                          Source
+                        </div>
+                        <div
+                          style={{
+                            padding: '12px 14px',
+                            background: 'var(--surface-1)',
+                            borderRadius: 8,
+                            border: '1px solid var(--border)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 10,
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: 13,
+                              color: 'var(--fg-subtle)',
+                              flexShrink: 0,
+                            }}
+                          >
+                            ↗
+                          </span>
+                          <span
                             style={{
                               fontFamily: "'JetBrains Mono', monospace",
-                              fontSize: 22,
-                              fontWeight: 700,
-                              color: stat.color,
-                              fontVariantNumeric: 'tabular-nums',
-                              letterSpacing: '-0.02em',
+                              fontSize: 12,
+                              color: 'var(--fg-muted)',
+                              flex: 1,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap' as const,
                             }}
                           >
-                            {stat.value}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              letterSpacing: '0.08em',
-                              textTransform: 'uppercase' as const,
-                              color: 'var(--fg-subtle)',
-                              marginTop: 4,
-                            }}
-                          >
-                            {stat.label}
-                          </div>
+                            {selected.websiteUrl}
+                          </span>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Error block */}
-                  {activeRun.errorMessage && (
-                    <ErrorBlock
-                      errorMessage={activeRun.errorMessage}
-                      httpStatusCode={activeRun.httpStatusCode}
-                      consecutiveFailures={selected.consecutiveFailures}
-                      blockedAt={selected.blockedAt}
-                    />
-                  )}
-
-                  {/* Source preview */}
-                  {selected.websiteUrl && (
-                    <div>
-                      <div
-                        style={{
-                          fontSize: 10,
-                          fontWeight: 700,
-                          letterSpacing: '0.08em',
-                          textTransform: 'uppercase' as const,
-                          color: 'var(--fg-subtle)',
-                          marginBottom: 8,
-                        }}
-                      >
-                        Source
                       </div>
-                      <div
-                        style={{
-                          padding: '12px 14px',
-                          background: 'var(--surface-1)',
-                          borderRadius: 8,
-                          border: '1px solid var(--border)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 10,
-                        }}
-                      >
-                        <span
+                    )}
+
+                    {/* Strategy */}
+                    {selected.strategy && selected.strategy !== '—' && (
+                      <div>
+                        <div
                           style={{
-                            fontSize: 13,
+                            fontSize: 10,
+                            fontWeight: 700,
+                            letterSpacing: '0.08em',
+                            textTransform: 'uppercase' as const,
                             color: 'var(--fg-subtle)',
-                            flexShrink: 0,
+                            marginBottom: 8,
                           }}
                         >
-                          ↗
-                        </span>
-                        <span
-                          style={{
-                            fontFamily: "'JetBrains Mono', monospace",
-                            fontSize: 12,
-                            color: 'var(--fg-muted)',
-                            flex: 1,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap' as const,
-                          }}
+                          Strategy
+                        </div>
+                        <StatusBadge
+                          kind={
+                            selected.strategy === 'structured'
+                              ? 'signal'
+                              : selected.strategy === 'llm'
+                                ? 'warning'
+                                : 'neutral'
+                          }
                         >
-                          {selected.websiteUrl}
-                        </span>
+                          {selected.strategy}
+                        </StatusBadge>
                       </div>
-                    </div>
-                  )}
-
-                  {/* Strategy */}
-                  {selected.strategy && selected.strategy !== '—' && (
-                    <div>
-                      <div
-                        style={{
-                          fontSize: 10,
-                          fontWeight: 700,
-                          letterSpacing: '0.08em',
-                          textTransform: 'uppercase' as const,
-                          color: 'var(--fg-subtle)',
-                          marginBottom: 8,
-                        }}
-                      >
-                        Strategy
-                      </div>
-                      <StatusBadge
-                        kind={
-                          selected.strategy === 'structured'
-                            ? 'signal'
-                            : selected.strategy === 'llm'
-                              ? 'warning'
-                              : 'neutral'
-                        }
-                      >
-                        {selected.strategy}
-                      </StatusBadge>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
-                  No runs yet
-                </div>
-              )}
+                    )}
+                  </>
+                ) : (
+                  <div style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
+                    No runs yet
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flex: 1,
+                color: 'var(--fg-muted)',
+                fontSize: 14,
+              }}
+            >
+              Select a venue to inspect
             </div>
-          </>
-        ) : (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flex: 1,
-              color: 'var(--fg-muted)',
-              fontSize: 14,
-            }}
-          >
-            Select a venue to inspect
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+      <CrawlRunHistoryTable initialRuns={initialRuns} venueId={selectedId} />
+    </>
   )
 }
 
