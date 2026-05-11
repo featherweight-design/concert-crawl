@@ -17,26 +17,50 @@ export function MySubmissionsList({
   const visible = submissions.slice(0, cap)
   const hasMore = totalCount > cap
 
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="px-1 text-[13px] font-semibold text-fg">
-        {SETTINGS_COPY.submissionsSection}
-      </span>
-      {visible.length === 0 ? (
-        <p className="px-4 py-3 text-[13px] text-fg-muted">
-          No submissions yet.
-        </p>
-      ) : (
-        <div className="flex flex-col">
-          {visible.map((sub) => (
-            <SubmissionItem key={sub.id} submission={sub} />
-          ))}
-          {hasMore && (
-            <span className="px-4 py-3 text-[13px] text-fg-subtle">
-              {SETTINGS_COPY.seeAllSubmissions(totalCount)}
-            </span>
-          )}
+  if (visible.length === 0) {
+    return (
+      <div
+        className="rounded-xl border p-5"
+        style={{ borderColor: 'var(--border)', background: 'var(--surface-1)' }}
+      >
+        <div className="flex flex-col gap-2">
+          <p className="text-[15px] font-extrabold leading-snug tracking-[-0.01em] text-fg">
+            You haven&apos;t submitted any prices yet.
+          </p>
+          <p className="text-[12.5px] leading-relaxed text-fg-muted">
+            The next show you go to, drop the price you saw. Two fans confirm
+            and it goes live.
+          </p>
         </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      {/* Card group with bordered items */}
+      <div
+        className="overflow-hidden rounded-xl border"
+        style={{ borderColor: 'var(--border)', background: 'var(--surface-1)' }}
+      >
+        {visible.map((sub, idx) => (
+          <SubmissionItem
+            key={sub.id}
+            submission={sub}
+            isLast={idx === visible.length - 1}
+          />
+        ))}
+      </div>
+
+      {/* "See all →" button */}
+      {hasMore && (
+        <button
+          type="button"
+          className="w-full py-2.5 text-center text-[11px] font-bold uppercase tracking-[0.10em]"
+          style={{ fontFamily: 'var(--font-mono)', color: 'var(--signal)' }}
+        >
+          {SETTINGS_COPY.seeAllSubmissions(totalCount)}
+        </button>
       )}
     </div>
   )

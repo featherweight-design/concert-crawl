@@ -18,14 +18,16 @@ export function SettingsRoute({ profile, submissions }: SettingsRouteProps) {
   return (
     <div className="flex flex-col gap-6 pb-24">
       {/* Hero */}
-      <ProfileHero
-        handle={profile.handle}
-        avatarColor={profile.avatarColor}
-        displayRole={profile.displayRole}
-        city={profile.city}
-        joined={profile.joined}
-        cred={profile.cred}
-      />
+      <div className="px-1">
+        <ProfileHero
+          handle={profile.handle}
+          avatarColor={profile.avatarColor}
+          displayRole={profile.displayRole}
+          city={profile.city}
+          joined={profile.joined}
+          cred={profile.cred}
+        />
+      </div>
 
       {/* Divider */}
       <div className="mx-4 h-px bg-border" />

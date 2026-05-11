@@ -4,6 +4,7 @@ import type { UserSubmissionItem } from '@concert-crawl/types'
 
 interface SubmissionItemProps {
   submission: UserSubmissionItem
+  isLast?: boolean
 }
 
 function formatPrice(cents: number): string {
@@ -11,45 +12,73 @@ function formatPrice(cents: number): string {
 }
 
 function formatDate(iso: string): string {
+  if (!iso) return ''
   const date = new Date(iso + 'T00:00:00')
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-export function SubmissionItem({ submission }: SubmissionItemProps) {
-  const priceRange = submission.priceMax
+export function SubmissionItem({
+  submission,
+  isLast = false,
+}: SubmissionItemProps) {
+  const priceLabel = submission.priceMax
     ? `${formatPrice(submission.priceMin)}–${formatPrice(submission.priceMax)}`
     : formatPrice(submission.priceMin)
 
   return (
     <Link
       href={`/events/${submission.eventId}`}
-      className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 transition-colors hover:bg-surface-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+      className="flex flex-col gap-1.5 px-3.5 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+      style={isLast ? undefined : { borderBottom: '1px solid var(--border)' }}
     >
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <span className="truncate text-[14px] font-semibold text-fg">
-          {submission.artist}
-        </span>
-        <span className="text-[12px] text-fg-muted">
-          {submission.venue} · {formatDate(submission.date)}
-        </span>
-      </div>
-      <div className="flex shrink-0 flex-col items-end gap-1">
-        <span
-          className="text-[13px] font-bold text-fg"
-          style={{ fontFamily: 'var(--font-mono)' }}
-        >
-          {priceRange}
-        </span>
+      {/* Row 1: status pill + date */}
+      <div className="flex items-center gap-2">
         <StatusPill status={submission.status} />
-        {submission.status === 'confirmed' && (
+        {submission.date && (
           <span
-            className="text-[10px] font-bold uppercase tracking-[0.12em]"
-            style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}
+            className="ml-auto text-[10px] text-fg-subtle"
+            style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}
           >
-            +1 cred
+            {formatDate(submission.date)}
           </span>
         )}
       </div>
+
+      {/* Row 2: artist name */}
+      <span className="truncate text-[14px] font-extrabold leading-snug tracking-[-0.01em] text-fg">
+        {submission.artist}
+      </span>
+
+      {/* Row 3: price + venue */}
+      <div className="flex flex-wrap items-baseline gap-2">
+        <span className="text-[16px] font-black leading-none tracking-[-0.02em] text-fg">
+          {priceLabel}
+        </span>
+        <span
+          className="text-[10px] text-fg-muted"
+          style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}
+        >
+          {submission.venue}
+        </span>
+      </div>
+
+      {/* Row 4: cred / disputed */}
+      {submission.status === 'confirmed' && (
+        <span
+          className="text-[10px] font-bold uppercase tracking-[0.12em]"
+          style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}
+        >
+          +1 cred
+        </span>
+      )}
+      {submission.status === 'disputed' && (
+        <span
+          className="text-[12px] text-fg-muted"
+          style={{ color: 'var(--danger)' }}
+        >
+          Someone disputed this. Tap to see what they saw.
+        </span>
+      )}
     </Link>
   )
 }

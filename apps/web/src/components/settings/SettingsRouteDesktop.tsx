@@ -75,15 +75,8 @@ export function SettingsRouteDesktop({
               city={profile.city}
               joined={profile.joined}
               cred={profile.cred}
+              dense
             />
-            {!profile.handle && (
-              <div
-                className="rounded-xl p-4 text-[13px] leading-relaxed text-fg-muted"
-                style={{ background: 'var(--surface-1)' }}
-              >
-                {SETTINGS_COPY.anonymousExplainer}
-              </div>
-            )}
           </div>
         )}
 
