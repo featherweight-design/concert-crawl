@@ -322,6 +322,7 @@ export async function crawlVenue(
       .set({
         lastCrawledAt: new Date(),
         consecutiveFailures: 0,
+        blockedAt: null,
         updatedAt: new Date(),
       })
       .where(eq(venues.id, venueId))
