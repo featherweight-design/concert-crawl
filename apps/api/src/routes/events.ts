@@ -179,7 +179,11 @@ eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
 
 // GET /v1/events/:id — single event with venue, watching count, setlist
 eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
-  const { id } = ctx.req.param()
+  const rawId = ctx.req.param('id')
+  const parsed = uuidSchema.safeParse(rawId)
+  if (!parsed.success)
+    return ctx.json({ success: false, error: 'Event not found' }, 404)
+  const id = parsed.data
 
   const [row] = await db
     .select({
@@ -270,7 +274,8 @@ eventsRouter.post('/:id/watch', clerkMiddleware(), async (ctx) => {
     .where(eq(events.id, eventId))
     .limit(1)
 
-  if (!eventRow) return ctx.json({ success: false, error: 'Event not found' }, 404)
+  if (!eventRow)
+    return ctx.json({ success: false, error: 'Event not found' }, 404)
 
   const savedPrice = eventRow.ticketPriceMin ?? null
 
@@ -288,7 +293,10 @@ eventsRouter.post('/:id/watch', clerkMiddleware(), async (ctx) => {
         set: { status: 'watching', savedPrice },
       })
   } catch (err) {
-    apiLogger.warn({ err, userId: authInfo.userId, eventId }, 'watch insert failed')
+    apiLogger.warn(
+      { err, userId: authInfo.userId, eventId },
+      'watch insert failed',
+    )
     return ctx.json({ success: false, error: 'Failed to watch event' }, 500)
   }
 
