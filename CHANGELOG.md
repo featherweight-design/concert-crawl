@@ -1,3 +1,19 @@
+## [1.4.1](https://github.com/HartiganHM/concert-crawl/compare/v1.4.0...v1.4.1) (2026-05-11)
+
+
+### Bug Fixes
+
+* **settings:** address Copilot review feedback on settings-v2-polish ([e5d9ebe](https://github.com/HartiganHM/concert-crawl/commit/e5d9ebe30d74cf7fb4ca2a517a0963948081e53c))
+* **settings:** align avatar tint, submission layout, and see-all link with spec ([b52583d](https://github.com/HartiganHM/concert-crawl/commit/b52583d8fa91e3bd0b498e5057716ee9b67b6e52))
+* **settings:** align mobile layout and desktop nav order with spec ([403883f](https://github.com/HartiganHM/concert-crawl/commit/403883f864a2ad9f3610f46f5c1a0db5f3316eba))
+* **settings:** danger zone icons and bordered delete card ([af1cd1f](https://github.com/HartiganHM/concert-crawl/commit/af1cd1f6ecdb8891ea7f15ccdebca59d2fa4a3a9))
+* **settings:** delete account modal on desktop ([a3bfe71](https://github.com/HartiganHM/concert-crawl/commit/a3bfe7106a7e0cf87a9d0b8cc82dac7300b85216))
+* **settings:** desktop topbar, sidebar icons, panel titles and content ([40f4f5d](https://github.com/HartiganHM/concert-crawl/commit/40f4f5d3dd5c84f633dec04c2d5ab8b28614169a))
+* **settings:** mobile bottom nav ME tab shows user avatar ([81b1f3f](https://github.com/HartiganHM/concert-crawl/commit/81b1f3f804287909abebb0c5e4c5e62a7678c6ee))
+* **settings:** mobile settings header and section layout fixes ([405775d](https://github.com/HartiganHM/concert-crawl/commit/405775da8bac813a08ca6d6ddf59d7197a37b095))
+* **settings:** resolve exactOptionalPropertyTypes error in DangerZone ([3e9c892](https://github.com/HartiganHM/concert-crawl/commit/3e9c892b93466b179cd0ae8c97301d5066a4dae1))
+* **settings:** update plan card copy to match spec ([2034dc5](https://github.com/HartiganHM/concert-crawl/commit/2034dc5d3c08200c43b973fa22ef096b14941851))
+
 # [1.4.0](https://github.com/HartiganHM/concert-crawl/compare/v1.3.1...v1.4.0) (2026-05-11)
 
 
