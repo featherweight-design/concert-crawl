@@ -6,8 +6,10 @@
     "Bash(cp -r *)",
     "Bash(mkdir *)",
     "Bash(cat *)",
+    "Bash(docker *)",
     "Bash(ls *)",
     "Bash(find *)",
-    "Bash(cd *)"
+    "Bash(cd *)",
+    "Bash(gh issue create*)"
   ]
 }

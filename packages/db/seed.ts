@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { db } from './src/client.js'
 import {
   venues,
@@ -224,6 +224,7 @@ export const SEED_NOTIFICATIONS = [
     title: 'Crawl failed: Bluebird Theater',
     body: '3 consecutive failures. Venue paused automatically.',
     actionUrl: '/admin/venues/bluebird-theater',
+    readAt: new Date(now.getTime() - 3_600_000), // read 1 hour ago
   },
   {
     userId: FAKE_USER_IDS.hugh,
@@ -609,6 +610,17 @@ async function seed() {
         status: 'pending' as const,
         corroborationCount: 0,
       },
+      // Stale submission — tests the stale status display in admin
+      {
+        eventId: submissionEventIds[0]!,
+        userId: FAKE_USER_IDS.jess,
+        priceMin: '28.00',
+        tier: 'GA' as const,
+        vendor: 'AXS' as const,
+        howFound: 'saw_listing' as const,
+        status: 'stale' as const,
+        corroborationCount: 0,
+      },
     ]
 
     const existingSubmissionsCount = await db
@@ -622,7 +634,21 @@ async function seed() {
         .returning()
       console.warn(`Inserted ${insertedSubmissions.length} price submissions.`)
 
-      // Corroboration rows for the 3 corroborated submissions
+      // Link the disputed submission to the first corroborated submission
+      const disputedSub = insertedSubmissions.find(
+        (sub) => sub.status === 'disputed',
+      )
+      const targetSub = insertedSubmissions.find(
+        (sub) => sub.status === 'corroborated',
+      )
+      if (disputedSub && targetSub) {
+        await db
+          .update(priceSubmissions)
+          .set({ disputedSubmissionId: targetSub.id })
+          .where(eq(priceSubmissions.id, disputedSub.id))
+      }
+
+      // Corroboration rows for the corroborated submissions
       const corroboratedSubmissions = insertedSubmissions.filter(
         (sub) => sub.status === 'corroborated',
       )
@@ -642,6 +668,61 @@ async function seed() {
       }
     } else {
       console.warn('Price submissions already seeded, skipping.')
+    }
+
+    // --- Test events for UI state coverage ---
+    // These use [Test] prefix to avoid collisions with real staging events
+    const venueForTests = insertedVenues[0]
+    if (venueForTests) {
+      const testEventRows = [
+        {
+          venueId: venueForTests.id,
+          title: '[Test] Cancelled Show',
+          artist: '[Test] Cancelled Artist',
+          date: '2026-09-10',
+          status: 'cancelled' as const,
+        },
+        {
+          venueId: venueForTests.id,
+          title: '[Test] Postponed Show',
+          artist: '[Test] Postponed Artist',
+          date: '2026-09-15',
+          status: 'postponed' as const,
+        },
+        {
+          venueId: venueForTests.id,
+          title: '[Test] Show With Setlist',
+          artist: '[Test] Setlist Artist',
+          date: '2026-09-20',
+          status: 'upcoming' as const,
+          confidenceScore: '0.92',
+          setlist: {
+            songs: [
+              'Opening Track',
+              'Second Song',
+              'Fan Favorite',
+              'Deep Cut',
+              'Popular Hit',
+              'Slow Ballad',
+            ],
+            encore: ['Classic Closer', 'Surprise Cover'],
+            source: 'Setlist.fm',
+            when: 'last tour',
+          },
+        },
+        {
+          venueId: venueForTests.id,
+          title: '[Test] Low Confidence Event',
+          artist: '[Test] Low Confidence Artist',
+          date: '2026-09-25',
+          status: 'upcoming' as const,
+          confidenceScore: '0.45',
+        },
+      ]
+      await db.insert(eventsTable).values(testEventRows).onConflictDoNothing()
+      console.warn(
+        `Inserted ${testEventRows.length} test events for UI state coverage.`,
+      )
     }
   }
 
