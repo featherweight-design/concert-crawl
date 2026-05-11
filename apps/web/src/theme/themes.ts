@@ -140,6 +140,7 @@ const pulse: Record<string, string> = {
   'overlay-press': 'rgba(200,255,46,0.16)',
   scrim: 'rgba(5,0,8,0.72)',
   'image-tint': 'rgba(5,0,8,0.20)',
+  'trust-community': 'oklch(0.62 0.12 240)',
 }
 
 const forge: Record<string, string> = {
@@ -168,6 +169,7 @@ const forge: Record<string, string> = {
   'overlay-press': 'rgba(200,33,26,0.16)',
   scrim: 'rgba(6,4,3,0.72)',
   'image-tint': 'rgba(6,4,3,0.20)',
+  'trust-community': 'oklch(0.62 0.12 240)',
 }
 
 const bluenote: Record<string, string> = {
@@ -196,6 +198,7 @@ const bluenote: Record<string, string> = {
   'overlay-press': 'rgba(77,163,255,0.16)',
   scrim: 'rgba(14,10,31,0.72)',
   'image-tint': 'rgba(14,10,31,0.20)',
+  'trust-community': 'oklch(0.62 0.12 240)',
 }
 
 const drip: Record<string, string> = {
@@ -224,6 +227,7 @@ const drip: Record<string, string> = {
   'overlay-press': 'rgba(46,255,107,0.16)',
   scrim: 'rgba(0,0,0,0.72)',
   'image-tint': 'rgba(0,0,0,0.20)',
+  'trust-community': 'oklch(0.62 0.12 240)',
 }
 
 const cedar: Record<string, string> = {
@@ -252,6 +256,7 @@ const cedar: Record<string, string> = {
   'overlay-press': 'rgba(216,154,138,0.16)',
   scrim: 'rgba(16,32,26,0.72)',
   'image-tint': 'rgba(16,32,26,0.20)',
+  'trust-community': 'oklch(0.62 0.12 240)',
 }
 
 const gloss: Record<string, string> = {
@@ -280,6 +285,7 @@ const gloss: Record<string, string> = {
   'overlay-press': 'rgba(255,91,161,0.16)',
   scrim: 'rgba(15,8,16,0.72)',
   'image-tint': 'rgba(15,8,16,0.20)',
+  'trust-community': 'oklch(0.62 0.12 240)',
 }
 
 export const THEMES: Record<ThemeName, Record<string, string>> = {
