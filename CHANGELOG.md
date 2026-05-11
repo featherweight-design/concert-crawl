@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/HartiganHM/concert-crawl/compare/v1.2.0...v1.3.0) (2026-05-11)
+
+
+### Features
+
+* **admin:** expose crawlWaitUntil and crawlDelayMs in venue details form ([c3819ca](https://github.com/HartiganHM/concert-crawl/commit/c3819cadde012f219914305d93f552cae1b7cc32)), closes [#210](https://github.com/HartiganHM/concert-crawl/issues/210)
+
 # [1.2.0](https://github.com/HartiganHM/concert-crawl/compare/v1.1.2...v1.2.0) (2026-05-11)
 
 
