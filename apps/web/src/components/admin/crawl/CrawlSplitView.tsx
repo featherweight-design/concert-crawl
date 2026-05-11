@@ -976,15 +976,18 @@ export const CrawlRunHistoryTable = ({
       {initialRuns.length === 0 ? (
         <div
           style={{
-            minHeight: 200,
+            minHeight: 300,
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
+            gap: 8,
             color: 'var(--fg-subtle)',
             fontSize: 13,
           }}
         >
-          No runs yet
+          <span style={{ fontSize: 22 }}>↻</span>
+          No runs yet — trigger a crawl to see history here
         </div>
       ) : (
         <div style={{ minHeight: 200, maxHeight: 400, overflowY: 'auto' }}>
