@@ -1,3 +1,10 @@
+## [1.6.2](https://github.com/HartiganHM/concert-crawl/compare/v1.6.1...v1.6.2) (2026-05-11)
+
+
+### Bug Fixes
+
+* **crawler:** process venues sequentially and extend navigation timeout ([8571ae0](https://github.com/HartiganHM/concert-crawl/commit/8571ae0e290552915ad3da60a6a744db4d726257)), closes [#241](https://github.com/HartiganHM/concert-crawl/issues/241)
+
 ## [1.6.1](https://github.com/HartiganHM/concert-crawl/compare/v1.6.0...v1.6.1) (2026-05-11)
 
 
