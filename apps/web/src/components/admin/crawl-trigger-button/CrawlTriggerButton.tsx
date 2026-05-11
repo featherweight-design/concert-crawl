@@ -6,8 +6,8 @@ import { useRouter } from 'next/navigation'
 import type { CrawlRun } from '@concert-crawl/types'
 import { ApiError } from '@/lib/api'
 import { formatISODate, formatDurationMs } from '@/lib/time'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { AdminButton, StatusBadge } from '@/components/admin/primitives'
+import { RefreshCw, Loader2 } from 'lucide-react'
 import { triggerVenueCrawl, fetchCrawlRun } from './lib/crawl'
 import {
   CRAWL_STATUS_BADGES,
@@ -98,58 +98,94 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
       : null
 
   return (
-    <section aria-label="Crawl trigger" className="space-y-4">
-      <div className="flex items-center gap-4">
-        <Button onClick={startVenueCrawl} disabled={isLoading}>
+    <div
+      aria-label="Crawl trigger"
+      style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <AdminButton
+          variant="primary"
+          size="sm"
+          icon={isLoading ? Loader2 : RefreshCw}
+          onClick={startVenueCrawl}
+          disabled={isLoading}
+        >
           {buttonLabel}
-        </Button>
+        </AdminButton>
         {isLoading && (
-          <p className="text-sm text-fg-muted">
+          <span
+            style={{
+              fontSize: 12,
+              color: 'var(--fg-muted)',
+              fontFamily: "'Inter', sans-serif",
+            }}
+          >
             {triggerState === 'triggering'
               ? copy.status.initiating
               : copy.status.waiting}
-          </p>
+          </span>
         )}
       </div>
 
       {triggerState === 'error' && errorMessage && (
-        <p role="alert" className="text-sm text-danger">
+        <span
+          role="alert"
+          style={{
+            fontSize: 12,
+            color: 'var(--danger)',
+            fontFamily: "'Inter', sans-serif",
+          }}
+        >
           {errorMessage}
-        </p>
+        </span>
       )}
 
       {triggerState === 'done' && result && (
-        <article className="rounded-md border p-4 space-y-2 text-sm">
-          <header className="flex items-center gap-2 font-medium">
-            <span>{copy.result.heading}</span>
+        <div
+          style={{
+            padding: '8px 12px',
+            background: 'var(--bg-elevated)',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {statusBadgeConfig && (
-              <Badge variant={statusBadgeConfig.variant}>
+              <StatusBadge
+                kind={result.status === 'success' ? 'success' : 'danger'}
+                dot
+              >
                 {statusBadgeConfig.label}
-              </Badge>
+              </StatusBadge>
             )}
-          </header>
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-fg-muted">
-            <dt>{copy.result.strategy}</dt>
-            <dd>{result.extractionStrategyUsed ?? copy.result.noValue}</dd>
-            <dt>{copy.result.eventsFound}</dt>
-            <dd>{result.eventsFound}</dd>
-            <dt>{copy.result.eventsInserted}</dt>
-            <dd>{result.eventsInserted}</dd>
-            <dt>{copy.result.duration}</dt>
-            <dd>{formatDurationMs(result.durationMs)}</dd>
-            <dt>{copy.result.completed}</dt>
-            <dd>
-              {formatISODate(result.createdAt, DEFAULT_TIME_ZONE)}{' '}
-              {copy.result.timeSuffix}
-            </dd>
-          </dl>
+            <span
+              style={{
+                fontSize: 12,
+                color: 'var(--fg-muted)',
+                fontFamily: "'JetBrains Mono', monospace",
+              }}
+            >
+              {result.eventsFound} found · {result.eventsInserted} inserted ·{' '}
+              {formatDurationMs(result.durationMs)}
+            </span>
+          </div>
           {result.errorMessage && (
-            <p role="alert" className="text-danger text-xs">
+            <span
+              role="alert"
+              style={{
+                fontSize: 11,
+                color: 'var(--danger)',
+                fontFamily: "'JetBrains Mono', monospace",
+              }}
+            >
               {result.errorMessage}
-            </p>
+            </span>
           )}
-        </article>
+        </div>
       )}
-    </section>
+    </div>
   )
 }

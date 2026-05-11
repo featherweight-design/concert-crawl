@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useTransition } from 'react'
+import { useState, useRef, useTransition, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { VenueWithCrawlHealth, CrawlRun } from '@concert-crawl/types'
@@ -17,9 +17,12 @@ import {
   MonoLabel,
   StatusBadge,
   RelTime,
+  SectionHead,
+  MetaCard,
 } from '@/components/admin/primitives'
 import { DeleteVenueDialog } from './DeleteVenueDialog'
-import { CrawlTriggerButton } from './crawl-trigger-button'
+import { CrawlTriggerButton } from './crawl-trigger-button/CrawlTriggerButton'
+import { usePageTitle } from '@/components/admin/shell/PageTitleContext'
 import {
   ExternalLink,
   RefreshCw,
@@ -30,6 +33,7 @@ import {
   AlertCircle,
   Check,
   Loader2,
+  MapPin,
 } from 'lucide-react'
 import { formatDurationMs } from '@/lib/time'
 
@@ -44,25 +48,327 @@ function slugify(name: string): string {
     .slice(0, 60)
 }
 
-function inputStyle(
-  hasError: boolean,
-  isDisabled: boolean,
-): React.CSSProperties {
-  return {
-    width: '100%',
-    height: 32,
-    padding: '0 10px',
-    borderRadius: 6,
-    border: `1px solid ${hasError ? 'var(--danger)' : 'var(--border)'}`,
-    background: isDisabled ? 'var(--surface-1)' : 'var(--bg)',
-    color: 'var(--fg)',
-    fontSize: 13,
-    fontFamily: "'Inter', sans-serif",
-    outline: 'none',
-    boxSizing: 'border-box',
-    opacity: isDisabled ? 0.66 : 1,
-    cursor: isDisabled ? 'not-allowed' : 'text',
+// ── Local primitives ──────────────────────────────────────────
+
+function SegToggle({
+  options,
+  value,
+  onChange,
+  disabled,
+}: {
+  options: { key: string; label: string }[]
+  value: string
+  onChange: (key: string) => void
+  disabled?: boolean
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        padding: 3,
+        background: 'var(--surface-1)',
+        borderRadius: 8,
+        border: '1px solid var(--border)',
+        height: 38,
+        boxSizing: 'border-box',
+      }}
+    >
+      {options.map((opt) => {
+        const active = value === opt.key
+        return (
+          <button
+            key={opt.key}
+            type="button"
+            onClick={() => onChange(opt.key)}
+            disabled={disabled}
+            style={{
+              all: 'unset',
+              cursor: disabled ? 'not-allowed' : 'pointer',
+              flex: 1,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 5,
+              fontFamily: "'Inter', sans-serif",
+              fontSize: 12.5,
+              fontWeight: 600,
+              color: active ? 'var(--fg-on-accent)' : 'var(--fg-muted)',
+              background: active ? 'var(--signal)' : 'transparent',
+              transition: 'background .12s, color .12s',
+            }}
+          >
+            {opt.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function FaviconChip({ url }: { url: string }) {
+  const host = useMemo(() => {
+    try {
+      return new URL(url.startsWith('http') ? url : `https://${url}`).hostname
+    } catch {
+      return null
+    }
+  }, [url])
+
+  if (!host) return null
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 5,
+        padding: '2px 8px 2px 4px',
+        borderRadius: 999,
+        background: 'var(--surface-1)',
+        border: '1px solid var(--border)',
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: 11,
+        fontWeight: 600,
+        color: 'var(--fg-muted)',
+        letterSpacing: '0.02em',
+        flexShrink: 0,
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={`https://www.google.com/s2/favicons?domain=${host}&sz=32`}
+        alt=""
+        width={14}
+        height={14}
+        style={{ borderRadius: 3 }}
+        onError={(evt) => {
+          evt.currentTarget.style.visibility = 'hidden'
+        }}
+      />
+      {host}
+    </span>
+  )
+}
+
+function HealthBarSparkline({
+  sparkline,
+}: {
+  sparkline: { date: string; success: boolean; hasRun: boolean }[]
+}) {
+  const total = sparkline.length
+  if (total === 0 || sparkline.every((day) => !day.hasRun)) {
+    return (
+      <span style={{ fontSize: 12, color: 'var(--fg-subtle)' }}>No data</span>
+    )
   }
+  const barWidth = Math.max(2, Math.floor((320 - (total - 1) * 3) / total))
+  const svgWidth = total * barWidth + (total - 1) * 3
+  return (
+    <svg
+      width="100%"
+      viewBox={`0 0 ${svgWidth} 28`}
+      preserveAspectRatio="none"
+      style={{ display: 'block', height: 28 }}
+    >
+      {sparkline.map((day, idx) => (
+        <rect
+          key={day.date}
+          x={idx * (barWidth + 3)}
+          y={!day.hasRun ? 20 : day.success ? 8 : 18}
+          width={barWidth}
+          height={!day.hasRun ? 6 : day.success ? 16 : 6}
+          rx={1.5}
+          fill={
+            !day.hasRun
+              ? 'var(--border)'
+              : day.success
+                ? 'var(--success)'
+                : 'var(--danger)'
+          }
+          opacity={!day.hasRun ? 0.5 : 0.9}
+        />
+      ))}
+    </svg>
+  )
+}
+
+function DangerRow({
+  title,
+  body,
+  action,
+}: {
+  title: string
+  body: string
+  action: React.ReactNode
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 14,
+      }}
+    >
+      <div style={{ minWidth: 0 }}>
+        <div
+          style={{
+            fontFamily: "'Inter', sans-serif",
+            fontSize: 13,
+            fontWeight: 600,
+            color: 'var(--fg)',
+          }}
+        >
+          {title}
+        </div>
+        <div
+          style={{
+            fontFamily: "'Inter', sans-serif",
+            fontSize: 12,
+            color: 'var(--fg-muted)',
+            marginTop: 2,
+            lineHeight: 1.4,
+          }}
+        >
+          {body}
+        </div>
+      </div>
+      {action}
+    </div>
+  )
+}
+
+function StyledInput({
+  id,
+  type = 'text',
+  defaultValue,
+  value,
+  placeholder,
+  disabled,
+  hasError,
+  onChange,
+  onBlur,
+  inputRef,
+  min,
+  max,
+  step,
+  style,
+}: {
+  id: string
+  type?: string
+  defaultValue?: string | number
+  value?: string | number
+  placeholder?: string
+  disabled?: boolean
+  hasError?: boolean
+  onChange?: React.ChangeEventHandler<HTMLInputElement>
+  onBlur?: React.FocusEventHandler<HTMLInputElement>
+  inputRef?: React.RefObject<HTMLInputElement | null>
+  min?: number
+  max?: number
+  step?: number
+  style?: React.CSSProperties
+}) {
+  const [focused, setFocused] = useState(false)
+  const borderColor = hasError
+    ? 'var(--danger)'
+    : focused
+      ? 'var(--signal)'
+      : 'var(--border-strong)'
+  const ring = focused
+    ? hasError
+      ? '0 0 0 3px color-mix(in oklab, var(--danger) 18%, transparent)'
+      : '0 0 0 3px color-mix(in oklab, var(--signal) 22%, transparent)'
+    : 'none'
+
+  return (
+    <input
+      ref={inputRef}
+      id={id}
+      type={type}
+      defaultValue={defaultValue}
+      value={value}
+      placeholder={placeholder}
+      disabled={disabled}
+      min={min}
+      max={max}
+      step={step}
+      onChange={onChange}
+      onFocus={() => setFocused(true)}
+      onBlur={(evt) => {
+        setFocused(false)
+        onBlur?.(evt)
+      }}
+      style={{
+        width: '100%',
+        height: 38,
+        padding: '0 10px',
+        borderRadius: 6,
+        border: `1px solid ${borderColor}`,
+        background: 'var(--bg-elevated)',
+        color: 'var(--fg)',
+        fontSize: 13,
+        fontFamily: "'Inter', sans-serif",
+        outline: 'none',
+        boxSizing: 'border-box',
+        opacity: disabled ? 0.66 : 1,
+        cursor: disabled ? 'not-allowed' : 'text',
+        boxShadow: ring,
+        transition: 'border-color .12s, box-shadow .12s',
+        ...style,
+      }}
+    />
+  )
+}
+
+function StyledSelect({
+  id,
+  value,
+  disabled,
+  onChange,
+  children,
+}: {
+  id: string
+  value: string
+  disabled?: boolean
+  onChange: React.ChangeEventHandler<HTMLSelectElement>
+  children: React.ReactNode
+}) {
+  const [focused, setFocused] = useState(false)
+  return (
+    <select
+      id={id}
+      value={value}
+      disabled={disabled}
+      onChange={onChange}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      style={{
+        width: '100%',
+        height: 38,
+        padding: '0 28px 0 10px',
+        borderRadius: 6,
+        border: `1px solid ${focused ? 'var(--signal)' : 'var(--border-strong)'}`,
+        background: 'var(--bg-elevated)',
+        color: 'var(--fg)',
+        fontSize: 13,
+        fontFamily: "'Inter', sans-serif",
+        outline: 'none',
+        boxSizing: 'border-box',
+        opacity: disabled ? 0.66 : 1,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        appearance: 'none',
+        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'right 10px center',
+        boxShadow: focused
+          ? '0 0 0 3px color-mix(in oklab, var(--signal) 22%, transparent)'
+          : 'none',
+        transition: 'border-color .12s, box-shadow .12s',
+      }}
+    >
+      {children}
+    </select>
+  )
 }
 
 function Field({
@@ -70,107 +376,78 @@ function Field({
   htmlFor,
   error,
   hint,
+  labelRight,
   children,
 }: {
   label: string
   htmlFor: string
-  error?: string | undefined
+  error?: string
   hint?: React.ReactNode
+  labelRight?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <label
-        htmlFor={htmlFor}
-        style={{ fontSize: 12, fontWeight: 500, color: 'var(--fg-muted)' }}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'baseline',
+          justifyContent: 'space-between',
+          marginBottom: 2,
+        }}
       >
-        {label}
-      </label>
+        <label
+          htmlFor={htmlFor}
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: 'var(--fg)',
+            letterSpacing: '-0.005em',
+            fontFamily: "'Inter', sans-serif",
+          }}
+        >
+          {label}
+        </label>
+        {labelRight}
+      </div>
       {children}
       {error && (
-        <span style={{ fontSize: 11, color: 'var(--danger)' }}>{error}</span>
+        <span
+          style={{
+            fontSize: 11,
+            color: 'var(--danger)',
+            fontFamily: "'Inter', sans-serif",
+          }}
+        >
+          {error}
+        </span>
       )}
       {!error && hint && hint}
     </div>
   )
 }
 
-function CrawlDotSparkline({
-  sparkline,
-}: {
-  sparkline: { date: string; success: boolean; hasRun: boolean }[]
-}) {
-  const allEmpty = sparkline.every((day) => !day.hasRun)
-  if (allEmpty) {
+function RobotsHint({ allowed }: { allowed: boolean | null }) {
+  if (allowed === null)
     return (
-      <span style={{ fontSize: 12, color: 'var(--fg-subtle)' }}>No data</span>
+      <StatusBadge kind="neutral" variant="mono">
+        unchecked
+      </StatusBadge>
     )
-  }
+  if (allowed)
+    return (
+      <StatusBadge kind="success" variant="mono">
+        robots ok
+      </StatusBadge>
+    )
   return (
-    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-      {sparkline.map((day) => (
-        <div
-          key={day.date}
-          title={`${day.date}: ${!day.hasRun ? 'no crawl' : day.success ? 'success' : 'failed'}`}
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            background: !day.hasRun
-              ? 'var(--border)'
-              : day.success
-                ? 'var(--success)'
-                : 'var(--danger)',
-          }}
-        />
-      ))}
-    </div>
+    <StatusBadge kind="danger" variant="mono">
+      robots blocked
+    </StatusBadge>
   )
 }
 
-function CrawlRunRow({ run }: { run: CrawlRun }) {
-  const statusColor =
-    run.status === 'success'
-      ? 'var(--success)'
-      : run.status === 'failed'
-        ? 'var(--danger)'
-        : 'var(--warning)'
-
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '8px 0',
-        borderBottom: '1px solid var(--border)',
-        fontSize: 12,
-        gap: 8,
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <div
-          style={{
-            width: 6,
-            height: 6,
-            borderRadius: '50%',
-            background: statusColor,
-            flexShrink: 0,
-          }}
-        />
-        <span style={{ color: 'var(--fg-muted)' }}>
-          <RelTime iso={run.createdAt} />
-        </span>
-      </div>
-      <div style={{ display: 'flex', gap: 12, color: 'var(--fg-muted)' }}>
-        <span>{run.eventsFound} found</span>
-        {run.durationMs !== null && (
-          <span>{formatDurationMs(run.durationMs)}</span>
-        )}
-      </div>
-    </div>
-  )
-}
+// ── Main component ───────────────────────────────────────────
 
 interface Props {
   venue: VenueWithCrawlHealth
@@ -180,33 +457,39 @@ interface Props {
 export function VenueDetailsClient({ venue, recentRuns }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const { setPageTitle } = usePageTitle()
 
-  // Form state
+  useEffect(() => {
+    setPageTitle(venue.name)
+    return () => setPageTitle(null)
+  }, [venue.name, setPageTitle])
+
+  // Form refs (uncontrolled inputs)
   const nameRef = useRef<HTMLInputElement>(null)
   const slugRef = useRef<HTMLInputElement>(null)
   const websiteUrlRef = useRef<HTMLInputElement>(null)
   const cityRef = useRef<HTMLInputElement>(null)
   const crawlDelayRef = useRef<HTMLInputElement>(null)
-  const [active, setActive] = useState(venue.active)
-  const [slugManual, setSlugManual] = useState(true)
 
-  // Track dirty state by checking against initial values
+  // Controlled state for dirty-tracking
   const [nameVal, setNameVal] = useState(venue.name)
   const [slugVal, setSlugVal] = useState(venue.slug)
   const [urlVal, setUrlVal] = useState(venue.websiteUrl)
   const [cityVal, setCityVal] = useState(venue.city)
+  const [activeVal, setActiveVal] = useState(venue.active)
   const [waitUntilVal, setWaitUntilVal] = useState(venue.crawlWaitUntil)
   const [crawlDelayVal, setCrawlDelayVal] = useState(venue.crawlDelayMs)
   const [waitForSelectorVal, setWaitForSelectorVal] = useState(
     venue.crawlWaitForSelector ?? '',
   )
+  const [slugManual, setSlugManual] = useState(true)
 
   const isDirty =
     nameVal !== venue.name ||
     slugVal !== venue.slug ||
     urlVal !== venue.websiteUrl ||
     cityVal !== venue.city ||
-    active !== venue.active ||
+    activeVal !== venue.active ||
     waitUntilVal !== venue.crawlWaitUntil ||
     crawlDelayVal !== venue.crawlDelayMs ||
     (waitForSelectorVal || null) !== venue.crawlWaitForSelector
@@ -216,9 +499,9 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     'idle' | 'saving' | 'saved' | 'error'
   >('idle')
   const [saveError, setSaveError] = useState<string | null>(null)
-  const [fieldErrors, setFieldErrors] = useState<{ slug?: string | undefined }>(
-    {},
-  )
+  const [fieldErrors, setFieldErrors] = useState<{
+    slug?: string | undefined
+  }>({})
 
   const isDisabled = saveState === 'saving'
 
@@ -227,7 +510,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     setSlugVal(venue.slug)
     setUrlVal(venue.websiteUrl)
     setCityVal(venue.city)
-    setActive(venue.active)
+    setActiveVal(venue.active)
     setWaitUntilVal(venue.crawlWaitUntil)
     setCrawlDelayVal(venue.crawlDelayMs)
     setWaitForSelectorVal(venue.crawlWaitForSelector ?? '')
@@ -252,7 +535,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     formData.set('slug', slugVal.trim())
     formData.set('websiteUrl', urlVal.trim())
     formData.set('city', cityVal.trim() || 'Denver')
-    formData.set('active', String(active))
+    formData.set('active', String(activeVal))
     formData.set('crawlWaitUntil', waitUntilVal)
     formData.set('crawlDelayMs', String(crawlDelayVal))
     formData.set('crawlWaitForSelector', waitForSelectorVal.trim())
@@ -302,14 +585,6 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
   }
 
   const { crawlHealth } = venue
-  const lastCrawledLabel = crawlHealth.lastCrawledAt
-    ? new Date(crawlHealth.lastCrawledAt).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    : 'Never'
 
   let sourceHost = ''
   try {
@@ -318,47 +593,43 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     sourceHost = venue.websiteUrl
   }
 
+  const healthColor =
+    crawlHealth.sevenDayPercent >= 80
+      ? 'var(--success)'
+      : crawlHealth.sevenDayPercent >= 50
+        ? 'var(--warning)'
+        : 'var(--danger)'
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: 12,
-        }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <h1
-              style={{
-                margin: 0,
-                fontSize: 20,
-                fontWeight: 700,
-                color: 'var(--fg)',
-                fontFamily: "'Inter', sans-serif",
-              }}
-            >
-              {venue.name}
-            </h1>
-            <StatusBadge kind={venue.verified ? 'success' : 'warning'}>
+      <SectionHead
+        eyebrow="Venue details"
+        title={
+          <span
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}
+          >
+            {venue.name}
+            <StatusBadge kind={venue.verified ? 'success' : 'warning'} dot>
               {venue.verified ? 'Verified' : 'Unverified'}
             </StatusBadge>
             {!venue.active && <StatusBadge kind="danger">Paused</StatusBadge>}
-          </div>
-          <div
+          </span>
+        }
+        subtitle={
+          <span
             style={{
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
-              gap: 12,
+              gap: 10,
+              fontFamily: "'JetBrains Mono', monospace",
               fontSize: 12,
-              color: 'var(--fg-muted)',
+              letterSpacing: '0.02em',
             }}
           >
-            <span>{venue.city}</span>
-            <span style={{ color: 'var(--border-strong)' }}>·</span>
+            <MapPin size={12} color="var(--fg-subtle)" />
+            <span style={{ color: 'var(--fg-muted)' }}>{venue.city}</span>
+            <span style={{ color: 'var(--fg-subtle)' }}>·</span>
             <a
               href={venue.websiteUrl}
               target="_blank"
@@ -366,35 +637,39 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
               style={{
                 color: 'var(--signal)',
                 textDecoration: 'none',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
                 gap: 3,
               }}
             >
-              {sourceHost} <ExternalLink size={10} />
+              {sourceHost}
+              <ExternalLink size={10} />
             </a>
             {crawlHealth.lastCrawledAt && (
               <>
-                <span style={{ color: 'var(--border-strong)' }}>·</span>
-                <span>Last crawled {lastCrawledLabel}</span>
+                <span style={{ color: 'var(--fg-subtle)' }}>·</span>
+                <span style={{ color: 'var(--fg-muted)' }}>
+                  last crawled <RelTime iso={crawlHealth.lastCrawledAt} />
+                </span>
               </>
             )}
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Link
-            href={`/v/${venue.slug}`}
-            target="_blank"
-            style={{ textDecoration: 'none' }}
-          >
-            <AdminButton variant="outline" size="sm" iconRight={ExternalLink}>
-              View public page
-            </AdminButton>
-          </Link>
-          <CrawlTriggerButton venueId={venue.id} />
-        </div>
-      </div>
+          </span>
+        }
+        actions={
+          <>
+            <Link
+              href={`/v/${venue.slug}`}
+              target="_blank"
+              style={{ textDecoration: 'none' }}
+            >
+              <AdminButton variant="outline" size="sm" iconRight={ExternalLink}>
+                View public page
+              </AdminButton>
+            </Link>
+            <CrawlTriggerButton venueId={venue.id} />
+          </>
+        }
+      />
 
       {/* Error banner */}
       {saveError && (
@@ -421,22 +696,21 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 360px',
-          gap: 24,
+          gridTemplateColumns: 'minmax(0, 1fr) 360px',
+          gap: 20,
           alignItems: 'start',
         }}
       >
         {/* Left: form */}
-        <Panel padding={24}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <Panel padding={20}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
             <MonoLabel>Details</MonoLabel>
 
-            {/* Name */}
-            <Field label="Name" htmlFor="edit-venue-name">
-              <input
-                ref={nameRef}
+            {/* Venue name */}
+            <Field label="Venue name" htmlFor="edit-venue-name">
+              <StyledInput
                 id="edit-venue-name"
-                type="text"
+                inputRef={nameRef}
                 defaultValue={venue.name}
                 disabled={isDisabled}
                 onChange={(evt) => {
@@ -448,7 +722,6 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                     setSlugVal(generated)
                   }
                 }}
-                style={inputStyle(false, isDisabled)}
               />
             </Field>
 
@@ -457,14 +730,47 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
               label="Slug"
               htmlFor="edit-venue-slug"
               error={fieldErrors.slug}
-              hint={
-                <span style={{ color: 'var(--fg-muted)', fontSize: 11 }}>
-                  concertcrawl.app/v/
-                  <span style={{ color: 'var(--fg)' }}>{slugVal}</span>
+              labelRight={
+                <span
+                  style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color: 'var(--fg-subtle)',
+                  }}
+                >
+                  Auto-generated
                 </span>
               }
             >
-              <div style={{ display: 'flex', gap: 6 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  height: 38,
+                  borderRadius: 6,
+                  border: `1px solid ${fieldErrors.slug ? 'var(--danger)' : 'var(--border-strong)'}`,
+                  background: 'var(--bg-elevated)',
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '0 10px',
+                    background: 'var(--surface-1)',
+                    borderRight: '1px solid var(--border)',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 11,
+                    color: 'var(--fg-subtle)',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                  }}
+                >
+                  concertcrawl.app/v/
+                </div>
                 <input
                   ref={slugRef}
                   id="edit-venue-slug"
@@ -477,8 +783,16 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                     setFieldErrors((prev) => ({ ...prev, slug: undefined }))
                   }}
                   style={{
-                    ...inputStyle(!!fieldErrors.slug, isDisabled),
+                    all: 'unset',
                     flex: 1,
+                    minWidth: 0,
+                    padding: '0 10px',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 13,
+                    fontWeight: 500,
+                    color: 'var(--fg)',
+                    cursor: isDisabled ? 'not-allowed' : 'text',
+                    opacity: isDisabled ? 0.66 : 1,
                   }}
                 />
                 <button
@@ -496,10 +810,9 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                   title="Regenerate slug from name"
                   style={{
                     flexShrink: 0,
-                    width: 32,
-                    height: 32,
-                    borderRadius: 6,
-                    border: '1px solid var(--border)',
+                    width: 36,
+                    border: 'none',
+                    borderLeft: '1px solid var(--border)',
                     background: 'var(--surface-1)',
                     color: 'var(--fg-muted)',
                     cursor: isDisabled ? 'not-allowed' : 'pointer',
@@ -514,93 +827,98 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
             </Field>
 
             {/* Source URL */}
-            <Field label="Source URL" htmlFor="edit-venue-url">
-              <input
-                ref={websiteUrlRef}
-                id="edit-venue-url"
-                type="url"
-                defaultValue={venue.websiteUrl}
-                disabled={isDisabled}
-                onChange={(evt) => setUrlVal(evt.target.value)}
-                style={inputStyle(false, isDisabled)}
-              />
-            </Field>
-
-            {/* City */}
-            <Field label="City" htmlFor="edit-venue-city">
-              <input
-                ref={cityRef}
-                id="edit-venue-city"
-                type="text"
-                defaultValue={venue.city}
-                disabled={isDisabled}
-                onChange={(evt) => setCityVal(evt.target.value)}
-                style={inputStyle(false, isDisabled)}
-              />
-            </Field>
-
-            {/* Active toggle */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '4px 0',
-              }}
-            >
-              <label
-                style={{
-                  fontSize: 13,
-                  fontWeight: 500,
-                  color: 'var(--fg)',
-                  cursor: 'pointer',
-                  fontFamily: "'Inter', sans-serif",
-                }}
-                htmlFor="edit-venue-active"
-              >
-                Active
-              </label>
-              <button
-                id="edit-venue-active"
-                type="button"
-                role="switch"
-                aria-checked={active}
-                disabled={isDisabled}
-                onClick={() => setActive((prev) => !prev)}
-                style={{
-                  width: 40,
-                  height: 22,
-                  borderRadius: 11,
-                  border: 'none',
-                  background: active ? 'var(--signal)' : 'var(--border-strong)',
-                  cursor: isDisabled ? 'not-allowed' : 'pointer',
-                  position: 'relative',
-                  transition: 'background 150ms',
-                }}
-              >
+            <Field
+              label="Source URL"
+              htmlFor="edit-venue-url"
+              labelRight={<RobotsHint allowed={venue.robotsTxtAllowed} />}
+              hint={
                 <span
                   style={{
-                    position: 'absolute',
-                    top: 3,
-                    left: active ? 21 : 3,
-                    width: 16,
-                    height: 16,
-                    borderRadius: '50%',
-                    background: 'white',
-                    transition: 'left 150ms',
+                    fontSize: 12,
+                    color: 'var(--fg-muted)',
+                    fontFamily: "'Inter', sans-serif",
+                  }}
+                >
+                  The events page we crawl daily.
+                </span>
+              }
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  height: 38,
+                  borderRadius: 6,
+                  border: '1px solid var(--border-strong)',
+                  background: 'var(--bg-elevated)',
+                  overflow: 'hidden',
+                  alignItems: 'center',
+                }}
+              >
+                <input
+                  ref={websiteUrlRef}
+                  id="edit-venue-url"
+                  type="url"
+                  defaultValue={venue.websiteUrl}
+                  disabled={isDisabled}
+                  onChange={(evt) => setUrlVal(evt.target.value)}
+                  style={{
+                    all: 'unset',
+                    flex: 1,
+                    minWidth: 0,
+                    padding: '0 10px',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 13,
+                    color: 'var(--fg)',
+                    cursor: isDisabled ? 'not-allowed' : 'text',
+                    opacity: isDisabled ? 0.66 : 1,
                   }}
                 />
-              </button>
+                <div style={{ padding: '0 6px', flexShrink: 0 }}>
+                  <FaviconChip url={urlVal} />
+                </div>
+              </div>
+            </Field>
+
+            {/* City + Status grid */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 220px',
+                gap: 14,
+              }}
+            >
+              <Field label="City" htmlFor="edit-venue-city">
+                <StyledInput
+                  id="edit-venue-city"
+                  inputRef={cityRef}
+                  defaultValue={venue.city}
+                  disabled={isDisabled}
+                  onChange={(evt) => setCityVal(evt.target.value)}
+                />
+              </Field>
+              <Field label="Status" htmlFor="edit-venue-status">
+                <SegToggle
+                  options={[
+                    { key: 'active', label: 'Active' },
+                    { key: 'paused', label: 'Paused' },
+                  ]}
+                  value={activeVal ? 'active' : 'paused'}
+                  onChange={(key) => setActiveVal(key === 'active')}
+                  disabled={isDisabled}
+                />
+              </Field>
             </div>
           </div>
 
+          {/* Crawl settings */}
           <div
             style={{
               borderTop: '1px solid var(--border)',
               paddingTop: 20,
+              marginTop: 20,
               display: 'flex',
               flexDirection: 'column',
-              gap: 20,
+              gap: 18,
             }}
           >
             <MonoLabel>Crawl settings</MonoLabel>
@@ -615,6 +933,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                     fontSize: 11,
                     color: 'var(--fg-muted)',
                     lineHeight: 1.5,
+                    fontFamily: "'Inter', sans-serif",
                   }}
                 >
                   {waitUntilVal === 'networkidle' && (
@@ -667,7 +986,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                 </div>
               }
             >
-              <select
+              <StyledSelect
                 id="edit-venue-wait-until"
                 value={waitUntilVal}
                 disabled={isDisabled}
@@ -679,16 +998,6 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                       | 'domcontentloaded',
                   )
                 }
-                style={{
-                  ...inputStyle(false, isDisabled),
-                  height: 32,
-                  appearance: 'none',
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 10px center',
-                  paddingRight: 28,
-                  cursor: isDisabled ? 'not-allowed' : 'pointer',
-                }}
               >
                 <option value="networkidle">
                   networkidle — wait for quiet network
@@ -697,7 +1006,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                 <option value="domcontentloaded">
                   domcontentloaded — wait for HTML parse only
                 </option>
-              </select>
+              </StyledSelect>
             </Field>
 
             {/* Crawl delay */}
@@ -705,7 +1014,13 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
               label="Crawl delay (ms)"
               htmlFor="edit-venue-crawl-delay"
               hint={
-                <span style={{ fontSize: 11, color: 'var(--fg-muted)' }}>
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--fg-muted)',
+                    fontFamily: "'Inter', sans-serif",
+                  }}
+                >
                   Minimum wait between this venue&apos;s page requests. Default
                   is 3000ms (3 seconds). Increase if the venue is rate-limiting
                   or returning 429 errors; decrease only for venues that
@@ -713,15 +1028,15 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                 </span>
               }
             >
-              <input
-                ref={crawlDelayRef}
+              <StyledInput
                 id="edit-venue-crawl-delay"
                 type="number"
+                inputRef={crawlDelayRef}
+                defaultValue={venue.crawlDelayMs}
+                disabled={isDisabled}
                 min={1000}
                 max={30000}
                 step={500}
-                defaultValue={venue.crawlDelayMs}
-                disabled={isDisabled}
                 onChange={(evt) => {
                   const parsed = Number(evt.target.value)
                   setCrawlDelayVal(
@@ -730,7 +1045,6 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                       : NaN,
                   )
                 }}
-                style={inputStyle(false, isDisabled)}
               />
             </Field>
 
@@ -744,6 +1058,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                     fontSize: 11,
                     color: 'var(--fg-muted)',
                     lineHeight: 1.5,
+                    fontFamily: "'Inter', sans-serif",
                   }}
                 >
                   CSS selector to wait for after page load — use for SPAs where
@@ -766,215 +1081,274 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                 </span>
               }
             >
-              <input
+              <StyledInput
                 id="edit-venue-wait-for-selector"
-                type="text"
                 value={waitForSelectorVal}
                 placeholder="e.g. .event-card or [data-testid='event']"
                 disabled={isDisabled}
                 onChange={(evt) => setWaitForSelectorVal(evt.target.value)}
-                style={inputStyle(false, isDisabled)}
               />
             </Field>
           </div>
         </Panel>
 
         {/* Right: meta sidebar */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Health panel */}
-          <Panel padding={16}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* Health */}
+          <MetaCard
+            title="Health · 7 days"
+            action={
+              <MonoLabel color={healthColor}>
+                {crawlHealth.sevenDayPercent}%
+              </MonoLabel>
+            }
+          >
+            <HealthBarSparkline sparkline={crawlHealth.sparkline} />
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 10,
+                marginTop: 12,
+              }}
+            >
+              {[
+                {
+                  label: 'Last crawl',
+                  value: crawlHealth.lastCrawledAt ? (
+                    <RelTime iso={crawlHealth.lastCrawledAt} />
+                  ) : (
+                    '—'
+                  ),
+                },
+                {
+                  label: 'Avg duration',
+                  value:
+                    crawlHealth.avgDurationMs !== null
+                      ? formatDurationMs(crawlHealth.avgDurationMs)
+                      : '—',
+                },
+                {
+                  label: 'Events tracked',
+                  value: String(crawlHealth.eventsTracked),
+                },
+                {
+                  label: 'Consecutive fails',
+                  value: String(crawlHealth.consecutiveFails),
+                },
+              ].map(({ label, value }) => (
+                <div key={label}>
+                  <MonoLabel>{label}</MonoLabel>
+                  <div
+                    style={{
+                      marginTop: 4,
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 15,
+                      fontWeight: 700,
+                      color: 'var(--fg)',
+                      letterSpacing: '0.01em',
+                      fontVariantNumeric: 'tabular-nums',
+                    }}
+                  >
+                    {value}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </MetaCard>
+
+          {/* Verification */}
+          <MetaCard
+            title="Verification"
+            action={
+              <StatusBadge kind={venue.verified ? 'success' : 'warning'} dot>
+                {venue.verified ? 'Verified' : 'Unverified'}
+              </StatusBadge>
+            }
+          >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <MonoLabel>Health · 7 days</MonoLabel>
-                <span
+              {venue.verified && (
+                <p
                   style={{
-                    fontSize: 20,
-                    fontWeight: 700,
-                    color:
-                      crawlHealth.sevenDayPercent >= 80
-                        ? 'var(--success)'
-                        : crawlHealth.sevenDayPercent >= 50
-                          ? 'var(--warning)'
-                          : 'var(--danger)',
+                    margin: 0,
                     fontFamily: "'Inter', sans-serif",
+                    fontSize: 12.5,
+                    color: 'var(--fg-muted)',
+                    lineHeight: 1.5,
                   }}
                 >
-                  {crawlHealth.sevenDayPercent}%
-                </span>
-              </div>
+                  Verified venues appear on the public Browse page.
+                </p>
+              )}
+              <AdminButton
+                variant="ghost"
+                size="sm"
+                icon={venue.verified ? ShieldOff : ShieldCheck}
+                disabled={isPending}
+                onClick={handleVerifyToggle}
+                type="button"
+              >
+                {venue.verified ? 'Unverify venue' : 'Verify venue'}
+              </AdminButton>
+            </div>
+          </MetaCard>
 
-              <CrawlDotSparkline sparkline={crawlHealth.sparkline} />
-
-              <div
+          {/* Recent runs */}
+          <MetaCard
+            title="Recent runs"
+            action={
+              <Link
+                href={`/admin/crawls?venue=${venue.id}`}
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: 8,
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: 'var(--signal)',
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3,
                 }}
               >
-                {[
-                  {
-                    label: 'Last crawl',
-                    value: crawlHealth.lastCrawledAt
-                      ? new Date(crawlHealth.lastCrawledAt).toLocaleDateString(
-                          'en-US',
-                          { month: 'short', day: 'numeric' },
-                        )
-                      : 'Never',
-                  },
-                  {
-                    label: 'Avg duration',
-                    value:
-                      crawlHealth.avgDurationMs !== null
-                        ? formatDurationMs(crawlHealth.avgDurationMs)
-                        : '—',
-                  },
-                  {
-                    label: 'Events tracked',
-                    value: String(crawlHealth.eventsTracked),
-                  },
-                  {
-                    label: 'Consec. fails',
-                    value: String(crawlHealth.consecutiveFails),
-                  },
-                ].map(({ label, value }) => (
+                View all →
+              </Link>
+            }
+          >
+            {recentRuns.length === 0 ? (
+              <p
+                style={{
+                  fontSize: 12,
+                  color: 'var(--fg-muted)',
+                  margin: 0,
+                  fontFamily: "'Inter', sans-serif",
+                }}
+              >
+                No crawl runs yet
+              </p>
+            ) : (
+              <div>
+                {recentRuns.map((run, idx) => (
                   <div
-                    key={label}
+                    key={run.id}
                     style={{
-                      background: 'var(--surface-1)',
-                      borderRadius: 6,
-                      padding: '8px 10px',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      justifyContent: 'space-between',
+                      gap: 10,
+                      padding: '10px 0',
+                      borderBottom:
+                        idx < recentRuns.length - 1
+                          ? '1px solid var(--border)'
+                          : 'none',
                     }}
                   >
                     <div
                       style={{
-                        fontSize: 10,
-                        fontWeight: 600,
-                        letterSpacing: '0.06em',
-                        textTransform: 'uppercase',
-                        color: 'var(--fg-subtle)',
-                        fontFamily: 'monospace',
-                        marginBottom: 2,
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: 8,
+                        minWidth: 0,
                       }}
                     >
-                      {label}
+                      <span
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: '50%',
+                          marginTop: 4,
+                          flexShrink: 0,
+                          background:
+                            run.status === 'success'
+                              ? 'var(--success)'
+                              : run.status === 'failed'
+                                ? 'var(--danger)'
+                                : 'var(--warning)',
+                        }}
+                      />
+                      <div style={{ minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontFamily: "'JetBrains Mono', monospace",
+                            fontSize: 11.5,
+                            fontWeight: 600,
+                            color: 'var(--fg)',
+                            letterSpacing: '0.02em',
+                          }}
+                        >
+                          <RelTime iso={run.createdAt} />
+                        </div>
+                        {run.errorMessage ? (
+                          <div
+                            style={{
+                              fontFamily: "'JetBrains Mono', monospace",
+                              fontSize: 10.5,
+                              color: 'var(--danger)',
+                              marginTop: 2,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {run.errorMessage}
+                          </div>
+                        ) : (
+                          <div
+                            style={{
+                              fontFamily: "'Inter', sans-serif",
+                              fontSize: 11,
+                              color: 'var(--fg-muted)',
+                              marginTop: 2,
+                            }}
+                          >
+                            {run.eventsFound} found · {run.eventsInserted}{' '}
+                            inserted
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div
-                      style={{
-                        fontSize: 14,
-                        fontWeight: 600,
-                        color: 'var(--fg)',
-                        fontFamily: "'Inter', sans-serif",
-                      }}
-                    >
-                      {value}
-                    </div>
+                    {run.durationMs !== null && (
+                      <MonoLabel color="var(--fg-subtle)">
+                        {formatDurationMs(run.durationMs)}
+                      </MonoLabel>
+                    )}
                   </div>
                 ))}
               </div>
-            </div>
-          </Panel>
-
-          {/* Verification panel */}
-          <Panel padding={16}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <MonoLabel>Verification</MonoLabel>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <StatusBadge kind={venue.verified ? 'success' : 'warning'}>
-                  {venue.verified ? 'Verified' : 'Unverified'}
-                </StatusBadge>
-                <AdminButton
-                  variant={venue.verified ? 'ghost' : 'outline'}
-                  size="sm"
-                  icon={venue.verified ? ShieldOff : ShieldCheck}
-                  disabled={isPending}
-                  onClick={handleVerifyToggle}
-                  type="button"
-                >
-                  {venue.verified ? 'Unverify' : 'Verify'}
-                </AdminButton>
-              </div>
-            </div>
-          </Panel>
-
-          {/* Recent runs panel */}
-          <Panel padding={16}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <MonoLabel>Recent runs</MonoLabel>
-                <Link
-                  href={`/admin/crawls?venue=${venue.id}`}
-                  style={{
-                    fontSize: 12,
-                    color: 'var(--signal)',
-                    textDecoration: 'none',
-                  }}
-                >
-                  View all →
-                </Link>
-              </div>
-              {recentRuns.length === 0 ? (
-                <p
-                  style={{
-                    fontSize: 12,
-                    color: 'var(--fg-muted)',
-                    margin: 0,
-                    fontFamily: "'Inter', sans-serif",
-                  }}
-                >
-                  No crawl runs yet
-                </p>
-              ) : (
-                <div>
-                  {recentRuns.map((run) => (
-                    <CrawlRunRow key={run.id} run={run} />
-                  ))}
-                </div>
-              )}
-            </div>
-          </Panel>
+            )}
+          </MetaCard>
 
           {/* Danger zone */}
-          <Panel padding={16}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <MonoLabel>Danger zone</MonoLabel>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <AdminButton
-                  variant="outline"
-                  size="sm"
-                  icon={venue.active ? Pause : Play}
-                  disabled={isPending}
-                  onClick={handlePauseToggle}
-                  type="button"
-                >
-                  {venue.active ? 'Pause' : 'Activate'}
-                </AdminButton>
-                <DeleteVenueDialog
-                  venueId={venue.id}
-                  venueName={venue.name}
-                  eventsTracked={crawlHealth.eventsTracked}
-                />
-              </div>
+          <MetaCard title="Danger zone" danger>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <DangerRow
+                title="Pause this venue"
+                body="Stops daily crawls. Existing events stay published."
+                action={
+                  <AdminButton
+                    variant="outline"
+                    size="sm"
+                    icon={venue.active ? Pause : Play}
+                    disabled={isPending}
+                    onClick={handlePauseToggle}
+                    type="button"
+                  >
+                    {venue.active ? 'Pause' : 'Activate'}
+                  </AdminButton>
+                }
+              />
+              <DangerRow
+                title="Delete venue"
+                body="Removes the venue and detaches its events. Cannot be undone."
+                action={
+                  <DeleteVenueDialog
+                    venueId={venue.id}
+                    venueName={venue.name}
+                    eventsTracked={crawlHealth.eventsTracked}
+                  />
+                }
+              />
             </div>
-          </Panel>
+          </MetaCard>
         </div>
       </div>
 
@@ -982,79 +1356,90 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
       {isDirty && (
         <div
           style={{
-            position: 'fixed',
-            bottom: 24,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 40,
+            position: 'sticky',
+            bottom: 0,
+            marginTop: 8,
             display: 'flex',
             alignItems: 'center',
-            gap: 10,
+            justifyContent: 'space-between',
+            padding: '12px 18px',
             background: 'var(--fg)',
             color: 'var(--bg)',
-            borderRadius: 100,
-            padding: '8px 16px',
+            borderRadius: 12,
             boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
             fontFamily: "'Inter', sans-serif",
             fontSize: 13,
             fontWeight: 500,
           }}
         >
-          <span style={{ opacity: 0.7, marginRight: 4 }}>Unsaved changes</span>
-          <button
-            type="button"
-            onClick={handleDiscard}
-            disabled={isDisabled}
-            style={{
-              background: 'transparent',
-              border: '1px solid rgba(255,255,255,0.25)',
-              borderRadius: 20,
-              padding: '4px 12px',
-              color: 'inherit',
-              fontSize: 12,
-              fontWeight: 500,
-              cursor: isDisabled ? 'not-allowed' : 'pointer',
-              fontFamily: "'Inter', sans-serif",
-            }}
-          >
-            Discard
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleSave()}
-            disabled={isDisabled}
-            style={{
-              background: 'var(--bg)',
-              border: 'none',
-              borderRadius: 20,
-              padding: '4px 16px',
-              color: 'var(--fg)',
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: isDisabled ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              fontFamily: "'Inter', sans-serif",
-            }}
-          >
-            {saveState === 'saving' ? (
-              <>
-                <Loader2
-                  size={12}
-                  style={{ animation: 'spin 1s linear infinite' }}
-                />
-                Saving…
-              </>
-            ) : saveState === 'saved' ? (
-              <>
-                <Check size={12} />
-                Saved
-              </>
-            ) : (
-              'Save changes'
-            )}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: 4,
+                background: 'var(--warning)',
+              }}
+            />
+            <span>Unsaved changes</span>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              type="button"
+              onClick={handleDiscard}
+              disabled={isDisabled}
+              style={{
+                background: 'transparent',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: 8,
+                padding: '6px 14px',
+                color: 'inherit',
+                fontSize: 13,
+                fontWeight: 600,
+                opacity: 0.8,
+                cursor: isDisabled ? 'not-allowed' : 'pointer',
+                fontFamily: "'Inter', sans-serif",
+              }}
+            >
+              Discard
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={isDisabled}
+              style={{
+                background: 'var(--signal)',
+                border: 'none',
+                borderRadius: 8,
+                padding: '6px 16px',
+                color: 'var(--fg-on-accent)',
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: isDisabled ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                fontFamily: "'Inter', sans-serif",
+              }}
+            >
+              {saveState === 'saving' ? (
+                <>
+                  <Loader2
+                    size={12}
+                    style={{ animation: 'spin 1s linear infinite' }}
+                  />
+                  Saving…
+                </>
+              ) : saveState === 'saved' ? (
+                <>
+                  <Check size={12} />
+                  Saved
+                </>
+              ) : (
+                'Save changes'
+              )}
+            </button>
+          </div>
         </div>
       )}
     </div>

@@ -1,8 +1,9 @@
 interface MonoLabelProps {
   children: React.ReactNode
+  color?: string
 }
 
-export const MonoLabel = ({ children }: MonoLabelProps) => (
+export const MonoLabel = ({ children, color }: MonoLabelProps) => (
   <span
     style={{
       fontFamily: "'JetBrains Mono', monospace",
@@ -10,7 +11,7 @@ export const MonoLabel = ({ children }: MonoLabelProps) => (
       fontWeight: 700,
       textTransform: 'uppercase',
       letterSpacing: '0.1em',
-      color: 'var(--fg-subtle)',
+      color: color ?? 'var(--fg-subtle)',
     }}
   >
     {children}

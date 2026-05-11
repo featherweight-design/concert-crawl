@@ -4,14 +4,20 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { NAV } from './nav'
 import { buildBreadcrumbs } from './breadcrumbs'
+import { usePageTitle } from './PageTitleContext'
 
-const useBreadcrumbs = () => {
+const useBreadcrumbs = (pageTitle: string | null) => {
   const pathname = usePathname()
-  return buildBreadcrumbs(pathname, NAV)
+  const crumbs = buildBreadcrumbs(pathname, NAV)
+  if (pageTitle && crumbs.length > 0) {
+    return [...crumbs.slice(0, -1), { label: pageTitle }]
+  }
+  return crumbs
 }
 
 export const AdminTopbar = () => {
-  const crumbs = useBreadcrumbs()
+  const { pageTitle } = usePageTitle()
+  const crumbs = useBreadcrumbs(pageTitle)
 
   return (
     <header

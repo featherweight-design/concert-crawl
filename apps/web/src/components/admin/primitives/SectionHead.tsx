@@ -1,7 +1,7 @@
 interface SectionHeadProps {
   eyebrow?: string
-  title: string
-  subtitle?: string
+  title: React.ReactNode
+  subtitle?: React.ReactNode
   actions?: React.ReactNode
 }
 

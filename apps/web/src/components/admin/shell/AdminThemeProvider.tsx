@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
+import { PageTitleProvider } from './PageTitleContext'
 import { type ThemeName, THEME_NAMES } from '@/theme/themes'
 
 export type AdminTheme = ThemeName
@@ -37,9 +38,11 @@ export const AdminThemeProvider = ({
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme }}>
-      <div data-admin-theme={theme} style={{ display: 'contents' }}>
-        {children}
-      </div>
+      <PageTitleProvider>
+        <div data-admin-theme={theme} style={{ display: 'contents' }}>
+          {children}
+        </div>
+      </PageTitleProvider>
     </ThemeContext.Provider>
   )
 }
