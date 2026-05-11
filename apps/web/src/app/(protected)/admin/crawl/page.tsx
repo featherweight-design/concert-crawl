@@ -58,7 +58,8 @@ interface RawVenueStatus {
 }
 
 function deriveVenueStatus(venue: RawVenueStatus): string {
-  if (venue.blockedAt != null) return 'blocked'
+  if (venue.blockedAt != null && venue.lastRun?.status !== 'success')
+    return 'blocked'
   if (!venue.active) return 'paused'
   return venue.lastRun?.status ?? 'never'
 }
