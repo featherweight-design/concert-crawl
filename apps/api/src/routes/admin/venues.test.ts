@@ -229,4 +229,78 @@ describe('Admin venue routes', () => {
     }
     expect(body.data.crawlWaitForSelector).toBeNull()
   })
+
+  it('PATCH /v1/admin/venues/:id sets verifiedAt when verified: true', async () => {
+    adminAuth()
+    mockDb.select.mockReturnValue(
+      mockDb._makeQueryBuilder([mockDb._mockVenueRow]),
+    )
+    const verifiedAt = new Date()
+    mockDb.returning.mockResolvedValue([
+      {
+        ...mockDb._mockVenueRow,
+        verified: true,
+        verifiedBy: 'Hugh',
+        verifiedAt,
+      },
+    ])
+    mockDb.set.mockClear()
+    const res = await createApp().request('/v1/admin/venues/venue-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ verified: true, verifiedBy: 'Hugh' }),
+    })
+    expect(res.status).toBe(200)
+    // verifiedAt is auto-set by the route — must be passed to db.set
+    expect(mockDb.set).toHaveBeenCalledWith(
+      expect.objectContaining({ verifiedAt: expect.any(Date) }),
+    )
+    const body = (await res.json()) as {
+      success: boolean
+      data: { verified: boolean; verifiedBy: string; verifiedAt: string }
+    }
+    expect(body.data.verified).toBe(true)
+    expect(body.data.verifiedBy).toBe('Hugh')
+    expect(body.data.verifiedAt).toBeTruthy()
+  })
+
+  it('PATCH /v1/admin/venues/:id nulls verifiedBy and verifiedAt when verified: false', async () => {
+    adminAuth()
+    mockDb.select.mockReturnValue(
+      mockDb._makeQueryBuilder([
+        {
+          ...mockDb._mockVenueRow,
+          verified: true,
+          verifiedBy: 'Hugh',
+          verifiedAt: new Date(),
+        },
+      ]),
+    )
+    mockDb.returning.mockResolvedValue([
+      {
+        ...mockDb._mockVenueRow,
+        verified: false,
+        verifiedBy: null,
+        verifiedAt: null,
+      },
+    ])
+    mockDb.set.mockClear()
+    const res = await createApp().request('/v1/admin/venues/venue-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ verified: false }),
+    })
+    expect(res.status).toBe(200)
+    // Route must explicitly null both fields
+    expect(mockDb.set).toHaveBeenCalledWith(
+      expect.objectContaining({ verifiedBy: null, verifiedAt: null }),
+    )
+    const body = (await res.json()) as {
+      success: boolean
+      data: { verified: boolean; verifiedBy: null; verifiedAt: null }
+    }
+    expect(body.data.verified).toBe(false)
+    expect(body.data.verifiedBy).toBeNull()
+    expect(body.data.verifiedAt).toBeNull()
+  })
 })

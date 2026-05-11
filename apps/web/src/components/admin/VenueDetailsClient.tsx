@@ -428,6 +428,8 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     venue.crawlWaitForSelector ?? '',
   )
   const [slugManual, setSlugManual] = useState(true)
+  const [slugFocused, setSlugFocused] = useState(false)
+  const [urlFocused, setUrlFocused] = useState(false)
 
   const isDirty =
     nameVal !== venue.name ||
@@ -481,6 +483,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     formData.set('crawlWaitUntil', waitUntilVal)
     formData.set('crawlDelayMs', String(crawlDelayVal))
     formData.set('crawlWaitForSelector', waitForSelectorVal.trim())
+    formData.set('active', String(venue.active))
 
     try {
       const result = await updateVenue(venue.id, formData)
@@ -701,13 +704,21 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
               }
             >
               <div
+                onFocus={() => setSlugFocused(true)}
+                onBlur={() => setSlugFocused(false)}
                 style={{
                   display: 'flex',
                   height: 38,
                   borderRadius: 8,
-                  border: `1px solid ${fieldErrors.slug ? 'var(--danger)' : 'var(--border-strong)'}`,
+                  border: `1px solid ${fieldErrors.slug ? 'var(--danger)' : slugFocused ? 'var(--signal)' : 'var(--border-strong)'}`,
                   background: 'var(--bg-elevated)',
                   overflow: 'hidden',
+                  boxShadow: slugFocused
+                    ? fieldErrors.slug
+                      ? '0 0 0 3px color-mix(in oklab, var(--danger) 18%, transparent)'
+                      : '0 0 0 3px color-mix(in oklab, var(--signal) 22%, transparent)'
+                    : 'none',
+                  transition: 'border-color .12s, box-shadow .12s',
                 }}
               >
                 <div
@@ -811,14 +822,20 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
               }
             >
               <div
+                onFocus={() => setUrlFocused(true)}
+                onBlur={() => setUrlFocused(false)}
                 style={{
                   display: 'flex',
                   height: 38,
                   borderRadius: 8,
-                  border: '1px solid var(--border-strong)',
+                  border: `1px solid ${urlFocused ? 'var(--signal)' : 'var(--border-strong)'}`,
                   background: 'var(--bg-elevated)',
                   overflow: 'hidden',
                   alignItems: 'center',
+                  boxShadow: urlFocused
+                    ? '0 0 0 3px color-mix(in oklab, var(--signal) 22%, transparent)'
+                    : 'none',
+                  transition: 'border-color .12s, box-shadow .12s',
                 }}
               >
                 <input
