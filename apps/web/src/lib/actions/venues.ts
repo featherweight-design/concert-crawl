@@ -83,6 +83,13 @@ export async function updateVenue(
       ? (crawlWaitUntilRaw as (typeof VALID_WAIT_UNTIL)[number])
       : undefined
 
+    const crawlWaitForSelectorRaw = formData.get('crawlWaitForSelector')
+    const crawlWaitForSelector =
+      crawlWaitForSelectorRaw === null ||
+      String(crawlWaitForSelectorRaw).trim() === ''
+        ? null
+        : String(crawlWaitForSelectorRaw).trim()
+
     await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
       name: formData.get('name'),
       slug: formData.get('slug'),
@@ -91,6 +98,7 @@ export async function updateVenue(
       active: formData.get('active') === 'true',
       crawlWaitUntil,
       crawlDelayMs,
+      crawlWaitForSelector,
     })
     revalidatePath('/admin/venues')
     revalidatePath(`/admin/venues/${id}`)
