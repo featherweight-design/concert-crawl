@@ -20,6 +20,7 @@ function makeVenue(
     crawlNotes: null,
     crawlDelayMs: 3000,
     crawlWaitUntil: 'networkidle' as const,
+    crawlWaitForSelector: null,
     extractionStrategy: null,
     contactEmail: null,
     consecutiveFailures: 0,

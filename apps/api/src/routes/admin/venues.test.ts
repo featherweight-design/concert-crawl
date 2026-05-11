@@ -51,7 +51,7 @@ const { mockGetAuth, mockDb } = vi.hoisted(() => {
     values: vi.fn().mockReturnThis(),
     set: vi.fn().mockReturnThis(),
     returning: vi.fn().mockResolvedValue([mockVenueRow]),
-    where: vi.fn().mockResolvedValue([]),
+    where: vi.fn().mockReturnThis(),
     execute: vi.fn().mockResolvedValue(undefined),
   }
 
