@@ -11,5 +11,19 @@
     "Bash(find *)",
     "Bash(cd *)",
     "Bash(gh issue create*)"
-  ]
+  ],
+  "hooks": {
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "REPO=/Users/huey/Projects/concert-crawl; WORKTREE=$(jq -r '.worktree_path'); cd \"$WORKTREE\" && pnpm i && find \"$REPO\" -name '.env.local' -not -path '*/.worktrees/*' -not -path '*/node_modules/*' | while read -r src; do rel=\"${src#$REPO/}\"; dest=\"$WORKTREE/$rel\"; mkdir -p \"$(dirname \"$dest\")\"; cp \"$src\" \"$dest\"; done",
+            "timeout": 120,
+            "statusMessage": "Installing dependencies and copying .env.local files..."
+          }
+        ]
+      }
+    ]
+  }
 }
