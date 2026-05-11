@@ -302,11 +302,11 @@ function StyledInput({
         width: '100%',
         height: 38,
         padding: '0 10px',
-        borderRadius: 6,
+        borderRadius: 8,
         border: `1px solid ${borderColor}`,
         background: 'var(--bg-elevated)',
         color: 'var(--fg)',
-        fontSize: 13,
+        fontSize: 13.5,
         fontFamily: "'Inter', sans-serif",
         outline: 'none',
         boxSizing: 'border-box',
@@ -346,11 +346,11 @@ function StyledSelect({
         width: '100%',
         height: 38,
         padding: '0 28px 0 10px',
-        borderRadius: 6,
+        borderRadius: 8,
         border: `1px solid ${focused ? 'var(--signal)' : 'var(--border-strong)'}`,
         background: 'var(--bg-elevated)',
         color: 'var(--fg)',
-        fontSize: 13,
+        fontSize: 13.5,
         fontFamily: "'Inter', sans-serif",
         outline: 'none',
         boxSizing: 'border-box',
@@ -716,7 +716,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
       >
         {/* Left: form */}
         <Panel padding={20}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <MonoLabel>Details</MonoLabel>
 
             {/* Venue name */}
@@ -762,7 +762,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                 style={{
                   display: 'flex',
                   height: 38,
-                  borderRadius: 6,
+                  borderRadius: 8,
                   border: `1px solid ${fieldErrors.slug ? 'var(--danger)' : 'var(--border-strong)'}`,
                   background: 'var(--bg-elevated)',
                   overflow: 'hidden',
@@ -776,7 +776,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                     background: 'var(--surface-1)',
                     borderRight: '1px solid var(--border)',
                     fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: 11,
+                    fontSize: 12,
                     color: 'var(--fg-subtle)',
                     whiteSpace: 'nowrap',
                     flexShrink: 0,
@@ -860,7 +860,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                 style={{
                   display: 'flex',
                   height: 38,
-                  borderRadius: 6,
+                  borderRadius: 8,
                   border: '1px solid var(--border-strong)',
                   background: 'var(--bg-elevated)',
                   overflow: 'hidden',
@@ -931,7 +931,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
               marginTop: 20,
               display: 'flex',
               flexDirection: 'column',
-              gap: 18,
+              gap: 16,
             }}
           >
             <MonoLabel>Crawl settings</MonoLabel>
@@ -1332,7 +1332,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
 
           {/* Danger zone */}
           <MetaCard title="Danger zone" danger>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <DangerRow
                 title="Pause this venue"
                 body="Stops daily crawls. Existing events stay published."
@@ -1382,7 +1382,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
             boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
             fontFamily: "'Inter', sans-serif",
             fontSize: 13,
-            fontWeight: 500,
+            fontWeight: 600,
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1405,11 +1405,11 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                 background: 'transparent',
                 border: '1px solid rgba(255,255,255,0.2)',
                 borderRadius: 8,
-                padding: '6px 14px',
+                padding: '8px 14px',
                 color: 'inherit',
                 fontSize: 13,
                 fontWeight: 600,
-                opacity: 0.8,
+                opacity: 0.7,
                 cursor: isDisabled ? 'not-allowed' : 'pointer',
                 fontFamily: "'Inter', sans-serif",
               }}
