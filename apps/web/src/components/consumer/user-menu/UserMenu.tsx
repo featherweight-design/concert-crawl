@@ -8,6 +8,9 @@ import { useTheme } from '@/theme/ThemeProvider'
 import { THEMES, THEME_META, type ThemeName } from '@/theme/themes'
 import { MiniMark } from '@/theme/MiniMark'
 import { FeedbackModal } from '../feedback/FeedbackModal'
+import { Avatar } from '@/components/settings/Avatar'
+import { fetchMe } from '@/lib/users'
+import type { AvatarColor } from '@concert-crawl/types'
 
 const APP_VERSION = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev'
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? ''
@@ -22,6 +25,8 @@ export function UserMenu() {
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [submissionCount, setSubmissionCount] = useState(0)
+  const [avatarHandle, setAvatarHandle] = useState<string | null>(null)
+  const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -96,6 +101,26 @@ export function UserMenu() {
     }
   }, [getToken])
 
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const token = await getToken()
+      if (!token || cancelled) return
+      try {
+        const profile = await fetchMe(token)
+        if (!cancelled) {
+          setAvatarHandle(profile.handle)
+          setAvatarColor(profile.avatarColor)
+        }
+      } catch (err) {
+        console.warn('UserMenu: could not load profile for avatar', err)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [getToken])
+
   const handleSignOut = useCallback(() => {
     void signOut().catch((err: unknown) =>
       console.error('Sign out failed', err),
@@ -129,15 +154,9 @@ export function UserMenu() {
           aria-label="Account menu"
           aria-expanded={open}
           aria-haspopup="menu"
-          className="relative h-9 w-9 shrink-0 cursor-pointer overflow-hidden rounded-full border border-[var(--border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal)]"
-          style={{ background: 'var(--surface-1)' }}
+          className="shrink-0 cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal)]"
         >
-          <span
-            className="flex h-full w-full items-center justify-center text-[13px] font-bold"
-            style={{ color: 'var(--fg-muted)' }}
-          >
-            {initials}
-          </span>
+          <Avatar handle={avatarHandle} avatarColor={avatarColor} size={36} />
         </button>
 
         {/* Desktop popover */}
