@@ -101,8 +101,8 @@ export function DangerZone({ handle, submissionCount }: DangerZoneProps) {
       <DeleteAccountSheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
-        handle={handle}
-        submissionCount={submissionCount}
+        {...(handle !== undefined && { handle })}
+        {...(submissionCount !== undefined && { submissionCount })}
       />
     </>
   )
