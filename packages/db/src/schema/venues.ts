@@ -42,6 +42,7 @@ export const venues = pgTable('venues', {
   crawlWaitUntil: crawlWaitUntilEnum('crawl_wait_until')
     .notNull()
     .default('networkidle'),
+  crawlWaitForSelector: text('crawl_wait_for_selector'),
   contactEmail: text('contact_email'),
   priceUrl: text('price_url'),
   createdAt: timestamp('created_at', { withTimezone: true })
