@@ -1,14 +1,19 @@
 import { Fragment } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import type { EventWithVenue, EventsListResponse } from '@concert-crawl/types'
-import { publicApiClient } from '@/lib/api'
+import { auth } from '@clerk/nextjs/server'
+import type { EventDetailResponse, EventWithVenue, EventsListResponse } from '@concert-crawl/types'
+import { publicApiClient, apiClient } from '@/lib/api'
 import { AppHeader } from '@/components/consumer/app-header'
 import { EventImage } from '@/components/consumer/event-image'
 import { SmallEventRow } from '@/components/consumer/small-event-row'
 import { SectionHeader } from '@/components/consumer/section-header'
 import { PriceDisplay } from '@/components/consumer/PriceDisplay'
 import { PriceSection } from '@/components/consumer/PriceSection'
+import { WatchShowButton } from '@/components/consumer/watch-show-button'
+import { SetlistPreview } from '@/components/consumer/setlist-preview'
+import { SoldOutCta } from '@/components/consumer/SoldOutCta'
+import { SubmitPriceCardCta } from '@/components/consumer/SubmitPriceCardCta'
 import {
   formatEventDate,
   formatShowTime,
@@ -20,9 +25,15 @@ interface EventDetailPageProps {
   params: Promise<{ id: string }>
 }
 
-async function fetchEvent(id: string): Promise<EventWithVenue | null> {
+async function fetchEvent(
+  id: string,
+  token: string | null,
+): Promise<EventDetailResponse | null> {
   try {
-    return await publicApiClient.get<EventWithVenue>(`/v1/events/${id}`)
+    if (token) {
+      return await apiClient.get<EventDetailResponse>(`/v1/events/${id}`, token)
+    }
+    return await publicApiClient.get<EventDetailResponse>(`/v1/events/${id}`)
   } catch {
     return null
   }
@@ -46,7 +57,10 @@ export default async function EventDetailPage({
   params,
 }: EventDetailPageProps) {
   const { id } = await params
-  const event = await fetchEvent(id)
+  const { getToken } = await auth()
+  const token = await getToken()
+
+  const event = await fetchEvent(id, token)
   if (!event) notFound()
 
   const related = await fetchRelated(event.venue.slug, event.id)
@@ -56,6 +70,7 @@ export default async function EventDetailPage({
   const dateLabel = formatEventDate(event.date, event.venue.timezone)
   const isCancelled = event.status === 'cancelled'
   const isPostponed = event.status === 'postponed'
+  const isSoldOut = event.priceSource !== null && event.ticketPriceMin === null
 
   const doorsShow =
     doorsTime && showTime
@@ -204,6 +219,15 @@ export default async function EventDetailPage({
           </p>
         )}
 
+        {/* Watch strip — directly under title */}
+        <div className="mt-3">
+          <WatchShowButton
+            eventId={event.id}
+            initialWatching={event.isWatching}
+            watchingCount={event.watching}
+          />
+        </div>
+
         {/* Info block */}
         <div className="mt-4 border-y border-border py-1">
           <InfoRow
@@ -222,14 +246,24 @@ export default async function EventDetailPage({
           <InfoRow icon={<IconUsers />} label="Ages" value="All Ages" />
         </div>
 
-        {/* Price block — always rendered; collapses to quiet no-price state */}
-        <PriceDisplay
-          priceMin={event.ticketPriceMin}
-          priceMax={event.ticketPriceMax}
-          priceSource={event.priceSource}
-          venueName={event.venue.name}
-          ticketUrl={event.ticketUrl}
-        />
+        {/* Price card — PriceDisplay in card container */}
+        <div
+          className="mt-4 rounded-[10px] border border-border px-4 py-3"
+          style={{ background: 'var(--surface-1)' }}
+        >
+          <PriceDisplay
+            priceMin={event.ticketPriceMin}
+            priceMax={event.ticketPriceMax}
+            priceSource={event.priceSource}
+            venueName={event.venue.name}
+            ticketUrl={event.ticketUrl}
+          />
+        </div>
+
+        {/* Submit-a-price card CTA */}
+        <div className="mt-3">
+          <SubmitPriceCardCta eventId={event.id} />
+        </div>
 
         {/* Community price section */}
         <div className="mt-4">
@@ -240,14 +274,6 @@ export default async function EventDetailPage({
             eventDate={event.date}
           />
         </div>
-
-        {/* Submit a price CTA */}
-        <a
-          href={`/events/${event.id}/submit-price`}
-          className="block text-center text-sm text-signal underline py-1"
-        >
-          Submit a price you saw →
-        </a>
 
         {/* About */}
         {event.description && (
@@ -295,23 +321,36 @@ export default async function EventDetailPage({
           </div>
         )}
 
-        {/* Get Tickets CTA */}
-        {event.ticketUrl && !isCancelled && !isPostponed && (
-          <a
-            href={event.ticketUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-5 flex h-12 w-full items-center justify-center rounded-[10px] text-fg-on-accent"
-            style={{
-              background: 'var(--accent)',
-              fontFamily: 'var(--font-ui)',
-              fontWeight: 800,
-              fontSize: 15,
-              letterSpacing: '-0.01em',
-            }}
-          >
-            {copy.ticketsCta} ↗
-          </a>
+        {/* Setlist preview — above primary CTA */}
+        <div className="mt-5">
+          <SetlistPreview setlist={event.setlist} />
+        </div>
+
+        {/* Primary CTA — sold out or get tickets */}
+        {!isCancelled && !isPostponed && (
+          <div className="mt-5">
+            {isSoldOut ? (
+              <SoldOutCta />
+            ) : (
+              event.ticketUrl && (
+                <a
+                  href={event.ticketUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex h-12 w-full items-center justify-center rounded-[10px] text-fg-on-accent"
+                  style={{
+                    background: 'var(--accent)',
+                    fontFamily: 'var(--font-ui)',
+                    fontWeight: 800,
+                    fontSize: 15,
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  {copy.ticketsCta} ↗
+                </a>
+              )
+            )}
+          </div>
         )}
 
         {/* Sign-up nudge */}
@@ -336,9 +375,9 @@ export default async function EventDetailPage({
               title={`More at ${event.venue.name}`}
               count={`${related.length} show${related.length !== 1 ? 's' : ''}`}
             />
-            {related.map((rel, i) => (
+            {related.map((rel, idx) => (
               <Fragment key={rel.id}>
-                {i > 0 && (
+                {idx > 0 && (
                   <div className="h-px bg-border" style={{ marginLeft: 50 }} />
                 )}
                 <SmallEventRow event={rel} date={formatShortDate(rel.date)} />

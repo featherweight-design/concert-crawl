@@ -103,11 +103,11 @@ function BellIcon() {
 function TrustMark({ kind }: { kind: SourceKind }) {
   if (kind !== 'resale' && kind !== 'community') return null
   const label = kind === 'resale' ? 'resale' : 'community'
-  const color = kind === 'resale' ? 'var(--warning)' : 'var(--fg-muted)'
+  const color = kind === 'resale' ? 'var(--warning)' : 'var(--trust-community)'
   const bg =
     kind === 'resale'
       ? 'color-mix(in oklab, var(--warning) 14%, transparent)'
-      : 'color-mix(in oklab, var(--fg-muted) 12%, transparent)'
+      : 'color-mix(in oklab, var(--trust-community) 12%, transparent)'
   return (
     <span
       style={{
@@ -206,9 +206,7 @@ export function PriceDisplay({
   const isAxs = ticketUrl?.includes('axs.com') ?? false
 
   const sectionStyle: React.CSSProperties = {
-    padding: '12px 0',
-    borderTop: '1px solid var(--border)',
-    borderBottom: '1px solid var(--border)',
+    padding: '4px 0',
   }
 
   const editorialText: React.CSSProperties = {
@@ -243,13 +241,12 @@ export function PriceDisplay({
   if (kind === 'community') {
     return (
       <div style={sectionStyle}>
-        <div style={{ marginBottom: 4 }}>
-          <TrustMark kind="community" />
-        </div>
         <p style={editorialText}>
-          <span>Reported at </span>
-          <span style={{ color: 'var(--fg)', fontWeight: 700 }}>{faceStr}</span>
-          <span> face. </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ color: 'var(--fg)', fontWeight: 700 }}>{faceStr}</span>
+            <TrustMark kind="community" />
+          </span>
+          <span> reported. </span>
           <span style={{ color: 'var(--fg-subtle)' }}>
             Single fan submission — not yet verified.
           </span>
@@ -275,12 +272,12 @@ export function PriceDisplay({
   if (kind === 'resale') {
     return (
       <div style={sectionStyle}>
-        <div style={{ marginBottom: 4 }}>
-          <TrustMark kind="resale" />
-        </div>
         <p style={editorialText}>
           <span>Cheapest resale: </span>
-          <span style={{ color: 'var(--fg)', fontWeight: 700 }}>{faceStr}</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ color: 'var(--fg)', fontWeight: 700 }}>{faceStr}</span>
+            <TrustMark kind="resale" />
+          </span>
           <span>. </span>
           <span style={{ color: 'var(--fg-subtle)' }}>
             Face value not published — couldn&apos;t pull one from the primary
@@ -319,16 +316,7 @@ export function PriceDisplay({
         }}
       >
         {sourceName && <SourceLink name={sourceName} url={ticketUrl} />}
-        <span
-          style={{
-            color: 'var(--fg-subtle)',
-            opacity: 0.4,
-            marginLeft: 'auto',
-          }}
-        >
-          ·
-        </span>
-        <WatchAffordance />
+        {false && <WatchAffordance />}
       </div>
     </div>
   )

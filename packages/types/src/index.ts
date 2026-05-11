@@ -210,12 +210,28 @@ export interface SubmissionListResponse {
   userSubmission: SubmissionWithMeta | null
 }
 
+// Setlist — likely setlist for an event, sourced from Setlist.fm
+export interface Setlist {
+  songs: string[]
+  encore?: string[]
+  source?: string
+  sourceUrl?: string
+  when?: string
+}
+
 // EventWithVenue — event joined with its venue, returned by the public events API
 export interface EventWithVenue extends Event {
   venue: Pick<
     Venue,
     'id' | 'name' | 'slug' | 'city' | 'websiteUrl' | 'timezone'
   >
+}
+
+// EventDetailResponse — single event detail with computed watch state and setlist
+export interface EventDetailResponse extends EventWithVenue {
+  setlist: Setlist | null
+  watching: number
+  isWatching: boolean
 }
 
 // Public events list query params

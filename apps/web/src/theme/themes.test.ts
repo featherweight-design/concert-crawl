@@ -22,6 +22,7 @@ const REQUIRED_TOKENS = [
   'success',
   'warning',
   'danger',
+  'trust-community',
   'focus',
   'overlay-hover',
   'overlay-press',

@@ -1,7 +1,8 @@
 import { Hono } from 'hono'
+import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { db, events, venues } from '@concert-crawl/db'
+import { db, events, venues, userEvents } from '@concert-crawl/db'
 import {
   type SQL,
   and,
@@ -18,6 +19,9 @@ import {
   sql,
 } from 'drizzle-orm'
 import { todayInTimezone } from '../lib/time.js'
+import { apiLogger } from '../lib/logger.js'
+
+const uuidSchema = z.string().uuid()
 
 const listEventsSchema = z.object({
   from: z
@@ -173,8 +177,8 @@ eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
   })
 })
 
-// GET /v1/events/:id — single event with venue
-eventsRouter.get('/:id', async (ctx) => {
+// GET /v1/events/:id — single event with venue, watching count, setlist
+eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   const { id } = ctx.req.param()
 
   const [row] = await db
@@ -197,6 +201,7 @@ eventsRouter.get('/:id', async (ctx) => {
       confidenceScore: events.confidenceScore,
       verified: events.verified,
       sourceUrl: events.sourceUrl,
+      setlist: events.setlist,
       createdAt: events.createdAt,
       updatedAt: events.updatedAt,
       venue: {
@@ -216,5 +221,108 @@ eventsRouter.get('/:id', async (ctx) => {
     return ctx.json({ success: false, error: 'Event not found' }, 404)
   }
 
-  return ctx.json({ success: true, data: row })
+  const [watchCountRow] = await db
+    .select({ total: count() })
+    .from(userEvents)
+    .where(and(eq(userEvents.eventId, id), eq(userEvents.status, 'watching')))
+
+  const watchingCount = watchCountRow?.total ?? 0
+
+  const authInfo = getAuth(ctx)
+  let isWatching = false
+  if (authInfo?.userId) {
+    const [watchRow] = await db
+      .select({ id: userEvents.id })
+      .from(userEvents)
+      .where(
+        and(
+          eq(userEvents.userId, authInfo.userId),
+          eq(userEvents.eventId, id),
+          eq(userEvents.status, 'watching'),
+        ),
+      )
+      .limit(1)
+    isWatching = Boolean(watchRow)
+  }
+
+  return ctx.json({
+    success: true,
+    data: { ...row, watching: watchingCount, isWatching },
+  })
+})
+
+// POST /v1/events/:id/watch — opt in to watching
+eventsRouter.post('/:id/watch', clerkMiddleware(), async (ctx) => {
+  const authInfo = getAuth(ctx)
+  if (!authInfo?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+
+  const rawId = ctx.req.param('id')
+  const parsed = uuidSchema.safeParse(rawId)
+  if (!parsed.success)
+    return ctx.json({ success: false, error: 'Invalid event ID' }, 400)
+
+  const eventId = parsed.data
+
+  const [eventRow] = await db
+    .select({ ticketPriceMin: events.ticketPriceMin })
+    .from(events)
+    .where(eq(events.id, eventId))
+    .limit(1)
+
+  if (!eventRow) return ctx.json({ success: false, error: 'Event not found' }, 404)
+
+  const savedPrice = eventRow.ticketPriceMin ?? null
+
+  try {
+    await db
+      .insert(userEvents)
+      .values({
+        userId: authInfo.userId,
+        eventId,
+        status: 'watching',
+        savedPrice,
+      })
+      .onConflictDoUpdate({
+        target: [userEvents.userId, userEvents.eventId],
+        set: { status: 'watching', savedPrice },
+      })
+  } catch (err) {
+    apiLogger.warn({ err, userId: authInfo.userId, eventId }, 'watch insert failed')
+    return ctx.json({ success: false, error: 'Failed to watch event' }, 500)
+  }
+
+  return ctx.json({ success: true, data: { watching: true } })
+})
+
+// DELETE /v1/events/:id/watch — opt out of watching
+eventsRouter.delete('/:id/watch', clerkMiddleware(), async (ctx) => {
+  const authInfo = getAuth(ctx)
+  if (!authInfo?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+
+  const rawId = ctx.req.param('id')
+  const parsed = uuidSchema.safeParse(rawId)
+  if (!parsed.success)
+    return ctx.json({ success: false, error: 'Invalid event ID' }, 400)
+
+  const eventId = parsed.data
+
+  const [existing] = await db
+    .select({ id: userEvents.id })
+    .from(userEvents)
+    .where(
+      and(
+        eq(userEvents.userId, authInfo.userId),
+        eq(userEvents.eventId, eventId),
+        eq(userEvents.status, 'watching'),
+      ),
+    )
+    .limit(1)
+
+  if (existing) {
+    await db.delete(userEvents).where(eq(userEvents.id, existing.id))
+  }
+
+  return ctx.json({ success: true, data: { watching: false } })
 })

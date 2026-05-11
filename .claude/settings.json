@@ -5,6 +5,8 @@
     "Bash(gh *)",
     "Bash(cp -r *)",
     "Bash(mkdir *)",
-    "Bash(cat *)"
+    "Bash(cat *)",
+    "Bash(ls *)",
+    "Bash(find *)"
   ]
 }
