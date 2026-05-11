@@ -3,7 +3,15 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Dialog } from '@base-ui/react/dialog'
-import { Plus, RefreshCw, Loader2, Check, AlertCircle } from 'lucide-react'
+import {
+  Plus,
+  RefreshCw,
+  Loader2,
+  Check,
+  AlertCircle,
+  Play,
+  X,
+} from 'lucide-react'
 import { createVenue, createVenueAndCrawl } from '@/lib/actions/venues'
 import { AdminButton } from '@/components/admin/primitives'
 
@@ -242,7 +250,7 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
                 border: '1px solid var(--border)',
                 borderRadius: 12,
                 width: '100%',
-                maxWidth: 480,
+                maxWidth: 560,
                 boxShadow:
                   '0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.2)',
                 fontFamily: "'Inter', sans-serif",
@@ -250,24 +258,84 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
               }}
             >
               {/* Header */}
-              <div
-                style={{
-                  padding: '20px 24px 0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <Dialog.Title
+              <div style={{ padding: '24px 24px 0' }}>
+                <div
                   style={{
-                    margin: 0,
-                    fontSize: 16,
-                    fontWeight: 600,
-                    color: 'var(--fg)',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    justifyContent: 'space-between',
+                    gap: 12,
                   }}
                 >
-                  Add venue
-                </Dialog.Title>
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 600,
+                        letterSpacing: '0.1em',
+                        textTransform: 'uppercase',
+                        color: 'var(--fg-muted)',
+                        marginBottom: 6,
+                      }}
+                    >
+                      New Venue
+                    </div>
+                    <Dialog.Title
+                      style={{
+                        margin: 0,
+                        fontSize: 22,
+                        fontWeight: 700,
+                        color: 'var(--fg)',
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      Add a crawl target
+                    </Dialog.Title>
+                    <p
+                      style={{
+                        margin: '6px 0 0',
+                        fontSize: 13,
+                        color: 'var(--fg-muted)',
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      Point us at an events page. We&apos;ll respect robots.txt
+                      and crawl daily at 3 AM MT.
+                    </p>
+                  </div>
+                  <Dialog.Close
+                    render={
+                      <button
+                        type="button"
+                        style={{
+                          flexShrink: 0,
+                          width: 28,
+                          height: 28,
+                          borderRadius: 6,
+                          border: '1px solid var(--border)',
+                          background: 'transparent',
+                          color: 'var(--fg-muted)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginTop: 2,
+                        }}
+                        aria-label="Close"
+                        onClick={resetState}
+                      >
+                        <X size={14} />
+                      </button>
+                    }
+                  />
+                </div>
+                <div
+                  style={{
+                    marginTop: 20,
+                    height: 1,
+                    background: 'var(--border)',
+                  }}
+                />
               </div>
 
               {/* Error banner */}
@@ -296,9 +364,9 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
                 <div
                   style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
                 >
-                  {/* Name */}
+                  {/* Venue name */}
                   <Field
-                    label="Name"
+                    label="Venue name"
                     htmlFor="add-venue-name"
                     error={errors.name}
                   >
@@ -306,38 +374,91 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
                       ref={nameRef}
                       id="add-venue-name"
                       type="text"
-                      placeholder="Ogden Theatre"
+                      placeholder="e.g. Bluebird Theater"
                       disabled={disabled}
                       onChange={handleNameChange}
                       style={inputStyle(!!errors.name, disabled)}
                     />
                   </Field>
 
-                  {/* Slug */}
-                  <Field
-                    label="Slug"
-                    htmlFor="add-venue-slug"
-                    error={errors.slug}
-                    hint={
-                      <span style={{ color: 'var(--fg-muted)', fontSize: 11 }}>
-                        concertcrawl.app/v/
-                        <span style={{ color: 'var(--fg)' }}>
-                          {slugRef.current?.value ?? ''}
-                        </span>
-                      </span>
-                    }
+                  {/* Slug with inline prefix */}
+                  <div
+                    style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
                   >
-                    <div style={{ display: 'flex', gap: 6 }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <label
+                        htmlFor="add-venue-slug"
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 500,
+                          color: 'var(--fg-muted)',
+                        }}
+                      >
+                        Slug
+                      </label>
+                      <span
+                        style={{
+                          fontSize: 9,
+                          fontWeight: 600,
+                          letterSpacing: '0.08em',
+                          textTransform: 'uppercase',
+                          color: 'var(--fg-muted)',
+                        }}
+                      >
+                        Auto-generated
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        border: `1px solid ${errors.slug ? 'var(--danger)' : 'var(--border)'}`,
+                        borderRadius: 6,
+                        background: disabled ? 'var(--surface-1)' : 'var(--bg)',
+                        overflow: 'hidden',
+                        opacity: disabled ? 0.66 : 1,
+                      }}
+                    >
+                      <span
+                        style={{
+                          padding: '0 8px 0 10px',
+                          fontSize: 13,
+                          color: 'var(--fg-muted)',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0,
+                          height: 32,
+                          display: 'flex',
+                          alignItems: 'center',
+                          borderRight: '1px solid var(--border)',
+                        }}
+                      >
+                        concertcrawl.app/v/
+                      </span>
                       <input
                         ref={slugRef}
                         id="add-venue-slug"
                         type="text"
-                        placeholder="ogden-theatre"
+                        placeholder="bluebird-theater"
                         disabled={disabled}
                         onChange={handleSlugChange}
                         style={{
-                          ...inputStyle(!!errors.slug, disabled),
                           flex: 1,
+                          height: 32,
+                          padding: '0 8px',
+                          border: 'none',
+                          background: 'transparent',
+                          color: 'var(--fg)',
+                          fontSize: 13,
+                          fontFamily: "'Inter', sans-serif",
+                          outline: 'none',
+                          cursor: disabled ? 'not-allowed' : 'text',
+                          minWidth: 0,
                         }}
                       />
                       <button
@@ -349,8 +470,8 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
                           flexShrink: 0,
                           width: 32,
                           height: 32,
-                          borderRadius: 6,
-                          border: '1px solid var(--border)',
+                          border: 'none',
+                          borderLeft: '1px solid var(--border)',
                           background: 'var(--surface-1)',
                           color: 'var(--fg-muted)',
                           cursor: disabled ? 'not-allowed' : 'pointer',
@@ -362,7 +483,18 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
                         <RefreshCw size={13} />
                       </button>
                     </div>
-                  </Field>
+                    {errors.slug && (
+                      <span style={{ fontSize: 11, color: 'var(--danger)' }}>
+                        {errors.slug}
+                      </span>
+                    )}
+                    {!errors.slug && (
+                      <span style={{ fontSize: 11, color: 'var(--fg-muted)' }}>
+                        Used in the public URL. Auto-derived from the venue
+                        name.
+                      </span>
+                    )}
+                  </div>
 
                   {/* Source URL */}
                   <Field
@@ -384,14 +516,21 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
                             ? '⚠ robots.txt disallows crawling (advisory only)'
                             : '✓ robots.txt allows crawling'}
                         </span>
-                      ) : null
+                      ) : (
+                        <span
+                          style={{ fontSize: 11, color: 'var(--fg-muted)' }}
+                        >
+                          The events page we&apos;ll crawl. Usually a /calendar,
+                          /events, or /shows path.
+                        </span>
+                      )
                     }
                   >
                     <input
                       ref={websiteUrlRef}
                       id="add-venue-url"
                       type="url"
-                      placeholder="https://ogdentheatre.com/events"
+                      placeholder="https://www.bluebirdtheater.net/calendar/"
                       disabled={disabled}
                       onBlur={handleUrlBlur}
                       onChange={() => {
@@ -405,78 +544,102 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
                     />
                   </Field>
 
-                  {/* City */}
-                  <Field
-                    label="City"
-                    htmlFor="add-venue-city"
-                    error={errors.city}
-                  >
-                    <input
-                      ref={cityRef}
-                      id="add-venue-city"
-                      type="text"
-                      defaultValue="Denver"
-                      disabled={disabled}
-                      onChange={() =>
-                        setErrors((prev) => ({ ...prev, city: undefined }))
-                      }
-                      style={inputStyle(!!errors.city, disabled)}
-                    />
-                  </Field>
-
-                  {/* Initial status toggle */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '4px 0',
-                    }}
-                  >
-                    <label
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 500,
-                        color: 'var(--fg)',
-                        cursor: 'pointer',
-                      }}
-                      htmlFor="add-venue-active"
+                  {/* City + Initial status */}
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <Field
+                      label="City"
+                      htmlFor="add-venue-city"
+                      error={errors.city}
+                      style={{ flex: 1 }}
                     >
-                      Start active
-                    </label>
-                    <button
-                      id="add-venue-active"
-                      type="button"
-                      role="switch"
-                      aria-checked={active}
-                      disabled={disabled}
-                      onClick={() => setActive((prev) => !prev)}
-                      style={{
-                        width: 40,
-                        height: 22,
-                        borderRadius: 11,
-                        border: 'none',
-                        background: active
-                          ? 'var(--signal)'
-                          : 'var(--border-strong)',
-                        cursor: disabled ? 'not-allowed' : 'pointer',
-                        position: 'relative',
-                        transition: 'background 150ms',
-                      }}
-                    >
-                      <span
-                        style={{
-                          position: 'absolute',
-                          top: 3,
-                          left: active ? 21 : 3,
-                          width: 16,
-                          height: 16,
-                          borderRadius: '50%',
-                          background: 'white',
-                          transition: 'left 150ms',
-                        }}
+                      <input
+                        ref={cityRef}
+                        id="add-venue-city"
+                        type="text"
+                        defaultValue="Denver"
+                        disabled={disabled}
+                        onChange={() =>
+                          setErrors((prev) => ({ ...prev, city: undefined }))
+                        }
+                        style={inputStyle(!!errors.city, disabled)}
                       />
-                    </button>
+                    </Field>
+
+                    {/* Initial status segmented control */}
+                    <div
+                      style={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 4,
+                      }}
+                    >
+                      <label
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 500,
+                          color: 'var(--fg-muted)',
+                        }}
+                      >
+                        Initial status
+                      </label>
+                      <div
+                        style={{
+                          display: 'flex',
+                          border: '1px solid var(--border)',
+                          borderRadius: 6,
+                          overflow: 'hidden',
+                          height: 32,
+                          opacity: disabled ? 0.66 : 1,
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => !disabled && setActive(true)}
+                          disabled={disabled}
+                          style={{
+                            flex: 1,
+                            border: 'none',
+                            background: active
+                              ? 'var(--signal)'
+                              : 'transparent',
+                            color: active ? '#fff' : 'var(--fg-muted)',
+                            fontSize: 13,
+                            fontWeight: active ? 600 : 400,
+                            cursor: disabled ? 'not-allowed' : 'pointer',
+                            fontFamily: "'Inter', sans-serif",
+                          }}
+                        >
+                          Active
+                        </button>
+                        <div
+                          style={{
+                            width: 1,
+                            background: 'var(--border)',
+                            flexShrink: 0,
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => !disabled && setActive(false)}
+                          disabled={disabled}
+                          style={{
+                            flex: 1,
+                            border: 'none',
+                            background: !active
+                              ? 'var(--surface-1)'
+                              : 'transparent',
+                            color: !active ? 'var(--fg)' : 'var(--fg-muted)',
+                            fontSize: 13,
+                            fontWeight: !active ? 600 : 400,
+                            cursor: disabled ? 'not-allowed' : 'pointer',
+                            fontFamily: "'Inter', sans-serif",
+                          }}
+                        >
+                          Paused
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -491,21 +654,45 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
                   gap: 8,
                 }}
               >
-                <Dialog.Close
-                  render={
-                    <AdminButton
-                      variant="ghost"
-                      size="sm"
-                      disabled={disabled}
-                      type="button"
-                      onClick={resetState}
-                    >
-                      Cancel
-                    </AdminButton>
-                  }
-                />
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--fg-muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                  }}
+                >
+                  <kbd
+                    style={{
+                      padding: '1px 5px',
+                      borderRadius: 4,
+                      border: '1px solid var(--border)',
+                      background: 'var(--surface-1)',
+                      fontSize: 10,
+                      fontFamily: 'monospace',
+                    }}
+                  >
+                    Esc
+                  </kbd>
+                  cancel
+                </span>
 
                 <div style={{ display: 'flex', gap: 8 }}>
+                  <Dialog.Close
+                    render={
+                      <AdminButton
+                        variant="ghost"
+                        size="sm"
+                        disabled={disabled}
+                        type="button"
+                        onClick={resetState}
+                      >
+                        Cancel
+                      </AdminButton>
+                    }
+                  />
+
                   <AdminButton
                     variant="outline"
                     size="sm"
@@ -537,7 +724,9 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
                       />
                     ) : submitState === 'success' ? (
                       <Check size={13} />
-                    ) : null}
+                    ) : (
+                      <Play size={13} />
+                    )}
                     {submitState === 'submitting'
                       ? 'Saving…'
                       : submitState === 'success'
@@ -571,16 +760,18 @@ function Field({
   htmlFor,
   error,
   hint,
+  style,
   children,
 }: {
   label: string
   htmlFor: string
   error?: string | undefined
   hint?: React.ReactNode
+  style?: React.CSSProperties
   children: React.ReactNode
 }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, ...style }}>
       <label
         htmlFor={htmlFor}
         style={{ fontSize: 12, fontWeight: 500, color: 'var(--fg-muted)' }}

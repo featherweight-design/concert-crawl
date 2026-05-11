@@ -244,7 +244,10 @@ venuesAdminRouter.post(
       )
     }
 
-    const [venue] = await db.insert(venues).values(body).returning()
+    const [venue] = await db
+      .insert(venues)
+      .values({ ...body, verified: true })
+      .returning()
 
     if (!venue) {
       return ctx.json(

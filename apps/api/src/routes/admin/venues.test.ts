@@ -165,6 +165,28 @@ describe('Admin venue routes', () => {
     expect(res.status).toBe(201)
   })
 
+  it('POST /v1/admin/venues sets verified: true so Save & crawl now works', async () => {
+    adminAuth()
+    mockDb.select.mockReturnValue(mockDb._makeQueryBuilder([]))
+    const verifiedVenue = { ...mockDb._mockVenueRow, verified: true }
+    mockDb.returning.mockResolvedValue([verifiedVenue])
+    const res = await createApp().request('/v1/admin/venues', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Bluebird Theater',
+        slug: 'bluebird-theater',
+        websiteUrl: 'https://www.bluebirdtheater.net/calendar/',
+        city: 'Denver',
+      }),
+    })
+    expect(res.status).toBe(201)
+    // Ensure verified: true was passed to the insert
+    expect(mockDb.values).toHaveBeenCalledWith(
+      expect.objectContaining({ verified: true }),
+    )
+  })
+
   it('PATCH /v1/admin/venues/:id accepts crawlWaitForSelector', async () => {
     adminAuth()
     mockDb.select.mockReturnValue(
