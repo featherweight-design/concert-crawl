@@ -11,23 +11,16 @@ import {
 } from '@concert-crawl/db'
 import { testDb } from './db.js'
 
-export async function clearTables(retries = 3): Promise<void> {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      await testDb.execute(
-        sql`TRUNCATE submission_confirms, price_submissions, user_events, events, venues, crawl_runs, audit_log, invite_codes, user_roles, price_retrieval_log, user_profiles, feedback RESTART IDENTITY CASCADE`,
-      )
-      return
-    } catch (err) {
-      const isDeadlock =
-        err !== null &&
-        typeof err === 'object' &&
-        'code' in err &&
-        err.code === '40P01'
-      if (!isDeadlock || attempt === retries) throw err
-      await new Promise((resolve) => setTimeout(resolve, 50 * attempt))
-    }
-  }
+export async function clearTables(): Promise<void> {
+  // pg_advisory_xact_lock serializes concurrent TRUNCATE calls so SELECT FOR UPDATE
+  // locks from in-flight test transactions can't deadlock with the AccessExclusiveLock
+  // that TRUNCATE acquires. The advisory lock is released automatically at transaction end.
+  await testDb.transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(7777)`)
+    await tx.execute(
+      sql`TRUNCATE submission_confirms, price_submissions, user_events, events, venues, crawl_runs, audit_log, invite_codes, user_roles, price_retrieval_log, user_profiles, feedback RESTART IDENTITY CASCADE`,
+    )
+  })
 }
 
 export async function seedUserEvent(
