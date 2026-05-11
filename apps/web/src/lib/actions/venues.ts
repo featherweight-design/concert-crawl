@@ -1,6 +1,6 @@
 'use server'
 
-import { auth } from '@clerk/nextjs/server'
+import { auth, currentUser } from '@clerk/nextjs/server'
 import { revalidatePath } from 'next/cache'
 import { apiClient, ApiError } from '@/lib/api'
 import type { Venue } from '@concert-crawl/types'
@@ -10,6 +10,15 @@ async function getToken(): Promise<string> {
   const token = await getToken()
   if (!token) throw new Error('Not authenticated')
   return token
+}
+
+async function getCurrentUserName(): Promise<string | null> {
+  const user = await currentUser()
+  if (!user) return null
+  const parts = [user.firstName, user.lastName].filter(Boolean)
+  return parts.length > 0
+    ? parts.join(' ')
+    : (user.emailAddresses[0]?.emailAddress ?? null)
 }
 
 export interface CreateVenueResult {
@@ -67,7 +76,9 @@ export async function updateVenue(
 
   try {
     const crawlDelayRaw = formData.get('crawlDelayMs')
-    const crawlDelayNum = crawlDelayRaw ? Number(String(crawlDelayRaw)) : undefined
+    const crawlDelayNum = crawlDelayRaw
+      ? Number(String(crawlDelayRaw))
+      : undefined
     const crawlDelayMs =
       crawlDelayNum !== undefined &&
       Number.isFinite(crawlDelayNum) &&
@@ -76,10 +87,14 @@ export async function updateVenue(
         : undefined
 
     const crawlWaitUntilRaw = String(formData.get('crawlWaitUntil') ?? '')
-    const VALID_WAIT_UNTIL = ['networkidle', 'load', 'domcontentloaded'] as const
-    const crawlWaitUntil = (
-      VALID_WAIT_UNTIL as readonly string[]
-    ).includes(crawlWaitUntilRaw)
+    const VALID_WAIT_UNTIL = [
+      'networkidle',
+      'load',
+      'domcontentloaded',
+    ] as const
+    const crawlWaitUntil = (VALID_WAIT_UNTIL as readonly string[]).includes(
+      crawlWaitUntilRaw,
+    )
       ? (crawlWaitUntilRaw as (typeof VALID_WAIT_UNTIL)[number])
       : undefined
 
@@ -146,9 +161,13 @@ export async function activateVenue(id: string): Promise<void> {
 }
 
 export async function verifyVenue(id: string): Promise<void> {
-  const token = await getToken()
+  const [token, verifiedBy] = await Promise.all([
+    getToken(),
+    getCurrentUserName(),
+  ])
   await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
     verified: true,
+    verifiedBy,
   })
   revalidatePath('/admin/venues')
   revalidatePath(`/admin/venues/${id}`)

@@ -48,6 +48,8 @@ function makeVenue(overrides: Partial<Venue> = {}): Venue {
     timezone: 'America/Denver',
     active: true,
     verified: true,
+    verifiedBy: null,
+    verifiedAt: null,
     lastCrawledAt: null,
     crawlNotes: null,
     crawlDelayMs: 3000,

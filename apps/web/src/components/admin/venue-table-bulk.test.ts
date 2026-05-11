@@ -14,6 +14,8 @@ function makeVenue(
     timezone: 'America/Denver',
     active: true,
     verified: false,
+    verifiedBy: null,
+    verifiedAt: null,
     blockedAt: null,
     robotsTxtAllowed: null,
     robotsTxtCheckedAt: null,

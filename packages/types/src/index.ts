@@ -97,6 +97,8 @@ export interface Venue {
   timezone: string
   active: boolean
   verified: boolean
+  verifiedBy: string | null
+  verifiedAt: string | null
   lastCrawledAt: string | null
   crawlNotes: string | null
   crawlDelayMs: number

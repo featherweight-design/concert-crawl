@@ -34,6 +34,7 @@ const createVenueSchema = z.object({
 const updateVenueSchema = createVenueSchema.partial().extend({
   active: z.boolean().optional(),
   verified: z.boolean().optional(),
+  verifiedBy: z.string().max(200).nullable().optional(),
 })
 
 export const venuesAdminRouter = new Hono<AdminVariables>()
@@ -291,9 +292,16 @@ venuesAdminRouter.patch(
       }
     }
 
+    const verificationFields =
+      body.verified === true
+        ? { verifiedAt: new Date() }
+        : body.verified === false
+          ? { verifiedBy: null, verifiedAt: null }
+          : {}
+
     const [updated] = await db
       .update(venues)
-      .set({ ...body, updatedAt: new Date() })
+      .set({ ...body, ...verificationFields, updatedAt: new Date() })
       .where(eq(venues.id, id))
       .returning()
 

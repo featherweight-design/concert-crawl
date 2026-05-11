@@ -1200,19 +1200,41 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
             }
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {venue.verified && (
-                <p
-                  style={{
-                    margin: 0,
-                    fontFamily: "'Inter', sans-serif",
-                    fontSize: 12.5,
-                    color: 'var(--fg-muted)',
-                    lineHeight: 1.5,
-                  }}
-                >
-                  Verified venues appear on the public Browse page.
-                </p>
-              )}
+              <p
+                style={{
+                  margin: 0,
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 12.5,
+                  color: 'var(--fg-muted)',
+                  lineHeight: 1.5,
+                }}
+              >
+                {venue.verified && venue.verifiedBy && venue.verifiedAt ? (
+                  <>
+                    Verified by{' '}
+                    <span style={{ color: 'var(--fg)', fontWeight: 600 }}>
+                      {venue.verifiedBy}
+                    </span>{' '}
+                    on{' '}
+                    <span
+                      style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        color: 'var(--fg)',
+                      }}
+                    >
+                      {new Intl.DateTimeFormat('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        timeZone: 'America/Denver',
+                      }).format(new Date(venue.verifiedAt))}
+                    </span>
+                    . Verified venues appear on the public Browse page.
+                  </>
+                ) : (
+                  'Verified venues appear on the public Browse page.'
+                )}
+              </p>
               <AdminButton
                 variant="ghost"
                 size="sm"
