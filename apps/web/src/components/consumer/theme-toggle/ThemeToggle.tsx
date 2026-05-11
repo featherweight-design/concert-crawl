@@ -8,12 +8,24 @@ const THEME_ICONS: Record<ThemeName, string> = {
   electric: '⚡',
   jade: '◈',
   light: '○',
+  pulse: '◉',
+  forge: '◆',
+  bluenote: '♩',
+  drip: '●',
+  cedar: '◇',
+  gloss: '★',
 }
 
 const THEME_LABELS: Record<ThemeName, string> = {
   electric: 'Electric',
   jade: 'Jade',
   light: 'Light',
+  pulse: 'Pulse',
+  forge: 'Forge',
+  bluenote: 'Blue Note',
+  drip: 'Drip',
+  cedar: 'Cedar',
+  gloss: 'Gloss',
 }
 
 export function ThemeToggle() {

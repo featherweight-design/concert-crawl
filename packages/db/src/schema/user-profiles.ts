@@ -7,7 +7,17 @@ export const avatarColorEnum = pgEnum('avatar_color', [
   'warning',
 ])
 
-export const userThemeEnum = pgEnum('user_theme', ['electric', 'jade', 'light'])
+export const userThemeEnum = pgEnum('user_theme', [
+  'electric',
+  'jade',
+  'light',
+  'pulse',
+  'forge',
+  'bluenote',
+  'drip',
+  'cedar',
+  'gloss',
+])
 
 export const userProfiles = pgTable('user_profiles', {
   id: uuid('id').primaryKey().defaultRandom(),

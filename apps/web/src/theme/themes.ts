@@ -1,4 +1,31 @@
-export type ThemeName = 'electric' | 'jade' | 'light'
+export type ThemeName =
+  | 'electric'
+  | 'jade'
+  | 'light'
+  | 'pulse'
+  | 'forge'
+  | 'bluenote'
+  | 'drip'
+  | 'cedar'
+  | 'gloss'
+
+export interface ThemeMeta {
+  label: string
+  mode: 'dark' | 'light'
+  role: string
+}
+
+export const THEME_META: Record<ThemeName, ThemeMeta> = {
+  electric: { label: 'Electric', mode: 'dark', role: 'base' },
+  jade: { label: 'Jade', mode: 'dark', role: 'base' },
+  light: { label: 'Light', mode: 'light', role: 'base' },
+  pulse: { label: 'Pulse', mode: 'dark', role: 'EDM' },
+  forge: { label: 'Forge', mode: 'dark', role: 'Metal' },
+  bluenote: { label: 'Blue Note', mode: 'dark', role: 'Jazz' },
+  drip: { label: 'Drip', mode: 'dark', role: 'Hip-Hop' },
+  cedar: { label: 'Cedar', mode: 'dark', role: 'Indie / Folk' },
+  gloss: { label: 'Gloss', mode: 'dark', role: 'Pop' },
+}
 
 const electric: Record<string, string> = {
   bg: '#070A1A',
@@ -16,6 +43,7 @@ const electric: Record<string, string> = {
   signal: '#7AE6FF',
   'signal-muted': '#3FA3C2',
   accent: '#FF7BD4',
+  'accent-2': '#FF7BD4',
   'accent-muted': '#B8559A',
   success: '#7BFFB0',
   warning: '#FFD27A',
@@ -43,6 +71,7 @@ const jade: Record<string, string> = {
   signal: '#1FFFC2',
   'signal-muted': '#15B58A',
   accent: '#9B5CFF',
+  'accent-2': '#9B5CFF',
   'accent-muted': '#6F44B5',
   success: '#1FFFC2',
   warning: '#FFD27A',
@@ -70,6 +99,7 @@ const light: Record<string, string> = {
   signal: '#0080A0',
   'signal-muted': '#4DABC2',
   accent: '#E0297A',
+  'accent-2': '#E0297A',
   'accent-muted': '#B0205F',
   success: '#1F8A4F',
   warning: '#B86E00',
@@ -81,14 +111,194 @@ const light: Record<string, string> = {
   'image-tint': 'transparent',
 }
 
+const pulse: Record<string, string> = {
+  bg: '#050008',
+  'bg-elevated': '#0C0314',
+  'surface-1': '#11041B',
+  'surface-2': '#1A0828',
+  'surface-3': '#240E38',
+  fg: '#F4ECFF',
+  'fg-muted': '#A38FBF',
+  'fg-subtle': '#5F4D7A',
+  'fg-on-accent': '#050008',
+  border: '#250F38',
+  'border-strong': '#3D1A58',
+  'border-focus': '#C8FF2E',
+  signal: '#C8FF2E',
+  'signal-muted': '#8AB520',
+  accent: '#FF2EC8',
+  'accent-2': '#FF2EC8',
+  'accent-muted': '#B820A0',
+  success: '#7BFFB0',
+  warning: '#FFD27A',
+  danger: '#FF7A8A',
+  focus: '#C8FF2E',
+  'overlay-hover': 'rgba(200,255,46,0.08)',
+  'overlay-press': 'rgba(200,255,46,0.16)',
+  scrim: 'rgba(5,0,8,0.72)',
+  'image-tint': 'rgba(5,0,8,0.20)',
+}
+
+const forge: Record<string, string> = {
+  bg: '#060403',
+  'bg-elevated': '#100C0A',
+  'surface-1': '#171210',
+  'surface-2': '#211915',
+  'surface-3': '#2D2820',
+  fg: '#ECDCC4',
+  'fg-muted': '#9A8775',
+  'fg-subtle': '#5C5042',
+  'fg-on-accent': '#060403',
+  border: '#26201A',
+  'border-strong': '#3D3128',
+  'border-focus': '#C8211A',
+  signal: '#C8211A',
+  'signal-muted': '#8A1712',
+  accent: '#ECDCC4',
+  'accent-2': '#ECDCC4',
+  'accent-muted': '#9A8870',
+  success: '#7BFFB0',
+  warning: '#FFD27A',
+  danger: '#FF7A8A',
+  focus: '#C8211A',
+  'overlay-hover': 'rgba(200,33,26,0.08)',
+  'overlay-press': 'rgba(200,33,26,0.16)',
+  scrim: 'rgba(6,4,3,0.72)',
+  'image-tint': 'rgba(6,4,3,0.20)',
+}
+
+const bluenote: Record<string, string> = {
+  bg: '#0E0A1F',
+  'bg-elevated': '#150F2A',
+  'surface-1': '#1C1538',
+  'surface-2': '#251D48',
+  'surface-3': '#2E2558',
+  fg: '#EFE6F5',
+  'fg-muted': '#A498BD',
+  'fg-subtle': '#685E82',
+  'fg-on-accent': '#0E0A1F',
+  border: '#33285E',
+  'border-strong': '#4A3A82',
+  'border-focus': '#4DA3FF',
+  signal: '#4DA3FF',
+  'signal-muted': '#2E72C0',
+  accent: '#E83A6E',
+  'accent-2': '#E83A6E',
+  'accent-muted': '#A02855',
+  success: '#7BFFB0',
+  warning: '#FFD27A',
+  danger: '#FF7A8A',
+  focus: '#4DA3FF',
+  'overlay-hover': 'rgba(77,163,255,0.08)',
+  'overlay-press': 'rgba(77,163,255,0.16)',
+  scrim: 'rgba(14,10,31,0.72)',
+  'image-tint': 'rgba(14,10,31,0.20)',
+}
+
+const drip: Record<string, string> = {
+  bg: '#000000',
+  'bg-elevated': '#0A0A0A',
+  'surface-1': '#111111',
+  'surface-2': '#181818',
+  'surface-3': '#242424',
+  fg: '#F5F5F5',
+  'fg-muted': '#8A8A8A',
+  'fg-subtle': '#4D4D4D',
+  'fg-on-accent': '#000000',
+  border: '#1F1F1F',
+  'border-strong': '#383838',
+  'border-focus': '#2EFF6B',
+  signal: '#2EFF6B',
+  'signal-muted': '#1DB050',
+  accent: '#FF7A1A',
+  'accent-2': '#FF2EC8',
+  'accent-muted': '#B85A10',
+  success: '#2EFF6B',
+  warning: '#FFD27A',
+  danger: '#FF7A8A',
+  focus: '#2EFF6B',
+  'overlay-hover': 'rgba(46,255,107,0.08)',
+  'overlay-press': 'rgba(46,255,107,0.16)',
+  scrim: 'rgba(0,0,0,0.72)',
+  'image-tint': 'rgba(0,0,0,0.20)',
+}
+
+const cedar: Record<string, string> = {
+  bg: '#10201A',
+  'bg-elevated': '#162A22',
+  'surface-1': '#1B342B',
+  'surface-2': '#234035',
+  'surface-3': '#2C4E3E',
+  fg: '#EFEAE0',
+  'fg-muted': '#A8B0A0',
+  'fg-subtle': '#6B7368',
+  'fg-on-accent': '#10201A',
+  border: '#2D4D40',
+  'border-strong': '#3F6256',
+  'border-focus': '#D89A8A',
+  signal: '#D89A8A',
+  'signal-muted': '#9A6860',
+  accent: '#C8A04A',
+  'accent-2': '#C8A04A',
+  'accent-muted': '#8A7030',
+  success: '#7BFFB0',
+  warning: '#FFD27A',
+  danger: '#FF7A8A',
+  focus: '#D89A8A',
+  'overlay-hover': 'rgba(216,154,138,0.08)',
+  'overlay-press': 'rgba(216,154,138,0.16)',
+  scrim: 'rgba(16,32,26,0.72)',
+  'image-tint': 'rgba(16,32,26,0.20)',
+}
+
+const gloss: Record<string, string> = {
+  bg: '#0F0810',
+  'bg-elevated': '#170F1A',
+  'surface-1': '#1E1521',
+  'surface-2': '#28192F',
+  'surface-3': '#34243C',
+  fg: '#F8EFF5',
+  'fg-muted': '#B89DC0',
+  'fg-subtle': '#6E5577',
+  'fg-on-accent': '#0F0810',
+  border: '#2B1F33',
+  'border-strong': '#4A3358',
+  'border-focus': '#FF5BA1',
+  signal: '#FF5BA1',
+  'signal-muted': '#C03878',
+  accent: '#C8D4E0',
+  'accent-2': '#C8D4E0',
+  'accent-muted': '#8A95A0',
+  success: '#7BFFB0',
+  warning: '#FFD27A',
+  danger: '#FF7A8A',
+  focus: '#FF5BA1',
+  'overlay-hover': 'rgba(255,91,161,0.08)',
+  'overlay-press': 'rgba(255,91,161,0.16)',
+  scrim: 'rgba(15,8,16,0.72)',
+  'image-tint': 'rgba(15,8,16,0.20)',
+}
+
 export const THEMES: Record<ThemeName, Record<string, string>> = {
   electric,
   jade,
   light,
+  pulse,
+  forge,
+  bluenote,
+  drip,
+  cedar,
+  gloss,
 }
 
 export const THEME_NAMES = [
   'electric',
   'jade',
   'light',
+  'pulse',
+  'forge',
+  'bluenote',
+  'drip',
+  'cedar',
+  'gloss',
 ] as const satisfies readonly ThemeName[]

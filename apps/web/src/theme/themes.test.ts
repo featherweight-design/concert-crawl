@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { THEMES, type ThemeName } from './themes'
+import { THEMES, THEME_NAMES, type ThemeName } from './themes'
 
 const REQUIRED_TOKENS = [
   'bg',
@@ -17,6 +17,7 @@ const REQUIRED_TOKENS = [
   'signal',
   'signal-muted',
   'accent',
+  'accent-2',
   'accent-muted',
   'success',
   'warning',
@@ -28,14 +29,28 @@ const REQUIRED_TOKENS = [
   'image-tint',
 ] as const
 
-const THEME_NAMES: ThemeName[] = ['electric', 'jade', 'light']
+const ALL_THEME_NAMES: ThemeName[] = [
+  'electric',
+  'jade',
+  'light',
+  'pulse',
+  'forge',
+  'bluenote',
+  'drip',
+  'cedar',
+  'gloss',
+]
 
 describe('THEMES', () => {
-  it('exports exactly three themes', () => {
-    expect(Object.keys(THEMES).sort()).toEqual([...THEME_NAMES].sort())
+  it('exports all nine themes', () => {
+    expect(Object.keys(THEMES).sort()).toEqual([...ALL_THEME_NAMES].sort())
   })
 
-  for (const name of THEME_NAMES) {
+  it('THEME_NAMES matches THEMES keys', () => {
+    expect([...THEME_NAMES].sort()).toEqual(Object.keys(THEMES).sort())
+  })
+
+  for (const name of ALL_THEME_NAMES) {
     describe(`theme: ${name}`, () => {
       it('contains every required token', () => {
         for (const token of REQUIRED_TOKENS) {

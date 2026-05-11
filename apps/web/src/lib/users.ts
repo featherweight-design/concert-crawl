@@ -3,6 +3,7 @@ import type {
   UserSubmissionItem,
   HandleAvailabilityResponse,
 } from '@concert-crawl/types'
+import type { ThemeName } from '@/theme/themes'
 import { apiClient } from './api'
 
 export async function fetchMe(token: string): Promise<UserProfileResponse> {
@@ -15,7 +16,7 @@ export async function patchMe(
     handle?: string | null
     city?: string | null
     avatarColor?: 'signal' | 'accent' | 'success' | 'warning' | null
-    theme?: 'electric' | 'jade' | 'light'
+    theme?: ThemeName
   },
 ): Promise<void> {
   await apiClient.patch<void>('/v1/users/me', token, updates)

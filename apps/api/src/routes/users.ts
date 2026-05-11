@@ -160,7 +160,19 @@ const patchSchema = z.object({
     .enum(['signal', 'accent', 'success', 'warning'])
     .nullable()
     .optional(),
-  theme: z.enum(['electric', 'jade', 'light']).optional(),
+  theme: z
+    .enum([
+      'electric',
+      'jade',
+      'light',
+      'pulse',
+      'forge',
+      'bluenote',
+      'drip',
+      'cedar',
+      'gloss',
+    ])
+    .optional(),
 })
 
 usersRouter.patch('/me', zValidator('json', patchSchema), async (ctx) => {

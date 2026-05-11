@@ -5,28 +5,11 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth, useUser, useClerk } from '@clerk/nextjs'
 import { useTheme } from '@/theme/ThemeProvider'
-import type { ThemeName } from '@/theme/themes'
+import { THEMES, THEME_META, type ThemeName } from '@/theme/themes'
 import { FeedbackModal } from '../feedback/FeedbackModal'
 
 const APP_VERSION = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev'
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? ''
-const THEMES: { key: ThemeName; label: string; gradient: string }[] = [
-  {
-    key: 'electric',
-    label: 'Electric',
-    gradient: 'linear-gradient(135deg, #070A1A 50%, #FF7BD4 50%)',
-  },
-  {
-    key: 'jade',
-    label: 'Jade',
-    gradient: 'linear-gradient(135deg, #06201F 50%, #1FFFC2 50%)',
-  },
-  {
-    key: 'light',
-    label: 'Light',
-    gradient: 'linear-gradient(135deg, #FAFCFF 50%, #E0297A 50%)',
-  },
-]
 
 export function UserMenu() {
   const { getToken } = useAuth()
@@ -370,33 +353,7 @@ function MenuBody({
 
       {/* App section */}
       <SectionLabel>App</SectionLabel>
-      <MenuRow
-        label="Theme"
-        trailing={
-          <div style={{ display: 'flex', gap: 4 }}>
-            {THEMES.map((tOpt) => (
-              <button
-                key={tOpt.key}
-                type="button"
-                onClick={() => setTheme(tOpt.key)}
-                aria-label={`Switch to ${tOpt.label} theme`}
-                aria-pressed={theme === tOpt.key}
-                style={{
-                  all: 'unset',
-                  cursor: 'pointer',
-                  width: 12,
-                  height: 12,
-                  borderRadius: 4,
-                  background: tOpt.gradient,
-                  border: '1px solid var(--border-strong)',
-                  boxShadow:
-                    theme === tOpt.key ? '0 0 0 1.5px var(--signal)' : 'none',
-                }}
-              />
-            ))}
-          </div>
-        }
-      />
+      <ThemeMenuRow theme={theme} setTheme={setTheme} />
       <MenuRow label="Settings" onClick={onSettings} kbd="⌘," />
       <MenuRow label="Notifications" meta="On" last />
 
@@ -583,6 +540,217 @@ function UserMenuSheet(props: MenuBodyProps) {
         />
       </div>
       <MenuBody {...props} />
+    </div>
+  )
+}
+
+// ── Theme row + compact swatch ────────────────────────────────────────────
+
+function UserMenuMiniMark({
+  tokens,
+  size = 18,
+}: {
+  tokens: Record<string, string>
+  size?: number
+}) {
+  const dotPositions: [number, number][] = [
+    [14, 38],
+    [18, 34],
+    [22, 30],
+    [26, 26],
+    [30, 22],
+    [34, 18],
+    [14, 32],
+  ]
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 48 48"
+      aria-hidden="true"
+      style={{ flexShrink: 0 }}
+    >
+      <rect width="48" height="48" rx="10" fill={tokens['surface-2']} />
+      <circle cx="34" cy="14" r="9" fill={tokens['accent']} opacity="0.22" />
+      <circle cx="34" cy="14" r="5" fill={tokens['accent-2']} opacity="0.45" />
+      <circle cx="34" cy="14" r="3" fill={tokens['signal']} />
+      {dotPositions.map(([cx, cy], idx) => (
+        <circle
+          key={idx}
+          cx={cx}
+          cy={cy}
+          r="1.6"
+          fill={tokens['fg']}
+          opacity={0.45 + idx * 0.07}
+        />
+      ))}
+    </svg>
+  )
+}
+
+function CompactThemeSwatch({
+  name,
+  active,
+  onClick,
+}: {
+  name: ThemeName
+  active: boolean
+  onClick: () => void
+}) {
+  const tokens = THEMES[name]
+  const meta = THEME_META[name]
+  return (
+    <button
+      type="button"
+      aria-label={`${meta.label} theme`}
+      aria-pressed={active}
+      onClick={onClick}
+      style={{
+        all: 'unset',
+        cursor: 'pointer',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 5,
+        width: '100%',
+        boxSizing: 'border-box',
+        borderRadius: 10,
+        padding: '7px 6px',
+        background: tokens['bg'],
+        border: active
+          ? `1.5px solid ${tokens['signal']}`
+          : `1px solid ${tokens['border-strong']}`,
+        transition: 'transform 100ms ease',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <UserMenuMiniMark tokens={tokens} size={16} />
+        <span style={{ display: 'flex', gap: 2 }}>
+          <span
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: 3,
+              background: tokens['signal'],
+              display: 'block',
+            }}
+          />
+          <span
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: 3,
+              background: tokens['accent'],
+              display: 'block',
+            }}
+          />
+        </span>
+      </div>
+      <span
+        style={{
+          fontFamily: 'var(--font-ui)',
+          fontSize: 9,
+          fontWeight: 700,
+          color: tokens['fg'],
+          letterSpacing: '-0.005em',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+        }}
+      >
+        {meta.label}
+      </span>
+    </button>
+  )
+}
+
+function ThemeMenuRow({
+  theme,
+  setTheme,
+}: {
+  theme: ThemeName
+  setTheme: (name: ThemeName) => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const activeTokens = THEMES[theme]
+  const activeMeta = THEME_META[theme]
+  const themeKeys = Object.keys(THEMES) as ThemeName[]
+
+  return (
+    <div style={{ borderBottom: '1px solid var(--border)' }}>
+      <button
+        type="button"
+        onClick={() => setExpanded((prev) => !prev)}
+        style={{
+          all: 'unset',
+          cursor: 'pointer',
+          width: '100%',
+          boxSizing: 'border-box',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '12px 14px',
+          background: expanded ? 'var(--overlay-hover)' : 'transparent',
+        }}
+      >
+        <span
+          style={{
+            flex: 1,
+            fontFamily: 'var(--font-ui)',
+            fontSize: 13.5,
+            fontWeight: 600,
+            color: 'var(--fg)',
+            letterSpacing: '-0.005em',
+          }}
+        >
+          Theme
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <UserMenuMiniMark tokens={activeTokens} size={18} />
+          <span
+            style={{
+              fontFamily: 'var(--font-ui)',
+              fontSize: 12,
+              fontWeight: 700,
+              color: 'var(--fg)',
+              letterSpacing: '-0.005em',
+            }}
+          >
+            {activeMeta.label}
+          </span>
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              color: 'var(--fg-muted)',
+            }}
+          >
+            {expanded ? '▾' : '›'}
+          </span>
+        </span>
+      </button>
+
+      {expanded && (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: 6,
+            padding: '6px 14px 12px',
+          }}
+        >
+          {themeKeys.map((name) => (
+            <CompactThemeSwatch
+              key={name}
+              name={name}
+              active={theme === name}
+              onClick={() => {
+                setTheme(name)
+                setExpanded(false)
+              }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
