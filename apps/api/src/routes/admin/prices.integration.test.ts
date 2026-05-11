@@ -17,6 +17,13 @@ vi.mock('@hono/clerk-auth', () => ({
   getAuth: () => authState.current,
 }))
 
+// Prevent the async price pipeline from escaping into adjacent tests and
+// causing TRUNCATE/INSERT deadlocks. The pipeline's correctness is covered
+// by packages/price-pipeline unit tests.
+vi.mock('@concert-crawl/price-pipeline', () => ({
+  runPricePipeline: vi.fn().mockResolvedValue(undefined),
+}))
+
 import { createApp } from '../../app.js'
 import {
   clearTables,
