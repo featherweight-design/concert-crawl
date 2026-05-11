@@ -1,4 +1,6 @@
-import Link from 'next/link'
+'use client'
+
+import { useState } from 'react'
 import { SubmissionItem } from './SubmissionItem'
 import { SETTINGS_COPY } from './definitions/copy'
 import { SUBMISSION_CAP_MOBILE } from './definitions/constants'
@@ -15,8 +17,10 @@ export function MySubmissionsList({
   totalCount,
   cap = SUBMISSION_CAP_MOBILE,
 }: MySubmissionsListProps) {
-  const visible = submissions.slice(0, cap)
-  const hasMore = totalCount > cap
+  const [showAll, setShowAll] = useState(false)
+
+  const visible = submissions.slice(0, showAll ? submissions.length : cap)
+  const hasMore = submissions.length > cap && !showAll
 
   if (visible.length === 0) {
     return (
@@ -54,13 +58,14 @@ export function MySubmissionsList({
       </div>
 
       {hasMore && (
-        <Link
-          href="/me"
+        <button
+          type="button"
+          onClick={() => setShowAll(true)}
           className="w-full py-2.5 text-center text-[11px] font-bold uppercase tracking-[0.10em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
           style={{ fontFamily: 'var(--font-mono)', color: 'var(--signal)' }}
         >
           {SETTINGS_COPY.seeAllSubmissions(totalCount)}
-        </Link>
+        </button>
       )}
     </div>
   )

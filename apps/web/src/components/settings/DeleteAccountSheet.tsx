@@ -67,7 +67,6 @@ export function DeleteAccountSheet({
           className="fixed inset-0 z-50"
           style={{ background: 'rgba(0,0,0,0.6)' }}
           onClick={onClose}
-          aria-hidden="true"
         />
         {/* Dialog */}
         <div
@@ -100,9 +99,9 @@ export function DeleteAccountSheet({
             ) : (
               ','
             )}{' '}
-            email, plan, and {submissionCount ?? 0} submitted{' '}
-            {submissionCount === 1 ? 'price' : 'prices'} are gone the moment
-            you delete.
+            email, and plan are deleted. {submissionCount ?? 0} submitted{' '}
+            {submissionCount === 1 ? 'price stays' : 'prices stay'} on the
+            public record — your name is removed from them.
           </p>
           <p className="mb-2 text-[13px] font-medium text-fg-muted">
             Type <strong>DELETE</strong> to confirm.
@@ -153,7 +152,6 @@ export function DeleteAccountSheet({
         className="fixed inset-0 z-50"
         style={{ background: 'rgba(0,0,0,0.5)' }}
         onClick={onClose}
-        aria-hidden="true"
       />
       {/* Sheet */}
       <div

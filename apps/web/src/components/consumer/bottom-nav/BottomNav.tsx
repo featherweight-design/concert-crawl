@@ -131,7 +131,11 @@ export function BottomNav() {
   const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(null)
 
   useEffect(() => {
-    if (!isSignedIn) return
+    if (!isSignedIn) {
+      setAvatarHandle(null)
+      setAvatarColor(null)
+      return
+    }
     let cancelled = false
     void (async () => {
       const token = await getToken()
@@ -185,11 +189,35 @@ export function BottomNav() {
         className="flex flex-col items-center gap-[3px]"
         style={{ color: isMeActive ? 'var(--signal)' : 'var(--fg-subtle)' }}
       >
-        <MeAvatar
-          handle={avatarHandle}
-          avatarColor={avatarColor}
-          isActive={isMeActive}
-        />
+        {avatarHandle !== null ? (
+          <MeAvatar
+            handle={avatarHandle}
+            avatarColor={avatarColor}
+            isActive={isMeActive}
+          />
+        ) : (
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 18 18"
+            fill="none"
+            aria-hidden
+          >
+            <circle
+              cx="9"
+              cy="6.5"
+              r="3"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+            <path
+              d="M3 16c0-3.314 2.686-5 6-5s6 1.686 6 5"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+          </svg>
+        )}
         <span
           className="text-[9px] tracking-[0.04em]"
           style={{

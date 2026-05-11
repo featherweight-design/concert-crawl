@@ -47,7 +47,7 @@ export function SubmissionItem({
           {priceLabel}
         </span>
         <span
-          className="shrink-0 text-[10px] text-fg-muted"
+          className="min-w-0 truncate text-right text-[10px] text-fg-muted"
           style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}
         >
           {submission.venue}

@@ -28,6 +28,10 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 export function SettingsRoute({ profile, submissions }: SettingsRouteProps) {
+  const confirmedCount = submissions.filter(
+    (sub) => sub.status === 'confirmed',
+  ).length
+
   return (
     <>
       {/* Mobile header */}
@@ -90,6 +94,7 @@ export function SettingsRoute({ profile, submissions }: SettingsRouteProps) {
                 style={{ fontFamily: 'var(--font-mono)' }}
               >
                 {profile.submissionCount} total
+                {confirmedCount > 0 && ` · ${confirmedCount} confirmed`}
               </span>
             )}
           </div>

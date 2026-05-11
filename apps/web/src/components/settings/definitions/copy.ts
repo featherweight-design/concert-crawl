@@ -45,7 +45,7 @@ export const SETTINGS_COPY = {
     deleteAccountSubtitle:
       'Permanently remove your handle, profile, and history.',
     deleteCardBody:
-      "This is permanent. Your handle, email, and every price you've submitted will be deleted. You can't undo it. Other fans' confirmations on your prices stay (they belong to them).",
+      "This is permanent. Your handle, email, and plan are gone. Price submissions stay on the public record — your name is removed from them. You can't undo it.",
     deleteAccountCta: 'Delete my account',
     deleteSheetTitle: 'Delete account permanently',
     deleteSheetBody:
