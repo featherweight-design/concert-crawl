@@ -973,84 +973,102 @@ export const CrawlRunHistoryTable = ({
       }
       padding={0}
     >
-      <div style={{ minHeight: 200, maxHeight: 400, overflowY: 'auto' }}>
-        <AdminTable>
-          <THead sticky>
-            <tr>
-              <TH width={92}>Run</TH>
-              <TH>Venue</TH>
-              <TH>Started</TH>
-              <TH>Duration</TH>
-              <TH>Status</TH>
-              <TH>Strategy</TH>
-              <TH align="right">Events</TH>
-              <TH align="right">LLM cost</TH>
-              <TH>Error</TH>
-            </tr>
-          </THead>
-          <tbody>
-            {initialRuns.map((run) => (
-              <TR key={run.id}>
-                <TD mono color="var(--fg-muted)">
-                  {shortRunId(run.id)}
-                </TD>
-                <TD>
-                  <span style={{ fontWeight: 600 }}>
-                    {run.venueName ?? '—'}
-                  </span>
-                </TD>
-                <TD mono color="var(--fg-muted)">
-                  {fmtDateTimeMT(run.startedAt ?? run.createdAt)}
-                </TD>
-                <TD mono color="var(--fg-muted)">
-                  {run.durationMs
-                    ? `${(run.durationMs / 1000).toFixed(1)}s`
-                    : '—'}
-                </TD>
-                <TD>
-                  <StatusBadge kind={STATUS_KIND[run.status] ?? 'neutral'} dot>
-                    {run.status.charAt(0).toUpperCase() + run.status.slice(1)}
-                  </StatusBadge>
-                </TD>
-                <TD>
-                  <StatusBadge
-                    kind={
-                      run.extractionStrategyUsed === 'structured'
-                        ? 'signal'
-                        : run.extractionStrategyUsed === 'llm'
-                          ? 'warning'
-                          : 'neutral'
+      {initialRuns.length === 0 ? (
+        <div
+          style={{
+            minHeight: 200,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--fg-subtle)',
+            fontSize: 13,
+          }}
+        >
+          No runs yet
+        </div>
+      ) : (
+        <div style={{ minHeight: 200, maxHeight: 400, overflowY: 'auto' }}>
+          <AdminTable>
+            <THead sticky>
+              <tr>
+                <TH width={92}>Run</TH>
+                <TH>Venue</TH>
+                <TH>Started</TH>
+                <TH>Duration</TH>
+                <TH>Status</TH>
+                <TH>Strategy</TH>
+                <TH align="right">Events</TH>
+                <TH align="right">LLM cost</TH>
+                <TH>Error</TH>
+              </tr>
+            </THead>
+            <tbody>
+              {initialRuns.map((run) => (
+                <TR key={run.id}>
+                  <TD mono color="var(--fg-muted)">
+                    {shortRunId(run.id)}
+                  </TD>
+                  <TD>
+                    <span style={{ fontWeight: 600 }}>
+                      {run.venueName ?? '—'}
+                    </span>
+                  </TD>
+                  <TD mono color="var(--fg-muted)">
+                    {fmtDateTimeMT(run.startedAt ?? run.createdAt)}
+                  </TD>
+                  <TD mono color="var(--fg-muted)">
+                    {run.durationMs
+                      ? `${(run.durationMs / 1000).toFixed(1)}s`
+                      : '—'}
+                  </TD>
+                  <TD>
+                    <StatusBadge
+                      kind={STATUS_KIND[run.status] ?? 'neutral'}
+                      dot
+                    >
+                      {run.status.charAt(0).toUpperCase() + run.status.slice(1)}
+                    </StatusBadge>
+                  </TD>
+                  <TD>
+                    <StatusBadge
+                      kind={
+                        run.extractionStrategyUsed === 'structured'
+                          ? 'signal'
+                          : run.extractionStrategyUsed === 'llm'
+                            ? 'warning'
+                            : 'neutral'
+                      }
+                    >
+                      {run.extractionStrategyUsed ?? '—'}
+                    </StatusBadge>
+                  </TD>
+                  <TD
+                    align="right"
+                    mono
+                    color={run.eventsFound ? 'var(--fg)' : 'var(--fg-subtle)'}
+                  >
+                    {run.eventsFound ?? '—'}
+                  </TD>
+                  <TD align="right">
+                    <CostText value={run.llmCostUsd ?? 0} />
+                  </TD>
+                  <TD
+                    color={
+                      run.errorMessage ? 'var(--danger)' : 'var(--fg-subtle)'
                     }
                   >
-                    {run.extractionStrategyUsed ?? '—'}
-                  </StatusBadge>
-                </TD>
-                <TD
-                  align="right"
-                  mono
-                  color={run.eventsFound ? 'var(--fg)' : 'var(--fg-subtle)'}
-                >
-                  {run.eventsFound ?? '—'}
-                </TD>
-                <TD align="right">
-                  <CostText value={run.llmCostUsd ?? 0} />
-                </TD>
-                <TD
-                  color={
-                    run.errorMessage ? 'var(--danger)' : 'var(--fg-subtle)'
-                  }
-                >
-                  {run.errorMessage ? (
-                    <span style={{ fontSize: 12 }}>{run.errorMessage}</span>
-                  ) : (
-                    '—'
-                  )}
-                </TD>
-              </TR>
-            ))}
-          </tbody>
-        </AdminTable>
-      </div>
+                    {run.errorMessage ? (
+                      <span style={{ fontSize: 12 }}>{run.errorMessage}</span>
+                    ) : (
+                      '—'
+                    )}
+                  </TD>
+                </TR>
+              ))}
+            </tbody>
+          </AdminTable>
+        </div>
+      )}
     </Panel>
   )
 }
