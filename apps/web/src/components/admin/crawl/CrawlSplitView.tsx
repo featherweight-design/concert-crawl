@@ -42,6 +42,8 @@ interface Props {
   initialSelectedId?: string
 }
 
+const VENUE_RUNS_LIMIT = 25
+
 function extractErrorMessage(rawBody: unknown, fallback: string): string {
   if (
     rawBody !== null &&
@@ -253,6 +255,8 @@ export const CrawlSplitView = ({
     Record<string, 'triggering' | 'queued' | 'error'>
   >({})
   const [recrawlError, setRecrawlError] = useState<Record<string, string>>({})
+  const [venueRuns, setVenueRuns] = useState<CrawlRun[]>([])
+  const [venueRunsLoading, setVenueRunsLoading] = useState(false)
 
   // Sync selectedId when IssuesBanner navigates to a new venueId via router.push
   useEffect(() => {
@@ -260,6 +264,32 @@ export const CrawlSplitView = ({
       setSelectedId(initialSelectedId)
     }
   }, [initialSelectedId])
+
+  // Fetch the full run history for the selected venue on selection change
+  useEffect(() => {
+    if (!selectedId) {
+      setVenueRuns([])
+      return
+    }
+    let cancelled = false
+    setVenueRunsLoading(true)
+    fetch(
+      `/api/admin/crawl/runs?venueId=${selectedId}&limit=${VENUE_RUNS_LIMIT}`,
+    )
+      .then((res) => res.json())
+      .then((body: { success: boolean; data: CrawlRun[] }) => {
+        if (!cancelled && body.success) setVenueRuns(body.data)
+      })
+      .catch(() => {
+        // silently fall back to initialRuns filter on fetch failure
+      })
+      .finally(() => {
+        if (!cancelled) setVenueRunsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [selectedId])
 
   // Close filter panel on outside click
   useEffect(() => {
@@ -1064,8 +1094,8 @@ export const CrawlSplitView = ({
         </div>
       </div>
       <CrawlRunHistoryTable
-        initialRuns={initialRuns}
-        venueId={selectedId}
+        runs={selectedId ? venueRuns : initialRuns}
+        loading={venueRunsLoading}
         selectedVenueName={selected?.venueName ?? null}
       />
     </>
@@ -1073,18 +1103,14 @@ export const CrawlSplitView = ({
 }
 
 export const CrawlRunHistoryTable = ({
-  initialRuns,
-  venueId,
+  runs: displayRuns,
+  loading = false,
   selectedVenueName,
 }: {
-  initialRuns: CrawlRun[]
-  venueId?: string | null
+  runs: CrawlRun[]
+  loading?: boolean
   selectedVenueName?: string | null
 }) => {
-  const displayRuns = venueId
-    ? initialRuns.filter((run) => run.venueId === venueId)
-    : initialRuns
-
   return (
     <Panel
       title="Run history"
@@ -1104,7 +1130,7 @@ export const CrawlRunHistoryTable = ({
               {' · '}
             </>
           ) : null}
-          showing {displayRuns.length}
+          {loading ? 'loading…' : `showing ${displayRuns.length}`}
         </span>
       }
       padding={0}

@@ -3,7 +3,7 @@
   "version": "1.7.1",
   "private": true,
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "pnpm db:migrate && turbo run dev",
     "build": "turbo run build",
     "test": "turbo run test",
     "lint": "turbo run lint",
