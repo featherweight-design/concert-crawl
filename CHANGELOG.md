@@ -1,3 +1,23 @@
+## [1.6.1](https://github.com/HartiganHM/concert-crawl/compare/v1.6.0...v1.6.1) (2026-05-11)
+
+
+### Bug Fixes
+
+* **admin/crawler:** address Copilot review — venue name prop, fileURLToPath ([6376f52](https://github.com/HartiganHM/concert-crawl/commit/6376f528f2641174aad2c290b56eace053f08c7f))
+* **admin:** add empty state and min height to run history table ([33b55d5](https://github.com/HartiganHM/concert-crawl/commit/33b55d512c37effac0a038311e2407a34ad8968a))
+* **admin:** add minimum heights to crawl split view and run history ([d180af0](https://github.com/HartiganHM/concert-crawl/commit/d180af0254c86f600eaa218dcdcbf69e00f87283)), closes [#234](https://github.com/HartiganHM/concert-crawl/issues/234)
+* **admin:** crawl UI polish — icons, filter panel, run history by venue ([219bd44](https://github.com/HartiganHM/concert-crawl/commit/219bd445ef7c45d2ea3078f6f0a54760138f0212))
+* **admin:** don't treat venue as blocked if last run succeeded ([17833de](https://github.com/HartiganHM/concert-crawl/commit/17833de47690479b89d03c7721ae7666b84ce3f7))
+* **admin:** fix Re-crawl button text contrast against signal background ([0745c76](https://github.com/HartiganHM/concert-crawl/commit/0745c76b6ae87feb1a3666127ea0a947915bb825))
+* **admin:** improve run details empty state — centered with icon ([ec352f0](https://github.com/HartiganHM/concert-crawl/commit/ec352f0489e448273d21c452eab7b32db4b263c5))
+* **admin:** increase run history empty state height and add icon ([b5c9e87](https://github.com/HartiganHM/concert-crawl/commit/b5c9e874e74d2ac91fccde502e9b869fcd971ac0))
+* **admin:** make crawl page scrollable — remove fixed height, use explicit split view height ([4c379e1](https://github.com/HartiganHM/concert-crawl/commit/4c379e1f7c4d8ef021e5691d2b1dd9d194ed2505))
+* **admin:** replace unicode icon in run history empty state with Lucide RefreshCw ([1bfd0a3](https://github.com/HartiganHM/concert-crawl/commit/1bfd0a3670127f3c47d0493771b65e14c67c6a06))
+* **admin:** restore Re-crawl Queued state by removing router.replace ([0cd47f2](https://github.com/HartiganHM/concert-crawl/commit/0cd47f2ddf658ec6cb8864744f3d200d1c6fbf24))
+* **crawler-core:** clear blockedAt on successful crawl ([d443a29](https://github.com/HartiganHM/concert-crawl/commit/d443a29fce0402c936a82f8523a2c8c3577f6a89))
+* **crawler:** correct .env.local path in instrument.ts ([53d0bff](https://github.com/HartiganHM/concert-crawl/commit/53d0bffc4980a219c24e7844bb31780eefa269e1))
+* **crawler:** load .env.local before Sentry init in instrument.ts ([53bc726](https://github.com/HartiganHM/concert-crawl/commit/53bc72669824d55a73abf3058a442d6039929f81))
+
 # [1.6.0](https://github.com/HartiganHM/concert-crawl/compare/v1.5.0...v1.6.0) (2026-05-11)
 
 
