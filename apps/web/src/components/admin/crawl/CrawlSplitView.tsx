@@ -815,7 +815,7 @@ export const CrawlSplitView = ({
               {/* Content */}
               <div
                 style={{
-                  padding: '20px 22px',
+                  padding: activeRun ? '20px 22px' : 0,
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 18,
@@ -1002,8 +1002,47 @@ export const CrawlSplitView = ({
                     )}
                   </>
                 ) : (
-                  <div style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
-                    No runs yet
+                  <div
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 12,
+                      padding: '40px 24px',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: '50%',
+                        background: 'var(--surface-1)',
+                        border: '1px solid var(--border)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <RefreshCw size={22} style={{ opacity: 0.35 }} />
+                    </div>
+                    <div>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 600,
+                          color: 'var(--fg-muted)',
+                          marginBottom: 4,
+                        }}
+                      >
+                        No runs yet
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--fg-subtle)' }}>
+                        Hit Re-crawl to trigger the first run for this venue.
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
