@@ -85,7 +85,14 @@ export async function runTriggeredCrawls(): Promise<{ processed: number }> {
             { extra: { venueId: trigger.venueId, triggerId: trigger.id } },
           )
         }
-        await tagEventsWithGenres(trigger.venueId, crawlRun.id)
+        try {
+          await tagEventsWithGenres(trigger.venueId, crawlRun.id)
+        } catch (tagErr) {
+          logger.error(
+            { tagErr, venueId: trigger.venueId, triggerId: trigger.id },
+            'Genre tagging failed — crawl data saved, genres skipped',
+          )
+        }
         if (crawlRun.status !== 'failed') {
           await runPricesForVenue(trigger.venueId)
         }
@@ -156,11 +163,21 @@ export async function runDailyCrawl(): Promise<{
 
       for (const [idx, result] of results.entries()) {
         if (result.status === 'fulfilled') {
-          succeeded++
           if (result.value.status === 'failed') {
+            failed++
             Sentry.captureException(
               new Error(result.value.errorMessage ?? 'Crawl failed'),
               { extra: { venueId: batch[idx]?.id, name: batch[idx]?.name } },
+            )
+            logger.error(
+              { venueId: batch[idx]?.id, name: batch[idx]?.name },
+              'Crawl failed',
+            )
+          } else {
+            succeeded++
+            logger.info(
+              { venueId: batch[idx]?.id, name: batch[idx]?.name },
+              'Crawl succeeded',
             )
           }
           if (batch[idx]?.id) {
@@ -176,10 +193,6 @@ export async function runDailyCrawl(): Promise<{
               await runPricesForVenue(batch[idx].id)
             }
           }
-          logger.info(
-            { venueId: batch[idx]?.id, name: batch[idx]?.name },
-            'Crawl succeeded',
-          )
         } else {
           failed++
           Sentry.captureException(result.reason, {
