@@ -17,21 +17,30 @@ export function PlanCard({ plan, trialDaysRemaining }: PlanCardProps) {
             'radial-gradient(ellipse at top left, color-mix(in srgb, var(--accent) 12%, transparent), var(--surface-1))',
         }}
       >
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
             <span
               className="text-[11px] font-bold uppercase tracking-[0.08em]"
               style={{ color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}
             >
               {SETTINGS_COPY.planCard.founder.badge}
             </span>
-            <span className="text-[17px] font-bold text-fg">
-              {SETTINGS_COPY.planCard.founder.tagline}
-            </span>
-            <span className="text-[13px] italic text-fg-muted">
-              {SETTINGS_COPY.planCard.founder.subline}
+            <span
+              className="text-[11px] font-medium uppercase tracking-[0.08em] text-fg-muted"
+              style={{ fontFamily: 'var(--font-mono)' }}
+            >
+              {SETTINGS_COPY.planCard.founder.yourPlanLabel}
             </span>
           </div>
+          <span className="text-[20px] font-extrabold text-fg">
+            {SETTINGS_COPY.planCard.founder.tagline}
+          </span>
+          <span className="text-[13px] leading-relaxed text-fg-muted">
+            {SETTINGS_COPY.planCard.founder.body}
+          </span>
+          <span className="text-[12px] italic" style={{ color: 'var(--accent)' }}>
+            {SETTINGS_COPY.planCard.founder.subline}
+          </span>
         </div>
       </div>
     )
