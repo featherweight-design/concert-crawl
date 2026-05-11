@@ -98,9 +98,10 @@ function Field({
 function CrawlDotSparkline({
   sparkline,
 }: {
-  sparkline: { date: string; success: boolean }[]
+  sparkline: { date: string; success: boolean; hasRun: boolean }[]
 }) {
-  if (sparkline.length === 0) {
+  const allEmpty = sparkline.every((day) => !day.hasRun)
+  if (allEmpty) {
     return (
       <span style={{ fontSize: 12, color: 'var(--fg-subtle)' }}>No data</span>
     )
@@ -110,12 +111,16 @@ function CrawlDotSparkline({
       {sparkline.map((day) => (
         <div
           key={day.date}
-          title={`${day.date}: ${day.success ? 'success' : 'failed'}`}
+          title={`${day.date}: ${!day.hasRun ? 'no crawl' : day.success ? 'success' : 'failed'}`}
           style={{
             width: 8,
             height: 8,
             borderRadius: '50%',
-            background: day.success ? 'var(--success)' : 'var(--danger)',
+            background: !day.hasRun
+              ? 'var(--border)'
+              : day.success
+                ? 'var(--success)'
+                : 'var(--danger)',
           }}
         />
       ))}

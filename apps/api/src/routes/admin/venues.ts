@@ -105,7 +105,8 @@ venuesAdminRouter.get('/robots-check', async (ctx) => {
         inWildcardBlock = agent === '*'
       } else if (lower.startsWith('disallow:')) {
         const path = line.slice('disallow:'.length).trim()
-        if (path === '/' || path === '') {
+        // Empty Disallow means "allow all" per robots.txt spec — only '/' blocks
+        if (path === '/') {
           if (inConcertCrawlBlock) concertCrawlDisallowed = true
           if (inWildcardBlock) wildcardDisallowed = true
         }
@@ -162,21 +163,26 @@ venuesAdminRouter.get('/:id', async (ctx) => {
     }
   }
 
-  const sparkline: { date: string; success: boolean }[] = []
+  const sparkline: { date: string; success: boolean; hasRun: boolean }[] = []
   for (let dayOffset = 6; dayOffset >= 0; dayOffset--) {
     const day = new Date()
     day.setDate(day.getDate() - dayOffset)
     const dayKey = day.toISOString().slice(0, 10)
     if (dayMap.has(dayKey)) {
-      sparkline.push({ date: dayKey, success: dayMap.get(dayKey)! })
+      sparkline.push({
+        date: dayKey,
+        success: dayMap.get(dayKey)!,
+        hasRun: true,
+      })
+    } else {
+      sparkline.push({ date: dayKey, success: false, hasRun: false })
     }
   }
 
+  const runDays = sparkline.filter((entry) => entry.hasRun).length
   const successDays = sparkline.filter((entry) => entry.success).length
   const sevenDayPercent =
-    sparkline.length > 0
-      ? Math.round((successDays / sparkline.length) * 100)
-      : 0
+    runDays > 0 ? Math.round((successDays / runDays) * 100) : 0
 
   const avgDurationResult = await db
     .select({ avg: avg(crawlRuns.durationMs) })
@@ -296,19 +302,23 @@ venuesAdminRouter.delete('/:id', async (ctx) => {
     return ctx.json({ success: false, error: 'Venue not found' }, 404)
   }
 
-  // Count events before detaching
-  const [eventCountResult] = await db
-    .select({ total: count(events.id) })
-    .from(events)
-    .where(eq(events.venueId, id))
+  const eventsDetached = await db.transaction(async (tx) => {
+    // Count events before detaching
+    const [eventCountResult] = await tx
+      .select({ total: count(events.id) })
+      .from(events)
+      .where(eq(events.venueId, id))
 
-  const eventsDetached = eventCountResult?.total ?? 0
+    const detachedCount = eventCountResult?.total ?? 0
 
-  // Null out venue_id on events so they remain published
-  await db.update(events).set({ venueId: null }).where(eq(events.venueId, id))
+    // Null out venue_id on events so they remain published
+    await tx.update(events).set({ venueId: null }).where(eq(events.venueId, id))
 
-  // Hard delete venue; crawl_runs cascade-delete automatically
-  await db.delete(venues).where(eq(venues.id, id))
+    // Hard delete venue; crawl_runs cascade-delete automatically
+    await tx.delete(venues).where(eq(venues.id, id))
+
+    return detachedCount
+  })
 
   ctx.set('auditAction', 'venue.delete')
   ctx.set('auditTargetId', id)

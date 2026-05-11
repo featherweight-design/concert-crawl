@@ -123,7 +123,7 @@ export interface VenueWithEventCount extends Venue {
 // CrawlHealth — 7-day crawl health stats returned by GET /v1/admin/venues/:id
 export interface CrawlHealth {
   sevenDayPercent: number
-  sparkline: { date: string; success: boolean }[]
+  sparkline: { date: string; success: boolean; hasRun: boolean }[]
   lastCrawledAt: string | null
   avgDurationMs: number | null
   eventsTracked: number

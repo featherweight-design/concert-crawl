@@ -50,7 +50,8 @@ export async function GET(request: NextRequest) {
         inWildcardBlock = agent === '*'
       } else if (lower.startsWith('disallow:')) {
         const path = line.slice('disallow:'.length).trim()
-        if (path === '/' || path === '') {
+        // Empty Disallow means "allow all" per robots.txt spec — only '/' blocks
+        if (path === '/') {
           if (inConcertCrawlBlock) concertCrawlDisallowed = true
           if (inWildcardBlock) wildcardDisallowed = true
         }

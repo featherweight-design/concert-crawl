@@ -126,9 +126,9 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
     try {
       new URL(url)
       if (!url.startsWith('http'))
-        fieldErrors.websiteUrl = 'Must be an https:// URL'
+        fieldErrors.websiteUrl = 'Must be an http:// or https:// URL'
     } catch {
-      fieldErrors.websiteUrl = 'Enter a valid URL (https://...)'
+      fieldErrors.websiteUrl = 'Enter a valid URL (http:// or https://...)'
     }
     if (!city || city.length < 2) fieldErrors.city = 'City is required'
 
@@ -394,12 +394,13 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
                       placeholder="https://ogdentheatre.com/events"
                       disabled={disabled}
                       onBlur={handleUrlBlur}
-                      onChange={() =>
+                      onChange={() => {
                         setErrors((prev) => ({
                           ...prev,
                           websiteUrl: undefined,
                         }))
-                      }
+                        setRobotsResult({ allowed: null, checked: false })
+                      }}
                       style={inputStyle(!!errors.websiteUrl, disabled)}
                     />
                   </Field>
