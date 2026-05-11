@@ -2,7 +2,11 @@ import { Fragment } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { auth } from '@clerk/nextjs/server'
-import type { EventDetailResponse, EventWithVenue, EventsListResponse } from '@concert-crawl/types'
+import type {
+  EventDetailResponse,
+  EventWithVenue,
+  EventsListResponse,
+} from '@concert-crawl/types'
 import { publicApiClient, apiClient } from '@/lib/api'
 import { AppHeader } from '@/components/consumer/app-header'
 import { EventImage } from '@/components/consumer/event-image'
@@ -275,25 +279,13 @@ export default async function EventDetailPage({
           />
         </div>
 
-        {/* About */}
-        {event.description && (
-          <div className="mt-4">
-            <p
-              className="mb-1.5 uppercase text-fg-subtle"
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '9px',
-                letterSpacing: '0.06em',
-              }}
-            >
-              About
-            </p>
-            <p
-              className="text-[13px] leading-[1.55] text-fg-muted"
-              style={{ textWrap: 'pretty' } as React.CSSProperties}
-            >
-              {event.description}
-            </p>
+        {/* Setlist preview — in a surface card, above primary CTA */}
+        {event.setlist && (
+          <div
+            className="mt-5 rounded-[12px] border border-border"
+            style={{ padding: '0 14px', background: 'var(--surface-1)' }}
+          >
+            <SetlistPreview setlist={event.setlist} />
           </div>
         )}
 
@@ -321,11 +313,6 @@ export default async function EventDetailPage({
           </div>
         )}
 
-        {/* Setlist preview — above primary CTA */}
-        <div className="mt-5">
-          <SetlistPreview setlist={event.setlist} />
-        </div>
-
         {/* Primary CTA — sold out or get tickets */}
         {!isCancelled && !isPostponed && (
           <div className="mt-5">
@@ -350,6 +337,28 @@ export default async function EventDetailPage({
                 </a>
               )
             )}
+          </div>
+        )}
+
+        {/* About — after CTA, per design */}
+        {event.description && (
+          <div className="mt-4">
+            <p
+              className="mb-1.5 uppercase text-fg-subtle"
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '9px',
+                letterSpacing: '0.06em',
+              }}
+            >
+              About
+            </p>
+            <p
+              className="text-[13px] leading-[1.55] text-fg-muted"
+              style={{ textWrap: 'pretty' } as React.CSSProperties}
+            >
+              {event.description}
+            </p>
           </div>
         )}
 
