@@ -328,7 +328,7 @@ export const CrawlSplitView = ({
   const venueRecrawlError = selectedId ? recrawlError[selectedId] : undefined
 
   return (
-    <div style={{ display: 'flex', gap: 16, flex: 1, minHeight: 0 }}>
+    <div style={{ display: 'flex', gap: 16, flex: 1, minHeight: 400 }}>
       {/* Left rail */}
       <div
         style={{
@@ -973,7 +973,7 @@ export const CrawlRunHistoryTable = ({
       }
       padding={0}
     >
-      <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+      <div style={{ minHeight: 200, maxHeight: 400, overflowY: 'auto' }}>
         <AdminTable>
           <THead sticky>
             <tr>
