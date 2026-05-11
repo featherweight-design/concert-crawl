@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm'
+import { desc, eq, sql } from 'drizzle-orm'
 import { db } from './src/client.js'
 import {
   venues,
@@ -329,21 +329,23 @@ async function seed() {
 
   // --- Synthetic user data ---
 
-  await db
-    .insert(userProfiles)
-    .values(FAKE_USER_PROFILES)
-    .onConflictDoNothing({ target: userProfiles.userId })
+  // onConflictDoNothing() without target covers both userId and handle unique constraints
+  await db.insert(userProfiles).values(FAKE_USER_PROFILES).onConflictDoNothing()
   console.warn(`Inserted ${FAKE_USER_PROFILES.length} user profiles.`)
 
-  const existingRolesCount = await db
-    .select({ count: sql<number>`count(*)::int` })
+  // Insert only roles for userIds not already present, to handle partial local state
+  const existingRoleRows = await db
+    .select({ userId: userRoles.userId })
     .from(userRoles)
-  const hasRoles = (existingRolesCount[0]?.count ?? 0) > 0
-  if (!hasRoles) {
-    await db.insert(userRoles).values(FAKE_USER_ROLES).onConflictDoNothing()
-    console.warn(`Inserted ${FAKE_USER_ROLES.length} user roles.`)
+  const existingRoleUserIds = new Set(existingRoleRows.map((row) => row.userId))
+  const missingRoles = FAKE_USER_ROLES.filter(
+    (role) => !existingRoleUserIds.has(role.userId),
+  )
+  if (missingRoles.length > 0) {
+    await db.insert(userRoles).values(missingRoles)
+    console.warn(`Inserted ${missingRoles.length} user roles.`)
   } else {
-    console.warn('User roles already seeded, skipping.')
+    console.warn('All synthetic user roles already present, skipping.')
   }
 
   await db
@@ -391,6 +393,7 @@ async function seed() {
   const recentEvents = await db
     .select({ id: eventsTable.id })
     .from(eventsTable)
+    .orderBy(desc(eventsTable.date))
     .limit(50)
 
   if (recentEvents.length === 0) {
@@ -501,127 +504,150 @@ async function seed() {
       console.warn('User events already seeded, skipping.')
     }
 
-    const submissionEventIds = eventIds.slice(0, 10)
-    const submissionRows = [
+    // Build submission rows defensively — only include entries where the eventId exists
+    type SubmissionTemplate = {
+      idx: number
+      userId: string
+      priceMin: string
+      priceMax?: string
+      tier: 'GA' | 'Reserved' | 'VIP' | 'Pit' | 'Lawn'
+      vendor:
+        | 'AXS'
+        | 'Ticketmaster'
+        | 'SeatGeek'
+        | 'DICE'
+        | 'Eventbrite'
+        | 'VenueBoxOffice'
+      howFound: 'bought_myself' | 'saw_listing' | 'at_the_venue'
+      status: 'pending' | 'corroborated' | 'disputed' | 'stale'
+      corroborationCount: number
+    }
+    const submissionTemplates: SubmissionTemplate[] = [
       {
-        eventId: submissionEventIds[0]!,
+        idx: 0,
         userId: FAKE_USER_IDS.jess,
         priceMin: '35.00',
         priceMax: '55.00',
-        tier: 'GA' as const,
-        vendor: 'AXS' as const,
-        howFound: 'bought_myself' as const,
-        status: 'corroborated' as const,
+        tier: 'GA',
+        vendor: 'AXS',
+        howFound: 'bought_myself',
+        status: 'corroborated',
         corroborationCount: 2,
       },
       {
-        eventId: submissionEventIds[1]!,
+        idx: 1,
         userId: FAKE_USER_IDS.marco,
         priceMin: '45.00',
         priceMax: '75.00',
-        tier: 'GA' as const,
-        vendor: 'Ticketmaster' as const,
-        howFound: 'saw_listing' as const,
-        status: 'corroborated' as const,
+        tier: 'GA',
+        vendor: 'Ticketmaster',
+        howFound: 'saw_listing',
+        status: 'corroborated',
         corroborationCount: 1,
       },
       {
-        eventId: submissionEventIds[2]!,
+        idx: 2,
         userId: FAKE_USER_IDS.jess,
         priceMin: '120.00',
         priceMax: '200.00',
-        tier: 'VIP' as const,
-        vendor: 'AXS' as const,
-        howFound: 'bought_myself' as const,
-        status: 'pending' as const,
+        tier: 'VIP',
+        vendor: 'AXS',
+        howFound: 'bought_myself',
+        status: 'pending',
         corroborationCount: 0,
       },
       {
-        eventId: submissionEventIds[3]!,
+        idx: 3,
         userId: FAKE_USER_IDS.marco,
         priceMin: '25.00',
-        tier: 'GA' as const,
-        vendor: 'SeatGeek' as const,
-        howFound: 'saw_listing' as const,
-        status: 'pending' as const,
+        tier: 'GA',
+        vendor: 'SeatGeek',
+        howFound: 'saw_listing',
+        status: 'pending',
         corroborationCount: 0,
       },
       {
-        eventId: submissionEventIds[4]!,
+        idx: 4,
         userId: FAKE_USER_IDS.hugh,
         priceMin: '30.00',
         priceMax: '45.00',
-        tier: 'GA' as const,
-        vendor: 'Ticketmaster' as const,
-        howFound: 'bought_myself' as const,
-        status: 'disputed' as const,
+        tier: 'GA',
+        vendor: 'Ticketmaster',
+        howFound: 'bought_myself',
+        status: 'disputed',
         corroborationCount: 0,
       },
       {
-        eventId: submissionEventIds[5]!,
+        idx: 5,
         userId: FAKE_USER_IDS.jess,
         priceMin: '50.00',
         priceMax: '80.00',
-        tier: 'Reserved' as const,
-        vendor: 'AXS' as const,
-        howFound: 'saw_listing' as const,
-        status: 'pending' as const,
+        tier: 'Reserved',
+        vendor: 'AXS',
+        howFound: 'saw_listing',
+        status: 'pending',
         corroborationCount: 0,
       },
       {
-        eventId: submissionEventIds[6]!,
+        idx: 6,
         userId: FAKE_USER_IDS.marco,
         priceMin: '22.00',
-        tier: 'GA' as const,
-        vendor: 'DICE' as const,
-        howFound: 'at_the_venue' as const,
-        status: 'pending' as const,
+        tier: 'GA',
+        vendor: 'DICE',
+        howFound: 'at_the_venue',
+        status: 'pending',
         corroborationCount: 0,
       },
       {
-        eventId: submissionEventIds[7]!,
+        idx: 7,
         userId: FAKE_USER_IDS.hugh,
         priceMin: '65.00',
         priceMax: '120.00',
-        tier: 'VIP' as const,
-        vendor: 'Ticketmaster' as const,
-        howFound: 'bought_myself' as const,
-        status: 'corroborated' as const,
+        tier: 'VIP',
+        vendor: 'Ticketmaster',
+        howFound: 'bought_myself',
+        status: 'corroborated',
         corroborationCount: 1,
       },
       {
-        eventId: submissionEventIds[8]!,
+        idx: 8,
         userId: FAKE_USER_IDS.jess,
         priceMin: '18.00',
-        tier: 'GA' as const,
-        vendor: 'Eventbrite' as const,
-        howFound: 'saw_listing' as const,
-        status: 'pending' as const,
+        tier: 'GA',
+        vendor: 'Eventbrite',
+        howFound: 'saw_listing',
+        status: 'pending',
         corroborationCount: 0,
       },
       {
-        eventId: submissionEventIds[9]!,
+        idx: 9,
         userId: FAKE_USER_IDS.marco,
         priceMin: '40.00',
         priceMax: '60.00',
-        tier: 'GA' as const,
-        vendor: 'SeatGeek' as const,
-        howFound: 'saw_listing' as const,
-        status: 'pending' as const,
+        tier: 'GA',
+        vendor: 'SeatGeek',
+        howFound: 'saw_listing',
+        status: 'pending',
         corroborationCount: 0,
       },
       // Stale submission — tests the stale status display in admin
       {
-        eventId: submissionEventIds[0]!,
+        idx: 0,
         userId: FAKE_USER_IDS.jess,
         priceMin: '28.00',
-        tier: 'GA' as const,
-        vendor: 'AXS' as const,
-        howFound: 'saw_listing' as const,
-        status: 'stale' as const,
+        tier: 'GA',
+        vendor: 'AXS',
+        howFound: 'saw_listing',
+        status: 'stale',
         corroborationCount: 0,
       },
     ]
+    const submissionRows = submissionTemplates
+      .filter(({ idx }) => eventIds[idx] !== undefined)
+      .map(({ idx, ...rest }) => ({
+        ...rest,
+        eventId: eventIds[idx] as string,
+      }))
 
     const existingSubmissionsCount = await db
       .select({ count: sql<number>`count(*)::int` })
