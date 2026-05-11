@@ -9,17 +9,33 @@ import { SETTINGS_COPY } from './definitions/copy'
 interface DeleteAccountSheetProps {
   open: boolean
   onClose: () => void
+  handle?: string | null
+  submissionCount?: number
 }
 
-export function DeleteAccountSheet({ open, onClose }: DeleteAccountSheetProps) {
+export function DeleteAccountSheet({
+  open,
+  onClose,
+  handle,
+  submissionCount,
+}: DeleteAccountSheetProps) {
   const [inputValue, setInputValue] = useState('')
   const [loading, setLoading] = useState(false)
+  const [isDesktop, setIsDesktop] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const { getToken } = useAuth()
   const { signOut } = useClerk()
   const router = useRouter()
 
   const isArmed = inputValue === 'DELETE'
+
+  useEffect(() => {
+    const mql = window.matchMedia('(min-width: 640px)')
+    setIsDesktop(mql.matches)
+    const handler = (ev: MediaQueryListEvent) => setIsDesktop(ev.matches)
+    mql.addEventListener('change', handler)
+    return () => mql.removeEventListener('change', handler)
+  }, [])
 
   useEffect(() => {
     if (open) {
@@ -42,6 +58,93 @@ export function DeleteAccountSheet({ open, onClose }: DeleteAccountSheetProps) {
   }
 
   if (!open) return null
+
+  if (isDesktop) {
+    return (
+      <>
+        {/* Scrim */}
+        <div
+          className="fixed inset-0 z-50"
+          style={{ background: 'rgba(0,0,0,0.6)' }}
+          onClick={onClose}
+          aria-hidden="true"
+        />
+        {/* Dialog */}
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-dialog-title"
+          className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl p-6"
+          style={{
+            background: 'var(--bg)',
+            border: '1px solid var(--border)',
+            boxShadow: '0 24px 60px rgba(0,0,0,0.4)',
+          }}
+        >
+          <h2
+            id="delete-dialog-title"
+            className="mb-2 text-[18px] font-bold text-fg"
+          >
+            Delete your account?
+          </h2>
+          <p className="mb-4 text-[13px] leading-relaxed text-fg-muted">
+            <strong style={{ color: 'var(--danger)' }}>
+              This can&apos;t be undone.
+            </strong>{' '}
+            Your handle
+            {handle ? (
+              <>
+                {' '}
+                <strong>@{handle}</strong>,
+              </>
+            ) : (
+              ','
+            )}{' '}
+            email, plan, and {submissionCount ?? 0} submitted{' '}
+            {submissionCount === 1 ? 'price' : 'prices'} are gone the moment
+            you delete.
+          </p>
+          <p className="mb-2 text-[13px] font-medium text-fg-muted">
+            Type <strong>DELETE</strong> to confirm.
+          </p>
+          <input
+            ref={inputRef}
+            type="text"
+            value={inputValue}
+            onChange={(evt) => setInputValue(evt.target.value)}
+            placeholder="DELETE"
+            className="mb-4 w-full rounded-lg border border-border bg-surface-1 px-4 py-3 text-[14px] text-fg placeholder:text-fg-subtle focus:outline-none focus:border-border-focus"
+            style={isArmed ? { borderColor: 'var(--danger)' } : undefined}
+            autoComplete="off"
+            autoCapitalize="off"
+            spellCheck={false}
+          />
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 rounded-xl border border-border py-3 text-[14px] font-bold text-fg transition-colors hover:bg-surface-1"
+              style={{ background: 'var(--surface-1)' }}
+            >
+              Keep my account
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleDelete()}
+              disabled={!isArmed || loading}
+              className="flex-1 rounded-xl py-3 text-[14px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+              style={{
+                background: isArmed ? 'var(--danger)' : 'var(--surface-2)',
+                color: isArmed ? 'white' : 'var(--fg-muted)',
+              }}
+            >
+              {loading ? 'Deleting…' : 'Delete forever'}
+            </button>
+          </div>
+        </div>
+      </>
+    )
+  }
 
   return (
     <>
