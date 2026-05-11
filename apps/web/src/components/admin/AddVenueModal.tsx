@@ -14,7 +14,7 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { createVenue, createVenueAndCrawl } from '@/lib/actions/venues'
-import { AdminButton } from '@/components/admin/primitives'
+import { AdminButton, Kbd } from '@/components/admin/primitives'
 
 function slugify(name: string): string {
   return name
@@ -53,6 +53,7 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
   const [robotsState, setRobotsState] = useState<RobotsState>('idle')
   const [urlValue, setUrlValue] = useState('')
   const [focusedField, setFocusedField] = useState<FocusedField>(null)
+  const [closeButtonFocused, setCloseButtonFocused] = useState(false)
 
   const nameRef = useRef<HTMLInputElement>(null)
   const slugRef = useRef<HTMLInputElement>(null)
@@ -70,6 +71,7 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
     setRobotsState('idle')
     setUrlValue('')
     setFocusedField(null)
+    setCloseButtonFocused(false)
     if (nameRef.current) nameRef.current.value = ''
     if (slugRef.current) slugRef.current.value = ''
     if (websiteUrlRef.current) websiteUrlRef.current.value = ''
@@ -332,9 +334,15 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
                         color: 'var(--fg-muted)',
                         display: 'flex',
                         flexShrink: 0,
+                        outline: closeButtonFocused
+                          ? '2px solid var(--signal)'
+                          : 'none',
+                        outlineOffset: 2,
                       }}
                       aria-label="Close"
                       onClick={resetState}
+                      onFocus={() => setCloseButtonFocused(true)}
+                      onBlur={() => setCloseButtonFocused(false)}
                     >
                       <X size={16} />
                     </button>
@@ -473,6 +481,7 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
                         onClick={handleRegenerateSlug}
                         disabled={disabled}
                         title="Regenerate slug from name"
+                        aria-label="Regenerate slug from name"
                         style={{
                           all: 'unset',
                           cursor: disabled ? 'not-allowed' : 'pointer',
@@ -845,6 +854,7 @@ function SegToggle({
             type="button"
             onClick={() => !disabled && onToggle(val)}
             disabled={disabled}
+            aria-pressed={isActive}
             style={{
               all: 'unset',
               cursor: disabled ? 'not-allowed' : 'pointer',
@@ -962,28 +972,6 @@ function FaviconChip({ url }: { url: string }) {
       />
       {host}
     </span>
-  )
-}
-
-function Kbd({ children }: { children: React.ReactNode }) {
-  return (
-    <kbd
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1px 5px',
-        borderRadius: 4,
-        border: '1px solid var(--border)',
-        background: 'var(--surface-1)',
-        fontSize: 10,
-        fontFamily: 'var(--font-mono, monospace)',
-        color: 'var(--fg-muted)',
-        lineHeight: 1.4,
-      }}
-    >
-      {children}
-    </kbd>
   )
 }
 

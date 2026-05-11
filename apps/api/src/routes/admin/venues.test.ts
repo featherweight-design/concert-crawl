@@ -170,6 +170,7 @@ describe('Admin venue routes', () => {
     mockDb.select.mockReturnValue(mockDb._makeQueryBuilder([]))
     const verifiedVenue = { ...mockDb._mockVenueRow, verified: true }
     mockDb.returning.mockResolvedValue([verifiedVenue])
+    mockDb.values.mockClear()
     const res = await createApp().request('/v1/admin/venues', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
