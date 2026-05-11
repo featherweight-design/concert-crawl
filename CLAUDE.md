@@ -130,8 +130,8 @@ Claude Code sessions are finite. To preserve continuity across sessions:
 - Leave a `## Next` section in `docs/superpowers/plans/` or update the relevant memory file with the immediate next step
 - After significant changes, update `CLAUDE.md` (architecture decisions, new conventions) and memory files (`~/.claude/projects/*/memory/`) with anything non-obvious
 - Optimize for cost-effectiveness: prefer smaller focused sessions over sprawling ones; use `/compact` when context grows large
-- **When opening a PR** — update the Phase Sequence table and Current Status bullet list in this file to reflect the new work, then commit the CLAUDE.md change as part of the branch
-- **When starting a new session** — run `gh pr list --state merged --limit 10` to check for merges since the last CLAUDE.md update; if any are unrecorded, update Current Status and the Phase Sequence table before doing anything else
+- **When opening a PR** — add a 🔄 row to `docs/superpowers/progress.md` and commit the change as part of the branch
+- **When starting a new session** — run `gh pr list --state merged --limit 10` and update `docs/superpowers/progress.md` before doing anything else
 
 ### Code
 
@@ -196,16 +196,6 @@ Issues live in GitHub Issues (repo: `HartiganHM/concert-crawl`). The board is a 
 
 ---
 
-## Role System
-
-Three roles: `admin`, `sub_admin`, `user`
-
-- Role is stored in **Clerk `publicMetadata`** (source of truth)
-- `user_roles` DB table mirrors this for audit purposes + stores scoped `sub_admin` permissions
-- Auth utilities: `getCurrentUser()`, `requireAuth()`, `requireRole()` — defined in `packages/auth`
-
----
-
 ## Crawl Architecture (Critical)
 
 **Extraction priority:**
@@ -228,29 +218,7 @@ Three roles: `admin`, `sub_admin`, `user`
 
 ## Environment Variables
 
-Each app has a `.env.example` at its root. Required variables:
-
-**`apps/api`**
-
-- `DATABASE_URL` — Postgres connection string
-- `CLERK_SECRET_KEY` — from Clerk dashboard
-- `ANTHROPIC_API_KEY` — for LLM extraction
-- `STRIPE_SECRET_KEY` — Stripe payments
-- `RESEND_API_KEY` — email delivery
-- `SENTRY_DSN` — error tracking
-
-**`apps/web`**
-
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-- `CLERK_SECRET_KEY`
-- `NEXT_PUBLIC_API_URL` — points to `apps/api`
-- `SENTRY_DSN`
-
-**`apps/crawler`**
-
-- `DATABASE_URL`
-- `ANTHROPIC_API_KEY`
-- `SENTRY_DSN`
+Each app has a `.env.example` at its root — see those for local dev vars. Full production variable tables (including Render + GitHub Actions secrets) are in `docs/runbooks/production-launch.md` Step 4–5.
 
 ---
 
@@ -267,82 +235,10 @@ Do not build upvoting, threading, status tracking, or public roadmaps. The list 
 
 ## Session Management
 
-Claude Code sessions have a rolling token budget. Long debugging sessions burn it fast. Follow these rules to stay efficient.
-
-### Automated warning
-
-A `UserPromptSubmit` hook in `.claude/settings.json` counts assistant turns in the session transcript and injects warnings at:
-
-- **20 turns** — suggest `/compact` if switching tasks or after heavy debugging
-- **35 turns** — require `/compact` or recommend starting a fresh session
-
-### When to suggest `/compact`
-
-Proactively suggest it when:
-
-- The user finishes a discrete task and is about to start something different
-- A debugging sequence just resolved (drizzle-kit, port conflicts, CI failures, etc.)
-- The user asks about a new file or feature that hasn't come up yet in this session
-
-### When to recommend a fresh session
-
-- Starting a new phase of work (Phase 2, Phase 3, etc.)
-- Switching from implementation to planning/brainstorming
-- The conversation has been compacted more than once
-
-### Context is always recoverable
-
-Nothing important lives only in conversation history:
-
-- **CLAUDE.md** — architecture, conventions, what Claude can/cannot touch
-- **Committed code** — all implementation decisions are in git
-- **`docs/superpowers/`** — design specs and implementation plans
-- **Memory files** — `~/.claude/projects/*/memory/` persists user preferences across sessions
-
-Always commit work-in-progress before ending a session so a fresh Claude starts with full context from the files, not from conversation history.
-
----
-
-## RBAC Model
-
-Three roles: `admin`, `sub_admin`, `user` (ordered lowest → highest in `ROLE_HIERARCHY`).
-
-### Source of truth
-
-Clerk `publicMetadata.role` is the authoritative source. The `user_roles` DB table mirrors it for audit purposes only — it is not read for authorization decisions.
-
-### Two paths for reading the role
-
-| Context                         | How                                 | When to use                                                                                                                  |
-| ------------------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Web server components / actions | `currentUser().publicMetadata.role` | Live Clerk API call — always reflects the current role. Use for page-level access gates (`requireAdminUser`, `requireRole`). |
-| API middleware                  | `sessionClaims.metadata.role`       | Reads from the JWT snapshot — fast, no extra API call. Use in `requireRole` middleware on Hono routes.                       |
-
-**Trade-off:** If a role is changed in Clerk, the web sees it immediately. The API will not see it until the user signs out and back in (JWT is reissued). This is acceptable — role changes are rare and the user can be asked to re-authenticate.
-
-### JWT template
-
-The Clerk dashboard session token template must include:
-
-```json
-{ "metadata": "{{user.public_metadata}}" }
-```
-
-This populates `sessionClaims.metadata` in the JWT. Without it, the API's `requireRole` middleware always fails with 403.
-
-### TypeScript augmentation
-
-`apps/web/src/types/clerk.d.ts` augments two Clerk interfaces:
-
-- `CustomJwtSessionClaims` — types `sessionClaims.metadata.role` as `Role | undefined`
-- `UserPublicMetadata` — types `user.publicMetadata.role` as `Role | undefined`
-
-Both eliminate the need to cast. Never cast `publicMetadata` or `sessionClaims` to `Record<string, unknown>`.
-
-### Role provisioning
-
-- **Now (pre-Phase 3):** Set roles manually in the Clerk dashboard → User → Public Metadata: `{ "role": "admin" }`. User must sign out and back in after any change.
-- **Phase 3+:** Admin UI at `/admin/users` will call `PATCH /v1/admin/users/:userId/role`, which calls the Clerk Management API (`clerkClient.users.updateUserMetadata`) and writes an audit row to `user_roles` with `granted_by`. Role changes require admin privileges and are always logged.
+- Hooks warn at 20 turns (suggest `/compact`) and 35 turns (require `/compact` or fresh session)
+- Compact after each committed task, not just at the warning threshold
+- Commit all WIP before ending a session — a fresh Claude reads code and files, not chat history
+- Context is always recoverable: CLAUDE.md, git log, `docs/superpowers/`, and memory files
 
 ---
 
@@ -350,170 +246,4 @@ Both eliminate the need to cast. Never cast `publicMetadata` or `sessionClaims` 
 
 Phase: **Pre-Beta Sprint — target open May 25, 2026**
 
-- Phase 6a complete (PR #26 merged 2026-05-07): pino + Sentry SDK across all three apps
-- Phase 6b complete (PR #28 merged 2026-05-07): Vitest integration tests for `apps/api` (20 tests, real Postgres)
-- Phase 6c complete (PR #29 merged 2026-05-07): Playwright `apps/e2e` package — staging E2E suite + prod smoke cron (every 6h, `SMOKE_ENABLED=false` until launch)
-- Price transparency spec merged (PR #30): `docs/superpowers/specs/2026-05-06-price-transparency-design.md`
-- Price transparency implementation complete (PR #32 merged 2026-05-08): 6-tier pipeline, community submissions, admin dashboard
-- Price transparency cleanup complete (PR #37 merged 2026-05-08): PriceSource consolidation + price_retrieval_log.source enum migration
-- Phase 7.5 complete (PR #39 merged 2026-05-08): IdentityArt generative engine — 5 templates × 8 palettes, wired to all image surfaces
-- Phase 7.6 complete (PR #44 merged 2026-05-08): Admin UI redesign — new design system, dashboard, crawl/events/venues/prices/invite-codes pages; RSC boundary fixes, today-stats fix, statusFilter wired, admin auth on crawl trigger
-- Phase 8a complete (PR #43 merged 2026-05-08): landing page, waitlist modal, invite code gate, onboarding flow, Clerk sign-up gate, code redemption; DB migration 0006
-- Phase 8a follow-up complete (PR #45 merged 2026-05-08): CTA priority flip, horizontal desktop layout, animation gap fix (4th card), indicator dots, dynamic hero shows from API
-- Price transparency v2 complete (PR #46 merged 2026-05-08): community submissions, confirm/dispute, admin review
-- Phase 8b Part 1 complete (PR #49 merged 2026-05-08): user profile + settings (handle, avatar, theme, submissions)
-- AdminTable theme fix complete (PR #50 merged 2026-05-08): electric/jade theme support in admin
-- Betterment: crawler separated from API service (PR #51 merged 2026-05-08): crawler-core + price-pipeline packages, two Render Cron Jobs
-- Legal pages complete (PR #108 merged 2026-05-09): beta agreement, T&C stub, Privacy Policy stub
-- Invite code error states complete (PR #43/onboarding flow): invalid code, expired code, no-code wall handled in onboarding — pending manual confirmation by Hugh
-- Venue seeding complete (ongoing — 10-12 venues crawled and live before private beta)
-- Empty state design handoff added (PR #118 merged 2026-05-09): design assets for empty states
-- Domain: `concertcrawl.app` via Cloudflare Registrar (~$15/yr)
-- Watching bug fixes complete (PR #140 merged 2026-05-10): IdentityArt thumbnail in WatchingItem; watch state rehydration on Browse via auth + fetchWatching
-- Admin dashboard polish complete (PR #127 merged 2026-05-10): topbar, sign-out popover, stat cards, crawl health table, activity feed
-- Browse filters + genre tagging complete (PR #130 merged 2026-05-10): Price + Vibe filter chips wired end-to-end; LLM genre-tagging pipeline in crawler
-- Crawler: shared browser instance (PR #144 merged 2026-05-10): single Playwright browser across venue crawls
-- Empty states complete (PR #145 merged 2026-05-10): hybrid design wired into browse (list + calendar), venue page, and watching
-- Feedback modal + user menu redesign complete (PR #146 merged 2026-05-10): identity card, theme switcher, beta channel, admin section, feedback submission
-- Genre tagger resilience (PR #147 merged 2026-05-10): open enum for unknown genres, batch size limit
-- Search implementation complete (PR #171): `/search` page, `SearchPalette` desktop command palette (⌘K), `useSearch` hook, `GET /v1/search/popular` endpoint, venue name in event search
-- Onboarding polish in PR #173 (fix/onboarding-polish): desktop card layout, top chrome, back button, step 5 copy, Caveat font, returning-user redirect (#134, #135, #138, #80)
-- Active Claude workers: admin/crawl UI fixes (issues #148–163), admin sidebar polish (issue #139)
-- Admin sidebar polish in PR #167 (issue #139): badge contrast, CCMark centralization, Invite Codes icon, OPERATIONS label
-- Admin crawl data + run-all in PR (feat/admin-crawl-data-and-run-all): DB migration 0014 (llm_cost_usd, events_updated), crawler writes new fields, API selects them + bulk trigger endpoint, "Run all" button in CrawlSplitView; closes #150, #155, #156
-- Auto-versioning + release notes in PR #183 (feat/auto-versioning, issue #154): semantic-release on root package.json, CI→Release→Deploy-Staging pipeline chain, version injected from package.json into next.config.ts
-- Admin venue forms in PR (feat/admin-venue-forms, issue #187): Add Venue modal inline on Venues table, full Venue Details redesign (2-col layout, crawl health sparkline, danger zone), type-to-confirm hard delete, DB migration for events.venue_id nullable FK
-- Genre themes in PR (feat/genre-themes, issue #194): 6 genre themes (Pulse/Forge/Blue Note/Drip/Cedar/Gloss) + redesigned 9-theme picker; DB migration 0016
-- Profile & Settings v2 in PR (feat/profile-v2, issue #196): cred score system (atomic +1 on submission corroboration, regression tests), Save button wired to edit profile page header, generative Avatar in desktop UserMenu trigger
-- Settings v2 polish in PR (fix/settings-v2-polish, issues #214–#224): mobile section labels, account rows with icons, WatchingTeaser in Lists section, desktop nav order, danger zone card, delete modal desktop, bottom nav ME avatar, plan card copy
-- Event Detail v2 in PR (feat/event-detail-v2, issue #195): WatchShowButton (3-state), SetlistPreview (collapsible), SoldOutCta, SubmitPriceCardCta, trust chrome (TrustMark inline + --trust-community token), DB migration 0017 (setlist jsonb), API watch endpoints (POST/DELETE /v1/events/:id/watch)
-- Venue crawl config UI in PR (feat/venue-crawl-config-ui, issue #210): crawlWaitUntil + crawlDelayMs exposed in Venue Details admin form with helper text; fixes Cervantes timeout
-- Crawler Sentry errors in PR (fix/crawler-sentry-errors, issue #212): explicit Sentry.captureException on crawlRun.status === 'failed' and unexpected throws in runDailyCrawl + runTriggeredCrawls
-- Sentry Structured Logs in PR (feat/sentry-logs, issue #225): enableLogs across all three apps, wide-event crawler logs (crawl.complete/crawl.failed/crawl.error) with venue_id, events_found, duration_ms, extraction_strategy
-
-### Phase Sequence
-
-| Phase       | Name                                     | Status                                             |
-| ----------- | ---------------------------------------- | -------------------------------------------------- |
-| 1           | Foundation                               | ✅ Complete                                        |
-| 2           | Venue Management (Admin)                 | ✅ Complete                                        |
-| 3           | Crawler v1                               | ✅ Complete                                        |
-| 4           | Design System / Theming Architecture     | ✅ Complete                                        |
-| 5           | Consumer Calendar UI (functional)        | ✅ Complete                                        |
-| 5b          | Consumer UI Design Polish                | ✅ Complete (PRs #22–24)                           |
-| 6a          | Observability SDK                        | ✅ Complete (PR #26)                               |
-| 6b          | Integration Tests                        | ✅ Complete (PR #28)                               |
-| 6c          | E2E + Smoke Tests                        | ✅ Complete (PR #29)                               |
-| 7           | Automation + Scheduling                  | ✅ Complete (PR #34)                               |
-| 7.5         | IdentityArt generative engine            | ✅ Complete (PR #39)                               |
-| 7.6         | Admin UI Redesign                        | ✅ Complete (PRs #44, #50)                         |
-| 8a          | Beta Launch Prep — Landing + Auth        | ✅ Complete (PRs #43, #45)                         |
-| 8b pt.1     | User Profile + Settings                  | ✅ Complete (PR #49)                               |
-| —           | Price Transparency v1                    | ✅ Complete (PRs #32, #37)                         |
-| —           | Price Transparency v2                    | ✅ Complete (PR #46)                               |
-| —           | Betterment: Crawler separation           | ✅ Complete (PR #51)                               |
-| **8b pt.2** | **Saving Shows (Watching)**              | ✅ **Complete (PR #117 merged 2026-05-09)**        |
-| —           | Legal pages                              | ✅ Complete (PR #108)                              |
-| —           | Watching bug fixes                       | ✅ Complete (PR #140 merged 2026-05-10)            |
-| —           | Admin dashboard polish                   | ✅ Complete (PR #127 merged 2026-05-10)            |
-| —           | Browse filters + LLM genre tagging       | ✅ Complete (PR #130 merged 2026-05-10)            |
-| —           | Empty states                             | ✅ Complete (PR #145 merged 2026-05-10)            |
-| —           | Feedback modal + user menu redesign      | ✅ Complete (PR #146 merged 2026-05-10)            |
-| —           | Crawler: shared browser + genre fixes    | ✅ Complete (PRs #144, #147 merged 2026-05-10)     |
-| —           | Admin sidebar polish                     | 🔄 In PR #167 (issue #139)                         |
-| —           | Admin crawl data + run-all               | 🔄 In PR (feat/admin-crawl-data-and-run-all)       |
-| —           | Search nav item                          | ✅ Complete (PR #171, issue #57)                   |
-| —           | Onboarding polish                        | 🔄 In PR #173 (issues #134, #135, #138, #80)       |
-| —           | Auto-versioning + release notes          | 🔄 In PR #183 (feat/auto-versioning, issue #154)   |
-| —           | Admin venue forms                        | 🔄 In PR (feat/admin-venue-forms, issue #187)      |
-| —           | Genre themes + picker redesign           | 🔄 In PR (feat/genre-themes, issue #194)           |
-| —           | Profile & Settings v2                    | 🔄 In PR (feat/profile-v2, issue #196)             |
-| —           | Settings v2 polish                       | 🔄 In PR (fix/settings-v2-polish, issues #214–224) |
-| —           | Event Detail v2                          | 🔄 In PR (feat/event-detail-v2, issue #195)        |
-| —           | Venue crawl config UI                    | 🔄 In PR (feat/venue-crawl-config-ui, issue #210)  |
-| —           | Crawler Sentry errors                    | 🔄 In PR (fix/crawler-sentry-errors, issue #212)   |
-| —           | Sentry Structured Logs                   | 🔄 In PR (feat/sentry-logs, issue #225)            |
-| Pre-beta    | UI interactions audit + bug fixes        | 🔄 In progress (admin/crawl, sidebar)              |
-| Beta period | Jun 16 – Aug 3 (see beta-to-launch spec) | —                                                  |
-| Launch prep | Aug 4–17                                 | —                                                  |
-| **Launch**  | **~Aug 18–22, 2026**                     | —                                                  |
-
-Full forward plan: `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md`
-
----
-
-## Design Backlog
-
-### Pre-beta hard blockers (must ship before May 25)
-
-| Item                         | Notes                                                                                                                              |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| **Saving shows (Watching)**  | ✅ Complete (PR #117 merged 2026-05-09). Heart button → `user_events` table. Design handoff: `design/design_handoff_watching/`.    |
-| **Browse filters wired**     | ✅ Complete (PR #130 merged 2026-05-10). Price + Vibe filter chips end-to-end; LLM genre-tagging pipeline in crawler.              |
-| **Search nav item**          | ✅ Complete (PR #171): `/search` mobile page, `SearchPalette` desktop (⌘K), `useSearch` hook, popular endpoint, venue name search. |
-| **UI interactions sweep**    | Walk every clickable element on every route. Log and fix dead interactions.                                                        |
-| **Invite code error states** | ⚠️ Believed complete via Phase 8a onboarding flow (PR #43) — Hugh confirming via manual test.                                      |
-| **Feedback modal**           | ✅ Complete (PR #146 merged 2026-05-10). Auth-only, rate-limited (1/hour), category + message → `feedback` table.                  |
-| **Empty states**             | ✅ Complete (PR #145 merged 2026-05-10). Hybrid design wired into browse (list + calendar), venue page, and watching.              |
-| **FounderNote content**      | Hugh writes the personal message for onboarding step 1.                                                                            |
-| **FounderNote admin page**   | `app_config` table + admin editor so copy can update without redeploy.                                                             |
-| **Legal for beta**           | ✅ Complete (PR #108): beta agreement, T&C stub, Privacy Policy stub.                                                              |
-| **Seed additional venues**   | ✅ Complete: 10-12 venues crawled and live before private beta.                                                                    |
-
-### Beta period deliverables (Jun 16 – Aug 3)
-
-| Item                               | Notes                                                                                                                                                                                                                                                       |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Architecture diagram in README** | Mermaid flowchart: apps, packages, Render services, external services, data flow. Renders natively on GitHub.                                                                                                                                               |
-| **Cost tracking admin**            | `cost_tracking` table exists. Admin UI + manual entry form + monthly summary dashboard.                                                                                                                                                                     |
-| **Phase 7.1 Trust chrome**         | Additive display layer on price transparency: TrustMark pill (RESALE/COMMUNITY), VerifiedStamp (attribution + 7d staleness), revised SourceLink. Design complete: `design_handoff_price_transparency/README_PHASE_7_1.md`. Ships standalone, eng issue #96. |
-| **404 page**                       | "We couldn't find that show."                                                                                                                                                                                                                               |
-| **Sign-out → landing transition**  | Polish.                                                                                                                                                                                                                                                     |
-| **Returning-user onboarding edge** | Abandoned-flow recovery.                                                                                                                                                                                                                                    |
-| **Stripe integration**             | Subscription tiers, upgrade flow, gifted premium mechanism.                                                                                                                                                                                                 |
-| **Concert history**                | Past attended shows. `user_events.status = 'attended'`. Empty state first experience.                                                                                                                                                                       |
-| **Calendar export**                | iCal + Google Calendar. Supporter tier feature.                                                                                                                                                                                                             |
-| **Shareable show cards**           | IdentityArt generative cards for saved/attended shows. 9:16, 1:1, link preview formats. Built around generative art — no photo swap. Design handoff: `design/design_handoff_shareable_cards/`.                                                              |
-| **"Who else is watching"**         | Aggregate count on event cards/detail. Number only — no names.                                                                                                                                                                                              |
-| **Setlist preview**                | Setlist.fm API. Collapsed in Event Detail. Degrades gracefully.                                                                                                                                                                                             |
-| **Venue first-timer guide**        | Static per-venue info card: parking, bag policy, age restriction, doors gap.                                                                                                                                                                                |
-| **"Last time in Denver"**          | Derived from crawl history. Lives on Event Detail / artist surfaces.                                                                                                                                                                                        |
-| **Spotify sync**                   | Clerk OAuth → Spotify API → populate `user_artist_follows`. Premium feature. User-gated; platform-level artist photo integration is a separate post-launch item.                                                                                            |
-| **Teaser UI**                      | Locked/preview states for artist following + price alerts (not built yet — just shown).                                                                                                                                                                     |
-
-### Launch features (not beta)
-
-| Item                                    | Notes                                                                                                                                                                    |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Artist following + new show alerts**  | Background job, Resend delivery. Smart batching. See notification design principles in spec.                                                                             |
-| **Price drop alerts**                   | Compare price snapshots. Alert when `price_min` drops for a watched event.                                                                                               |
-| **Notification preferences settings**   | Per-artist instant vs. digest, 60-day threshold, delivery time.                                                                                                          |
-| **Support act spotlight**               | Opener given card-level prominence on event detail.                                                                                                                      |
-| **Concert passport**                    | Visual shareable grid of attended shows. Includes per-venue passport card ("10 shows at Red Rocks") using venue identity art — design together, same visual language.    |
-| **Venue passport card**                 | Per-venue attended show recap card. Generative venue identity art + typographic layout listing artists, show count, date range. Issue #99.                               |
-| **Public profile pages**                | `/u/<handle>` — read-only. Settings model supports it.                                                                                                                   |
-| **Artist images via Spotify treatment** | Platform-level Spotify Client Credentials API for artist photos + graphic treatment overlay (pop-art style). No user OAuth required. Ships after Spotify sync is proven. |
-
-### Intentionally deferred
-
-| Item                              | Notes                                                                                                                                                                                        |
-| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Photo upload**                  | Deferred indefinitely. Tracked so we don't accidentally ship a half-promise.                                                                                                                 |
-| **Concert Roulette**              | Hold as a surprise for post-launch. Don't tease.                                                                                                                                             |
-| **AI recommendations**            | Taste-based from Spotify + history. Post-launch.                                                                                                                                             |
-| **Multi-city**                    | Post-launch. Denver-only through launch.                                                                                                                                                     |
-| **Real photo swap (Bandsintown)** | Decided 2026-05-09: generative art stays through launch. Bandsintown is not a tracked dependency. Artist treatment via Spotify is post-launch (see above). No Phase 8 design pass on photos. |
-
----
-
-### Keeping this section current
-
-**Update this section whenever:**
-
-- A PR is merged — mark the corresponding phase/sub-phase complete with the PR number and merge date
-- A new phase or sub-phase begins — add a row to the table and update the summary line at the top
-- A plan file is created — link it in the relevant row's notes
-- **When opening a PR** — update Phase Sequence + Current Status in this file and commit the change on the feature branch before opening the PR
-- **At the start of every session** — run `gh pr list --state merged --limit 10`, check for unrecorded merges, and update this file before doing any other work
-
-This keeps any future Claude session (or human) immediately oriented without needing to run `gh pr list`.
+Phase sequence and recent PR history: `docs/superpowers/progress.md` — update it whenever a PR merges or a new phase begins. At the start of every session run `gh pr list --state merged --limit 10` and sync it before doing any other work.
