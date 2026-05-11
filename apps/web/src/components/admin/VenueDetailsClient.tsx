@@ -197,6 +197,9 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
   const [cityVal, setCityVal] = useState(venue.city)
   const [waitUntilVal, setWaitUntilVal] = useState(venue.crawlWaitUntil)
   const [crawlDelayVal, setCrawlDelayVal] = useState(venue.crawlDelayMs)
+  const [waitForSelectorVal, setWaitForSelectorVal] = useState(
+    venue.crawlWaitForSelector ?? '',
+  )
 
   const isDirty =
     nameVal !== venue.name ||
@@ -205,7 +208,8 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     cityVal !== venue.city ||
     active !== venue.active ||
     waitUntilVal !== venue.crawlWaitUntil ||
-    crawlDelayVal !== venue.crawlDelayMs
+    crawlDelayVal !== venue.crawlDelayMs ||
+    (waitForSelectorVal || null) !== venue.crawlWaitForSelector
 
   // Save state
   const [saveState, setSaveState] = useState<
@@ -226,6 +230,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     setActive(venue.active)
     setWaitUntilVal(venue.crawlWaitUntil)
     setCrawlDelayVal(venue.crawlDelayMs)
+    setWaitForSelectorVal(venue.crawlWaitForSelector ?? '')
     setSaveState('idle')
     setSaveError(null)
     setFieldErrors({})
@@ -250,6 +255,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     formData.set('active', String(active))
     formData.set('crawlWaitUntil', waitUntilVal)
     formData.set('crawlDelayMs', String(crawlDelayVal))
+    formData.set('crawlWaitForSelector', waitForSelectorVal.trim())
 
     try {
       const result = await updateVenue(venue.id, formData)
@@ -724,6 +730,49 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                       : NaN,
                   )
                 }}
+                style={inputStyle(false, isDisabled)}
+              />
+            </Field>
+
+            {/* Wait for selector */}
+            <Field
+              label="Wait for selector (optional)"
+              htmlFor="edit-venue-wait-for-selector"
+              hint={
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--fg-muted)',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  CSS selector to wait for after page load — use for SPAs where
+                  content is injected by JavaScript. Example:{' '}
+                  <code
+                    style={{
+                      fontFamily: 'monospace',
+                      background: 'var(--surface-1)',
+                      padding: '1px 3px',
+                      borderRadius: 3,
+                    }}
+                  >
+                    .event-list-item
+                  </code>
+                  . When set,{' '}
+                  <strong style={{ color: 'var(--fg)' }}>
+                    DOM content loaded
+                  </strong>{' '}
+                  is used for navigation and the wait strategy above is ignored.
+                </span>
+              }
+            >
+              <input
+                id="edit-venue-wait-for-selector"
+                type="text"
+                value={waitForSelectorVal}
+                placeholder="e.g. .event-card or [data-testid='event']"
+                disabled={isDisabled}
+                onChange={(evt) => setWaitForSelectorVal(evt.target.value)}
                 style={inputStyle(false, isDisabled)}
               />
             </Field>
