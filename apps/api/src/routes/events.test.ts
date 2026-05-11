@@ -33,6 +33,7 @@ vi.mock('drizzle-orm', () => ({
 vi.mock('@concert-crawl/db', () => ({
   db: mockDb,
   events: {
+    id: 'id',
     status: 'status',
     date: 'date',
     venueId: 'venueId',
@@ -46,6 +47,12 @@ vi.mock('@concert-crawl/db', () => ({
     city: 'city',
     timezone: 'timezone',
     websiteUrl: 'websiteUrl',
+  },
+  userEvents: {
+    id: 'id',
+    userId: 'userId',
+    eventId: 'eventId',
+    status: 'status',
   },
   auditLog: {},
   inviteCodes: {},
@@ -175,20 +182,34 @@ describe('GET /v1/events/:id', () => {
   })
 
   it('returns 200 with event data for a known id', async () => {
-    // single query: select().from().innerJoin().where() → terminal
+    // event query: select().from().innerJoin().where() → terminal
     mockDb.where.mockResolvedValueOnce([mockEvent])
+    // watch count query: select().from().where() → terminal
+    mockDb.where.mockResolvedValueOnce([{ total: 0 }])
 
-    const res = await createApp().request('/v1/events/event-1')
+    const res = await createApp().request(
+      '/v1/events/00000000-0000-0000-0000-000000000001',
+    )
     expect(res.status).toBe(200)
     const body = (await res.json()) as { success: boolean; data: unknown }
     expect(body.success).toBe(true)
     expect(body.data).toBeTruthy()
   })
 
-  it('returns 404 for an unknown event id', async () => {
+  it('returns 404 for a non-UUID event id', async () => {
+    const res = await createApp().request('/v1/events/not-a-uuid')
+    expect(res.status).toBe(404)
+    const body = (await res.json()) as { success: boolean; error: string }
+    expect(body.success).toBe(false)
+    expect(body.error).toBe('Event not found')
+  })
+
+  it('returns 404 for a valid UUID that matches no event', async () => {
     mockDb.where.mockResolvedValueOnce([])
 
-    const res = await createApp().request('/v1/events/does-not-exist')
+    const res = await createApp().request(
+      '/v1/events/00000000-0000-0000-0000-000000000000',
+    )
     expect(res.status).toBe(404)
     const body = (await res.json()) as { success: boolean; error: string }
     expect(body.success).toBe(false)
