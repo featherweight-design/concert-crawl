@@ -1,3 +1,11 @@
+## [1.3.1](https://github.com/HartiganHM/concert-crawl/compare/v1.3.0...v1.3.1) (2026-05-11)
+
+
+### Bug Fixes
+
+* **crawler:** address Copilot review — counter accuracy + tag resilience ([8e98884](https://github.com/HartiganHM/concert-crawl/commit/8e988847d84d48ef79d5c4344121dfa8dcfa1da1))
+* **crawler:** capture crawl failures in Sentry via explicit captureException ([e6d3ea2](https://github.com/HartiganHM/concert-crawl/commit/e6d3ea2db38e4bb92c18a8e0765d570bbb2b1b98)), closes [#212](https://github.com/HartiganHM/concert-crawl/issues/212)
+
 # [1.3.0](https://github.com/HartiganHM/concert-crawl/compare/v1.2.0...v1.3.0) (2026-05-11)
 
 
