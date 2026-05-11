@@ -3,9 +3,17 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Dialog } from '@base-ui/react/dialog'
-import { Trash2, AlertTriangle, Loader2 } from 'lucide-react'
+import {
+  Trash2,
+  AlertTriangle,
+  Loader2,
+  X,
+  Inbox,
+  RefreshCw,
+  ExternalLink,
+} from 'lucide-react'
 import { deleteVenue } from '@/lib/actions/venues'
-import { AdminButton } from '@/components/admin/primitives'
+import { AdminButton, MonoLabel } from '@/components/admin/primitives'
 
 interface DeleteVenueDialogProps {
   venueId: string
@@ -25,6 +33,7 @@ export function DeleteVenueDialog({
     'idle',
   )
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [inputFocused, setInputFocused] = useState(false)
 
   const trimmed = typedName.trim()
   const isMatch = trimmed === venueName
@@ -52,6 +61,83 @@ export function DeleteVenueDialog({
       setDeleteState('error')
     }
   }
+
+  const inputBorderColor = isMatch
+    ? 'color-mix(in oklab, var(--success) 60%, transparent)'
+    : isMismatch
+      ? 'var(--danger)'
+      : inputFocused
+        ? 'var(--signal)'
+        : 'var(--border-strong)'
+
+  const inputRing = isMatch
+    ? '0 0 0 3px color-mix(in oklab, var(--success) 22%, transparent)'
+    : isMismatch
+      ? '0 0 0 3px color-mix(in oklab, var(--danger) 18%, transparent)'
+      : inputFocused
+        ? '0 0 0 3px color-mix(in oklab, var(--signal) 22%, transparent)'
+        : 'none'
+
+  const consequences = [
+    {
+      icon: <X size={11} />,
+      text: (
+        <>
+          <b style={{ color: 'var(--fg)' }}>1 venue</b> deleted from{' '}
+          <span
+            style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              color: 'var(--fg)',
+            }}
+          >
+            venues
+          </span>{' '}
+          table.
+        </>
+      ),
+    },
+    {
+      icon: <Inbox size={11} />,
+      text: (
+        <>
+          <b style={{ color: 'var(--fg)' }}>
+            {eventsTracked} event{eventsTracked !== 1 ? 's' : ''}
+          </b>{' '}
+          will have their{' '}
+          <span
+            style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              color: 'var(--fg)',
+            }}
+          >
+            venue_id
+          </span>{' '}
+          nulled. Events remain published.
+        </>
+      ),
+    },
+    {
+      icon: <RefreshCw size={11} />,
+      text: <>All scheduled crawls for this venue stop immediately.</>,
+    },
+    {
+      icon: <ExternalLink size={11} />,
+      text: (
+        <>
+          Public page at{' '}
+          <span
+            style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              color: 'var(--fg)',
+            }}
+          >
+            concertcrawl.app/v/…
+          </span>{' '}
+          will 404.
+        </>
+      ),
+    },
+  ]
 
   return (
     <>
@@ -95,10 +181,11 @@ export function DeleteVenueDialog({
             <div
               style={{
                 background: 'var(--bg-elevated)',
-                border: '1px solid var(--border)',
-                borderRadius: 12,
+                border:
+                  '1px solid color-mix(in oklab, var(--danger) 30%, var(--border))',
+                borderRadius: 14,
                 width: '100%',
-                maxWidth: 440,
+                maxWidth: 520,
                 boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
                 fontFamily: "'Inter', sans-serif",
                 overflow: 'hidden',
@@ -107,177 +194,197 @@ export function DeleteVenueDialog({
               {/* Header */}
               <div
                 style={{
-                  padding: '20px 24px 16px',
+                  padding: '20px 22px 16px',
+                  display: 'flex',
+                  gap: 14,
+                  alignItems: 'flex-start',
                   borderBottom: '1px solid var(--border)',
                 }}
               >
                 <div
                   style={{
-                    display: 'flex',
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    background:
+                      'color-mix(in oklab, var(--danger) 14%, transparent)',
+                    border:
+                      '1px solid color-mix(in oklab, var(--danger) 40%, transparent)',
+                    display: 'inline-flex',
                     alignItems: 'center',
-                    gap: 10,
-                    marginBottom: 4,
+                    justifyContent: 'center',
+                    flexShrink: 0,
                   }}
                 >
-                  <AlertTriangle
-                    size={16}
-                    style={{ color: 'var(--danger)', flexShrink: 0 }}
-                  />
+                  <AlertTriangle size={18} color="var(--danger)" />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <MonoLabel color="var(--danger)">
+                    danger · permanent
+                  </MonoLabel>
                   <Dialog.Title
                     style={{
-                      margin: 0,
-                      fontSize: 15,
-                      fontWeight: 600,
+                      margin: '4px 0 0',
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: 20,
+                      fontWeight: 700,
                       color: 'var(--fg)',
+                      letterSpacing: '-0.02em',
                     }}
                   >
-                    Delete venue
+                    Delete {venueName}?
                   </Dialog.Title>
                 </div>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 13,
-                    color: 'var(--fg-muted)',
-                    lineHeight: 1.5,
-                  }}
-                >
-                  This action cannot be undone.
-                </p>
               </div>
 
-              {/* Impact summary */}
-              <div style={{ padding: '16px 24px' }}>
-                <div
+              {/* Consequences */}
+              <div style={{ padding: '16px 22px 4px' }}>
+                <p
                   style={{
-                    background: 'rgba(184,56,26,0.07)',
-                    border: '1px solid rgba(184,56,26,0.2)',
-                    borderRadius: 8,
-                    padding: '12px 14px',
+                    margin: '0 0 14px',
                     fontSize: 13,
-                    color: 'var(--fg)',
-                    lineHeight: 1.6,
+                    color: 'var(--fg-muted)',
+                    lineHeight: 1.55,
                   }}
                 >
-                  <strong
-                    style={{ display: 'block', marginBottom: 6, fontSize: 12 }}
-                  >
-                    What will change
-                  </strong>
-                  <ul
-                    style={{
-                      margin: 0,
-                      paddingLeft: 16,
-                      color: 'var(--fg-muted)',
-                    }}
-                  >
-                    <li>
-                      <strong style={{ color: 'var(--fg)' }}>
-                        {venueName}
-                      </strong>{' '}
-                      will be permanently deleted
-                    </li>
-                    <li>
-                      {eventsTracked} event
-                      {eventsTracked !== 1 ? 's' : ''} will have their venue
-                      detached but remain published
-                    </li>
-                    <li>All crawl history for this venue will be removed</li>
-                    <li>
-                      The public URL{' '}
-                      <code
+                  This will{' '}
+                  <b style={{ color: 'var(--fg)' }}>permanently delete</b> the
+                  venue and detach all events that reference it. This cannot be
+                  undone.
+                </p>
+                <ul
+                  style={{
+                    margin: 0,
+                    padding: 0,
+                    listStyle: 'none',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8,
+                  }}
+                >
+                  {consequences.map((row, idx) => (
+                    <li
+                      key={idx}
+                      style={{
+                        display: 'flex',
+                        gap: 10,
+                        alignItems: 'flex-start',
+                        fontSize: 12.5,
+                        color: 'var(--fg-muted)',
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      <span
                         style={{
-                          fontSize: 11,
+                          width: 22,
+                          height: 22,
+                          borderRadius: 6,
                           background: 'var(--surface-1)',
-                          padding: '1px 4px',
-                          borderRadius: 3,
+                          border: '1px solid var(--border)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          color: 'var(--fg-subtle)',
                         }}
                       >
-                        /v/…
-                      </code>{' '}
-                      will 404
+                        {row.icon}
+                      </span>
+                      <span>{row.text}</span>
                     </li>
-                  </ul>
-                </div>
+                  ))}
+                </ul>
+              </div>
 
-                {/* Type-to-confirm */}
-                <div style={{ marginTop: 16 }}>
-                  <label
-                    htmlFor="delete-confirm-input"
+              {/* Confirmation input */}
+              <div style={{ padding: '16px 22px 4px' }}>
+                <label
+                  htmlFor="delete-confirm-input"
+                  style={{
+                    display: 'block',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: 'var(--fg)',
+                    letterSpacing: '-0.005em',
+                    marginBottom: 6,
+                  }}
+                >
+                  Type{' '}
+                  <span
                     style={{
-                      display: 'block',
-                      fontSize: 12,
-                      fontWeight: 500,
-                      color: 'var(--fg-muted)',
-                      marginBottom: 6,
+                      fontFamily: "'JetBrains Mono', monospace",
+                      color: 'var(--fg)',
+                      background: 'var(--surface-2)',
+                      padding: '1px 6px',
+                      borderRadius: 4,
+                      fontSize: 11.5,
                     }}
                   >
-                    Type{' '}
-                    <strong style={{ color: 'var(--fg)' }}>{venueName}</strong>{' '}
-                    to confirm
-                  </label>
-                  <input
-                    id="delete-confirm-input"
-                    type="text"
-                    value={typedName}
-                    onChange={(evt) => {
-                      setTypedName(evt.target.value)
-                      setErrorMessage(null)
-                    }}
-                    disabled={deleteState === 'deleting'}
-                    placeholder={venueName}
-                    autoComplete="off"
+                    {venueName}
+                  </span>{' '}
+                  to confirm
+                </label>
+                <input
+                  id="delete-confirm-input"
+                  type="text"
+                  value={typedName}
+                  onChange={(evt) => {
+                    setTypedName(evt.target.value)
+                    setErrorMessage(null)
+                  }}
+                  onFocus={() => setInputFocused(true)}
+                  onBlur={() => setInputFocused(false)}
+                  disabled={deleteState === 'deleting'}
+                  placeholder={venueName}
+                  autoComplete="off"
+                  style={{
+                    width: '100%',
+                    height: 38,
+                    padding: '0 10px',
+                    borderRadius: 8,
+                    border: `1px solid ${inputBorderColor}`,
+                    background: 'var(--bg-elevated)',
+                    color: 'var(--fg)',
+                    fontSize: 13.5,
+                    fontFamily: "'Inter', sans-serif",
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    opacity: deleteState === 'deleting' ? 0.66 : 1,
+                    boxShadow: inputRing,
+                    transition: 'border-color .12s, box-shadow .12s',
+                  }}
+                />
+                {isMatch && (
+                  <span
                     style={{
-                      width: '100%',
-                      height: 32,
-                      padding: '0 10px',
-                      borderRadius: 6,
-                      border: `1px solid ${
-                        isMatch
-                          ? 'var(--success)'
-                          : isMismatch
-                            ? 'var(--danger)'
-                            : 'var(--border)'
-                      }`,
-                      background: 'var(--bg)',
-                      color: 'var(--fg)',
-                      fontSize: 13,
+                      display: 'block',
+                      marginTop: 4,
+                      fontSize: 11,
+                      color: 'var(--success)',
                       fontFamily: "'Inter', sans-serif",
-                      outline: 'none',
-                      boxSizing: 'border-box',
-                      opacity: deleteState === 'deleting' ? 0.66 : 1,
                     }}
-                  />
-                  {isMismatch && (
-                    <span
-                      style={{
-                        display: 'block',
-                        marginTop: 4,
-                        fontSize: 11,
-                        color: 'var(--danger)',
-                      }}
-                    >
-                      Name doesn&apos;t match — check capitalisation
-                    </span>
-                  )}
-                  {isMatch && (
-                    <span
-                      style={{
-                        display: 'block',
-                        marginTop: 4,
-                        fontSize: 11,
-                        color: 'var(--success)',
-                      }}
-                    >
-                      ✓ Name matches — delete is armed
-                    </span>
-                  )}
-                </div>
-
+                  >
+                    Match — delete is now enabled.
+                  </span>
+                )}
+                {isMismatch && (
+                  <span
+                    style={{
+                      display: 'block',
+                      marginTop: 4,
+                      fontSize: 11,
+                      color: 'var(--danger)',
+                      fontFamily: "'Inter', sans-serif",
+                    }}
+                  >
+                    Doesn&apos;t match &ldquo;{venueName}&rdquo;. Type exactly,
+                    including capitalization.
+                  </span>
+                )}
                 {errorMessage && (
                   <div
                     style={{
-                      marginTop: 12,
+                      marginTop: 8,
                       padding: '8px 12px',
                       background: 'rgba(184,56,26,0.1)',
                       border: '1px solid rgba(184,56,26,0.25)',
@@ -294,45 +401,67 @@ export function DeleteVenueDialog({
               {/* Footer */}
               <div
                 style={{
-                  padding: '0 24px 20px',
                   display: 'flex',
-                  justifyContent: 'flex-end',
-                  gap: 8,
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '14px 22px',
+                  marginTop: 16,
+                  borderTop: '1px solid var(--border)',
+                  background:
+                    'color-mix(in oklab, var(--danger) 5%, var(--surface-1))',
+                  gap: 12,
                 }}
               >
-                <Dialog.Close
-                  render={
-                    <AdminButton
-                      variant="ghost"
-                      size="sm"
-                      type="button"
-                      disabled={deleteState === 'deleting'}
-                      onClick={handleClose}
-                    >
-                      Cancel
-                    </AdminButton>
-                  }
-                />
-                <AdminButton
-                  variant="danger"
-                  size="sm"
-                  type="button"
-                  disabled={!canDelete}
-                  onClick={() => void handleDelete()}
-                  style={{ minWidth: 80 }}
+                <span
+                  style={{
+                    fontSize: 11.5,
+                    color: 'var(--fg-subtle)',
+                    fontFamily: "'Inter', sans-serif",
+                  }}
                 >
-                  {deleteState === 'deleting' ? (
-                    <>
-                      <Loader2
-                        size={12}
-                        style={{ animation: 'spin 1s linear infinite' }}
-                      />{' '}
-                      Deleting…
-                    </>
-                  ) : (
-                    'Delete venue'
-                  )}
-                </AdminButton>
+                  <kbd
+                    style={{
+                      display: 'inline-block',
+                      padding: '1px 5px',
+                      borderRadius: 4,
+                      border: '1px solid var(--border)',
+                      background: 'var(--surface-1)',
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: '0.04em',
+                      color: 'var(--fg-muted)',
+                    }}
+                  >
+                    Esc
+                  </kbd>{' '}
+                  cancel
+                </span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <Dialog.Close
+                    render={
+                      <AdminButton
+                        variant="ghost"
+                        size="sm"
+                        type="button"
+                        disabled={deleteState === 'deleting'}
+                        onClick={handleClose}
+                      >
+                        Cancel
+                      </AdminButton>
+                    }
+                  />
+                  <AdminButton
+                    variant="danger"
+                    size="sm"
+                    icon={deleteState === 'deleting' ? Loader2 : AlertTriangle}
+                    type="button"
+                    disabled={!canDelete}
+                    onClick={() => void handleDelete()}
+                  >
+                    {deleteState === 'deleting' ? 'Deleting…' : 'Delete venue'}
+                  </AdminButton>
+                </div>
               </div>
             </div>
           </Dialog.Popup>

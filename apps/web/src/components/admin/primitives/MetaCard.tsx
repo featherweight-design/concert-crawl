@@ -35,7 +35,9 @@ export const MetaCard = ({
         borderBottom: '1px solid var(--border)',
       }}
     >
-      <MonoLabel color={danger ? 'var(--danger)' : undefined}>{title}</MonoLabel>
+      <MonoLabel {...(danger ? { color: 'var(--danger)' } : {})}>
+        {title}
+      </MonoLabel>
       {action}
     </div>
     <div style={{ padding }}>{children}</div>

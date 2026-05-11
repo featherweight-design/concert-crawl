@@ -34,6 +34,7 @@ import {
   Check,
   Loader2,
   MapPin,
+  ChevronRight,
 } from 'lucide-react'
 import { formatDurationMs } from '@/lib/time'
 
@@ -742,7 +743,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
             <Field
               label="Slug"
               htmlFor="edit-venue-slug"
-              error={fieldErrors.slug}
+              {...(fieldErrors.slug ? { error: fieldErrors.slug } : {})}
               labelRight={
                 <span
                   style={{
@@ -853,6 +854,18 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                   }}
                 >
                   The events page we crawl daily.
+                  {venue.robotsTxtAllowed === null && (
+                    <span
+                      style={{
+                        color: 'var(--fg-subtle)',
+                        display: 'block',
+                        marginTop: 2,
+                      }}
+                    >
+                      robots.txt has not been checked yet — it will be verified
+                      on the next crawl run.
+                    </span>
+                  )}
                 </span>
               }
             >
@@ -1133,6 +1146,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                   ) : (
                     '—'
                   ),
+                  valueColor: 'var(--fg)',
                 },
                 {
                   label: 'Avg duration',
@@ -1140,16 +1154,22 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                     crawlHealth.avgDurationMs !== null
                       ? formatDurationMs(crawlHealth.avgDurationMs)
                       : '—',
+                  valueColor: 'var(--fg)',
                 },
                 {
                   label: 'Events tracked',
                   value: String(crawlHealth.eventsTracked),
+                  valueColor: 'var(--fg)',
                 },
                 {
                   label: 'Consecutive fails',
                   value: String(crawlHealth.consecutiveFails),
+                  valueColor:
+                    crawlHealth.consecutiveFails === 0
+                      ? 'var(--success)'
+                      : 'var(--danger)',
                 },
-              ].map(({ label, value }) => (
+              ].map(({ label, value, valueColor }) => (
                 <div key={label}>
                   <MonoLabel>{label}</MonoLabel>
                   <div
@@ -1158,7 +1178,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                       fontFamily: "'JetBrains Mono', monospace",
                       fontSize: 15,
                       fontWeight: 700,
-                      color: 'var(--fg)',
+                      color: valueColor,
                       letterSpacing: '0.01em',
                       fontVariantNumeric: 'tabular-nums',
                     }}
@@ -1200,6 +1220,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                 disabled={isPending}
                 onClick={handleVerifyToggle}
                 type="button"
+                style={{ alignSelf: 'flex-start' }}
               >
                 {venue.verified ? 'Unverify venue' : 'Verify venue'}
               </AdminButton>
@@ -1223,7 +1244,8 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                   gap: 3,
                 }}
               >
-                View all →
+                View all
+                <ChevronRight size={11} />
               </Link>
             }
           >

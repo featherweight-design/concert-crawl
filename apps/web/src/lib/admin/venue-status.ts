@@ -3,9 +3,10 @@ import type { Venue } from '@concert-crawl/types'
 export type VenueStatus = 'active' | 'paused' | 'blocked'
 
 export function deriveVenueStatus(
-  venue: Pick<Venue, 'active' | 'blockedAt'>,
+  venue: Pick<Venue, 'active' | 'blockedAt' | 'consecutiveFailures'>,
 ): VenueStatus {
-  if (venue.blockedAt !== null) return 'blocked'
+  if (venue.blockedAt !== null && venue.consecutiveFailures > 0)
+    return 'blocked'
   if (!venue.active) return 'paused'
   return 'active'
 }
