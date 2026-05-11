@@ -25,6 +25,7 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN }}
 
       - uses: pnpm/action-setup@v4
 
