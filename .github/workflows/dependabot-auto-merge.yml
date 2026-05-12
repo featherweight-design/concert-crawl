@@ -12,6 +12,9 @@ jobs:
     name: Auto-merge patch updates
     runs-on: ubuntu-latest
     if: github.actor == 'dependabot[bot]'
+    env:
+      PR_URL: ${{ github.event.pull_request.html_url }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Fetch Dependabot metadata
         id: metadata
@@ -27,9 +30,6 @@ jobs:
         run: |
           gh pr review "$PR_URL" --approve --body "Auto-approving npm patch update."
           gh pr merge "$PR_URL" --auto --rebase
-        env:
-          PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # GH Actions bumps (any semver tier): auto-approve and merge after CI passes.
       # Actions version bumps carry low application risk.
@@ -38,6 +38,3 @@ jobs:
         run: |
           gh pr review "$PR_URL" --approve --body "Auto-approving GitHub Actions update."
           gh pr merge "$PR_URL" --auto --rebase
-        env:
-          PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
