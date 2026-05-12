@@ -3,11 +3,25 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { apiClient } from '@/lib/api'
-import { ConfidenceBar, AdminButton, Kbd } from '@/components/admin/primitives'
-import { Check, X, Edit2 } from 'lucide-react'
+import {
+  ConfidenceBar,
+  AdminButton,
+  Kbd,
+  StatusBadge,
+  MonoLabel,
+} from '@/components/admin/primitives'
+import { Check, X, Edit2, Filter, ChevronRight, Tag } from 'lucide-react'
 import type { AdminEvent } from '@/app/(protected)/admin/events/page'
 
-type StatusTab = 'pending' | 'low_conf' | 'approved' | 'all'
+type StatusTab = 'pending' | 'low_conf' | 'duplicates' | 'approved' | 'rejected'
+
+const TAB_KINDS: Record<StatusTab, string> = {
+  pending: 'signal',
+  low_conf: 'warning',
+  duplicates: 'warning',
+  approved: 'success',
+  rejected: 'danger',
+}
 
 interface Props {
   initialEvents: AdminEvent[]
@@ -116,25 +130,20 @@ function VitalCell({
   return (
     <div
       style={{
-        padding: '12px 16px',
+        padding: '14px 18px',
         borderRight: noBorder ? 'none' : '1px solid var(--border)',
         flex: 1,
       }}
     >
+      <MonoLabel>{label}</MonoLabel>
       <div
         style={{
-          fontFamily: "'JetBrains Mono', monospace",
-          fontSize: 10,
-          fontWeight: 700,
-          color: 'var(--fg-subtle)',
-          textTransform: 'uppercase' as const,
-          letterSpacing: '0.06em',
-          marginBottom: 6,
+          marginTop: 6,
+          fontSize: 13,
+          fontWeight: 600,
+          color: 'var(--fg)',
         }}
       >
-        {label}
-      </div>
-      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg)' }}>
         {children}
       </div>
     </div>
@@ -145,16 +154,20 @@ function FieldRow({
   label,
   value,
   mono,
+  warn,
+  tags,
 }: {
   label: string
-  value: string | null | undefined
+  value?: string | null
   mono?: boolean
+  warn?: boolean
+  tags?: string[]
 }) {
   return (
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: '80px 1fr',
+        gridTemplateColumns: '92px 1fr',
         gap: 12,
         alignItems: 'center',
       }}
@@ -165,25 +178,61 @@ function FieldRow({
           fontSize: 10,
           fontWeight: 700,
           color: 'var(--fg-subtle)',
-          textTransform: 'uppercase' as const,
+          textTransform: 'uppercase',
           letterSpacing: '0.06em',
         }}
       >
         {label}
       </span>
-      <div
-        style={{
-          padding: '5px 9px',
-          borderRadius: 6,
-          background: 'var(--bg-elevated)',
-          border: '1px solid var(--border)',
-          fontFamily: mono ? "'JetBrains Mono', monospace" : 'inherit',
-          fontSize: 13,
-          color: 'var(--fg)',
-        }}
-      >
-        {value ?? '—'}
-      </div>
+      {tags ? (
+        <div
+          style={{
+            display: 'flex',
+            gap: 6,
+            flexWrap: 'wrap',
+            alignItems: 'center',
+          }}
+        >
+          {tags.map((tag) => (
+            <StatusBadge key={tag} kind="neutral" variant="mono">
+              {tag}
+            </StatusBadge>
+          ))}
+          <button
+            style={{
+              padding: '2px 8px',
+              borderRadius: 4,
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 10,
+              color: 'var(--fg-subtle)',
+              border: '1px dashed var(--border)',
+              background: 'transparent',
+              cursor: 'pointer',
+            }}
+          >
+            + tag
+          </button>
+        </div>
+      ) : (
+        <div
+          style={{
+            padding: '6px 10px',
+            borderRadius: 6,
+            background: warn
+              ? 'color-mix(in oklab, var(--danger) 12%, transparent)'
+              : 'var(--bg-elevated)',
+            border: warn
+              ? '1px solid color-mix(in oklab, var(--danger) 32%, transparent)'
+              : '1px solid var(--border)',
+            fontFamily: mono ? "'JetBrains Mono', monospace" : 'inherit',
+            fontSize: 13,
+            color: warn ? 'var(--danger)' : 'var(--fg)',
+            fontVariantNumeric: 'tabular-nums',
+          }}
+        >
+          {value ?? '—'}
+        </div>
+      )}
     </div>
   )
 }
@@ -210,9 +259,13 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
       ? pendingEvents
       : tab === 'low_conf'
         ? lowConfEvents
-        : tab === 'approved'
-          ? approvedEvents
-          : events
+        : tab === 'duplicates'
+          ? []
+          : tab === 'approved'
+            ? approvedEvents
+            : tab === 'rejected'
+              ? []
+              : events
 
   const selectedIdx = filtered.findIndex((ev) => ev.id === selectedId)
   const selected = filtered.find((ev) => ev.id === selectedId)
@@ -290,8 +343,9 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
   const TABS: { key: StatusTab; label: string; count: number }[] = [
     { key: 'pending', label: 'Pending', count: pendingEvents.length },
     { key: 'low_conf', label: 'Low conf.', count: lowConfEvents.length },
+    { key: 'duplicates', label: 'Duplicates', count: 0 },
     { key: 'approved', label: 'Approved', count: approvedEvents.length },
-    { key: 'all', label: 'All', count: events.length },
+    { key: 'rejected', label: 'Rejected', count: 0 },
   ]
 
   if (events.length === 0) {
@@ -326,59 +380,108 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
         minHeight: 0,
       }}
     >
-      {/* Filter tab strip */}
+      {/* Filter rail — card with tabs left + dropdowns right */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 2,
-          padding: 3,
-          background: 'var(--surface-1)',
-          borderRadius: 8,
+          gap: 12,
+          flexWrap: 'wrap',
+          padding: '12px 14px',
+          background: 'var(--bg-elevated)',
           border: '1px solid var(--border)',
-          width: 'fit-content',
+          borderRadius: 10,
         }}
       >
-        {TABS.map((tabItem) => {
-          const active = tab === tabItem.key
-          return (
-            <button
-              key={tabItem.key}
-              onClick={() => setTab(tabItem.key)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '5px 12px',
-                borderRadius: 6,
-                fontSize: 12,
-                fontWeight: active ? 700 : 500,
-                cursor: 'pointer',
-                background: active
-                  ? 'color-mix(in oklab, var(--signal) 18%, var(--bg-elevated))'
-                  : 'transparent',
-                color: active ? 'var(--signal)' : 'var(--fg-muted)',
-                border: 'none',
-                transition: 'background 0.12s, color 0.12s',
-              }}
-            >
-              {tabItem.label}
-              <span
+        {/* Tab pill group */}
+        <div
+          style={{
+            display: 'flex',
+            gap: 4,
+            padding: 2,
+            background: 'var(--surface-1)',
+            borderRadius: 6,
+            border: '1px solid var(--border)',
+          }}
+        >
+          {TABS.map((tabItem) => {
+            const active = tab === tabItem.key
+            const kind = TAB_KINDS[tabItem.key]
+            return (
+              <button
+                key={tabItem.key}
+                onClick={() => setTab(tabItem.key)}
                 style={{
-                  padding: '1px 5px',
-                  borderRadius: 999,
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 10,
-                  fontWeight: 700,
-                  background: active ? 'var(--signal)' : 'var(--surface-2)',
-                  color: active ? '#fff' : 'var(--fg-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '6px 12px',
+                  borderRadius: 4,
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: active
+                    ? `color-mix(in oklab, var(--${kind}) 18%, transparent)`
+                    : 'transparent',
+                  color: active ? `var(--${kind})` : 'var(--fg-muted)',
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 12,
+                  fontWeight: active ? 700 : 500,
                 }}
               >
-                {tabItem.count}
-              </span>
-            </button>
-          )
-        })}
+                {tabItem.label}
+                <span
+                  style={{
+                    padding: '1px 6px',
+                    borderRadius: 999,
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    background: active ? `var(--${kind})` : 'var(--surface-2)',
+                    color: active ? 'var(--fg-on-accent)' : 'var(--fg-muted)',
+                    fontVariantNumeric: 'tabular-nums',
+                  }}
+                >
+                  {tabItem.count}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Filter dropdowns */}
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            gap: 8,
+            justifyContent: 'flex-end',
+          }}
+        >
+          <AdminButton
+            variant="outline"
+            size="sm"
+            icon={Filter}
+            iconRight={ChevronRight}
+          >
+            All venues
+          </AdminButton>
+          <AdminButton
+            variant="outline"
+            size="sm"
+            icon={Filter}
+            iconRight={ChevronRight}
+          >
+            Date · next 30d
+          </AdminButton>
+          <AdminButton
+            variant="outline"
+            size="sm"
+            icon={Filter}
+            iconRight={ChevronRight}
+          >
+            Source · any
+          </AdminButton>
+        </div>
       </div>
 
       {/* Unified split panel — no gap, shared border */}
@@ -403,7 +506,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
             overflowY: 'auto',
           }}
         >
-          {/* List header row */}
+          {/* List header */}
           <div
             style={{
               padding: '10px 14px',
@@ -426,25 +529,17 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                 }
               }}
             />
-            <span
-              style={{
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 11,
-                fontWeight: 700,
-                color: 'var(--fg-subtle)',
-                textTransform: 'uppercase' as const,
-                letterSpacing: '0.06em',
-              }}
-            >
+            <MonoLabel>
               {filtered.length} {tab === 'approved' ? 'approved' : 'pending'} ·
-              sort: date ↑
-            </span>
+              sort: discovered ↓
+            </MonoLabel>
           </div>
 
           {/* Event rows */}
           {filtered.map((ev) => {
             const conf = Number(ev.confidenceScore ?? 0)
             const isLowConf = conf > 0 && conf < 0.7
+            const missingPrice = !ev.ticketPriceMin && !ev.ticketPriceMax
             const active = ev.id === selectedId
             const showTime = formatTime(ev.showTime)
 
@@ -458,6 +553,8 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                   gridTemplateColumns: '16px 1fr',
                   gap: 12,
                   padding: '12px 14px',
+                  borderTop: 'none',
+                  borderRight: 'none',
                   borderBottom: '1px solid var(--border)',
                   borderLeft: active
                     ? '2px solid var(--signal)'
@@ -507,23 +604,28 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                     >
                       {ev.artist || ev.title}
                     </span>
-                    <ConfidenceBar score={conf} />
+                    <div style={{ minWidth: 96, flexShrink: 0 }}>
+                      <ConfidenceBar score={conf} />
+                    </div>
                   </div>
                   <div
                     style={{
                       fontSize: 12,
                       color: 'var(--fg-muted)',
                       fontFamily: "'JetBrains Mono', monospace",
-                      marginBottom: isLowConf || ev.extractionStrategy ? 8 : 0,
+                      marginBottom: isLowConf || missingPrice ? 8 : 0,
                     }}
                   >
                     {ev.venueName ?? '—'} · {formatDate(ev.date)}
                     {showTime ? ` · ${showTime}` : ''}
                   </div>
-                  {(isLowConf || ev.extractionStrategy) && (
+                  {(isLowConf || missingPrice) && (
                     <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                       {isLowConf && (
                         <FlagBadge kind="warning">low conf.</FlagBadge>
+                      )}
+                      {missingPrice && (
+                        <FlagBadge kind="danger">no price</FlagBadge>
                       )}
                       <SourceBadge strategy={ev.extractionStrategy} />
                     </div>
@@ -546,7 +648,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
             {/* Inspector header */}
             <div
               style={{
-                padding: '16px 20px',
+                padding: '16px 22px',
                 borderBottom: '1px solid var(--border)',
                 background: 'var(--surface-1)',
                 flexShrink: 0,
@@ -557,28 +659,26 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8,
-                  marginBottom: 8,
+                  marginBottom: 6,
                 }}
               >
+                <MonoLabel>{selected.id.slice(0, 8).toUpperCase()}</MonoLabel>
                 <span
                   style={{
                     fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: 10,
-                    fontWeight: 700,
+                    fontSize: 11,
                     color: 'var(--fg-subtle)',
-                    textTransform: 'uppercase' as const,
-                    letterSpacing: '0.06em',
                   }}
                 >
-                  {selected.id.slice(0, 8).toUpperCase()}
+                  ·
                 </span>
                 {!selected.verified && (
                   <span
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: 4,
-                      padding: '2px 7px',
+                      gap: 5,
+                      padding: '2px 8px',
                       borderRadius: 999,
                       fontSize: 11,
                       fontWeight: 600,
@@ -589,11 +689,13 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                   >
                     <span
                       style={{
-                        width: 5,
-                        height: 5,
+                        width: 6,
+                        height: 6,
                         borderRadius: '50%',
                         background: 'var(--warning)',
                         flexShrink: 0,
+                        boxShadow:
+                          '0 0 0 3px color-mix(in oklab, var(--warning) 22%, transparent)',
                       }}
                     />
                     Pending review
@@ -619,6 +721,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                   <h2
                     style={{
                       margin: 0,
+                      fontFamily: "'Inter', sans-serif",
                       fontSize: 22,
                       fontWeight: 700,
                       letterSpacing: '-0.02em',
@@ -629,7 +732,8 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                   </h2>
                   <div
                     style={{
-                      marginTop: 4,
+                      marginTop: 6,
+                      fontFamily: "'Inter', sans-serif",
                       fontSize: 13,
                       color: 'var(--fg-muted)',
                     }}
@@ -643,17 +747,19 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                   <AdminButton
                     variant="ghost"
+                    size="sm"
                     icon={X}
                     disabled={processing === selected.id}
                     onClick={() => void reject(selected.id)}
                   >
                     Reject
                   </AdminButton>
-                  <AdminButton variant="outline" icon={Edit2}>
+                  <AdminButton variant="outline" size="sm" icon={Edit2}>
                     Edit
                   </AdminButton>
                   <AdminButton
                     variant="success"
+                    size="sm"
                     icon={Check}
                     disabled={processing === selected.id}
                     onClick={() => void approve(selected.id)}
@@ -718,13 +824,13 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
               </VitalCell>
             </div>
 
-            {/* Field rows + footer */}
+            {/* Body: 2-col extracted vs. raw */}
             <div
               style={{
-                padding: '20px',
+                padding: '20px 22px',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 12,
+                gap: 22,
                 flex: 1,
               }}
             >
@@ -743,86 +849,129 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                 </div>
               )}
 
-              <FieldRow label="Title" value={selected.title} />
-              <FieldRow label="Artist" value={selected.artist} />
-              <FieldRow label="Venue" value={selected.venueName} />
-              <FieldRow label="Date" value={formatDate(selected.date)} mono />
-              <FieldRow
-                label="Doors"
-                value={formatTime(selected.doorsTime)}
-                mono
-              />
-              <FieldRow
-                label="Show"
-                value={formatTime(selected.showTime)}
-                mono
-              />
-              <FieldRow
-                label="Price low"
-                value={
-                  selected.ticketPriceMin
-                    ? `$${Math.round(parseFloat(selected.ticketPriceMin))}`
-                    : null
-                }
-                mono
-              />
-              <FieldRow
-                label="Price high"
-                value={
-                  selected.ticketPriceMax
-                    ? `$${Math.round(parseFloat(selected.ticketPriceMax))}`
-                    : null
-                }
-                mono
-              />
-
-              {selected.genre && selected.genre.length > 0 && (
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '80px 1fr',
-                    gap: 12,
-                    alignItems: 'center',
-                  }}
-                >
-                  <span
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: 16,
+                }}
+              >
+                {/* Left: extracted (editable) */}
+                <div>
+                  <MonoLabel>extracted (editable)</MonoLabel>
+                  <div
                     style={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: 'var(--fg-subtle)',
-                      textTransform: 'uppercase' as const,
-                      letterSpacing: '0.06em',
+                      marginTop: 10,
+                      padding: 16,
+                      border: '1px solid var(--border)',
+                      borderRadius: 10,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 12,
+                      background: 'var(--surface-1)',
                     }}
                   >
-                    Tags
-                  </span>
-                  <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                    {selected.genre.map((tag) => (
-                      <span
-                        key={tag}
-                        style={{
-                          padding: '2px 8px',
-                          borderRadius: 4,
-                          fontSize: 11,
-                          fontFamily: "'JetBrains Mono', monospace",
-                          background: 'var(--surface-1)',
-                          border: '1px solid var(--border)',
-                          color: 'var(--fg-muted)',
-                        }}
-                      >
-                        {tag}
-                      </span>
-                    ))}
+                    <FieldRow label="Title" value={selected.title} />
+                    <FieldRow label="Artist" value={selected.artist} />
+                    <FieldRow label="Venue" value={selected.venueName} />
+                    <FieldRow
+                      label="Date"
+                      value={formatDate(selected.date)}
+                      mono
+                    />
+                    <FieldRow
+                      label="Doors"
+                      value={formatTime(selected.doorsTime)}
+                      mono
+                    />
+                    <FieldRow
+                      label="Show"
+                      value={formatTime(selected.showTime)}
+                      mono
+                    />
+                    <FieldRow
+                      label="Price low"
+                      value={
+                        selected.ticketPriceMin
+                          ? `$${Math.round(parseFloat(selected.ticketPriceMin))}`
+                          : null
+                      }
+                      mono
+                      warn={!selected.ticketPriceMin}
+                    />
+                    <FieldRow
+                      label="Price high"
+                      value={
+                        selected.ticketPriceMax
+                          ? `$${Math.round(parseFloat(selected.ticketPriceMax))}`
+                          : null
+                      }
+                      mono
+                      warn={!selected.ticketPriceMax}
+                    />
+                    {selected.genre && selected.genre.length > 0 && (
+                      <FieldRow label="Tags" tags={selected.genre} />
+                    )}
                   </div>
                 </div>
-              )}
 
-              {/* Keyboard shortcuts footer */}
+                {/* Right: raw source */}
+                <div>
+                  <MonoLabel>raw source · llm input</MonoLabel>
+                  <div
+                    style={{
+                      marginTop: 10,
+                      padding: 14,
+                      borderRadius: 10,
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg)',
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 11.5,
+                      lineHeight: 1.65,
+                      color: 'var(--fg-muted)',
+                      whiteSpace: 'pre-wrap',
+                      maxHeight: 360,
+                      overflow: 'auto',
+                    }}
+                  >
+                    {selected.sourceUrl ? (
+                      <>
+                        <span style={{ color: 'var(--fg-subtle)' }}>
+                          {'// source url\n'}
+                        </span>
+                        <a
+                          href={selected.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            color: 'var(--signal)',
+                            wordBreak: 'break-all',
+                          }}
+                        >
+                          {selected.sourceUrl}
+                        </a>
+                        {'\n\n'}
+                        <span style={{ color: 'var(--fg-subtle)' }}>
+                          {'// raw html capture not stored in this build\n'}
+                          {'// see issue #259'}
+                        </span>
+                      </>
+                    ) : (
+                      <span style={{ color: 'var(--fg-subtle)' }}>
+                        {'// no source url recorded\n'}
+                        {'// raw html capture not stored in this build\n'}
+                        {'// see issue #259'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer: keyboard shortcuts */}
               <div
                 style={{
                   marginTop: 'auto',
-                  paddingTop: 16,
+                  paddingTop: 14,
                   borderTop: '1px dashed var(--border)',
                   display: 'flex',
                   gap: 8,
@@ -833,12 +982,12 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                 }}
               >
                 <Kbd>J</Kbd>
-                <span>next</span>
                 <Kbd>K</Kbd>
-                <span>prev</span>
-                <span style={{ width: 4 }} />
+                <span>navigate</span>
+                <span style={{ width: 8, display: 'inline-block' }} />
                 <Kbd>A</Kbd>
                 <span>approve</span>
+                <span style={{ width: 8, display: 'inline-block' }} />
                 <Kbd>R</Kbd>
                 <span>reject</span>
               </div>
@@ -879,8 +1028,8 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
         >
           <div
             style={{
-              width: 26,
-              height: 26,
+              width: 28,
+              height: 28,
               borderRadius: 6,
               background: 'var(--signal)',
               color: '#fff',
@@ -888,31 +1037,107 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
               alignItems: 'center',
               justifyContent: 'center',
               fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 700,
+              fontVariantNumeric: 'tabular-nums',
             }}
           >
             {selectedIds.size}
           </div>
           <span
-            style={{ fontSize: 13, color: 'var(--paper)', fontWeight: 600 }}
+            style={{
+              fontFamily: "'Inter', sans-serif",
+              fontSize: 13,
+              fontWeight: 600,
+              color: 'var(--paper)',
+            }}
           >
             events selected
           </span>
-          <AdminButton variant="success" size="sm" disabled>
-            Approve all
-          </AdminButton>
-          <AdminButton variant="danger" size="sm" disabled>
-            Reject
-          </AdminButton>
-          <AdminButton
-            variant="ghost"
-            size="sm"
-            onClick={() => setSelectedIds(new Set())}
-            style={{ color: 'var(--paper)' }}
+          <span
+            style={{
+              width: 1,
+              height: 18,
+              background: 'rgba(255,255,255,0.18)',
+              display: 'inline-block',
+            }}
+          />
+          <button
+            style={{
+              padding: '6px 10px',
+              borderRadius: 6,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              fontFamily: "'Inter', sans-serif",
+              fontSize: 12,
+              fontWeight: 600,
+              color: 'var(--paper)',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+            }}
           >
-            Dismiss
-          </AdminButton>
+            <Check size={13} />
+            Approve all
+          </button>
+          <button
+            style={{
+              padding: '6px 10px',
+              borderRadius: 6,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              fontFamily: "'Inter', sans-serif",
+              fontSize: 12,
+              fontWeight: 600,
+              color: 'var(--paper)',
+              opacity: 0.85,
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            <X size={13} />
+            Reject
+          </button>
+          <button
+            style={{
+              padding: '6px 10px',
+              borderRadius: 6,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              fontFamily: "'Inter', sans-serif",
+              fontSize: 12,
+              fontWeight: 600,
+              color: 'var(--paper)',
+              opacity: 0.85,
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            <Tag size={13} />
+            Re-tag
+          </button>
+          <span style={{ flex: 1 }} />
+          <button
+            style={{
+              padding: 6,
+              borderRadius: 6,
+              opacity: 0.7,
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--paper)',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+            onClick={() => setSelectedIds(new Set())}
+          >
+            <X size={14} />
+          </button>
         </div>
       )}
     </div>

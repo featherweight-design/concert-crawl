@@ -46,6 +46,7 @@ export const StatusBadge = ({
             borderRadius: '50%',
             background: colors.fg,
             flexShrink: 0,
+            boxShadow: `0 0 0 3px color-mix(in oklab, ${colors.fg} 22%, transparent)`,
           }}
         />
       )}
