@@ -21,6 +21,7 @@ import type {
   UserProfileResponse,
   UserSubmissionItem,
   HandleAvailabilityResponse,
+  Tier,
 } from '@concert-crawl/types'
 import { apiLogger } from '../lib/logger.js'
 
@@ -273,7 +274,7 @@ usersRouter.get('/me/submissions', async (ctx) => {
     date: string | null
     priceMin: string
     priceMax: string | null
-    tier: string
+    tier: Tier
     corroborationCount: number
     submittedAt: Date
     status: string | null
