@@ -380,7 +380,7 @@ export const CrawlSplitView = ({
         style={{
           display: 'grid',
           gridTemplateColumns: 'minmax(0, 460px) minmax(0, 1fr)',
-          minHeight: 560,
+          height: 560,
           borderBottom: '1px solid var(--border)',
         }}
       >
