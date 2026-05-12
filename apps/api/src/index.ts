@@ -1,7 +1,7 @@
+import { env } from './env.js'
 import './instrument.js'
 import { serve } from '@hono/node-server'
 import { createApp } from './app.js'
-import { env } from './env.js'
 import { apiLogger } from './lib/logger.js'
 
 const app = createApp()
