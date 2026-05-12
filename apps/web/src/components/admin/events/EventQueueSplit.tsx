@@ -28,11 +28,12 @@ interface Props {
 }
 
 function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'America/Denver',
-  })
+  const parts = dateStr.split('-').map(Number)
+  return new Date(
+    parts[0] ?? 0,
+    (parts[1] ?? 1) - 1,
+    parts[2] ?? 1,
+  ).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 function formatTime(timeStr: string | null | undefined) {
@@ -250,7 +251,10 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
 
   const pendingEvents = events.filter((ev) => !ev.verified)
   const lowConfEvents = events.filter(
-    (ev) => !ev.verified && Number(ev.confidenceScore) < 0.7,
+    (ev) =>
+      !ev.verified &&
+      Number(ev.confidenceScore) > 0 &&
+      Number(ev.confidenceScore) < 0.7,
   )
   const approvedEvents = events.filter((ev) => ev.verified)
 
@@ -410,7 +414,20 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
             return (
               <button
                 key={tabItem.key}
-                onClick={() => setTab(tabItem.key)}
+                onClick={() => {
+                  setTab(tabItem.key)
+                  const newFiltered =
+                    tabItem.key === 'pending'
+                      ? pendingEvents
+                      : tabItem.key === 'low_conf'
+                        ? lowConfEvents
+                        : tabItem.key === 'approved'
+                          ? approvedEvents
+                          : []
+                  if (!newFiltered.find((ev) => ev.id === selectedId)) {
+                    setSelectedId(newFiltered[0]?.id ?? null)
+                  }
+                }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -544,9 +561,14 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
             const showTime = formatTime(ev.showTime)
 
             return (
-              <button
+              <div
                 key={ev.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => setSelectedId(ev.id)}
+                onKeyDown={(ke) => {
+                  if (ke.key === 'Enter' || ke.key === ' ') setSelectedId(ev.id)
+                }}
                 style={{
                   width: '100%',
                   display: 'grid',
@@ -631,7 +653,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                     </div>
                   )}
                 </div>
-              </button>
+              </div>
             )
           })}
         </div>
@@ -745,27 +767,31 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                  <AdminButton
-                    variant="ghost"
-                    size="sm"
-                    icon={X}
-                    disabled={processing === selected.id}
-                    onClick={() => void reject(selected.id)}
-                  >
-                    Reject
-                  </AdminButton>
+                  {!selected.verified && (
+                    <AdminButton
+                      variant="ghost"
+                      size="sm"
+                      icon={X}
+                      disabled={processing === selected.id}
+                      onClick={() => void reject(selected.id)}
+                    >
+                      Reject
+                    </AdminButton>
+                  )}
                   <AdminButton variant="outline" size="sm" icon={Edit2}>
                     Edit
                   </AdminButton>
-                  <AdminButton
-                    variant="success"
-                    size="sm"
-                    icon={Check}
-                    disabled={processing === selected.id}
-                    onClick={() => void approve(selected.id)}
-                  >
-                    Approve
-                  </AdminButton>
+                  {!selected.verified && (
+                    <AdminButton
+                      variant="success"
+                      size="sm"
+                      icon={Check}
+                      disabled={processing === selected.id}
+                      onClick={() => void approve(selected.id)}
+                    >
+                      Approve
+                    </AdminButton>
+                  )}
                 </div>
               </div>
             </div>
@@ -1063,6 +1089,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
             }}
           />
           <button
+            disabled={processing !== null}
             style={{
               padding: '6px 10px',
               borderRadius: 6,
@@ -1075,13 +1102,15 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
               color: 'var(--paper)',
               background: 'transparent',
               border: 'none',
-              cursor: 'pointer',
+              cursor: processing !== null ? 'not-allowed' : 'pointer',
+              opacity: processing !== null ? 0.5 : 1,
             }}
           >
             <Check size={13} />
             Approve all
           </button>
           <button
+            disabled={processing !== null}
             style={{
               padding: '6px 10px',
               borderRadius: 6,
@@ -1092,16 +1121,17 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
               fontSize: 12,
               fontWeight: 600,
               color: 'var(--paper)',
-              opacity: 0.85,
+              opacity: processing !== null ? 0.5 : 0.85,
               background: 'transparent',
               border: 'none',
-              cursor: 'pointer',
+              cursor: processing !== null ? 'not-allowed' : 'pointer',
             }}
           >
             <X size={13} />
             Reject
           </button>
           <button
+            disabled={processing !== null}
             style={{
               padding: '6px 10px',
               borderRadius: 6,
@@ -1112,10 +1142,10 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
               fontSize: 12,
               fontWeight: 600,
               color: 'var(--paper)',
-              opacity: 0.85,
+              opacity: processing !== null ? 0.5 : 0.85,
               background: 'transparent',
               border: 'none',
-              cursor: 'pointer',
+              cursor: processing !== null ? 'not-allowed' : 'pointer',
             }}
           >
             <Tag size={13} />

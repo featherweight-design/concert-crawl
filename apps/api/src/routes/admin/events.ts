@@ -68,6 +68,7 @@ eventsAdminRouter.get(
         sourceUrl: events.sourceUrl,
         genre: events.genre,
         createdAt: events.createdAt,
+        venueId: events.venueId,
         venueName: venues.name,
       })
       .from(events)

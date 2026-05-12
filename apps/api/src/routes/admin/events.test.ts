@@ -77,8 +77,8 @@ const mockEventRow = {
   sourceUrl: null,
   genre: null,
   createdAt: new Date('2026-05-07T10:00:00Z'),
-  venueName: 'Test Venue',
   venueId: VENUE_ID,
+  venueName: 'Test Venue',
 }
 
 function adminAuth() {

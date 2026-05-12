@@ -8,6 +8,7 @@ export interface AdminEvent {
   id: string
   title: string
   artist: string
+  venueId: string | null
   venueName: string | null
   date: string
   doorsTime: string | null
