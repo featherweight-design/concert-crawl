@@ -47,7 +47,7 @@ export function SettingsRoute({ profile, submissions }: SettingsRouteProps) {
         <div style={{ width: 52 }} />
       </div>
 
-      <div className="flex flex-col gap-6 pb-24">
+      <div className="flex flex-col gap-6 pb-36">
         {/* Hero — no section label */}
         <div className="px-5 pt-2">
           <ProfileHero
@@ -98,10 +98,12 @@ export function SettingsRoute({ profile, submissions }: SettingsRouteProps) {
               </span>
             )}
           </div>
-          <MySubmissionsList
-            submissions={submissions}
-            totalCount={profile.submissionCount}
-          />
+          <div className="px-4">
+            <MySubmissionsList
+              submissions={submissions}
+              totalCount={profile.submissionCount}
+            />
+          </div>
         </div>
 
         <div className="mx-4 h-px bg-border" />

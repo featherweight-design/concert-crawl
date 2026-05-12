@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { useTheme } from '@/theme/ThemeProvider'
 import { THEMES, THEME_META, type ThemeName } from '@/theme/themes'
+import { MiniMark } from '@/theme/MiniMark'
 import { patchMe } from '@/lib/users'
 
 function ThemeSwatch({
@@ -19,6 +20,7 @@ function ThemeSwatch({
 }) {
   const tokens = THEMES[name]
   const meta = THEME_META[name]
+  const hasDistinctAccent2 = tokens['accent-2'] !== tokens['accent']
 
   return (
     <button
@@ -40,45 +42,61 @@ function ThemeSwatch({
         padding: 10,
         background: tokens['bg'],
         border: active
-          ? `2px solid ${tokens['signal']}`
+          ? `1.5px solid ${tokens['signal']}`
           : `1px solid ${tokens['border-strong']}`,
-        boxShadow: active
-          ? `0 0 0 4px color-mix(in oklch, ${tokens['signal']} 14%, transparent)`
-          : 'none',
         transition: 'transform 120ms ease',
         minWidth: 0,
       }}
     >
       {/* Dots row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        <span
-          style={{
-            width: 10,
-            height: 10,
-            borderRadius: 5,
-            background: tokens['signal'],
-            display: 'block',
-          }}
-        />
-        <span
-          style={{
-            width: 10,
-            height: 10,
-            borderRadius: 5,
-            background: tokens['accent'],
-            display: 'block',
-          }}
-        />
-        <span
-          style={{
-            width: 10,
-            height: 10,
-            borderRadius: 5,
-            background: tokens['fg-muted'],
-            opacity: 0.6,
-            display: 'block',
-          }}
-        />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <MiniMark tokens={tokens} size={20} />
+        <span style={{ display: 'flex', gap: 3 }}>
+          <span
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: 4,
+              background: tokens['signal'],
+              display: 'block',
+            }}
+          />
+          <span
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: 4,
+              background: tokens['accent'],
+              display: 'block',
+            }}
+          />
+          {hasDistinctAccent2 && (
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                background: tokens['accent-2'],
+                display: 'block',
+              }}
+            />
+          )}
+        </span>
+        {active && (
+          <span
+            style={{
+              marginLeft: 'auto',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 8,
+              fontWeight: 700,
+              color: tokens['signal'],
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+            }}
+          >
+            active
+          </span>
+        )}
       </div>
 
       {/* Mini gig card */}
@@ -107,17 +125,31 @@ function ThemeSwatch({
         >
           Habstrakt
         </div>
-        <span
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 8,
-            fontWeight: 700,
-            color: tokens['fg-muted'],
-            letterSpacing: '0.04em',
-          }}
-        >
-          $35 · GA
-        </span>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
+          <span
+            style={{
+              fontFamily: 'var(--font-ui)',
+              fontSize: 12,
+              fontWeight: 900,
+              color: tokens['signal'],
+              letterSpacing: '-0.02em',
+            }}
+          >
+            $35
+          </span>
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 7,
+              fontWeight: 700,
+              color: tokens['fg-subtle'],
+              letterSpacing: '0.10em',
+              textTransform: 'uppercase',
+            }}
+          >
+            · GA
+          </span>
+        </div>
       </div>
 
       {/* Label */}
@@ -144,6 +176,7 @@ export function ThemePickerInline() {
   const { getToken } = useAuth()
   const [isSaving, setIsSaving] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const activeMeta = THEME_META[theme]
 
   useEffect(() => {
     const mql = window.matchMedia('(max-width: 480px)')
@@ -173,36 +206,9 @@ export function ThemePickerInline() {
   const themeKeys = Object.keys(THEMES) as ThemeName[]
 
   return (
-    <div
-      style={{
-        background: 'var(--surface-1)',
-        border: '1px solid var(--border)',
-        borderRadius: 12,
-        padding: 12,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 10,
-      }}
-    >
-      {/* Header: paint icon + label + hint */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 16 16"
-          fill="none"
-          aria-hidden
-          style={{ color: 'var(--fg-muted)', flexShrink: 0 }}
-        >
-          <path
-            d="M2 13.5c1-1 2-2 3-1.5s2.5 2 4 0c1-1.3 2-3 2-4.5a5 5 0 00-10 0c0 1 .3 2 1 3z"
-            stroke="currentColor"
-            strokeWidth="1.4"
-            strokeLinejoin="round"
-          />
-          <circle cx="6" cy="8" r="1" fill="currentColor" />
-          <circle cx="10" cy="8" r="1" fill="currentColor" />
-        </svg>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {/* Header: label + active name + hint */}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
         <span
           style={{
             fontFamily: 'var(--font-ui)',
@@ -213,6 +219,17 @@ export function ThemePickerInline() {
           }}
         >
           Theme
+        </span>
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            fontWeight: 600,
+            color: 'var(--fg-subtle)',
+            letterSpacing: '0.06em',
+          }}
+        >
+          {activeMeta.label}
         </span>
         <span
           style={{

@@ -12,6 +12,8 @@ import {
   RESERVED_HANDLES,
   AVATAR_COLORS,
 } from './definitions/constants'
+import { CCClusterMark } from '@/components/brand/cc-cluster-mark/CCClusterMark'
+import { CCWordmark } from '@/components/brand/cc-wordmark/CCWordmark'
 import type { AvatarColor, UserProfileResponse } from '@concert-crawl/types'
 
 export const EDIT_PROFILE_FORM_ID = 'edit-profile-form'
@@ -50,6 +52,15 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [checkingAvailability, setCheckingAvailability] = useState(false)
+  const [isDesktop, setIsDesktop] = useState(false)
+
+  useEffect(() => {
+    const mql = window.matchMedia('(min-width: 640px)')
+    setIsDesktop(mql.matches)
+    const handler = (ev: MediaQueryListEvent) => setIsDesktop(ev.matches)
+    mql.addEventListener('change', handler)
+    return () => mql.removeEventListener('change', handler)
+  }, [])
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hadHandleBefore = profile.handle !== null
@@ -121,7 +132,7 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
     }
   }
 
-  return (
+  const formContent = (
     <div className="mx-auto max-w-md">
       {/* Header with Cancel + Save */}
       <div className="flex items-center justify-between border-b border-border px-4 py-4">
@@ -283,4 +294,37 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
       </form>
     </div>
   )
+
+  if (isDesktop) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        {/* Topbar */}
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-bg-elevated px-6">
+          <div className="flex items-center gap-2">
+            <CCClusterMark size={24} color="var(--signal)" />
+            <CCWordmark size={18} />
+          </div>
+          <Link
+            href="/me"
+            className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-fg"
+            style={{ fontFamily: 'var(--font-mono)' }}
+          >
+            ← Settings
+          </Link>
+        </header>
+
+        {/* Centered form card */}
+        <div className="flex flex-1 items-start justify-center px-6 py-10">
+          <div
+            className="w-full max-w-lg overflow-hidden rounded-2xl border border-border"
+            style={{ background: 'var(--surface-1)' }}
+          >
+            {formContent}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return formContent
 }

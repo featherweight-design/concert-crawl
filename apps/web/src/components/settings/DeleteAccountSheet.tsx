@@ -176,6 +176,8 @@ export function DeleteAccountSheet({
           margin: '0 auto',
           borderTop: '1px solid var(--danger)',
           boxShadow: '0 -24px 60px -10px rgba(0,0,0,0.5)',
+          maxHeight: '90svh',
+          overflowY: 'auto',
         }}
       >
         {/* Drag handle */}
