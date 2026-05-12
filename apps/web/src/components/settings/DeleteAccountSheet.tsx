@@ -82,7 +82,8 @@ export function DeleteAccountSheet({
         >
           <h2
             id="delete-dialog-title"
-            className="mb-2 text-[18px] font-bold text-fg"
+            className="mb-2 text-fg"
+            style={{ fontSize: 20, fontWeight: 900 }}
           >
             Delete your account?
           </h2>
@@ -116,8 +117,14 @@ export function DeleteAccountSheet({
             value={inputValue}
             onChange={(evt) => setInputValue(evt.target.value)}
             placeholder="DELETE"
-            className="mb-4 w-full rounded-lg border border-border bg-surface-1 px-4 py-3 text-[14px] text-fg placeholder:text-fg-subtle focus:outline-none focus:border-border-focus"
-            style={isArmed ? { borderColor: 'var(--danger)' } : undefined}
+            className="mb-4 w-full rounded-lg border border-border bg-surface-1 px-4 py-3 text-fg placeholder:text-fg-subtle focus:outline-none focus:border-border-focus"
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 16,
+              fontWeight: 700,
+              letterSpacing: '0.06em',
+              ...(isArmed ? { borderColor: 'var(--danger)' } : {}),
+            }}
             autoComplete="off"
             autoCapitalize="off"
             spellCheck={false}
@@ -168,12 +175,17 @@ export function DeleteAccountSheet({
           maxWidth: '480px',
           margin: '0 auto',
           borderTop: '1px solid var(--danger)',
+          boxShadow: '0 -24px 60px -10px rgba(0,0,0,0.5)',
         }}
       >
         {/* Drag handle */}
         <div className="mx-auto h-1 w-10 rounded-full bg-border" />
 
-        <h2 id="delete-sheet-title" className="text-[18px] font-bold text-fg">
+        <h2
+          id="delete-sheet-title"
+          className="text-fg"
+          style={{ fontSize: 20, fontWeight: 900 }}
+        >
           Delete your account?
         </h2>
 
@@ -195,8 +207,14 @@ export function DeleteAccountSheet({
             value={inputValue}
             onChange={(evt) => setInputValue(evt.target.value)}
             placeholder={SETTINGS_COPY.dangerZone.deleteConfirmPlaceholder}
-            className="rounded-lg border border-border bg-surface-1 px-4 py-3 text-[14px] text-fg placeholder:text-fg-subtle focus:outline-none"
-            style={isArmed ? { borderColor: 'var(--danger)' } : undefined}
+            className="rounded-lg border border-border bg-surface-1 px-4 py-3 text-fg placeholder:text-fg-subtle focus:outline-none"
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 16,
+              fontWeight: 700,
+              letterSpacing: '0.06em',
+              ...(isArmed ? { borderColor: 'var(--danger)' } : {}),
+            }}
             autoComplete="off"
             autoCapitalize="off"
             spellCheck={false}

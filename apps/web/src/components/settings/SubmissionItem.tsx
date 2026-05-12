@@ -52,7 +52,7 @@ export function SubmissionItem({
           className="text-[10px] text-fg-subtle"
           style={{ fontFamily: 'var(--font-mono)' }}
         >
-          {ago}
+          {ago} ago
         </span>
       </div>
 
@@ -61,15 +61,21 @@ export function SubmissionItem({
         {submission.artist}
       </span>
 
-      {/* Row 3: price · tier left, venue · date right */}
+      {/* Row 3: price + tier left, venue · date right */}
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[16px] font-black leading-none tracking-[-0.02em] text-fg">
-          {priceLabel}{' '}
+        <span className="flex items-baseline gap-2">
+          <span className="text-[16px] font-black leading-none tracking-[-0.02em] text-fg">
+            {priceLabel}
+          </span>
           <span
             className="text-[10px] font-bold text-fg-muted"
-            style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.06em' }}
+            style={{
+              fontFamily: 'var(--font-mono)',
+              letterSpacing: '0.10em',
+              textTransform: 'uppercase',
+            }}
           >
-            · {submission.tier}
+            {submission.tier}
           </span>
         </span>
         <span

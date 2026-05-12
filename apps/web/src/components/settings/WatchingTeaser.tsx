@@ -47,6 +47,9 @@ export function WatchingTeaser() {
           </span>
           <span
             style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
               padding: '2px 7px',
               borderRadius: 999,
               fontFamily: 'var(--font-mono)',
@@ -54,16 +57,25 @@ export function WatchingTeaser() {
               fontWeight: 700,
               letterSpacing: '0.10em',
               textTransform: 'uppercase' as const,
-              color: 'var(--fg-muted)',
-              background: 'var(--surface-2)',
-              border: '1px solid var(--border-strong)',
+              background: 'var(--accent)',
+              color: 'var(--bg)',
             }}
           >
+            <span
+              style={{
+                width: 5,
+                height: 5,
+                borderRadius: '50%',
+                background: 'var(--bg)',
+                flexShrink: 0,
+              }}
+            />
             Coming soon
           </span>
         </div>
         <span className="text-[12px] leading-snug text-fg-muted">
-          Shows you&apos;ve starred — price alerts when they dip.
+          Star a show — we&apos;ll ping you when prices drop or new tickets
+          surface.
         </span>
       </div>
     </div>

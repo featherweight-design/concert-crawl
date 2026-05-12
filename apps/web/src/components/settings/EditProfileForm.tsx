@@ -133,7 +133,7 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
             textDecoration: 'none',
           }}
         >
-          Cancel
+          ← Cancel
         </Link>
         <span className="text-[15px] font-bold text-fg">Edit profile</span>
         <button
@@ -189,17 +189,16 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
                     onClick={() => setAvatarColor(color)}
                     aria-label={`Avatar color: ${color}`}
                     aria-pressed={isSelected}
-                    className="relative h-9 w-9 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+                    className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
                     style={{
+                      width: 28,
+                      height: 28,
                       borderRadius: '50%',
                       background: `color-mix(in oklch, var(--${color}) 36%, var(--surface-1))`,
-                      border: isSelected
-                        ? `2px solid var(--${color})`
-                        : '2px solid transparent',
-                      outline: isSelected
-                        ? `2px solid var(--${color})`
-                        : '2px solid transparent',
-                      outlineOffset: '2px',
+                      border: `1.5px solid var(--${color})`,
+                      boxShadow: isSelected
+                        ? `0 0 0 3px color-mix(in oklch, var(--${color}) 24%, transparent)`
+                        : 'none',
                     }}
                   />
                 )
