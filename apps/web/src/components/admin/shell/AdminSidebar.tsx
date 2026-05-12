@@ -83,7 +83,7 @@ const NavLink = ({
             padding: '0 5px',
             borderRadius: 999,
             background: `var(--${item.badge?.kind ?? 'danger'})`,
-            color: '#fff',
+            color: `var(--${item.badge?.kind ?? 'danger'}-fg, #fff)`,
             fontSize: 10,
             fontWeight: 700,
             display: 'flex',

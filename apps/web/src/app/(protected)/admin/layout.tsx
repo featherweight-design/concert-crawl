@@ -9,7 +9,6 @@ import { AdminTopbar } from '@/components/admin/shell/AdminTopbar'
 interface CrawlStatusVenue {
   id: string
   name: string
-  blockedAt: string | null
   lastRun: { status: string } | null
 }
 
@@ -41,7 +40,8 @@ export default async function AdminLayout({
     if (statusRes.status === 'fulfilled') {
       blockedCrawls = statusRes.value.filter(
         (venue) =>
-          venue.blockedAt !== null || venue.lastRun?.status === 'failed',
+          venue.lastRun?.status === 'failed' ||
+          venue.lastRun?.status === 'blocked',
       ).length
     } else {
       console.warn('[admin layout] badge count fetch failed', {
