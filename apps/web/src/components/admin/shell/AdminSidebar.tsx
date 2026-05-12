@@ -73,43 +73,31 @@ const NavLink = ({
     >
       <NavIcon name={item.iconName} size={16} />
       {mode === 'full' && <span style={{ flex: 1 }}>{item.label}</span>}
-      {/* Full mode: numeric badge or dot */}
-      {mode === 'full' &&
-        showBadge &&
-        (count > 0 ? (
-          <span
-            style={{
-              marginLeft: 'auto',
-              minWidth: 18,
-              height: 18,
-              padding: '0 5px',
-              borderRadius: 999,
-              background: `var(--${item.badge?.kind ?? 'danger'})`,
-              color: '#fff',
-              fontSize: 10,
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontFamily: "'JetBrains Mono', monospace",
-              flexShrink: 0,
-            }}
-          >
-            {count}
-          </span>
-        ) : (
-          <span
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              background: `var(--${item.badge?.kind ?? 'danger'})`,
-              flexShrink: 0,
-            }}
-          />
-        ))}
-      {/* Rail mode: dot */}
-      {mode === 'rail' && showBadge && (
+      {/* Full mode: numeric badge — only when count > 0 */}
+      {mode === 'full' && showBadge && count > 0 && (
+        <span
+          style={{
+            marginLeft: 'auto',
+            minWidth: 18,
+            height: 18,
+            padding: '0 5px',
+            borderRadius: 999,
+            background: `var(--${item.badge?.kind ?? 'danger'})`,
+            color: '#fff',
+            fontSize: 10,
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontFamily: "'JetBrains Mono', monospace",
+            flexShrink: 0,
+          }}
+        >
+          {count}
+        </span>
+      )}
+      {/* Rail mode: dot — only when count > 0 */}
+      {mode === 'rail' && showBadge && count > 0 && (
         <span
           style={{
             position: 'absolute',

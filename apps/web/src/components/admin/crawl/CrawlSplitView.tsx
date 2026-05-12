@@ -10,7 +10,6 @@ import {
   TH,
   TD,
   CostText,
-  Panel,
 } from '@/components/admin/primitives'
 import type { CrawlRun } from '@concert-crawl/types'
 import { formatCostValue } from '@/app/(protected)/admin/crawl/crawl-stats'
@@ -368,16 +367,27 @@ export const CrawlSplitView = ({
   const venueRecrawlError = selectedId ? recrawlError[selectedId] : undefined
 
   return (
-    <>
-      <div style={{ display: 'flex', gap: 16, height: 560 }}>
+    <div
+      style={{
+        border: '1px solid var(--border)',
+        borderRadius: 12,
+        background: 'var(--bg-elevated)',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Split view — left rail + right inspector share one unified outer border */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 460px) minmax(0, 1fr)',
+          minHeight: 560,
+          borderBottom: '1px solid var(--border)',
+        }}
+      >
         {/* Left rail */}
         <div
           style={{
-            width: 460,
-            flexShrink: 0,
-            border: '1px solid var(--border)',
-            borderRadius: 12,
-            background: 'var(--bg-elevated)',
+            borderRight: '1px solid var(--border)',
             overflowY: 'auto',
             display: 'flex',
             flexDirection: 'column',
@@ -617,15 +627,11 @@ export const CrawlSplitView = ({
           ))}
         </div>
 
-        {/* Right inspector — single bordered container, no gap between sections */}
+        {/* Right inspector */}
         <div
           style={{
-            flex: 1,
             display: 'flex',
             flexDirection: 'column',
-            border: '1px solid var(--border)',
-            borderRadius: 12,
-            background: 'var(--bg-elevated)',
             overflow: 'hidden',
             minHeight: 0,
           }}
@@ -770,7 +776,7 @@ export const CrawlSplitView = ({
                 )}
               </div>
 
-              {/* Vitals — separate section with border dividers */}
+              {/* Vitals */}
               {activeRun && (
                 <div
                   style={{
@@ -1035,7 +1041,7 @@ export const CrawlSplitView = ({
                       </div>
                     )}
                   </>
-                ) : (
+                ) : !venueRunsLoading ? (
                   <div
                     style={{
                       flex: 1,
@@ -1078,7 +1084,7 @@ export const CrawlSplitView = ({
                       </div>
                     </div>
                   </div>
-                )}
+                ) : null}
               </div>
             </>
           ) : (
@@ -1097,12 +1103,14 @@ export const CrawlSplitView = ({
           )}
         </div>
       </div>
+
+      {/* Run history — seamlessly joined inside the same outer container */}
       <CrawlRunHistoryTable
         runs={selectedId ? venueRuns : initialRuns}
         loading={venueRunsLoading}
         selectedVenueName={selected?.venueName ?? null}
       />
-    </>
+    </div>
   )
 }
 
@@ -1116,9 +1124,19 @@ export const CrawlRunHistoryTable = ({
   selectedVenueName?: string | null
 }) => {
   return (
-    <Panel
-      title="Run history"
-      action={
+    <div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '10px 16px',
+          borderBottom: '1px solid var(--border)',
+        }}
+      >
+        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--fg)' }}>
+          Run history
+        </span>
         <span
           style={{
             fontSize: 12,
@@ -1136,9 +1154,8 @@ export const CrawlRunHistoryTable = ({
           ) : null}
           {loading ? 'loading…' : `showing ${displayRuns.length}`}
         </span>
-      }
-      padding={0}
-    >
+      </div>
+
       {displayRuns.length === 0 && !loading ? (
         <div
           style={{
@@ -1238,7 +1255,7 @@ export const CrawlRunHistoryTable = ({
           </AdminTable>
         </div>
       )}
-    </Panel>
+    </div>
   )
 }
 
