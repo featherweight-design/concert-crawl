@@ -1,3 +1,22 @@
+# [1.9.0](https://github.com/HartiganHM/concert-crawl/compare/v1.8.0...v1.9.0) (2026-05-12)
+
+
+### Bug Fixes
+
+* **api:** load env before all other imports to ensure dotenv runs first ([4837a98](https://github.com/HartiganHM/concert-crawl/commit/4837a9811e4dbf68cc87240aee93d95359725479))
+* **api:** use Tier type in SubmissionRow to satisfy UserSubmissionItem ([1bc336d](https://github.com/HartiganHM/concert-crawl/commit/1bc336da01b7f06cb611dae5f5efc350722017cf))
+* **settings/edit-profile:** desktop — full-page layout → modal dialog ([c76d463](https://github.com/HartiganHM/concert-crawl/commit/c76d463487b1188247fdc8b766f06372ca9b5008))
+* **settings:** address Copilot review feedback ([5ab4103](https://github.com/HartiganHM/concert-crawl/commit/5ab4103db99c727250bbe2186a6210c5c5f71ab4))
+* **settings:** address feedback — 5 mobile/desktop issues ([aa615a3](https://github.com/HartiganHM/concert-crawl/commit/aa615a339636d7a948fb3b3103e13533bcf174ee))
+* **settings:** design cross-compare fixes — 5 components ([66d4e2b](https://github.com/HartiganHM/concert-crawl/commit/66d4e2b5fb243fced7167cf8da187d7098457717))
+* **settings:** edit profile as in-page modal on desktop ([3c98d41](https://github.com/HartiganHM/concert-crawl/commit/3c98d41b803c3cc1e6ba917e4bf8a491bb4585f3))
+
+
+### Features
+
+* **api/types:** extend UserSubmissionItem with tier, confirms, timestamp ([9394d57](https://github.com/HartiganHM/concert-crawl/commit/9394d57ed43e6f7df69ed72f0a97c07dc8247d35))
+* **settings:** align settings UI with v2 design handoff ([3b529f1](https://github.com/HartiganHM/concert-crawl/commit/3b529f1784e378e7749fb03d70f2aa462284e04b))
+
 # [1.8.0](https://github.com/HartiganHM/concert-crawl/compare/v1.7.3...v1.8.0) (2026-05-12)
 
 
