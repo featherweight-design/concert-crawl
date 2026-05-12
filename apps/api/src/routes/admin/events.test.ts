@@ -20,6 +20,7 @@ vi.mock('@concert-crawl/db', () => ({
   db: {
     select: vi.fn().mockReturnThis(),
     from: vi.fn().mockReturnThis(),
+    leftJoin: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
     orderBy: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
@@ -37,9 +38,22 @@ vi.mock('@concert-crawl/db', () => ({
     venueId: 'venueId',
     createdAt: 'createdAt',
     date: 'date',
+    title: 'title',
+    artist: 'artist',
+    doorsTime: 'doorsTime',
+    showTime: 'showTime',
+    ticketPriceMin: 'ticketPriceMin',
+    ticketPriceMax: 'ticketPriceMax',
+    confidenceScore: 'confidenceScore',
+    extractionStrategy: 'extractionStrategy',
+    sourceUrl: 'sourceUrl',
+    genre: 'genre',
+  },
+  venues: {
+    id: 'id',
+    name: 'name',
   },
   auditLog: {},
-  venues: {},
   inviteCodes: {},
   crawlRuns: {},
   notifications: {},
@@ -50,16 +64,21 @@ const VENUE_ID = '33333333-3333-3333-3333-333333333333'
 
 const mockEventRow = {
   id: EVENT_ID,
-  venueId: VENUE_ID,
   title: 'Test Show',
   artist: 'Test Artist',
   date: '2026-06-01',
-  verified: false,
+  doorsTime: null,
+  showTime: null,
+  ticketPriceMin: null,
+  ticketPriceMax: null,
   confidenceScore: '0.6',
+  verified: false,
   extractionStrategy: 'llm',
-  status: 'upcoming',
+  sourceUrl: null,
+  genre: null,
   createdAt: new Date('2026-05-07T10:00:00Z'),
-  updatedAt: new Date('2026-05-07T10:00:00Z'),
+  venueName: 'Test Venue',
+  venueId: VENUE_ID,
 }
 
 function adminAuth() {
@@ -68,6 +87,41 @@ function adminAuth() {
     sessionClaims: { metadata: { role: 'admin' } },
   })
 }
+
+describe('GET /v1/admin/events/count', () => {
+  beforeEach(() => {
+    mockGetAuth.mockReset()
+  })
+
+  it('returns 401 for unauthenticated requests', async () => {
+    mockGetAuth.mockReturnValue(null)
+    const res = await createApp().request('/v1/admin/events/count')
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 403 for non-admin users', async () => {
+    mockGetAuth.mockReturnValue({
+      userId: 'user_123',
+      sessionClaims: { metadata: { role: 'user' } },
+    })
+    const res = await createApp().request('/v1/admin/events/count')
+    expect(res.status).toBe(403)
+  })
+
+  it('returns 200 with pending and approved counts', async () => {
+    adminAuth()
+    const { db } = await import('@concert-crawl/db')
+    vi.mocked(db.select().from().where().limit().offset)
+      .mockResolvedValueOnce([{ total: 12 }])
+      .mockResolvedValueOnce([{ total: 218 }])
+    const res = await createApp().request('/v1/admin/events/count')
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.success).toBe(true)
+    expect(body.data.pending).toBe(12)
+    expect(body.data.approved).toBe(218)
+  })
+})
 
 describe('GET /v1/admin/events', () => {
   beforeEach(() => {
@@ -89,11 +143,11 @@ describe('GET /v1/admin/events', () => {
     expect(res.status).toBe(403)
   })
 
-  it('returns 200 with events list', async () => {
+  it('returns 200 with events list including venue name', async () => {
     adminAuth()
     const { db } = await import('@concert-crawl/db')
     vi.mocked(
-      db.select().from().where().orderBy().limit().offset,
+      db.select().from().leftJoin().where().orderBy().limit().offset,
     ).mockResolvedValueOnce([mockEventRow])
     const res = await createApp().request('/v1/admin/events')
     expect(res.status).toBe(200)
@@ -101,6 +155,7 @@ describe('GET /v1/admin/events', () => {
     expect(body.success).toBe(true)
     expect(Array.isArray(body.data)).toBe(true)
     expect(body.data[0].id).toBe(EVENT_ID)
+    expect(body.data[0].venueName).toBe('Test Venue')
   })
 
   it('defaults to limit=50 and offset=0', async () => {
@@ -108,10 +163,10 @@ describe('GET /v1/admin/events', () => {
     const { db } = await import('@concert-crawl/db')
     await createApp().request('/v1/admin/events')
     expect(
-      vi.mocked(db.select().from().where().orderBy().limit),
+      vi.mocked(db.select().from().leftJoin().where().orderBy().limit),
     ).toHaveBeenCalledWith(50)
     expect(
-      vi.mocked(db.select().from().where().orderBy().limit().offset),
+      vi.mocked(db.select().from().leftJoin().where().orderBy().limit().offset),
     ).toHaveBeenCalledWith(0)
   })
 
@@ -120,16 +175,16 @@ describe('GET /v1/admin/events', () => {
     const { db } = await import('@concert-crawl/db')
     await createApp().request('/v1/admin/events?limit=10&offset=20')
     expect(
-      vi.mocked(db.select().from().where().orderBy().limit),
+      vi.mocked(db.select().from().leftJoin().where().orderBy().limit),
     ).toHaveBeenCalledWith(10)
     expect(
-      vi.mocked(db.select().from().where().orderBy().limit().offset),
+      vi.mocked(db.select().from().leftJoin().where().orderBy().limit().offset),
     ).toHaveBeenCalledWith(20)
   })
 
-  it('rejects limit > 100', async () => {
+  it('rejects limit > 500', async () => {
     adminAuth()
-    const res = await createApp().request('/v1/admin/events?limit=200')
+    const res = await createApp().request('/v1/admin/events?limit=600')
     expect(res.status).toBe(400)
   })
 })

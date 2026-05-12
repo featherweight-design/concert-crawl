@@ -13,8 +13,9 @@ interface CrawlStatusVenue {
   lastRun: { status: string } | null
 }
 
-interface AdminEvent {
-  id: string
+interface EventCounts {
+  pending: number
+  approved: number
 }
 
 export default async function AdminLayout({
@@ -30,12 +31,9 @@ export default async function AdminLayout({
   let pendingEvents = 0
 
   if (token) {
-    const [statusRes, eventsRes] = await Promise.allSettled([
+    const [statusRes, countsRes] = await Promise.allSettled([
       apiClient.get<CrawlStatusVenue[]>('/v1/admin/crawl/status', token),
-      apiClient.get<AdminEvent[]>(
-        '/v1/admin/events?verified=false&limit=100',
-        token,
-      ),
+      apiClient.get<EventCounts>('/v1/admin/events/count', token),
     ])
 
     if (statusRes.status === 'fulfilled') {
@@ -45,16 +43,16 @@ export default async function AdminLayout({
           venue.lastRun?.status === 'failed',
       ).length
     } else {
-      console.warn('[admin layout] badge count fetch failed', {
+      console.warn('[admin layout] crawl status fetch failed', {
         reason: statusRes.reason,
       })
     }
 
-    if (eventsRes.status === 'fulfilled') {
-      pendingEvents = eventsRes.value.length
+    if (countsRes.status === 'fulfilled') {
+      pendingEvents = countsRes.value.pending
     } else {
-      console.warn('[admin layout] pending events fetch failed', {
-        reason: eventsRes.reason,
+      console.warn('[admin layout] event counts fetch failed', {
+        reason: countsRes.reason,
       })
     }
   }

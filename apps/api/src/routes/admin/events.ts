@@ -1,8 +1,8 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { and, eq, desc, asc } from 'drizzle-orm'
-import { db, events } from '@concert-crawl/db'
+import { and, eq, desc, asc, sql } from 'drizzle-orm'
+import { db, events, venues } from '@concert-crawl/db'
 import { getAuthUser } from '../../middleware/auth.js'
 import type { AdminVariables } from './index.js'
 
@@ -13,11 +13,37 @@ const listQuerySchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((val) => val === 'true'),
-  limit: z.coerce.number().int().min(1).max(100).default(50),
+  limit: z.coerce.number().int().min(1).max(500).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 })
 
 export const eventsAdminRouter = new Hono<AdminVariables>()
+
+// GET /v1/admin/events/count — returns unverified + verified counts for badges/filter rail
+eventsAdminRouter.get('/count', async (ctx) => {
+  const [pendingResult, approvedResult] = await Promise.all([
+    db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(events)
+      .where(eq(events.verified, false))
+      .limit(1)
+      .offset(0),
+    db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(events)
+      .where(eq(events.verified, true))
+      .limit(1)
+      .offset(0),
+  ])
+
+  return ctx.json({
+    success: true,
+    data: {
+      pending: pendingResult[0]?.total ?? 0,
+      approved: approvedResult[0]?.total ?? 0,
+    },
+  })
+})
 
 // GET /v1/admin/events?verified=false&limit=50&offset=0
 eventsAdminRouter.get(
@@ -27,8 +53,25 @@ eventsAdminRouter.get(
     const { verified, limit, offset } = ctx.req.valid('query')
 
     const rows = await db
-      .select()
+      .select({
+        id: events.id,
+        title: events.title,
+        artist: events.artist,
+        date: events.date,
+        doorsTime: events.doorsTime,
+        showTime: events.showTime,
+        ticketPriceMin: events.ticketPriceMin,
+        ticketPriceMax: events.ticketPriceMax,
+        confidenceScore: events.confidenceScore,
+        verified: events.verified,
+        extractionStrategy: events.extractionStrategy,
+        sourceUrl: events.sourceUrl,
+        genre: events.genre,
+        createdAt: events.createdAt,
+        venueName: venues.name,
+      })
       .from(events)
+      .leftJoin(venues, eq(events.venueId, venues.id))
       .where(eq(events.verified, verified))
       .orderBy(asc(events.date), desc(events.createdAt))
       .limit(limit)
