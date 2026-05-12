@@ -16,19 +16,19 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "turbo": "^2.0.0",
-    "prettier": "^3.0.0",
-    "@commitlint/cli": "^19.0.0",
-    "@commitlint/config-conventional": "^19.0.0",
-    "husky": "^9.0.0",
-    "lint-staged": "^15.0.0",
-    "semantic-release": "^24.0.0",
-    "@semantic-release/changelog": "^6.0.0",
-    "@semantic-release/commit-analyzer": "^13.0.0",
-    "@semantic-release/git": "^10.0.0",
-    "@semantic-release/github": "^11.0.0",
-    "@semantic-release/npm": "^12.0.0",
-    "@semantic-release/release-notes-generator": "^14.0.0"
+    "turbo": "2.9.6",
+    "prettier": "3.8.3",
+    "@commitlint/cli": "19.8.1",
+    "@commitlint/config-conventional": "19.8.1",
+    "husky": "9.1.7",
+    "lint-staged": "15.5.2",
+    "semantic-release": "24.2.9",
+    "@semantic-release/changelog": "6.0.3",
+    "@semantic-release/commit-analyzer": "13.0.1",
+    "@semantic-release/git": "10.0.1",
+    "@semantic-release/github": "11.0.6",
+    "@semantic-release/npm": "12.0.2",
+    "@semantic-release/release-notes-generator": "14.1.1"
   },
   "lint-staged": {
     "**/*.{ts,tsx,js,json,md}": [
@@ -40,7 +40,15 @@
       "fast-uri": "^3.1.2",
       "ip-address": "^10.2.0",
       "postcss": "^8.5.14"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "@clerk/shared",
+      "@sentry/cli",
+      "esbuild",
+      "msw",
+      "sharp",
+      "unrs-resolver"
+    ]
   },
   "packageManager": "pnpm@10.33.2",
   "engines": {
