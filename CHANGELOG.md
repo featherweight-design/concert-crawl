@@ -1,3 +1,10 @@
+## [1.9.1](https://github.com/HartiganHM/concert-crawl/compare/v1.9.0...v1.9.1) (2026-05-12)
+
+
+### Bug Fixes
+
+* **ci:** address Copilot review — pull_request_target, stale doc fixes ([d3bad4e](https://github.com/HartiganHM/concert-crawl/commit/d3bad4ead1aedf74d36dc14bf214c5d45d1f3733)), closes [#276](https://github.com/HartiganHM/concert-crawl/issues/276)
+
 # [1.9.0](https://github.com/HartiganHM/concert-crawl/compare/v1.8.0...v1.9.0) (2026-05-12)
 
 
