@@ -1,3 +1,12 @@
+## [1.7.3](https://github.com/HartiganHM/concert-crawl/compare/v1.7.2...v1.7.3) (2026-05-12)
+
+
+### Bug Fixes
+
+* **admin/crawl:** correct badge count logic + restore grid height ([186d7c2](https://github.com/HartiganHM/concert-crawl/commit/186d7c27e3fac778245f419a320a99c11cc802e1))
+* **admin/crawl:** seamless split-view layout + sidebar dot always-on bug ([e58eb2b](https://github.com/HartiganHM/concert-crawl/commit/e58eb2b8a5b044252459ceb2f3011b52bb8ff720))
+* **admin/sidebar:** improve badge contrast + fix always-on indicator ([08da897](https://github.com/HartiganHM/concert-crawl/commit/08da897e6ac3cd03952c03339ba4fe0c4fcc19cc)), closes [#ff7a8a](https://github.com/HartiganHM/concert-crawl/issues/ff7a8a)
+
 ## [1.7.2](https://github.com/HartiganHM/concert-crawl/compare/v1.7.1...v1.7.2) (2026-05-11)
 
 
