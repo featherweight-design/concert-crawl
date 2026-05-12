@@ -6,40 +6,97 @@ interface PlanCardProps {
   trialDaysRemaining?: number
 }
 
+function PlanPill({ label, tone }: { label: string; tone: string }) {
+  return (
+    <span
+      style={{
+        padding: '3px 8px',
+        borderRadius: 999,
+        background: `color-mix(in oklch, var(--${tone}) 12%, transparent)`,
+        border: `1px solid var(--${tone})`,
+        color: `var(--${tone})`,
+        fontFamily: 'var(--font-mono)',
+        fontSize: 9.5,
+        fontWeight: 700,
+        letterSpacing: '0.14em',
+        textTransform: 'uppercase' as const,
+      }}
+    >
+      {label}
+    </span>
+  )
+}
+
 export function PlanCard({ plan, trialDaysRemaining }: PlanCardProps) {
   if (plan === 'founder') {
     return (
       <div
-        className="relative overflow-hidden rounded-2xl border-2 p-5"
+        className="relative overflow-hidden rounded-2xl border p-5"
         style={{
           borderColor: 'var(--accent)',
           background:
-            'radial-gradient(ellipse at top left, color-mix(in srgb, var(--accent) 12%, transparent), var(--surface-1))',
+            'linear-gradient(135deg, color-mix(in oklch, var(--accent) 8%, var(--surface-1)), var(--surface-1) 65%)',
         }}
       >
-        <div className="flex flex-col gap-2">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(circle at 90% 0%, color-mix(in oklch, var(--accent) 18%, transparent), transparent 60%)',
+          }}
+        />
+        <div className="relative flex flex-col gap-2.5">
           <div className="flex items-center gap-2">
+            <PlanPill
+              label={SETTINGS_COPY.planCard.founder.badge}
+              tone="accent"
+            />
             <span
-              className="text-[11px] font-bold uppercase tracking-[0.08em]"
-              style={{ color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}
-            >
-              {SETTINGS_COPY.planCard.founder.badge}
-            </span>
-            <span
-              className="text-[11px] font-medium uppercase tracking-[0.08em] text-fg-muted"
-              style={{ fontFamily: 'var(--font-mono)' }}
+              className="font-bold uppercase text-fg-subtle"
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 10,
+                letterSpacing: '0.10em',
+              }}
             >
               {SETTINGS_COPY.planCard.founder.yourPlanLabel}
             </span>
           </div>
-          <span className="text-[20px] font-extrabold text-fg">
-            {SETTINGS_COPY.planCard.founder.tagline}
-          </span>
-          <span className="text-[13px] leading-relaxed text-fg-muted">
-            {SETTINGS_COPY.planCard.founder.body}
-          </span>
-          <span className="text-[12px] italic" style={{ color: 'var(--accent)' }}>
-            {SETTINGS_COPY.planCard.founder.subline}
+          <div className="flex flex-col gap-1.5">
+            <span
+              className="text-fg"
+              style={{
+                fontSize: 24,
+                fontWeight: 900,
+                letterSpacing: '-0.025em',
+                lineHeight: 1.1,
+              }}
+            >
+              {SETTINGS_COPY.planCard.founder.tagline}
+            </span>
+            <span
+              className="text-fg-muted"
+              style={{
+                fontSize: 13.5,
+                lineHeight: 1.5,
+                letterSpacing: '-0.005em',
+              }}
+            >
+              {SETTINGS_COPY.planCard.founder.body}
+            </span>
+          </div>
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              fontWeight: 600,
+              color: 'var(--accent)',
+              letterSpacing: '0.06em',
+              fontStyle: 'italic',
+            }}
+          >
+            — {SETTINGS_COPY.planCard.founder.subline}
           </span>
         </div>
       </div>
@@ -51,31 +108,59 @@ export function PlanCard({ plan, trialDaysRemaining }: PlanCardProps) {
       <div
         className="rounded-2xl border p-5"
         style={{
-          borderColor: 'var(--warning)',
+          borderColor: 'var(--danger)',
           background: 'var(--surface-1)',
         }}
       >
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-2.5">
+          <div className="flex items-center gap-2">
+            <PlanPill
+              label={SETTINGS_COPY.planCard.pastDue.badge}
+              tone="danger"
+            />
             <span
-              className="text-[11px] font-bold uppercase tracking-[0.08em]"
+              className="font-bold uppercase text-fg-subtle"
               style={{
-                color: 'var(--warning)',
                 fontFamily: 'var(--font-mono)',
+                fontSize: 10,
+                letterSpacing: '0.10em',
               }}
             >
-              {SETTINGS_COPY.planCard.pastDue.badge}
-            </span>
-            <span className="text-[15px] font-medium text-fg">
-              {SETTINGS_COPY.planCard.pastDue.tagline}
+              your plan
             </span>
           </div>
-          <span
-            className="shrink-0 text-[13px] font-medium"
-            style={{ color: 'var(--warning)' }}
-          >
-            {SETTINGS_COPY.planCard.pastDue.cta}
-          </span>
+          <div className="flex flex-col gap-1.5">
+            <span
+              className="text-fg"
+              style={{
+                fontSize: 24,
+                fontWeight: 900,
+                letterSpacing: '-0.025em',
+                lineHeight: 1.1,
+              }}
+            >
+              {SETTINGS_COPY.planCard.pastDue.tagline}
+            </span>
+            <span
+              className="text-fg-muted"
+              style={{
+                fontSize: 13.5,
+                lineHeight: 1.5,
+                letterSpacing: '-0.005em',
+              }}
+            >
+              Update payment to keep Plus features.
+            </span>
+          </div>
+          <div className="mt-1 flex gap-2">
+            <button
+              type="button"
+              className="rounded-xl px-4 py-2.5 text-[13px] font-bold"
+              style={{ background: 'var(--signal)', color: 'var(--bg)' }}
+            >
+              {SETTINGS_COPY.planCard.pastDue.cta}
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -84,19 +169,62 @@ export function PlanCard({ plan, trialDaysRemaining }: PlanCardProps) {
   if (plan === 'trial') {
     return (
       <div className="rounded-2xl border border-border bg-surface-1 p-5">
-        <div className="flex flex-col gap-1">
-          <span
-            className="text-[11px] font-bold uppercase tracking-[0.08em] text-fg-muted"
-            style={{ fontFamily: 'var(--font-mono)' }}
-          >
-            {SETTINGS_COPY.planCard.trial.badge}
-          </span>
-          <span className="text-[15px] font-medium text-fg">
-            {trialDaysRemaining ?? 0} {SETTINGS_COPY.planCard.trial.tagline}
-          </span>
-          <span className="text-[13px] text-fg-muted">
-            {SETTINGS_COPY.planCard.trial.subline}
-          </span>
+        <div className="flex flex-col gap-2.5">
+          <div className="flex items-center gap-2">
+            <PlanPill
+              label={SETTINGS_COPY.planCard.trial.badge}
+              tone="warning"
+            />
+            <span
+              className="font-bold uppercase text-fg-subtle"
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 10,
+                letterSpacing: '0.10em',
+              }}
+            >
+              your plan
+            </span>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span
+              className="text-fg"
+              style={{
+                fontSize: 24,
+                fontWeight: 900,
+                letterSpacing: '-0.025em',
+                lineHeight: 1.1,
+              }}
+            >
+              {trialDaysRemaining ?? 0} {SETTINGS_COPY.planCard.trial.tagline}
+            </span>
+            <span
+              className="text-fg-muted"
+              style={{
+                fontSize: 13.5,
+                lineHeight: 1.5,
+                letterSpacing: '-0.005em',
+              }}
+            >
+              {SETTINGS_COPY.planCard.trial.subline}
+            </span>
+          </div>
+          <div className="mt-1 flex gap-2">
+            <button
+              type="button"
+              className="rounded-xl px-4 py-2.5 text-[13px] font-bold"
+              style={{ background: 'var(--signal)', color: 'var(--bg)' }}
+            >
+              Add a card
+            </button>
+            <button
+              type="button"
+              className="rounded-xl border border-border px-4 py-2.5 text-[13px] font-bold text-fg"
+              style={{ background: 'var(--surface-2)' }}
+            >
+              Stay free
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -108,19 +236,43 @@ export function PlanCard({ plan, trialDaysRemaining }: PlanCardProps) {
       className="rounded-2xl border p-5"
       style={{ borderColor: 'var(--signal)', background: 'var(--surface-1)' }}
     >
-      <div className="flex flex-col gap-1">
-        <span
-          className="text-[11px] font-bold uppercase tracking-[0.08em]"
-          style={{ color: 'var(--signal)', fontFamily: 'var(--font-mono)' }}
-        >
-          {SETTINGS_COPY.planCard.paid.badge}
-        </span>
-        <span className="text-[15px] font-medium text-fg">
-          {SETTINGS_COPY.planCard.paid.tagline}
-        </span>
-        <span className="text-[13px] text-fg-muted">
-          {SETTINGS_COPY.planCard.paid.subline}
-        </span>
+      <div className="flex flex-col gap-2.5">
+        <div className="flex items-center gap-2">
+          <PlanPill label={SETTINGS_COPY.planCard.paid.badge} tone="signal" />
+          <span
+            className="font-bold uppercase text-fg-subtle"
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              letterSpacing: '0.10em',
+            }}
+          >
+            your plan
+          </span>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <span
+            className="text-fg"
+            style={{
+              fontSize: 24,
+              fontWeight: 900,
+              letterSpacing: '-0.025em',
+              lineHeight: 1.1,
+            }}
+          >
+            {SETTINGS_COPY.planCard.paid.tagline}
+          </span>
+          <span
+            className="text-fg-muted"
+            style={{
+              fontSize: 13.5,
+              lineHeight: 1.5,
+              letterSpacing: '-0.005em',
+            }}
+          >
+            {SETTINGS_COPY.planCard.paid.subline}
+          </span>
+        </div>
       </div>
     </div>
   )

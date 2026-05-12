@@ -103,11 +103,15 @@ export function DeleteAccountSheet({
             {submissionCount === 1 ? 'price stays' : 'prices stay'} on the
             public record — your name is removed from them.
           </p>
-          <p className="mb-2 text-[13px] font-medium text-fg-muted">
+          <label
+            className="mb-1.5 block text-[13px] font-medium text-fg-muted"
+            htmlFor="delete-confirm-desktop"
+          >
             Type <strong>DELETE</strong> to confirm.
-          </p>
+          </label>
           <input
             ref={inputRef}
+            id="delete-confirm-desktop"
             type="text"
             value={inputValue}
             onChange={(evt) => setInputValue(evt.target.value)}
@@ -159,47 +163,72 @@ export function DeleteAccountSheet({
         aria-modal="true"
         aria-labelledby="delete-sheet-title"
         className="fixed bottom-0 left-0 right-0 z-50 flex flex-col gap-5 rounded-t-2xl p-6"
-        style={{ background: 'var(--bg)', maxWidth: '480px', margin: '0 auto' }}
+        style={{
+          background: 'var(--bg)',
+          maxWidth: '480px',
+          margin: '0 auto',
+          borderTop: '1px solid var(--danger)',
+        }}
       >
         {/* Drag handle */}
         <div className="mx-auto h-1 w-10 rounded-full bg-border" />
 
         <h2 id="delete-sheet-title" className="text-[18px] font-bold text-fg">
-          {SETTINGS_COPY.dangerZone.deleteSheetTitle}
+          Delete your account?
         </h2>
 
         <p className="text-[14px] leading-relaxed text-fg-muted">
           {SETTINGS_COPY.dangerZone.deleteSheetBody}
         </p>
 
-        <input
-          ref={inputRef}
-          type="text"
-          value={inputValue}
-          onChange={(evt) => setInputValue(evt.target.value)}
-          placeholder={SETTINGS_COPY.dangerZone.deleteConfirmPlaceholder}
-          className="rounded-lg border border-border bg-surface-1 px-4 py-3 text-[14px] text-fg placeholder:text-fg-subtle focus:outline-none"
-          autoComplete="off"
-          autoCapitalize="off"
-          spellCheck={false}
-        />
+        <div className="flex flex-col gap-1.5">
+          <label
+            className="text-[13px] font-medium text-fg-muted"
+            htmlFor="delete-confirm-sheet"
+          >
+            Type <strong>DELETE</strong> to confirm.
+          </label>
+          <input
+            ref={inputRef}
+            id="delete-confirm-sheet"
+            type="text"
+            value={inputValue}
+            onChange={(evt) => setInputValue(evt.target.value)}
+            placeholder={SETTINGS_COPY.dangerZone.deleteConfirmPlaceholder}
+            className="rounded-lg border border-border bg-surface-1 px-4 py-3 text-[14px] text-fg placeholder:text-fg-subtle focus:outline-none"
+            style={isArmed ? { borderColor: 'var(--danger)' } : undefined}
+            autoComplete="off"
+            autoCapitalize="off"
+            spellCheck={false}
+          />
+        </div>
 
-        <button
-          type="button"
-          onClick={() => void handleDelete()}
-          disabled={!isArmed || loading}
-          className="rounded-xl py-3.5 text-[15px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40"
-          style={{
-            background: isArmed ? 'var(--danger)' : 'var(--surface-2)',
-            color: isArmed ? 'white' : 'var(--fg-muted)',
-          }}
-        >
-          {loading
-            ? 'Deleting…'
-            : isArmed
-              ? SETTINGS_COPY.dangerZone.deleteButtonArmed
-              : SETTINGS_COPY.dangerZone.deleteButtonDisabled}
-        </button>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 rounded-xl border border-border py-3 text-[14px] font-bold text-fg"
+            style={{ background: 'var(--surface-1)' }}
+          >
+            Keep my account
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleDelete()}
+            disabled={!isArmed || loading}
+            className="flex-1 rounded-xl py-3.5 text-[15px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+            style={{
+              background: isArmed ? 'var(--danger)' : 'var(--surface-2)',
+              color: isArmed ? 'white' : 'var(--fg-muted)',
+            }}
+          >
+            {loading
+              ? 'Deleting…'
+              : isArmed
+                ? SETTINGS_COPY.dangerZone.deleteButtonArmed
+                : SETTINGS_COPY.dangerZone.deleteButtonDisabled}
+          </button>
+        </div>
       </div>
     </>
   )

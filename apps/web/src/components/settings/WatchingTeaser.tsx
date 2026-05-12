@@ -1,10 +1,7 @@
-import Link from 'next/link'
-
 export function WatchingTeaser() {
   return (
-    <Link
-      href="/watching"
-      className="relative flex items-center gap-3 overflow-hidden rounded-xl border px-4 py-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+    <div
+      className="relative flex items-center gap-3 overflow-hidden rounded-xl border px-4 py-3.5"
       style={{
         borderColor: 'var(--border-strong)',
         background:
@@ -43,32 +40,32 @@ export function WatchingTeaser() {
       </div>
 
       {/* text */}
-      <div className="relative flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-[14px] font-extrabold tracking-[-0.005em] text-fg">
-          Watching
-        </span>
+      <div className="relative flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <span className="text-[14px] font-extrabold tracking-[-0.005em] text-fg">
+            Watching
+          </span>
+          <span
+            style={{
+              padding: '2px 7px',
+              borderRadius: 999,
+              fontFamily: 'var(--font-mono)',
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: '0.10em',
+              textTransform: 'uppercase' as const,
+              color: 'var(--fg-muted)',
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border-strong)',
+            }}
+          >
+            Coming soon
+          </span>
+        </div>
         <span className="text-[12px] leading-snug text-fg-muted">
-          Shows you&apos;ve starred. Tap to see them all.
+          Shows you&apos;ve starred — price alerts when they dip.
         </span>
       </div>
-
-      {/* chevron */}
-      <svg
-        width="14"
-        height="14"
-        viewBox="0 0 16 16"
-        className="relative shrink-0 text-fg-subtle"
-        fill="none"
-        aria-hidden
-      >
-        <path
-          d="M6 4l4 4-4 4"
-          stroke="currentColor"
-          strokeWidth="1.7"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </Link>
+    </div>
   )
 }

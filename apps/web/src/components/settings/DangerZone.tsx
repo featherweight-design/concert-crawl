@@ -57,7 +57,7 @@ export function DangerZone({ handle, submissionCount }: DangerZoneProps) {
 
         {/* Delete account card */}
         <div
-          className="rounded-xl border-2 p-4"
+          className="rounded-xl border p-4"
           style={{ borderColor: 'var(--danger)' }}
         >
           <div className="mb-2 flex items-center gap-2">

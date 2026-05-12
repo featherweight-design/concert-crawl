@@ -36,7 +36,12 @@ export function ProfileHero({
   return (
     <div className="flex items-center gap-3.5">
       {/* Avatar */}
-      <Avatar handle={handle} avatarColor={avatarColor} size={avatarSize} />
+      <Avatar
+        handle={handle}
+        avatarColor={avatarColor}
+        size={avatarSize}
+        ringed
+      />
 
       {/* Text content */}
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -61,9 +66,31 @@ export function ProfileHero({
           </span>
           {displayRole !== 'fan' && (
             <span
-              className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-fg-muted"
-              style={{ fontFamily: 'var(--font-mono)' }}
+              className="inline-flex shrink-0 items-center gap-1"
+              style={{
+                padding: '2px 6px',
+                borderRadius: 4,
+                background: `color-mix(in oklch, var(--signal) 14%, transparent)`,
+                border: `1px solid var(--signal)`,
+                color: 'var(--signal)',
+                fontFamily: 'var(--font-mono)',
+                fontSize: 9,
+                fontWeight: 700,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                whiteSpace: 'nowrap',
+              }}
             >
+              <span
+                aria-hidden
+                style={{
+                  width: 4,
+                  height: 4,
+                  borderRadius: 2,
+                  background: 'var(--signal)',
+                  display: 'block',
+                }}
+              />
               {ROLE_LABEL[displayRole]}
             </span>
           )}

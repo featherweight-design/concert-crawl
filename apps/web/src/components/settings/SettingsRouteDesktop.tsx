@@ -9,6 +9,8 @@ import { ThemePickerInline } from './ThemePickerInline'
 import { MySubmissionsList } from './MySubmissionsList'
 import { DangerZone } from './DangerZone'
 import { SETTINGS_COPY } from './definitions/copy'
+import { CCClusterMark } from '@/components/brand/cc-cluster-mark/CCClusterMark'
+import { CCWordmark } from '@/components/brand/cc-wordmark/CCWordmark'
 import type {
   UserProfileResponse,
   UserSubmissionItem,
@@ -34,11 +36,11 @@ const NAV_ITEMS: { key: NavSection; label: string }[] = [
 const NAV_ICONS: Record<NavSection, React.ReactNode> = {
   profile: (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <circle cx="8" cy="5.5" r="2.5" stroke="currentColor" strokeWidth="1.4" />
+      <circle cx="8" cy="6" r="2.6" stroke="currentColor" strokeWidth="1.5" />
       <path
-        d="M2.5 14c0-3 2.5-4.5 5.5-4.5s5.5 1.5 5.5 4.5"
+        d="M2.5 13.5c.6-2.3 2.7-3.5 5.5-3.5s4.9 1.2 5.5 3.5"
         stroke="currentColor"
-        strokeWidth="1.4"
+        strokeWidth="1.5"
         strokeLinecap="round"
       />
     </svg>
@@ -47,69 +49,53 @@ const NAV_ICONS: Record<NavSection, React.ReactNode> = {
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
       <rect
         x="2"
-        y="3"
+        y="4"
         width="12"
-        height="10"
-        rx="2"
+        height="9"
+        rx="1.5"
         stroke="currentColor"
-        strokeWidth="1.4"
+        strokeWidth="1.5"
       />
-      <path
-        d="M5 7h6M5 10h4"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-      />
+      <path d="M2 7h12" stroke="currentColor" strokeWidth="1.5" />
     </svg>
   ),
   submissions: (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
       <path
-        d="M3 4h10M3 8h10M3 12h6"
+        d="M5 4h8M5 8h8M5 12h8"
         stroke="currentColor"
-        strokeWidth="1.4"
+        strokeWidth="1.7"
         strokeLinecap="round"
       />
     </svg>
   ),
   appearance: (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="1.4" />
-      <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.4" />
+      <circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="6" cy="6" r=".9" fill="currentColor" />
+      <circle cx="10" cy="6" r=".9" fill="currentColor" />
+      <circle cx="11" cy="9" r=".9" fill="currentColor" />
     </svg>
   ),
   account: (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <rect
-        x="3"
-        y="7"
-        width="10"
-        height="7"
-        rx="1.5"
-        stroke="currentColor"
-        strokeWidth="1.4"
-      />
       <path
-        d="M5.5 7V5.5a2.5 2.5 0 015 0V7"
+        d="M8 2L3 4v4.5c0 3.3 2.5 5.4 5 6 2.5-.6 5-2.7 5-6V4L8 2z"
         stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
       />
     </svg>
   ),
   danger: (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
       <path
-        d="M6.5 2.5L2 13.5h12L9.5 2.5a1.5 1.5 0 00-3 0z"
+        d="M3 5h10M6 5V3.5h4V5M5 5l.7 8.5h4.6L11 5"
         stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M8 6.5v3M8 11.5v.5"
-        stroke="currentColor"
-        strokeWidth="1.4"
+        strokeWidth="1.5"
+        fill="none"
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   ),
@@ -240,13 +226,10 @@ export function SettingsRouteDesktop({
     <div className="flex min-h-screen flex-col">
       {/* Topbar */}
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-bg-elevated px-6">
-        <span
-          className="text-[22px] font-bold tracking-tight text-fg"
-          style={{ fontFamily: 'var(--font-caveat, "Caveat", cursive)' }}
-        >
-          concert<span style={{ color: 'var(--signal)' }}>crawl</span>
-          <span style={{ color: 'var(--accent)' }}>.</span>
-        </span>
+        <div className="flex items-center gap-2">
+          <CCClusterMark size={24} color="var(--signal)" />
+          <CCWordmark size={18} />
+        </div>
         <Link
           href="/events"
           className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-fg"
@@ -316,155 +299,159 @@ export function SettingsRouteDesktop({
         </aside>
 
         {/* Panel */}
-        <main className="max-w-xl flex-1 px-8 py-8">
-          {activeSection === 'profile' && profilePanel}
+        <main className="flex-1 px-8 py-8">
+          <div style={{ maxWidth: 640, margin: '0 auto' }}>
+            {activeSection === 'profile' && profilePanel}
 
-          {activeSection === 'plan' && (
-            <div className="flex flex-col gap-5">
-              <div>
-                <h2 className="text-[22px] font-extrabold text-fg">Plan</h2>
-                <p className="text-[13px] text-fg-muted">
-                  What you&apos;re paying us. (Spoiler: nothing.)
-                </p>
-              </div>
-              <PlanCard plan={profile.plan} />
-            </div>
-          )}
-
-          {activeSection === 'appearance' && (
-            <div className="flex flex-col gap-5">
-              <div>
-                <h2 className="text-[22px] font-extrabold text-fg">
-                  Appearance
-                </h2>
-                <p className="text-[13px] text-fg-muted">
-                  Three flavors. Pick the one that hurts your eyes least.
-                </p>
-              </div>
-              <ThemePickerInline />
-            </div>
-          )}
-
-          {activeSection === 'submissions' && submissionsPanel}
-
-          {activeSection === 'account' && (
-            <div className="flex flex-col gap-5">
-              <div>
-                <h2 className="text-[22px] font-extrabold text-fg">Account</h2>
-                <p className="text-[13px] text-fg-muted">
-                  The actual login bits. Lives in Clerk, not here.
-                </p>
-              </div>
-              <div className="flex flex-col rounded-xl border border-border bg-surface-1">
-                {/* Email row */}
-                <div className="flex items-center gap-3 px-5 py-3.5">
-                  <svg
-                    width="15"
-                    height="15"
-                    viewBox="0 0 15 15"
-                    fill="none"
-                    aria-hidden
-                    className="shrink-0 text-fg-muted"
-                  >
-                    <rect
-                      x="1"
-                      y="3"
-                      width="13"
-                      height="9"
-                      rx="1.5"
-                      stroke="currentColor"
-                      strokeWidth="1.3"
-                    />
-                    <path
-                      d="M1 4.5l6.5 4.5L14 4.5"
-                      stroke="currentColor"
-                      strokeWidth="1.3"
-                    />
-                  </svg>
-                  <span className="flex-1 text-[14px] font-medium text-fg">
-                    {SETTINGS_COPY.emailRow}
-                  </span>
-                  <span className="text-[13px] text-fg-muted">
-                    {profile.email}
-                  </span>
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 14 14"
-                    fill="none"
-                    aria-hidden
-                    className="shrink-0 text-fg-subtle"
-                  >
-                    <path
-                      d="M5.5 3l4 4-4 4"
-                      stroke="currentColor"
-                      strokeWidth="1.3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+            {activeSection === 'plan' && (
+              <div className="flex flex-col gap-5">
+                <div>
+                  <h2 className="text-[22px] font-extrabold text-fg">Plan</h2>
+                  <p className="text-[13px] text-fg-muted">
+                    What you&apos;re paying us. (Spoiler: nothing.)
+                  </p>
                 </div>
-                <div className="mx-5 h-px bg-border" />
-                {/* Password row */}
-                <div className="flex items-center gap-3 px-5 py-3.5">
-                  <svg
-                    width="15"
-                    height="15"
-                    viewBox="0 0 15 15"
-                    fill="none"
-                    aria-hidden
-                    className="shrink-0 text-fg-muted"
-                  >
-                    <rect
-                      x="3"
-                      y="7"
-                      width="9"
-                      height="6.5"
-                      rx="1.5"
-                      stroke="currentColor"
-                      strokeWidth="1.3"
-                    />
-                    <path
-                      d="M5 7V5.5a2.5 2.5 0 015 0V7"
-                      stroke="currentColor"
-                      strokeWidth="1.3"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <span className="flex-1 text-[14px] font-medium text-fg">
-                    {SETTINGS_COPY.passwordRow}
-                  </span>
-                  <a
-                    href="https://accounts.clerk.dev/user"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-[0.06em] text-fg-muted transition-colors hover:text-fg"
-                    style={{
-                      fontFamily: 'var(--font-mono)',
-                      background: 'var(--surface-2)',
-                    }}
-                  >
-                    Clerk →
-                  </a>
+                <PlanCard plan={profile.plan} />
+              </div>
+            )}
+
+            {activeSection === 'appearance' && (
+              <div className="flex flex-col gap-5">
+                <div>
+                  <h2 className="text-[22px] font-extrabold text-fg">
+                    Appearance
+                  </h2>
+                  <p className="text-[13px] text-fg-muted">
+                    Three flavors. Pick the one that hurts your eyes least.
+                  </p>
+                </div>
+                <ThemePickerInline />
+              </div>
+            )}
+
+            {activeSection === 'submissions' && submissionsPanel}
+
+            {activeSection === 'account' && (
+              <div className="flex flex-col gap-5">
+                <div>
+                  <h2 className="text-[22px] font-extrabold text-fg">
+                    Account
+                  </h2>
+                  <p className="text-[13px] text-fg-muted">
+                    The actual login bits. Lives in Clerk, not here.
+                  </p>
+                </div>
+                <div className="flex flex-col rounded-xl border border-border bg-surface-1">
+                  {/* Email row */}
+                  <div className="flex items-center gap-3 px-5 py-3.5">
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 15 15"
+                      fill="none"
+                      aria-hidden
+                      className="shrink-0 text-fg-muted"
+                    >
+                      <rect
+                        x="1"
+                        y="3"
+                        width="13"
+                        height="9"
+                        rx="1.5"
+                        stroke="currentColor"
+                        strokeWidth="1.3"
+                      />
+                      <path
+                        d="M1 4.5l6.5 4.5L14 4.5"
+                        stroke="currentColor"
+                        strokeWidth="1.3"
+                      />
+                    </svg>
+                    <span className="flex-1 text-[14px] font-medium text-fg">
+                      {SETTINGS_COPY.emailRow}
+                    </span>
+                    <span className="text-[13px] text-fg-muted">
+                      {profile.email}
+                    </span>
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 14 14"
+                      fill="none"
+                      aria-hidden
+                      className="shrink-0 text-fg-subtle"
+                    >
+                      <path
+                        d="M5.5 3l4 4-4 4"
+                        stroke="currentColor"
+                        strokeWidth="1.3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                  <div className="mx-5 h-px bg-border" />
+                  {/* Password row */}
+                  <div className="flex items-center gap-3 px-5 py-3.5">
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 15 15"
+                      fill="none"
+                      aria-hidden
+                      className="shrink-0 text-fg-muted"
+                    >
+                      <rect
+                        x="3"
+                        y="7"
+                        width="9"
+                        height="6.5"
+                        rx="1.5"
+                        stroke="currentColor"
+                        strokeWidth="1.3"
+                      />
+                      <path
+                        d="M5 7V5.5a2.5 2.5 0 015 0V7"
+                        stroke="currentColor"
+                        strokeWidth="1.3"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <span className="flex-1 text-[14px] font-medium text-fg">
+                      {SETTINGS_COPY.passwordRow}
+                    </span>
+                    <a
+                      href="https://accounts.clerk.dev/user"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-[0.06em] text-fg-muted transition-colors hover:text-fg"
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        background: 'var(--surface-2)',
+                      }}
+                    >
+                      Clerk →
+                    </a>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {activeSection === 'danger' && (
-            <div className="flex flex-col gap-5">
-              <div>
-                <h2 className="text-[22px] font-extrabold text-fg">
-                  Danger zone
-                </h2>
-                <p className="text-[13px] text-fg-muted">The exits.</p>
+            {activeSection === 'danger' && (
+              <div className="flex flex-col gap-5">
+                <div>
+                  <h2 className="text-[22px] font-extrabold text-fg">
+                    Danger zone
+                  </h2>
+                  <p className="text-[13px] text-fg-muted">The exits.</p>
+                </div>
+                <DangerZone
+                  handle={profile.handle}
+                  submissionCount={profile.submissionCount}
+                />
               </div>
-              <DangerZone
-                handle={profile.handle}
-                submissionCount={profile.submissionCount}
-              />
-            </div>
-          )}
+            )}
+          </div>
         </main>
       </div>
     </div>

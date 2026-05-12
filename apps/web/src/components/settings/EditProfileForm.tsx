@@ -29,11 +29,12 @@ function validateHandleLocal(handle: string): HandleError {
   return null
 }
 
-const COLOR_VAR: Record<AvatarColor, string> = {
-  signal: 'var(--signal)',
-  accent: 'var(--accent)',
-  success: 'var(--success)',
-  warning: 'var(--warning)',
+const MONO_BTN: React.CSSProperties = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: 11,
+  fontWeight: 700,
+  letterSpacing: '0.10em',
+  textTransform: 'uppercase',
 }
 
 export function EditProfileForm({ profile }: EditProfileFormProps) {
@@ -55,7 +56,7 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
 
   const checkAvailability = useCallback(
     async (value: string) => {
-      if (value === profile.handle) return // unchanged
+      if (value === profile.handle) return
       setCheckingAvailability(true)
       try {
         const token = await getToken()
@@ -122,25 +123,34 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
 
   return (
     <div className="mx-auto max-w-md">
-      {/* Header with Cancel + Save wired to isSaveDisabled */}
+      {/* Header with Cancel + Save */}
       <div className="flex items-center justify-between border-b border-border px-4 py-4">
         <Link
           href="/me"
-          className="text-[14px] font-medium text-fg-muted hover:text-fg"
+          style={{
+            ...MONO_BTN,
+            color: 'var(--fg-muted)',
+            textDecoration: 'none',
+          }}
         >
-          ← Cancel
+          Cancel
         </Link>
         <span className="text-[15px] font-bold text-fg">Edit profile</span>
         <button
           type="submit"
           form={EDIT_PROFILE_FORM_ID}
           disabled={isSaveDisabled}
-          className="text-[14px] font-semibold disabled:opacity-50"
           style={{
-            color: isSaveDisabled ? 'var(--fg-muted)' : 'var(--signal)',
+            ...MONO_BTN,
+            color: isSaveDisabled ? 'var(--fg-subtle)' : 'var(--signal)',
+            background: 'none',
+            border: 'none',
+            cursor: isSaveDisabled ? 'not-allowed' : 'pointer',
+            padding: 0,
+            opacity: isSaveDisabled ? 0.5 : 1,
           }}
         >
-          Save
+          {saving ? 'Saving…' : checkingAvailability ? 'Checking…' : 'Save'}
         </button>
       </div>
 
@@ -152,12 +162,50 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
         }}
         className="flex flex-col gap-6 px-4 py-6"
       >
-        {/* Avatar preview */}
-        <div className="flex flex-col items-center gap-3">
-          <Avatar handle={handle || null} avatarColor={avatarColor} size={72} />
-          {handle && (
-            <span className="text-[15px] font-bold text-fg">@{handle}</span>
-          )}
+        {/* Avatar + color picker: horizontal layout */}
+        <div className="flex items-start gap-5">
+          <div className="flex flex-col items-center gap-2 shrink-0">
+            <Avatar
+              handle={handle || null}
+              avatarColor={avatarColor}
+              size={72}
+              ringed
+            />
+            {handle && (
+              <span className="text-[13px] font-bold text-fg">@{handle}</span>
+            )}
+          </div>
+          <div className="flex flex-1 flex-col gap-2 pt-1">
+            <span className="text-[13px] font-semibold text-fg">
+              Avatar color
+            </span>
+            <div className="flex flex-wrap gap-3">
+              {AVATAR_COLORS.map((color) => {
+                const isSelected = avatarColor === color
+                return (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setAvatarColor(color)}
+                    aria-label={`Avatar color: ${color}`}
+                    aria-pressed={isSelected}
+                    className="relative h-9 w-9 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+                    style={{
+                      borderRadius: '50%',
+                      background: `color-mix(in oklch, var(--${color}) 36%, var(--surface-1))`,
+                      border: isSelected
+                        ? `2px solid var(--${color})`
+                        : '2px solid transparent',
+                      outline: isSelected
+                        ? `2px solid var(--${color})`
+                        : '2px solid transparent',
+                      outlineOffset: '2px',
+                    }}
+                  />
+                )
+              })}
+            </div>
+          </div>
         </div>
 
         {/* Handle field */}
@@ -193,7 +241,7 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
           )}
           {!handleError && !isGoingAnonymous && (
             <span className="text-[12px] text-fg-subtle">
-              {SETTINGS_COPY.handleHint}
+              Lowercase letters, numbers, underscores only.
             </span>
           )}
           {isGoingAnonymous && (
@@ -228,47 +276,6 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
           </span>
         </div>
 
-        {/* Avatar color picker */}
-        <div className="flex flex-col gap-2">
-          <span className="text-[13px] font-semibold text-fg">
-            Avatar color
-          </span>
-          <div className="flex gap-3">
-            {AVATAR_COLORS.map((color) => {
-              const isSelected = avatarColor === color
-              return (
-                <button
-                  key={color}
-                  type="button"
-                  onClick={() => setAvatarColor(color)}
-                  aria-label={`Avatar color: ${color}`}
-                  aria-pressed={isSelected}
-                  className="relative h-8 w-8 cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
-                  style={{
-                    background: COLOR_VAR[color],
-                    outline: isSelected
-                      ? `3px solid ${COLOR_VAR[color]}`
-                      : '3px solid transparent',
-                    outlineOffset: '3px',
-                  }}
-                />
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Save */}
-        <button
-          type="submit"
-          disabled={isSaveDisabled}
-          className="rounded-xl py-3.5 text-[15px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-          style={{
-            background: isSaveDisabled ? 'var(--surface-2)' : 'var(--signal)',
-            color: isSaveDisabled ? 'var(--fg-muted)' : 'var(--bg)',
-          }}
-        >
-          {saving ? 'Saving…' : checkingAvailability ? 'Checking…' : 'Save'}
-        </button>
         {saveError && (
           <span className="text-[12px]" style={{ color: 'var(--danger)' }}>
             {saveError}

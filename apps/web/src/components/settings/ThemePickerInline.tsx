@@ -125,7 +125,7 @@ function ThemeSwatch({
         >
           Habstrakt
         </div>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
           <span
             style={{
               fontFamily: 'var(--font-ui)',
@@ -147,42 +147,26 @@ function ThemeSwatch({
               textTransform: 'uppercase',
             }}
           >
-            GA
+            · GA
           </span>
         </div>
       </div>
 
-      {/* Label + role */}
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-        <span
-          style={{
-            fontFamily: 'var(--font-ui)',
-            fontSize: 11,
-            fontWeight: 700,
-            color: tokens['fg'],
-            letterSpacing: '-0.005em',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          {meta.label}
-        </span>
-        <span
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 7,
-            fontWeight: 600,
-            color: tokens['fg-muted'],
-            letterSpacing: '0.10em',
-            textTransform: 'uppercase',
-            marginLeft: 'auto',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {meta.role === 'base' ? meta.mode : meta.role}
-        </span>
-      </div>
+      {/* Label */}
+      <span
+        style={{
+          fontFamily: 'var(--font-ui)',
+          fontSize: 11,
+          fontWeight: 700,
+          color: tokens['fg'],
+          letterSpacing: '-0.005em',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+        }}
+      >
+        {meta.label}
+      </span>
     </button>
   )
 }
@@ -223,8 +207,8 @@ export function ThemePickerInline() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {/* Header: label + active pill + count */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      {/* Header: label + active name + hint */}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
         <span
           style={{
             fontFamily: 'var(--font-ui)',
@@ -239,14 +223,10 @@ export function ThemePickerInline() {
         <span
           style={{
             fontFamily: 'var(--font-mono)',
-            fontSize: 9,
-            fontWeight: 700,
-            color: 'var(--fg)',
-            letterSpacing: '0.10em',
-            textTransform: 'uppercase',
-            padding: '2px 6px',
-            background: 'var(--surface-2)',
-            borderRadius: 4,
+            fontSize: 10,
+            fontWeight: 600,
+            color: 'var(--fg-subtle)',
+            letterSpacing: '0.06em',
           }}
         >
           {activeMeta.label}
@@ -256,13 +236,12 @@ export function ThemePickerInline() {
             marginLeft: 'auto',
             fontFamily: 'var(--font-mono)',
             fontSize: 9,
-            fontWeight: 700,
-            color: 'var(--fg-muted)',
-            letterSpacing: '0.10em',
-            textTransform: 'uppercase',
+            fontWeight: 600,
+            color: 'var(--fg-subtle)',
+            letterSpacing: '0.06em',
           }}
         >
-          {themeKeys.length} themes
+          tap to switch
         </span>
       </div>
 

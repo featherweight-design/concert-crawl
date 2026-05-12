@@ -9,20 +9,29 @@ const STATUS_STYLE: Record<
   { label: string; color: string }
 > = {
   confirmed: { label: 'confirmed', color: 'var(--success)' },
-  pending: { label: 'pending', color: 'var(--fg-subtle)' },
-  disputed: { label: 'disputed', color: 'var(--warning)' },
+  pending: { label: 'pending', color: 'var(--warning)' },
+  disputed: { label: 'disputed', color: 'var(--danger)' },
 }
 
+const FALLBACK_STYLE = { label: 'pending', color: 'var(--warning)' }
+
 export function StatusPill({ status }: StatusPillProps) {
-  const { label, color } = STATUS_STYLE[status]
+  const { label, color } = STATUS_STYLE[status] ?? FALLBACK_STYLE
   return (
     <span
-      className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em]"
       style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        padding: '2px 7px',
+        borderRadius: 999,
         fontFamily: 'var(--font-mono)',
+        fontSize: 9,
+        fontWeight: 700,
+        letterSpacing: '0.10em',
+        textTransform: 'uppercase' as const,
         color,
-        background: `color-mix(in srgb, ${color} 12%, transparent)`,
-        border: `1px solid color-mix(in srgb, ${color} 30%, transparent)`,
+        background: `color-mix(in oklch, ${color} 10%, transparent)`,
+        border: `1px solid ${color}`,
       }}
     >
       {label}
