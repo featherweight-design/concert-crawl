@@ -18,6 +18,7 @@ export const EDIT_PROFILE_FORM_ID = 'edit-profile-form'
 
 interface EditProfileFormProps {
   profile: UserProfileResponse
+  onClose?: () => void
 }
 
 type HandleError = 'tooShort' | 'invalidChars' | 'reserved' | 'taken' | null
@@ -37,7 +38,7 @@ const MONO_BTN: React.CSSProperties = {
   textTransform: 'uppercase',
 }
 
-export function EditProfileForm({ profile }: EditProfileFormProps) {
+export function EditProfileForm({ profile, onClose }: EditProfileFormProps) {
   const router = useRouter()
   const { getToken } = useAuth()
 
@@ -50,15 +51,6 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [checkingAvailability, setCheckingAvailability] = useState(false)
-  const [isDesktop, setIsDesktop] = useState(false)
-
-  useEffect(() => {
-    const mql = window.matchMedia('(min-width: 640px)')
-    setIsDesktop(mql.matches)
-    const handler = (ev: MediaQueryListEvent) => setIsDesktop(ev.matches)
-    mql.addEventListener('change', handler)
-    return () => mql.removeEventListener('change', handler)
-  }, [])
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hadHandleBefore = profile.handle !== null
@@ -119,8 +111,12 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
         city: city === '' ? null : city,
         avatarColor,
       })
-      router.push('/me')
       router.refresh()
+      if (onClose) {
+        onClose()
+      } else {
+        router.push('/me')
+      }
     } catch (err) {
       setSaveError(
         err instanceof Error ? err.message : 'Something went wrong. Try again.',
@@ -134,16 +130,33 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
     <div className="mx-auto max-w-md">
       {/* Header with Cancel + Save */}
       <div className="flex items-center justify-between border-b border-border px-4 py-4">
-        <Link
-          href="/me"
-          style={{
-            ...MONO_BTN,
-            color: 'var(--fg-muted)',
-            textDecoration: 'none',
-          }}
-        >
-          ← Cancel
-        </Link>
+        {onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              ...MONO_BTN,
+              color: 'var(--fg-muted)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+            }}
+          >
+            ← Cancel
+          </button>
+        ) : (
+          <Link
+            href="/me"
+            style={{
+              ...MONO_BTN,
+              color: 'var(--fg-muted)',
+              textDecoration: 'none',
+            }}
+          >
+            ← Cancel
+          </Link>
+        )}
         <span className="text-[15px] font-bold text-fg">Edit profile</span>
         <button
           type="submit"
@@ -292,33 +305,6 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
       </form>
     </div>
   )
-
-  if (isDesktop) {
-    return (
-      <>
-        {/* Scrim */}
-        <div
-          className="fixed inset-0 z-50"
-          style={{ background: 'rgba(0,0,0,0.6)' }}
-          onClick={() => router.push('/me')}
-        />
-        {/* Modal */}
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Edit profile"
-          className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl"
-          style={{
-            background: 'var(--bg)',
-            border: '1px solid var(--border)',
-            boxShadow: '0 24px 60px rgba(0,0,0,0.4)',
-          }}
-        >
-          {formContent}
-        </div>
-      </>
-    )
-  }
 
   return formContent
 }

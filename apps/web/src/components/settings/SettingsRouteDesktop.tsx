@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { Avatar } from './Avatar'
 import { CredChip } from './CredChip'
@@ -8,6 +8,7 @@ import { PlanCard } from './PlanCard'
 import { ThemePickerInline } from './ThemePickerInline'
 import { MySubmissionsList } from './MySubmissionsList'
 import { DangerZone } from './DangerZone'
+import { EditProfileForm } from './EditProfileForm'
 import { SETTINGS_COPY } from './definitions/copy'
 import { CCClusterMark } from '@/components/brand/cc-cluster-mark/CCClusterMark'
 import { CCWordmark } from '@/components/brand/cc-wordmark/CCWordmark'
@@ -111,6 +112,19 @@ export function SettingsRouteDesktop({
   submissions,
 }: SettingsRouteDesktopProps) {
   const [activeSection, setActiveSection] = useState<NavSection>('profile')
+  const [editOpen, setEditOpen] = useState(false)
+
+  const openEdit = useCallback(() => setEditOpen(true), [])
+  const closeEdit = useCallback(() => setEditOpen(false), [])
+
+  useEffect(() => {
+    if (!editOpen) return
+    function handleKey(ev: KeyboardEvent) {
+      if (ev.key === 'Escape') setEditOpen(false)
+    }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [editOpen])
 
   const isAnon = !profile.handle
   const confirmedCount = submissions.filter(
@@ -162,16 +176,17 @@ export function SettingsRouteDesktop({
             </span>
           )}
         </div>
-        <Link
-          href="/me/edit"
-          className="shrink-0 rounded-lg border px-3 py-1.5 text-[12.5px] font-bold text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+        <button
+          type="button"
+          onClick={openEdit}
+          className="shrink-0 cursor-pointer rounded-lg border px-3 py-1.5 text-[12.5px] font-bold text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
           style={{
             background: 'var(--surface-2)',
             borderColor: 'var(--border-strong)',
           }}
         >
           Edit
-        </Link>
+        </button>
       </div>
       {/* Context info card */}
       {!isAnon ? (
@@ -192,13 +207,18 @@ export function SettingsRouteDesktop({
             your prices (and the option to be tagged when someone confirms one),
             pick a handle.
           </p>
-          <Link
-            href="/me/edit"
-            className="mt-3 inline-flex rounded-xl px-4 py-2.5 text-[13px] font-bold"
-            style={{ background: 'var(--signal)', color: 'var(--bg)' }}
+          <button
+            type="button"
+            onClick={openEdit}
+            className="mt-3 inline-flex cursor-pointer rounded-xl px-4 py-2.5 text-[13px] font-bold"
+            style={{
+              background: 'var(--signal)',
+              color: 'var(--bg)',
+              border: 'none',
+            }}
           >
             Pick a handle
-          </Link>
+          </button>
         </div>
       )}
     </div>
@@ -454,6 +474,37 @@ export function SettingsRouteDesktop({
           </div>
         </main>
       </div>
+
+      {/* Edit profile modal — appears over settings page */}
+      {editOpen && (
+        <>
+          {/* Scrim with blur */}
+          <div
+            className="fixed inset-0 z-50"
+            style={{
+              background: 'var(--scrim, rgba(0,0,0,0.55))',
+              backdropFilter: 'blur(6px)',
+              WebkitBackdropFilter: 'blur(6px)',
+            }}
+            onClick={closeEdit}
+          />
+          {/* Dialog */}
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Edit profile"
+            className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl"
+            style={{
+              background: 'var(--bg-elevated, var(--bg))',
+              border: '1px solid var(--border-strong, var(--border))',
+              boxShadow: '0 32px 80px rgba(0,0,0,0.5)',
+            }}
+            onClick={(ev) => ev.stopPropagation()}
+          >
+            <EditProfileForm profile={profile} onClose={closeEdit} />
+          </div>
+        </>
+      )}
     </div>
   )
 }
