@@ -14,43 +14,43 @@ importers:
   .:
     devDependencies:
       '@commitlint/cli':
-        specifier: ^19.0.0
+        specifier: 19.8.1
         version: 19.8.1(@types/node@25.6.0)(typescript@6.0.3)
       '@commitlint/config-conventional':
-        specifier: ^19.0.0
+        specifier: 19.8.1
         version: 19.8.1
       '@semantic-release/changelog':
-        specifier: ^6.0.0
+        specifier: 6.0.3
         version: 6.0.3(semantic-release@24.2.9(typescript@6.0.3))
       '@semantic-release/commit-analyzer':
-        specifier: ^13.0.0
+        specifier: 13.0.1
         version: 13.0.1(semantic-release@24.2.9(typescript@6.0.3))
       '@semantic-release/git':
-        specifier: ^10.0.0
+        specifier: 10.0.1
         version: 10.0.1(semantic-release@24.2.9(typescript@6.0.3))
       '@semantic-release/github':
-        specifier: ^11.0.0
+        specifier: 11.0.6
         version: 11.0.6(semantic-release@24.2.9(typescript@6.0.3))
       '@semantic-release/npm':
-        specifier: ^12.0.0
+        specifier: 12.0.2
         version: 12.0.2(semantic-release@24.2.9(typescript@6.0.3))
       '@semantic-release/release-notes-generator':
-        specifier: ^14.0.0
+        specifier: 14.1.1
         version: 14.1.1(semantic-release@24.2.9(typescript@6.0.3))
       husky:
-        specifier: ^9.0.0
+        specifier: 9.1.7
         version: 9.1.7
       lint-staged:
-        specifier: ^15.0.0
+        specifier: 15.5.2
         version: 15.5.2
       prettier:
-        specifier: ^3.0.0
+        specifier: 3.8.3
         version: 3.8.3
       semantic-release:
-        specifier: ^24.0.0
+        specifier: 24.2.9
         version: 24.2.9(typescript@6.0.3)
       turbo:
-        specifier: ^2.0.0
+        specifier: 2.9.6
         version: 2.9.6
 
   apps/api:
@@ -7190,7 +7190,7 @@ snapshots:
   '@commitlint/config-validator@19.8.1':
     dependencies:
       '@commitlint/types': 19.8.1
-      ajv: 8.18.0
+      ajv: 8.20.0
 
   '@commitlint/ensure@19.8.1':
     dependencies:
@@ -8495,7 +8495,7 @@ snapshots:
       read-pkg: 9.0.1
       registry-auth-token: 5.1.1
       semantic-release: 24.2.9(typescript@6.0.3)
-      semver: 7.7.4
+      semver: 7.8.0
       tempy: 3.2.0
 
   '@semantic-release/release-notes-generator@14.1.1(semantic-release@24.2.9(typescript@6.0.3))':
@@ -8861,7 +8861,7 @@ snapshots:
 
   '@types/conventional-commits-parser@5.0.2':
     dependencies:
-      '@types/node': 20.19.39
+      '@types/node': 20.19.40
 
   '@types/eslint-scope@3.7.7':
     dependencies:
@@ -9702,7 +9702,7 @@ snapshots:
       conventional-commits-filter: 5.0.0
       handlebars: 4.7.9
       meow: 13.2.0
-      semver: 7.7.4
+      semver: 7.8.0
 
   conventional-commits-filter@5.0.0: {}
 
@@ -12368,7 +12368,7 @@ snapshots:
       p-reduce: 3.0.0
       read-package-up: 11.0.0
       resolve-from: 5.0.0
-      semver: 7.7.4
+      semver: 7.8.0
       semver-diff: 5.0.0
       signale: 1.4.0
       yargs: 17.7.2
@@ -12378,7 +12378,7 @@ snapshots:
 
   semver-diff@5.0.0:
     dependencies:
-      semver: 7.7.4
+      semver: 7.8.0
 
   semver-regex@4.0.5: {}
 
