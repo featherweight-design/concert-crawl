@@ -273,9 +273,9 @@ usersRouter.get('/me/submissions', async (ctx) => {
     date: string | null
     priceMin: string
     priceMax: string | null
-    tier: string | null
+    tier: string
     corroborationCount: number
-    submittedAt: Date | null
+    submittedAt: Date
     status: string | null
   }
 
@@ -312,9 +312,9 @@ usersRouter.get('/me/submissions', async (ctx) => {
     date: row.date ?? '',
     priceMin: Math.round(parseFloat(row.priceMin) * 100),
     priceMax: row.priceMax ? Math.round(parseFloat(row.priceMax) * 100) : null,
-    tier: row.tier ?? 'GA',
+    tier: row.tier,
     corroborationCount: row.corroborationCount,
-    submittedAt: row.submittedAt?.toISOString() ?? new Date().toISOString(),
+    submittedAt: row.submittedAt.toISOString(),
     status: mapStatus(row.status ?? 'pending'),
   }))
 

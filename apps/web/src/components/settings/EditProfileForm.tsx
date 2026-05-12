@@ -262,7 +262,7 @@ export function EditProfileForm({ profile, onClose }: EditProfileFormProps) {
           )}
           {!handleError && !isGoingAnonymous && (
             <span className="text-[12px] text-fg-subtle">
-              Lowercase letters, numbers, underscores only.
+              {SETTINGS_COPY.handleHint}
             </span>
           )}
           {isGoingAnonymous && (

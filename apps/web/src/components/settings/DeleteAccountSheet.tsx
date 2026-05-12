@@ -192,7 +192,21 @@ export function DeleteAccountSheet({
         </h2>
 
         <p className="text-[14px] leading-relaxed text-fg-muted">
-          {SETTINGS_COPY.dangerZone.deleteSheetBody}
+          <strong style={{ color: 'var(--danger)' }}>
+            This can&apos;t be undone.
+          </strong>{' '}
+          Your handle
+          {handle ? (
+            <>
+              {' '}
+              <strong>@{handle}</strong>,
+            </>
+          ) : (
+            ','
+          )}{' '}
+          email, and plan are deleted. {submissionCount ?? 0} submitted{' '}
+          {submissionCount === 1 ? 'price stays' : 'prices stay'} on the public
+          record — your name is removed from them.
         </p>
 
         <div className="flex flex-col gap-1.5">

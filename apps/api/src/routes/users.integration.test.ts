@@ -170,6 +170,53 @@ describe('GET /v1/users/me/submissions', () => {
     expect(body.data[0]?.status).toBe('confirmed')
     expect(body.data[0]?.priceMin).toBe(4000)
   })
+
+  it('returns tier, corroborationCount, and submittedAt fields', async () => {
+    setAuth()
+    await clearTables()
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id)
+    await seedPriceSubmission(event.id, 'user_test123', { priceMin: '25' })
+
+    const res = await app.request('/v1/users/me/submissions', {
+      headers: { Authorization: 'Bearer test' },
+    })
+    const body = (await res.json()) as {
+      success: boolean
+      data: Array<{
+        tier: string
+        corroborationCount: number
+        submittedAt: string
+      }>
+    }
+    expect(body.success).toBe(true)
+    expect(body.data[0]?.tier).toBe('GA')
+    expect(body.data[0]?.corroborationCount).toBe(0)
+    expect(typeof body.data[0]?.submittedAt).toBe('string')
+    expect(new Date(body.data[0]?.submittedAt ?? '').getTime()).not.toBeNaN()
+  })
+
+  it('returns submissions newest-first', async () => {
+    setAuth()
+    await clearTables()
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id)
+    await seedPriceSubmission(event.id, 'user_test123', { priceMin: '10' })
+    await seedPriceSubmission(event.id, 'user_test123', { priceMin: '20' })
+
+    const res = await app.request('/v1/users/me/submissions', {
+      headers: { Authorization: 'Bearer test' },
+    })
+    const body = (await res.json()) as {
+      success: boolean
+      data: Array<{ submittedAt: string }>
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.length).toBe(2)
+    const first = new Date(body.data[0]?.submittedAt ?? '').getTime()
+    const second = new Date(body.data[1]?.submittedAt ?? '').getTime()
+    expect(first).toBeGreaterThanOrEqual(second)
+  })
 })
 
 describe('GET /v1/users/handle-availability', () => {

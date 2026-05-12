@@ -336,7 +336,7 @@ export interface UserSubmissionItem {
   date: string // ISO YYYY-MM-DD
   priceMin: number // cents (integer)
   priceMax: number | null
-  tier: string // GA | Reserved | VIP | Pit | Lawn
+  tier: Tier
   corroborationCount: number // fans who confirmed this price
   submittedAt: string // ISO timestamp
   status: SubmissionDisplayStatus
