@@ -15,24 +15,25 @@
 
 ## File Map
 
-| Action | Path |
-|---|---|
+| Action | Path                                                                            |
+| ------ | ------------------------------------------------------------------------------- |
 | Modify | `.github/workflows/ci.yml` — add `security-audit` job + `permissions: read-all` |
-| Modify | `.github/workflows/release.yml` — add `permissions: read-all` workflow floor |
-| Modify | `.github/workflows/deploy-staging.yml` — add `permissions: read-all` |
-| Modify | `.github/workflows/crawler.yml` — add `permissions: read-all` |
-| Modify | `.github/workflows/crawler-staging.yml` — add `permissions: read-all` |
-| Modify | `.github/workflows/smoke.yml` — add `permissions: read-all` |
-| Modify | `.github/workflows/staging-e2e.yml` — add `permissions: read-all` |
-| Create | `.github/dependabot.yml` — Dependabot config for npm + Actions |
-| Create | `.github/workflows/dependabot-auto-merge.yml` — auto-approve/merge patch PRs |
-| Modify | `package.json` — `onlyBuiltDependencies: []` + exact version pins |
+| Modify | `.github/workflows/release.yml` — add `permissions: read-all` workflow floor    |
+| Modify | `.github/workflows/deploy-staging.yml` — add `permissions: read-all`            |
+| Modify | `.github/workflows/crawler.yml` — add `permissions: read-all`                   |
+| Modify | `.github/workflows/crawler-staging.yml` — add `permissions: read-all`           |
+| Modify | `.github/workflows/smoke.yml` — add `permissions: read-all`                     |
+| Modify | `.github/workflows/staging-e2e.yml` — add `permissions: read-all`               |
+| Create | `.github/dependabot.yml` — Dependabot config for npm + Actions                  |
+| Create | `.github/workflows/dependabot-auto-merge.yml` — auto-approve/merge patch PRs    |
+| Modify | `package.json` — `onlyBuiltDependencies: []` + exact version pins               |
 
 ---
 
 ## Task 1: Add `pnpm audit` job to CI + workflow-level permissions
 
 **Files:**
+
 - Modify: `.github/workflows/ci.yml`
 
 This task adds two things to `ci.yml` simultaneously: a `security-audit` job that runs `pnpm audit --audit-level=high`, and `permissions: read-all` at the workflow level. No tests are needed — GitHub Actions validates workflow syntax at push time.
@@ -100,6 +101,7 @@ git commit -m "chore(ci): add pnpm audit job and read-all permissions to CI work
 ## Task 2: Add `permissions: read-all` to remaining five workflows
 
 **Files:**
+
 - Modify: `.github/workflows/release.yml`
 - Modify: `.github/workflows/deploy-staging.yml`
 - Modify: `.github/workflows/crawler.yml`
@@ -165,6 +167,7 @@ git commit -m "chore(ci): add permissions: read-all to all remaining workflows"
 ## Task 3: Create `.github/dependabot.yml`
 
 **Files:**
+
 - Create: `.github/dependabot.yml`
 
 - [ ] **Step 1: Create `.github/dependabot.yml`**
@@ -213,6 +216,7 @@ git commit -m "chore(deps): add Dependabot config for npm and GitHub Actions"
 ## Task 4: Create Dependabot auto-merge workflow
 
 **Files:**
+
 - Create: `.github/workflows/dependabot-auto-merge.yml`
 
 This workflow auto-approves and enables auto-merge for patch-level Dependabot PRs. It requires `pull-requests: write` and `contents: write` at the workflow level (the minimum for `gh pr review` and `gh pr merge`). It uses `dependabot/fetch-metadata` to distinguish patch from minor/major updates.
@@ -268,11 +272,14 @@ git commit -m "chore(ci): add Dependabot auto-merge workflow for patch updates"
 ## Task 5: Add install-script allowlist to `package.json`
 
 **Files:**
+
 - Modify: `package.json`
 
-pnpm's `onlyBuiltDependencies` config key is an explicit allowlist of package names permitted to run postinstall/install lifecycle scripts. Setting it to an empty array blocks all install scripts. This is safe: the lockfile currently has zero `requiresBuild` entries — no dep in this tree uses install scripts (esbuild 0.27+ uses optional peer deps for platform binaries instead of postinstall).
+pnpm's `onlyBuiltDependencies` config key is an explicit allowlist of package names permitted to run postinstall/install lifecycle scripts. Any package not in the list is silently blocked at install time.
 
-- [ ] **Step 1: Add `onlyBuiltDependencies: []` to the `pnpm` key in `package.json`**
+**Note:** Starting with an empty array and running `pnpm install` will reveal which packages in the current dep tree run install scripts (they appear as warnings). Add any legitimate ones to the allowlist before committing.
+
+- [ ] **Step 1: Add `onlyBuiltDependencies` to the `pnpm` key in `package.json`**
 
 The current `pnpm` key in `package.json`:
 
@@ -286,7 +293,7 @@ The current `pnpm` key in `package.json`:
 }
 ```
 
-Update it to:
+Update it to (allowlist reflects packages that legitimately run install scripts in this dep tree):
 
 ```json
 "pnpm": {
@@ -295,7 +302,7 @@ Update it to:
     "ip-address": "^10.2.0",
     "postcss": "^8.5.14"
   },
-  "onlyBuiltDependencies": []
+  "onlyBuiltDependencies": ["@clerk/shared", "@sentry/cli", "esbuild", "msw", "sharp", "unrs-resolver"]
 }
 ```
 
@@ -306,7 +313,7 @@ cd /Users/huey/Projects/concert-crawl/.worktrees/chore/supply-chain-security
 pnpm install --frozen-lockfile
 ```
 
-Expected: install completes with no errors. If any package prints a warning about a blocked install script, that package must be added to `onlyBuiltDependencies` by name (e.g. `["esbuild"]`).
+Expected: install completes with no warnings about blocked install scripts.
 
 - [ ] **Step 3: Commit**
 
@@ -321,6 +328,7 @@ git commit -m "chore(security): block all dependency install scripts via onlyBui
 ## Task 6: Pin exact versions for root `devDependencies`
 
 **Files:**
+
 - Modify: `package.json`
 
 Replace all `^` ranges in `devDependencies` with exact versions taken directly from `pnpm-lock.yaml`. This prevents a fresh `pnpm install --no-frozen-lockfile` from silently resolving a newer (potentially compromised) version.

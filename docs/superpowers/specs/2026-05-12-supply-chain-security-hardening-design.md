@@ -8,11 +8,13 @@
 ## Current Posture
 
 **Already solid:**
+
 - `--frozen-lockfile` on every `pnpm install` across all 6 workflows
 - `pnpm.overrides` in root `package.json` patching 3 known-vulnerable transitive deps
 - Job-level timeouts on all CI jobs
 
 **Gaps:**
+
 - No `pnpm audit` in CI — known-critical vulnerabilities not flagged on PRs
 - No Dependabot — no automated dependency updates for npm or GitHub Actions
 - No auto-merge for Dependabot patch PRs — stale dep backlogs are a known security hygiene failure
@@ -35,6 +37,7 @@ Add a `security-audit` job to `ci.yml` that runs in parallel with typecheck/lint
 Create `.github/dependabot.yml` with two ecosystems:
 
 **npm** (`package-ecosystem: npm`):
+
 - Directory: `/` (root, pnpm workspaces auto-discovered)
 - Schedule: weekly on Monday
 - Groups: `dev-dependencies` (all devDependencies together), `production-dependencies` separately
@@ -42,6 +45,7 @@ Create `.github/dependabot.yml` with two ecosystems:
 - Labels: `dependencies`, `automated`
 
 **GitHub Actions** (`package-ecosystem: github-actions`):
+
 - Directory: `/`
 - Schedule: weekly on Monday
 - Labels: `dependencies`, `automated`
@@ -62,17 +66,22 @@ The workflow needs `pull-requests: write` and `contents: write` permissions.
 
 ### 4. Install-Script Allowlist
 
-Add `onlyBuiltDependencies: []` to the `pnpm` key in root `package.json`. This tells pnpm to block all postinstall/install lifecycle scripts from running for any dependency.
+Add `onlyBuiltDependencies` to the `pnpm` key in root `package.json` with an explicit allowlist of package names permitted to run postinstall/install lifecycle scripts. Any package not in the list is silently blocked. This directly closes the attack vector used by Mini Shai-Hulud, which hijacked `prepare` hooks to execute at install time.
 
-This is safe: the lockfile currently has zero `requiresBuild` entries — no dependency in the tree currently relies on install scripts (esbuild 0.27+ uses optional peer deps for platform binaries instead). This directly closes the attack vector used by Mini Shai-Hulud, which hijacked `prepare` hooks to execute at install time.
+During implementation, running `pnpm install` with an empty array revealed 10 packages that legitimately run install scripts: `@clerk/shared`, `@sentry/cli`, `esbuild` (multiple versions), `msw`, `sharp`, and `unrs-resolver`. The shipped allowlist is:
 
-If a future dependency legitimately needs an install script (e.g. a native addon), add it explicitly to the array by name.
+```json
+"onlyBuiltDependencies": ["@clerk/shared", "@sentry/cli", "esbuild", "msw", "sharp", "unrs-resolver"]
+```
+
+If a future dependency legitimately needs an install script, add it explicitly to this list by name.
 
 ### 5. Minimal Workflow Permissions
 
 Add `permissions: read-all` at the top-level of every workflow that doesn't currently declare permissions. This sets the default for all jobs in that workflow to read-only. Jobs that need write access declare it explicitly at the job level.
 
 Workflows and their required elevations:
+
 - `ci.yml` — `read-all` at workflow level; no job needs write
 - `release.yml` — already declares `contents: write`, `issues: write`, `pull-requests: write` at job level; add `permissions: read-all` at workflow level as a floor
 - `deploy-staging.yml` — `read-all` at workflow level; no job needs write (uses deploy hook URLs)
@@ -86,6 +95,7 @@ Workflows and their required elevations:
 Replace `^` ranges with exact versions in root `package.json` `devDependencies`. The current lockfile already pins these via `pnpm-lock.yaml`, but the `package.json` ranges mean a fresh `pnpm install --no-frozen-lockfile` (e.g. in a new environment or after manual lockfile deletion) could resolve newer, potentially compromised versions.
 
 Current → exact versions (from what's already resolved in the lockfile):
+
 - `turbo`: `^2.0.0` → `2.9.6`
 - `prettier`: `^3.0.0` → `3.8.3`
 - `@commitlint/cli`: `^19.0.0` → `19.8.1`
