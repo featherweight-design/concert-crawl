@@ -19,10 +19,24 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Auto-approve and merge patch updates
-        if: steps.metadata.outputs.update-type == 'version-update:semver-patch'
+      # Patch bumps for npm packages: auto-approve and merge after CI passes
+      - name: Auto-approve and merge npm patch updates
+        if: |
+          steps.metadata.outputs.package-ecosystem == 'npm' &&
+          steps.metadata.outputs.update-type == 'version-update:semver-patch'
         run: |
-          gh pr review "$PR_URL" --approve --body "Auto-approving patch update."
+          gh pr review "$PR_URL" --approve --body "Auto-approving npm patch update."
+          gh pr merge "$PR_URL" --auto --rebase
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # GH Actions bumps (any semver tier): auto-approve and merge after CI passes.
+      # Actions version bumps carry low application risk.
+      - name: Auto-approve and merge GitHub Actions updates
+        if: steps.metadata.outputs.package-ecosystem == 'github-actions'
+        run: |
+          gh pr review "$PR_URL" --approve --body "Auto-approving GitHub Actions update."
           gh pr merge "$PR_URL" --auto --rebase
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}

@@ -6,21 +6,35 @@ updates:
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 20
     labels:
       - dependencies
       - automated
     groups:
-      dev-dependencies:
-        dependency-type: development
-      production-dependencies:
-        dependency-type: production
+      # Patch bumps: auto-merged by dependabot-auto-merge.yml after CI passes
+      npm-patch-updates:
+        update-types:
+          - patch
+      # Minor bumps: batched for human review, but low-risk
+      npm-minor-updates:
+        update-types:
+          - minor
+      # Major bumps: intentionally ungrouped — one PR per package so each
+      # breaking change gets its own focused review and migration PR
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
       day: monday
+    open-pull-requests-limit: 10
     labels:
       - dependencies
       - automated
+    groups:
+      # GH Actions version bumps are low-risk; batch all update types together
+      github-actions-updates:
+        update-types:
+          - major
+          - minor
+          - patch
