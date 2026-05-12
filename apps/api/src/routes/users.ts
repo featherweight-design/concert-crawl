@@ -1,7 +1,7 @@
 // apps/api/src/routes/users.ts
 import { Hono } from 'hono'
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
-import { eq, count, ne, and } from 'drizzle-orm'
+import { eq, count, ne, and, desc } from 'drizzle-orm'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import {
@@ -273,6 +273,9 @@ usersRouter.get('/me/submissions', async (ctx) => {
     date: string | null
     priceMin: string
     priceMax: string | null
+    tier: string | null
+    corroborationCount: number
+    submittedAt: Date | null
     status: string | null
   }
 
@@ -285,6 +288,9 @@ usersRouter.get('/me/submissions', async (ctx) => {
       date: events.date,
       priceMin: priceSubmissions.priceMin,
       priceMax: priceSubmissions.priceMax,
+      tier: priceSubmissions.tier,
+      corroborationCount: priceSubmissions.corroborationCount,
+      submittedAt: priceSubmissions.createdAt,
       status: priceSubmissions.status,
     })
     .from(priceSubmissions)
@@ -296,7 +302,7 @@ usersRouter.get('/me/submissions', async (ctx) => {
         ne(priceSubmissions.status, 'stale'),
       ),
     )
-    .orderBy(priceSubmissions.createdAt)
+    .orderBy(desc(priceSubmissions.createdAt))
 
   const data: UserSubmissionItem[] = rows.map((row) => ({
     id: row.id,
@@ -306,6 +312,9 @@ usersRouter.get('/me/submissions', async (ctx) => {
     date: row.date ?? '',
     priceMin: Math.round(parseFloat(row.priceMin) * 100),
     priceMax: row.priceMax ? Math.round(parseFloat(row.priceMax) * 100) : null,
+    tier: row.tier ?? 'GA',
+    corroborationCount: row.corroborationCount,
+    submittedAt: row.submittedAt?.toISOString() ?? new Date().toISOString(),
     status: mapStatus(row.status ?? 'pending'),
   }))
 
