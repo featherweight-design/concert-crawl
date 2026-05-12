@@ -1,3 +1,16 @@
+# [1.8.0](https://github.com/HartiganHM/concert-crawl/compare/v1.7.3...v1.8.0) (2026-05-12)
+
+
+### Bug Fixes
+
+* **admin/events:** address Copilot review items ([d74afb0](https://github.com/HartiganHM/concert-crawl/commit/d74afb089f885824c0338ae2baeb4b3cb5cb71e6))
+* **admin/events:** close design gaps — filter rail, tabs, inspector layout, field styles ([31aacf6](https://github.com/HartiganHM/concert-crawl/commit/31aacf6fa3dd997846cea2dc92d440c5ecc667a9)), closes [#259](https://github.com/HartiganHM/concert-crawl/issues/259)
+
+
+### Features
+
+* **admin/events:** unified split-panel UI, accurate badge count, 500-event cap ([09852b8](https://github.com/HartiganHM/concert-crawl/commit/09852b834eb441e3007544563cc841e555d1355f)), closes [#256](https://github.com/HartiganHM/concert-crawl/issues/256) [#257](https://github.com/HartiganHM/concert-crawl/issues/257) [#258](https://github.com/HartiganHM/concert-crawl/issues/258) [#259](https://github.com/HartiganHM/concert-crawl/issues/259) [#260](https://github.com/HartiganHM/concert-crawl/issues/260)
+
 ## [1.7.3](https://github.com/HartiganHM/concert-crawl/compare/v1.7.2...v1.7.3) (2026-05-12)
 
 
