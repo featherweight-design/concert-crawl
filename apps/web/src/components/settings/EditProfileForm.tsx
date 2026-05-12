@@ -12,8 +12,6 @@ import {
   RESERVED_HANDLES,
   AVATAR_COLORS,
 } from './definitions/constants'
-import { CCClusterMark } from '@/components/brand/cc-cluster-mark/CCClusterMark'
-import { CCWordmark } from '@/components/brand/cc-wordmark/CCWordmark'
 import type { AvatarColor, UserProfileResponse } from '@concert-crawl/types'
 
 export const EDIT_PROFILE_FORM_ID = 'edit-profile-form'
@@ -297,32 +295,28 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
 
   if (isDesktop) {
     return (
-      <div className="flex min-h-screen flex-col">
-        {/* Topbar */}
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-bg-elevated px-6">
-          <div className="flex items-center gap-2">
-            <CCClusterMark size={24} color="var(--signal)" />
-            <CCWordmark size={18} />
-          </div>
-          <Link
-            href="/me"
-            className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-fg"
-            style={{ fontFamily: 'var(--font-mono)' }}
-          >
-            ← Settings
-          </Link>
-        </header>
-
-        {/* Centered form card */}
-        <div className="flex flex-1 items-start justify-center px-6 py-10">
-          <div
-            className="w-full max-w-lg overflow-hidden rounded-2xl border border-border"
-            style={{ background: 'var(--surface-1)' }}
-          >
-            {formContent}
-          </div>
+      <>
+        {/* Scrim */}
+        <div
+          className="fixed inset-0 z-50"
+          style={{ background: 'rgba(0,0,0,0.6)' }}
+          onClick={() => router.push('/me')}
+        />
+        {/* Modal */}
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Edit profile"
+          className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl"
+          style={{
+            background: 'var(--bg)',
+            border: '1px solid var(--border)',
+            boxShadow: '0 24px 60px rgba(0,0,0,0.4)',
+          }}
+        >
+          {formContent}
         </div>
-      </div>
+      </>
     )
   }
 
