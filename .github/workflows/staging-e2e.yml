@@ -3,6 +3,8 @@ name: Staging E2E
 on:
   workflow_dispatch:
 
+permissions: read-all
+
 jobs:
   e2e:
     name: Playwright E2E (staging)

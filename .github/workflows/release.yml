@@ -10,6 +10,8 @@ concurrency:
   group: release
   cancel-in-progress: false
 
+permissions: read-all
+
 jobs:
   release:
     name: Release

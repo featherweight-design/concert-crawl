@@ -12,6 +12,8 @@ concurrency:
   group: deploy-staging
   cancel-in-progress: false
 
+permissions: read-all
+
 jobs:
   deploy-api:
     name: Deploy API (staging)

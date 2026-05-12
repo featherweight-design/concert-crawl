@@ -6,6 +6,8 @@ on:
     - cron: '0 10 * * *'
   workflow_dispatch:
 
+permissions: read-all
+
 jobs:
   crawl:
     name: Run daily crawler (production)
