@@ -209,7 +209,7 @@ pricesAdminRouter.get('/activity', async (ctx) => {
     .from(priceRetrievalLog)
     .leftJoin(events, eq(priceRetrievalLog.eventId, events.id))
     .leftJoin(venues, eq(events.venueId, venues.id))
-    .orderBy(desc(priceRetrievalLog.attemptedAt))
+    .orderBy(asc(events.date), desc(priceRetrievalLog.attemptedAt))
     .limit(100)
 
   return ctx.json({ success: true, data: rows })
