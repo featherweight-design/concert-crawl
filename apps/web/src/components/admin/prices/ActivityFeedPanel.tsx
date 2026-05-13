@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { Filter } from 'lucide-react'
 import {
   Panel,
   AdminTable,
@@ -45,51 +46,138 @@ interface ActivityFeedPanelProps {
 }
 
 export const ActivityFeedPanel = ({ activity }: ActivityFeedPanelProps) => {
-  const sources = [
-    'all',
-    ...Array.from(new Set(activity.map((row) => row.source))).sort(),
-  ]
-  const [selectedSource, setSelectedSource] = useState<string>('all')
+  const sources = Array.from(new Set(activity.map((row) => row.source))).sort()
+  const [selectedSource, setSelectedSource] = useState<string>('')
+  const [filterOpen, setFilterOpen] = useState(false)
+  const filterRef = useRef<HTMLDivElement>(null)
 
   const filtered =
-    selectedSource === 'all'
+    selectedSource === ''
       ? activity
       : activity.filter((row) => row.source === selectedSource)
+
+  const filtersActive = selectedSource !== ''
+
+  useEffect(() => {
+    function handleClick(event: MouseEvent) {
+      if (
+        filterOpen &&
+        filterRef.current &&
+        !filterRef.current.contains(event.target as Node)
+      ) {
+        setFilterOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [filterOpen])
 
   return (
     <Panel
       title="Recent pipeline activity"
       padding={0}
       action={
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-          {sources.map((src) => {
-            const isActive = selectedSource === src
-            return (
-              <button
-                key={src}
-                onClick={() => setSelectedSource(src)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  height: 24,
-                  padding: '0 8px',
-                  borderRadius: 6,
-                  fontSize: 11,
-                  fontWeight: 600,
-                  fontFamily: "'Inter', sans-serif",
-                  cursor: 'pointer',
-                  border: `1px solid ${isActive ? 'var(--signal)' : 'var(--border)'}`,
-                  background: isActive
-                    ? 'rgba(var(--signal-rgb, 99,102,241),0.08)'
-                    : 'transparent',
-                  color: isActive ? 'var(--signal)' : 'var(--fg-muted)',
-                  transition: 'background 0.1s, color 0.1s, border-color 0.1s',
-                }}
-              >
-                {src}
-              </button>
-            )
-          })}
+        <div ref={filterRef} style={{ position: 'relative' }}>
+          <button
+            onClick={() => setFilterOpen((prev) => !prev)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              height: 28,
+              padding: '0 10px',
+              borderRadius: 6,
+              fontSize: 12,
+              fontWeight: 600,
+              border: `1px solid ${filtersActive ? 'var(--signal)' : 'var(--border)'}`,
+              background: filtersActive
+                ? 'rgba(var(--signal-rgb, 99,102,241),0.08)'
+                : 'transparent',
+              color: filtersActive ? 'var(--signal)' : 'var(--fg-muted)',
+              cursor: 'pointer',
+            }}
+          >
+            <Filter size={13} />
+            {filtersActive ? selectedSource : 'Filter'}
+          </button>
+          {filterOpen && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 'calc(100% + 6px)',
+                right: 0,
+                zIndex: 10,
+                width: 200,
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border)',
+                borderRadius: 10,
+                boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+                padding: 12,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10,
+              }}
+            >
+              <div>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    color: 'var(--fg-subtle)',
+                    marginBottom: 6,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Source
+                </label>
+                <select
+                  value={selectedSource}
+                  onChange={(ev) => {
+                    setSelectedSource(ev.target.value)
+                    setFilterOpen(false)
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '4px 8px',
+                    borderRadius: 6,
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg)',
+                    color: 'var(--fg)',
+                    fontSize: 12,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="">All sources</option>
+                  {sources.map((src) => (
+                    <option key={src} value={src}>
+                      {src}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {filtersActive && (
+                <button
+                  onClick={() => {
+                    setSelectedSource('')
+                    setFilterOpen(false)
+                  }}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: 6,
+                    border: '1px solid var(--border)',
+                    background: 'transparent',
+                    color: 'var(--fg-muted)',
+                    fontSize: 12,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Clear filter
+                </button>
+              )}
+            </div>
+          )}
         </div>
       }
     >
@@ -121,19 +209,27 @@ export const ActivityFeedPanel = ({ activity }: ActivityFeedPanelProps) => {
                   </div>
                 </TD>
                 <TD>
-                  <StatusBadge kind="signal" variant="outline">
-                    {row.source}
-                  </StatusBadge>
                   <div
                     style={{
-                      fontSize: 11,
-                      color: 'var(--fg-subtle)',
-                      fontFamily: "'JetBrains Mono', monospace",
-                      marginTop: 2,
-                      whiteSpace: 'nowrap',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      gap: 2,
                     }}
                   >
-                    {formatTimestamp(row.attemptedAt)}
+                    <StatusBadge kind="signal" variant="outline">
+                      {row.source}
+                    </StatusBadge>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: 'var(--fg-subtle)',
+                        fontFamily: "'JetBrains Mono', monospace",
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {formatTimestamp(row.attemptedAt)}
+                    </div>
                   </div>
                 </TD>
                 <TD>
