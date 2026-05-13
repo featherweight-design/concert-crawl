@@ -1,3 +1,20 @@
+# [1.10.0](https://github.com/HartiganHM/concert-crawl/compare/v1.9.2...v1.10.0) (2026-05-13)
+
+
+### Bug Fixes
+
+* **admin/prices:** address Copilot review items ([c82b508](https://github.com/HartiganHM/concert-crawl/commit/c82b508b51059dbecfae299c24d925117091daaf))
+* **admin/prices:** replace source pills with Filter dropdown, left-align source+timestamp ([6aae969](https://github.com/HartiganHM/concert-crawl/commit/6aae96982e90cbcab42fb1e2f984b60c1c80efdf))
+* **admin/prices:** sort activity by event date asc, then attempt time desc ([ac38522](https://github.com/HartiganHM/concert-crawl/commit/ac38522e066e482cf2dde70489086bbcd852049a))
+* **admin/prices:** sort events ascending, timestamp as source subtext, filter pill style ([293147b](https://github.com/HartiganHM/concert-crawl/commit/293147b88e0fdf1807f5815c1c9e3b5fac8fc491))
+* **admin/prices:** surface source+latency in activity feed; move panels above table; cap height ([6d48895](https://github.com/HartiganHM/concert-crawl/commit/6d48895475af3b7b3ca5d949e0cbb8a826eacc4d))
+
+
+### Features
+
+* **admin/prices:** activity feed, source health panel, pipeline trigger, responsive layout ([b91fa5a](https://github.com/HartiganHM/concert-crawl/commit/b91fa5afd88c0bbe7bcccc7afc5e2d88906139fc)), closes [#317](https://github.com/HartiganHM/concert-crawl/issues/317)
+* **admin/prices:** source filter + full timestamp in activity feed ([b9d372b](https://github.com/HartiganHM/concert-crawl/commit/b9d372b53ef73020834214187ad72a07db4e0a5f))
+
 ## [1.9.2](https://github.com/HartiganHM/concert-crawl/compare/v1.9.1...v1.9.2) (2026-05-13)
 
 
