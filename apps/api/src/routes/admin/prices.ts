@@ -193,7 +193,7 @@ pricesAdminRouter.patch(
   },
 )
 
-// GET /v1/admin/prices/activity — last 50 price retrieval attempts with event + venue context
+// GET /v1/admin/prices/activity — last 100 price retrieval attempts with event + venue context
 pricesAdminRouter.get('/activity', async (ctx) => {
   const rows = await db
     .select({
@@ -201,14 +201,16 @@ pricesAdminRouter.get('/activity', async (ctx) => {
       eventTitle: events.title,
       venueName: venues.name,
       date: events.date,
+      source: priceRetrievalLog.source,
       outcome: priceRetrievalLog.outcome,
-      updatedAt: priceRetrievalLog.attemptedAt,
+      latencyMs: priceRetrievalLog.latencyMs,
+      attemptedAt: priceRetrievalLog.attemptedAt,
     })
     .from(priceRetrievalLog)
     .leftJoin(events, eq(priceRetrievalLog.eventId, events.id))
     .leftJoin(venues, eq(events.venueId, venues.id))
     .orderBy(desc(priceRetrievalLog.attemptedAt))
-    .limit(50)
+    .limit(100)
 
   return ctx.json({ success: true, data: rows })
 })

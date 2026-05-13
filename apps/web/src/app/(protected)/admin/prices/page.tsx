@@ -42,8 +42,10 @@ interface ActivityRow {
   eventTitle: string | null
   venueName: string | null
   date: string
+  source: string
   outcome: string
-  updatedAt: string
+  latencyMs: number
+  attemptedAt: string
 }
 
 interface HealthStat {
@@ -193,6 +195,164 @@ export default async function AdminPricesPage() {
         />
       </div>
 
+      {/* Activity + Health — above the event table, side-by-side on wide, stacked on narrow */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns:
+            'repeat(auto-fill, minmax(min(100%, 480px), 1fr))',
+          gap: 24,
+          alignItems: 'start',
+        }}
+      >
+        {/* Activity feed */}
+        <Panel title="Recent pipeline activity" padding={0}>
+          <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+            <AdminTable>
+              <THead sticky>
+                <tr>
+                  <TH>Event</TH>
+                  <TH>Source</TH>
+                  <TH>Outcome</TH>
+                  <TH>Latency</TH>
+                  <TH>When</TH>
+                </tr>
+              </THead>
+              <tbody>
+                {activity.map((row, idx) => (
+                  <TR key={`${row.eventId}-${row.source}-${idx}`}>
+                    <TD>
+                      <div style={{ fontWeight: 500, fontSize: 13 }}>
+                        {row.eventTitle ?? row.eventId}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: 'var(--fg-subtle)',
+                          fontFamily: "'JetBrains Mono', monospace",
+                        }}
+                      >
+                        {row.venueName ?? '—'} · {row.date}
+                      </div>
+                    </TD>
+                    <TD>
+                      <StatusBadge kind="signal" variant="outline">
+                        {row.source}
+                      </StatusBadge>
+                    </TD>
+                    <TD>
+                      <StatusBadge
+                        kind={OUTCOME_KIND[row.outcome] ?? 'neutral'}
+                        dot
+                      >
+                        {row.outcome}
+                      </StatusBadge>
+                    </TD>
+                    <TD mono color="var(--fg-muted)">
+                      {row.latencyMs}ms
+                    </TD>
+                    <TD color="var(--fg-muted)">
+                      <RelTime iso={row.attemptedAt} />
+                    </TD>
+                  </TR>
+                ))}
+                {activity.length === 0 && (
+                  <TR>
+                    <TD colSpan={5} color="var(--fg-subtle)">
+                      No pipeline activity yet.
+                    </TD>
+                  </TR>
+                )}
+              </tbody>
+            </AdminTable>
+          </div>
+        </Panel>
+
+        {/* Source health */}
+        <Panel title="Source health" padding={0}>
+          <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+            <AdminTable>
+              <THead sticky>
+                <tr>
+                  <TH>Source</TH>
+                  <TH align="right" mono>
+                    Attempts
+                  </TH>
+                  <TH align="right" mono>
+                    Hits
+                  </TH>
+                  <TH align="right" mono>
+                    Rate
+                  </TH>
+                  <TH>Last attempt</TH>
+                </tr>
+              </THead>
+              <tbody>
+                {sourceHealth.map((row) => (
+                  <TR key={row.source}>
+                    <TD>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <StatusBadge
+                          kind={row.flagged ? 'danger' : 'signal'}
+                          variant="outline"
+                        >
+                          {row.source}
+                        </StatusBadge>
+                        {row.flagged && (
+                          <StatusBadge kind="danger" dot>
+                            flagged
+                          </StatusBadge>
+                        )}
+                      </div>
+                    </TD>
+                    <TD align="right" mono color="var(--fg-muted)">
+                      {row.total}
+                    </TD>
+                    <TD align="right" mono color="var(--fg-muted)">
+                      {row.hits}
+                    </TD>
+                    <TD
+                      align="right"
+                      mono
+                      color={
+                        row.hitRate === 0
+                          ? 'var(--danger)'
+                          : row.hitRate < 50
+                            ? 'var(--warning)'
+                            : 'var(--success)'
+                      }
+                    >
+                      {row.hitRate}%
+                    </TD>
+                    <TD color="var(--fg-muted)">
+                      {row.lastAttemptedAt !== null ? (
+                        <RelTime iso={row.lastAttemptedAt} />
+                      ) : (
+                        <span style={{ color: 'var(--fg-subtle)' }}>—</span>
+                      )}
+                    </TD>
+                  </TR>
+                ))}
+                {sourceHealth.length === 0 && (
+                  <TR>
+                    <TD colSpan={5} color="var(--fg-subtle)">
+                      No retrieval data yet.
+                    </TD>
+                  </TR>
+                )}
+              </tbody>
+            </AdminTable>
+          </div>
+        </Panel>
+      </div>
+
       {/* Event prices table */}
       <Panel title="Event prices" padding={0}>
         <AdminTable>
@@ -302,156 +462,6 @@ export default async function AdminPricesPage() {
           </tbody>
         </AdminTable>
       </Panel>
-
-      {/* Activity + Health — side by side on wide screens, stacked on narrow */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns:
-            'repeat(auto-fill, minmax(min(100%, 480px), 1fr))',
-          gap: 24,
-          alignItems: 'start',
-        }}
-      >
-        {/* Activity feed */}
-        <Panel title="Recent pipeline activity" padding={0}>
-          <AdminTable>
-            <THead>
-              <tr>
-                <TH>Event</TH>
-                <TH>Venue</TH>
-                <TH>Outcome</TH>
-                <TH>When</TH>
-              </tr>
-            </THead>
-            <tbody>
-              {activity.map((row, idx) => (
-                <TR key={`${row.eventId}-${idx}`}>
-                  <TD>
-                    <div style={{ fontWeight: 500, fontSize: 13 }}>
-                      {row.eventTitle ?? row.eventId}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 11,
-                        color: 'var(--fg-subtle)',
-                        fontFamily: "'JetBrains Mono', monospace",
-                      }}
-                    >
-                      {row.date}
-                    </div>
-                  </TD>
-                  <TD color="var(--fg-muted)">
-                    {row.venueName ?? (
-                      <span style={{ color: 'var(--fg-subtle)' }}>—</span>
-                    )}
-                  </TD>
-                  <TD>
-                    <StatusBadge
-                      kind={OUTCOME_KIND[row.outcome] ?? 'neutral'}
-                      dot
-                    >
-                      {row.outcome}
-                    </StatusBadge>
-                  </TD>
-                  <TD color="var(--fg-muted)">
-                    <RelTime iso={row.updatedAt} />
-                  </TD>
-                </TR>
-              ))}
-              {activity.length === 0 && (
-                <TR>
-                  <TD colSpan={4} color="var(--fg-subtle)">
-                    No pipeline activity yet.
-                  </TD>
-                </TR>
-              )}
-            </tbody>
-          </AdminTable>
-        </Panel>
-
-        {/* Source health */}
-        <Panel title="Source health" padding={0}>
-          <AdminTable>
-            <THead>
-              <tr>
-                <TH>Source</TH>
-                <TH align="right" mono>
-                  Attempts
-                </TH>
-                <TH align="right" mono>
-                  Hits
-                </TH>
-                <TH align="right" mono>
-                  Rate
-                </TH>
-                <TH>Last attempt</TH>
-              </tr>
-            </THead>
-            <tbody>
-              {sourceHealth.map((row) => (
-                <TR key={row.source}>
-                  <TD>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        flexWrap: 'wrap',
-                      }}
-                    >
-                      <StatusBadge
-                        kind={row.flagged ? 'danger' : 'signal'}
-                        variant="outline"
-                      >
-                        {row.source}
-                      </StatusBadge>
-                      {row.flagged && (
-                        <StatusBadge kind="danger" dot>
-                          flagged
-                        </StatusBadge>
-                      )}
-                    </div>
-                  </TD>
-                  <TD align="right" mono color="var(--fg-muted)">
-                    {row.total}
-                  </TD>
-                  <TD align="right" mono color="var(--fg-muted)">
-                    {row.hits}
-                  </TD>
-                  <TD
-                    align="right"
-                    mono
-                    color={
-                      row.hitRate === 0
-                        ? 'var(--danger)'
-                        : row.hitRate < 50
-                          ? 'var(--warning)'
-                          : 'var(--success)'
-                    }
-                  >
-                    {row.hitRate}%
-                  </TD>
-                  <TD color="var(--fg-muted)">
-                    {row.lastAttemptedAt !== null ? (
-                      <RelTime iso={row.lastAttemptedAt} />
-                    ) : (
-                      <span style={{ color: 'var(--fg-subtle)' }}>—</span>
-                    )}
-                  </TD>
-                </TR>
-              ))}
-              {sourceHealth.length === 0 && (
-                <TR>
-                  <TD colSpan={5} color="var(--fg-subtle)">
-                    No retrieval data yet.
-                  </TD>
-                </TR>
-              )}
-            </tbody>
-          </AdminTable>
-        </Panel>
-      </div>
     </div>
   )
 }
