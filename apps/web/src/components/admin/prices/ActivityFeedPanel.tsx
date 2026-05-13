@@ -62,33 +62,34 @@ export const ActivityFeedPanel = ({ activity }: ActivityFeedPanelProps) => {
       padding={0}
       action={
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-          {sources.map((src) => (
-            <button
-              key={src}
-              onClick={() => setSelectedSource(src)}
-              style={{
-                padding: '2px 10px',
-                borderRadius: 999,
-                fontSize: 11,
-                fontWeight: 600,
-                fontFamily: "'Inter', sans-serif",
-                cursor: 'pointer',
-                border:
-                  selectedSource === src
-                    ? '1px solid var(--signal)'
-                    : '1px solid var(--border-strong)',
-                background:
-                  selectedSource === src ? 'var(--signal)' : 'transparent',
-                color:
-                  selectedSource === src
-                    ? 'var(--fg-on-accent)'
-                    : 'var(--fg-muted)',
-                transition: 'background 0.1s, color 0.1s, border-color 0.1s',
-              }}
-            >
-              {src}
-            </button>
-          ))}
+          {sources.map((src) => {
+            const isActive = selectedSource === src
+            return (
+              <button
+                key={src}
+                onClick={() => setSelectedSource(src)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  height: 24,
+                  padding: '0 8px',
+                  borderRadius: 6,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  fontFamily: "'Inter', sans-serif",
+                  cursor: 'pointer',
+                  border: `1px solid ${isActive ? 'var(--signal)' : 'var(--border)'}`,
+                  background: isActive
+                    ? 'rgba(var(--signal-rgb, 99,102,241),0.08)'
+                    : 'transparent',
+                  color: isActive ? 'var(--signal)' : 'var(--fg-muted)',
+                  transition: 'background 0.1s, color 0.1s, border-color 0.1s',
+                }}
+              >
+                {src}
+              </button>
+            )
+          })}
         </div>
       }
     >
@@ -100,7 +101,6 @@ export const ActivityFeedPanel = ({ activity }: ActivityFeedPanelProps) => {
               <TH>Source</TH>
               <TH>Outcome</TH>
               <TH>Latency</TH>
-              <TH>Timestamp</TH>
             </tr>
           </THead>
           <tbody>
@@ -124,6 +124,17 @@ export const ActivityFeedPanel = ({ activity }: ActivityFeedPanelProps) => {
                   <StatusBadge kind="signal" variant="outline">
                     {row.source}
                   </StatusBadge>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: 'var(--fg-subtle)',
+                      fontFamily: "'JetBrains Mono', monospace",
+                      marginTop: 2,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {formatTimestamp(row.attemptedAt)}
+                  </div>
                 </TD>
                 <TD>
                   <StatusBadge
@@ -136,23 +147,11 @@ export const ActivityFeedPanel = ({ activity }: ActivityFeedPanelProps) => {
                 <TD mono color="var(--fg-muted)">
                   {row.latencyMs}ms
                 </TD>
-                <TD>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: 'var(--fg)',
-                      fontFamily: "'JetBrains Mono', monospace",
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {formatTimestamp(row.attemptedAt)}
-                  </div>
-                </TD>
               </TR>
             ))}
             {filtered.length === 0 && (
               <TR>
-                <TD colSpan={5} color="var(--fg-subtle)">
+                <TD colSpan={4} color="var(--fg-subtle)">
                   {activity.length === 0
                     ? 'No pipeline activity yet.'
                     : `No activity for source "${selectedSource}".`}

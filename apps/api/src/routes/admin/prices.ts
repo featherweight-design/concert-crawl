@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { and, count, desc, eq, max, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, max, sql } from 'drizzle-orm'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import {
@@ -46,7 +46,7 @@ pricesAdminRouter.get('/events', async (ctx) => {
     .from(events)
     .leftJoin(venues, eq(events.venueId, venues.id))
     .where(eq(events.status, 'upcoming'))
-    .orderBy(desc(events.date))
+    .orderBy(asc(events.date))
     .limit(100)
 
   return ctx.json({ success: true, data: rows } as const)
