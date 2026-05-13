@@ -13,27 +13,10 @@ vi.mock('@concert-crawl/db', () => ({
 }))
 
 vi.mock('../tier1-structured-data.js', () => ({ tier1StructuredData: vi.fn() }))
-vi.mock('../tier2-ticketmaster.js', () => ({ tier2Ticketmaster: vi.fn() }))
-vi.mock('../tier3-eventbrite-dice.js', () => ({
-  tier3EventbriteDice: vi
-    .fn()
-    .mockResolvedValue({ eventbrite: null, dice: null }),
-}))
-vi.mock('../tier4-songkick-bandsintown.js', () => ({
-  tier4SongkickBandsintown: vi
-    .fn()
-    .mockResolvedValue({ songkick: null, bandsintown: null }),
-}))
-vi.mock('../tier5-seatgeek.js', () => ({ tier5SeatGeek: vi.fn() }))
 vi.mock('../tier6-community.js', () => ({ tier6Community: vi.fn() }))
 
 const { runPricePipeline } = await import('../index.js')
 const { tier1StructuredData } = await import('../tier1-structured-data.js')
-const { tier2Ticketmaster } = await import('../tier2-ticketmaster.js')
-const { tier3EventbriteDice } = await import('../tier3-eventbrite-dice.js')
-const { tier4SongkickBandsintown } =
-  await import('../tier4-songkick-bandsintown.js')
-const { tier5SeatGeek } = await import('../tier5-seatgeek.js')
 const { tier6Community } = await import('../tier6-community.js')
 const { db } = await import('@concert-crawl/db')
 
@@ -46,12 +29,6 @@ const ctx: PipelineContext = {
 
 beforeEach(() => {
   vi.mocked(tier1StructuredData).mockResolvedValue(null)
-  vi.mocked(tier2Ticketmaster).mockResolvedValue(null)
-  vi.mocked(tier3EventbriteDice).mockResolvedValue({
-    eventbrite: null,
-    dice: null,
-  })
-  vi.mocked(tier5SeatGeek).mockResolvedValue(null)
   vi.mocked(tier6Community).mockResolvedValue(null)
 })
 
@@ -65,39 +42,40 @@ describe('runPricePipeline', () => {
       source: 'structured_data',
     })
     await runPricePipeline(ctx)
-    expect(tier2Ticketmaster).not.toHaveBeenCalled()
+    expect(tier6Community).not.toHaveBeenCalled()
     const insertMock = vi.mocked(db.insert)
     expect(insertMock).toHaveBeenCalledWith(expect.anything())
     expect(vi.mocked(db.update)).toHaveBeenCalled()
   })
 
-  it('logs a miss and continues to next tier when tier returns null', async () => {
+  it('logs a miss on tier 1 and continues to tier 6', async () => {
     vi.mocked(tier1StructuredData).mockResolvedValue(null)
-    vi.mocked(tier2Ticketmaster).mockResolvedValue({
+    vi.mocked(tier6Community).mockResolvedValue({
       priceMin: 55,
       priceMax: null,
-      source: 'ticketmaster',
+      source: 'community',
     })
     await runPricePipeline(ctx)
-    expect(tier6Community).not.toHaveBeenCalled()
+    expect(tier6Community).toHaveBeenCalledWith(ctx)
+    expect(vi.mocked(db.update)).toHaveBeenCalled()
   })
 
-  it('logs an error and continues when tier throws', async () => {
+  it('logs an error on tier 1 and continues to tier 6', async () => {
     vi.mocked(tier1StructuredData).mockRejectedValue(
       new Error('network failure'),
     )
-    vi.mocked(tier2Ticketmaster).mockResolvedValue({
+    vi.mocked(tier6Community).mockResolvedValue({
       priceMin: 30,
       priceMax: 60,
-      source: 'ticketmaster',
+      source: 'community',
     })
     await runPricePipeline(ctx)
-    expect(tier6Community).not.toHaveBeenCalled()
+    expect(tier6Community).toHaveBeenCalledWith(ctx)
   })
 
-  it('reaches tier 6 when all previous tiers return null', async () => {
+  it('stamps pipelineExhaustedAt when both tiers return null', async () => {
     await runPricePipeline(ctx)
-    expect(tier4SongkickBandsintown).toHaveBeenCalledWith(ctx)
     expect(tier6Community).toHaveBeenCalledWith(ctx)
+    expect(vi.mocked(db.update)).toHaveBeenCalled()
   })
 })
