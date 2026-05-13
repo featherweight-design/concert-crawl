@@ -63,6 +63,16 @@ export type Vendor =
   | 'Eventbrite'
   | 'VenueBoxOffice'
 
+// Ticket vendor — lower-cased for pipeline
+export type TicketVendor =
+  | 'axs'
+  | 'ticketmaster'
+  | 'seatgeek'
+  | 'dice'
+  | 'eventbrite'
+  | 'venue_box_office'
+  | 'unknown'
+
 // How the submitter found the price
 export type HowFound = 'bought_myself' | 'saw_listing' | 'at_the_venue'
 
@@ -110,6 +120,8 @@ export interface Venue {
   blockedAt: string | null
   extractionStrategy: ExtractionStrategy | null
   contactEmail: string | null
+  priceUrl: string | null
+  ticketVendor: TicketVendor | null
   createdAt: string
   updatedAt: string
 }
@@ -173,6 +185,7 @@ export interface Event {
   ticketPriceMin: string | null
   ticketPriceMax: string | null
   priceSource: PriceSource | null
+  pipelineExhaustedAt: string | null
   description: string | null
   imageUrl: string | null
   genre: string[] | null
