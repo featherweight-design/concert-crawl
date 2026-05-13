@@ -76,6 +76,67 @@ describe('runPricePipeline', () => {
   it('stamps pipelineExhaustedAt when both tiers return null', async () => {
     await runPricePipeline(ctx)
     expect(tier6Community).toHaveBeenCalledWith(ctx)
-    expect(vi.mocked(db.update)).toHaveBeenCalled()
+    // db.update always returns the same mock chain; retrieve set's call args
+    // from the mock results without calling db.update again.
+    const setMock = vi.mocked(db.update).mock.results[0]?.value?.set as
+      | ReturnType<typeof vi.fn>
+      | undefined
+    const setCallArgs = (setMock?.mock?.calls ?? []).map(
+      (callArgs: unknown[]) => callArgs[0],
+    )
+    const exhaustedCall = setCallArgs.find(
+      (args: unknown) =>
+        typeof args === 'object' &&
+        args !== null &&
+        'pipelineExhaustedAt' in args,
+    )
+    expect(exhaustedCall).toBeDefined()
+  })
+
+  it('does NOT stamp pipelineExhaustedAt when tier 1 hits', async () => {
+    vi.mocked(tier1StructuredData).mockResolvedValue({
+      priceMin: 25,
+      priceMax: 50,
+      source: 'structured_data',
+    })
+    await runPricePipeline(ctx)
+    expect(tier6Community).not.toHaveBeenCalled()
+    const setMock = vi.mocked(db.update).mock.results[0]?.value?.set as
+      | ReturnType<typeof vi.fn>
+      | undefined
+    const setCallArgs = (setMock?.mock?.calls ?? []).map(
+      (callArgs: unknown[]) => callArgs[0],
+    )
+    const exhaustedCall = setCallArgs.find(
+      (args: unknown) =>
+        typeof args === 'object' &&
+        args !== null &&
+        'pipelineExhaustedAt' in args,
+    )
+    expect(exhaustedCall).toBeUndefined()
+  })
+
+  it('does NOT stamp pipelineExhaustedAt when tier 6 hits', async () => {
+    vi.mocked(tier1StructuredData).mockResolvedValue(null)
+    vi.mocked(tier6Community).mockResolvedValue({
+      priceMin: 15,
+      priceMax: null,
+      source: 'community',
+    })
+    await runPricePipeline(ctx)
+    expect(tier6Community).toHaveBeenCalledWith(ctx)
+    const setMock = vi.mocked(db.update).mock.results[0]?.value?.set as
+      | ReturnType<typeof vi.fn>
+      | undefined
+    const setCallArgs = (setMock?.mock?.calls ?? []).map(
+      (callArgs: unknown[]) => callArgs[0],
+    )
+    const exhaustedCall = setCallArgs.find(
+      (args: unknown) =>
+        typeof args === 'object' &&
+        args !== null &&
+        'pipelineExhaustedAt' in args,
+    )
+    expect(exhaustedCall).toBeUndefined()
   })
 })
