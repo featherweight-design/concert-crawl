@@ -148,6 +148,13 @@
       "when": 1778710000001,
       "tag": "0020_ticket_vendor",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1778710000002,
+      "tag": "0021_pipeline_exhausted_at",
+      "breakpoints": true
     }
   ]
 }

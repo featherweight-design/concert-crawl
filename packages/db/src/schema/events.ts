@@ -47,6 +47,9 @@ export const events = pgTable(
     ticketPriceMin: numeric('ticket_price_min', { precision: 10, scale: 2 }),
     ticketPriceMax: numeric('ticket_price_max', { precision: 10, scale: 2 }),
     priceSource: priceSourceEnum('price_source'),
+    pipelineExhaustedAt: timestamp('pipeline_exhausted_at', {
+      withTimezone: true,
+    }),
     description: text('description'),
     imageUrl: text('image_url'),
     genre: text('genre').array(),
