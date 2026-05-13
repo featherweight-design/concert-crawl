@@ -83,7 +83,6 @@ Go to each service in the Render dashboard → **Environment** tab. `DATABASE_UR
 | `RESEND_API_KEY`        | From Step 3                                                        |
 | `SENTRY_DSN`            | API project DSN from Step 3                                        |
 | `SENTRY_ENVIRONMENT`    | `production`                                                       |
-| `TICKETMASTER_API_KEY`  | From Ticketmaster developer portal (price pipeline)                |
 | `LOG_LEVEL`             | `info`                                                             |
 | `NODE_ENV`              | `production`                                                       |
 
