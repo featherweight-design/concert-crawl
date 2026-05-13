@@ -1,3 +1,11 @@
+## [1.10.1](https://github.com/HartiganHM/concert-crawl/compare/v1.10.0...v1.10.1) (2026-05-13)
+
+
+### Bug Fixes
+
+* **crawler:** bump Playwright to 1.60.0 and flush Sentry before exit ([6176d5f](https://github.com/HartiganHM/concert-crawl/commit/6176d5fe20dbea76661ab4bdd3f9b9972218ac07)), closes [#319](https://github.com/HartiganHM/concert-crawl/issues/319)
+* **crawler:** flush Sentry on success path; guard flush against rejection ([50ab52e](https://github.com/HartiganHM/concert-crawl/commit/50ab52edf4e52ed2d8649955d9da31f8314f1412))
+
 # [1.10.0](https://github.com/HartiganHM/concert-crawl/compare/v1.9.2...v1.10.0) (2026-05-13)
 
 
