@@ -146,16 +146,13 @@ Go to the repository on GitHub → **Settings** → **Environments**.
 
 ### `production` environment — Variables (not secrets)
 
-| Variable        | Value                                              |
-| --------------- | -------------------------------------------------- |
-| `CRAWL_ENABLED` | `false` initially — see Step 9 for when to enable  |
-| `ADMIN_EMAIL`   | Your email address for crawl failure notifications |
+| Variable      | Value                                              |
+| ------------- | -------------------------------------------------- |
+| `ADMIN_EMAIL` | Your email address for crawl failure notifications |
 
 ### `staging` environment — Variables
 
-| Variable        | Value  |
-| --------------- | ------ |
-| `CRAWL_ENABLED` | `true` |
+No variables required.
 
 ### Repository-level variables (Settings → Variables, not environment-scoped)
 
@@ -235,24 +232,22 @@ Before opening the beta, generate invite codes for your initial cohort.
 
 ## Step 9 — Enable the Production Crawler
 
-The GitHub Actions daily crawler is gated by `CRAWL_ENABLED` in the `production` environment (set to `false` in Step 5). The Render cron jobs run on their own schedule once deployed and are always-on — suspend them in the Render dashboard if you need to pause crawling.
+The daily crawler runs as two Render Cron Jobs and is always-on once deployed. Suspend them in the Render dashboard if you need to pause crawling.
 
-**Do not enable until:**
+**Do not proceed until:**
 
-- At least one successful staging crawl run has completed (verify in GitHub Actions tab)
+- At least one successful staging crawl run has completed (verify in Render dashboard → `concert-crawl-crawler-daily` → **Logs**)
 - Production DB has venue records seeded (Step 6)
 - Step 8 passes (API healthy, app loads)
-
-**To enable the GitHub Actions crawler:**
-
-1. Go to **Settings** → **Environments** → `production`
-2. Under **Environment variables**, set `CRAWL_ENABLED` to `true`
-3. The crawler will run at the next scheduled time (3 AM MT), or trigger manually via **Actions** → **Daily Crawler (Production)** → **Run workflow**
 
 **To verify the Render cron jobs are running:**
 
 1. Render dashboard → `concert-crawl-crawler-triggers` → **Logs** — look for successful runs every 10 minutes
 2. Render dashboard → `concert-crawl-crawler-daily` → **Logs** — look for a successful 3 AM MT run
+
+**To trigger the daily crawl manually:**
+
+Render dashboard → `concert-crawl-crawler-daily` → **Triggers** → **Trigger deploy**.
 
 ---
 
