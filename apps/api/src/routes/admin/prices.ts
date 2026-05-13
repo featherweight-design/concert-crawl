@@ -68,11 +68,12 @@ pricesAdminRouter.get('/health', async (ctx) => {
     .groupBy(priceRetrievalLog.venueId, priceRetrievalLog.source)
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+  // "0 hits in 30 days": tried recently but never succeeded
   const autoFlagged = stats.filter(
     (stat) =>
       Number(stat.hitCount) === 0 &&
       stat.lastAttemptedAt != null &&
-      new Date(stat.lastAttemptedAt) < thirtyDaysAgo,
+      new Date(stat.lastAttemptedAt) >= thirtyDaysAgo,
   )
 
   return ctx.json({ success: true, data: { stats, autoFlagged } })

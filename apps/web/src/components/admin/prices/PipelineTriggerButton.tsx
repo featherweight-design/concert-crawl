@@ -48,6 +48,7 @@ export const PipelineTriggerButton = ({
       }
 
       setState('started')
+      setTimeout(() => setState('idle'), 3000)
     } catch (err) {
       setState('error')
       setErrorMessage(

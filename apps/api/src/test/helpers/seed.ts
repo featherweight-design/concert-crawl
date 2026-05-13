@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import {
   crawlRuns,
   events,
+  priceRetrievalLog,
   priceSubmissions,
   submissionConfirms,
   userEvents,
@@ -150,6 +151,26 @@ export async function seedSubmissionConfirm(
     .values({ submissionId, userId })
     .returning()
   if (!row) throw new Error('seedSubmissionConfirm: insert returned no rows')
+  return row
+}
+
+export async function seedPriceRetrievalLog(
+  eventId: string,
+  venueId: string,
+  overrides: Partial<typeof priceRetrievalLog.$inferInsert> = {},
+): Promise<typeof priceRetrievalLog.$inferSelect> {
+  const [row] = await testDb
+    .insert(priceRetrievalLog)
+    .values({
+      eventId,
+      venueId,
+      source: 'ticketmaster',
+      outcome: 'miss',
+      latencyMs: 100,
+      ...overrides,
+    })
+    .returning()
+  if (!row) throw new Error('seedPriceRetrievalLog: insert returned no rows')
   return row
 }
 

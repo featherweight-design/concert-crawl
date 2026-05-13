@@ -104,10 +104,11 @@ function aggregateBySource(stats: HealthStat[]): Array<{
       hits: data.hits,
       hitRate: data.total > 0 ? Math.round((data.hits / data.total) * 100) : 0,
       lastAttemptedAt: data.lastAttemptedAt,
+      // "0 hits in 30 days": tried recently but never succeeded
       flagged:
         data.hits === 0 &&
         data.lastAttemptedAt !== null &&
-        new Date(data.lastAttemptedAt) < thirtyDaysAgo,
+        new Date(data.lastAttemptedAt) >= thirtyDaysAgo,
     }))
     .sort((aa, bb) => bb.total - aa.total)
 }
@@ -135,8 +136,6 @@ export default async function AdminPricesPage() {
       .catch(() => ({ stats: [], autoFlagged: [] })),
   ])
 
-  const withPrices = priceEvents.filter((ev) => ev.priceMin !== null)
-  const noPrices = priceEvents.filter((ev) => ev.priceMin === null)
   const recentHits = priceEvents.filter((ev) => ev.lastOutcome === 'hit')
   const sourceHealth = aggregateBySource(health.stats)
   const flaggedCount = sourceHealth.filter((src) => src.flagged).length
@@ -161,14 +160,14 @@ export default async function AdminPricesPage() {
         />
         <StatCard
           label="With prices"
-          value={String(withPrices.length)}
+          value={String(coverage.withPrice)}
           iconName="TrendingUp"
           kind="success"
           hint={`${coverage.pct}% coverage`}
         />
         <StatCard
           label="No price data"
-          value={String(noPrices.length)}
+          value={String(coverage.total - coverage.withPrice)}
           iconName="AlertTriangle"
           kind="warning"
         />

@@ -59,17 +59,18 @@ export const ActivityFeedPanel = ({ activity }: ActivityFeedPanelProps) => {
   const filtersActive = selectedSource !== ''
 
   useEffect(() => {
-    function handleClick(event: MouseEvent) {
+    if (!filterOpen) return
+    function handlePointerDown(event: PointerEvent) {
       if (
-        filterOpen &&
         filterRef.current &&
-        !filterRef.current.contains(event.target as Node)
+        event.target instanceof Node &&
+        !filterRef.current.contains(event.target)
       ) {
         setFilterOpen(false)
       }
     }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
+    document.addEventListener('pointerdown', handlePointerDown)
+    return () => document.removeEventListener('pointerdown', handlePointerDown)
   }, [filterOpen])
 
   return (

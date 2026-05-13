@@ -28,6 +28,7 @@ import { createApp } from '../../app.js'
 import {
   clearTables,
   seedEvent,
+  seedPriceRetrievalLog,
   seedPriceSubmission,
   seedUserRole,
   seedVenue,
@@ -47,6 +48,75 @@ const ADMIN_HEADERS = {
   Authorization: 'Bearer admin-token',
   'Content-Type': 'application/json',
 }
+
+describe('GET /v1/admin/prices/activity', () => {
+  beforeEach(() => {
+    setAdminAuth()
+    return clearTables()
+  })
+
+  it('returns expected fields for each row', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, { date: '2026-06-15' })
+    await seedPriceRetrievalLog(event.id, venue.id, {
+      source: 'ticketmaster',
+      outcome: 'miss',
+      latencyMs: 42,
+    })
+
+    const res = await app.request('/v1/admin/prices/activity', {
+      headers: ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: Array<{
+        eventId: string
+        eventTitle: string | null
+        venueName: string | null
+        date: string
+        source: string
+        outcome: string
+        latencyMs: number
+        attemptedAt: string
+      }>
+    }
+    expect(body.success).toBe(true)
+    expect(body.data).toHaveLength(1)
+    const row = body.data[0]
+    expect(row?.eventId).toBe(event.id)
+    expect(row?.source).toBe('ticketmaster')
+    expect(row?.outcome).toBe('miss')
+    expect(row?.latencyMs).toBe(42)
+    expect(row?.attemptedAt).toBeDefined()
+  })
+
+  it('orders rows by event date ascending then attempt time descending', async () => {
+    const venue = await seedVenue()
+    const near = await seedEvent(venue.id, { date: '2026-06-01' })
+    const far = await seedEvent(venue.id, { date: '2026-12-01' })
+    await seedPriceRetrievalLog(far.id, venue.id, {
+      source: 'seatgeek',
+      outcome: 'miss',
+      latencyMs: 0,
+    })
+    await seedPriceRetrievalLog(near.id, venue.id, {
+      source: 'ticketmaster',
+      outcome: 'hit',
+      latencyMs: 50,
+    })
+
+    const res = await app.request('/v1/admin/prices/activity', {
+      headers: ADMIN_HEADERS,
+    })
+    const body = (await res.json()) as {
+      success: boolean
+      data: Array<{ eventId: string }>
+    }
+    expect(body.data[0]?.eventId).toBe(near.id)
+    expect(body.data[1]?.eventId).toBe(far.id)
+  })
+})
 
 describe('GET /v1/admin/prices/health', () => {
   beforeEach(() => {
@@ -131,11 +201,14 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
     await seedUserRole(userId)
     const submission = await seedPriceSubmission(event.id, userId)
 
-    const res = await app.request(`/v1/admin/prices/submissions/${submission.id}`, {
-      method: 'PATCH',
-      headers: ADMIN_HEADERS,
-      body: JSON.stringify({ status: 'corroborated' }),
-    })
+    const res = await app.request(
+      `/v1/admin/prices/submissions/${submission.id}`,
+      {
+        method: 'PATCH',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({ status: 'corroborated' }),
+      },
+    )
     expect(res.status).toBe(200)
 
     const [role] = await testDb
@@ -155,11 +228,14 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
       status: 'corroborated',
     })
 
-    const res = await app.request(`/v1/admin/prices/submissions/${submission.id}`, {
-      method: 'PATCH',
-      headers: ADMIN_HEADERS,
-      body: JSON.stringify({ status: 'corroborated' }),
-    })
+    const res = await app.request(
+      `/v1/admin/prices/submissions/${submission.id}`,
+      {
+        method: 'PATCH',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({ status: 'corroborated' }),
+      },
+    )
     expect(res.status).toBe(200)
 
     const [role] = await testDb
@@ -177,11 +253,14 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
       userId: null,
     })
 
-    const res = await app.request(`/v1/admin/prices/submissions/${submission.id}`, {
-      method: 'PATCH',
-      headers: ADMIN_HEADERS,
-      body: JSON.stringify({ status: 'corroborated' }),
-    })
+    const res = await app.request(
+      `/v1/admin/prices/submissions/${submission.id}`,
+      {
+        method: 'PATCH',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({ status: 'corroborated' }),
+      },
+    )
     expect(res.status).toBe(200)
     const body = (await res.json()) as { success: boolean }
     expect(body.success).toBe(true)
