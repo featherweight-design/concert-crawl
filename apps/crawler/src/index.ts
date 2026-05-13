@@ -1,4 +1,5 @@
 import './instrument.js'
+import * as Sentry from '@sentry/node'
 import { createLogger } from '@concert-crawl/logger'
 import { runDailyCrawl, runTriggeredCrawls } from './run.js'
 
@@ -27,7 +28,9 @@ main()
   .then(() => {
     process.exit(0)
   })
-  .catch((err) => {
+  .catch(async (err) => {
     logger.error({ err }, 'Fatal error in crawler')
+    Sentry.captureException(err)
+    await Sentry.flush(2000)
     process.exit(1)
   })
