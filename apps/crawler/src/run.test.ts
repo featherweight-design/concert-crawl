@@ -31,12 +31,19 @@ const mockDbUpdate = {
 const mockDbChain = {
   select: vi.fn().mockReturnThis(),
   from: vi.fn().mockReturnThis(),
+  leftJoin: vi.fn().mockReturnThis(),
   where: vi.fn().mockResolvedValue(mockVenues),
   update: vi.fn().mockReturnValue(mockDbUpdate),
 }
 vi.mock('@concert-crawl/db', () => ({
   db: mockDbChain,
-  venues: { id: 'id', name: 'name', active: 'active', verified: 'verified' },
+  venues: {
+    id: 'id',
+    name: 'name',
+    active: 'active',
+    verified: 'verified',
+    priceUrl: 'priceUrl',
+  },
   crawlTriggers: { id: 'id', venueId: 'venueId', status: 'status' },
   events: {
     id: 'id',
@@ -45,6 +52,7 @@ vi.mock('@concert-crawl/db', () => ({
     date: 'date',
     ticketUrl: 'ticketUrl',
     ticketPriceMin: 'ticketPriceMin',
+    pipelineExhaustedAt: 'pipelineExhaustedAt',
   },
 }))
 
@@ -106,6 +114,7 @@ describe('runDailyCrawl', () => {
     vi.clearAllMocks()
     mockDbChain.select.mockReturnThis()
     mockDbChain.from.mockReturnThis()
+    mockDbChain.leftJoin.mockReturnThis()
     mockDbChain.where.mockResolvedValue(mockVenues)
     mockDbChain.update.mockReturnValue(mockDbUpdate)
     mockCrawlVenue.mockResolvedValue(SUCCESSFUL_CRAWL_RUN)
@@ -212,6 +221,7 @@ describe('runDailyCrawl', () => {
       artist: 'Band A',
       date: '2026-06-01',
       ticketUrl: 'https://tickets.example.com/1',
+      priceUrl: null,
     })
   })
 
@@ -383,6 +393,7 @@ describe('runTriggeredCrawls', () => {
     mockDbChain.update.mockReturnValue(mockDbUpdate)
     mockDbChain.select.mockReturnThis()
     mockDbChain.from.mockReturnThis()
+    mockDbChain.leftJoin.mockReturnThis()
     mockDbChain.where.mockResolvedValue([])
     mockCrawlVenue.mockResolvedValue(SUCCESSFUL_CRAWL_RUN)
     mockBrowser.close.mockResolvedValue(undefined)
@@ -466,6 +477,7 @@ describe('runTriggeredCrawls', () => {
       artist: 'Artist X',
       date: '2026-06-15',
       ticketUrl: null,
+      priceUrl: null,
     })
   })
 
