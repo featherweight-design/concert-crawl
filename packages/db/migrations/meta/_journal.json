@@ -141,6 +141,13 @@
       "when": 1778710000000,
       "tag": "0019_venue_verified_by",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1778710000001,
+      "tag": "0020_ticket_vendor",
+      "breakpoints": true
     }
   ]
 }

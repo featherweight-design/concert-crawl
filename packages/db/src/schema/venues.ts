@@ -20,6 +20,16 @@ export const crawlWaitUntilEnum = pgEnum('crawl_wait_until', [
   'domcontentloaded',
 ])
 
+export const ticketVendorEnum = pgEnum('ticket_vendor', [
+  'axs',
+  'ticketmaster',
+  'seatgeek',
+  'dice',
+  'eventbrite',
+  'venue_box_office',
+  'unknown',
+])
+
 export const venues = pgTable('venues', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
@@ -47,6 +57,7 @@ export const venues = pgTable('venues', {
   crawlWaitForSelector: text('crawl_wait_for_selector'),
   contactEmail: text('contact_email'),
   priceUrl: text('price_url'),
+  ticketVendor: ticketVendorEnum('ticket_vendor'),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
