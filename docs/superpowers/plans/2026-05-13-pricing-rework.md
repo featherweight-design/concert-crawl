@@ -2,9 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Gut the dead API-polling tiers from the price pipeline, establish ticket vendor tracking on venues, make community price submission the hero feature, and fix the missing "Get Tickets" button for AXS events.
+**Goal:** Gut the dead API-polling tiers from the price pipeline, establish ticket vendor tracking on venues, fix the missing "Get Tickets" button for AXS events, and set up the infrastructure for community price submission as the hero feature (consumer UI deferred to follow-up PR pending design).
 
-**Architecture:** The price pipeline is simplified to tier 1 (JSON-LD structured data) + tier 6 (community submissions) — all middle tiers are removed because they produce zero hits and waste bandwidth. A `ticketVendor` enum column is added to venues (auto-detected on creation via HTML signal detection, admin-overridable). A `pipelineExhaustedAt` timestamp on events stops the pipeline from re-running after a full-miss pass. The community submission UI is promoted from a small footnote link to the primary price-surfacing mechanism when no price exists.
+**Architecture:** The price pipeline is simplified to tier 1 (JSON-LD structured data) + tier 6 (community submissions) — all middle tiers are removed because they produce zero hits and waste bandwidth. A `ticketVendor` enum column is added to venues (auto-detected on creation via HTML signal detection, admin-overridable, backfilled for existing venues). A `pipelineExhaustedAt` timestamp on events stops the pipeline from re-running after a full-miss pass. Consumer-facing community price UI changes (hero CTA + onboarding callout) are deferred to a follow-up branch once designs are delivered.
+
+**Two-PR strategy:**
+- **This PR (feat/pricing-rework):** Backend + admin + bug fix — Tasks 1-9. No consumer UI changes.
+- **Follow-up PR:** Consumer hero CTA + onboarding — Tasks 10-11. Blocked on design.
 
 **Tech Stack:** Drizzle ORM (migrations), Hono (API routes), Zod (validation), Next.js App Router, TypeScript strict mode, Vitest
 
@@ -29,11 +33,15 @@
 | `apps/api/src/lib/detect-ticket-vendor.ts` | Create | `detectTicketVendor(url)` — fetches homepage HTML, looks for AXS/TM/SeatGeek signals |
 | `apps/crawler/src/run.ts` | Modify | Skip events with `pipelineExhaustedAt` set; pass `priceUrl` to pipeline |
 | `packages/types/src/index.ts` | Modify | Already listed above |
-| `apps/web/src/components/consumer/PriceSection.tsx` | Modify | Render prominent submit CTA when no submissions exist (not null) |
-| `apps/web/src/components/consumer/SubmitPriceCardCta.tsx` | Modify | Upgrade copy + visual weight for the hero state |
 | `apps/web/src/app/(protected)/events/[id]/page.tsx` | Modify | Fall back to `venue.websiteUrl` when `ticketUrl` is null |
 | `apps/web/src/components/admin/VenueDetailsClient.tsx` | Modify | Add `ticketVendor` dropdown to venue edit form |
-| `apps/web/src/components/onboarding/steps/YoureIn.tsx` | Modify | Add community pricing callout paragraph |
+| `apps/api/.env.example` | Modify | Remove dead price pipeline API key vars |
+| `apps/crawler/.env.example` | Modify | Remove dead price pipeline API key vars |
+| `docs/runbooks/production-launch.md` | Modify | Remove `TICKETMASTER_API_KEY` row from concert-crawl-api env table |
+| `apps/api/scripts/backfill-ticket-vendor.ts` | Create | One-time script to detect + set `ticketVendor` for all existing venues |
+| `apps/web/src/components/consumer/PriceSection.tsx` | Modify | **Follow-up PR** — hero CTA when no submissions (blocked on design) |
+| `apps/web/src/components/consumer/SubmitPriceCardCta.tsx` | Modify | **Follow-up PR** — upgrade copy + visual weight (blocked on design) |
+| `apps/web/src/components/onboarding/steps/YoureIn.tsx` | Modify | **Follow-up PR** — community pricing callout (blocked on design) |
 
 ---
 
@@ -742,7 +750,320 @@ git commit -m "fix(web): fall back to venue websiteUrl when ticketUrl is null (c
 
 ---
 
-## Task 8: Make community price submission the hero feature
+## Task 8: Backfill `ticketVendor` for existing venues (one-time script)
+
+**Files:**
+- Create: `apps/api/scripts/backfill-ticket-vendor.ts`
+
+Existing venues were created before `ticket_vendor` existed and will have `NULL`. This script fetches each venue's homepage and writes the detected vendor.
+
+- [ ] **Step 1: Write the script**
+
+Create `apps/api/scripts/backfill-ticket-vendor.ts`:
+
+```ts
+/**
+ * One-time backfill: detect and set ticket_vendor for all venues where it is NULL.
+ *
+ * Run from the monorepo root:
+ *   env $(grep -v '^#' apps/api/.env.local | grep -v '^$' | xargs) \
+ *     apps/crawler/node_modules/.bin/tsx apps/api/scripts/backfill-ticket-vendor.ts
+ */
+import { isNull } from 'drizzle-orm'
+import { db, venues } from '@concert-crawl/db'
+import { detectTicketVendor } from '../src/lib/detect-ticket-vendor.js'
+
+const DELAY_MS = 2_000 // polite delay between requests
+
+async function sleep(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms))
+}
+
+const rows = await db
+  .select({ id: venues.id, name: venues.name, websiteUrl: venues.websiteUrl })
+  .from(venues)
+  .where(isNull(venues.ticketVendor))
+
+console.log(`Backfilling ${rows.length} venue(s)...`)
+
+for (const row of rows) {
+  process.stdout.write(`  ${row.name} (${row.websiteUrl}) → `)
+  const vendor = await detectTicketVendor(row.websiteUrl)
+  await db.update(venues).set({ ticketVendor: vendor }).where(eq(venues.id, row.id))
+  console.log(vendor)
+  await sleep(DELAY_MS)
+}
+
+console.log('Done.')
+```
+
+Also add the missing `eq` import: `import { eq, isNull } from 'drizzle-orm'`
+
+- [ ] **Step 2: Run locally to verify**
+
+```bash
+env $(grep -v '^#' apps/api/.env.local | grep -v '^$' | xargs) \
+  apps/crawler/node_modules/.bin/tsx apps/api/scripts/backfill-ticket-vendor.ts
+```
+
+Expected: each venue name printed with detected vendor; no errors.
+
+Verify in psql: `SELECT name, ticket_vendor FROM venues;`
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add apps/api/scripts/backfill-ticket-vendor.ts
+git commit -m "feat(api): one-time backfill script for ticket_vendor on existing venues"
+```
+
+---
+
+## Task 9: Remove dead env vars + update runbook
+
+**Files:**
+- Modify: `apps/api/.env.example`
+- Modify: `apps/crawler/.env.example`
+- Modify: `docs/runbooks/production-launch.md`
+
+Dead vars being removed: `TICKETMASTER_API_KEY`, `EVENTBRITE_API_TOKEN`, `DICE_API_KEY`, `SONGKICK_API_KEY`, `BANDSINTOWN_APP_ID`, `SEATGEEK_CLIENT_ID`, `SEATGEEK_CLIENT_SECRET`
+
+- [ ] **Step 1: Update `apps/api/.env.example`**
+
+Remove the entire section at the bottom of the file:
+
+```
+# Price pipeline — external ticketing APIs
+# All optional: tiers are skipped when the key is absent.
+TICKETMASTER_API_KEY=
+EVENTBRITE_API_TOKEN=
+DICE_API_KEY=
+SONGKICK_API_KEY=
+BANDSINTOWN_APP_ID=
+SEATGEEK_CLIENT_ID=
+SEATGEEK_CLIENT_SECRET=
+```
+
+- [ ] **Step 2: Update `apps/crawler/.env.example`**
+
+Remove the same section from the crawler `.env.example`.
+
+- [ ] **Step 3: Update `docs/runbooks/production-launch.md`**
+
+In the **concert-crawl-api** env table (Step 4 section), remove the row:
+
+```
+| `TICKETMASTER_API_KEY`  | From Ticketmaster developer portal (price pipeline)                |
+```
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add apps/api/.env.example apps/crawler/.env.example docs/runbooks/production-launch.md
+git commit -m "chore: remove dead price pipeline API key env vars"
+```
+
+---
+
+## Task 10: Admin venue edit — ticketVendor dropdown
+
+**Files:**
+- Modify: `apps/web/src/components/admin/VenueDetailsClient.tsx`
+
+- [ ] **Step 1: Read the existing edit form in `VenueDetailsClient.tsx`**
+
+Find the venue update form (look for `PATCH /v1/admin/venues/:id` call or a form with `name`, `slug`, etc. inputs).
+
+- [ ] **Step 2: Add the `ticketVendor` field to the displayed venue type and form state**
+
+In `VenueDetailsClient.tsx`, the venue prop comes in as `VenueWithCrawlHealth` from `@concert-crawl/types`. After Task 3 above updates that type to include `ticketVendor`, the form needs a new `<select>` for it.
+
+Locate the section of the form that renders the venue edit inputs. Add a new field after the existing fields:
+
+```tsx
+<div>
+  <label
+    htmlFor="ticketVendor"
+    style={{ fontSize: 12, color: 'var(--fg-muted)', fontFamily: 'var(--font-ui)' }}
+  >
+    Ticket Vendor
+  </label>
+  <select
+    id="ticketVendor"
+    value={form.ticketVendor ?? ''}
+    onChange={(evt) => setForm((prev) => ({ ...prev, ticketVendor: evt.target.value || null }))}
+    style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface-1)', color: 'var(--fg)', fontFamily: 'var(--font-ui)', fontSize: 13 }}
+  >
+    <option value="">— Auto-detected / Unknown —</option>
+    <option value="axs">AXS</option>
+    <option value="ticketmaster">Ticketmaster</option>
+    <option value="seatgeek">SeatGeek</option>
+    <option value="dice">DICE</option>
+    <option value="eventbrite">Eventbrite</option>
+    <option value="venue_box_office">Venue Box Office</option>
+    <option value="unknown">Unknown</option>
+  </select>
+</div>
+```
+
+Ensure the form state type includes `ticketVendor: string | null` and the PATCH payload sends it:
+
+```ts
+await apiClient.patch(`/v1/admin/venues/${venue.id}`, token, {
+  ...otherFields,
+  ticketVendor: form.ticketVendor ?? null,
+})
+```
+
+- [ ] **Step 3: Verify in browser**
+
+Navigate to an admin venue detail page. Confirm the Ticket Vendor dropdown appears, shows the current value (or empty for auto/unknown), and can be changed and saved.
+
+- [ ] **Step 4: Typecheck**
+
+```bash
+pnpm --filter @concert-crawl/web typecheck
+```
+
+Expected: no errors.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add apps/web/src/components/admin/VenueDetailsClient.tsx
+git commit -m "feat(admin): add ticketVendor dropdown to venue edit form"
+```
+
+---
+
+## Task 11: Pre-push checks + open PR
+
+- [ ] **Step 1: Run full typecheck + lint + tests across the monorepo**
+
+```bash
+cd /Users/huey/Projects/concert-crawl/.worktrees/feat/pricing-rework
+pnpm typecheck && pnpm lint && pnpm test
+```
+
+Expected: all pass.
+
+- [ ] **Step 2: Rebase on main**
+
+```bash
+git fetch origin && git rebase origin/main
+```
+
+- [ ] **Step 3: Update `docs/superpowers/progress.md`**
+
+Add a 🔄 row for this PR.
+
+- [ ] **Step 4: Push and open PR**
+
+```bash
+git push -u origin feat/pricing-rework
+gh pr create --title "feat: pricing rework — strip dead tiers, ticketVendor, fix Get Tickets" --body "$(cat <<'EOF'
+## Summary
+- Strip dead price pipeline tiers 2-5 (TM, Eventbrite/Dice, Songkick/Bandsintown, SeatGeek) — zero historical hits, wasted bandwidth
+- Add `pipeline_exhausted_at` to events; pipeline marks it on full miss; crawler skips those events on subsequent runs
+- Add `ticket_vendor` enum + column to venues; auto-detected via HTML signal scan on venue creation; admin-overridable dropdown in venue edit form; one-time backfill script for existing venues
+- Remove dead API key env vars (`TICKETMASTER_API_KEY`, `EVENTBRITE_API_TOKEN`, etc.) from `.env.example` and runbook
+- Fix #324: "Get Tickets" button now falls back to `venue.websiteUrl` when `ticketUrl` is null (AXS events)
+
+Consumer-facing community price UI (hero CTA, onboarding callout) tracked in follow-up PR pending design.
+
+## Dead env vars — remove from Render after deploy
+These are no longer used and can be deleted from Render environment settings:
+- `TICKETMASTER_API_KEY`
+- `EVENTBRITE_API_TOKEN`
+- `DICE_API_KEY`
+- `SONGKICK_API_KEY`
+- `BANDSINTOWN_APP_ID`
+- `SEATGEEK_CLIENT_ID`
+- `SEATGEEK_CLIENT_SECRET`
+
+## New migrations
+- `0020_ticket_vendor.sql` — `ticket_vendor_enum` type + `ticket_vendor` column on `venues`
+- `0021_pipeline_exhausted_at.sql` — `pipeline_exhausted_at` column on `events`
+
+Run `pnpm db:migrate` on staging and prod after deploy.
+
+## Post-deploy one-time action
+Run the backfill script to populate `ticket_vendor` on existing venues:
+```
+env $(cat apps/api/.env.local | grep -v '^#' | xargs) \
+  apps/crawler/node_modules/.bin/tsx apps/api/scripts/backfill-ticket-vendor.ts
+```
+
+## Test plan
+- [ ] `pnpm test` passes across all packages
+- [ ] Local: create a new venue via admin UI — ticket vendor auto-detected and displayed
+- [ ] Local: override ticket vendor via admin venue edit dropdown — saves correctly
+- [ ] Local: navigate to AXS event detail — "Visit Venue Website ↗" button appears
+- [ ] Local: navigate to TM event detail — "Get Tickets ↗" button still appears
+- [ ] Local: run backfill script — all existing venues get a vendor value
+- [ ] Staging: run migrations, trigger crawler run, verify exhausted events are skipped on second pass
+
+Closes #324
+EOF
+)"
+```
+
+---
+
+## Task 12: Follow-up PR — community price hero UI (BLOCKED ON DESIGN)
+
+> **Status:** Do not implement until designs are delivered. See design prompt in the plan's design section below.
+
+**Scope:**
+- `apps/web/src/components/consumer/PriceSection.tsx` — hero "no price yet" state
+- `apps/web/src/components/consumer/SubmitPriceCardCta.tsx` — update or retire
+- `apps/web/src/components/onboarding/steps/YoureIn.tsx` — community pricing paragraph
+
+These changes require a new worktree (`feat/community-price-hero`) once designs arrive.
+
+---
+
+## Design Brief (for Tasks 12)
+
+### Event Detail — Community Price Hero State
+
+**Context:** The event detail page (`/events/[id]`) shows a price card when a price exists. When no price is found (most AXS venues), the current UI shows a small dashed-border "Saw a different price?" link and hides the community price section entirely. This needs to become a prominent, purposeful call to action.
+
+**Scenarios to design:**
+
+1. **No price, no community submissions** — primary hero state. Most events will be in this state at launch.
+2. **Community submissions exist but no official price** — current `CommunityPriceChip` + confirm flow (this state already works; keep as-is or refine).
+3. **Official price exists** — current `PriceDisplay` card (keep as-is).
+
+**What to design for Scenario 1:**
+- A card or section that communicates "we don't have a price for this show — help us get one"
+- Must feel like a feature, not an absence. This is the product's grassroots identity.
+- Should include: a short headline, 1-2 lines of body copy, a clear CTA ("Report a price" or similar)
+- The current submit flow is at `/events/[id]/submit-price` — the CTA links there
+- Consider: does the card replace the price card container, sit below it, or both?
+
+**Design constraints:**
+- Mobile-first (320px baseline). Most users will see this on iPhone.
+- Existing token system: `--fg`, `--fg-muted`, `--fg-subtle`, `--signal`, `--accent`, `--border`, `--border-strong`, `--surface-1`, `var(--font-ui)`, `var(--font-mono)`
+- The signal color (`--signal`) is the brand's "action" color — appropriate for this CTA
+- Existing component for reference: the current `SubmitPriceCardCta` (dashed border, "Saw a different price?" copy)
+- The `CommunityPriceChip` component shows the confirmed community state — the new design should feel like a step earlier in that journey
+
+### Onboarding — Community Pricing Callout
+
+**Context:** The `YoureIn` onboarding step tells new beta users "you're not just here to use the thing — you're here to make it better." We want to make community pricing concrete: what does "making it better" mean in practice?
+
+**What to design:**
+- A paragraph or card addition to the `YoureIn` step that names community pricing specifically
+- Should feel like a personal ask from the founder, not a product feature list
+- Tone: direct, human, low-pressure. "When you buy a ticket, report the price. That's it."
+- Consider: inline paragraph vs. a highlighted callout card vs. a small icon+text row
+
+**Design constraints:** Same token system as above. This is a static component (no interactive state needed).
+
+---
+
+## Self-Review
 
 **Files:**
 - Modify: `apps/web/src/components/consumer/PriceSection.tsx`
@@ -950,7 +1271,7 @@ git commit -m "feat(web): elevate community price submission to hero feature on 
 
 ---
 
-## Task 9: Admin venue edit — ticketVendor dropdown
+## Task 10: Admin venue edit — ticketVendor dropdown
 
 **Files:**
 - Modify: `apps/web/src/components/admin/VenueDetailsClient.tsx`
@@ -1130,19 +1451,21 @@ EOF
 
 **Spec coverage check:**
 
-| Requirement | Covered by |
-|-------------|-----------|
-| Strip tiers 2-5 | Task 5 |
-| `ticketVendor` enum + DB column | Task 1 |
-| Auto-detect vendor on venue create | Task 4 |
-| Admin override dropdown | Task 9 |
-| `pipelineExhaustedAt` — stop retrying | Tasks 2 + 5 |
-| Crawler skips exhausted events | Task 6 |
-| Crawler passes `priceUrl` (tier 1 fix) | Task 6 |
-| Fix #324 Get Tickets button | Task 7 |
-| Hero community submit CTA | Task 8 |
-| Onboarding callout | Task 10 |
-| Shared types updated | Task 3 |
+| Requirement | Covered by | PR |
+|-------------|-----------|-----|
+| Strip tiers 2-5 | Task 5 | This PR |
+| `ticketVendor` enum + DB column | Task 1 | This PR |
+| Auto-detect vendor on venue create | Task 4 | This PR |
+| Backfill existing venues | Task 8 | This PR |
+| Admin override dropdown | Task 10 | This PR |
+| `pipelineExhaustedAt` — stop retrying | Tasks 2 + 5 | This PR |
+| Crawler skips exhausted events | Task 6 | This PR |
+| Crawler passes `priceUrl` (tier 1 fix) | Task 6 | This PR |
+| Dead env var cleanup | Task 9 | This PR |
+| Fix #324 Get Tickets button | Task 7 | This PR |
+| Hero community submit CTA | Task 12 | Follow-up |
+| Onboarding callout | Task 12 | Follow-up |
+| Shared types updated | Task 3 | This PR |
 
 **Type consistency check:**
 
