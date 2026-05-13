@@ -18,9 +18,17 @@ async function runPricesForVenue(venueId: string): Promise<void> {
       artist: events.artist,
       date: events.date,
       ticketUrl: events.ticketUrl,
+      priceUrl: venues.priceUrl,
     })
     .from(events)
-    .where(and(eq(events.venueId, venueId), isNull(events.ticketPriceMin)))
+    .leftJoin(venues, eq(events.venueId, venues.id))
+    .where(
+      and(
+        eq(events.venueId, venueId),
+        isNull(events.ticketPriceMin),
+        isNull(events.pipelineExhaustedAt),
+      ),
+    )
 
   for (const event of unpricedEvents) {
     if (event.venueId === null) continue
@@ -31,6 +39,7 @@ async function runPricesForVenue(venueId: string): Promise<void> {
         artist: event.artist,
         date: event.date,
         ticketUrl: event.ticketUrl,
+        priceUrl: event.priceUrl ?? null,
       })
     } catch (priceErr: unknown) {
       logger.error(
