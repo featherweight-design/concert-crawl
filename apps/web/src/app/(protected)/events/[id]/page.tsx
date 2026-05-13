@@ -319,23 +319,29 @@ export default async function EventDetailPage({
             {isSoldOut ? (
               <SoldOutCta />
             ) : (
-              event.ticketUrl && (
-                <a
-                  href={event.ticketUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex h-12 w-full items-center justify-center rounded-[10px] text-fg-on-accent"
-                  style={{
-                    background: 'var(--accent)',
-                    fontFamily: 'var(--font-ui)',
-                    fontWeight: 800,
-                    fontSize: 15,
-                    letterSpacing: '-0.01em',
-                  }}
-                >
-                  {copy.ticketsCta} ↗
-                </a>
-              )
+              (() => {
+                const ctaHref = event.ticketUrl ?? event.venue.websiteUrl
+                const ctaLabel = event.ticketUrl
+                  ? `${copy.ticketsCta} ↗`
+                  : 'Visit Venue Website ↗'
+                return ctaHref ? (
+                  <a
+                    href={ctaHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex h-12 w-full items-center justify-center rounded-[10px] text-fg-on-accent"
+                    style={{
+                      background: 'var(--accent)',
+                      fontFamily: 'var(--font-ui)',
+                      fontWeight: 800,
+                      fontSize: 15,
+                      letterSpacing: '-0.01em',
+                    }}
+                  >
+                    {ctaLabel}
+                  </a>
+                ) : null
+              })()
             )}
           </div>
         )}
