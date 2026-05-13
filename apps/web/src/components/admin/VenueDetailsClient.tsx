@@ -427,6 +427,9 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
   const [waitForSelectorVal, setWaitForSelectorVal] = useState(
     venue.crawlWaitForSelector ?? '',
   )
+  const [ticketVendorVal, setTicketVendorVal] = useState<string | null>(
+    venue.ticketVendor ?? null,
+  )
   const [slugManual, setSlugManual] = useState(true)
   const [slugFocused, setSlugFocused] = useState(false)
   const [urlFocused, setUrlFocused] = useState(false)
@@ -438,7 +441,8 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     cityVal !== venue.city ||
     waitUntilVal !== venue.crawlWaitUntil ||
     crawlDelayVal !== venue.crawlDelayMs ||
-    (waitForSelectorVal || null) !== venue.crawlWaitForSelector
+    (waitForSelectorVal || null) !== venue.crawlWaitForSelector ||
+    ticketVendorVal !== (venue.ticketVendor ?? null)
 
   // Save state
   const [saveState, setSaveState] = useState<
@@ -459,6 +463,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     setWaitUntilVal(venue.crawlWaitUntil)
     setCrawlDelayVal(venue.crawlDelayMs)
     setWaitForSelectorVal(venue.crawlWaitForSelector ?? '')
+    setTicketVendorVal(venue.ticketVendor ?? null)
     setSaveState('idle')
     setSaveError(null)
     setFieldErrors({})
@@ -484,6 +489,9 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     formData.set('crawlDelayMs', String(crawlDelayVal))
     formData.set('crawlWaitForSelector', waitForSelectorVal.trim())
     formData.set('active', String(venue.active))
+    if (ticketVendorVal !== null) {
+      formData.set('ticketVendor', ticketVendorVal)
+    }
 
     try {
       const result = await updateVenue(venue.id, formData)
@@ -872,6 +880,39 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                 disabled={isDisabled}
                 onChange={(evt) => setCityVal(evt.target.value)}
               />
+            </Field>
+
+            {/* Ticket vendor */}
+            <Field
+              label="Ticket Vendor"
+              htmlFor="edit-venue-ticket-vendor"
+              hint={
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--fg-muted)',
+                    fontFamily: "'Inter', sans-serif",
+                  }}
+                >
+                  Override the auto-detected ticket vendor for this venue.
+                </span>
+              }
+            >
+              <StyledSelect
+                id="edit-venue-ticket-vendor"
+                value={ticketVendorVal ?? ''}
+                disabled={isDisabled}
+                onChange={(evt) => setTicketVendorVal(evt.target.value || null)}
+              >
+                <option value="">— Auto-detected / Unknown —</option>
+                <option value="axs">AXS</option>
+                <option value="ticketmaster">Ticketmaster</option>
+                <option value="seatgeek">SeatGeek</option>
+                <option value="dice">DICE</option>
+                <option value="eventbrite">Eventbrite</option>
+                <option value="venue_box_office">Venue Box Office</option>
+                <option value="unknown">Unknown</option>
+              </StyledSelect>
             </Field>
           </div>
 
