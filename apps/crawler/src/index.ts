@@ -25,12 +25,16 @@ async function main() {
 }
 
 main()
-  .then(() => {
+  .then(async () => {
+    await Sentry.flush(2000)
     process.exit(0)
   })
   .catch(async (err) => {
     logger.error({ err }, 'Fatal error in crawler')
     Sentry.captureException(err)
-    await Sentry.flush(2000)
-    process.exit(1)
+    try {
+      await Sentry.flush(2000)
+    } finally {
+      process.exit(1)
+    }
   })
