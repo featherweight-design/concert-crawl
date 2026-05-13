@@ -1,3 +1,11 @@
+## [1.9.2](https://github.com/HartiganHM/concert-crawl/compare/v1.9.1...v1.9.2) (2026-05-13)
+
+
+### Bug Fixes
+
+* **price-pipeline:** address Copilot review — URL constructor in lookupById, honest DST comment ([8055b17](https://github.com/HartiganHM/concert-crawl/commit/8055b172eef37216591935bd53ef8bbfbdd29354))
+* **price-pipeline:** improve Ticketmaster tier — event ID lookup + MT-aware date window ([e702e97](https://github.com/HartiganHM/concert-crawl/commit/e702e9718a6ad369813ff76b64aa1debf390ff1c)), closes [#295](https://github.com/HartiganHM/concert-crawl/issues/295)
+
 ## [1.9.1](https://github.com/HartiganHM/concert-crawl/compare/v1.9.0...v1.9.1) (2026-05-12)
 
 
