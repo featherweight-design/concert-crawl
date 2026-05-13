@@ -12,7 +12,11 @@ import {
   StatusBadge,
   RelTime,
 } from '@/components/admin/primitives'
-import { PipelineTriggerButton } from '@/components/admin/prices'
+import {
+  PipelineTriggerButton,
+  ActivityFeedPanel,
+} from '@/components/admin/prices'
+import type { ActivityRow } from '@/components/admin/prices'
 import type { StatusKind } from '@/components/admin/primitives'
 
 // ---- Types ------------------------------------------------------------------
@@ -35,17 +39,6 @@ interface CoverageData {
   total: number
   withPrice: number
   pct: number
-}
-
-interface ActivityRow {
-  eventId: string
-  eventTitle: string | null
-  venueName: string | null
-  date: string
-  source: string
-  outcome: string
-  latencyMs: number
-  attemptedAt: string
 }
 
 interface HealthStat {
@@ -205,68 +198,7 @@ export default async function AdminPricesPage() {
           alignItems: 'start',
         }}
       >
-        {/* Activity feed */}
-        <Panel title="Recent pipeline activity" padding={0}>
-          <div style={{ maxHeight: 320, overflowY: 'auto' }}>
-            <AdminTable>
-              <THead sticky>
-                <tr>
-                  <TH>Event</TH>
-                  <TH>Source</TH>
-                  <TH>Outcome</TH>
-                  <TH>Latency</TH>
-                  <TH>When</TH>
-                </tr>
-              </THead>
-              <tbody>
-                {activity.map((row, idx) => (
-                  <TR key={`${row.eventId}-${row.source}-${idx}`}>
-                    <TD>
-                      <div style={{ fontWeight: 500, fontSize: 13 }}>
-                        {row.eventTitle ?? row.eventId}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: 'var(--fg-subtle)',
-                          fontFamily: "'JetBrains Mono', monospace",
-                        }}
-                      >
-                        {row.venueName ?? '—'} · {row.date}
-                      </div>
-                    </TD>
-                    <TD>
-                      <StatusBadge kind="signal" variant="outline">
-                        {row.source}
-                      </StatusBadge>
-                    </TD>
-                    <TD>
-                      <StatusBadge
-                        kind={OUTCOME_KIND[row.outcome] ?? 'neutral'}
-                        dot
-                      >
-                        {row.outcome}
-                      </StatusBadge>
-                    </TD>
-                    <TD mono color="var(--fg-muted)">
-                      {row.latencyMs}ms
-                    </TD>
-                    <TD color="var(--fg-muted)">
-                      <RelTime iso={row.attemptedAt} />
-                    </TD>
-                  </TR>
-                ))}
-                {activity.length === 0 && (
-                  <TR>
-                    <TD colSpan={5} color="var(--fg-subtle)">
-                      No pipeline activity yet.
-                    </TD>
-                  </TR>
-                )}
-              </tbody>
-            </AdminTable>
-          </div>
-        </Panel>
+        <ActivityFeedPanel activity={activity as ActivityRow[]} />
 
         {/* Source health */}
         <Panel title="Source health" padding={0}>
