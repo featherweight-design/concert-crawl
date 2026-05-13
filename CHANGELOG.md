@@ -1,3 +1,23 @@
+# [1.11.0](https://github.com/HartiganHM/concert-crawl/compare/v1.10.1...v1.11.0) (2026-05-13)
+
+
+### Bug Fixes
+
+* **api:** cap detectTicketVendor body read at 256KB, run detection async on venue create ([31eeace](https://github.com/HartiganHM/concert-crawl/commit/31eeace0ea47b8cc5ff20b6fbddbf2fd40447d29))
+* **crawler:** skip exhausted events, pass priceUrl to pipeline ([bd959e7](https://github.com/HartiganHM/concert-crawl/commit/bd959e7789e9bc1978fccd8c10e18fd63ddc9777))
+* **web:** fall back to venue websiteUrl when ticketUrl is null (closes [#324](https://github.com/HartiganHM/concert-crawl/issues/324)) ([eba0d05](https://github.com/HartiganHM/concert-crawl/commit/eba0d05bd2bca4560bb379ffcc080445d204166d))
+
+
+### Features
+
+* **admin:** add ticketVendor dropdown to venue edit form ([581cc91](https://github.com/HartiganHM/concert-crawl/commit/581cc919568a73815404d9613b8d90d821dc5fbe))
+* **api:** auto-detect ticketVendor on venue creation ([d3638a9](https://github.com/HartiganHM/concert-crawl/commit/d3638a95f2df5b1c29155299de4d9313f5ae9f50))
+* **api:** one-time backfill script for ticketVendor on existing venues ([4ccecad](https://github.com/HartiganHM/concert-crawl/commit/4ccecad9b7c328d57e608bc6eef495fbd9632996))
+* **db:** add pipeline_exhausted_at to events ([6f306f4](https://github.com/HartiganHM/concert-crawl/commit/6f306f4ba2d3560667b66e2bbfb4808eccea0b02))
+* **db:** add ticket_vendor enum + column to venues ([e463f3d](https://github.com/HartiganHM/concert-crawl/commit/e463f3d0d4883b8c9d4f3e0a788c60b620a94e41))
+* **price-pipeline:** strip dead tiers 2-5, set pipelineExhaustedAt on full miss ([5516a22](https://github.com/HartiganHM/concert-crawl/commit/5516a22d797555701bf96408a680a7d39a9bf193))
+* **types:** add TicketVendor, ticketVendor to Venue, pipelineExhaustedAt to Event ([e6dd0d4](https://github.com/HartiganHM/concert-crawl/commit/e6dd0d47378680a830371f9a7b4583620aee50a4))
+
 ## [1.10.1](https://github.com/HartiganHM/concert-crawl/compare/v1.10.0...v1.10.1) (2026-05-13)
 
 
