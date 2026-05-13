@@ -12,8 +12,10 @@ function buildMtDateWindow(date: string): {
   startDateTime: string
   endDateTime: string
 } {
-  // Denver observes MST (UTC-7); using UTC-7 offset gives a window of
-  // midnight–midnight MT that also safely covers MDT (UTC-6) shows.
+  // Uses a fixed MST offset (UTC-7). During MDT (UTC-6, ~Mar–Nov) the window
+  // starts at 1 AM local instead of midnight, missing the 12–1 AM hour. In
+  // practice Denver venues don't have shows in that window, so the approximation
+  // is acceptable without adding a DST-aware timezone library.
   const parts = date.split('-').map(Number)
   const year = parts[0]!
   const month = parts[1]!
@@ -30,10 +32,13 @@ async function lookupById(
   eventId: string,
   apiKey: string,
 ): Promise<PriceTierResult | null> {
-  const url = `https://app.ticketmaster.com/discovery/v2/events/${eventId}?apikey=${apiKey}`
+  const url = new URL(
+    `https://app.ticketmaster.com/discovery/v2/events/${encodeURIComponent(eventId)}`,
+  )
+  url.searchParams.set('apikey', apiKey)
   let res: Response
   try {
-    res = await fetch(url, { signal: AbortSignal.timeout(10_000) })
+    res = await fetch(url.toString(), { signal: AbortSignal.timeout(10_000) })
   } catch {
     return null
   }
