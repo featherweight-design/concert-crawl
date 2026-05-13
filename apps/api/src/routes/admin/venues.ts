@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { db, venues, events, crawlRuns } from '@concert-crawl/db'
 import { and, avg, count, desc, eq, gte, isNotNull, ne } from 'drizzle-orm'
 import { getAuthUser } from '../../middleware/auth.js'
+import { detectTicketVendor } from '../../lib/detect-ticket-vendor.js'
 import type { AdminVariables } from './index.js'
 
 const createVenueSchema = z.object({
@@ -27,6 +28,18 @@ const createVenueSchema = z.object({
     .string()
     .max(200)
     .transform((val) => val.trim() || null)
+    .nullable()
+    .optional(),
+  ticketVendor: z
+    .enum([
+      'axs',
+      'ticketmaster',
+      'seatgeek',
+      'dice',
+      'eventbrite',
+      'venue_box_office',
+      'unknown',
+    ])
     .nullable()
     .optional(),
 })
@@ -245,9 +258,12 @@ venuesAdminRouter.post(
       )
     }
 
+    const detectedVendor =
+      body.ticketVendor ?? (await detectTicketVendor(body.websiteUrl))
+
     const [venue] = await db
       .insert(venues)
-      .values({ ...body, verified: true })
+      .values({ ...body, ticketVendor: detectedVendor, verified: true })
       .returning()
 
     if (!venue) {
