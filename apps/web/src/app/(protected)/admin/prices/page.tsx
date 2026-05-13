@@ -12,7 +12,10 @@ import {
   StatusBadge,
   RelTime,
 } from '@/components/admin/primitives'
+import { PipelineTriggerButton } from '@/components/admin/prices'
 import type { StatusKind } from '@/components/admin/primitives'
+
+// ---- Types ------------------------------------------------------------------
 
 interface PriceEvent {
   eventId: string
@@ -28,11 +31,93 @@ interface PriceEvent {
   lastOutcome: string | null
 }
 
+interface CoverageData {
+  total: number
+  withPrice: number
+  pct: number
+}
+
+interface ActivityRow {
+  eventId: string
+  eventTitle: string | null
+  venueName: string | null
+  date: string
+  outcome: string
+  updatedAt: string
+}
+
+interface HealthStat {
+  venueId: string
+  source: string
+  totalCount: number
+  hitCount: number
+  lastAttemptedAt: string | null
+}
+
+interface HealthData {
+  stats: HealthStat[]
+  autoFlagged: HealthStat[]
+}
+
+// ---- Helpers ----------------------------------------------------------------
+
 const OUTCOME_KIND: Record<string, StatusKind> = {
   hit: 'success',
   miss: 'warning',
   error: 'danger',
 }
+
+function aggregateBySource(stats: HealthStat[]): Array<{
+  source: string
+  total: number
+  hits: number
+  hitRate: number
+  lastAttemptedAt: string | null
+  flagged: boolean
+}> {
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+
+  const bySource = new Map<
+    string,
+    { total: number; hits: number; lastAttemptedAt: string | null }
+  >()
+
+  for (const stat of stats) {
+    const existing = bySource.get(stat.source) ?? {
+      total: 0,
+      hits: 0,
+      lastAttemptedAt: null,
+    }
+    const latest =
+      stat.lastAttemptedAt !== null &&
+      (existing.lastAttemptedAt === null ||
+        stat.lastAttemptedAt > existing.lastAttemptedAt)
+        ? stat.lastAttemptedAt
+        : existing.lastAttemptedAt
+
+    bySource.set(stat.source, {
+      total: existing.total + Number(stat.totalCount),
+      hits: existing.hits + Number(stat.hitCount),
+      lastAttemptedAt: latest,
+    })
+  }
+
+  return Array.from(bySource.entries())
+    .map(([source, data]) => ({
+      source,
+      total: data.total,
+      hits: data.hits,
+      hitRate: data.total > 0 ? Math.round((data.hits / data.total) * 100) : 0,
+      lastAttemptedAt: data.lastAttemptedAt,
+      flagged:
+        data.hits === 0 &&
+        data.lastAttemptedAt !== null &&
+        new Date(data.lastAttemptedAt) < thirtyDaysAgo,
+    }))
+    .sort((aa, bb) => bb.total - aa.total)
+}
+
+// ---- Page -------------------------------------------------------------------
 
 export default async function AdminPricesPage() {
   await requireAdminUser()
@@ -40,28 +125,42 @@ export default async function AdminPricesPage() {
   const token = await getToken()
   if (!token) return null
 
-  const priceEvents = await apiClient
-    .get<PriceEvent[]>('/v1/admin/prices/events', token)
-    .catch(() => [] as PriceEvent[])
+  const [priceEvents, coverage, activity, health] = await Promise.all([
+    apiClient
+      .get<PriceEvent[]>('/v1/admin/prices/events', token)
+      .catch(() => [] as PriceEvent[]),
+    apiClient
+      .get<CoverageData>('/v1/admin/prices/coverage', token)
+      .catch(() => ({ total: 0, withPrice: 0, pct: 0 })),
+    apiClient
+      .get<ActivityRow[]>('/v1/admin/prices/activity', token)
+      .catch(() => [] as ActivityRow[]),
+    apiClient
+      .get<HealthData>('/v1/admin/prices/health', token)
+      .catch(() => ({ stats: [], autoFlagged: [] })),
+  ])
 
   const withPrices = priceEvents.filter((ev) => ev.priceMin !== null)
   const noPrices = priceEvents.filter((ev) => ev.priceMin === null)
   const recentHits = priceEvents.filter((ev) => ev.lastOutcome === 'hit')
+  const sourceHealth = aggregateBySource(health.stats)
+  const flaggedCount = sourceHealth.filter((src) => src.flagged).length
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <SectionHead eyebrow="Phase 7 · Pricing" title="Price snapshots" />
 
+      {/* Stat cards — auto-fill wraps on narrow screens */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
           gap: 16,
         }}
       >
         <StatCard
           label="Tracked events"
-          value={String(priceEvents.length)}
+          value={String(coverage.total)}
           iconName="DollarSign"
           kind="neutral"
         />
@@ -70,11 +169,7 @@ export default async function AdminPricesPage() {
           value={String(withPrices.length)}
           iconName="TrendingUp"
           kind="success"
-          {...(priceEvents.length > 0
-            ? {
-                hint: `${Math.round((withPrices.length / priceEvents.length) * 100)}% coverage`,
-              }
-            : {})}
+          hint={`${coverage.pct}% coverage`}
         />
         <StatCard
           label="No price data"
@@ -85,12 +180,20 @@ export default async function AdminPricesPage() {
         <StatCard
           label="Recent hits"
           value={String(recentHits.length)}
-          iconName="DollarSign"
+          iconName="CheckCircle"
           kind="signal"
           hint="last retrieval ok"
         />
+        <StatCard
+          label="Flagged sources"
+          value={String(flaggedCount)}
+          iconName="AlertOctagon"
+          kind={flaggedCount > 0 ? 'danger' : 'neutral'}
+          hint="0 hits in 30 days"
+        />
       </div>
 
+      {/* Event prices table */}
       <Panel title="Event prices" padding={0}>
         <AdminTable>
           <THead>
@@ -106,6 +209,7 @@ export default async function AdminPricesPage() {
               <TH>Source</TH>
               <TH>Last retrieval</TH>
               <TH>Status</TH>
+              <TH>Pipeline</TH>
             </tr>
           </THead>
           <tbody>
@@ -183,11 +287,14 @@ export default async function AdminPricesPage() {
                     <StatusBadge kind="neutral">unchecked</StatusBadge>
                   )}
                 </TD>
+                <TD>
+                  <PipelineTriggerButton eventId={row.eventId} />
+                </TD>
               </TR>
             ))}
             {priceEvents.length === 0 && (
               <TR>
-                <TD colSpan={7} color="var(--fg-subtle)">
+                <TD colSpan={8} color="var(--fg-subtle)">
                   No events found. Run a crawl to populate data.
                 </TD>
               </TR>
@@ -195,6 +302,156 @@ export default async function AdminPricesPage() {
           </tbody>
         </AdminTable>
       </Panel>
+
+      {/* Activity + Health — side by side on wide screens, stacked on narrow */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns:
+            'repeat(auto-fill, minmax(min(100%, 480px), 1fr))',
+          gap: 24,
+          alignItems: 'start',
+        }}
+      >
+        {/* Activity feed */}
+        <Panel title="Recent pipeline activity" padding={0}>
+          <AdminTable>
+            <THead>
+              <tr>
+                <TH>Event</TH>
+                <TH>Venue</TH>
+                <TH>Outcome</TH>
+                <TH>When</TH>
+              </tr>
+            </THead>
+            <tbody>
+              {activity.map((row, idx) => (
+                <TR key={`${row.eventId}-${idx}`}>
+                  <TD>
+                    <div style={{ fontWeight: 500, fontSize: 13 }}>
+                      {row.eventTitle ?? row.eventId}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: 'var(--fg-subtle)',
+                        fontFamily: "'JetBrains Mono', monospace",
+                      }}
+                    >
+                      {row.date}
+                    </div>
+                  </TD>
+                  <TD color="var(--fg-muted)">
+                    {row.venueName ?? (
+                      <span style={{ color: 'var(--fg-subtle)' }}>—</span>
+                    )}
+                  </TD>
+                  <TD>
+                    <StatusBadge
+                      kind={OUTCOME_KIND[row.outcome] ?? 'neutral'}
+                      dot
+                    >
+                      {row.outcome}
+                    </StatusBadge>
+                  </TD>
+                  <TD color="var(--fg-muted)">
+                    <RelTime iso={row.updatedAt} />
+                  </TD>
+                </TR>
+              ))}
+              {activity.length === 0 && (
+                <TR>
+                  <TD colSpan={4} color="var(--fg-subtle)">
+                    No pipeline activity yet.
+                  </TD>
+                </TR>
+              )}
+            </tbody>
+          </AdminTable>
+        </Panel>
+
+        {/* Source health */}
+        <Panel title="Source health" padding={0}>
+          <AdminTable>
+            <THead>
+              <tr>
+                <TH>Source</TH>
+                <TH align="right" mono>
+                  Attempts
+                </TH>
+                <TH align="right" mono>
+                  Hits
+                </TH>
+                <TH align="right" mono>
+                  Rate
+                </TH>
+                <TH>Last attempt</TH>
+              </tr>
+            </THead>
+            <tbody>
+              {sourceHealth.map((row) => (
+                <TR key={row.source}>
+                  <TD>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <StatusBadge
+                        kind={row.flagged ? 'danger' : 'signal'}
+                        variant="outline"
+                      >
+                        {row.source}
+                      </StatusBadge>
+                      {row.flagged && (
+                        <StatusBadge kind="danger" dot>
+                          flagged
+                        </StatusBadge>
+                      )}
+                    </div>
+                  </TD>
+                  <TD align="right" mono color="var(--fg-muted)">
+                    {row.total}
+                  </TD>
+                  <TD align="right" mono color="var(--fg-muted)">
+                    {row.hits}
+                  </TD>
+                  <TD
+                    align="right"
+                    mono
+                    color={
+                      row.hitRate === 0
+                        ? 'var(--danger)'
+                        : row.hitRate < 50
+                          ? 'var(--warning)'
+                          : 'var(--success)'
+                    }
+                  >
+                    {row.hitRate}%
+                  </TD>
+                  <TD color="var(--fg-muted)">
+                    {row.lastAttemptedAt !== null ? (
+                      <RelTime iso={row.lastAttemptedAt} />
+                    ) : (
+                      <span style={{ color: 'var(--fg-subtle)' }}>—</span>
+                    )}
+                  </TD>
+                </TR>
+              ))}
+              {sourceHealth.length === 0 && (
+                <TR>
+                  <TD colSpan={5} color="var(--fg-subtle)">
+                    No retrieval data yet.
+                  </TD>
+                </TR>
+              )}
+            </tbody>
+          </AdminTable>
+        </Panel>
+      </div>
     </div>
   )
 }
