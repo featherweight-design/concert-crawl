@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { db, venues, events, crawlRuns } from '@concert-crawl/db'
 import { and, avg, count, desc, eq, gte, isNotNull, ne } from 'drizzle-orm'
 import { getAuthUser } from '../../middleware/auth.js'
+import { apiLogger } from '../../lib/logger.js'
 import { detectTicketVendor } from '../../lib/detect-ticket-vendor.js'
 import type { AdminVariables } from './index.js'
 
@@ -258,12 +259,13 @@ venuesAdminRouter.post(
       )
     }
 
-    const detectedVendor =
-      body.ticketVendor ?? (await detectTicketVendor(body.websiteUrl))
-
     const [venue] = await db
       .insert(venues)
-      .values({ ...body, ticketVendor: detectedVendor, verified: true })
+      .values({
+        ...body,
+        ticketVendor: body.ticketVendor ?? null,
+        verified: true,
+      })
       .returning()
 
     if (!venue) {
@@ -271,6 +273,21 @@ venuesAdminRouter.post(
         { success: false, error: 'Venue created but no row was returned' },
         500,
       )
+    }
+
+    // Detect vendor in the background — does not block the response
+    if (!body.ticketVendor) {
+      void (async () => {
+        try {
+          const detectedVendor = await detectTicketVendor(body.websiteUrl)
+          await db
+            .update(venues)
+            .set({ ticketVendor: detectedVendor })
+            .where(eq(venues.id, venue.id))
+        } catch (err) {
+          apiLogger.warn({ err }, 'detectTicketVendor background update failed')
+        }
+      })()
     }
 
     ctx.set('auditAction', 'venue.create')

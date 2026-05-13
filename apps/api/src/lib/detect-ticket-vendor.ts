@@ -21,7 +21,9 @@ export async function detectTicketVendor(
       signal: AbortSignal.timeout(8_000),
     })
     if (!res.ok) return 'unknown'
-    const html = await res.text()
+    const MAX_BYTES = 256 * 1024 // 256 KB
+    const buffer = await res.arrayBuffer()
+    const html = new TextDecoder().decode(buffer.slice(0, MAX_BYTES))
     for (const { pattern, vendor } of VENDOR_SIGNALS) {
       if (pattern.test(html)) return vendor
     }

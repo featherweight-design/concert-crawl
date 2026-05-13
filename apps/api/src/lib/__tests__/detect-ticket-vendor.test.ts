@@ -6,7 +6,10 @@ afterEach(() => vi.restoreAllMocks())
 const mockFetch = (html: string) =>
   vi.stubGlobal(
     'fetch',
-    vi.fn().mockResolvedValue({ ok: true, text: async () => html }),
+    vi.fn().mockResolvedValue({
+      ok: true,
+      arrayBuffer: async () => new TextEncoder().encode(html).buffer,
+    }),
   )
 
 describe('detectTicketVendor', () => {
