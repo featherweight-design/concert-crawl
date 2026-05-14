@@ -230,6 +230,7 @@ export function MakeItYours() {
 
   function handleSelect(name: ThemeName) {
     setTheme(name)
+    localStorage.setItem('cc-onboarding-theme-pending', '1')
     setHasSelected(true)
   }
 
