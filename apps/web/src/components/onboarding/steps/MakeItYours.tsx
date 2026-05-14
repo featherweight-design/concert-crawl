@@ -177,7 +177,6 @@ function CompactStrip({ themeName }: { themeName: ThemeName }) {
     <div
       style={{
         borderRadius: 12,
-        border: `1px solid ${tokens['border-strong']}`,
         background: tokens['bg'],
         padding: 12,
         display: 'flex',
