@@ -1,3 +1,17 @@
+# [1.17.0](https://github.com/HartiganHM/concert-crawl/compare/v1.16.0...v1.17.0) (2026-05-14)
+
+
+### Bug Fixes
+
+* **favicon:** opaque canvas fill for iOS, test default export, fix doc class names and test commands ([6a41382](https://github.com/HartiganHM/concert-crawl/commit/6a413823c813a72368de15649dd1862aeb36d1a8))
+* **favicon:** set themeColor to Electric bg [#070](https://github.com/HartiganHM/concert-crawl/issues/070)A1A ([d07d6c7](https://github.com/HartiganHM/concert-crawl/commit/d07d6c711f5b5953a263b59dd33697b751edc04d)), closes [#070A1A](https://github.com/HartiganHM/concert-crawl/issues/070A1A)
+
+
+### Features
+
+* **favicon:** add apple-icon ImageResponse (180x180, Electric theme) ([c6d2dc6](https://github.com/HartiganHM/concert-crawl/commit/c6d2dc61250c54e35697d0bfc010f7a2b4c5662d))
+* **favicon:** add SVG favicon with dark/light prefers-color-scheme ([0ab1117](https://github.com/HartiganHM/concert-crawl/commit/0ab1117699635747eeeda76cbb7b721cac4972f4))
+
 # [1.16.0](https://github.com/HartiganHM/concert-crawl/compare/v1.15.0...v1.16.0) (2026-05-14)
 
 
