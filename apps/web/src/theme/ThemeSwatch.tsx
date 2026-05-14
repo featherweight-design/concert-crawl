@@ -35,7 +35,7 @@ export function ThemeSwatch({
         width: '100%',
         boxSizing: 'border-box',
         borderRadius: 14,
-        padding: 10,
+        padding: 12,
         background: tokens['bg'],
         border: active
           ? `1.5px solid ${tokens['signal']}`
@@ -46,7 +46,7 @@ export function ThemeSwatch({
     >
       {/* Dots row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <MiniMark tokens={tokens} size={20} />
+        <MiniMark tokens={tokens} size={22} />
         <span style={{ display: 'flex', gap: 3 }}>
           <span
             style={{
@@ -101,7 +101,7 @@ export function ThemeSwatch({
           background: tokens['surface-1'],
           border: `1px solid ${tokens['border']}`,
           borderRadius: 8,
-          padding: '6px 8px',
+          padding: '8px 10px',
           display: 'flex',
           flexDirection: 'column',
           gap: 3,
@@ -148,21 +148,38 @@ export function ThemeSwatch({
         </div>
       </div>
 
-      {/* Label */}
-      <span
-        style={{
-          fontFamily: 'var(--font-ui)',
-          fontSize: 11,
-          fontWeight: 700,
-          color: tokens['fg'],
-          letterSpacing: '-0.005em',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-        }}
-      >
-        {meta.label}
-      </span>
+      {/* Label + role pill */}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+        <span
+          style={{
+            fontFamily: 'var(--font-ui)',
+            fontSize: 11,
+            fontWeight: 700,
+            color: tokens['fg'],
+            letterSpacing: '-0.005em',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {meta.label}
+        </span>
+        <span
+          style={{
+            marginLeft: 'auto',
+            fontFamily: 'var(--font-mono)',
+            fontSize: 8,
+            fontWeight: 600,
+            color: tokens['fg-muted'],
+            letterSpacing: '0.10em',
+            textTransform: 'uppercase',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
+          }}
+        >
+          {meta.role === 'base' ? meta.mode : meta.role}
+        </span>
+      </div>
     </button>
   )
 }
