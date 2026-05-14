@@ -10,9 +10,10 @@ import { FounderNote } from './steps/FounderNote'
 import { HowItWorks } from './steps/HowItWorks'
 import { WhatItDoesToday } from './steps/WhatItDoesToday'
 import { WhatItDoesntYet } from './steps/WhatItDoesntYet'
+import { MakeItYours } from './steps/MakeItYours'
 import { YoureIn } from './steps/YoureIn'
 
-const FLOW = ['welcome', 'how', 'today', 'notyet', 'done'] as const
+const FLOW = ['welcome', 'how', 'today', 'notyet', 'theme', 'done'] as const
 type StepKey = (typeof FLOW)[number]
 
 const STEP_LABELS: Record<StepKey, string> = {
@@ -20,17 +21,19 @@ const STEP_LABELS: Record<StepKey, string> = {
   how: 'HOW IT WORKS',
   today: 'TODAY',
   notyet: 'NOT YET',
+  theme: 'MAKE IT YOURS',
   done: "YOU'RE IN",
 }
 
 // Steps whose desktop card is wider (620px instead of 520px)
-const WIDE_STEPS = new Set<StepKey>(['welcome', 'today', 'notyet'])
+const WIDE_STEPS = new Set<StepKey>(['welcome', 'today', 'notyet', 'theme'])
 
 function StepContent({ stepKey }: { stepKey: StepKey }) {
   if (stepKey === 'welcome') return <FounderNote />
   if (stepKey === 'how') return <HowItWorks />
   if (stepKey === 'today') return <WhatItDoesToday />
   if (stepKey === 'notyet') return <WhatItDoesntYet />
+  if (stepKey === 'theme') return <MakeItYours />
   if (stepKey === 'done') return <YoureIn />
   return null
 }

@@ -7,7 +7,7 @@ import { THEMES, THEME_META, type ThemeName } from '@/theme/themes'
 import { MiniMark } from '@/theme/MiniMark'
 import { patchMe } from '@/lib/users'
 
-function ThemeSwatch({
+export function ThemeSwatch({
   name,
   active,
   onClick,
