@@ -40,6 +40,19 @@ Date: 2026-05-14
 | Fix 12 | Fee all-in label logic                                                     | IMPLEMENTED — 'face value' (no fees), 'all-in, including fees' (fees > 0), 'starting, all-in' (ranged price)                                                                                               |
 | Fix 13 | `SetlistPreview` owns its card surface                                     | IMPLEMENTED — card chrome (bg, border, borderRadius, overflow, padding) moved into `SetlistPreview.tsx`; page.tsx wrapper simplified                                                                       |
 
+### Round 3 (final design gap fixes 2026-05-14)
+
+| Fix   | Description                                                             | Status                                                                                                                                                                                                                 |
+| ----- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Fix 1 | Community box-office context line above @handle attribution             | IMPLEMENTED — "Saw at {venue} box office · in person/by phone" when `boxOfficeAction=saw`; JetBrains Mono 10px fg-muted; renders nothing when fields absent                                                            |
+| Fix 2 | Delta pill `openedAt` wired from API (`ticketPriceOpenedAt`)            | IMPLEMENTED — `ticketPriceOpenedAt?: number \| null` added to `EventDetailResponse`; `priceObj.openedAt = ticketPriceOpenedAt ?? null`; `DeltaPill` activates automatically when API returns data                      |
+| Fix 3 | Fee label + FeeBreakdown wired from API (`ticketFees`)                  | IMPLEMENTED — `ticketFees?: number \| null` added to `EventDetailResponse`; `priceObj.fees = ticketFees ?? null`; fee label and `FeeBreakdown` activate automatically when API returns data                            |
+| Fix 4 | Sparkline `flag` and `dim` color modes                                  | IMPLEMENTED — `flag?: 'drop' \| 'rise' \| null` colors line (drop=success, rise=warning, null=fg-subtle); `dim?: boolean` controls opacity; `sparkFlag` computed from first-vs-last of `range14d`; passed at call site |
+| Fix 5 | Gold box-office card inset top highlight                                | IMPLEMENTED — `boxShadow: 'inset 0 1px 0 color-mix(in oklab, oklch(0.66 0.14 78) 40%, transparent)'` on gold card                                                                                                      |
+| Fix 6 | EventCard community PriceChip uses `var(--trust-community)` token       | IMPLEMENTED — replaced hardcoded `'oklch(0.62 0.12 240)'` with `'var(--trust-community)'`; coral resale stays as literal (no CSS var yet)                                                                              |
+| Fix 7 | PrimaryCTA renders on cancelled/postponed events per spec               | IMPLEMENTED — removed `!isCancelled && !isPostponed` gate; spec says CTA always renders; fans may still visit the venue site                                                                                           |
+| Fix 8 | Status banner moved above SetlistPreview so setlist + CTA stay adjacent | IMPLEMENTED — banner now renders before setlist block; setlist and CTA are adjacent in all event states                                                                                                                |
+
 ## Notes
 
 - All attribution fields (`boxOfficeAction`, `boxOfficeMethod`, `submitter`, `soldOutBy`,
@@ -53,3 +66,6 @@ Date: 2026-05-14
   convenience" section will appear automatically when the API returns alternates.
 - `priceStatus` in the API currently returns `null`; a follow-up is needed to query
   `user_events` for corroborated sold-out submissions and return `'soldout'` when found.
+- `ticketPriceOpenedAt` and `ticketFees` are not yet in the DB schema. Both fields are
+  nullable optionals in `EventDetailResponse` — no migration needed now. When columns land,
+  the API route and `priceObj` construction are already wired to consume them.
