@@ -58,6 +58,8 @@ interface PriceDisplayProps {
   observedAt?: string | null
   range14d?: number[] | null
   priceStatus?: 'live' | 'soldout' | null
+  ticketPriceOpenedAt?: number | null
+  ticketFees?: number | null
 }
 
 // ── Color constants ───────────────────────────────────────────────
@@ -276,14 +278,20 @@ export function TrustMark({
 
 // ── Sparkline ────────────────────────────────────────────────────
 // Renders only when ≥4 datapoints AND sourceKind is not community or boxoffice.
+// flag: colors the line — 'drop' = success green, 'rise' = warning, null = fg-subtle
+// dim: mutes opacity for sold-out state
 function Sparkline({
   values,
   width = 84,
   height = 22,
+  flag = null,
+  dim = false,
 }: {
   values: number[]
   width?: number
   height?: number
+  flag?: 'drop' | 'rise' | null
+  dim?: boolean
 }) {
   if (values.length < 4) return null
   const min = Math.min(...values)
@@ -302,14 +310,20 @@ function Sparkline({
     .join(' ')
   const last = points[points.length - 1]
   if (!last) return null
-  const stroke = 'var(--fg-subtle)'
+
+  const stroke =
+    flag === 'drop'
+      ? 'var(--success)'
+      : flag === 'rise'
+        ? 'var(--warning)'
+        : 'var(--fg-subtle)'
 
   return (
     <svg
       width={width}
       height={height}
       viewBox={`0 0 ${width} ${height}`}
-      style={{ display: 'block', flexShrink: 0 }}
+      style={{ display: 'block', flexShrink: 0, opacity: dim ? 0.4 : 1 }}
       aria-hidden
     >
       <path
@@ -950,6 +964,8 @@ export function PriceDisplay({
   observedAt,
   range14d,
   priceStatus,
+  ticketPriceOpenedAt,
+  ticketFees,
 }: PriceDisplayProps) {
   const parsedMin = priceMin ? parseFloat(priceMin) : null
   const parsedMax = priceMax ? parseFloat(priceMax) : null
@@ -970,12 +986,12 @@ export function PriceDisplay({
   const priceObj: PriceBlockPrice = {
     face,
     max: faceMax,
-    fees: null,
+    fees: ticketFees ?? null,
     sourceKind,
     source: sourceName,
     sourceUrl: ticketUrl,
     observedAt: observedAt ?? null,
-    openedAt: null,
+    openedAt: ticketPriceOpenedAt ?? null,
     range14d: range14d ?? null,
     status: priceStatus ?? 'live',
     submitter: null,
@@ -1000,6 +1016,17 @@ export function PriceDisplay({
     sourceKind !== 'community' &&
     sourceKind !== 'boxoffice'
 
+  // Sparkline flag: compare first vs last value in the 14-day range.
+  // 'drop' = price went down (success green), 'rise' = price went up (warning), null = flat.
+  const sparkFlag: 'drop' | 'rise' | null =
+    hasSpark && Array.isArray(range14d) && range14d.length >= 2
+      ? range14d[range14d.length - 1]! < range14d[0]!
+        ? 'drop'
+        : range14d[range14d.length - 1]! > range14d[0]!
+          ? 'rise'
+          : null
+      : null
+
   // Card theming
   const cardBg = isBoxOffice
     ? `color-mix(in oklab, ${GOLD} 8%, var(--surface-1))`
@@ -1007,6 +1034,9 @@ export function PriceDisplay({
   const cardBorder = isBoxOffice
     ? `1px solid color-mix(in oklab, ${GOLD} 52%, var(--border))`
     : '1px solid var(--border)'
+  const cardBoxShadow = isBoxOffice
+    ? `inset 0 1px 0 color-mix(in oklab, oklch(0.66 0.14 78) 40%, transparent)`
+    : undefined
 
   // Headline price
   const headlineStr =
@@ -1022,6 +1052,7 @@ export function PriceDisplay({
         borderRadius: 12,
         background: cardBg,
         border: cardBorder,
+        boxShadow: cardBoxShadow,
         position: 'relative',
       }}
     >
@@ -1044,7 +1075,9 @@ export function PriceDisplay({
         >
           {isBoxOffice ? 'Box office' : 'Tickets'}
         </div>
-        {hasSpark && range14d && <Sparkline values={range14d} />}
+        {hasSpark && range14d && (
+          <Sparkline values={range14d} flag={sparkFlag} dim={soldOut} />
+        )}
       </div>
 
       {/* Headline number */}
@@ -1120,6 +1153,26 @@ export function PriceDisplay({
       {/* Source attribution — community shows submitter handle or "anonymous fan" */}
       {!soldOut && isCommunity && (
         <div style={{ marginTop: 6 }}>
+          {/* Community box-office context — shown when fan saw (not bought) the price
+              at the venue in person or by phone. Renders above the @handle line. */}
+          {priceObj.boxOfficeAction === 'saw' &&
+            priceObj.venueName &&
+            priceObj.boxOfficeMethod && (
+              <div style={{ marginBottom: 4 }}>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 10,
+                    color: 'var(--fg-muted)',
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  {priceObj.boxOfficeMethod === 'phone'
+                    ? `Called the ${priceObj.venueName} box office · by phone`
+                    : `Saw at ${priceObj.venueName} box office · in person`}
+                </span>
+              </div>
+            )}
           {priceObj.submitter ? (
             <a
               href={priceObj.submitter.url}
