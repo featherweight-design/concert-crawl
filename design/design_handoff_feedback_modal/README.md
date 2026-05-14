@@ -9,14 +9,16 @@ In-app feedback surface. Pre-beta. Routes to Hugh.
 - `feedback-entry-points.jsx` — `<MiniBrowse variant="A|B|C"/>` host scenes for the entry-point exploration
 - `theme-context.jsx` / `ios-frame.jsx` / `design-canvas.jsx` — local copies of project primitives
 
-## Entry point — DECIDED: A · Floating accent pill ✅
+## Entry point — DECIDED: B · Edge tab ✅
 
-**Beta-only surface.** Doubles as a `BETA` status indicator so it doesn't read as a marketing CTA. After beta, feedback moves into the user settings menu (see `design_handoff_user_menu/` for the menu pattern that will receive it).
+**Beta-only surface.** Vertical monospace tab pinned to the right edge — "TELL US · BETA" — with a small accent dot for status. Reads as a typographic anchor, not a button. Reaches every screen without competing with content.
+
+**Swap from earlier pick:** we originally landed on the floating accent pill (Variant A). In review, the pill read as a marketing CTA and felt too present at the bottom-right of every screen. Edge tab is the quieter omnipresent option we'd already explored — it carries the same `BETA` signal without the visual weight.
 
 Other variants explored (rejected for the beta window):
 
-- B · Edge tab — too quiet for the discovery we need pre-beta
-- C · Menu row + screenshot FAB — pattern lives on, but the menu surface itself is the post-beta home; pre-beta we want the pill's discoverability
+- A · Floating accent pill — too intrusive; competed with content and read as marketing
+- C · Menu row + screenshot FAB — pattern lives on, but the menu surface itself is the post-beta home; pre-beta we want a discoverable on-canvas surface
 
 ## Form contract
 

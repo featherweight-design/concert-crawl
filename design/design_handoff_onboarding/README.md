@@ -28,13 +28,13 @@ The onboarding is a **single component** that renders one of N step views based 
 
 ### Default flow (5 steps)
 
-| # | Step key   | Title                              | Purpose |
-|---|-----------|-------------------------------------|---------|
-| 1 | `welcome` | "Hey — thanks for trying this thing." | Founder's note. Plain voice (not the snarky app voice). |
-| 2 | `how`     | "Honest by design."                  | Three-row explainer: how prices work, where they come from, why they expire. |
-| 3 | `today`   | "What you can do right now."         | Bulleted list of what's actually shippable on day one (Denver pilot). |
-| 4 | `notyet`  | "What's missing — on purpose."       | Honest list of what doesn't work yet (notifications, cross-device, other cities, ticket sales). |
-| 5 | `done`    | "One last thing. Tell us when we're wrong." | CTA into Clerk sign-in. Surfaces the feedback loop. |
+| #   | Step key  | Title                                       | Purpose                                                                                         |
+| --- | --------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| 1   | `welcome` | "Hey — thanks for trying this thing."       | Founder's note. Plain voice (not the snarky app voice).                                         |
+| 2   | `how`     | "Honest by design."                         | Three-row explainer: how prices work, where they come from, why they expire.                    |
+| 3   | `today`   | "What you can do right now."                | Bulleted list of what's actually shippable on day one (Denver pilot).                           |
+| 4   | `notyet`  | "What's missing — on purpose."              | Honest list of what doesn't work yet (notifications, cross-device, other cities, ticket sales). |
+| 5   | `done`    | "One last thing. Tell us when we're wrong." | CTA into Clerk sign-in. Surfaces the feedback loop.                                             |
 
 ### Flow rules
 
@@ -152,20 +152,21 @@ Same content, centered card on a dim background. Mirrors the Auth Gate desktop c
 - Heading: `One last thing.` <br/> `Tell us when we're wrong.` (second line in `--accent`)
 - Lede: `When something changes — a new feature, a new city, a new way prices work — we'll let you know in-app and ask what you think. Loved it. Hated it. Either way, send it.`
 - Channel card: `--surface-1` bg, 1px `--border`, 12 radius. Pulsing dot (6×6, `--signal`, glow shadow) + monospace `BETA CHANNEL · ALWAYS OPEN`. Body line: `The "give feedback" button stays in the menu. You can also just email hugh@concertcrawl.app — it goes to me directly.` (email is `--signal`, weight 700.)
+- **Personal ask · community pricing.** Sits between the channel card and the CTA. No card chrome — a hairline `--border` top rule separates it from the channel card so it reads as a personal beat, not another feature box. Mono eyebrow `One ask, from me` in `--accent`. Body: `Most shows won't have a price listed yet — that's the part you can fix. When you buy a ticket, take ten seconds to report what you paid. Two fans confirming a number is all it takes to make a price real for everyone else.` Closes with a small (22×22) Hugh avatar in `--accent` + a `Caveat` `— Hugh` sign-off in `--fg-muted`, echoing step 1's founder signature at reduced scale. Rationale: beta users _are_ the seed data for the pricing system — without explicit asks, most show pages display nothing. This makes the role personal at the last possible moment before sign-in. Voice is founder-adjacent (matches step 1), not feature-explainer (steps 2/3 already cover the mechanics).
 - CTA copy: `Continue to sign-in →`.
 
 ## Typography
 
-| Role            | Family             | Size | Weight | Letter spacing |
-|-----------------|--------------------|------|--------|----------------|
-| Step heading    | Inter              | 28px (mobile) / 34px (desktop) | 900 | -0.03em |
-| Lede            | Inter              | 15  | 400    | -0.005em |
-| Body            | Inter              | 13.5–15.5 | 400–700 | -0.005em |
-| Eyebrow         | JetBrains Mono     | 10  | 700    | 0.14em uppercase |
-| Step counter    | JetBrains Mono     | 10  | 700    | 0.14em uppercase |
-| Back link       | JetBrains Mono     | 11  | 700    | 0.10em uppercase |
-| Founder sign-off| Caveat             | 24  | 600    | — |
-| CTA             | Inter              | 16  | 800    | -0.01em |
+| Role             | Family         | Size                           | Weight  | Letter spacing   |
+| ---------------- | -------------- | ------------------------------ | ------- | ---------------- |
+| Step heading     | Inter          | 28px (mobile) / 34px (desktop) | 900     | -0.03em          |
+| Lede             | Inter          | 15                             | 400     | -0.005em         |
+| Body             | Inter          | 13.5–15.5                      | 400–700 | -0.005em         |
+| Eyebrow          | JetBrains Mono | 10                             | 700     | 0.14em uppercase |
+| Step counter     | JetBrains Mono | 10                             | 700     | 0.14em uppercase |
+| Back link        | JetBrains Mono | 11                             | 700     | 0.10em uppercase |
+| Founder sign-off | Caveat         | 24                             | 600     | —                |
+| CTA              | Inter          | 16                             | 800     | -0.01em          |
 
 `text-wrap: balance` on headings; `text-wrap: pretty` on bodies.
 
@@ -225,14 +226,14 @@ Onboarding-specific components (in `onboarding-screens.jsx`):
 
 ## Files in this bundle
 
-| File | Role |
-|------|------|
-| `Onboarding.html` | The design canvas. Loads all dependencies and renders mobile + desktop side-by-side under the design canvas wrapper. **Reference only — do not ship.** |
-| `onboarding-screens.jsx` | All onboarding components and step bodies. The source of truth for layout, copy, and tokens. |
-| `theme-context.jsx` | Existing project theme provider (already in your codebase from earlier handoffs — included for completeness). |
-| `landing-screens.jsx` | Existing brand chrome — `CCClusterMark`, `CCWordmark`, `BetaPill`. Onboarding consumes these. |
-| `design-canvas.jsx` | Design-canvas presentation wrapper. **Not part of production.** |
-| `tweaks-panel.jsx` | In-canvas Tweaks panel. **Not part of production.** |
+| File                     | Role                                                                                                                                                   |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Onboarding.html`        | The design canvas. Loads all dependencies and renders mobile + desktop side-by-side under the design canvas wrapper. **Reference only — do not ship.** |
+| `onboarding-screens.jsx` | All onboarding components and step bodies. The source of truth for layout, copy, and tokens.                                                           |
+| `theme-context.jsx`      | Existing project theme provider (already in your codebase from earlier handoffs — included for completeness).                                          |
+| `landing-screens.jsx`    | Existing brand chrome — `CCClusterMark`, `CCWordmark`, `BetaPill`. Onboarding consumes these.                                                          |
+| `design-canvas.jsx`      | Design-canvas presentation wrapper. **Not part of production.**                                                                                        |
+| `tweaks-panel.jsx`       | In-canvas Tweaks panel. **Not part of production.**                                                                                                    |
 
 ## Implementation checklist
 

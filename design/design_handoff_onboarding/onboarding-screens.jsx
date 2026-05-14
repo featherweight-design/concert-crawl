@@ -578,6 +578,60 @@ function YoureIn({ dense = false }) {
           }}>hugh@concertcrawl.app</span> — it goes to me directly.
         </div>
       </div>
+
+      {/* Personal ask · community pricing.
+          Sits between the channel card and the CTA. Visually quieter than the
+          channel card (no card chrome — just a hairline top rule) so the
+          primary CTA still owns the bottom of the step. Voice matches step 1's
+          Hugh-first-person — this is the founder closing the loop with one
+          direct ask before sign-in. */}
+      <div style={{
+        display: "flex", flexDirection: "column", gap: 10,
+        paddingTop: dense ? 14 : 16,
+        borderTop: "1px solid var(--border)",
+      }}>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8,
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 10, fontWeight: 700,
+          color: "var(--accent)", letterSpacing: "0.10em",
+          textTransform: "uppercase",
+        }}>
+          One ask, from me
+        </div>
+        <p style={{
+          margin: 0,
+          fontFamily: "Inter, system-ui",
+          fontSize: 14.5, lineHeight: 1.55,
+          color: "var(--fg)",
+          letterSpacing: "-0.005em",
+          textWrap: "pretty",
+        }}>
+          Most shows won't have a price listed yet — that's the part you can
+          fix. When you buy a ticket, take ten seconds to report what you paid.
+          Two fans confirming a number is all it takes to make a price real
+          for everyone else.
+        </p>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8,
+          paddingTop: 2,
+        }}>
+          <div style={{
+            width: 22, height: 22, borderRadius: 11,
+            background: "var(--accent)",
+            color: "var(--fg-on-accent)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontFamily: "Inter, system-ui", fontWeight: 900, fontSize: 10,
+            letterSpacing: "-0.01em",
+          }}>H</div>
+          <div style={{
+            fontFamily: "Caveat, 'Inter', system-ui",
+            fontSize: 18, fontWeight: 600,
+            color: "var(--fg-muted)",
+            lineHeight: 1,
+          }}>— Hugh</div>
+        </div>
+      </div>
     </div>
   );
 }

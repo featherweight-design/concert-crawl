@@ -945,6 +945,31 @@ function PageBehindMock({ variant = "mobile" }) {
           }}>FILLMORE · 8:00 · $58–$92</div>
         </div>
       </div>
+      {/* Edge tab — the chosen entry point, visible behind the dimmed scene */}
+      <div style={{
+        position: "absolute", right: 0, top: "44%",
+        padding: isMobile ? "12px 6px" : "14px 7px",
+        background: "var(--surface-1)",
+        border: "1px solid var(--border-strong)",
+        borderRight: "none",
+        borderTopLeftRadius: 10, borderBottomLeftRadius: 10,
+        display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
+        color: "var(--fg)",
+        pointerEvents: "none",
+      }}>
+        <span style={{
+          width: 6, height: 6, borderRadius: 6,
+          background: "var(--accent)",
+        }}/>
+        <div style={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: isMobile ? 10 : 11,
+          fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase",
+          color: "var(--fg)",
+          writingMode: "vertical-rl",
+          transform: "rotate(180deg)",
+        }}>Tell us · beta</div>
+      </div>
       {/* row stubs */}
       {[0,1,2,3].map(i => (
         <div key={i} style={{

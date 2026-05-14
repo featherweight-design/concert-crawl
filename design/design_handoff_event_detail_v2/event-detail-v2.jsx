@@ -26,6 +26,11 @@ const EV2_EVENT = {
   description:
     "Electric Callboy brings the Tanzneid World Tour to Red Rocks. Expect pyrotechnics, crowd surfs, and songs your parents pretend not to like.",
   watching: 14,
+  // Ticketing routing: ticketUrl is the direct deep-link when we have one
+  // (most primary + resale prices), venueUrl is the always-known fallback.
+  // The Get Tickets button picks copy based on which is present.
+  ticketUrl: "https://www.axs.com/events/example",
+  venueUrl: "https://www.redrocksonline.com/",
   price: window.PHASE7_EVENTS ? window.PHASE7_EVENTS.electricCallboy.price : null,
   // Setlist.fm-style — most recent show on the current tour
   setlist: {
@@ -67,6 +72,11 @@ const EV2_PRICE_BY_STATE = {
   community:  () => window.PHASE7_EVENTS ? window.PHASE7_EVENTS.caroline.price      : null,
   stale:      () => window.PHASE7_EVENTS ? window.PHASE7_EVENTS.twoFriends.price    : null,
   verified:   () => window.PHASE7_EVENTS ? window.PHASE7_EVENTS.caroline.price      : null,  // community + verification
+  // Phase 7.2 — box-office tier
+  boBought:   () => window.PHASE7_EVENTS ? window.PHASE7_EVENTS.bigThief.price      : null,  // in-person + bought + alternates
+  boPhone:    () => window.PHASE7_EVENTS ? window.PHASE7_EVENTS.ldr.price           : null,  // phone + bought
+  boSaw:      () => window.PHASE7_EVENTS ? window.PHASE7_EVENTS.julien.price        : null,  // in-person + saw
+  boCalled:   () => window.PHASE7_EVENTS ? window.PHASE7_EVENTS.cigarettes.price    : null,  // phone + saw → community tier
 };
 
 // ─── New module: Setlist preview ────────────────────────────────
@@ -502,17 +512,29 @@ function EventRowDivider() {
   return <div style={{ height: 1, background: "var(--border)", marginLeft: 50 }}/>;
 }
 
-function PrimaryCTA({ label = "Get Tickets ↗", disabled = false }) {
+// PrimaryCTA — always renders. Two copy variants share the SAME button bounds
+// (height 48, width 100%, radius 10, single 15px line) so swapping between
+// "Get Tickets ↗" and "Visit Venue Website ↗" produces zero layout shift.
+//
+//   variant="direct"  → "Get Tickets ↗"          (used when ticketUrl is present)
+//   variant="venue"   → "Visit Venue Website ↗"  (fallback when only venueUrl is known)
+//
+// Engineering: pick the variant on the caller side from the URL set you have;
+// the CTA always renders so there is no empty-button gap on no-price events.
+function PrimaryCTA({ variant = "direct", href = "#", disabled = false }) {
+  const label = variant === "venue" ? "Visit Venue Website ↗" : "Get Tickets ↗";
   return (
-    <button style={{
+    <a href={href} onClick={(e) => disabled && e.preventDefault()} style={{
       all: "unset", cursor: disabled ? "default" : "pointer",
       display: "flex", width: "100%", height: 48, borderRadius: 10,
       background: disabled ? "var(--surface-2)" : "var(--accent)",
       color: disabled ? "var(--fg-subtle)" : "var(--fg-on-accent)",
-      fontWeight: 800, fontSize: 15,
-      letterSpacing: "-0.01em", alignItems: "center", justifyContent: "center",
+      fontFamily: "Inter, system-ui", fontWeight: 800, fontSize: 15,
+      letterSpacing: "-0.01em",
+      alignItems: "center", justifyContent: "center",
+      whiteSpace: "nowrap",
       boxSizing: "border-box",
-    }}>{label}</button>
+    }}>{label}</a>
   );
 }
 
@@ -526,23 +548,34 @@ function PrimaryCTA({ label = "Get Tickets ↗", disabled = false }) {
 // ============================================================
 function EventDetail({ event, chrome = "mobile" }) {
   const soldOut = event.price && event.price.status === "soldout";
+  // `chrome="none"` means we're being rendered without the iOS device frame
+  // — typically in a full-scroll artboard where the content needs to expand
+  // naturally rather than scroll inside a fixed-height container.
+  const isUnscrolled = chrome === "none";
   return (
     <div style={{
-      height: "100%", display: "flex", flexDirection: "column",
+      height: isUnscrolled ? "auto" : "100%",
+      display: "flex", flexDirection: "column",
       background: "var(--bg)", color: "var(--fg)",
       fontFamily: "Inter, system-ui",
     }}>
       <div style={{ position: "relative", flexShrink: 0 }}>
         <HeroImage label={event.artist.charAt(0)} height={300} hueSource={event.artist}/>
         {chrome === "mobile" && <BackButton/>}
-        {chrome === "mobile" && <SaveButton/>}
+        {/* Save heart removed per May-13 feedback — Watch CTA below the title
+            now carries the same intent (subscribe for updates on this show).
+            Two-mechanism redundancy was confusing. */}
         <div style={{
           position: "absolute", bottom: 0, left: 0, right: 0, height: 80,
           background: "linear-gradient(transparent, var(--bg))",
         }}/>
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", marginTop: -20, position: "relative" }}>
+      <div style={{
+        flex: isUnscrolled ? "none" : 1,
+        overflowY: isUnscrolled ? "visible" : "auto",
+        marginTop: -20, position: "relative",
+      }}>
         <div style={{ padding: "0 18px" }}>
           <ChipRow items={event.genre}/>
           <h1 style={{
@@ -572,14 +605,13 @@ function EventDetail({ event, chrome = "mobile" }) {
             <InfoRow icon={<IconUsers/>}    label="Ages" value={event.ages}/>
           </div>
 
-          {/* Spacious price card — PriceBlockB + inline submit footer */}
-          {window.PriceBlockB && <window.PriceBlockB price={event.price} tone="deadpan"/>}
+          {/* Spacious price card — PriceBlockB for priced states, and the
+              community-handoff card for no-price (rendered by PriceBlockB itself).
+              The "Saw a different price?" revise CTA only attaches when we have
+              a price to revise — no longer doubles up under the no-price card,
+              which already carries its own focal-point submit button. */}
+          {window.PriceBlockB && <window.PriceBlockB price={event.price} tone="deadpan" venue={event.venueShort || event.venue}/>}
           {event.price && (
-            <div style={{ marginTop: 8 }}>
-              <SubmitPriceCardCTA/>
-            </div>
-          )}
-          {!event.price && (
             <div style={{ marginTop: 8 }}>
               <SubmitPriceCardCTA/>
             </div>
@@ -596,9 +628,15 @@ function EventDetail({ event, chrome = "mobile" }) {
             </div>
           )}
 
-          {/* CTA */}
+          {/* CTA — always renders. Sold out is the only state that swaps the
+              button shape (disabled "Sold out"). Otherwise: ticketUrl wins,
+              venueUrl is the fallback so the slot is never empty. */}
           <div style={{ marginTop: 18 }}>
-            {soldOut ? <SoldOutCTA/> : <PrimaryCTA label="Get Tickets ↗"/>}
+            {soldOut
+              ? <SoldOutCTA/>
+              : event.ticketUrl
+                ? <PrimaryCTA variant="direct" href={event.ticketUrl}/>
+                : <PrimaryCTA variant="venue"  href={event.venueUrl || "#"}/>}
           </div>
 
           {/* About */}
@@ -668,6 +706,7 @@ function WatchConfirmDemo() {
 
 window.SubmitPriceLink = SubmitPriceLink;
 window.SubmitPriceCardCTA = SubmitPriceCardCTA;
+window.PrimaryCTA = PrimaryCTA;
 window.EV2_EVENT = EV2_EVENT;
 window.EV2_PRICE_BY_STATE = EV2_PRICE_BY_STATE;
 window.EV2_VariantFrame = VariantFrame;

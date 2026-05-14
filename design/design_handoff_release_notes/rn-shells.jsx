@@ -1,9 +1,9 @@
 // rn-shells.jsx — host shells for the Release Notes canvas
 //
-//   <DesktopBrowseShell stacked/>     desktop Browse with drop-pill stacked above Beta Feedback pill
+//   <DesktopBrowseShell/>             desktop Browse with drop pill (bottom-right) + feedback edge tab (right edge)
 //   <DesktopSpotlightShell/>          desktop Browse w/ Spotlight takeover modal open
 //   <DesktopChangelogShell/>          desktop /changelog page in app shell
-//   <MobileBrowseShell stacked/>      phone w/ drop-pill stacked above Beta Feedback pill
+//   <MobileBrowseShell/>              phone w/ drop pill above tab bar + feedback edge tab on the right edge
 //   <MobileSpotlightShell/>           phone w/ takeover modal full-screen
 //   <MobileChangelogShell/>           phone /changelog route
 //
@@ -23,53 +23,41 @@ const {
 
 const SPOTLIT = RN_RELEASES[0];
 
-// ── Existing Beta Feedback pill (mock) ────────────────────────
-// Same anatomy as design_handoff_feedback_modal Variant A — accent pill,
-// bottom-right, doubles as a BETA status surface. Modeled here so we can
-// show how the new drop pill reconciles with it.
-function BetaFeedbackPill({ variant = "desktop" }) {
+// ── Beta Feedback edge tab (mock) ─────────────────────────────
+// The chosen entry point for the in-app feedback modal — vertical
+// monospace tab pinned to the right edge. Modeled here so we can show
+// the new drop pill alongside it in context. Earlier mock was a
+// floating pill at bottom-right; that was rejected as too intrusive
+// (see design_handoff_feedback_modal/README.md).
+function BetaFeedbackEdgeTab({ variant = "desktop" }) {
   const isMobile = variant === "mobile";
   return (
-    <span style={{
-      display: "inline-flex", alignItems: "center", gap: 8,
-      padding: isMobile ? "8px 12px 8px 10px" : "10px 14px 10px 12px",
-      borderRadius: 999,
-      background: "var(--accent)",
-      color: "var(--fg-on-accent)",
-      fontFamily: "Inter, system-ui",
-      boxShadow: "0 12px 32px rgba(0,0,0,0.45)",
+    <button type="button" style={{
+      all: "unset", cursor: "pointer",
+      position: "absolute", right: 0, top: "44%",
+      padding: isMobile ? "12px 6px" : "14px 7px",
+      background: "var(--surface-1)",
+      border: "1px solid var(--border-strong)",
+      borderRight: "none",
+      borderTopLeftRadius: 10, borderBottomLeftRadius: 10,
+      display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
+      color: "var(--fg)",
+      zIndex: 4,
     }}>
       <span style={{
-        width: 10, height: 10, borderRadius: 10,
-        background: "var(--fg-on-accent)",
-        opacity: 0.85,
+        width: 6, height: 6, borderRadius: 6,
+        background: "var(--accent)",
+        boxShadow: "0 0 6px var(--accent)",
       }}/>
-      <span style={{
+      <div style={{
         fontFamily: "'JetBrains Mono', monospace",
-        fontSize: 9, fontWeight: 800,
-        letterSpacing: "0.16em", textTransform: "uppercase",
-        opacity: 0.8,
-      }}>Beta</span>
-      <span style={{
-        fontSize: isMobile ? 13 : 14, fontWeight: 700,
-        letterSpacing: "-0.015em",
-      }}>Tell us</span>
-    </span>
-  );
-}
-
-// ── Stacked pills container ───────────────────────────────────
-function PillStack({ children, variant = "desktop", showFeedback = true }) {
-  const isMobile = variant === "mobile";
-  return (
-    <div style={{
-      display: "inline-flex", flexDirection: "column",
-      alignItems: "flex-end",
-      gap: 10,
-    }}>
-      {children}
-      {showFeedback && <BetaFeedbackPill variant={variant}/>}
-    </div>
+        fontSize: isMobile ? 10 : 11,
+        fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase",
+        color: "var(--fg)",
+        writingMode: "vertical-rl",
+        transform: "rotate(180deg)",
+      }}>Tell us · beta</div>
+    </button>
   );
 }
 
@@ -299,7 +287,7 @@ function FakeShowRow({ artist, venue, time, price }) {
   );
 }
 
-// ── Desktop · stacked pills (drop above feedback) ─────────────
+// ── Desktop · drop pill (bottom-right) + feedback edge tab (right edge) ─────
 function DesktopBrowseShell({ showFeedback = true, showDrop = true }) {
   return (
     <RN_TP theme="electric">
@@ -310,13 +298,14 @@ function DesktopBrowseShell({ showFeedback = true, showDrop = true }) {
       }}>
         <RNTopbar/>
         <DesktopBrowseList/>
-        <div style={{
-          position: "absolute", right: 24, bottom: 24, zIndex: 10,
-        }}>
-          <PillStack variant="desktop" showFeedback={showFeedback}>
-            {showDrop && <FeatureDropPill release={SPOTLIT} onOpen={() => {}} onDismiss={() => {}}/>}
-          </PillStack>
-        </div>
+        {showFeedback && <BetaFeedbackEdgeTab variant="desktop"/>}
+        {showDrop && (
+          <div style={{
+            position: "absolute", right: 24, bottom: 24, zIndex: 10,
+          }}>
+            <FeatureDropPill release={SPOTLIT} onOpen={() => {}} onDismiss={() => {}}/>
+          </div>
+        )}
       </div>
     </RN_TP>
   );
@@ -492,15 +481,15 @@ function MobileBrowseShell({ showFeedback = true, showDrop = true }) {
         <div style={{ width: "100%", height: "100%", position: "relative" }}>
           <MobileBrowse/>
           <MobileTabBar/>
-          {/* Pills stacked above the tab bar */}
-          <div style={{
-            position: "absolute", right: 14, bottom: 96,
-            zIndex: 6,
-          }}>
-            <PillStack variant="mobile" showFeedback={showFeedback}>
-              {showDrop && <FeatureDropPill release={SPOTLIT} onOpen={() => {}} onDismiss={() => {}} variant="mobile"/>}
-            </PillStack>
-          </div>
+          {showFeedback && <BetaFeedbackEdgeTab variant="mobile"/>}
+          {showDrop && (
+            <div style={{
+              position: "absolute", right: 14, bottom: 96,
+              zIndex: 6,
+            }}>
+              <FeatureDropPill release={SPOTLIT} onOpen={() => {}} onDismiss={() => {}} variant="mobile"/>
+            </div>
+          )}
         </div>
       </RN_IOS>
     </RN_TP>
@@ -661,5 +650,5 @@ function UserMenuWithFooterRN({ user, unread = true }) {
 Object.assign(window, {
   DesktopBrowseShell, DesktopSpotlightShell, DesktopChangelogShell,
   MobileBrowseShell, MobileSpotlightShell, MobileChangelogShell,
-  UserMenuWithFooterRN, BetaFeedbackPill, PillStack,
+  UserMenuWithFooterRN, BetaFeedbackEdgeTab,
 });

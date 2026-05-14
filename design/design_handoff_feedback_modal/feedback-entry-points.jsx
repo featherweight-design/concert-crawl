@@ -1,22 +1,26 @@
-// feedback-entry-points.jsx — three explorations of how the feedback
-// modal is reached. All three are omnipresent (the founder ask) — they
+// feedback-entry-points.jsx — explorations of how the feedback modal
+// is reached. All three are omnipresent (the founder ask) — they
 // differ in HOW visible they are and what extra signal they carry.
 //
-// Variant A — Floating accent pill (bottom-right)
-//   The most-discoverable option. Always visible, hugs the bottom-right
-//   above the home indicator. Doubles as a "BETA" status surface so it
-//   doesn't feel like a marketing CTA.
+// DECISION (May 13, 2026): Variant B (edge tab) — chosen.
+//   Variant A (floating pill) was rejected after review: read as a
+//   marketing CTA and felt too present at the bottom-right of every
+//   screen. Code is retained below for design history; only B and C
+//   appear in the canvas.
 //
-// Variant B — Edge tab (right side rail)
-//   Quietest option. A vertically-stacked monospace tab pinned to the
-//   right edge — "BETA · TELL US." Reads as a typographic anchor, not
-//   a button. Reaches every screen without competing with content.
+// Variant A — Floating accent pill (bottom-right)  ✗ REJECTED
+//   Most-discoverable but too intrusive in practice. Doubled as a
+//   "BETA" status surface; that signal moved to the edge tab.
 //
-// Variant C — Menu item + screenshot FAB combo
+// Variant B — Edge tab (right side rail)  ✓ CHOSEN
+//   Vertically-stacked monospace tab pinned to the right edge —
+//   "TELL US · BETA." Reads as a typographic anchor, not a button.
+//   Reaches every screen without competing with content.
+//
+// Variant C — Menu item + screenshot FAB combo  ◷ POST-BETA HOME
 //   Closest to the onboarding promise: the Send Feedback row lives
-//   inside the user menu (matches "the give feedback button stays in
-//   the menu"). Adds a tiny shutter FAB that pre-attaches a screenshot
-//   of THIS screen — fastest path for bug capture.
+//   inside the user menu. Pre-beta we use the edge tab for
+//   discoverability; post-beta this becomes the permanent home.
 //
 // Each variant renders a stripped-down browse-home scene as its host.
 

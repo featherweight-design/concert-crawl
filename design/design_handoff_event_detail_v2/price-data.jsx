@@ -6,29 +6,220 @@
 //   {
 //     face: 55,             // base ticket price (cheapest tier today, USD)
 //     fees: 12.50,          // total fees on top — concise summary
-//     feeBreakdown: [       // optional line-itemized fees, only shown on tap
-//       { label: "Service",     amount: 8.50 },
-//       { label: "Facility",    amount: 2.50 },
-//       { label: "Processing",  amount: 1.50 },
-//     ],
-//     openedAt: 50,         // face price at first observed snapshot (on-sale)
+//     feeBreakdown: [...],  // optional line-itemized fees, only shown on tap
+//     openedAt: 50,         // face price at first observed snapshot
 //     low14d: 50,           // 14-day low face
 //     high14d: 58,          // 14-day high face
-//     range14d: [50,52,52,54,53,55,55,55,55,57,55,55,55,55],
-//     observedAt: <iso>,    // most recent crawl that produced this snapshot
-//     source: "Mission Ballroom",  // human-readable source label
+//     range14d: [50,...],   // sparkline data — only meaningful when we have history
+//     observedAt: <iso>,    // most recent snapshot timestamp
+//     source: "Mission Ballroom",       // human-readable source label
 //     sourceUrl: "https://…",
-//     sourceKind: "primary",  // "primary" | "resale" | "community"  (default: "primary")
-//     faceKnown: 45,        // resale only: actual face value when we know it
-//     submitter: { handle: "@hugh", url: "/u/hugh" },  // community only
-//     status: "live",       // "live" | "soldout" | "presale" | "tba"
-//     tier: "from"          // "from" → "$55+" / "fixed" → "$55" / "range" → "$55–$95"
+//     sourceKind: "primary",            // see Trust hierarchy below
+//     faceKnown: 45,                    // resale only: actual face when known
+//     submitter: { handle, url, name }, // community / boxoffice
+//     boxOfficeAction: "bought"|"saw",  // boxoffice only — see Trust hierarchy
+//     boxOfficeMethod: "in-person"|"phone",
+//     verification: { by, at },
+//     status: "live" | "soldout" | "presale" | "tba",
+//     tier: "from" | "fixed" | "range",
+//     alternates: [                     // other sources for the same show,
+//       { face, fees, source, sourceKind, ... },   // rendered as compact rows
+//     ],
 //   }
 //
-// Many events won't have any price data. That's fine and intentional —
+// ====================================================================
+// Trust hierarchy  (May 13, 2026 — box-office tier added)
+// ====================================================================
+//
+//   1. BOX OFFICE   sourceKind: "boxoffice"
+//                   The gold standard. A fan went to (or called) the venue
+//                   box office and saw the real face value, no fees.
+//                   Has sub-tiers based on action × method:
+//
+//                   action="bought"  method="in-person"  → BOX OFFICE  (top)
+//                   action="bought"  method="phone"      → BOX OFFICE  (verified purchase)
+//                   action="saw"     method="in-person"  → BOX OFFICE  (saw at venue)
+//                   action="saw"     method="phone"      → COMMUNITY   (“called & asked” —
+//                                                          drops out of gold tier;
+//                                                          treated as a community sub)
+//
+//                   Override rule: when a fresh (<14d) box-office submission exists,
+//                   it ALWAYS wins the headline price slot regardless of what else
+//                   is present (TM scrape, resale, other community subs). Everything
+//                   else renders as `alternates` below the headline.
+//
+//   2. COMMUNITY    sourceKind: "community"
+//                   Fan-reported number from a source that isn't the box office
+//                   (or called-only “saw the price” submissions, see above).
+//
+//   3. RESALE       sourceKind: "resale"
+//                   Secondary market — SeatGeek, StubHub, etc.
+//
+//   4. PRIMARY      sourceKind: "primary"
+//                   Structured data we scraped from a venue's own site.
+//                   Rare under the May-2026 strategy; included for completeness.
+//
+// Many events still won't have any price data. That's fine and intentional —
 // the value prop is the show, not the price.
 
 const PHASE7_EVENTS = {
+  // ── Phase 7.2 — BOX OFFICE, gold-standard (bought in person) ──
+  // The top of the trust hierarchy. Face value, no fees, fan went to
+  // the venue and bought a ticket. Carries an `alternates` array so the
+  // card can also show what TM/resale wants — fan has options.
+  bigThief: {
+    artist: "Big Thief",
+    title: "Big Thief",
+    venue: "Mission Ballroom",
+    venueShort: "Mission",
+    neighborhood: "RiNo, Denver",
+    date: "Fri, May 22",
+    doors: "7:00 PM",
+    showTime: "8:00 PM",
+    genre: ["indie folk"],
+    ages: "All Ages",
+    description: "Big Thief returns to Denver — Adrianne, Buck, Max, James in a room you can actually hear in.",
+    price: {
+      face: 42,
+      fees: 0,            // box-office = no fees
+      openedAt: 42,
+      low14d:   42,
+      high14d:  42,
+      range14d: null,     // single data point — sparkline less meaningful
+      observedAt: "2026-04-27T17:00:00Z",  // ~18h ago
+      source: "Mission Ballroom box office",
+      sourceUrl: null,
+      sourceKind: "boxoffice",
+      boxOfficeAction: "bought",       // bought a ticket
+      boxOfficeMethod: "in-person",    // went to the venue
+      submitter: { handle: "@hugh", url: "/u/hugh", name: "Hugh" },
+      verification: {
+        by: { handle: "@amelia", url: "/u/amelia", kind: "user" },
+        at: "2026-04-28T06:30:00Z",
+      },
+      status: "live",
+      tier: "fixed",
+      alternates: [
+        { source: "AXS",        sourceKind: "primary",   face: 42, fees: 14.50,
+          sourceUrl: "https://example.com/tickets/bigthief-axs" },
+        { source: "SeatGeek",   sourceKind: "resale",    face: 68, fees: 16.00, faceKnown: 42,
+          sourceUrl: "https://example.com/tickets/bigthief-sg" },
+      ],
+    },
+  },
+
+  // ── Phase 7.2 — BOX OFFICE, called the venue + bought ──────────
+  // Fan called the box office, locked in face value over the phone.
+  // Still gold tier (bought), but attribution names the method.
+  ldr: {
+    artist: "Lana Del Rey",
+    title: "Lana Del Rey",
+    venue: "Red Rocks Amphitheatre",
+    venueShort: "Red Rocks",
+    neighborhood: "Morrison, CO",
+    date: "Sun, Jun 14",
+    doors: "6:30 PM",
+    showTime: "7:30 PM",
+    genre: ["alt pop"],
+    ages: "All Ages",
+    description: "Lana at Red Rocks. The kind of show people will mention in introductions for the rest of the year.",
+    price: {
+      face: 95,
+      fees: 0,
+      openedAt: 95,
+      low14d:   95,
+      high14d:  95,
+      range14d: null,
+      observedAt: "2026-04-28T04:00:00Z",  // ~7h ago
+      source: "Red Rocks box office",
+      sourceUrl: null,
+      sourceKind: "boxoffice",
+      boxOfficeAction: "bought",
+      boxOfficeMethod: "phone",
+      submitter: { handle: "@kel", url: "/u/kel", name: "Kel" },
+      status: "live",
+      tier: "fixed",
+      alternates: [
+        { source: "AXS",        sourceKind: "primary",   face: 95, fees: 31.00 },
+        { source: "StubHub",    sourceKind: "resale",    face: 185, fees: 42.00, faceKnown: 95 },
+      ],
+    },
+  },
+
+  // ── Phase 7.2 — BOX OFFICE, saw price in person (didn't buy) ───
+  // Per May-13 spec revision: SAW submissions — even at the box office —
+  // are COMMUNITY tier. "Saw at the venue" and "Called and asked" are both
+  // passive observations; only BOUGHT submissions earn the gold tier.
+  // The community card surfaces the box-office origin in a context line.
+  julien: {
+    artist: "Julien Baker & TORRES",
+    title: "Send a Prayer My Way",
+    venue: "Gothic Theatre",
+    venueShort: "Gothic",
+    neighborhood: "Englewood, CO",
+    date: "Thu, May 14",
+    doors: "7:30 PM",
+    showTime: "8:30 PM",
+    genre: ["indie", "country"],
+    ages: "16+",
+    description: "Julien Baker and TORRES co-billed on the Send a Prayer My Way tour. Quiet, devastating, perfect for the Gothic.",
+    price: {
+      face: 38,
+      fees: 0,
+      openedAt: 38,
+      low14d:   38,
+      high14d:  38,
+      range14d: null,
+      observedAt: "2026-04-27T22:00:00Z",
+      source: "box office (seen in person)",
+      sourceUrl: null,
+      sourceKind: "community",        // saw → community, even when in-person at venue
+      boxOfficeAction: "saw",
+      boxOfficeMethod: "in-person",
+      submitter: { handle: "@hugh", url: "/u/hugh", name: "Hugh" },
+      status: "live",
+      tier: "fixed",
+    },
+  },
+
+  // ── Phase 7.2 — BOX OFFICE, called and asked (no purchase) ─────
+  // Per spec: drops OUT of the box-office gold tier into community.
+  // Lowest-effort box-office signal — phone + saw-only = single hop.
+  // sourceKind is "community" so it picks up the azure treatment; the
+  // attribution still references the box-office call for transparency.
+  cigarettes: {
+    artist: "Cigarettes After Sex",
+    title: "X's World Tour",
+    venue: "Mission Ballroom",
+    venueShort: "Mission",
+    neighborhood: "RiNo, Denver",
+    date: "Wed, May 28",
+    doors: "7:30 PM",
+    showTime: "8:30 PM",
+    genre: ["dream pop"],
+    ages: "All Ages",
+    description: "CASX hush-pop at Mission, exactly how it ought to sound.",
+    price: {
+      face: 52,
+      fees: 0,
+      openedAt: 52,
+      low14d:   52,
+      high14d:  52,
+      range14d: null,
+      observedAt: "2026-04-28T01:00:00Z",
+      source: "box office (by phone)",
+      sourceUrl: null,
+      // Note: even though the user dialed the venue, this is COMMUNITY tier.
+      // The form should let users self-flag this and the backend should map it.
+      sourceKind: "community",
+      boxOfficeAction: "saw",
+      boxOfficeMethod: "phone",
+      submitter: { handle: "@amelia", url: "/u/amelia", name: "Amelia" },
+      status: "live",
+      tier: "fixed",
+    },
+  },
+
   // The hero — tickets up, has fees, slight drift
   electricCallboy: {
     artist: "Electric Callboy",
@@ -111,7 +302,11 @@ const PHASE7_EVENTS = {
     price: null,
   },
 
-  // Sold out
+  // Sold out — NOW with community attribution. Per May-13 spec: sold-out is
+  // community-reported just like price (we don't have an API telling us).
+  // `soldOutBy` + `soldOutConfirms` drive the attribution line on the price
+  // card and the SoldOutCTA below. A future iteration adds a "still available?"
+  // dispute affordance — open question, see README.
   geese: {
     artist: "Geese",
     title: "Geese",
@@ -126,20 +321,19 @@ const PHASE7_EVENTS = {
     description: "Geese pulled the rug out and ran on it. Catch the last gasp of their tour at the Ogden.",
     price: {
       face: 25,
-      fees: 7.00,
-      feeBreakdown: [
-        { label: "Service",    amount: 5.00 },
-        { label: "Facility",   amount: 1.50 },
-        { label: "Processing", amount: 0.50 },
-      ],
-      openedAt: 22,
-      low14d:   22,
+      fees: 0,
+      openedAt: 25,
+      low14d:   25,
       high14d:  25,
-      range14d: [22,22,22,22,22,22,22,25,25,25,25,25,25,25],
-      observedAt: "2026-04-28T05:00:00Z",
-      source: "Ogden Theatre",
-      sourceUrl: "https://example.com/tickets/geese",
+      range14d: null,
+      observedAt: "2026-04-26T18:00:00Z",
+      source: "fan submission",
+      sourceUrl: null,
+      sourceKind: "community",
+      submitter: { handle: "@amelia", url: "/u/amelia", name: "Amelia" },
       status: "soldout",
+      soldOutBy: { handle: "@amelia", url: "/u/amelia", at: "2026-04-27T15:00:00Z" },
+      soldOutConfirms: 3,
       tier: "fixed",
     },
   },
@@ -400,6 +594,57 @@ function sourceKind(p) {
 }
 function isResale(p)    { return sourceKind(p) === "resale"; }
 function isCommunity(p) { return sourceKind(p) === "community"; }
+function isBoxOffice(p) { return sourceKind(p) === "boxoffice"; }
+
+// Attribution phrasing for BOX OFFICE TIER (gold) submissions.
+// **Box-office tier is restricted to BOUGHT submissions.** A fan must have
+// actually purchased a ticket from the venue (in person or by phone) for
+// the gold tier. "Saw" submissions — even at the box office — are community
+// tier with a box-office origin context line (see communityBoxOfficeContext).
+//
+// Returns { verb, where, who, prep, method? } so the rendering layer can
+// color the verb and submitter separately. Caller passes the venue display name.
+function boxOfficeAttribution(p, venue) {
+  if (!isBoxOffice(p)) return null;
+  if (p.boxOfficeAction !== "bought") return null;  // only purchases qualify
+  const v = venue ? `${venue} box office` : "the box office";
+  const who = p.submitter && p.submitter.handle
+    ? p.submitter.handle
+    : "an anonymous fan";
+  if (p.boxOfficeMethod === "in-person") return { verb: "Bought", where: `at ${v}`, who, prep: "by" };
+  if (p.boxOfficeMethod === "phone")     return { verb: "Bought", where: `from ${v}`, who, prep: "by", method: "by phone" };
+  return null;
+}
+
+// Box-office sub-tier — derived from action × method.
+// Returns: "in-person-bought" | "phone-bought" | null.
+// Per May-13 spec: only BOUGHT submissions earn the gold tier. Submissions
+// with action="saw" never have sourceKind=boxoffice in the first place —
+// they're community tier with optional box-office context.
+function boxOfficeSubtier(p) {
+  if (!isBoxOffice(p)) return null;
+  if (p.boxOfficeAction !== "bought") return null;
+  if (p.boxOfficeMethod === "in-person") return "in-person-bought";
+  if (p.boxOfficeMethod === "phone")     return "phone-bought";
+  return null;
+}
+
+// Context phrasing for COMMUNITY TIER submissions that came from a box-office
+// origin (saw in person OR by phone). Returns a short context string the
+// community card can render alongside its standard attribution.
+//
+//   saw + in-person  →  "Saw at {Venue} box office"  (passive in-person observation)
+//   saw + phone      →  "Called the {Venue} box office"  (phone observation)
+//
+// Returns null for any community submission that isn't a box-office observation.
+function communityBoxOfficeContext(p, venue) {
+  if (!isCommunity(p)) return null;
+  if (p.boxOfficeAction !== "saw") return null;
+  const v = venue ? `${venue} box office` : "the box office";
+  if (p.boxOfficeMethod === "in-person") return { verb: "Saw",    where: `at ${v}`,  kind: "in-person" };
+  if (p.boxOfficeMethod === "phone")     return { verb: "Called", where: `the ${v.replace(/^the /, "")}`, kind: "phone" };
+  return null;
+}
 
 // Markup over face — only meaningful when sourceKind === "resale"
 // AND we know the face value. Returns positive number = $ over face.
@@ -453,5 +698,6 @@ window.PHASE7_EVENTS = PHASE7_EVENTS;
 window.phase7 = {
   NOW_ISO, formatUSD, formatDelta, relTime, isStale,
   allIn, deltaVsOpen, deltaFlag, priceChipText, feeSummary,
-  sourceKind, isResale, isCommunity, markupVsFace,
+  sourceKind, isResale, isCommunity, isBoxOffice, markupVsFace,
+  boxOfficeSubtier, boxOfficeAttribution, communityBoxOfficeContext,
 };
