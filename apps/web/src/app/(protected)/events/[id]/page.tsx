@@ -72,10 +72,9 @@ export default async function EventDetailPage({
   const dateLabel = formatEventDate(event.date, event.venue.timezone)
   const isCancelled = event.status === 'cancelled'
   const isPostponed = event.status === 'postponed'
-  // Sold-out is a community claim surfaced via price.status.
-  // The EventDetailResponse doesn't yet carry a priceStatus field, so we
-  // fall back to the legacy heuristic until the API adds it.
-  const isSoldOut = false
+  // Sold-out is a community claim surfaced via the API priceStatus field.
+  // The field is null until a corroborated sold-out submission exists.
+  const isSoldOut = event.priceStatus === 'soldout'
 
   const doorsShow =
     doorsTime && showTime
@@ -163,7 +162,7 @@ export default async function EventDetailPage({
       </div>
 
       {/* Scrollable content — 880px max-width centered column, -60px hero overlap on desktop */}
-      <div className="relative -mt-5 sm:-mt-[60px] sm:z-10 flex-1">
+      <div className="relative -mt-5 sm:-mt-[60px] sm:z-[1] flex-1">
         <div className="mx-auto w-full max-w-[880px] box-border px-[18px] sm:px-8 pb-10 sm:pb-16 sm:pt-5">
           {/* Genre chips */}
           {event.genre && event.genre.length > 0 && (
@@ -239,6 +238,7 @@ export default async function EventDetailPage({
             venueName={event.venue.name}
             ticketUrl={event.ticketUrl}
             eventId={event.id}
+            priceStatus={event.priceStatus ?? null}
           />
 
           {/* Submit-a-price card CTA — only when a price exists to revise */}

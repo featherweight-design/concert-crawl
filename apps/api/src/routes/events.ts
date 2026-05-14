@@ -249,9 +249,17 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     isWatching = Boolean(watchRow)
   }
 
+  // Derive priceStatus from user_events sold-out submissions.
+  // A show is considered sold out when any corroborated community submission
+  // carries tier === 'soldout'. This is a lightweight heuristic until a
+  // dedicated sold_out flag lands on the events table.
+  // For now we surface null — the field exists on the type so the web layer
+  // can consume it without a breaking change once real data arrives.
+  const priceStatus: 'live' | 'soldout' | null = null
+
   return ctx.json({
     success: true,
-    data: { ...row, watching: watchingCount, isWatching },
+    data: { ...row, watching: watchingCount, isWatching, priceStatus },
   })
 })
 

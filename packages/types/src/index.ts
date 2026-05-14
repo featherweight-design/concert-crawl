@@ -249,6 +249,7 @@ export interface EventDetailResponse extends EventWithVenue {
   setlist: Setlist | null
   watching: number
   isWatching: boolean
+  priceStatus?: 'live' | 'soldout' | null
 }
 
 // Public events list query params
