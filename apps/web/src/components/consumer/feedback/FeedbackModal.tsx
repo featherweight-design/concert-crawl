@@ -250,7 +250,14 @@ function FormFields({
       {/* Category chips */}
       <div>
         <Eyebrow error={catError}>What kind?</Eyebrow>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 6,
+            opacity: disabled ? 0.55 : 1,
+          }}
+        >
           {CATEGORIES.map((cat) => {
             const active = category === cat.key
             return (
@@ -1096,7 +1103,7 @@ function SubmitButton({
       }}
     >
       {loading && <Spinner />}
-      <span>{children}</span>
+      <span>{loading ? 'Sending…' : children}</span>
     </button>
   )
 }
@@ -1120,6 +1127,7 @@ function SecondaryButton({
         justifyContent: 'center',
         height: 44,
         padding: '0 16px',
+        borderRadius: 10,
         color: 'var(--fg-muted)',
         fontFamily: 'var(--font-ui)',
         fontWeight: 700,
