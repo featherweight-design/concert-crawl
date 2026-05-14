@@ -71,13 +71,13 @@ describe('OnboardingThemeFlush', () => {
     expect(localStorageMock.getItem('cc-onboarding-theme-pending')).toBeNull()
   })
 
-  it('clears cc-onboarding-theme-pending even when patchMe throws', async () => {
+  it('keeps cc-onboarding-theme-pending when patchMe throws so the next load retries', async () => {
     localStorageMock.setItem('cc-onboarding-theme-pending', '1')
     localStorageMock.setItem('cc-theme', 'jade')
     mockPatchMe.mockRejectedValueOnce(new Error('network error'))
     render(<OnboardingThemeFlush />)
     await act(async () => {})
-    expect(localStorageMock.getItem('cc-onboarding-theme-pending')).toBeNull()
+    expect(localStorageMock.getItem('cc-onboarding-theme-pending')).toBe('1')
   })
 
   it('does not call patchMe when cc-theme is not a valid ThemeName', async () => {

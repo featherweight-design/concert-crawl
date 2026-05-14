@@ -15,16 +15,20 @@ export function OnboardingThemeFlush() {
     void (async () => {
       try {
         const raw = localStorage.getItem('cc-theme')
-        if (raw && Object.hasOwn(THEMES, raw)) {
-          const token = await getToken()
-          if (token) {
-            await patchMe(token, { theme: raw as ThemeName })
-          }
+        if (!raw || !Object.hasOwn(THEMES, raw)) {
+          // Nothing valid to flush — clear so we don't retry forever
+          localStorage.removeItem('cc-onboarding-theme-pending')
+          return
         }
-      } catch (_err) {
-        // Network errors are non-fatal; the pending flag is still cleared below
-      } finally {
+        const token = await getToken()
+        if (!token) {
+          localStorage.removeItem('cc-onboarding-theme-pending')
+          return
+        }
+        await patchMe(token, { theme: raw as ThemeName })
         localStorage.removeItem('cc-onboarding-theme-pending')
+      } catch (_err) {
+        // Network/API error — leave the flag set so the next protected-route load retries
       }
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
