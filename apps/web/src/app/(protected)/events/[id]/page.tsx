@@ -239,6 +239,8 @@ export default async function EventDetailPage({
             ticketUrl={event.ticketUrl}
             eventId={event.id}
             priceStatus={event.priceStatus ?? null}
+            ticketPriceOpenedAt={event.ticketPriceOpenedAt ?? null}
+            ticketFees={event.ticketFees ?? null}
           />
 
           {/* Submit-a-price card CTA — only when a price exists to revise */}
@@ -248,14 +250,9 @@ export default async function EventDetailPage({
             </div>
           )}
 
-          {/* Setlist preview — owns its own card surface (bg, border, radius) */}
-          {event.setlist && (
-            <div className="mt-5">
-              <SetlistPreview setlist={event.setlist} />
-            </div>
-          )}
-
-          {/* Status banner */}
+          {/* Status banner — renders above SetlistPreview so the setlist and CTA
+              remain adjacent regardless of event status. Per spec, the banner
+              is still visible; it just doesn't split the setlist from the CTA. */}
           {(isCancelled || isPostponed) && (
             <div
               className="mt-5 rounded-[10px] border border-border px-4 py-3"
@@ -279,38 +276,45 @@ export default async function EventDetailPage({
             </div>
           )}
 
-          {/* Primary CTA — always renders on non-cancelled/postponed events.
-            Sold out → disabled button. ticketUrl → "Get Tickets ↗".
-            Fallback → venue website. If neither, href="#". */}
-          {!isCancelled && !isPostponed && (
+          {/* Setlist preview — owns its own card surface (bg, border, radius) */}
+          {event.setlist && (
             <div className="mt-5">
-              {isSoldOut ? (
-                <SoldOutCta />
-              ) : (
-                <a
-                  href={event.ticketUrl ?? event.venue.websiteUrl ?? '#'}
-                  target={
-                    (event.ticketUrl ?? event.venue.websiteUrl)
-                      ? '_blank'
-                      : undefined
-                  }
-                  rel="noopener noreferrer"
-                  className="flex h-12 w-full items-center justify-center rounded-[10px] text-fg-on-accent"
-                  style={{
-                    background: 'var(--accent)',
-                    fontFamily: 'var(--font-ui)',
-                    fontWeight: 800,
-                    fontSize: 15,
-                    letterSpacing: '-0.01em',
-                    textDecoration: 'none',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {event.ticketUrl ? 'Get Tickets ↗' : 'Visit Venue Website ↗'}
-                </a>
-              )}
+              <SetlistPreview setlist={event.setlist} />
             </div>
           )}
+
+          {/* Primary CTA — always renders on all events including cancelled/postponed,
+              per spec ("PrimaryCTA always renders with no cancelled carve-out").
+              Fans may still want to visit the venue site even for cancelled shows.
+              Sold out → disabled button. ticketUrl → "Get Tickets ↗".
+              Fallback → venue website. If neither, href="#". */}
+          <div className="mt-5">
+            {isSoldOut ? (
+              <SoldOutCta />
+            ) : (
+              <a
+                href={event.ticketUrl ?? event.venue.websiteUrl ?? '#'}
+                target={
+                  (event.ticketUrl ?? event.venue.websiteUrl)
+                    ? '_blank'
+                    : undefined
+                }
+                rel="noopener noreferrer"
+                className="flex h-12 w-full items-center justify-center rounded-[10px] text-fg-on-accent"
+                style={{
+                  background: 'var(--accent)',
+                  fontFamily: 'var(--font-ui)',
+                  fontWeight: 800,
+                  fontSize: 15,
+                  letterSpacing: '-0.01em',
+                  textDecoration: 'none',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {event.ticketUrl ? 'Get Tickets ↗' : 'Visit Venue Website ↗'}
+              </a>
+            )}
+          </div>
 
           {/* About — after CTA, per design */}
           {event.description && (
