@@ -306,6 +306,7 @@ function FormFields({
       <div>
         <Eyebrow error={msgError}>What&apos;s up?</Eyebrow>
         <textarea
+          className="fb-textarea"
           value={message}
           onChange={(ev) => setMessage(ev.target.value)}
           disabled={disabled}
@@ -775,7 +776,9 @@ function DesktopCard({
             gap: 10,
           }}
         >
-          <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
+          <SecondaryButton onClick={onClose} fullWidth={false}>
+            Cancel
+          </SecondaryButton>
           <div style={{ width: 200 }}>
             <SubmitButton loading={state === 'loading'} onClick={onSubmit}>
               Send →
@@ -1067,6 +1070,7 @@ function StatusRail({ tone }: { tone: 'success' | 'error' }) {
           fontSize: 10,
           color: 'var(--fg-subtle)',
           letterSpacing: '0.14em',
+          textTransform: 'uppercase',
           fontWeight: 700,
         }}
       >
@@ -1121,9 +1125,11 @@ function SubmitButton({
 function SecondaryButton({
   children,
   onClick,
+  fullWidth = true,
 }: {
   children: React.ReactNode
   onClick: () => void
+  fullWidth?: boolean
 }) {
   return (
     <button
@@ -1135,6 +1141,8 @@ function SecondaryButton({
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
+        width: fullWidth ? '100%' : 'auto',
+        boxSizing: 'border-box',
         height: 44,
         padding: '0 16px',
         borderRadius: 10,

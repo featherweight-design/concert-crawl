@@ -79,6 +79,8 @@
 @keyframes fbSpin {
   to { transform: rotate(360deg); }
 }
+.fb-textarea::placeholder { color: var(--fg-subtle); }
+.fb-textarea:focus { border-color: var(--border-focus); }
 @keyframes umPulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
