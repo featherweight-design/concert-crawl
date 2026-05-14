@@ -312,9 +312,11 @@ function FormFields({
             fontFamily: 'var(--font-ui)',
             fontSize: 14,
             lineHeight: 1.5,
+            letterSpacing: '-0.005em',
             resize: 'vertical',
             outline: 'none',
             opacity: disabled ? 0.6 : 1,
+            transition: 'border-color .12s',
           }}
         />
         {msgError && (
@@ -322,6 +324,88 @@ function FormFields({
             Don&apos;t leave us hanging — give us a sentence.
           </HelpText>
         )}
+      </div>
+
+      {/* Screenshot — dashed slot renders but attach is post-MVP */}
+      <div>
+        <Eyebrow>Proof (optional)</Eyebrow>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '12px 14px',
+            border: '1.5px dashed var(--border-strong)',
+            borderRadius: 10,
+            color: 'var(--fg-muted)',
+            fontFamily: 'var(--font-ui)',
+            fontSize: 13,
+            fontWeight: 600,
+            letterSpacing: '-0.005em',
+            opacity: disabled ? 0.5 : 1,
+          }}
+        >
+          <span
+            style={{
+              width: 26,
+              height: 26,
+              borderRadius: 7,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'var(--surface-2)',
+              color: 'var(--signal)',
+              flexShrink: 0,
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+              <rect
+                x="2"
+                y="3.5"
+                width="12"
+                height="9"
+                rx="1.5"
+                stroke="currentColor"
+                strokeWidth="1.4"
+              />
+              <circle
+                cx="8"
+                cy="8"
+                r="2.2"
+                stroke="currentColor"
+                strokeWidth="1.4"
+              />
+              <path
+                d="M5.5 3.5l1-1.2h3l1 1.2"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+          <span
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: 1,
+            }}
+          >
+            <span style={{ color: 'var(--fg)', fontSize: 13, fontWeight: 700 }}>
+              Attach a screenshot
+            </span>
+            <span
+              style={{
+                color: 'var(--fg-subtle)',
+                fontSize: 11.5,
+                fontWeight: 500,
+                letterSpacing: 0,
+              }}
+            >
+              Optional · helps a lot
+            </span>
+          </span>
+        </div>
       </div>
 
       <ContextDisclosure ctx={ctxData} />
@@ -421,8 +505,8 @@ function ErrorState({
           letterSpacing: '-0.005em',
         }}
       >
-        We couldn&apos;t push that to the queue just now. Your message is still
-        here — try again in a sec.
+        We couldn&apos;t push that to the queue just now. Your message is saved
+        on this device — try again in a sec, or send it later.
       </div>
       <div
         style={{
@@ -433,7 +517,7 @@ function ErrorState({
         }}
       >
         <SubmitButton onClick={onReset}>Try again</SubmitButton>
-        <SecondaryButton onClick={onClose}>Come back later</SecondaryButton>
+        <SecondaryButton onClick={onClose}>Save and come back</SecondaryButton>
       </div>
     </div>
   )
@@ -678,7 +762,7 @@ function DesktopCard({
           }}
         >
           <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
-          <div style={{ width: 180 }}>
+          <div style={{ width: 200 }}>
             <SubmitButton loading={state === 'loading'} onClick={onSubmit}>
               Send →
             </SubmitButton>
