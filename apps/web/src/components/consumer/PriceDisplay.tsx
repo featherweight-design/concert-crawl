@@ -709,8 +709,9 @@ function BoxOfficeAttribution({ price }: { price: PriceBlockPrice }) {
   // Render nothing unless we have at least the venue name
   if (!venueName) return null
   const actionWord = boxOfficeAction === 'saw' ? 'Saw' : 'Bought'
+  // Phone purchases use "from" (called remotely); in-person uses "at" (was there)
+  const prep = boxOfficeMethod === 'phone' ? 'from' : 'at'
   const methodSuffix = boxOfficeMethod === 'phone' ? ' · by phone' : ''
-  const venueLabel = `${actionWord} at ${venueName} box office`
   const byLine = submitter ? (
     <>
       {' by '}
@@ -741,13 +742,18 @@ function BoxOfficeAttribution({ price }: { price: PriceBlockPrice }) {
     <div style={{ marginTop: 6 }}>
       <span
         style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
           fontFamily: 'var(--font-mono)',
           fontSize: 9,
           color: 'var(--fg-muted)',
           letterSpacing: '0.03em',
         }}
       >
-        {venueLabel}
+        {/* Verb ("Bought"/"Saw") is gold-weighted — it's the trust signal */}
+        <span style={{ color: GOLD, fontWeight: 700 }}>{actionWord}</span>
+        {prep} {venueName} box office
         {byLine}
         {methodSuffix}
       </span>
@@ -1038,11 +1044,16 @@ export function PriceDisplay({
     ? `inset 0 1px 0 color-mix(in oklab, oklch(0.66 0.14 78) 40%, transparent)`
     : undefined
 
-  // Headline price
+  // Headline price — show all-in (face + fees) for non-boxoffice tiers when fees exist.
+  // Box-office always shows face (no fees by definition). Ranges use face min/max only.
+  const allInFace =
+    !isBoxOffice && priceObj.fees && priceObj.fees > 0
+      ? face + priceObj.fees
+      : face
   const headlineStr =
     faceMax && faceMax > face
       ? `$${Math.round(face)}–$${Math.round(faceMax)}`
-      : formatUSD(face, { whole: face >= 10 })
+      : formatUSD(allInFace, { whole: allInFace >= 10 })
 
   return (
     <div
@@ -1119,7 +1130,7 @@ export function PriceDisplay({
               : faceMax
                 ? 'starting, all-in'
                 : priceObj.fees && priceObj.fees > 0
-                  ? 'all-in, including fees'
+                  ? 'all-in'
                   : 'face value'}
           </span>
         )}
@@ -1147,9 +1158,6 @@ export function PriceDisplay({
         )}
       </div>
 
-      {/* Delta pill — shown when price has changed since on-sale */}
-      {!soldOut && <DeltaPill face={face} openedAt={priceObj.openedAt} />}
-
       {/* Source attribution — community shows submitter handle or "anonymous fan" */}
       {!soldOut && isCommunity && (
         <div style={{ marginTop: 6 }}>
@@ -1158,18 +1166,71 @@ export function PriceDisplay({
           {priceObj.boxOfficeAction === 'saw' &&
             priceObj.venueName &&
             priceObj.boxOfficeMethod && (
-              <div style={{ marginBottom: 4 }}>
-                <span
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 10,
-                    color: 'var(--fg-muted)',
-                    letterSpacing: '0.04em',
-                  }}
-                >
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  marginBottom: 4,
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 9,
+                  color: 'var(--fg-muted)',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                {/* Phone or location icon matches the source of the observation */}
+                {priceObj.boxOfficeMethod === 'phone' ? (
+                  <svg
+                    width="9"
+                    height="9"
+                    viewBox="0 0 10 10"
+                    fill="none"
+                    aria-hidden
+                  >
+                    <path
+                      d="M2 2.5C2 2 2.4 1.5 3 1.5h1.2c.4 0 .8.3.9.7l.3 1.2c.1.4-.1.8-.4 1L4.5 4.8c.6 1.1 1.6 2.1 2.7 2.7l.4-.5c.2-.3.6-.5 1-.4l1.2.3c.4.1.7.5.7.9V9c0 .6-.5 1-1 1-3.9 0-7-3.1-7-7v-.5z"
+                      stroke="currentColor"
+                      strokeWidth="0.9"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    width="9"
+                    height="9"
+                    viewBox="0 0 10 10"
+                    fill="none"
+                    aria-hidden
+                  >
+                    <circle
+                      cx="5"
+                      cy="5"
+                      r="1.8"
+                      stroke="currentColor"
+                      strokeWidth="0.9"
+                    />
+                    <circle
+                      cx="5"
+                      cy="5"
+                      r="3.5"
+                      stroke="currentColor"
+                      strokeWidth="0.9"
+                      opacity="0.5"
+                    />
+                  </svg>
+                )}
+                {/* Verb is bold fg — it's the trust signal, same pattern as BoxOfficeAttribution */}
+                <span style={{ color: 'var(--fg)', fontWeight: 700 }}>
+                  {priceObj.boxOfficeMethod === 'phone' ? 'Called' : 'Saw'}
+                </span>
+                {priceObj.boxOfficeMethod === 'phone'
+                  ? `the ${priceObj.venueName} box office`
+                  : `at ${priceObj.venueName} box office`}
+                <span style={{ opacity: 0.5 }}>·</span>
+                <span style={{ opacity: 0.85 }}>
                   {priceObj.boxOfficeMethod === 'phone'
-                    ? `Called the ${priceObj.venueName} box office · by phone`
-                    : `Saw at ${priceObj.venueName} box office · in person`}
+                    ? 'by phone'
+                    : 'in person'}
                 </span>
               </div>
             )}
@@ -1210,10 +1271,24 @@ export function PriceDisplay({
       {/* Sold-out reporter attribution */}
       {soldOut && <SoldOutReporterAttribution price={priceObj} />}
 
-      {/* Fee breakdown — expandable, shows only when feeBreakdown is non-empty */}
+      {/* Fee breakdown + delta pill in a single flex row — mirrors design layout */}
       {!soldOut && !isBoxOffice && (
-        <div style={{ marginTop: 6 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            marginTop: 6,
+            flexWrap: 'wrap',
+          }}
+        >
           <FeeBreakdown price={priceObj} />
+          {priceObj.openedAt != null && priceObj.openedAt !== face && (
+            <>
+              <span style={{ color: 'var(--fg-subtle)', opacity: 0.4 }}>·</span>
+              <DeltaPill face={allInFace} openedAt={priceObj.openedAt} />
+            </>
+          )}
         </div>
       )}
 
