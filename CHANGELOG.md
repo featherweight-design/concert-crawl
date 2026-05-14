@@ -1,3 +1,20 @@
+# [1.16.0](https://github.com/HartiganHM/concert-crawl/compare/v1.15.0...v1.16.0) (2026-05-14)
+
+
+### Bug Fixes
+
+* **auth:** preserve pending theme flag on patchMe failure; skip ThemeSync during onboarding flush ([283c228](https://github.com/HartiganHM/concert-crawl/commit/283c228083d871d016cba8ce21e835998b8d58de))
+* **onboarding:** remove border from CompactStrip — not in design ([cf458b1](https://github.com/HartiganHM/concert-crawl/commit/cf458b1ddfd09fa7e7366b8d52807c0a311299a5))
+* **theme:** align ThemeSwatch dots, gig card, and label sizes to design spec ([6ce22fa](https://github.com/HartiganHM/concert-crawl/commit/6ce22fa97185ec698b426f7fe8f248ebcab9cb26))
+* **theme:** align ThemeSwatch padding, MiniMark size, and role pill to design spec ([615e746](https://github.com/HartiganHM/concert-crawl/commit/615e746ed88699ee55713dc77d72cdee0c92bda4))
+
+
+### Features
+
+* **auth:** add OnboardingThemeFlush to persist pre-auth theme selection ([4346df8](https://github.com/HartiganHM/concert-crawl/commit/4346df84376743956952dfee005f1caedbe3f67a))
+* **auth:** mount OnboardingThemeFlush in protected layout ([e5607cb](https://github.com/HartiganHM/concert-crawl/commit/e5607cbaa78beaabcc488fb9d85a8448179735dc)), closes [#331](https://github.com/HartiganHM/concert-crawl/issues/331)
+* **onboarding:** write pending flag to localStorage on theme select ([303a2f9](https://github.com/HartiganHM/concert-crawl/commit/303a2f957919b3d668793609e1a6a4e4aaa918e7))
+
 # [1.15.0](https://github.com/HartiganHM/concert-crawl/compare/v1.14.0...v1.15.0) (2026-05-14)
 
 
