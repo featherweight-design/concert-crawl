@@ -6,11 +6,13 @@
 
 ## GAPS (0)
 
+All gaps found in second review pass have been resolved.
+
 ## DEFERRED (0)
 
 ## Notes
 
-- `FeedbackModal` was already fully implemented and faithful to the design — no changes needed
+- `FeedbackModal` gaps found in second review pass and fixed: screenshot slot (dashed, non-functional), error state body copy, error secondary button label ("Save and come back"), textarea transition + letterSpacing, desktop footer submit width (200px)
 - `FeedbackPill.tsx` and `FeedbackPillGate.tsx` (Variant A, rejected) deleted
 - Replaced in barrel export and `(protected)/layout.tsx` with `FeedbackEdgeTab` / `FeedbackEdgeTabGate`
 - Design uses `fontFamily: "'JetBrains Mono', monospace"` directly; implementation uses `var(--font-mono)` per project convention — same result
