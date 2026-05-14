@@ -214,7 +214,7 @@ function HowItWorks({ dense = false }) {
     {
       kicker: "02",
       title: "Prices come from somewhere — we'll tell you where.",
-      body: "Every price has a tag. RESALE means a marketplace. COMMUNITY means a fan submitted it. If we can't pull a face value, we'll say so instead of making one up.",
+      body: "Every price has a tag. BOX OFFICE means a fan bought a ticket directly from the venue — that's the gold standard. COMMUNITY means a fan reported what they saw. RESALE means a marketplace listing. If we can't find a price, we'll say so instead of making one up.",
     },
     {
       kicker: "03",
@@ -288,7 +288,7 @@ function WhatItDoesToday({ dense = false }) {
     "Browse upcoming shows in the Denver area",
     "See real prices side-by-side, with their sources",
     "Watch shows you're curious about (saved locally for now)",
-    "Submit a price you saw and help other fans",
+    "Submit a price you saw — or report what you paid at the box office",
   ];
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: dense ? 16 : 20 }}>
