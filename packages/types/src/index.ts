@@ -250,6 +250,9 @@ export interface EventDetailResponse extends EventWithVenue {
   watching: number
   isWatching: boolean
   priceStatus?: 'live' | 'soldout' | null
+  // Price detail fields — not yet in DB schema; null until added via migration
+  ticketPriceOpenedAt?: number | null
+  ticketFees?: number | null
 }
 
 // Public events list query params
