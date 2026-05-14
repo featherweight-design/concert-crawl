@@ -4,7 +4,7 @@ const ITEMS = [
   'Browse upcoming shows in the Denver area',
   'See real prices side-by-side, with their sources',
   "Watch shows you're curious about (saved locally for now)",
-  'Submit a price you saw and help other fans',
+  'Submit a price you saw — or report what you paid at the box office',
 ]
 
 export function WhatItDoesToday() {

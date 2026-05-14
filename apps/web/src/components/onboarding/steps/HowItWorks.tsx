@@ -9,7 +9,7 @@ const ROWS = [
   {
     kicker: '02',
     title: "Prices come from somewhere — we'll tell you where.",
-    body: "Every price has a tag. RESALE means a marketplace. COMMUNITY means a fan submitted it. If we can't pull a face value, we'll say so instead of making one up.",
+    body: "Every price has a tag. BOX OFFICE means a fan bought a ticket directly from the venue — that's the gold standard. COMMUNITY means a fan reported what they saw. RESALE means a marketplace listing. If we can't find a price, we'll say so instead of making one up.",
   },
   {
     kicker: '03',

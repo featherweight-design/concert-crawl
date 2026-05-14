@@ -28,13 +28,13 @@ The onboarding is a **single component** that renders one of N step views based 
 
 ### Default flow (5 steps)
 
-| #   | Step key  | Title                                       | Purpose                                                                                         |
-| --- | --------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| 1   | `welcome` | "Hey — thanks for trying this thing."       | Founder's note. Plain voice (not the snarky app voice).                                         |
-| 2   | `how`     | "Honest by design."                         | Three-row explainer: how prices work, where they come from, why they expire.                    |
-| 3   | `today`   | "What you can do right now."                | Bulleted list of what's actually shippable on day one (Denver pilot).                           |
-| 4   | `notyet`  | "What's missing — on purpose."              | Honest list of what doesn't work yet (notifications, cross-device, other cities, ticket sales). |
-| 5   | `done`    | "One last thing. Tell us when we're wrong." | CTA into Clerk sign-in. Surfaces the feedback loop.                                             |
+| #   | Step key  | Title                                        | Purpose                                                                                         |
+| --- | --------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| 1   | `welcome` | "Hey — thanks for trying this thing."        | Founder's note. Plain voice (not the snarky app voice).                                         |
+| 2   | `how`     | "Honest by design."                          | Three-row explainer: how prices work, where they come from, why they expire.                    |
+| 3   | `today`   | "What you can do right now."                 | Bulleted list of what's actually shippable on day one (Denver pilot).                           |
+| 4   | `notyet`  | "What's missing — on purpose."               | Honest list of what doesn't work yet (notifications, cross-device, other cities, ticket sales). |
+| 5   | `done`    | "One last thing. You'll be shaping the app." | CTA into Clerk sign-in. Surfaces the feedback loop + community pricing ask.                     |
 
 ### Flow rules
 
@@ -121,7 +121,7 @@ Same content, centered card on a dim background. Mirrors the Auth Gate desktop c
 - Lede: `Two minutes on what to expect from the prices, the listings, and what we'll never do.`
 - Three-row card (`--surface-1` bg, 1px `--border`, `border-radius: 14`). Each row: 36×36 monospace number tile (01/02/03) + title + body.
   - **01 — We crawl, we don't sell.** Concert Crawl reads public listings from venues and ticketers. We don't sell tickets and we don't take a cut. Tap a price, you go to the source.
-  - **02 — Prices come from somewhere — we'll tell you where.** Every price has a tag. RESALE means a marketplace. COMMUNITY means a fan submitted it. If we can't pull a face value, we'll say so instead of making one up.
+  - **02 — Prices come from somewhere — we'll tell you where.** Every price has a tag. BOX OFFICE means a fan bought a ticket directly from the venue — that's the gold standard. COMMUNITY means a fan reported what they saw. RESALE means a marketplace listing. If we can't find a price, we'll say so instead of making one up.
   - **03 — Verifications expire.** A community price is more trustworthy after another fan confirms it — but even verified prices go stale after a week. We'll show you when something is old.
 
 ### Step 3 · What it does today (`today`)
@@ -133,7 +133,7 @@ Same content, centered card on a dim background. Mirrors the Auth Gate desktop c
   1. Browse upcoming shows in the Denver area
   2. See real prices side-by-side, with their sources
   3. Watch shows you're curious about (saved locally for now)
-  4. Submit a price you saw and help other fans
+  4. Submit a price you saw — or report what you paid at the box office
 
 ### Step 4 · What it doesn't (yet) (`notyet`)
 
@@ -149,9 +149,12 @@ Same content, centered card on a dim background. Mirrors the Auth Gate desktop c
 ### Step 5 · You're in (`done`)
 
 - Eyebrow: `You're in` (`--accent` tone)
-- Heading: `One last thing.` <br/> `Tell us when we're wrong.` (second line in `--accent`)
-- Lede: `When something changes — a new feature, a new city, a new way prices work — we'll let you know in-app and ask what you think. Loved it. Hated it. Either way, send it.`
-- Channel card: `--surface-1` bg, 1px `--border`, 12 radius. Pulsing dot (6×6, `--signal`, glow shadow) + monospace `BETA CHANNEL · ALWAYS OPEN`. Body line: `The "give feedback" button stays in the menu. You can also just email hugh@concertcrawl.app — it goes to me directly.` (email is `--signal`, weight 700.)
+- Heading: `One last thing.` <br/> `You'll be shaping the app.` (second line in `--accent`)
+- Lede (two paragraphs):
+  > You're not just here to use the thing — you're here to make it better. When something changes, we'll ask what you think. When something breaks, we want to know.
+  >
+  > The Give Feedback button lives in your menu — always there, never buried. Tap it and you'll see a quick category picker and a free-form message field. Thirty seconds. I read every one.
+- Channel card: `--surface-1` bg, 1px `--border`, 12 radius. Pulsing dot (6×6, `--signal`, glow shadow) + monospace `BETA CHANNEL · ALWAYS OPEN`. Body line: `Tap "Give Feedback" in your menu. You'll see a quick category picker and a free-form message field — thirty seconds, straight to me.`
 - **Personal ask · community pricing.** Sits between the channel card and the CTA. No card chrome — a hairline `--border` top rule separates it from the channel card so it reads as a personal beat, not another feature box. Mono eyebrow `One ask, from me` in `--accent`. Body: `Most shows won't have a price listed yet — that's the part you can fix. When you buy a ticket, take ten seconds to report what you paid. Two fans confirming a number is all it takes to make a price real for everyone else.` Closes with a small (22×22) Hugh avatar in `--accent` + a `Caveat` `— Hugh` sign-off in `--fg-muted`, echoing step 1's founder signature at reduced scale. Rationale: beta users _are_ the seed data for the pricing system — without explicit asks, most show pages display nothing. This makes the role personal at the last possible moment before sign-in. Voice is founder-adjacent (matches step 1), not feature-explainer (steps 2/3 already cover the mechanics).
 - CTA copy: `Continue to sign-in →`.
 
@@ -242,7 +245,7 @@ Onboarding-specific components (in `onboarding-screens.jsx`):
 3. Recreate the five step bodies using your codebase's component primitives. Copy is final — preserve verbatim.
 4. Use the existing CC theme tokens; verify rendering under all three themes.
 5. Keep the bottom-pinned-CTA + scrollable-body layout on both mobile and desktop. No skips. Back disabled on step 1.
-6. The `hugh@concertcrawl.app` email on step 5 is a placeholder — confirm the real address before ship.
+6. Step 5 routes feedback through the in-app feedback form (Give Feedback in the menu) — no direct email reference.
 
 ## Out of scope / explicit non-features
 

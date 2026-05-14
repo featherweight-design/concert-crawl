@@ -538,13 +538,18 @@ function YoureIn({ dense = false }) {
 
       <StepHeading dense={dense}>
         One last thing.<br/>
-        <span style={{ color: "var(--accent)" }}>Tell us when we're wrong.</span>
+        <span style={{ color: "var(--accent)" }}>You'll be shaping the app.</span>
       </StepHeading>
 
       <Lede>
-        When something changes — a new feature, a new city, a new way prices
-        work — we'll let you know in-app and ask what you think. Loved it.
-        Hated it. Either way, send it.
+        You're not just here to use the thing — you're here to make it better.
+        When something changes, we'll ask what you think. When something breaks,
+        we want to know.
+      </Lede>
+      <Lede>
+        The Give Feedback button lives in your menu — always there, never
+        buried. Tap it and you'll see a quick category picker and a free-form
+        message field. Thirty seconds. I read every one.
       </Lede>
 
       <div style={{
@@ -572,10 +577,8 @@ function YoureIn({ dense = false }) {
           fontFamily: "Inter, system-ui", fontSize: 14, lineHeight: 1.5,
           color: "var(--fg)", letterSpacing: "-0.005em",
         }}>
-          The "give feedback" button stays in the menu. You can also just
-          email <span style={{
-            color: "var(--signal)", fontWeight: 700,
-          }}>hugh@concertcrawl.app</span> — it goes to me directly.
+          Tap "Give Feedback" in your menu. You'll see a quick category picker
+          and a free-form message field — thirty seconds, straight to me.
         </div>
       </div>
 
