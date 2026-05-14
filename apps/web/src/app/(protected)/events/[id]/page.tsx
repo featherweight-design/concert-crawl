@@ -88,8 +88,8 @@ export default async function EventDetailPage({
         <AppHeader />
       </div>
 
-      {/* Hero — 320px, full-bleed */}
-      <div className="relative w-full shrink-0" style={{ height: 320 }}>
+      {/* Hero — 300px, full-bleed */}
+      <div className="relative w-full shrink-0" style={{ height: 300 }}>
         <EventImage
           src={event.imageUrl}
           alt={event.artist}
