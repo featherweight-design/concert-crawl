@@ -1,3 +1,18 @@
+# [1.15.0](https://github.com/HartiganHM/concert-crawl/compare/v1.14.0...v1.15.0) (2026-05-14)
+
+
+### Bug Fixes
+
+* **feedback:** fifth-pass gaps — textarea focus/placeholder, secondary width, status code case ([cb7b723](https://github.com/HartiganHM/concert-crawl/commit/cb7b72340dd135a3bcbf83761aa9dc9330d161c4))
+* **feedback:** fourth-pass typography polish ([29f4713](https://github.com/HartiganHM/concert-crawl/commit/29f4713846bf7523619331e8d5b132f726e027bf))
+* **feedback:** loading label, chips group opacity, secondary border-radius ([f76d8ca](https://github.com/HartiganHM/concert-crawl/commit/f76d8caed9aa5865efafdcba46a976551d5a952d))
+* **web:** feedback modal — screenshot slot, error copy, textarea transition, desktop footer width ([3889158](https://github.com/HartiganHM/concert-crawl/commit/388915888344ff2c3b237b2ea05b9959081e2f7b))
+
+
+### Features
+
+* **web:** replace FeedbackPill with FeedbackEdgeTab (Variant B — edge tab) ([b7c3ebd](https://github.com/HartiganHM/concert-crawl/commit/b7c3ebd2e7638b1a51a04f0d341900f10a35fae3))
+
 # [1.14.0](https://github.com/HartiganHM/concert-crawl/compare/v1.13.0...v1.14.0) (2026-05-14)
 
 
