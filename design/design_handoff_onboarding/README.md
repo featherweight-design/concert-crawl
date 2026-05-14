@@ -154,9 +154,8 @@ Same content, centered card on a dim background. Mirrors the Auth Gate desktop c
   > You're not just here to use the thing — you're here to make it better. When something changes, we'll ask what you think. When something breaks, we want to know.
   >
   > The Give Feedback button lives in your menu — always there, never buried. Tap it and you'll see a quick category picker and a free-form message field. Thirty seconds. I read every one.
-- Channel card: `--surface-1` bg, 1px `--border`, 12 radius. Pulsing dot (6×6, `--signal`, glow shadow) + monospace `BETA CHANNEL · ALWAYS OPEN`. Body line: `Tap "Give Feedback" in your menu. You'll see a quick category picker and a free-form message field — thirty seconds, straight to me.`
-- **Personal ask · community pricing.** Sits between the channel card and the CTA. No card chrome — a hairline `--border` top rule separates it from the channel card so it reads as a personal beat, not another feature box. Mono eyebrow `One ask, from me` in `--accent`. Body: `Most shows won't have a price listed yet — that's the part you can fix. When you buy a ticket, take ten seconds to report what you paid. Two fans confirming a number is all it takes to make a price real for everyone else.` Closes with a small (22×22) Hugh avatar in `--accent` + a `Caveat` `— Hugh` sign-off in `--fg-muted`, echoing step 1's founder signature at reduced scale. Rationale: beta users _are_ the seed data for the pricing system — without explicit asks, most show pages display nothing. This makes the role personal at the last possible moment before sign-in. Voice is founder-adjacent (matches step 1), not feature-explainer (steps 2/3 already cover the mechanics).
-- CTA copy: `Continue to sign-in →`.
+- **Personal ask · community pricing.** Sits after the two lede paragraphs, separated by a hairline `--border` top rule. No card chrome — the rule keeps it as a personal beat rather than another feature box. Mono eyebrow `One ask, from me` in `--accent` (`letterSpacing: 0.10em` — intentionally tighter than the standard `Eyebrow` primitive's `0.14em`). Body: `Most shows won't have a price listed yet — that's the part you can fix. When you buy a ticket, take ten seconds to report what you paid. Two fans confirming a number is all it takes to make a price real for everyone else.` Closes with a small (22×22) Hugh avatar in `--accent` + a `Caveat` `— Hugh` sign-off in `--fg-muted`, echoing step 1's founder signature at reduced scale. Rationale: beta users _are_ the seed data for the pricing system — without explicit asks, most show pages display nothing. This makes the role personal at the last possible moment before sign-up.
+- CTA copy: `Continue to sign-up →`.
 
 ## Typography
 
@@ -240,7 +239,7 @@ Onboarding-specific components (in `onboarding-screens.jsx`):
 
 ## Implementation checklist
 
-1. Wire `<OnboardingMobile />` / `<OnboardingDesktop />` into the auth-gate flow so they render after code redemption and before the Clerk handoff. Pass `onComplete={() => router.push('/sign-in')}` (or your codebase's equivalent).
+1. Wire `<OnboardingMobile />` / `<OnboardingDesktop />` into the auth-gate flow so they render after code redemption and before the Clerk handoff. Pass `onComplete={() => router.push('/sign-up')}` (or your codebase's equivalent).
 2. Hard-code the 5-step flow `["welcome", "how", "today", "notyet", "done"]`; the variable-flow scaffolding is design exploration only.
 3. Recreate the five step bodies using your codebase's component primitives. Copy is final — preserve verbatim.
 4. Use the existing CC theme tokens; verify rendering under all three themes.
