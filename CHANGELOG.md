@@ -1,3 +1,28 @@
+# [1.14.0](https://github.com/HartiganHM/concert-crawl/compare/v1.13.0...v1.14.0) (2026-05-14)
+
+
+### Bug Fixes
+
+* **event-card:** replace hardcoded community color with CSS token ([c414355](https://github.com/HartiganHM/concert-crawl/commit/c4143550212a1065f5af5ecb149db3b3bf949e17))
+* **event-card:** resale trust tell color to coral, community to azure ([f516bb3](https://github.com/HartiganHM/concert-crawl/commit/f516bb32b2b55cbcbc83f66056b3c1dfd43342a1))
+* **event-detail:** correct hero height to 300px per design spec ([d350eb2](https://github.com/HartiganHM/concert-crawl/commit/d350eb28ada12f1c6349f300b676e9a9fb9cca4f))
+* **event-detail:** derive isSoldOut from API priceStatus, fix desktop z-index ([e13fbd2](https://github.com/HartiganHM/concert-crawl/commit/e13fbd20983a7c53a406320855989c75262bba67))
+* **event-detail:** desktop layout, CTA always renders, remove stale sections ([ceab101](https://github.com/HartiganHM/concert-crawl/commit/ceab10186981f83e0b994a8e65cbf21f0d792e5a))
+* **event-detail:** fixes 7+8 — PrimaryCTA always renders, status banner above setlist ([16d83e4](https://github.com/HartiganHM/concert-crawl/commit/16d83e489ad1fb5fca9a8958e6f66287a1983722))
+* **event-detail:** guard no-url CTA, loosen null check on ticketPriceMin ([8bdfaab](https://github.com/HartiganHM/concert-crawl/commit/8bdfaab760da9315df5cd20cd623bd493ff8b432))
+* **price-display:** five design gaps — headline all-in, attribution verb styling, context icon ([bc4ffee](https://github.com/HartiganHM/concert-crawl/commit/bc4ffee73a32d28a187025f86dc68b349bea921e))
+* **price:** correct type mismatches from quality gate ([7e70067](https://github.com/HartiganHM/concert-crawl/commit/7e7006724fab3f95ba6c4864edefd543bdcf8905))
+* **theme:** correct --trust-community lightness in light theme (0.52 → 0.62) ([f13bec6](https://github.com/HartiganHM/concert-crawl/commit/f13bec6892848c96f417993b92c130b905f17631))
+
+
+### Features
+
+* **price-display:** implement fixes 1-5 for event detail v2 gap report ([05acbb5](https://github.com/HartiganHM/concert-crawl/commit/05acbb5913b723b3b3d3029603235cc382add723))
+* **price-display:** implement PriceBlockB card with full trust tier system ([ddb32c4](https://github.com/HartiganHM/concert-crawl/commit/ddb32c44ae9401a99c4fd3f26f4b26609e4aa664))
+* **price:** delta pill, box-office attribution, sold-out reporter, community [@handle](https://github.com/handle) ([e0dc878](https://github.com/HartiganHM/concert-crawl/commit/e0dc87849a32065ff0e72755f9fe7e44cfabc061))
+* **types:** add ticketPriceOpenedAt and ticketFees to EventDetailResponse ([b8f65cb](https://github.com/HartiganHM/concert-crawl/commit/b8f65cb1afda537fd0a597427423a4527ed95c30))
+* **ui:** event detail v2 — watch, setlist, price card, desktop layout ([4dad2a3](https://github.com/HartiganHM/concert-crawl/commit/4dad2a3f882e931c856796e44055a1f82089c7e2))
+
 # [1.13.0](https://github.com/HartiganHM/concert-crawl/compare/v1.12.0...v1.13.0) (2026-05-14)
 
 
