@@ -1,7 +1,9 @@
 import { vi, describe, it, expect } from 'vitest'
 
+const mockImageResponse = vi.fn()
+
 vi.mock('next/og', () => ({
-  ImageResponse: vi.fn(),
+  ImageResponse: mockImageResponse,
 }))
 
 describe('apple-icon', () => {
@@ -13,5 +15,14 @@ describe('apple-icon', () => {
   it('exports contentType image/png', async () => {
     const mod = await import('./apple-icon')
     expect(mod.contentType).toBe('image/png')
+  })
+
+  it('default export calls ImageResponse with 180x180 size', async () => {
+    const mod = await import('./apple-icon')
+    mod.default()
+    expect(mockImageResponse).toHaveBeenCalledWith(expect.anything(), {
+      width: 180,
+      height: 180,
+    })
   })
 })

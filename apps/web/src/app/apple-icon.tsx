@@ -11,7 +11,9 @@ export default function AppleIcon() {
       viewBox="0 0 48 48"
       xmlns="http://www.w3.org/2000/svg"
     >
-      {/* Background */}
+      {/* Opaque canvas fill — iOS expects a fully opaque PNG before applying its own mask */}
+      <rect width="48" height="48" fill="#070A1A" />
+      {/* Rounded background */}
       <rect width="48" height="48" rx="10" fill="#171D3A" />
       {/* Signal ring */}
       <circle cx="34" cy="14" r="9" fill="#FF7BD4" opacity="0.22" />

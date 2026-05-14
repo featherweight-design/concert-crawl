@@ -30,16 +30,16 @@ Same as `MiniMark.tsx`:
 
 ### Color tokens
 
-| Token       | Electric (dark)  | Light            |
-|-------------|------------------|------------------|
-| `surface-2` | `#171D3A`        | `#E8EDF6`        |
-| `accent`    | `#FF7BD4`        | `#E0297A`        |
-| `signal`    | `#7AE6FF`        | `#0080A0`        |
-| `fg`        | `#E8F3FF`        | `#070A1A`        |
+| Token       | Electric (dark) | Light     |
+| ----------- | --------------- | --------- |
+| `surface-2` | `#171D3A`       | `#E8EDF6` |
+| `accent`    | `#FF7BD4`       | `#E0297A` |
+| `signal`    | `#7AE6FF`       | `#0080A0` |
+| `fg`        | `#E8F3FF`       | `#070A1A` |
 
 ### `icon.svg`
 
-A static SVG file. A `<style>` block defines CSS classes (`bg`, `accent`, `signal`, `dot`) with Light theme values as the default, overridden by `@media (prefers-color-scheme: dark)` to Electric values. Each shape element uses the appropriate class.
+A static SVG file. A `<style>` block defines CSS classes (`bg`, `ac`, `sig`, `dot`) with Light theme values as the default, overridden by `@media (prefers-color-scheme: dark)` to Electric values. Each shape element uses the appropriate class.
 
 ### `apple-icon.tsx`
 
@@ -60,11 +60,11 @@ Update `themeColor` in the `viewport` export from `#000000` to `#070A1A` (Electr
 
 ## Files changed
 
-| File | Change |
-|------|--------|
-| `apps/web/src/app/icon.svg` | New |
-| `apps/web/src/app/apple-icon.tsx` | New |
-| `apps/web/src/app/layout.tsx` | Update `themeColor` |
+| File                              | Change              |
+| --------------------------------- | ------------------- |
+| `apps/web/src/app/icon.svg`       | New                 |
+| `apps/web/src/app/apple-icon.tsx` | New                 |
+| `apps/web/src/app/layout.tsx`     | Update `themeColor` |
 
 ---
 
