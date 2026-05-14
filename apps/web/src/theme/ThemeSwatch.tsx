@@ -45,23 +45,23 @@ export function ThemeSwatch({
       }}
     >
       {/* Dots row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <MiniMark tokens={tokens} size={22} />
-        <span style={{ display: 'flex', gap: 3 }}>
+        <span style={{ display: 'flex', gap: 4 }}>
           <span
             style={{
-              width: 8,
-              height: 8,
-              borderRadius: 4,
+              width: 9,
+              height: 9,
+              borderRadius: 5,
               background: tokens['signal'],
               display: 'block',
             }}
           />
           <span
             style={{
-              width: 8,
-              height: 8,
-              borderRadius: 4,
+              width: 9,
+              height: 9,
+              borderRadius: 5,
               background: tokens['accent'],
               display: 'block',
             }}
@@ -69,9 +69,9 @@ export function ThemeSwatch({
           {hasDistinctAccent2 && (
             <span
               style={{
-                width: 8,
-                height: 8,
-                borderRadius: 4,
+                width: 9,
+                height: 9,
+                borderRadius: 5,
                 background: tokens['accent-2'],
                 display: 'block',
               }}
@@ -104,13 +104,13 @@ export function ThemeSwatch({
           padding: '8px 10px',
           display: 'flex',
           flexDirection: 'column',
-          gap: 3,
+          gap: 4,
         }}
       >
         <div
           style={{
             fontFamily: 'var(--font-ui)',
-            fontSize: 10,
+            fontSize: 11,
             fontWeight: 800,
             color: tokens['fg'],
             letterSpacing: '-0.01em',
@@ -121,11 +121,11 @@ export function ThemeSwatch({
         >
           Habstrakt
         </div>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
           <span
             style={{
               fontFamily: 'var(--font-ui)',
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: 900,
               color: tokens['signal'],
               letterSpacing: '-0.02em',
@@ -136,14 +136,14 @@ export function ThemeSwatch({
           <span
             style={{
               fontFamily: 'var(--font-mono)',
-              fontSize: 7,
+              fontSize: 8,
               fontWeight: 700,
               color: tokens['fg-subtle'],
               letterSpacing: '0.10em',
               textTransform: 'uppercase',
             }}
           >
-            · GA
+            GA
           </span>
         </div>
       </div>
@@ -153,7 +153,7 @@ export function ThemeSwatch({
         <span
           style={{
             fontFamily: 'var(--font-ui)',
-            fontSize: 11,
+            fontSize: 13,
             fontWeight: 700,
             color: tokens['fg'],
             letterSpacing: '-0.005em',
