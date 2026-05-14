@@ -244,7 +244,7 @@ export default async function EventDetailPage({
           />
 
           {/* Submit-a-price card CTA — only when a price exists to revise */}
-          {event.ticketPriceMin !== null && (
+          {event.ticketPriceMin != null && (
             <div className="mt-3">
               <SubmitPriceCardCta eventId={event.id} />
             </div>
@@ -287,18 +287,14 @@ export default async function EventDetailPage({
               per spec ("PrimaryCTA always renders with no cancelled carve-out").
               Fans may still want to visit the venue site even for cancelled shows.
               Sold out → disabled button. ticketUrl → "Get Tickets ↗".
-              Fallback → venue website. If neither, href="#". */}
+              Fallback → venue website. No URL → disabled "No tickets available". */}
           <div className="mt-5">
             {isSoldOut ? (
               <SoldOutCta />
-            ) : (
+            ) : event.ticketUrl || event.venue.websiteUrl ? (
               <a
                 href={event.ticketUrl ?? event.venue.websiteUrl ?? '#'}
-                target={
-                  (event.ticketUrl ?? event.venue.websiteUrl)
-                    ? '_blank'
-                    : undefined
-                }
+                target="_blank"
                 rel="noopener noreferrer"
                 className="flex h-12 w-full items-center justify-center rounded-[10px] text-fg-on-accent"
                 style={{
@@ -313,6 +309,32 @@ export default async function EventDetailPage({
               >
                 {event.ticketUrl ? 'Get Tickets ↗' : 'Visit Venue Website ↗'}
               </a>
+            ) : (
+              <button
+                type="button"
+                disabled
+                aria-label="No tickets available"
+                style={{
+                  all: 'unset',
+                  boxSizing: 'border-box',
+                  cursor: 'not-allowed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '100%',
+                  height: 48,
+                  borderRadius: 10,
+                  background: 'var(--surface-1)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--fg-subtle)',
+                  fontFamily: 'var(--font-ui)',
+                  fontWeight: 700,
+                  fontSize: 14,
+                  letterSpacing: '-0.005em',
+                }}
+              >
+                No tickets available
+              </button>
             )}
           </div>
 
