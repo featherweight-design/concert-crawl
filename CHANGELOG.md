@@ -1,3 +1,15 @@
+# [1.13.0](https://github.com/HartiganHM/concert-crawl/compare/v1.12.0...v1.13.0) (2026-05-14)
+
+
+### Bug Fixes
+
+* **onboarding:** align MakeItYours hero strip + compact strip to design spec ([7afe001](https://github.com/HartiganHM/concert-crawl/commit/7afe00146d794caec0f359134d9d2dfb71c3342c))
+
+
+### Features
+
+* **onboarding:** add Make It Yours theme picker step ([cae2f9a](https://github.com/HartiganHM/concert-crawl/commit/cae2f9a6a984531fb37dc0e2f01dc761882da6af)), closes [#202](https://github.com/HartiganHM/concert-crawl/issues/202)
+
 # [1.12.0](https://github.com/HartiganHM/concert-crawl/compare/v1.11.0...v1.12.0) (2026-05-14)
 
 
