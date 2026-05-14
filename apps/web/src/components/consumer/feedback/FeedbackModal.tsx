@@ -228,6 +228,7 @@ function FormFields({
             letterSpacing: '-0.035em',
             lineHeight: 1.0,
             color: 'var(--fg)',
+            textWrap: 'balance',
           }}
         >
           Holler at us.
@@ -240,6 +241,7 @@ function FormFields({
             lineHeight: 1.5,
             color: 'var(--fg-muted)',
             letterSpacing: '-0.005em',
+            textWrap: 'pretty',
           }}
         >
           Bug, idea, or praise. We read all of it — usually within a couple
@@ -275,6 +277,7 @@ function FormFields({
                   fontFamily: 'var(--font-ui)',
                   fontWeight: 700,
                   fontSize: 12.5,
+                  letterSpacing: '-0.005em',
                   background: active ? 'var(--signal)' : 'transparent',
                   color: active ? 'var(--fg-on-accent)' : 'var(--fg)',
                   border: `1.5px solid ${
@@ -446,6 +449,7 @@ function SuccessState({
           letterSpacing: '-0.035em',
           lineHeight: 1.0,
           color: 'var(--fg)',
+          textWrap: 'balance',
         }}
       >
         Loud and clear.
@@ -456,6 +460,7 @@ function SuccessState({
           color: 'var(--fg-muted)',
           lineHeight: 1.55,
           letterSpacing: '-0.005em',
+          textWrap: 'pretty',
         }}
       >
         Your message is in the queue. We read everything — Hugh especially.
@@ -500,6 +505,7 @@ function ErrorState({
           letterSpacing: '-0.035em',
           lineHeight: 1.0,
           color: 'var(--fg)',
+          textWrap: 'balance',
         }}
       >
         Signal lost.
@@ -510,6 +516,7 @@ function ErrorState({
           color: 'var(--fg-muted)',
           lineHeight: 1.55,
           letterSpacing: '-0.005em',
+          textWrap: 'pretty',
         }}
       >
         We couldn&apos;t push that to the queue just now. Your message is saved
@@ -953,6 +960,7 @@ function HelpText({
         color: tone === 'error' ? 'var(--warning)' : 'var(--fg-subtle)',
         marginTop: 6,
         lineHeight: 1.4,
+        letterSpacing: '-0.005em',
       }}
     >
       {children}
@@ -1098,8 +1106,10 @@ function SubmitButton({
         fontFamily: 'var(--font-ui)',
         fontWeight: 800,
         fontSize: 14.5,
+        letterSpacing: '-0.005em',
         boxShadow: loading ? 'none' : '0 12px 32px -16px var(--signal)',
         opacity: loading ? 0.55 : 1,
+        transition: 'opacity .12s, transform .12s',
       }}
     >
       {loading && <Spinner />}
@@ -1132,6 +1142,8 @@ function SecondaryButton({
         fontFamily: 'var(--font-ui)',
         fontWeight: 700,
         fontSize: 13,
+        letterSpacing: '-0.005em',
+        textAlign: 'center',
         whiteSpace: 'nowrap',
       }}
     >
@@ -1157,7 +1169,7 @@ function Spinner() {
 
 function CloseIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+    <svg width="13" height="13" viewBox="0 0 12 12" fill="none">
       <path
         d="M2 2l8 8M10 2l-8 8"
         stroke="currentColor"
