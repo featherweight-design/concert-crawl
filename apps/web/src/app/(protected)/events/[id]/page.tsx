@@ -248,12 +248,9 @@ export default async function EventDetailPage({
             </div>
           )}
 
-          {/* Setlist preview — in a surface card, above primary CTA */}
+          {/* Setlist preview — owns its own card surface (bg, border, radius) */}
           {event.setlist && (
-            <div
-              className="mt-5 rounded-[12px] border border-border"
-              style={{ padding: '0 14px', background: 'var(--surface-1)' }}
-            >
+            <div className="mt-5">
               <SetlistPreview setlist={event.setlist} />
             </div>
           )}

@@ -1,1 +1,0 @@
-export { WatchButton } from './WatchButton'

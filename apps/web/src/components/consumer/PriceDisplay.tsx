@@ -44,6 +44,7 @@ export interface PriceBlockPrice {
   boxOfficeAction?: 'bought' | 'saw'
   boxOfficeMethod?: 'in-person' | 'phone'
   boxOfficeFaceLiteral?: boolean
+  venueName?: string | null
 }
 
 interface PriceDisplayProps {
@@ -62,7 +63,8 @@ interface PriceDisplayProps {
 // ── Color constants ───────────────────────────────────────────────
 const CORAL = 'oklch(0.65 0.20 25)'
 const GOLD = 'oklch(0.66 0.14 78)'
-const AZURE = 'oklch(0.62 0.12 240)'
+// Community color token — consumed from CSS variable so it responds to theme.
+const COMMUNITY = 'var(--trust-community)'
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -212,7 +214,7 @@ export function TrustMark({
     kind === 'resale'
       ? CORAL
       : kind === 'community'
-        ? AZURE
+        ? COMMUNITY
         : kind === 'boxoffice'
           ? GOLD
           : 'var(--fg-muted)'
@@ -221,7 +223,7 @@ export function TrustMark({
     kind === 'resale'
       ? `color-mix(in oklab, ${CORAL} 16%, transparent)`
       : kind === 'community'
-        ? `color-mix(in oklab, ${AZURE} 16%, transparent)`
+        ? `color-mix(in oklab, ${COMMUNITY} 16%, transparent)`
         : kind === 'boxoffice'
           ? `color-mix(in oklab, ${GOLD} 22%, transparent)`
           : 'color-mix(in oklab, var(--fg-muted) 12%, transparent)'
@@ -528,7 +530,7 @@ function AlternateSourceRow({
     alt.sourceKind === 'resale'
       ? CORAL
       : alt.sourceKind === 'community'
-        ? AZURE
+        ? COMMUNITY
         : alt.sourceKind === 'boxoffice'
           ? GOLD
           : 'var(--fg-muted)'
@@ -639,6 +641,155 @@ function AlternateSourceRow({
   )
 }
 
+// ── DropDotIcon ─────────────────────────────────────────────────
+function DropDotIcon({ size = 8 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 8 8" aria-hidden>
+      <circle cx="4" cy="4" r="3" fill="var(--success)" />
+    </svg>
+  )
+}
+
+// ── DeltaPill — price-vs-on-sale indicator ───────────────────────
+// Renders when openedAt differs from current face price.
+// Down (price dropped): success-colored. Up (price rose): muted/neutral.
+function DeltaPill({
+  face,
+  openedAt,
+}: {
+  face: number
+  openedAt: number | null | undefined
+}) {
+  if (openedAt == null || openedAt === face) return null
+  const diff = face - openedAt
+  const isDown = diff < 0
+  const absDiff = Math.abs(diff)
+  const deltaStr = formatUSD(absDiff, { whole: absDiff >= 1 })
+  const text = isDown
+    ? `${deltaStr} cheaper than on-sale`
+    : `+${deltaStr} since on-sale`
+
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 5,
+        flexShrink: 0,
+        whiteSpace: 'nowrap',
+        fontFamily: 'var(--font-mono)',
+        fontSize: 10,
+        letterSpacing: '0.02em',
+        color: isDown ? 'var(--success)' : 'var(--fg-muted)',
+      }}
+    >
+      {isDown && <DropDotIcon />}
+      {text}
+    </span>
+  )
+}
+
+// ── BoxOfficeAttribution — in-person or phone purchase line ──────
+function BoxOfficeAttribution({ price }: { price: PriceBlockPrice }) {
+  const { boxOfficeAction, boxOfficeMethod, venueName, submitter } = price
+  // Render nothing unless we have at least the venue name
+  if (!venueName) return null
+  const actionWord = boxOfficeAction === 'saw' ? 'Saw' : 'Bought'
+  const methodSuffix = boxOfficeMethod === 'phone' ? ' · by phone' : ''
+  const venueLabel = `${actionWord} at ${venueName} box office`
+  const byLine = submitter ? (
+    <>
+      {' by '}
+      {submitter.url ? (
+        <a
+          href={submitter.url}
+          style={{
+            color: 'inherit',
+            textDecoration: 'underline',
+            textDecorationColor: 'var(--border-strong)',
+            textUnderlineOffset: 2,
+          }}
+        >
+          @{submitter.handle}
+        </a>
+      ) : (
+        `@${submitter.handle}`
+      )}
+    </>
+  ) : (
+    <>
+      {' '}
+      by <em>an anonymous fan</em>
+    </>
+  )
+
+  return (
+    <div style={{ marginTop: 6 }}>
+      <span
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 9,
+          color: 'var(--fg-muted)',
+          letterSpacing: '0.03em',
+        }}
+      >
+        {venueLabel}
+        {byLine}
+        {methodSuffix}
+      </span>
+    </div>
+  )
+}
+
+// ── SoldOutReporterAttribution — who flagged this as sold out ────
+function SoldOutReporterAttribution({ price }: { price: PriceBlockPrice }) {
+  const { soldOutBy, soldOutConfirms } = price
+  if (soldOutBy == null && !soldOutConfirms) return null
+  const confirmsText =
+    soldOutConfirms != null && soldOutConfirms > 0
+      ? ` · ${soldOutConfirms} fan${soldOutConfirms !== 1 ? 's' : ''} confirmed`
+      : ''
+
+  const reportedBy = soldOutBy ? (
+    <>
+      {'Reported sold out by '}
+      {soldOutBy.url ? (
+        <a
+          href={soldOutBy.url}
+          style={{
+            color: 'inherit',
+            textDecoration: 'underline',
+            textDecorationColor: 'var(--border-strong)',
+            textUnderlineOffset: 2,
+          }}
+        >
+          @{soldOutBy.handle}
+        </a>
+      ) : (
+        `@${soldOutBy.handle}`
+      )}
+    </>
+  ) : (
+    'Reported sold out'
+  )
+
+  return (
+    <div style={{ marginTop: 6 }}>
+      <span
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 9,
+          color: 'var(--fg-subtle)',
+          letterSpacing: '0.03em',
+        }}
+      >
+        {reportedBy}
+        {confirmsText}
+      </span>
+    </div>
+  )
+}
+
 // ── CommunityHandoffCard — shown when price is null ──────────────
 function CommunityHandoffCard({ eventId }: { eventId: string }) {
   return (
@@ -647,8 +798,8 @@ function CommunityHandoffCard({ eventId }: { eventId: string }) {
         marginTop: 18,
         padding: '16px 14px 14px',
         borderRadius: 12,
-        background: `color-mix(in oklab, ${AZURE} 6%, var(--surface-1))`,
-        border: `1px solid color-mix(in oklab, ${AZURE} 32%, var(--border))`,
+        background: `color-mix(in oklab, ${COMMUNITY} 6%, var(--surface-1))`,
+        border: `1px solid color-mix(in oklab, ${COMMUNITY} 32%, var(--border))`,
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -661,8 +812,8 @@ function CommunityHandoffCard({ eventId }: { eventId: string }) {
           right: 0,
           padding: '3px 8px',
           borderRadius: '0 0 0 6px',
-          background: `color-mix(in oklab, ${AZURE} 20%, transparent)`,
-          color: AZURE,
+          background: `color-mix(in oklab, ${COMMUNITY} 20%, transparent)`,
+          color: COMMUNITY,
           fontFamily: 'var(--font-mono)',
           fontSize: 9,
           fontWeight: 700,
@@ -713,7 +864,7 @@ function CommunityHandoffCard({ eventId }: { eventId: string }) {
             fontFamily: 'var(--font-ui)',
             fontWeight: 700,
             fontSize: 14,
-            color: AZURE,
+            color: COMMUNITY,
             letterSpacing: '-0.005em',
           }}
         >
@@ -813,7 +964,7 @@ export function PriceDisplay({
   }
 
   // Build a PriceBlockPrice-shaped object from the flat API fields.
-  // Fields not yet returned by the API stub to null — they short-circuit
+  // Fields not yet returned by the API are null — they short-circuit
   // gracefully in every sub-component.
   const priceObj: PriceBlockPrice = {
     face,
@@ -823,23 +974,32 @@ export function PriceDisplay({
     source: sourceName,
     sourceUrl: ticketUrl,
     observedAt: observedAt ?? null,
+    openedAt: null,
     range14d: range14d ?? null,
     status: priceStatus ?? 'live',
     submitter: null,
     verification: null,
     alternates: [],
+    // Box-office / community fields — null until API wires them
+    venueName: venueName,
+    boxOfficeAction: undefined,
+    boxOfficeMethod: undefined,
+    soldOutBy: null,
+    soldOutConfirms: undefined,
   }
 
   const soldOut = priceStatus === 'soldout'
   const isBoxOffice = sourceKind === 'boxoffice'
   const isCommunity = sourceKind === 'community'
 
-  // Sparkline only for primary tier with ≥4 datapoints
+  // Sparkline for primary and resale tiers with ≥4 datapoints.
+  // Community and box-office are excluded per spec (single data point / no history).
   const hasSpark =
     !soldOut &&
     Array.isArray(range14d) &&
     range14d.length >= 4 &&
-    sourceKind === 'primary'
+    sourceKind !== 'community' &&
+    sourceKind !== 'boxoffice'
 
   // Card theming
   const cardBg = isBoxOffice
@@ -901,7 +1061,7 @@ export function PriceDisplay({
         <span
           style={{
             fontFamily: 'var(--font-ui)',
-            fontWeight: 800,
+            fontWeight: 900,
             fontSize: 28,
             color: soldOut ? 'var(--fg-subtle)' : 'var(--fg)',
             letterSpacing: '-0.025em',
@@ -926,7 +1086,9 @@ export function PriceDisplay({
               ? 'face value · no fees'
               : faceMax
                 ? 'starting, all-in'
-                : 'face'}
+                : priceObj.fees && priceObj.fees > 0
+                  ? 'all-in, including fees'
+                  : 'face value'}
           </span>
         )}
 
@@ -953,22 +1115,48 @@ export function PriceDisplay({
         )}
       </div>
 
-      {/* Source attribution — community shows submitter (anon) */}
+      {/* Delta pill — shown when price has changed since on-sale */}
+      {!soldOut && <DeltaPill face={face} openedAt={priceObj.openedAt} />}
+
+      {/* Source attribution — community shows submitter handle or "anonymous fan" */}
       {!soldOut && isCommunity && (
         <div style={{ marginTop: 6 }}>
-          <span
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 9,
-              color: 'var(--fg-subtle)',
-              letterSpacing: '0.04em',
-              fontStyle: 'italic',
-            }}
-          >
-            anonymous fan
-          </span>
+          {priceObj.submitter ? (
+            <a
+              href={priceObj.submitter.url}
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 9,
+                color: 'var(--fg-subtle)',
+                letterSpacing: '0.04em',
+                textDecoration: 'underline',
+                textDecorationColor: 'var(--border-strong)',
+                textUnderlineOffset: 2,
+              }}
+            >
+              @{priceObj.submitter.handle}
+            </a>
+          ) : (
+            <span
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 9,
+                color: 'var(--fg-subtle)',
+                letterSpacing: '0.04em',
+                fontStyle: 'italic',
+              }}
+            >
+              an anonymous fan
+            </span>
+          )}
         </div>
       )}
+
+      {/* Box-office attribution line */}
+      {!soldOut && isBoxOffice && <BoxOfficeAttribution price={priceObj} />}
+
+      {/* Sold-out reporter attribution */}
+      {soldOut && <SoldOutReporterAttribution price={priceObj} />}
 
       {/* Fee breakdown — expandable, shows only when feeBreakdown is non-empty */}
       {!soldOut && !isBoxOffice && (

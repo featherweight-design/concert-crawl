@@ -24,8 +24,11 @@ export function SetlistPreview({
   return (
     <div
       style={{
-        borderTop: '1px solid var(--border)',
-        borderBottom: '1px solid var(--border)',
+        background: 'var(--surface-1)',
+        border: '1px solid var(--border)',
+        borderRadius: 12,
+        overflow: 'hidden',
+        padding: '0 14px',
       }}
     >
       <button
