@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useTheme } from '@/theme/ThemeProvider'
 import { THEMES, THEME_META, type ThemeName } from '@/theme/themes'
 import { MiniMark } from '@/theme/MiniMark'
-import { ThemeSwatch } from '@/components/settings/ThemePickerInline'
+import { ThemeSwatch } from '@/theme/ThemeSwatch'
 import { Eyebrow, Lede, StepHeading } from './_primitives'
 
 const THEME_KEYS = Object.keys(THEMES) as ThemeName[]
