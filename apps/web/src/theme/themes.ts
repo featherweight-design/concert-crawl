@@ -106,7 +106,7 @@ const light: Record<string, string> = {
   success: '#1F8A4F',
   warning: '#B86E00',
   danger: '#C42940',
-  'trust-community': 'oklch(0.52 0.12 240)',
+  'trust-community': 'oklch(0.62 0.12 240)',
   focus: '#0080A0',
   'overlay-hover': 'rgba(7,10,26,0.04)',
   'overlay-press': 'rgba(7,10,26,0.08)',
