@@ -70,17 +70,19 @@ const STATIC_TABS = [
     ),
   },
   {
-    key: 'saved',
-    label: 'saved',
+    key: 'watching',
+    label: 'watching',
     href: '/watching',
     icon: (
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
         <path
-          d="M9 15l-6.5-6A3.5 3.5 0 019 4.5 3.5 3.5 0 0115.5 9L9 15z"
+          d="M1 9C1 9 4 3 9 3s8 6 8 6-3 6-8 6-8-6-8-6z"
           stroke="currentColor"
           strokeWidth="1.5"
           strokeLinejoin="round"
+          strokeLinecap="round"
         />
+        <circle cx="9" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.5" />
       </svg>
     ),
   },

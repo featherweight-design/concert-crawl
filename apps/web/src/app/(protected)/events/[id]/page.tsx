@@ -128,27 +128,6 @@ export default async function EventDetailPage({
             />
           </svg>
         </Link>
-        {/* Mobile: floating save button (stub) */}
-        <button
-          aria-label="Save show"
-          className="absolute right-3.5 top-14 z-10 flex h-9 w-9 items-center justify-center rounded-full sm:hidden"
-          style={{ background: 'var(--scrim)' }}
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 18 18"
-            fill="none"
-            aria-hidden
-          >
-            <path
-              d="M9 15l-6.5-6A3.5 3.5 0 019 4.5 3.5 3.5 0 0115.5 9L9 15z"
-              stroke="var(--fg)"
-              strokeWidth="1.5"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
         {/* Desktop: breadcrumb over hero */}
         <div className="absolute bottom-4 left-6 hidden items-center gap-1.5 text-[13px] sm:flex">
           <Link
@@ -264,10 +243,12 @@ export default async function EventDetailPage({
           />
         </div>
 
-        {/* Submit-a-price card CTA */}
-        <div className="mt-3">
-          <SubmitPriceCardCta eventId={event.id} />
-        </div>
+        {/* Submit-a-price card CTA — only when a price exists */}
+        {event.ticketPriceMin !== null && (
+          <div className="mt-3">
+            <SubmitPriceCardCta eventId={event.id} />
+          </div>
+        )}
 
         {/* Community price section */}
         <div className="mt-4">
@@ -380,7 +361,7 @@ export default async function EventDetailPage({
           <Link href="/sign-up" className="text-signal">
             Sign up
           </Link>{' '}
-          to save this show
+          to watch this show
         </p>
 
         {/* Related shows */}

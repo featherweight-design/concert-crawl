@@ -3,7 +3,7 @@ import type { EventWithVenue } from '@concert-crawl/types'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { EventImage } from '../event-image'
-import { WatchButton } from '../watch-button'
+import { WatchShowButton } from '../watch-show-button'
 import { formatShowTime, venueShort } from '../definitions/lib'
 import { copy } from '../definitions/copy'
 
@@ -184,7 +184,7 @@ export function EventCard({
       </div>
 
       {/* Watch button */}
-      <WatchButton eventId={event.id} initialWatching={isWatching} />
+      <WatchShowButton eventId={event.id} initialWatching={isWatching} />
 
       {/* Price chip — links to event detail */}
       <Link
