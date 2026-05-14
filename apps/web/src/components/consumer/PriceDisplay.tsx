@@ -1,7 +1,50 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 import type { PriceSource } from '@concert-crawl/types'
+
+// ── Price shape used by PriceBlockB ─────────────────────────────
+// Maps from the flat EventDetailResponse fields into a richer object
+// that mirrors the design's price data shape. Fields not yet in the DB
+// are optional and default to null — no migration needed this round.
+export interface PriceBlockPrice {
+  face: number
+  max?: number | null
+  fees?: number | null
+  feeBreakdown?: Array<{ label: string; amount: number }> | null
+  tier?: 'exact' | 'from'
+  source?: string | null
+  sourceUrl?: string | null
+  sourceKind: 'primary' | 'resale' | 'community' | 'boxoffice'
+  observedAt?: string | null
+  openedAt?: number | null
+  range14d?: number[] | null
+  status?: 'live' | 'soldout'
+  submitter?: { handle: string; url: string } | null
+  verification?: {
+    at: string
+    by: {
+      kind: 'user' | 'auto' | 'admin'
+      handle?: string
+      url?: string
+      label?: string
+    }
+  } | null
+  alternates?: Array<{
+    source: string
+    sourceUrl?: string | null
+    sourceKind: 'primary' | 'resale' | 'community' | 'boxoffice'
+    face: number
+    fees?: number | null
+  }>
+  soldOutBy?: { handle: string; url: string } | null
+  soldOutConfirms?: number
+  // Box-office meta
+  boxOfficeAction?: 'bought' | 'saw'
+  boxOfficeMethod?: 'in-person' | 'phone'
+  boxOfficeFaceLiteral?: boolean
+}
 
 interface PriceDisplayProps {
   priceMin: string | null
@@ -9,11 +52,23 @@ interface PriceDisplayProps {
   priceSource: PriceSource | null
   venueName: string
   ticketUrl: string | null
+  eventId: string
+  // Extended fields (optional — undefined = not yet in API response)
+  observedAt?: string | null
+  range14d?: number[] | null
+  priceStatus?: 'live' | 'soldout'
 }
 
-type SourceKind = 'primary' | 'resale' | 'community'
+// ── Color constants ───────────────────────────────────────────────
+const CORAL = 'oklch(0.65 0.20 25)'
+const GOLD = 'oklch(0.66 0.14 78)'
+const AZURE = 'oklch(0.62 0.12 240)'
 
-function resolveSourceKind(source: PriceSource | null): SourceKind {
+// ── Helpers ──────────────────────────────────────────────────────
+
+function resolveSourceKind(
+  source: PriceSource | null,
+): 'primary' | 'resale' | 'community' | 'boxoffice' {
   if (source === 'seatgeek') return 'resale'
   if (source === 'community') return 'community'
   return 'primary'
@@ -44,16 +99,30 @@ function resolveSourceName(
   }
 }
 
-function formatFace(face: number, max: number | null): string {
-  if (max && max > face) return `$${Math.round(face)}–$${Math.round(max)}`
-  return `$${Math.round(face)}`
+function formatUSD(val: number, opts?: { whole?: boolean }): string {
+  if (opts?.whole || Number.isInteger(val)) return `$${Math.round(val)}`
+  return `$${val.toFixed(2)}`
 }
 
-// ── Custom SVG glyphs (1.2–1.4px stroke, matches consumer system) ─
+function isStale(observedAt: string | null | undefined): boolean {
+  if (!observedAt) return false
+  return Date.now() - new Date(observedAt).getTime() > 24 * 60 * 60 * 1000
+}
 
-function ExternalIcon() {
+function relTime(observedAt: string): string {
+  const diff = Date.now() - new Date(observedAt).getTime()
+  const hours = Math.floor(diff / (1000 * 60 * 60))
+  if (hours < 1) return 'just now'
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
+}
+
+// ── SVG icons ────────────────────────────────────────────────────
+
+function ExternalIcon({ size = 10 }: { size?: number }) {
   return (
-    <svg width={10} height={10} viewBox="0 0 10 10" fill="none" aria-hidden>
+    <svg width={size} height={size} viewBox="0 0 10 10" fill="none" aria-hidden>
       <path
         d="M3.5 2H2v6h6V6.5"
         stroke="currentColor"
@@ -72,185 +141,820 @@ function ExternalIcon() {
   )
 }
 
-function BellIcon() {
+function CaretIcon({ dir = 'down' }: { dir?: 'down' | 'up' }) {
+  const rot = dir === 'up' ? 180 : 0
   return (
-    <svg width={11} height={11} viewBox="0 0 14 14" fill="none" aria-hidden>
+    <svg
+      width={9}
+      height={9}
+      viewBox="0 0 10 10"
+      style={{ transform: `rotate(${rot}deg)`, transition: 'transform .15s' }}
+      aria-hidden
+    >
       <path
-        d="M3 6.5C3 4.3 4.8 2.5 7 2.5S11 4.3 11 6.5V8L12 10H2L3 8V6.5Z"
+        d="M2 4l3 3 3-3"
         stroke="currentColor"
-        strokeWidth="1.4"
+        strokeWidth="1.5"
+        strokeLinecap="round"
         strokeLinejoin="round"
-      />
-      <path
-        d="M5.5 11.5C5.5 12.3 6.2 13 7 13S8.5 12.3 8.5 11.5"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
         fill="none"
-      />
-      <path
-        d="M7 1V2.5"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
       />
     </svg>
   )
 }
 
-// ── TrustMark — one-word inline pill for resale / community ──────
+function CheckIcon({
+  size = 10,
+  color = 'currentColor',
+}: {
+  size?: number
+  color?: string
+}) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 10 10"
+      fill="none"
+      style={{ flexShrink: 0 }}
+      aria-hidden
+    >
+      <path
+        d="M1.8 5.2L4 7.4 8.4 2.6"
+        stroke={color}
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
 
-function TrustMark({ kind }: { kind: SourceKind }) {
-  if (kind !== 'resale' && kind !== 'community') return null
-  const label = kind === 'resale' ? 'resale' : 'community'
-  const color = kind === 'resale' ? 'var(--warning)' : 'var(--trust-community)'
+// ── TrustMark — four tiers ────────────────────────────────────────
+// boxoffice (gold ★) · community (azure C) · resale (coral R) · primary (vendor muted)
+export function TrustMark({
+  kind,
+  glyph = true,
+}: {
+  kind: 'primary' | 'resale' | 'community' | 'boxoffice'
+  glyph?: boolean
+}) {
+  const label =
+    kind === 'resale'
+      ? 'resale'
+      : kind === 'community'
+        ? 'community'
+        : kind === 'boxoffice'
+          ? 'box office'
+          : 'vendor'
+
+  const tint =
+    kind === 'resale'
+      ? CORAL
+      : kind === 'community'
+        ? AZURE
+        : kind === 'boxoffice'
+          ? GOLD
+          : 'var(--fg-muted)'
+
   const bg =
     kind === 'resale'
-      ? 'color-mix(in oklab, var(--warning) 14%, transparent)'
-      : 'color-mix(in oklab, var(--trust-community) 12%, transparent)'
+      ? `color-mix(in oklab, ${CORAL} 16%, transparent)`
+      : kind === 'community'
+        ? `color-mix(in oklab, ${AZURE} 16%, transparent)`
+        : kind === 'boxoffice'
+          ? `color-mix(in oklab, ${GOLD} 22%, transparent)`
+          : 'color-mix(in oklab, var(--fg-muted) 12%, transparent)'
+
+  const border =
+    kind === 'boxoffice'
+      ? `1px solid color-mix(in oklab, ${GOLD} 60%, transparent)`
+      : 'none'
+
   return (
     <span
       style={{
         display: 'inline-flex',
         alignItems: 'center',
+        gap: 4,
         padding: '2px 6px',
         borderRadius: 4,
         background: bg,
-        color,
+        color: tint,
+        border,
         fontFamily: 'var(--font-mono)',
         fontSize: 9,
         letterSpacing: '0.06em',
         textTransform: 'uppercase',
+        fontWeight: 700,
         lineHeight: 1,
         whiteSpace: 'nowrap',
         flexShrink: 0,
         verticalAlign: 'middle',
       }}
     >
+      {kind === 'boxoffice' && glyph && (
+        <svg
+          width="8"
+          height="8"
+          viewBox="0 0 10 10"
+          style={{ flexShrink: 0 }}
+          aria-hidden
+        >
+          <path
+            d="M5 1l1.18 2.46L9 3.78l-2 1.92.55 2.8L5 7.2 2.45 8.5 3 5.7 1 3.78l2.82-.32L5 1z"
+            fill={tint}
+          />
+        </svg>
+      )}
       {label}
     </span>
   )
 }
 
-// ── SourceLink — attribution with optional external link ─────────
+// ── Sparkline ────────────────────────────────────────────────────
+// Renders only when ≥4 datapoints AND sourceKind is not community or boxoffice.
+function Sparkline({
+  values,
+  width = 84,
+  height = 22,
+}: {
+  values: number[]
+  width?: number
+  height?: number
+}) {
+  if (values.length < 4) return null
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const range = Math.max(max - min, 1)
+  const stepX = width / (values.length - 1)
+  const points = values.map((val, idx) => {
+    const xCoord = idx * stepX
+    const yCoord = height - 2 - ((val - min) / range) * (height - 4)
+    return [xCoord, yCoord] as [number, number]
+  })
+  const pathD = points
+    .map(([xCoord, yCoord], idx) =>
+      idx === 0 ? `M${xCoord},${yCoord}` : `L${xCoord},${yCoord}`,
+    )
+    .join(' ')
+  const last = points[points.length - 1]
+  if (!last) return null
+  const stroke = 'var(--fg-subtle)'
 
-function SourceLink({ name, url }: { name: string; url: string | null }) {
-  const baseStyle: React.CSSProperties = {
-    fontFamily: 'var(--font-mono)',
-    fontSize: 9,
-    color: 'var(--fg-subtle)',
-    letterSpacing: '0.04em',
-  }
-  if (!url) {
-    return <span style={baseStyle}>{name}</span>
-  }
   return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      style={{
-        ...baseStyle,
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 3,
-        textDecoration: 'none',
-      }}
+    <svg
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      style={{ display: 'block', flexShrink: 0 }}
+      aria-hidden
     >
-      {name}
-      <ExternalIcon />
-    </a>
+      <path
+        d={pathD}
+        stroke={stroke}
+        strokeWidth="1.25"
+        fill="none"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <circle cx={last[0]} cy={last[1]} r="2" fill={stroke} />
+    </svg>
   )
 }
 
-// ── WatchAffordance — local state only, no backend yet ───────────
+// ── StaleStamp ──────────────────────────────────────────────────
+function StaleStamp({ observedAt }: { observedAt: string | null | undefined }) {
+  if (!observedAt) return null
+  const stale = isStale(observedAt)
+  const rel = relTime(observedAt)
+  const text = stale ? `as of ${rel} — could be stale` : `as of ${rel}`
 
-function WatchAffordance() {
-  const [watching, setWatching] = useState(false)
   return (
-    <button
-      onClick={() => setWatching((prev) => !prev)}
+    <span
       style={{
-        all: 'unset',
-        cursor: 'pointer',
         display: 'inline-flex',
         alignItems: 'center',
         gap: 5,
+        flexShrink: 0,
+        whiteSpace: 'nowrap',
         fontFamily: 'var(--font-mono)',
-        fontSize: 10,
-        color: watching ? 'var(--accent)' : 'var(--fg-subtle)',
-        letterSpacing: '0.02em',
+        fontSize: 9,
+        color: stale ? 'var(--warning)' : 'var(--fg-subtle)',
+        letterSpacing: '0.04em',
       }}
     >
-      <BellIcon />
-      <span>{watching ? 'On it' : 'Yell if it drops'}</span>
-    </button>
+      {stale && (
+        <svg width="8" height="8" viewBox="0 0 8 8" aria-hidden>
+          <circle cx="4" cy="4" r="3" fill="var(--warning)" opacity="0.7" />
+        </svg>
+      )}
+      {text}
+    </span>
   )
 }
 
-// ── Editorial sentence — PriceBlockC ported to available data ────
+// ── VerifiedStamp ───────────────────────────────────────────────
+function VerifiedStamp({
+  verification,
+  subject,
+}: {
+  verification: NonNullable<PriceBlockPrice['verification']>
+  subject?: string | null
+}) {
+  const stale =
+    Date.now() - new Date(verification.at).getTime() > 7 * 24 * 60 * 60 * 1000
+  const rel = relTime(verification.at)
+  const color = stale ? 'var(--warning)' : 'var(--success)'
+  const headWord = subject ? `${subject} verified` : 'Verified'
+  const { by } = verification
+  const whenText = stale ? `${rel} — could be stale` : rel
 
+  let head: React.ReactNode
+  if (by.kind === 'user' && by.handle) {
+    head = (
+      <>
+        {headWord} by{' '}
+        <a
+          href={by.url}
+          style={{
+            color: 'inherit',
+            textDecoration: 'underline',
+            textDecorationColor: 'var(--border-strong)',
+            textUnderlineOffset: 2,
+          }}
+        >
+          {by.handle}
+        </a>
+      </>
+    )
+  } else if (by.label) {
+    head = (
+      <>
+        {headWord} · {by.label}
+      </>
+    )
+  } else {
+    head = <>{headWord}</>
+  }
+
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 5,
+        flexShrink: 0,
+        whiteSpace: 'nowrap',
+        fontFamily: 'var(--font-mono)',
+        fontSize: 9,
+        color,
+        letterSpacing: '0.04em',
+      }}
+    >
+      <CheckIcon color={color} size={10} />
+      <span>
+        {head} · {whenText}
+      </span>
+    </span>
+  )
+}
+
+// ── FeeBreakdown — collapsible ───────────────────────────────────
+function FeeBreakdown({ price }: { price: PriceBlockPrice }) {
+  const [open, setOpen] = useState(false)
+  if (!price.feeBreakdown || price.fees == null || price.fees <= 0) return null
+  const allIn = price.face + price.fees
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        style={{
+          all: 'unset',
+          cursor: 'pointer',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 5,
+          flexShrink: 0,
+          whiteSpace: 'nowrap',
+          fontFamily: 'var(--font-mono)',
+          fontSize: 10,
+          color: 'var(--fg-muted)',
+          letterSpacing: '0.02em',
+        }}
+      >
+        <span>+{formatUSD(price.fees)} fees</span>
+        <CaretIcon dir={open ? 'up' : 'down'} />
+      </button>
+      {open && (
+        <div
+          style={{
+            marginTop: 8,
+            padding: '8px 10px',
+            borderRadius: 8,
+            background: 'var(--surface-1)',
+            border: '1px solid var(--border)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4,
+          }}
+        >
+          {price.feeBreakdown.map((row, idx) => (
+            <div
+              key={idx}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontFamily: 'var(--font-mono)',
+                fontSize: 10,
+                color: 'var(--fg-muted)',
+              }}
+            >
+              <span>{row.label}</span>
+              <span style={{ color: 'var(--fg)' }}>
+                {formatUSD(row.amount)}
+              </span>
+            </div>
+          ))}
+          <div
+            style={{ height: 1, background: 'var(--border)', margin: '2px 0' }}
+          />
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              color: 'var(--fg-muted)',
+            }}
+          >
+            <span style={{ color: 'var(--fg-subtle)' }}>Face value</span>
+            <span style={{ color: 'var(--fg)' }}>
+              {formatUSD(price.face, { whole: true })}
+            </span>
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginTop: 2,
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              color: 'var(--fg)',
+              fontWeight: 700,
+            }}
+          >
+            <span>all-in, including fees</span>
+            <span>{formatUSD(allIn)}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── AlternateSourceRow ───────────────────────────────────────────
+function AlternateSourceRow({
+  alt,
+}: {
+  alt: NonNullable<PriceBlockPrice['alternates']>[number]
+}) {
+  if (alt.face == null) return null
+  const allInVal = alt.face + (alt.fees ?? 0)
+  const showAllIn = (alt.fees ?? 0) > 0
+  const dotColor =
+    alt.sourceKind === 'resale'
+      ? CORAL
+      : alt.sourceKind === 'community'
+        ? AZURE
+        : alt.sourceKind === 'boxoffice'
+          ? GOLD
+          : 'var(--fg-muted)'
+  const kindLabel =
+    alt.sourceKind === 'resale'
+      ? 'resale'
+      : alt.sourceKind === 'community'
+        ? 'community'
+        : alt.sourceKind === 'boxoffice'
+          ? 'box office'
+          : 'vendor'
+
+  const inner = (
+    <>
+      <span
+        style={{
+          width: 5,
+          height: 5,
+          borderRadius: 2.5,
+          flexShrink: 0,
+          background: dotColor,
+          alignSelf: 'center',
+          opacity: 0.85,
+        }}
+      />
+      <span
+        style={{
+          fontFamily: 'var(--font-ui)',
+          fontWeight: 500,
+          fontSize: 12,
+          color: 'var(--fg-muted)',
+          letterSpacing: '-0.005em',
+        }}
+      >
+        {alt.source}
+      </span>
+      <span
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 8.5,
+          color: dotColor,
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+          opacity: 0.75,
+        }}
+      >
+        {kindLabel}
+      </span>
+      <span style={{ flex: 1 }} />
+      <span
+        style={{
+          fontFamily: 'var(--font-ui)',
+          fontWeight: 600,
+          fontSize: 12.5,
+          color: 'var(--fg-muted)',
+          letterSpacing: '-0.01em',
+        }}
+      >
+        {showAllIn
+          ? formatUSD(allInVal, { whole: allInVal >= 10 })
+          : `$${alt.face}`}
+      </span>
+      {showAllIn && (
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 8.5,
+            color: 'var(--fg-subtle)',
+            letterSpacing: '0.04em',
+          }}
+        >
+          all-in
+        </span>
+      )}
+      {alt.sourceUrl && <ExternalIcon size={8} />}
+    </>
+  )
+
+  return alt.sourceUrl ? (
+    <a
+      href={alt.sourceUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        display: 'flex',
+        alignItems: 'baseline',
+        gap: 8,
+        padding: '8px 0',
+        borderTop: '1px dashed var(--border)',
+        textDecoration: 'none',
+        cursor: 'pointer',
+      }}
+    >
+      {inner}
+    </a>
+  ) : (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'baseline',
+        gap: 8,
+        padding: '8px 0',
+        borderTop: '1px dashed var(--border)',
+      }}
+    >
+      {inner}
+    </div>
+  )
+}
+
+// ── CommunityHandoffCard — shown when price is null ──────────────
+function CommunityHandoffCard({ eventId }: { eventId: string }) {
+  return (
+    <div
+      style={{
+        marginTop: 18,
+        padding: '16px 14px 14px',
+        borderRadius: 12,
+        background: `color-mix(in oklab, ${AZURE} 6%, var(--surface-1))`,
+        border: `1px solid color-mix(in oklab, ${AZURE} 32%, var(--border))`,
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Community badge — pinned top-right */}
+      <span
+        style={{
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          padding: '3px 8px',
+          borderRadius: '0 0 0 6px',
+          background: `color-mix(in oklab, ${AZURE} 20%, transparent)`,
+          color: AZURE,
+          fontFamily: 'var(--font-mono)',
+          fontSize: 9,
+          fontWeight: 700,
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          lineHeight: 1,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        community
+      </span>
+
+      <div
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 9,
+          color: 'var(--fg-subtle)',
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+        }}
+      >
+        Tickets
+      </div>
+
+      <div
+        style={{
+          marginTop: 6,
+          display: 'flex',
+          alignItems: 'baseline',
+          gap: 8,
+          flexWrap: 'wrap',
+        }}
+      >
+        <span
+          style={{
+            fontFamily: 'var(--font-ui)',
+            fontWeight: 900,
+            fontSize: 24,
+            color: 'var(--fg)',
+            letterSpacing: '-0.025em',
+            lineHeight: 1.05,
+          }}
+        >
+          No price yet.
+        </span>
+        <span
+          style={{
+            fontFamily: 'var(--font-ui)',
+            fontWeight: 700,
+            fontSize: 14,
+            color: AZURE,
+            letterSpacing: '-0.005em',
+          }}
+        >
+          Your call.
+        </span>
+      </div>
+
+      <p
+        style={{
+          margin: '8px 0 0',
+          fontFamily: 'var(--font-ui)',
+          fontSize: 13.5,
+          color: 'var(--fg-muted)',
+          lineHeight: 1.5,
+          letterSpacing: '-0.005em',
+        }}
+      >
+        Ticketing APIs don&apos;t share prices with us, and we&apos;re not
+        waiting on them. The community fills the gap — if you saw a number out
+        there, drop it here.
+      </p>
+
+      <Link
+        href={`/events/${eventId}/submit-price`}
+        style={{
+          marginTop: 14,
+          boxSizing: 'border-box',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          height: 44,
+          width: '100%',
+          borderRadius: 9,
+          background: 'var(--signal)',
+          color: 'var(--fg-on-accent)',
+          fontFamily: 'var(--font-ui)',
+          fontWeight: 800,
+          fontSize: 14,
+          letterSpacing: '-0.005em',
+          textDecoration: 'none',
+        }}
+      >
+        Submit a price
+        <svg width="13" height="13" viewBox="0 0 12 12" fill="none" aria-hidden>
+          <path
+            d="M2.5 6h7M6 2.5l3.5 3.5L6 9.5"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </Link>
+
+      <div
+        style={{
+          marginTop: 10,
+          fontFamily: 'var(--font-mono)',
+          fontSize: 9,
+          color: 'var(--fg-subtle)',
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+        }}
+      >
+        Anonymous works · two confirms moves it live
+      </div>
+    </div>
+  )
+}
+
+// ── PriceBlockB — spacious dedicated card ────────────────────────
+// When price is null → community-handoff card.
+// When price exists → full card with headline, breakdown, trust marks, etc.
 export function PriceDisplay({
   priceMin,
   priceMax,
   priceSource,
   venueName,
   ticketUrl,
+  eventId,
+  observedAt,
+  range14d,
+  priceStatus,
 }: PriceDisplayProps) {
-  const kind = resolveSourceKind(priceSource)
-  const sourceName = resolveSourceName(priceSource, venueName)
   const parsedMin = priceMin ? parseFloat(priceMin) : null
   const parsedMax = priceMax ? parseFloat(priceMax) : null
   const face = parsedMin !== null && !isNaN(parsedMin) ? parsedMin : null
-  const max = parsedMax !== null && !isNaN(parsedMax) ? parsedMax : null
-  const isAxs = ticketUrl?.includes('axs.com') ?? false
+  const faceMax = parsedMax !== null && !isNaN(parsedMax) ? parsedMax : null
+  const sourceKind = resolveSourceKind(priceSource)
+  const sourceName = resolveSourceName(priceSource, venueName)
+  const sourceUrl = ticketUrl
 
-  const sectionStyle: React.CSSProperties = {
-    padding: '4px 0',
+  // No-price state → community-handoff card
+  if (face === null) {
+    return <CommunityHandoffCard eventId={eventId} />
   }
 
-  const editorialText: React.CSSProperties = {
-    fontFamily: 'var(--font-ui)',
-    fontSize: 13,
-    lineHeight: 1.45,
-    color: 'var(--fg-muted)',
-    letterSpacing: '-0.01em',
+  // Build a PriceBlockPrice-shaped object from the flat API fields.
+  // Fields not yet returned by the API stub to null — they short-circuit
+  // gracefully in every sub-component.
+  const priceObj: PriceBlockPrice = {
+    face,
+    max: faceMax,
+    fees: null,
+    sourceKind,
+    source: sourceName,
+    sourceUrl: ticketUrl,
+    observedAt: observedAt ?? null,
+    range14d: range14d ?? null,
+    status: priceStatus ?? 'live',
+    submitter: null,
+    verification: null,
+    alternates: [],
   }
 
-  // No price
-  if (!face) {
-    const headline = isAxs
-      ? "AXS doesn't share pricing publicly."
-      : 'Price: who knows.'
-    const subline = isAxs
-      ? 'Check their site closer to the show or call the box office.'
-      : "We'll yell once tickets actually exist."
-    return (
-      <div style={sectionStyle}>
-        <p style={editorialText}>
-          {headline}{' '}
-          <span style={{ color: 'var(--fg-subtle)' }}>{subline}</span>
-        </p>
+  const soldOut = priceStatus === 'soldout'
+  const isBoxOffice = sourceKind === 'boxoffice'
+  const isCommunity = sourceKind === 'community'
+
+  // Sparkline only for primary tier with ≥4 datapoints
+  const hasSpark =
+    !soldOut &&
+    Array.isArray(range14d) &&
+    range14d.length >= 4 &&
+    sourceKind === 'primary'
+
+  // Card theming
+  const cardBg = isBoxOffice
+    ? `color-mix(in oklab, ${GOLD} 8%, var(--surface-1))`
+    : 'var(--surface-1)'
+  const cardBorder = isBoxOffice
+    ? `1px solid color-mix(in oklab, ${GOLD} 52%, var(--border))`
+    : '1px solid var(--border)'
+
+  // Headline price
+  const headlineStr =
+    faceMax && faceMax > face
+      ? `$${Math.round(face)}–$${Math.round(faceMax)}`
+      : formatUSD(face, { whole: face >= 10 })
+
+  return (
+    <div
+      style={{
+        marginTop: 18,
+        padding: '14px 14px 12px',
+        borderRadius: 12,
+        background: cardBg,
+        border: cardBorder,
+        position: 'relative',
+      }}
+    >
+      {/* Top row — label + sparkline */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <div
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 9,
+            color: isBoxOffice ? GOLD : 'var(--fg-subtle)',
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+          }}
+        >
+          {isBoxOffice ? 'Box office' : 'Tickets'}
+        </div>
+        {hasSpark && range14d && <Sparkline values={range14d} />}
       </div>
-    )
-  }
 
-  const faceStr = formatFace(face, max)
+      {/* Headline number */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'baseline',
+          gap: 8,
+          marginTop: 6,
+          flexWrap: 'wrap',
+        }}
+      >
+        <span
+          style={{
+            fontFamily: 'var(--font-ui)',
+            fontWeight: 800,
+            fontSize: 28,
+            color: soldOut ? 'var(--fg-subtle)' : 'var(--fg)',
+            letterSpacing: '-0.025em',
+            textDecoration: soldOut ? 'line-through' : 'none',
+            textDecorationColor: 'var(--fg-subtle)',
+          }}
+        >
+          {headlineStr}
+        </span>
 
-  // Community source
-  if (kind === 'community') {
-    return (
-      <div style={sectionStyle}>
-        <p style={editorialText}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ color: 'var(--fg)', fontWeight: 700 }}>{faceStr}</span>
-            <TrustMark kind="community" />
+        {!soldOut && (
+          <span
+            style={{
+              fontFamily: 'var(--font-ui)',
+              fontWeight: 600,
+              fontSize: 12,
+              color: isBoxOffice ? GOLD : 'var(--fg-muted)',
+              letterSpacing: '-0.005em',
+            }}
+          >
+            {isBoxOffice
+              ? 'face value · no fees'
+              : faceMax
+                ? 'starting, all-in'
+                : 'face'}
           </span>
-          <span> reported. </span>
-          <span style={{ color: 'var(--fg-subtle)' }}>
-            Single fan submission — not yet verified.
+        )}
+
+        {/* Trust mark — all four tiers */}
+        {!soldOut && <TrustMark kind={sourceKind} />}
+
+        {/* Sold out pill */}
+        {soldOut && (
+          <span
+            style={{
+              padding: '2px 7px',
+              borderRadius: 4,
+              background: 'var(--warning)',
+              color: 'var(--fg-on-accent)',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+            }}
+          >
+            Sold out
           </span>
-        </p>
+        )}
+      </div>
+
+      {/* Source attribution — community shows submitter (anon) */}
+      {!soldOut && isCommunity && (
         <div style={{ marginTop: 6 }}>
           <span
             style={{
@@ -264,59 +968,114 @@ export function PriceDisplay({
             anonymous fan
           </span>
         </div>
-      </div>
-    )
-  }
+      )}
 
-  // Resale source (SeatGeek)
-  if (kind === 'resale') {
-    return (
-      <div style={sectionStyle}>
-        <p style={editorialText}>
-          <span>Cheapest resale: </span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ color: 'var(--fg)', fontWeight: 700 }}>{faceStr}</span>
-            <TrustMark kind="resale" />
-          </span>
-          <span>. </span>
-          <span style={{ color: 'var(--fg-subtle)' }}>
-            Face value not published — couldn&apos;t pull one from the primary
-            listing.
-          </span>
-        </p>
-        {sourceName && (
-          <div style={{ marginTop: 6 }}>
-            <SourceLink name={sourceName} url={null} />
+      {/* Fee breakdown — expandable, shows only when feeBreakdown is non-empty */}
+      {!soldOut && !isBoxOffice && (
+        <div style={{ marginTop: 6 }}>
+          <FeeBreakdown price={priceObj} />
+        </div>
+      )}
+
+      {/* Alternate sources — "Or pay for convenience" */}
+      {!soldOut && priceObj.alternates && priceObj.alternates.length > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <div
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 9,
+              color: 'var(--fg-subtle)',
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              marginBottom: 2,
+            }}
+          >
+            Or pay for convenience
           </div>
-        )}
-      </div>
-    )
-  }
+          {priceObj.alternates.map((alt, idx) => (
+            <AlternateSourceRow key={idx} alt={alt} />
+          ))}
+        </div>
+      )}
 
-  // Primary source (default)
-  return (
-    <div style={sectionStyle}>
-      <p style={editorialText}>
-        <span style={{ color: 'var(--fg)', fontWeight: 700 }}>{faceStr}</span>
-        <span> face.</span>
-        {isAxs && (
-          <span style={{ color: 'var(--fg-subtle)' }}>
-            {' '}
-            AXS doesn&apos;t list face value publicly — this may be an estimate.
-          </span>
-        )}
-      </p>
+      {/* Footer — source link + stale stamp */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 8,
-          marginTop: 6,
+          justifyContent: 'space-between',
+          gap: 10,
+          marginTop: 10,
+          paddingTop: 9,
+          borderTop: '1px solid var(--border)',
           flexWrap: 'wrap',
         }}
       >
-        {sourceName && <SourceLink name={sourceName} url={ticketUrl} />}
-        {false && <WatchAffordance />}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            flexWrap: 'wrap',
+          }}
+        >
+          <StaleStamp observedAt={observedAt} />
+          {sourceName && !isCommunity && (
+            <>
+              {observedAt && (
+                <span style={{ color: 'var(--fg-subtle)', opacity: 0.4 }}>
+                  ·
+                </span>
+              )}
+              {sourceUrl ? (
+                <a
+                  href={sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 3,
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 9,
+                    color: 'var(--fg-subtle)',
+                    textDecoration: 'none',
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  {sourceName}
+                  <ExternalIcon />
+                </a>
+              ) : (
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 9,
+                    color: 'var(--fg-subtle)',
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  {sourceName}
+                </span>
+              )}
+            </>
+          )}
+          {priceObj.verification && (
+            <>
+              <span style={{ color: 'var(--fg-subtle)', opacity: 0.4 }}>·</span>
+              <VerifiedStamp
+                verification={priceObj.verification}
+                subject={
+                  isBoxOffice &&
+                  priceObj.alternates &&
+                  priceObj.alternates.length > 0
+                    ? 'Box-office price'
+                    : null
+                }
+              />
+            </>
+          )}
+        </div>
       </div>
     </div>
   )
