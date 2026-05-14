@@ -1,3 +1,10 @@
+# [1.12.0](https://github.com/HartiganHM/concert-crawl/compare/v1.11.0...v1.12.0) (2026-05-14)
+
+
+### Features
+
+* **onboarding:** add box-office tier copy + personal ask to YoureIn ([af98117](https://github.com/HartiganHM/concert-crawl/commit/af9811786264b25270b35790a6af002d106c052c))
+
 # [1.11.0](https://github.com/HartiganHM/concert-crawl/compare/v1.10.1...v1.11.0) (2026-05-13)
 
 
