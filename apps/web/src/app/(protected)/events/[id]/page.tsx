@@ -13,7 +13,6 @@ import { EventImage } from '@/components/consumer/event-image'
 import { SmallEventRow } from '@/components/consumer/small-event-row'
 import { SectionHeader } from '@/components/consumer/section-header'
 import { PriceDisplay } from '@/components/consumer/PriceDisplay'
-import { PriceSection } from '@/components/consumer/PriceSection'
 import { WatchShowButton } from '@/components/consumer/watch-show-button'
 import { SetlistPreview } from '@/components/consumer/setlist-preview'
 import { SoldOutCta } from '@/components/consumer/SoldOutCta'
@@ -23,7 +22,6 @@ import {
   formatShowTime,
   formatShortDate,
 } from '@/components/consumer/definitions/lib'
-import { copy } from '@/components/consumer/definitions/copy'
 
 interface EventDetailPageProps {
   params: Promise<{ id: string }>
@@ -74,7 +72,10 @@ export default async function EventDetailPage({
   const dateLabel = formatEventDate(event.date, event.venue.timezone)
   const isCancelled = event.status === 'cancelled'
   const isPostponed = event.status === 'postponed'
-  const isSoldOut = event.priceSource !== null && event.ticketPriceMin === null
+  // Sold-out is a community claim surfaced via price.status.
+  // The EventDetailResponse doesn't yet carry a priceStatus field, so we
+  // fall back to the legacy heuristic until the API adds it.
+  const isSoldOut = false
 
   const doorsShow =
     doorsTime && showTime
@@ -161,226 +162,202 @@ export default async function EventDetailPage({
         </div>
       </div>
 
-      {/* Scrollable content */}
-      <div className="relative -mt-5 flex-1 px-[18px] pb-10">
-        {/* Genre chips */}
-        {event.genre && event.genre.length > 0 && (
-          <div className="mb-2 flex flex-wrap gap-1">
-            {event.genre.map((genre) => (
-              <span
-                key={genre}
-                className="rounded-[4px] bg-surface-3 px-2 py-[3px] text-fg-muted"
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '9px',
-                  letterSpacing: '0.03em',
-                }}
-              >
-                {genre}
-              </span>
-            ))}
+      {/* Scrollable content — 880px max-width centered column, -60px hero overlap on desktop */}
+      <div className="relative -mt-5 sm:-mt-[60px] sm:z-10 flex-1">
+        <div className="mx-auto w-full max-w-[880px] box-border px-[18px] sm:px-8 pb-10 sm:pb-16 sm:pt-5">
+          {/* Genre chips */}
+          {event.genre && event.genre.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1">
+              {event.genre.map((genre) => (
+                <span
+                  key={genre}
+                  className="rounded-[4px] bg-surface-3 px-2 py-[3px] text-fg-muted"
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '9px',
+                    letterSpacing: '0.03em',
+                  }}
+                >
+                  {genre}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Title */}
+          <h1
+            className="text-fg"
+            style={{
+              fontFamily: 'var(--font-ui)',
+              fontWeight: 900,
+              fontSize: 26,
+              letterSpacing: '-0.03em',
+              lineHeight: 1.1,
+              margin: 0,
+            }}
+          >
+            {event.artist}
+          </h1>
+          {event.title !== event.artist && (
+            <p className="mt-1 text-[14px] font-medium text-fg-muted">
+              {event.title}
+            </p>
+          )}
+
+          {/* Watch strip — directly under title */}
+          <div className="mt-3">
+            <WatchShowButton
+              eventId={event.id}
+              initialWatching={event.isWatching}
+              watchingCount={event.watching}
+            />
           </div>
-        )}
 
-        {/* Title */}
-        <h1
-          className="text-fg"
-          style={{
-            fontFamily: 'var(--font-ui)',
-            fontWeight: 900,
-            fontSize: 26,
-            letterSpacing: '-0.03em',
-            lineHeight: 1.1,
-            margin: 0,
-          }}
-        >
-          {event.artist}
-        </h1>
-        {event.title !== event.artist && (
-          <p className="mt-1 text-[14px] font-medium text-fg-muted">
-            {event.title}
-          </p>
-        )}
+          {/* Info block */}
+          <div className="mt-4 border-y border-border py-1">
+            <InfoRow
+              icon={<IconPin />}
+              label="Venue"
+              value={event.venue.name}
+              href={`/venues/${event.venue.slug}`}
+              data-testid="event-venue-name"
+            />
+            <InfoRow icon={<IconCalendar />} label="Date" value={dateLabel} />
+            <InfoRow
+              icon={<IconClock />}
+              label="Doors / Show"
+              value={doorsShow}
+            />
+            <InfoRow icon={<IconUsers />} label="Ages" value="All Ages" />
+          </div>
 
-        {/* Watch strip — directly under title */}
-        <div className="mt-3">
-          <WatchShowButton
-            eventId={event.id}
-            initialWatching={event.isWatching}
-            watchingCount={event.watching}
-          />
-        </div>
-
-        {/* Info block */}
-        <div className="mt-4 border-y border-border py-1">
-          <InfoRow
-            icon={<IconPin />}
-            label="Venue"
-            value={event.venue.name}
-            href={`/venues/${event.venue.slug}`}
-            data-testid="event-venue-name"
-          />
-          <InfoRow icon={<IconCalendar />} label="Date" value={dateLabel} />
-          <InfoRow
-            icon={<IconClock />}
-            label="Doors / Show"
-            value={doorsShow}
-          />
-          <InfoRow icon={<IconUsers />} label="Ages" value="All Ages" />
-        </div>
-
-        {/* Price card — PriceDisplay in card container */}
-        <div
-          className="mt-4 rounded-[10px] border border-border px-4 py-3"
-          style={{ background: 'var(--surface-1)' }}
-        >
+          {/* Price card — PriceBlockB. Renders community-handoff card when no price. */}
           <PriceDisplay
             priceMin={event.ticketPriceMin}
             priceMax={event.ticketPriceMax}
             priceSource={event.priceSource}
             venueName={event.venue.name}
             ticketUrl={event.ticketUrl}
-          />
-        </div>
-
-        {/* Submit-a-price card CTA — only when a price exists */}
-        {event.ticketPriceMin !== null && (
-          <div className="mt-3">
-            <SubmitPriceCardCta eventId={event.id} />
-          </div>
-        )}
-
-        {/* Community price section */}
-        <div className="mt-4">
-          <PriceSection
             eventId={event.id}
-            artistName={event.artist}
-            venueName={event.venue.name}
-            eventDate={event.date}
           />
+
+          {/* Submit-a-price card CTA — only when a price exists to revise */}
+          {event.ticketPriceMin !== null && (
+            <div className="mt-3">
+              <SubmitPriceCardCta eventId={event.id} />
+            </div>
+          )}
+
+          {/* Setlist preview — in a surface card, above primary CTA */}
+          {event.setlist && (
+            <div
+              className="mt-5 rounded-[12px] border border-border"
+              style={{ padding: '0 14px', background: 'var(--surface-1)' }}
+            >
+              <SetlistPreview setlist={event.setlist} />
+            </div>
+          )}
+
+          {/* Status banner */}
+          {(isCancelled || isPostponed) && (
+            <div
+              className="mt-5 rounded-[10px] border border-border px-4 py-3"
+              style={{ background: 'var(--surface-1)' }}
+            >
+              <p
+                className="uppercase text-signal"
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '9px',
+                  letterSpacing: '0.06em',
+                }}
+              >
+                {isCancelled ? 'Cancelled' : 'Postponed'}
+              </p>
+              <p className="mt-1 text-[13px] leading-[1.55] text-fg-muted">
+                {isCancelled
+                  ? 'This show has been cancelled.'
+                  : 'This show has been postponed. Check back for updates.'}
+              </p>
+            </div>
+          )}
+
+          {/* Primary CTA — always renders on non-cancelled/postponed events.
+            Sold out → disabled button. ticketUrl → "Get Tickets ↗".
+            Fallback → venue website. If neither, href="#". */}
+          {!isCancelled && !isPostponed && (
+            <div className="mt-5">
+              {isSoldOut ? (
+                <SoldOutCta />
+              ) : (
+                <a
+                  href={event.ticketUrl ?? event.venue.websiteUrl ?? '#'}
+                  target={
+                    (event.ticketUrl ?? event.venue.websiteUrl)
+                      ? '_blank'
+                      : undefined
+                  }
+                  rel="noopener noreferrer"
+                  className="flex h-12 w-full items-center justify-center rounded-[10px] text-fg-on-accent"
+                  style={{
+                    background: 'var(--accent)',
+                    fontFamily: 'var(--font-ui)',
+                    fontWeight: 800,
+                    fontSize: 15,
+                    letterSpacing: '-0.01em',
+                    textDecoration: 'none',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {event.ticketUrl ? 'Get Tickets ↗' : 'Visit Venue Website ↗'}
+                </a>
+              )}
+            </div>
+          )}
+
+          {/* About — after CTA, per design */}
+          {event.description && (
+            <div className="mt-4">
+              <p
+                className="mb-1.5 uppercase text-fg-subtle"
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '9px',
+                  letterSpacing: '0.06em',
+                }}
+              >
+                About
+              </p>
+              <p
+                className="text-[13px] leading-[1.55] text-fg-muted"
+                style={{ textWrap: 'pretty' } as React.CSSProperties}
+              >
+                {event.description}
+              </p>
+            </div>
+          )}
+
+          {/* Related shows */}
+          {related.length > 0 && (
+            <div className="mt-6">
+              <SectionHeader
+                title={`More at ${event.venue.name}`}
+                count={`${related.length} show${related.length !== 1 ? 's' : ''}`}
+              />
+              {related.map((rel, idx) => (
+                <Fragment key={rel.id}>
+                  {idx > 0 && (
+                    <div
+                      className="h-px bg-border"
+                      style={{ marginLeft: 50 }}
+                    />
+                  )}
+                  <SmallEventRow event={rel} date={formatShortDate(rel.date)} />
+                </Fragment>
+              ))}
+            </div>
+          )}
         </div>
-
-        {/* Setlist preview — in a surface card, above primary CTA */}
-        {event.setlist && (
-          <div
-            className="mt-5 rounded-[12px] border border-border"
-            style={{ padding: '0 14px', background: 'var(--surface-1)' }}
-          >
-            <SetlistPreview setlist={event.setlist} />
-          </div>
-        )}
-
-        {/* Status banner */}
-        {(isCancelled || isPostponed) && (
-          <div
-            className="mt-5 rounded-[10px] border border-border px-4 py-3"
-            style={{ background: 'var(--surface-1)' }}
-          >
-            <p
-              className="uppercase text-signal"
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '9px',
-                letterSpacing: '0.06em',
-              }}
-            >
-              {isCancelled ? 'Cancelled' : 'Postponed'}
-            </p>
-            <p className="mt-1 text-[13px] leading-[1.55] text-fg-muted">
-              {isCancelled
-                ? 'This show has been cancelled.'
-                : 'This show has been postponed. Check back for updates.'}
-            </p>
-          </div>
-        )}
-
-        {/* Primary CTA — sold out or get tickets */}
-        {!isCancelled && !isPostponed && (
-          <div className="mt-5">
-            {isSoldOut ? (
-              <SoldOutCta />
-            ) : (
-              (() => {
-                const ctaHref = event.ticketUrl ?? event.venue.websiteUrl
-                const ctaLabel = event.ticketUrl
-                  ? `${copy.ticketsCta} ↗`
-                  : 'Visit Venue Website ↗'
-                return ctaHref ? (
-                  <a
-                    href={ctaHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex h-12 w-full items-center justify-center rounded-[10px] text-fg-on-accent"
-                    style={{
-                      background: 'var(--accent)',
-                      fontFamily: 'var(--font-ui)',
-                      fontWeight: 800,
-                      fontSize: 15,
-                      letterSpacing: '-0.01em',
-                    }}
-                  >
-                    {ctaLabel}
-                  </a>
-                ) : null
-              })()
-            )}
-          </div>
-        )}
-
-        {/* About — after CTA, per design */}
-        {event.description && (
-          <div className="mt-4">
-            <p
-              className="mb-1.5 uppercase text-fg-subtle"
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '9px',
-                letterSpacing: '0.06em',
-              }}
-            >
-              About
-            </p>
-            <p
-              className="text-[13px] leading-[1.55] text-fg-muted"
-              style={{ textWrap: 'pretty' } as React.CSSProperties}
-            >
-              {event.description}
-            </p>
-          </div>
-        )}
-
-        {/* Sign-up nudge */}
-        <p
-          className="mt-2.5 text-center text-fg-subtle"
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: '9px',
-            letterSpacing: '0.02em',
-          }}
-        >
-          <Link href="/sign-up" className="text-signal">
-            Sign up
-          </Link>{' '}
-          to watch this show
-        </p>
-
-        {/* Related shows */}
-        {related.length > 0 && (
-          <div className="mt-6">
-            <SectionHeader
-              title={`More at ${event.venue.name}`}
-              count={`${related.length} show${related.length !== 1 ? 's' : ''}`}
-            />
-            {related.map((rel, idx) => (
-              <Fragment key={rel.id}>
-                {idx > 0 && (
-                  <div className="h-px bg-border" style={{ marginLeft: 50 }} />
-                )}
-                <SmallEventRow event={rel} date={formatShortDate(rel.date)} />
-              </Fragment>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   )
