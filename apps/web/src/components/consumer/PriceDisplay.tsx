@@ -39,7 +39,7 @@ export interface PriceBlockPrice {
     fees?: number | null
   }>
   soldOutBy?: { handle: string; url: string } | null
-  soldOutConfirms?: number
+  soldOutConfirms?: number | null
   // Box-office meta
   boxOfficeAction?: 'bought' | 'saw'
   boxOfficeMethod?: 'in-person' | 'phone'
@@ -57,7 +57,7 @@ interface PriceDisplayProps {
   // Extended fields (optional — undefined = not yet in API response)
   observedAt?: string | null
   range14d?: number[] | null
-  priceStatus?: 'live' | 'soldout'
+  priceStatus?: 'live' | 'soldout' | null
 }
 
 // ── Color constants ───────────────────────────────────────────────
@@ -744,7 +744,8 @@ function BoxOfficeAttribution({ price }: { price: PriceBlockPrice }) {
 // ── SoldOutReporterAttribution — who flagged this as sold out ────
 function SoldOutReporterAttribution({ price }: { price: PriceBlockPrice }) {
   const { soldOutBy, soldOutConfirms } = price
-  if (soldOutBy == null && !soldOutConfirms) return null
+  if (soldOutBy == null && (soldOutConfirms == null || soldOutConfirms <= 0))
+    return null
   const confirmsText =
     soldOutConfirms != null && soldOutConfirms > 0
       ? ` · ${soldOutConfirms} fan${soldOutConfirms !== 1 ? 's' : ''} confirmed`
@@ -982,10 +983,8 @@ export function PriceDisplay({
     alternates: [],
     // Box-office / community fields — null until API wires them
     venueName: venueName,
-    boxOfficeAction: undefined,
-    boxOfficeMethod: undefined,
     soldOutBy: null,
-    soldOutConfirms: undefined,
+    soldOutConfirms: null,
   }
 
   const soldOut = priceStatus === 'soldout'
