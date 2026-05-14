@@ -45,8 +45,8 @@ function PriceChip({
       : kind === 'community'
         ? {
             letter: 'C',
-            color: 'oklch(0.62 0.12 240)',
-            bg: 'color-mix(in oklab, oklch(0.62 0.12 240) 14%, transparent)',
+            color: 'var(--trust-community)',
+            bg: 'color-mix(in oklab, var(--trust-community) 14%, transparent)',
           }
         : null
 
