@@ -39,14 +39,14 @@ function PriceChip({
     kind === 'resale'
       ? {
           letter: 'R',
-          color: 'var(--warning)',
-          bg: 'color-mix(in oklab, var(--warning) 14%, transparent)',
+          color: 'oklch(0.65 0.20 25)',
+          bg: 'color-mix(in oklab, oklch(0.65 0.20 25) 16%, transparent)',
         }
       : kind === 'community'
         ? {
             letter: 'C',
-            color: 'var(--fg-muted)',
-            bg: 'color-mix(in oklab, var(--fg-muted) 12%, transparent)',
+            color: 'oklch(0.62 0.12 240)',
+            bg: 'color-mix(in oklab, oklch(0.62 0.12 240) 14%, transparent)',
           }
         : null
 
