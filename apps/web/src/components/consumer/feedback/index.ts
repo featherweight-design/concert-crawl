@@ -1,3 +1,3 @@
 export { FeedbackModal } from './FeedbackModal'
-export { FeedbackPill } from './FeedbackPill'
-export { FeedbackPillGate } from './FeedbackPillGate'
+export { FeedbackEdgeTab } from './FeedbackEdgeTab'
+export { FeedbackEdgeTabGate } from './FeedbackEdgeTabGate'

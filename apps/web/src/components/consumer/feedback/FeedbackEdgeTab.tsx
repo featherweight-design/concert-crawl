@@ -1,0 +1,63 @@
+'use client'
+
+import { useState } from 'react'
+import { FeedbackModal } from './FeedbackModal'
+
+export function FeedbackEdgeTab() {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label="Send feedback"
+        style={{
+          all: 'unset',
+          cursor: 'pointer',
+          position: 'fixed',
+          right: 0,
+          top: '44%',
+          zIndex: 80,
+          padding: '12px 6px',
+          background: 'var(--surface-1)',
+          border: '1px solid var(--border-strong)',
+          borderRight: 'none',
+          borderTopLeftRadius: 10,
+          borderBottomLeftRadius: 10,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 8,
+          color: 'var(--fg)',
+        }}
+      >
+        <span
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: 6,
+            background: 'var(--accent)',
+            boxShadow: '0 0 6px var(--accent)',
+          }}
+        />
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            color: 'var(--fg)',
+            writingMode: 'vertical-rl',
+            transform: 'rotate(180deg)',
+          }}
+        >
+          Tell us · beta
+        </span>
+      </button>
+
+      <FeedbackModal open={open} onClose={() => setOpen(false)} />
+    </>
+  )
+}

@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
-import { FeedbackPillGate } from '@/components/consumer/feedback'
+import { FeedbackEdgeTabGate } from '@/components/consumer/feedback'
 
 interface ProtectedLayoutProps {
   children: React.ReactNode
@@ -18,7 +18,7 @@ export default async function ProtectedLayout({
   return (
     <>
       {children}
-      <FeedbackPillGate />
+      <FeedbackEdgeTabGate />
     </>
   )
 }
