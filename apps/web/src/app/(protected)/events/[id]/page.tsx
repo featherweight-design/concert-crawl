@@ -17,6 +17,7 @@ import { WatchShowButton } from '@/components/consumer/watch-show-button'
 import { SetlistPreview } from '@/components/consumer/setlist-preview'
 import { SoldOutCta } from '@/components/consumer/SoldOutCta'
 import { SubmitPriceCardCta } from '@/components/consumer/SubmitPriceCardCta'
+import { GenreChips } from '@/components/consumer/GenreChips'
 import {
   formatEventDate,
   formatShowTime,
@@ -165,23 +166,7 @@ export default async function EventDetailPage({
       <div className="relative -mt-5 sm:-mt-[60px] sm:z-[1] flex-1">
         <div className="mx-auto w-full max-w-[880px] box-border px-[18px] sm:px-8 pb-10 sm:pb-16 sm:pt-5">
           {/* Genre chips */}
-          {event.genre && event.genre.length > 0 && (
-            <div className="mb-2 flex flex-wrap gap-1">
-              {event.genre.map((genre) => (
-                <span
-                  key={genre}
-                  className="rounded-[4px] bg-surface-3 px-2 py-[3px] text-fg-muted"
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '9px',
-                    letterSpacing: '0.03em',
-                  }}
-                >
-                  {genre}
-                </span>
-              ))}
-            </div>
-          )}
+          <GenreChips genres={event.genre} className="mb-2" />
 
           {/* Title */}
           <h1
