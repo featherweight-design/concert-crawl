@@ -20,7 +20,7 @@ export const ONBOARDING_COPY = {
       {
         kicker: '02',
         title: "Prices come from somewhere — we'll tell you where.",
-        body: 'All price data is community-sourced. We crawl the web for listings, but fans report what they actually saw or paid. The community holds itself accountable through confirmations and flags. If you see a price, you can trust that it came from a real fan.',
+        body: null,
       },
       {
         kicker: '03',
@@ -71,11 +71,11 @@ export const ONBOARDING_COPY = {
     items: [
       {
         title: 'Notifications.',
-        body: "No push, no email alerts yet. We'll add them after we earn the right to interrupt you.",
+        body: "No push, no email alerts yet. We'll bother you when it's ready.",
       },
       {
         title: 'Cities outside Denver.',
-        body: 'The crawl is regional for now. Other metros come once the system is solid.',
+        body: 'The crawl is regional for now. Other cities will onboard later.',
       },
       {
         title: 'Artist following.',
