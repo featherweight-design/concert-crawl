@@ -112,7 +112,7 @@ export function EventCard({
   return (
     <div
       data-testid="event-card"
-      className={cn('group flex items-center gap-2.5 py-2.5', className)}
+      className={cn('group flex items-start gap-2.5 py-2.5', className)}
     >
       {/* Thumbnail — 48×48, links to event detail */}
       <Link
@@ -182,7 +182,7 @@ export function EventCard({
             </>
           )}
         </p>
-        <GenreChips genres={event.genre} className="mt-1" />
+        <GenreChips genres={event.genre} className="mt-1" maxChips={3} />
       </div>
 
       {/* Watch button */}

@@ -27,4 +27,12 @@ describe('GenreChips', () => {
     const wrapper = screen.getByText('rock').parentElement
     expect(wrapper?.classList.contains('mt-2')).toBe(true)
   })
+
+  it('respects maxChips by truncating the list', () => {
+    render(<GenreChips genres={['pop', 'jazz', 'rock', 'soul']} maxChips={3} />)
+    expect(screen.getByText('pop')).toBeTruthy()
+    expect(screen.getByText('jazz')).toBeTruthy()
+    expect(screen.getByText('rock')).toBeTruthy()
+    expect(screen.queryByText('soul')).toBeNull()
+  })
 })
