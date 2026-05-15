@@ -1,10 +1,10 @@
 export const ONBOARDING_COPY = {
   founderNote: {
-    eyebrow: 'A note from the maker',
-    heading: 'Hey — thanks for trying this thing.',
-    p1: "I'm Hugh. I go to a lot of shows. Concert Crawl is the tool I always wanted: an honest place to see what's playing, what it costs, and whether it's worth the trip.",
-    p2: "This is a private beta. Lots of edges are still rough. Some screens are empty because the data isn't there yet. Some prices are missing because we couldn't pull a real one — and we'd rather say that than make one up.",
-    p3: "You're here early on purpose. Tell me what works, what's confusing, what's missing. I'll read all of it. The product will change because of it.",
+    eyebrow: 'A note from the developer',
+    heading: 'Hey, thanks for trying this thing.',
+    p1: "I'm Hugh. I go to a lot of shows. Concert Crawl is the tool I always wanted: a place to see what's playing, what it costs, and who you should drag along with you.",
+    p2: "This is a private beta, so a lot of edges are still rough. But, the core product is there and I'm excited for you to get your hands on it. That weird neich artist none of your friends have heard of? You should know when they're playing (I know I've kicked myself for missing plenty of shows).",
+    p3: "Friends, you're here early on purpose. I trust your feedback and want your insight. Tell me what works, what's confusing, what's missing. I'll read all of it and the app will be better for it.",
   },
 
   howItWorks: {
@@ -15,12 +15,12 @@ export const ONBOARDING_COPY = {
       {
         kicker: '01',
         title: "We crawl, we don't sell.",
-        body: "Concert Crawl reads public listings from venues and ticketers. We don't sell tickets and we don't take a cut. Tap a price, you go to the source.",
+        body: "Concert Crawl reads public listings from venues. We don't sell tickets and we don't take a cut. See the price, tap a button, go to the source.",
       },
       {
         kicker: '02',
         title: "Prices come from somewhere — we'll tell you where.",
-        body: null,
+        body: 'All price data is community-sourced. We crawl the web for listings, but fans report what they actually saw or paid. The community holds itself accountable through confirmations and flags. If you see a price, you can trust that it came from a real fan.',
       },
       {
         kicker: '03',
@@ -33,12 +33,13 @@ export const ONBOARDING_COPY = {
         label: 'BOX OFFICE',
         kind: 'primary' as const,
         description:
-          "Directly from the venue — that's the gold standard. No markup.",
+          "Directly from the venue - that's the gold standard. No markup.",
       },
       {
         label: 'COMMUNITY',
         kind: 'community' as const,
-        description: 'Reported by a fan who was there. Confirmed by others.',
+        description:
+          "Reported by a fan - confirmed by others. We'll show you the ticket vendor.",
       },
       {
         label: 'RESALE',
@@ -47,7 +48,7 @@ export const ONBOARDING_COPY = {
           "A marketplace listing — secondary market, not face value. We'll flag it.",
       },
     ],
-    noPrice: "If we can't find a price, we'll say so instead of making one up.",
+    noPrice: "If we can't find a price, we'll say so.",
   },
 
   whatItDoesToday: {
@@ -59,13 +60,14 @@ export const ONBOARDING_COPY = {
       'See real prices side-by-side, with their sources',
       "Watch shows you're curious about",
       'Submit a price you saw — or report what you paid at the box office',
+      'Plenty of other fun bells and whistles with more on the horizon',
     ],
   },
 
   whatItDoesntYet: {
     eyebrow: 'Not yet',
     heading: "What's missing — on purpose.",
-    lede: 'Better to be straight with you than to ship something that pretends. Things on this list are coming, not abandoned.',
+    lede: `Things on this list are coming, not abandoned. We're aspirational, but won't ship anything until it's ready.`,
     items: [
       {
         title: 'Notifications.',
@@ -88,8 +90,8 @@ export const ONBOARDING_COPY = {
 
   makeItYours: {
     eyebrow: 'Make it yours',
-    heading: 'Pick your look.',
-    lede: 'Nine themes. Pick the one that feels right — you can always change it in Settings.',
+    heading: 'Pick your drip.',
+    lede: 'Nine themes, different genre flavors. Pick one now, switch it up later in Settings.',
   },
 
   youreIn: {
@@ -99,9 +101,9 @@ export const ONBOARDING_COPY = {
     lede1:
       "You're not just here to use the thing — you're here to make it better. When something changes, we'll ask what you think. When something breaks, we want to know.",
     lede2:
-      "The Give Feedback button lives in your menu — always there, never buried. Tap it and you'll see a quick category picker and a free-form message field. Thirty seconds. I read every one.",
-    personalAskLabel: 'One ask, from me',
+      "You'll notice a little tab on the right side of the app. Tap it and you'll see a feedback form. Did the app crash? Love a feature? Have an idea for something new? Let us know.",
+    personalAskLabel: 'One ask, from me to the homies',
     personalAskBody:
-      "Most shows won't have a price listed yet — that's the part you can fix. When you buy a ticket, take ten seconds to report what you paid. Two fans confirming a number is all it takes to make a price real for everyone else.",
+      "Most shows won't have a price listed. Yet. That's where you come in. Use the app to look up some shows (maybe buy a ticket) and submit the price. Bother a couple people to cross check what you saw, put the app through its paces. The more prices that are available the more real the app starts to feel when it launches.",
   },
 }
