@@ -35,4 +35,15 @@ describe('GenreChips', () => {
     expect(screen.getByText('rock')).toBeTruthy()
     expect(screen.queryByText('soul')).toBeNull()
   })
+
+  it('renders at least one chip when maxChips is 0 or negative', () => {
+    const { rerender } = render(
+      <GenreChips genres={['pop', 'jazz']} maxChips={0} />,
+    )
+    expect(screen.getByText('pop')).toBeTruthy()
+    expect(screen.queryByText('jazz')).toBeNull()
+
+    rerender(<GenreChips genres={['pop', 'jazz']} maxChips={-1} />)
+    expect(screen.getByText('pop')).toBeTruthy()
+  })
 })

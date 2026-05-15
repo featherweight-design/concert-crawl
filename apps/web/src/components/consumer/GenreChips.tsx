@@ -9,7 +9,8 @@ interface GenreChipsProps {
 export function GenreChips({ genres, className, maxChips }: GenreChipsProps) {
   if (!genres || genres.length === 0) return null
 
-  const chips = maxChips != null ? genres.slice(0, maxChips) : genres
+  const chips =
+    maxChips != null ? genres.slice(0, Math.max(1, maxChips)) : genres
 
   return (
     <div className={cn('flex flex-wrap gap-1', className)}>

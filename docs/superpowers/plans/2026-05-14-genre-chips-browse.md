@@ -13,6 +13,7 @@
 ### Task 1: Create `GenreChips` component (TDD)
 
 **Files:**
+
 - Create: `apps/web/src/components/consumer/GenreChips.test.tsx`
 - Create: `apps/web/src/components/consumer/GenreChips.tsx`
 
@@ -29,25 +30,25 @@ import { render, screen } from '@testing-library/react'
 import { GenreChips } from './GenreChips'
 
 describe('GenreChips', () => {
-  it('renders a chip for each genre', () => {
-    render(<GenreChips genre={['pop', 'jazz']} />)
+  it('renders a chip for each genres', () => {
+    render(<GenreChips genres={['pop', 'jazz']} />)
     expect(screen.getByText('pop')).toBeTruthy()
     expect(screen.getByText('jazz')).toBeTruthy()
   })
 
-  it('renders nothing when genre is null', () => {
-    const { container } = render(<GenreChips genre={null} />)
+  it('renders nothing when genres is null', () => {
+    const { container } = render(<GenreChips genres={null} />)
     expect(container.firstChild).toBeNull()
   })
 
-  it('renders nothing when genre is an empty array', () => {
-    const { container } = render(<GenreChips genre={[]} />)
+  it('renders nothing when genres is an empty array', () => {
+    const { container } = render(<GenreChips genres={[]} />)
     expect(container.firstChild).toBeNull()
   })
 
   it('applies className to the container', () => {
     const { container } = render(
-      <GenreChips genre={['rock']} className="mt-2" />,
+      <GenreChips genres={['rock']} className="mt-2" />,
     )
     expect(
       (container.firstChild as HTMLElement).classList.contains('mt-2'),
@@ -69,17 +70,23 @@ Expected: FAIL — `GenreChips` is not defined.
 Create `apps/web/src/components/consumer/GenreChips.tsx`:
 
 ```tsx
+import { cn } from '@/lib/utils'
+
 interface GenreChipsProps {
-  genre: string[] | null
+  genres: string[] | null
   className?: string
+  maxChips?: number
 }
 
-export function GenreChips({ genre, className }: GenreChipsProps) {
-  if (!genre || genre.length === 0) return null
+export function GenreChips({ genres, className, maxChips }: GenreChipsProps) {
+  if (!genres || genres.length === 0) return null
+
+  const chips =
+    maxChips != null ? genres.slice(0, Math.max(1, maxChips)) : genres
 
   return (
-    <div className={`flex flex-wrap gap-1${className ? ` ${className}` : ''}`}>
-      {genre.map((tag) => (
+    <div className={cn('flex flex-wrap gap-1', className)}>
+      {chips.map((tag) => (
         <span
           key={tag}
           className="rounded-[4px] bg-surface-3 px-[7px] py-[2px] text-fg-muted"
@@ -103,7 +110,7 @@ export function GenreChips({ genre, className }: GenreChipsProps) {
 pnpm --filter @concert-crawl/web test -- --run src/components/consumer/GenreChips.test.tsx
 ```
 
-Expected: PASS — 4 tests pass.
+Expected: PASS — 6 tests pass.
 
 - [ ] **Step 5: Commit**
 
@@ -118,6 +125,7 @@ git commit -m "feat(consumer): add GenreChips shared component"
 ### Task 2: Update `HeroEventCard` to use `GenreChips`
 
 **Files:**
+
 - Modify: `apps/web/src/components/consumer/hero-event-card/HeroEventCard.tsx`
 
 - [ ] **Step 1: Replace the inline chip block**
@@ -125,29 +133,31 @@ git commit -m "feat(consumer): add GenreChips shared component"
 In `HeroEventCard.tsx`, replace lines 107–123:
 
 ```tsx
-        {event.genre && event.genre.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1">
-            {event.genre.map((genre) => (
-              <span
-                key={genre}
-                className="rounded-[4px] bg-surface-3 px-[7px] py-[2px] text-fg-muted"
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '9px',
-                  letterSpacing: '0.03em',
-                }}
-              >
-                {genre}
-              </span>
-            ))}
-          </div>
-        )}
+{
+  event.genres && event.genres.length > 0 && (
+    <div className="mt-2 flex flex-wrap gap-1">
+      {event.genres.map((genres) => (
+        <span
+          key={genres}
+          className="rounded-[4px] bg-surface-3 px-[7px] py-[2px] text-fg-muted"
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '9px',
+            letterSpacing: '0.03em',
+          }}
+        >
+          {genres}
+        </span>
+      ))}
+    </div>
+  )
+}
 ```
 
 With:
 
 ```tsx
-        <GenreChips genre={event.genre} className="mt-2" />
+<GenreChips genres={event.genre} className="mt-2" />
 ```
 
 - [ ] **Step 2: Add the import**
@@ -178,6 +188,7 @@ git commit -m "refactor(consumer): use GenreChips in HeroEventCard"
 ### Task 3: Update event detail page to use `GenreChips`
 
 **Files:**
+
 - Modify: `apps/web/src/app/(protected)/events/[id]/page.tsx`
 
 - [ ] **Step 1: Replace the inline chip block**
@@ -185,31 +196,37 @@ git commit -m "refactor(consumer): use GenreChips in HeroEventCard"
 In `apps/web/src/app/(protected)/events/[id]/page.tsx`, replace lines 168–184:
 
 ```tsx
-          {/* Genre chips */}
-          {event.genre && event.genre.length > 0 && (
-            <div className="mb-2 flex flex-wrap gap-1">
-              {event.genre.map((genre) => (
-                <span
-                  key={genre}
-                  className="rounded-[4px] bg-surface-3 px-2 py-[3px] text-fg-muted"
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '9px',
-                    letterSpacing: '0.03em',
-                  }}
-                >
-                  {genre}
-                </span>
-              ))}
-            </div>
-          )}
+{
+  /* Genre chips */
+}
+{
+  event.genres && event.genres.length > 0 && (
+    <div className="mb-2 flex flex-wrap gap-1">
+      {event.genres.map((genres) => (
+        <span
+          key={genres}
+          className="rounded-[4px] bg-surface-3 px-2 py-[3px] text-fg-muted"
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '9px',
+            letterSpacing: '0.03em',
+          }}
+        >
+          {genres}
+        </span>
+      ))}
+    </div>
+  )
+}
 ```
 
 With:
 
 ```tsx
-          {/* Genre chips */}
-          <GenreChips genre={event.genre} className="mb-2" />
+{
+  /* Genre chips */
+}
+;<GenreChips genres={event.genre} className="mb-2" />
 ```
 
 - [ ] **Step 2: Add the import**
@@ -240,6 +257,7 @@ git commit -m "refactor(consumer): use GenreChips in event detail page"
 ### Task 4: Add `GenreChips` to `EventCard`
 
 **Files:**
+
 - Modify: `apps/web/src/components/consumer/event-card/EventCard.tsx`
 
 - [ ] **Step 1: Add the import**
@@ -255,60 +273,60 @@ import { GenreChips } from '../GenreChips'
 In `EventCard.tsx`, the info column ends at line 184 with the closing `</div>` after the venue+time `<p>`. Add `<GenreChips />` between the venue+time line and that closing tag:
 
 ```tsx
-      {/* Info */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        {isCancelled || isPostponed ? (
-          <div className="flex items-center gap-2">
-            <Link
-              href={`/events/${event.id}`}
-              className="truncate text-sm font-bold text-fg transition-colors hover:text-signal"
-            >
-              {event.artist}
-            </Link>
-            {isCancelled && (
-              <Badge variant="destructive">{copy.cancelledLabel}</Badge>
-            )}
-            {isPostponed && (
-              <Badge variant="secondary">{copy.postponedLabel}</Badge>
-            )}
-          </div>
-        ) : (
-          <Link
-            href={`/events/${event.id}`}
-            className="truncate text-sm font-bold text-fg transition-colors hover:text-signal"
-          >
-            {event.artist}
-          </Link>
-        )}
-        {event.title !== event.artist && (
-          <p className="truncate text-[12px] font-medium text-fg-muted">
-            {event.title}
-          </p>
-        )}
-        <p
-          className="mt-0.5 flex items-center gap-1.5 text-fg-muted"
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: '9.5px',
-            letterSpacing: '0.02em',
-          }}
-        >
-          <Link
-            href={`/venues/${event.venue.slug}`}
-            data-testid="venue-name-link"
-            className="hover:underline"
-          >
-            <span>{venueShort(event.venue.name)}</span>
-          </Link>
-          {showTime && (
-            <>
-              <span className="opacity-40">·</span>
-              <span>{showTime}</span>
-            </>
-          )}
-        </p>
-        <GenreChips genre={event.genre} className="mt-1" />
-      </div>
+{
+  /* Info */
+}
+;<div className="flex min-w-0 flex-1 flex-col">
+  {isCancelled || isPostponed ? (
+    <div className="flex items-center gap-2">
+      <Link
+        href={`/events/${event.id}`}
+        className="truncate text-sm font-bold text-fg transition-colors hover:text-signal"
+      >
+        {event.artist}
+      </Link>
+      {isCancelled && (
+        <Badge variant="destructive">{copy.cancelledLabel}</Badge>
+      )}
+      {isPostponed && <Badge variant="secondary">{copy.postponedLabel}</Badge>}
+    </div>
+  ) : (
+    <Link
+      href={`/events/${event.id}`}
+      className="truncate text-sm font-bold text-fg transition-colors hover:text-signal"
+    >
+      {event.artist}
+    </Link>
+  )}
+  {event.title !== event.artist && (
+    <p className="truncate text-[12px] font-medium text-fg-muted">
+      {event.title}
+    </p>
+  )}
+  <p
+    className="mt-0.5 flex items-center gap-1.5 text-fg-muted"
+    style={{
+      fontFamily: 'var(--font-mono)',
+      fontSize: '9.5px',
+      letterSpacing: '0.02em',
+    }}
+  >
+    <Link
+      href={`/venues/${event.venue.slug}`}
+      data-testid="venue-name-link"
+      className="hover:underline"
+    >
+      <span>{venueShort(event.venue.name)}</span>
+    </Link>
+    {showTime && (
+      <>
+        <span className="opacity-40">·</span>
+        <span>{showTime}</span>
+      </>
+    )}
+  </p>
+  <GenreChips genres={event.genre} className="mt-1" maxChips={3} />
+</div>
 ```
 
 - [ ] **Step 3: Verify no type errors**
@@ -331,7 +349,7 @@ Expected: all tests pass.
 
 ```bash
 git add apps/web/src/components/consumer/event-card/EventCard.tsx
-git commit -m "feat(browse): show genre chips on all EventCard rows"
+git commit -m "feat(browse): show genres chips on all EventCard rows"
 ```
 
 ---
@@ -347,7 +365,7 @@ git fetch origin && git rebase origin/main
 - [ ] **Step 2: Push**
 
 ```bash
-git push -u origin feat/genre-chips-browse
+git push -u origin feat/genres-chips-browse
 ```
 
 - [ ] **Step 3: Open PR**
@@ -359,7 +377,7 @@ gh pr create \
 ## Summary
 
 - Extracts genre chip rendering into a shared `GenreChips` component
-- Adds genre chips to `EventCard` rows on the Browse page
+- Adds genres chips to `EventCard` rows on the Browse page
 - Replaces inline chip blocks in `HeroEventCard` and the event detail page with the shared component
 
 Closes #341
@@ -368,8 +386,8 @@ Closes #341
 
 - [ ] Browse page: event cards with genres show chips below venue + time line
 - [ ] Browse page: event cards with no genres show no chip row (no empty gap)
-- [ ] Spotlight: genre chips still render correctly
-- [ ] Event detail page: genre chips still render correctly
+- [ ] Spotlight: genres chips still render correctly
+- [ ] Event detail page: genres chips still render correctly
 - [ ] All existing tests pass
 EOF
 )"

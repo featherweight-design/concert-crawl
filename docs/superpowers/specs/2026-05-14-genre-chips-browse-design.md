@@ -24,8 +24,9 @@ Extract the genre chip rendering into a shared `GenreChips` component and use it
 
 **File:** `apps/web/src/components/consumer/GenreChips.tsx`
 
-- Props: `genre: string[] | null`
-- Renders a flex row of chip spans, or nothing if `genre` is null or empty
+- Props: `genres: string[] | null`, optional `maxChips?: number`, optional `className?: string`
+- Renders a flex row of chip spans, or nothing if `genres` is null or empty
+- `maxChips` clamps to at least 1; omitting it shows all chips
 - Chip styling (matches current `HeroEventCard` implementation):
   - `bg-surface-3`, `text-fg-muted`, `rounded-[4px]`
   - `px-[7px] py-[2px]`
@@ -36,20 +37,20 @@ Extract the genre chip rendering into a shared `GenreChips` component and use it
 
 **File:** `apps/web/src/components/consumer/event-card/EventCard.tsx`
 
-- Add `<GenreChips genre={event.genre} />` below the venue + time line
-- No other changes
+- Add `<GenreChips genres={event.genre} maxChips={3} className="mt-1" />` below the venue + time line
+- Row alignment changed from `items-center` to `items-start`
 
 ### `HeroEventCard` (updated)
 
 **File:** `apps/web/src/components/consumer/hero-event-card/HeroEventCard.tsx`
 
-- Replace inline chip block (lines 107–123) with `<GenreChips genre={event.genre} />`
+- Replace inline chip block with `<GenreChips genres={event.genre} className="mt-2" />`
 
 ### Event detail page (updated)
 
 **File:** `apps/web/src/app/(protected)/events/[id]/page.tsx`
 
-- Replace inline chip block (lines 168–183) with `<GenreChips genre={event.genre} />`
+- Replace inline chip block with `<GenreChips genres={event.genre} className="mb-2" />`
 
 ---
 
@@ -63,4 +64,5 @@ No API changes. `genre` is already present in the event list response. No new fe
 
 - `genre: null` → renders nothing (no empty row)
 - `genre: []` → renders nothing (no empty row)
-- Long genre lists → `flex-wrap` handles overflow naturally
+- Long genre lists → `flex-wrap` handles overflow; `EventCard` caps at 3 chips via `maxChips`
+- `maxChips={0}` or negative → clamped to 1 (always renders at least one chip)
