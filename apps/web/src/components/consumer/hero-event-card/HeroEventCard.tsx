@@ -3,6 +3,7 @@ import type { EventWithVenue } from '@concert-crawl/types'
 import { EventImage } from '../event-image'
 import { formatShowTime, venueShort } from '../definitions/lib'
 import { copy } from '../definitions/copy'
+import { GenreChips } from '../GenreChips'
 
 interface HeroEventCardProps {
   event: EventWithVenue
@@ -104,23 +105,7 @@ export function HeroEventCard({
             </>
           )}
         </div>
-        {event.genre && event.genre.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1">
-            {event.genre.map((genre) => (
-              <span
-                key={genre}
-                className="rounded-[4px] bg-surface-3 px-[7px] py-[2px] text-fg-muted"
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '9px',
-                  letterSpacing: '0.03em',
-                }}
-              >
-                {genre}
-              </span>
-            ))}
-          </div>
-        )}
+        <GenreChips genres={event.genre} className="mt-2" />
       </div>
     </Link>
   )
