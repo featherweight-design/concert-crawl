@@ -1,3 +1,4 @@
+import React from 'react'
 import { Eyebrow, StepHeading, Lede } from './_primitives'
 import { ONBOARDING_COPY } from '../definitions/copy'
 
@@ -36,34 +37,44 @@ function PriceSourceChip({ label, kind }: { label: string; kind: string }) {
 
 function PriceSourcesList() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-      {copy.priceSources.map((source) => (
-        <div
-          key={source.kind}
-          style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}
-        >
-          <PriceSourceChip label={source.label} kind={source.kind} />
-          <span
-            style={{
-              fontFamily: 'Inter, system-ui',
-              fontSize: 13,
-              lineHeight: 1.4,
-              color: 'var(--fg-muted)',
-              letterSpacing: '-0.005em',
-            }}
-          >
-            {source.description}
-          </span>
-        </div>
-      ))}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {/* Flat grid: chip column sized to widest chip, descriptions share one left edge */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'max-content 1fr',
+          columnGap: 10,
+          rowGap: 6,
+          alignItems: 'center',
+        }}
+      >
+        {copy.priceSources.map((source) => (
+          <React.Fragment key={source.kind}>
+            <div style={{ justifySelf: 'start', alignSelf: 'center' }}>
+              <PriceSourceChip label={source.label} kind={source.kind} />
+            </div>
+            <span
+              style={{
+                fontFamily: 'Inter, system-ui',
+                fontSize: 13,
+                lineHeight: 1.4,
+                color: 'var(--fg-muted)',
+                letterSpacing: '-0.005em',
+              }}
+            >
+              {source.description}
+            </span>
+          </React.Fragment>
+        ))}
+      </div>
       <span
         style={{
           fontFamily: 'Inter, system-ui',
-          fontSize: 12.5,
+          fontSize: 12,
           lineHeight: 1.4,
           color: 'var(--fg-subtle)',
           letterSpacing: '-0.005em',
-          paddingTop: 2,
+          marginTop: 2,
         }}
       >
         {copy.noPrice}
