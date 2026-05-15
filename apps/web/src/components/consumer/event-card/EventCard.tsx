@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { EventImage } from '../event-image'
 import { WatchShowButton } from '../watch-show-button'
+import { GenreChips } from '../GenreChips'
 import { formatShowTime, venueShort } from '../definitions/lib'
 import { copy } from '../definitions/copy'
 
@@ -181,6 +182,7 @@ export function EventCard({
             </>
           )}
         </p>
+        <GenreChips genres={event.genre} className="mt-1" />
       </div>
 
       {/* Watch button */}
