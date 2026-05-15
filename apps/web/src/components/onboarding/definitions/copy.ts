@@ -3,7 +3,7 @@ export const ONBOARDING_COPY = {
     eyebrow: 'A note from the developer',
     heading: 'Hey, thanks for trying this thing.',
     p1: "I'm Hugh. I go to a lot of shows. Concert Crawl is the tool I always wanted: a place to see what's playing, what it costs, and who you should drag along with you.",
-    p2: "This is a private beta, so a lot of edges are still rough. But, the core product is there and I'm excited for you to get your hands on it. That weird neich artist none of your friends have heard of? You should know when they're playing (I know I've kicked myself for missing plenty of shows).",
+    p2: "This is a private beta, so a lot of edges are still rough. But, the core product is there and I'm excited for you to get your hands on it. That weird niche artist none of your friends have heard of? You should know when they're playing (I know I've kicked myself for missing plenty of shows).",
     p3: "Friends, you're here early on purpose. I trust your feedback and want your insight. Tell me what works, what's confusing, what's missing. I'll read all of it and the app will be better for it.",
   },
 
@@ -33,13 +33,13 @@ export const ONBOARDING_COPY = {
         label: 'BOX OFFICE',
         kind: 'primary' as const,
         description:
-          "Directly from the venue - that's the gold standard. No markup.",
+          "Directly from the venue — that's the gold standard. No markup.",
       },
       {
         label: 'COMMUNITY',
         kind: 'community' as const,
         description:
-          "Reported by a fan - confirmed by others. We'll show you the ticket vendor.",
+          "Reported by a fan — confirmed by others. We'll show you the ticket vendor.",
       },
       {
         label: 'RESALE',
@@ -92,6 +92,15 @@ export const ONBOARDING_COPY = {
     eyebrow: 'Make it yours',
     heading: 'Pick your drip.',
     lede: 'Nine themes, different genre flavors. Pick one now, switch it up later in Settings.',
+    preview: {
+      currentlyUsing: 'Currently using',
+      tonight: 'Tonight',
+      venue: 'Ogden · 9PM',
+      artist: 'The Midnight',
+      price: '$35',
+      tier: 'GA · 21+',
+      watchButton: 'Watch',
+    },
   },
 
   youreIn: {
@@ -104,6 +113,22 @@ export const ONBOARDING_COPY = {
       "You'll notice a little tab on the right side of the app. Tap it and you'll see a feedback form. Did the app crash? Love a feature? Have an idea for something new? Let us know.",
     personalAskLabel: 'One ask, from me to the homies',
     personalAskBody:
-      "Most shows won't have a price listed. Yet. That's where you come in. Use the app to look up some shows (maybe buy a ticket) and submit the price. Bother a couple people to cross check what you saw, put the app through its paces. The more prices that are available the more real the app starts to feel when it launches.",
+      "Most shows won't have a price listed. Yet. That's where you come in. Use the app to look up some shows (maybe buy a ticket) and submit the price. Bother a couple people to cross check what you saw, put the app through its paces. The more prices that are available, the more real the app starts to feel when it launches.",
+  },
+
+  nav: {
+    codeAccepted: 'Code accepted · Welcome',
+    nextButton: 'Next →',
+    continueButton: 'Continue to sign-up →',
+    backButton: '← Back',
+    stepCounter: (step: number, total: number) => `Step ${step} of ${total}`,
+    stepLabels: {
+      welcome: 'WELCOME',
+      how: 'HOW IT WORKS',
+      today: 'TODAY',
+      notyet: 'NOT YET',
+      theme: 'MAKE IT YOURS',
+      done: "YOU'RE IN",
+    },
   },
 }

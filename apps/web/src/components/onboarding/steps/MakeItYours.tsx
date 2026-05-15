@@ -9,6 +9,7 @@ import { Eyebrow, Lede, StepHeading } from './_primitives'
 import { ONBOARDING_COPY } from '../definitions/copy'
 
 const copy = ONBOARDING_COPY.makeItYours
+const preview = copy.preview
 
 const THEME_KEYS = Object.keys(THEMES) as ThemeName[]
 
@@ -45,7 +46,7 @@ function HeroStrip({ themeName }: { themeName: ThemeName }) {
             textTransform: 'uppercase',
           }}
         >
-          Currently using
+          {preview.currentlyUsing}
         </div>
         <div
           style={{
@@ -97,7 +98,7 @@ function HeroStrip({ themeName }: { themeName: ThemeName }) {
               textTransform: 'uppercase',
             }}
           >
-            Tonight
+            {preview.tonight}
           </span>
           <span
             style={{
@@ -110,7 +111,7 @@ function HeroStrip({ themeName }: { themeName: ThemeName }) {
               textTransform: 'uppercase',
             }}
           >
-            Ogden · 9PM
+            {preview.venue}
           </span>
         </div>
 
@@ -124,7 +125,7 @@ function HeroStrip({ themeName }: { themeName: ThemeName }) {
             letterSpacing: '-0.02em',
           }}
         >
-          The Midnight
+          {preview.artist}
         </div>
 
         {/* Price + Watch */}
@@ -138,7 +139,7 @@ function HeroStrip({ themeName }: { themeName: ThemeName }) {
               letterSpacing: '-0.02em',
             }}
           >
-            $35
+            {preview.price}
           </span>
           <span
             style={{
@@ -150,7 +151,7 @@ function HeroStrip({ themeName }: { themeName: ThemeName }) {
               textTransform: 'uppercase',
             }}
           >
-            GA · 21+
+            {preview.tier}
           </span>
           <span
             style={{
@@ -164,7 +165,7 @@ function HeroStrip({ themeName }: { themeName: ThemeName }) {
               borderRadius: 6,
             }}
           >
-            Watch
+            {preview.watchButton}
           </span>
         </div>
       </div>
@@ -199,7 +200,7 @@ function CompactStrip({ themeName }: { themeName: ThemeName }) {
             textTransform: 'uppercase',
           }}
         >
-          Currently using
+          {preview.currentlyUsing}
         </span>
         <span
           style={{
@@ -219,7 +220,11 @@ function CompactStrip({ themeName }: { themeName: ThemeName }) {
 
 export function MakeItYours() {
   const { theme, setTheme } = useTheme()
-  const [isMobile, setIsMobile] = useState(false)
+  const [isMobile, setIsMobile] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      window.matchMedia('(max-width: 480px)').matches,
+  )
 
   useEffect(() => {
     const mql = window.matchMedia('(max-width: 480px)')

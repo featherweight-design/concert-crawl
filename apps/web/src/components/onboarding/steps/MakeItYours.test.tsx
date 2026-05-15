@@ -54,4 +54,10 @@ describe('MakeItYours', () => {
     render(<MakeItYours />, { wrapper: Wrapper })
     expect(localStorageMock.getItem('cc-onboarding-theme-pending')).toBeNull()
   })
+
+  it('renders the hero preview on initial render without any swatch interaction', () => {
+    render(<MakeItYours />, { wrapper: Wrapper })
+    expect(screen.getByText('The Midnight')).toBeDefined()
+    expect(screen.getByText('Tonight')).toBeDefined()
+  })
 })

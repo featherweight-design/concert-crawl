@@ -12,20 +12,14 @@ import { WhatItDoesToday } from './steps/WhatItDoesToday'
 import { WhatItDoesntYet } from './steps/WhatItDoesntYet'
 import { MakeItYours } from './steps/MakeItYours'
 import { YoureIn } from './steps/YoureIn'
+import { ONBOARDING_COPY } from './definitions/copy'
+
+const nav = ONBOARDING_COPY.nav
 
 const FLOW = ['welcome', 'how', 'today', 'notyet', 'theme', 'done'] as const
 type StepKey = (typeof FLOW)[number]
 
-const STEP_LABELS: Record<StepKey, string> = {
-  welcome: 'WELCOME',
-  how: 'HOW IT WORKS',
-  today: 'TODAY',
-  notyet: 'NOT YET',
-  theme: 'MAKE IT YOURS',
-  done: "YOU'RE IN",
-}
-
-const WIDE_STEPS = new Set<StepKey>(FLOW)
+const DESKTOP_CARD_WIDTH = 620
 
 function StepContent({ stepKey }: { stepKey: StepKey }) {
   if (stepKey === 'welcome') return <FounderNote />
@@ -117,7 +111,7 @@ export function OnboardingShell() {
               color: 'var(--fg-subtle)',
             }}
           >
-            {STEP_LABELS[stepKey]}
+            {nav.stepLabels[stepKey]}
           </span>
         </div>
 
@@ -175,7 +169,7 @@ export function OnboardingShell() {
               boxShadow: '0 12px 32px -12px var(--signal)',
             }}
           >
-            {isLast ? 'Continue to sign-up →' : 'Next →'}
+            {isLast ? nav.continueButton : nav.nextButton}
           </button>
 
           {/* Secondary row: back link + step counter */}
@@ -204,7 +198,7 @@ export function OnboardingShell() {
                 color: 'var(--fg-muted)',
               }}
             >
-              ← Back
+              {nav.backButton}
             </button>
             <span
               style={{
@@ -216,7 +210,7 @@ export function OnboardingShell() {
                 color: 'var(--fg-subtle)',
               }}
             >
-              Step {index + 1} of {total}
+              {nav.stepCounter(index + 1, total)}
             </span>
           </div>
         </nav>
@@ -258,7 +252,7 @@ function OnboardingDesktop({
   onBack,
 }: DesktopProps) {
   const cardBodyRef = useRef<HTMLDivElement>(null)
-  const cardWidth = WIDE_STEPS.has(stepKey) ? 620 : 520
+  const cardWidth = DESKTOP_CARD_WIDTH
 
   useEffect(() => {
     cardBodyRef.current?.scrollTo({ top: 0 })
@@ -317,7 +311,7 @@ function OnboardingDesktop({
             color: 'var(--fg-subtle)',
           }}
         >
-          Code accepted · Welcome
+          {nav.codeAccepted}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <CCClusterMark size={26} color="var(--signal)" glow="var(--accent)" />
@@ -372,7 +366,7 @@ function OnboardingDesktop({
                 color: 'var(--fg-subtle)',
               }}
             >
-              {STEP_LABELS[stepKey]}
+              {nav.stepLabels[stepKey]}
             </span>
           </div>
 
@@ -430,7 +424,7 @@ function OnboardingDesktop({
                 boxShadow: '0 12px 32px -12px var(--signal)',
               }}
             >
-              {isLast ? 'Continue to sign-up →' : 'Next →'}
+              {isLast ? nav.continueButton : nav.nextButton}
             </button>
 
             <div
@@ -458,7 +452,7 @@ function OnboardingDesktop({
                   color: 'var(--fg-muted)',
                 }}
               >
-                ← Back
+                {nav.backButton}
               </button>
               <span
                 style={{
@@ -470,7 +464,7 @@ function OnboardingDesktop({
                   color: 'var(--fg-subtle)',
                 }}
               >
-                Step {index + 1} of {total}
+                {nav.stepCounter(index + 1, total)}
               </span>
             </div>
           </nav>
