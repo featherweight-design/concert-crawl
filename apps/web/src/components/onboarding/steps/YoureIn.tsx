@@ -1,26 +1,19 @@
 import { Eyebrow, Lede, StepHeading } from './_primitives'
+import { ONBOARDING_COPY } from '../definitions/copy'
+
+const copy = ONBOARDING_COPY.youreIn
 
 export function YoureIn() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-      <Eyebrow tone="accent">You&apos;re in</Eyebrow>
+      <Eyebrow tone="accent">{copy.eyebrow}</Eyebrow>
       <StepHeading>
-        One last thing.
+        {copy.heading}
         <br />
-        <span style={{ color: 'var(--accent)' }}>
-          You&apos;ll be shaping the app.
-        </span>
+        <span style={{ color: 'var(--accent)' }}>{copy.headingAccent}</span>
       </StepHeading>
-      <Lede>
-        You&apos;re not just here to use the thing — you&apos;re here to make it
-        better. When something changes, we&apos;ll ask what you think. When
-        something breaks, we want to know.
-      </Lede>
-      <Lede>
-        The Give Feedback button lives in your menu — always there, never
-        buried. Tap it and you&apos;ll see a quick category picker and a
-        free-form message field. Thirty seconds. I read every one.
-      </Lede>
+      <Lede>{copy.lede1}</Lede>
+      <Lede>{copy.lede2}</Lede>
       <div
         style={{
           display: 'flex',
@@ -40,7 +33,7 @@ export function YoureIn() {
             textTransform: 'uppercase',
           }}
         >
-          One ask, from me
+          {copy.personalAskLabel}
         </div>
         <p
           style={{
@@ -52,10 +45,7 @@ export function YoureIn() {
             letterSpacing: '-0.005em',
           }}
         >
-          Most shows won&apos;t have a price listed yet — that&apos;s the part
-          you can fix. When you buy a ticket, take ten seconds to report what
-          you paid. Two fans confirming a number is all it takes to make a price
-          real for everyone else.
+          {copy.personalAskBody}
         </p>
         <div
           style={{

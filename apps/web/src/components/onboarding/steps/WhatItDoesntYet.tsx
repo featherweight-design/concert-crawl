@@ -1,33 +1,14 @@
 import { Eyebrow, StepHeading, Lede } from './_primitives'
+import { ONBOARDING_COPY } from '../definitions/copy'
 
-const ITEMS = [
-  {
-    title: 'Notifications.',
-    body: "No push, no email alerts yet. We'll add them after we earn the right to interrupt you.",
-  },
-  {
-    title: 'Cities outside Denver.',
-    body: 'The crawl is regional for now. Other metros come once the system is solid.',
-  },
-  {
-    title: 'Accounts that follow you across devices.',
-    body: 'Watching is local-only this beta. Sign-in keeps your invite, not your list — yet.',
-  },
-  {
-    title: 'Buying tickets.',
-    body: "We'll never sell. We point you at the source and stay out of the transaction.",
-  },
-]
+const copy = ONBOARDING_COPY.whatItDoesntYet
 
 export function WhatItDoesntYet() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <Eyebrow tone="accent">Not yet</Eyebrow>
-      <StepHeading>What&apos;s missing — on purpose.</StepHeading>
-      <Lede>
-        Better to be straight with you than to ship something that pretends.
-        Things on this list are coming, not abandoned.
-      </Lede>
+      <Eyebrow tone="accent">{copy.eyebrow}</Eyebrow>
+      <StepHeading>{copy.heading}</StepHeading>
+      <Lede>{copy.lede}</Lede>
       <ul
         style={{
           margin: 0,
@@ -38,7 +19,7 @@ export function WhatItDoesntYet() {
           gap: 10,
         }}
       >
-        {ITEMS.map((item, ii) => (
+        {copy.items.map((item, ii) => (
           <li
             key={ii}
             style={{

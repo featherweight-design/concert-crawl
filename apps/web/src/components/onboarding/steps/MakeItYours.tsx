@@ -6,6 +6,9 @@ import { THEMES, THEME_META, type ThemeName } from '@/theme/themes'
 import { MiniMark } from '@/theme/MiniMark'
 import { ThemeSwatch } from '@/theme/ThemeSwatch'
 import { Eyebrow, Lede, StepHeading } from './_primitives'
+import { ONBOARDING_COPY } from '../definitions/copy'
+
+const copy = ONBOARDING_COPY.makeItYours
 
 const THEME_KEYS = Object.keys(THEMES) as ThemeName[]
 
@@ -216,7 +219,6 @@ function CompactStrip({ themeName }: { themeName: ThemeName }) {
 
 export function MakeItYours() {
   const { theme, setTheme } = useTheme()
-  const [hasSelected, setHasSelected] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
@@ -230,24 +232,19 @@ export function MakeItYours() {
   function handleSelect(name: ThemeName) {
     setTheme(name)
     localStorage.setItem('cc-onboarding-theme-pending', '1')
-    setHasSelected(true)
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <Eyebrow>Make it yours</Eyebrow>
-      <StepHeading>Pick your look.</StepHeading>
-      <Lede>
-        Nine themes. Pick the one that feels right — you can always change it in
-        Settings.
-      </Lede>
+      <Eyebrow>{copy.eyebrow}</Eyebrow>
+      <StepHeading>{copy.heading}</StepHeading>
+      <Lede>{copy.lede}</Lede>
 
-      {hasSelected &&
-        (isMobile ? (
-          <CompactStrip themeName={theme} />
-        ) : (
-          <HeroStrip themeName={theme} />
-        ))}
+      {isMobile ? (
+        <CompactStrip themeName={theme} />
+      ) : (
+        <HeroStrip themeName={theme} />
+      )}
 
       {/* Swatch grid (desktop) or scroll-snap carousel (mobile) */}
       <div

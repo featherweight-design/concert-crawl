@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ProgressDots } from './ProgressDots'
 import { CCClusterMark } from '@/components/brand/cc-cluster-mark/CCClusterMark'
@@ -25,8 +25,7 @@ const STEP_LABELS: Record<StepKey, string> = {
   done: "YOU'RE IN",
 }
 
-// Steps whose desktop card is wider (620px instead of 520px)
-const WIDE_STEPS = new Set<StepKey>(['welcome', 'today', 'notyet', 'theme'])
+const WIDE_STEPS = new Set<StepKey>(FLOW)
 
 function StepContent({ stepKey }: { stepKey: StepKey }) {
   if (stepKey === 'welcome') return <FounderNote />
@@ -41,6 +40,7 @@ function StepContent({ stepKey }: { stepKey: StepKey }) {
 export function OnboardingShell() {
   const [index, setIndex] = useState(0)
   const router = useRouter()
+  const mobileScrollRef = useRef<HTMLDivElement>(null)
   const total = FLOW.length
   const isFirst = index === 0
   const isLast = index === total - 1
@@ -51,11 +51,13 @@ export function OnboardingShell() {
       router.push('/sign-up')
       return
     }
+    mobileScrollRef.current?.scrollTo({ top: 0 })
     setIndex((ii) => Math.min(ii + 1, total - 1))
   }
 
   function goBack() {
     if (isFirst) return
+    mobileScrollRef.current?.scrollTo({ top: 0 })
     setIndex((ii) => ii - 1)
   }
 
@@ -121,6 +123,7 @@ export function OnboardingShell() {
 
         {/* Scrollable body */}
         <div
+          ref={mobileScrollRef}
           style={{
             flex: 1,
             minHeight: 0,
@@ -254,7 +257,12 @@ function OnboardingDesktop({
   onNext,
   onBack,
 }: DesktopProps) {
+  const cardBodyRef = useRef<HTMLDivElement>(null)
   const cardWidth = WIDE_STEPS.has(stepKey) ? 620 : 520
+
+  useEffect(() => {
+    cardBodyRef.current?.scrollTo({ top: 0 })
+  }, [index])
 
   return (
     <div
@@ -370,6 +378,7 @@ function OnboardingDesktop({
 
           {/* Card body */}
           <div
+            ref={cardBodyRef}
             style={{
               flex: 1,
               minHeight: 0,

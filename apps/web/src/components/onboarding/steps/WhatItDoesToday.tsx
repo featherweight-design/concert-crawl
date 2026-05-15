@@ -1,21 +1,14 @@
 import { Eyebrow, StepHeading, Lede } from './_primitives'
+import { ONBOARDING_COPY } from '../definitions/copy'
 
-const ITEMS = [
-  'Browse upcoming shows in the Denver area',
-  'See real prices side-by-side, with their sources',
-  "Watch shows you're curious about (saved locally for now)",
-  'Submit a price you saw — or report what you paid at the box office',
-]
+const copy = ONBOARDING_COPY.whatItDoesToday
 
 export function WhatItDoesToday() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <Eyebrow>Today</Eyebrow>
-      <StepHeading>What you can do right now.</StepHeading>
-      <Lede>
-        We&apos;re starting small. Denver is the pilot. Here&apos;s what&apos;s
-        actually in front of you on day one:
-      </Lede>
+      <Eyebrow>{copy.eyebrow}</Eyebrow>
+      <StepHeading>{copy.heading}</StepHeading>
+      <Lede>{copy.lede}</Lede>
       <ul
         style={{
           margin: 0,
@@ -26,7 +19,7 @@ export function WhatItDoesToday() {
           gap: 10,
         }}
       >
-        {ITEMS.map((item, ii) => (
+        {copy.items.map((item, ii) => (
           <li
             key={ii}
             style={{

@@ -1,32 +1,83 @@
 import { Eyebrow, StepHeading, Lede } from './_primitives'
+import { ONBOARDING_COPY } from '../definitions/copy'
 
-const ROWS = [
-  {
-    kicker: '01',
-    title: "We crawl, we don't sell.",
-    body: "Concert Crawl reads public listings from venues and ticketers. We don't sell tickets and we don't take a cut. Tap a price, you go to the source.",
-  },
-  {
-    kicker: '02',
-    title: "Prices come from somewhere — we'll tell you where.",
-    body: "Every price has a tag. BOX OFFICE means a fan bought a ticket directly from the venue — that's the gold standard. COMMUNITY means a fan reported what they saw. RESALE means a marketplace listing. If we can't find a price, we'll say so instead of making one up.",
-  },
-  {
-    kicker: '03',
-    title: 'Verifications expire.',
-    body: "A community price is more trustworthy after another fan confirms it — but even verified prices go stale after a week. We'll show you when something is old.",
-  },
-]
+const copy = ONBOARDING_COPY.howItWorks
+
+const SOURCE_COLORS: Record<string, string> = {
+  primary: 'var(--fg-muted)',
+  community: 'var(--signal)',
+  resale: 'var(--warning)',
+}
+
+function PriceSourceChip({ label, kind }: { label: string; kind: string }) {
+  const color = SOURCE_COLORS[kind] ?? 'var(--fg-muted)'
+  return (
+    <span
+      style={{
+        display: 'inline-block',
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: 9.5,
+        fontWeight: 700,
+        letterSpacing: '0.10em',
+        textTransform: 'uppercase',
+        color,
+        border: `1px solid ${color}`,
+        borderRadius: 4,
+        padding: '2px 5px',
+        lineHeight: 1.4,
+        whiteSpace: 'nowrap',
+        flexShrink: 0,
+      }}
+    >
+      {label}
+    </span>
+  )
+}
+
+function PriceSourcesList() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+      {copy.priceSources.map((source) => (
+        <div
+          key={source.kind}
+          style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}
+        >
+          <PriceSourceChip label={source.label} kind={source.kind} />
+          <span
+            style={{
+              fontFamily: 'Inter, system-ui',
+              fontSize: 13,
+              lineHeight: 1.4,
+              color: 'var(--fg-muted)',
+              letterSpacing: '-0.005em',
+            }}
+          >
+            {source.description}
+          </span>
+        </div>
+      ))}
+      <span
+        style={{
+          fontFamily: 'Inter, system-ui',
+          fontSize: 12.5,
+          lineHeight: 1.4,
+          color: 'var(--fg-subtle)',
+          letterSpacing: '-0.005em',
+          paddingTop: 2,
+        }}
+      >
+        {copy.noPrice}
+      </span>
+    </div>
+  )
+}
 
 export function HowItWorks() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-      <Eyebrow>How this works</Eyebrow>
-      <StepHeading>Honest by design.</StepHeading>
-      <Lede>
-        Two minutes on what to expect from the prices, the listings, and what
-        we&apos;ll never do.
-      </Lede>
+      <Eyebrow>{copy.eyebrow}</Eyebrow>
+      <StepHeading>{copy.heading}</StepHeading>
+      <Lede>{copy.lede}</Lede>
       <div
         style={{
           background: 'var(--surface-1)',
@@ -35,7 +86,7 @@ export function HowItWorks() {
           overflow: 'hidden',
         }}
       >
-        {ROWS.map((row, ii) => (
+        {copy.rows.map((row, ii) => (
           <div
             key={row.kicker}
             style={{
@@ -65,7 +116,7 @@ export function HowItWorks() {
             >
               {row.kicker}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div
                 style={{
                   fontFamily: 'Inter, system-ui',
@@ -77,17 +128,21 @@ export function HowItWorks() {
               >
                 {row.title}
               </div>
-              <div
-                style={{
-                  fontFamily: 'Inter, system-ui',
-                  fontSize: 13.5,
-                  lineHeight: 1.5,
-                  color: 'var(--fg-muted)',
-                  letterSpacing: '-0.005em',
-                }}
-              >
-                {row.body}
-              </div>
+              {row.body !== null ? (
+                <div
+                  style={{
+                    fontFamily: 'Inter, system-ui',
+                    fontSize: 13.5,
+                    lineHeight: 1.5,
+                    color: 'var(--fg-muted)',
+                    letterSpacing: '-0.005em',
+                  }}
+                >
+                  {row.body}
+                </div>
+              ) : (
+                <PriceSourcesList />
+              )}
             </div>
           </div>
         ))}
