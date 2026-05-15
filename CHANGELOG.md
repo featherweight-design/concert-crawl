@@ -1,3 +1,17 @@
+# [1.18.0](https://github.com/HartiganHM/concert-crawl/compare/v1.17.1...v1.18.0) (2026-05-15)
+
+
+### Bug Fixes
+
+* **browse:** cap EventCard genre chips at 3, top-align row ([71cb6ea](https://github.com/HartiganHM/concert-crawl/commit/71cb6ea409d2890cd0bd9a2a53d6c8e4de16d362))
+* **browse:** clamp maxChips >= 1, update stale docs ([694bb28](https://github.com/HartiganHM/concert-crawl/commit/694bb28f27ab7be4dc324d272fde9556a61757a0))
+* **consumer:** genrechips - use cn(), rename genres prop, remove as cast ([1b64a93](https://github.com/HartiganHM/concert-crawl/commit/1b64a93a92a66f1da8230dd9cf75af882a6b81e8))
+
+
+### Features
+
+* **browse:** show genre chips on all EventCard rows ([3f37c93](https://github.com/HartiganHM/concert-crawl/commit/3f37c93dd65047cc45658eaebbbfb9220616016c))
+
 ## [1.17.1](https://github.com/HartiganHM/concert-crawl/compare/v1.17.0...v1.17.1) (2026-05-15)
 
 
