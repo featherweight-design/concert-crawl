@@ -1,3 +1,14 @@
+## [1.17.1](https://github.com/HartiganHM/concert-crawl/compare/v1.17.0...v1.17.1) (2026-05-15)
+
+
+### Bug Fixes
+
+* **onboarding:** copilot review — copy fixes, centralization, isMobile flash, refactors ([df2502c](https://github.com/HartiganHM/concert-crawl/commit/df2502ca41241f9128431624163531858b816e16))
+* **onboarding:** copy adjustments ([dadddf7](https://github.com/HartiganHM/concert-crawl/commit/dadddf72715e3bddef490242e325c561c9fc9fd6))
+* **onboarding:** price chip alignment + mobile breakpoint ([b7ff422](https://github.com/HartiganHM/concert-crawl/commit/b7ff4227c5798a8cd3365a840967febe93858eb3))
+* **onboarding:** scroll-to-top, price chips, copy centralization, width + theme fixes ([70e5c05](https://github.com/HartiganHM/concert-crawl/commit/70e5c05975fed9d7b5b409b4c52f9fb6459db4e3)), closes [#342](https://github.com/HartiganHM/concert-crawl/issues/342)
+* **onboarding:** update copy.ts with user copy adjustments ([759cb8b](https://github.com/HartiganHM/concert-crawl/commit/759cb8b4b0f917d0b91751d44250056d8c521f3b))
+
 # [1.17.0](https://github.com/HartiganHM/concert-crawl/compare/v1.16.0...v1.17.0) (2026-05-14)
 
 
