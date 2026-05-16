@@ -84,3 +84,24 @@ describe('GET /v1/venues/:slug — integration', () => {
     expect(body.error).toBe('Venue not found')
   })
 })
+
+describe('GET /v1/venues — beta auth gate', () => {
+  it('returns 401 without auth when REQUIRE_BETA_AUTH is true', async () => {
+    const original = process.env.REQUIRE_BETA_AUTH
+    try {
+      process.env.REQUIRE_BETA_AUTH = 'true'
+      vi.resetModules()
+      // Re-import after env change — vi.mock is re-applied on fresh module load
+      const { venuesPublicRouter: freshRouter } =
+        await import('./venues-public.js')
+      const { Hono } = await import('hono')
+      const testApp = new Hono()
+      testApp.route('/v1/venues', freshRouter)
+      const res = await testApp.request('/v1/venues')
+      expect(res.status).toBe(401)
+    } finally {
+      process.env.REQUIRE_BETA_AUTH = original
+      vi.resetModules()
+    }
+  })
+})

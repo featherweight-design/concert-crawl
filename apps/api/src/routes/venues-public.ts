@@ -1,9 +1,15 @@
 import { Hono } from 'hono'
+import { clerkMiddleware } from '@hono/clerk-auth'
 import { db, events, venues } from '@concert-crawl/db'
 import { type SQL, and, asc, eq, gte } from 'drizzle-orm'
 import { todayInTimezone } from '../lib/time.js'
+import { requireAuth } from '../middleware/auth.js'
 
 export const venuesPublicRouter = new Hono()
+
+if (process.env.REQUIRE_BETA_AUTH === 'true') {
+  venuesPublicRouter.use('*', clerkMiddleware(), requireAuth)
+}
 
 // GET /v1/venues — list active venues (public)
 venuesPublicRouter.get('/', async (ctx) => {
