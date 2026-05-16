@@ -435,3 +435,22 @@ describe('GET /v1/events — filterVibe', () => {
     expect(body.data.data[0]?.title).toBe('Cheap Rock')
   })
 })
+
+describe('GET /v1/events — beta auth gate', () => {
+  it('returns 401 without auth when REQUIRE_BETA_AUTH is true', async () => {
+    const original = process.env.REQUIRE_BETA_AUTH
+    try {
+      process.env.REQUIRE_BETA_AUTH = 'true'
+      vi.resetModules()
+      const { eventsRouter: freshRouter } = await import('./events.js')
+      const { Hono } = await import('hono')
+      const testApp = new Hono()
+      testApp.route('/v1/events', freshRouter)
+      const res = await testApp.request('/v1/events')
+      expect(res.status).toBe(401)
+    } finally {
+      process.env.REQUIRE_BETA_AUTH = original
+      vi.resetModules()
+    }
+  })
+})

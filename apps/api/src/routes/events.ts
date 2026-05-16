@@ -20,6 +20,7 @@ import {
 } from 'drizzle-orm'
 import { todayInTimezone } from '../lib/time.js'
 import { apiLogger } from '../lib/logger.js'
+import { requireAuth } from '../middleware/auth.js'
 
 const uuidSchema = z.string().uuid()
 
@@ -52,6 +53,10 @@ const listEventsSchema = z.object({
 })
 
 export const eventsRouter = new Hono()
+
+if (process.env.REQUIRE_BETA_AUTH === 'true') {
+  eventsRouter.use('/', clerkMiddleware(), requireAuth)
+}
 
 // GET /v1/events — public event listing with filters and pagination
 eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
