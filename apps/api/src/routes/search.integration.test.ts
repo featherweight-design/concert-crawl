@@ -101,3 +101,22 @@ describe('GET /v1/search/popular', () => {
     expect(body.data).toHaveLength(5)
   })
 })
+
+describe('GET /v1/search/popular — beta auth gate', () => {
+  it('returns 401 without auth when REQUIRE_BETA_AUTH is true', async () => {
+    const original = process.env.REQUIRE_BETA_AUTH
+    try {
+      process.env.REQUIRE_BETA_AUTH = 'true'
+      vi.resetModules()
+      const { searchRouter: freshRouter } = await import('./search.js')
+      const { Hono } = await import('hono')
+      const testApp = new Hono()
+      testApp.route('/v1/search', freshRouter)
+      const res = await testApp.request('/v1/search/popular')
+      expect(res.status).toBe(401)
+    } finally {
+      process.env.REQUIRE_BETA_AUTH = original
+      vi.resetModules()
+    }
+  })
+})
