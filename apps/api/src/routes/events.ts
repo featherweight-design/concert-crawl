@@ -55,7 +55,7 @@ const listEventsSchema = z.object({
 export const eventsRouter = new Hono()
 
 if (process.env.REQUIRE_BETA_AUTH === 'true') {
-  eventsRouter.use('/', clerkMiddleware(), requireAuth)
+  eventsRouter.use('*', clerkMiddleware(), requireAuth)
 }
 
 // GET /v1/events — public event listing with filters and pagination

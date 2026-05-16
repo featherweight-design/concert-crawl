@@ -33,6 +33,10 @@ const submissionBodySchema = z
 
 export const priceSubmissionsRouter = new Hono()
 
+if (process.env.REQUIRE_BETA_AUTH === 'true') {
+  priceSubmissionsRouter.use('*', clerkAuth, requireAuth)
+}
+
 // GET /v1/events/:id/price-submissions — optional auth; returns all non-stale submissions
 priceSubmissionsRouter.get('/:id/price-submissions', clerkAuth, async (ctx) => {
   const { id: eventId } = ctx.req.param()

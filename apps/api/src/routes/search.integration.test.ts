@@ -116,7 +116,6 @@ describe('GET /v1/search/popular — beta auth gate', () => {
       expect(res.status).toBe(401)
     } finally {
       process.env.REQUIRE_BETA_AUTH = original
-      vi.resetModules()
     }
   })
 })

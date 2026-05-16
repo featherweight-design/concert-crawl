@@ -171,3 +171,24 @@ describe('GET /v1/events/:id/price-submissions', () => {
     expect(body.data.submissions).toHaveLength(0)
   })
 })
+
+describe('GET /v1/events/:id/price-submissions — beta auth gate', () => {
+  it('returns 401 without auth when REQUIRE_BETA_AUTH is true', async () => {
+    const original = process.env.REQUIRE_BETA_AUTH
+    try {
+      process.env.REQUIRE_BETA_AUTH = 'true'
+      vi.resetModules()
+      const { priceSubmissionsRouter: freshRouter } =
+        await import('./price-submissions.js')
+      const { Hono } = await import('hono')
+      const testApp = new Hono()
+      testApp.route('/v1/events', freshRouter)
+      const res = await testApp.request(
+        '/v1/events/00000000-0000-0000-0000-000000000001/price-submissions',
+      )
+      expect(res.status).toBe(401)
+    } finally {
+      process.env.REQUIRE_BETA_AUTH = original
+    }
+  })
+})

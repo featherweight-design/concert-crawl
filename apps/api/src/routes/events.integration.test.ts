@@ -450,7 +450,24 @@ describe('GET /v1/events — beta auth gate', () => {
       expect(res.status).toBe(401)
     } finally {
       process.env.REQUIRE_BETA_AUTH = original
+    }
+  })
+
+  it('returns 401 on GET /:id without auth when REQUIRE_BETA_AUTH is true', async () => {
+    const original = process.env.REQUIRE_BETA_AUTH
+    try {
+      process.env.REQUIRE_BETA_AUTH = 'true'
       vi.resetModules()
+      const { eventsRouter: freshRouter } = await import('./events.js')
+      const { Hono } = await import('hono')
+      const testApp = new Hono()
+      testApp.route('/v1/events', freshRouter)
+      const res = await testApp.request(
+        '/v1/events/00000000-0000-0000-0000-000000000001',
+      )
+      expect(res.status).toBe(401)
+    } finally {
+      process.env.REQUIRE_BETA_AUTH = original
     }
   })
 })
