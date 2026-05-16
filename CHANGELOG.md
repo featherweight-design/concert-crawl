@@ -1,3 +1,19 @@
+# [1.19.0](https://github.com/HartiganHM/concert-crawl/compare/v1.18.0...v1.19.0) (2026-05-16)
+
+
+### Bug Fixes
+
+* **api:** expand REQUIRE_BETA_AUTH gate to /:id + price-submissions; fix test fragility ([e594c6f](https://github.com/HartiganHM/concert-crawl/commit/e594c6f6e79e594e715265390d07fadb0342b5f7))
+* **web:** redirect unauthenticated users to / instead of sign-in ([4100b38](https://github.com/HartiganHM/concert-crawl/commit/4100b38c70d5a8b267abe93d8c8c256aa782ca9c))
+
+
+### Features
+
+* **api:** gate GET /v1/events list behind REQUIRE_BETA_AUTH ([67c2e95](https://github.com/HartiganHM/concert-crawl/commit/67c2e95b221831095e4386301f9fce405b75a626))
+* **api:** gate GET /v1/search/popular behind REQUIRE_BETA_AUTH ([4b91927](https://github.com/HartiganHM/concert-crawl/commit/4b91927b07b423d74144bd7f41ec0bd9f54973d0))
+* **api:** gate GET /v1/venues behind REQUIRE_BETA_AUTH ([a044253](https://github.com/HartiganHM/concert-crawl/commit/a0442532bd2a8fa65cecbb049907f229b0e5ec64))
+* **landing:** add Sign In path for existing users below CTA buttons ([7ff4703](https://github.com/HartiganHM/concert-crawl/commit/7ff47038dd49c9906a6fa4a58682f3180db54fbf))
+
 # [1.18.0](https://github.com/HartiganHM/concert-crawl/compare/v1.17.1...v1.18.0) (2026-05-15)
 
 
