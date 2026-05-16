@@ -51,7 +51,7 @@ export default clerkMiddleware(async (auth, req) => {
   }
 
   // Everything else requires Clerk auth
-  await auth.protect()
+  await auth.protect({ unauthenticatedUrl: new URL('/', req.url).toString() })
 })
 
 export const config = {
