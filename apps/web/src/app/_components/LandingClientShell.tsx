@@ -175,9 +175,23 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
           </div>
 
           {/* CTAs — desktop only (horizontal row: code primary, waitlist secondary) */}
-          <div className="hidden md:flex flex-row gap-3">
-            {ctaCode}
-            {ctaWaitlist}
+          <div className="hidden md:flex flex-col gap-3">
+            <div className="flex flex-row gap-3">
+              {ctaCode}
+              {ctaWaitlist}
+            </div>
+            <Link
+              href="/sign-in"
+              style={{
+                fontSize: 13,
+                color: 'var(--fg-muted)',
+                textDecoration: 'none',
+                fontFamily: 'Inter, system-ui',
+                fontWeight: 500,
+              }}
+            >
+              Already have an account? Sign in →
+            </Link>
           </div>
         </div>
 
@@ -195,6 +209,18 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
         <div className="flex flex-col gap-3 md:hidden">
           {ctaCode}
           {ctaWaitlist}
+          <Link
+            href="/sign-in"
+            style={{
+              fontSize: 13,
+              color: 'var(--fg-muted)',
+              textDecoration: 'none',
+              fontFamily: 'Inter, system-ui',
+              fontWeight: 500,
+            }}
+          >
+            Already have an account? Sign in →
+          </Link>
         </div>
 
         {/* Vibes */}
