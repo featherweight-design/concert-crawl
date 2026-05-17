@@ -101,7 +101,10 @@ export interface WeekDayInfo {
   dayOfMonth: string
 }
 
-export function currentWeekDays(timezone = 'America/Denver'): WeekDayInfo[] {
+export function currentWeekDays(
+  timezone = 'America/Denver',
+  weekOffset = 0,
+): WeekDayInfo[] {
   const today = localDateString(timezone)
   // Parse from the localized string — avoids local-timezone shifts on UTC servers.
   const [year, month, day] = today.split('-').map(Number) as [
@@ -113,10 +116,12 @@ export function currentWeekDays(timezone = 'America/Denver'): WeekDayInfo[] {
   const todayNoon = new Date(Date.UTC(year, month - 1, day, 12))
   const dow = todayNoon.getUTCDay() // 0 = Sun
   const mondayOffset = dow === 0 ? -6 : 1 - dow
+  // Shift the entire week window by weekOffset weeks.
+  const weekShift = weekOffset * 7
 
   return Array.from({ length: 7 }).map((_, index) => {
     const noon = new Date(
-      Date.UTC(year, month - 1, day + mondayOffset + index, 12),
+      Date.UTC(year, month - 1, day + mondayOffset + weekShift + index, 12),
     )
     const date = `${noon.getUTCFullYear()}-${String(noon.getUTCMonth() + 1).padStart(2, '0')}-${String(noon.getUTCDate()).padStart(2, '0')}`
     const label = new Intl.DateTimeFormat('en-US', {

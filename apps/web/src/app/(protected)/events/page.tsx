@@ -21,6 +21,7 @@ import {
   isToday,
   type WeekDayInfo,
 } from '@/components/consumer/definitions/lib'
+import { localDateString } from '@/lib/time'
 import { copy } from '@/components/consumer/definitions/copy'
 import { WeekStrip } from '@/components/consumer/week-strip'
 
@@ -79,7 +80,21 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     const range = filterWhenToDateRange(filterWhen)
     if (range) fetchParams = { ...params, from: range.from, to: range.to }
   }
-  let weekDays: CalendarWeekDay[] = currentWeekDays().map((day) => ({
+  // Read weekOffset for calendar view pagination (0 = current week, 1 = next week, etc.)
+  const weekOffsetRaw = params['weekOffset']
+  const weekOffsetParsed =
+    typeof weekOffsetRaw === 'string' ? parseInt(weekOffsetRaw, 10) : 0
+  const weekOffset =
+    Number.isFinite(weekOffsetParsed) && weekOffsetParsed >= 0
+      ? weekOffsetParsed
+      : 0
+
+  const today = localDateString('America/Denver')
+
+  let weekDays: CalendarWeekDay[] = currentWeekDays(
+    'America/Denver',
+    weekOffset,
+  ).map((day) => ({
     ...day,
     hasEvents: false,
   }))
@@ -118,13 +133,18 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
       }
     }
 
+    // Default to today (if today is in the visible week), otherwise the first
+    // visible day of the week. Never fall back to Monday unconditionally.
+    const todayInWeek = weekDays.some((day) => day.date === today)
+    const fallbackDate = todayInWeek ? today : weekDays[0]?.date
+
     const validSelectedDate =
       typeof selectedDate === 'string' &&
       weekDays.some((day) => day.date === selectedDate)
         ? selectedDate
         : (weekDays.find((day) => day.date === fromParam)?.date ??
           weekDays.find((day) => day.date === toParam)?.date ??
-          weekDays[0]?.date)
+          fallbackDate)
 
     if (validSelectedDate) selectedDate = validSelectedDate
   }
@@ -224,6 +244,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
           <WeekStrip
             days={weekDays}
             selectedDate={selectedDate}
+            today={today}
             buildHref={(nextDate) => {
               const nextParams = new URLSearchParams()
               for (const [key, value] of Object.entries(params)) {
@@ -233,8 +254,52 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
               }
               nextParams.set('view', 'cal')
               nextParams.set('selectedDate', nextDate)
+              if (weekOffset > 0) {
+                nextParams.set('weekOffset', String(weekOffset))
+              } else {
+                nextParams.delete('weekOffset')
+              }
               return `/events?${nextParams.toString()}`
             }}
+            prevWeekHref={
+              weekOffset > 0
+                ? (() => {
+                    const prevParams = new URLSearchParams()
+                    for (const [key, value] of Object.entries(params)) {
+                      if (
+                        typeof value === 'string' &&
+                        key !== 'offset' &&
+                        key !== 'selectedDate'
+                      ) {
+                        prevParams.set(key, value)
+                      }
+                    }
+                    prevParams.set('view', 'cal')
+                    const prevOffset = weekOffset - 1
+                    if (prevOffset > 0) {
+                      prevParams.set('weekOffset', String(prevOffset))
+                    } else {
+                      prevParams.delete('weekOffset')
+                    }
+                    return `/events?${prevParams.toString()}`
+                  })()
+                : null
+            }
+            nextWeekHref={(() => {
+              const nextParams = new URLSearchParams()
+              for (const [key, value] of Object.entries(params)) {
+                if (
+                  typeof value === 'string' &&
+                  key !== 'offset' &&
+                  key !== 'selectedDate'
+                ) {
+                  nextParams.set(key, value)
+                }
+              }
+              nextParams.set('view', 'cal')
+              nextParams.set('weekOffset', String(weekOffset + 1))
+              return `/events?${nextParams.toString()}`
+            })()}
           />
         )}
 

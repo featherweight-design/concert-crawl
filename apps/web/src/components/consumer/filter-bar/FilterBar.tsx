@@ -223,7 +223,19 @@ export function FilterBar({ venues, className }: FilterBarProps) {
               <button
                 key={key}
                 type="button"
-                onClick={() => updateParam('view', key)}
+                onClick={() => {
+                  // When switching views, strip calendar-specific params so the
+                  // server component re-fetches with a clean slate.
+                  if (key === 'list') {
+                    updateParams({
+                      view: 'list',
+                      selectedDate: '',
+                      weekOffset: '',
+                    })
+                  } else {
+                    updateParam('view', key)
+                  }
+                }}
                 className="inline-flex cursor-pointer items-center gap-1.5 transition-colors"
                 style={{
                   padding: '6px 14px',
