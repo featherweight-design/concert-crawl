@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { Avatar } from './Avatar'
 import { CredChip } from './CredChip'
 import { PlanCard } from './PlanCard'
@@ -111,7 +112,13 @@ export function SettingsRouteDesktop({
   profile,
   submissions,
 }: SettingsRouteDesktopProps) {
-  const [activeSection, setActiveSection] = useState<NavSection>('profile')
+  const searchParams = useSearchParams()
+  const sectionParam = searchParams.get('section')
+  const initialSection: NavSection =
+    sectionParam !== null && NAV_ITEMS.some((item) => item.key === sectionParam)
+      ? (sectionParam as NavSection)
+      : 'profile'
+  const [activeSection, setActiveSection] = useState<NavSection>(initialSection)
   const [editOpen, setEditOpen] = useState(false)
 
   const openEdit = useCallback(() => setEditOpen(true), [])

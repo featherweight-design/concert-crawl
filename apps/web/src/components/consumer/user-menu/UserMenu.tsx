@@ -328,7 +328,7 @@ function MenuBody({
       <SectionLabel>You</SectionLabel>
       <MenuRow
         label="Submitted prices"
-        href="/me/submissions"
+        href="/me?section=submissions"
         {...(submissionCount > 0 ? { meta: `${submissionCount} live` } : {})}
         kbd="P"
         last
