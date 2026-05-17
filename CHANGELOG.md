@@ -1,3 +1,12 @@
+## [1.20.8](https://github.com/HartiganHM/concert-crawl/compare/v1.20.7...v1.20.8) (2026-05-17)
+
+
+### Bug Fixes
+
+* **nav:** restore theme picker to UserMenu, fix avatar, hover, alignment ([7eba67d](https://github.com/HartiganHM/concert-crawl/commit/7eba67d4218d081624ec2f9b12f6ccff64141128))
+* **user-menu:** remove unused initials prop, drop invalid role=menu from panels ([d2e3990](https://github.com/HartiganHM/concert-crawl/commit/d2e399027f3074be09ce1d86025165a863e87182))
+* **venue:** pass auth token to venue API call to fix 404 under beta gate ([9f40fe6](https://github.com/HartiganHM/concert-crawl/commit/9f40fe6b1d7834a0555a90a288649281a9327005))
+
 ## [1.20.7](https://github.com/HartiganHM/concert-crawl/compare/v1.20.6...v1.20.7) (2026-05-17)
 
 
