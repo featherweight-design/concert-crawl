@@ -332,9 +332,7 @@ function FormFields({
           })}
         </div>
         {catError && (
-          <HelpText tone="error">
-            Pick a vibe so we know how to read this.
-          </HelpText>
+          <HelpText tone="error">Pick a feedback category.</HelpText>
         )}
       </div>
 
@@ -603,8 +601,8 @@ function SuccessState({
           textWrap: 'pretty',
         }}
       >
-        Your message is in the queue. We read everything — Hugh especially.
-        Don&apos;t expect a reply unless we need more from you.
+        Thanks for the feedback! We&apos;ll reach out if we need more
+        information.
       </div>
       <div
         style={{
