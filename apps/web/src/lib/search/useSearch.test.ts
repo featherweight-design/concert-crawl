@@ -9,9 +9,14 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }))
 
-vi.mock('./useAuthToken', () => ({
-  useAuthToken: () => vi.fn().mockResolvedValue(null),
+vi.mock('@clerk/nextjs', () => ({
+  useAuth: () => ({ getToken: vi.fn().mockResolvedValue(null) }),
 }))
+
+vi.mock('./useAuthToken', () => {
+  const stableGetToken = vi.fn().mockResolvedValue(null)
+  return { useAuthToken: () => stableGetToken }
+})
 
 import { useSearch } from './useSearch'
 
