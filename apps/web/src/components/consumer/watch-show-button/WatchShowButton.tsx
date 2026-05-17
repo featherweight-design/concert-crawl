@@ -21,6 +21,7 @@ export function WatchShowButton({
 
   useEffect(() => {
     setIsWatching(initialWatching)
+    setIsConfirming(false)
   }, [initialWatching])
   const [isPending, setIsPending] = useState(false)
   const { getToken } = useAuth()

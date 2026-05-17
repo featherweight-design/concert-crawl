@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, useMemo, useState, useTransition } from 'react'
+import { Fragment, useEffect, useMemo, useState, useTransition } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { useSearchParams } from 'next/navigation'
 import type { EventWithVenue, EventsListResponse } from '@concert-crawl/types'
@@ -27,6 +27,12 @@ export const EventsList = ({
 }: EventsListProps) => {
   const [events, setEvents] = useState<EventWithVenue[]>(initialEvents)
   const [offset, setOffset] = useState<number>(initialOffset)
+
+  useEffect(() => {
+    setEvents(initialEvents)
+    setOffset(initialOffset)
+  }, [initialEvents, initialOffset])
+
   const watchedIdsSet = useMemo(
     () => new Set(initialWatchedIds),
     [initialWatchedIds],
@@ -65,7 +71,7 @@ export const EventsList = ({
     if (group) group.push(event)
   }
 
-  const hasMore = events.length < total
+  const hasMore = offset + limit < total
 
   return (
     <>
