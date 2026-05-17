@@ -16,7 +16,6 @@ const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
 
 const DESKTOP_TABS = [
   { label: 'Browse', href: '/events' },
-  { label: 'Search', href: '/search' },
   { label: 'Watching', href: '/watching' },
 ] as const
 
