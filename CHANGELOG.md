@@ -1,3 +1,10 @@
+## [1.20.1](https://github.com/HartiganHM/concert-crawl/compare/v1.20.0...v1.20.1) (2026-05-17)
+
+
+### Bug Fixes
+
+* **landing:** remove 'What you get' section and footer ([839248a](https://github.com/HartiganHM/concert-crawl/commit/839248afd0d41920e1cc00ab025452f75ae2e982))
+
 # [1.20.0](https://github.com/HartiganHM/concert-crawl/compare/v1.19.2...v1.20.0) (2026-05-17)
 
 
