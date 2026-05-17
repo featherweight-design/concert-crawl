@@ -9,21 +9,6 @@ import { WaitlistModal } from '@/components/waitlist/WaitlistModal'
 import { CCMark } from '@/components/brand/cc-mark'
 import type { Show } from '@/components/brand/gig-poster/GigPoster'
 
-const VIBES = [
-  {
-    title: 'Browse',
-    body: 'Every show in Denver this week — list or calendar, your call.',
-  },
-  {
-    title: 'Save',
-    body: 'Heart the ones you might hit. They sync to your phone calendar.',
-  },
-  {
-    title: 'Crawl',
-    body: 'Stack a bunch in one night. We map the route.',
-  },
-]
-
 interface LandingClientShellProps {
   shows: Show[]
 }
@@ -222,86 +207,6 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
             Already have an account? Sign in →
           </Link>
         </div>
-
-        {/* Vibes */}
-        <section
-          className="md:col-span-2"
-          style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
-        >
-          <div
-            style={{
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 10,
-              color: 'var(--fg-muted)',
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-              fontWeight: 700,
-            }}
-          >
-            What you get
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {VIBES.map((vibe) => (
-              <div
-                key={vibe.title}
-                style={{
-                  padding: 18,
-                  background: 'var(--surface-1)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 12,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 6,
-                }}
-              >
-                <h3
-                  style={{
-                    margin: '4px 0 0',
-                    fontFamily: 'Inter, system-ui',
-                    fontWeight: 800,
-                    fontSize: 18,
-                    color: 'var(--fg)',
-                    letterSpacing: '-0.015em',
-                  }}
-                >
-                  {vibe.title}
-                </h3>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 14,
-                    color: 'var(--fg-muted)',
-                    lineHeight: 1.4,
-                  }}
-                >
-                  {vibe.body}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Footer */}
-        <footer
-          className="md:col-span-2"
-          style={{ paddingTop: 16, borderTop: '1px solid var(--border)' }}
-        >
-          <div
-            style={{
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 10,
-              color: 'var(--fg-subtle)',
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 4,
-            }}
-          >
-            <div>Denver pilot · more cities later</div>
-            <div style={{ opacity: 0.7 }}>made by fans · v0.1 beta</div>
-          </div>
-        </footer>
       </main>
 
       <WaitlistModal
