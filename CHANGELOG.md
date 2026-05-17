@@ -1,3 +1,11 @@
+## [1.20.5](https://github.com/HartiganHM/concert-crawl/compare/v1.20.4...v1.20.5) (2026-05-17)
+
+
+### Bug Fixes
+
+* **nav:** remove Search tab, clean settings menu, fix admin role check ([568f42f](https://github.com/HartiganHM/concert-crawl/commit/568f42f8040ce081299c7335ce296fe33aeacdd9))
+* **nav:** remove stale Search tab from WatchingRouteDesktop DESKTOP_TABS ([9ea1967](https://github.com/HartiganHM/concert-crawl/commit/9ea1967c318c1786b6cad9f4c3181f0c7f47756c))
+
 ## [1.20.4](https://github.com/HartiganHM/concert-crawl/compare/v1.20.3...v1.20.4) (2026-05-17)
 
 
