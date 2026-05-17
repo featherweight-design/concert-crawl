@@ -1,3 +1,11 @@
+## [1.20.4](https://github.com/HartiganHM/concert-crawl/compare/v1.20.3...v1.20.4) (2026-05-17)
+
+
+### Bug Fixes
+
+* **account:** use openUserProfile() modal; hide password row for OAuth users ([4982d94](https://github.com/HartiganHM/concert-crawl/commit/4982d94debb0bd9eb26f51a061e6fc57fa9a441f))
+* **settings:** extract AccountManagementRow client island, restore SettingsRoute as RSC ([6133f58](https://github.com/HartiganHM/concert-crawl/commit/6133f580b12029c346c5c2fd081e37d26ec7459a))
+
 ## [1.20.3](https://github.com/HartiganHM/concert-crawl/compare/v1.20.2...v1.20.3) (2026-05-17)
 
 
