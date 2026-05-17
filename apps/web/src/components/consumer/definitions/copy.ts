@@ -26,9 +26,9 @@ export const copy = {
 
   // ── Watching ───────────────────────────────────────────────────────
   watchingEmptyEyebrow: 'Watching',
-  watchingEmptyTitle: 'Empty queue.',
+  watchingEmptyTitle: 'No shows, grandpa.',
   watchingEmptyBody:
-    "Bookmark a show and we'll watch its price for you — drops, spikes, sell-outs. We're patient.",
+    "Add a show and we'll watch the price for you — drops, spikes, sell-outs.",
   watchingEmptyCta: "Browse tonight's shows",
 
   // ── Search ─────────────────────────────────────────────────────────

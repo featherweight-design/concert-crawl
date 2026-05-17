@@ -29,12 +29,12 @@ vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: vi.fn() }),
 }))
 
-vi.mock('../identity-art/IdentityArt', () => ({
-  IdentityArt: vi.fn(() => <svg data-testid="identity-art" />),
+vi.mock('../event-image/EventImage', () => ({
+  EventImage: vi.fn(() => <div data-testid="event-image" />),
 }))
 
 import { WatchingItem } from './WatchingItem'
-import { IdentityArt } from '../identity-art/IdentityArt'
+import { EventImage } from '../event-image/EventImage'
 
 const baseShow: WatchingShow = {
   userEventId: 'ue-1',
@@ -58,17 +58,12 @@ const baseShow: WatchingShow = {
 describe('WatchingItem thumbnail', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('renders IdentityArt, not a venue img element', () => {
-    const { getByTestId, container } = render(
+  it('renders EventImage in the thumbnail slot', () => {
+    const { getByTestId } = render(
       <WatchingItem show={baseShow} density="cozy" onRemove={() => {}} />,
     )
 
-    // IdentityArt is rendered in the thumbnail slot
-    expect(getByTestId('identity-art')).toBeTruthy()
-
-    // Should NOT render an img element with the venue imageUrl
-    const imgEl = container.querySelector(`img[src="${baseShow.imageUrl}"]`)
-    expect(imgEl).toBeNull()
+    expect(getByTestId('event-image')).toBeTruthy()
   })
 
   it('renders correctly even when imageUrl is null', () => {
@@ -77,14 +72,17 @@ describe('WatchingItem thumbnail', () => {
       <WatchingItem show={show} density="cozy" onRemove={() => {}} />,
     )
 
-    expect(getByTestId('identity-art')).toBeTruthy()
+    expect(getByTestId('event-image')).toBeTruthy()
   })
 
-  it('passes the artist name as the IdentityArt name prop', () => {
+  it('passes artist name and imageUrl to EventImage', () => {
     render(<WatchingItem show={baseShow} density="cozy" onRemove={() => {}} />)
 
-    expect(vi.mocked(IdentityArt)).toHaveBeenCalledWith(
-      expect.objectContaining({ name: baseShow.artist }),
+    expect(vi.mocked(EventImage)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        artist: baseShow.artist,
+        src: baseShow.imageUrl,
+      }),
       undefined,
     )
   })

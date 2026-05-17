@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { WatchingShow } from '@concert-crawl/types'
-import { IdentityArt } from '../identity-art/IdentityArt'
+import { EventImage } from '../event-image'
 import { DeltaTag } from './DeltaTag'
 import { SourcePill } from './SourcePill'
 
@@ -155,12 +155,12 @@ export function WatchingItem({ show, density, onRemove }: WatchingItemProps) {
           flexShrink: 0,
         }}
       >
-        <IdentityArt
-          name={show.artist}
-          kind="artist"
-          scale="tile"
+        <EventImage
+          src={show.imageUrl}
+          alt={show.artist}
+          artist={show.artist}
+          identityScale="tile"
           className="h-full w-full"
-          aria-hidden
         />
       </Link>
 
@@ -253,40 +253,28 @@ export function WatchingItem({ show, density, onRemove }: WatchingItemProps) {
             SOLD OUT
           </span>
         ) : isPresale ? (
-          <>
-            <span
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: cfg.priceSize,
-                fontWeight: 700,
-                color: 'var(--fg-subtle)',
-              }}
-            >
-              —
-            </span>
-            <span
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: '0.10em',
-                textTransform: 'uppercase',
-                color: 'var(--fg-subtle)',
-              }}
-            >
-              presale
-            </span>
-          </>
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: '0.10em',
+              textTransform: 'uppercase',
+              color: 'var(--fg-subtle)',
+            }}
+          >
+            presale
+          </span>
         ) : show.currentPrice === null ? (
           <span
             style={{
               fontFamily: 'var(--font-mono)',
-              fontSize: cfg.priceSize,
-              fontWeight: 700,
+              fontSize: 9.5,
               color: 'var(--fg-subtle)',
+              letterSpacing: '0.04em',
             }}
           >
-            —
+            tba
           </span>
         ) : (
           <>
