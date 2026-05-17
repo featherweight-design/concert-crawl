@@ -1,3 +1,14 @@
+## [1.19.2](https://github.com/HartiganHM/concert-crawl/compare/v1.19.1...v1.19.2) (2026-05-17)
+
+
+### Bug Fixes
+
+* add auth token to useSearch popular and debounced fetches ([011ed3f](https://github.com/HartiganHM/concert-crawl/commit/011ed3ffd47cc9b6e95a4be90d865ef1da2dc233))
+* pass auth token to server-side API fetches on protected pages ([89d7cd6](https://github.com/HartiganHM/concert-crawl/commit/89d7cd627bbe371a5a4eb33b1a08941758fc805e))
+* route useSearch through useAuthToken abstraction, add test mock, sync section param on nav ([06b6a9b](https://github.com/HartiganHM/concert-crawl/commit/06b6a9b14ebf5aa67b8868fbcbceba6fde3f276a))
+* **settings:** deep-link Submitted prices to /me?section=submissions ([737bd8a](https://github.com/HartiganHM/concert-crawl/commit/737bd8a3e4ffd8eb9d5136562f680583f2d575fd))
+* **test:** stabilise useAuthToken mock to prevent infinite re-render loop ([dc140d9](https://github.com/HartiganHM/concert-crawl/commit/dc140d948a1655257801bef94f2524a833c8efc6))
+
 ## [1.19.1](https://github.com/HartiganHM/concert-crawl/compare/v1.19.0...v1.19.1) (2026-05-17)
 
 
