@@ -1,3 +1,12 @@
+## [1.20.7](https://github.com/HartiganHM/concert-crawl/compare/v1.20.6...v1.20.7) (2026-05-17)
+
+
+### Bug Fixes
+
+* **feedback:** make screenshot attachment functional via file input ([51195eb](https://github.com/HartiganHM/concert-crawl/commit/51195eb9be057698806441e67d6b310fd6425d79)), closes [#364](https://github.com/HartiganHM/concert-crawl/issues/364)
+* **ui:** address Copilot review comments on PR [#376](https://github.com/HartiganHM/concert-crawl/issues/376) ([f701b6b](https://github.com/HartiganHM/concert-crawl/commit/f701b6b3f6fe695cd0ffb0525b540c511747109d))
+* **ui:** get-tickets SVG icon, remove screenshot slot, hero WatchShowButton ([ad272a7](https://github.com/HartiganHM/concert-crawl/commit/ad272a757d02fbbc9111f8007dcce1cde17b8256))
+
 ## [1.20.6](https://github.com/HartiganHM/concert-crawl/compare/v1.20.5...v1.20.6) (2026-05-17)
 
 
