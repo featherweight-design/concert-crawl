@@ -1,5 +1,6 @@
 'use client'
 
+import { useAuth } from '@clerk/nextjs'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
@@ -91,6 +92,7 @@ function deriveVenueResults(rows: EventRow[]): VenueResult[] {
 
 export function useSearch() {
   const router = useRouter()
+  const { getToken } = useAuth()
   const [query, setQuery] = useState('')
   const [recentSearches, setRecentSearches] = useState<string[]>([])
   const [popularEvents, setPopularEvents] = useState<PopularEvent[]>([])
@@ -103,13 +105,20 @@ export function useSearch() {
   useEffect(() => {
     setRecentSearches(readRecent())
 
-    fetch(`${API_URL}/v1/search/popular`)
-      .then((res) => res.json())
-      .then((body: { success: boolean; data: PopularEvent[] }) => {
-        if (body.success) setPopularEvents(body.data)
+    void (async () => {
+      const token = await getToken()
+      fetch(`${API_URL}/v1/search/popular`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
-      .catch(() => {})
-  }, [])
+        .then((res) => res.json())
+        .then((body: { success: boolean; data: PopularEvent[] }) => {
+          if (body.success) setPopularEvents(body.data)
+        })
+        .catch((err) => {
+          console.error(err)
+        })
+    })()
+  }, [getToken])
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -127,28 +136,36 @@ export function useSearch() {
     debounceRef.current = setTimeout(() => {
       const controller = new AbortController()
       abortRef.current = controller
-      fetch(
-        `${API_URL}/v1/events?search=${encodeURIComponent(trimmed)}&limit=100`,
-        { signal: controller.signal },
-      )
-        .then((res) => res.json())
-        .then((body: { success: boolean; data: { data: EventRow[] } }) => {
-          if (body.success) {
-            setArtistResults(deriveArtistResults(body.data.data))
-            setVenueResults(deriveVenueResults(body.data.data))
-          }
-        })
-        .catch(() => {})
-        .finally(() => {
-          if (!controller.signal.aborted) setIsLoading(false)
-        })
+      void (async () => {
+        const token = await getToken()
+        fetch(
+          `${API_URL}/v1/events?search=${encodeURIComponent(trimmed)}&limit=100`,
+          {
+            signal: controller.signal,
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          },
+        )
+          .then((res) => res.json())
+          .then((body: { success: boolean; data: { data: EventRow[] } }) => {
+            if (body.success) {
+              setArtistResults(deriveArtistResults(body.data.data))
+              setVenueResults(deriveVenueResults(body.data.data))
+            }
+          })
+          .catch((err) => {
+            console.error(err)
+          })
+          .finally(() => {
+            if (!controller.signal.aborted) setIsLoading(false)
+          })
+      })()
     }, DEBOUNCE_MS)
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
       abortRef.current?.abort()
     }
-  }, [query])
+  }, [query, getToken])
 
   const clearQuery = useCallback(() => {
     setQuery('')
