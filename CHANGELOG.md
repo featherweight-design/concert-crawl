@@ -1,3 +1,10 @@
+## [1.20.2](https://github.com/HartiganHM/concert-crawl/compare/v1.20.1...v1.20.2) (2026-05-17)
+
+
+### Bug Fixes
+
+* **browse:** calendar default date, past dates, week forward scroll, view-switch cleanup ([b05fc48](https://github.com/HartiganHM/concert-crawl/commit/b05fc48d4c49e3375978088ac5251bd1c28a650e)), closes [#359](https://github.com/HartiganHM/concert-crawl/issues/359)
+
 ## [1.20.1](https://github.com/HartiganHM/concert-crawl/compare/v1.20.0...v1.20.1) (2026-05-17)
 
 
