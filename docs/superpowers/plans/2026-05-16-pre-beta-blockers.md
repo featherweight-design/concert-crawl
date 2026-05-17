@@ -12,16 +12,19 @@
 
 ## PR 1 — Navigation + Auth Header Sweep
 
-### Task 1: Fix UserMenu "Submitted prices" link
+### Task 1: Fix UserMenu "Submitted prices" link + pre-select submissions section
 
-**Context:** `UserMenu.tsx` links "Submitted prices" to `/me/submissions`, which does not exist as a page. The My Submissions content already renders inside `/me` (the user settings page). Fix is a one-character path change.
+**Context:** `UserMenu.tsx` links "Submitted prices" to `/me/submissions`, which does not exist. The My Submissions content already renders inside `/me`. On desktop, `/me` uses `SettingsRouteDesktop` — a client component with `useState<NavSection>('profile')` for the active section and no URL awareness. On mobile, `SettingsRoute` is a single scrollable page (all sections always visible, no tab switching).
+
+Fix: change the link to `/me?section=submissions`, then read that param in `SettingsRouteDesktop` to initialize the active section. Mobile already shows all sections in a scroll, so no change needed there.
 
 **Files:**
 - Modify: `apps/web/src/components/consumer/user-menu/UserMenu.tsx` (~line 331)
+- Modify: `apps/web/src/components/settings/SettingsRouteDesktop.tsx`
 
-- [ ] **Step 1: Locate the broken link**
+- [ ] **Step 1: Update the UserMenu href**
 
-Open `apps/web/src/components/consumer/user-menu/UserMenu.tsx` and find the `MenuRow` with `label="Submitted prices"`. It currently reads:
+In `apps/web/src/components/consumer/user-menu/UserMenu.tsx`, find the `MenuRow` with `label="Submitted prices"`:
 
 ```tsx
 <MenuRow
@@ -33,29 +36,73 @@ Open `apps/web/src/components/consumer/user-menu/UserMenu.tsx` and find the `Men
 />
 ```
 
-- [ ] **Step 2: Fix the href**
-
-Change `href="/me/submissions"` to `href="/me"`:
+Change `href="/me/submissions"` to `href="/me?section=submissions"`:
 
 ```tsx
 <MenuRow
   label="Submitted prices"
-  href="/me"
+  href="/me?section=submissions"
   {...(submissionCount > 0 ? { meta: `${submissionCount} live` } : {})}
   kbd="P"
   last
 />
 ```
 
-- [ ] **Step 3: Verify manually**
+- [ ] **Step 2: Read the section param in SettingsRouteDesktop**
 
-Start the web app (`pnpm --filter web dev`), sign in, open the user menu, click "Submitted prices". Confirm it lands on `/me` with the My Submissions section visible.
+`SettingsRouteDesktop` is already a client component (`'use client'`). Add `useSearchParams` to the React import and `useSearchParams` from Next.js.
 
-- [ ] **Step 4: Commit**
+At the top of `apps/web/src/components/settings/SettingsRouteDesktop.tsx`, add to the existing Next.js import:
+
+```typescript
+// BEFORE:
+import Link from 'next/link'
+
+// AFTER:
+import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
+```
+
+Inside `SettingsRouteDesktop`, the function currently initializes active section with:
+
+```typescript
+const [activeSection, setActiveSection] = useState<NavSection>('profile')
+```
+
+Replace with:
+
+```typescript
+const searchParams = useSearchParams()
+const sectionParam = searchParams.get('section')
+const initialSection: NavSection =
+  sectionParam !== null &&
+  NAV_ITEMS.some((item) => item.key === sectionParam)
+    ? (sectionParam as NavSection)
+    : 'profile'
+const [activeSection, setActiveSection] = useState<NavSection>(initialSection)
+```
+
+This reads the `?section=` param on first render, validates it against the known `NAV_ITEMS` keys, and falls back to `'profile'` if the param is missing or invalid.
+
+- [ ] **Step 3: TypeScript check**
 
 ```bash
-git add apps/web/src/components/consumer/user-menu/UserMenu.tsx
-git commit -m "fix(settings): update Submitted prices link to /me"
+pnpm --filter web typecheck
+```
+
+Expected: no errors.
+
+- [ ] **Step 4: Verify manually**
+
+Start the dev server (`pnpm --filter web dev`). Sign in, open the user menu, click "Submitted prices". On desktop: confirm `/me?section=submissions` loads with the "My submissions" panel active in the sidebar. On mobile: confirm `/me?section=submissions` loads and shows the full settings page (submissions section visible on scroll).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add \
+  apps/web/src/components/consumer/user-menu/UserMenu.tsx \
+  apps/web/src/components/settings/SettingsRouteDesktop.tsx
+git commit -m "fix(settings): deep-link Submitted prices to /me?section=submissions"
 ```
 
 ---
