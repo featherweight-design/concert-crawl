@@ -1,3 +1,17 @@
+# [1.20.0](https://github.com/HartiganHM/concert-crawl/compare/v1.19.2...v1.20.0) (2026-05-17)
+
+
+### Bug Fixes
+
+* re-sync WatchShowButton state when initialWatching prop changes ([91d3338](https://github.com/HartiganHM/concert-crawl/commit/91d3338a9ccf4015870f2d069e334d2c180fcffb))
+* reset EventsList state on filter change, fix hasMore check, reset isConfirming on prop change ([6026823](https://github.com/HartiganHM/concert-crawl/commit/60268238d0e0e1eafc5cd5069a93313ab71d121a))
+* use EventsList client component to append load-more events in list view ([d46b062](https://github.com/HartiganHM/concert-crawl/commit/d46b0620f8bd24fcba014c4beae196f4aead0f46))
+
+
+### Features
+
+* add EventsList client component for append-on-load-more ([347549a](https://github.com/HartiganHM/concert-crawl/commit/347549a22d0b73ad370bfefff7d5a7e8bd91c9be))
+
 ## [1.19.2](https://github.com/HartiganHM/concert-crawl/compare/v1.19.1...v1.19.2) (2026-05-17)
 
 
