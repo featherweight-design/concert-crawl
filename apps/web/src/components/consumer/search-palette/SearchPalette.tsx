@@ -213,7 +213,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
             />
           )}
           {search.query.trim() !== '' && !hasResults && (
-            <SearchEmptyState query={search.query} />
+            <SearchEmptyState query={search.query} onCtaClick={onClose} />
           )}
         </div>
 

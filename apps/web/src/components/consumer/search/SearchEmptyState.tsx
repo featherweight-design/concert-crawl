@@ -3,11 +3,13 @@ import { copy } from '../definitions/copy'
 
 interface SearchEmptyStateProps {
   query: string
+  onCtaClick?: () => void
 }
 
-export function SearchEmptyState({ query }: SearchEmptyStateProps) {
-  const title = query.trim()
-    ? `Nothing called "${query.trim()}".`
+export function SearchEmptyState({ query, onCtaClick }: SearchEmptyStateProps) {
+  const trimmedQuery = query.trim()
+  const title = trimmedQuery
+    ? `No results for "${trimmedQuery}".`
     : copy.searchNoResultsTitle
 
   return (
@@ -17,7 +19,11 @@ export function SearchEmptyState({ query }: SearchEmptyStateProps) {
       eyebrow={copy.searchNoResultsEyebrow}
       title={title}
       body={copy.searchNoResultsBody}
-      primaryCta={{ label: copy.searchNoResultsCta, href: '/events' }}
+      primaryCta={{
+        label: copy.searchNoResultsCta,
+        href: '/events',
+        ...(onCtaClick ? { onClick: onCtaClick } : {}),
+      }}
     />
   )
 }

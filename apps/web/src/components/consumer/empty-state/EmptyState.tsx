@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 interface EmptyStateCta {
   label: string
   href: string
+  onClick?: () => void
 }
 
 export interface EmptyStateProps {
@@ -28,6 +29,7 @@ function EmptyStatePrimary({
   return (
     <Link
       href={cta.href}
+      {...(cta.onClick ? { onClick: cta.onClick } : {})}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
