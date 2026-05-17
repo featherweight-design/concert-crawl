@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useAuth } from '@clerk/nextjs'
 
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
@@ -18,6 +18,10 @@ export function WatchShowButton({
 }: WatchShowButtonProps) {
   const [isWatching, setIsWatching] = useState(initialWatching)
   const [isConfirming, setIsConfirming] = useState(false)
+
+  useEffect(() => {
+    setIsWatching(initialWatching)
+  }, [initialWatching])
   const [isPending, setIsPending] = useState(false)
   const { getToken } = useAuth()
 
@@ -88,7 +92,14 @@ export function WatchShowButton({
 
   if (isWatching && isConfirming) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          flexWrap: 'wrap',
+        }}
+      >
         <button
           type="button"
           onClick={stopWatching}
@@ -123,7 +134,14 @@ export function WatchShowButton({
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        flexWrap: 'wrap',
+      }}
+    >
       <button
         type="button"
         onClick={isWatching ? () => setIsConfirming(true) : startWatching}
@@ -185,7 +203,8 @@ export function WatchShowButton({
             }}
             aria-hidden
           />
-          {watchingCount} watching{isWatching ? '' : ' · alerts on price + sold out'}
+          {watchingCount} watching
+          {isWatching ? '' : ' · alerts on price + sold out'}
         </span>
       )}
     </div>
