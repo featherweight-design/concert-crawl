@@ -1,8 +1,8 @@
 'use client'
 
-import { useAuth } from '@clerk/nextjs'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuthToken } from './useAuthToken'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 const RECENT_KEY = 'cc_recent_searches'
@@ -92,7 +92,7 @@ function deriveVenueResults(rows: EventRow[]): VenueResult[] {
 
 export function useSearch() {
   const router = useRouter()
-  const { getToken } = useAuth()
+  const getToken = useAuthToken()
   const [query, setQuery] = useState('')
   const [recentSearches, setRecentSearches] = useState<string[]>([])
   const [popularEvents, setPopularEvents] = useState<PopularEvent[]>([])
@@ -106,17 +106,21 @@ export function useSearch() {
     setRecentSearches(readRecent())
 
     void (async () => {
-      const token = await getToken()
-      fetch(`${API_URL}/v1/search/popular`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
-        .then((res) => res.json())
-        .then((body: { success: boolean; data: PopularEvent[] }) => {
-          if (body.success) setPopularEvents(body.data)
+      try {
+        const token = await getToken()
+        fetch(`${API_URL}/v1/search/popular`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
         })
-        .catch((err) => {
-          console.error(err)
-        })
+          .then((res) => res.json())
+          .then((body: { success: boolean; data: PopularEvent[] }) => {
+            if (body.success) setPopularEvents(body.data)
+          })
+          .catch((err: unknown) => {
+            console.error(err)
+          })
+      } catch (err) {
+        console.error(err)
+      }
     })()
   }, [getToken])
 
@@ -137,27 +141,34 @@ export function useSearch() {
       const controller = new AbortController()
       abortRef.current = controller
       void (async () => {
-        const token = await getToken()
-        fetch(
-          `${API_URL}/v1/events?search=${encodeURIComponent(trimmed)}&limit=100`,
-          {
-            signal: controller.signal,
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          },
-        )
-          .then((res) => res.json())
-          .then((body: { success: boolean; data: { data: EventRow[] } }) => {
-            if (body.success) {
-              setArtistResults(deriveArtistResults(body.data.data))
-              setVenueResults(deriveVenueResults(body.data.data))
-            }
-          })
-          .catch((err) => {
-            console.error(err)
-          })
-          .finally(() => {
-            if (!controller.signal.aborted) setIsLoading(false)
-          })
+        try {
+          const token = await getToken()
+          fetch(
+            `${API_URL}/v1/events?search=${encodeURIComponent(trimmed)}&limit=100`,
+            {
+              signal: controller.signal,
+              headers: token ? { Authorization: `Bearer ${token}` } : {},
+            },
+          )
+            .then((res) => res.json())
+            .then((body: { success: boolean; data: { data: EventRow[] } }) => {
+              if (body.success) {
+                setArtistResults(deriveArtistResults(body.data.data))
+                setVenueResults(deriveVenueResults(body.data.data))
+              }
+            })
+            .catch((err: unknown) => {
+              if (err instanceof DOMException && err.name === 'AbortError')
+                return
+              console.error(err)
+            })
+            .finally(() => {
+              if (!controller.signal.aborted) setIsLoading(false)
+            })
+        } catch (err) {
+          if (err instanceof DOMException && err.name === 'AbortError') return
+          console.error(err)
+        }
       })()
     }, DEBOUNCE_MS)
 

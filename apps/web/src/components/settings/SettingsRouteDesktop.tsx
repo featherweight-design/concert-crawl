@@ -121,6 +121,13 @@ export function SettingsRouteDesktop({
   const [activeSection, setActiveSection] = useState<NavSection>(initialSection)
   const [editOpen, setEditOpen] = useState(false)
 
+  useEffect(() => {
+    const param = searchParams.get('section')
+    const isValid =
+      param !== null && NAV_ITEMS.some((item) => item.key === param)
+    setActiveSection(isValid ? (param as NavSection) : 'profile')
+  }, [searchParams])
+
   const openEdit = useCallback(() => setEditOpen(true), [])
   const closeEdit = useCallback(() => setEditOpen(false), [])
 

@@ -9,6 +9,10 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }))
 
+vi.mock('./useAuthToken', () => ({
+  useAuthToken: () => vi.fn().mockResolvedValue(null),
+}))
+
 import { useSearch } from './useSearch'
 
 const POPULAR_RESPONSE = {
