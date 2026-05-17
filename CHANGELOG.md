@@ -1,3 +1,10 @@
+## [1.19.1](https://github.com/HartiganHM/concert-crawl/compare/v1.19.0...v1.19.1) (2026-05-17)
+
+
+### Bug Fixes
+
+* **auth:** pass Clerk token to events/venues fetches; add protected error boundary ([2611353](https://github.com/HartiganHM/concert-crawl/commit/2611353081de5b865fbfec97cbe8edc8ff5142b4))
+
 # [1.19.0](https://github.com/HartiganHM/concert-crawl/compare/v1.18.0...v1.19.0) (2026-05-16)
 
 
