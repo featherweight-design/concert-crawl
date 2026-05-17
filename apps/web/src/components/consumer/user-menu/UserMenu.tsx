@@ -86,12 +86,6 @@ export function UserMenu() {
   }, [signOut])
 
   // Derive user display values
-  const firstName = user?.firstName ?? ''
-  const lastName = user?.lastName ?? ''
-  const initials =
-    firstName || lastName
-      ? (firstName.charAt(0) + lastName.charAt(0)).toUpperCase()
-      : (user?.emailAddresses[0]?.emailAddress.charAt(0) ?? '?').toUpperCase()
   const email = user?.emailAddresses[0]?.emailAddress ?? ''
 
   // CustomJwtSessionClaims is augmented in apps/web/src/types/clerk.d.ts — no cast needed
@@ -111,7 +105,7 @@ export function UserMenu() {
           onClick={() => setOpen((prev) => !prev)}
           aria-label="Account menu"
           aria-expanded={open}
-          aria-haspopup="menu"
+          aria-haspopup="true"
           className="shrink-0 cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal)]"
         >
           <Avatar handle={avatarHandle} avatarColor={avatarColor} size={36} />
@@ -120,7 +114,6 @@ export function UserMenu() {
         {/* Desktop popover */}
         {open && !isMobile && (
           <UserMenuPopover
-            initials={initials}
             email={email}
             isAdmin={isAdmin}
             buildLabel={buildLabel}
@@ -150,7 +143,6 @@ export function UserMenu() {
             onClick={() => setOpen(false)}
           />
           <UserMenuSheet
-            initials={initials}
             email={email}
             isAdmin={isAdmin}
             buildLabel={buildLabel}
@@ -173,7 +165,6 @@ export function UserMenu() {
 // ── Shared props ──────────────────────────────────────────────────────────
 
 interface MenuBodyProps {
-  initials: string
   email: string
   isAdmin: boolean
   buildLabel: string
@@ -188,7 +179,6 @@ interface MenuBodyProps {
 // ── Menu body (shared between popover and sheet) ──────────────────────────
 
 function MenuBody({
-  initials,
   email,
   isAdmin,
   buildLabel,
@@ -386,8 +376,6 @@ function MenuBody({
 function UserMenuPopover(props: MenuBodyProps) {
   return (
     <div
-      role="menu"
-      aria-label="Account menu"
       style={{
         position: 'absolute',
         right: 0,
@@ -413,8 +401,6 @@ function UserMenuPopover(props: MenuBodyProps) {
 function UserMenuSheet(props: MenuBodyProps) {
   return (
     <div
-      role="menu"
-      aria-label="Account menu"
       style={{
         position: 'fixed',
         left: 0,
