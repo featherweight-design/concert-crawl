@@ -78,6 +78,7 @@ export function SearchResultsState({
               <button
                 onClick={() => onNavigateTo('artist', artist.name)}
                 onMouseEnter={() => onHover?.(idx)}
+                data-selected={selectedIdx === idx ? 'true' : undefined}
                 style={{
                   all: 'unset',
                   cursor: 'pointer',
@@ -154,6 +155,7 @@ export function SearchResultsState({
                 <button
                   onClick={() => onNavigateTo('venue', { slug: venue.slug })}
                   onMouseEnter={() => onHover?.(venueIdx)}
+                  data-selected={selectedIdx === venueIdx ? 'true' : undefined}
                   style={{
                     all: 'unset',
                     cursor: 'pointer',

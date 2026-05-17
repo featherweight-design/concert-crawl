@@ -175,8 +175,13 @@ describe('SearchResultsState', () => {
 })
 
 describe('SearchEmptyState', () => {
-  it('renders the no-results title', () => {
+  it('renders the query in the no-results title', () => {
     render(<SearchEmptyState query="thee oh sees" />)
+    expect(screen.getByText(/Nothing called "thee oh sees"/)).toBeTruthy()
+  })
+
+  it('falls back to generic title when query is empty', () => {
+    render(<SearchEmptyState query="" />)
     expect(screen.getByText(/Nothing under that name/)).toBeTruthy()
   })
 
