@@ -4,7 +4,7 @@ import type {
   VenuePublic,
   WatchingShow,
 } from '@concert-crawl/types'
-import { publicApiClient } from '@/lib/api'
+import { publicApiClient, apiClient } from '@/lib/api'
 import { auth } from '@/lib/auth'
 import { fetchWatching } from '@/lib/watching'
 import { AppHeader } from '@/components/consumer/app-header'
@@ -36,6 +36,7 @@ interface BrowsePageProps {
 
 async function fetchEvents(
   params: Record<string, string | string[] | undefined>,
+  token: string | null,
 ): Promise<EventsListResponse> {
   const qs = new URLSearchParams()
   if (typeof params['search'] === 'string') qs.set('search', params['search'])
@@ -55,11 +56,16 @@ async function fetchEvents(
   if (typeof params['filterVibe'] === 'string')
     qs.set('filterVibe', params['filterVibe'])
   qs.set('limit', String(PAGE_LIMIT))
-  return publicApiClient.get<EventsListResponse>(`/v1/events?${qs.toString()}`)
+  const url = `/v1/events?${qs.toString()}`
+  return token
+    ? apiClient.get<EventsListResponse>(url, token)
+    : publicApiClient.get<EventsListResponse>(url)
 }
 
-async function fetchVenues(): Promise<VenuePublic[]> {
-  return publicApiClient.get<VenuePublic[]>('/v1/venues')
+async function fetchVenues(token: string | null): Promise<VenuePublic[]> {
+  return token
+    ? apiClient.get<VenuePublic[]>('/v1/venues', token)
+    : publicApiClient.get<VenuePublic[]>('/v1/venues')
 }
 
 export default async function BrowsePage({ searchParams }: BrowsePageProps) {
@@ -132,8 +138,8 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     : Promise.resolve([])
 
   const [eventsResult, venues, watchedShows] = await Promise.all([
-    fetchEvents(fetchParams),
-    fetchVenues(),
+    fetchEvents(fetchParams, token),
+    fetchVenues(token),
     watchedShowsPromise,
   ])
 
