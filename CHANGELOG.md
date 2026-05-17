@@ -1,3 +1,10 @@
+## [1.20.9](https://github.com/HartiganHM/concert-crawl/compare/v1.20.8...v1.20.9) (2026-05-17)
+
+
+### Bug Fixes
+
+* **feedback:** update category error + success body copy per issue [#364](https://github.com/HartiganHM/concert-crawl/issues/364) ([7343066](https://github.com/HartiganHM/concert-crawl/commit/73430661d3ef48134e5ac7ce5c1e3126d07ef959))
+
 ## [1.20.8](https://github.com/HartiganHM/concert-crawl/compare/v1.20.7...v1.20.8) (2026-05-17)
 
 
