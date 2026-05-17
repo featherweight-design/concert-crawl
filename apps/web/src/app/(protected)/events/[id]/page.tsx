@@ -292,7 +292,8 @@ export default async function EventDetailPage({
                   whiteSpace: 'nowrap',
                 }}
               >
-                {event.ticketUrl ? 'Get Tickets ↗' : 'Visit Venue Website ↗'}
+                {event.ticketUrl ? 'Get Tickets' : 'Visit Venue Website'}
+                <ExternalLinkIcon />
               </a>
             ) : (
               <button
@@ -465,6 +466,27 @@ function IconUsers() {
         stroke="var(--fg-subtle)"
         strokeWidth="1.2"
         strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+function ExternalLinkIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path
+        d="M7 3H3a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V9"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M13 3h-4m4 0v4m0-4L7 9"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   )

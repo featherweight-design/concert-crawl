@@ -236,7 +236,10 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
         {heroEvent && view === 'list' && (
           <div className="mb-6">
-            <HeroEventCard event={heroEvent} />
+            <HeroEventCard
+              event={heroEvent}
+              isWatching={watchedIds.has(heroEvent.id)}
+            />
           </div>
         )}
 
