@@ -12,8 +12,8 @@ import { BottomNav } from '@/components/consumer/bottom-nav'
 import { HeroEventCard } from '@/components/consumer/hero-event-card'
 import { EventCard } from '@/components/consumer/event-card'
 import { FilterBar } from '@/components/consumer/filter-bar'
-import { LoadMoreButton } from '@/components/consumer/load-more'
 import { EmptyState } from '@/components/consumer/empty-state'
+import { EventsList } from '@/components/consumer/events-list'
 import {
   currentWeekDays,
   dateGroupLabel,
@@ -248,14 +248,25 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
           />
         )}
 
-        {groups.size > 0 && (
+        {view === 'list' && events.length > 0 && (
+          <Suspense>
+            <EventsList
+              initialEvents={listEvents}
+              initialOffset={currentOffset}
+              total={total}
+              limit={limit}
+              initialWatchedIds={Array.from(watchedIds)}
+            />
+          </Suspense>
+        )}
+
+        {view === 'cal' && groups.size > 0 && (
           <div className="flex flex-col gap-6">
             {Array.from(groups.entries()).map(([date, dateEvents]) => {
               const label = dateGroupLabel(date)
               const isTonight = label.toLowerCase() === 'tonight'
               return (
                 <section key={date} aria-label={label}>
-                  {/* Day group header */}
                   <div
                     className="mb-1 flex items-baseline gap-2.5 px-4 pb-2"
                     style={{ borderBottom: '1px solid var(--border)' }}
@@ -284,11 +295,10 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                       {dateEvents.length !== 1 ? 's' : ''}
                     </span>
                   </div>
-                  {/* Event rows with dividers */}
                   <div>
-                    {dateEvents.map((event, i) => (
+                    {dateEvents.map((event, idx) => (
                       <Fragment key={event.id}>
-                        {i > 0 && (
+                        {idx > 0 && (
                           <div
                             className="h-px bg-border"
                             style={{ marginLeft: 58 }}
@@ -304,18 +314,6 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                 </section>
               )
             })}
-          </div>
-        )}
-
-        {events.length > 0 && view === 'list' && (
-          <div className="mt-8">
-            <Suspense>
-              <LoadMoreButton
-                currentOffset={currentOffset}
-                limit={limit}
-                total={total}
-              />
-            </Suspense>
           </div>
         )}
       </main>
