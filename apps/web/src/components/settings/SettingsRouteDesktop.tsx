@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import { useClerk, useUser } from '@clerk/nextjs'
 import { Avatar } from './Avatar'
 import { CredChip } from './CredChip'
 import { PlanCard } from './PlanCard'
@@ -112,6 +113,8 @@ export function SettingsRouteDesktop({
   profile,
   submissions,
 }: SettingsRouteDesktopProps) {
+  const { openUserProfile } = useClerk()
+  const { user } = useUser()
   const searchParams = useSearchParams()
   const sectionParam = searchParams.get('section')
   const initialSection: NavSection =
@@ -424,49 +427,52 @@ export function SettingsRouteDesktop({
                       />
                     </svg>
                   </div>
-                  <div className="mx-5 h-px bg-border" />
-                  {/* Password row */}
-                  <div className="flex items-center gap-3 px-5 py-3.5">
-                    <svg
-                      width="15"
-                      height="15"
-                      viewBox="0 0 15 15"
-                      fill="none"
-                      aria-hidden
-                      className="shrink-0 text-fg-muted"
-                    >
-                      <rect
-                        x="3"
-                        y="7"
-                        width="9"
-                        height="6.5"
-                        rx="1.5"
-                        stroke="currentColor"
-                        strokeWidth="1.3"
-                      />
-                      <path
-                        d="M5 7V5.5a2.5 2.5 0 015 0V7"
-                        stroke="currentColor"
-                        strokeWidth="1.3"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <span className="flex-1 text-[14px] font-medium text-fg">
-                      {SETTINGS_COPY.passwordRow}
-                    </span>
-                    <a
-                      href="https://accounts.clerk.dev/user"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-[0.06em] text-fg-muted transition-colors hover:text-fg"
-                      style={{
-                        fontFamily: 'var(--font-mono)',
-                        background: 'var(--surface-2)',
-                      }}
-                    >
-                      Clerk →
-                    </a>
-                  </div>
+                  {user?.passwordEnabled && (
+                    <>
+                      <div className="mx-5 h-px bg-border" />
+                      {/* Password row — only shown for email/password accounts */}
+                      <div className="flex items-center gap-3 px-5 py-3.5">
+                        <svg
+                          width="15"
+                          height="15"
+                          viewBox="0 0 15 15"
+                          fill="none"
+                          aria-hidden
+                          className="shrink-0 text-fg-muted"
+                        >
+                          <rect
+                            x="3"
+                            y="7"
+                            width="9"
+                            height="6.5"
+                            rx="1.5"
+                            stroke="currentColor"
+                            strokeWidth="1.3"
+                          />
+                          <path
+                            d="M5 7V5.5a2.5 2.5 0 015 0V7"
+                            stroke="currentColor"
+                            strokeWidth="1.3"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                        <span className="flex-1 text-[14px] font-medium text-fg">
+                          {SETTINGS_COPY.passwordRow}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => openUserProfile()}
+                          className="cursor-pointer rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-[0.06em] text-fg-muted transition-colors hover:text-fg"
+                          style={{
+                            fontFamily: 'var(--font-mono)',
+                            background: 'var(--surface-2)',
+                          }}
+                        >
+                          Manage →
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}

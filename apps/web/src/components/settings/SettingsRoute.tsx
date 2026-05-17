@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { useClerk, useUser } from '@clerk/nextjs'
 import { ProfileHero } from './ProfileHero'
 import { PlanCard } from './PlanCard'
 import { ThemePickerInline } from './ThemePickerInline'
@@ -28,6 +31,8 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 export function SettingsRoute({ profile, submissions }: SettingsRouteProps) {
+  const { openUserProfile } = useClerk()
+  const { user } = useUser()
   const confirmedCount = submissions.filter(
     (sub) => sub.status === 'confirmed',
   ).length
@@ -146,61 +151,49 @@ export function SettingsRoute({ profile, submissions }: SettingsRouteProps) {
                 {profile.email}
               </span>
             </div>
-            <div className="mx-4 h-px bg-border" />
-            {/* Password row */}
-            <div className="flex items-center gap-3 px-4 py-3.5">
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 16 16"
-                fill="none"
-                aria-hidden
-                className="shrink-0 text-fg-muted"
-              >
-                <rect
-                  x="3"
-                  y="7"
-                  width="10"
-                  height="7"
-                  rx="1.5"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                />
-                <path
-                  d="M5.5 7V5.5a2.5 2.5 0 015 0V7"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                />
-              </svg>
-              <span className="flex-1 text-[14px] font-medium text-fg">
-                {SETTINGS_COPY.passwordRow}
-              </span>
-              <a
-                href="https://accounts.clerk.dev/user"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-[0.06em] text-fg-subtle transition-colors hover:text-fg-muted"
-                style={{ fontFamily: 'var(--font-mono)' }}
-              >
-                Clerk
-                <svg
-                  width="11"
-                  height="11"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  aria-hidden
-                >
-                  <path
-                    d="M5 11l6-6M6 5h5v5"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </a>
-            </div>
+            {user?.passwordEnabled && (
+              <>
+                <div className="mx-4 h-px bg-border" />
+                {/* Password row — only shown for email/password accounts */}
+                <div className="flex items-center gap-3 px-4 py-3.5">
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    aria-hidden
+                    className="shrink-0 text-fg-muted"
+                  >
+                    <rect
+                      x="3"
+                      y="7"
+                      width="10"
+                      height="7"
+                      rx="1.5"
+                      stroke="currentColor"
+                      strokeWidth="1.4"
+                    />
+                    <path
+                      d="M5.5 7V5.5a2.5 2.5 0 015 0V7"
+                      stroke="currentColor"
+                      strokeWidth="1.4"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <span className="flex-1 text-[14px] font-medium text-fg">
+                    {SETTINGS_COPY.passwordRow}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => openUserProfile()}
+                    className="inline-flex cursor-pointer items-center gap-1 text-[11px] font-bold uppercase tracking-[0.06em] text-fg-subtle transition-colors hover:text-fg-muted"
+                    style={{ fontFamily: 'var(--font-mono)' }}
+                  >
+                    Manage →
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
