@@ -15,6 +15,7 @@ const feedbackSchema = z.object({
       theme: z.string().optional(),
       build: z.string().optional(),
       device: z.string().optional(),
+      screenshot: z.string().optional(),
     })
     .optional(),
 })

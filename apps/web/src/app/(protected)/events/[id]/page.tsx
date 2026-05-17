@@ -281,7 +281,7 @@ export default async function EventDetailPage({
                 href={event.ticketUrl ?? event.venue.websiteUrl ?? '#'}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex h-12 w-full items-center justify-center rounded-[10px] text-fg-on-accent"
+                className="flex h-12 w-full items-center justify-center gap-1.5 rounded-[10px] text-fg-on-accent"
                 style={{
                   background: 'var(--accent)',
                   fontFamily: 'var(--font-ui)',
@@ -372,7 +372,7 @@ export default async function EventDetailPage({
   )
 }
 
-// ── Icon components (16×16, 1.5px stroke, --fg-subtle) ──────────
+// ── Icon components ──────────────────────────────────────────────
 
 function IconPin() {
   return (
