@@ -1,8 +1,9 @@
 import { Fragment } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { auth } from '@clerk/nextjs/server'
 import type { VenueWithEvents, Event } from '@concert-crawl/types'
-import { publicApiClient } from '@/lib/api'
+import { publicApiClient, apiClient } from '@/lib/api'
 import { AppHeader } from '@/components/consumer/app-header'
 import { SmallEventRow } from '@/components/consumer/small-event-row'
 import { SectionHeader } from '@/components/consumer/section-header'
@@ -21,8 +22,12 @@ interface VenueProfilePageProps {
 
 async function fetchVenueWithEvents(
   slug: string,
+  token: string | null,
 ): Promise<VenueWithEvents | null> {
   try {
+    if (token) {
+      return await apiClient.get<VenueWithEvents>(`/v1/venues/${slug}`, token)
+    }
     return await publicApiClient.get<VenueWithEvents>(`/v1/venues/${slug}`)
   } catch {
     return null
@@ -33,7 +38,9 @@ export default async function VenueProfilePage({
   params,
 }: VenueProfilePageProps) {
   const { slug } = await params
-  const result = await fetchVenueWithEvents(slug)
+  const { getToken } = await auth()
+  const token = await getToken()
+  const result = await fetchVenueWithEvents(slug, token)
   if (!result) notFound()
 
   const { venue, upcomingEvents } = result
