@@ -13,7 +13,6 @@ import { SearchPalette } from '../search-palette/SearchPalette'
 
 const NAV_TABS = [
   { label: 'Browse', href: '/events' },
-  { label: 'Search', href: '/search' },
   { label: 'Watching', href: '/watching' },
 ] as const
 

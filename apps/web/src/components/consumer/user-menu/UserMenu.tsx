@@ -4,10 +4,6 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth, useUser, useClerk } from '@clerk/nextjs'
-import { useTheme } from '@/theme/ThemeProvider'
-import { THEMES, THEME_META, type ThemeName } from '@/theme/themes'
-import { MiniMark } from '@/theme/MiniMark'
-import { FeedbackModal } from '../feedback/FeedbackModal'
 import { Avatar } from '@/components/settings/Avatar'
 import { fetchMe } from '@/lib/users'
 import type { AvatarColor } from '@concert-crawl/types'
@@ -15,13 +11,11 @@ import type { AvatarColor } from '@concert-crawl/types'
 const APP_VERSION = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev'
 
 export function UserMenu() {
-  const { getToken } = useAuth()
+  const { getToken, sessionClaims } = useAuth()
   const { user } = useUser()
   const { signOut } = useClerk()
   const router = useRouter()
-  const { theme, setTheme } = useTheme()
   const [open, setOpen] = useState(false)
-  const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [submissionCount, setSubmissionCount] = useState(0)
   const [avatarHandle, setAvatarHandle] = useState<string | null>(null)
@@ -99,8 +93,8 @@ export function UserMenu() {
       : (user?.emailAddresses[0]?.emailAddress.charAt(0) ?? '?').toUpperCase()
   const email = user?.emailAddresses[0]?.emailAddress ?? ''
 
-  // UserPublicMetadata is augmented in apps/web/src/types/clerk.d.ts — no cast needed
-  const isAdmin = user?.publicMetadata?.role === 'admin'
+  // CustomJwtSessionClaims is augmented in apps/web/src/types/clerk.d.ts — no cast needed
+  const isAdmin = sessionClaims?.metadata?.role === 'admin'
 
   // Build version display: "v0.4.2-beta · abc1234" or just "dev"
   const buildParts = APP_VERSION.split(' · ')
@@ -128,15 +122,9 @@ export function UserMenu() {
             initials={initials}
             email={email}
             isAdmin={isAdmin}
-            theme={theme}
-            setTheme={setTheme}
             buildLabel={buildLabel}
             commitLabel={commitLabel}
             submissionCount={submissionCount}
-            onFeedback={() => {
-              setOpen(false)
-              setFeedbackOpen(true)
-            }}
             onSettings={() => {
               setOpen(false)
               void router.push('/me')
@@ -162,15 +150,9 @@ export function UserMenu() {
             initials={initials}
             email={email}
             isAdmin={isAdmin}
-            theme={theme}
-            setTheme={setTheme}
             buildLabel={buildLabel}
             commitLabel={commitLabel}
             submissionCount={submissionCount}
-            onFeedback={() => {
-              setOpen(false)
-              setFeedbackOpen(true)
-            }}
             onSettings={() => {
               setOpen(false)
               void router.push('/me')
@@ -179,11 +161,6 @@ export function UserMenu() {
           />
         </>
       )}
-
-      <FeedbackModal
-        open={feedbackOpen}
-        onClose={() => setFeedbackOpen(false)}
-      />
     </>
   )
 }
@@ -194,11 +171,8 @@ interface MenuBodyProps {
   initials: string
   email: string
   isAdmin: boolean
-  theme: ThemeName
-  setTheme: (theme: ThemeName) => void
   buildLabel: string
   commitLabel: string
-  onFeedback: () => void
   onSettings: () => void
   onSignOut: () => void
   submissionCount: number
@@ -210,11 +184,8 @@ function MenuBody({
   initials,
   email,
   isAdmin,
-  theme,
-  setTheme,
   buildLabel,
   commitLabel,
-  onFeedback,
   onSettings,
   onSignOut,
   submissionCount,
@@ -336,9 +307,7 @@ function MenuBody({
 
       {/* App section */}
       <SectionLabel>App</SectionLabel>
-      <ThemeMenuRow theme={theme} setTheme={setTheme} />
-      <MenuRow label="Settings" onClick={onSettings} kbd="⌘," />
-      <MenuRow label="Notifications" meta="On" last />
+      <MenuRow label="Settings" onClick={onSettings} last />
 
       {/* Admin section */}
       {isAdmin && (
@@ -369,33 +338,6 @@ function MenuBody({
           />
         </>
       )}
-
-      {/* Beta channel */}
-      <SectionLabel>Beta channel</SectionLabel>
-      <MenuRow
-        label="Send feedback"
-        meta="BETA"
-        hot
-        last
-        onClick={onFeedback}
-        leading={
-          <span
-            style={{
-              width: 22,
-              height: 22,
-              borderRadius: 6,
-              background: 'var(--surface-2)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--accent)',
-              flexShrink: 0,
-            }}
-          >
-            <ChatIcon />
-          </span>
-        }
-      />
 
       {/* Sign out */}
       <div style={{ borderTop: '1px solid var(--border)' }} />
@@ -523,175 +465,6 @@ function UserMenuSheet(props: MenuBodyProps) {
         />
       </div>
       <MenuBody {...props} />
-    </div>
-  )
-}
-
-// ── Theme row + compact swatch ────────────────────────────────────────────
-
-function CompactThemeSwatch({
-  name,
-  active,
-  onClick,
-}: {
-  name: ThemeName
-  active: boolean
-  onClick: () => void
-}) {
-  const tokens = THEMES[name]
-  const meta = THEME_META[name]
-  return (
-    <button
-      type="button"
-      aria-label={`${meta.label} theme`}
-      aria-pressed={active}
-      onClick={onClick}
-      style={{
-        all: 'unset',
-        cursor: 'pointer',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 5,
-        width: '100%',
-        boxSizing: 'border-box',
-        borderRadius: 10,
-        padding: '7px 6px',
-        background: tokens['bg'],
-        border: active
-          ? `1.5px solid ${tokens['signal']}`
-          : `1px solid ${tokens['border-strong']}`,
-        transition: 'transform 100ms ease',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        <MiniMark tokens={tokens} size={16} />
-        <span style={{ display: 'flex', gap: 2 }}>
-          <span
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: 3,
-              background: tokens['signal'],
-              display: 'block',
-            }}
-          />
-          <span
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: 3,
-              background: tokens['accent'],
-              display: 'block',
-            }}
-          />
-        </span>
-      </div>
-      <span
-        style={{
-          fontFamily: 'var(--font-ui)',
-          fontSize: 9,
-          fontWeight: 700,
-          color: tokens['fg'],
-          letterSpacing: '-0.005em',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-        }}
-      >
-        {meta.label}
-      </span>
-    </button>
-  )
-}
-
-function ThemeMenuRow({
-  theme,
-  setTheme,
-}: {
-  theme: ThemeName
-  setTheme: (name: ThemeName) => void
-}) {
-  const [expanded, setExpanded] = useState(false)
-  const activeTokens = THEMES[theme]
-  const activeMeta = THEME_META[theme]
-  const themeKeys = Object.keys(THEMES) as ThemeName[]
-
-  return (
-    <div style={{ borderBottom: '1px solid var(--border)' }}>
-      <button
-        type="button"
-        onClick={() => setExpanded((prev) => !prev)}
-        style={{
-          all: 'unset',
-          cursor: 'pointer',
-          width: '100%',
-          boxSizing: 'border-box',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          padding: '12px 14px',
-          background: expanded ? 'var(--overlay-hover)' : 'transparent',
-        }}
-      >
-        <span
-          style={{
-            flex: 1,
-            fontFamily: 'var(--font-ui)',
-            fontSize: 13.5,
-            fontWeight: 600,
-            color: 'var(--fg)',
-            letterSpacing: '-0.005em',
-          }}
-        >
-          Theme
-        </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <MiniMark tokens={activeTokens} size={18} />
-          <span
-            style={{
-              fontFamily: 'var(--font-ui)',
-              fontSize: 12,
-              fontWeight: 700,
-              color: 'var(--fg)',
-              letterSpacing: '-0.005em',
-            }}
-          >
-            {activeMeta.label}
-          </span>
-          <span
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 10,
-              color: 'var(--fg-muted)',
-            }}
-          >
-            {expanded ? '▾' : '›'}
-          </span>
-        </span>
-      </button>
-
-      {expanded && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: 6,
-            padding: '6px 14px 12px',
-          }}
-        >
-          {themeKeys.map((name) => (
-            <CompactThemeSwatch
-              key={name}
-              name={name}
-              active={theme === name}
-              onClick={() => {
-                setTheme(name)
-                setExpanded(false)
-              }}
-            />
-          ))}
-        </div>
-      )}
     </div>
   )
 }
@@ -856,22 +629,6 @@ function ShieldIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-    </svg>
-  )
-}
-
-function ChatIcon() {
-  return (
-    <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
-      <path
-        d="M2 4h12v7H6.5L4 13.5V11H2V4z"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinejoin="round"
-      />
-      <circle cx="6" cy="7.5" r="0.8" fill="currentColor" />
-      <circle cx="8" cy="7.5" r="0.8" fill="currentColor" />
-      <circle cx="10" cy="7.5" r="0.8" fill="currentColor" />
     </svg>
   )
 }
