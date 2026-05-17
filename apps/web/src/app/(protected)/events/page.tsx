@@ -40,7 +40,6 @@ async function fetchEvents(
 ): Promise<EventsListResponse> {
   const qs = new URLSearchParams()
   if (typeof params['search'] === 'string') qs.set('search', params['search'])
-  // filterWhere takes precedence over the legacy venueSlug param
   const venueSlug = params['filterWhere'] ?? params['venueSlug']
   if (typeof venueSlug === 'string') qs.set('venueSlug', venueSlug)
   if (typeof params['from'] === 'string') qs.set('from', params['from'])

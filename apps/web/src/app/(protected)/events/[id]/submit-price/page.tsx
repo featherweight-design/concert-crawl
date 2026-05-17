@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { notFound, redirect } from 'next/navigation'
 import { SubmitForm } from '@/components/consumer/SubmitForm'
+import { apiClient } from '@/lib/api'
 import type { Event, SubmissionListResponse } from '@concert-crawl/types'
 
 interface SubmitPricePageProps {
@@ -15,40 +16,28 @@ export default async function SubmitPricePage({
   if (!userId) redirect('/sign-in')
 
   const token = await getToken()
+  if (!token) redirect('/sign-in')
 
-  const [eventRes, submissionsRes] = await Promise.all([
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/events/${id}`),
-    fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/v1/events/${id}/price-submissions`,
-      token ? { headers: { Authorization: `Bearer ${token}` } } : {},
-    ),
+  const eventFetch = apiClient.get<Event & { venue: { name: string } }>(
+    `/v1/events/${id}`,
+    token,
+  )
+
+  const submissionsFetch: Promise<SubmissionListResponse | null> = apiClient
+    .get<SubmissionListResponse>(`/v1/events/${id}/price-submissions`, token)
+    .catch(() => null)
+
+  const [event, submissionsResult] = await Promise.all([
+    eventFetch.catch(() => null),
+    submissionsFetch,
   ])
 
-  if (!eventRes.ok) notFound()
+  if (!event) notFound()
 
-  const eventData = (await eventRes.json()) as {
-    data: Event & { venue: { name: string } }
+  const { alreadySubmitted, userSubmission } = submissionsResult ?? {
+    alreadySubmitted: false,
+    userSubmission: null,
   }
-  const event = eventData.data
-
-  const submissionsData: { success: boolean; data: SubmissionListResponse } =
-    submissionsRes.ok
-      ? ((await submissionsRes.json()) as {
-          success: boolean
-          data: SubmissionListResponse
-        })
-      : {
-          success: false,
-          data: {
-            submissions: [],
-            alreadySubmitted: false,
-            userSubmission: null,
-          },
-        }
-
-  const { alreadySubmitted, userSubmission } = submissionsData.success
-    ? submissionsData.data
-    : { alreadySubmitted: false, userSubmission: null }
 
   return (
     <main className="min-h-screen bg-bg">

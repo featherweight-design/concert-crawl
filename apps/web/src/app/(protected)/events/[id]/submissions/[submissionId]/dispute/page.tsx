@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { notFound, redirect } from 'next/navigation'
 import { DisputeForm } from '@/components/consumer/DisputeForm'
+import { apiClient } from '@/lib/api'
 import type { Event, PriceSubmission } from '@concert-crawl/types'
 
 interface DisputePageProps {
@@ -13,26 +14,24 @@ export default async function DisputePage({ params }: DisputePageProps) {
   if (!userId) redirect('/sign-in')
 
   const token = await getToken()
+  if (!token) redirect('/sign-in')
 
-  const [eventRes, submissionRes] = await Promise.all([
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/events/${id}`),
-    fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/v1/submissions/${submissionId}`,
-      token ? { headers: { Authorization: `Bearer ${token}` } } : {},
-    ),
+  const eventFetch = apiClient.get<Event & { venue: { name: string } }>(
+    `/v1/events/${id}`,
+    token,
+  )
+
+  const submissionFetch = apiClient.get<PriceSubmission>(
+    `/v1/submissions/${submissionId}`,
+    token,
+  )
+
+  const [event, submission] = await Promise.all([
+    eventFetch.catch(() => null),
+    submissionFetch.catch(() => null),
   ])
 
-  if (!eventRes.ok || !submissionRes.ok) notFound()
-
-  const eventData = (await eventRes.json()) as {
-    data: Event & { venue: { name: string } }
-  }
-  const event = eventData.data
-
-  const submissionData = (await submissionRes.json()) as {
-    data: PriceSubmission
-  }
-  const submission = submissionData.data
+  if (!event || !submission) notFound()
 
   const dateStr = new Date(event.date).toLocaleDateString('en-US', {
     month: 'short',
