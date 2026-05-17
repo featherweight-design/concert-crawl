@@ -1,3 +1,11 @@
+## [1.20.3](https://github.com/HartiganHM/concert-crawl/compare/v1.20.2...v1.20.3) (2026-05-17)
+
+
+### Bug Fixes
+
+* **search:** keyboard nav highlight, empty state query interpolation ([c41bd11](https://github.com/HartiganHM/concert-crawl/commit/c41bd1170450ceb2ce9be8cc66e22b4c6bc9a6ea))
+* **search:** update empty state copy to "No results for", add onCtaClick to close palette ([edaec87](https://github.com/HartiganHM/concert-crawl/commit/edaec87dfceb7f59bc71b9caef9c9d7bbb495054))
+
 ## [1.20.2](https://github.com/HartiganHM/concert-crawl/compare/v1.20.1...v1.20.2) (2026-05-17)
 
 
