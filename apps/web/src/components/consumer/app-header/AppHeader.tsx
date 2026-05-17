@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { ThemeToggle } from '../theme-toggle'
 import { CCMark } from '@/components/brand/cc-mark'
 import { UserMenu } from '../user-menu'
 import { MobileProfileEntry } from './MobileProfileEntry'
@@ -100,7 +99,7 @@ export function AppHeader() {
           </nav>
         </div>
 
-        {/* Right: search bar + user avatar + theme */}
+        {/* Right: search bar + user avatar */}
         <div className="flex items-center gap-3">
           <button
             onClick={() => setPaletteOpen(true)}
@@ -120,8 +119,6 @@ export function AppHeader() {
           </button>
 
           <UserMenu />
-
-          <ThemeToggle />
         </div>
       </div>
 

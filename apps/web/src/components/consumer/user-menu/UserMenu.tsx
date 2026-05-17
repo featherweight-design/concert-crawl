@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth, useUser, useClerk } from '@clerk/nextjs'
 import { Avatar } from '@/components/settings/Avatar'
+import { ThemeToggle } from '../theme-toggle'
 import { fetchMe } from '@/lib/users'
 import type { AvatarColor } from '@concert-crawl/types'
 
@@ -125,6 +126,8 @@ export function UserMenu() {
             buildLabel={buildLabel}
             commitLabel={commitLabel}
             submissionCount={submissionCount}
+            avatarHandle={avatarHandle}
+            avatarColor={avatarColor}
             onSettings={() => {
               setOpen(false)
               void router.push('/me')
@@ -153,6 +156,8 @@ export function UserMenu() {
             buildLabel={buildLabel}
             commitLabel={commitLabel}
             submissionCount={submissionCount}
+            avatarHandle={avatarHandle}
+            avatarColor={avatarColor}
             onSettings={() => {
               setOpen(false)
               void router.push('/me')
@@ -176,6 +181,8 @@ interface MenuBodyProps {
   onSettings: () => void
   onSignOut: () => void
   submissionCount: number
+  avatarHandle: string | null
+  avatarColor: AvatarColor | null
 }
 
 // ── Menu body (shared between popover and sheet) ──────────────────────────
@@ -189,6 +196,8 @@ function MenuBody({
   onSettings,
   onSignOut,
   submissionCount,
+  avatarHandle,
+  avatarColor,
 }: MenuBodyProps) {
   return (
     <>
@@ -202,37 +211,7 @@ function MenuBody({
           borderBottom: '1px solid var(--border)',
         }}
       >
-        <div
-          style={{
-            position: 'relative',
-            width: 42,
-            height: 42,
-            borderRadius: 21,
-            background: 'var(--surface-2)',
-            border: '1px solid var(--border-strong)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontFamily: 'var(--font-ui)',
-            fontWeight: 800,
-            fontSize: 17,
-            color: 'var(--fg)',
-            flexShrink: 0,
-          }}
-        >
-          <span
-            style={{
-              position: 'absolute',
-              inset: -2,
-              borderRadius: 23,
-              background:
-                'radial-gradient(circle at 30% 30%, var(--accent) 0%, transparent 70%)',
-              opacity: 0.35,
-              pointerEvents: 'none',
-            }}
-          />
-          <span style={{ position: 'relative' }}>{initials}</span>
-        </div>
+        <Avatar handle={avatarHandle} avatarColor={avatarColor} size={42} />
         <div
           style={{
             flex: 1,
@@ -307,6 +286,14 @@ function MenuBody({
 
       {/* App section */}
       <SectionLabel>App</SectionLabel>
+      <div
+        style={{
+          padding: '8px 14px 10px',
+          borderBottom: '1px solid var(--border)',
+        }}
+      >
+        <ThemeToggle />
+      </div>
       <MenuRow label="Settings" onClick={onSettings} last />
 
       {/* Admin section */}
@@ -316,7 +303,6 @@ function MenuBody({
           <MenuRow
             label="Admin"
             href="/admin"
-            meta="⌘⇧A"
             last
             leading={
               <span
@@ -521,13 +507,16 @@ function MenuRow({
     gap: 10,
     padding: '12px 14px',
     borderBottom: last ? 'none' : '1px solid var(--border)',
-    background: hot ? 'var(--overlay-hover)' : 'transparent',
     cursor: 'pointer',
     width: '100%',
     boxSizing: 'border-box',
     textDecoration: 'none',
+    textAlign: 'left',
     color,
   }
+  const rowClass = hot
+    ? 'bg-[var(--overlay-hover)]'
+    : 'bg-transparent transition-colors hover:bg-[var(--overlay-hover)]'
 
   const inner = (
     <>
@@ -598,19 +587,28 @@ function MenuRow({
 
   if (href) {
     return (
-      <Link href={href} style={rowStyle}>
+      <Link href={href} style={rowStyle} className={rowClass}>
         {inner}
       </Link>
     )
   }
   if (onClick) {
     return (
-      <button type="button" onClick={onClick} style={rowStyle}>
+      <button
+        type="button"
+        onClick={onClick}
+        style={rowStyle}
+        className={rowClass}
+      >
         {inner}
       </button>
     )
   }
-  return <div style={rowStyle}>{inner}</div>
+  return (
+    <div style={rowStyle} className={rowClass}>
+      {inner}
+    </div>
+  )
 }
 
 function ShieldIcon() {
