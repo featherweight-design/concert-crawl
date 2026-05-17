@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { useAuth, useUser } from '@clerk/nextjs'
 import { useTheme } from '@/theme/ThemeProvider'
@@ -35,6 +35,22 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
   const [message, setMessage] = useState('')
   const [catError, setCatError] = useState(false)
   const [msgError, setMsgError] = useState(false)
+  const [screenshot, setScreenshot] = useState<{
+    name: string
+    dataUrl: string
+  } | null>(null)
+
+  const handleScreenshotChange = useCallback((file: File | null) => {
+    if (!file) {
+      setScreenshot(null)
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      setScreenshot({ name: file.name, dataUrl: reader.result as string })
+    }
+    reader.readAsDataURL(file)
+  }, [])
 
   const reset = useCallback(() => {
     setState('form')
@@ -42,6 +58,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     setMessage('')
     setCatError(false)
     setMsgError(false)
+    setScreenshot(null)
   }, [])
 
   const handleClose = useCallback(() => {
@@ -82,7 +99,12 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
           category,
           message: message.trim(),
           pageUrl: pathname,
-          metadata: { theme, build: APP_VERSION, device },
+          metadata: {
+            theme,
+            build: APP_VERSION,
+            device,
+            screenshot: screenshot?.dataUrl ?? null,
+          },
         }),
       })
       if (!res.ok) throw new Error(`${res.status}`)
@@ -91,7 +113,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
       console.error('Feedback submission failed', err)
       setState('error')
     }
-  }, [category, getToken, message, pathname, theme])
+  }, [category, getToken, message, pathname, screenshot, theme])
 
   const handleCategoryChange = useCallback((cat: FeedbackCategory) => {
     setCategory(cat)
@@ -160,6 +182,8 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
           catError={catError}
           msgError={msgError}
           ctxData={ctxData}
+          screenshot={screenshot}
+          onScreenshotChange={handleScreenshotChange}
           onSubmit={handleSubmit}
           onClose={handleClose}
           onReset={reset}
@@ -174,6 +198,8 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
           catError={catError}
           msgError={msgError}
           ctxData={ctxData}
+          screenshot={screenshot}
+          onScreenshotChange={handleScreenshotChange}
           onSubmit={handleSubmit}
           onClose={handleClose}
           onReset={reset}
@@ -193,6 +219,11 @@ interface CtxData {
   user: string
 }
 
+interface ScreenshotValue {
+  name: string
+  dataUrl: string
+}
+
 interface FormProps {
   state: ModalState
   category: FeedbackCategory | null
@@ -202,6 +233,8 @@ interface FormProps {
   catError: boolean
   msgError: boolean
   ctxData: CtxData
+  screenshot: ScreenshotValue | null
+  onScreenshotChange: (file: File | null) => void
 }
 
 function FormFields({
@@ -213,8 +246,11 @@ function FormFields({
   catError,
   msgError,
   ctxData,
+  screenshot,
+  onScreenshotChange,
 }: FormProps) {
   const disabled = state === 'loading'
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -334,6 +370,191 @@ function FormFields({
           <HelpText tone="error">
             Don&apos;t leave us hanging — give us a sentence.
           </HelpText>
+        )}
+      </div>
+
+      {/* Screenshot attachment */}
+      <div>
+        <Eyebrow>Proof (optional)</Eyebrow>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          disabled={disabled}
+          onChange={(ev) => {
+            onScreenshotChange(ev.target.files?.[0] ?? null)
+          }}
+        />
+        {screenshot ? (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '10px 14px',
+              border: '1.5px solid var(--border-strong)',
+              borderRadius: 10,
+              background: 'var(--surface-1)',
+              opacity: disabled ? 0.5 : 1,
+            }}
+          >
+            <span
+              style={{
+                width: 26,
+                height: 26,
+                borderRadius: 7,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background:
+                  'color-mix(in oklab, var(--signal) 14%, transparent)',
+                color: 'var(--signal)',
+                flexShrink: 0,
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                <path
+                  d="M4 8l3 3 5-5"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+            <span
+              style={{
+                flex: 1,
+                fontFamily: 'var(--font-ui)',
+                fontSize: 13,
+                fontWeight: 600,
+                color: 'var(--fg)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {screenshot.name}
+            </span>
+            <button
+              type="button"
+              disabled={disabled}
+              aria-label="Remove screenshot"
+              onClick={() => {
+                onScreenshotChange(null)
+                if (fileInputRef.current) fileInputRef.current.value = ''
+              }}
+              style={{
+                all: 'unset',
+                cursor: disabled ? 'default' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 22,
+                height: 22,
+                borderRadius: 5,
+                color: 'var(--fg-subtle)',
+                flexShrink: 0,
+              }}
+            >
+              <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                <path
+                  d="M2 2l8 8M10 2l-8 8"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              all: 'unset',
+              cursor: disabled ? 'default' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              width: '100%',
+              boxSizing: 'border-box',
+              padding: '12px 14px',
+              border: '1.5px dashed var(--border-strong)',
+              borderRadius: 10,
+              color: 'var(--fg-muted)',
+              fontFamily: 'var(--font-ui)',
+              fontSize: 13,
+              fontWeight: 600,
+              letterSpacing: '-0.005em',
+              opacity: disabled ? 0.5 : 1,
+            }}
+          >
+            <span
+              style={{
+                width: 26,
+                height: 26,
+                borderRadius: 7,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'var(--surface-2)',
+                color: 'var(--signal)',
+                flexShrink: 0,
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                <rect
+                  x="2"
+                  y="3.5"
+                  width="12"
+                  height="9"
+                  rx="1.5"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                />
+                <circle
+                  cx="8"
+                  cy="8"
+                  r="2.2"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                />
+                <path
+                  d="M5.5 3.5l1-1.2h3l1 1.2"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+            <span
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-start',
+                gap: 1,
+              }}
+            >
+              <span
+                style={{ color: 'var(--fg)', fontSize: 13, fontWeight: 700 }}
+              >
+                Attach a screenshot
+              </span>
+              <span
+                style={{
+                  color: 'var(--fg-subtle)',
+                  fontSize: 11.5,
+                  fontWeight: 500,
+                  letterSpacing: 0,
+                }}
+              >
+                Optional · helps a lot
+              </span>
+            </span>
+          </button>
         )}
       </div>
 
