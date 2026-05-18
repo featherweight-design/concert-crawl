@@ -1,7 +1,7 @@
 // apps/api/src/routes/watching.ts
 import { Hono } from 'hono'
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
-import { eq, and, gte } from 'drizzle-orm'
+import { eq, and, gte, asc } from 'drizzle-orm'
 import { z } from 'zod'
 import { db, userEvents, events, venues } from '@concert-crawl/db'
 import type { WatchingShow, WatchToggleResponse } from '@concert-crawl/types'
@@ -23,12 +23,9 @@ function mapSourceKind(
 }
 
 function resolveWatchStatus(
-  priceSource: string | null,
-  ticketPriceMin: string | null,
   eventStatus: string,
 ): 'live' | 'soldout' | 'presale' {
   if (eventStatus === 'cancelled') return 'soldout'
-  if (!priceSource && !ticketPriceMin) return 'presale'
   return 'live'
 }
 
@@ -75,7 +72,7 @@ watchingRouter.get('/', async (ctx) => {
         gte(events.date, today),
       ),
     )
-    .orderBy(events.date)
+    .orderBy(asc(events.date), asc(events.showTime))
 
   const data: WatchingShow[] = rows.map((row) => ({
     userEventId: row.userEventId,
@@ -91,11 +88,7 @@ watchingRouter.get('/', async (ctx) => {
     currentPrice: parsePrice(row.ticketPriceMin ?? null),
     sourceKind: mapSourceKind(row.priceSource ?? null),
     eventStatus: row.eventStatus,
-    watchStatus: resolveWatchStatus(
-      row.priceSource ?? null,
-      row.ticketPriceMin ?? null,
-      row.eventStatus,
-    ),
+    watchStatus: resolveWatchStatus(row.eventStatus),
     updatedAt: row.updatedAt.toISOString(),
     imageUrl: row.imageUrl ?? null,
   }))
