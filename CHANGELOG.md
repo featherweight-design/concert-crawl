@@ -1,3 +1,16 @@
+# [1.21.0](https://github.com/HartiganHM/concert-crawl/compare/v1.20.10...v1.21.0) (2026-05-18)
+
+
+### Bug Fixes
+
+* **cache:** drop blank optimistic stub, fix watching cache sync from Watching page ([271da6d](https://github.com/HartiganHM/concert-crawl/commit/271da6d9e21535a9b2487bbf559c56243c4e97a0))
+* correct initialData deps and remove cache mutation from onMutate ([d2cbe1a](https://github.com/HartiganHM/concert-crawl/commit/d2cbe1a8131c8fe1ef6cc3b32255be430257badd))
+
+
+### Features
+
+* **cache:** add TanStack Query, browse caching, and watching cache ([3129452](https://github.com/HartiganHM/concert-crawl/commit/312945220379f2e962105afdde447c440001330f)), closes [#407](https://github.com/HartiganHM/concert-crawl/issues/407)
+
 ## [1.20.10](https://github.com/HartiganHM/concert-crawl/compare/v1.20.9...v1.20.10) (2026-05-18)
 
 
