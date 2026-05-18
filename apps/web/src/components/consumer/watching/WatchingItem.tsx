@@ -103,7 +103,6 @@ export function WatchingItem({ show, density, onRemove }: WatchingItemProps) {
   const cfg = DENSITY_CONFIG[density]
   const router = useRouter()
   const isSoldOut = show.watchStatus === 'soldout'
-  const isPresale = show.watchStatus === 'presale'
   const stale = isStale(show.updatedAt)
   const showTime = formatShowTime(show.showTime)
   const dateLabel = formatDateLabel(show.date)
@@ -252,19 +251,6 @@ export function WatchingItem({ show, density, onRemove }: WatchingItemProps) {
           >
             SOLD OUT
           </span>
-        ) : isPresale ? (
-          <span
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: '0.10em',
-              textTransform: 'uppercase',
-              color: 'var(--fg-subtle)',
-            }}
-          >
-            presale
-          </span>
         ) : show.currentPrice === null ? (
           <span
             style={{
@@ -327,7 +313,7 @@ export function WatchingItem({ show, density, onRemove }: WatchingItemProps) {
         )}
 
         {/* Source pill — only meaningful when a live price is shown */}
-        {!isSoldOut && !isPresale && show.currentPrice !== null && (
+        {!isSoldOut && show.currentPrice !== null && (
           <SourcePill sourceKind={show.sourceKind} />
         )}
       </div>

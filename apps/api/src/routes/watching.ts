@@ -23,8 +23,8 @@ function mapSourceKind(
 }
 
 function resolveWatchStatus(
-  eventStatus: string,
-): 'live' | 'soldout' | 'presale' {
+  eventStatus: 'upcoming' | 'cancelled' | 'postponed',
+): 'live' | 'soldout' {
   if (eventStatus === 'cancelled') return 'soldout'
   return 'live'
 }

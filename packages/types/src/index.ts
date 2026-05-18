@@ -380,7 +380,7 @@ export interface WatchingShow {
   currentPrice: number | null // dollars, from events.ticketPriceMin at query time
   sourceKind: 'primary' | 'resale' | 'community' | null
   eventStatus: 'upcoming' | 'cancelled' | 'postponed'
-  watchStatus: 'live' | 'soldout' | 'presale'
+  watchStatus: 'live' | 'soldout'
   updatedAt: string // ISO — last time event row was updated (for stale check)
   imageUrl: string | null
 }

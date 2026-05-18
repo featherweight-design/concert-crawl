@@ -88,6 +88,64 @@ describe('GET /v1/watching', () => {
     expect(body.data[0]?.venueName).toBe('Red Rocks')
     expect(body.data[0]?.venueSlug).toBe('red-rocks')
   })
+
+  it('returns watchStatus: live (not presale) for on-sale events with no price data', async () => {
+    setAuth('user_noprice')
+    const venue = await seedVenue({ name: 'Bluebird', slug: 'bluebird' })
+    const event = await seedEvent(venue.id, {
+      artist: 'Wilco',
+      date: '2099-08-01',
+      status: 'upcoming',
+      ticketPriceMin: null,
+      priceSource: null,
+    })
+    await seedUserEvent('user_noprice', event.id, { status: 'watching' })
+
+    const res = await app.request('/v1/watching')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { watchStatus: string; currentPrice: number | null }[]
+    }
+    expect(body.success).toBe(true)
+    expect(body.data[0]?.watchStatus).toBe('live')
+    expect(body.data[0]?.currentPrice).toBeNull()
+  })
+
+  it('returns shows sorted ascending by date then showTime', async () => {
+    setAuth('user_sort')
+    const venue = await seedVenue({ name: 'Gothic', slug: 'gothic' })
+    const eventLate = await seedEvent(venue.id, {
+      artist: 'Late Show',
+      date: '2099-09-01',
+      showTime: '21:00:00',
+    })
+    const eventEarly = await seedEvent(venue.id, {
+      artist: 'Early Show',
+      date: '2099-09-01',
+      showTime: '18:00:00',
+    })
+    const eventNextDay = await seedEvent(venue.id, {
+      artist: 'Next Day',
+      date: '2099-09-02',
+      showTime: '20:00:00',
+    })
+    await seedUserEvent('user_sort', eventLate.id, { status: 'watching' })
+    await seedUserEvent('user_sort', eventEarly.id, { status: 'watching' })
+    await seedUserEvent('user_sort', eventNextDay.id, { status: 'watching' })
+
+    const res = await app.request('/v1/watching')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { artist: string }[]
+    }
+    expect(body.success).toBe(true)
+    expect(body.data).toHaveLength(3)
+    expect(body.data[0]?.artist).toBe('Early Show')
+    expect(body.data[1]?.artist).toBe('Late Show')
+    expect(body.data[2]?.artist).toBe('Next Day')
+  })
 })
 
 describe('PUT /v1/watching/:eventId', () => {
