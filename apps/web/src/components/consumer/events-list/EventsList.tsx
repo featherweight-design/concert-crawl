@@ -1,14 +1,16 @@
 'use client'
 
-import { Fragment, useEffect, useMemo, useState, useTransition } from 'react'
-import { useAuth } from '@clerk/nextjs'
+import { Fragment, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import type { EventWithVenue, EventsListResponse } from '@concert-crawl/types'
-import { apiClient, publicApiClient } from '@/lib/api'
+import { useEvents } from '@/lib/queries/use-events'
+import { useWatching } from '@/lib/queries/use-watching'
 import { EventCard } from '@/components/consumer/event-card/EventCard'
 import { cn } from '@/lib/utils'
 import { dateGroupLabel } from '@/components/consumer/definitions/lib'
 import { copy } from '@/components/consumer/definitions/copy'
+
+const PAGE_LIMIT = 20
 
 export interface EventsListProps {
   initialEvents: EventWithVenue[]
@@ -25,53 +27,56 @@ export const EventsList = ({
   limit,
   initialWatchedIds,
 }: EventsListProps) => {
-  const [events, setEvents] = useState<EventWithVenue[]>(initialEvents)
-  const [offset, setOffset] = useState<number>(initialOffset)
-
-  useEffect(() => {
-    setEvents(initialEvents)
-    setOffset(initialOffset)
-  }, [initialEvents, initialOffset])
-
-  const watchedIdsSet = useMemo(
-    () => new Set(initialWatchedIds),
-    [initialWatchedIds],
-  )
-  const [isPending, startTransition] = useTransition()
-
-  const { getToken } = useAuth()
   const searchParams = useSearchParams()
 
-  const loadMore = () => {
-    startTransition(async () => {
-      try {
-        const token = await getToken()
-        const nextOffset = offset + limit
-        const params = new URLSearchParams(searchParams.toString())
-        params.set('offset', String(nextOffset))
-        params.delete('page')
-        const path = `/v1/events?${params.toString()}`
-        const result = token
-          ? await apiClient.get<EventsListResponse>(path, token)
-          : await publicApiClient.get<EventsListResponse>(path)
-        const newEvents = result.data
-        setEvents((prev) => [...prev, ...newEvents])
-        setOffset(nextOffset)
-      } catch (err) {
-        console.error(err)
-      }
-    })
-  }
+  // Build a stable query key from URL params (strip offset — managed by pagination)
+  const searchParamsString = useMemo(() => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('offset')
+    params.delete('page')
+    return params.toString()
+  }, [searchParams])
 
-  const groups = new Map<string, EventWithVenue[]>()
-  for (const event of events) {
-    const key = event.date
-    if (!groups.has(key)) groups.set(key, [])
-    const group = groups.get(key)
-    if (group) group.push(event)
-  }
+  // Seed the cache with the SSR-provided first page
+  const initialData: EventsListResponse = useMemo(
+    () => ({ data: initialEvents, total, limit, offset: initialOffset }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [], // only seed once on mount — server provides the snapshot
+  )
 
-  const hasMore = offset + limit < total
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useEvents({
+    searchParamsString,
+    limit: limit || PAGE_LIMIT,
+    initialData,
+    initialOffset,
+  })
+
+  const { data: watchedShows } = useWatching()
+  const watchedIds = useMemo(
+    () => new Set((watchedShows ?? []).map((show) => show.eventId)),
+    [watchedShows],
+  )
+
+  // Flatten pages into a single event list
+  const events = useMemo(
+    () => (data?.pages ?? []).flatMap((page) => page.data),
+    [data],
+  )
+
+  // Group events by date for display
+  const groups = useMemo(() => {
+    const grouped = new Map<string, EventWithVenue[]>()
+    for (const event of events) {
+      const key = event.date
+      if (!grouped.has(key)) grouped.set(key, [])
+      grouped.get(key)!.push(event)
+    }
+    return grouped
+  }, [events])
+
+  // Fall back to initialWatchedIds while the watching cache loads
+  const effectiveWatchedIds =
+    watchedShows !== undefined ? watchedIds : new Set(initialWatchedIds)
 
   return (
     <>
@@ -121,7 +126,7 @@ export const EventsList = ({
                       )}
                       <EventCard
                         event={event}
-                        isWatching={watchedIdsSet.has(event.id)}
+                        isWatching={effectiveWatchedIds.has(event.id)}
                       />
                     </Fragment>
                   ))}
@@ -132,18 +137,18 @@ export const EventsList = ({
         </div>
       )}
 
-      {hasMore && (
+      {hasNextPage && (
         <div className="mt-8 flex justify-center pt-2">
           <button
             type="button"
-            onClick={loadMore}
-            disabled={isPending}
+            onClick={() => void fetchNextPage()}
+            disabled={isFetchingNextPage}
             className={cn(
               'inline-flex h-10 items-center justify-center rounded-md border border-border-strong bg-surface-2 px-4 text-[13px] font-bold text-signal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-1',
-              isPending && 'pointer-events-none opacity-60',
+              isFetchingNextPage && 'pointer-events-none opacity-60',
             )}
           >
-            {isPending ? 'Loading…' : copy.loadMore}
+            {isFetchingNextPage ? 'Loading…' : copy.loadMore}
           </button>
         </div>
       )}

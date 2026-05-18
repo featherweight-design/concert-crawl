@@ -5,6 +5,7 @@ import { Inter, JetBrains_Mono, Caveat } from 'next/font/google'
 import { ThemeProvider } from '@/theme'
 import { THEMES } from '@/theme/themes'
 import { cn } from '@/lib/utils'
+import { QueryProvider } from '@/components/QueryProvider'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -72,7 +73,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
           <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         </head>
         <body className="min-h-screen bg-bg text-fg font-sans antialiased">
-          <ThemeProvider>{children}</ThemeProvider>
+          <QueryProvider>
+            <ThemeProvider>{children}</ThemeProvider>
+          </QueryProvider>
         </body>
       </html>
     </ClerkProvider>

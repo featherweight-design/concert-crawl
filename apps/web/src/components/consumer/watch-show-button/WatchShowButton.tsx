@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
-
-const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
+import { useWatching } from '@/lib/queries/use-watching'
+import { useWatchToggle } from '@/lib/queries/use-watch-toggle'
 
 interface WatchShowButtonProps {
   eventId: string
@@ -16,62 +16,24 @@ export function WatchShowButton({
   initialWatching = false,
   watchingCount = 0,
 }: WatchShowButtonProps) {
-  const [isWatching, setIsWatching] = useState(initialWatching)
+  const { isSignedIn } = useAuth()
   const [isConfirming, setIsConfirming] = useState(false)
+  const { data: watchedShows } = useWatching()
+  const toggle = useWatchToggle()
 
-  useEffect(() => {
-    setIsWatching(initialWatching)
+  // Derive watching state from cache; fall back to prop while cache loads
+  const isWatching =
+    watchedShows !== undefined
+      ? watchedShows.some((show) => show.eventId === eventId)
+      : initialWatching
+
+  const isPending = toggle.isPending
+
+  const handleToggle = () => {
+    if (!isSignedIn || isPending) return
     setIsConfirming(false)
-  }, [initialWatching])
-  const [isPending, setIsPending] = useState(false)
-  const { getToken } = useAuth()
-
-  const startWatching = useCallback(async () => {
-    if (isPending) return
-    setIsWatching(true)
-    setIsPending(true)
-
-    try {
-      const token = await getToken()
-      if (!token) {
-        setIsWatching(false)
-        return
-      }
-      const res = await fetch(`${API_URL}/v1/events/${eventId}/watch`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (!res.ok) setIsWatching(false)
-    } catch {
-      setIsWatching(false)
-    } finally {
-      setIsPending(false)
-    }
-  }, [eventId, getToken, isPending])
-
-  const stopWatching = useCallback(async () => {
-    if (isPending) return
-    setIsWatching(false)
-    setIsConfirming(false)
-    setIsPending(true)
-
-    try {
-      const token = await getToken()
-      if (!token) {
-        setIsWatching(true)
-        return
-      }
-      const res = await fetch(`${API_URL}/v1/events/${eventId}/watch`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (!res.ok) setIsWatching(true)
-    } catch {
-      setIsWatching(true)
-    } finally {
-      setIsPending(false)
-    }
-  }, [eventId, getToken, isPending])
+    toggle.mutate(eventId)
+  }
 
   const baseBtn: React.CSSProperties = {
     all: 'unset',
@@ -103,7 +65,7 @@ export function WatchShowButton({
       >
         <button
           type="button"
-          onClick={stopWatching}
+          onClick={handleToggle}
           disabled={isPending}
           aria-label="Stop watching this show"
           style={{
@@ -145,7 +107,7 @@ export function WatchShowButton({
     >
       <button
         type="button"
-        onClick={isWatching ? () => setIsConfirming(true) : startWatching}
+        onClick={isWatching ? () => setIsConfirming(true) : handleToggle}
         disabled={isPending}
         aria-pressed={isWatching}
         aria-label={isWatching ? 'Watching — click to stop' : 'Watch this show'}
