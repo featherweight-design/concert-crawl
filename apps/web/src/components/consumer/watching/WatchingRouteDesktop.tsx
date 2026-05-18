@@ -4,7 +4,9 @@ import { useState, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
+import { useQueryClient } from '@tanstack/react-query'
 import type { WatchingShow } from '@concert-crawl/types'
+import { watchingQueryKey } from '@/lib/queries/use-watching'
 import { cn } from '@/lib/utils'
 import { CCMark } from '@/components/brand/cc-mark'
 import { UserMenu } from '../user-menu'
@@ -116,6 +118,7 @@ export function WatchingRouteDesktop({
 }: WatchingRouteDesktopProps) {
   const [shows, setShows] = useState<WatchingShow[]>(initialShows)
   const { getToken } = useAuth()
+  const queryClient = useQueryClient()
   const pathname = usePathname()
 
   const handleRemove = useCallback(
@@ -146,11 +149,12 @@ export function WatchingRouteDesktop({
           method: 'PUT',
           headers: { Authorization: `Bearer ${token}` },
         })
+        void queryClient.invalidateQueries({ queryKey: watchingQueryKey })
       } catch {
         revert()
       }
     },
-    [shows, getToken],
+    [shows, getToken, queryClient],
   )
 
   const { drops, spikes, soldOut } = countChanges(shows)

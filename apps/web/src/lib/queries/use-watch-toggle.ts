@@ -27,30 +27,12 @@ export function useWatchToggle() {
       queryClient.setQueryData<WatchingShow[]>(watchingQueryKey, (old = []) => {
         const isWatching = old.some((show) => show.eventId === eventId)
         if (isWatching) {
+          // Optimistic remove — safe because we have the full data to revert to
           return old.filter((show) => show.eventId !== eventId)
         }
-        // Optimistically mark as watching with a minimal stub; full data arrives on settle
-        return [
-          ...old,
-          {
-            eventId,
-            userEventId: `optimistic-${eventId}`,
-            artist: '',
-            venueName: '',
-            venueSlug: '',
-            date: '',
-            showTime: null,
-            ticketUrl: null,
-            savedAt: new Date().toISOString(),
-            savedPrice: null,
-            currentPrice: null,
-            sourceKind: null,
-            eventStatus: 'upcoming' as const,
-            watchStatus: 'live' as const,
-            updatedAt: new Date().toISOString(),
-            imageUrl: null,
-          },
-        ]
+        // For adds: don't insert a stub with blank fields — let isPending handle
+        // the visual state in WatchShowButton, full data arrives on settle
+        return old
       })
 
       return { previous }

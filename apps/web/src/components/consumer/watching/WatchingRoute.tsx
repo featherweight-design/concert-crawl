@@ -3,6 +3,8 @@
 import { useState, useCallback } from 'react'
 import type { WatchingShow } from '@concert-crawl/types'
 import { useAuth } from '@clerk/nextjs'
+import { useQueryClient } from '@tanstack/react-query'
+import { watchingQueryKey } from '@/lib/queries/use-watching'
 import { WatchingItem } from './WatchingItem'
 import { WatchingEmpty } from './WatchingEmpty'
 import { NotifyFutureRow } from './NotifyFutureRow'
@@ -106,6 +108,7 @@ function groupShows(shows: WatchingShow[]): GroupedShows[] {
 export function WatchingRoute({ initialShows }: WatchingRouteProps) {
   const [shows, setShows] = useState<WatchingShow[]>(initialShows)
   const { getToken } = useAuth()
+  const queryClient = useQueryClient()
 
   const handleRemove = useCallback(
     async (userEventId: string) => {
@@ -136,11 +139,12 @@ export function WatchingRoute({ initialShows }: WatchingRouteProps) {
           method: 'PUT',
           headers: { Authorization: `Bearer ${token}` },
         })
+        void queryClient.invalidateQueries({ queryKey: watchingQueryKey })
       } catch {
         revert()
       }
     },
-    [shows, getToken],
+    [shows, getToken, queryClient],
   )
 
   const { drops, spikes, soldOut } = countChanges(shows)

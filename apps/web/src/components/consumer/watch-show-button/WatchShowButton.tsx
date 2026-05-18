@@ -21,11 +21,14 @@ export function WatchShowButton({
   const { data: watchedShows } = useWatching()
   const toggle = useWatchToggle()
 
-  // Derive watching state from cache; fall back to prop while cache loads
-  const isWatching =
+  // Derive watching state from cache; fall back to prop while cache loads.
+  // When a toggle is in flight, flip the pre-mutation state optimistically so
+  // the button responds instantly without needing a stub in the cache.
+  const isInCache =
     watchedShows !== undefined
       ? watchedShows.some((show) => show.eventId === eventId)
       : initialWatching
+  const isWatching = toggle.isPending ? !isInCache : isInCache
 
   const isPending = toggle.isPending
 
