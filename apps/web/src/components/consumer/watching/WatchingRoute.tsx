@@ -115,7 +115,7 @@ export function WatchingRoute({ initialShows }: WatchingRouteProps) {
   const handleRemove = useCallback(
     (userEventId: string) => {
       const show = shows.find((sv) => sv.userEventId === userEventId)
-      if (!show || toggle.isPending) return
+      if (!show || pendingRemoveIds.has(show.eventId)) return
       setPendingRemoveIds((prev) => new Set([...prev, show.eventId]))
       toggle.mutate(show.eventId, {
         onSettled: () => {
