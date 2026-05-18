@@ -1,3 +1,11 @@
+## [1.20.10](https://github.com/HartiganHM/concert-crawl/compare/v1.20.9...v1.20.10) (2026-05-18)
+
+
+### Bug Fixes
+
+* auth gate sign out contrast, watching sort order, and presale label bug ([e0cb6f7](https://github.com/HartiganHM/concert-crawl/commit/e0cb6f77cc5be7286b05ddc8343043e0b7f5eef1)), closes [#381](https://github.com/HartiganHM/concert-crawl/issues/381) [#382](https://github.com/HartiganHM/concert-crawl/issues/382) [#383](https://github.com/HartiganHM/concert-crawl/issues/383)
+* **watching:** tighten watchStatus type, remove dead presale branch, add tests ([e27c452](https://github.com/HartiganHM/concert-crawl/commit/e27c452b0c2a6eb9ed8dc535827f3c518a79cd18))
+
 ## [1.20.9](https://github.com/HartiganHM/concert-crawl/compare/v1.20.8...v1.20.9) (2026-05-17)
 
 
