@@ -2,14 +2,11 @@
 
 import { useState, useCallback } from 'react'
 import type { WatchingShow } from '@concert-crawl/types'
-import { useAuth } from '@clerk/nextjs'
-import { useQueryClient } from '@tanstack/react-query'
-import { watchingQueryKey } from '@/lib/queries/use-watching'
+import { useWatching } from '@/lib/queries/use-watching'
+import { useWatchToggle } from '@/lib/queries/use-watch-toggle'
 import { WatchingItem } from './WatchingItem'
 import { WatchingEmpty } from './WatchingEmpty'
 import { NotifyFutureRow } from './NotifyFutureRow'
-
-const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
 
 interface WatchingRouteProps {
   initialShows: WatchingShow[]
@@ -106,49 +103,35 @@ function groupShows(shows: WatchingShow[]): GroupedShows[] {
 }
 
 export function WatchingRoute({ initialShows }: WatchingRouteProps) {
-  const [shows, setShows] = useState<WatchingShow[]>(initialShows)
-  const { getToken } = useAuth()
-  const queryClient = useQueryClient()
+  const { data: cachedShows } = useWatching({ initialData: initialShows })
+  const toggle = useWatchToggle()
+  const shows = cachedShows ?? initialShows
+
+  const [pendingRemoveIds, setPendingRemoveIds] = useState<Set<string>>(
+    new Set(),
+  )
+  const displayedShows = shows.filter((sv) => !pendingRemoveIds.has(sv.eventId))
 
   const handleRemove = useCallback(
-    async (userEventId: string) => {
+    (userEventId: string) => {
       const show = shows.find((sv) => sv.userEventId === userEventId)
-      if (!show) return
-
-      // Optimistic remove
-      setShows((prev) => prev.filter((sv) => sv.userEventId !== userEventId))
-
-      const revert = () => {
-        setShows((prev) =>
-          [...prev, show].sort((sa, sb) => {
-            if (sa.date !== sb.date) return sa.date < sb.date ? -1 : 1
-            if (!sa.showTime) return 1
-            if (!sb.showTime) return -1
-            return sa.showTime < sb.showTime ? -1 : 1
-          }),
-        )
-      }
-
-      try {
-        const token = await getToken()
-        if (!token) {
-          revert()
-          return
-        }
-        await fetch(`${API_URL}/v1/watching/${show.eventId}`, {
-          method: 'PUT',
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        void queryClient.invalidateQueries({ queryKey: watchingQueryKey })
-      } catch {
-        revert()
-      }
+      if (!show || toggle.isPending) return
+      setPendingRemoveIds((prev) => new Set([...prev, show.eventId]))
+      toggle.mutate(show.eventId, {
+        onSettled: () => {
+          setPendingRemoveIds((prev) => {
+            const next = new Set(prev)
+            next.delete(show.eventId)
+            return next
+          })
+        },
+      })
     },
-    [shows, getToken, queryClient],
+    [shows, toggle],
   )
 
-  const { drops, spikes, soldOut } = countChanges(shows)
-  const groups = groupShows(shows)
+  const { drops, spikes, soldOut } = countChanges(displayedShows)
+  const groups = groupShows(displayedShows)
 
   const changeSummary = () => {
     const parts: string[] = []
@@ -201,7 +184,7 @@ export function WatchingRoute({ initialShows }: WatchingRouteProps) {
             lineHeight: 1,
           }}
         >
-          {shows.length} show{shows.length !== 1 ? 's' : ''}
+          {displayedShows.length} show{displayedShows.length !== 1 ? 's' : ''}
         </p>
         <p
           style={{
@@ -227,7 +210,7 @@ export function WatchingRoute({ initialShows }: WatchingRouteProps) {
           gap: 8,
         }}
       >
-        {shows.length === 0 ? (
+        {displayedShows.length === 0 ? (
           <WatchingEmpty />
         ) : (
           <>

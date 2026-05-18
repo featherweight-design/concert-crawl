@@ -7,7 +7,11 @@ import { apiClient } from '@/lib/api'
 
 export const watchingQueryKey = ['watching'] as const
 
-export function useWatching() {
+interface UseWatchingOptions {
+  initialData?: WatchingShow[]
+}
+
+export function useWatching(options: UseWatchingOptions = {}) {
   const { getToken, isSignedIn } = useAuth()
 
   return useQuery({
@@ -19,5 +23,8 @@ export function useWatching() {
     },
     enabled: !!isSignedIn,
     staleTime: 5 * 60 * 1000,
+    ...(options.initialData !== undefined
+      ? { initialData: options.initialData }
+      : {}),
   })
 }
