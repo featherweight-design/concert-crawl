@@ -19,22 +19,10 @@ export function useWatchToggle() {
         token,
       )
     },
-    onMutate: async (eventId) => {
+    onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: watchingQueryKey })
       const previous =
         queryClient.getQueryData<WatchingShow[]>(watchingQueryKey)
-
-      queryClient.setQueryData<WatchingShow[]>(watchingQueryKey, (old = []) => {
-        const isWatching = old.some((show) => show.eventId === eventId)
-        if (isWatching) {
-          // Optimistic remove — safe because we have the full data to revert to
-          return old.filter((show) => show.eventId !== eventId)
-        }
-        // For adds: don't insert a stub with blank fields — let isPending handle
-        // the visual state in WatchShowButton, full data arrives on settle
-        return old
-      })
-
       return { previous }
     },
     onError: (_err, _eventId, context) => {

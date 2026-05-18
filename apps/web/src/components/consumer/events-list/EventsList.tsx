@@ -40,8 +40,7 @@ export const EventsList = ({
   // Seed the cache with the SSR-provided first page
   const initialData: EventsListResponse = useMemo(
     () => ({ data: initialEvents, total, limit, offset: initialOffset }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [], // only seed once on mount — server provides the snapshot
+    [initialEvents, total, limit, initialOffset],
   )
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useEvents({
