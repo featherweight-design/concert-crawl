@@ -1,3 +1,15 @@
+# [1.22.0](https://github.com/HartiganHM/concert-crawl/compare/v1.21.0...v1.22.0) (2026-05-18)
+
+
+### Bug Fixes
+
+* allow concurrent watch removes by guarding on pendingRemoveIds ([0498026](https://github.com/HartiganHM/concert-crawl/commit/04980264669199323aaa4cd0bb4c95ab0351868c))
+
+
+### Features
+
+* **cache:** migrate WatchingRoute + WatchingRouteDesktop to useWatchToggle ([8febbc5](https://github.com/HartiganHM/concert-crawl/commit/8febbc5401f0a0487cc9a6f582c9aade95b4e876)), closes [#408](https://github.com/HartiganHM/concert-crawl/issues/408)
+
 # [1.21.0](https://github.com/HartiganHM/concert-crawl/compare/v1.20.10...v1.21.0) (2026-05-18)
 
 
