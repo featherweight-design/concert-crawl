@@ -247,20 +247,26 @@ Features behind the Supporter or Premium paywall at launch.
 
 ## Design Queue
 
+Status key: ✅ Complete · 🎨 Design handoff ready, eng pending · 🔲 Not started
+
 ### Beta bucket (needed before or during beta period)
 
-1. **Event Detail v2** — Port price trail + sourcing from price transparency into layout. Add submit-a-price entry point inline. Add setlist preview stub (collapsed). Add "who else is watching" as togglable element. Core layout from phase5b stands — this is additive. Design handoff: `design/design_handoff_event_detail_v2/`.
-2. **Shareable show cards** — Three formats: 9:16, 1:1, link preview. Built around IdentityArt generative engine — not photo-based. Design handoff: `design/design_handoff_shareable_cards/`.
-3. **Monetization upgrade flow** — Tier comparison (Supporter / Premium / Founder), payment modal, trial CTA, Founder urgency treatment.
-4. **Concert history / passport view** — Past attended shows. Empty state is the primary experience ("Your concert history starts here"). No import/backfill at launch.
+| # | Feature | Design | Eng | Notes |
+|---|---|---|---|---|
+| 1 | **Event Detail v2** | ✅ `design_handoff_event_detail_v2/` | ✅ PRs #205, #329 | Price trail, submit-a-price, setlist stub, "who else is watching" |
+| 2 | **Shareable show cards** | ✅ `design_handoff_shareable_cards/` | 🔲 Not started | Riso Poster only; 9:16 / 1:1 / link preview; IdentityArt-based; eng target beta week 5 (Jul 14–20) |
+| 3 | **Monetization upgrade flow** | 🔲 Not started | 🔲 Not started | Tier comparison, payment modal, trial CTA, Founder urgency; eng target beta week 3 (Jun 30–Jul 6) |
+| 4 | **Concert history / passport view** | 🔲 Not started | 🔲 Not started | Empty state is primary UX — no import/backfill at launch; eng target beta week 4 (Jul 7–13) |
 
 ### Launch bucket (needed before public launch)
 
-5. **Artist following UI** — Follow button on artist name (event card, event detail, venue page). Distinct from Watching heart button.
-6. **Venue first-timer guide surface** — Static content card on venue profile.
-7. **Notification preferences settings** — Per-artist instant vs. digest, 60-day threshold toggle, delivery time preference.
-8. **"Last time in Denver" treatment** — How does this data point appear on event detail / artist surfaces?
-9. **Support act spotlight treatment** — Opener card weight and placement.
+| # | Feature | Design | Eng | Notes |
+|---|---|---|---|---|
+| 5 | **Artist following UI** | 🔲 Not started | 🔲 Not started | Follow button on artist name; distinct from Watching heart; touches event card, event detail, venue page |
+| 6 | **Venue first-timer guide surface** | 🔲 Not started | 🔲 Not started | Static content card on venue profile |
+| 7 | **Notification preferences settings** | 🔲 Not started | 🔲 Not started | Per-artist instant vs. digest, 60-day threshold toggle, delivery time preference |
+| 8 | **"Last time in Denver" treatment** | 🔲 Not started | 🔲 Not started | How does this data point appear on event detail / artist surfaces? |
+| 9 | **Support act spotlight treatment** | 🔲 Not started | 🔲 Not started | Opener card weight and placement |
 
 ---
 
