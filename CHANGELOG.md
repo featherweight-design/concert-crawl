@@ -1,3 +1,15 @@
+# [1.31.0](https://github.com/HartiganHM/concert-crawl/compare/v1.30.0...v1.31.0) (2026-05-19)
+
+
+### Bug Fixes
+
+* **settings:** add connected accounts + footnote to desktop view; use copy constant ([6ad99f6](https://github.com/HartiganHM/concert-crawl/commit/6ad99f6f3081eb7fe0f1acb5e26dd539e880edef))
+
+
+### Features
+
+* **settings:** show connected OAuth providers with Clerk attribution ([#400](https://github.com/HartiganHM/concert-crawl/issues/400)) ([1d30c68](https://github.com/HartiganHM/concert-crawl/commit/1d30c68394b47881a8b1f665ec032e86de1065bc))
+
 # [1.30.0](https://github.com/HartiganHM/concert-crawl/compare/v1.29.0...v1.30.0) (2026-05-19)
 
 
