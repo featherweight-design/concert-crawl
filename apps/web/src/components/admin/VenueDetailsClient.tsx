@@ -430,6 +430,9 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
   const [ticketVendorVal, setTicketVendorVal] = useState<string | null>(
     venue.ticketVendor ?? null,
   )
+  const [crawlModeVal, setCrawlModeVal] = useState<'http' | 'browser' | null>(
+    (venue.crawlMode as 'http' | 'browser' | null) ?? null,
+  )
   const [slugManual, setSlugManual] = useState(true)
   const [slugFocused, setSlugFocused] = useState(false)
   const [urlFocused, setUrlFocused] = useState(false)
@@ -442,7 +445,8 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     waitUntilVal !== venue.crawlWaitUntil ||
     crawlDelayVal !== venue.crawlDelayMs ||
     (waitForSelectorVal || null) !== venue.crawlWaitForSelector ||
-    ticketVendorVal !== (venue.ticketVendor ?? null)
+    ticketVendorVal !== (venue.ticketVendor ?? null) ||
+    crawlModeVal !== ((venue.crawlMode as 'http' | 'browser' | null) ?? null)
 
   // Save state
   const [saveState, setSaveState] = useState<
@@ -464,6 +468,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     setCrawlDelayVal(venue.crawlDelayMs)
     setWaitForSelectorVal(venue.crawlWaitForSelector ?? '')
     setTicketVendorVal(venue.ticketVendor ?? null)
+    setCrawlModeVal((venue.crawlMode as 'http' | 'browser' | null) ?? null)
     setSaveState('idle')
     setSaveError(null)
     setFieldErrors({})
@@ -492,6 +497,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     if (ticketVendorVal !== null) {
       formData.set('ticketVendor', ticketVendorVal)
     }
+    formData.set('crawlMode', crawlModeVal ?? '')
 
     try {
       const result = await updateVenue(venue.id, formData)
@@ -1011,6 +1017,74 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                 <option value="load">load — wait for page load event</option>
                 <option value="domcontentloaded">
                   domcontentloaded — wait for HTML parse only
+                </option>
+              </StyledSelect>
+            </Field>
+
+            {/* Fetch mode */}
+            <Field
+              label="Fetch mode"
+              htmlFor="edit-venue-crawl-mode"
+              hint={
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--fg-muted)',
+                    lineHeight: 1.5,
+                    fontFamily: "'Inter', sans-serif",
+                  }}
+                >
+                  {crawlModeVal === null && (
+                    <>
+                      <strong style={{ color: 'var(--fg)' }}>
+                        Auto-detect
+                      </strong>{' '}
+                      — tries plain HTTP first. If events are found, saves{' '}
+                      <strong style={{ color: 'var(--fg)' }}>HTTP only</strong>{' '}
+                      for future crawls. Falls back to browser if HTTP returns
+                      no events.
+                    </>
+                  )}
+                  {crawlModeVal === 'http' && (
+                    <>
+                      <strong style={{ color: 'var(--fg)' }}>HTTP only</strong>{' '}
+                      — fetches the page with a plain HTTP request. Fast and
+                      lightweight. Only works for server-rendered sites where
+                      event data is present in the raw HTML. A crawl returning
+                      zero events is recorded as a failure — it will not
+                      escalate to browser.
+                    </>
+                  )}
+                  {crawlModeVal === 'browser' && (
+                    <>
+                      <strong style={{ color: 'var(--fg)' }}>
+                        Browser only
+                      </strong>{' '}
+                      — always uses Playwright (headless Chromium). Required for
+                      JavaScript-rendered pages and SPAs. Set this if
+                      auto-detect incorrectly detected HTTP mode for a venue.
+                    </>
+                  )}
+                </div>
+              }
+            >
+              <StyledSelect
+                id="edit-venue-crawl-mode"
+                value={crawlModeVal ?? ''}
+                disabled={isDisabled}
+                onChange={(evt) => {
+                  const val = evt.target.value
+                  setCrawlModeVal(
+                    val === 'http' || val === 'browser' ? val : null,
+                  )
+                }}
+              >
+                <option value="">
+                  auto-detect — HTTP first, browser fallback
+                </option>
+                <option value="http">HTTP only — server-rendered pages</option>
+                <option value="browser">
+                  Browser only — JS-rendered pages
                 </option>
               </StyledSelect>
             </Field>
