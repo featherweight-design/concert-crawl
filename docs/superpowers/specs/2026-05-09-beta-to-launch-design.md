@@ -253,8 +253,8 @@ Status key: ✅ Complete · 🎨 Design handoff ready, eng pending · 🔲 Not s
 
 | # | Feature | Design | Eng | Notes |
 |---|---|---|---|---|
-| 1 | **Event Detail v2** | ✅ `design_handoff_event_detail_v2/` | ✅ PRs #205, #329 | Price trail, submit-a-price, setlist stub, "who else is watching" |
-| 2 | **Shareable show cards** | ✅ `design_handoff_shareable_cards/` | 🔲 Not started | Riso Poster only; 9:16 / 1:1 / link preview; IdentityArt-based; eng target beta week 5 (Jul 14–20) |
+| 1 | **Event Detail v2** | ✅ `design/design_handoff_event_detail_v2/` | ✅ PRs #205, #329 | Price trail, submit-a-price, setlist stub, "who else is watching" |
+| 2 | **Shareable show cards** | ✅ `design/design_handoff_shareable_cards/` | 🔲 Not started | Riso Poster only; 9:16 / 1:1 / link preview; IdentityArt-based; eng target beta week 5 (Jul 14–20) |
 | 3 | **Monetization upgrade flow** | 🔲 Not started | 🔲 Not started | Tier comparison, payment modal, trial CTA, Founder urgency; eng target beta week 3 (Jun 30–Jul 6) |
 | 4 | **Concert history / passport view** | 🔲 Not started | 🔲 Not started | Empty state is primary UX — no import/backfill at launch; eng target beta week 4 (Jul 7–13) |
 
