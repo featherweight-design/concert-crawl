@@ -1,14 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { useAuth } from '@clerk/nextjs'
 import { Play, Loader2 } from 'lucide-react'
 import { AdminButton } from '@/components/admin/primitives'
-import { ApiError } from '@/lib/api'
-
-const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
-
-type TriggerState = 'idle' | 'loading' | 'started' | 'error'
+import { useTriggerPricePipeline } from '@/lib/queries/use-admin-price-pipeline'
 
 interface PipelineTriggerButtonProps {
   eventId: string
@@ -17,49 +12,21 @@ interface PipelineTriggerButtonProps {
 export const PipelineTriggerButton = ({
   eventId,
 }: PipelineTriggerButtonProps) => {
-  const { getToken } = useAuth()
-  const [state, setState] = useState<TriggerState>('idle')
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const triggerPipeline = useTriggerPricePipeline()
+  const [showStarted, setShowStarted] = useState(false)
 
   const runPipeline = async () => {
-    setState('loading')
-    setErrorMessage(null)
-
+    setShowStarted(false)
     try {
-      const token = await getToken()
-      if (!token) throw new Error('Not authenticated')
-
-      const res = await fetch(
-        `${API_URL}/v1/admin/prices/pipeline/${eventId}`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        },
-      )
-
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as {
-          error?: string
-        }
-        throw new ApiError(res.status, body.error ?? `Error ${res.status}`)
-      }
-
-      setState('started')
-      setTimeout(() => setState('idle'), 3000)
-    } catch (err) {
-      setState('error')
-      setErrorMessage(
-        err instanceof ApiError || err instanceof Error
-          ? err.message
-          : 'Failed to start pipeline',
-      )
+      await triggerPipeline.mutateAsync(eventId)
+      setShowStarted(true)
+      setTimeout(() => setShowStarted(false), 3000)
+    } catch {
+      // error surfaced via triggerPipeline.isError
     }
   }
 
-  if (state === 'started') {
+  if (showStarted) {
     return (
       <span style={{ fontSize: 12, color: 'var(--success)', fontWeight: 500 }}>
         Started
@@ -72,18 +39,20 @@ export const PipelineTriggerButton = ({
       <AdminButton
         variant="ghost"
         size="sm"
-        icon={state === 'loading' ? Loader2 : Play}
-        onClick={runPipeline}
-        disabled={state === 'loading'}
+        icon={triggerPipeline.isPending ? Loader2 : Play}
+        onClick={() => void runPipeline()}
+        disabled={triggerPipeline.isPending}
       >
-        {state === 'loading' ? 'Running…' : 'Run'}
+        {triggerPipeline.isPending ? 'Running…' : 'Run'}
       </AdminButton>
-      {state === 'error' && errorMessage && (
+      {triggerPipeline.isError && triggerPipeline.error && (
         <span
           role="alert"
           style={{ fontSize: 11, color: 'var(--danger)', whiteSpace: 'nowrap' }}
         >
-          {errorMessage}
+          {triggerPipeline.error instanceof Error
+            ? triggerPipeline.error.message
+            : 'Failed to start pipeline'}
         </span>
       )}
     </div>

@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useAuth } from '@clerk/nextjs'
-import { apiClient } from '@/lib/api'
+import { useApproveEvent, useRejectEvent } from '@/lib/queries/use-admin-events'
 import {
   ConfidenceBar,
   AdminButton,
@@ -239,7 +238,8 @@ function FieldRow({
 }
 
 export const EventQueueSplit = ({ initialEvents }: Props) => {
-  const { getToken } = useAuth()
+  const approveMutation = useApproveEvent()
+  const rejectMutation = useRejectEvent()
   const [events, setEvents] = useState(initialEvents)
   const [selectedId, setSelectedId] = useState<string | null>(
     initialEvents[0]?.id ?? null,
@@ -279,9 +279,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
       setProcessing(id)
       setActionError(null)
       try {
-        const tok = await getToken()
-        if (!tok) return
-        await apiClient.patch(`/v1/admin/events/${id}/verify`, tok, {})
+        await approveMutation.mutateAsync(id)
         setEvents((prev) =>
           prev.map((ev) => (ev.id === id ? { ...ev, verified: true } : ev)),
         )
@@ -295,7 +293,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
         setProcessing(null)
       }
     },
-    [getToken, selectedIdx, filtered],
+    [approveMutation, selectedIdx, filtered],
   )
 
   const reject = useCallback(
@@ -304,9 +302,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
       setProcessing(id)
       setActionError(null)
       try {
-        const tok = await getToken()
-        if (!tok) return
-        await apiClient.delete(`/v1/admin/events/${id}`, tok)
+        await rejectMutation.mutateAsync(id)
         setEvents((prev) => prev.filter((ev) => ev.id !== id))
         const remaining = filtered.filter((ev) => ev.id !== id)
         const nextIdx = Math.min(selectedIdx, remaining.length - 1)
@@ -318,7 +314,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
         setProcessing(null)
       }
     },
-    [getToken, selectedIdx, filtered],
+    [rejectMutation, selectedIdx, filtered],
   )
 
   useEffect(() => {

@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { ExternalLink, RefreshCw, Filter } from 'lucide-react'
+import { useAdminVenueRuns } from '@/lib/queries/use-admin-venue-runs'
+import { useTriggerVenueCrawl } from '@/lib/queries/use-admin-crawl-trigger'
 import {
   StatusBadge,
   AdminTable,
@@ -39,20 +41,6 @@ interface Props {
   initialStatus: CrawlStatusRow[]
   initialRuns: CrawlRun[]
   initialSelectedId?: string
-}
-
-const VENUE_RUNS_LIMIT = 25
-
-function extractErrorMessage(rawBody: unknown, fallback: string): string {
-  if (
-    rawBody !== null &&
-    typeof rawBody === 'object' &&
-    'error' in rawBody &&
-    typeof (rawBody as { error?: unknown })['error'] === 'string'
-  ) {
-    return (rawBody as { error: string })['error']
-  }
-  return fallback
 }
 
 const STATUS_KIND: Record<
@@ -254,8 +242,9 @@ export const CrawlSplitView = ({
     Record<string, 'triggering' | 'queued' | 'error'>
   >({})
   const [recrawlError, setRecrawlError] = useState<Record<string, string>>({})
-  const [venueRuns, setVenueRuns] = useState<CrawlRun[]>([])
-  const [venueRunsLoading, setVenueRunsLoading] = useState(false)
+  const triggerCrawl = useTriggerVenueCrawl()
+  const { data: venueRuns = [], isLoading: venueRunsLoading } =
+    useAdminVenueRuns(selectedId)
 
   // Sync selectedId when IssuesBanner navigates to a new venueId via router.push
   useEffect(() => {
@@ -263,34 +252,6 @@ export const CrawlSplitView = ({
       setSelectedId(initialSelectedId)
     }
   }, [initialSelectedId])
-
-  // Fetch the full run history for the selected venue on selection change
-  useEffect(() => {
-    if (!selectedId) {
-      setVenueRuns([])
-      setVenueRunsLoading(false)
-      return
-    }
-    let cancelled = false
-    setVenueRuns([])
-    setVenueRunsLoading(true)
-    fetch(
-      `/api/admin/crawl/runs?venueId=${selectedId}&limit=${VENUE_RUNS_LIMIT}`,
-    )
-      .then((res) => res.json())
-      .then((body: { success: boolean; data: CrawlRun[] }) => {
-        if (!cancelled) setVenueRuns(body.success ? body.data : [])
-      })
-      .catch(() => {
-        if (!cancelled) setVenueRuns([])
-      })
-      .finally(() => {
-        if (!cancelled) setVenueRunsLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [selectedId])
 
   // Close filter panel on outside click
   useEffect(() => {
@@ -338,11 +299,7 @@ export const CrawlSplitView = ({
       return next
     })
     try {
-      const res = await fetch(`/api/admin/crawl/${venueId}`, { method: 'POST' })
-      if (!res.ok) {
-        const rawBody: unknown = await res.json().catch(() => ({}))
-        throw new Error(extractErrorMessage(rawBody, `HTTP ${res.status}`))
-      }
+      await triggerCrawl.mutateAsync(venueId)
       setRecrawlState((prev) => ({ ...prev, [venueId]: 'queued' }))
     } catch (err) {
       setRecrawlState((prev) => {
