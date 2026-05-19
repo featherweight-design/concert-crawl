@@ -53,10 +53,10 @@ const PRICE_OPTIONS: FilterOption[] = [
 export const FILTER_ORDER: FilterKey[] = ['when', 'where', 'price', 'vibe']
 
 function genreLabel(genre: string): string {
-  return genre
-    .split('-')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join('-')
+  return genre.replace(
+    /(^|[-&])([a-z])/g,
+    (_, sep, char) => sep + char.toUpperCase(),
+  )
 }
 
 export function getFilterOptions(

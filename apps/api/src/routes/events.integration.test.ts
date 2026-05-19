@@ -471,4 +471,56 @@ describe('GET /v1/events — beta auth gate', () => {
       process.env.REQUIRE_BETA_AUTH = original
     }
   })
+
+  it('returns 401 on GET /genres without auth when REQUIRE_BETA_AUTH is true', async () => {
+    const original = process.env.REQUIRE_BETA_AUTH
+    try {
+      process.env.REQUIRE_BETA_AUTH = 'true'
+      vi.resetModules()
+      const { eventsRouter: freshRouter } = await import('./events.js')
+      const { Hono } = await import('hono')
+      const testApp = new Hono()
+      testApp.route('/v1/events', freshRouter)
+      const res = await testApp.request('/v1/events/genres')
+      expect(res.status).toBe(401)
+    } finally {
+      process.env.REQUIRE_BETA_AUTH = original
+    }
+  })
+})
+
+describe('GET /v1/events/genres', () => {
+  beforeEach(async () => {
+    await clearTables()
+  })
+
+  it('returns empty array when no upcoming events exist', async () => {
+    const res = await app.request('/v1/events/genres')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { success: boolean; data: string[] }
+    expect(body.success).toBe(true)
+    expect(body.data).toEqual([])
+  })
+
+  it('returns distinct genres from upcoming events sorted alphabetically', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, { genre: ['rock', 'indie'], status: 'upcoming' })
+    await seedEvent(venue.id, { genre: ['r&b', 'rock'], status: 'upcoming' })
+
+    const res = await app.request('/v1/events/genres')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { success: boolean; data: string[] }
+    expect(body.data).toEqual(['indie', 'r&b', 'rock'])
+  })
+
+  it('excludes genres from non-upcoming events', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, { genre: ['jazz'], status: 'cancelled' })
+    await seedEvent(venue.id, { genre: ['rock'], status: 'upcoming' })
+
+    const res = await app.request('/v1/events/genres')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { success: boolean; data: string[] }
+    expect(body.data).toEqual(['rock'])
+  })
 })
