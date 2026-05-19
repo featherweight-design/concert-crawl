@@ -123,6 +123,7 @@ export interface Venue {
   priceUrl: string | null
   ticketVendor: TicketVendor | null
   crawlMode: 'http' | 'browser' | null
+  address: string | null
   createdAt: string
   updatedAt: string
 }
@@ -284,6 +285,7 @@ export interface VenuePublic {
   websiteUrl: string
   active: boolean
   verified: boolean
+  address: string | null
 }
 
 // VenueWithEvents — venue profile page response

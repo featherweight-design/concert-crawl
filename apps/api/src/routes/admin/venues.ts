@@ -43,6 +43,7 @@ const createVenueSchema = z.object({
     ])
     .nullable()
     .optional(),
+  address: z.string().max(500).nullable().optional(),
 })
 
 const updateVenueSchema = createVenueSchema.partial().extend({

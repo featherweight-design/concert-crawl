@@ -95,6 +95,10 @@ export function googleMapsUrl(address: string): string {
   return `https://maps.google.com/?q=${encodeURIComponent(address)}`
 }
 
+export function googleMapsEmbedUrl(query: string): string {
+  return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&output=embed`
+}
+
 export interface WeekDayInfo {
   date: string
   label: string

@@ -26,6 +26,7 @@ export const SEED_VENUES: NewVenue[] = [
     active: true,
     verified: true,
     crawlDelayMs: 3000,
+    address: '18300 W Alameda Pkwy, Morrison, CO 80465',
   },
   {
     name: 'Ogden Theatre',
@@ -36,6 +37,7 @@ export const SEED_VENUES: NewVenue[] = [
     active: true,
     verified: true,
     crawlDelayMs: 3000,
+    address: '935 E Colfax Ave, Denver, CO 80218',
   },
   {
     name: 'Mission Ballroom',
@@ -46,6 +48,7 @@ export const SEED_VENUES: NewVenue[] = [
     active: true,
     verified: true,
     crawlDelayMs: 3000,
+    address: '4242 Wynkoop St, Denver, CO 80211',
   },
   {
     name: 'Bluebird Theater',
@@ -57,6 +60,7 @@ export const SEED_VENUES: NewVenue[] = [
     verified: true,
     crawlDelayMs: 3000,
     crawlWaitUntil: 'load' as const,
+    address: '3317 E Colfax Ave, Denver, CO 80206',
   },
   {
     name: 'Gothic Theatre',
@@ -67,6 +71,7 @@ export const SEED_VENUES: NewVenue[] = [
     active: true,
     verified: true,
     crawlDelayMs: 3000,
+    address: '3263 S Broadway, Englewood, CO 80113',
   },
 ]
 

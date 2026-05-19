@@ -28,7 +28,7 @@ function slugify(name: string): string {
 }
 
 type SubmitState = 'idle' | 'validating' | 'submitting' | 'success' | 'error'
-type FocusedField = 'name' | 'slug' | 'url' | 'city' | null
+type FocusedField = 'name' | 'slug' | 'url' | 'city' | 'address' | null
 type RobotsState = 'idle' | 'checking' | 'allowed' | 'disallowed' | 'unknown'
 
 interface FieldError {
@@ -58,6 +58,7 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
   const slugRef = useRef<HTMLInputElement>(null)
   const websiteUrlRef = useRef<HTMLInputElement>(null)
   const cityRef = useRef<HTMLInputElement>(null)
+  const addressRef = useRef<HTMLInputElement>(null)
 
   const disabled = submitState === 'submitting' || submitState === 'success'
 
@@ -74,6 +75,7 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
     if (slugRef.current) slugRef.current.value = ''
     if (websiteUrlRef.current) websiteUrlRef.current.value = ''
     if (cityRef.current) cityRef.current.value = 'Denver'
+    if (addressRef.current) addressRef.current.value = ''
   }
 
   function handleNameChange(evt: React.ChangeEvent<HTMLInputElement>) {
@@ -174,6 +176,7 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
     formData.set('slug', slugRef.current!.value.trim())
     formData.set('websiteUrl', websiteUrlRef.current!.value.trim())
     formData.set('city', cityRef.current!.value.trim() || 'Denver')
+    formData.set('address', addressRef.current?.value.trim() ?? '')
     formData.set('active', 'true')
 
     try {
@@ -644,6 +647,24 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
                         !!errors.city,
                         disabled,
                         focusedField === 'city',
+                      )}
+                    />
+                  </Field>
+
+                  {/* Address */}
+                  <Field label="Street address" htmlFor="add-venue-address">
+                    <input
+                      ref={addressRef}
+                      id="add-venue-address"
+                      type="text"
+                      placeholder="e.g. 3317 E Colfax Ave, Denver, CO 80206"
+                      disabled={disabled}
+                      onFocus={() => setFocusedField('address')}
+                      onBlur={() => setFocusedField(null)}
+                      style={inputStyle(
+                        false,
+                        disabled,
+                        focusedField === 'address',
                       )}
                     />
                   </Field>

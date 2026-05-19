@@ -44,7 +44,7 @@ export default async function VenueProfilePage({
 
   const { venue, upcomingEvents } = result
 
-  const mapsAddress = `${venue.name}, ${venue.city}`
+  const mapSearchQuery = `${venue.name}, ${venue.city}`
 
   return (
     <div className="flex min-h-screen flex-col bg-bg">
@@ -160,7 +160,7 @@ export default async function VenueProfilePage({
           </span>
           <span className="opacity-40 text-fg-subtle">·</span>
           <a
-            href={googleMapsUrl(mapsAddress)}
+            href={googleMapsUrl(venue.address ?? mapSearchQuery)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-signal"
@@ -215,6 +215,14 @@ export default async function VenueProfilePage({
           </StatPill>
         </div>
 
+        {/* Map */}
+        <div className="mt-5">
+          <MapPlaceholder
+            venueAddress={venue.address}
+            searchQuery={mapSearchQuery}
+          />
+        </div>
+
         {/* Upcoming shows */}
         <div className="mt-5">
           <SectionHeader
@@ -236,11 +244,6 @@ export default async function VenueProfilePage({
               {...(highlight ? { highlightId: highlight } : {})}
             />
           )}
-        </div>
-
-        {/* Map placeholder */}
-        <div className="mb-6 mt-5">
-          <MapPlaceholder address={mapsAddress} />
         </div>
       </div>
     </div>

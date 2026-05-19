@@ -34,12 +34,19 @@ export async function createVenue(
   const token = await getToken()
 
   try {
+    const addressRaw = formData.get('address')
+    const address =
+      addressRaw !== null && String(addressRaw).trim()
+        ? String(addressRaw).trim()
+        : null
+
     const venue = await apiClient.post<Venue>('/v1/admin/venues', token, {
       name: formData.get('name'),
       slug: formData.get('slug'),
       websiteUrl: formData.get('websiteUrl'),
       city: formData.get('city') || 'Denver',
       active: formData.get('active') !== 'false',
+      address,
     })
     revalidatePath('/admin/venues')
     return { success: true, data: venue }
@@ -119,6 +126,12 @@ export async function updateVenue(
           ? null
           : undefined
 
+    const addressRaw = formData.get('address')
+    const address =
+      addressRaw !== null && String(addressRaw).trim()
+        ? String(addressRaw).trim()
+        : null
+
     await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
       name: formData.get('name'),
       slug: formData.get('slug'),
@@ -130,6 +143,7 @@ export async function updateVenue(
       crawlWaitForSelector,
       ticketVendor,
       crawlMode,
+      address,
     })
     revalidatePath('/admin/venues')
     revalidatePath(`/admin/venues/${id}`)

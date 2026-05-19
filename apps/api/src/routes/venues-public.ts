@@ -23,6 +23,7 @@ venuesPublicRouter.get('/', async (ctx) => {
       websiteUrl: venues.websiteUrl,
       active: venues.active,
       verified: venues.verified,
+      address: venues.address,
     })
     .from(venues)
     .where(eq(venues.active, true))
@@ -45,6 +46,7 @@ venuesPublicRouter.get('/:slug', async (ctx) => {
       websiteUrl: venues.websiteUrl,
       active: venues.active,
       verified: venues.verified,
+      address: venues.address,
     })
     .from(venues)
     .where(eq(venues.slug, slug))

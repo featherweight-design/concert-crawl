@@ -28,6 +28,7 @@ function makeVenue(
     priceUrl: null,
     ticketVendor: null,
     crawlMode: null,
+    address: null,
     consecutiveFailures: 0,
     lastCrawledAt: null,
     createdAt: new Date().toISOString(),

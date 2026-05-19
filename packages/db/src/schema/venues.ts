@@ -57,6 +57,7 @@ export const venues = pgTable('venues', {
     .default('networkidle'),
   crawlWaitForSelector: text('crawl_wait_for_selector'),
   crawlMode: varchar('crawl_mode', { length: 10 }).$type<'http' | 'browser'>(),
+  address: text('address'),
   contactEmail: text('contact_email'),
   priceUrl: text('price_url'),
   ticketVendor: ticketVendorEnum('ticket_vendor'),

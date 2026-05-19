@@ -415,6 +415,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
   const slugRef = useRef<HTMLInputElement>(null)
   const websiteUrlRef = useRef<HTMLInputElement>(null)
   const cityRef = useRef<HTMLInputElement>(null)
+  const addressRef = useRef<HTMLInputElement>(null)
   const crawlDelayRef = useRef<HTMLInputElement>(null)
 
   // Controlled state for dirty-tracking
@@ -422,6 +423,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
   const [slugVal, setSlugVal] = useState(venue.slug)
   const [urlVal, setUrlVal] = useState(venue.websiteUrl)
   const [cityVal, setCityVal] = useState(venue.city)
+  const [addressVal, setAddressVal] = useState(venue.address ?? '')
   const [waitUntilVal, setWaitUntilVal] = useState(venue.crawlWaitUntil)
   const [crawlDelayVal, setCrawlDelayVal] = useState(venue.crawlDelayMs)
   const [waitForSelectorVal, setWaitForSelectorVal] = useState(
@@ -442,6 +444,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     slugVal !== venue.slug ||
     urlVal !== venue.websiteUrl ||
     cityVal !== venue.city ||
+    addressVal !== (venue.address ?? '') ||
     waitUntilVal !== venue.crawlWaitUntil ||
     crawlDelayVal !== venue.crawlDelayMs ||
     (waitForSelectorVal || null) !== venue.crawlWaitForSelector ||
@@ -464,6 +467,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     setSlugVal(venue.slug)
     setUrlVal(venue.websiteUrl)
     setCityVal(venue.city)
+    setAddressVal(venue.address ?? '')
     setWaitUntilVal(venue.crawlWaitUntil)
     setCrawlDelayVal(venue.crawlDelayMs)
     setWaitForSelectorVal(venue.crawlWaitForSelector ?? '')
@@ -476,6 +480,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     if (slugRef.current) slugRef.current.value = venue.slug
     if (websiteUrlRef.current) websiteUrlRef.current.value = venue.websiteUrl
     if (cityRef.current) cityRef.current.value = venue.city
+    if (addressRef.current) addressRef.current.value = venue.address ?? ''
     if (crawlDelayRef.current)
       crawlDelayRef.current.value = String(venue.crawlDelayMs)
   }
@@ -490,6 +495,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     formData.set('slug', slugVal.trim())
     formData.set('websiteUrl', urlVal.trim())
     formData.set('city', cityVal.trim() || 'Denver')
+    formData.set('address', addressVal.trim())
     formData.set('crawlWaitUntil', waitUntilVal)
     formData.set('crawlDelayMs', String(crawlDelayVal))
     formData.set('crawlWaitForSelector', waitForSelectorVal.trim())
@@ -885,6 +891,18 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                 defaultValue={venue.city}
                 disabled={isDisabled}
                 onChange={(evt) => setCityVal(evt.target.value)}
+              />
+            </Field>
+
+            {/* Address */}
+            <Field label="Street address" htmlFor="edit-venue-address">
+              <StyledInput
+                id="edit-venue-address"
+                inputRef={addressRef}
+                defaultValue={venue.address ?? ''}
+                disabled={isDisabled}
+                placeholder="e.g. 3317 E Colfax Ave, Denver, CO 80206"
+                onChange={(evt) => setAddressVal(evt.target.value)}
               />
             </Field>
 
