@@ -110,7 +110,7 @@ export default async function EventDetailPage({
         <Link
           href="/events"
           aria-label="Back to browse"
-          className="absolute left-3.5 top-14 z-10 flex h-9 w-9 items-center justify-center rounded-full sm:hidden"
+          className="absolute left-3.5 top-14 z-10 flex h-9 w-9 items-center justify-center rounded-full"
           style={{ background: 'var(--scrim)' }}
         >
           <svg
@@ -129,37 +129,6 @@ export default async function EventDetailPage({
             />
           </svg>
         </Link>
-        {/* Desktop: breadcrumb over hero */}
-        <div className="absolute bottom-4 left-6 hidden items-center gap-1.5 text-[13px] sm:flex">
-          <Link
-            href="/events"
-            className="flex items-center gap-1.5 text-fg-muted transition-colors hover:text-fg"
-          >
-            <svg
-              width="13"
-              height="13"
-              viewBox="0 0 16 16"
-              fill="none"
-              aria-hidden
-            >
-              <path
-                d="M11 4L5 8l6 4"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            Browse
-          </Link>
-          <span
-            className="text-fg-subtle"
-            style={{ fontFamily: 'var(--font-mono)', fontSize: '11px' }}
-          >
-            /
-          </span>
-          <span className="font-medium text-fg">{event.artist}</span>
-        </div>
       </div>
 
       {/* Scrollable content — 880px max-width centered column, -60px hero overlap on desktop */}
