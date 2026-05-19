@@ -1,3 +1,10 @@
+## [1.23.3](https://github.com/HartiganHM/concert-crawl/compare/v1.23.2...v1.23.3) (2026-05-19)
+
+
+### Bug Fixes
+
+* **browse:** date filter 'this-week' and 'this-weekend' relative to today ([5f917a4](https://github.com/HartiganHM/concert-crawl/commit/5f917a4a19af0c8ac881d5f49e59ae030fb18a90)), closes [#395](https://github.com/HartiganHM/concert-crawl/issues/395)
+
 ## [1.23.2](https://github.com/HartiganHM/concert-crawl/compare/v1.23.1...v1.23.2) (2026-05-19)
 
 
