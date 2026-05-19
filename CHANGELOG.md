@@ -1,3 +1,13 @@
+## [1.27.1](https://github.com/HartiganHM/concert-crawl/compare/v1.27.0...v1.27.1) (2026-05-19)
+
+
+### Bug Fixes
+
+* **event-detail:** move venue chevron inline with venue name in InfoRow ([b4975ae](https://github.com/HartiganHM/concert-crawl/commit/b4975ae3413d3910c6593283d382c0d237bf846c))
+* **event-detail:** remove desktop breadcrumb, show back button on all breakpoints ([fd76fe7](https://github.com/HartiganHM/concert-crawl/commit/fd76fe7ef141b4633d062842e8a4bc6ffb264ad4))
+* **event-detail:** update back button comment, fix InfoRow venue name overflow ([def74c9](https://github.com/HartiganHM/concert-crawl/commit/def74c96beaf6660d02e75b979a367dfe8b68ea8))
+* **venue:** remove desktop breadcrumb, extend back button, add max-width and responsive padding ([d16fc9a](https://github.com/HartiganHM/concert-crawl/commit/d16fc9a5def87a3f7c97962ec02c6cede4183817))
+
 # [1.27.0](https://github.com/HartiganHM/concert-crawl/compare/v1.26.0...v1.27.0) (2026-05-19)
 
 
