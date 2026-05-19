@@ -1,3 +1,12 @@
+## [1.25.1](https://github.com/HartiganHM/concert-crawl/compare/v1.25.0...v1.25.1) (2026-05-19)
+
+
+### Bug Fixes
+
+* **app:** add loading/transition states throughout the application ([ea1a353](https://github.com/HartiganHM/concert-crawl/commit/ea1a353be5774f74e7bd10556827919e591eaa1e)), closes [#385](https://github.com/HartiganHM/concert-crawl/issues/385)
+* guard SubmissionList confirm state against concurrent clicks and thrown errors ([0ca2e40](https://github.com/HartiganHM/concert-crawl/commit/0ca2e404ab51ef866314c3bf9fc1eede0d13d9f4))
+* remove unused cn import from EventsList ([3760f94](https://github.com/HartiganHM/concert-crawl/commit/3760f94f2c0715fb1ac94e5758fa8bdd223b1f05))
+
 # [1.25.0](https://github.com/HartiganHM/concert-crawl/compare/v1.24.2...v1.25.0) (2026-05-19)
 
 
