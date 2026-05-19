@@ -431,7 +431,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     venue.ticketVendor ?? null,
   )
   const [crawlModeVal, setCrawlModeVal] = useState<'http' | 'browser' | null>(
-    (venue.crawlMode as 'http' | 'browser' | null) ?? null,
+    venue.crawlMode ?? null,
   )
   const [slugManual, setSlugManual] = useState(true)
   const [slugFocused, setSlugFocused] = useState(false)
@@ -446,7 +446,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     crawlDelayVal !== venue.crawlDelayMs ||
     (waitForSelectorVal || null) !== venue.crawlWaitForSelector ||
     ticketVendorVal !== (venue.ticketVendor ?? null) ||
-    crawlModeVal !== ((venue.crawlMode as 'http' | 'browser' | null) ?? null)
+    crawlModeVal !== (venue.crawlMode ?? null)
 
   // Save state
   const [saveState, setSaveState] = useState<
@@ -468,7 +468,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     setCrawlDelayVal(venue.crawlDelayMs)
     setWaitForSelectorVal(venue.crawlWaitForSelector ?? '')
     setTicketVendorVal(venue.ticketVendor ?? null)
-    setCrawlModeVal((venue.crawlMode as 'http' | 'browser' | null) ?? null)
+    setCrawlModeVal(venue.crawlMode ?? null)
     setSaveState('idle')
     setSaveError(null)
     setFieldErrors({})

@@ -122,6 +122,7 @@ export interface Venue {
   contactEmail: string | null
   priceUrl: string | null
   ticketVendor: TicketVendor | null
+  crawlMode: 'http' | 'browser' | null
   createdAt: string
   updatedAt: string
 }
