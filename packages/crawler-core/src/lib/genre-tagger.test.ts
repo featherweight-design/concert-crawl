@@ -6,9 +6,11 @@ const mockLoggerError = vi.fn()
 const mockLoggerInfo = vi.fn()
 
 vi.mock('@anthropic-ai/sdk', () => ({
-  default: vi.fn().mockImplementation(() => ({
-    messages: { create: mockCreate },
-  })),
+  default: vi.fn().mockImplementation(
+    class {
+      messages = { create: mockCreate }
+    },
+  ),
 }))
 
 vi.mock('@concert-crawl/logger', () => ({

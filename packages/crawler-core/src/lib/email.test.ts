@@ -3,9 +3,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 // Mock the resend SDK before importing the module under test
 const mockSend = vi.fn().mockResolvedValue({ id: 'email-1' })
 vi.mock('resend', () => ({
-  Resend: vi.fn().mockImplementation(() => ({
-    emails: { send: mockSend },
-  })),
+  Resend: vi.fn().mockImplementation(
+    class {
+      emails = { send: mockSend }
+    },
+  ),
 }))
 
 describe('sendCrawlFailureEmail', () => {

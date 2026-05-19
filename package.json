@@ -39,7 +39,8 @@
     "overrides": {
       "fast-uri": "^3.1.2",
       "ip-address": "^10.2.0",
-      "postcss": "^8.5.14"
+      "postcss": "^8.5.14",
+      "vite": "^6.0.0"
     },
     "onlyBuiltDependencies": [
       "@clerk/shared",
