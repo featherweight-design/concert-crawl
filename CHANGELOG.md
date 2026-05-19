@@ -1,3 +1,18 @@
+# [1.30.0](https://github.com/HartiganHM/concert-crawl/compare/v1.29.0...v1.30.0) (2026-05-19)
+
+
+### Bug Fixes
+
+* **submit-price:** address Copilot review feedback ([b50520a](https://github.com/HartiganHM/concert-crawl/commit/b50520a82d6edf0b7c442f224ee75125bf2e7b01))
+
+
+### Features
+
+* **modal-shell:** extract shared ModalShell primitive ([#448](https://github.com/HartiganHM/concert-crawl/issues/448)) ([d952ef0](https://github.com/HartiganHM/concert-crawl/commit/d952ef0f0795c26062983dedf87bd49f68b5b896))
+* **submit-price:** add SubmitPriceModal with ShieldCheck icon ([#399](https://github.com/HartiganHM/concert-crawl/issues/399) [#403](https://github.com/HartiganHM/concert-crawl/issues/403)) ([d610229](https://github.com/HartiganHM/concert-crawl/commit/d6102291fb2edf1be51aa2ea6326e42e9149e783))
+* **submit-price:** convert PriceDisplay submit link to modal trigger ([#403](https://github.com/HartiganHM/concert-crawl/issues/403)) ([69d5721](https://github.com/HartiganHM/concert-crawl/commit/69d57211915f80b8e4aef5c6f7d71fd498ab62f9))
+* **submit-price:** convert SubmitPriceCardCta to modal trigger ([#403](https://github.com/HartiganHM/concert-crawl/issues/403)) ([8d78635](https://github.com/HartiganHM/concert-crawl/commit/8d78635aa05e6e0ed9ef371dac6ec53c243e1b1d))
+
 # [1.29.0](https://github.com/HartiganHM/concert-crawl/compare/v1.28.0...v1.29.0) (2026-05-19)
 
 
