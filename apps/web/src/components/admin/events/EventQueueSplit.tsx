@@ -1,7 +1,12 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useApproveEvent, useRejectEvent } from '@/lib/queries/use-admin-events'
+import {
+  useAdminEvents,
+  useApproveEvent,
+  useRejectEvent,
+  useUpdateEvent,
+} from '@/lib/queries/use-admin-events'
 import {
   ConfidenceBar,
   AdminButton,
@@ -237,10 +242,72 @@ function FieldRow({
   )
 }
 
+function EditFieldRow({
+  label,
+  value,
+  type = 'text',
+  mono,
+  onChange,
+}: {
+  label: string
+  value: string
+  type?: 'text' | 'date' | 'time' | 'number'
+  mono?: boolean
+  onChange: (val: string) => void
+}) {
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '92px 1fr',
+        gap: 12,
+        alignItems: 'center',
+      }}
+    >
+      <span
+        style={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 10,
+          fontWeight: 700,
+          color: 'var(--fg-subtle)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.06em',
+        }}
+      >
+        {label}
+      </span>
+      <input
+        type={type}
+        value={value}
+        onChange={(ev) => onChange(ev.target.value)}
+        style={{
+          width: '100%',
+          padding: '4px 8px',
+          borderRadius: 6,
+          border: '1px solid var(--border)',
+          background: 'var(--bg)',
+          color: 'var(--fg)',
+          fontSize: 13,
+          fontFamily: mono ? "'JetBrains Mono', monospace" : undefined,
+          outline: 'none',
+        }}
+        onFocus={(ev) => {
+          ev.currentTarget.style.borderColor = 'var(--signal)'
+        }}
+        onBlur={(ev) => {
+          ev.currentTarget.style.borderColor = 'var(--border)'
+        }}
+      />
+    </div>
+  )
+}
+
 export const EventQueueSplit = ({ initialEvents }: Props) => {
   const approveMutation = useApproveEvent()
   const rejectMutation = useRejectEvent()
-  const [events, setEvents] = useState(initialEvents)
+  const updateEvent = useUpdateEvent()
+  const { data: queriedEvents } = useAdminEvents(initialEvents)
+  const [events, setEvents] = useState<AdminEvent[]>(queriedEvents)
   const [selectedId, setSelectedId] = useState<string | null>(
     initialEvents[0]?.id ?? null,
   )
@@ -248,6 +315,34 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
   const [processing, setProcessing] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [actionError, setActionError] = useState<string | null>(null)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editDraft, setEditDraft] = useState<{
+    title: string
+    artist: string
+    date: string
+    doorsTime: string
+    showTime: string
+    ticketPriceMin: string
+    ticketPriceMax: string
+  }>({
+    title: '',
+    artist: '',
+    date: '',
+    doorsTime: '',
+    showTime: '',
+    ticketPriceMin: '',
+    ticketPriceMax: '',
+  })
+
+  // Keep local state in sync with background refetches
+  useEffect(() => {
+    setEvents(queriedEvents)
+  }, [queriedEvents])
+
+  // Exit edit mode when a different event is selected
+  useEffect(() => {
+    setIsEditing(false)
+  }, [selectedId])
 
   const pendingEvents = events.filter((ev) => !ev.verified)
   const lowConfEvents = events.filter(
@@ -316,6 +411,43 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
     },
     [rejectMutation, selectedIdx, filtered],
   )
+
+  function handleEditStart() {
+    if (!selected) return
+    setEditDraft({
+      title: selected.title,
+      artist: selected.artist,
+      date: selected.date,
+      doorsTime: selected.doorsTime ?? '',
+      showTime: selected.showTime ?? '',
+      ticketPriceMin: selected.ticketPriceMin ?? '',
+      ticketPriceMax: selected.ticketPriceMax ?? '',
+    })
+    setIsEditing(true)
+  }
+
+  async function handleEditSave() {
+    if (!selected) return
+    try {
+      const payload = {
+        ...(editDraft.title ? { title: editDraft.title } : {}),
+        ...(editDraft.artist ? { artist: editDraft.artist } : {}),
+        ...(editDraft.date ? { date: editDraft.date } : {}),
+        doorsTime: editDraft.doorsTime || null,
+        showTime: editDraft.showTime || null,
+        ticketPriceMin: editDraft.ticketPriceMin || null,
+        ticketPriceMax: editDraft.ticketPriceMax || null,
+      }
+      await updateEvent.mutateAsync({ id: selected.id, payload })
+      setIsEditing(false)
+    } catch (err) {
+      console.error('Failed to save event edits', err)
+    }
+  }
+
+  function handleEditCancel() {
+    setIsEditing(false)
+  }
 
   useEffect(() => {
     const handler = (ev: KeyboardEvent) => {
@@ -774,9 +906,34 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                       Reject
                     </AdminButton>
                   )}
-                  <AdminButton variant="outline" size="sm" icon={Edit2}>
-                    Edit
-                  </AdminButton>
+                  {isEditing ? (
+                    <>
+                      <AdminButton
+                        variant="primary"
+                        size="sm"
+                        onClick={() => void handleEditSave()}
+                        disabled={updateEvent.isPending}
+                      >
+                        {updateEvent.isPending ? 'Saving…' : 'Save'}
+                      </AdminButton>
+                      <AdminButton
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleEditCancel}
+                      >
+                        Cancel
+                      </AdminButton>
+                    </>
+                  ) : (
+                    <AdminButton
+                      variant="outline"
+                      size="sm"
+                      icon={Edit2}
+                      onClick={handleEditStart}
+                    >
+                      Edit
+                    </AdminButton>
+                  )}
                   {!selected.verified && (
                     <AdminButton
                       variant="success"
@@ -880,12 +1037,14 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
               >
                 {/* Left: extracted (editable) */}
                 <div>
-                  <MonoLabel>extracted (editable)</MonoLabel>
+                  <MonoLabel>
+                    extracted {isEditing ? '· editing' : '(editable)'}
+                  </MonoLabel>
                   <div
                     style={{
                       marginTop: 10,
                       padding: 16,
-                      border: '1px solid var(--border)',
+                      border: `1px solid ${isEditing ? 'var(--signal)' : 'var(--border)'}`,
                       borderRadius: 10,
                       display: 'flex',
                       flexDirection: 'column',
@@ -893,46 +1052,124 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                       background: 'var(--surface-1)',
                     }}
                   >
-                    <FieldRow label="Title" value={selected.title} />
-                    <FieldRow label="Artist" value={selected.artist} />
-                    <FieldRow label="Venue" value={selected.venueName} />
-                    <FieldRow
-                      label="Date"
-                      value={formatDate(selected.date)}
-                      mono
-                    />
-                    <FieldRow
-                      label="Doors"
-                      value={formatTime(selected.doorsTime)}
-                      mono
-                    />
-                    <FieldRow
-                      label="Show"
-                      value={formatTime(selected.showTime)}
-                      mono
-                    />
-                    <FieldRow
-                      label="Price low"
-                      value={
-                        selected.ticketPriceMin
-                          ? `$${Math.round(parseFloat(selected.ticketPriceMin))}`
-                          : null
-                      }
-                      mono
-                      warn={!selected.ticketPriceMin}
-                    />
-                    <FieldRow
-                      label="Price high"
-                      value={
-                        selected.ticketPriceMax
-                          ? `$${Math.round(parseFloat(selected.ticketPriceMax))}`
-                          : null
-                      }
-                      mono
-                      warn={!selected.ticketPriceMax}
-                    />
-                    {selected.genre && selected.genre.length > 0 && (
-                      <FieldRow label="Tags" tags={selected.genre} />
+                    {isEditing ? (
+                      <>
+                        <EditFieldRow
+                          label="Title"
+                          value={editDraft.title}
+                          onChange={(val) =>
+                            setEditDraft((prev) => ({ ...prev, title: val }))
+                          }
+                        />
+                        <EditFieldRow
+                          label="Artist"
+                          value={editDraft.artist}
+                          onChange={(val) =>
+                            setEditDraft((prev) => ({ ...prev, artist: val }))
+                          }
+                        />
+                        <EditFieldRow
+                          label="Date"
+                          value={editDraft.date}
+                          type="date"
+                          mono
+                          onChange={(val) =>
+                            setEditDraft((prev) => ({ ...prev, date: val }))
+                          }
+                        />
+                        <EditFieldRow
+                          label="Doors"
+                          value={editDraft.doorsTime}
+                          type="time"
+                          mono
+                          onChange={(val) =>
+                            setEditDraft((prev) => ({
+                              ...prev,
+                              doorsTime: val,
+                            }))
+                          }
+                        />
+                        <EditFieldRow
+                          label="Show"
+                          value={editDraft.showTime}
+                          type="time"
+                          mono
+                          onChange={(val) =>
+                            setEditDraft((prev) => ({ ...prev, showTime: val }))
+                          }
+                        />
+                        <EditFieldRow
+                          label="Price low"
+                          value={editDraft.ticketPriceMin}
+                          type="number"
+                          mono
+                          onChange={(val) =>
+                            setEditDraft((prev) => ({
+                              ...prev,
+                              ticketPriceMin: val,
+                            }))
+                          }
+                        />
+                        <EditFieldRow
+                          label="Price high"
+                          value={editDraft.ticketPriceMax}
+                          type="number"
+                          mono
+                          onChange={(val) =>
+                            setEditDraft((prev) => ({
+                              ...prev,
+                              ticketPriceMax: val,
+                            }))
+                          }
+                        />
+                        {selected.genre && selected.genre.length > 0 && (
+                          <FieldRow label="Tags" tags={selected.genre} />
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <FieldRow label="Title" value={selected.title} />
+                        <FieldRow label="Artist" value={selected.artist} />
+                        <FieldRow label="Venue" value={selected.venueName} />
+                        <FieldRow
+                          label="Date"
+                          value={formatDate(selected.date)}
+                          mono
+                        />
+                        <FieldRow
+                          label="Doors"
+                          value={formatTime(selected.doorsTime)}
+                          mono
+                        />
+                        <FieldRow
+                          label="Show"
+                          value={formatTime(selected.showTime)}
+                          mono
+                        />
+                        <FieldRow
+                          label="Price low"
+                          value={
+                            selected.ticketPriceMin
+                              ? `$${Math.round(parseFloat(selected.ticketPriceMin))}`
+                              : null
+                          }
+                          mono
+                          warn={!selected.ticketPriceMin}
+                        />
+                        <FieldRow
+                          label="Price high"
+                          value={
+                            selected.ticketPriceMax
+                              ? `$${Math.round(parseFloat(selected.ticketPriceMax))}`
+                              : null
+                          }
+                          mono
+                          warn={!selected.ticketPriceMax}
+                        />
+                        {selected.genre && selected.genre.length > 0 && (
+                          <FieldRow label="Tags" tags={selected.genre} />
+                        )}
+                      </>
                     )}
                   </div>
                 </div>

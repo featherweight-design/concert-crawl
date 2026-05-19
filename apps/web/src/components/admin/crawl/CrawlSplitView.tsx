@@ -1075,7 +1075,9 @@ export const CrawlSplitView = ({
         loading={venueRunsLoading}
         selectedVenueName={selected?.venueName ?? null}
         selectedRunId={selectedId ? selectedRunId : null}
-        onSelectRun={selectedId ? setSelectedRunId : undefined}
+        {...(selectedId
+          ? { onSelectRun: (runId: string) => setSelectedRunId(runId) }
+          : {})}
       />
     </div>
   )
@@ -1164,7 +1166,9 @@ export const CrawlRunHistoryTable = ({
                 <TR
                   key={run.id}
                   active={selectedRunId === run.id}
-                  onClick={onSelectRun ? () => onSelectRun(run.id) : undefined}
+                  {...(onSelectRun
+                    ? { onClick: () => onSelectRun(run.id) }
+                    : {})}
                 >
                   <TD mono color="var(--fg-muted)">
                     {shortRunId(run.id)}
