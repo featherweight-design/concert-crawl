@@ -178,6 +178,7 @@ function seedVenue(overrides: Record<string, unknown> = {}) {
     active: true,
     verified: true,
     consecutiveFailures: 0,
+    blockedAt: null,
     crawlDelayMs: 3000,
     crawlWaitUntil: 'networkidle' as const,
     crawlWaitForSelector: null,
@@ -737,6 +738,6 @@ describe('crawlVenue — crawlMode orchestration', () => {
     await crawlVenue(venue.id, mockBrowser)
 
     const savedVenue = stores.venues.find((vv) => vv.id === venue.id)
-    expect(savedVenue?.blockedAt).toBeUndefined()
+    expect(savedVenue?.blockedAt).toBeNull()
   })
 })

@@ -432,8 +432,9 @@ export async function crawlVenue(
       err instanceof CrawlFetchError &&
       (err.httpStatus === 403 || err.httpStatus === 429)
     // Playwright TimeoutError fires when bot-detection silently hangs the connection
-    // (no HTTP error, just no response). Treat ≥3 consecutive timeouts the same as
-    // a 403/429 block so the venue is paused and admin is notified.
+    // (no HTTP error, just no response). When the current error is a TimeoutError
+    // and consecutiveFailures is already ≥2 (i.e. this is the 3rd failure), treat
+    // it the same as a 403/429 block so the venue is paused and admin is notified.
     const isTimeoutBlock =
       err instanceof Error &&
       err.name === 'TimeoutError' &&
