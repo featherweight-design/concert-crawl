@@ -498,27 +498,31 @@ function InfoRow({
           className="mt-[1px] text-[14px] font-semibold tracking-[-0.01em]"
           style={{ color: signal ? 'var(--signal)' : 'var(--fg)' }}
         >
-          {value}
+          {href ? (
+            <span className="inline-flex items-center gap-0.5">
+              {value}
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 16 16"
+                fill="none"
+                className="shrink-0 text-fg-subtle"
+                aria-hidden
+              >
+                <path
+                  d="M6 4l4 4-4 4"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+          ) : (
+            value
+          )}
         </p>
       </div>
-      {href && (
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 16 16"
-          fill="none"
-          className="shrink-0 text-fg-subtle"
-          aria-hidden
-        >
-          <path
-            d="M6 4l4 4-4 4"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      )}
     </>
   )
 
