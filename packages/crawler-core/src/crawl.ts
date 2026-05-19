@@ -428,9 +428,17 @@ export async function crawlVenue(
 
     return crawlRun
   } catch (err) {
-    const isBlocked =
+    const isHttpBlocked =
       err instanceof CrawlFetchError &&
       (err.httpStatus === 403 || err.httpStatus === 429)
+    // Playwright TimeoutError fires when bot-detection silently hangs the connection
+    // (no HTTP error, just no response). Treat ≥3 consecutive timeouts the same as
+    // a 403/429 block so the venue is paused and admin is notified.
+    const isTimeoutBlock =
+      err instanceof Error &&
+      err.name === 'TimeoutError' &&
+      venue.consecutiveFailures >= 2 // becomes 3 after the increment below
+    const isBlocked = isHttpBlocked || isTimeoutBlock
 
     const [updatedVenue] = await db
       .update(venues)

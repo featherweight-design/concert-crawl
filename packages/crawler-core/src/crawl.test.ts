@@ -709,4 +709,34 @@ describe('crawlVenue — crawlMode orchestration', () => {
     const savedVenue = stores.venues.find((vv) => vv.id === venue.id)
     expect(savedVenue?.crawlMode).toBe('http')
   })
+
+  it('sets blockedAt when a TimeoutError occurs on the 3rd consecutive failure', async () => {
+    const timeoutError = new Error('Timeout exceeded')
+    timeoutError.name = 'TimeoutError'
+
+    // Venue already has 2 consecutive failures — this crawl makes it 3
+    const venue = seedVenue({ consecutiveFailures: 2 })
+    mockFetchPage.mockRejectedValue(timeoutError)
+
+    const result = await crawlVenue(venue.id, mockBrowser)
+
+    expect(result.status).toBe('failed')
+
+    const savedVenue = stores.venues.find((vv) => vv.id === venue.id)
+    expect(savedVenue?.blockedAt).not.toBeNull()
+  })
+
+  it('does not set blockedAt for a TimeoutError before 3 consecutive failures', async () => {
+    const timeoutError = new Error('Timeout exceeded')
+    timeoutError.name = 'TimeoutError'
+
+    // Only 1 prior failure — should not block yet
+    const venue = seedVenue({ consecutiveFailures: 1 })
+    mockFetchPage.mockRejectedValue(timeoutError)
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const savedVenue = stores.venues.find((vv) => vv.id === venue.id)
+    expect(savedVenue?.blockedAt).toBeUndefined()
+  })
 })
