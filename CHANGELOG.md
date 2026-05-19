@@ -1,3 +1,21 @@
+# [1.24.0](https://github.com/HartiganHM/concert-crawl/compare/v1.23.3...v1.24.0) (2026-05-19)
+
+
+### Bug Fixes
+
+* **crawler:** avoid LLM double-call on auto-detect http fallback; fix makeVenue factories ([bae53bc](https://github.com/HartiganHM/concert-crawl/commit/bae53bc00c38afd9ee9b28c71f245a04cc7e2d25))
+* **types:** add crawlMode to Venue interface, remove as casts in VenueDetailsClient ([ba8f6f4](https://github.com/HartiganHM/concert-crawl/commit/ba8f6f4b732f2a5f924f92ad94aefb36cdf346ab))
+
+
+### Features
+
+* **api:** add crawlMode to venue update schema ([cf0639e](https://github.com/HartiganHM/concert-crawl/commit/cf0639e27370cf55ef00cab87d2fc70b430fe065))
+* **crawler-core:** add fetchPageHttp for plain HTTP crawling ([8eae6fd](https://github.com/HartiganHM/concert-crawl/commit/8eae6fd55b4cb91bd68ecf5e9c341011fd82f889))
+* **crawler-core:** http-first crawl mode with auto-detect and browser fallback ([f2af45f](https://github.com/HartiganHM/concert-crawl/commit/f2af45f3a0eb1628b5055ef015d401e2d958da03))
+* **db:** add crawl_mode column to venues ([4ccf426](https://github.com/HartiganHM/concert-crawl/commit/4ccf426770a1627018987aac348d38d786b64f53))
+* **web:** add fetch mode selector to admin venue crawl settings ([2429780](https://github.com/HartiganHM/concert-crawl/commit/2429780cd445e004c846b1cdbc2807cd25b3659f))
+* **web:** pass crawlMode through venue update server action ([d9c4a9c](https://github.com/HartiganHM/concert-crawl/commit/d9c4a9c923567ef4d636c7a627626ee66d6e7fb3))
+
 ## [1.23.3](https://github.com/HartiganHM/concert-crawl/compare/v1.23.2...v1.23.3) (2026-05-19)
 
 
