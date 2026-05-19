@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { filterWhenToDateRange } from './lib'
 
 vi.mock('@/lib/time', () => ({
