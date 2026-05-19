@@ -124,6 +124,7 @@ vi.mock('@concert-crawl/db', () => {
 
 vi.mock('./lib/fetcher.js', () => ({
   fetchPage: vi.fn(),
+  fetchPageHttp: vi.fn(),
   CrawlFetchError: class CrawlFetchError extends Error {
     constructor(
       public httpStatus: number,
@@ -140,7 +141,7 @@ vi.mock('./lib/extractors/llm.js', () => ({
   extractWithLlm: vi.fn(),
 }))
 
-import { fetchPage } from './lib/fetcher.js'
+import { fetchPage, fetchPageHttp } from './lib/fetcher.js'
 import { extractWithLlm } from './lib/extractors/llm.js'
 import {
   db,
@@ -152,6 +153,7 @@ import {
 } from '@concert-crawl/db'
 
 const mockFetchPage = vi.mocked(fetchPage)
+const mockFetchPageHttp = vi.mocked(fetchPageHttp)
 const mockExtractWithLlm = vi.mocked(extractWithLlm)
 
 beforeEach(() => {
@@ -161,6 +163,7 @@ beforeEach(() => {
   stores.notifications.length = 0
   stores.costTracking.length = 0
   mockFetchPage.mockClear()
+  mockFetchPageHttp.mockClear()
   mockExtractWithLlm.mockClear()
 })
 
@@ -178,6 +181,7 @@ function seedVenue(overrides: Record<string, unknown> = {}) {
     crawlDelayMs: 3000,
     crawlWaitUntil: 'networkidle' as const,
     crawlWaitForSelector: null,
+    crawlMode: 'browser' as const,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -564,5 +568,141 @@ describe('crawlVenue — LLM cost tracking', () => {
       }
     })
     expect(costRow).toBeUndefined()
+  })
+})
+
+describe('crawlVenue — crawlMode orchestration', () => {
+  const FETCH_RESULT = {
+    html: HTML_V1,
+    httpStatus: 200,
+    finalUrl: 'https://test-venue.example.com',
+  }
+
+  beforeEach(() => {
+    mockExtractWithLlm.mockResolvedValue({
+      events: [METALLICA_EVENT],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+  })
+
+  it('uses fetchPageHttp when crawlMode is http', async () => {
+    const venue = seedVenue({ crawlMode: 'http' })
+    mockFetchPageHttp.mockResolvedValue(FETCH_RESULT)
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    expect(mockFetchPageHttp).toHaveBeenCalledWith(
+      venue.websiteUrl,
+      venue.crawlDelayMs,
+    )
+    expect(mockFetchPage).not.toHaveBeenCalled()
+  })
+
+  it('uses fetchPage when crawlMode is browser', async () => {
+    const venue = seedVenue({ crawlMode: 'browser' })
+    mockFetchPage.mockResolvedValue(FETCH_RESULT)
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    expect(mockFetchPage).toHaveBeenCalledWith(
+      venue.websiteUrl,
+      mockBrowser,
+      venue.crawlDelayMs,
+      venue.crawlWaitUntil,
+      undefined,
+    )
+    expect(mockFetchPageHttp).not.toHaveBeenCalled()
+  })
+
+  it('auto-detect: saves crawlMode=http when HTTP fetch returns events', async () => {
+    const venue = seedVenue({ crawlMode: null })
+    mockFetchPageHttp.mockResolvedValue(FETCH_RESULT)
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    expect(mockFetchPageHttp).toHaveBeenCalled()
+    expect(mockFetchPage).not.toHaveBeenCalled()
+
+    const savedVenue = stores.venues.find((vv) => vv.id === venue.id)
+    expect(savedVenue?.crawlMode).toBe('http')
+  })
+
+  it('auto-detect: falls back to browser and saves crawlMode=browser when HTTP returns no events', async () => {
+    const venue = seedVenue({ crawlMode: null })
+    const emptyHtml = '<html><body>No events here</body></html>'
+    mockFetchPageHttp.mockResolvedValue({
+      html: emptyHtml,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+    mockFetchPage.mockResolvedValue(FETCH_RESULT)
+    mockExtractWithLlm
+      .mockResolvedValueOnce({
+        events: [],
+        usage: { inputTokens: 50, outputTokens: 10 },
+      })
+      .mockResolvedValueOnce({
+        events: [METALLICA_EVENT],
+        usage: { inputTokens: 100, outputTokens: 50 },
+      })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    expect(mockFetchPageHttp).toHaveBeenCalled()
+    expect(mockFetchPage).toHaveBeenCalled()
+
+    const savedVenue = stores.venues.find((vv) => vv.id === venue.id)
+    expect(savedVenue?.crawlMode).toBe('browser')
+  })
+
+  it('auto-detect: falls back to browser and saves crawlMode=browser when HTTP fetch throws', async () => {
+    const venue = seedVenue({ crawlMode: null })
+    mockFetchPageHttp.mockRejectedValue(new Error('network error'))
+    mockFetchPage.mockResolvedValue(FETCH_RESULT)
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    expect(mockFetchPage).toHaveBeenCalled()
+
+    const savedVenue = stores.venues.find((vv) => vv.id === venue.id)
+    expect(savedVenue?.crawlMode).toBe('browser')
+  })
+
+  it('forced http: does not fall back to browser when HTTP returns no events', async () => {
+    const venue = seedVenue({ crawlMode: 'http' })
+    const emptyHtml = '<html><body>No events</body></html>'
+    mockFetchPageHttp.mockResolvedValue({
+      html: emptyHtml,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [],
+      usage: { inputTokens: 50, outputTokens: 10 },
+    })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    expect(mockFetchPage).not.toHaveBeenCalled()
+  })
+
+  it('forced http: propagates fetch errors without falling back', async () => {
+    const venue = seedVenue({ crawlMode: 'http' })
+    mockFetchPageHttp.mockRejectedValue(new Error('timeout'))
+
+    const result = await crawlVenue(venue.id, mockBrowser)
+
+    expect(result.status).toBe('failed')
+    expect(mockFetchPage).not.toHaveBeenCalled()
+  })
+
+  it('does not overwrite a stored crawlMode on subsequent crawls', async () => {
+    const venue = seedVenue({ crawlMode: 'http' })
+    mockFetchPageHttp.mockResolvedValue(FETCH_RESULT)
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const savedVenue = stores.venues.find((vv) => vv.id === venue.id)
+    expect(savedVenue?.crawlMode).toBe('http')
   })
 })

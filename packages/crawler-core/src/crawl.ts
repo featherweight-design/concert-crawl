@@ -11,7 +11,12 @@ import {
 import type { CrawlRun } from '@concert-crawl/db'
 import { isAllowed } from './lib/robots.js'
 import { sendCrawlFailureEmail } from './lib/email.js'
-import { fetchPage, CrawlFetchError } from './lib/fetcher.js'
+import {
+  fetchPage,
+  fetchPageHttp,
+  CrawlFetchError,
+  type FetchResult,
+} from './lib/fetcher.js'
 import { extractJsonLd } from './lib/extractors/json-ld.js'
 import { extractWithLlm } from './lib/extractors/llm.js'
 import { calculateCost } from './lib/cost.js'
@@ -19,6 +24,26 @@ import { hashPage, hashEvent } from './lib/hash.js'
 import type { NormalizedEvent, TokenUsage } from './types.js'
 
 const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
+
+async function runExtraction(
+  html: string,
+  finalUrl: string,
+): Promise<{
+  normalizedEvents: NormalizedEvent[]
+  strategy: 'structured_data' | 'llm'
+  tokenUsage: TokenUsage | undefined
+}> {
+  let normalizedEvents: NormalizedEvent[] = extractJsonLd(html, finalUrl)
+  let strategy: 'structured_data' | 'llm' = 'structured_data'
+  let tokenUsage: TokenUsage | undefined
+  if (normalizedEvents.length === 0) {
+    strategy = 'llm'
+    const llmResult = await extractWithLlm(html, finalUrl)
+    normalizedEvents = llmResult.events
+    tokenUsage = llmResult.usage
+  }
+  return { normalizedEvents, strategy, tokenUsage }
+}
 
 export async function crawlVenue(
   venueId: string,
@@ -74,13 +99,48 @@ export async function crawlVenue(
   }
 
   try {
-    const { html, httpStatus, finalUrl } = await fetchPage(
-      venue.websiteUrl,
-      browser,
-      venue.crawlDelayMs,
-      venue.crawlWaitUntil,
-      venue.crawlWaitForSelector ?? undefined,
-    )
+    // Determine fetch strategy and execute
+    let fetchResult: FetchResult
+    let resolvedMode: 'http' | 'browser'
+
+    if (venue.crawlMode === 'browser') {
+      fetchResult = await fetchPage(
+        venue.websiteUrl,
+        browser,
+        venue.crawlDelayMs,
+        venue.crawlWaitUntil,
+        venue.crawlWaitForSelector ?? undefined,
+      )
+      resolvedMode = 'browser'
+    } else {
+      // crawlMode is 'http' or null (auto-detect: HTTP first)
+      let httpResult: FetchResult | null = null
+      try {
+        httpResult = await fetchPageHttp(venue.websiteUrl, venue.crawlDelayMs)
+      } catch (httpErr) {
+        if (venue.crawlMode === 'http') {
+          throw httpErr // forced HTTP — no browser fallback
+        }
+        // auto-detect: HTTP failed, will fall through to browser below
+      }
+
+      if (httpResult !== null) {
+        fetchResult = httpResult
+        resolvedMode = 'http'
+      } else {
+        // auto-detect: HTTP threw — fall back to browser
+        fetchResult = await fetchPage(
+          venue.websiteUrl,
+          browser,
+          venue.crawlDelayMs,
+          venue.crawlWaitUntil,
+          venue.crawlWaitForSelector ?? undefined,
+        )
+        resolvedMode = 'browser'
+      }
+    }
+
+    const { html, httpStatus, finalUrl } = fetchResult
 
     const pageHash = hashPage(html)
 
@@ -125,23 +185,36 @@ export async function crawlVenue(
         .set({
           lastCrawledAt: new Date(),
           consecutiveFailures: 0,
+          ...(venue.crawlMode === null ? { crawlMode: resolvedMode } : {}),
           updatedAt: new Date(),
         })
         .where(eq(venues.id, venueId))
       return crawlRun
     }
 
-    // Structured data first — LLM fallback only when needed
-    let normalizedEvents: NormalizedEvent[] = extractJsonLd(html, finalUrl)
-    let strategy: 'structured_data' | 'llm' = 'structured_data'
-    let tokenUsage: TokenUsage | undefined
+    // Extract events; if auto-detect and HTTP returned no events, fall back to browser
+    let extraction = await runExtraction(html, finalUrl)
 
-    if (normalizedEvents.length === 0) {
-      strategy = 'llm'
-      const llmResult = await extractWithLlm(html, finalUrl)
-      normalizedEvents = llmResult.events
-      tokenUsage = llmResult.usage
+    if (
+      venue.crawlMode === null &&
+      resolvedMode === 'http' &&
+      extraction.normalizedEvents.length === 0
+    ) {
+      const browserResult = await fetchPage(
+        venue.websiteUrl,
+        browser,
+        venue.crawlDelayMs,
+        venue.crawlWaitUntil,
+        venue.crawlWaitForSelector ?? undefined,
+      )
+      extraction = await runExtraction(
+        browserResult.html,
+        browserResult.finalUrl,
+      )
+      resolvedMode = 'browser'
     }
+
+    const { normalizedEvents, strategy, tokenUsage } = extraction
 
     // Upsert events — insert on first crawl, update mutable fields on re-crawl
     let eventsInserted = 0
@@ -323,6 +396,7 @@ export async function crawlVenue(
         lastCrawledAt: new Date(),
         consecutiveFailures: 0,
         blockedAt: null,
+        ...(venue.crawlMode === null ? { crawlMode: resolvedMode } : {}),
         updatedAt: new Date(),
       })
       .where(eq(venues.id, venueId))
