@@ -8,7 +8,6 @@ import {
   TH,
   TD,
 } from '@/components/admin/primitives/AdminTable'
-import { AdminButton } from '@/components/admin/primitives/AdminButton'
 import { updateUserRole } from '@/lib/actions/admin-users'
 import type { Role } from '@concert-crawl/types'
 
