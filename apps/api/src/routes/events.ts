@@ -36,18 +36,7 @@ const listEventsSchema = z.object({
   venueSlug: z.string().optional(),
   search: z.string().max(200).optional(),
   filterPrice: z.enum(['under-25', '25-50', '50-plus', 'tbd']).optional(),
-  filterVibe: z
-    .enum([
-      'rock',
-      'indie',
-      'hip-hop',
-      'electronic',
-      'country',
-      'jazz',
-      'pop',
-      'metal',
-    ])
-    .optional(),
+  filterVibe: z.string().max(100).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   offset: z.coerce.number().int().min(0).default(0),
 })
@@ -180,6 +169,17 @@ eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
     success: true,
     data: { data: rows, total, limit, offset },
   })
+})
+
+// GET /v1/events/genres — distinct genres across all upcoming events
+eventsRouter.get('/genres', async (ctx) => {
+  const rows = await db.execute(
+    sql`SELECT DISTINCT unnest(genre) AS genre FROM ${events} WHERE status = 'upcoming' AND genre IS NOT NULL ORDER BY genre`,
+  )
+  const genres = Array.from(rows)
+    .map((row) => (row as Record<string, unknown>)['genre'])
+    .filter((genre): genre is string => typeof genre === 'string')
+  return ctx.json({ success: true, data: genres })
 })
 
 // GET /v1/events/:id — single event with venue, watching count, setlist

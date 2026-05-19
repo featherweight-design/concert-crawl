@@ -50,22 +50,19 @@ const PRICE_OPTIONS: FilterOption[] = [
   { value: 'tbd', label: 'Price TBD' },
 ]
 
-const VIBE_OPTIONS: FilterOption[] = [
-  { value: 'rock', label: 'Rock' },
-  { value: 'indie', label: 'Indie' },
-  { value: 'hip-hop', label: 'Hip-Hop' },
-  { value: 'electronic', label: 'Electronic' },
-  { value: 'country', label: 'Country' },
-  { value: 'jazz', label: 'Jazz' },
-  { value: 'pop', label: 'Pop' },
-  { value: 'metal', label: 'Metal' },
-]
-
 export const FILTER_ORDER: FilterKey[] = ['when', 'where', 'price', 'vibe']
+
+function genreLabel(genre: string): string {
+  return genre
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join('-')
+}
 
 export function getFilterOptions(
   key: FilterKey,
   venues: VenuePublic[],
+  genres: string[] = [],
 ): FilterOption[] {
   if (key === 'where') {
     return venues
@@ -77,7 +74,7 @@ export function getFilterOptions(
 
   if (key === 'when') return WHEN_OPTIONS
   if (key === 'price') return PRICE_OPTIONS
-  return VIBE_OPTIONS
+  return genres.map((genre) => ({ value: genre, label: genreLabel(genre) }))
 }
 
 export function getActiveFilterCount(
@@ -90,8 +87,10 @@ export function getActiveFilterLabel(
   key: FilterKey,
   value: string,
   venues: VenuePublic[],
+  genres: string[] = [],
 ): string | null {
-  const match = getFilterOptions(key, venues).find(
+  if (key === 'vibe') return genreLabel(value)
+  const match = getFilterOptions(key, venues, genres).find(
     (option) => option.value === value,
   )
   return match?.label ?? null

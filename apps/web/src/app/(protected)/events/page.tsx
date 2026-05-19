@@ -69,6 +69,12 @@ async function fetchVenues(token: string | null): Promise<VenuePublic[]> {
     : publicApiClient.get<VenuePublic[]>('/v1/venues')
 }
 
+async function fetchGenres(token: string | null): Promise<string[]> {
+  return token
+    ? apiClient.get<string[]>('/v1/events/genres', token)
+    : publicApiClient.get<string[]>('/v1/events/genres')
+}
+
 export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   const params = await searchParams
   const view = params['view'] === 'cal' ? 'cal' : 'list'
@@ -160,13 +166,14 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   // Calendar fetches a bounded week — use the API max (100) so all shows in the
   // week are returned. List view uses PAGE_LIMIT and paginates client-side.
   const calendarLimit = 100
-  const [eventsResult, venues, watchedShows] = await Promise.all([
+  const [eventsResult, venues, genres, watchedShows] = await Promise.all([
     fetchEvents(
       fetchParams,
       token,
       view === 'cal' ? calendarLimit : PAGE_LIMIT,
     ),
     fetchVenues(token),
+    fetchGenres(token).catch(() => []),
     watchedShowsPromise,
   ])
 
@@ -212,7 +219,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
         {/* Filter bar */}
         <div className="mb-5">
           <Suspense>
-            <FilterBar venues={venues} />
+            <FilterBar venues={venues} genres={genres} />
           </Suspense>
         </div>
 

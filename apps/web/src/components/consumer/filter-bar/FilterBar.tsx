@@ -17,6 +17,7 @@ import {
 
 interface FilterBarProps {
   venues: VenuePublic[]
+  genres?: string[]
   className?: string
 }
 
@@ -78,7 +79,7 @@ function IconChevDown({ size = 11 }: { size?: number }) {
   )
 }
 
-export function FilterBar({ venues, className }: FilterBarProps) {
+export function FilterBar({ venues, genres = [], className }: FilterBarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -154,7 +155,7 @@ export function FilterBar({ venues, className }: FilterBarProps) {
 
   const activeDef = openFilterKey ? FILTER_DEFS[openFilterKey] : null
   const activeOptions = openFilterKey
-    ? getFilterOptions(openFilterKey, venues)
+    ? getFilterOptions(openFilterKey, venues, genres)
     : []
   const activeValue = openFilterKey ? (filterValues[openFilterKey] ?? '') : ''
 
@@ -269,7 +270,7 @@ export function FilterBar({ venues, className }: FilterBarProps) {
         {FILTER_ORDER.map((key) => {
           const value = filterValues[key] ?? ''
           const activeLabel = value
-            ? getActiveFilterLabel(key, value, venues)
+            ? getActiveFilterLabel(key, value, venues, genres)
             : null
           const displayLabel = activeLabel ?? FILTER_DEFS[key].placeholder
           const isActive = Boolean(value)
