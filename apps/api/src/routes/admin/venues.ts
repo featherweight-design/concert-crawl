@@ -43,7 +43,16 @@ const createVenueSchema = z.object({
     ])
     .nullable()
     .optional(),
-  address: z.string().max(500).nullable().optional(),
+  address: z
+    .string()
+    .max(500)
+    .nullable()
+    .optional()
+    .transform((val) => {
+      if (val == null) return val
+      const trimmed = val.trim()
+      return trimmed === '' ? null : trimmed
+    }),
 })
 
 const updateVenueSchema = createVenueSchema.partial().extend({
