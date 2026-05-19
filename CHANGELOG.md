@@ -1,3 +1,16 @@
+# [1.26.0](https://github.com/HartiganHM/concert-crawl/compare/v1.25.1...v1.26.0) (2026-05-19)
+
+
+### Bug Fixes
+
+* **test:** add matchingEventId to VenueResult fixtures in SearchPage tests ([457fe61](https://github.com/HartiganHM/concert-crawl/commit/457fe61fb04e9bf9ef8a532b7aca6c83f5236dcc))
+* **venue:** move highlight keyframes to globals.css, honor prefers-reduced-motion ([8033114](https://github.com/HartiganHM/concert-crawl/commit/803311464db3fa14d812f52fef6fe482320f2330))
+
+
+### Features
+
+* **search:** venue deep-link from artist search with highlight scroll ([f5937cf](https://github.com/HartiganHM/concert-crawl/commit/f5937cf22f05d51e82dd16417007d337e819c577)), closes [#402](https://github.com/HartiganHM/concert-crawl/issues/402)
+
 ## [1.25.1](https://github.com/HartiganHM/concert-crawl/compare/v1.25.0...v1.25.1) (2026-05-19)
 
 
