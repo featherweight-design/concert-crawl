@@ -1,3 +1,10 @@
+## [1.24.2](https://github.com/HartiganHM/concert-crawl/compare/v1.24.1...v1.24.2) (2026-05-19)
+
+
+### Bug Fixes
+
+* **browse:** use limit=100 for calendar week fetch to prevent missing shows ([4111dbe](https://github.com/HartiganHM/concert-crawl/commit/4111dbef1183795ca92e5a27f495628a8115a60e)), closes [#397](https://github.com/HartiganHM/concert-crawl/issues/397)
+
 ## [1.24.1](https://github.com/HartiganHM/concert-crawl/compare/v1.24.0...v1.24.1) (2026-05-19)
 
 
