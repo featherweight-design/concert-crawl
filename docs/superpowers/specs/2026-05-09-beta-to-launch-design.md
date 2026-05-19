@@ -223,7 +223,7 @@ Features that make users share the app or return to it more often. Not algorithm
 | **Venue passport card** | Per-venue attended show recap card ("10 shows at Red Rocks"). Uses venue identity art (generative, on-brand) + typographic layout listing artists, show count, date range. Issue #99. Design alongside Concert passport — same visual language. | Launch |
 | **Artist images via Spotify treatment** | Platform-level Spotify Client Credentials API for artist photos + graphic treatment overlay (pop-art style over licensed image). No user OAuth required. Ships after Spotify sync is proven. Decided 2026-05-09: generative art stays through launch; this is next step for artist imagery. | Post-launch |
 | **Setlist preview** | Most recent tour setlist via Setlist.fm API (free, no approval). Collapsed by default in Event Detail. Degrades gracefully if no data. | Launch |
-| **Venue first-timer guide** | Static per-venue card: parking, entry policy, age restriction, bag rules, "bring cash or not", doors-to-show gap. Editorial, not crawled. Red Rocks especially. | Launch |
+| **Venue first-timer guide** | Per-venue info card: parking, entry policy, age restriction, bag rules, "bring cash or not", doors-to-show gap. Crawl-first via Haiku extraction from the venue's "Plan Your Visit" page, refreshed periodically. Admin reviews crawled output before it surfaces to users. Editorial notes field per venue for brand voice and local tips the crawler won't find (e.g. "Red Rocks altitude is brutal — drink water before doors"). Crawled data + editorial note render together; editorial always wins on conflict. Requires `venue_info` data structure + admin editor UI. Red Rocks especially. | Launch |
 | **Support act spotlight** | Surface the opener prominently — same card weight as headliner. How people discover new artists. | Launch |
 | **"Last time in Denver"** | When did this artist last play a show in our events database. Derived from crawl history. City from `user_profiles.city`, defaults to Denver. | Launch |
 | **Concert Roulette** | One random upcoming Denver show, shuffle-style. "I'm feeling lucky." No algorithm. Hold as a surprise — don't tease. | Post-launch |
@@ -254,19 +254,33 @@ Status key: ✅ Complete · 🎨 Design handoff ready, eng pending · 🔲 Not s
 | # | Feature | Design | Eng | Notes |
 |---|---|---|---|---|
 | 1 | **Event Detail v2** | ✅ `design/design_handoff_event_detail_v2/` | ✅ PRs #205, #329 | Price trail, submit-a-price, setlist stub, "who else is watching" |
-| 2 | **Shareable show cards** | ✅ `design/design_handoff_shareable_cards/` | 🔲 Not started | Riso Poster only; 9:16 / 1:1 / link preview; IdentityArt-based; eng target beta week 5 (Jul 14–20) |
-| 3 | **Monetization upgrade flow** | 🔲 Not started | 🔲 Not started | Tier comparison, payment modal, trial CTA, Founder urgency; eng target beta week 3 (Jun 30–Jul 6) |
-| 4 | **Concert history / passport view** | 🔲 Not started | 🔲 Not started | Empty state is primary UX — no import/backfill at launch; eng target beta week 4 (Jul 7–13) |
+| 2 | **Trust chrome** | 🔲 Not started | 🔲 Not started | TrustMark, VerifiedStamp, SourceLink — issue #96; eng target beta wk 2 (Jun 23–29) |
+| 3 | **404 page** | 🔲 Not started | 🔲 Not started | Eng target beta wk 2 (Jun 23–29) |
+| 4 | **Monetization upgrade flow + badges** | 🔲 Not started | 🔲 Not started | Tier comparison, payment modal, trial CTA, Founder urgency; role badges (Admin/Promoter/Beta) + cosmetic tier badges (Supporter/Founder); voluntary support state for role-holders; eng target beta wk 3 (Jun 30–Jul 6) |
+| 5 | **Concert history / passport view** | 🔲 Not started | 🔲 Not started | Empty state is primary UX — no import/backfill at launch; eng target beta wk 4 (Jul 7–13) |
+| 6 | **Shareable show cards** | ✅ `design/design_handoff_shareable_cards/` | 🔲 Not started | Riso Poster only; 9:16 / 1:1 / link preview; IdentityArt-based; eng target beta wk 5 (Jul 14–20) |
+| 7 | **"Who else is watching"** | 🔲 Not started | 🔲 Not started | Aggregate count on event detail — number only, no names; eng target beta wk 5 (Jul 14–20) |
+| 8 | **Spotify sync connect flow** | 🔲 Not started | 🔲 Not started | Clerk OAuth connect screen; eng target beta wk 7 (Jul 28–Aug 3) |
 
 ### Launch bucket (needed before public launch)
 
 | # | Feature | Design | Eng | Notes |
 |---|---|---|---|---|
-| 5 | **Artist following UI** | 🔲 Not started | 🔲 Not started | Follow button on artist name; distinct from Watching heart; touches event card, event detail, venue page |
-| 6 | **Venue first-timer guide surface** | 🔲 Not started | 🔲 Not started | Static content card on venue profile |
-| 7 | **Notification preferences settings** | 🔲 Not started | 🔲 Not started | Per-artist instant vs. digest, 60-day threshold toggle, delivery time preference |
-| 8 | **"Last time in Denver" treatment** | 🔲 Not started | 🔲 Not started | How does this data point appear on event detail / artist surfaces? |
-| 9 | **Support act spotlight treatment** | 🔲 Not started | 🔲 Not started | Opener card weight and placement |
+| 9 | **Artist following UI** | 🔲 Not started | 🔲 Not started | Follow button on artist name; distinct from Watching heart; event card + detail + venue page |
+| 10 | **Venue first-timer guide surface** | 🔲 Not started | 🔲 Not started | Crawl-first; editorial notes layer; admin review UI; eng target beta wk 6 (Jul 21–27) |
+| 11 | **Notification preferences settings** | 🔲 Not started | 🔲 Not started | Per-artist instant vs. digest, 60-day threshold toggle, delivery time preference |
+| 12 | **"Last time in Denver" treatment** | 🔲 Not started | 🔲 Not started | How does this data point appear on event detail / artist surfaces? |
+| 13 | **Support act spotlight treatment** | 🔲 Not started | 🔲 Not started | Opener card weight and placement |
+| 14 | **Alert templates (new show + price drop)** | 🔲 Not started | 🔲 Not started | Email (Resend) + PWA push notification; two alert types with distinct voice |
+| 15 | **Concert passport** | 🔲 Not started | 🔲 Not started | Visual stamp grid of attended shows; designed to screenshot and share; same visual language as venue passport |
+| 16 | **Venue passport card** | 🔲 Not started | 🔲 Not started | Per-venue recap ("10 shows at Red Rocks"); typographic + venue identity art; issue #99; design alongside Concert passport |
+
+### Post-launch bucket
+
+| # | Feature | Design | Eng | Notes |
+|---|---|---|---|---|
+| 17 | **Concert Roulette** | 🔲 Not started | 🔲 Not started | Shuffle UI; "I'm feeling lucky"; hold as a surprise — don't tease |
+| 18 | **Artist images via Spotify treatment** | 🔲 Not started | 🔲 Not started | Pop-art graphic overlay on licensed artist photos; no user OAuth; ships after Spotify sync proven |
 
 ---
 
