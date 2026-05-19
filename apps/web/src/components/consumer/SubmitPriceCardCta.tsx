@@ -58,7 +58,7 @@ export function SubmitPriceCardCta({
               letterSpacing: '-0.005em',
             }}
           >
-            Two confirms moves a community price out of pending.
+            Two confirms move a community price out of pending.
           </span>
         </div>
         <span

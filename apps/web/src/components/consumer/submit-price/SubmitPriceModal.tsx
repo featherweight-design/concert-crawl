@@ -104,12 +104,15 @@ export function SubmitPriceModal({
           { headers: { Authorization: `Bearer ${token}` } },
         )
         if (res.ok) {
-          const data = (await res.json()) as {
-            alreadySubmitted: boolean
-            userSubmission: SubmissionWithMeta | null
+          const body = (await res.json()) as {
+            success: boolean
+            data: {
+              alreadySubmitted: boolean
+              userSubmission: SubmissionWithMeta | null
+            }
           }
-          if (data.alreadySubmitted && data.userSubmission) {
-            setExistingSubmission(data.userSubmission)
+          if (body.data.alreadySubmitted && body.data.userSubmission) {
+            setExistingSubmission(body.data.userSubmission)
             setModalState('alreadySubmitted')
             return
           }

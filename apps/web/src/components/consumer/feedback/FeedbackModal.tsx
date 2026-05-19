@@ -179,6 +179,12 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     </div>
   ) : undefined
 
+  const mobileFooter = showForm ? (
+    <SubmitButton loading={state === 'loading'} onClick={handleSubmit}>
+      Send →
+    </SubmitButton>
+  ) : undefined
+
   return (
     <ModalShell
       open={open}
@@ -187,6 +193,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
       sheetHeight={state === 'success' || state === 'error' ? 'short' : 'tall'}
       header={header}
       footer={footer}
+      mobileFooter={mobileFooter}
     >
       <div
         style={{

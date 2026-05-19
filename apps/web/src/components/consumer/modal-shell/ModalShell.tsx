@@ -8,6 +8,7 @@ interface ModalShellProps {
   ariaLabel: string
   header: React.ReactNode
   footer?: React.ReactNode
+  mobileFooter?: React.ReactNode
   children: React.ReactNode
   sheetHeight?: 'tall' | 'short'
 }
@@ -18,6 +19,7 @@ export function ModalShell({
   ariaLabel,
   header,
   footer,
+  mobileFooter,
   children,
   sheetHeight = 'tall',
 }: ModalShellProps) {
@@ -114,7 +116,7 @@ export function ModalShell({
           >
             {children}
           </div>
-          {footer && (
+          {(mobileFooter ?? footer) && (
             <div
               style={{
                 flexShrink: 0,
@@ -123,7 +125,7 @@ export function ModalShell({
                 background: 'var(--bg-elevated)',
               }}
             >
-              {footer}
+              {mobileFooter ?? footer}
             </div>
           )}
         </div>

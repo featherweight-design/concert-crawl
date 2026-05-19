@@ -41,7 +41,10 @@ vi.mock('@/lib/sp-policy', () => ({
 // Default: no existing submission
 global.fetch = vi.fn().mockResolvedValue({
   ok: true,
-  json: async () => ({ alreadySubmitted: false, userSubmission: null }),
+  json: async () => ({
+    success: true,
+    data: { alreadySubmitted: false, userSubmission: null },
+  }),
 })
 
 import { SubmitPriceModal } from './SubmitPriceModal'
@@ -91,7 +94,10 @@ describe('SubmitPriceModal — success state', () => {
       if (callCount === 1) {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ alreadySubmitted: false, userSubmission: null }),
+          json: async () => ({
+            success: true,
+            data: { alreadySubmitted: false, userSubmission: null },
+          }),
         })
       }
       return Promise.resolve({
@@ -118,7 +124,10 @@ describe('SubmitPriceModal — error state (#398)', () => {
       if (callCount === 1) {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ alreadySubmitted: false, userSubmission: null }),
+          json: async () => ({
+            success: true,
+            data: { alreadySubmitted: false, userSubmission: null },
+          }),
         })
       }
       return Promise.resolve({
@@ -148,7 +157,10 @@ describe('SubmitPriceModal — error state (#398)', () => {
       if (callCount === 1) {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ alreadySubmitted: false, userSubmission: null }),
+          json: async () => ({
+            success: true,
+            data: { alreadySubmitted: false, userSubmission: null },
+          }),
         })
       }
       return Promise.resolve({
@@ -174,13 +186,16 @@ describe('SubmitPriceModal — alreadySubmitted state', () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        alreadySubmitted: true,
-        userSubmission: {
-          id: 'sub-1',
-          priceMin: 45,
-          priceMax: 75,
-          tier: 'GA',
-          vendor: 'AXS',
+        success: true,
+        data: {
+          alreadySubmitted: true,
+          userSubmission: {
+            id: 'sub-1',
+            priceMin: 45,
+            priceMax: 75,
+            tier: 'GA',
+            vendor: 'AXS',
+          },
         },
       }),
     })
@@ -199,7 +214,10 @@ describe('SubmitPriceModal — alreadySubmitted state', () => {
       if (callCount === 1) {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ alreadySubmitted: false, userSubmission: null }),
+          json: async () => ({
+            success: true,
+            data: { alreadySubmitted: false, userSubmission: null },
+          }),
         })
       }
       return Promise.resolve({
