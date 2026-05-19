@@ -9,7 +9,9 @@ import type { Role } from '@concert-crawl/types'
 // Using Zod here avoids type-casting and catches malformed claims at runtime.
 const claimsSchema = z.object({
   metadata: z
-    .object({ role: z.enum(['admin', 'sub_admin', 'user']) })
+    .object({
+      role: z.enum(['admin', 'promoter', 'beta', 'sub_admin', 'user']),
+    })
     .optional(),
 })
 

@@ -55,6 +55,7 @@ export function SettingsRoute({ profile, submissions }: SettingsRouteProps) {
             handle={profile.handle}
             avatarColor={profile.avatarColor}
             displayRole={profile.displayRole}
+            roleBadge={profile.roleBadge}
             city={profile.city}
             joined={profile.joined}
             cred={profile.cred}

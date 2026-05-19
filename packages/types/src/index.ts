@@ -1,13 +1,32 @@
 // User roles — mirrors Clerk publicMetadata.role
-export type Role = 'admin' | 'sub_admin' | 'user'
+// Role always takes precedence over plan in access checks:
+//   admin/promoter/beta/sub_admin get full premium access regardless of subscription.
+export type Role = 'admin' | 'promoter' | 'beta' | 'sub_admin' | 'user'
 
 // Ordered lowest → highest privilege. Used for role comparison across API and web.
-export const ROLE_HIERARCHY: readonly Role[] = ['user', 'sub_admin', 'admin']
+export const ROLE_HIERARCHY: readonly Role[] = [
+  'user',
+  'beta',
+  'promoter',
+  'sub_admin',
+  'admin',
+]
+
+// Roles that grant full premium access independent of subscription plan
+export const PREMIUM_ROLES: readonly Role[] = [
+  'admin',
+  'sub_admin',
+  'promoter',
+  'beta',
+]
 
 // Type guard — use instead of casting when reading role from external sources (e.g. Clerk metadata)
 export function isRole(value: unknown): value is Role {
   return ROLE_HIERARCHY.includes(value as Role)
 }
+
+// Badge displayed in ProfileHero / settings for privileged role-holders; null for regular users
+export type RoleBadge = 'admin' | 'promoter' | 'beta' | 'staff'
 
 // Standard API response envelope
 export type ApiResponse<T> =
@@ -342,6 +361,7 @@ export interface UserProfileResponse {
   theme: UserTheme
   plan: UserPlan
   displayRole: DisplayRole
+  roleBadge: RoleBadge | null
   joined: string // formatted "Apr 2026"
   submissionCount: number
   cred: number // lifetime cumulative confirmed-submission count

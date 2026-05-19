@@ -17,12 +17,14 @@ import { createClerkClient } from '@clerk/backend'
 import type {
   UserPlan,
   DisplayRole,
+  RoleBadge,
   SubmissionDisplayStatus,
   UserProfileResponse,
   UserSubmissionItem,
   HandleAvailabilityResponse,
   Tier,
 } from '@concert-crawl/types'
+import { PREMIUM_ROLES } from '@concert-crawl/types'
 import { apiLogger } from '../lib/logger.js'
 
 export const usersRouter = new Hono()
@@ -134,6 +136,21 @@ usersRouter.get('/me', async (ctx) => {
   const displayRole: DisplayRole =
     authRole === 'admin' || authRole === 'sub_admin' ? 'staff' : 'fan'
 
+  // Role-first: privileged roles get full premium access regardless of subscription
+  const isPremiumRole = PREMIUM_ROLES.includes(
+    authRole as (typeof PREMIUM_ROLES)[number],
+  )
+  const plan: UserPlan = isPremiumRole ? 'founder' : derivePlan(sub)
+
+  const roleBadge: RoleBadge | null =
+    authRole === 'admin' || authRole === 'sub_admin'
+      ? 'admin'
+      : authRole === 'promoter'
+        ? 'promoter'
+        : authRole === 'beta'
+          ? 'beta'
+          : null
+
   const response: UserProfileResponse = {
     id: auth.userId,
     email,
@@ -141,8 +158,9 @@ usersRouter.get('/me', async (ctx) => {
     city: profile?.city ?? null,
     avatarColor: profile?.avatarColor ?? null,
     theme: profile?.theme ?? 'electric',
-    plan: derivePlan(sub),
+    plan,
     displayRole,
+    roleBadge,
     joined: formatJoined(
       clerkUser.createdAt ? new Date(clerkUser.createdAt) : new Date(),
     ),

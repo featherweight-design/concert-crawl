@@ -58,6 +58,13 @@ export const NAV: NavItem[] = [
     section: 'operations',
   },
   {
+    key: 'users',
+    label: 'Users',
+    href: '/admin/users',
+    iconName: 'Users',
+    section: 'account',
+  },
+  {
     key: 'settings',
     label: 'Settings',
     href: '/admin/settings',
