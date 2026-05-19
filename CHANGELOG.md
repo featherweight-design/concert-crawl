@@ -1,3 +1,10 @@
+# [1.25.0](https://github.com/HartiganHM/concert-crawl/compare/v1.24.2...v1.25.0) (2026-05-19)
+
+
+### Features
+
+* **nav:** replace inline ThemeToggle strip with MenuRow → inline swatch grid in UserMenu ([2420628](https://github.com/HartiganHM/concert-crawl/commit/24206288b8dd51c95dcfee7fe6daf6acc6ab4dd4)), closes [#380](https://github.com/HartiganHM/concert-crawl/issues/380)
+
 ## [1.24.2](https://github.com/HartiganHM/concert-crawl/compare/v1.24.1...v1.24.2) (2026-05-19)
 
 
