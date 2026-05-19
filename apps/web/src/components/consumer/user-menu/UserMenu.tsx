@@ -5,7 +5,10 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth, useUser, useClerk } from '@clerk/nextjs'
 import { Avatar } from '@/components/settings/Avatar'
-import { ThemeToggle } from '../theme-toggle'
+import { ThemeSwatch } from '@/theme/ThemeSwatch'
+import { THEMES, THEME_META, THEME_NAMES } from '@/theme/themes'
+import { MiniMark } from '@/theme/MiniMark'
+import { useTheme } from '@/theme'
 import { fetchMe } from '@/lib/users'
 import type { AvatarColor } from '@concert-crawl/types'
 
@@ -176,6 +179,97 @@ interface MenuBodyProps {
   avatarColor: AvatarColor | null
 }
 
+// ── Theme row with inline swatch grid ────────────────────────────────────
+
+function ThemeMenuRow() {
+  const { theme, setTheme } = useTheme()
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const activeTokens = THEMES[theme]
+  const activeMeta = THEME_META[theme]
+
+  return (
+    <>
+      <button
+        type="button"
+        aria-expanded={pickerOpen}
+        onClick={() => setPickerOpen((prev) => !prev)}
+        style={{
+          all: 'unset',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '12px 14px',
+          borderBottom: pickerOpen ? 'none' : '1px solid var(--border)',
+          width: '100%',
+          boxSizing: 'border-box',
+          transition: 'background 120ms',
+        }}
+        className="bg-transparent hover:bg-[var(--overlay-hover)]"
+      >
+        <span
+          style={{
+            flex: 1,
+            fontFamily: 'var(--font-ui)',
+            fontSize: 13.5,
+            fontWeight: 600,
+            color: 'var(--fg)',
+            letterSpacing: '-0.005em',
+          }}
+        >
+          Theme
+        </span>
+        <span
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            flexShrink: 0,
+          }}
+        >
+          <MiniMark tokens={activeTokens} size={18} />
+          <span
+            style={{
+              fontFamily: 'var(--font-ui)',
+              fontSize: 12,
+              fontWeight: 700,
+              color: 'var(--fg-muted)',
+              letterSpacing: '-0.005em',
+            }}
+          >
+            {activeMeta.label}
+          </span>
+          <ChevronIcon open={pickerOpen} />
+        </span>
+      </button>
+
+      {pickerOpen && (
+        <div
+          style={{
+            padding: '10px 14px 12px',
+            borderBottom: '1px solid var(--border)',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: 8,
+          }}
+        >
+          {THEME_NAMES.map((name) => (
+            <ThemeSwatch
+              key={name}
+              name={name}
+              active={theme === name}
+              onClick={() => {
+                setTheme(name)
+                setPickerOpen(false)
+              }}
+            />
+          ))}
+        </div>
+      )}
+    </>
+  )
+}
+
 // ── Menu body (shared between popover and sheet) ──────────────────────────
 
 function MenuBody({
@@ -276,14 +370,7 @@ function MenuBody({
 
       {/* App section */}
       <SectionLabel>App</SectionLabel>
-      <div
-        style={{
-          padding: '8px 14px 10px',
-          borderBottom: '1px solid var(--border)',
-        }}
-      >
-        <ThemeToggle />
-      </div>
+      <ThemeMenuRow />
       <MenuRow label="Settings" onClick={onSettings} last />
 
       {/* Admin section */}
@@ -594,6 +681,32 @@ function MenuRow({
     <div style={rowStyle} className={rowClass}>
       {inner}
     </div>
+  )
+}
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 12 12"
+      fill="none"
+      aria-hidden="true"
+      style={{
+        color: 'var(--fg-muted)',
+        transition: 'transform 150ms ease',
+        transform: open ? 'rotate(90deg)' : 'rotate(0deg)',
+        flexShrink: 0,
+      }}
+    >
+      <path
+        d="M4.5 3l3 3-3 3"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }
 
