@@ -94,6 +94,17 @@
   85%  { width: 80%;  opacity: 1; }
   100% { width: 80%;  opacity: 1; }
 }
+@keyframes ccEventHighlight {
+  0%   { background: var(--overlay-hover); border-radius: 8px; }
+  60%  { background: var(--overlay-hover); border-radius: 8px; }
+  100% { background: transparent; border-radius: 8px; }
+}
+[data-highlighted="true"] {
+  animation: ccEventHighlight 2s ease forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-highlighted="true"] { animation: none; }
+}
 
 /* Onboarding responsive layout */
 .onboarding-mobile { display: flex; }
