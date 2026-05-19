@@ -6,7 +6,6 @@ import type { EventWithVenue, EventsListResponse } from '@concert-crawl/types'
 import { useEvents } from '@/lib/queries/use-events'
 import { useWatching } from '@/lib/queries/use-watching'
 import { EventCard } from '@/components/consumer/event-card/EventCard'
-import { cn } from '@/lib/utils'
 import { dateGroupLabel } from '@/components/consumer/definitions/lib'
 import { copy } from '@/components/consumer/definitions/copy'
 
