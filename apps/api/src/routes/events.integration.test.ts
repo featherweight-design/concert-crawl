@@ -394,8 +394,9 @@ describe('GET /v1/events — filterVibe', () => {
     expect(titles).toEqual(['Indie Rock Show', 'Pure Indie'])
   })
 
-  it('returns 400 for an invalid filterVibe value', async () => {
-    const res = await app.request('/v1/events?filterVibe=reggae')
+  it('returns 400 for a filterVibe value exceeding 100 characters', async () => {
+    const longGenre = 'a'.repeat(101)
+    const res = await app.request(`/v1/events?filterVibe=${longGenre}`)
     expect(res.status).toBe(400)
   })
 
