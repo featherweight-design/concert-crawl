@@ -161,16 +161,21 @@ export function filterWhenToDateRange(
   const sundayOffset = dow === 0 ? 0 : 7 - dow
   const satOffset = dow === 0 ? -1 : 6 - dow
 
+  const isWeekend = dow === 0 || dow === 6
+
   switch (value) {
     case 'tonight':
       return { from: today, to: today }
     case 'this-week':
       return {
-        from: isoDate(noon, mondayOffset),
+        from: today,
         to: isoDate(noon, sundayOffset),
       }
     case 'this-weekend':
-      return { from: isoDate(noon, satOffset), to: isoDate(noon, sundayOffset) }
+      return {
+        from: isWeekend ? today : isoDate(noon, satOffset),
+        to: isoDate(noon, sundayOffset),
+      }
     case 'next-week':
       return {
         from: isoDate(noon, mondayOffset + 7),
