@@ -106,7 +106,7 @@ export default async function EventDetailPage({
           style={{ background: 'linear-gradient(transparent, var(--bg))' }}
           aria-hidden
         />
-        {/* Mobile: floating back button */}
+        {/* Floating back button */}
         <Link
           href="/events"
           aria-label="Back to browse"
@@ -495,12 +495,12 @@ function InfoRow({
           {label}
         </p>
         <p
-          className="mt-[1px] text-[14px] font-semibold tracking-[-0.01em]"
+          className="mt-[1px] flex min-w-0 items-center gap-0.5 text-[14px] font-semibold tracking-[-0.01em]"
           style={{ color: signal ? 'var(--signal)' : 'var(--fg)' }}
         >
           {href ? (
-            <span className="inline-flex items-center gap-0.5">
-              {value}
+            <>
+              <span className="min-w-0 truncate">{value}</span>
               <svg
                 width="14"
                 height="14"
@@ -517,7 +517,7 @@ function InfoRow({
                   strokeLinejoin="round"
                 />
               </svg>
-            </span>
+            </>
           ) : (
             value
           )}
