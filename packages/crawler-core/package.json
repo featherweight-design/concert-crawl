@@ -17,7 +17,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.95.2",
+    "@anthropic-ai/sdk": "^0.97.0",
     "@concert-crawl/db": "workspace:*",
     "@concert-crawl/logger": "workspace:*",
     "@concert-crawl/types": "workspace:*",
@@ -28,7 +28,7 @@
   },
   "devDependencies": {
     "@concert-crawl/config": "workspace:*",
-    "@types/node": "^25.7.0",
+    "@types/node": "^25.9.0",
     "typescript": "^5.0.0",
     "vitest": "^2.0.0"
   }
