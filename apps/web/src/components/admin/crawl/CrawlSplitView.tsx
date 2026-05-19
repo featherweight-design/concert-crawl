@@ -245,6 +245,7 @@ export const CrawlSplitView = ({
   const triggerCrawl = useTriggerVenueCrawl()
   const { data: venueRuns = [], isLoading: venueRunsLoading } =
     useAdminVenueRuns(selectedId)
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
 
   // Sync selectedId when IssuesBanner navigates to a new venueId via router.push
   useEffect(() => {
@@ -252,6 +253,11 @@ export const CrawlSplitView = ({
       setSelectedId(initialSelectedId)
     }
   }, [initialSelectedId])
+
+  // Reset run selection when the user switches venues
+  useEffect(() => {
+    setSelectedRunId(null)
+  }, [selectedId])
 
   // Close filter panel on outside click
   useEffect(() => {
@@ -316,7 +322,9 @@ export const CrawlSplitView = ({
 
   const selected = initialStatus.find((row) => row.venueId === selectedId)
   const activeRun =
-    (selectedId ? venueRuns[0] : null) ??
+    (selectedId
+      ? (venueRuns.find((run) => run.id === selectedRunId) ?? venueRuns[0])
+      : null) ??
     initialRuns.find((run) => run.venueId === selectedId) ??
     null
 
@@ -1066,6 +1074,8 @@ export const CrawlSplitView = ({
         runs={selectedId ? venueRuns : initialRuns}
         loading={venueRunsLoading}
         selectedVenueName={selected?.venueName ?? null}
+        selectedRunId={selectedId ? selectedRunId : null}
+        onSelectRun={selectedId ? setSelectedRunId : undefined}
       />
     </div>
   )
@@ -1075,10 +1085,14 @@ export const CrawlRunHistoryTable = ({
   runs: displayRuns,
   loading = false,
   selectedVenueName,
+  selectedRunId,
+  onSelectRun,
 }: {
   runs: CrawlRun[]
   loading?: boolean
   selectedVenueName?: string | null
+  selectedRunId?: string | null
+  onSelectRun?: (id: string) => void
 }) => {
   return (
     <div>
@@ -1147,7 +1161,11 @@ export const CrawlRunHistoryTable = ({
             </THead>
             <tbody>
               {displayRuns.map((run) => (
-                <TR key={run.id}>
+                <TR
+                  key={run.id}
+                  active={selectedRunId === run.id}
+                  onClick={onSelectRun ? () => onSelectRun(run.id) : undefined}
+                >
                   <TD mono color="var(--fg-muted)">
                     {shortRunId(run.id)}
                   </TD>
