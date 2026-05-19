@@ -5,6 +5,7 @@ import { SearchBar } from '../../../components/consumer/search/SearchBar'
 import { SearchDefaultState } from '../../../components/consumer/search/SearchDefaultState'
 import { SearchResultsState } from '../../../components/consumer/search/SearchResultsState'
 import { SearchEmptyState } from '../../../components/consumer/search/SearchEmptyState'
+import { SearchLoadingState } from '../../../components/consumer/search/SearchLoadingState'
 
 export default function SearchPage() {
   const {
@@ -15,6 +16,7 @@ export default function SearchPage() {
     popularEvents,
     artistResults,
     venueResults,
+    isLoading,
     navigateTo,
   } = useSearch()
 
@@ -47,14 +49,15 @@ export default function SearchPage() {
             onPickEvent={navigateTo}
           />
         )}
-        {query.trim() !== '' && hasResults && (
+        {query.trim() !== '' && isLoading && <SearchLoadingState />}
+        {query.trim() !== '' && !isLoading && hasResults && (
           <SearchResultsState
             artistResults={artistResults}
             venueResults={venueResults}
             onNavigateTo={navigateTo}
           />
         )}
-        {query.trim() !== '' && !hasResults && (
+        {query.trim() !== '' && !isLoading && !hasResults && (
           <SearchEmptyState query={query} />
         )}
       </div>

@@ -85,6 +85,10 @@
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
 
 /* Onboarding responsive layout */
 .onboarding-mobile { display: flex; }

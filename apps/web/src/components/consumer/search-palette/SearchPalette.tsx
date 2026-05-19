@@ -6,6 +6,7 @@ import { useSearch } from '../../../lib/search/useSearch'
 import { SearchDefaultState } from '../search/SearchDefaultState'
 import { SearchResultsState } from '../search/SearchResultsState'
 import { SearchEmptyState } from '../search/SearchEmptyState'
+import { SearchLoadingState } from '../search/SearchLoadingState'
 
 interface SearchPaletteProps {
   open: boolean
@@ -199,7 +200,10 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
               onPickEvent={search.navigateTo}
             />
           )}
-          {search.query.trim() !== '' && hasResults && (
+          {search.query.trim() !== '' && search.isLoading && (
+            <SearchLoadingState />
+          )}
+          {search.query.trim() !== '' && !search.isLoading && hasResults && (
             <SearchResultsState
               artistResults={search.artistResults}
               venueResults={search.venueResults}
@@ -214,7 +218,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
               }}
             />
           )}
-          {search.query.trim() !== '' && !hasResults && (
+          {search.query.trim() !== '' && !search.isLoading && !hasResults && (
             <SearchEmptyState query={search.query} onCtaClick={onClose} />
           )}
         </div>
