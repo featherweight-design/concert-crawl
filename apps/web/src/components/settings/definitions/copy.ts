@@ -63,6 +63,7 @@ export const SETTINGS_COPY = {
   seeAllSubmissions: (submissionCount: number) =>
     `See all ${submissionCount} →`,
   emailRow: 'Email',
+  connectedAccountRow: 'Connected Account',
   passwordRow: 'Password',
   clerkLinkLabel: 'Manage via Clerk →',
   watchlistRow: 'Saved shows',
