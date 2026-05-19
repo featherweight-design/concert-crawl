@@ -114,36 +114,36 @@ export function SubmissionList({
 
   async function handleConfirm(submissionId: string) {
     setConfirmingId(submissionId)
-    const token = await getToken()
-    if (!token) {
-      setConfirmingId(null)
-      return
-    }
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/v1/submissions/${submissionId}/confirm`,
-      {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    )
-    if (res.ok) {
-      const data = (await res.json()) as {
-        data: { confirms: number; status: SubmissionWithMeta['status'] }
-      }
-      setLocalSubmissions((prev) =>
-        prev.map((sub) =>
-          sub.id === submissionId
-            ? {
-                ...sub,
-                confirms: data.data.confirms,
-                status: data.data.status,
-                byYou: true,
-              }
-            : sub,
-        ),
+    try {
+      const token = await getToken()
+      if (!token) return
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/v1/submissions/${submissionId}/confirm`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        },
       )
+      if (res.ok) {
+        const data = (await res.json()) as {
+          data: { confirms: number; status: SubmissionWithMeta['status'] }
+        }
+        setLocalSubmissions((prev) =>
+          prev.map((sub) =>
+            sub.id === submissionId
+              ? {
+                  ...sub,
+                  confirms: data.data.confirms,
+                  status: data.data.status,
+                  byYou: true,
+                }
+              : sub,
+          ),
+        )
+      }
+    } finally {
+      setConfirmingId(null)
     }
-    setConfirmingId(null)
   }
 
   return (
@@ -155,7 +155,7 @@ export function SubmissionList({
           eventId={eventId}
           currentUserId={currentUserId}
           onConfirm={handleConfirm}
-          isConfirming={confirmingId === sub.id}
+          isConfirming={confirmingId !== null}
         />
       ))}
       {localSubmissions.length === 0 && (
