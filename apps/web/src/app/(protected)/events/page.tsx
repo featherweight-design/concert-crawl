@@ -38,6 +38,7 @@ interface BrowsePageProps {
 async function fetchEvents(
   params: Record<string, string | string[] | undefined>,
   token: string | null,
+  limit = PAGE_LIMIT,
 ): Promise<EventsListResponse> {
   const qs = new URLSearchParams()
   if (typeof params['search'] === 'string') qs.set('search', params['search'])
@@ -55,7 +56,7 @@ async function fetchEvents(
     qs.set('filterPrice', params['filterPrice'])
   if (typeof params['filterVibe'] === 'string')
     qs.set('filterVibe', params['filterVibe'])
-  qs.set('limit', String(PAGE_LIMIT))
+  qs.set('limit', String(limit))
   const url = `/v1/events?${qs.toString()}`
   return token
     ? apiClient.get<EventsListResponse>(url, token)
@@ -156,8 +157,15 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     ? fetchWatching(token).catch(() => [])
     : Promise.resolve([])
 
+  // Calendar fetches a bounded week — use the API max (100) so all shows in the
+  // week are returned. List view uses PAGE_LIMIT and paginates client-side.
+  const calendarLimit = 100
   const [eventsResult, venues, watchedShows] = await Promise.all([
-    fetchEvents(fetchParams, token),
+    fetchEvents(
+      fetchParams,
+      token,
+      view === 'cal' ? calendarLimit : PAGE_LIMIT,
+    ),
     fetchVenues(token),
     watchedShowsPromise,
   ])
