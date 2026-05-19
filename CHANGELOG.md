@@ -1,3 +1,17 @@
+# [1.28.0](https://github.com/HartiganHM/concert-crawl/compare/v1.27.2...v1.28.0) (2026-05-19)
+
+
+### Bug Fixes
+
+* **rbac:** api envelope, sub_admin select, role tests ([1ae05b7](https://github.com/HartiganHM/concert-crawl/commit/1ae05b757baf8cf084e5ccc8368593238f5173dd))
+* **rbac:** remove dead staff RoleBadge variant; fix profile badge gap ([46d6f86](https://github.com/HartiganHM/concert-crawl/commit/46d6f86cfed0d22450a05fde64e65663cd4b271c))
+* **rbac:** remove unused AdminButton import (lint) ([51e6b30](https://github.com/HartiganHM/concert-crawl/commit/51e6b3053b271a345de56e41b08a2fc61f16e1e2))
+
+
+### Features
+
+* **rbac:** role system, admin users UI, and role badge ([e07db2a](https://github.com/HartiganHM/concert-crawl/commit/e07db2a36d83170ba9c7658c059a3acfc3f0f6d4)), closes [#413](https://github.com/HartiganHM/concert-crawl/issues/413)
+
 ## [1.27.2](https://github.com/HartiganHM/concert-crawl/compare/v1.27.1...v1.27.2) (2026-05-19)
 
 
