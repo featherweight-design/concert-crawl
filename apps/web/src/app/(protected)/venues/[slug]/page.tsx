@@ -73,11 +73,11 @@ export default async function VenueProfilePage({
           style={{ background: 'linear-gradient(transparent, var(--bg))' }}
           aria-hidden
         />
-        {/* Mobile: floating back button */}
+        {/* Floating back button */}
         <Link
           href="/events"
           aria-label="Back to browse"
-          className="absolute left-3.5 top-14 z-10 flex h-9 w-9 items-center justify-center rounded-full sm:hidden"
+          className="absolute left-3.5 top-14 z-10 flex h-9 w-9 items-center justify-center rounded-full"
           style={{ background: 'var(--scrim)' }}
         >
           <svg
@@ -96,191 +96,107 @@ export default async function VenueProfilePage({
             />
           </svg>
         </Link>
-        {/* Desktop: breadcrumb */}
-        <div className="absolute bottom-4 left-6 hidden items-center gap-1.5 text-[13px] sm:flex">
-          <Link
-            href="/events"
-            className="flex items-center gap-1.5 text-fg-muted transition-colors hover:text-fg"
-          >
-            <svg
-              width="13"
-              height="13"
-              viewBox="0 0 16 16"
-              fill="none"
-              aria-hidden
-            >
-              <path
-                d="M11 4L5 8l6 4"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            Browse
-          </Link>
-          <span
-            className="text-fg-subtle"
-            style={{ fontFamily: 'var(--font-mono)', fontSize: '11px' }}
-          >
-            /
-          </span>
-          <span className="font-medium text-fg">{venue.name}</span>
-        </div>
       </div>
 
       {/* Content */}
-      <div className="relative -mt-5 flex-1 px-[18px] pb-10">
-        {/* Venue name */}
-        <h1
-          className="text-fg"
-          style={{
-            fontFamily: 'var(--font-ui)',
-            fontWeight: 900,
-            fontSize: 26,
-            letterSpacing: '-0.03em',
-            lineHeight: 1.1,
-            margin: 0,
-          }}
-        >
-          {venue.name}
-        </h1>
+      <div className="relative -mt-5 flex-1 pb-10">
+        <div className="mx-auto w-full max-w-[880px] px-[18px] sm:px-8">
+          {/* Venue name */}
+          <h1
+            className="text-fg"
+            style={{
+              fontFamily: 'var(--font-ui)',
+              fontWeight: 900,
+              fontSize: 26,
+              letterSpacing: '-0.03em',
+              lineHeight: 1.1,
+              margin: 0,
+            }}
+          >
+            {venue.name}
+          </h1>
 
-        {/* City + Directions */}
-        <div className="mt-1.5 flex items-center gap-2">
-          <span
-            className="text-fg-muted"
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: '10px',
-              letterSpacing: '0.04em',
-            }}
-          >
-            {venue.city}
-          </span>
-          <span className="opacity-40 text-fg-subtle">·</span>
-          <a
-            href={googleMapsUrl(venue.address ?? mapSearchQuery)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-signal"
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: '10px',
-              letterSpacing: '0.03em',
-            }}
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 14 14"
-              fill="none"
-              aria-hidden
+          {/* City + Directions */}
+          <div className="mt-1.5 flex items-center gap-2">
+            <span
+              className="text-fg-muted"
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '10px',
+                letterSpacing: '0.04em',
+              }}
             >
-              <path
-                d="M7 1l5.5 5.5L7 12"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M12.5 6.5H5a3.5 3.5 0 00-3.5 3.5v1"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
-            Directions
-          </a>
-        </div>
-
-        {/* Stats row */}
-        <div className="mt-3.5 flex gap-3 border-y border-border py-3">
-          <StatPill
-            label="Upcoming"
-            value={`${upcomingEvents.length} show${upcomingEvents.length !== 1 ? 's' : ''}`}
-            signal
-          />
-          <StatPill label="City" value={venue.city} />
-          <StatPill label="Website">
+              {venue.city}
+            </span>
+            <span className="opacity-40 text-fg-subtle">·</span>
             <a
-              href={venue.websiteUrl}
+              href={googleMapsUrl(venue.address ?? mapSearchQuery)}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-signal hover:underline"
+              className="inline-flex items-center gap-1 text-signal"
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '10px',
+                letterSpacing: '0.03em',
+              }}
             >
-              ↗
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                aria-hidden
+              >
+                <path
+                  d="M7 1l5.5 5.5L7 12"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M12.5 6.5H5a3.5 3.5 0 00-3.5 3.5v1"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </svg>
+              Directions
             </a>
-          </StatPill>
-        </div>
+          </div>
 
-        {/* Map */}
-        <div className="mt-5">
-          <MapPlaceholder
-            venueAddress={venue.address}
-            searchQuery={mapSearchQuery}
-          />
-        </div>
-
-        {/* Upcoming shows */}
-        <div className="mt-5">
-          <SectionHeader
-            title="Upcoming"
-            count={`${upcomingEvents.length} show${upcomingEvents.length !== 1 ? 's' : ''}`}
-          />
-
-          {upcomingEvents.length === 0 ? (
-            <EmptyState
-              state="no-data"
-              density="dense"
-              eyebrow={copy.venueEmptyEyebrow}
-              title={copy.venueEmptyTitle}
-              body={copy.venueNoShows}
+          {/* Map */}
+          <div className="mt-5">
+            <MapPlaceholder
+              venueAddress={venue.address}
+              searchQuery={mapSearchQuery}
             />
-          ) : (
-            <VenueEventList
-              events={upcomingEvents}
-              {...(highlight ? { highlightId: highlight } : {})}
+          </div>
+
+          {/* Upcoming shows */}
+          <div className="mt-5">
+            <SectionHeader
+              title="Upcoming"
+              count={`${upcomingEvents.length} show${upcomingEvents.length !== 1 ? 's' : ''}`}
             />
-          )}
+
+            {upcomingEvents.length === 0 ? (
+              <EmptyState
+                state="no-data"
+                density="dense"
+                eyebrow={copy.venueEmptyEyebrow}
+                title={copy.venueEmptyTitle}
+                body={copy.venueNoShows}
+              />
+            ) : (
+              <VenueEventList
+                events={upcomingEvents}
+                {...(highlight ? { highlightId: highlight } : {})}
+              />
+            )}
+          </div>
         </div>
       </div>
-    </div>
-  )
-}
-
-function StatPill({
-  label,
-  value,
-  signal = false,
-  children,
-}: {
-  label: string
-  value?: string
-  signal?: boolean
-  children?: React.ReactNode
-}) {
-  return (
-    <div className="flex flex-1 flex-col gap-0.5">
-      <span
-        className="uppercase text-fg-subtle"
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: '8px',
-          letterSpacing: '0.06em',
-        }}
-      >
-        {label}
-      </span>
-      {children ?? (
-        <span
-          className="text-[12px] font-bold tracking-[-0.01em]"
-          style={{ color: signal ? 'var(--signal)' : 'var(--fg)' }}
-        >
-          {value}
-        </span>
-      )}
     </div>
   )
 }
