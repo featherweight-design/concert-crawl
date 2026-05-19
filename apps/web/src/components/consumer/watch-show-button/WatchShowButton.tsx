@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
+import { Loader2 } from 'lucide-react'
 import { useWatching } from '@/lib/queries/use-watching'
 import { useWatchToggle } from '@/lib/queries/use-watch-toggle'
 
@@ -125,24 +126,38 @@ export function WatchShowButton({
             : '1px solid var(--border-strong)',
         }}
       >
-        <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden>
-          {isWatching ? (
-            <path
-              d="M2.5 6.5l2.5 2.5L9.5 4"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          ) : (
-            <path
-              d="M6 2.5v7M2.5 6h7"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-            />
-          )}
-        </svg>
+        {isPending ? (
+          <Loader2
+            size={10}
+            aria-hidden
+            style={{ animation: 'fbSpin 0.7s linear infinite' }}
+          />
+        ) : (
+          <svg
+            width="10"
+            height="10"
+            viewBox="0 0 12 12"
+            fill="none"
+            aria-hidden
+          >
+            {isWatching ? (
+              <path
+                d="M2.5 6.5l2.5 2.5L9.5 4"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            ) : (
+              <path
+                d="M6 2.5v7M2.5 6h7"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+            )}
+          </svg>
+        )}
         {isWatching ? 'Watching' : 'Watch this show'}
       </button>
 

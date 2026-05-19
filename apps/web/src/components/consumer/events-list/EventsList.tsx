@@ -136,18 +136,67 @@ export const EventsList = ({
         </div>
       )}
 
-      {hasNextPage && (
+      {isFetchingNextPage && (
+        <div className="mt-2 flex flex-col">
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <div
+              key={idx}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '12px 16px',
+                animation: `skeletonPulse 1.4s ease-in-out ${idx * 0.07}s infinite`,
+              }}
+            >
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 8,
+                  background: 'var(--surface-2)',
+                  flexShrink: 0,
+                }}
+              />
+              <div
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 6,
+                }}
+              >
+                <div
+                  style={{
+                    height: 13,
+                    width: '60%',
+                    borderRadius: 4,
+                    background: 'var(--surface-2)',
+                  }}
+                />
+                <div
+                  style={{
+                    height: 10,
+                    width: '40%',
+                    borderRadius: 4,
+                    background: 'var(--surface-2)',
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {hasNextPage && !isFetchingNextPage && (
         <div className="mt-8 flex justify-center pt-2">
           <button
             type="button"
             onClick={() => void fetchNextPage()}
-            disabled={isFetchingNextPage}
-            className={cn(
-              'inline-flex h-10 items-center justify-center rounded-md border border-border-strong bg-surface-2 px-4 text-[13px] font-bold text-signal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-1',
-              isFetchingNextPage && 'pointer-events-none opacity-60',
-            )}
+            className="inline-flex h-10 items-center justify-center rounded-md border border-border-strong bg-surface-2 px-4 text-[13px] font-bold text-signal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-1"
           >
-            {isFetchingNextPage ? 'Loading…' : copy.loadMore}
+            {copy.loadMore}
           </button>
         </div>
       )}

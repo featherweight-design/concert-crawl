@@ -16,11 +16,13 @@ function SubmissionCard({
   eventId,
   currentUserId,
   onConfirm,
+  isConfirming,
 }: {
   submission: SubmissionWithMeta
   eventId: string
   currentUserId: string | null
   onConfirm: (id: string) => void
+  isConfirming: boolean
 }) {
   const router = useRouter()
   const isOwn = currentUserId != null && submission.userId === currentUserId
@@ -78,10 +80,11 @@ function SubmissionCard({
         <div className="flex gap-3 pt-1 border-t border-border">
           {!submission.byYou && isPending && (
             <button
-              onClick={() => onConfirm(submission.id)}
-              className="text-xs text-signal underline"
+              onClick={() => !isConfirming && onConfirm(submission.id)}
+              disabled={isConfirming}
+              className="text-xs text-signal underline disabled:opacity-50 disabled:cursor-default"
             >
-              Confirm
+              {isConfirming ? 'Confirming…' : 'Confirm'}
             </button>
           )}
           <button
@@ -107,10 +110,15 @@ export function SubmissionList({
 }: SubmissionListProps) {
   const { getToken } = useAuth()
   const [localSubmissions, setLocalSubmissions] = useState(submissions)
+  const [confirmingId, setConfirmingId] = useState<string | null>(null)
 
   async function handleConfirm(submissionId: string) {
+    setConfirmingId(submissionId)
     const token = await getToken()
-    if (!token) return
+    if (!token) {
+      setConfirmingId(null)
+      return
+    }
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/v1/submissions/${submissionId}/confirm`,
       {
@@ -135,6 +143,7 @@ export function SubmissionList({
         ),
       )
     }
+    setConfirmingId(null)
   }
 
   return (
@@ -146,6 +155,7 @@ export function SubmissionList({
           eventId={eventId}
           currentUserId={currentUserId}
           onConfirm={handleConfirm}
+          isConfirming={confirmingId === sub.id}
         />
       ))}
       {localSubmissions.length === 0 && (
