@@ -1,12 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
-const { authState } = vi.hoisted(() => ({
+const { authState, clerkState } = vi.hoisted(() => ({
   authState: {
     current: null as {
       userId: string
       sessionClaims: { metadata?: { role?: string } }
     } | null,
   },
+  clerkState: { role: 'user' as string },
 }))
 
 vi.mock('@hono/clerk-auth', () => ({
@@ -15,15 +16,17 @@ vi.mock('@hono/clerk-auth', () => ({
   getAuth: () => authState.current,
 }))
 
-// Mock Clerk client — deleteUser and getUser
+// Mock Clerk client — getUser and deleteUser
 vi.mock('@clerk/backend', () => ({
   createClerkClient: () => ({
     users: {
-      getUser: vi.fn().mockResolvedValue({
-        emailAddresses: [{ emailAddress: 'test@example.com' }],
-        publicMetadata: { role: 'user' },
-        createdAt: new Date('2026-04-01').getTime(),
-      }),
+      getUser: vi.fn().mockImplementation(() =>
+        Promise.resolve({
+          emailAddresses: [{ emailAddress: 'test@example.com' }],
+          publicMetadata: { role: clerkState.role },
+          createdAt: new Date('2026-04-01').getTime(),
+        }),
+      ),
       deleteUser: vi.fn().mockResolvedValue({}),
     },
   }),
@@ -54,6 +57,7 @@ function clearAuth(): void {
 describe('GET /v1/users/me', () => {
   beforeEach(async () => {
     clearAuth()
+    clerkState.role = 'user'
     await clearTables()
   })
 
@@ -89,6 +93,80 @@ describe('GET /v1/users/me', () => {
       data: { handle: string }
     }
     expect(body.data.handle).toBe('testuser')
+  })
+
+  it('beta role grants founder plan and beta roleBadge', async () => {
+    clerkState.role = 'beta'
+    setAuth()
+    const res = await app.request('/v1/users/me', {
+      headers: { Authorization: 'Bearer test' },
+    })
+    const body = (await res.json()) as {
+      success: boolean
+      data: { plan: string; roleBadge: string | null }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.plan).toBe('founder')
+    expect(body.data.roleBadge).toBe('beta')
+  })
+
+  it('promoter role grants founder plan and promoter roleBadge', async () => {
+    clerkState.role = 'promoter'
+    setAuth()
+    const res = await app.request('/v1/users/me', {
+      headers: { Authorization: 'Bearer test' },
+    })
+    const body = (await res.json()) as {
+      success: boolean
+      data: { plan: string; roleBadge: string | null }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.plan).toBe('founder')
+    expect(body.data.roleBadge).toBe('promoter')
+  })
+
+  it('admin role grants founder plan and admin roleBadge', async () => {
+    clerkState.role = 'admin'
+    setAuth()
+    const res = await app.request('/v1/users/me', {
+      headers: { Authorization: 'Bearer test' },
+    })
+    const body = (await res.json()) as {
+      success: boolean
+      data: { plan: string; roleBadge: string | null }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.plan).toBe('founder')
+    expect(body.data.roleBadge).toBe('admin')
+  })
+
+  it('sub_admin role grants founder plan and admin roleBadge', async () => {
+    clerkState.role = 'sub_admin'
+    setAuth()
+    const res = await app.request('/v1/users/me', {
+      headers: { Authorization: 'Bearer test' },
+    })
+    const body = (await res.json()) as {
+      success: boolean
+      data: { plan: string; roleBadge: string | null }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.plan).toBe('founder')
+    expect(body.data.roleBadge).toBe('admin')
+  })
+
+  it('user role produces null roleBadge', async () => {
+    clerkState.role = 'user'
+    setAuth()
+    const res = await app.request('/v1/users/me', {
+      headers: { Authorization: 'Bearer test' },
+    })
+    const body = (await res.json()) as {
+      success: boolean
+      data: { roleBadge: string | null }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.roleBadge).toBeNull()
   })
 })
 

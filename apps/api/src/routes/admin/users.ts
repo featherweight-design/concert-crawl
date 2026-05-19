@@ -50,7 +50,7 @@ usersAdminRouter.get('/', async (ctx) => {
     }
   })
 
-  return ctx.json({ success: true, data, total: result.totalCount })
+  return ctx.json({ success: true, data: { data, total: result.totalCount } })
 })
 
 // PATCH /v1/admin/users/:id/role — assign a role to a Clerk user

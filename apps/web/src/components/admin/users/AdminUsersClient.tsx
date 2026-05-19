@@ -131,6 +131,11 @@ function RoleSelect({
           minWidth: 120,
         }}
       >
+        {currentRole === 'sub_admin' && (
+          <option value="sub_admin" disabled>
+            {ROLE_LABEL['sub_admin']}
+          </option>
+        )}
         {ASSIGNABLE_ROLES.map((role) => (
           <option key={role} value={role}>
             {ROLE_LABEL[role]}
