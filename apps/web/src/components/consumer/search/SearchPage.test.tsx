@@ -128,7 +128,12 @@ describe('SearchResultsState', () => {
 
   it('renders venue section with count', () => {
     const venues = [
-      { name: 'Bluebird Theater', slug: 'bluebird-theater', showCount: 4 },
+      {
+        name: 'Bluebird Theater',
+        slug: 'bluebird-theater',
+        showCount: 4,
+        matchingEventId: 'evt-1',
+      },
     ]
     render(
       <SearchResultsState
@@ -158,7 +163,12 @@ describe('SearchResultsState', () => {
 
   it('calls onNavigateTo with venue on tap', () => {
     const venues = [
-      { name: 'Bluebird Theater', slug: 'bluebird-theater', showCount: 4 },
+      {
+        name: 'Bluebird Theater',
+        slug: 'bluebird-theater',
+        showCount: 4,
+        matchingEventId: 'evt-1',
+      },
     ]
     render(
       <SearchResultsState
@@ -170,6 +180,7 @@ describe('SearchResultsState', () => {
     fireEvent.click(screen.getByText('Bluebird Theater'))
     expect(mockNavigateTo).toHaveBeenCalledWith('venue', {
       slug: 'bluebird-theater',
+      matchingEventId: 'evt-1',
     })
   })
 })
