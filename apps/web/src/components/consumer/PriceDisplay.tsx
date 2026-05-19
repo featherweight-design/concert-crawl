@@ -1,8 +1,8 @@
 'use client'
 
-import Link from 'next/link'
 import { useState } from 'react'
 import type { PriceSource } from '@concert-crawl/types'
+import { SubmitPriceModal } from '@/components/consumer/submit-price'
 
 // ── Price shape used by PriceBlockB ─────────────────────────────
 // Maps from the flat EventDetailResponse fields into a richer object
@@ -54,6 +54,8 @@ interface PriceDisplayProps {
   venueName: string
   ticketUrl: string | null
   eventId: string
+  artist: string
+  date: string
   // Extended fields (optional — undefined = not yet in API response)
   observedAt?: string | null
   range14d?: number[] | null
@@ -812,7 +814,18 @@ function SoldOutReporterAttribution({ price }: { price: PriceBlockPrice }) {
 }
 
 // ── CommunityHandoffCard — shown when price is null ──────────────
-function CommunityHandoffCard({ eventId }: { eventId: string }) {
+function CommunityHandoffCard({
+  eventId,
+  artist,
+  venueName: venueNameProp,
+  date,
+}: {
+  eventId: string
+  artist: string
+  venueName: string
+  date: string
+}) {
+  const [isSubmitOpen, setIsSubmitOpen] = useState(false)
   return (
     <div
       style={{
@@ -908,11 +921,14 @@ function CommunityHandoffCard({ eventId }: { eventId: string }) {
         there, drop it here.
       </p>
 
-      <Link
-        href={`/events/${eventId}/submit-price`}
+      <button
+        type="button"
+        onClick={() => setIsSubmitOpen(true)}
         style={{
+          all: 'unset',
           marginTop: 14,
           boxSizing: 'border-box',
+          cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -926,7 +942,6 @@ function CommunityHandoffCard({ eventId }: { eventId: string }) {
           fontWeight: 800,
           fontSize: 14,
           letterSpacing: '-0.005em',
-          textDecoration: 'none',
         }}
       >
         Submit a price
@@ -939,7 +954,15 @@ function CommunityHandoffCard({ eventId }: { eventId: string }) {
             strokeLinejoin="round"
           />
         </svg>
-      </Link>
+      </button>
+      <SubmitPriceModal
+        open={isSubmitOpen}
+        onClose={() => setIsSubmitOpen(false)}
+        eventId={eventId}
+        artist={artist}
+        venueName={venueNameProp}
+        date={date}
+      />
 
       <div
         style={{
@@ -967,6 +990,8 @@ export function PriceDisplay({
   venueName,
   ticketUrl,
   eventId,
+  artist,
+  date,
   observedAt,
   range14d,
   priceStatus,
@@ -983,7 +1008,14 @@ export function PriceDisplay({
 
   // No-price state → community-handoff card
   if (face === null) {
-    return <CommunityHandoffCard eventId={eventId} />
+    return (
+      <CommunityHandoffCard
+        eventId={eventId}
+        artist={artist}
+        venueName={venueName}
+        date={date}
+      />
+    )
   }
 
   // Build a PriceBlockPrice-shaped object from the flat API fields.

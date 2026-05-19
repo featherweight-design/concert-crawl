@@ -192,6 +192,8 @@ export default async function EventDetailPage({
             venueName={event.venue.name}
             ticketUrl={event.ticketUrl}
             eventId={event.id}
+            artist={event.artist}
+            date={event.date}
             priceStatus={event.priceStatus ?? null}
             ticketPriceOpenedAt={event.ticketPriceOpenedAt ?? null}
             ticketFees={event.ticketFees ?? null}
