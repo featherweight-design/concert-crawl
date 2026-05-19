@@ -243,6 +243,93 @@ describe('PATCH /v1/admin/events/:id/verify', () => {
   })
 })
 
+describe('PATCH /v1/admin/events/:id', () => {
+  beforeEach(() => {
+    mockGetAuth.mockReset()
+  })
+
+  it('returns 401 for unauthenticated requests', async () => {
+    mockGetAuth.mockReturnValue(null)
+    const res = await createApp().request(`/v1/admin/events/${EVENT_ID}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'New Title' }),
+    })
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 403 for non-admin users', async () => {
+    mockGetAuth.mockReturnValue({
+      userId: 'user_123',
+      sessionClaims: { metadata: { role: 'user' } },
+    })
+    const res = await createApp().request(`/v1/admin/events/${EVENT_ID}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'New Title' }),
+    })
+    expect(res.status).toBe(403)
+  })
+
+  it('returns 200 and updates content fields', async () => {
+    adminAuth()
+    const { db } = await import('@concert-crawl/db')
+    vi.mocked(db.update().set().where().returning).mockResolvedValueOnce([
+      { ...mockEventRow, title: 'Updated Title', artist: 'New Artist' },
+    ])
+    const res = await createApp().request(`/v1/admin/events/${EVENT_ID}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Updated Title', artist: 'New Artist' }),
+    })
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.success).toBe(true)
+    expect(body.data.title).toBe('Updated Title')
+    expect(body.data.artist).toBe('New Artist')
+  })
+
+  it('returns 200 and accepts nullable price fields', async () => {
+    adminAuth()
+    const { db } = await import('@concert-crawl/db')
+    vi.mocked(db.update().set().where().returning).mockResolvedValueOnce([
+      { ...mockEventRow, ticketPriceMin: '25.00', ticketPriceMax: null },
+    ])
+    const res = await createApp().request(`/v1/admin/events/${EVENT_ID}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticketPriceMin: '25.00', ticketPriceMax: null }),
+    })
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.success).toBe(true)
+    expect(body.data.ticketPriceMin).toBe('25.00')
+    expect(body.data.ticketPriceMax).toBeNull()
+  })
+
+  it('returns 400 for invalid date format', async () => {
+    adminAuth()
+    const res = await createApp().request(`/v1/admin/events/${EVENT_ID}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date: 'not-a-date' }),
+    })
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 404 when event not found', async () => {
+    adminAuth()
+    const { db } = await import('@concert-crawl/db')
+    vi.mocked(db.update().set().where().returning).mockResolvedValueOnce([])
+    const res = await createApp().request(`/v1/admin/events/${EVENT_ID}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Updated Title' }),
+    })
+    expect(res.status).toBe(404)
+  })
+})
+
 describe('DELETE /v1/admin/events/:id', () => {
   beforeEach(() => {
     mockGetAuth.mockReset()

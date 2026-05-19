@@ -108,7 +108,7 @@ eventsAdminRouter.patch(
   },
 )
 
-// PATCH /v1/admin/events/:id — partial update (verified, status)
+// PATCH /v1/admin/events/:id — partial update (verified, status, content fields)
 eventsAdminRouter.patch(
   '/:id',
   zValidator('param', eventIdSchema),
@@ -117,6 +117,17 @@ eventsAdminRouter.patch(
     z.object({
       verified: z.boolean().optional(),
       status: z.enum(['upcoming', 'cancelled', 'postponed']).optional(),
+      title: z.string().min(1).optional(),
+      artist: z.string().min(1).optional(),
+      date: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD')
+        .optional(),
+      doorsTime: z.string().nullable().optional(),
+      showTime: z.string().nullable().optional(),
+      ticketPriceMin: z.string().nullable().optional(),
+      ticketPriceMax: z.string().nullable().optional(),
+      genre: z.array(z.string()).nullable().optional(),
     }),
   ),
   async (ctx) => {
