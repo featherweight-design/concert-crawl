@@ -1,3 +1,11 @@
+## [1.27.2](https://github.com/HartiganHM/concert-crawl/compare/v1.27.1...v1.27.2) (2026-05-19)
+
+
+### Bug Fixes
+
+* **browse:** derive genre/vibe filter options from live event data ([986a136](https://github.com/HartiganHM/concert-crawl/commit/986a1369fe341f6010ad124993b24bd1cfd95217)), closes [#396](https://github.com/HartiganHM/concert-crawl/issues/396)
+* **browse:** handle & separator in genre labels; add genres endpoint tests ([7379802](https://github.com/HartiganHM/concert-crawl/commit/73798026d144b7ec71d852ccd21af4e9bb261849))
+
 ## [1.27.1](https://github.com/HartiganHM/concert-crawl/compare/v1.27.0...v1.27.1) (2026-05-19)
 
 
