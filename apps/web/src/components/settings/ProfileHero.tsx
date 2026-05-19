@@ -27,14 +27,12 @@ const ROLE_BADGE_DOT: Record<RoleBadge, string> = {
   admin: 'var(--warning)',
   promoter: 'var(--accent)',
   beta: 'var(--signal)',
-  staff: 'var(--signal)',
 }
 
 const ROLE_BADGE_LABEL: Record<RoleBadge, string> = {
   admin: 'Admin',
   promoter: 'Promoter',
   beta: 'Beta',
-  staff: 'Staff',
 }
 
 export function ProfileHero({
@@ -88,8 +86,9 @@ export function ProfileHero({
           </span>
           {showRoleBadge && roleBadge && (
             <span
-              className="inline-flex shrink-0 items-center gap-1"
+              className="inline-flex shrink-0 items-center"
               style={{
+                gap: 5,
                 padding: '3px 7px',
                 borderRadius: 4,
                 background: 'var(--surface-2)',

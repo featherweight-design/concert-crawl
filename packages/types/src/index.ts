@@ -26,7 +26,8 @@ export function isRole(value: unknown): value is Role {
 }
 
 // Badge displayed in ProfileHero / settings for privileged role-holders; null for regular users
-export type RoleBadge = 'admin' | 'promoter' | 'beta' | 'staff'
+// sub_admin maps to 'admin' badge; 'user' maps to null (no badge)
+export type RoleBadge = 'admin' | 'promoter' | 'beta'
 
 // Standard API response envelope
 export type ApiResponse<T> =
