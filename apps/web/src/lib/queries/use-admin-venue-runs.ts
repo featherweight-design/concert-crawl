@@ -21,5 +21,6 @@ export function useAdminVenueRuns(venueId: string | null) {
     },
     enabled: !!venueId,
     staleTime: STALE_2_MIN,
+    refetchOnWindowFocus: true,
   })
 }
