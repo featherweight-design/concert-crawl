@@ -200,7 +200,12 @@ export default async function EventDetailPage({
           {/* Submit-a-price card CTA — only when a price exists to revise */}
           {event.ticketPriceMin != null && (
             <div className="mt-3">
-              <SubmitPriceCardCta eventId={event.id} />
+              <SubmitPriceCardCta
+                eventId={event.id}
+                artist={event.artist}
+                venueName={event.venue.name}
+                date={event.date}
+              />
             </div>
           )}
 
