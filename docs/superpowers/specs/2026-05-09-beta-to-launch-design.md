@@ -254,7 +254,7 @@ Status key: ✅ Complete · 🎨 Design handoff ready, eng pending · 🔲 Not s
 | # | Feature | Design | Eng | Notes |
 |---|---|---|---|---|
 | 1 | **Event Detail v2** | ✅ `design/design_handoff_event_detail_v2/` | ✅ PRs #205, #329 | Price trail, submit-a-price, setlist stub, "who else is watching" |
-| 2 | **Trust chrome** | ✅ `design/design_handoff_event_detail_v2/` | 🔲 Not started | TrustMark, VerifiedStamp, SourceLink — issue #96; specced in Trust hierarchy + price-block sections; eng target beta wk 2 (Jun 23–29) |
+| 2 | **Trust chrome** | ✅ `design/design_handoff_event_detail_v2/` | ✅ `PriceDisplay.tsx` | TrustMark, VerifiedStamp, four-tier trust hierarchy — all implemented |
 | 3 | **404 page** | 🔲 Not started | 🔲 Not started | Eng target beta wk 2 (Jun 23–29) |
 | 4 | **Monetization upgrade flow + badges** | ✅ `design/design_handoff_monetization/` | 🔲 Not started | Tier comparison, payment modal, trial CTA, Founder urgency; role badges (Admin/Promoter/Beta) + cosmetic tier badges (Supporter/Founder); voluntary support state for role-holders; eng target beta wk 3 (Jun 30–Jul 6) |
 | 5 | **Concert history / passport view** | 🔲 Not started | 🔲 Not started | Empty state is primary UX — no import/backfill at launch; eng target beta wk 4 (Jul 7–13) |
