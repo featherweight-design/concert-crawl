@@ -8,7 +8,7 @@ interface SearchResultsStateProps {
   onHover?: (idx: number) => void
   onNavigateTo: (
     type: 'artist' | 'venue',
-    value: string | { slug: string },
+    value: string | { slug: string; matchingEventId?: string },
   ) => void
 }
 
@@ -151,7 +151,12 @@ export function SearchResultsState({
               <div key={venue.slug}>
                 {idx > 0 && <Divider />}
                 <button
-                  onClick={() => onNavigateTo('venue', { slug: venue.slug })}
+                  onClick={() =>
+                    onNavigateTo('venue', {
+                      slug: venue.slug,
+                      matchingEventId: venue.matchingEventId,
+                    })
+                  }
                   onMouseEnter={() => onHover?.(venueIdx)}
                   data-selected={selectedIdx === venueIdx ? 'true' : undefined}
                   style={{

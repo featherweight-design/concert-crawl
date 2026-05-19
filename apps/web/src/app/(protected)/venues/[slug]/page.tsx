@@ -1,23 +1,20 @@
-import { Fragment } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { auth } from '@clerk/nextjs/server'
-import type { VenueWithEvents, Event } from '@concert-crawl/types'
+import type { VenueWithEvents } from '@concert-crawl/types'
 import { publicApiClient, apiClient } from '@/lib/api'
 import { AppHeader } from '@/components/consumer/app-header'
-import { SmallEventRow } from '@/components/consumer/small-event-row'
 import { SectionHeader } from '@/components/consumer/section-header'
 import { MapPlaceholder } from '@/components/consumer/map-placeholder'
 import { EmptyState } from '@/components/consumer/empty-state'
-import {
-  formatShortDate,
-  googleMapsUrl,
-} from '@/components/consumer/definitions/lib'
+import { googleMapsUrl } from '@/components/consumer/definitions/lib'
 import { copy } from '@/components/consumer/definitions/copy'
 import { IdentityArt } from '@/components/consumer/identity-art/IdentityArt'
+import { VenueEventList } from '@/components/consumer/venue-event-list/VenueEventList'
 
 interface VenueProfilePageProps {
   params: Promise<{ slug: string }>
+  searchParams: Promise<{ highlight?: string }>
 }
 
 async function fetchVenueWithEvents(
@@ -36,8 +33,10 @@ async function fetchVenueWithEvents(
 
 export default async function VenueProfilePage({
   params,
+  searchParams,
 }: VenueProfilePageProps) {
   const { slug } = await params
+  const { highlight } = await searchParams
   const { getToken } = await auth()
   const token = await getToken()
   const result = await fetchVenueWithEvents(slug, token)
@@ -232,23 +231,10 @@ export default async function VenueProfilePage({
               body={copy.venueNoShows}
             />
           ) : (
-            <div>
-              {upcomingEvents.map((event: Event, i: number) => (
-                <Fragment key={event.id}>
-                  {i > 0 && (
-                    <div
-                      className="h-px bg-border"
-                      style={{ marginLeft: 50 }}
-                    />
-                  )}
-                  <SmallEventRow
-                    event={event}
-                    date={formatShortDate(event.date)}
-                    showVenue={false}
-                  />
-                </Fragment>
-              ))}
-            </div>
+            <VenueEventList
+              events={upcomingEvents}
+              {...(highlight ? { highlightId: highlight } : {})}
+            />
           )}
         </div>
 

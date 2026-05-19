@@ -19,6 +19,7 @@ export interface VenueResult {
   name: string
   slug: string
   showCount: number
+  matchingEventId: string
 }
 
 export interface PopularEvent {
@@ -32,6 +33,7 @@ export interface PopularEvent {
 }
 
 interface EventRow {
+  id: string
   artist: string
   date: string
   title: string
@@ -84,6 +86,7 @@ function deriveVenueResults(rows: EventRow[]): VenueResult[] {
         name: row.venue.name,
         slug: row.venue.slug,
         showCount: 1,
+        matchingEventId: row.id,
       })
     }
   }
@@ -185,7 +188,10 @@ export function useSearch() {
   }, [])
 
   const navigateTo = useCallback(
-    (type: 'artist' | 'venue', value: string | { slug: string }) => {
+    (
+      type: 'artist' | 'venue',
+      value: string | { slug: string; matchingEventId?: string },
+    ) => {
       if (query.trim()) {
         const updated = addToRecent(query.trim(), recentSearches)
         setRecentSearches(updated)
@@ -195,7 +201,10 @@ export function useSearch() {
       if (type === 'artist' && typeof value === 'string') {
         router.push(`/events?search=${encodeURIComponent(value)}`)
       } else if (type === 'venue' && typeof value === 'object') {
-        router.push(`/venues/${value.slug}`)
+        const url = value.matchingEventId
+          ? `/venues/${value.slug}?highlight=${value.matchingEventId}`
+          : `/venues/${value.slug}`
+        router.push(url)
       }
     },
     [query, recentSearches, router],
