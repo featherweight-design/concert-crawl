@@ -188,7 +188,9 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
         </div>
 
         {/* Body */}
-        <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+        <div
+          style={{ flex: 1, overflowY: 'auto', minHeight: 0, paddingTop: 8 }}
+        >
           {search.query.trim() === '' && (
             <SearchDefaultState
               recentSearches={search.recentSearches}
@@ -250,7 +252,8 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
             }}
           >
             <span style={{ color: 'var(--accent)' }}>●</span>
-            concert<span style={{ color: 'var(--accent)' }}>crawl.</span>
+            {'concert'}
+            <span style={{ color: 'var(--accent)' }}>{'crawl.'}</span>
           </span>
         </div>
       </div>

@@ -69,9 +69,7 @@ export function SearchDefaultState({
   onPickEvent,
 }: SearchDefaultStateProps) {
   return (
-    <div
-      style={{ display: 'flex', flexDirection: 'column', paddingBottom: 40 }}
-    >
+    <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: 8 }}>
       {recentSearches.length > 0 && (
         <>
           <SectionHeader

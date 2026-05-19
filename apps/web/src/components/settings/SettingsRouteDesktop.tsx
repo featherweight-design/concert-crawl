@@ -375,7 +375,8 @@ export function SettingsRouteDesktop({
                     Account
                   </h2>
                   <p className="text-[13px] text-fg-muted">
-                    The actual login bits. Lives in Clerk, not here.
+                    Your account credentials are managed securely. Click any row
+                    to update.
                   </p>
                 </div>
                 <div className="flex flex-col rounded-xl border border-border bg-surface-1">

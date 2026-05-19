@@ -579,7 +579,6 @@ function SuccessState({
         padding: '8px 0',
       }}
     >
-      <StatusRail tone="success" />
       <div
         style={{
           fontSize: 30,

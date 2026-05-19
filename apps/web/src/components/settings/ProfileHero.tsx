@@ -101,7 +101,7 @@ export function ProfileHero({
           className="text-[11px] font-semibold text-fg-muted"
           style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}
         >
-          {city || '—'} · joined {joined}
+          {city ? `${city} · ` : ''}joined {joined}
         </span>
 
         {/* Cred chip + zero-state nudge */}

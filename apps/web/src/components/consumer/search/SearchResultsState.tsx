@@ -63,9 +63,7 @@ export function SearchResultsState({
   onNavigateTo,
 }: SearchResultsStateProps) {
   return (
-    <div
-      style={{ display: 'flex', flexDirection: 'column', paddingBottom: 40 }}
-    >
+    <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: 8 }}>
       {artistResults.length > 0 && (
         <>
           <SectionHeader
