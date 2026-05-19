@@ -1,3 +1,15 @@
+## [1.23.1](https://github.com/HartiganHM/concert-crawl/compare/v1.23.0...v1.23.1) (2026-05-19)
+
+
+### Bug Fixes
+
+* pre-beta polish — feedback header, city display, account copy, search palette ([17e4ced](https://github.com/HartiganHM/concert-crawl/commit/17e4cedddfb5a09a06fb3a7a15c5923d6fab1992)), closes [#386](https://github.com/HartiganHM/concert-crawl/issues/386) [#391](https://github.com/HartiganHM/concert-crawl/issues/391) [#392](https://github.com/HartiganHM/concert-crawl/issues/392) [#393](https://github.com/HartiganHM/concert-crawl/issues/393) [#394](https://github.com/HartiganHM/concert-crawl/issues/394)
+
+
+### Reverts
+
+* restore progress.md (updated on separate branch) ([3740225](https://github.com/HartiganHM/concert-crawl/commit/374022530ef9670c112f024b38ccbca031d87283))
+
 # [1.23.0](https://github.com/HartiganHM/concert-crawl/compare/v1.22.1...v1.23.0) (2026-05-19)
 
 
