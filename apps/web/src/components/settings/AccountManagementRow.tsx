@@ -143,7 +143,7 @@ export function AccountManagementRow({ email }: AccountManagementRowProps) {
                 className="inline-flex cursor-pointer items-center gap-1 text-[11px] font-bold uppercase tracking-[0.06em] text-fg-subtle transition-colors hover:text-fg-muted"
                 style={{ fontFamily: 'var(--font-mono)' }}
               >
-                Manage →
+                {SETTINGS_COPY.clerkLinkLabel}
               </button>
             </div>
           </>

@@ -379,101 +379,179 @@ export function SettingsRouteDesktop({
                     to update.
                   </p>
                 </div>
-                <div className="flex flex-col rounded-xl border border-border bg-surface-1">
-                  {/* Email row */}
-                  <div className="flex items-center gap-3 px-5 py-3.5">
-                    <svg
-                      width="15"
-                      height="15"
-                      viewBox="0 0 15 15"
-                      fill="none"
-                      aria-hidden
-                      className="shrink-0 text-fg-muted"
-                    >
-                      <rect
-                        x="1"
-                        y="3"
-                        width="13"
-                        height="9"
-                        rx="1.5"
-                        stroke="currentColor"
-                        strokeWidth="1.3"
-                      />
-                      <path
-                        d="M1 4.5l6.5 4.5L14 4.5"
-                        stroke="currentColor"
-                        strokeWidth="1.3"
-                      />
-                    </svg>
-                    <span className="flex-1 text-[14px] font-medium text-fg">
-                      {SETTINGS_COPY.emailRow}
-                    </span>
-                    <span className="text-[13px] text-fg-muted">
-                      {profile.email}
-                    </span>
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 14 14"
-                      fill="none"
-                      aria-hidden
-                      className="shrink-0 text-fg-subtle"
-                    >
-                      <path
-                        d="M5.5 3l4 4-4 4"
-                        stroke="currentColor"
-                        strokeWidth="1.3"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </div>
-                  {user?.passwordEnabled && (
-                    <>
-                      <div className="mx-5 h-px bg-border" />
-                      {/* Password row — only shown for email/password accounts */}
-                      <div className="flex items-center gap-3 px-5 py-3.5">
-                        <svg
-                          width="15"
-                          height="15"
-                          viewBox="0 0 15 15"
-                          fill="none"
-                          aria-hidden
-                          className="shrink-0 text-fg-muted"
-                        >
-                          <rect
-                            x="3"
-                            y="7"
-                            width="9"
-                            height="6.5"
-                            rx="1.5"
-                            stroke="currentColor"
-                            strokeWidth="1.3"
-                          />
-                          <path
-                            d="M5 7V5.5a2.5 2.5 0 015 0V7"
-                            stroke="currentColor"
-                            strokeWidth="1.3"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                        <span className="flex-1 text-[14px] font-medium text-fg">
-                          {SETTINGS_COPY.passwordRow}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => openUserProfile()}
-                          className="cursor-pointer rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-[0.06em] text-fg-muted transition-colors hover:text-fg"
-                          style={{
-                            fontFamily: 'var(--font-mono)',
-                            background: 'var(--surface-2)',
-                          }}
-                        >
-                          Manage →
-                        </button>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex flex-col rounded-xl border border-border bg-surface-1">
+                    {/* Email row */}
+                    <div className="flex items-center gap-3 px-5 py-3.5">
+                      <svg
+                        width="15"
+                        height="15"
+                        viewBox="0 0 15 15"
+                        fill="none"
+                        aria-hidden
+                        className="shrink-0 text-fg-muted"
+                      >
+                        <rect
+                          x="1"
+                          y="3"
+                          width="13"
+                          height="9"
+                          rx="1.5"
+                          stroke="currentColor"
+                          strokeWidth="1.3"
+                        />
+                        <path
+                          d="M1 4.5l6.5 4.5L14 4.5"
+                          stroke="currentColor"
+                          strokeWidth="1.3"
+                        />
+                      </svg>
+                      <span className="flex-1 text-[14px] font-medium text-fg">
+                        {SETTINGS_COPY.emailRow}
+                      </span>
+                      <span className="text-[13px] text-fg-muted">
+                        {profile.email}
+                      </span>
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 14 14"
+                        fill="none"
+                        aria-hidden
+                        className="shrink-0 text-fg-subtle"
+                      >
+                        <path
+                          d="M5.5 3l4 4-4 4"
+                          stroke="currentColor"
+                          strokeWidth="1.3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </div>
+
+                    {/* Connected account rows */}
+                    {user?.externalAccounts?.map((account) => (
+                      <div key={account.provider}>
+                        <div className="mx-5 h-px bg-border" />
+                        <div className="flex items-center gap-3 px-5 py-3.5">
+                          <svg
+                            width="15"
+                            height="15"
+                            viewBox="0 0 16 16"
+                            fill="none"
+                            aria-hidden
+                            className="shrink-0 text-fg-muted"
+                          >
+                            <circle
+                              cx="4"
+                              cy="8"
+                              r="2.5"
+                              stroke="currentColor"
+                              strokeWidth="1.3"
+                            />
+                            <circle
+                              cx="12"
+                              cy="4"
+                              r="2.5"
+                              stroke="currentColor"
+                              strokeWidth="1.3"
+                            />
+                            <circle
+                              cx="12"
+                              cy="12"
+                              r="2.5"
+                              stroke="currentColor"
+                              strokeWidth="1.3"
+                            />
+                            <path
+                              d="M6.5 7l3-2M6.5 9l3 2"
+                              stroke="currentColor"
+                              strokeWidth="1.3"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                          <span className="flex-1 text-[14px] font-medium text-fg">
+                            {SETTINGS_COPY.connectedAccountRow}
+                          </span>
+                          <span className="text-[13px] text-fg-muted">
+                            {account.provider
+                              .replace(/^oauth_/, '')
+                              .replace(/_/g, ' ')
+                              .replace(/\b\w/g, (char) => char.toUpperCase())}
+                          </span>
+                        </div>
                       </div>
-                    </>
-                  )}
+                    ))}
+
+                    {user?.passwordEnabled && (
+                      <>
+                        <div className="mx-5 h-px bg-border" />
+                        {/* Password row — only shown for email/password accounts */}
+                        <div className="flex items-center gap-3 px-5 py-3.5">
+                          <svg
+                            width="15"
+                            height="15"
+                            viewBox="0 0 15 15"
+                            fill="none"
+                            aria-hidden
+                            className="shrink-0 text-fg-muted"
+                          >
+                            <rect
+                              x="3"
+                              y="7"
+                              width="9"
+                              height="6.5"
+                              rx="1.5"
+                              stroke="currentColor"
+                              strokeWidth="1.3"
+                            />
+                            <path
+                              d="M5 7V5.5a2.5 2.5 0 015 0V7"
+                              stroke="currentColor"
+                              strokeWidth="1.3"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                          <span className="flex-1 text-[14px] font-medium text-fg">
+                            {SETTINGS_COPY.passwordRow}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => openUserProfile()}
+                            className="cursor-pointer rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-[0.06em] text-fg-muted transition-colors hover:text-fg"
+                            style={{
+                              fontFamily: 'var(--font-mono)',
+                              background: 'var(--surface-2)',
+                            }}
+                          >
+                            {SETTINGS_COPY.clerkLinkLabel}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Clerk attribution */}
+                  <p
+                    className="text-fg-subtle"
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '9px',
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    Sign-in credentials and connected accounts are managed by
+                    Clerk.{' '}
+                    <a
+                      href="https://clerk.com/legal/privacy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-signal hover:underline"
+                    >
+                      Privacy Policy →
+                    </a>
+                  </p>
                 </div>
               </div>
             )}
