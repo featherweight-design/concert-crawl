@@ -133,17 +133,18 @@ export async function updateVenue(
         : null
 
     const capacityRaw = formData.get('capacity')
-    const capacityNum =
-      capacityRaw !== null && String(capacityRaw).trim() !== ''
-        ? Number(String(capacityRaw).trim())
-        : null
-    const capacity =
-      capacityNum !== null &&
-      Number.isFinite(capacityNum) &&
-      Number.isInteger(capacityNum) &&
-      capacityNum > 0
-        ? capacityNum
-        : null
+    const capacityTrimmed =
+      capacityRaw !== null ? String(capacityRaw).trim() : ''
+    let capacity: number | null | undefined
+    if (capacityTrimmed === '') {
+      capacity = null
+    } else {
+      const num = Number(capacityTrimmed)
+      capacity =
+        Number.isFinite(num) && Number.isInteger(num) && num > 0
+          ? num
+          : undefined
+    }
 
     const venueTypeRaw = formData.get('venueType')
     const venueType =

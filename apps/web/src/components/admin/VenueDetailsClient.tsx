@@ -198,6 +198,7 @@ function StyledInput({
   min,
   max,
   step,
+  list,
   style,
 }: {
   id: string
@@ -213,6 +214,7 @@ function StyledInput({
   min?: number
   max?: number
   step?: number
+  list?: string
   style?: React.CSSProperties
 }) {
   const [focused, setFocused] = useState(false)
@@ -239,6 +241,7 @@ function StyledInput({
       min={min}
       max={max}
       step={step}
+      list={list}
       onChange={onChange}
       onFocus={() => setFocused(true)}
       onBlur={(evt) => {
@@ -1030,7 +1033,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                   value={venueTypeVal}
                   placeholder="e.g. Theater"
                   disabled={isDisabled}
-                  style={{ listStyle: 'none' }}
+                  list="venue-type-suggestions"
                   onChange={(evt) => setVenueTypeVal(evt.target.value)}
                 />
                 <datalist id="venue-type-suggestions">

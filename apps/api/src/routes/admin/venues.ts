@@ -418,11 +418,14 @@ Respond with only valid JSON, no markdown, no extra text.`
 
   try {
     const anthropic = new Anthropic()
-    const message = await anthropic.messages.create({
-      model: 'claude-haiku-4-5',
-      max_tokens: 256,
-      messages: [{ role: 'user', content: prompt }],
-    })
+    const message = await anthropic.messages.create(
+      {
+        model: 'claude-haiku-4-5',
+        max_tokens: 256,
+        messages: [{ role: 'user', content: prompt }],
+      },
+      { signal: AbortSignal.timeout(30_000) },
+    )
 
     const textBlock = message.content.find((block) => block.type === 'text')
     if (!textBlock || textBlock.type !== 'text') {
@@ -432,9 +435,14 @@ Respond with only valid JSON, no markdown, no extra text.`
       )
     }
 
+    const rawText = textBlock.text
+      .replace(/^```(?:json)?\s*\n?/i, '')
+      .replace(/\n?```\s*$/i, '')
+      .trim()
+
     let parsed: unknown
     try {
-      parsed = JSON.parse(textBlock.text)
+      parsed = JSON.parse(rawText)
     } catch {
       return ctx.json(
         { success: false, error: 'Model returned invalid JSON' },
