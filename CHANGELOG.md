@@ -1,3 +1,17 @@
+# [1.29.0](https://github.com/HartiganHM/concert-crawl/compare/v1.28.0...v1.29.0) (2026-05-19)
+
+
+### Bug Fixes
+
+* **admin/events:** await invalidation after edit, surface save errors, fix types ([b142a91](https://github.com/HartiganHM/concert-crawl/commit/b142a919fe847f5b84d7d7a23b61a1a0504154c4))
+
+
+### Features
+
+* **admin/crawl:** make run history rows selectable ([#161](https://github.com/HartiganHM/concert-crawl/issues/161)) ([c5869a3](https://github.com/HartiganHM/concert-crawl/commit/c5869a3bc61285ce9317d2f7d7af8b4487383f0f))
+* **admin/events:** background refresh and edit event fields ([#161](https://github.com/HartiganHM/concert-crawl/issues/161), [#415](https://github.com/HartiganHM/concert-crawl/issues/415), [#259](https://github.com/HartiganHM/concert-crawl/issues/259)) ([e7edc7b](https://github.com/HartiganHM/concert-crawl/commit/e7edc7bc8895fe7f5f854570f419edd5d7a32bc3))
+* **api:** extend PATCH /admin/events/:id to accept content fields ([#259](https://github.com/HartiganHM/concert-crawl/issues/259)) ([9ef31f6](https://github.com/HartiganHM/concert-crawl/commit/9ef31f642ed18a8303fca6dfdff393316cde2e0a))
+
 # [1.28.0](https://github.com/HartiganHM/concert-crawl/compare/v1.27.2...v1.28.0) (2026-05-19)
 
 
