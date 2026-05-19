@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@clerk/backend": "^1.0.0",
+    "@clerk/backend": "^2.33.3",
     "@concert-crawl/price-pipeline": "workspace:*",
     "@concert-crawl/db": "workspace:*",
     "@concert-crawl/logger": "workspace:*",
