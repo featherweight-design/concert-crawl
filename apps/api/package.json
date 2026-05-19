@@ -20,7 +20,7 @@
     "@concert-crawl/logger": "workspace:*",
     "@concert-crawl/types": "workspace:*",
     "@hono/clerk-auth": "^2.0.0",
-    "@hono/node-server": "^1.0.0",
+    "@hono/node-server": "^2.0.3",
     "@hono/zod-validator": "^0.8.0",
     "@sentry/hono": "^10.53.1",
     "dotenv": "^17.4.2",
