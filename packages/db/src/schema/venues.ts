@@ -6,6 +6,7 @@ import {
   text,
   timestamp,
   uuid,
+  varchar,
 } from 'drizzle-orm/pg-core'
 
 export const extractionStrategyEnum = pgEnum('extraction_strategy', [
@@ -55,6 +56,7 @@ export const venues = pgTable('venues', {
     .notNull()
     .default('networkidle'),
   crawlWaitForSelector: text('crawl_wait_for_selector'),
+  crawlMode: varchar('crawl_mode', { length: 10 }).$type<'http' | 'browser'>(),
   contactEmail: text('contact_email'),
   priceUrl: text('price_url'),
   ticketVendor: ticketVendorEnum('ticket_vendor'),
