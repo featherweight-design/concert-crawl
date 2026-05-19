@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { fetchPage } from './fetcher.js'
+import { fetchPage, fetchPageHttp, CrawlFetchError } from './fetcher.js'
 import type { Browser, BrowserContext, Page, Response } from 'playwright'
 
 // jitter(0) = Math.floor(random * 1000) - 500; with random=0.5 → 0ms delay
@@ -13,7 +13,9 @@ afterEach(() => {
 function makeMockPage(overrides: Partial<Page> = {}): Page {
   return {
     on: vi.fn(),
-    goto: vi.fn().mockResolvedValue({ status: () => 200 } as unknown as Response),
+    goto: vi
+      .fn()
+      .mockResolvedValue({ status: () => 200 } as unknown as Response),
     waitForSelector: vi.fn().mockResolvedValue(null),
     content: vi.fn().mockResolvedValue('<html><body>loaded</body></html>'),
     url: vi.fn().mockReturnValue('https://example.com'),
@@ -58,7 +60,13 @@ describe('fetchPage — waitForSelector', () => {
     const page = makeMockPage()
     const browser = makeMockBrowser(page)
 
-    await fetchPage('https://example.com', browser, 0, 'networkidle', '.event-card')
+    await fetchPage(
+      'https://example.com',
+      browser,
+      0,
+      'networkidle',
+      '.event-card',
+    )
 
     expect(page.goto).toHaveBeenCalledWith('https://example.com', {
       waitUntil: 'domcontentloaded',
@@ -84,12 +92,20 @@ describe('fetchPage — waitForSelector', () => {
 
   it('throws CrawlFetchError before calling waitForSelector when response is 403', async () => {
     const page = makeMockPage({
-      goto: vi.fn().mockResolvedValue({ status: () => 403 } as unknown as Response),
+      goto: vi
+        .fn()
+        .mockResolvedValue({ status: () => 403 } as unknown as Response),
     })
     const browser = makeMockBrowser(page)
 
     await expect(
-      fetchPage('https://example.com', browser, 0, 'networkidle', '.event-card'),
+      fetchPage(
+        'https://example.com',
+        browser,
+        0,
+        'networkidle',
+        '.event-card',
+      ),
     ).rejects.toThrow('HTTP 403')
     expect(page.waitForSelector).not.toHaveBeenCalled()
   })
@@ -103,5 +119,90 @@ describe('fetchPage — waitForSelector', () => {
     expect(result.html).toBe('<html><body>loaded</body></html>')
     expect(result.httpStatus).toBe(200)
     expect(result.finalUrl).toBe('https://example.com')
+  })
+})
+
+describe('fetchPageHttp', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn())
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('fetches the URL with the ConcertCrawl user agent', async () => {
+    const mockFetch = vi.mocked(fetch)
+    mockFetch.mockResolvedValue({
+      status: 200,
+      url: 'https://example.com',
+      text: vi.fn().mockResolvedValue('<html>events</html>'),
+    } as unknown as Response)
+
+    await fetchPageHttp('https://example.com', 0)
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://example.com',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'User-Agent': 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)',
+        }),
+      }),
+    )
+  })
+
+  it('returns html, httpStatus, and finalUrl on success', async () => {
+    const mockFetch = vi.mocked(fetch)
+    mockFetch.mockResolvedValue({
+      status: 200,
+      url: 'https://example.com/redirected',
+      text: vi.fn().mockResolvedValue('<html>event content</html>'),
+    } as unknown as Response)
+
+    const result = await fetchPageHttp('https://example.com', 0)
+
+    expect(result).toEqual({
+      html: '<html>event content</html>',
+      httpStatus: 200,
+      finalUrl: 'https://example.com/redirected',
+    })
+  })
+
+  it('throws CrawlFetchError on 403', async () => {
+    const mockFetch = vi.mocked(fetch)
+    mockFetch.mockResolvedValue({
+      status: 403,
+      url: 'https://example.com',
+      text: vi.fn().mockResolvedValue(''),
+    } as unknown as Response)
+
+    await expect(fetchPageHttp('https://example.com', 0)).rejects.toThrow(
+      CrawlFetchError,
+    )
+  })
+
+  it('throws CrawlFetchError on 429', async () => {
+    const mockFetch = vi.mocked(fetch)
+    mockFetch.mockResolvedValue({
+      status: 429,
+      url: 'https://example.com',
+      text: vi.fn().mockResolvedValue(''),
+    } as unknown as Response)
+
+    await expect(fetchPageHttp('https://example.com', 0)).rejects.toThrow(
+      CrawlFetchError,
+    )
+  })
+
+  it('throws a generic Error on other 4xx', async () => {
+    const mockFetch = vi.mocked(fetch)
+    mockFetch.mockResolvedValue({
+      status: 404,
+      url: 'https://example.com',
+      text: vi.fn().mockResolvedValue(''),
+    } as unknown as Response)
+
+    await expect(fetchPageHttp('https://example.com', 0)).rejects.toThrow(
+      'HTTP 404',
+    )
   })
 })

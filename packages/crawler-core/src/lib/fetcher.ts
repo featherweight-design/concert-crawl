@@ -97,3 +97,52 @@ export async function fetchPage(
     await context.close()
   }
 }
+
+export async function fetchPageHttp(
+  url: string,
+  crawlDelayMs = 3000,
+): Promise<FetchResult> {
+  const delay = Math.max(0, jitter(crawlDelayMs))
+  if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay))
+
+  console.log(JSON.stringify({ event: 'fetch.start', url, mode: 'http' }))
+
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': HONEST_USER_AGENT,
+      Accept: 'text/html,application/xhtml+xml',
+    },
+    redirect: 'follow',
+  })
+
+  if (response.status === 403 || response.status === 429) {
+    console.log(
+      JSON.stringify({ event: 'fetch.blocked', url, status: response.status }),
+    )
+    throw new CrawlFetchError(
+      response.status,
+      `HTTP ${response.status} — venue may have blocked crawler`,
+    )
+  }
+
+  if (response.status >= 400) {
+    console.log(
+      JSON.stringify({ event: 'fetch.error', url, status: response.status }),
+    )
+    throw new Error(`HTTP ${response.status}`)
+  }
+
+  const html = await response.text()
+  const finalUrl = response.url
+
+  console.log(
+    JSON.stringify({
+      event: 'fetch.success',
+      url,
+      finalUrl,
+      status: response.status,
+      mode: 'http',
+    }),
+  )
+  return { html, httpStatus: response.status, finalUrl }
+}
