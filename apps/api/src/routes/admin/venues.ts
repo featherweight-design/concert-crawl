@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
+import Anthropic from '@anthropic-ai/sdk'
 import { db, venues, events, crawlRuns } from '@concert-crawl/db'
 import { and, avg, count, desc, eq, gte, isNotNull, ne } from 'drizzle-orm'
 import { getAuthUser } from '../../middleware/auth.js'
@@ -46,6 +47,27 @@ const createVenueSchema = z.object({
   address: z
     .string()
     .max(500)
+    .nullable()
+    .optional()
+    .transform((val) => {
+      if (val == null) return val
+      const trimmed = val.trim()
+      return trimmed === '' ? null : trimmed
+    }),
+  capacity: z.number().int().positive().nullable().optional(),
+  venueType: z
+    .string()
+    .max(100)
+    .nullable()
+    .optional()
+    .transform((val) => {
+      if (val == null) return val
+      const trimmed = val.trim()
+      return trimmed === '' ? null : trimmed
+    }),
+  about: z
+    .string()
+    .max(1000)
     .nullable()
     .optional()
     .transform((val) => {
@@ -356,6 +378,90 @@ venuesAdminRouter.patch(
     return ctx.json({ success: true, data: updated })
   },
 )
+
+// POST /v1/admin/venues/:id/generate-about — LLM-generate capacity, venueType, and about copy
+// Does NOT persist to DB; returns suggestions for admin review before saving
+venuesAdminRouter.post('/:id/generate-about', async (ctx) => {
+  const { id } = ctx.req.param()
+
+  const [venue] = await db
+    .select({
+      name: venues.name,
+      address: venues.address,
+      venueType: venues.venueType,
+    })
+    .from(venues)
+    .where(eq(venues.id, id))
+
+  if (!venue) {
+    return ctx.json({ success: false, error: 'Venue not found' }, 404)
+  }
+
+  const generateResponseSchema = z.object({
+    capacity: z.number().int().positive().nullable(),
+    venueType: z.string().min(1).max(100),
+    about: z.string().min(10).max(500),
+  })
+
+  const prompt = `You are helping populate a Denver concert venue directory.
+
+Venue: ${venue.name}
+Address: ${venue.address ?? 'unknown'}
+Current type: ${venue.venueType ?? 'unknown'}
+
+Generate a JSON object with:
+- "capacity": the venue's approximate standing/seated capacity as an integer (null if unknown)
+- "venueType": a concise venue type (e.g. "Amphitheater", "Theater", "Concert Hall", "Music Hall", "Ballroom", "Bar", "Auditorium", "Outdoor Pavilion")
+- "about": 1-3 sentences describing the venue's character, history, and what makes it distinctive for live music. Be specific to this venue — avoid generic descriptions.
+
+Respond with only valid JSON, no markdown, no extra text.`
+
+  try {
+    const anthropic = new Anthropic()
+    const message = await anthropic.messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 256,
+      messages: [{ role: 'user', content: prompt }],
+    })
+
+    const textBlock = message.content.find((block) => block.type === 'text')
+    if (!textBlock || textBlock.type !== 'text') {
+      return ctx.json(
+        { success: false, error: 'No text response from model' },
+        503,
+      )
+    }
+
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(textBlock.text)
+    } catch {
+      return ctx.json(
+        { success: false, error: 'Model returned invalid JSON' },
+        503,
+      )
+    }
+
+    const result = generateResponseSchema.safeParse(parsed)
+    if (!result.success) {
+      return ctx.json(
+        {
+          success: false,
+          error: 'Model response did not match expected shape',
+        },
+        503,
+      )
+    }
+
+    return ctx.json({ success: true, data: result.data })
+  } catch (err) {
+    apiLogger.error({ err }, 'generate-about: Anthropic call failed')
+    return ctx.json(
+      { success: false, error: 'Failed to generate venue description' },
+      503,
+    )
+  }
+})
 
 // DELETE /v1/admin/venues/:id — hard delete; nulls venue_id on events, cascades crawl_runs
 venuesAdminRouter.delete('/:id', async (ctx) => {

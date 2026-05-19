@@ -56,6 +56,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@anthropic-ai/sdk':
+        specifier: ^0.97.0
+        version: 0.97.0(zod@3.25.76)
       '@clerk/backend':
         specifier: ^2.33.3
         version: 2.33.3(react-dom@19.2.6(react@19.2.6))(react@19.2.6)

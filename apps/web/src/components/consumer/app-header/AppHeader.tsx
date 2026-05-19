@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Search } from 'lucide-react'
+import { MapPin, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CCMark } from '@/components/brand/cc-mark'
 import { UserMenu } from '../user-menu'
@@ -12,6 +12,7 @@ import { SearchPalette } from '../search-palette/SearchPalette'
 
 const NAV_TABS = [
   { label: 'Browse', href: '/events' },
+  { label: 'Venues', href: '/venues' },
   { label: 'Watching', href: '/watching' },
 ] as const
 
@@ -52,11 +53,11 @@ export function AppHeader() {
         </Link>
         <div className="flex items-center gap-2">
           <Link
-            href="/search"
-            aria-label="Search"
+            href="/venues"
+            aria-label="Venues"
             className="flex h-9 w-9 items-center justify-center rounded-full border border-border-strong"
           >
-            <Search size={16} className="text-fg-muted" strokeWidth={1.5} />
+            <MapPin size={16} className="text-fg-muted" strokeWidth={1.5} />
           </Link>
           <MobileProfileEntry />
         </div>

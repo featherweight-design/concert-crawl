@@ -27,6 +27,10 @@ export const SEED_VENUES: NewVenue[] = [
     verified: true,
     crawlDelayMs: 3000,
     address: '18300 W Alameda Pkwy, Morrison, CO 80465',
+    capacity: 9525,
+    venueType: 'Amphitheater',
+    about:
+      'Carved into the foothills west of Denver, Red Rocks is a natural sandstone amphitheater renowned for its acoustics and panoramic views. At 6,450 feet elevation, it hosts world-class acts against one of the most iconic backdrops in live music.',
   },
   {
     name: 'Ogden Theatre',
@@ -38,6 +42,10 @@ export const SEED_VENUES: NewVenue[] = [
     verified: true,
     crawlDelayMs: 3000,
     address: '935 E Colfax Ave, Denver, CO 80218',
+    capacity: 1600,
+    venueType: 'Theater',
+    about:
+      "A historic 1917 theater on Colfax Avenue, the Ogden has been a cornerstone of Denver's live music scene for over a century. Its ornate interior and intimate sightlines make it a favorite for mid-sized acts across rock, indie, and electronic.",
   },
   {
     name: 'Mission Ballroom',
@@ -49,6 +57,10 @@ export const SEED_VENUES: NewVenue[] = [
     verified: true,
     crawlDelayMs: 3000,
     address: '4242 Wynkoop St, Denver, CO 80211',
+    capacity: 3900,
+    venueType: 'Concert Hall',
+    about:
+      "Opened in 2018 in the RiNo Arts District, Mission Ballroom is Denver's premier mid-size venue with a state-of-the-art sound system and flexible standing floor. It bridges the gap between club shows and arena tours.",
   },
   {
     name: 'Bluebird Theater',
@@ -61,6 +73,10 @@ export const SEED_VENUES: NewVenue[] = [
     crawlDelayMs: 3000,
     crawlWaitUntil: 'load' as const,
     address: '3317 E Colfax Ave, Denver, CO 80206',
+    capacity: 550,
+    venueType: 'Theater',
+    about:
+      'A beloved neighborhood theater on East Colfax, the Bluebird has been hosting intimate shows since 1913. Its close-to-the-stage feel and eclectic booking make it an essential stop for emerging artists and underground acts.',
   },
   {
     name: 'Gothic Theatre',
@@ -72,6 +88,10 @@ export const SEED_VENUES: NewVenue[] = [
     verified: true,
     crawlDelayMs: 3000,
     address: '3263 S Broadway, Englewood, CO 80113',
+    capacity: 1100,
+    venueType: 'Theater',
+    about:
+      'A landmark on South Broadway since 1926, the Gothic Theatre blends historic architecture with a gritty, no-frills energy that draws a devoted crowd. Its slightly off-center location in Englewood gives it a character all its own.',
   },
 ]
 

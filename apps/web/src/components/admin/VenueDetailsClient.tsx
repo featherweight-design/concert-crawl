@@ -10,6 +10,7 @@ import {
   activateVenue,
   verifyVenue,
   unverifyVenue,
+  generateVenueAbout,
 } from '@/lib/actions/venues'
 import {
   AdminButton,
@@ -266,6 +267,67 @@ function StyledInput({
   )
 }
 
+const VENUE_TYPE_SUGGESTIONS = [
+  'Amphitheater',
+  'Theater',
+  'Concert Hall',
+  'Music Hall',
+  'Ballroom',
+  'Bar',
+  'Auditorium',
+  'Outdoor Pavilion',
+]
+
+function StyledTextarea({
+  id,
+  value,
+  placeholder,
+  disabled,
+  rows,
+  onChange,
+}: {
+  id: string
+  value: string
+  placeholder?: string
+  disabled?: boolean
+  rows?: number
+  onChange: React.ChangeEventHandler<HTMLTextAreaElement>
+}) {
+  const [focused, setFocused] = useState(false)
+  return (
+    <textarea
+      id={id}
+      value={value}
+      placeholder={placeholder}
+      disabled={disabled}
+      rows={rows ?? 4}
+      onChange={onChange}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      style={{
+        width: '100%',
+        padding: '8px 10px',
+        borderRadius: 8,
+        border: `1px solid ${focused ? 'var(--signal)' : 'var(--border-strong)'}`,
+        background: 'var(--bg-elevated)',
+        color: 'var(--fg)',
+        fontSize: 13.5,
+        fontFamily: "'Inter', sans-serif",
+        outline: 'none',
+        boxSizing: 'border-box',
+        resize: 'vertical',
+        lineHeight: 1.5,
+        opacity: disabled ? 0.66 : 1,
+        cursor: disabled ? 'not-allowed' : 'text',
+        boxShadow: focused
+          ? '0 0 0 3px color-mix(in oklab, var(--signal) 22%, transparent)'
+          : 'none',
+        transition: 'border-color .12s, box-shadow .12s',
+      }}
+    />
+  )
+}
+
 function StyledSelect({
   id,
   value,
@@ -435,6 +497,11 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
   const [crawlModeVal, setCrawlModeVal] = useState<'http' | 'browser' | null>(
     venue.crawlMode ?? null,
   )
+  const [capacityVal, setCapacityVal] = useState<string>(
+    venue.capacity != null ? String(venue.capacity) : '',
+  )
+  const [venueTypeVal, setVenueTypeVal] = useState(venue.venueType ?? '')
+  const [aboutVal, setAboutVal] = useState(venue.about ?? '')
   const [slugManual, setSlugManual] = useState(true)
   const [slugFocused, setSlugFocused] = useState(false)
   const [urlFocused, setUrlFocused] = useState(false)
@@ -449,7 +516,10 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     crawlDelayVal !== venue.crawlDelayMs ||
     (waitForSelectorVal || null) !== venue.crawlWaitForSelector ||
     ticketVendorVal !== (venue.ticketVendor ?? null) ||
-    crawlModeVal !== (venue.crawlMode ?? null)
+    crawlModeVal !== (venue.crawlMode ?? null) ||
+    capacityVal !== (venue.capacity != null ? String(venue.capacity) : '') ||
+    venueTypeVal !== (venue.venueType ?? '') ||
+    aboutVal !== (venue.about ?? '')
 
   // Save state
   const [saveState, setSaveState] = useState<
@@ -459,6 +529,33 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
   const [fieldErrors, setFieldErrors] = useState<{
     slug?: string | undefined
   }>({})
+
+  // Generate-about state
+  const [generateState, setGenerateState] = useState<
+    'idle' | 'loading' | 'error'
+  >('idle')
+  const [generateError, setGenerateError] = useState<string | null>(null)
+
+  async function handleGenerateAbout() {
+    setGenerateState('loading')
+    setGenerateError(null)
+    try {
+      const result = await generateVenueAbout(venue.id)
+      if (!result.success || !result.data) {
+        setGenerateError(result.error ?? 'Generation failed')
+        setGenerateState('error')
+        return
+      }
+      const { capacity, venueType, about } = result.data
+      setCapacityVal(capacity != null ? String(capacity) : '')
+      setVenueTypeVal(venueType)
+      setAboutVal(about)
+      setGenerateState('idle')
+    } catch {
+      setGenerateError('Network error — could not reach API')
+      setGenerateState('error')
+    }
+  }
 
   const isDisabled = saveState === 'saving'
 
@@ -473,6 +570,9 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     setWaitForSelectorVal(venue.crawlWaitForSelector ?? '')
     setTicketVendorVal(venue.ticketVendor ?? null)
     setCrawlModeVal(venue.crawlMode ?? null)
+    setCapacityVal(venue.capacity != null ? String(venue.capacity) : '')
+    setVenueTypeVal(venue.venueType ?? '')
+    setAboutVal(venue.about ?? '')
     setSaveState('idle')
     setSaveError(null)
     setFieldErrors({})
@@ -504,6 +604,9 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
       formData.set('ticketVendor', ticketVendorVal)
     }
     formData.set('crawlMode', crawlModeVal ?? '')
+    formData.set('capacity', capacityVal.trim())
+    formData.set('venueType', venueTypeVal.trim())
+    formData.set('about', aboutVal.trim())
 
     try {
       const result = await updateVenue(venue.id, formData)
@@ -904,6 +1007,106 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                 placeholder="e.g. 3317 E Colfax Ave, Denver, CO 80206"
                 onChange={(evt) => setAddressVal(evt.target.value)}
               />
+            </Field>
+
+            {/* Capacity */}
+            <Field label="Capacity" htmlFor="edit-venue-capacity">
+              <StyledInput
+                id="edit-venue-capacity"
+                type="number"
+                value={capacityVal}
+                placeholder="e.g. 1600"
+                disabled={isDisabled}
+                min={1}
+                onChange={(evt) => setCapacityVal(evt.target.value)}
+              />
+            </Field>
+
+            {/* Venue type */}
+            <Field label="Venue type" htmlFor="edit-venue-type">
+              <>
+                <StyledInput
+                  id="edit-venue-type"
+                  value={venueTypeVal}
+                  placeholder="e.g. Theater"
+                  disabled={isDisabled}
+                  style={{ listStyle: 'none' }}
+                  onChange={(evt) => setVenueTypeVal(evt.target.value)}
+                />
+                <datalist id="venue-type-suggestions">
+                  {VENUE_TYPE_SUGGESTIONS.map((suggestion) => (
+                    <option key={suggestion} value={suggestion} />
+                  ))}
+                </datalist>
+              </>
+            </Field>
+
+            {/* About */}
+            <Field
+              label="About"
+              htmlFor="edit-venue-about"
+              labelRight={
+                <button
+                  type="button"
+                  onClick={() => void handleGenerateAbout()}
+                  disabled={isDisabled || generateState === 'loading'}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    cursor:
+                      isDisabled || generateState === 'loading'
+                        ? 'not-allowed'
+                        : 'pointer',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color:
+                      generateState === 'loading'
+                        ? 'var(--fg-subtle)'
+                        : 'var(--signal)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                  }}
+                >
+                  {generateState === 'loading' ? (
+                    <>
+                      <Loader2
+                        size={10}
+                        style={{ animation: 'spin 1s linear infinite' }}
+                      />
+                      Generating…
+                    </>
+                  ) : (
+                    'Generate ↗'
+                  )}
+                </button>
+              }
+            >
+              <>
+                <StyledTextarea
+                  id="edit-venue-about"
+                  value={aboutVal}
+                  placeholder="A short description of the venue's character and history."
+                  disabled={isDisabled}
+                  rows={4}
+                  onChange={(evt) => setAboutVal(evt.target.value)}
+                />
+                {generateError && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color: 'var(--danger)',
+                      fontFamily: "'Inter', sans-serif",
+                    }}
+                  >
+                    {generateError}
+                  </span>
+                )}
+              </>
             </Field>
 
             {/* Ticket vendor */}

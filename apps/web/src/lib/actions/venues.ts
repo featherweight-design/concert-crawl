@@ -132,6 +132,31 @@ export async function updateVenue(
         ? String(addressRaw).trim()
         : null
 
+    const capacityRaw = formData.get('capacity')
+    const capacityNum =
+      capacityRaw !== null && String(capacityRaw).trim() !== ''
+        ? Number(String(capacityRaw).trim())
+        : null
+    const capacity =
+      capacityNum !== null &&
+      Number.isFinite(capacityNum) &&
+      Number.isInteger(capacityNum) &&
+      capacityNum > 0
+        ? capacityNum
+        : null
+
+    const venueTypeRaw = formData.get('venueType')
+    const venueType =
+      venueTypeRaw !== null && String(venueTypeRaw).trim()
+        ? String(venueTypeRaw).trim()
+        : null
+
+    const aboutRaw = formData.get('about')
+    const about =
+      aboutRaw !== null && String(aboutRaw).trim()
+        ? String(aboutRaw).trim()
+        : null
+
     await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
       name: formData.get('name'),
       slug: formData.get('slug'),
@@ -144,6 +169,9 @@ export async function updateVenue(
       ticketVendor,
       crawlMode,
       address,
+      capacity,
+      venueType,
+      about,
     })
     revalidatePath('/admin/venues')
     revalidatePath(`/admin/venues/${id}`)
@@ -244,6 +272,32 @@ export async function bulkActivateVenues(ids: string[]): Promise<void> {
     ),
   )
   revalidatePath('/admin/venues')
+}
+
+export interface GenerateAboutResult {
+  success: boolean
+  data?: { capacity: number | null; venueType: string; about: string }
+  error?: string
+}
+
+export async function generateVenueAbout(
+  id: string,
+): Promise<GenerateAboutResult> {
+  const token = await getToken()
+  try {
+    const data = await apiClient.post<{
+      capacity: number | null
+      venueType: string
+      about: string
+    }>(`/v1/admin/venues/${id}/generate-about`, token, {})
+    return { success: true, data }
+  } catch (err: unknown) {
+    const message =
+      err && typeof err === 'object' && 'message' in err
+        ? String((err as { message: unknown }).message)
+        : 'Generation failed'
+    return { success: false, error: message }
+  }
 }
 
 export async function bulkDeactivateVenues(ids: string[]): Promise<void> {

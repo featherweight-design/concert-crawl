@@ -11,6 +11,7 @@ import { googleMapsUrl } from '@/components/consumer/definitions/lib'
 import { copy } from '@/components/consumer/definitions/copy'
 import { IdentityArt } from '@/components/consumer/identity-art/IdentityArt'
 import { VenueEventList } from '@/components/consumer/venue-event-list/VenueEventList'
+import { StatPill } from '@/components/consumer/venue-profile/StatPill'
 
 interface VenueProfilePageProps {
   params: Promise<{ slug: string }>
@@ -45,6 +46,9 @@ export default async function VenueProfilePage({
   const { venue, upcomingEvents } = result
 
   const mapSearchQuery = `${venue.name}, ${venue.city}`
+  const hasStats = venue.capacity != null || venue.venueType != null
+  const capacityFormatted =
+    venue.capacity != null ? venue.capacity.toLocaleString('en-US') : '—'
 
   return (
     <div className="flex min-h-screen flex-col bg-bg">
@@ -101,6 +105,22 @@ export default async function VenueProfilePage({
       {/* Content */}
       <div className="relative -mt-5 flex-1 pb-10">
         <div className="mx-auto w-full max-w-[880px] px-[18px] sm:px-8">
+          {/* Type chip */}
+          {venue.venueType && (
+            <div className="mb-2">
+              <span
+                className="rounded-[4px] bg-surface-3 px-[7px] py-[2px] text-fg-muted"
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '9px',
+                  letterSpacing: '0.03em',
+                }}
+              >
+                {venue.venueType}
+              </span>
+            </div>
+          )}
+
           {/* Venue name */}
           <h1
             className="text-fg"
@@ -164,6 +184,46 @@ export default async function VenueProfilePage({
               Directions
             </a>
           </div>
+
+          {/* Stats row */}
+          {hasStats && (
+            <div className="mt-4">
+              <div className="h-px bg-border" />
+              <div className="flex gap-4 py-3">
+                <StatPill label="Capacity" value={capacityFormatted} />
+                <StatPill
+                  label="Upcoming"
+                  value={String(upcomingEvents.length)}
+                  signal
+                />
+                <StatPill label="Type" value={venue.venueType ?? '—'} />
+              </div>
+              <div className="h-px bg-border" />
+            </div>
+          )}
+
+          {/* About */}
+          {venue.about && (
+            <div className="mt-4">
+              <p
+                className="mb-1 text-fg-subtle"
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '8px',
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                About
+              </p>
+              <p
+                className="text-fg-muted"
+                style={{ fontSize: '13px', lineHeight: 1.55 }}
+              >
+                {venue.about}
+              </p>
+            </div>
+          )}
 
           {/* Map */}
           <div className="mt-5">

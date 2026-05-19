@@ -144,6 +144,9 @@ export interface Venue {
   ticketVendor: TicketVendor | null
   crawlMode: 'http' | 'browser' | null
   address: string | null
+  capacity: number | null
+  venueType: string | null
+  about: string | null
   createdAt: string
   updatedAt: string
 }
@@ -306,6 +309,9 @@ export interface VenuePublic {
   active: boolean
   verified: boolean
   address: string | null
+  capacity: number | null
+  venueType: string | null
+  about: string | null
 }
 
 // VenueWithEvents — venue profile page response
