@@ -1,3 +1,10 @@
+## [1.22.1](https://github.com/HartiganHM/concert-crawl/compare/v1.22.0...v1.22.1) (2026-05-19)
+
+
+### Bug Fixes
+
+* **docs:** add design/ prefix to handoff folder paths in design queue tables ([16f2839](https://github.com/HartiganHM/concert-crawl/commit/16f2839119e70054d20c3c330a2e0c8078b2ea01))
+
 # [1.22.0](https://github.com/HartiganHM/concert-crawl/compare/v1.21.0...v1.22.0) (2026-05-18)
 
 
