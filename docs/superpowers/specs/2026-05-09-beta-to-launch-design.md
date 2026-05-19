@@ -100,13 +100,13 @@ Hard blockers — nothing ships to beta users without these:
 | **Search implementation** | Command palette (⌘K on desktop, full-screen on mobile). Four states: empty, artist match, venue match, no results. Currently a dead nav link. Designs complete: `design_handoff_phase5b_screens/Search Desktop.html` + `Search Mobile.html`. |
 | **Artist genre data** | `genre: text[]` exists on the events table but is sparsely populated. LLM extraction must be verified to consistently output genre tags before Event Detail v2 can surface them. Audit crawler output and patch extraction prompt if needed. |
 | **Full UI interactions sweep** | Walk every clickable element on every route. Log dead interactions. Fix blockers. |
-| **Invite code error states** | Invalid code, expired code, no-code wall (separate from onboarding flow — these are code-entry failures). |
+| ~~**Invite code error states**~~ | ✅ Done. Invalid code, expired code, no-code wall. |
 | **Feedback modal** | In-app, auth-only, rate-limited (1/hour). Category + message + auto-captured page URL → `feedback` table. |
 | **Empty states** | Per-route — browse (no results for filters), search (no results), Watching (no saved shows). |
-| **FounderNote copy** | Hugh writes the personal message for onboarding step 1 before beta opens. |
+| ~~**FounderNote copy**~~ | ✅ Done. Personal message written and live in `app_config`. |
 | **FounderNote admin page** | `app_config` table (key-value), simple admin editor so copy can be updated without a redeploy. |
 | **Legal for beta** | One-page "private beta, don't share" doc. T&C + Privacy Policy required before public launch. |
-| **Seed additional venues** | Add Mission Ballroom + Fillmore to active crawl before May 25. |
+| ~~**Seed additional venues**~~ | ✅ Done. Mission Ballroom + Fillmore added to active crawl. |
 
 ---
 
