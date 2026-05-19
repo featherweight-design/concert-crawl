@@ -1,3 +1,11 @@
+## [1.24.1](https://github.com/HartiganHM/concert-crawl/compare/v1.24.0...v1.24.1) (2026-05-19)
+
+
+### Bug Fixes
+
+* **crawler:** auto-pause venue on repeated Playwright TimeoutErrors ([3c89386](https://github.com/HartiganHM/concert-crawl/commit/3c893861483a008aa98453650c6e759d5a8a0eab)), closes [#433](https://github.com/HartiganHM/concert-crawl/issues/433)
+* **crawler:** clarify TimeoutError comment; fix blockedAt null assertion in tests ([6557fb3](https://github.com/HartiganHM/concert-crawl/commit/6557fb357b75bf8ec75985c4c7d2cc80ebc6dc3e))
+
 # [1.24.0](https://github.com/HartiganHM/concert-crawl/compare/v1.23.3...v1.24.0) (2026-05-19)
 
 
