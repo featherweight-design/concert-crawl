@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useAuth, useUser } from '@clerk/nextjs'
 import { useTheme } from '@/theme/ThemeProvider'
 import { CCMark } from '@/components/brand/cc-mark'
+import { ModalShell } from '@/components/consumer/modal-shell'
 
 type FeedbackCategory = 'bug' | 'idea' | 'praise' | 'other'
 type ModalState = 'form' | 'loading' | 'success' | 'error'
@@ -125,27 +126,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     setMsgError(false)
   }, [])
 
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    const mql = window.matchMedia('(max-width: 639px)')
-    setIsMobile(mql.matches)
-    const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches)
-    mql.addEventListener('change', handler)
-    return () => mql.removeEventListener('change', handler)
-  }, [])
-
-  useEffect(() => {
-    if (!open) return
-    const handleKeyDown = (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape') handleClose()
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [open, handleClose])
-
-  if (!open) return null
-
+  const showForm = state === 'form' || state === 'loading'
   const ctxData: CtxData = {
     route: pathname,
     theme,
@@ -157,55 +138,84 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     user: userEmail,
   }
 
+  const header = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <CCMark size={22} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <HeaderRail state={state} />
+      </div>
+      <button
+        type="button"
+        aria-label="Close feedback"
+        onClick={handleClose}
+        style={{
+          all: 'unset',
+          cursor: 'pointer',
+          width: 30,
+          height: 30,
+          borderRadius: 8,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'var(--fg-muted)',
+          border: '1px solid var(--border)',
+        }}
+      >
+        <CloseIcon />
+      </button>
+    </div>
+  )
+
+  const footer = showForm ? (
+    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+      <SecondaryButton onClick={handleClose} fullWidth={false}>
+        Cancel
+      </SecondaryButton>
+      <div style={{ width: 200 }}>
+        <SubmitButton loading={state === 'loading'} onClick={handleSubmit}>
+          Send →
+        </SubmitButton>
+      </div>
+    </div>
+  ) : undefined
+
   return (
-    <>
-      {/* Scrim */}
+    <ModalShell
+      open={open}
+      onClose={handleClose}
+      ariaLabel="Feedback"
+      sheetHeight={state === 'success' || state === 'error' ? 'short' : 'tall'}
+      header={header}
+      footer={footer}
+    >
       <div
         style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 90,
-          background: 'var(--scrim)',
-          backdropFilter: 'blur(4px)',
+          opacity: state === 'loading' ? 0.5 : 1,
+          pointerEvents: state === 'loading' ? 'none' : 'auto',
         }}
-        onClick={handleClose}
-      />
-
-      {/* Sheet (mobile) / Card (desktop) */}
-      {isMobile ? (
-        <MobileSheet
-          state={state}
-          category={category}
-          setCategory={handleCategoryChange}
-          message={message}
-          setMessage={handleMessageChange}
-          catError={catError}
-          msgError={msgError}
-          ctxData={ctxData}
-          screenshot={screenshot}
-          onScreenshotChange={handleScreenshotChange}
-          onSubmit={handleSubmit}
-          onClose={handleClose}
-          onReset={reset}
-        />
-      ) : (
-        <DesktopCard
-          state={state}
-          category={category}
-          setCategory={handleCategoryChange}
-          message={message}
-          setMessage={handleMessageChange}
-          catError={catError}
-          msgError={msgError}
-          ctxData={ctxData}
-          screenshot={screenshot}
-          onScreenshotChange={handleScreenshotChange}
-          onSubmit={handleSubmit}
-          onClose={handleClose}
-          onReset={reset}
-        />
-      )}
-    </>
+      >
+        {state === 'success' && (
+          <SuccessState onClose={handleClose} onReset={reset} />
+        )}
+        {state === 'error' && (
+          <ErrorState onReset={reset} onClose={handleClose} />
+        )}
+        {showForm && (
+          <FormFields
+            state={state}
+            category={category}
+            setCategory={handleCategoryChange}
+            message={message}
+            setMessage={handleMessageChange}
+            catError={catError}
+            msgError={msgError}
+            ctxData={ctxData}
+            screenshot={screenshot}
+            onScreenshotChange={handleScreenshotChange}
+          />
+        )}
+      </div>
+    </ModalShell>
   )
 }
 
@@ -670,258 +680,6 @@ function ErrorState({
         <SubmitButton onClick={onReset}>Try again</SubmitButton>
         <SecondaryButton onClick={onClose}>Save and come back</SecondaryButton>
       </div>
-    </div>
-  )
-}
-
-// ── Mobile sheet ──────────────────────────────────────────────────────────
-
-interface ShellProps extends FormProps {
-  onSubmit: () => void
-  onClose: () => void
-  onReset: () => void
-}
-
-function MobileSheet({
-  state,
-  onSubmit,
-  onClose,
-  onReset,
-  ...formProps
-}: ShellProps) {
-  const showForm = state === 'form' || state === 'loading'
-  const sheetHeight = state === 'success' || state === 'error' ? '62%' : '85%'
-
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Feedback"
-      style={{
-        position: 'fixed',
-        left: 0,
-        right: 0,
-        bottom: 0,
-        height: sheetHeight,
-        zIndex: 100,
-        background: 'var(--bg-elevated)',
-        borderTopLeftRadius: 22,
-        borderTopRightRadius: 22,
-        boxShadow: '0 -16px 48px rgba(0,0,0,0.45)',
-        border: '1px solid var(--border)',
-        borderBottom: 'none',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }}
-    >
-      {/* Drag handle */}
-      <div
-        style={{
-          flexShrink: 0,
-          height: 18,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <div
-          style={{
-            width: 36,
-            height: 4,
-            borderRadius: 2,
-            background: 'var(--border-strong)',
-          }}
-        />
-      </div>
-
-      {/* Header rail */}
-      <div
-        style={{
-          flexShrink: 0,
-          padding: '0 18px 12px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-        }}
-      >
-        <CCMark size={20} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <HeaderRail state={state} />
-        </div>
-        <button
-          type="button"
-          aria-label="Close feedback"
-          onClick={onClose}
-          style={{
-            all: 'unset',
-            cursor: 'pointer',
-            width: 28,
-            height: 28,
-            borderRadius: 8,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'var(--fg-muted)',
-            border: '1px solid var(--border)',
-          }}
-        >
-          <CloseIcon />
-        </button>
-      </div>
-
-      {/* Scroll area */}
-      <div
-        style={{
-          flex: 1,
-          minHeight: 0,
-          overflowY: 'auto',
-          padding: '6px 18px 18px',
-          opacity: state === 'loading' ? 0.5 : 1,
-          pointerEvents: state === 'loading' ? 'none' : 'auto',
-        }}
-      >
-        {state === 'success' && (
-          <SuccessState onClose={onClose} onReset={onReset} />
-        )}
-        {state === 'error' && (
-          <ErrorState onReset={onReset} onClose={onClose} />
-        )}
-        {showForm && <FormFields state={state} {...formProps} />}
-      </div>
-
-      {/* Sticky footer */}
-      {showForm && (
-        <div
-          style={{
-            flexShrink: 0,
-            padding: '12px 18px 22px',
-            borderTop: '1px solid var(--border)',
-            background: 'var(--bg-elevated)',
-          }}
-        >
-          <SubmitButton loading={state === 'loading'} onClick={onSubmit}>
-            Send →
-          </SubmitButton>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── Desktop card ──────────────────────────────────────────────────────────
-
-function DesktopCard({
-  state,
-  onSubmit,
-  onClose,
-  onReset,
-  ...formProps
-}: ShellProps) {
-  const showForm = state === 'form' || state === 'loading'
-
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Feedback"
-      style={{
-        position: 'fixed',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        zIndex: 100,
-        width: 520,
-        maxWidth: 'calc(100% - 64px)',
-        maxHeight: 'calc(100% - 80px)',
-        background: 'var(--bg-elevated)',
-        border: '1px solid var(--border-strong)',
-        borderRadius: 16,
-        boxShadow: '0 32px 80px rgba(0,0,0,0.5)',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }}
-    >
-      {/* Header */}
-      <div
-        style={{
-          flexShrink: 0,
-          padding: '18px 22px 12px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          borderBottom: '1px solid var(--border)',
-        }}
-      >
-        <CCMark size={22} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <HeaderRail state={state} />
-        </div>
-        <button
-          type="button"
-          aria-label="Close feedback"
-          onClick={onClose}
-          style={{
-            all: 'unset',
-            cursor: 'pointer',
-            width: 30,
-            height: 30,
-            borderRadius: 8,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'var(--fg-muted)',
-            border: '1px solid var(--border)',
-          }}
-        >
-          <CloseIcon />
-        </button>
-      </div>
-
-      {/* Scroll area */}
-      <div
-        style={{
-          flex: 1,
-          minHeight: 0,
-          overflowY: 'auto',
-          padding: '18px 22px',
-          opacity: state === 'loading' ? 0.5 : 1,
-          pointerEvents: state === 'loading' ? 'none' : 'auto',
-        }}
-      >
-        {state === 'success' && (
-          <SuccessState onClose={onClose} onReset={onReset} />
-        )}
-        {state === 'error' && (
-          <ErrorState onReset={onReset} onClose={onClose} />
-        )}
-        {showForm && <FormFields state={state} {...formProps} />}
-      </div>
-
-      {/* Footer */}
-      {showForm && (
-        <div
-          style={{
-            flexShrink: 0,
-            padding: '14px 22px 18px',
-            borderTop: '1px solid var(--border)',
-            background: 'var(--bg-elevated)',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: 10,
-          }}
-        >
-          <SecondaryButton onClick={onClose} fullWidth={false}>
-            Cancel
-          </SecondaryButton>
-          <div style={{ width: 200 }}>
-            <SubmitButton loading={state === 'loading'} onClick={onSubmit}>
-              Send →
-            </SubmitButton>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
