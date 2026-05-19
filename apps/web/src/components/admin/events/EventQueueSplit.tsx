@@ -428,6 +428,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
 
   async function handleEditSave() {
     if (!selected) return
+    setActionError(null)
     try {
       const payload = {
         ...(editDraft.title ? { title: editDraft.title } : {}),
@@ -441,7 +442,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
       await updateEvent.mutateAsync({ id: selected.id, payload })
       setIsEditing(false)
     } catch (err) {
-      console.error('Failed to save event edits', err)
+      setActionError(err instanceof Error ? err.message : 'Save failed')
     }
   }
 

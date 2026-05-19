@@ -79,14 +79,10 @@ export function useUpdateEvent() {
     }) => {
       const token = await getToken()
       if (!token) throw new Error('Not authenticated')
-      return apiClient.patch<AdminEvent>(
-        `/v1/admin/events/${id}`,
-        token,
-        payload,
-      )
+      await apiClient.patch(`/v1/admin/events/${id}`, token, payload)
     },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: adminEventsQueryKey })
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: adminEventsQueryKey })
     },
   })
 }
