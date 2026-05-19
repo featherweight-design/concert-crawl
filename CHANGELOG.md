@@ -1,3 +1,15 @@
+# [1.27.0](https://github.com/HartiganHM/concert-crawl/compare/v1.26.0...v1.27.0) (2026-05-19)
+
+
+### Bug Fixes
+
+* **admin:** normalize empty address string to null in API schema ([22d42e4](https://github.com/HartiganHM/concert-crawl/commit/22d42e46a307423a9fbff78c111253ce8d715cdd))
+
+
+### Features
+
+* **venue:** add address field, functional map embed, reposition above shows ([331c797](https://github.com/HartiganHM/concert-crawl/commit/331c79720490d7befe0f50aaeb05a45f20027650)), closes [#405](https://github.com/HartiganHM/concert-crawl/issues/405)
+
 # [1.26.0](https://github.com/HartiganHM/concert-crawl/compare/v1.25.1...v1.26.0) (2026-05-19)
 
 
