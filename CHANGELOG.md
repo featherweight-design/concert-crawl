@@ -1,3 +1,10 @@
+## [1.23.2](https://github.com/HartiganHM/concert-crawl/compare/v1.23.1...v1.23.2) (2026-05-19)
+
+
+### Bug Fixes
+
+* **search:** add loading skeleton, suppress empty state until fetch resolves ([#384](https://github.com/HartiganHM/concert-crawl/issues/384)) ([7e3cd35](https://github.com/HartiganHM/concert-crawl/commit/7e3cd35cf857495a5d27043f87c6e0343368dd3a))
+
 ## [1.23.1](https://github.com/HartiganHM/concert-crawl/compare/v1.23.0...v1.23.1) (2026-05-19)
 
 
