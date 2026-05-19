@@ -35,7 +35,6 @@ function haloColor(hex: string): string {
 
 function pickPalette(seed: string): Palette {
   const hash = seed.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0)
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   return POSTER_PALETTES[hash % POSTER_PALETTES.length]!
 }
 
