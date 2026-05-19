@@ -111,6 +111,14 @@ export async function updateVenue(
         ? null
         : String(ticketVendorRaw).trim()
 
+    const crawlModeRaw = formData.get('crawlMode')
+    const crawlMode =
+      crawlModeRaw === 'http' || crawlModeRaw === 'browser'
+        ? (crawlModeRaw as 'http' | 'browser')
+        : crawlModeRaw === ''
+          ? null
+          : undefined
+
     await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
       name: formData.get('name'),
       slug: formData.get('slug'),
@@ -121,6 +129,7 @@ export async function updateVenue(
       crawlDelayMs,
       crawlWaitForSelector,
       ticketVendor,
+      crawlMode,
     })
     revalidatePath('/admin/venues')
     revalidatePath(`/admin/venues/${id}`)
