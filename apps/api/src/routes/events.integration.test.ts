@@ -504,8 +504,16 @@ describe('GET /v1/events/genres', () => {
 
   it('returns distinct genres from upcoming events sorted alphabetically', async () => {
     const venue = await seedVenue()
-    await seedEvent(venue.id, { genre: ['rock', 'indie'], status: 'upcoming' })
-    await seedEvent(venue.id, { genre: ['r&b', 'rock'], status: 'upcoming' })
+    await seedEvent(venue.id, {
+      artist: 'Artist One',
+      genre: ['rock', 'indie'],
+      status: 'upcoming',
+    })
+    await seedEvent(venue.id, {
+      artist: 'Artist Two',
+      genre: ['r&b', 'rock'],
+      status: 'upcoming',
+    })
 
     const res = await app.request('/v1/events/genres')
     expect(res.status).toBe(200)
@@ -515,8 +523,16 @@ describe('GET /v1/events/genres', () => {
 
   it('excludes genres from non-upcoming events', async () => {
     const venue = await seedVenue()
-    await seedEvent(venue.id, { genre: ['jazz'], status: 'cancelled' })
-    await seedEvent(venue.id, { genre: ['rock'], status: 'upcoming' })
+    await seedEvent(venue.id, {
+      artist: 'Jazz Act',
+      genre: ['jazz'],
+      status: 'cancelled',
+    })
+    await seedEvent(venue.id, {
+      artist: 'Rock Act',
+      genre: ['rock'],
+      status: 'upcoming',
+    })
 
     const res = await app.request('/v1/events/genres')
     expect(res.status).toBe(200)
