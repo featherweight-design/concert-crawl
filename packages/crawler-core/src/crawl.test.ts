@@ -194,6 +194,8 @@ const HTML_V1 =
   '<html><body><p>Event: Metallica on 2026-08-15</p></body></html>'
 const HTML_V2 =
   '<html><body><p>Event: Metallica on 2026-08-15. Doors at 7pm.</p></body></html>'
+// HTML with embedded JSON-LD — used to test auto-detect HTTP path (no LLM needed)
+const HTML_WITH_JSON_LD = `<html><head><script type="application/ld+json">{"@context":"https://schema.org","@type":"MusicEvent","name":"Metallica Live","startDate":"2026-08-15","performer":{"@type":"MusicGroup","name":"Metallica"}}</script></head><body></body></html>`
 
 const METALLICA_EVENT = {
   title: 'Metallica Live',
@@ -614,20 +616,25 @@ describe('crawlVenue — crawlMode orchestration', () => {
     expect(mockFetchPageHttp).not.toHaveBeenCalled()
   })
 
-  it('auto-detect: saves crawlMode=http when HTTP fetch returns events', async () => {
+  it('auto-detect: saves crawlMode=http when HTTP fetch returns JSON-LD events (no LLM called)', async () => {
     const venue = seedVenue({ crawlMode: null })
-    mockFetchPageHttp.mockResolvedValue(FETCH_RESULT)
+    mockFetchPageHttp.mockResolvedValue({
+      html: HTML_WITH_JSON_LD,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
 
     await crawlVenue(venue.id, mockBrowser)
 
     expect(mockFetchPageHttp).toHaveBeenCalled()
     expect(mockFetchPage).not.toHaveBeenCalled()
+    expect(mockExtractWithLlm).not.toHaveBeenCalled()
 
     const savedVenue = stores.venues.find((vv) => vv.id === venue.id)
     expect(savedVenue?.crawlMode).toBe('http')
   })
 
-  it('auto-detect: falls back to browser and saves crawlMode=browser when HTTP returns no events', async () => {
+  it('auto-detect: falls back to browser and saves crawlMode=browser when HTTP has no JSON-LD', async () => {
     const venue = seedVenue({ crawlMode: null })
     const emptyHtml = '<html><body>No events here</body></html>'
     mockFetchPageHttp.mockResolvedValue({
@@ -636,20 +643,17 @@ describe('crawlVenue — crawlMode orchestration', () => {
       finalUrl: venue.websiteUrl,
     })
     mockFetchPage.mockResolvedValue(FETCH_RESULT)
-    mockExtractWithLlm
-      .mockResolvedValueOnce({
-        events: [],
-        usage: { inputTokens: 50, outputTokens: 10 },
-      })
-      .mockResolvedValueOnce({
-        events: [METALLICA_EVENT],
-        usage: { inputTokens: 100, outputTokens: 50 },
-      })
+    // LLM is only called once — on the browser HTML, never on HTTP HTML
+    mockExtractWithLlm.mockResolvedValueOnce({
+      events: [METALLICA_EVENT],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
 
     await crawlVenue(venue.id, mockBrowser)
 
     expect(mockFetchPageHttp).toHaveBeenCalled()
     expect(mockFetchPage).toHaveBeenCalled()
+    expect(mockExtractWithLlm).toHaveBeenCalledTimes(1)
 
     const savedVenue = stores.venues.find((vv) => vv.id === venue.id)
     expect(savedVenue?.crawlMode).toBe('browser')

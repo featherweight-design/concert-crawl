@@ -64,6 +64,7 @@ function makeVenue(overrides: Partial<Venue> = {}): Venue {
     contactEmail: null,
     priceUrl: null,
     ticketVendor: null,
+    crawlMode: null,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
     ...overrides,

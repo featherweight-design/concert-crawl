@@ -192,26 +192,38 @@ export async function crawlVenue(
       return crawlRun
     }
 
-    // Extract events; if auto-detect and HTTP returned no events, fall back to browser
-    let extraction = await runExtraction(html, finalUrl)
+    // Extract events. In auto-detect mode, only check JSON-LD on the HTTP HTML
+    // before deciding to fall back — avoids paying an LLM call on HTTP markup
+    // that a JS-rendered venue won't populate anyway.
+    let extraction: Awaited<ReturnType<typeof runExtraction>>
 
-    if (
-      venue.crawlMode === null &&
-      resolvedMode === 'http' &&
-      extraction.normalizedEvents.length === 0
-    ) {
-      const browserResult = await fetchPage(
-        venue.websiteUrl,
-        browser,
-        venue.crawlDelayMs,
-        venue.crawlWaitUntil,
-        venue.crawlWaitForSelector ?? undefined,
-      )
-      extraction = await runExtraction(
-        browserResult.html,
-        browserResult.finalUrl,
-      )
-      resolvedMode = 'browser'
+    if (venue.crawlMode === null && resolvedMode === 'http') {
+      const httpJsonLdEvents = extractJsonLd(html, finalUrl)
+      if (httpJsonLdEvents.length > 0) {
+        extraction = {
+          normalizedEvents: httpJsonLdEvents,
+          strategy: 'structured_data' as const,
+          tokenUsage: undefined,
+        }
+      } else {
+        // No structured data on HTTP HTML — fall back to browser before invoking LLM.
+        // The crawlDelayMs fires inside both fetchPageHttp (above) and fetchPage (here),
+        // which is intentional: each request to the venue's origin deserves its own delay.
+        const browserResult = await fetchPage(
+          venue.websiteUrl,
+          browser,
+          venue.crawlDelayMs,
+          venue.crawlWaitUntil,
+          venue.crawlWaitForSelector ?? undefined,
+        )
+        extraction = await runExtraction(
+          browserResult.html,
+          browserResult.finalUrl,
+        )
+        resolvedMode = 'browser'
+      }
+    } else {
+      extraction = await runExtraction(html, finalUrl)
     }
 
     const { normalizedEvents, strategy, tokenUsage } = extraction
