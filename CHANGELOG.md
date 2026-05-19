@@ -1,3 +1,15 @@
+# [1.23.0](https://github.com/HartiganHM/concert-crawl/compare/v1.22.1...v1.23.0) (2026-05-19)
+
+
+### Bug Fixes
+
+* **cache:** opt admin venue runs query into window focus refetch ([95754a6](https://github.com/HartiganHM/concert-crawl/commit/95754a61e05a1fcac0ed2aa276e1e9f718b150e4))
+
+
+### Features
+
+* **cache:** migrate admin UI to TanStack Query ([#409](https://github.com/HartiganHM/concert-crawl/issues/409)) ([3776f92](https://github.com/HartiganHM/concert-crawl/commit/3776f92b0eea9623672532ab2e71db7b3a728c81))
+
 ## [1.22.1](https://github.com/HartiganHM/concert-crawl/compare/v1.22.0...v1.22.1) (2026-05-19)
 
 
