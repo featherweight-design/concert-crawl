@@ -27,7 +27,13 @@ function IconChevron() {
   )
 }
 
-function IconPin({ size = 11 }: { size?: number }) {
+function IconPin({
+  size = 11,
+  dotRadius = 1.2,
+}: {
+  size?: number
+  dotRadius?: number
+}) {
   return (
     <svg width={size} height={size} viewBox="0 0 12 12" fill="none" aria-hidden>
       <path
@@ -36,7 +42,7 @@ function IconPin({ size = 11 }: { size?: number }) {
         strokeWidth="1.2"
         fill="none"
       />
-      <circle cx="6" cy="5" r="1.2" fill="currentColor" />
+      <circle cx="6" cy="5" r={dotRadius} fill="currentColor" />
     </svg>
   )
 }
@@ -56,7 +62,10 @@ export function VenueRow({ venue, last = false }: VenueRowProps) {
         <VenueIdentityTile name={venue.name} size={72} />
 
         <div className="min-w-0">
-          <div className="truncate text-[22px] font-bold tracking-tight text-fg leading-[1.15]">
+          <div
+            className="truncate text-[22px] font-bold text-fg leading-[1.15]"
+            style={{ letterSpacing: '-0.02em' }}
+          >
             {venue.name}
           </div>
           <div
@@ -69,12 +78,14 @@ export function VenueRow({ venue, last = false }: VenueRowProps) {
               textTransform: 'uppercase',
             }}
           >
-            <span className="flex items-center gap-1.5 font-semibold text-fg">
+            <span className="flex items-center gap-[5px] font-semibold text-fg">
               <IconPin />
               {fmtDistance(venue.distanceMi)}
             </span>
             <span style={{ color: 'var(--fg-subtle)' }}>·</span>
-            <span>{venue.neighborhood ?? venue.city}</span>
+            <span>
+              {[venue.neighborhood, venue.city].filter(Boolean).join(', ')}
+            </span>
           </div>
         </div>
 
@@ -139,8 +150,13 @@ export function VenueRow({ venue, last = false }: VenueRowProps) {
         </div>
 
         {/* Chevron */}
-        <div className="flex justify-end text-fg-subtle group-hover:text-fg transition-colors">
-          <IconChevron />
+        <div
+          className="flex justify-end text-fg-subtle group-hover:text-fg transition-all"
+          style={{ transform: 'translateX(0)' }}
+        >
+          <span className="block transition-transform group-hover:translate-x-0.5">
+            <IconChevron />
+          </span>
         </div>
       </div>
 
@@ -148,11 +164,14 @@ export function VenueRow({ venue, last = false }: VenueRowProps) {
       <div className="flex sm:hidden items-center gap-3.5 px-4 py-3 group-hover:bg-overlay-hover transition-colors">
         <VenueIdentityTile name={venue.name} size={56} />
         <div className="flex-1 min-w-0">
-          <div className="truncate text-[16px] font-bold tracking-tight text-fg leading-[1.2]">
+          <div
+            className="truncate text-[16px] font-bold text-fg leading-[1.2]"
+            style={{ letterSpacing: '-0.015em' }}
+          >
             {venue.name}
           </div>
           <div
-            className="mt-1.5 flex items-center gap-1.5"
+            className="mt-[5px] flex items-center gap-[7px]"
             style={{
               fontFamily: 'var(--font-mono)',
               fontSize: 10,
@@ -160,8 +179,8 @@ export function VenueRow({ venue, last = false }: VenueRowProps) {
               color: 'var(--fg-muted)',
             }}
           >
-            <span className="flex items-center gap-1 font-semibold text-fg">
-              <IconPin size={9} />
+            <span className="flex items-center gap-[3px] font-semibold text-fg">
+              <IconPin size={9} dotRadius={1.1} />
               {fmtDistance(venue.distanceMi)}
             </span>
             <span style={{ color: 'var(--fg-subtle)' }}>·</span>

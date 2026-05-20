@@ -17,18 +17,18 @@ interface VenueFilterBarProps {
   onChange: (next: VenueFilterState) => void
 }
 
-function IconChevDown() {
+function IconChevDown({ size = 11 }: { size?: number }) {
   return (
     <svg
-      width="11"
-      height="11"
-      viewBox="0 0 16 16"
+      width={size}
+      height={size}
+      viewBox="0 0 12 12"
       fill="none"
       aria-hidden
       style={{ flexShrink: 0 }}
     >
       <path
-        d="M4 6l4 4 4-4"
+        d="M3 4.5l3 3 3-3"
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
@@ -70,59 +70,120 @@ export function VenueFilterBar({ state, onChange }: VenueFilterBarProps) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {VENUE_FILTER_ORDER.map((key) => {
-        const def = VENUE_FILTER_DEFS[key]
-        const value = state[key]
-        const active = def.alwaysOn
-          ? !!value && value !== def.options[0]?.value
-          : !!value
-        const label = venueChipLabel(key, value)
+    <>
+      {/* Mobile: horizontally scrollable chip strip */}
+      <div
+        className="flex sm:hidden items-center gap-1.5 overflow-x-auto"
+        style={{ padding: '8px 16px 14px', scrollbarWidth: 'none' }}
+      >
+        {VENUE_FILTER_ORDER.map((key) => {
+          const def = VENUE_FILTER_DEFS[key]
+          const value = state[key]
+          const active = def.alwaysOn
+            ? !!value && value !== def.options[0]?.value
+            : !!value
+          const label = venueChipLabel(key, value)
 
-        return (
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => openFilter(key)}
+              style={{ letterSpacing: '-0.005em' }}
+              className={cn(
+                'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-semibold transition-colors',
+                active
+                  ? 'border-signal bg-signal text-fg-on-accent'
+                  : 'border-border-strong bg-transparent text-fg-muted',
+              )}
+            >
+              {def.alwaysOn && (
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 9,
+                    letterSpacing: '0.12em',
+                    textTransform: 'uppercase',
+                    opacity: active ? 0.7 : 1,
+                    color: active ? 'var(--fg-on-accent)' : 'var(--fg-subtle)',
+                  }}
+                >
+                  Sort
+                </span>
+              )}
+              <span className="whitespace-nowrap">{label}</span>
+              <IconChevDown size={9} />
+            </button>
+          )
+        })}
+
+        {anyActive && (
           <button
-            key={key}
-            ref={(el) => {
-              chipRefs.current[key] = el
-            }}
             type="button"
-            onClick={() => openFilter(key)}
-            className={cn(
-              'inline-flex items-center gap-1.5 rounded-full px-3 py-[7px] text-[12.5px] font-semibold transition-colors',
-              active
-                ? 'border border-signal bg-signal text-fg-on-accent'
-                : 'border border-border bg-surface-1 text-fg hover:bg-surface-2',
-            )}
+            onClick={clearFilters}
+            className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-dashed border-border-strong bg-transparent px-3 py-1.5 text-[12px] font-semibold text-fg-subtle transition-colors hover:text-fg"
           >
-            {def.alwaysOn && (
-              <span
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 10,
-                  letterSpacing: '0.12em',
-                  textTransform: 'uppercase',
-                  opacity: active ? 0.7 : 1,
-                  color: active ? 'var(--fg-on-accent)' : 'var(--fg-subtle)',
-                }}
-              >
-                Sort
-              </span>
-            )}
-            <span className="whitespace-nowrap">{label}</span>
-            <IconChevDown />
+            × Clear
           </button>
-        )
-      })}
+        )}
+      </div>
 
-      {anyActive && (
-        <button
-          type="button"
-          onClick={clearFilters}
-          className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-dashed border-border-strong px-3 py-[7px] text-[12.5px] font-semibold text-fg-muted transition-colors hover:text-fg"
-        >
-          × Clear filters
-        </button>
-      )}
+      {/* Desktop: wrapping chip row */}
+      <div className="hidden sm:flex flex-wrap items-center gap-2">
+        {VENUE_FILTER_ORDER.map((key) => {
+          const def = VENUE_FILTER_DEFS[key]
+          const value = state[key]
+          const active = def.alwaysOn
+            ? !!value && value !== def.options[0]?.value
+            : !!value
+          const label = venueChipLabel(key, value)
+
+          return (
+            <button
+              key={key}
+              ref={(el) => {
+                chipRefs.current[key] = el
+              }}
+              type="button"
+              onClick={() => openFilter(key)}
+              style={{ letterSpacing: '-0.005em' }}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full px-3 py-[7px] text-[12.5px] font-semibold transition-colors',
+                active
+                  ? 'border border-signal bg-signal text-fg-on-accent'
+                  : 'border border-border bg-surface-1 text-fg hover:bg-surface-2',
+              )}
+            >
+              {def.alwaysOn && (
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 10,
+                    letterSpacing: '0.12em',
+                    textTransform: 'uppercase',
+                    opacity: active ? 0.7 : 1,
+                    color: active ? 'var(--fg-on-accent)' : 'var(--fg-subtle)',
+                  }}
+                >
+                  Sort
+                </span>
+              )}
+              <span className="whitespace-nowrap">{label}</span>
+              <IconChevDown />
+            </button>
+          )
+        })}
+
+        {anyActive && (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-dashed border-border-strong px-3 py-[7px] text-[12.5px] font-semibold text-fg-muted transition-colors hover:text-fg"
+          >
+            × Clear filters
+          </button>
+        )}
+      </div>
 
       {/* Desktop popover */}
       {openKey && (
@@ -133,6 +194,7 @@ export function VenueFilterBar({ state, onChange }: VenueFilterBarProps) {
           options={VENUE_FILTER_DEFS[openKey]?.options ?? []}
           value={state[openKey] ?? ''}
           anchorRect={anchorRect}
+          alwaysOn={VENUE_FILTER_DEFS[openKey]?.alwaysOn ?? false}
           onSelect={handleSelect}
           onClose={() => setOpenKey(null)}
         />
@@ -146,10 +208,11 @@ export function VenueFilterBar({ state, onChange }: VenueFilterBarProps) {
           placeholder={VENUE_FILTER_DEFS[openKey]?.placeholder ?? ''}
           options={VENUE_FILTER_DEFS[openKey]?.options ?? []}
           value={state[openKey] ?? ''}
+          alwaysOn={VENUE_FILTER_DEFS[openKey]?.alwaysOn ?? false}
           onSelect={handleSelect}
           onClose={() => setOpenKey(null)}
         />
       )}
-    </div>
+    </>
   )
 }

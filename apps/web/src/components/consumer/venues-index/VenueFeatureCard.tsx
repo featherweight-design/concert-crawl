@@ -86,13 +86,14 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
         </div>
 
         {/* Right — meta column */}
-        <div className="relative flex flex-col justify-between p-7">
-          {/* Chevron — top-right */}
+        <div className="relative flex flex-col justify-between py-6 px-7">
+          {/* Chevron — top-right, lights up signal on card hover */}
           <div
-            className="absolute top-5 right-5 w-9 h-9 rounded-full flex items-center justify-center border transition-all"
+            className="absolute top-5 right-5 w-9 h-9 rounded-full flex items-center justify-center border transition-all group-hover:bg-[var(--signal)] group-hover:border-[var(--signal)] group-hover:text-[var(--fg-on-accent)]"
             style={{
               background: 'var(--surface-2)',
               borderColor: 'var(--border-strong)',
+              color: 'var(--fg-muted)',
             }}
             aria-hidden
           >
@@ -127,7 +128,10 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
                 {venue.venueType}
               </span>
             )}
-            <div className="mt-2.5 text-[34px] font-extrabold tracking-tight text-fg leading-[1.05]">
+            <div
+              className="mt-2.5 text-[34px] font-extrabold text-fg leading-[1.05]"
+              style={{ letterSpacing: '-0.03em' }}
+            >
               {venue.name}
             </div>
             <div
@@ -139,7 +143,9 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
                 letterSpacing: '0.04em',
               }}
             >
-              <span>{venue.neighborhood ?? venue.city}</span>
+              <span>
+                {[venue.neighborhood, venue.city].filter(Boolean).join(' · ')}
+              </span>
               <span style={{ color: 'var(--fg-subtle)' }}>·</span>
               <span
                 className="flex items-center gap-1"
@@ -161,8 +167,12 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
 
           {/* Stats */}
           <div
-            className="mt-5 pt-4 flex gap-10 items-end"
-            style={{ borderTop: '1px solid var(--border)' }}
+            className="flex gap-10 items-end"
+            style={{
+              marginTop: 22,
+              paddingTop: 18,
+              borderTop: '1px solid var(--border)',
+            }}
           >
             {[
               {
@@ -287,7 +297,10 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
               {venue.venueType}
             </span>
           )}
-          <div className="mt-2 text-2xl font-extrabold tracking-tight text-fg leading-[1.1]">
+          <div
+            className="mt-2 text-2xl font-extrabold text-fg leading-[1.1]"
+            style={{ letterSpacing: '-0.03em' }}
+          >
             {venue.name}
           </div>
           <div
@@ -299,7 +312,9 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
               letterSpacing: '0.04em',
             }}
           >
-            <span>{venue.neighborhood ?? venue.city}</span>
+            <span>
+              {[venue.neighborhood, venue.city].filter(Boolean).join(' · ')}
+            </span>
             <span style={{ color: 'var(--fg-subtle)' }}>·</span>
             <span
               className="flex items-center gap-1"

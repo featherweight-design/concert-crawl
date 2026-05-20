@@ -2,7 +2,6 @@ import { auth } from '@clerk/nextjs/server'
 import type { VenuePublic } from '@concert-crawl/types'
 import { publicApiClient, apiClient } from '@/lib/api'
 import { AppHeader } from '@/components/consumer/app-header'
-import { SectionHeader } from '@/components/consumer/section-header'
 import { EmptyState } from '@/components/consumer/empty-state'
 import { VenuesIndexClient } from '@/components/consumer/venues-index'
 
@@ -30,19 +29,39 @@ export default async function VenuesPage() {
         <AppHeader />
       </div>
 
-      <div className="mx-auto w-full max-w-[1120px] px-[18px] pb-24 pt-6 sm:px-8">
-        <div className="mb-4 sm:mb-[18px]">
-          <SectionHeader title="Venues" count={`${venues.length} in Denver`} />
-        </div>
-
+      <div className="mx-auto w-full max-w-[1120px] px-[18px] pb-24 pt-6 sm:px-8 sm:pt-[48px]">
         {venues.length === 0 ? (
-          <EmptyState
-            state="no-data"
-            density="dense"
-            eyebrow="No venues"
-            title="Nothing here yet"
-            body="Venues will appear here once they're added."
-          />
+          <>
+            <div
+              className="mb-[18px] flex flex-wrap items-baseline"
+              style={{ gap: '14px' }}
+            >
+              <h1
+                className="m-0 text-[28px] font-extrabold text-fg sm:text-[40px]"
+                style={{ letterSpacing: '-0.035em' }}
+              >
+                Venues
+              </h1>
+              <span
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 12,
+                  color: 'var(--fg-muted)',
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                0 in Denver
+              </span>
+            </div>
+            <EmptyState
+              state="no-data"
+              density="dense"
+              eyebrow="No venues"
+              title="Nothing here yet"
+              body="Venues will appear here once they're added."
+            />
+          </>
         ) : (
           <VenuesIndexClient venues={venues} />
         )}

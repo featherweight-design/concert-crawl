@@ -10,6 +10,7 @@ interface FilterPopoverProps {
   options: FilterOption[]
   value: string
   anchorRect: DOMRect | null
+  alwaysOn?: boolean
   onSelect: (nextValue: string) => void
   onClose: () => void
 }
@@ -21,6 +22,7 @@ export function FilterPopover({
   options,
   value,
   anchorRect,
+  alwaysOn = false,
   onSelect,
   onClose,
 }: FilterPopoverProps) {
@@ -56,28 +58,25 @@ export function FilterPopover({
       ref={popoverRef}
       role="dialog"
       aria-label={`${title} filter`}
-      className="fixed z-50 hidden min-w-[240px] rounded-xl border border-border-strong bg-bg-elevated py-1 shadow-[0_20px_48px_-12px_rgba(0,0,0,0.55)] sm:block"
-      style={{ top: anchorRect.bottom + 8, left: anchorRect.left }}
+      className="fixed z-50 hidden min-w-[240px] border border-border-strong bg-bg-elevated sm:block"
+      style={{
+        top: anchorRect.bottom + 6,
+        left: anchorRect.left,
+        borderRadius: 10,
+        padding: 6,
+        boxShadow: '0 12px 36px rgba(0,0,0,0.4)',
+      }}
     >
-      <div
-        className="px-3.5 pb-1 pt-2 text-[9.5px] uppercase text-signal"
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontWeight: 700,
-          letterSpacing: '0.12em',
-        }}
-      >
-        {title}
-      </div>
-
-      <OptionButton
-        label={placeholder}
-        active={!value}
-        onClick={() => {
-          onSelect('')
-          onClose()
-        }}
-      />
+      {!alwaysOn && (
+        <OptionButton
+          label={placeholder}
+          active={!value}
+          onClick={() => {
+            onSelect('')
+            onClose()
+          }}
+        />
+      )}
 
       {options.map((option) => (
         <OptionButton
@@ -105,15 +104,17 @@ function OptionButton({ label, active, onClick }: OptionButtonProps) {
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center justify-between px-3.5 py-2 text-left text-[13.5px]"
+      className="flex w-full items-center justify-between text-left text-[13px]"
       style={{
-        color: active ? 'var(--signal)' : 'var(--fg)',
+        padding: '8px 10px',
+        borderRadius: 6,
+        color: active ? 'var(--fg)' : 'var(--fg-muted)',
         fontWeight: active ? 700 : 500,
-        background: active ? 'var(--surface-1)' : 'transparent',
+        background: active ? 'var(--surface-2)' : 'transparent',
       }}
       onMouseEnter={(event) => {
         if (active) return
-        event.currentTarget.style.background = 'var(--surface-1)'
+        event.currentTarget.style.background = 'var(--overlay-hover)'
       }}
       onMouseLeave={(event) => {
         if (active) return
@@ -121,7 +122,17 @@ function OptionButton({ label, active, onClick }: OptionButtonProps) {
       }}
     >
       <span>{label}</span>
-      {active ? <span aria-hidden>✓</span> : null}
+      {active ? (
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+          <path
+            d="M2 6.5l2.5 2.5L10 3.5"
+            stroke="var(--signal)"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ) : null}
     </button>
   )
 }

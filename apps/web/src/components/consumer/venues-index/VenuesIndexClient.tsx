@@ -59,6 +59,24 @@ export function VenuesIndexClient({ venues }: VenuesIndexClientProps) {
 
   return (
     <>
+      {/* Page heading — reactive to filtered count */}
+      <div className="mb-[18px] flex flex-wrap items-baseline gap-[10px] sm:gap-[14px]">
+        <h1 className="m-0 text-[28px] font-extrabold text-fg sm:text-[40px] [letter-spacing:-0.03em] sm:[letter-spacing:-0.035em]">
+          Venues
+        </h1>
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 12,
+            color: 'var(--fg-muted)',
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+          }}
+        >
+          {filtered.length} in Denver
+        </span>
+      </div>
+
       {/* Filter bar */}
       <div className="mb-7">
         <VenueFilterBar state={filterState} onChange={setFilterState} />
@@ -66,7 +84,7 @@ export function VenuesIndexClient({ venues }: VenuesIndexClientProps) {
 
       {/* Flagship card */}
       {featured && (
-        <div className="mb-8">
+        <div className="mb-[18px] sm:mb-8">
           <VenueFeatureCard venue={featured} />
         </div>
       )}
@@ -74,8 +92,10 @@ export function VenuesIndexClient({ venues }: VenuesIndexClientProps) {
       {/* Column headers — desktop only */}
       {listVenues.length > 0 && (
         <div
-          className="hidden sm:grid px-2 py-5 border-b border-border"
+          className="hidden sm:grid px-2 border-b border-border"
           style={{
+            paddingTop: 20,
+            paddingBottom: 10,
             gridTemplateColumns: '88px 1fr 120px 120px 24px',
             gap: 20,
             fontFamily: 'var(--font-mono)',
@@ -96,7 +116,7 @@ export function VenuesIndexClient({ venues }: VenuesIndexClientProps) {
 
       {/* Venue list */}
       {listVenues.length > 0 ? (
-        <div className="overflow-hidden rounded-xl border border-border bg-surface-1 sm:rounded-none sm:border-0 sm:bg-transparent">
+        <div>
           {listVenues.map((venue, idx) => (
             <VenueRow
               key={venue.id}
@@ -106,11 +126,11 @@ export function VenuesIndexClient({ venues }: VenuesIndexClientProps) {
           ))}
         </div>
       ) : !featured ? (
-        <div className="py-20 text-center">
-          <div className="text-[18px] font-bold tracking-tight text-fg">
+        <div className="py-[60px] sm:py-20 text-center px-6 sm:px-0">
+          <div className="text-[16px] sm:text-[18px] font-bold text-fg sm:[letter-spacing:-0.01em]">
             No venues match.
           </div>
-          <div className="mt-1.5 text-[14px] text-fg-muted">
+          <div className="mt-[5px] sm:mt-1.5 text-[13px] sm:text-[14px] text-fg-muted">
             Loosen a filter or two and they&apos;ll come back.
           </div>
           <button
@@ -122,7 +142,7 @@ export function VenuesIndexClient({ venues }: VenuesIndexClientProps) {
                 distance: null,
               }))
             }
-            className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-border-strong px-3.5 py-2 text-[12.5px] font-semibold text-fg-muted hover:text-fg transition-colors"
+            className="mt-[14px] sm:mt-4 inline-flex items-center gap-1.5 rounded-full border border-border-strong px-[13px] sm:px-3.5 py-[7px] sm:py-2 text-[12px] sm:text-[12.5px] font-semibold text-fg-muted hover:text-fg transition-colors"
           >
             × Clear filters
           </button>
