@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { Release } from '@/lib/definitions/releases'
 import { SpotlightHero } from './SpotlightHero'
 
@@ -19,6 +19,14 @@ export function SpotlightModal({
 }: SpotlightModalProps) {
   const sp = release.spotlight
   const [step, setStep] = useState(0)
+
+  useEffect(() => {
+    function handleKeyDown(ev: KeyboardEvent) {
+      if (ev.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
 
   if (!sp) return null
 
@@ -40,6 +48,9 @@ export function SpotlightModal({
       }}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="spotlight-modal-title"
         style={{
           width: isMobile ? '100%' : 580,
           maxWidth: '100%',
@@ -150,6 +161,7 @@ export function SpotlightModal({
           }}
         >
           <h2
+            id="spotlight-modal-title"
             style={{
               fontSize: isMobile ? 28 : 30,
               fontWeight: 900,
@@ -173,163 +185,167 @@ export function SpotlightModal({
           </p>
 
           {/* walkthrough carousel */}
-          <div
-            style={{
-              background: 'var(--surface-1)',
-              border: '1px solid var(--border)',
-              borderRadius: 12,
-              padding: '16px 18px',
-              marginBottom: 18,
-            }}
-          >
+          {totalSteps > 0 && (
             <div
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: 10,
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: 'var(--fg-subtle)',
-                  letterSpacing: '0.14em',
-                  textTransform: 'uppercase',
-                }}
-              >
-                How it works
-              </span>
-              <span
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: 'var(--fg-subtle)',
-                  letterSpacing: '0.12em',
-                }}
-              >
-                {String(step + 1).padStart(2, '0')} /{' '}
-                {String(totalSteps).padStart(2, '0')}
-              </span>
-            </div>
-
-            <div
-              key={step}
-              style={{
-                display: 'flex',
-                gap: 14,
-                alignItems: 'flex-start',
-                padding: '10px 0 16px',
-                animation: 'rnFadeUp 360ms ease both',
+                background: 'var(--surface-1)',
+                border: '1px solid var(--border)',
+                borderRadius: 12,
+                padding: '16px 18px',
+                marginBottom: 18,
               }}
             >
               <div
                 style={{
-                  flexShrink: 0,
-                  width: 36,
-                  height: 36,
-                  borderRadius: 18,
-                  background: 'var(--surface-3)',
-                  border: '1px solid var(--signal)',
-                  color: 'var(--signal)',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 14,
-                  fontWeight: 800,
+                  justifyContent: 'space-between',
+                  marginBottom: 10,
                 }}
               >
-                {step + 1}
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: 'var(--fg-subtle)',
+                    letterSpacing: '0.14em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  How it works
+                </span>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: 'var(--fg-subtle)',
+                    letterSpacing: '0.12em',
+                  }}
+                >
+                  {String(step + 1).padStart(2, '0')} /{' '}
+                  {String(totalSteps).padStart(2, '0')}
+                </span>
               </div>
+
+              <div
+                key={step}
+                style={{
+                  display: 'flex',
+                  gap: 14,
+                  alignItems: 'flex-start',
+                  padding: '10px 0 16px',
+                  animation: 'rnFadeUp 360ms ease both',
+                }}
+              >
+                <div
+                  style={{
+                    flexShrink: 0,
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    background: 'var(--surface-3)',
+                    border: '1px solid var(--signal)',
+                    color: 'var(--signal)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 14,
+                    fontWeight: 800,
+                  }}
+                >
+                  {step + 1}
+                </div>
+                <div
+                  style={{
+                    flex: 1,
+                    fontSize: 15,
+                    lineHeight: 1.45,
+                    color: 'var(--fg)',
+                    letterSpacing: '-0.005em',
+                    paddingTop: 5,
+                  }}
+                >
+                  {sp.steps[step]?.caption}
+                </div>
+              </div>
+
               <div
                 style={{
-                  flex: 1,
-                  fontSize: 15,
-                  lineHeight: 1.45,
-                  color: 'var(--fg)',
-                  letterSpacing: '-0.005em',
-                  paddingTop: 5,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 10,
                 }}
               >
-                {sp.steps[step]?.caption}
+                <button
+                  type="button"
+                  onClick={() => setStep(Math.max(0, step - 1))}
+                  disabled={step === 0}
+                  style={{
+                    all: 'unset',
+                    cursor: step === 0 ? 'default' : 'pointer',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 10,
+                    fontWeight: 800,
+                    color: step === 0 ? 'var(--fg-subtle)' : 'var(--fg-muted)',
+                    letterSpacing: '0.14em',
+                    textTransform: 'uppercase',
+                    opacity: step === 0 ? 0.4 : 1,
+                  }}
+                >
+                  ← Back
+                </button>
+
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  {Array.from({ length: totalSteps }).map((_, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setStep(idx)}
+                      aria-label={`Go to step ${idx + 1}`}
+                      style={{
+                        all: 'unset',
+                        cursor: 'pointer',
+                        width: idx === step ? 22 : 6,
+                        height: 6,
+                        borderRadius: 6,
+                        background:
+                          idx === step
+                            ? 'var(--signal)'
+                            : 'var(--border-strong)',
+                        transition: 'width 220ms ease',
+                      }}
+                    />
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setStep(Math.min(totalSteps - 1, step + 1))}
+                  disabled={step === totalSteps - 1}
+                  style={{
+                    all: 'unset',
+                    cursor: step === totalSteps - 1 ? 'default' : 'pointer',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 10,
+                    fontWeight: 800,
+                    color:
+                      step === totalSteps - 1
+                        ? 'var(--fg-subtle)'
+                        : 'var(--signal)',
+                    letterSpacing: '0.14em',
+                    textTransform: 'uppercase',
+                    opacity: step === totalSteps - 1 ? 0.4 : 1,
+                  }}
+                >
+                  Next →
+                </button>
               </div>
             </div>
-
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 10,
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setStep(Math.max(0, step - 1))}
-                disabled={step === 0}
-                style={{
-                  all: 'unset',
-                  cursor: step === 0 ? 'default' : 'pointer',
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 10,
-                  fontWeight: 800,
-                  color: step === 0 ? 'var(--fg-subtle)' : 'var(--fg-muted)',
-                  letterSpacing: '0.14em',
-                  textTransform: 'uppercase',
-                  opacity: step === 0 ? 0.4 : 1,
-                }}
-              >
-                ← Back
-              </button>
-
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                {Array.from({ length: totalSteps }).map((_, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setStep(idx)}
-                    aria-label={`Go to step ${idx + 1}`}
-                    style={{
-                      all: 'unset',
-                      cursor: 'pointer',
-                      width: idx === step ? 22 : 6,
-                      height: 6,
-                      borderRadius: 6,
-                      background:
-                        idx === step ? 'var(--signal)' : 'var(--border-strong)',
-                      transition: 'width 220ms ease',
-                    }}
-                  />
-                ))}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setStep(Math.min(totalSteps - 1, step + 1))}
-                disabled={step === totalSteps - 1}
-                style={{
-                  all: 'unset',
-                  cursor: step === totalSteps - 1 ? 'default' : 'pointer',
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 10,
-                  fontWeight: 800,
-                  color:
-                    step === totalSteps - 1
-                      ? 'var(--fg-subtle)'
-                      : 'var(--signal)',
-                  letterSpacing: '0.14em',
-                  textTransform: 'uppercase',
-                  opacity: step === totalSteps - 1 ? 0.4 : 1,
-                }}
-              >
-                Next →
-              </button>
-            </div>
-          </div>
+          )}
 
           {/* founder note */}
           {sp.founderNote && (

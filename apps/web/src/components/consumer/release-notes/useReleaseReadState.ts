@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 const LAST_SEEN_KEY = 'cc.lastSeenRelease'
 const DISMISSED_KEY = 'cc.dismissedSpotlights'
@@ -27,12 +27,12 @@ export function useReleaseReadState(latestVersion: string) {
     }
   }, [latestVersion])
 
-  function markSeen() {
+  const markSeen = useCallback(() => {
     localStorage.setItem(LAST_SEEN_KEY, latestVersion)
     setUnread(false)
-  }
+  }, [latestVersion])
 
-  function dismissPill() {
+  const dismissPill = useCallback(() => {
     try {
       const raw = localStorage.getItem(DISMISSED_KEY)
       const existing = JSON.parse(raw ?? '[]') as unknown[]
@@ -46,7 +46,7 @@ export function useReleaseReadState(latestVersion: string) {
       )
     }
     setPillDismissed(true)
-  }
+  }, [latestVersion])
 
   return { unread, pillDismissed, markSeen, dismissPill }
 }

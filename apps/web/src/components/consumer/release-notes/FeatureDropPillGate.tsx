@@ -34,15 +34,7 @@ export function FeatureDropPillGate() {
 
   return (
     <>
-      <div
-        style={{
-          position: 'fixed',
-          right: 20,
-          bottom: 20,
-          zIndex: 80,
-        }}
-        className="sm:bottom-5 sm:right-5 bottom-[72px]"
-      >
+      <div className="fixed bottom-[72px] right-5 sm:bottom-5 z-[80]">
         <FeatureDropPill
           release={LATEST}
           variant="desktop"

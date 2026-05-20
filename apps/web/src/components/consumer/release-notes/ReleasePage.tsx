@@ -22,9 +22,7 @@ export function ReleasePage({ releases }: ReleasePageProps) {
 
   useEffect(() => {
     markSeen()
-    // markSeen is stable — intentionally run once on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [markSeen])
 
   const handleOpenSpotlight = useCallback((release: Release) => {
     setSpotlightRelease(release)
