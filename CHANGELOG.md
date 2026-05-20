@@ -1,3 +1,26 @@
+# [1.33.0](https://github.com/HartiganHM/concert-crawl/compare/v1.32.4...v1.33.0) (2026-05-20)
+
+
+### Bug Fixes
+
+* address Copilot review comments on PR [#491](https://github.com/HartiganHM/concert-crawl/issues/491) ([da66850](https://github.com/HartiganHM/concert-crawl/commit/da668509c416fab56ec17dbc6f07e34467b2d37a))
+
+
+### Features
+
+* **api:** add neighborhood, featured, lat/lng, upcomingCount to public venues endpoint ([c0b879c](https://github.com/HartiganHM/concert-crawl/commit/c0b879ce535f6924fa7500929669ea972fda18ec))
+* **api:** generate-about adds neighborhood + brand voice; PATCH adds featured ([#476](https://github.com/HartiganHM/concert-crawl/issues/476)) ([7f24fbe](https://github.com/HartiganHM/concert-crawl/commit/7f24fbe734becb2e95c08297268249f0c9473d82))
+* **db:** add neighborhood, featured, lat/lng to venues; seed Denver coords ([7ebb0b2](https://github.com/HartiganHM/concert-crawl/commit/7ebb0b262961b8d030f66ea598fb2f92a96433a7))
+* **venues:** client component with geolocation, filter state, featured/list logic ([785cc48](https://github.com/HartiganHM/concert-crawl/commit/785cc48b618bcb61117d49bec820006632a9f39e))
+* **venues:** enriched desktop + mobile list row component ([bb4b1f8](https://github.com/HartiganHM/concert-crawl/commit/bb4b1f8a0735b9efe70195ea7979232ab5768aec))
+* **venues:** filter pill bar with sort/capacity/distance chips, popover + sheet ([1ac50f9](https://github.com/HartiganHM/concert-crawl/commit/1ac50f95179bcb3d9c1e7b906e665a85ae678613))
+* **venues:** flagship hero card with identity art and stats triad ([3bd0311](https://github.com/HartiganHM/concert-crawl/commit/3bd0311849bea3b73ae216e698f591eebb4a32f9))
+* **venues:** identity art tile component with monogram chip ([bc6a706](https://github.com/HartiganHM/concert-crawl/commit/bc6a706d5aa4e824956f89c707ae7c6eb13a76e8))
+* **venues:** redesign venues index page to match design handoff ([d60ede4](https://github.com/HartiganHM/concert-crawl/commit/d60ede4918178e03ad0f3a5bbba71f21009383a7)), closes [#476](https://github.com/HartiganHM/concert-crawl/issues/476)
+* **venues:** venue filter definitions, haversine helper, apply/sort logic ([081677e](https://github.com/HartiganHM/concert-crawl/commit/081677ed0f10cb8482a0d93482330e24fb1b460f))
+* **venues:** wire venues index client into page; widen max-w to 1120px ([5557fe2](https://github.com/HartiganHM/concert-crawl/commit/5557fe23dbfd5ec7dc239af77f0d82b7129c8285))
+* **web:** add neighborhood + featured to admin venue form and actions ([50fd76a](https://github.com/HartiganHM/concert-crawl/commit/50fd76a84687c3aeb9dcebba8e19adfd8465574f))
+
 ## [1.32.4](https://github.com/HartiganHM/concert-crawl/compare/v1.32.3...v1.32.4) (2026-05-20)
 
 
