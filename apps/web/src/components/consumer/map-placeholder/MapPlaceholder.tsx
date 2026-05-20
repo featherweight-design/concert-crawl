@@ -1,3 +1,7 @@
+'use client'
+
+import { useTheme } from '@/theme'
+import { THEME_META } from '@/theme/themes'
 import { googleMapsEmbedUrl, googleMapsUrl } from '../definitions/lib'
 
 interface MapPlaceholderProps {
@@ -9,6 +13,9 @@ export function MapPlaceholder({
   venueAddress,
   searchQuery,
 }: MapPlaceholderProps) {
+  const { theme } = useTheme()
+  const isDark = THEME_META[theme].mode === 'dark'
+
   if (venueAddress) {
     return (
       <div
@@ -20,7 +27,9 @@ export function MapPlaceholder({
           src={googleMapsEmbedUrl(venueAddress)}
           width="100%"
           height="160"
-          className="[filter:invert(90%)_hue-rotate(180deg)]"
+          className={
+            isDark ? '[filter:invert(90%)_hue-rotate(180deg)]' : undefined
+          }
           style={{ border: 0, display: 'block' }}
           loading="lazy"
           referrerPolicy="no-referrer-when-downgrade"

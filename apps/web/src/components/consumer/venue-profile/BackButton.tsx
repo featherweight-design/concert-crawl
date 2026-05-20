@@ -8,7 +8,13 @@ export function BackButton() {
   return (
     <button
       type="button"
-      onClick={() => router.back()}
+      onClick={() => {
+        if (window.history.length <= 1) {
+          router.push('/events')
+        } else {
+          router.back()
+        }
+      }}
       aria-label="Go back"
       className="absolute left-3.5 top-14 z-10 flex h-9 w-9 items-center justify-center rounded-full"
       style={{ background: 'var(--scrim)' }}
