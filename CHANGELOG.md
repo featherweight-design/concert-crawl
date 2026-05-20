@@ -1,3 +1,12 @@
+## [1.32.1](https://github.com/HartiganHM/concert-crawl/compare/v1.32.0...v1.32.1) (2026-05-20)
+
+
+### Bug Fixes
+
+* **browse:** cache calendar date queries to prevent redundant refetches ([9bfcf11](https://github.com/HartiganHM/concert-crawl/commit/9bfcf1171601aa1d1bafc81dd643915a05b001c7))
+* **search:** brand accent highlight with pulse, venue ranking and dedup ([b31a868](https://github.com/HartiganHM/concert-crawl/commit/b31a868a164bbd70fa70b17feca0448b8ebaa343)), closes [#479](https://github.com/HartiganHM/concert-crawl/issues/479) [#480](https://github.com/HartiganHM/concert-crawl/issues/480)
+* **ui:** remove excess top/bottom padding, fix shield icon, fix ceiling input ([74241b1](https://github.com/HartiganHM/concert-crawl/commit/74241b126854ec79fd30526dd259fe3fb70edf17)), closes [#458](https://github.com/HartiganHM/concert-crawl/issues/458) [#468](https://github.com/HartiganHM/concert-crawl/issues/468) [#471](https://github.com/HartiganHM/concert-crawl/issues/471) [#473](https://github.com/HartiganHM/concert-crawl/issues/473)
+
 # [1.32.0](https://github.com/HartiganHM/concert-crawl/compare/v1.31.0...v1.32.0) (2026-05-19)
 
 
