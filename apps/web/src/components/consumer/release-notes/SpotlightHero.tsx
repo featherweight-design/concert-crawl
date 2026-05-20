@@ -32,7 +32,8 @@ function MapHero({ compact }: { compact: boolean }) {
       style={{
         position: 'absolute',
         inset: 0,
-        background: 'var(--surface-2)',
+        background:
+          'radial-gradient(ellipse at 30% 40%, var(--surface-3), var(--surface-1) 70%)',
         overflow: 'hidden',
       }}
     >
