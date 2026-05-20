@@ -1,3 +1,21 @@
+# [1.34.0](https://github.com/HartiganHM/concert-crawl/compare/v1.33.1...v1.34.0) (2026-05-20)
+
+
+### Bug Fixes
+
+* **release-notes:** address Copilot review feedback ([0eddf7f](https://github.com/HartiganHM/concert-crawl/commit/0eddf7f71aeed500876e62f537f34b25b4a36633))
+* **release-notes:** radial gradient hero background; add design gap report ([7f489be](https://github.com/HartiganHM/concert-crawl/commit/7f489bebc0914f68ccdb86909f7bc753b1bfded7))
+
+
+### Features
+
+* **release-notes:** feature drop pill floating component ([f4b374c](https://github.com/HartiganHM/concert-crawl/commit/f4b374c3deeab08a66b68aae2469a49196fc0237))
+* **release-notes:** feature drop pill gate and protected layout integration ([ed0c6e1](https://github.com/HartiganHM/concert-crawl/commit/ed0c6e1ab05e1ee689e598acbf6146735c30e0a9))
+* **release-notes:** release page component and /changelog route ([ff0ca82](https://github.com/HartiganHM/concert-crawl/commit/ff0ca8269847ef0f343519d26d231e2324c761ad))
+* **release-notes:** spotlight hero, modal, and release entry components ([5942ae7](https://github.com/HartiganHM/concert-crawl/commit/5942ae7cc4d3b6138dd91be9ec47c2fd50233201))
+* **release-notes:** user menu version footer with changelog navigation ([365a3e6](https://github.com/HartiganHM/concert-crawl/commit/365a3e6b2ce60cc597031bab2b8e3fbccf025617))
+* **release-notes:** useReleaseReadState localStorage hook ([5d6f27f](https://github.com/HartiganHM/concert-crawl/commit/5d6f27f11fd6d84c1353472e12af76e5a9367f33))
+
 ## [1.33.1](https://github.com/HartiganHM/concert-crawl/compare/v1.33.0...v1.33.1) (2026-05-20)
 
 
