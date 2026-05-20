@@ -37,7 +37,15 @@ const mockHookState = {
     { name: 'Radiohead', nextDate: '2027-06-01', venueShort: 'Red Rocks' },
     { name: 'Godspeed', nextDate: '2027-06-05', venueShort: 'Bluebird' },
   ],
-  venueResults: [{ name: 'Red Rocks', slug: 'red-rocks', showCount: 3 }],
+  venueResults: [
+    {
+      name: 'Red Rocks',
+      slug: 'red-rocks',
+      showCount: 3,
+      matchingEventId: 'ev-1',
+    },
+  ],
+  venueFirst: false,
   isLoading: false,
   navigateTo: mockNavigateTo,
 }
@@ -59,8 +67,14 @@ beforeEach(() => {
     { name: 'Godspeed', nextDate: '2027-06-05', venueShort: 'Bluebird' },
   ]
   mockHookState.venueResults = [
-    { name: 'Red Rocks', slug: 'red-rocks', showCount: 3 },
+    {
+      name: 'Red Rocks',
+      slug: 'red-rocks',
+      showCount: 3,
+      matchingEventId: 'ev-1',
+    },
   ]
+  mockHookState.venueFirst = false
 })
 
 describe('SearchPalette', () => {
@@ -159,7 +173,10 @@ describe('SearchPalette', () => {
     fireEvent.keyDown(window, { key: 'ArrowDown' })
     fireEvent.keyDown(window, { key: 'ArrowDown' })
     fireEvent.keyDown(window, { key: 'Enter' })
-    expect(mockNavigateTo).toHaveBeenCalledWith('venue', { slug: 'red-rocks' })
+    expect(mockNavigateTo).toHaveBeenCalledWith('venue', {
+      slug: 'red-rocks',
+      matchingEventId: 'ev-1',
+    })
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
@@ -177,6 +194,9 @@ describe('SearchPalette', () => {
     }
     fireEvent.keyDown(window, { key: 'Enter' })
     // Should navigate to the last result (Red Rocks venue at idx 2)
-    expect(mockNavigateTo).toHaveBeenCalledWith('venue', { slug: 'red-rocks' })
+    expect(mockNavigateTo).toHaveBeenCalledWith('venue', {
+      slug: 'red-rocks',
+      matchingEventId: 'ev-1',
+    })
   })
 })

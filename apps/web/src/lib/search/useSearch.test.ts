@@ -30,7 +30,7 @@ const POPULAR_RESPONSE = {
       date: '2027-06-01',
       ticketPriceMin: '25',
       watcherCount: 3,
-      venue: { name: 'Globe Hall', slug: 'globe-hall' },
+      venue: { id: 'venue-1', name: 'Globe Hall', slug: 'globe-hall' },
     },
   ],
 }
@@ -40,22 +40,33 @@ const EVENTS_RESPONSE = {
   data: {
     data: [
       {
+        id: 'ev-1',
         artist: 'Radiohead',
         date: '2027-06-01',
         title: 'Radiohead Live',
-        venue: { name: 'Red Rocks', slug: 'red-rocks' },
+        venue: { id: 'venue-rr', name: 'Red Rocks', slug: 'red-rocks' },
       },
       {
+        id: 'ev-2',
         artist: 'Radiohead',
         date: '2027-06-05',
         title: 'Radiohead Night 2',
-        venue: { name: 'Red Rocks', slug: 'red-rocks' },
+        venue: {
+          id: 'venue-rr',
+          name: 'Red Rocks Amphitheatre',
+          slug: 'red-rocks',
+        },
       },
       {
+        id: 'ev-3',
         artist: 'Other Band',
         date: '2027-06-02',
         title: 'Other Show',
-        venue: { name: 'Bluebird Theater', slug: 'bluebird-theater' },
+        venue: {
+          id: 'venue-bb',
+          name: 'Bluebird Theater',
+          slug: 'bluebird-theater',
+        },
       },
     ],
   },
@@ -159,6 +170,55 @@ describe('useSearch — debounce', () => {
       (venue) => venue.slug === 'red-rocks',
     )
     expect(redRocks?.showCount).toBe(2) // two Radiohead nights
+  })
+
+  it('deduplicates venues by venue id even when name variants differ', async () => {
+    const { result } = renderHook(() => useSearch())
+
+    act(() => {
+      result.current.setQuery('Red Rocks')
+    })
+
+    await act(async () => {
+      vi.advanceTimersByTime(300)
+      await Promise.resolve()
+    })
+
+    // venue-rr appears twice with slightly different names; should collapse to one
+    const redRocksResults = result.current.venueResults.filter(
+      (venue) => venue.slug === 'red-rocks',
+    )
+    expect(redRocksResults).toHaveLength(1)
+  })
+
+  it('sets venueFirst when query strongly matches a venue name', async () => {
+    const { result } = renderHook(() => useSearch())
+
+    act(() => {
+      result.current.setQuery('Red Rocks')
+    })
+
+    await act(async () => {
+      vi.advanceTimersByTime(300)
+      await Promise.resolve()
+    })
+
+    expect(result.current.venueFirst).toBe(true)
+  })
+
+  it('does not set venueFirst when query matches artists but not venue names', async () => {
+    const { result } = renderHook(() => useSearch())
+
+    act(() => {
+      result.current.setQuery('Radiohead')
+    })
+
+    await act(async () => {
+      vi.advanceTimersByTime(300)
+      await Promise.resolve()
+    })
+
+    expect(result.current.venueFirst).toBe(false)
   })
 })
 

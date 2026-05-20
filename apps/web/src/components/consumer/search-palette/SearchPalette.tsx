@@ -42,7 +42,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
     }
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { artistResults, venueResults, navigateTo } = search
+  const { artistResults, venueResults, venueFirst, navigateTo } = search
 
   useEffect(() => {
     if (!open) return
@@ -65,18 +65,41 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
       } else if (event.key === 'Enter' && selectedIdxRef.current >= 0) {
         event.preventDefault()
         const currentIdx = selectedIdxRef.current
-        const artistCount = artistResults.length
-        if (currentIdx < artistCount) {
-          const artist = artistResults[currentIdx]
-          if (artist) {
-            navigateTo('artist', artist.name)
-            onClose()
+        if (venueFirst) {
+          const venueCount = venueResults.length
+          if (currentIdx < venueCount) {
+            const venue = venueResults[currentIdx]
+            if (venue) {
+              navigateTo('venue', {
+                slug: venue.slug,
+                matchingEventId: venue.matchingEventId,
+              })
+              onClose()
+            }
+          } else {
+            const artist = artistResults[currentIdx - venueCount]
+            if (artist) {
+              navigateTo('artist', artist.name)
+              onClose()
+            }
           }
         } else {
-          const venue = venueResults[currentIdx - artistCount]
-          if (venue) {
-            navigateTo('venue', { slug: venue.slug })
-            onClose()
+          const artistCount = artistResults.length
+          if (currentIdx < artistCount) {
+            const artist = artistResults[currentIdx]
+            if (artist) {
+              navigateTo('artist', artist.name)
+              onClose()
+            }
+          } else {
+            const venue = venueResults[currentIdx - artistCount]
+            if (venue) {
+              navigateTo('venue', {
+                slug: venue.slug,
+                matchingEventId: venue.matchingEventId,
+              })
+              onClose()
+            }
           }
         }
       }
@@ -84,7 +107,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [open, artistResults, venueResults, navigateTo, onClose])
+  }, [open, artistResults, venueResults, venueFirst, navigateTo, onClose])
 
   if (!open) return null
 
@@ -207,6 +230,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
             <SearchResultsState
               artistResults={search.artistResults}
               venueResults={search.venueResults}
+              venueFirst={search.venueFirst}
               selectedIdx={selectedIdx}
               onHover={(idx) => {
                 selectedIdxRef.current = idx

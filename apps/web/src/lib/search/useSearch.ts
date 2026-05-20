@@ -37,7 +37,7 @@ interface EventRow {
   artist: string
   date: string
   title: string
-  venue: { name: string; slug: string }
+  venue: { id: string; name: string; slug: string }
 }
 
 function readRecent(): string[] {
@@ -78,11 +78,11 @@ function deriveArtistResults(rows: EventRow[]): ArtistResult[] {
 function deriveVenueResults(rows: EventRow[]): VenueResult[] {
   const map = new Map<string, VenueResult>()
   for (const row of rows) {
-    const existing = map.get(row.venue.slug)
+    const existing = map.get(row.venue.id)
     if (existing) {
       existing.showCount += 1
     } else {
-      map.set(row.venue.slug, {
+      map.set(row.venue.id, {
         name: row.venue.name,
         slug: row.venue.slug,
         showCount: 1,
@@ -91,6 +91,16 @@ function deriveVenueResults(rows: EventRow[]): VenueResult[] {
     }
   }
   return Array.from(map.values())
+}
+
+function venueMatchesQuery(venueName: string, query: string): boolean {
+  const normalizedName = venueName.toLowerCase().trim()
+  const normalizedQuery = query.toLowerCase().trim()
+  return (
+    normalizedName === normalizedQuery ||
+    normalizedName.startsWith(normalizedQuery) ||
+    normalizedQuery.startsWith(normalizedName)
+  )
 }
 
 export function useSearch() {
@@ -210,6 +220,10 @@ export function useSearch() {
     [query, recentSearches, router],
   )
 
+  const venueFirst =
+    venueResults.length > 0 &&
+    venueResults.some((venue) => venueMatchesQuery(venue.name, query.trim()))
+
   return {
     query,
     setQuery,
@@ -218,6 +232,7 @@ export function useSearch() {
     popularEvents,
     artistResults,
     venueResults,
+    venueFirst,
     isLoading,
     navigateTo,
   }

@@ -95,12 +95,14 @@
   100% { width: 80%;  opacity: 1; }
 }
 @keyframes ccEventHighlight {
-  0%   { background: var(--overlay-hover); border-radius: 8px; }
-  60%  { background: var(--overlay-hover); border-radius: 8px; }
-  100% { background: transparent; border-radius: 8px; }
+  0%   { background: color-mix(in srgb, var(--accent) 18%, transparent); border-left: 2px solid var(--accent); border-radius: 8px; }
+  25%  { background: color-mix(in srgb, var(--accent) 8%, transparent);  border-left: 2px solid var(--accent); border-radius: 8px; }
+  50%  { background: color-mix(in srgb, var(--accent) 18%, transparent); border-left: 2px solid var(--accent); border-radius: 8px; }
+  75%  { background: color-mix(in srgb, var(--accent) 8%, transparent);  border-left: 2px solid var(--accent); border-radius: 8px; }
+  100% { background: transparent; border-left: 2px solid transparent; border-radius: 8px; }
 }
 [data-highlighted="true"] {
-  animation: ccEventHighlight 2s ease forwards;
+  animation: ccEventHighlight 2s ease-in-out forwards;
 }
 @media (prefers-reduced-motion: reduce) {
   [data-highlighted="true"] { animation: none; }
