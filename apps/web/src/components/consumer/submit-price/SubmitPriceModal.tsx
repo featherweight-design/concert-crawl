@@ -155,9 +155,15 @@ export function SubmitPriceModal({
           }),
         },
       )
-      const data = (await res.json()) as { error?: string }
+      const data = (await res.json()) as {
+        error?: string
+        submission?: SubmissionWithMeta
+      }
       if (!res.ok) {
         if (res.status === 409) {
+          if (data.submission) {
+            setExistingSubmission(data.submission)
+          }
           setModalState('alreadySubmitted')
           router.refresh()
           return
@@ -175,14 +181,21 @@ export function SubmitPriceModal({
     if (!existingSubmission) return
     try {
       const token = await getToken()
-      await fetch(`${API_URL}/v1/submissions/${existingSubmission.id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token ?? ''}` },
-      })
+      const res = await fetch(
+        `${API_URL}/v1/submissions/${existingSubmission.id}`,
+        {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token ?? ''}` },
+        },
+      )
+      if (!res.ok) {
+        throw new Error(`Withdraw failed: ${res.status}`)
+      }
       router.refresh()
       onClose()
     } catch (err) {
       console.error('Withdraw failed', err)
+      setModalState('error')
     }
   }, [existingSubmission, getToken, router, onClose])
 
@@ -259,23 +272,7 @@ export function SubmitPriceModal({
         </div>
       )}
 
-      {modalState === 'success' && (
-        <SuccessState
-          onClose={onClose}
-          onReset={() => {
-            setFormState({
-              floor: '',
-              ceiling: '',
-              tier: null,
-              vendor: null,
-              howFound: null,
-            })
-            setFieldErrors({})
-            setFieldWarnings({})
-            setModalState('form')
-          }}
-        />
-      )}
+      {modalState === 'success' && <SuccessState onClose={onClose} />}
 
       {modalState === 'error' && (
         <ErrorState onReset={() => setModalState('form')} onClose={onClose} />
@@ -284,7 +281,20 @@ export function SubmitPriceModal({
       {modalState === 'alreadySubmitted' && (
         <AlreadySubmittedState
           submission={existingSubmission}
-          onEdit={() => setModalState('form')}
+          onEdit={() => {
+            if (existingSubmission) {
+              setFormState({
+                floor: existingSubmission.priceMin,
+                ceiling: existingSubmission.priceMax ?? '',
+                tier: existingSubmission.tier,
+                vendor: existingSubmission.vendor,
+                howFound: existingSubmission.howFound,
+              })
+            }
+            setFieldErrors({})
+            setFieldWarnings({})
+            setModalState('form')
+          }}
           onWithdraw={handleWithdraw}
         />
       )}
@@ -442,13 +452,7 @@ export function SubmitPriceModal({
 
 // ── Sub-views ────────────────────────────────────────────────────────────────
 
-function SuccessState({
-  onClose,
-  onReset,
-}: {
-  onClose: () => void
-  onReset: () => void
-}) {
+function SuccessState({ onClose }: { onClose: () => void }) {
   return (
     <div
       style={{
@@ -489,7 +493,6 @@ function SuccessState({
         }}
       >
         <PrimaryButton onClick={onClose}>Back to show</PrimaryButton>
-        <GhostButton onClick={onReset}>Submit another</GhostButton>
       </div>
     </div>
   )

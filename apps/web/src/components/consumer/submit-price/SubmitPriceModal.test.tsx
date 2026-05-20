@@ -112,7 +112,7 @@ describe('SubmitPriceModal — success state', () => {
     fireEvent.click(screen.getByText('Submit price'))
     await waitFor(() => expect(screen.getByText('Got it.')).toBeTruthy())
     expect(screen.getByText('Back to show')).toBeTruthy()
-    expect(screen.getByText('Submit another')).toBeTruthy()
+    expect(screen.queryByText('Submit another')).toBeNull()
   })
 })
 

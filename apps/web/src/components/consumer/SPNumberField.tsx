@@ -22,16 +22,28 @@ export function SPNumberField({
   warning,
 }: SPNumberFieldProps) {
   const borderClass = error
-    ? 'border-danger'
+    ? 'border-warning'
     : warning
       ? 'border-warning'
       : 'border-border-strong'
 
   return (
-    <div className="flex min-w-0 flex-col gap-1">
-      <label className="text-xs font-medium text-fg-muted uppercase tracking-wider font-mono">
+    <div className="flex flex-col gap-1">
+      <label
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 10,
+          fontWeight: 700,
+          color: error ? 'var(--warning)' : 'var(--fg-subtle)',
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          marginBottom: 2,
+        }}
+      >
         {label}
-        {required && <span className="text-danger ml-1">*</span>}
+        {required && (
+          <span style={{ color: 'var(--warning)', marginLeft: 4 }}>*</span>
+        )}
       </label>
       <div
         className={`flex min-w-0 items-center border ${borderClass} rounded-md px-3 h-[46px] bg-surface-1`}
@@ -49,11 +61,45 @@ export function SPNumberField({
         />
       </div>
       {hint && !error && !warning && (
-        <span className="text-xs text-fg-subtle">{hint}</span>
+        <span
+          style={{
+            fontFamily: 'var(--font-ui)',
+            fontSize: 12,
+            color: 'var(--fg-subtle)',
+            marginTop: 4,
+            lineHeight: 1.4,
+          }}
+        >
+          {hint}
+        </span>
       )}
-      {error && <span className="text-xs text-danger">{error}</span>}
+      {error && (
+        <span
+          style={{
+            fontFamily: 'var(--font-ui)',
+            fontSize: 12,
+            color: 'var(--warning)',
+            marginTop: 4,
+            lineHeight: 1.4,
+            letterSpacing: '-0.005em',
+          }}
+        >
+          {error}
+        </span>
+      )}
       {!error && warning && (
-        <span className="text-xs text-warning">{warning}</span>
+        <span
+          style={{
+            fontFamily: 'var(--font-ui)',
+            fontSize: 12,
+            color: 'var(--warning)',
+            marginTop: 4,
+            lineHeight: 1.4,
+            letterSpacing: '-0.005em',
+          }}
+        >
+          {warning}
+        </span>
       )}
     </div>
   )

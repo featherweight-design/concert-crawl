@@ -22,7 +22,16 @@ export function ChipGroup({
 }: ChipGroupProps) {
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-xs font-medium text-fg-muted uppercase tracking-wider font-mono">
+      <span
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 10,
+          fontWeight: 700,
+          color: error ? 'var(--warning)' : 'var(--fg-subtle)',
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+        }}
+      >
         {label}
       </span>
       <div className="flex flex-wrap gap-2">
@@ -37,7 +46,9 @@ export function ChipGroup({
                 'px-3 py-1.5 rounded-full text-sm font-medium border transition-colors',
                 isActive
                   ? 'border-signal text-signal bg-signal/10'
-                  : 'border-border-strong text-fg hover:border-fg-muted',
+                  : error
+                    ? 'border-warning text-fg hover:border-fg-muted'
+                    : 'border-border-strong text-fg hover:border-fg-muted',
               ].join(' ')}
             >
               {opt.label}
@@ -45,7 +56,20 @@ export function ChipGroup({
           )
         })}
       </div>
-      {error && <span className="text-xs text-danger">{error}</span>}
+      {error && (
+        <span
+          style={{
+            fontFamily: 'var(--font-ui)',
+            fontSize: 12,
+            color: 'var(--warning)',
+            marginTop: 2,
+            lineHeight: 1.4,
+            letterSpacing: '-0.005em',
+          }}
+        >
+          {error}
+        </span>
+      )}
     </div>
   )
 }
