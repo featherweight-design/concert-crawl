@@ -1,4 +1,4 @@
-export type NavKind = 'danger' | 'warning'
+export type NavKind = 'danger' | 'warning' | 'signal'
 
 export interface NavItem {
   key: string
@@ -12,7 +12,7 @@ export interface NavItem {
   section: 'operations' | 'account'
 }
 
-export const NAV: NavItem[] = [
+export const NAV_V2: NavItem[] = [
   {
     key: 'dashboard',
     label: 'Dashboard',
@@ -36,25 +36,19 @@ export const NAV: NavItem[] = [
     section: 'operations',
   },
   {
-    key: 'events',
-    label: 'Event review',
-    href: '/admin/events',
-    iconName: 'CalendarCheck',
+    key: 'review',
+    label: 'Review',
+    href: '/admin/review',
+    iconName: 'CheckSquare',
     badge: { count: 0, kind: 'warning' },
     section: 'operations',
   },
   {
-    key: 'prices',
-    label: 'Prices',
-    href: '/admin/prices',
-    iconName: 'DollarSign',
-    section: 'operations',
-  },
-  {
-    key: 'invite-codes',
-    label: 'Invite codes',
-    href: '/admin/invite-codes',
-    iconName: 'Key',
+    key: 'feedback',
+    label: 'Feedback',
+    href: '/admin/feedback',
+    iconName: 'MessageSquare',
+    badge: { count: 0, kind: 'signal' },
     section: 'operations',
   },
   {
@@ -65,6 +59,13 @@ export const NAV: NavItem[] = [
     section: 'account',
   },
   {
+    key: 'invite-codes',
+    label: 'Invite codes',
+    href: '/admin/invite-codes',
+    iconName: 'Key',
+    section: 'account',
+  },
+  {
     key: 'settings',
     label: 'Settings',
     href: '/admin/settings',
@@ -72,3 +73,6 @@ export const NAV: NavItem[] = [
     section: 'account',
   },
 ]
+
+/** @deprecated Use NAV_V2 */
+export const NAV = NAV_V2

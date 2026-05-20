@@ -3,8 +3,7 @@ import { requireAdminUser } from '@/lib/auth'
 import { auth } from '@clerk/nextjs/server'
 import { apiClient } from '@/lib/api'
 import { AdminThemeProvider } from '@/components/admin/shell/AdminThemeProvider'
-import { AdminSidebar } from '@/components/admin/shell/AdminSidebar'
-import { AdminTopbar } from '@/components/admin/shell/AdminTopbar'
+import { AdminShellClient } from '@/components/admin/shell/AdminShellClient'
 
 interface CrawlStatusVenue {
   id: string
@@ -13,9 +12,13 @@ interface CrawlStatusVenue {
   lastRun: { status: string } | null
 }
 
-interface EventCounts {
-  pending: number
-  approved: number
+interface ReviewCounts {
+  pendingEvents: number
+  pendingPrices: number
+}
+
+interface FeedbackCounts {
+  unread: number
 }
 
 export default async function AdminLayout({
@@ -28,12 +31,14 @@ export default async function AdminLayout({
   const token = await getToken()
 
   let blockedCrawls = 0
-  let pendingEvents = 0
+  let pendingReview = 0
+  let unreadFeedback = 0
 
   if (token) {
-    const [statusRes, countsRes] = await Promise.allSettled([
+    const [statusRes, reviewRes, feedbackRes] = await Promise.allSettled([
       apiClient.get<CrawlStatusVenue[]>('/v1/admin/crawl/status', token),
-      apiClient.get<EventCounts>('/v1/admin/events/count', token),
+      apiClient.get<ReviewCounts>('/v1/admin/review/counts', token),
+      apiClient.get<FeedbackCounts>('/v1/admin/feedback/counts', token),
     ])
 
     if (statusRes.status === 'fulfilled') {
@@ -48,26 +53,45 @@ export default async function AdminLayout({
       })
     }
 
-    if (countsRes.status === 'fulfilled') {
-      pendingEvents = countsRes.value.pending
+    if (reviewRes.status === 'fulfilled') {
+      pendingReview =
+        reviewRes.value.pendingEvents + reviewRes.value.pendingPrices
     } else {
-      console.warn('[admin layout] event counts fetch failed', {
-        reason: countsRes.reason,
+      console.warn('[admin layout] review counts fetch failed', {
+        reason: reviewRes.reason,
+      })
+    }
+
+    if (feedbackRes.status === 'fulfilled') {
+      unreadFeedback = feedbackRes.value.unread
+    } else {
+      console.warn('[admin layout] feedback counts fetch failed', {
+        reason: feedbackRes.reason,
       })
     }
   }
 
   return (
     <AdminThemeProvider>
-      <div className="flex h-screen overflow-hidden bg-[var(--bg)] text-[var(--fg)]">
-        <AdminSidebar
-          badgeCounts={{ crawl: blockedCrawls, events: pendingEvents }}
+      <div
+        style={{
+          display: 'flex',
+          height: '100vh',
+          overflow: 'hidden',
+          background: 'var(--bg)',
+          color: 'var(--fg)',
+        }}
+      >
+        <AdminShellClient
+          badgeCounts={{
+            crawl: blockedCrawls,
+            review: pendingReview,
+            feedback: unreadFeedback,
+          }}
           user={{ firstName: adminUser.firstName, email: adminUser.email }}
-        />
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <AdminTopbar />
-          <main className="flex-1 overflow-y-auto p-6 lg:p-8">{children}</main>
-        </div>
+        >
+          {children}
+        </AdminShellClient>
       </div>
     </AdminThemeProvider>
   )

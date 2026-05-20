@@ -5,8 +5,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useClerk } from '@clerk/nextjs'
 import * as LucideIcons from 'lucide-react'
-import { LogOut, ArrowLeft } from 'lucide-react'
-import { NAV, type NavItem } from './nav'
+import { LogOut } from 'lucide-react'
+import { NAV_V2, type NavItem } from './nav'
 import { CCMark } from '@/components/brand/cc-mark'
 import { CCWordmark } from '@/components/brand/cc-wordmark'
 
@@ -14,7 +14,7 @@ type SidebarMode = 'full' | 'rail' | 'auto'
 const STORAGE_KEY = 'cc-admin-sidebar'
 
 interface AdminSidebarProps {
-  badgeCounts?: { crawl: number; events: number }
+  badgeCounts?: { crawl: number; review: number; feedback: number }
   user: { firstName: string | null; email: string }
 }
 
@@ -51,49 +51,64 @@ const NavLink = ({
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: mode === 'full' ? 10 : 0,
+        gap: mode === 'full' ? 12 : 0,
         justifyContent: mode === 'rail' ? 'center' : 'flex-start',
-        padding: mode === 'full' ? '7px 10px' : '7px 0',
-        borderRadius: 7,
+        padding: mode === 'full' ? '8px 10px 8px 14px' : '10px 0',
+        borderRadius: 8,
         textDecoration: 'none',
+        fontFamily: 'var(--admin-font, Inter, sans-serif)',
         fontSize: 13,
-        fontWeight: active ? 600 : 400,
+        fontWeight: active ? 600 : 500,
+        letterSpacing: '-0.005em',
         color: active ? 'var(--fg)' : 'var(--fg-muted)',
         background: active
           ? 'var(--surface-2)'
           : hovered
             ? 'var(--overlay-hover)'
             : 'transparent',
-        borderLeft: active
-          ? '2px solid var(--signal)'
-          : '2px solid transparent',
         position: 'relative',
-        transition: 'background 0.12s',
+        transition: 'background 0.12s, color 0.12s',
       }}
     >
-      <NavIcon name={item.iconName} size={16} />
+      {active && (
+        <span
+          style={{
+            position: 'absolute',
+            left: mode === 'rail' ? 6 : 0,
+            top: 8,
+            bottom: 8,
+            width: 2,
+            background: 'var(--signal)',
+            borderRadius: 2,
+          }}
+        />
+      )}
+      <NavIcon name={item.iconName} size={17} />
       {mode === 'full' && <span style={{ flex: 1 }}>{item.label}</span>}
       {/* Full mode: numeric badge — only when count > 0 */}
       {mode === 'full' && showBadge && count > 0 && (
         <span
           style={{
-            marginLeft: 'auto',
             minWidth: 18,
             height: 18,
             padding: '0 5px',
-            borderRadius: 999,
+            borderRadius: 9,
             background: `var(--${item.badge?.kind ?? 'danger'})`,
-            color: `var(--${item.badge?.kind ?? 'danger'}-fg, #fff)`,
+            color:
+              item.badge?.kind === 'warning'
+                ? 'var(--bg)'
+                : 'var(--fg-on-accent, #fff)',
             fontSize: 10,
             fontWeight: 700,
-            display: 'flex',
+            display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontFamily: "'JetBrains Mono', monospace",
             flexShrink: 0,
+            fontVariantNumeric: 'tabular-nums',
           }}
         >
-          {count}
+          {count > 99 ? '99+' : count}
         </span>
       )}
       {/* Rail mode: dot — only when count > 0 */}
@@ -101,12 +116,13 @@ const NavLink = ({
         <span
           style={{
             position: 'absolute',
-            top: 4,
-            right: 4,
-            width: 6,
-            height: 6,
-            borderRadius: '50%',
+            top: 6,
+            right: 12,
+            width: 8,
+            height: 8,
+            borderRadius: 4,
             background: `var(--${item.badge?.kind ?? 'danger'})`,
+            boxShadow: '0 0 0 2px var(--surface-1)',
           }}
         />
       )}
@@ -167,11 +183,14 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
   const getCount = (key: string): number => {
     if (!badgeCounts) return 0
     if (key === 'crawl') return badgeCounts.crawl
-    if (key === 'events') return badgeCounts.events
+    if (key === 'review') return badgeCounts.review
+    if (key === 'feedback') return badgeCounts.feedback
     return 0
   }
 
   const userInitial = (user.firstName ?? user.email).charAt(0).toUpperCase()
+  const opsItems = NAV_V2.filter((item) => item.section === 'operations')
+  const accountItems = NAV_V2.filter((item) => item.section === 'account')
 
   return (
     <aside
@@ -181,7 +200,7 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
         display: 'flex',
         flexDirection: 'column',
         borderRight: '1px solid var(--border)',
-        background: 'var(--bg-elevated)',
+        background: 'var(--surface-1)',
         transition: 'width 0.18s ease',
         overflow: 'hidden',
       }}
@@ -189,24 +208,27 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
       {/* Wordmark */}
       <div
         style={{
-          padding: effectiveMode === 'full' ? '16px 16px 12px' : '16px 0 12px',
+          padding: effectiveMode === 'full' ? '16px 16px' : '16px 0',
           display: 'flex',
           justifyContent: effectiveMode === 'rail' ? 'center' : 'flex-start',
+          alignItems: 'center',
           borderBottom: '1px solid var(--border)',
+          height: 64,
+          boxSizing: 'border-box',
         }}
       >
         {effectiveMode === 'full' ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div
               style={{
-                width: 32,
-                height: 32,
+                width: 30,
+                height: 30,
                 borderRadius: 8,
                 overflow: 'hidden',
                 flexShrink: 0,
               }}
             >
-              <CCMark size={32} />
+              <CCMark size={30} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <CCWordmark size={13} />
@@ -234,13 +256,13 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
         ) : (
           <div
             style={{
-              width: 32,
-              height: 32,
+              width: 28,
+              height: 28,
               borderRadius: 8,
               overflow: 'hidden',
             }}
           >
-            <CCMark size={32} />
+            <CCMark size={28} />
           </div>
         )}
       </div>
@@ -249,54 +271,70 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
       <nav
         style={{
           flex: 1,
-          padding: '12px 8px',
+          padding: effectiveMode === 'full' ? '12px 10px' : '10px 8px',
           display: 'flex',
           flexDirection: 'column',
           gap: 2,
+          overflowY: 'auto',
         }}
       >
-        {NAV.map((item, idx) => {
-          const prevItem = idx > 0 ? NAV[idx - 1] : null
-          const isNewSection = item.section !== prevItem?.section
+        {effectiveMode === 'full' && (
+          <div
+            style={{
+              padding: '6px 8px 8px',
+              fontSize: 10,
+              fontWeight: 700,
+              color: 'var(--fg-subtle)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              fontFamily: "'JetBrains Mono', monospace",
+            }}
+          >
+            Operations
+          </div>
+        )}
+        {opsItems.map((item) => {
           const active =
             pathname === item.href ||
             (item.href !== '/admin' && pathname.startsWith(item.href))
           const count = getCount(item.key)
-
           return (
-            <div key={item.key}>
-              {isNewSection && effectiveMode === 'full' && (
-                <>
-                  {item.section === 'account' && (
-                    <div
-                      style={{
-                        height: 1,
-                        background: 'var(--border)',
-                        margin: '6px 0',
-                      }}
-                    />
-                  )}
-                  <div
-                    style={{
-                      padding: '4px 10px',
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: 'var(--fg-subtle)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.1em',
-                    }}
-                  >
-                    {item.section === 'account' ? 'Account' : 'Operations'}
-                  </div>
-                </>
-              )}
-              <NavLink
-                item={item}
-                mode={effectiveMode}
-                active={active}
-                count={count}
-              />
-            </div>
+            <NavLink
+              key={item.key}
+              item={item}
+              mode={effectiveMode}
+              active={active}
+              count={count}
+            />
+          )
+        })}
+        {effectiveMode === 'full' && (
+          <div
+            style={{
+              padding: '16px 8px 8px',
+              fontSize: 10,
+              fontWeight: 700,
+              color: 'var(--fg-subtle)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              fontFamily: "'JetBrains Mono', monospace",
+            }}
+          >
+            Account
+          </div>
+        )}
+        {accountItems.map((item) => {
+          const active =
+            pathname === item.href ||
+            (item.href !== '/admin' && pathname.startsWith(item.href))
+          return (
+            <NavLink
+              key={item.key}
+              item={item}
+              mode={effectiveMode}
+              active={active}
+              count={0}
+            />
           )
         })}
       </nav>
@@ -306,8 +344,11 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
         ref={userCardRef}
         style={{
           position: 'relative',
-          padding: '8px 8px 0',
+          padding: effectiveMode === 'full' ? '10px 10px 0' : '10px 8px 0',
           borderTop: '1px solid var(--border)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2,
         }}
       >
         {signOutOpen && (
@@ -375,14 +416,15 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
               style={{
                 width: 28,
                 height: 28,
-                borderRadius: '50%',
-                background: 'var(--accent)',
+                borderRadius: 14,
+                background:
+                  'linear-gradient(135deg, var(--accent), var(--signal))',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 700,
-                color: '#fff',
+                color: 'var(--fg-on-accent, #fff)',
                 flexShrink: 0,
               }}
             >
@@ -397,15 +439,18 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
+                  fontFamily: 'var(--admin-font, Inter, sans-serif)',
+                  lineHeight: 1.2,
                 }}
               >
                 {user.firstName ?? user.email}
               </div>
               <div
                 style={{
-                  fontSize: 11,
+                  fontSize: 10,
                   color: 'var(--fg-subtle)',
                   fontFamily: "'JetBrains Mono', monospace",
+                  letterSpacing: '0.04em',
                 }}
               >
                 admin
@@ -427,14 +472,15 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
               style={{
                 width: 28,
                 height: 28,
-                borderRadius: '50%',
-                background: 'var(--accent)',
+                borderRadius: 14,
+                background:
+                  'linear-gradient(135deg, var(--accent), var(--signal))',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 700,
-                color: '#fff',
+                color: 'var(--fg-on-accent, #fff)',
                 border: 'none',
                 cursor: 'pointer',
               }}
@@ -445,41 +491,11 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
         )}
       </div>
 
-      {/* Back to app */}
-      <div
-        style={{
-          padding: '8px 8px 0',
-        }}
-      >
-        <Link
-          href="/watching"
-          title="Back to app"
-          aria-label="Back to app"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: effectiveMode === 'full' ? 10 : 0,
-            justifyContent: effectiveMode === 'rail' ? 'center' : 'flex-start',
-            padding: effectiveMode === 'full' ? '6px 10px' : '6px 0',
-            borderRadius: 6,
-            textDecoration: 'none',
-            fontSize: 12,
-            color: 'var(--fg-muted)',
-          }}
-        >
-          <ArrowLeft size={16} />
-          {effectiveMode === 'full' && <span>Back to app</span>}
-        </Link>
-      </div>
-
-      {/* Bottom controls */}
+      {/* Collapse toggle */}
       <div
         style={{
           padding: '12px 8px',
           borderTop: '1px solid var(--border)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 6,
         }}
       >
         <button
@@ -503,6 +519,7 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
             cursor: 'pointer',
             color: 'var(--fg-muted)',
             fontSize: 12,
+            width: '100%',
           }}
         >
           <NavIcon
