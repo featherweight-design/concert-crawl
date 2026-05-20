@@ -54,18 +54,18 @@ const STATIC_TABS = [
     ),
   },
   {
-    key: 'search',
-    label: 'search',
-    href: '/search',
+    key: 'venues',
+    label: 'venues',
+    href: '/venues',
     icon: (
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
-        <circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="1.5" />
         <path
-          d="M12.5 12.5L16 16"
+          d="M9 1.5C6.515 1.5 4.5 3.515 4.5 6c0 3.375 4.5 10.5 4.5 10.5S13.5 9.375 13.5 6c0-2.485-2.015-4.5-4.5-4.5z"
           stroke="currentColor"
           strokeWidth="1.5"
-          strokeLinecap="round"
+          strokeLinejoin="round"
         />
+        <circle cx="9" cy="6" r="1.5" stroke="currentColor" strokeWidth="1.5" />
       </svg>
     ),
   },
@@ -89,13 +89,13 @@ const STATIC_TABS = [
 ] as const
 
 interface MeAvatarProps {
-  handle: string | null
+  handle: string
   avatarColor: AvatarColor | null
   isActive: boolean
 }
 
 function MeAvatar({ handle, avatarColor, isActive }: MeAvatarProps) {
-  const letter = handle ? handle.charAt(0).toUpperCase() : '?'
+  const letter = handle.charAt(0).toUpperCase()
   const tone = avatarColor ?? 'signal'
   const tintBg = `color-mix(in oklch, var(--${tone}) 22%, var(--surface-1))`
   const tintBorder = `color-mix(in oklch, var(--${tone}) 50%, transparent)`
@@ -126,16 +126,47 @@ function MeAvatar({ handle, avatarColor, isActive }: MeAvatarProps) {
   )
 }
 
+function MeAvatarSkeleton() {
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        width: 22,
+        height: 22,
+        borderRadius: '50%',
+        flexShrink: 0,
+        background: 'var(--surface-2)',
+      }}
+    />
+  )
+}
+
+function PersonIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
+      <circle cx="9" cy="6.5" r="3" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M3 16c0-3.314 2.686-5 6-5s6 1.686 6 5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
 export function BottomNav() {
   const pathname = usePathname()
   const { getToken, isSignedIn } = useAuth()
   const [avatarHandle, setAvatarHandle] = useState<string | null>(null)
   const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(null)
+  const [profileLoaded, setProfileLoaded] = useState(false)
 
   useEffect(() => {
     if (!isSignedIn) {
       setAvatarHandle(null)
       setAvatarColor(null)
+      setProfileLoaded(true)
       return
     }
     let cancelled = false
@@ -150,6 +181,8 @@ export function BottomNav() {
         }
       } catch (err) {
         console.warn('BottomNav: could not load profile', err)
+      } finally {
+        if (!cancelled) setProfileLoaded(true)
       }
     })()
     return () => {
@@ -188,47 +221,21 @@ export function BottomNav() {
       })}
       <Link
         href="/me"
+        aria-label="Profile"
         className="flex flex-col items-center gap-[3px]"
         style={{ color: isMeActive ? 'var(--signal)' : 'var(--fg-subtle)' }}
       >
-        {avatarHandle !== null ? (
+        {!profileLoaded ? (
+          <MeAvatarSkeleton />
+        ) : avatarHandle !== null ? (
           <MeAvatar
             handle={avatarHandle}
             avatarColor={avatarColor}
             isActive={isMeActive}
           />
         ) : (
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 18 18"
-            fill="none"
-            aria-hidden
-          >
-            <circle
-              cx="9"
-              cy="6.5"
-              r="3"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            />
-            <path
-              d="M3 16c0-3.314 2.686-5 6-5s6 1.686 6 5"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-          </svg>
+          <PersonIcon />
         )}
-        <span
-          className="text-[9px] tracking-[0.04em]"
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontWeight: isMeActive ? 700 : 500,
-          }}
-        >
-          me
-        </span>
       </Link>
     </nav>
   )

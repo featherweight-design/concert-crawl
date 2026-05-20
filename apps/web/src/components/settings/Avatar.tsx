@@ -6,6 +6,7 @@ interface AvatarProps {
   size?: number
   ringed?: boolean
   className?: string
+  loading?: boolean
 }
 
 export function Avatar({
@@ -14,8 +15,25 @@ export function Avatar({
   size = 56,
   ringed = false,
   className,
+  loading = false,
 }: AvatarProps) {
-  const letter = handle ? handle.charAt(0).toUpperCase() : '?'
+  if (loading) {
+    return (
+      <div
+        className={className}
+        aria-hidden="true"
+        style={{
+          width: size,
+          height: size,
+          borderRadius: '50%',
+          flexShrink: 0,
+          background: 'var(--surface-2)',
+        }}
+      />
+    )
+  }
+
+  const letter = handle ? handle.charAt(0).toUpperCase() : null
   const isAnonymous = !handle
   const fontSize = Math.round(size * 0.46)
 

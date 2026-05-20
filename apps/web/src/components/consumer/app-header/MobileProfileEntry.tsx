@@ -9,11 +9,15 @@ import type { UserProfileResponse } from '@concert-crawl/types'
 export function MobileProfileEntry() {
   const { getToken, isSignedIn } = useAuth()
   const [profile, setProfile] = useState<UserProfileResponse | null>(null)
+  const [profileLoaded, setProfileLoaded] = useState(false)
 
   useEffect(() => {
     void (async () => {
       const token = await getToken()
-      if (!token) return
+      if (!token) {
+        setProfileLoaded(true)
+        return
+      }
       try {
         const data = await fetchMe(token)
         setProfile(data)
@@ -22,6 +26,8 @@ export function MobileProfileEntry() {
           'MobileProfileEntry: could not load profile, showing anonymous avatar',
           err,
         )
+      } finally {
+        setProfileLoaded(true)
       }
     })()
   }, [getToken])
@@ -32,6 +38,7 @@ export function MobileProfileEntry() {
     <ProfileEntryAvatar
       handle={profile?.handle ?? null}
       avatarColor={profile?.avatarColor ?? null}
+      loading={!profileLoaded}
     />
   )
 }
