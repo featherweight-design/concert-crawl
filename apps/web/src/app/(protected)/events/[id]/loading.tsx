@@ -33,22 +33,6 @@ export default function EventDetailLoading() {
       {/* Content column — mirrors -mt-5 / sm:-mt-[60px] from the real page */}
       <div className="relative -mt-5 sm:-mt-[60px] sm:z-[1] flex-1">
         <div className="mx-auto w-full max-w-[880px] box-border px-[18px] sm:px-8 pb-10 sm:pb-16 sm:pt-5">
-          {/* Genre chip strip */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-            {[52, 64, 48].map((width, idx) => (
-              <div
-                key={idx}
-                style={{
-                  width,
-                  height: 20,
-                  borderRadius: 4,
-                  background: 'var(--surface-2)',
-                  animation: `skeletonPulse 1.4s ease-in-out ${idx * 0.06}s infinite`,
-                }}
-              />
-            ))}
-          </div>
-
           {/* Artist name — h1 26px / weight 900 */}
           <div
             style={{
@@ -56,19 +40,8 @@ export default function EventDetailLoading() {
               width: '55%',
               borderRadius: 6,
               background: 'var(--surface-2)',
-              marginBottom: 8,
-              animation: 'skeletonPulse 1.4s ease-in-out 0.08s infinite',
-            }}
-          />
-          {/* Subtitle */}
-          <div
-            style={{
-              height: 14,
-              width: '38%',
-              borderRadius: 4,
-              background: 'var(--surface-2)',
               marginBottom: 12,
-              animation: 'skeletonPulse 1.4s ease-in-out 0.12s infinite',
+              animation: 'skeletonPulse 1.4s ease-in-out 0.08s infinite',
             }}
           />
 

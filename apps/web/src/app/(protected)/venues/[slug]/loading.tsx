@@ -83,18 +83,6 @@ export default function VenueLoading() {
       {/* Content column */}
       <div className="relative -mt-5 flex-1 pb-10">
         <div className="mx-auto w-full max-w-[880px] px-[18px] sm:px-8">
-          {/* Type chip */}
-          <div
-            style={{
-              height: 18,
-              width: 72,
-              borderRadius: 4,
-              background: 'var(--surface-2)',
-              marginBottom: 8,
-              animation: 'skeletonPulse 1.4s ease-in-out 0.06s infinite',
-            }}
-          />
-
           {/* Venue name — h1 26px / weight 900 */}
           <div
             style={{
@@ -134,70 +122,6 @@ export default function VenueLoading() {
                 animation: 'skeletonPulse 1.4s ease-in-out 0.16s infinite',
               }}
             />
-          </div>
-
-          {/* Stats row — 3 pills */}
-          <div
-            style={{
-              borderTop: '1px solid var(--border)',
-              borderBottom: '1px solid var(--border)',
-              padding: '12px 0',
-              display: 'flex',
-              gap: 16,
-              marginBottom: 16,
-            }}
-          >
-            {[0, 1, 2].map((idx) => (
-              <div
-                key={idx}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 4,
-                  animation: `skeletonPulse 1.4s ease-in-out ${0.18 + idx * 0.06}s infinite`,
-                }}
-              >
-                <div
-                  style={{
-                    height: 9,
-                    width: 52,
-                    borderRadius: 3,
-                    background: 'var(--surface-2)',
-                  }}
-                />
-                <div
-                  style={{
-                    height: 16,
-                    width: 40,
-                    borderRadius: 4,
-                    background: 'var(--surface-2)',
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-
-          {/* About text block — 3 lines */}
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 6,
-              marginBottom: 20,
-            }}
-          >
-            {[0.9, 0.8, 0.5].map((widthFraction, idx) => (
-              <div
-                key={idx}
-                style={{
-                  height: 12,
-                  width: `${widthFraction * 100}%`,
-                  borderRadius: 4,
-                  background: 'var(--surface-2)',
-                  animation: `skeletonPulse 1.4s ease-in-out ${0.3 + idx * 0.05}s infinite`,
-                }}
-              />
-            ))}
           </div>
 
           {/* Map placeholder */}
