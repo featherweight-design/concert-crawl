@@ -1,4 +1,4 @@
-import { Fragment, Suspense } from 'react'
+import { Suspense } from 'react'
 import type {
   EventsListResponse,
   VenuePublic,
@@ -10,20 +10,18 @@ import { fetchWatching } from '@/lib/watching'
 import { AppHeader } from '@/components/consumer/app-header'
 import { BottomNav } from '@/components/consumer/bottom-nav'
 import { HeroEventCard } from '@/components/consumer/hero-event-card'
-import { EventCard } from '@/components/consumer/event-card'
 import { FilterBar } from '@/components/consumer/filter-bar'
 import { EmptyState } from '@/components/consumer/empty-state'
 import { EventsList } from '@/components/consumer/events-list'
+import { CalendarView } from '@/components/consumer/calendar-view/CalendarView'
 import {
   currentWeekDays,
-  dateGroupLabel,
   filterWhenToDateRange,
   isToday,
   type WeekDayInfo,
 } from '@/components/consumer/definitions/lib'
 import { localDateString } from '@/lib/time'
 import { copy } from '@/components/consumer/definitions/copy'
-import { WeekStrip } from '@/components/consumer/week-strip'
 
 export const dynamic = 'force-dynamic'
 
@@ -193,14 +191,6 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   const heroEvent = firstEventIsToday ? events[0] : null
   const listEvents = heroEvent && view === 'list' ? events.slice(1) : events
 
-  const groups = new Map<string, typeof events>()
-  for (const event of listEvents) {
-    if (view === 'cal' && selectedDate && event.date !== selectedDate) continue
-    const key = event.date
-    if (!groups.has(key)) groups.set(key, [])
-    groups.get(key)!.push(event)
-  }
-
   const isFiltered =
     params['search'] ??
     params['venueSlug'] ??
@@ -210,6 +200,48 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     params['filterPrice'] ??
     params['filterVibe']
   const currentOffset = eventsResult.offset
+
+  // Compute week navigation hrefs server-side so they can be passed as plain
+  // strings to the CalendarView client component.
+  const calPrevWeekHref: string | null =
+    weekOffset > 0
+      ? (() => {
+          const prevParams = new URLSearchParams()
+          for (const [key, value] of Object.entries(params)) {
+            if (
+              typeof value === 'string' &&
+              key !== 'offset' &&
+              key !== 'selectedDate'
+            ) {
+              prevParams.set(key, value)
+            }
+          }
+          prevParams.set('view', 'cal')
+          const prevOffset = weekOffset - 1
+          if (prevOffset > 0) {
+            prevParams.set('weekOffset', String(prevOffset))
+          } else {
+            prevParams.delete('weekOffset')
+          }
+          return `/events?${prevParams.toString()}`
+        })()
+      : null
+
+  const calNextWeekHref = (() => {
+    const nextParams = new URLSearchParams()
+    for (const [key, value] of Object.entries(params)) {
+      if (
+        typeof value === 'string' &&
+        key !== 'offset' &&
+        key !== 'selectedDate'
+      ) {
+        nextParams.set(key, value)
+      }
+    }
+    nextParams.set('view', 'cal')
+    nextParams.set('weekOffset', String(weekOffset + 1))
+    return `/events?${nextParams.toString()}`
+  })()
 
   return (
     <div className="flex min-h-screen flex-col bg-bg">
@@ -259,75 +291,14 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
         )}
 
         {view === 'cal' && selectedDate && (
-          <WeekStrip
+          <CalendarView
             days={weekDays}
-            selectedDate={selectedDate}
+            events={events}
+            initialSelectedDate={selectedDate}
             today={today}
-            buildHref={(nextDate) => {
-              const nextParams = new URLSearchParams()
-              for (const [key, value] of Object.entries(params)) {
-                if (typeof value === 'string' && key !== 'offset') {
-                  nextParams.set(key, value)
-                }
-              }
-              nextParams.set('view', 'cal')
-              nextParams.set('selectedDate', nextDate)
-              if (weekOffset > 0) {
-                nextParams.set('weekOffset', String(weekOffset))
-              } else {
-                nextParams.delete('weekOffset')
-              }
-              return `/events?${nextParams.toString()}`
-            }}
-            prevWeekHref={
-              weekOffset > 0
-                ? (() => {
-                    const prevParams = new URLSearchParams()
-                    for (const [key, value] of Object.entries(params)) {
-                      if (
-                        typeof value === 'string' &&
-                        key !== 'offset' &&
-                        key !== 'selectedDate'
-                      ) {
-                        prevParams.set(key, value)
-                      }
-                    }
-                    prevParams.set('view', 'cal')
-                    const prevOffset = weekOffset - 1
-                    if (prevOffset > 0) {
-                      prevParams.set('weekOffset', String(prevOffset))
-                    } else {
-                      prevParams.delete('weekOffset')
-                    }
-                    return `/events?${prevParams.toString()}`
-                  })()
-                : null
-            }
-            nextWeekHref={(() => {
-              const nextParams = new URLSearchParams()
-              for (const [key, value] of Object.entries(params)) {
-                if (
-                  typeof value === 'string' &&
-                  key !== 'offset' &&
-                  key !== 'selectedDate'
-                ) {
-                  nextParams.set(key, value)
-                }
-              }
-              nextParams.set('view', 'cal')
-              nextParams.set('weekOffset', String(weekOffset + 1))
-              return `/events?${nextParams.toString()}`
-            })()}
-          />
-        )}
-
-        {view === 'cal' && groups.size === 0 && (
-          <EmptyState
-            state="no-data"
-            density="dense"
-            eyebrow={copy.emptyCalEyebrow}
-            title={copy.emptyCalTitle}
-            body={copy.emptyCalBody}
+            watchedIds={Array.from(watchedIds)}
+            prevWeekHref={calPrevWeekHref}
+            nextWeekHref={calNextWeekHref}
           />
         )}
 
@@ -341,63 +312,6 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
               initialWatchedIds={Array.from(watchedIds)}
             />
           </Suspense>
-        )}
-
-        {view === 'cal' && groups.size > 0 && (
-          <div className="flex flex-col gap-6">
-            {Array.from(groups.entries()).map(([date, dateEvents]) => {
-              const label = dateGroupLabel(date)
-              const isTonight = label.toLowerCase() === 'tonight'
-              return (
-                <section key={date} aria-label={label}>
-                  <div
-                    className="mb-1 flex items-baseline gap-2.5 px-4 pb-2"
-                    style={{ borderBottom: '1px solid var(--border)' }}
-                  >
-                    <h2
-                      className="shrink-0 leading-none"
-                      style={{
-                        fontFamily: 'Inter, system-ui',
-                        fontWeight: 900,
-                        fontSize: 18,
-                        letterSpacing: '-0.02em',
-                        color: isTonight ? 'var(--accent)' : 'var(--fg)',
-                      }}
-                    >
-                      {label}
-                    </h2>
-                    <span
-                      className="shrink-0 uppercase text-fg-subtle"
-                      style={{
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: 10,
-                        letterSpacing: '0.06em',
-                      }}
-                    >
-                      {dateEvents.length} show
-                      {dateEvents.length !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                  <div>
-                    {dateEvents.map((event, idx) => (
-                      <Fragment key={event.id}>
-                        {idx > 0 && (
-                          <div
-                            className="h-px bg-border"
-                            style={{ marginLeft: 58 }}
-                          />
-                        )}
-                        <EventCard
-                          event={event}
-                          isWatching={watchedIds.has(event.id)}
-                        />
-                      </Fragment>
-                    ))}
-                  </div>
-                </section>
-              )
-            })}
-          </div>
         )}
       </main>
 

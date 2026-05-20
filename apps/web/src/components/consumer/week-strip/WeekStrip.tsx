@@ -12,7 +12,15 @@ interface WeekStripProps {
   days: WeekStripDay[]
   selectedDate: string
   today: string
-  buildHref: (date: string) => string
+  /**
+   * Called when the user selects a date. Providing this enables client-side
+   * date switching without URL navigation — pass a setState setter so
+   * re-selecting a previously visited date is instant with no network request.
+   * When omitted, day buttons fall back to `buildHref` links (SSR nav).
+   */
+  onDateSelect?: (date: string) => void
+  /** Used as the day `href` when `onDateSelect` is not provided. */
+  buildHref?: (date: string) => string
   prevWeekHref: string | null
   nextWeekHref: string
 }
@@ -49,6 +57,7 @@ export function WeekStrip({
   days,
   selectedDate,
   today,
+  onDateSelect,
   buildHref,
   prevWeekHref,
   nextWeekHref,
@@ -108,19 +117,8 @@ export function WeekStrip({
               )
             }
 
-            return (
-              <Link
-                key={day.date}
-                href={buildHref(day.date)}
-                className={cn(
-                  'flex h-[58px] flex-col items-center justify-center rounded-xl transition-colors',
-                  selected
-                    ? 'bg-signal text-fg-on-accent'
-                    : 'bg-surface-1 text-fg-muted',
-                )}
-                scroll={false}
-                aria-current={selected ? 'date' : undefined}
-              >
+            const dayInner = (
+              <>
                 <span
                   className="text-[10px] uppercase"
                   style={{
@@ -145,6 +143,39 @@ export function WeekStrip({
                   }}
                   aria-hidden
                 />
+              </>
+            )
+
+            const dayClassName = cn(
+              'flex h-[58px] flex-col items-center justify-center rounded-xl transition-colors',
+              selected
+                ? 'bg-signal text-fg-on-accent'
+                : 'bg-surface-1 text-fg-muted',
+            )
+
+            if (onDateSelect) {
+              return (
+                <button
+                  key={day.date}
+                  type="button"
+                  className={cn(dayClassName, 'cursor-pointer')}
+                  onClick={() => onDateSelect(day.date)}
+                  aria-current={selected ? 'date' : undefined}
+                >
+                  {dayInner}
+                </button>
+              )
+            }
+
+            return (
+              <Link
+                key={day.date}
+                href={buildHref?.(day.date) ?? '#'}
+                className={dayClassName}
+                scroll={false}
+                aria-current={selected ? 'date' : undefined}
+              >
+                {dayInner}
               </Link>
             )
           })}
