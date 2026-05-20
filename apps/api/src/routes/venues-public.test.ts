@@ -6,6 +6,7 @@ const { mockDb } = vi.hoisted(() => {
     from: vi.fn(),
     where: vi.fn(),
     orderBy: vi.fn(),
+    groupBy: vi.fn(),
     limit: vi.fn(),
   }
   return { mockDb }
@@ -22,11 +23,14 @@ vi.mock('drizzle-orm', () => ({
   and: vi.fn((...args: unknown[]) => ({ type: 'and', args })),
   asc: vi.fn((col: unknown) => ({ type: 'asc', col })),
   gte: vi.fn((_a, _b) => ({ type: 'gte' })),
+  count: vi.fn((col: unknown) => ({ type: 'count', col })),
+  isNotNull: vi.fn((col: unknown) => ({ type: 'isNotNull', col })),
 }))
 
 vi.mock('@concert-crawl/db', () => ({
   db: mockDb,
   events: {
+    id: 'id',
     venueId: 'venueId',
     status: 'status',
     date: 'date',
@@ -85,6 +89,7 @@ function resetChain() {
   mockDb.from.mockReturnValue(mockDb)
   mockDb.where.mockReturnValue(mockDb)
   mockDb.orderBy.mockReturnValue(mockDb)
+  mockDb.groupBy.mockResolvedValue([])
   mockDb.limit.mockResolvedValue([])
 }
 
@@ -144,6 +149,8 @@ describe('GET /v1/venues/:slug', () => {
   it('returns 200 with venue and upcomingEvents for a known slug', async () => {
     // venue lookup: select().from().where() → [mockVenue]
     mockDb.where.mockResolvedValueOnce([mockVenue])
+    // count query: select().from().where() → [{total: 1}]
+    mockDb.where.mockResolvedValueOnce([{ total: 1 }])
     // events: select().from().where().orderBy().limit() → [mockEvent]
     mockDb.where.mockReturnValueOnce(mockDb)
     mockDb.limit.mockResolvedValueOnce([mockEvent])
@@ -163,6 +170,8 @@ describe('GET /v1/venues/:slug', () => {
     mockDb.where.mockResolvedValueOnce([
       { ...mockVenue, timezone: 'America/Chicago' },
     ])
+    // count query
+    mockDb.where.mockResolvedValueOnce([{ total: 0 }])
     mockDb.where.mockReturnValueOnce(mockDb)
     mockDb.limit.mockResolvedValueOnce([])
 

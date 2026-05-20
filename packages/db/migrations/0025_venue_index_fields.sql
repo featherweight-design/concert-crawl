@@ -17,4 +17,4 @@ UPDATE "venues" SET lat = 39.7319, lng = -104.9800, neighborhood = 'Capitol Hill
 UPDATE "venues" SET lat = 39.6654, lng = -105.2057, neighborhood = 'Morrison',
                     featured = true                                                       WHERE slug = 'red-rocks-amphitheatre';
 UPDATE "venues" SET lat = 39.7531, lng = -104.9971, neighborhood = 'Ballpark'           WHERE slug = 'summit-music-hall';
-UPDATE "venues" SET lat = 39.7333, lng = -104.9789, neighborhood = 'Capitol Hill'       WHERE slug = 'the-fillmore-auditorium';
+UPDATE "venues" SET lat = 39.7333, lng = -104.9789, neighborhood = 'Capitol Hill'       WHERE slug = 'fillmore-auditorium';

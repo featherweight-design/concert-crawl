@@ -99,6 +99,13 @@ venuesPublicRouter.get('/:slug', async (ctx) => {
     gte(events.date, today),
   ]
 
+  const [countRow] = await db
+    .select({ total: count(events.id) })
+    .from(events)
+    .where(and(...conditions))
+
+  const upcomingCount = countRow?.total ?? 0
+
   const upcomingEvents = await db
     .select({
       id: events.id,
@@ -125,8 +132,6 @@ venuesPublicRouter.get('/:slug', async (ctx) => {
     .where(and(...conditions))
     .orderBy(asc(events.date), asc(events.showTime))
     .limit(50)
-
-  const upcomingCount = upcomingEvents.length
 
   return ctx.json({
     success: true,

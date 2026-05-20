@@ -165,7 +165,7 @@ export async function updateVenue(
         : null
 
     const featuredRaw = formData.get('featured')
-    const featured = featuredRaw === 'true'
+    const featured = featuredRaw !== null ? featuredRaw === 'true' : undefined
 
     await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
       name: formData.get('name'),

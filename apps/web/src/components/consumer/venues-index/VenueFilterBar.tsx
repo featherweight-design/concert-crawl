@@ -185,8 +185,8 @@ export function VenueFilterBar({ state, onChange }: VenueFilterBarProps) {
         )}
       </div>
 
-      {/* Desktop popover */}
-      {openKey && (
+      {/* Desktop popover — only render when anchorRect is set (desktop only) */}
+      {openKey && anchorRect && (
         <FilterPopover
           open={!!openKey}
           title={VENUE_FILTER_DEFS[openKey]?.label ?? ''}

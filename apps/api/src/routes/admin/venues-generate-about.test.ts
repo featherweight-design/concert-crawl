@@ -130,6 +130,7 @@ describe('POST /v1/admin/venues/:id/generate-about', () => {
           text: JSON.stringify({
             capacity: 1600,
             venueType: 'Theater',
+            neighborhood: 'Capitol Hill',
             about:
               'A historic venue on Colfax Ave with a long live music tradition.',
           }),
@@ -162,7 +163,7 @@ describe('POST /v1/admin/venues/:id/generate-about', () => {
       content: [
         {
           type: 'text',
-          text: '```json\n{"capacity":500,"venueType":"Bar","about":"A cozy neighborhood bar with live music."}\n```',
+          text: '```json\n{"capacity":500,"venueType":"Bar","neighborhood":"RiNo","about":"A cozy neighborhood bar with live music."}\n```',
         },
       ],
     })
