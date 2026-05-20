@@ -20,6 +20,7 @@ export function MapPlaceholder({
           src={googleMapsEmbedUrl(venueAddress)}
           width="100%"
           height="160"
+          className="[filter:invert(90%)_hue-rotate(180deg)]"
           style={{ border: 0, display: 'block' }}
           loading="lazy"
           referrerPolicy="no-referrer-when-downgrade"

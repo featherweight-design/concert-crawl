@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { auth } from '@clerk/nextjs/server'
 import type { VenueWithEvents } from '@concert-crawl/types'
@@ -12,6 +11,7 @@ import { copy } from '@/components/consumer/definitions/copy'
 import { IdentityArt } from '@/components/consumer/identity-art/IdentityArt'
 import { VenueEventList } from '@/components/consumer/venue-event-list/VenueEventList'
 import { StatPill } from '@/components/consumer/venue-profile/StatPill'
+import { BackButton } from '@/components/consumer/venue-profile/BackButton'
 
 interface VenueProfilePageProps {
   params: Promise<{ slug: string }>
@@ -78,28 +78,7 @@ export default async function VenueProfilePage({
           aria-hidden
         />
         {/* Floating back button */}
-        <Link
-          href="/events"
-          aria-label="Back to browse"
-          className="absolute left-3.5 top-14 z-10 flex h-9 w-9 items-center justify-center rounded-full"
-          style={{ background: 'var(--scrim)' }}
-        >
-          <svg
-            width="10"
-            height="16"
-            viewBox="0 0 10 16"
-            fill="none"
-            aria-hidden
-          >
-            <path
-              d="M8 2L2 8l6 6"
-              stroke="var(--fg)"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </Link>
+        <BackButton />
       </div>
 
       {/* Content */}
