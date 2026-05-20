@@ -48,7 +48,7 @@ export function SettingsRoute({ profile, submissions }: SettingsRouteProps) {
         <div style={{ width: 52 }} />
       </div>
 
-      <div className="flex flex-col gap-6 pb-36">
+      <div className="flex flex-col gap-6 pb-24">
         {/* Hero — no section label */}
         <div className="px-5 pt-2">
           <ProfileHero

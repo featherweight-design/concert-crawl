@@ -29,7 +29,7 @@ export default function SearchPage() {
         background: 'var(--bg)',
         display: 'flex',
         flexDirection: 'column',
-        paddingTop: 62,
+        paddingTop: 16,
       }}
     >
       <SearchBar

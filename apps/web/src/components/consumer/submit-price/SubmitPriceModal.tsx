@@ -342,7 +342,7 @@ export function SubmitPriceModal({
           <div
             style={{
               display: 'flex',
-              alignItems: 'flex-start',
+              alignItems: 'center',
               gap: 8,
               borderRadius: 8,
               background: 'var(--surface-2)',
@@ -352,7 +352,7 @@ export function SubmitPriceModal({
           >
             <ShieldCheck
               size={14}
-              style={{ flexShrink: 0, color: 'var(--fg-muted)', marginTop: 1 }}
+              style={{ flexShrink: 0, color: 'var(--fg-muted)' }}
             />
             <p
               style={{

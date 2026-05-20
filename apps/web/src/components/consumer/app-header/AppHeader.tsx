@@ -40,7 +40,7 @@ export function AppHeader() {
   return (
     <header className="w-full">
       {/* ── Mobile bar (hidden sm+) ─────────────────────── */}
-      <div className="flex items-center justify-between bg-bg px-4 pb-2.5 pt-[62px] sm:hidden">
+      <div className="flex items-center justify-between bg-bg px-4 pb-2.5 pt-4 sm:hidden">
         <Link href="/events" className="flex items-center gap-2">
           <CCMark size={28} />
           <span

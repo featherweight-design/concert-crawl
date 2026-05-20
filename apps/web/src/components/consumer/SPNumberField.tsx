@@ -28,13 +28,13 @@ export function SPNumberField({
       : 'border-border-strong'
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex min-w-0 flex-col gap-1">
       <label className="text-xs font-medium text-fg-muted uppercase tracking-wider font-mono">
         {label}
         {required && <span className="text-danger ml-1">*</span>}
       </label>
       <div
-        className={`flex items-center border ${borderClass} rounded-md px-3 h-[46px] bg-surface-1`}
+        className={`flex min-w-0 items-center border ${borderClass} rounded-md px-3 h-[46px] bg-surface-1`}
       >
         <span className="font-mono text-sm font-bold text-fg-muted mr-1">
           $
