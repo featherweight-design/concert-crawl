@@ -1,3 +1,13 @@
+## [1.32.2](https://github.com/HartiganHM/concert-crawl/compare/v1.32.1...v1.32.2) (2026-05-20)
+
+
+### Bug Fixes
+
+* **browse:** filter sheet heading, clear filters position, hide date in cal ([e4c2b81](https://github.com/HartiganHM/concert-crawl/commit/e4c2b816872d30ec62216cede229c7aa259770f8))
+* **filter-bar:** clear filterWhen when switching to calendar view ([cf6b657](https://github.com/HartiganHM/concert-crawl/commit/cf6b657618c5b9790c6f95f358ad687cf0b3ed27))
+* **ui:** align loading skeletons with rendered layout on browse, event detail, and venue detail ([7a20064](https://github.com/HartiganHM/concert-crawl/commit/7a2006456f4d337d88a29dd04486f0d567f44a2c)), closes [#459](https://github.com/HartiganHM/concert-crawl/issues/459)
+* **ui:** remove skeleton elements that don't match conditional real-page renders ([8edf1c8](https://github.com/HartiganHM/concert-crawl/commit/8edf1c8e304edcba473622c1168deebbc6056655))
+
 ## [1.32.1](https://github.com/HartiganHM/concert-crawl/compare/v1.32.0...v1.32.1) (2026-05-20)
 
 
