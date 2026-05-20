@@ -54,7 +54,14 @@ export function FilterSheet({
             >
               {title}
             </div>
-            <div className="pt-0.5 text-[18px] font-bold text-fg">
+            <div
+              className="pt-0.5 text-[11px] uppercase text-fg-muted"
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 600,
+                letterSpacing: '0.08em',
+              }}
+            >
               {placeholder}
             </div>
           </div>

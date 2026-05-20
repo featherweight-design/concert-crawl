@@ -267,7 +267,29 @@ export function FilterBar({ venues, genres = [], className }: FilterBarProps) {
           maskImage: 'linear-gradient(to right, black 85%, transparent)',
         }}
       >
+        {activeFilterCount > 0 && (
+          <button
+            type="button"
+            onClick={clearAllFilters}
+            className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-dashed border-border-strong sm:hidden"
+            style={{ color: 'var(--fg-muted)' }}
+            aria-label="Clear all filters"
+          >
+            <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                d="M3 3l10 10M13 3L3 13"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                fill="none"
+              />
+            </svg>
+          </button>
+        )}
+
         {FILTER_ORDER.map((key) => {
+          if (key === 'when' && isCalendarView) return null
+
           const value = filterValues[key] ?? ''
           const activeLabel = value
             ? getActiveFilterLabel(key, value, venues, genres)
@@ -314,7 +336,7 @@ export function FilterBar({ venues, genres = [], className }: FilterBarProps) {
           <button
             type="button"
             onClick={clearAllFilters}
-            className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1 rounded-full border border-dashed border-border-strong px-3"
+            className="hidden h-9 shrink-0 cursor-pointer items-center gap-1 rounded-full border border-dashed border-border-strong px-3 sm:inline-flex"
             style={{
               fontFamily: 'Inter, system-ui',
               fontWeight: 600,
