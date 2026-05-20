@@ -25,6 +25,8 @@ import type { NormalizedEvent, TokenUsage } from './types.js'
 
 const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
 
+const AUTO_APPROVE_THRESHOLD = 0.7
+
 async function runExtraction(
   html: string,
   finalUrl: string,
@@ -322,7 +324,7 @@ export async function crawlVenue(
           sourceHash: event.sourceHash,
           status: 'upcoming' as const,
           confidenceScore: event.confidence.toFixed(2),
-          verified: strategy === 'structured_data',
+          verified: event.confidence >= AUTO_APPROVE_THRESHOLD,
           extractionStrategy: strategy,
         }))
 

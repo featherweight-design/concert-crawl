@@ -44,7 +44,9 @@ export default async function AdminEventsPage() {
       }}
     >
       <SectionHead
-        title="Event review"
+        eyebrow="Review"
+        title="Event flags"
+        subtitle="Events below the 0.70 confidence threshold — auto-approved events don't appear here."
         actions={
           <AdminButton variant="primary" icon={Plus}>
             New event
