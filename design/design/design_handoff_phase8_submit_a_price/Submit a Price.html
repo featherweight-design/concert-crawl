@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Concert Crawl — Submit a Price (v4)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: #0A0E22; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 999px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="landing-screens.jsx"></script>
+<script type="text/babel" src="submit-price-screens.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+
+<script type="text/babel">
+// ─── Frames ──────────────────────────────────────────────────
+function PhoneFrame({ children, height = 852 }) {
+  return (
+    <div style={{
+      width: 393, height,
+      background: "#070A1A",
+      borderRadius: 28,
+      overflow: "hidden",
+      border: "1px solid rgba(255,255,255,0.08)",
+      boxShadow: "0 24px 60px -20px rgba(0,0,0,0.55)",
+      position: "relative",
+    }}>{children}</div>
+  );
+}
+
+function DesktopShell({ children, width = 1180, height = 760 }) {
+  return (
+    <div style={{
+      width, height,
+      background: "#070A1A",
+      borderRadius: 14,
+      border: "1px solid rgba(255,255,255,0.10)",
+      overflow: "hidden",
+      boxShadow: "0 32px 80px -24px rgba(0,0,0,0.6)",
+      position: "relative",
+    }}>{children}</div>
+  );
+}
+
+// ─── Faithful Event Detail mock ──────────────────────────────
+// Layout follows the agreed flow:
+//   Hero → Genre chips → Event info (title + facts) → About →
+//   Ticket info (price/community strip) → CTAs → More at venue
+
+function IconPin() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M8 14s4.5-4 4.5-7.5a4.5 4.5 0 1 0-9 0C3.5 10 8 14 8 14Z" stroke="currentColor" strokeWidth="1.5"/>
+      <circle cx="8" cy="6.5" r="1.6" stroke="currentColor" strokeWidth="1.5"/>
+    </svg>
+  );
+}
+function IconCalendar() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <rect x="2.5" y="3.5" width="11" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
+      <path d="M5 2v3M11 2v3M2.5 6.5h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+  );
+}
+function IconClock() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="1.5"/>
+      <path d="M8 5v3.2L10 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+  );
+}
+function IconUsers() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <circle cx="6" cy="6.5" r="2.2" stroke="currentColor" strokeWidth="1.5"/>
+      <path d="M2 13c0-2 1.8-3.5 4-3.5s4 1.5 4 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+      <path d="M11 9.7c1.7.3 3 1.6 3 3.3M10.5 4.5a2 2 0 1 1 0 3.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+function HeroMonogram({ artist = "Habstrakt" }) {
+  const hash = artist.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+  const hues = [280, 200, 340, 160, 30, 220, 310, 180, 50, 260];
+  const hue = hues[hash % hues.length];
+  const initial = artist.charAt(0).toUpperCase();
+  return (
+    <div style={{
+      width: "100%", height: 280, flexShrink: 0,
+      background: `linear-gradient(135deg, oklch(0.35 0.08 ${hue}), oklch(0.22 0.06 ${hue + 40}))`,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      position: "relative", overflow: "hidden",
+    }}>
+      <svg width="100%" height="100%" viewBox="0 0 280 280" preserveAspectRatio="xMidYMid slice"
+        style={{ position: "absolute", inset: 0, opacity: 0.22 }}>
+        {[40, 80, 120, 160].map(r => (
+          <circle key={r} cx="140" cy="140" r={r} fill="none" stroke={`oklch(0.85 0.16 ${hue})`} strokeWidth="1.5" />
+        ))}
+      </svg>
+      <span style={{
+        fontFamily: "Inter, system-ui", fontWeight: 900, fontSize: 110,
+        color: `oklch(0.78 0.16 ${hue})`, opacity: 0.7,
+        letterSpacing: "-0.04em",
+        position: "relative",
+      }}>{initial}</span>
+    </div>
+  );
+}
+
+function NavOverlay() {
+  const dot = {
+    width: 32, height: 32, borderRadius: 16,
+    background: "rgba(0,0,0,0.45)",
+    border: "1px solid rgba(255,255,255,0.12)",
+    backdropFilter: "blur(8px)",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    color: "#fff", fontSize: 14,
+  };
+  return (
+    <>
+      <div style={{ position: "absolute", top: 14, left: 14, zIndex: 2, ...dot }}>←</div>
+      <div style={{ position: "absolute", top: 14, right: 14, zIndex: 2, ...dot }}>♥</div>
+    </>
+  );
+}
+
+function Chip({ children }) {
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center",
+      padding: "4px 10px",
+      background: "var(--surface-2)",
+      border: "1px solid var(--border)",
+      borderRadius: 999,
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: 10, fontWeight: 700,
+      color: "var(--fg-muted)",
+      letterSpacing: "0.10em", textTransform: "uppercase",
+    }}>{children}</span>
+  );
+}
+
+function InfoRow({ icon, label, value, signal = false }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 10,
+      padding: "10px 0",
+      borderBottom: "1px solid var(--border)",
+    }}>
+      <span style={{ color: "var(--fg-muted)", display: "inline-flex" }}>{icon}</span>
+      <span style={{
+        flex: "0 0 auto",
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: 10, letterSpacing: "0.10em", textTransform: "uppercase",
+        color: "var(--fg-subtle)", fontWeight: 700, width: 64,
+      }}>{label}</span>
+      <span style={{
+        flex: 1, minWidth: 0,
+        fontFamily: "Inter, system-ui",
+        fontSize: 14, fontWeight: 600,
+        color: signal ? "var(--signal)" : "var(--fg)",
+        letterSpacing: "-0.005em",
+        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+      }}>{value}</span>
+    </div>
+  );
+}
+
+function SectionHeader({ children }) {
+  return (
+    <div style={{
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase",
+      color: "var(--fg-subtle)", fontWeight: 700,
+      marginBottom: 8,
+    }}>{children}</div>
+  );
+}
+
+function SmallEventRow({ artist, venue, date, time, price }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 12,
+      padding: "12px 0",
+    }}>
+      <div style={{
+        width: 44, height: 44, borderRadius: 8, flexShrink: 0,
+        background: "linear-gradient(135deg, var(--surface-2), var(--surface-3))",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontFamily: "Inter, system-ui", fontWeight: 900, fontSize: 18,
+        color: "var(--fg-subtle)",
+      }}>{artist.charAt(0)}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontFamily: "Inter, system-ui", fontSize: 14, fontWeight: 700,
+          color: "var(--fg)", letterSpacing: "-0.005em",
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }}>{artist}</div>
+        <div style={{
+          fontFamily: "'JetBrains Mono', monospace", fontSize: 9,
+          color: "var(--fg-muted)", marginTop: 2,
+          letterSpacing: "0.04em",
+        }}>{venue ? venue + " · " : ""}{date} · {time}</div>
+      </div>
+      {price ? (
+        <span style={{
+          fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700,
+          color: "var(--signal)", letterSpacing: "0.04em",
+        }}>{price}</span>
+      ) : (
+        <span style={{
+          fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 600,
+          color: "var(--fg-subtle)", letterSpacing: "0.10em", textTransform: "uppercase",
+        }}>TBA</span>
+      )}
+    </div>
+  );
+}
+
+// EventDetailMock — sectioned to match the agreed flow.
+//   ticketInfoSlot: replaces the default community price strip
+//   primaryCta:     defaults to "Get Tickets ↗"
+//   submitCta:      stacked secondary CTA — submit a price
+function EventDetailMock({
+  ticketInfoSlot = null,
+  showSubmitCta = true,
+  onSubmitCta = () => {},
+  bannerLabels = false,    // when true, draws section labels in a side rail
+}) {
+  const event = {
+    artist: "Habstrakt",
+    title: "ALLEYCVT presents: Supersonic Rocks",
+    venue: "Red Rocks Amphitheatre",
+    venueShort: "Red Rocks",
+    date: "Wed, Apr 30",
+    doors: "6:00 PM",
+    showTime: "7:00 PM",
+    ages: "All Ages",
+    genre: ["bass", "dubstep"],
+    description: "Habstrakt headlines the ALLEYCVT presents: Supersonic Rocks lineup at Red Rocks. Heavy bass under the cliffs.",
+  };
+  const related = [
+    { artist: "YUNGBLUD", date: "May 11", time: "8:00 PM", price: null },
+    { artist: "Mannequin Pussy", venue: "Bluebird", date: "May 7", time: "8:30 PM", price: "$28" },
+    { artist: "Puscifer", date: "May 3", time: "7:30 PM", price: null },
+  ];
+
+  const Lbl = ({ children, color = "var(--accent)" }) => (
+    bannerLabels ? (
+      <div style={{
+        position: "absolute", left: -118, top: 4,
+        width: 110,
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: 10, fontWeight: 700, letterSpacing: "0.14em",
+        textTransform: "uppercase",
+        color,
+        textAlign: "right",
+        paddingRight: 6,
+        borderRight: `2px solid ${color}`,
+      }}>{children}</div>
+    ) : null
+  );
+
+  return (
+    <div style={{
+      width: "100%", height: "100%",
+      background: "var(--bg)", color: "var(--fg)",
+      display: "flex", flexDirection: "column",
+      fontFamily: "Inter, system-ui",
+      overflow: "hidden",
+    }}>
+      <div style={{ position: "relative", flexShrink: 0 }}>
+        <HeroMonogram artist={event.artist} />
+        <NavOverlay />
+        <div style={{
+          position: "absolute", bottom: 0, left: 0, right: 0, height: 80,
+          background: "linear-gradient(transparent, var(--bg))",
+        }} />
+        {bannerLabels && <Lbl color="rgba(255,255,255,0.7)">1 · Hero</Lbl>}
+      </div>
+      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", marginTop: -20, position: "relative" }}>
+        <div style={{ padding: "0 18px 24px", position: "relative" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10, position: "relative" }}>
+            <Lbl>2 · Genre</Lbl>
+            {event.genre.map(g => <Chip key={g}>{g}</Chip>)}
+          </div>
+
+          <div style={{ position: "relative" }}>
+            <Lbl>3 · Event info</Lbl>
+            <h1 style={{
+              margin: 0, fontWeight: 900,
+              fontSize: 28, letterSpacing: "-0.03em", lineHeight: 1.1,
+              color: "var(--fg)",
+            }}>{event.artist}</h1>
+            <div style={{
+              fontWeight: 500, fontSize: 13.5,
+              color: "var(--fg-muted)", marginTop: 4,
+              letterSpacing: "-0.005em",
+            }}>{event.title}</div>
+
+            <div style={{
+              marginTop: 14, padding: "2px 0",
+              borderTop: "1px solid var(--border)",
+            }}>
+              <InfoRow icon={<IconPin />}     label="Venue"  value={event.venue} />
+              <InfoRow icon={<IconCalendar/>} label="Date"   value={event.date} />
+              <InfoRow icon={<IconClock />}   label="Doors / Show" value={`${event.doors} / ${event.showTime}`} />
+              <InfoRow icon={<IconUsers />}   label="Ages"   value={event.ages} />
+            </div>
+          </div>
+
+          <div style={{ marginTop: 18, position: "relative" }}>
+            <Lbl>4 · About</Lbl>
+            <SectionHeader>About</SectionHeader>
+            <div style={{
+              fontFamily: "Inter, system-ui", fontSize: 13.5,
+              color: "var(--fg-muted)", lineHeight: 1.5,
+              letterSpacing: "-0.005em",
+            }}>{event.description}</div>
+          </div>
+
+          <div style={{ marginTop: 18, position: "relative" }}>
+            <Lbl color="var(--signal)">5 · Ticket info</Lbl>
+            <SectionHeader>Ticket info</SectionHeader>
+            {ticketInfoSlot || (
+              <window.CommunityPriceChip attribution="anonymous" showQuickConfirm={true} />
+            )}
+          </div>
+
+          <div style={{ marginTop: 16, position: "relative", display: "flex", flexDirection: "column", gap: 10 }}>
+            <Lbl color="var(--accent)">6 · CTAs</Lbl>
+            <button style={{
+              all: "unset", cursor: "pointer",
+              display: "flex", width: "100%", height: 48, borderRadius: 10,
+              background: "var(--accent)", color: "var(--fg-on-accent)",
+              fontWeight: 800, fontSize: 15,
+              letterSpacing: "-0.01em",
+              alignItems: "center", justifyContent: "center",
+              boxSizing: "border-box",
+            }}>Get Tickets ↗</button>
+            {showSubmitCta && (
+              <button type="button" onClick={onSubmitCta} style={{
+                all: "unset", cursor: "pointer",
+                display: "flex", width: "100%", height: 48, borderRadius: 10,
+                background: "var(--signal)", color: "var(--fg-on-accent)",
+                fontWeight: 800, fontSize: 15,
+                letterSpacing: "-0.01em",
+                alignItems: "center", justifyContent: "center", gap: 8,
+                boxSizing: "border-box",
+              }}>
+                <svg width="14" height="14" viewBox="0 0 16 16">
+                  <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
+                </svg>
+                Submit a price you saw
+              </button>
+            )}
+            <div style={{
+              textAlign: "center",
+              fontFamily: "'JetBrains Mono', monospace", fontSize: 9,
+              color: "var(--fg-subtle)", letterSpacing: "0.02em",
+            }}>
+              <span style={{ color: "var(--signal)" }}>Sign up</span> to save this show
+            </div>
+          </div>
+
+          <div style={{ marginTop: 22, position: "relative" }}>
+            <Lbl>7 · More at venue</Lbl>
+            <div style={{
+              display: "flex", alignItems: "baseline", justifyContent: "space-between",
+              borderBottom: "1px solid var(--border)", paddingBottom: 6, marginBottom: 4,
+            }}>
+              <div style={{
+                fontFamily: "Inter, system-ui", fontSize: 14, fontWeight: 800,
+                letterSpacing: "-0.005em",
+              }}>More at {event.venueShort}</div>
+              <div style={{
+                fontFamily: "'JetBrains Mono', monospace", fontSize: 9,
+                color: "var(--fg-subtle)", letterSpacing: "0.10em", textTransform: "uppercase",
+              }}>{related.length} shows</div>
+            </div>
+            {related.map((r, i) => (
+              <React.Fragment key={i}>
+                {i > 0 && <div style={{ height: 1, background: "var(--border)", opacity: 0.4 }} />}
+                <SmallEventRow {...r} />
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Ticket-info variants ─────────────────────────────────────
+// Empty state — no community reports yet
+function TicketInfoEmpty() {
+  return (
+    <div style={{
+      padding: "14px 14px",
+      background: "var(--surface-1)",
+      border: "1px dashed var(--border-strong)",
+      borderRadius: 12,
+      display: "flex", flexDirection: "column", gap: 6,
+    }}>
+      <div style={{
+        fontFamily: "Inter, system-ui",
+        fontSize: 14, fontWeight: 700,
+        color: "var(--fg)", letterSpacing: "-0.005em",
+      }}>No reports yet — be the first.</div>
+      <div style={{
+        fontFamily: "Inter, system-ui",
+        fontSize: 12.5, color: "var(--fg-muted)",
+        letterSpacing: "-0.005em",
+      }}>Once two fans confirm, a community price goes live for everyone.</div>
+    </div>
+  );
+}
+
+// ─── Variant labels ───────────────────────────────────────────
+function VariantTag({ kind = "before", children }) {
+  const colors = {
+    before: { bg: "rgba(255,176,138,0.10)", border: "rgba(255,176,138,0.45)", fg: "#FFB08A" },
+    after:  { bg: "rgba(123,255,176,0.10)", border: "rgba(123,255,176,0.45)", fg: "#7BFFB0" },
+    note:   { bg: "rgba(122,230,255,0.10)", border: "rgba(122,230,255,0.45)", fg: "#7AE6FF" },
+    rec:    { bg: "rgba(255,230,122,0.10)", border: "rgba(255,230,122,0.45)", fg: "#FFE67A" },
+  };
+  const c = colors[kind] || colors.before;
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center",
+      padding: "3px 8px", borderRadius: 6,
+      background: c.bg, border: `1px solid ${c.border}`,
+      color: c.fg,
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: 9, fontWeight: 700,
+      letterSpacing: "0.14em", textTransform: "uppercase",
+    }}>{children}</span>
+  );
+}
+
+// ─── Dispute as a dedicated page ─────────────────────────────
+// Inputs: the original submission being disputed.
+function DisputePage({ submission, onCancel = () => {}, initialState = "empty" }) {
+  return (
+    <div style={{
+      width: "100%", height: "100%",
+      background: "var(--bg)",
+      color: "var(--fg)",
+      display: "flex", flexDirection: "column",
+      fontFamily: "Inter, system-ui",
+      overflow: "hidden",
+    }}>
+      {/* Header */}
+      <header style={{
+        flexShrink: 0,
+        padding: "14px 18px 12px",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        borderBottom: "1px solid var(--border)",
+      }}>
+        <button type="button" onClick={onCancel} style={{
+          all: "unset", cursor: "pointer",
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 11, fontWeight: 700,
+          color: "var(--fg-muted)",
+          letterSpacing: "0.10em", textTransform: "uppercase",
+        }}>← Cancel</button>
+        <div style={{
+          fontFamily: "Inter, system-ui", fontSize: 14, fontWeight: 800,
+          color: "var(--fg)", letterSpacing: "-0.005em",
+        }}>Dispute price</div>
+        <div style={{ width: 60 }} />
+      </header>
+
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px 18px 22px", display: "flex", flexDirection: "column", gap: 16 }}>
+        {/* Show context */}
+        <window.DetailContextHeader />
+
+        {/* The submission being disputed */}
+        <div style={{
+          padding: "12px 14px",
+          background: "var(--surface-1)",
+          border: "1px solid var(--border)",
+          borderRadius: 12,
+          display: "flex", flexDirection: "column", gap: 6,
+        }}>
+          <div style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 9, fontWeight: 700, letterSpacing: "0.14em",
+            textTransform: "uppercase", color: "var(--fg-subtle)",
+          }}>You're disputing</div>
+          <div style={{
+            display: "flex", alignItems: "baseline", gap: 8,
+            fontFamily: "Inter, system-ui", letterSpacing: "-0.005em",
+          }}>
+            <span style={{ fontSize: 22, fontWeight: 900, color: "var(--fg)" }}>
+              ${submission.floor}{submission.ceiling ? `–${submission.ceiling}` : ""}
+            </span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg-muted)" }}>
+              · {submission.tier}
+            </span>
+          </div>
+          <div style={{
+            fontFamily: "Inter, system-ui", fontSize: 12.5,
+            color: "var(--fg-muted)", letterSpacing: "-0.005em",
+          }}>{submission.source} · {submission.vendor} · {submission.submittedAgo} ago</div>
+        </div>
+
+        {/* Why disputes need an alternate */}
+        <div style={{
+          padding: "10px 12px",
+          background: "rgba(255,107,107,0.06)",
+          border: "1px solid rgba(255,107,107,0.30)",
+          borderRadius: 10,
+          fontFamily: "Inter, system-ui", fontSize: 12.5, lineHeight: 1.5,
+          color: "var(--fg-muted)", letterSpacing: "-0.005em",
+        }}>
+          A dispute needs an alternate price + vendor. If you saw something different, log it — that's how we find the truth.
+        </div>
+
+        {/* Reuse the inline DisputeForm component — it already has the right
+            fields (floor, ceiling required, vendor required) and "File dispute" CTA. */}
+        <window.DisputeForm
+          submission={submission}
+          onCancel={onCancel}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ─── Tweaks ──────────────────────────────────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "attribution": "anonymous",
+  "showQuickConfirm": true,
+  "disputeStyle": "page"
+}/*EDITMODE-END*/;
+
+const ATTRIBUTION_OPTIONS = [
+  { value: "anonymous", label: "Anonymous count" },
+  { value: "handle",    label: "Handles" },
+];
+const DISPUTE_STYLE_OPTIONS = [
+  { value: "page",   label: "Dedicated page" },
+  { value: "inline", label: "Inline expand" },
+];
+
+function App() {
+  const [theme, setTheme] = window.useThemeState
+    ? window.useThemeState("electric")
+    : React.useState("electric");
+
+  const [tweaks, setTweak] = window.useTweaks
+    ? window.useTweaks(TWEAK_DEFAULTS)
+    : [TWEAK_DEFAULTS, () => {}];
+
+  const attribution = tweaks.attribution || "anonymous";
+  const showQuickConfirm = tweaks.showQuickConfirm !== false;
+
+  const ThemeProvider = window.ThemeProvider || (({ children }) => <>{children}</>);
+
+  const showWithPending = window.SP_SAMPLE_SHOW;
+  const firstPeerSubmission = (showWithPending.submissions || []).find(s => !s.byYou) || null;
+  const firstPeerSubmissionId = firstPeerSubmission?.id || null;
+
+  return (
+    <window.DesignCanvas
+      title="Submit a Price · v4"
+      subtitle="Sectioned detail flow · ticket info · dispute as a dedicated page"
+    >
+      {/* —— System notes —— */}
+      <window.DCSection id="system" title="System">
+        <window.DCArtboard id="system-card" label="design notes · v4" width={780} height={680}>
+          <div style={{
+            width: "100%", height: "100%",
+            padding: "28px 32px",
+            background: "#0F1430",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 12,
+            color: "#E5EAF5",
+            fontFamily: "Inter, system-ui",
+            fontSize: 14, lineHeight: 1.55,
+            display: "flex", flexDirection: "column", gap: 14,
+            overflowY: "auto",
+          }}>
+            <div style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 10, letterSpacing: "0.14em",
+              textTransform: "uppercase", fontWeight: 700,
+              color: "rgba(255,123,212,0.85)",
+            }}>Phase 8 · Submit & verify · v4</div>
+            <h2 style={{ margin: 0, fontSize: 26, fontWeight: 900, letterSpacing: "-0.02em" }}>
+              Sectioned flow + dedicated dispute page.
+            </h2>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 10, letterSpacing: "0.14em",
+                textTransform: "uppercase", fontWeight: 700,
+                color: "rgba(123,255,176,0.85)",
+              }}>Detail page flow (locked)</div>
+              <div style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 12, color: "#cfd6ea",
+                background: "rgba(255,255,255,0.04)",
+                padding: "10px 12px", borderRadius: 8,
+                letterSpacing: "0.04em",
+              }}>
+                Hero → Genre chips → Event info → About → <span style={{ color: "#FFE67A" }}>Ticket info</span> → CTAs → More at venue
+              </div>
+              <ul style={{ margin: "4px 0 0", paddingLeft: 18, color: "#A6ADC4" }}>
+                <li><strong style={{ color: "#fff" }}>Ticket info</strong> is its own labeled section — community price strip lives here, not buried mid-page.</li>
+                <li><strong style={{ color: "#fff" }}>CTAs</strong> stack: Get Tickets (primary commerce) over Submit a price (primary engagement). Sign-up nudge below.</li>
+                <li>Walk-through artboard below has the section labels in a side rail so you can sanity-check at a glance.</li>
+              </ul>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
+              <div style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 10, letterSpacing: "0.14em",
+                textTransform: "uppercase", fontWeight: 700,
+                color: "rgba(255,230,122,0.9)",
+              }}>Dispute UX — my recommendation: dedicated page</div>
+              <ul style={{ margin: 0, paddingLeft: 18, color: "#A6ADC4" }}>
+                <li><strong style={{ color: "#fff" }}>You're right.</strong> Inline expansion gets noisy on a list of 3+ reports — the verify sheet stops being scannable.</li>
+                <li>A dedicated page mirrors the Submit route philosophy: <em>commit to it, don't compromise on inputs</em>. Same form, same validation, just prefilled with the disputed report at the top for context.</li>
+                <li>Cost is one extra navigation. Worth it — disputes are deliberate, not casual.</li>
+                <li>Both versions live below as artboards so you can compare. Tweak the toggle to swap which one the verify sheet uses.</li>
+              </ul>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
+              <div style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 10, letterSpacing: "0.14em",
+                textTransform: "uppercase", fontWeight: 700,
+                color: "rgba(122,230,255,0.85)",
+              }}>How do you reach the verify sheet?</div>
+              <ul style={{ margin: 0, paddingLeft: 18, color: "#A6ADC4" }}>
+                <li>From the <strong style={{ color: "#fff" }}>Ticket info</strong> section, the community price strip has a "<strong style={{ color: "#7AE6FF" }}>3 reports →</strong>" link on the right.</li>
+                <li>Tap it → verify sheet slides up from the bottom (mobile) or opens as a side panel (desktop, future).</li>
+                <li>Sheet shows all reports + Confirm/Dispute on each. Confirm is one tap. Dispute opens the dedicated dispute page.</li>
+                <li>The "tap target" artboard below highlights the entry point in red.</li>
+              </ul>
+            </div>
+          </div>
+        </window.DCArtboard>
+      </window.DCSection>
+
+      {/* —— Sectioned flow walk-through —— */}
+      <window.DCSection id="flow" title="Detail page · sectioned flow walk-through">
+        <window.DCArtboard
+          id="flow-walk"
+          label={<><VariantTag kind="rec">flow</VariantTag>&nbsp;&nbsp;Hero → Genre → Event info → About → Ticket info → CTAs → More at venue</>}
+          width={560}
+          height={1180}
+        >
+          <div style={{
+            width: "100%", height: "100%",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            paddingLeft: 130, paddingRight: 18,
+            background: "transparent",
+          }}>
+            <PhoneFrame height={1140}>
+              <ThemeProvider theme={theme}>
+                <EventDetailMock bannerLabels />
+              </ThemeProvider>
+            </PhoneFrame>
+          </div>
+        </window.DCArtboard>
+      </window.DCSection>
+
+      {/* —— Standard view, before/after —— */}
+      <window.DCSection id="ticket-info-states" title="Ticket info · states">
+        <window.DCArtboard
+          id="detail-after"
+          label={<><VariantTag kind="after">after</VariantTag>&nbsp;&nbsp;community price + reports link</>}
+          width={393} height={1140}
+        >
+          <PhoneFrame height={1140}>
+            <ThemeProvider theme={theme}>
+              <EventDetailMock />
+            </ThemeProvider>
+          </PhoneFrame>
+        </window.DCArtboard>
+
+        <window.DCArtboard
+          id="detail-empty"
+          label={<><VariantTag kind="after">after</VariantTag>&nbsp;&nbsp;no reports yet</>}
+          width={393} height={1140}
+        >
+          <PhoneFrame height={1140}>
+            <ThemeProvider theme={theme}>
+              <EventDetailMock ticketInfoSlot={<TicketInfoEmpty />} />
+            </ThemeProvider>
+          </PhoneFrame>
+        </window.DCArtboard>
+      </window.DCSection>
+
+      {/* —— Verify sheet entry —— */}
+      <window.DCSection id="verify-entry" title="Reaching the verify sheet">
+        <window.DCArtboard
+          id="verify-tap"
+          label={<><VariantTag kind="note">step 1</VariantTag>&nbsp;&nbsp;Tap "N reports →" on community strip</>}
+          width={393} height={852}
+        >
+          <PhoneFrame>
+            <ThemeProvider theme={theme}>
+              <EventDetailMock
+                ticketInfoSlot={(
+                  <div style={{ position: "relative" }}>
+                    <div style={{
+                      position: "absolute", inset: -6,
+                      borderRadius: 14,
+                      border: "2px solid #FF6B6B",
+                      boxShadow: "0 0 0 6px rgba(255,107,107,0.18)",
+                      pointerEvents: "none",
+                      zIndex: 2,
+                    }} />
+                    <div style={{
+                      position: "absolute", left: 0, top: -28,
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 9, fontWeight: 700,
+                      color: "#FF6B6B", letterSpacing: "0.14em",
+                      textTransform: "uppercase",
+                      background: "rgba(0,0,0,0.7)",
+                      padding: "3px 6px", borderRadius: 4,
+                      zIndex: 3,
+                    }}>tap “N reports →”</div>
+                    <window.CommunityPriceChip attribution="anonymous" showQuickConfirm={true} />
+                  </div>
+                )}
+              />
+            </ThemeProvider>
+          </PhoneFrame>
+        </window.DCArtboard>
+
+        <window.DCArtboard
+          id="verify-open"
+          label={<><VariantTag kind="note">step 2</VariantTag>&nbsp;&nbsp;Verify sheet slides up</>}
+          width={393} height={852}
+        >
+          <PhoneFrame>
+            <ThemeProvider theme={theme}>
+              <EventDetailMock />
+              <div style={{
+                position: "absolute", inset: 0,
+                display: "flex", flexDirection: "column",
+                background: "rgba(0,0,0,0.55)",
+              }}>
+                <div style={{ flex: 1 }} />
+                <div style={{
+                  background: "var(--bg-elevated)",
+                  borderTopLeftRadius: 20, borderTopRightRadius: 20,
+                  borderTop: "1px solid var(--border-strong)",
+                  padding: "10px 18px 22px",
+                  maxHeight: "82%",
+                  display: "flex", flexDirection: "column",
+                  boxShadow: "0 -24px 60px -10px rgba(0,0,0,0.5)",
+                }}>
+                  <div style={{
+                    width: 44, height: 4, borderRadius: 2,
+                    background: "var(--border-strong)",
+                    alignSelf: "center",
+                    marginBottom: 12,
+                  }} />
+                  <window.VerifySheet attribution={attribution} />
+                </div>
+              </div>
+            </ThemeProvider>
+          </PhoneFrame>
+        </window.DCArtboard>
+      </window.DCSection>
+
+      {/* —— Dispute · dedicated page —— */}
+      <window.DCSection id="dispute" title="Dispute · dedicated page">
+        <window.DCArtboard
+          id="dispute-page"
+          label={<><VariantTag kind="rec">recommended</VariantTag>&nbsp;&nbsp;Dedicated dispute page</>}
+          width={393} height={852}
+        >
+          <PhoneFrame>
+            <ThemeProvider theme={theme}>
+              {firstPeerSubmission && (
+                <DisputePage submission={firstPeerSubmission} initialState="empty" />
+              )}
+            </ThemeProvider>
+          </PhoneFrame>
+        </window.DCArtboard>
+
+      </window.DCSection>
+
+      {/* —— Submit route — full state walk —— */}
+      <window.DCSection id="route-states" title="Submit route · state walk">
+        <window.DCArtboard id="state-empty" label="01 · Empty form" width={393} height={852}>
+          <PhoneFrame>
+            <ThemeProvider theme={theme}>
+              <window.SubmitRoute initialState="empty" />
+            </ThemeProvider>
+          </PhoneFrame>
+        </window.DCArtboard>
+
+        <window.DCArtboard id="state-error" label="02 · Validation error" width={393} height={852}>
+          <PhoneFrame>
+            <ThemeProvider theme={theme}>
+              <window.SubmitRoute initialState="error" />
+            </ThemeProvider>
+          </PhoneFrame>
+        </window.DCArtboard>
+
+        <window.DCArtboard id="state-submitting" label="03 · Submitting" width={393} height={852}>
+          <PhoneFrame>
+            <ThemeProvider theme={theme}>
+              <window.SubmitRoute initialState="submitting" />
+            </ThemeProvider>
+          </PhoneFrame>
+        </window.DCArtboard>
+
+        <window.DCArtboard id="state-success" label="04 · Success" width={393} height={852}>
+          <PhoneFrame>
+            <ThemeProvider theme={theme}>
+              <window.SubmitRoute initialState="success" />
+            </ThemeProvider>
+          </PhoneFrame>
+        </window.DCArtboard>
+
+        <window.DCArtboard id="state-already" label="05 · Already submitted" width={393} height={852}>
+          <PhoneFrame>
+            <ThemeProvider theme={theme}>
+              <window.SubmitRoute initialState="alreadySubmitted" />
+            </ThemeProvider>
+          </PhoneFrame>
+        </window.DCArtboard>
+
+        <window.DCArtboard id="state-route-desktop" label="06 · Desktop route" width={1180} height={760}>
+          <DesktopShell>
+            <ThemeProvider theme={theme}>
+              <div style={{
+                width: "100%", height: "100%",
+                display: "flex", flexDirection: "column",
+                background: "var(--bg)",
+              }}>
+                <header style={{
+                  flexShrink: 0,
+                  padding: "18px 32px",
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  borderBottom: "1px solid var(--border)",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    {window.CCClusterMark && <window.CCClusterMark size={22} color="var(--signal)" glow="var(--accent)" />}
+                    {window.CCWordmark && <window.CCWordmark size={16} />}
+                  </div>
+                  <span style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 11, fontWeight: 700,
+                    color: "var(--fg-muted)",
+                    letterSpacing: "0.10em", textTransform: "uppercase",
+                  }}>← Back to Habstrakt</span>
+                </header>
+                <div style={{
+                  flex: 1, minHeight: 0,
+                  display: "flex", justifyContent: "center",
+                  padding: "32px 32px 40px",
+                  overflowY: "auto",
+                }}>
+                  <div style={{ width: "100%", maxWidth: 520 }}>
+                    <window.SubmitForm show={window.SP_SAMPLE_SHOW} initialState="empty" />
+                  </div>
+                </div>
+              </div>
+            </ThemeProvider>
+          </DesktopShell>
+        </window.DCArtboard>
+      </window.DCSection>
+
+      {window.ThemeSwitcher && <window.ThemeSwitcher value={theme} onChange={setTheme} position="top-left" />}
+
+      {window.TweaksPanel && (
+        <window.TweaksPanel title="Tweaks">
+          <window.TweakSection title="Verify path">
+            <window.TweakRadio
+              label="Attribution"
+              value={attribution}
+              onChange={v => setTweak("attribution", v)}
+              options={ATTRIBUTION_OPTIONS}
+            />
+            <window.TweakToggle
+              label="Quick-confirm chip on detail"
+              value={showQuickConfirm}
+              onChange={v => setTweak("showQuickConfirm", v)}
+            />
+            <window.TweakRadio
+              label="Dispute UX"
+              value={tweaks.disputeStyle || "page"}
+              onChange={v => setTweak("disputeStyle", v)}
+              options={DISPUTE_STYLE_OPTIONS}
+            />
+          </window.TweakSection>
+        </window.TweaksPanel>
+      )}
+    </window.DesignCanvas>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("app"));
+root.render(<App />);
+</script>
+
+</body>
+</html>
