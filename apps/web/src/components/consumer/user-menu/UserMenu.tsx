@@ -11,6 +11,7 @@ import { MiniMark } from '@/theme/MiniMark'
 import { useTheme } from '@/theme'
 import { fetchMe } from '@/lib/users'
 import type { AvatarColor } from '@concert-crawl/types'
+import { UserMenuVersionFooter } from '@/components/consumer/release-notes/UserMenuVersionFooter'
 
 const APP_VERSION = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev'
 
@@ -97,7 +98,6 @@ export function UserMenu() {
   // Build version display: "v0.4.2-beta · abc1234" or just "dev"
   const buildParts = APP_VERSION.split(' · ')
   const buildLabel = buildParts[0] ?? APP_VERSION
-  const commitLabel = buildParts[1] ?? ''
 
   return (
     <>
@@ -120,7 +120,6 @@ export function UserMenu() {
             email={email}
             isAdmin={isAdmin}
             buildLabel={buildLabel}
-            commitLabel={commitLabel}
             submissionCount={submissionCount}
             avatarHandle={avatarHandle}
             avatarColor={avatarColor}
@@ -149,7 +148,6 @@ export function UserMenu() {
             email={email}
             isAdmin={isAdmin}
             buildLabel={buildLabel}
-            commitLabel={commitLabel}
             submissionCount={submissionCount}
             avatarHandle={avatarHandle}
             avatarColor={avatarColor}
@@ -171,7 +169,6 @@ interface MenuBodyProps {
   email: string
   isAdmin: boolean
   buildLabel: string
-  commitLabel: string
   onSettings: () => void
   onSignOut: () => void
   submissionCount: number
@@ -276,7 +273,6 @@ function MenuBody({
   email,
   isAdmin,
   buildLabel,
-  commitLabel,
   onSettings,
   onSignOut,
   submissionCount,
@@ -406,54 +402,8 @@ function MenuBody({
       <div style={{ borderTop: '1px solid var(--border)' }} />
       <MenuRow label="Sign out" danger last onClick={onSignOut} />
 
-      {/* Status footer */}
-      <div
-        style={{
-          padding: '10px 14px',
-          borderTop: '1px solid var(--border)',
-          background: 'var(--surface-1)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-        }}
-      >
-        <span
-          style={{
-            width: 5,
-            height: 5,
-            borderRadius: 5,
-            background: 'var(--signal)',
-            boxShadow: '0 0 5px var(--signal)',
-            animation: 'umPulse 2.2s ease-in-out infinite',
-          }}
-        />
-        <span
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 10,
-            fontWeight: 700,
-            color: 'var(--fg-muted)',
-            letterSpacing: '0.10em',
-            textTransform: 'uppercase',
-          }}
-        >
-          {buildLabel}
-        </span>
-        <span style={{ flex: 1 }} />
-        {commitLabel && (
-          <span
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 10,
-              fontWeight: 600,
-              color: 'var(--fg-subtle)',
-              letterSpacing: '0.08em',
-            }}
-          >
-            {commitLabel}
-          </span>
-        )}
-      </div>
+      {/* Status footer — routes to /changelog, shows unread dot */}
+      <UserMenuVersionFooter build={buildLabel} />
     </>
   )
 }
