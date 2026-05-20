@@ -1,3 +1,17 @@
+# [1.35.0](https://github.com/HartiganHM/concert-crawl/compare/v1.34.0...v1.35.0) (2026-05-20)
+
+
+### Bug Fixes
+
+* **admin:** address Copilot review — threshold constant, verified upsert, aria-label, email tests ([f80da7f](https://github.com/HartiganHM/concert-crawl/commit/f80da7f19c8cc3b5ceed76bc8db0f2570151fafa))
+* **admin:** back-to-app link, responsive stat grids, theme fallback ([#495](https://github.com/HartiganHM/concert-crawl/issues/495) [#496](https://github.com/HartiganHM/concert-crawl/issues/496) [#497](https://github.com/HartiganHM/concert-crawl/issues/497)) ([7239f6d](https://github.com/HartiganHM/concert-crawl/commit/7239f6d7974fdfa08ab87cae3b9ae2cc71bd8507))
+
+
+### Features
+
+* **admin:** auto-approve events above 0.70 confidence threshold ([#494](https://github.com/HartiganHM/concert-crawl/issues/494)) ([3be9ed0](https://github.com/HartiganHM/concert-crawl/commit/3be9ed00bcff6f41b1e577475a349b322d53d378))
+* **admin:** send invite code via Resend email on mint when recipient set ([#498](https://github.com/HartiganHM/concert-crawl/issues/498)) ([93b8f9e](https://github.com/HartiganHM/concert-crawl/commit/93b8f9e41c144c1f7998ad7c0e5a960f4bc2be86))
+
 # [1.34.0](https://github.com/HartiganHM/concert-crawl/compare/v1.33.1...v1.34.0) (2026-05-20)
 
 
