@@ -1,3 +1,15 @@
+## [1.32.3](https://github.com/HartiganHM/concert-crawl/compare/v1.32.2...v1.32.3) (2026-05-20)
+
+
+### Bug Fixes
+
+* **mobile-profile:** fix useEffect deps, sign-out reset, and stuck skeleton ([f8571a2](https://github.com/HartiganHM/concert-crawl/commit/f8571a2eeb995efade88fc829f3f266a1359d4d6))
+* **nav:** add venues tab, remove search tab, fix avatar loading flash ([5468da0](https://github.com/HartiganHM/concert-crawl/commit/5468da0301d776aee335597900d9d6065c2322ae))
+* **venue:** back button history, dark map theme ([129b50e](https://github.com/HartiganHM/concert-crawl/commit/129b50eb0a49c6789a8f4d28d3653a15ae33e182)), closes [#478](https://github.com/HartiganHM/concert-crawl/issues/478) [#477](https://github.com/HartiganHM/concert-crawl/issues/477)
+* **venues:** address Copilot review feedback on PR [#483](https://github.com/HartiganHM/concert-crawl/issues/483) ([041ea8e](https://github.com/HartiganHM/concert-crawl/commit/041ea8e8686b75b3551769ffe9b0ccb6bbe2bb1b))
+* **watching:** address Copilot review on PR [#484](https://github.com/HartiganHM/concert-crawl/issues/484) ([4a81a7f](https://github.com/HartiganHM/concert-crawl/commit/4a81a7f68a0195207ce6b1a9d65c89ba84e31665))
+* **watching:** optimistic state update, remove double-confirm, eye icon on mobile ([f252995](https://github.com/HartiganHM/concert-crawl/commit/f25299571e8704c79d2f2e0240a5228b11b15b6a)), closes [#465](https://github.com/HartiganHM/concert-crawl/issues/465) [#466](https://github.com/HartiganHM/concert-crawl/issues/466)
+
 ## [1.32.2](https://github.com/HartiganHM/concert-crawl/compare/v1.32.1...v1.32.2) (2026-05-20)
 
 
