@@ -172,7 +172,10 @@ export function BottomNav() {
     let cancelled = false
     void (async () => {
       const token = await getToken()
-      if (!token || cancelled) return
+      if (!token || cancelled) {
+        if (!cancelled) setProfileLoaded(true)
+        return
+      }
       try {
         const profile = await fetchMe(token)
         if (!cancelled) {

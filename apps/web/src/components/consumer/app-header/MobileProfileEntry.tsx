@@ -12,25 +12,35 @@ export function MobileProfileEntry() {
   const [profileLoaded, setProfileLoaded] = useState(false)
 
   useEffect(() => {
+    if (!isSignedIn) {
+      setProfile(null)
+      setProfileLoaded(false)
+      return
+    }
+    let cancelled = false
+    setProfileLoaded(false)
     void (async () => {
       const token = await getToken()
-      if (!token) {
-        setProfileLoaded(true)
+      if (!token || cancelled) {
+        if (!cancelled) setProfileLoaded(true)
         return
       }
       try {
         const data = await fetchMe(token)
-        setProfile(data)
+        if (!cancelled) setProfile(data)
       } catch (err) {
         console.warn(
           'MobileProfileEntry: could not load profile, showing anonymous avatar',
           err,
         )
       } finally {
-        setProfileLoaded(true)
+        if (!cancelled) setProfileLoaded(true)
       }
     })()
-  }, [getToken])
+    return () => {
+      cancelled = true
+    }
+  }, [getToken, isSignedIn])
 
   if (!isSignedIn) return null
 
