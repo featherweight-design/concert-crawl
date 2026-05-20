@@ -232,4 +232,106 @@ describe('SubmitPriceModal — alreadySubmitted state', () => {
     fireEvent.click(screen.getByText('Submit price'))
     await waitFor(() => expect(screen.getByText('Already in.')).toBeTruthy())
   })
+
+  it('sets existingSubmission from 409 body and Withdraw succeeds → modal closes', async () => {
+    const onClose = vi.fn()
+    let callCount = 0
+    global.fetch = vi.fn().mockImplementation(() => {
+      callCount++
+      if (callCount === 1) {
+        // Initial check: no existing submission
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            success: true,
+            data: { alreadySubmitted: false, userSubmission: null },
+          }),
+        })
+      }
+      if (callCount === 2) {
+        // POST returns 409 with submission data
+        return Promise.resolve({
+          ok: false,
+          status: 409,
+          json: async () => ({
+            submission: {
+              id: 'sub-409',
+              priceMin: '55',
+              priceMax: null,
+              tier: 'GA',
+              vendor: 'AXS',
+            },
+          }),
+        })
+      }
+      // DELETE succeeds
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({}),
+      })
+    })
+
+    render(<SubmitPriceModal {...defaultProps} onClose={onClose} />)
+    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy())
+
+    fireEvent.click(screen.getByText('Submit price'))
+    await waitFor(() => expect(screen.getByText('Already in.')).toBeTruthy())
+    expect(screen.getByText(/\$55/)).toBeTruthy()
+
+    fireEvent.click(screen.getByText('Withdraw'))
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+  })
+
+  it('shows error state when Withdraw fails', async () => {
+    let callCount = 0
+    global.fetch = vi.fn().mockImplementation(() => {
+      callCount++
+      if (callCount === 1) {
+        // Initial check: no existing submission
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            success: true,
+            data: { alreadySubmitted: false, userSubmission: null },
+          }),
+        })
+      }
+      if (callCount === 2) {
+        // POST returns 409 with submission data
+        return Promise.resolve({
+          ok: false,
+          status: 409,
+          json: async () => ({
+            submission: {
+              id: 'sub-409',
+              priceMin: '55',
+              priceMax: null,
+              tier: 'GA',
+              vendor: 'AXS',
+            },
+          }),
+        })
+      }
+      // DELETE fails
+      return Promise.resolve({
+        ok: false,
+        status: 403,
+        json: async () => ({ error: 'Forbidden' }),
+      })
+    })
+
+    render(<SubmitPriceModal {...defaultProps} />)
+    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy())
+
+    fireEvent.click(screen.getByText('Submit price'))
+    await waitFor(() => expect(screen.getByText('Already in.')).toBeTruthy())
+
+    fireEvent.click(screen.getByText('Withdraw'))
+    await waitFor(() =>
+      expect(screen.getByText("Didn't go through.")).toBeTruthy(),
+    )
+    expect(screen.getByText('Try again')).toBeTruthy()
+    // Should show a non-network-specific error for a 403
+    expect(screen.queryByText(/Couldn't reach the server/)).toBeNull()
+  })
 })

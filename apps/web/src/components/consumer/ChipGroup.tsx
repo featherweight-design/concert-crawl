@@ -41,6 +41,7 @@ export function ChipGroup({
             <button
               key={opt.value}
               type="button"
+              aria-pressed={isActive}
               onClick={() => onChange(opt.value)}
               className={[
                 'px-3 py-1.5 rounded-full text-sm font-medium border transition-colors',

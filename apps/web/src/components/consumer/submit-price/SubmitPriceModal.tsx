@@ -13,6 +13,7 @@ import type {
   Tier,
   Vendor,
   HowFound,
+  PriceSubmission,
   SubmissionWithMeta,
 } from '@concert-crawl/types'
 
@@ -84,7 +85,10 @@ export function SubmitPriceModal({
     Partial<Record<string, string>>
   >({})
   const [existingSubmission, setExistingSubmission] =
-    useState<SubmissionWithMeta | null>(null)
+    useState<PriceSubmission | null>(null)
+  const [withdrawError, setWithdrawError] = useState<'network' | 'api' | null>(
+    null,
+  )
 
   useEffect(() => {
     if (!open) return
@@ -157,7 +161,7 @@ export function SubmitPriceModal({
       )
       const data = (await res.json()) as {
         error?: string
-        submission?: SubmissionWithMeta
+        submission?: PriceSubmission
       }
       if (!res.ok) {
         if (res.status === 409) {
@@ -189,12 +193,15 @@ export function SubmitPriceModal({
         },
       )
       if (!res.ok) {
-        throw new Error(`Withdraw failed: ${res.status}`)
+        setWithdrawError('api')
+        setModalState('error')
+        return
       }
       router.refresh()
       onClose()
     } catch (err) {
       console.error('Withdraw failed', err)
+      setWithdrawError('network')
       setModalState('error')
     }
   }, [existingSubmission, getToken, router, onClose])
@@ -275,7 +282,14 @@ export function SubmitPriceModal({
       {modalState === 'success' && <SuccessState onClose={onClose} />}
 
       {modalState === 'error' && (
-        <ErrorState onReset={() => setModalState('form')} onClose={onClose} />
+        <ErrorState
+          onReset={() => {
+            setWithdrawError(null)
+            setModalState('form')
+          }}
+          onClose={onClose}
+          withdrawError={withdrawError}
+        />
       )}
 
       {modalState === 'alreadySubmitted' && (
@@ -383,6 +397,7 @@ export function SubmitPriceModal({
             style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}
           >
             <SPNumberField
+              id="sp-floor"
               label="Floor"
               value={formState.floor}
               onChange={(val) =>
@@ -394,6 +409,7 @@ export function SubmitPriceModal({
               warning={fieldWarnings['floor']}
             />
             <SPNumberField
+              id="sp-ceiling"
               label="Ceiling"
               value={formState.ceiling}
               onChange={(val) =>
@@ -501,10 +517,19 @@ function SuccessState({ onClose }: { onClose: () => void }) {
 function ErrorState({
   onReset,
   onClose,
+  withdrawError,
 }: {
   onReset: () => void
   onClose: () => void
+  withdrawError?: 'network' | 'api' | null
 }) {
+  const errorMessage =
+    withdrawError === 'network'
+      ? 'Couldn’t reach the server — check your connection and try again.'
+      : withdrawError === 'api'
+        ? 'Something went wrong withdrawing your submission. Try again or come back later.'
+        : 'Couldn’t reach the server — your inputs are still here. Try again or come back later.'
+
   return (
     <div
       style={{
@@ -534,8 +559,7 @@ function ErrorState({
           letterSpacing: '-0.005em',
         }}
       >
-        Couldn&apos;t reach the server — your inputs are still here. Try again
-        or come back later.
+        {errorMessage}
       </div>
       <div
         style={{
@@ -557,7 +581,7 @@ function AlreadySubmittedState({
   onEdit,
   onWithdraw,
 }: {
-  submission: SubmissionWithMeta | null
+  submission: PriceSubmission | null
   onEdit: () => void
   onWithdraw: () => void
 }) {

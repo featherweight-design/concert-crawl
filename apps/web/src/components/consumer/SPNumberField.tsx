@@ -1,6 +1,7 @@
 'use client'
 
 interface SPNumberFieldProps {
+  id: string
   label: string
   value: string
   onChange: (value: string) => void
@@ -12,6 +13,7 @@ interface SPNumberFieldProps {
 }
 
 export function SPNumberField({
+  id,
   label,
   value,
   onChange,
@@ -30,6 +32,7 @@ export function SPNumberField({
   return (
     <div className="flex flex-col gap-1">
       <label
+        htmlFor={id}
         style={{
           fontFamily: 'var(--font-mono)',
           fontSize: 10,
@@ -52,6 +55,7 @@ export function SPNumberField({
           $
         </span>
         <input
+          id={id}
           type="text"
           inputMode="numeric"
           value={value}
