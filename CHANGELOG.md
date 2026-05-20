@@ -1,3 +1,10 @@
+## [1.33.1](https://github.com/HartiganHM/concert-crawl/compare/v1.33.0...v1.33.1) (2026-05-20)
+
+
+### Bug Fixes
+
+* **mobile-nav:** add search to top bar, fix browse icon, enlarge avatar ([6f897ab](https://github.com/HartiganHM/concert-crawl/commit/6f897abc6214a822721f6df87cf79286eaf397c3))
+
 # [1.33.0](https://github.com/HartiganHM/concert-crawl/compare/v1.32.4...v1.33.0) (2026-05-20)
 
 
