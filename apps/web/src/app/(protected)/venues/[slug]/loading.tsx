@@ -1,5 +1,54 @@
 import { AppHeader } from '@/components/consumer/app-header'
-import { BottomNav } from '@/components/consumer/bottom-nav'
+
+function VenueEventRowSkeleton({ delay }: { delay: number }) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '10px 0',
+        animation: `skeletonPulse 1.4s ease-in-out ${delay}s infinite`,
+      }}
+    >
+      <div
+        style={{
+          width: 48,
+          height: 48,
+          borderRadius: 6,
+          background: 'var(--surface-2)',
+          flexShrink: 0,
+        }}
+      />
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6,
+        }}
+      >
+        <div
+          style={{
+            height: 14,
+            width: '55%',
+            borderRadius: 4,
+            background: 'var(--surface-2)',
+          }}
+        />
+        <div
+          style={{
+            height: 10,
+            width: '32%',
+            borderRadius: 3,
+            background: 'var(--surface-2)',
+          }}
+        />
+      </div>
+    </div>
+  )
+}
 
 export default function VenueLoading() {
   return (
@@ -15,93 +64,190 @@ export default function VenueLoading() {
           zIndex: 9999,
         }}
       />
-      <AppHeader />
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 pb-20 pt-4 sm:px-6 sm:pb-6">
-        {/* Venue name */}
-        <div
-          style={{
-            height: 26,
-            width: '50%',
-            borderRadius: 6,
-            background: 'var(--surface-2)',
-            marginBottom: 8,
-            animation: 'skeletonPulse 1.4s ease-in-out infinite',
-          }}
-        />
-        {/* Address */}
-        <div
-          style={{
-            height: 13,
-            width: '35%',
-            borderRadius: 4,
-            background: 'var(--surface-2)',
-            marginBottom: 24,
-            animation: 'skeletonPulse 1.4s ease-in-out 0.1s infinite',
-          }}
-        />
-        {/* Section header */}
-        <div
-          style={{
-            height: 14,
-            width: '25%',
-            borderRadius: 4,
-            background: 'var(--surface-2)',
-            marginBottom: 16,
-            animation: 'skeletonPulse 1.4s ease-in-out 0.15s infinite',
-          }}
-        />
-        {/* Event rows */}
-        {Array.from({ length: 5 }).map((_, idx) => (
+      {/* Desktop-only header */}
+      <div className="hidden sm:block">
+        <AppHeader />
+      </div>
+
+      {/* Hero — 320px full-bleed */}
+      <div
+        style={{
+          width: '100%',
+          height: 320,
+          background: 'var(--surface-2)',
+          flexShrink: 0,
+          animation: 'skeletonPulse 1.4s ease-in-out infinite',
+        }}
+      />
+
+      {/* Content column */}
+      <div className="relative -mt-5 flex-1 pb-10">
+        <div className="mx-auto w-full max-w-[880px] px-[18px] sm:px-8">
+          {/* Type chip */}
           <div
-            key={idx}
+            style={{
+              height: 18,
+              width: 72,
+              borderRadius: 4,
+              background: 'var(--surface-2)',
+              marginBottom: 8,
+              animation: 'skeletonPulse 1.4s ease-in-out 0.06s infinite',
+            }}
+          />
+
+          {/* Venue name — h1 26px / weight 900 */}
+          <div
+            style={{
+              height: 28,
+              width: '48%',
+              borderRadius: 6,
+              background: 'var(--surface-2)',
+              marginBottom: 10,
+              animation: 'skeletonPulse 1.4s ease-in-out 0.1s infinite',
+            }}
+          />
+
+          {/* City + Directions row */}
+          <div
             style={{
               display: 'flex',
+              gap: 10,
               alignItems: 'center',
-              gap: 12,
-              padding: '12px 0',
-              borderBottom: '1px solid var(--border)',
-              animation: `skeletonPulse 1.4s ease-in-out ${0.2 + idx * 0.07}s infinite`,
+              marginBottom: 16,
             }}
           >
             <div
               style={{
-                width: 44,
-                height: 44,
-                borderRadius: 8,
+                height: 11,
+                width: 64,
+                borderRadius: 3,
                 background: 'var(--surface-2)',
-                flexShrink: 0,
+                animation: 'skeletonPulse 1.4s ease-in-out 0.14s infinite',
               }}
             />
             <div
               style={{
-                flex: 1,
-                minWidth: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 6,
+                height: 11,
+                width: 72,
+                borderRadius: 3,
+                background: 'var(--surface-2)',
+                animation: 'skeletonPulse 1.4s ease-in-out 0.16s infinite',
               }}
-            >
-              <div
-                style={{
-                  height: 13,
-                  width: '58%',
-                  borderRadius: 4,
-                  background: 'var(--surface-2)',
-                }}
-              />
-              <div
-                style={{
-                  height: 10,
-                  width: '36%',
-                  borderRadius: 4,
-                  background: 'var(--surface-2)',
-                }}
-              />
-            </div>
+            />
           </div>
-        ))}
-      </main>
-      <BottomNav />
+
+          {/* Stats row — 3 pills */}
+          <div
+            style={{
+              borderTop: '1px solid var(--border)',
+              borderBottom: '1px solid var(--border)',
+              padding: '12px 0',
+              display: 'flex',
+              gap: 16,
+              marginBottom: 16,
+            }}
+          >
+            {[0, 1, 2].map((idx) => (
+              <div
+                key={idx}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4,
+                  animation: `skeletonPulse 1.4s ease-in-out ${0.18 + idx * 0.06}s infinite`,
+                }}
+              >
+                <div
+                  style={{
+                    height: 9,
+                    width: 52,
+                    borderRadius: 3,
+                    background: 'var(--surface-2)',
+                  }}
+                />
+                <div
+                  style={{
+                    height: 16,
+                    width: 40,
+                    borderRadius: 4,
+                    background: 'var(--surface-2)',
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* About text block — 3 lines */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 6,
+              marginBottom: 20,
+            }}
+          >
+            {[0.9, 0.8, 0.5].map((widthFraction, idx) => (
+              <div
+                key={idx}
+                style={{
+                  height: 12,
+                  width: `${widthFraction * 100}%`,
+                  borderRadius: 4,
+                  background: 'var(--surface-2)',
+                  animation: `skeletonPulse 1.4s ease-in-out ${0.3 + idx * 0.05}s infinite`,
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Map placeholder */}
+          <div
+            style={{
+              height: 160,
+              borderRadius: 10,
+              background: 'var(--surface-2)',
+              marginBottom: 20,
+              animation: 'skeletonPulse 1.4s ease-in-out 0.42s infinite',
+            }}
+          />
+
+          {/* Section header — "Upcoming" + count */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              justifyContent: 'space-between',
+              marginBottom: 12,
+              borderBottom: '1px solid var(--border)',
+              paddingBottom: 8,
+            }}
+          >
+            <div
+              style={{
+                height: 16,
+                width: 88,
+                borderRadius: 4,
+                background: 'var(--surface-2)',
+                animation: 'skeletonPulse 1.4s ease-in-out 0.48s infinite',
+              }}
+            />
+            <div
+              style={{
+                height: 11,
+                width: 52,
+                borderRadius: 3,
+                background: 'var(--surface-2)',
+                animation: 'skeletonPulse 1.4s ease-in-out 0.5s infinite',
+              }}
+            />
+          </div>
+
+          {/* Event rows */}
+          {Array.from({ length: 5 }).map((_, idx) => (
+            <VenueEventRowSkeleton key={idx} delay={0.52 + idx * 0.07} />
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

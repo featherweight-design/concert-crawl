@@ -1,52 +1,155 @@
 import { AppHeader } from '@/components/consumer/app-header'
 import { BottomNav } from '@/components/consumer/bottom-nav'
 
+function HeroCardSkeleton() {
+  return (
+    <div
+      style={{
+        borderRadius: 12,
+        border: '1px solid var(--border-strong)',
+        background: 'var(--surface-1)',
+        overflow: 'hidden',
+        marginBottom: 24,
+        animation: 'skeletonPulse 1.4s ease-in-out infinite',
+      }}
+    >
+      {/* Hero image area — 180px */}
+      <div
+        style={{
+          height: 180,
+          background: 'var(--surface-2)',
+        }}
+      />
+      {/* Content overlap */}
+      <div
+        style={{
+          padding: '12px 14px 14px',
+          marginTop: -40,
+          position: 'relative',
+        }}
+      >
+        {/* Artist name */}
+        <div
+          style={{
+            height: 22,
+            width: '62%',
+            borderRadius: 5,
+            background: 'var(--surface-2)',
+            marginBottom: 8,
+          }}
+        />
+        {/* Venue / time row */}
+        <div
+          style={{
+            height: 11,
+            width: '40%',
+            borderRadius: 4,
+            background: 'var(--surface-2)',
+            marginBottom: 10,
+          }}
+        />
+        {/* Genre chip strip */}
+        <div style={{ display: 'flex', gap: 6 }}>
+          {[48, 60, 52].map((width, idx) => (
+            <div
+              key={idx}
+              style={{
+                width,
+                height: 18,
+                borderRadius: 4,
+                background: 'var(--surface-2)',
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function EventCardSkeleton({ delay }: { delay: number }) {
   return (
     <div
       style={{
         display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        padding: '12px 16px',
+        alignItems: 'flex-start',
+        gap: 10,
+        padding: '10px 0',
         animation: `skeletonPulse 1.4s ease-in-out ${delay}s infinite`,
       }}
     >
+      {/* Thumbnail — 48×48 */}
       <div
         style={{
-          width: 44,
-          height: 44,
-          borderRadius: 8,
+          width: 48,
+          height: 48,
+          borderRadius: 6,
           background: 'var(--surface-2)',
           flexShrink: 0,
         }}
       />
+      {/* Info column */}
       <div
         style={{
           flex: 1,
           minWidth: 0,
           display: 'flex',
           flexDirection: 'column',
-          gap: 6,
+          gap: 5,
         }}
       >
+        {/* Artist name */}
         <div
           style={{
-            height: 13,
-            width: '60%',
+            height: 14,
+            width: '58%',
             borderRadius: 4,
             background: 'var(--surface-2)',
           }}
         />
+        {/* Subtitle */}
+        <div
+          style={{
+            height: 11,
+            width: '42%',
+            borderRadius: 4,
+            background: 'var(--surface-2)',
+          }}
+        />
+        {/* Venue / time */}
         <div
           style={{
             height: 10,
-            width: '40%',
-            borderRadius: 4,
+            width: '35%',
+            borderRadius: 3,
             background: 'var(--surface-2)',
           }}
         />
+        {/* Genre chips */}
+        <div style={{ display: 'flex', gap: 5, marginTop: 2 }}>
+          {[44, 56].map((width, idx) => (
+            <div
+              key={idx}
+              style={{
+                width,
+                height: 16,
+                borderRadius: 3,
+                background: 'var(--surface-2)',
+              }}
+            />
+          ))}
+        </div>
       </div>
+      {/* Watch button placeholder */}
+      <div
+        style={{
+          width: 32,
+          height: 32,
+          borderRadius: 8,
+          background: 'var(--surface-2)',
+          flexShrink: 0,
+        }}
+      />
     </div>
   )
 }
@@ -83,6 +186,8 @@ export default function EventsLoading() {
             />
           ))}
         </div>
+        {/* Hero card skeleton (shown when today has events) */}
+        <HeroCardSkeleton />
         {/* Event card skeletons */}
         <div className="flex flex-col">
           {Array.from({ length: 6 }).map((_, idx) => (
