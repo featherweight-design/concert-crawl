@@ -27,8 +27,13 @@ export const AdminThemeProvider = ({
   const [theme, setThemeState] = useState<AdminTheme>('electric')
 
   useEffect(() => {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    setThemeState(isAdminTheme(raw) ? raw : 'electric')
+    const adminRaw = localStorage.getItem(STORAGE_KEY)
+    if (isAdminTheme(adminRaw)) {
+      setThemeState(adminRaw)
+      return
+    }
+    const consumerRaw = localStorage.getItem('cc-theme')
+    setThemeState(isAdminTheme(consumerRaw) ? consumerRaw : 'electric')
   }, [])
 
   const setTheme = (name: AdminTheme) => {

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useClerk } from '@clerk/nextjs'
 import * as LucideIcons from 'lucide-react'
-import { LogOut } from 'lucide-react'
+import { LogOut, ArrowLeft } from 'lucide-react'
 import { NAV, type NavItem } from './nav'
 import { CCMark } from '@/components/brand/cc-mark'
 import { CCWordmark } from '@/components/brand/cc-wordmark'
@@ -443,6 +443,32 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
             </button>
           </div>
         )}
+      </div>
+
+      {/* Back to app */}
+      <div
+        style={{
+          padding: '8px 8px 0',
+        }}
+      >
+        <Link
+          href="/watching"
+          title="Back to app"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: effectiveMode === 'full' ? 10 : 0,
+            justifyContent: effectiveMode === 'rail' ? 'center' : 'flex-start',
+            padding: effectiveMode === 'full' ? '6px 10px' : '6px 0',
+            borderRadius: 6,
+            textDecoration: 'none',
+            fontSize: 12,
+            color: 'var(--fg-muted)',
+          }}
+        >
+          <ArrowLeft size={16} />
+          {effectiveMode === 'full' && <span>Back to app</span>}
+        </Link>
       </div>
 
       {/* Bottom controls */}
