@@ -454,6 +454,7 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
         <Link
           href="/watching"
           title="Back to app"
+          aria-label="Back to app"
           style={{
             display: 'flex',
             alignItems: 'center',

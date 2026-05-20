@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createApp } from '../../app.js'
 
+const mockSendInviteCodeEmail = vi.fn()
+vi.mock('../../lib/email.js', () => ({
+  sendInviteCodeEmail: (...args: unknown[]) => mockSendInviteCodeEmail(...args),
+}))
+
 const mockGetAuth = vi.fn()
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
@@ -107,7 +112,10 @@ function adminAuth() {
 }
 
 describe('Admin invite code routes', () => {
-  beforeEach(() => mockGetAuth.mockReset())
+  beforeEach(() => {
+    mockGetAuth.mockReset()
+    mockSendInviteCodeEmail.mockReset()
+  })
 
   it('GET /v1/admin/invite-codes returns 200 for admin', async () => {
     adminAuth()
@@ -129,6 +137,44 @@ describe('Admin invite code routes', () => {
     }
     expect(body.success).toBe(true)
     expect(typeof body.data.code).toBe('string')
+  })
+
+  it('POST /v1/admin/invite-codes calls sendInviteCodeEmail when recipientEmail is provided', async () => {
+    adminAuth()
+    mockSendInviteCodeEmail.mockResolvedValue(undefined)
+    await createApp().request('/v1/admin/invite-codes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipientEmail: 'test@example.com' }),
+    })
+    // Fire-and-forget: yield to allow the async IIFE to run
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(mockSendInviteCodeEmail).toHaveBeenCalledWith(
+      'test@example.com',
+      'BETA-ABCD-EF12',
+    )
+  })
+
+  it('POST /v1/admin/invite-codes returns 201 even when sendInviteCodeEmail throws', async () => {
+    adminAuth()
+    mockSendInviteCodeEmail.mockRejectedValue(new Error('Resend unavailable'))
+    const res = await createApp().request('/v1/admin/invite-codes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipientEmail: 'test@example.com' }),
+    })
+    expect(res.status).toBe(201)
+  })
+
+  it('POST /v1/admin/invite-codes does not call sendInviteCodeEmail when recipientEmail is absent', async () => {
+    adminAuth()
+    await createApp().request('/v1/admin/invite-codes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(mockSendInviteCodeEmail).not.toHaveBeenCalled()
   })
 
   it('POST /v1/admin/invite-codes/:id/revoke sets revokedAt and returns 200', async () => {

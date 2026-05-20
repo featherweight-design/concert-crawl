@@ -353,6 +353,9 @@ export async function crawlVenue(
               confidenceScore: sql`excluded.confidence_score`,
               sourceHash: sql`excluded.source_hash`,
               updatedAt: new Date(),
+              // One-way promotion: once verified, stays verified; promotes to
+              // true when confidence crosses the threshold on re-crawl.
+              verified: sql`CASE WHEN excluded.verified = TRUE THEN TRUE ELSE ${events.verified} END`,
             },
           })
       }
@@ -361,14 +364,16 @@ export async function crawlVenue(
     // Notify admin on low-confidence LLM extractions (structured data is always confidence=1.0)
     const lowConfidence =
       strategy === 'llm'
-        ? normalizedEvents.filter((e) => e.confidence < 0.7)
+        ? normalizedEvents.filter(
+            (ev) => ev.confidence < AUTO_APPROVE_THRESHOLD,
+          )
         : []
     if (lowConfidence.length > 0) {
       await db.insert(notifications).values({
         type: 'admin_alert',
         category: 'crawl.low_confidence',
         title: `Low confidence events: ${venue.name}`,
-        body: `${lowConfidence.length} event(s) extracted with confidence < 0.7 from ${venue.name}`,
+        body: `${lowConfidence.length} event(s) extracted with confidence < ${AUTO_APPROVE_THRESHOLD} from ${venue.name}`,
         metadata: JSON.stringify({ venueId, crawlRunId: id }),
       })
     }
