@@ -118,6 +118,7 @@ export function DisputeForm({ submission, eventId }: DisputeFormProps) {
 
       <div className="grid grid-cols-2 gap-3">
         <SPNumberField
+          id="dispute-floor"
           label="Floor"
           value={floor}
           onChange={setFloor}
@@ -126,6 +127,7 @@ export function DisputeForm({ submission, eventId }: DisputeFormProps) {
           error={errors['floor']}
         />
         <SPNumberField
+          id="dispute-ceiling"
           label="Ceiling"
           value={ceiling}
           onChange={setCeiling}
