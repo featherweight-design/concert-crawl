@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { clerkMiddleware } from '@hono/clerk-auth'
 import { db, events, venues } from '@concert-crawl/db'
-import { type SQL, and, asc, eq, gte } from 'drizzle-orm'
+import { type SQL, and, asc, count, eq, gte, isNotNull } from 'drizzle-orm'
 import { todayInTimezone } from '../lib/time.js'
 import { requireAuth } from '../middleware/auth.js'
 
@@ -11,7 +11,7 @@ if (process.env.REQUIRE_BETA_AUTH === 'true') {
   venuesPublicRouter.use('*', clerkMiddleware(), requireAuth)
 }
 
-// GET /v1/venues — list active venues (public)
+// GET /v1/venues — list active venues with upcoming event counts (public)
 venuesPublicRouter.get('/', async (ctx) => {
   const rows = await db
     .select({
@@ -27,12 +27,38 @@ venuesPublicRouter.get('/', async (ctx) => {
       capacity: venues.capacity,
       venueType: venues.venueType,
       about: venues.about,
+      neighborhood: venues.neighborhood,
+      featured: venues.featured,
+      lat: venues.lat,
+      lng: venues.lng,
     })
     .from(venues)
     .where(eq(venues.active, true))
     .orderBy(asc(venues.name))
 
-  return ctx.json({ success: true, data: rows })
+  const today = new Date().toISOString().slice(0, 10)
+  const eventCounts = await db
+    .select({ venueId: events.venueId, total: count(events.id) })
+    .from(events)
+    .where(
+      and(
+        eq(events.status, 'upcoming'),
+        gte(events.date, today),
+        isNotNull(events.venueId),
+      ),
+    )
+    .groupBy(events.venueId)
+
+  const countByVenueId = new Map(
+    eventCounts.map((row) => [row.venueId, row.total]),
+  )
+
+  const data = rows.map((venue) => ({
+    ...venue,
+    upcomingCount: countByVenueId.get(venue.id) ?? 0,
+  }))
+
+  return ctx.json({ success: true, data })
 })
 
 // GET /v1/venues/:slug — venue detail + upcoming events (public)
@@ -53,6 +79,10 @@ venuesPublicRouter.get('/:slug', async (ctx) => {
       capacity: venues.capacity,
       venueType: venues.venueType,
       about: venues.about,
+      neighborhood: venues.neighborhood,
+      featured: venues.featured,
+      lat: venues.lat,
+      lng: venues.lng,
     })
     .from(venues)
     .where(eq(venues.slug, slug))
@@ -96,5 +126,10 @@ venuesPublicRouter.get('/:slug', async (ctx) => {
     .orderBy(asc(events.date), asc(events.showTime))
     .limit(50)
 
-  return ctx.json({ success: true, data: { venue, upcomingEvents } })
+  const upcomingCount = upcomingEvents.length
+
+  return ctx.json({
+    success: true,
+    data: { venue: { ...venue, upcomingCount }, upcomingEvents },
+  })
 })

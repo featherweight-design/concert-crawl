@@ -312,6 +312,11 @@ export interface VenuePublic {
   capacity: number | null
   venueType: string | null
   about: string | null
+  neighborhood: string | null
+  featured: boolean
+  lat: number | null
+  lng: number | null
+  upcomingCount: number
 }
 
 // VenueWithEvents — venue profile page response
