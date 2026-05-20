@@ -1,5 +1,6 @@
 import {
   boolean,
+  doublePrecision,
   integer,
   pgEnum,
   pgTable,
@@ -61,6 +62,10 @@ export const venues = pgTable('venues', {
   capacity: integer('capacity'),
   venueType: text('venue_type'),
   about: text('about'),
+  neighborhood: text('neighborhood'),
+  featured: boolean('featured').notNull().default(false),
+  lat: doublePrecision('lat'),
+  lng: doublePrecision('lng'),
   contactEmail: text('contact_email'),
   priceUrl: text('price_url'),
   ticketVendor: ticketVendorEnum('ticket_vendor'),

@@ -176,6 +176,13 @@
       "when": 1778710000005,
       "tag": "0024_venue_profile_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1779000000001,
+      "tag": "0025_venue_index_fields",
+      "breakpoints": true
     }
   ]
 }
