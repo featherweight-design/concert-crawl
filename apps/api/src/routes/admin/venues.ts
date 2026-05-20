@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import Anthropic from '@anthropic-ai/sdk'
 import { db, venues, events, crawlRuns } from '@concert-crawl/db'
-import { and, avg, count, desc, eq, gte, isNotNull, ne } from 'drizzle-orm'
+import { and, avg, count, desc, eq, gte, isNotNull, ne, not } from 'drizzle-orm'
 import { getAuthUser } from '../../middleware/auth.js'
 import { apiLogger } from '../../lib/logger.js'
 import { detectTicketVendor } from '../../lib/detect-ticket-vendor.js'
@@ -67,7 +67,17 @@ const createVenueSchema = z.object({
     }),
   about: z
     .string()
-    .max(1000)
+    .max(280)
+    .nullable()
+    .optional()
+    .transform((val) => {
+      if (val == null) return val
+      const trimmed = val.trim()
+      return trimmed === '' ? null : trimmed
+    }),
+  neighborhood: z
+    .string()
+    .max(100)
     .nullable()
     .optional()
     .transform((val) => {
@@ -82,6 +92,7 @@ const updateVenueSchema = createVenueSchema.partial().extend({
   verified: z.boolean().optional(),
   verifiedBy: z.string().max(200).nullable().optional(),
   crawlMode: z.enum(['http', 'browser']).nullable().optional(),
+  featured: z.boolean().optional(),
 })
 
 export const venuesAdminRouter = new Hono<AdminVariables>()
@@ -365,6 +376,14 @@ venuesAdminRouter.patch(
           ? { verifiedBy: null, verifiedAt: null }
           : {}
 
+    // Ensure only one flagship at a time — clear others before setting this one
+    if (body.featured === true) {
+      await db
+        .update(venues)
+        .set({ featured: false })
+        .where(and(eq(venues.featured, true), not(eq(venues.id, id))))
+    }
+
     const [updated] = await db
       .update(venues)
       .set({ ...body, ...verificationFields, updatedAt: new Date() })
@@ -379,7 +398,7 @@ venuesAdminRouter.patch(
   },
 )
 
-// POST /v1/admin/venues/:id/generate-about — LLM-generate capacity, venueType, and about copy
+// POST /v1/admin/venues/:id/generate-about — LLM-generate capacity, venueType, neighborhood, and about copy
 // Does NOT persist to DB; returns suggestions for admin review before saving
 venuesAdminRouter.post('/:id/generate-about', async (ctx) => {
   const { id } = ctx.req.param()
@@ -400,10 +419,11 @@ venuesAdminRouter.post('/:id/generate-about', async (ctx) => {
   const generateResponseSchema = z.object({
     capacity: z.number().int().positive().nullable(),
     venueType: z.string().min(1).max(100),
-    about: z.string().min(10).max(500),
+    neighborhood: z.string().min(1).max(100),
+    about: z.string().min(10).max(280),
   })
 
-  const prompt = `You are helping populate a Denver concert venue directory.
+  const prompt = `You are writing copy for Concert Crawl — a Denver live music calendar for people who actually go to shows, not tourists reading a brochure. Voice: direct, local, slightly irreverent. Short sentences. No fluff.
 
 Venue: ${venue.name}
 Address: ${venue.address ?? 'unknown'}
@@ -412,7 +432,8 @@ Current type: ${venue.venueType ?? 'unknown'}
 Generate a JSON object with:
 - "capacity": the venue's approximate standing/seated capacity as an integer (null if unknown)
 - "venueType": a concise venue type (e.g. "Amphitheater", "Theater", "Concert Hall", "Music Hall", "Ballroom", "Bar", "Auditorium", "Outdoor Pavilion")
-- "about": 1-3 sentences describing the venue's character, history, and what makes it distinctive for live music. Be specific to this venue — avoid generic descriptions.
+- "neighborhood": the Denver neighborhood or city where the venue is located (e.g. "Capitol Hill", "RiNo", "LoDo", "South Broadway", "Morrison"). Use well-known local neighborhood names, not zip codes or suburbs.
+- "about": 1-2 punchy sentences — what the room is like, why it matters to Denver music fans. Be specific. No clichés. Max 280 characters.
 
 Respond with only valid JSON, no markdown, no extra text.`
 
