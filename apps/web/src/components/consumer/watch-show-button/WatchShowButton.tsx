@@ -1,8 +1,7 @@
 'use client'
 
-import { useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
-import { Loader2 } from 'lucide-react'
+import { Eye, Loader2 } from 'lucide-react'
 import { useWatching } from '@/lib/queries/use-watching'
 import { useWatchToggle } from '@/lib/queries/use-watch-toggle'
 
@@ -18,24 +17,21 @@ export function WatchShowButton({
   watchingCount = 0,
 }: WatchShowButtonProps) {
   const { isSignedIn } = useAuth()
-  const [isConfirming, setIsConfirming] = useState(false)
   const { data: watchedShows } = useWatching()
   const toggle = useWatchToggle()
 
   // Derive watching state from cache; fall back to prop while cache loads.
-  // When a toggle is in flight, flip the pre-mutation state optimistically so
-  // the button responds instantly without needing a stub in the cache.
-  const isInCache =
+  // The cache is updated optimistically in onMutate so this resolves in
+  // a single step without intermediate spinner → label flicker.
+  const isWatching =
     watchedShows !== undefined
       ? watchedShows.some((show) => show.eventId === eventId)
       : initialWatching
-  const isWatching = toggle.isPending ? !isInCache : isInCache
 
   const isPending = toggle.isPending
 
   const handleToggle = () => {
     if (!isSignedIn || isPending) return
-    setIsConfirming(false)
     toggle.mutate(eventId)
   }
 
@@ -57,47 +53,18 @@ export function WatchShowButton({
     transition: 'opacity 0.15s',
   }
 
-  if (isWatching && isConfirming) {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          flexWrap: 'wrap',
-        }}
-      >
-        <button
-          type="button"
-          onClick={handleToggle}
-          disabled={isPending}
-          aria-label="Stop watching this show"
-          style={{
-            ...baseBtn,
-            background: 'transparent',
-            color: 'var(--warning)',
-            border: '1px solid var(--warning)',
-          }}
-        >
-          Stop watching
-        </button>
-        <button
-          type="button"
-          onClick={() => setIsConfirming(false)}
-          disabled={isPending}
-          aria-label="Cancel"
-          style={{
-            ...baseBtn,
-            padding: '0 8px',
-            background: 'transparent',
-            color: 'var(--fg-muted)',
-            border: '1px solid var(--border)',
-          }}
-        >
-          Cancel
-        </button>
-      </div>
-    )
+  const watchingStyle: React.CSSProperties = {
+    ...baseBtn,
+    background: 'color-mix(in oklab, var(--accent) 12%, transparent)',
+    color: 'var(--accent)',
+    border: '1px solid var(--accent)',
+  }
+
+  const unwatchedStyle: React.CSSProperties = {
+    ...baseBtn,
+    background: 'transparent',
+    color: 'var(--fg)',
+    border: '1px solid var(--border-strong)',
   }
 
   return (
@@ -111,20 +78,11 @@ export function WatchShowButton({
     >
       <button
         type="button"
-        onClick={isWatching ? () => setIsConfirming(true) : handleToggle}
+        onClick={handleToggle}
         disabled={isPending}
         aria-pressed={isWatching}
         aria-label={isWatching ? 'Watching — click to stop' : 'Watch this show'}
-        style={{
-          ...baseBtn,
-          background: isWatching
-            ? 'color-mix(in oklab, var(--accent) 12%, transparent)'
-            : 'transparent',
-          color: isWatching ? 'var(--accent)' : 'var(--fg)',
-          border: isWatching
-            ? '1px solid var(--accent)'
-            : '1px solid var(--border-strong)',
-        }}
+        style={isWatching ? watchingStyle : unwatchedStyle}
       >
         {isPending ? (
           <Loader2
@@ -132,7 +90,7 @@ export function WatchShowButton({
             aria-hidden
             style={{ animation: 'fbSpin 0.7s linear infinite' }}
           />
-        ) : (
+        ) : isWatching ? (
           <svg
             width="10"
             height="10"
@@ -140,25 +98,45 @@ export function WatchShowButton({
             fill="none"
             aria-hidden
           >
-            {isWatching ? (
-              <path
-                d="M2.5 6.5l2.5 2.5L9.5 4"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            ) : (
+            <path
+              d="M2.5 6.5l2.5 2.5L9.5 4"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        ) : (
+          <>
+            {/* Eye icon — shown only on mobile (sm and below) */}
+            <Eye
+              size={12}
+              aria-hidden
+              className="block sm:hidden"
+              style={{ flexShrink: 0 }}
+            />
+            {/* Plus icon — shown only on desktop */}
+            <svg
+              width="10"
+              height="10"
+              viewBox="0 0 12 12"
+              fill="none"
+              aria-hidden
+              className="hidden sm:block"
+            >
               <path
                 d="M6 2.5v7M2.5 6h7"
                 stroke="currentColor"
                 strokeWidth="1.8"
                 strokeLinecap="round"
               />
-            )}
-          </svg>
+            </svg>
+          </>
         )}
-        {isWatching ? 'Watching' : 'Watch this show'}
+        {/* Label — hidden on mobile when not watching (eye icon replaces it) */}
+        <span className={isWatching ? undefined : 'hidden sm:inline'}>
+          {isWatching ? 'Watching' : 'Watch this show'}
+        </span>
       </button>
 
       {watchingCount > 0 && (
