@@ -1,3 +1,12 @@
+## [1.32.4](https://github.com/HartiganHM/concert-crawl/compare/v1.32.3...v1.32.4) (2026-05-20)
+
+
+### Bug Fixes
+
+* **submit-price:** add id prop to SPNumberField usages in DisputeForm ([fcb3a12](https://github.com/HartiganHM/concert-crawl/commit/fcb3a12c8570b367de18bb2d84c0618b830b54d6))
+* **submit-price:** correct 409 type, withdraw error copy, label a11y, aria-pressed, regression tests ([d38e90f](https://github.com/HartiganHM/concert-crawl/commit/d38e90fd406f1782443815092b216d67608cccee))
+* **submit-price:** remove submit-another, fix error style, fix already-submitted flow ([a32aeb8](https://github.com/HartiganHM/concert-crawl/commit/a32aeb86d6710a9f36deec3ee38af674f50cd5ec)), closes [#475](https://github.com/HartiganHM/concert-crawl/issues/475)
+
 ## [1.32.3](https://github.com/HartiganHM/concert-crawl/compare/v1.32.2...v1.32.3) (2026-05-20)
 
 
