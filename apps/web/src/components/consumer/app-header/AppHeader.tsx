@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { MapPin, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CCMark } from '@/components/brand/cc-mark'
 import { UserMenu } from '../user-menu'
@@ -52,13 +52,13 @@ export function AppHeader() {
           </span>
         </Link>
         <div className="flex items-center gap-2">
-          <Link
-            href="/venues"
-            aria-label="Venues"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-border-strong"
+          <button
+            onClick={() => setPaletteOpen(true)}
+            aria-label="Search"
+            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-border-strong"
           >
-            <MapPin size={16} className="text-fg-muted" strokeWidth={1.5} />
-          </Link>
+            <Search size={16} className="text-fg-muted" strokeWidth={1.5} />
+          </button>
           <MobileProfileEntry />
         </div>
       </div>
