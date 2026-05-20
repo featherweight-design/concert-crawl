@@ -505,6 +505,10 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
   )
   const [venueTypeVal, setVenueTypeVal] = useState(venue.venueType ?? '')
   const [aboutVal, setAboutVal] = useState(venue.about ?? '')
+  const [neighborhoodVal, setNeighborhoodVal] = useState(
+    venue.neighborhood ?? '',
+  )
+  const [featuredVal, setFeaturedVal] = useState(venue.featured ?? false)
   const [slugManual, setSlugManual] = useState(true)
   const [slugFocused, setSlugFocused] = useState(false)
   const [urlFocused, setUrlFocused] = useState(false)
@@ -522,7 +526,9 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     crawlModeVal !== (venue.crawlMode ?? null) ||
     capacityVal !== (venue.capacity != null ? String(venue.capacity) : '') ||
     venueTypeVal !== (venue.venueType ?? '') ||
-    aboutVal !== (venue.about ?? '')
+    aboutVal !== (venue.about ?? '') ||
+    neighborhoodVal !== (venue.neighborhood ?? '') ||
+    featuredVal !== (venue.featured ?? false)
 
   // Save state
   const [saveState, setSaveState] = useState<
@@ -549,9 +555,10 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
         setGenerateState('error')
         return
       }
-      const { capacity, venueType, about } = result.data
+      const { capacity, venueType, neighborhood, about } = result.data
       setCapacityVal(capacity != null ? String(capacity) : '')
       setVenueTypeVal(venueType)
+      setNeighborhoodVal(neighborhood)
       setAboutVal(about)
       setGenerateState('idle')
     } catch {
@@ -576,6 +583,8 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     setCapacityVal(venue.capacity != null ? String(venue.capacity) : '')
     setVenueTypeVal(venue.venueType ?? '')
     setAboutVal(venue.about ?? '')
+    setNeighborhoodVal(venue.neighborhood ?? '')
+    setFeaturedVal(venue.featured ?? false)
     setSaveState('idle')
     setSaveError(null)
     setFieldErrors({})
@@ -610,6 +619,8 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     formData.set('capacity', capacityVal.trim())
     formData.set('venueType', venueTypeVal.trim())
     formData.set('about', aboutVal.trim())
+    formData.set('neighborhood', neighborhoodVal.trim())
+    formData.set('featured', String(featuredVal))
 
     try {
       const result = await updateVenue(venue.id, formData)
@@ -1110,6 +1121,88 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                   </span>
                 )}
               </>
+            </Field>
+
+            {/* Neighborhood */}
+            <Field label="Neighborhood" htmlFor="edit-venue-neighborhood">
+              <StyledInput
+                id="edit-venue-neighborhood"
+                value={neighborhoodVal}
+                placeholder="e.g. Capitol Hill, RiNo, LoDo"
+                disabled={isDisabled}
+                onChange={(evt) => setNeighborhoodVal(evt.target.value)}
+              />
+            </Field>
+
+            {/* Flagship venue toggle */}
+            <Field
+              label="Flagship venue"
+              htmlFor="edit-venue-featured"
+              hint={
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--fg-muted)',
+                    fontFamily: "'Inter', sans-serif",
+                  }}
+                >
+                  The flagship venue gets a hero card at the top of the Venues
+                  index. Only one venue can be flagship at a time.
+                </span>
+              }
+            >
+              <button
+                id="edit-venue-featured"
+                type="button"
+                role="switch"
+                aria-checked={featuredVal}
+                disabled={isDisabled}
+                onClick={() => setFeaturedVal((prev) => !prev)}
+                style={{
+                  alignSelf: 'flex-start',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  cursor: isDisabled ? 'not-allowed' : 'pointer',
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: featuredVal ? 'var(--signal)' : 'var(--fg-muted)',
+                }}
+              >
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: 36,
+                    height: 20,
+                    borderRadius: 10,
+                    background: featuredVal
+                      ? 'var(--signal)'
+                      : 'var(--border-strong)',
+                    position: 'relative',
+                    transition: 'background .15s',
+                    flexShrink: 0,
+                  }}
+                >
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: 2,
+                      left: featuredVal ? 18 : 2,
+                      width: 16,
+                      height: 16,
+                      borderRadius: '50%',
+                      background: 'var(--bg)',
+                      transition: 'left .15s',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+                    }}
+                  />
+                </span>
+                {featuredVal ? 'Flagship' : 'Not flagship'}
+              </button>
             </Field>
 
             {/* Ticket vendor */}

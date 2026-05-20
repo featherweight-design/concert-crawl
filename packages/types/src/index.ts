@@ -147,6 +147,10 @@ export interface Venue {
   capacity: number | null
   venueType: string | null
   about: string | null
+  neighborhood: string | null
+  featured: boolean
+  lat: number | null
+  lng: number | null
   createdAt: string
   updatedAt: string
 }

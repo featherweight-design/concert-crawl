@@ -158,6 +158,15 @@ export async function updateVenue(
         ? String(aboutRaw).trim()
         : null
 
+    const neighborhoodRaw = formData.get('neighborhood')
+    const neighborhood =
+      neighborhoodRaw !== null && String(neighborhoodRaw).trim()
+        ? String(neighborhoodRaw).trim()
+        : null
+
+    const featuredRaw = formData.get('featured')
+    const featured = featuredRaw === 'true'
+
     await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
       name: formData.get('name'),
       slug: formData.get('slug'),
@@ -173,6 +182,8 @@ export async function updateVenue(
       capacity,
       venueType,
       about,
+      neighborhood,
+      featured,
     })
     revalidatePath('/admin/venues')
     revalidatePath(`/admin/venues/${id}`)
@@ -277,7 +288,12 @@ export async function bulkActivateVenues(ids: string[]): Promise<void> {
 
 export interface GenerateAboutResult {
   success: boolean
-  data?: { capacity: number | null; venueType: string; about: string }
+  data?: {
+    capacity: number | null
+    venueType: string
+    neighborhood: string
+    about: string
+  }
   error?: string
 }
 
@@ -289,6 +305,7 @@ export async function generateVenueAbout(
     const data = await apiClient.post<{
       capacity: number | null
       venueType: string
+      neighborhood: string
       about: string
     }>(`/v1/admin/venues/${id}/generate-about`, token, {})
     return { success: true, data }
