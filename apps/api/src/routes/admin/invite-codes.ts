@@ -6,6 +6,8 @@ import { z } from 'zod'
 import { getAuthUser } from '../../middleware/auth.js'
 import { randomBytes } from 'crypto'
 import type { AdminVariables } from './index.js'
+import { sendInviteCodeEmail } from '../../lib/email.js'
+import { apiLogger } from '../../lib/logger.js'
 
 function generateCode(): string {
   // Format: BETA-XXXX-XXXX (uppercase hex, URL-safe)
@@ -15,6 +17,7 @@ function generateCode(): string {
 
 const generateCodeSchema = z.object({
   expiresAt: z.string().datetime({ offset: true }).optional(),
+  recipientEmail: z.string().email().optional(),
 })
 
 export const inviteCodesAdminRouter = new Hono<AdminVariables>()
@@ -34,7 +37,7 @@ inviteCodesAdminRouter.post(
   zValidator('json', generateCodeSchema),
   async (ctx) => {
     const { userId } = getAuthUser(ctx)
-    const { expiresAt } = ctx.req.valid('json')
+    const { expiresAt, recipientEmail } = ctx.req.valid('json')
 
     const [code] = await db
       .insert(inviteCodes)
@@ -59,6 +62,16 @@ inviteCodesAdminRouter.post(
     ctx.set('auditAction', 'invite_code.create')
     ctx.set('auditTargetId', code.id)
     ctx.set('auditActorId', userId)
+
+    if (recipientEmail) {
+      void (async () => {
+        try {
+          await sendInviteCodeEmail(recipientEmail, code.code)
+        } catch (err) {
+          apiLogger.error({ err }, 'Failed to send invite code email')
+        }
+      })()
+    }
 
     return ctx.json({ success: true, data: code }, 201)
   },
