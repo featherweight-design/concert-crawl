@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Concert Crawl — Admin V2 (Review · Dashboard · Crawl · Venues · Feedback)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; }
+  * { box-sizing: border-box; }
+  body { font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+  [data-cc-theme] {
+    --ink: var(--fg);
+    --paper: var(--bg);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.18);
+    --shadow-md: 0 6px 18px rgba(0,0,0,0.32);
+    --shadow-lg: 0 16px 40px rgba(0,0,0,0.5);
+  }
+  [data-cc-theme="light"] {
+    --shadow-sm: 0 1px 2px rgba(7,10,26,0.06);
+    --shadow-md: 0 4px 12px rgba(7,10,26,0.08);
+    --shadow-lg: 0 12px 32px rgba(7,10,26,0.16);
+  }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- v1 admin theme + primitives — unchanged for v2 -->
+<script type="text/babel" src="../design_handoff_admin_ui/admin-theme.jsx"></script>
+<script type="text/babel" src="../design_handoff_admin_ui/admin-primitives.jsx"></script>
+<!-- v1 shell (for AdminBrowserFrame + InboxPanel + legacy Sidebar shape we still use in canvas) -->
+<script type="text/babel" src="../design_handoff_admin_ui/admin-shell.jsx"></script>
+<!-- v1 crawl pieces (RunningBanner, IssuesBanner, CrawlStats, RunHistory, RUNS) -->
+<script type="text/babel" src="../design_handoff_admin_ui/admin-crawl.jsx"></script>
+
+<!-- V2 admin code -->
+<script type="text/babel" src="admin-shell-v2.jsx"></script>
+<script type="text/babel" src="admin-dashboard-v2.jsx"></script>
+<script type="text/babel" src="admin-review.jsx"></script>
+<script type="text/babel" src="admin-crawl-v2.jsx"></script>
+<script type="text/babel" src="admin-venues-v2.jsx"></script>
+<script type="text/babel" src="admin-venue-detail-v2.jsx"></script>
+<script type="text/babel" src="admin-feedback.jsx"></script>
+
+<!-- Consumer theme system (electric/jade/light) overrides ThemeProvider -->
+<script type="text/babel" src="../theme-context.jsx"></script>
+
+<!-- Tweaks + canvas chrome -->
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+
+<script type="text/babel" data-presets="env,react">
+const { useState } = React;
+
+const FRAME_W = 1440;
+const FRAME_H = 900;
+const FRAME_TOTAL_H = FRAME_H + 36;
+
+// Mobile artboard size (iPhone 14 portrait, scaled to ~390×844)
+const MOB_W = 390;
+const MOB_H = 780;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "electric",
+  "dashboardVariant": "mixed"
+}/*EDITMODE-END*/;
+
+// ── Wrap a v2 page in the full admin shell (sidebar + topbar) + browser frame ──
+function FullScreenV2({ active, breadcrumb, theme, url, topbarActions, children, height = FRAME_TOTAL_H }) {
+  return (
+    <AdminBrowserFrame width={FRAME_W} height={height} url={url} theme={theme}>
+      <AdminShellV2
+        active={active}
+        breadcrumb={breadcrumb}
+        theme={theme}
+        topbarActions={topbarActions}
+        width={FRAME_W}
+        height={height - 36}
+        frame={false}
+      >
+        {children}
+      </AdminShellV2>
+    </AdminBrowserFrame>
+  );
+}
+
+// Mobile artboard wrapper — iPhone-ish bezel-less frame
+function MobileArtboard({ children, theme, label }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <div style={{
+        width: MOB_W, height: MOB_H, overflow: "hidden",
+        borderRadius: 36, background: "var(--bg)",
+        border: "8px solid #1a1814",
+        boxShadow: "0 18px 48px rgba(0,0,0,0.22)",
+      }}>
+        {children}
+      </div>
+    </ThemeProvider>
+  );
+}
+
+// Bare artboard — primitives in isolation
+function BareSurface({ width, height, theme, children, padding = 32 }) {
+  return (
+    <ThemeProvider theme={theme} style={{
+      width, height, background: "var(--bg)", color: "var(--fg)",
+      fontFamily: ADMIN_FONT, padding, overflow: "hidden",
+      borderRadius: 12, border: "1px solid var(--border)",
+      boxShadow: "0 8px 24px rgba(0,0,0,.08)",
+    }}>
+      {children}
+    </ThemeProvider>
+  );
+}
+
+// ─── PAGE ARTBOARDS ──────────────────────────────────────────────────
+function DashboardArtboard({ theme, variant }) {
+  return (
+    <FullScreenV2
+      active="dashboard"
+      breadcrumb={[{ label: "Admin", href: "#" }, { label: "Dashboard" }]}
+      theme={theme}
+      url="concertcrawl.app/admin"
+    >
+      <AdminDashboardV2 variant={variant} />
+    </FullScreenV2>
+  );
+}
+
+function ReviewArtboard({ theme, layout = "stacked", flagsEmpty = false, selectedIds, bulkConfirmOpen = false, addingPriceId, openPriceMenuId }) {
+  return (
+    <FullScreenV2
+      active="review"
+      breadcrumb={[{ label: "Admin", href: "#" }, { label: "Review" }]}
+      theme={theme}
+      url="concertcrawl.app/admin/review"
+      height={FRAME_TOTAL_H + 400}
+    >
+      <AdminReviewPage
+        layout={layout}
+        flagsEmpty={flagsEmpty}
+        selectedFlagId="evt-2911"
+        selectedIds={selectedIds}
+        bulkConfirmOpen={bulkConfirmOpen}
+        addingPriceId={addingPriceId}
+        openPriceMenuId={openPriceMenuId}
+      />
+    </FullScreenV2>
+  );
+}
+
+function CrawlArtboardV2({ theme, exhausted = false, selectedId = "r-9421", confirmOpen = false, confirmId = "opt-headers" }) {
+  return (
+    <FullScreenV2
+      active="crawl"
+      breadcrumb={[{ label: "Admin", href: "#" }, { label: "Crawl status" }]}
+      theme={theme}
+      url="concertcrawl.app/admin/crawl"
+      height={FRAME_TOTAL_H + 220}
+    >
+      <AdminCrawlPageV2 exhausted={exhausted} selectedId={selectedId} />
+      {confirmOpen && <StagedApplyConfirm stagedId={confirmId} />}
+    </FullScreenV2>
+  );
+}
+
+function VenuesArtboard({ theme, expandedId = "rrx" }) {
+  const [eid, setEid] = React.useState(expandedId);
+  return (
+    <FullScreenV2
+      active="venues"
+      breadcrumb={[{ label: "Admin", href: "#" }, { label: "Venues" }]}
+      theme={theme}
+      url="concertcrawl.app/admin/venues"
+    >
+      <AdminVenuesPageV2 expandedId={eid} onToggle={setEid} />
+    </FullScreenV2>
+  );
+}
+
+function VenueGenerateArtboard({ theme, states }) {
+  return (
+    <FullScreenV2
+      active="venues"
+      breadcrumb={[{ label: "Admin", href: "#" }, { label: "Venues" }, { label: "Red Rocks · Edit" }]}
+      theme={theme}
+      url="concertcrawl.app/admin/venues/red-rocks"
+      height={FRAME_TOTAL_H + 180}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: 22, maxWidth: 920 }}>
+        <SectionHead
+          eyebrow="Phase 7.6 · Editorial"
+          title="Red Rocks Amphitheatre"
+          subtitle="The 'About / Capacity / Neighborhood' fields are LLM-assisted. Every generate run is admin-reviewed before it saves."
+          actions={<AdminButton variant="ghost" size="sm" iconRight="chevR">Back to venues</AdminButton>}
+        />
+        <VenueDetailGenerateDemo states={states} />
+      </div>
+    </FullScreenV2>
+  );
+}
+
+// Full venue detail page with Generate UI embedded in context.
+function VenueDetailFullArtboard({ theme, generateStates, deleteOpen = false, deletePhase = "type" }) {
+  return (
+    <FullScreenV2
+      active="venues"
+      breadcrumb={[{ label: "Admin", href: "#" }, { label: "Venues" }, { label: "Red Rocks Amphitheatre" }]}
+      theme={theme}
+      url="concertcrawl.app/admin/venues/red-rocks-amphitheatre"
+      height={FRAME_TOTAL_H + 1900}
+    >
+      <VenueDetailPageV2 venue={VENUES_V2[0]} generateStates={generateStates} />
+      {deleteOpen && <DeleteVenueConfirm venue={VENUES_V2[0]} initialPhase={deletePhase} />}
+    </FullScreenV2>
+  );
+}
+
+function FeedbackArtboard({ theme, filter = "all", expandedId = "fb-0042" }) {
+  const [exp, setExp] = React.useState(expandedId);
+  const [f, setF] = React.useState(filter);
+  return (
+    <FullScreenV2
+      active="feedback"
+      breadcrumb={[{ label: "Admin", href: "#" }, { label: "Feedback" }]}
+      theme={theme}
+      url="concertcrawl.app/admin/feedback"
+      height={FRAME_TOTAL_H + 200}
+    >
+      <AdminFeedbackPage filter={f} expandedId={exp} />
+    </FullScreenV2>
+  );
+}
+
+// ─── MOBILE ARTBOARDS ────────────────────────────────────────────────
+function MobileDashboard({ theme }) {
+  return (
+    <MobileArtboard theme={theme}>
+      <MobileShell active="dashboard" title="Dashboard">
+        <AdminDashboardMobile />
+      </MobileShell>
+    </MobileArtboard>
+  );
+}
+function MobileReview({ theme, flagsEmpty = false, tab = "flags", addingPriceId }) {
+  return (
+    <MobileArtboard theme={theme}>
+      <MobileShell active="review" title="Review">
+        <AdminReviewMobile flagsEmpty={flagsEmpty} tab={tab} addingPriceId={addingPriceId} />
+      </MobileShell>
+    </MobileArtboard>
+  );
+}
+function MobileVenues({ theme }) {
+  return (
+    <MobileArtboard theme={theme}>
+      <MobileShell active="venues" title="Venues">
+        <AdminVenuesMobile />
+      </MobileShell>
+    </MobileArtboard>
+  );
+}
+function MobileFeedback({ theme }) {
+  return (
+    <MobileArtboard theme={theme}>
+      <MobileShell active="feedback" title="Feedback">
+        <AdminFeedbackMobile />
+      </MobileShell>
+    </MobileArtboard>
+  );
+}
+function MobileDrawer({ theme }) {
+  return (
+    <MobileArtboard theme={theme}>
+      <MobileShell active="review" title="Review" drawerOpen={true}>
+        <AdminReviewMobile />
+      </MobileShell>
+    </MobileArtboard>
+  );
+}
+
+// ─── SHELL pieces in isolation ───────────────────────────────────────
+function SidebarOnlyV2({ mode = "full", theme, active = "review" }) {
+  const w = mode === "rail" ? 64 : 240;
+  return (
+    <BareSurface width={w} height={760} theme={theme} padding={0} style={{ overflow: "hidden" }}>
+      <div style={{ display: "flex", height: "100%" }}>
+        <SidebarV2 active={active} mode={mode} />
+      </div>
+    </BareSurface>
+  );
+}
+function TopbarOnlyV2({ theme }) {
+  return (
+    <BareSurface width={1100} height={140} theme={theme} padding={0}>
+      <AdminTopbarV2
+        breadcrumb={[{ label: "Admin", href: "#" }, { label: "Review" }]}
+        theme={theme}
+      />
+      <div style={{ padding: 18, fontFamily: ADMIN_FONT, fontSize: 12, color: "var(--fg-muted)" }}>
+        AppSwitcher (top-left) flips the tab to the consumer app. Replaces the back-button-or-edit-URL workaround.
+      </div>
+    </BareSurface>
+  );
+}
+function AppSwitcherShowcase({ theme }) {
+  return (
+    <BareSurface width={620} height={280} theme={theme} padding={28}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        <div>
+          <MonoLabel>app switcher · default size</MonoLabel>
+          <div style={{ marginTop: 10 }}><AppSwitcher value="admin" /></div>
+        </div>
+        <div>
+          <MonoLabel>flipped to user app</MonoLabel>
+          <div style={{ marginTop: 10 }}><AppSwitcher value="user" /></div>
+        </div>
+        <div>
+          <MonoLabel>compact (mobile topbar)</MonoLabel>
+          <div style={{ marginTop: 10 }}><AppSwitcher value="admin" size="sm" /></div>
+        </div>
+      </div>
+    </BareSurface>
+  );
+}
+
+// ─── App ─────────────────────────────────────────────────────────────
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const theme = (t.theme === "electric" || t.theme === "jade" || t.theme === "light") ? t.theme : "electric";
+  const variant = t.dashboardVariant === "grouped" ? "B" : "A";
+
+  return (
+    <>
+      <DesignCanvas>
+        {/* SHELL */}
+        <DCSection
+          id="shell"
+          title="01 · Shell — new nav + app switcher + mobile"
+          subtitle="Removed Events + Prices, added Review + Feedback. New AppSwitcher in the topbar fixes the Admin → User-app one-way trip. Mobile uses a hamburger drawer + bottom tab bar."
+        >
+          <DCArtboard id="sidebar-v2" label="Sidebar · new nav (Review + Feedback)" width={240} height={760}>
+            <SidebarOnlyV2 mode="full" theme={theme} active="review" />
+          </DCArtboard>
+          <DCArtboard id="sidebar-v2-rail" label="Sidebar · rail" width={64} height={760}>
+            <SidebarOnlyV2 mode="rail" theme={theme} active="review" />
+          </DCArtboard>
+          <DCArtboard id="topbar-v2" label="Topbar · with AppSwitcher" width={1100} height={140}>
+            <TopbarOnlyV2 theme={theme} />
+          </DCArtboard>
+          <DCArtboard id="app-switcher" label="AppSwitcher · isolated" width={620} height={280}>
+            <AppSwitcherShowcase theme={theme} />
+          </DCArtboard>
+        </DCSection>
+
+        {/* DASHBOARD */}
+        <DCSection
+          id="dashboard"
+          title="02 · Dashboard — attention feed (variants A & B)"
+          subtitle="CTAs moved off the dashboard (they live on their respective pages). Crawl-log → Attention feed: exceptions only, successes roll up to one digest line. Try the Tweaks panel to swap A ↔ B."
+        >
+          <DCArtboard id="dashboard-v2-a" label="Dashboard · A · mixed severity (default)" width={FRAME_W} height={FRAME_TOTAL_H}>
+            <DashboardArtboard theme={theme} variant="A" />
+          </DCArtboard>
+          <DCArtboard id="dashboard-v2-b" label="Dashboard · B · grouped by severity (variant)" width={FRAME_W} height={FRAME_TOTAL_H}>
+            <DashboardArtboard theme={theme} variant="B" />
+          </DCArtboard>
+          <DCArtboard id="dashboard-mobile" label="Dashboard · mobile (390px)" width={MOB_W + 30} height={MOB_H + 30}>
+            <MobileDashboard theme={theme} />
+          </DCArtboard>
+        </DCSection>
+
+        {/* REVIEW */}
+        <DCSection
+          id="review"
+          title="03 · Review (NEW) — replaces /admin/events + /admin/prices"
+          subtitle="Two sections under one URL. Section A (Event flags) is empty most days — shows queue-clear strip. Section B (Price coverage) is always populated. Inspector pattern mirrors v1 event review."
+        >
+          <DCArtboard id="review-stacked" label="Review · stacked layout (default)" width={FRAME_W} height={FRAME_TOTAL_H + 600}>
+            <ReviewArtboard theme={theme} layout="stacked" />
+          </DCArtboard>
+          <DCArtboard id="review-bulk-selected" label="Review · multi-select · bulk dock visible" width={FRAME_W} height={FRAME_TOTAL_H + 600}>
+            <ReviewArtboard theme={theme} layout="stacked" selectedIds={new Set(["evt-2911", "evt-2902", "evt-2878"])} />
+          </DCArtboard>
+          <DCArtboard id="review-bulk-confirm" label="Review · bulk approve confirm modal" width={FRAME_W} height={FRAME_TOTAL_H + 600}>
+            <ReviewArtboard theme={theme} layout="stacked" selectedIds={new Set(["evt-2911", "evt-2902", "evt-2878"])} bulkConfirmOpen={true} />
+          </DCArtboard>
+          <DCArtboard id="review-add-price" label="Review · 'Add price' inline form (admin entry)" width={FRAME_W} height={FRAME_TOTAL_H + 700}>
+            <ReviewArtboard theme={theme} layout="stacked" addingPriceId="evt-2841" />
+          </DCArtboard>
+          <DCArtboard id="review-row-menu" label="Review · price row overflow menu (Edit / Mark stale / Remove)" width={FRAME_W} height={FRAME_TOTAL_H + 600}>
+            <ReviewArtboard theme={theme} layout="stacked" openPriceMenuId="evt-2818" />
+          </DCArtboard>
+          <DCArtboard id="review-clear" label="Review · queue clear (the normal state)" width={FRAME_W} height={FRAME_TOTAL_H + 300}>
+            <ReviewArtboard theme={theme} layout="stacked" flagsEmpty={true} />
+          </DCArtboard>
+          <DCArtboard id="review-adaptive" label="Review · data-adaptive (variant)" width={FRAME_W} height={FRAME_TOTAL_H + 700}>
+            <ReviewArtboard theme={theme} layout="data-adaptive" />
+          </DCArtboard>
+          <DCArtboard id="review-mobile" label="Review · mobile · Event flags tab" width={MOB_W + 30} height={MOB_H + 30}>
+            <MobileReview theme={theme} tab="flags" />
+          </DCArtboard>
+          <DCArtboard id="review-mobile-prices" label="Review · mobile · Prices tab (submissions + needs price + has price)" width={MOB_W + 30} height={MOB_H + 30}>
+            <MobileReview theme={theme} tab="prices" />
+          </DCArtboard>
+          <DCArtboard id="review-mobile-add-price" label="Review · mobile · Add price inline" width={MOB_W + 30} height={MOB_H + 30}>
+            <MobileReview theme={theme} tab="prices" addingPriceId="evt-2841" />
+          </DCArtboard>
+          <DCArtboard id="review-mobile-clear" label="Review · mobile · queue clear" width={MOB_W + 30} height={MOB_H + 30}>
+            <MobileReview theme={theme} flagsEmpty={true} />
+          </DCArtboard>
+        </DCSection>
+
+        {/* CRAWL */}
+        <DCSection
+          id="crawl"
+          title="04 · Crawl — Diagnostics tab in the inspector"
+          subtitle="Inspector tabs: Overview / Diagnostics / History. Diagnostics is the new failure-triage surface — What happened · Why · Options (staged, not auto-applied) · Strategy history."
+        >
+          <DCArtboard id="crawl-diagnostics" label="Crawl · Diagnostics tab (default for failed runs)" width={FRAME_W} height={FRAME_TOTAL_H + 220}>
+            <CrawlArtboardV2 theme={theme} />
+          </DCArtboard>
+          <DCArtboard id="crawl-apply-confirm" label="Crawl · Apply confirm modal (config diff + risks + rollback)" width={FRAME_W} height={FRAME_TOTAL_H + 220}>
+            <CrawlArtboardV2 theme={theme} confirmOpen={true} confirmId="opt-headers" />
+          </DCArtboard>
+          <DCArtboard id="crawl-apply-confirm-llm" label="Crawl · Apply confirm · 'Switch to LLM' (higher-risk change)" width={FRAME_W} height={FRAME_TOTAL_H + 220}>
+            <CrawlArtboardV2 theme={theme} confirmOpen={true} confirmId="opt-llm" />
+          </DCArtboard>
+          <DCArtboard id="crawl-exhausted" label="Crawl · Diagnostics · 'No viable path' terminal state" width={FRAME_W} height={FRAME_TOTAL_H + 220}>
+            <CrawlArtboardV2 theme={theme} exhausted={true} />
+          </DCArtboard>
+        </DCSection>
+
+        {/* VENUES */}
+        <DCSection
+          id="venues"
+          title="05 · Venues — accordion row + Generate UI in full detail context"
+          subtitle="Chevron expands a quick-view (one open at a time). Detail-page name link still navigates. NEW: full <VenueDetailPageV2/> embeds the Generate UI inline next to About/Capacity/Neighborhood — every editable field on one page."
+        >
+          <DCArtboard id="venues-accordion" label="Venues table · accordion (Red Rocks expanded)" width={FRAME_W} height={FRAME_TOTAL_H + 220}>
+            <VenuesArtboard theme={theme} expandedId="rrx" />
+          </DCArtboard>
+          <DCArtboard id="venues-mobile" label="Venues · mobile · stacked cards" width={MOB_W + 30} height={MOB_H + 30}>
+            <MobileVenues theme={theme} />
+          </DCArtboard>
+          <DCArtboard id="venue-detail-full" label="Venue detail · FULL form · Generate in context (About in review)" width={FRAME_W} height={FRAME_TOTAL_H + 1900}>
+            <VenueDetailFullArtboard theme={theme} generateStates={{ about: "review", capacity: "idle", neighborhood: "accepted" }} />
+          </DCArtboard>
+          <DCArtboard id="venue-delete-typing" label="Venue detail · Delete modal · typing (button disabled)" width={FRAME_W} height={FRAME_TOTAL_H + 1900}>
+            <VenueDetailFullArtboard theme={theme} generateStates={{ about: "idle", capacity: "idle", neighborhood: "idle" }} deleteOpen={true} deletePhase="type" />
+          </DCArtboard>
+          <DCArtboard id="venue-delete-armed" label="Venue detail · Delete modal · DELETE typed (armed, red)" width={FRAME_W} height={FRAME_TOTAL_H + 1900}>
+            <VenueDetailFullArtboard theme={theme} generateStates={{ about: "idle", capacity: "idle", neighborhood: "idle" }} deleteOpen={true} deletePhase="armed" />
+          </DCArtboard>
+          <DCArtboard id="venue-detail-loading" label="Venue detail · Generate · loading (About generating)" width={FRAME_W} height={FRAME_TOTAL_H + 1900}>
+            <VenueDetailFullArtboard theme={theme} generateStates={{ about: "loading", capacity: "idle", neighborhood: "idle" }} />
+          </DCArtboard>
+          <DCArtboard id="venues-generate-states" label="Generate · state matrix (idle / review / accepted / error)" width={FRAME_W} height={FRAME_TOTAL_H + 250}>
+            <VenueGenerateArtboard theme={theme} states={{ about: "idle", capacity: "review", neighborhood: "accepted" }} />
+          </DCArtboard>
+          <DCArtboard id="venues-generate-error" label="Generate · error (model returned nothing)" width={FRAME_W} height={FRAME_TOTAL_H + 250}>
+            <VenueGenerateArtboard theme={theme} states={{ about: "error", capacity: "idle", neighborhood: "idle" }} />
+          </DCArtboard>
+        </DCSection>
+
+        {/* FEEDBACK */}
+        <DCSection
+          id="feedback"
+          title="06 · Feedback (NEW) — read · flag · open issue · resolve"
+          subtitle="Receives FeedbackSurface submissions today, Sentry next. Each row is one item, click to expand: full body + screenshot + context strip + admin notes + GH issue creation. Voice matches Feedback Modal — playful + clear."
+        >
+          <DCArtboard id="feedback-default" label="Feedback · active view (default landing)" width={FRAME_W} height={FRAME_TOTAL_H + 600}>
+            <FeedbackArtboard theme={theme} filter="all" expandedId="fb-0042" />
+          </DCArtboard>
+          <DCArtboard id="feedback-flagged" label="Feedback · 'Flagged' filter active" width={FRAME_W} height={FRAME_TOTAL_H + 300}>
+            <FeedbackArtboard theme={theme} filter="flagged" expandedId="fb-0040" />
+          </DCArtboard>
+          <DCArtboard id="feedback-issue" label="Feedback · expanded item with linked GH issue" width={FRAME_W} height={FRAME_TOTAL_H + 400}>
+            <FeedbackArtboard theme={theme} filter="all" expandedId="fb-0039" />
+          </DCArtboard>
+          <DCArtboard id="feedback-mobile" label="Feedback · mobile" width={MOB_W + 30} height={MOB_H + 30}>
+            <MobileFeedback theme={theme} />
+          </DCArtboard>
+          <DCArtboard id="mobile-drawer" label="Mobile · sheet drawer (hamburger open)" width={MOB_W + 30} height={MOB_H + 30}>
+            <MobileDrawer theme={theme} />
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection title="Theme">
+          <TweakRadio
+            label="Brand theme"
+            value={theme}
+            options={[
+              { value: "electric", label: "Electric" },
+              { value: "jade",     label: "Jade" },
+              { value: "light",    label: "Light" },
+            ]}
+            onChange={(v) => setTweak("theme", v)}
+          />
+        </TweakSection>
+        <TweakSection title="Dashboard">
+          <TweakRadio
+            label="Attention feed layout"
+            value={t.dashboardVariant || "mixed"}
+            options={[
+              { value: "mixed",   label: "Mixed (A)" },
+              { value: "grouped", label: "Grouped (B)" },
+            ]}
+            onChange={(v) => setTweak("dashboardVariant", v)}
+          />
+        </TweakSection>
+      </TweaksPanel>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
