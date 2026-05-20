@@ -2,53 +2,137 @@ import { ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
-import type { CrawlRun, Event, Venue } from '@concert-crawl/types'
+import type { CrawlRun, Venue } from '@concert-crawl/types'
 import {
   StatCard,
-  Panel,
   AdminButton,
   ProgressBar,
   Sparkline,
 } from '@/components/admin/primitives'
-import { ActivityFeed } from '@/components/admin/dashboard/ActivityFeed'
-import { RunAllVenuesButton } from '@/components/admin/dashboard/RunAllVenuesButton'
 import { CrawlHealthTable } from '@/components/admin/dashboard/CrawlHealthTable'
+import { AttentionFeed } from '@/components/admin/dashboard/AttentionFeed'
+import type { AttentionItemData } from '@/components/admin/dashboard/AttentionFeed'
 import {
   LLM_BUDGET_USD,
   toStatusRow,
-  buildPendingReviewHint,
   buildCrawlHealthHint,
   buildActiveVenuesHint,
   buildSparklineData,
 } from '@/components/admin/dashboard/lib/dashboard'
 import type { RawVenueStatus } from '@/components/admin/dashboard/lib/dashboard'
+import { Panel } from '@/components/admin/primitives'
+
+interface EventCount {
+  pending: number
+  approved: number
+}
+
+interface PriceSubmissionCount {
+  pending: number
+}
 
 async function fetchDashboardData(token: string) {
-  const [rawStatus, venues, runs, pendingEvents] = await Promise.all([
-    apiClient
-      .get<RawVenueStatus[]>('/v1/admin/crawl/status', token)
-      .catch((err: unknown) => {
-        throw new Error(
-          `Failed to load crawl status: ${err instanceof Error ? err.message : String(err)}`,
-        )
-      }),
-    apiClient.get<Venue[]>('/v1/admin/venues', token).catch((err: unknown) => {
-      throw new Error(
-        `Failed to load venues: ${err instanceof Error ? err.message : String(err)}`,
-      )
-    }),
-    apiClient
-      .get<CrawlRun[]>('/v1/admin/crawl/runs?limit=20', token)
-      .catch((err: unknown) => {
-        throw new Error(
-          `Failed to load crawl runs: ${err instanceof Error ? err.message : String(err)}`,
-        )
-      }),
-    apiClient
-      .get<Event[]>('/v1/admin/events?verified=false&limit=100', token)
-      .catch(() => [] as Event[]),
-  ])
-  return { status: rawStatus.map(toStatusRow), venues, runs, pendingEvents }
+  const [rawStatus, venues, runs, eventCounts, priceCounts] = await Promise.all(
+    [
+      apiClient
+        .get<RawVenueStatus[]>('/v1/admin/crawl/status', token)
+        .catch((err: unknown) => {
+          throw new Error(
+            `Failed to load crawl status: ${err instanceof Error ? err.message : String(err)}`,
+          )
+        }),
+      apiClient
+        .get<Venue[]>('/v1/admin/venues', token)
+        .catch((err: unknown) => {
+          throw new Error(
+            `Failed to load venues: ${err instanceof Error ? err.message : String(err)}`,
+          )
+        }),
+      apiClient
+        .get<CrawlRun[]>('/v1/admin/crawl/runs?limit=20', token)
+        .catch((err: unknown) => {
+          throw new Error(
+            `Failed to load crawl runs: ${err instanceof Error ? err.message : String(err)}`,
+          )
+        }),
+      apiClient
+        .get<EventCount>('/v1/admin/events/count', token)
+        .catch(() => ({ pending: 0, approved: 0 })),
+      apiClient
+        .get<PriceSubmissionCount>('/v1/admin/prices/submissions/count', token)
+        .catch(() => ({ pending: 0 })),
+    ],
+  )
+  return {
+    status: rawStatus.map(toStatusRow),
+    venues,
+    runs,
+    pendingEventCount: eventCounts.pending,
+    pendingPriceCount: priceCounts.pending,
+  }
+}
+
+function buildAttentionItems(
+  status: ReturnType<typeof toStatusRow>[],
+  venues: Venue[],
+  pendingEventCount: number,
+  pendingPriceCount: number,
+): AttentionItemData[] {
+  const items: AttentionItemData[] = []
+
+  const failedVenues = status.filter(
+    (row) => row.status === 'failed' || row.blockedAt !== null,
+  )
+  for (const venue of failedVenues.slice(0, 3)) {
+    const venueName = venues.find((vn) => vn.id === venue.id)?.name ?? venue.id
+    const isBlocked = venue.blockedAt !== null
+    items.push({
+      id: `crawl-${venue.id}`,
+      severity: 'danger',
+      iconName: isBlocked ? 'ShieldAlert' : 'AlertCircle',
+      title: `${venueName} — crawl ${isBlocked ? 'blocked' : 'failed'}`,
+      meta: isBlocked
+        ? 'Venue blocked · crawl schedule paused'
+        : `Status: ${venue.status} · check crawl inspector`,
+      timeLabel: 'recent',
+      action: {
+        label: 'Open crawl',
+        href: '/admin/crawl',
+      },
+    })
+  }
+
+  if (pendingEventCount > 0) {
+    items.push({
+      id: 'events-pending',
+      severity: 'warning',
+      iconName: 'CheckSquare',
+      title: `${pendingEventCount} event${pendingEventCount === 1 ? '' : 's'} flagged for review`,
+      meta: 'Needs manual verification before publishing',
+      timeLabel: 'pending',
+      action: {
+        label: 'Open Review',
+        href: '/admin/review',
+      },
+    })
+  }
+
+  if (pendingPriceCount > 0) {
+    items.push({
+      id: 'prices-pending',
+      severity: 'signal',
+      iconName: 'DollarSign',
+      title: `${pendingPriceCount} price submission${pendingPriceCount === 1 ? '' : 's'} waiting`,
+      meta: 'Community submissions need approval or dispute',
+      timeLabel: 'pending',
+      action: {
+        label: 'Open Review',
+        href: '/admin/review',
+      },
+    })
+  }
+
+  return items
 }
 
 export default async function AdminDashboardPage() {
@@ -59,7 +143,7 @@ export default async function AdminDashboardPage() {
 
   const firstName = user.firstName ?? user.email
 
-  const { status, venues, runs, pendingEvents } =
+  const { status, venues, runs, pendingEventCount, pendingPriceCount } =
     await fetchDashboardData(token)
 
   const hour = new Date().getHours()
@@ -88,38 +172,33 @@ export default async function AdminDashboardPage() {
         }
       : undefined
 
-  const pendingHint = buildPendingReviewHint(pendingEvents, venues)
   const crawlHealthHint = buildCrawlHealthHint(status)
   const activeVenuesHint = buildActiveVenuesHint(venues)
   const sparklineData = buildSparklineData(runs)
 
-  async function triggerAllVenues() {
-    'use server'
-    const { getToken: getActionToken } = await auth()
-    const actionToken = await getActionToken()
-    if (!actionToken) return
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
-    const venuesRes = await fetch(`${apiUrl}/v1/admin/venues`, {
-      headers: { Authorization: `Bearer ${actionToken}` },
-    })
-    if (!venuesRes.ok) return
-    const venuesData = (await venuesRes.json()) as {
-      success: boolean
-      data: Venue[]
-    }
-    if (!venuesData.success) return
-    const activeVenues = venuesData.data.filter(
-      (venue) => venue.active && venue.verified,
+  const attentionItems = buildAttentionItems(
+    status,
+    venues,
+    pendingEventCount,
+    pendingPriceCount,
+  )
+
+  const summaryParts: string[] = []
+  if (blockedCount > 0)
+    summaryParts.push(
+      `${blockedCount} venue${blockedCount === 1 ? '' : 's'} need${blockedCount === 1 ? 's' : ''} attention`,
     )
-    await Promise.allSettled(
-      activeVenues.map((venue) =>
-        fetch(`${apiUrl}/v1/admin/crawl/${venue.id}`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${actionToken}` },
-        }),
-      ),
-    )
-  }
+  if (pendingEventCount > 0)
+    summaryParts.push(`${pendingEventCount} events flagged`)
+  if (pendingPriceCount > 0)
+    summaryParts.push(`${pendingPriceCount} price submissions waiting`)
+  if (summaryParts.length === 0)
+    summaryParts.push(`${greenCount} of ${status.length} venues green`)
+
+  const digestLabel =
+    greenCount > 0
+      ? `${greenCount} venue${greenCount === 1 ? '' : 's'} crawled cleanly · last sweep 3:02 AM`
+      : undefined
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -128,7 +207,6 @@ export default async function AdminDashboardPage() {
         style={{
           display: 'flex',
           alignItems: 'flex-start',
-          justifyContent: 'space-between',
           gap: 14,
           flexWrap: 'wrap',
         }}
@@ -137,7 +215,7 @@ export default async function AdminDashboardPage() {
           <h1
             style={{
               margin: 0,
-              fontFamily: "'Inter', sans-serif",
+              fontFamily: 'var(--admin-font, Inter, sans-serif)',
               fontSize: 26,
               fontWeight: 700,
               color: 'var(--fg)',
@@ -146,18 +224,16 @@ export default async function AdminDashboardPage() {
           >
             {greeting}, {firstName}.
           </h1>
-          <div style={{ marginTop: 4, fontSize: 13, color: 'var(--fg-muted)' }}>
-            {greenCount} of {status.length} venues green ·{' '}
-            {blockedCount > 0 ? `${blockedCount} blocked` : 'all healthy'}
+          <div
+            style={{
+              marginTop: 4,
+              fontFamily: 'var(--admin-font, Inter, sans-serif)',
+              fontSize: 13,
+              color: 'var(--fg-muted)',
+            }}
+          >
+            {summaryParts.join(' · ')}
           </div>
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <RunAllVenuesButton action={triggerAllVenues} />
-          <Link href="/admin/venues/new" style={{ textDecoration: 'none' }}>
-            <AdminButton variant="outline" size="sm">
-              + Add venue
-            </AdminButton>
-          </Link>
         </div>
       </div>
 
@@ -169,17 +245,26 @@ export default async function AdminDashboardPage() {
           gap: 16,
         }}
       >
-        {/* Pending review */}
+        {/* Needs review */}
         <StatCard
-          label="Pending review"
-          value={String(pendingEvents.length)}
-          unit="events"
+          label="Needs review"
+          value={String(pendingEventCount + pendingPriceCount)}
+          unit="items"
           iconName="CheckSquare"
-          kind={pendingEvents.length > 0 ? 'warning' : 'neutral'}
-          {...(pendingHint ? { hint: pendingHint } : {})}
+          kind={
+            pendingEventCount + pendingPriceCount > 0 ? 'warning' : 'neutral'
+          }
+          hint={
+            [
+              pendingEventCount > 0 ? `${pendingEventCount} events` : '',
+              pendingPriceCount > 0 ? `${pendingPriceCount} prices` : '',
+            ]
+              .filter(Boolean)
+              .join(' · ') || undefined
+          }
           footer={
             <Link
-              href="/admin/events"
+              href="/admin/review"
               style={{ textDecoration: 'none', display: 'block' }}
             >
               <AdminButton
@@ -188,7 +273,7 @@ export default async function AdminDashboardPage() {
                 iconRight={ChevronRight}
                 fullWidth
               >
-                Open queue
+                Open Review
               </AdminButton>
             </Link>
           }
@@ -241,16 +326,13 @@ export default async function AdminDashboardPage() {
         />
       </div>
 
-      {/* Health table + Activity feed */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        <Panel title="Crawl health · today" padding={0}>
-          <CrawlHealthTable rows={status} />
-        </Panel>
+      {/* Attention feed */}
+      <AttentionFeed items={attentionItems} digestLabel={digestLabel} />
 
-        <Panel title="Recent activity">
-          <ActivityFeed runs={runs} />
-        </Panel>
-      </div>
+      {/* Crawl health detail */}
+      <Panel title="Crawl health · today" padding={0}>
+        <CrawlHealthTable rows={status} />
+      </Panel>
     </div>
   )
 }
