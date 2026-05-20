@@ -20,15 +20,19 @@ export function WatchShowButton({
   const { data: watchedShows } = useWatching()
   const toggle = useWatchToggle()
 
-  // Derive watching state from cache; fall back to prop while cache loads.
-  // The cache is updated optimistically in onMutate so this resolves in
-  // a single step without intermediate spinner → label flicker.
-  const isWatching =
-    watchedShows !== undefined
-      ? watchedShows.some((show) => show.eventId === eventId)
-      : initialWatching
-
   const isPending = toggle.isPending
+
+  // Derive watching state from the cache when available. If the cache hasn't
+  // loaded yet but a mutation is in-flight, apply a local optimistic override
+  // by flipping initialWatching — this prevents the button from staying in the
+  // wrong state (or showing only a spinner with no label) while the watching
+  // query is still fetching on first render.
+  const cacheIsReady = watchedShows !== undefined
+  const cacheWatching = cacheIsReady
+    ? watchedShows.some((show) => show.eventId === eventId)
+    : initialWatching
+  const isWatching =
+    isPending && !cacheIsReady ? !initialWatching : cacheWatching
 
   const handleToggle = () => {
     if (!isSignedIn || isPending) return
