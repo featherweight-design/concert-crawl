@@ -106,11 +106,6 @@ export function FilterBar({ venues, genres = [], className }: FilterBarProps) {
     [pathname, router, searchParams],
   )
 
-  const updateParam = useCallback(
-    (key: string, value: string) => updateParams({ [key]: value }),
-    [updateParams],
-  )
-
   const [openFilterKey, setOpenFilterKey] = useState<FilterKey | null>(null)
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null)
   const [isDesktop, setIsDesktop] = useState(false)
@@ -225,7 +220,7 @@ export function FilterBar({ venues, genres = [], className }: FilterBarProps) {
                 key={key}
                 type="button"
                 onClick={() => {
-                  // When switching views, strip calendar-specific params so the
+                  // When switching views, strip view-specific params so the
                   // server component re-fetches with a clean slate.
                   if (key === 'list') {
                     updateParams({
@@ -234,7 +229,12 @@ export function FilterBar({ venues, genres = [], className }: FilterBarProps) {
                       weekOffset: '',
                     })
                   } else {
-                    updateParam('view', key)
+                    // Switching to cal view: clear filterWhen so the hidden chip
+                    // doesn't silently apply server-side date filtering.
+                    updateParams({
+                      view: key,
+                      [FILTER_DEFS.when.queryKey]: '',
+                    })
                   }
                 }}
                 className="inline-flex cursor-pointer items-center gap-1.5 transition-colors"
