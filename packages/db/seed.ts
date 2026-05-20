@@ -88,7 +88,6 @@ export const SEED_VENUES: NewVenue[] = [
     active: true,
     verified: true,
     crawlDelayMs: 3000,
-    crawlWaitUntil: 'load' as const,
     crawlWaitForSelector: '.c-axs-event-card__wrapper',
     address: '3263 S Broadway, Englewood, CO 80113',
     capacity: 1100,
