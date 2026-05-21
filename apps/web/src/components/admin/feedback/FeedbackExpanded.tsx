@@ -30,8 +30,11 @@ export function FeedbackExpanded({
     }
   }
 
+  const screenshot = item.metadata?.screenshot as string | null | undefined
   const metaEntries = item.metadata
-    ? Object.entries(item.metadata).filter(([, val]) => val != null)
+    ? Object.entries(item.metadata).filter(
+        ([key, val]) => val != null && key !== 'screenshot',
+      )
     : []
 
   return (
@@ -202,6 +205,57 @@ export function FeedbackExpanded({
               ))}
             </div>
           </div>
+
+          {screenshot && (
+            <div>
+              <MonoLabel>screenshot</MonoLabel>
+              <div
+                style={{
+                  marginTop: 6,
+                  position: 'relative',
+                  borderRadius: 8,
+                  overflow: 'hidden',
+                  border: '1px solid var(--border)',
+                  background: 'var(--surface-1)',
+                  height: 200,
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={screenshot}
+                  alt="User screenshot"
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    objectPosition: 'top',
+                  }}
+                />
+                <a
+                  href={screenshot}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    position: 'absolute',
+                    bottom: 8,
+                    right: 8,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: '#F1E6D5',
+                    background: 'rgba(0,0,0,0.55)',
+                    backdropFilter: 'blur(4px)',
+                    padding: '3px 8px',
+                    borderRadius: 6,
+                    textDecoration: 'none',
+                    fontFamily: "'Inter', sans-serif",
+                  }}
+                >
+                  Open full size ↗
+                </a>
+              </div>
+            </div>
+          )}
 
           {item.issueUrl ? (
             <div

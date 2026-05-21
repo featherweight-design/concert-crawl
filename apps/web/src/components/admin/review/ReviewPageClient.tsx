@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { apiClient, ApiError } from '@/lib/api'
 import { EventFlagsSection } from './EventFlagsSection'
 import { PendingSubmissionsPanel } from './PendingSubmissionsPanel'
 import { PriceCoverageTable } from './PriceCoverageTable'
+import { AdminReviewMobile } from './AdminReviewMobile'
 
 interface EventFlag {
   id: string
@@ -70,6 +71,15 @@ export const ReviewPageClient = ({
   const [submissions, setSubmissions] =
     useState<PriceSubmission[]>(initialSubmissions)
   const [error, setError] = useState<string | null>(null)
+  const [isDesktop, setIsDesktop] = useState(true)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1280px)')
+    setIsDesktop(mq.matches)
+    const handler = (evt: MediaQueryListEvent) => setIsDesktop(evt.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   const approveEvent = useCallback(
     async (id: string) => {
@@ -132,6 +142,27 @@ export const ReviewPageClient = ({
     [getToken, router],
   )
 
+  const addPrice = useCallback(
+    async (eventId: string, priceMin: string, priceMax: string | null) => {
+      setError(null)
+      try {
+        const token = await getToken()
+        if (!token) return
+        await apiClient.patch(`/v1/admin/events/${eventId}`, token, {
+          ticketPriceMin: priceMin,
+          ticketPriceMax: priceMax,
+        })
+        router.refresh()
+      } catch (err) {
+        const message =
+          err instanceof ApiError ? err.message : 'Failed to save price.'
+        console.error('addPrice error:', err)
+        setError(message)
+      }
+    },
+    [getToken, router],
+  )
+
   const denySubmission = useCallback(
     async (id: string) => {
       setError(null)
@@ -153,24 +184,43 @@ export const ReviewPageClient = ({
     [getToken, router],
   )
 
+  const errorBanner = error && (
+    <div
+      style={{
+        padding: '10px 14px',
+        borderRadius: 8,
+        border: '1px solid color-mix(in oklab, var(--danger) 30%, transparent)',
+        background: 'color-mix(in oklab, var(--danger) 8%, transparent)',
+        fontSize: 13,
+        color: 'var(--danger)',
+        fontFamily: "'Inter', sans-serif",
+      }}
+    >
+      {error}
+    </div>
+  )
+
+  if (!isDesktop) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {errorBanner}
+        <AdminReviewMobile
+          events={events}
+          submissions={submissions}
+          priceEvents={priceEvents}
+          onApprove={approveEvent}
+          onReject={rejectEvent}
+          onApproveSubmission={approveSubmission}
+          onDenySubmission={denySubmission}
+          onAddPrice={addPrice}
+        />
+      </div>
+    )
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      {error && (
-        <div
-          style={{
-            padding: '10px 14px',
-            borderRadius: 8,
-            border:
-              '1px solid color-mix(in oklab, var(--danger) 30%, transparent)',
-            background: 'color-mix(in oklab, var(--danger) 8%, transparent)',
-            fontSize: 13,
-            color: 'var(--danger)',
-            fontFamily: "'Inter', sans-serif",
-          }}
-        >
-          {error}
-        </div>
-      )}
+      {errorBanner}
 
       <EventFlagsSection
         events={events}
@@ -190,7 +240,7 @@ export const ReviewPageClient = ({
           onApprove={approveSubmission}
           onDeny={denySubmission}
         />
-        <PriceCoverageTable events={priceEvents} />
+        <PriceCoverageTable events={priceEvents} onAddPrice={addPrice} />
       </div>
     </div>
   )

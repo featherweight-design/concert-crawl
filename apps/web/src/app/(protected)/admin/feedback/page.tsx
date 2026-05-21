@@ -7,7 +7,10 @@ import { StatCard, Panel } from '@/components/admin/primitives'
 import { FeedbackFilterRail } from '@/components/admin/feedback/FeedbackFilterRail'
 import { FeedbackRow } from '@/components/admin/feedback/FeedbackRow'
 import { FeedbackExpanded } from '@/components/admin/feedback/FeedbackExpanded'
-import type { FeedbackStatusFilter } from '@/components/admin/feedback/FeedbackFilterRail'
+import type {
+  FeedbackStatusFilter,
+  FeedbackSource,
+} from '@/components/admin/feedback/FeedbackFilterRail'
 import type { FeedbackItem } from '@/components/admin/feedback/FeedbackRow'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
@@ -18,6 +21,9 @@ export default function FeedbackPage() {
   const [items, setItems] = useState<FeedbackItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState<FeedbackStatusFilter>('all')
+  const [activeSources, setActiveSources] = useState<Set<FeedbackSource>>(
+    new Set(['feedback_surface']),
+  )
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const fetchFeedback = async () => {
@@ -77,10 +83,24 @@ export default function FeedbackPage() {
     )
   }
 
+  const handleSourceToggle = (source: FeedbackSource) => {
+    setActiveSources((prev) => {
+      const next = new Set(prev)
+      if (next.has(source)) {
+        next.delete(source)
+      } else {
+        next.add(source)
+      }
+      return next
+    })
+  }
+
+  const sourceFiltered = activeSources.has('feedback_surface') ? items : []
+
   const filtered =
     activeFilter === 'all'
-      ? items
-      : items.filter((item) => item.status === activeFilter)
+      ? sourceFiltered
+      : sourceFiltered.filter((item) => item.status === activeFilter)
 
   const counts = {
     all: items.length,
@@ -143,6 +163,8 @@ export default function FeedbackPage() {
           active={activeFilter}
           counts={counts}
           onChange={setActiveFilter}
+          activeSources={activeSources}
+          onSourceToggle={handleSourceToggle}
         />
 
         <Panel

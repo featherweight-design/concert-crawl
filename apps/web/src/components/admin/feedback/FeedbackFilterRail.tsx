@@ -21,10 +21,14 @@ interface StatusCounts {
   archived: number
 }
 
+export type FeedbackSource = 'feedback_surface' | 'sentry' | 'email'
+
 interface FeedbackFilterRailProps {
   active: FeedbackStatusFilter
   counts: StatusCounts
   onChange: (filter: FeedbackStatusFilter) => void
+  activeSources?: Set<FeedbackSource>
+  onSourceToggle?: (source: FeedbackSource) => void
 }
 
 const STATUS_ITEMS: { value: FeedbackStatusFilter; label: string }[] = [
@@ -37,10 +41,22 @@ const STATUS_ITEMS: { value: FeedbackStatusFilter; label: string }[] = [
   { value: 'archived', label: 'Archived' },
 ]
 
+const SOURCE_ITEMS: {
+  value: FeedbackSource
+  label: string
+  soon: boolean
+}[] = [
+  { value: 'feedback_surface', label: 'FeedbackSurface', soon: false },
+  { value: 'sentry', label: 'Sentry', soon: true },
+  { value: 'email', label: 'Email', soon: true },
+]
+
 export function FeedbackFilterRail({
   active,
   counts,
   onChange,
+  activeSources,
+  onSourceToggle,
 }: FeedbackFilterRailProps) {
   return (
     <div
@@ -132,6 +148,66 @@ export function FeedbackFilterRail({
       <div style={{ padding: '4px 10px 8px' }}>
         <MonoLabel>Source</MonoLabel>
       </div>
+
+      {SOURCE_ITEMS.map((src) => {
+        const isChecked = activeSources
+          ? activeSources.has(src.value)
+          : src.value === 'feedback_surface'
+        return (
+          <label
+            key={src.value}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '6px 10px',
+              borderRadius: 8,
+              cursor: src.soon ? 'default' : 'pointer',
+              opacity: src.soon ? 0.55 : 1,
+              fontFamily: "'Inter', sans-serif",
+              fontSize: 13,
+              fontWeight: 500,
+              color: 'var(--fg-muted)',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={isChecked}
+              disabled={src.soon}
+              onChange={() => {
+                if (!src.soon && onSourceToggle) {
+                  onSourceToggle(src.value)
+                }
+              }}
+              style={{
+                accentColor: 'var(--signal)',
+                width: 14,
+                height: 14,
+                cursor: src.soon ? 'default' : 'pointer',
+                flexShrink: 0,
+              }}
+            />
+            <span style={{ flex: 1 }}>{src.label}</span>
+            {src.soon && (
+              <span
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 9,
+                  fontWeight: 700,
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase' as const,
+                  color: 'var(--fg-subtle)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 4,
+                  padding: '1px 5px',
+                }}
+              >
+                soon
+              </span>
+            )}
+          </label>
+        )
+      })}
     </div>
   )
 }

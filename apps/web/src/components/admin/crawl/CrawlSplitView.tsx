@@ -1137,6 +1137,7 @@ export const CrawlSplitView = ({
               {confirmOpen && stagedId && (
                 <StagedApplyConfirm
                   stagedId={stagedId}
+                  venueId={selected.venueId}
                   venueName={selected.venueName}
                   onCancel={() => setConfirmOpen(false)}
                   onApply={() => {

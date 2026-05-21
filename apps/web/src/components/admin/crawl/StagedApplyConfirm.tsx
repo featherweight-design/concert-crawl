@@ -1,7 +1,10 @@
 'use client'
 
+import { useState } from 'react'
+import { useAuth } from '@clerk/nextjs'
 import { AdminButton } from '@/components/admin/primitives'
 import { StatusBadge } from '@/components/admin/primitives'
+import { triggerVenueCrawl } from '@/components/admin/crawl-trigger-button/lib/crawl'
 
 interface ConfigDiffEntry {
   path: string
@@ -104,6 +107,7 @@ const STAGED_DIFFS: Record<string, StagedDiff> = {
 
 interface StagedApplyConfirmProps {
   stagedId: string
+  venueId: string
   venueName: string
   onCancel: () => void
   onApply: () => void
@@ -111,12 +115,25 @@ interface StagedApplyConfirmProps {
 
 export const StagedApplyConfirm = ({
   stagedId,
+  venueId,
   venueName,
   onCancel,
   onApply,
 }: StagedApplyConfirmProps) => {
+  const { getToken } = useAuth()
+  const [triggerRecrawl, setTriggerRecrawl] = useState(false)
   const diff = STAGED_DIFFS[stagedId] ?? STAGED_DIFFS['opt-headers']
   if (!diff) return null
+
+  const handleApply = async () => {
+    onApply()
+    if (triggerRecrawl) {
+      const token = await getToken()
+      if (token) {
+        void triggerVenueCrawl(venueId, token)
+      }
+    }
+  }
 
   return (
     <div
@@ -423,11 +440,37 @@ export const StagedApplyConfirm = ({
             background: 'var(--surface-1)',
           }}
         >
-          <div style={{ marginRight: 'auto' }} />
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              cursor: 'pointer',
+              fontFamily: "'Inter', sans-serif",
+              fontSize: 12,
+              fontWeight: 500,
+              color: 'var(--fg-muted)',
+              userSelect: 'none',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={triggerRecrawl}
+              onChange={(evt) => setTriggerRecrawl(evt.target.checked)}
+              style={{
+                accentColor: 'var(--signal)',
+                width: 14,
+                height: 14,
+                cursor: 'pointer',
+              }}
+            />
+            Trigger re-crawl now
+          </label>
+          <div style={{ marginLeft: 'auto' }} />
           <AdminButton variant="ghost" onClick={onCancel}>
             Cancel
           </AdminButton>
-          <AdminButton variant="primary" onClick={onApply}>
+          <AdminButton variant="primary" onClick={() => void handleApply()}>
             Apply change
           </AdminButton>
         </div>

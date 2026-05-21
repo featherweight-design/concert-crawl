@@ -28,6 +28,11 @@ interface PriceEvent {
 
 interface PriceCoverageTableProps {
   events: PriceEvent[]
+  onAddPrice?: (
+    eventId: string,
+    priceMin: string,
+    priceMax: string | null,
+  ) => Promise<void>
 }
 
 const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000
@@ -37,8 +42,32 @@ function isStale(lastRetrievedAt: string | null): boolean {
   return Date.now() - new Date(lastRetrievedAt).getTime() > FORTY_EIGHT_HOURS_MS
 }
 
-export const PriceCoverageTable = ({ events }: PriceCoverageTableProps) => {
+export const PriceCoverageTable = ({
+  events,
+  onAddPrice,
+}: PriceCoverageTableProps) => {
   const [showMissingOnly, setShowMissingOnly] = useState(false)
+  const [addingForEventId, setAddingForEventId] = useState<string | null>(null)
+  const [priceMin, setPriceMin] = useState('')
+  const [priceMax, setPriceMax] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+
+  const resetAddForm = () => {
+    setAddingForEventId(null)
+    setPriceMin('')
+    setPriceMax('')
+  }
+
+  const handleSavePrice = async (eventId: string) => {
+    if (!priceMin.trim() || !onAddPrice) return
+    setIsSaving(true)
+    try {
+      await onAddPrice(eventId, priceMin.trim(), priceMax.trim() || null)
+      resetAddForm()
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   const missingCount = events.filter((ev) => ev.priceMin === null).length
   const filteredEvents = showMissingOnly
@@ -95,6 +124,95 @@ export const PriceCoverageTable = ({ events }: PriceCoverageTableProps) => {
             const priceDisplay = ev.priceMin
               ? `$${ev.priceMin}${ev.priceMax ? ` – $${ev.priceMax}` : ''}`
               : null
+
+            const isAddingHere = addingForEventId === ev.eventId
+            const isMissingPrice = ev.priceMin === null
+
+            if (isAddingHere) {
+              return (
+                <TR key={ev.eventId}>
+                  <TD>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: 'var(--fg)',
+                        maxWidth: 160,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {ev.eventTitle}
+                    </div>
+                  </TD>
+                  <TD>
+                    <input
+                      type="number"
+                      placeholder="Low"
+                      value={priceMin}
+                      onChange={(evt) => setPriceMin(evt.target.value)}
+                      min={0}
+                      step={0.01}
+                      style={{
+                        width: 80,
+                        height: 28,
+                        padding: '0 8px',
+                        border: '1px solid var(--border-strong)',
+                        borderRadius: 6,
+                        background: 'var(--bg-elevated)',
+                        color: 'var(--fg)',
+                        fontSize: 12,
+                        fontFamily: "'JetBrains Mono', monospace",
+                        outline: 'none',
+                      }}
+                    />
+                  </TD>
+                  <TD>
+                    <input
+                      type="number"
+                      placeholder="High"
+                      value={priceMax}
+                      onChange={(evt) => setPriceMax(evt.target.value)}
+                      min={0}
+                      step={0.01}
+                      style={{
+                        width: 80,
+                        height: 28,
+                        padding: '0 8px',
+                        border: '1px solid var(--border-strong)',
+                        borderRadius: 6,
+                        background: 'var(--bg-elevated)',
+                        color: 'var(--fg)',
+                        fontSize: 12,
+                        fontFamily: "'JetBrains Mono', monospace",
+                        outline: 'none',
+                      }}
+                    />
+                  </TD>
+                  <TD colSpan={2}>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <AdminButton
+                        variant="ghost"
+                        size="sm"
+                        onClick={resetAddForm}
+                        disabled={isSaving}
+                      >
+                        Cancel
+                      </AdminButton>
+                      <AdminButton
+                        variant="success"
+                        size="sm"
+                        onClick={() => void handleSavePrice(ev.eventId)}
+                        disabled={isSaving || !priceMin.trim()}
+                      >
+                        {isSaving ? 'Saving…' : 'Save'}
+                      </AdminButton>
+                    </div>
+                  </TD>
+                </TR>
+              )
+            }
 
             return (
               <TR key={ev.eventId}>
@@ -191,7 +309,19 @@ export const PriceCoverageTable = ({ events }: PriceCoverageTableProps) => {
                   </div>
                 </TD>
                 <TD>
-                  {ev.lastRetrievedAt ? (
+                  {isMissingPrice && onAddPrice ? (
+                    <AdminButton
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setPriceMin('')
+                        setPriceMax('')
+                        setAddingForEventId(ev.eventId)
+                      }}
+                    >
+                      + Add
+                    </AdminButton>
+                  ) : ev.lastRetrievedAt ? (
                     <span style={{ fontSize: 12, color: 'var(--fg-muted)' }}>
                       {new Date(ev.lastRetrievedAt).toLocaleDateString(
                         'en-US',

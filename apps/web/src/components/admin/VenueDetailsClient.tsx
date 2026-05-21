@@ -20,6 +20,12 @@ import {
   SectionHead,
   MetaCard,
 } from '@/components/admin/primitives'
+import {
+  IdentityArt,
+  ia_getInitials,
+  ia_isDark,
+  identityFor,
+} from '@/components/consumer/identity-art/IdentityArt'
 import { DeleteVenueConfirm } from './DeleteVenueConfirm'
 import {
   GenerateField,
@@ -550,6 +556,10 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
   const [fieldErrors, setFieldErrors] = useState<{ slug?: string | undefined }>(
     {},
   )
+
+  // Identity art preview state
+  const [artNamespace, setArtNamespace] = useState<'venue' | 'artist'>('venue')
+  const [artSeed, setArtSeed] = useState(venue.name)
 
   // Generate-about state
   const [generateState, setGenerateState] = useState<GenerateFieldState>('idle')
@@ -1359,8 +1369,145 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
             </div>
           </VDSection>
 
-          {/* 05 · danger */}
-          <VDSection eyebrow="05 · danger" title="Danger Zone">
+          {/* 05 · identity art */}
+          <VDSection eyebrow="05 · identity" title="Identity Art">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div
+                style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}
+              >
+                {/* Preview tile */}
+                <div
+                  style={{
+                    position: 'relative',
+                    width: 96,
+                    height: 96,
+                    flexShrink: 0,
+                    borderRadius: 10,
+                    overflow: 'hidden',
+                    border: '1px solid var(--border)',
+                  }}
+                >
+                  <IdentityArt
+                    name={artSeed}
+                    kind={artNamespace}
+                    scale="tile"
+                    showInitials={false}
+                    grain={0.08}
+                    width={96}
+                    height={96}
+                  />
+                  {(() => {
+                    const identity = identityFor(artSeed, artNamespace)
+                    const dark = ia_isDark(identity.palette.bg)
+                    const initials = ia_getInitials(artSeed, 2)
+                    return (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: 6,
+                          bottom: 6,
+                          padding: '2px 6px',
+                          borderRadius: 5,
+                          background: dark
+                            ? 'rgba(0,0,0,0.55)'
+                            : 'rgba(255,255,255,0.78)',
+                          backdropFilter: 'blur(4px)',
+                          fontFamily: 'var(--font-sans)',
+                          fontWeight: 900,
+                          fontSize: 10,
+                          letterSpacing: '0.04em',
+                          color: dark ? '#F1E6D5' : '#191418',
+                          lineHeight: 1,
+                        }}
+                      >
+                        {initials}
+                      </div>
+                    )
+                  })()}
+                </div>
+
+                {/* Controls */}
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 12,
+                    flex: 1,
+                  }}
+                >
+                  <VDField
+                    label="Namespace"
+                    htmlFor="edit-venue-art-namespace"
+                    hint="Controls which template set is used. Venues use architectural / spatial patterns; artists use more organic / gestural ones."
+                  >
+                    <VDSegToggle
+                      options={[
+                        { value: 'venue', label: 'Venue' },
+                        { value: 'artist', label: 'Artist' },
+                      ]}
+                      value={artNamespace}
+                      onChange={(val) =>
+                        setArtNamespace(val as 'venue' | 'artist')
+                      }
+                    />
+                  </VDField>
+
+                  <VDField
+                    label="Seed"
+                    htmlFor="edit-venue-art-seed"
+                    hint="The seed text is hashed to pick palette + template. Changing it gives a different art variation."
+                  >
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <VDInput
+                        id="edit-venue-art-seed"
+                        value={artSeed}
+                        placeholder={venue.name}
+                        onChange={(evt) => setArtSeed(evt.target.value)}
+                        style={{ flex: 1 }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const roll = `${venue.name}-${Math.floor(Math.random() * 9999)}`
+                          setArtSeed(roll)
+                        }}
+                        style={{
+                          flexShrink: 0,
+                          height: 36,
+                          padding: '0 14px',
+                          border: '1px solid var(--border-strong)',
+                          borderRadius: 8,
+                          background: 'var(--surface-1)',
+                          color: 'var(--fg-muted)',
+                          fontFamily: "'Inter', sans-serif",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Roll
+                      </button>
+                    </div>
+                  </VDField>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 12,
+                  color: 'var(--fg-subtle)',
+                  lineHeight: 1.5,
+                }}
+              >
+                Preview only — production art always uses the venue name as
+                seed. Reset the seed to see the canonical art.
+              </div>
+            </div>
+          </VDSection>
+
+          {/* 06 · danger */}
+          <VDSection eyebrow="06 · danger" title="Danger Zone">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {/* Pause / activate */}
               <div
