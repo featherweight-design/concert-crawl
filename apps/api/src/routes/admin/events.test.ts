@@ -418,9 +418,9 @@ describe('POST /v1/admin/events/bulk-auto-approve', () => {
     adminAuth()
     const { db } = await import('@concert-crawl/db')
     vi.mocked(db.update().set().where().returning).mockResolvedValueOnce([
-      { n: 1 },
-      { n: 1 },
-      { n: 1 },
+      { ok: 1 },
+      { ok: 1 },
+      { ok: 1 },
     ])
     const res = await createApp().request(
       '/v1/admin/events/bulk-auto-approve',
@@ -440,8 +440,8 @@ describe('POST /v1/admin/events/bulk-auto-approve', () => {
     adminAuth()
     const { db } = await import('@concert-crawl/db')
     vi.mocked(db.update().set().where().returning).mockResolvedValueOnce([
-      { n: 1 },
-      { n: 1 },
+      { ok: 1 },
+      { ok: 1 },
     ])
     const res = await createApp().request(
       '/v1/admin/events/bulk-auto-approve',
