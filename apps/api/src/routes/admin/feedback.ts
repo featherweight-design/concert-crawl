@@ -20,7 +20,7 @@ const patchBodySchema = z.object({
     .enum(['unread', 'read', 'flagged', 'issue_opened', 'resolved', 'archived'])
     .optional(),
   adminNotes: z.string().nullable().optional(),
-  issueUrl: z.string().url().nullable().optional(),
+  issueUrl: z.union([z.string().url(), z.null()]).optional(),
 })
 
 export const feedbackAdminRouter = new Hono<AdminVariables>()
