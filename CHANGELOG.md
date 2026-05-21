@@ -1,3 +1,10 @@
+## [1.35.2](https://github.com/HartiganHM/concert-crawl/compare/v1.35.1...v1.35.2) (2026-05-21)
+
+
+### Bug Fixes
+
+* correct venue event counts and LLM year extraction ([1a06aa6](https://github.com/HartiganHM/concert-crawl/commit/1a06aa673d1c19c33f91f83545449b3f13b9762a)), closes [#507](https://github.com/HartiganHM/concert-crawl/issues/507)
+
 ## [1.35.1](https://github.com/HartiganHM/concert-crawl/compare/v1.35.0...v1.35.1) (2026-05-21)
 
 
