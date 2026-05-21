@@ -8,7 +8,7 @@ import { WatchingItem } from './WatchingItem'
 import { WatchingEmpty } from './WatchingEmpty'
 import { NotifyFutureRow } from './NotifyFutureRow'
 
-interface WatchingRouteProps {
+interface WatchingContentProps {
   initialShows: WatchingShow[]
 }
 
@@ -88,7 +88,6 @@ interface GroupedShows {
 function groupShows(shows: WatchingShow[]): GroupedShows[] {
   const bucketMap = new Map<string, GroupedShows>()
   const bucketOrder: string[] = []
-
   for (const show of shows) {
     const bucket = classifyDate(show.date)
     const key = bucketKey(bucket)
@@ -98,11 +97,10 @@ function groupShows(shows: WatchingShow[]): GroupedShows[] {
     }
     bucketMap.get(key)!.shows.push(show)
   }
-
   return bucketOrder.map((key) => bucketMap.get(key)!)
 }
 
-export function WatchingRoute({ initialShows }: WatchingRouteProps) {
+export function WatchingContent({ initialShows }: WatchingContentProps) {
   const { data: cachedShows } = useWatching({ initialData: initialShows })
   const toggle = useWatchToggle()
   const shows = cachedShows ?? initialShows
@@ -143,23 +141,9 @@ export function WatchingRoute({ initialShows }: WatchingRouteProps) {
   }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100dvh',
-        background: 'var(--bg)',
-      }}
-    >
-      {/* Sticky header */}
-      <div
-        style={{
-          flexShrink: 0,
-          padding: '16px 16px 14px',
-          borderBottom: '1px solid var(--border)',
-          background: 'var(--bg)',
-        }}
-      >
+    <main className="mx-auto w-full max-w-[880px] flex-1 px-4 pb-20 pt-4 sm:px-8 sm:pb-10 sm:pt-8">
+      {/* Headline block */}
+      <div className="mb-5 border-b border-border pb-4 sm:mb-6 sm:pb-5">
         <p
           style={{
             fontFamily: 'var(--font-mono)',
@@ -173,104 +157,83 @@ export function WatchingRoute({ initialShows }: WatchingRouteProps) {
         >
           WATCHING
         </p>
-        <p
-          style={{
-            fontFamily: 'var(--font-ui)',
-            fontSize: 36,
-            fontWeight: 900,
-            letterSpacing: '-0.025em',
-            color: 'var(--fg)',
-            margin: '0 0 4px',
-            lineHeight: 1,
-          }}
-        >
-          {displayedShows.length} show{displayedShows.length !== 1 ? 's' : ''}
-        </p>
-        <p
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 12,
-            fontWeight: 600,
-            color: drops > 0 ? 'var(--success)' : 'var(--fg-muted)',
-            margin: 0,
-          }}
-        >
-          {changeSummary()}
-        </p>
+        <div className="flex items-baseline gap-3">
+          <p
+            style={{
+              fontFamily: 'var(--font-ui)',
+              fontSize: 36,
+              fontWeight: 900,
+              letterSpacing: '-0.025em',
+              color: 'var(--fg)',
+              margin: 0,
+              lineHeight: 1,
+            }}
+          >
+            {displayedShows.length} show{displayedShows.length !== 1 ? 's' : ''}
+          </p>
+          <p
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 12,
+              fontWeight: 600,
+              color: drops > 0 ? 'var(--success)' : 'var(--fg-muted)',
+              margin: 0,
+            }}
+          >
+            {changeSummary()}
+          </p>
+        </div>
       </div>
 
-      {/* Scroll region */}
-      <div
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: '12px 16px 100px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-        }}
-      >
-        {displayedShows.length === 0 ? (
-          <WatchingEmpty />
-        ) : (
-          <>
-            {groups.map((group) => (
-              <section key={group.key}>
-                {/* Section header */}
-                <div
+      {/* Show list */}
+      {displayedShows.length === 0 ? (
+        <WatchingEmpty />
+      ) : (
+        <div className="flex flex-col gap-2 sm:gap-3">
+          {groups.map((group) => (
+            <section key={group.key}>
+              <div className="flex items-baseline gap-2 px-1 pb-1 pt-2.5">
+                <span
                   style={{
-                    display: 'flex',
-                    alignItems: 'baseline',
-                    gap: 8,
-                    padding: '10px 4px 4px',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 10,
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.14em',
+                    color:
+                      group.key === 'tonight'
+                        ? 'var(--accent)'
+                        : 'var(--fg-subtle)',
                   }}
                 >
-                  <span
-                    style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: 10,
-                      fontWeight: 700,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.14em',
-                      color:
-                        group.key === 'tonight'
-                          ? 'var(--accent)'
-                          : 'var(--fg-subtle)',
-                    }}
-                  >
-                    {group.label}
-                  </span>
-                  <span
-                    style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: 10,
-                      fontWeight: 500,
-                      color: 'var(--fg-subtle)',
-                    }}
-                  >
-                    · {group.shows.length}
-                  </span>
-                </div>
-
-                {/* Rows */}
-                <div
-                  style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
+                  {group.label}
+                </span>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 10,
+                    fontWeight: 500,
+                    color: 'var(--fg-subtle)',
+                  }}
                 >
-                  {group.shows.map((show) => (
-                    <WatchingItem
-                      key={show.userEventId}
-                      show={show}
-                      density="cozy"
-                      onRemove={handleRemove}
-                    />
-                  ))}
-                </div>
-              </section>
-            ))}
-            <NotifyFutureRow />
-          </>
-        )}
-      </div>
-    </div>
+                  · {group.shows.length}
+                </span>
+              </div>
+              <div className="flex flex-col gap-2.5">
+                {group.shows.map((show) => (
+                  <WatchingItem
+                    key={show.userEventId}
+                    show={show}
+                    density="cozy"
+                    onRemove={handleRemove}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
+          <NotifyFutureRow />
+        </div>
+      )}
+    </main>
   )
 }

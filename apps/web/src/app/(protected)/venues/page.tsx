@@ -2,6 +2,7 @@ import { auth } from '@clerk/nextjs/server'
 import type { VenuePublic } from '@concert-crawl/types'
 import { publicApiClient, apiClient } from '@/lib/api'
 import { AppHeader } from '@/components/consumer/app-header'
+import { BottomNav } from '@/components/consumer/bottom-nav'
 import { EmptyState } from '@/components/consumer/empty-state'
 import { VenuesIndexClient } from '@/components/consumer/venues-index'
 
@@ -25,11 +26,9 @@ export default async function VenuesPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-bg">
-      <div className="hidden sm:block">
-        <AppHeader />
-      </div>
+      <AppHeader />
 
-      <div className="mx-auto w-full max-w-[1120px] px-[18px] pb-24 pt-6 sm:px-8 sm:pt-[48px]">
+      <div className="mx-auto w-full max-w-[1120px] px-[18px] pb-24 pt-4 sm:px-8 sm:pt-[48px]">
         {venues.length === 0 ? (
           <>
             <div
@@ -66,6 +65,7 @@ export default async function VenuesPage() {
           <VenuesIndexClient venues={venues} />
         )}
       </div>
+      <BottomNav />
     </div>
   )
 }
