@@ -1,3 +1,10 @@
+## [1.36.2](https://github.com/HartiganHM/concert-crawl/compare/v1.36.1...v1.36.2) (2026-05-21)
+
+
+### Bug Fixes
+
+* **deps:** override js-cookie to >=3.0.7 to resolve GHSA-qjx8-664m-686j ([6418127](https://github.com/HartiganHM/concert-crawl/commit/64181279f9489da0f51941dc9b406bc868840484))
+
 ## [1.36.1](https://github.com/HartiganHM/concert-crawl/compare/v1.36.0...v1.36.1) (2026-05-21)
 
 
