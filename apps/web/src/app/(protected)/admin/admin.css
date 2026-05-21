@@ -47,7 +47,7 @@
   --border-strong: #2c3661;
   --overlay-hover: rgba(122, 230, 255, 0.08);
   --success: #7bffb0;
-  --warning: #c97920;
+  --warning: #ffd27a;
   --danger: #ff7a8a;
   --danger-fg: #1a0808;
   --signal: #7ae6ff;
@@ -73,7 +73,7 @@
   --border-strong: #2a5c57;
   --overlay-hover: rgba(31, 255, 194, 0.08);
   --success: #1fffc2;
-  --warning: #c97920;
+  --warning: #ffd27a;
   --danger: #ff7a8a;
   --danger-fg: #1a0808;
   --signal: #1fffc2;
@@ -99,7 +99,7 @@
   --border-strong: #3d1a58;
   --overlay-hover: rgba(200, 255, 46, 0.08);
   --success: #7bffb0;
-  --warning: #c97920;
+  --warning: #ffd27a;
   --danger: #ff7a8a;
   --danger-fg: #1a0808;
   --signal: #c8ff2e;
@@ -125,7 +125,7 @@
   --border-strong: #3d3128;
   --overlay-hover: rgba(200, 33, 26, 0.08);
   --success: #7bffb0;
-  --warning: #c97920;
+  --warning: #ffd27a;
   --danger: #ff7a8a;
   --danger-fg: #1a0808;
   --signal: #c8211a;
@@ -151,7 +151,7 @@
   --border-strong: #4a3a82;
   --overlay-hover: rgba(77, 163, 255, 0.08);
   --success: #7bffb0;
-  --warning: #c97920;
+  --warning: #ffd27a;
   --danger: #ff7a8a;
   --danger-fg: #1a0808;
   --signal: #4da3ff;
@@ -177,7 +177,7 @@
   --border-strong: #383838;
   --overlay-hover: rgba(46, 255, 107, 0.08);
   --success: #2eff6b;
-  --warning: #c97920;
+  --warning: #ffd27a;
   --danger: #ff7a8a;
   --danger-fg: #1a0808;
   --signal: #2eff6b;
@@ -203,7 +203,7 @@
   --border-strong: #3f6256;
   --overlay-hover: rgba(216, 154, 138, 0.08);
   --success: #7bffb0;
-  --warning: #c97920;
+  --warning: #ffd27a;
   --danger: #ff7a8a;
   --danger-fg: #1a0808;
   --signal: #d89a8a;
@@ -229,7 +229,7 @@
   --border-strong: #4a3358;
   --overlay-hover: rgba(255, 91, 161, 0.08);
   --success: #7bffb0;
-  --warning: #c97920;
+  --warning: #ffd27a;
   --danger: #ff7a8a;
   --danger-fg: #1a0808;
   --signal: #ff5ba1;
