@@ -71,7 +71,7 @@ export function DeleteVenueConfirm({
           style={{
             position: 'fixed',
             inset: 0,
-            zIndex: 200,
+            zIndex: 100,
             background: 'rgba(0,0,0,0.5)',
             display: 'flex',
             alignItems: 'center',
@@ -124,11 +124,12 @@ export function DeleteVenueConfirm({
               <h3
                 id="delete-venue-title"
                 style={{
-                  margin: 0,
+                  margin: '8px 0 0',
                   fontFamily: "'Inter', sans-serif",
                   fontSize: 22,
                   fontWeight: 800,
                   letterSpacing: '-0.02em',
+                  lineHeight: 1.15,
                   color: 'var(--fg)',
                 }}
               >
@@ -226,12 +227,12 @@ export function DeleteVenueConfirm({
                     padding: '0 14px',
                     border: 'none',
                     outline: 'none',
-                    background: 'var(--bg-elevated)',
+                    background: 'var(--surface-1)',
                     fontFamily: "'JetBrains Mono', monospace",
                     fontSize: 16,
                     fontWeight: 700,
                     letterSpacing: '0.08em',
-                    color: isArmed ? 'var(--danger)' : 'var(--fg)',
+                    color: 'var(--fg)',
                     boxSizing: 'border-box' as const,
                   }}
                 />
@@ -290,9 +291,13 @@ export function DeleteVenueConfirm({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6,
-                  padding: '8px 16px',
+                  height: 34,
+                  padding: '0 16px',
                   borderRadius: 8,
-                  border: 'none',
+                  border: canDelete
+                    ? '1px solid var(--danger)'
+                    : '1px solid var(--border-strong)',
+                  letterSpacing: '-0.005em',
                   background: canDelete ? 'var(--danger)' : 'var(--surface-2)',
                   color: canDelete ? 'var(--fg-on-accent)' : 'var(--fg-subtle)',
                   fontFamily: "'Inter', sans-serif",

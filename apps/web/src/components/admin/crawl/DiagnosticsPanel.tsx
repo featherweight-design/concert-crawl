@@ -256,9 +256,9 @@ const OptionCard = ({
       >
         {opt.body}
       </div>
-      <div style={{ paddingLeft: 32, marginTop: 4 }}>
+      <div style={{ paddingLeft: 32, marginTop: 10 }}>
         {staged ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <StatusBadge kind="signal" dot>
               Staged
             </StatusBadge>
@@ -353,7 +353,7 @@ export const DiagnosticsPanel = ({
             <span
               style={{
                 fontFamily: 'var(--admin-font, Inter, sans-serif)',
-                fontSize: 14,
+                fontSize: 20,
                 fontWeight: 700,
                 color: 'var(--danger)',
               }}
@@ -364,7 +364,7 @@ export const DiagnosticsPanel = ({
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
+              gridTemplateColumns: 'repeat(4, auto)',
               gap: 14,
               paddingLeft: 26,
             }}
@@ -372,6 +372,7 @@ export const DiagnosticsPanel = ({
             {[
               { label: 'HTTP status', value: run.httpStatusCode ?? '—' },
               { label: 'Error class', value: errClass.replace(/_/g, ' ') },
+              { label: 'Strategy', value: run.strategy },
               {
                 label: 'Consecutive',
                 value: `${run.consecutiveFailures} of 4`,

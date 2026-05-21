@@ -51,14 +51,14 @@ const NavLink = ({
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: mode === 'full' ? 12 : 0,
+        gap: mode === 'full' ? 10 : 0,
         justifyContent: mode === 'rail' ? 'center' : 'flex-start',
         padding: mode === 'full' ? '8px 10px 8px 14px' : '10px 0',
         borderRadius: 8,
         textDecoration: 'none',
         fontFamily: 'var(--admin-font, Inter, sans-serif)',
         fontSize: 13,
-        fontWeight: active ? 600 : 500,
+        fontWeight: active ? 700 : 500,
         letterSpacing: '-0.005em',
         color: active ? 'var(--fg)' : 'var(--fg-muted)',
         background: active
@@ -89,16 +89,16 @@ const NavLink = ({
       {mode === 'full' && showBadge && count > 0 && (
         <span
           style={{
-            minWidth: 18,
-            height: 18,
-            padding: '0 5px',
-            borderRadius: 9,
+            minWidth: 16,
+            height: 16,
+            padding: '2px 5px',
+            borderRadius: 8,
             background: `var(--${item.badge?.kind ?? 'danger'})`,
             color:
               item.badge?.kind === 'warning'
                 ? 'var(--bg)'
                 : 'var(--fg-on-accent, #fff)',
-            fontSize: 10,
+            fontSize: 9,
             fontWeight: 700,
             display: 'inline-flex',
             alignItems: 'center',

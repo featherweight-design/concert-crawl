@@ -138,7 +138,7 @@ export function VenueQuickView({ venue }: Props) {
             style={{
               fontFamily: "'JetBrains Mono', monospace",
               fontSize: 11,
-              color: 'var(--fg-subtle)',
+              color: 'var(--fg-muted)',
               marginLeft: 4,
             }}
           >
@@ -205,9 +205,9 @@ export function VenueQuickView({ venue }: Props) {
             padding: '10px 14px',
             borderRadius: 6,
             marginBottom: 14,
-            background: 'color-mix(in oklab, var(--danger) 8%, transparent)',
+            background: 'color-mix(in oklab, var(--warning) 8%, transparent)',
             border:
-              '1px solid color-mix(in oklab, var(--danger) 22%, transparent)',
+              '1px solid color-mix(in oklab, var(--warning) 30%, transparent)',
           }}
         >
           <div
@@ -237,7 +237,14 @@ export function VenueQuickView({ venue }: Props) {
       )}
 
       {/* Action shelf */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          flexWrap: 'wrap' as const,
+        }}
+      >
         <AdminButton
           variant={crawlState === 'queued' ? 'success' : 'primary'}
           size="sm"

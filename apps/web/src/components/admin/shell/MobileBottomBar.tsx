@@ -72,7 +72,7 @@ export const MobileBottomBar = ({ badgeCounts }: MobileBottomBarProps) => {
               padding: '4px 0',
               borderRadius: 8,
               textDecoration: 'none',
-              color: active ? 'var(--fg)' : 'var(--fg-subtle)',
+              color: active ? 'var(--signal)' : 'var(--fg-muted)',
               position: 'relative',
             }}
           >

@@ -60,10 +60,11 @@ export function FeedbackExpanded({
                 background: 'var(--surface-1)',
                 border: '1px solid var(--border)',
                 borderRadius: 8,
+                fontFamily: "'Inter', sans-serif",
                 fontSize: 13,
                 lineHeight: 1.6,
                 color: 'var(--fg)',
-                marginTop: 6,
+                marginTop: 8,
               }}
             >
               {item.message}
@@ -206,11 +207,13 @@ export function FeedbackExpanded({
             <div
               style={{
                 padding: '12px 14px',
-                background:
-                  'color-mix(in oklab, var(--accent) 7%, transparent)',
+                background: 'var(--bg-elevated)',
                 border:
                   '1px solid color-mix(in oklab, var(--accent) 32%, transparent)',
                 borderRadius: 8,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10,
               }}
             >
               <MonoLabel>linked issue</MonoLabel>
@@ -222,7 +225,6 @@ export function FeedbackExpanded({
                   display: 'flex',
                   alignItems: 'center',
                   gap: 6,
-                  marginTop: 6,
                   fontFamily: "'JetBrains Mono', monospace",
                   fontSize: 12,
                   fontWeight: 700,
@@ -238,12 +240,13 @@ export function FeedbackExpanded({
             <div
               style={{
                 padding: '12px 14px',
-                background: 'var(--surface-1)',
+                background: 'var(--bg-elevated)',
                 border: '1px dashed var(--border-strong)',
                 borderRadius: 8,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
+                gap: 10,
               }}
             >
               <MonoLabel>no linked issue</MonoLabel>
@@ -270,6 +273,7 @@ export function FeedbackExpanded({
         style={{
           display: 'flex',
           alignItems: 'center',
+          flexWrap: 'wrap',
           gap: 8,
           paddingTop: 12,
           marginTop: 14,

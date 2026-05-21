@@ -17,14 +17,14 @@ export const InspectorTabs = ({
     key: InspectorTab
     label: string
     disabled?: boolean
-    dot?: 'danger' | null
+    dot?: 'warning' | null
   }> = [
     { key: 'overview', label: 'Overview' },
     {
       key: 'diagnostics',
       label: 'Diagnostics',
       disabled: !hasDiagnostics,
-      dot: hasDiagnostics ? 'danger' : null,
+      dot: hasDiagnostics ? 'warning' : null,
     },
     { key: 'history', label: 'History' },
   ]

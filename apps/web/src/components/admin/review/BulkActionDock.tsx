@@ -25,7 +25,7 @@ export const BulkActionDock = ({
         marginRight: 'auto',
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 10,
+        gap: 12,
         padding: '10px 12px 10px 18px',
         background: 'var(--ink)',
         borderRadius: 14,
@@ -58,7 +58,7 @@ export const BulkActionDock = ({
         style={{
           fontFamily: "'Inter', sans-serif",
           fontSize: 12,
-          color: 'rgba(255,255,255,0.7)',
+          color: 'var(--paper)',
         }}
       >
         selected

@@ -134,7 +134,7 @@ export const StagedApplyConfirm = ({
       <div
         style={{
           width: 640,
-          maxWidth: '100%',
+          maxWidth: 'calc(100vw - 48px)',
           background: 'var(--bg-elevated)',
           border: '1px solid var(--border)',
           borderRadius: 14,
@@ -290,10 +290,10 @@ export const StagedApplyConfirm = ({
                         alignItems: 'flex-start',
                         gap: 6,
                         color: 'var(--danger)',
-                        background:
-                          'color-mix(in oklab, var(--danger) 6%, transparent)',
+                        background: `color-mix(in oklab, var(--danger) 6%, var(--bg-elevated))`,
                         padding: '4px 8px',
                         borderRadius: 4,
+                        fontSize: 12,
                       }}
                     >
                       <span style={{ fontWeight: 700 }}>−</span>
@@ -307,10 +307,10 @@ export const StagedApplyConfirm = ({
                         alignItems: 'flex-start',
                         gap: 6,
                         color: 'var(--success)',
-                        background:
-                          'color-mix(in oklab, var(--success) 6%, transparent)',
+                        background: `color-mix(in oklab, var(--success) 6%, var(--bg-elevated))`,
                         padding: '4px 8px',
                         borderRadius: 4,
+                        fontSize: 12,
                       }}
                     >
                       <span style={{ fontWeight: 700 }}>+</span>
@@ -418,7 +418,7 @@ export const StagedApplyConfirm = ({
             padding: '14px 22px',
             borderTop: '1px solid var(--border)',
             display: 'flex',
-            gap: 8,
+            gap: 12,
             alignItems: 'center',
             background: 'var(--surface-1)',
           }}

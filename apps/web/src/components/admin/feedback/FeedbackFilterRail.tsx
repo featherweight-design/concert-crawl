@@ -79,7 +79,7 @@ export function FeedbackFilterRail({
               background: isActive ? 'var(--surface-2)' : 'transparent',
               cursor: 'pointer',
               fontSize: 13,
-              fontWeight: isActive ? 600 : 400,
+              fontWeight: isActive ? 700 : 500,
               color: isActive ? 'var(--fg)' : 'var(--fg-muted)',
               fontFamily: "'Inter', sans-serif",
               position: 'relative',
@@ -108,10 +108,9 @@ export function FeedbackFilterRail({
                   fontWeight: 700,
                   padding: '2px 6px',
                   borderRadius: 8,
-                  background: isActive
-                    ? 'var(--bg-elevated)'
-                    : 'var(--surface-1)',
-                  color: isActive ? 'var(--signal)' : 'var(--fg-subtle)',
+                  background: isActive ? 'var(--bg)' : 'var(--surface-1)',
+                  color: 'var(--fg-muted)',
+                  fontVariantNumeric: 'tabular-nums',
                   flexShrink: 0,
                 }}
               >

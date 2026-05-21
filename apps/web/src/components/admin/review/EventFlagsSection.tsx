@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { CheckCircle2 } from 'lucide-react'
-import { Panel, AdminButton } from '@/components/admin/primitives'
+import { Panel, AdminButton, StatusBadge } from '@/components/admin/primitives'
 import { EventFlagRow } from './EventFlagRow'
 import { EventFlagInspector } from './EventFlagInspector'
 import { BulkActionDock } from './BulkActionDock'
@@ -122,16 +122,7 @@ export const EventFlagsSection = ({
               <CheckCircle2 size={18} color="var(--success)" />
             </div>
             <div>
-              <div
-                style={{
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: 'var(--fg)',
-                  fontFamily: "'Inter', sans-serif",
-                }}
-              >
-                Queue clear
-              </div>
+              <StatusBadge kind="success">queue clear</StatusBadge>
               <div
                 style={{
                   fontSize: 13,
@@ -192,19 +183,8 @@ export const EventFlagsSection = ({
           </AdminButton>
         )}
 
-        <span
-          style={{
-            marginLeft: 'auto',
-            background: 'var(--signal)',
-            color: 'var(--fg-on-accent)',
-            borderRadius: 999,
-            padding: '2px 8px',
-            fontSize: 11,
-            fontWeight: 700,
-            fontFamily: "'JetBrains Mono', monospace",
-          }}
-        >
-          {events.length}
+        <span style={{ marginLeft: 'auto' }}>
+          <StatusBadge kind="warning">{events.length}</StatusBadge>
         </span>
       </div>
 

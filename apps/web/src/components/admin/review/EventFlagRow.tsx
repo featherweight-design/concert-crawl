@@ -108,6 +108,7 @@ export const EventFlagRow = ({
       <div style={{ minWidth: 0 }}>
         <div
           style={{
+            fontFamily: "'Inter', sans-serif",
             fontSize: 13,
             fontWeight: 600,
             letterSpacing: '-0.005em',
@@ -117,13 +118,15 @@ export const EventFlagRow = ({
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
             color: 'var(--fg)',
+            marginBottom: 4,
           }}
         >
           {event.title}
         </div>
         <div
           style={{
-            fontSize: 12,
+            fontFamily: "'Inter', sans-serif",
+            fontSize: 11,
             color: 'var(--fg-muted)',
             marginTop: 2,
             overflow: 'hidden',

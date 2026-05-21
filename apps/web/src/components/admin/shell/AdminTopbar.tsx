@@ -40,6 +40,7 @@ export const AdminTopbar = () => {
           display: 'flex',
           alignItems: 'center',
           gap: 14,
+          flex: 1,
           minWidth: 0,
         }}
       >

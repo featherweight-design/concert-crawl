@@ -146,7 +146,7 @@ export const BulkApproveConfirm = ({
         {/* Warning strip */}
         <div
           style={{
-            margin: '0 22px 16px',
+            margin: '12px 22px 16px',
             padding: '10px 12px',
             background: 'color-mix(in oklab, var(--warning) 8%, transparent)',
             border:
@@ -167,6 +167,7 @@ export const BulkApproveConfirm = ({
             borderTop: '1px solid var(--border)',
             display: 'flex',
             gap: 8,
+            justifyContent: 'flex-end',
             background: 'var(--surface-1)',
             borderRadius: '0 0 14px 14px',
           }}
@@ -174,11 +175,7 @@ export const BulkApproveConfirm = ({
           <AdminButton variant="ghost" onClick={onCancel}>
             Cancel
           </AdminButton>
-          <AdminButton
-            variant="success"
-            onClick={onConfirm}
-            style={{ marginLeft: 'auto' }}
-          >
+          <AdminButton variant="success" onClick={onConfirm}>
             Approve all
           </AdminButton>
         </div>

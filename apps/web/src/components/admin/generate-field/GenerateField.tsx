@@ -48,7 +48,8 @@ export function GenerateField({
           borderRadius: 6,
           border:
             '1px solid color-mix(in oklab, var(--accent) 34%, transparent)',
-          background: 'color-mix(in oklab, var(--accent) 8%, transparent)',
+          background:
+            'color-mix(in oklab, var(--accent) 8%, var(--bg-elevated))',
           cursor: 'pointer',
           fontFamily: "'Inter', sans-serif",
           fontSize: 12,
@@ -80,11 +81,12 @@ export function GenerateField({
           display: 'flex',
           alignItems: 'center',
           gap: 8,
-          padding: '8px 12px',
-          borderRadius: 6,
+          padding: '14px 16px',
+          borderRadius: 8,
           border:
             '1px solid color-mix(in oklab, var(--signal) 28%, transparent)',
-          background: 'color-mix(in oklab, var(--signal) 6%, transparent)',
+          background:
+            'color-mix(in oklab, var(--signal) 6%, var(--bg-elevated))',
           fontFamily: "'Inter', sans-serif",
           fontSize: 12,
           color: 'var(--signal)',
@@ -114,7 +116,8 @@ export function GenerateField({
           borderRadius: 8,
           border:
             '1px solid color-mix(in oklab, var(--accent) 32%, transparent)',
-          background: 'color-mix(in oklab, var(--accent) 6%, transparent)',
+          background:
+            'color-mix(in oklab, var(--accent) 6%, var(--bg-elevated))',
           display: 'flex',
           flexDirection: 'column',
           gap: 10,
@@ -191,6 +194,7 @@ export function GenerateField({
               fontSize: 10,
               letterSpacing: '0.04em',
               color: 'var(--fg-subtle)',
+              marginTop: 8,
             }}
           >
             {result.sources.join(' · ')}
@@ -255,7 +259,8 @@ export function GenerateField({
           borderRadius: 20,
           border:
             '1px solid color-mix(in oklab, var(--success) 38%, transparent)',
-          background: 'color-mix(in oklab, var(--success) 5%, transparent)',
+          background:
+            'color-mix(in oklab, var(--success) 5%, var(--bg-elevated))',
           fontFamily: "'JetBrains Mono', monospace",
           fontSize: 11,
           fontWeight: 700,
@@ -284,11 +289,12 @@ export function GenerateField({
           display: 'flex',
           alignItems: 'center',
           gap: 6,
-          padding: '6px 10px',
-          borderRadius: 6,
+          padding: '14px 16px',
+          borderRadius: 8,
           border:
             '1px solid color-mix(in oklab, var(--danger) 32%, transparent)',
-          background: 'color-mix(in oklab, var(--danger) 8%, transparent)',
+          background:
+            'color-mix(in oklab, var(--danger) 8%, var(--bg-elevated))',
           fontFamily: "'Inter', sans-serif",
           fontSize: 12,
           color: 'var(--danger)',

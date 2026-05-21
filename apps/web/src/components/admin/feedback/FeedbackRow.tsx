@@ -90,6 +90,7 @@ export function FeedbackRow({ item, isExpanded, onToggle }: FeedbackRowProps) {
         {/* Message preview */}
         <span
           style={{
+            fontFamily: "'Inter', sans-serif",
             fontSize: 13,
             fontWeight: isUnread ? 600 : 500,
             color: isUnread ? 'var(--fg)' : 'var(--fg-muted)',

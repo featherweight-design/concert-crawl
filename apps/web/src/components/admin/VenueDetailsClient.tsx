@@ -156,7 +156,7 @@ function VDField({
             fontSize: 11,
             color: 'var(--fg-muted)',
             lineHeight: 1.5,
-            marginTop: 2,
+            marginTop: 6,
           }}
         >
           {hint}
@@ -289,7 +289,7 @@ function VDSelect({ id, value, disabled, onChange, children }: VDSelectProps) {
         opacity: disabled ? 0.66 : 1,
         cursor: disabled ? 'not-allowed' : 'pointer',
         appearance: 'none' as const,
-        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B6B6B' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
         backgroundRepeat: 'no-repeat',
         backgroundPosition: 'right 10px center',
         boxShadow: focused
@@ -319,6 +319,7 @@ function VDSegToggle({ options, value, onChange, disabled }: VDSegToggleProps) {
         padding: 2,
         borderRadius: 8,
         background: 'var(--surface-1)',
+        border: '1px solid var(--border)',
         gap: 0,
       }}
     >
@@ -712,7 +713,8 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: 20,
+        gap: 18,
+        maxWidth: 1080,
         paddingBottom: 80,
         position: 'relative',
       }}
@@ -856,7 +858,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                       fontFamily: "'JetBrains Mono', monospace",
                       fontSize: 10,
                       fontWeight: 700,
-                      letterSpacing: '0.08em',
+                      letterSpacing: '0.06em',
                       textTransform: 'uppercase',
                       color: 'var(--fg-subtle)',
                     }}
@@ -1260,7 +1262,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
 
           {/* 04 · editorial */}
           <VDSection eyebrow="04 · editorial" title="Editorial Info">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
               {/* Capacity + Venue type row */}
               <div
                 style={{

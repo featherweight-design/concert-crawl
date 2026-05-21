@@ -82,7 +82,8 @@ export const EventFlagInspector = ({
             fontSize: 18,
             fontWeight: 700,
             letterSpacing: '-0.02em',
-            margin: '6px 0 0',
+            lineHeight: 1.3,
+            margin: 0,
             color: 'var(--fg)',
             fontFamily: "'Inter', sans-serif",
           }}
@@ -113,12 +114,14 @@ export const EventFlagInspector = ({
           <div
             style={{
               padding: '12px 14px',
-              background: 'color-mix(in oklab, var(--signal) 7%, transparent)',
+              background: 'color-mix(in oklab, var(--accent) 7%, transparent)',
               border:
-                '1px solid color-mix(in oklab, var(--signal) 30%, transparent)',
+                '1px solid color-mix(in oklab, var(--accent) 30%, transparent)',
               borderRadius: 8,
+              fontFamily: "'Inter', sans-serif",
               fontSize: 12,
               lineHeight: 1.55,
+              marginTop: 8,
             }}
           >
             <div style={{ marginBottom: 4 }}>
@@ -140,6 +143,7 @@ export const EventFlagInspector = ({
               borderRadius: 8,
               fontFamily: "'JetBrains Mono', monospace",
               fontSize: 11,
+              marginTop: 8,
             }}
           >
             <div style={{ marginBottom: 4 }}>
@@ -150,9 +154,10 @@ export const EventFlagInspector = ({
               target="_blank"
               rel="noreferrer"
               style={{
-                color: 'var(--signal)',
+                color: 'var(--fg-muted)',
                 textDecoration: 'none',
                 wordBreak: 'break-all',
+                whiteSpace: 'pre-wrap',
               }}
             >
               {event.sourceUrl}

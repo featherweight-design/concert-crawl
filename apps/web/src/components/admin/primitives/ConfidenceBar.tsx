@@ -14,7 +14,7 @@ export const ConfidenceBar = ({ score }: ConfidenceBarProps) => {
         style={{
           flex: 1,
           height: 4,
-          borderRadius: 999,
+          borderRadius: 4,
           background: 'var(--surface-2)',
           overflow: 'hidden',
         }}
@@ -24,7 +24,7 @@ export const ConfidenceBar = ({ score }: ConfidenceBarProps) => {
             width: `${score * 100}%`,
             height: '100%',
             background: color,
-            borderRadius: 999,
+            borderRadius: 4,
           }}
         />
       </div>
@@ -32,6 +32,7 @@ export const ConfidenceBar = ({ score }: ConfidenceBarProps) => {
         style={{
           fontFamily: "'JetBrains Mono', monospace",
           fontSize: 11,
+          fontWeight: 700,
           color,
           fontVariantNumeric: 'tabular-nums',
           minWidth: 32,
