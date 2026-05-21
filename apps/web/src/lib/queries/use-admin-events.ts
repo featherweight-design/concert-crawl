@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@clerk/nextjs'
 import { apiClient } from '@/lib/api'
-import type { AdminEvent } from '@/app/(protected)/admin/events/page'
+import type { AdminEvent } from '@/components/admin/events/types'
 
 export const adminEventsQueryKey = ['admin', 'events'] as const
 

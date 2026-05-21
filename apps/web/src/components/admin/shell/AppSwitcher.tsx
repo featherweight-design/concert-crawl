@@ -8,8 +8,8 @@ interface AppSwitcherProps {
 }
 
 const SIZES = {
-  sm: { h: 26, fs: 10, px: 8, gap: 4, iconSize: 12 },
-  md: { h: 30, fs: 11, px: 10, gap: 5, iconSize: 13 },
+  sm: { height: 26, fs: 10, px: 8, gap: 4, iconSize: 12 },
+  md: { height: 30, fs: 11, px: 10, gap: 5, iconSize: 13 },
 } as const
 
 export const AppSwitcher = ({ size = 'md' }: AppSwitcherProps) => {
@@ -26,7 +26,7 @@ export const AppSwitcher = ({ size = 'md' }: AppSwitcherProps) => {
         borderRadius: 8,
         background: 'var(--surface-1)',
         border: '1px solid var(--border)',
-        height: sz.h + 4,
+        height: sz.height + 4,
         flexShrink: 0,
       }}
     >
@@ -39,7 +39,7 @@ export const AppSwitcher = ({ size = 'md' }: AppSwitcherProps) => {
           display: 'inline-flex',
           alignItems: 'center',
           gap: sz.gap,
-          height: sz.h,
+          height: sz.height,
           padding: `0 ${sz.px}px`,
           borderRadius: 6,
           fontFamily: 'var(--admin-font, Inter, sans-serif)',
@@ -69,7 +69,7 @@ export const AppSwitcher = ({ size = 'md' }: AppSwitcherProps) => {
           display: 'inline-flex',
           alignItems: 'center',
           gap: sz.gap,
-          height: sz.h,
+          height: sz.height,
           padding: `0 ${sz.px}px`,
           borderRadius: 6,
           fontFamily: 'var(--admin-font, Inter, sans-serif)',

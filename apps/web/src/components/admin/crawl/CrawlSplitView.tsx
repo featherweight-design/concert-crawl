@@ -15,6 +15,10 @@ import {
 } from '@/components/admin/primitives'
 import type { CrawlRun } from '@concert-crawl/types'
 import { formatCostValue } from '@/app/(protected)/admin/crawl/crawl-stats'
+import { InspectorTabs } from '@/components/admin/crawl/InspectorTabs'
+import type { InspectorTab } from '@/components/admin/crawl/InspectorTabs'
+import { DiagnosticsPanel } from '@/components/admin/crawl/DiagnosticsPanel'
+import { StagedApplyConfirm } from '@/components/admin/crawl/StagedApplyConfirm'
 
 const MT_TIMEZONE = 'America/Denver'
 
@@ -230,6 +234,9 @@ export const CrawlSplitView = ({
       : (initialStatus[0]?.venueId ?? null)
 
   const [selectedId, setSelectedId] = useState<string | null>(resolvedInitialId)
+  const [activeTab, setActiveTab] = useState<InspectorTab>('overview')
+  const [stagedId, setStagedId] = useState<string | null>(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   function selectVenue(venueId: string | null) {
     setSelectedId(venueId)
@@ -258,6 +265,16 @@ export const CrawlSplitView = ({
   useEffect(() => {
     setSelectedRunId(null)
   }, [selectedId])
+
+  // Default to diagnostics tab when selected venue has a failed/blocked run
+  useEffect(() => {
+    const row = initialStatus.find((sr) => sr.venueId === selectedId)
+    if (row && (row.status === 'failed' || row.blockedAt !== null)) {
+      setActiveTab('diagnostics')
+    } else {
+      setActiveTab('overview')
+    }
+  }, [selectedId, initialStatus])
 
   // Close filter panel on outside click
   useEffect(() => {
@@ -330,6 +347,26 @@ export const CrawlSplitView = ({
 
   const venueRecrawlState = selectedId ? recrawlState[selectedId] : undefined
   const venueRecrawlError = selectedId ? recrawlError[selectedId] : undefined
+
+  const hasDiagnostics =
+    selected !== undefined &&
+    (selected.status === 'failed' ||
+      selected.status === 'blocked' ||
+      selected.blockedAt !== null)
+
+  const diagnosticsRun =
+    selected && activeRun
+      ? {
+          id: activeRun.id,
+          status: activeRun.status,
+          httpStatusCode: activeRun.httpStatusCode,
+          errorMessage: activeRun.errorMessage ?? null,
+          consecutiveFailures: selected.consecutiveFailures,
+          strategy: selected.strategy,
+          venueName: selected.venueName,
+          websiteUrl: selected.websiteUrl,
+        }
+      : null
 
   return (
     <div
@@ -741,8 +778,14 @@ export const CrawlSplitView = ({
                 )}
               </div>
 
-              {/* Vitals */}
-              {activeRun && (
+              <InspectorTabs
+                value={activeTab}
+                onChange={setActiveTab}
+                hasDiagnostics={hasDiagnostics}
+              />
+
+              {/* Vitals — overview only */}
+              {activeTab === 'overview' && activeRun && (
                 <div
                   style={{
                     display: 'grid',
@@ -817,240 +860,291 @@ export const CrawlSplitView = ({
                 </div>
               )}
 
-              {/* Content */}
-              <div
-                style={{
-                  padding: activeRun ? '20px 22px' : 0,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 18,
-                  overflowY: 'auto',
-                  flex: 1,
-                }}
-              >
-                {activeRun ? (
-                  <>
-                    {/* Events mini cards */}
-                    <div>
-                      <div
-                        style={{
-                          fontSize: 10,
-                          fontWeight: 700,
-                          letterSpacing: '0.08em',
-                          textTransform: 'uppercase' as const,
-                          color: 'var(--fg-subtle)',
-                          marginBottom: 10,
-                        }}
-                      >
-                        Events
+              {/* Overview tab content */}
+              {activeTab === 'overview' && (
+                <div
+                  style={{
+                    padding: activeRun ? '20px 22px' : 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 18,
+                    overflowY: 'auto',
+                    flex: 1,
+                  }}
+                >
+                  {activeRun ? (
+                    <>
+                      {/* Events mini cards */}
+                      <div>
+                        <div
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            letterSpacing: '0.08em',
+                            textTransform: 'uppercase' as const,
+                            color: 'var(--fg-subtle)',
+                            marginBottom: 10,
+                          }}
+                        >
+                          Events
+                        </div>
+                        <div
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(3, 1fr)',
+                            gap: 12,
+                          }}
+                        >
+                          {[
+                            {
+                              label: 'Found',
+                              value: activeRun.eventsFound as string | number,
+                              color:
+                                activeRun.eventsFound > 0
+                                  ? 'var(--fg)'
+                                  : 'var(--fg-subtle)',
+                            },
+                            {
+                              label: 'Created',
+                              value: activeRun.eventsInserted as
+                                | string
+                                | number,
+                              color:
+                                activeRun.eventsInserted > 0
+                                  ? 'var(--success)'
+                                  : 'var(--fg-subtle)',
+                            },
+                            {
+                              label: 'Updated',
+                              value: activeRun.eventsUpdated as string | number,
+                              color:
+                                activeRun.eventsUpdated > 0
+                                  ? 'var(--fg)'
+                                  : 'var(--fg-subtle)',
+                            },
+                          ].map((stat) => (
+                            <div
+                              key={stat.label}
+                              style={{
+                                padding: '14px 16px',
+                                borderRadius: 8,
+                                background: 'var(--surface-1)',
+                                border: '1px solid var(--border)',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  fontFamily: "'JetBrains Mono', monospace",
+                                  fontSize: 22,
+                                  fontWeight: 700,
+                                  color: stat.color,
+                                  fontVariantNumeric: 'tabular-nums',
+                                  letterSpacing: '-0.02em',
+                                }}
+                              >
+                                {stat.value}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  letterSpacing: '0.08em',
+                                  textTransform: 'uppercase' as const,
+                                  color: 'var(--fg-subtle)',
+                                  marginTop: 4,
+                                }}
+                              >
+                                {stat.label}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <div
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(3, 1fr)',
-                          gap: 12,
-                        }}
-                      >
-                        {[
-                          {
-                            label: 'Found',
-                            value: activeRun.eventsFound as string | number,
-                            color:
-                              activeRun.eventsFound > 0
-                                ? 'var(--fg)'
-                                : 'var(--fg-subtle)',
-                          },
-                          {
-                            label: 'Created',
-                            value: activeRun.eventsInserted as string | number,
-                            color:
-                              activeRun.eventsInserted > 0
-                                ? 'var(--success)'
-                                : 'var(--fg-subtle)',
-                          },
-                          {
-                            label: 'Updated',
-                            value: activeRun.eventsUpdated as string | number,
-                            color:
-                              activeRun.eventsUpdated > 0
-                                ? 'var(--fg)'
-                                : 'var(--fg-subtle)',
-                          },
-                        ].map((stat) => (
+
+                      {/* Error block */}
+                      {activeRun.errorMessage && (
+                        <ErrorBlock
+                          errorMessage={activeRun.errorMessage}
+                          httpStatusCode={activeRun.httpStatusCode}
+                          consecutiveFailures={selected.consecutiveFailures}
+                          blockedAt={selected.blockedAt}
+                        />
+                      )}
+
+                      {/* Source preview */}
+                      {selected.websiteUrl && (
+                        <div>
                           <div
-                            key={stat.label}
                             style={{
-                              padding: '14px 16px',
-                              borderRadius: 8,
-                              background: 'var(--surface-1)',
-                              border: '1px solid var(--border)',
+                              fontSize: 10,
+                              fontWeight: 700,
+                              letterSpacing: '0.08em',
+                              textTransform: 'uppercase' as const,
+                              color: 'var(--fg-subtle)',
+                              marginBottom: 8,
                             }}
                           >
-                            <div
+                            Source
+                          </div>
+                          <div
+                            style={{
+                              padding: '12px 14px',
+                              background: 'var(--surface-1)',
+                              borderRadius: 8,
+                              border: '1px solid var(--border)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 10,
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: 13,
+                                color: 'var(--fg-subtle)',
+                                flexShrink: 0,
+                              }}
+                            >
+                              ↗
+                            </span>
+                            <span
                               style={{
                                 fontFamily: "'JetBrains Mono', monospace",
-                                fontSize: 22,
-                                fontWeight: 700,
-                                color: stat.color,
-                                fontVariantNumeric: 'tabular-nums',
-                                letterSpacing: '-0.02em',
+                                fontSize: 12,
+                                color: 'var(--fg-muted)',
+                                flex: 1,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap' as const,
                               }}
                             >
-                              {stat.value}
-                            </div>
-                            <div
-                              style={{
-                                fontSize: 10,
-                                fontWeight: 700,
-                                letterSpacing: '0.08em',
-                                textTransform: 'uppercase' as const,
-                                color: 'var(--fg-subtle)',
-                                marginTop: 4,
-                              }}
-                            >
-                              {stat.label}
-                            </div>
+                              {selected.websiteUrl}
+                            </span>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Error block */}
-                    {activeRun.errorMessage && (
-                      <ErrorBlock
-                        errorMessage={activeRun.errorMessage}
-                        httpStatusCode={activeRun.httpStatusCode}
-                        consecutiveFailures={selected.consecutiveFailures}
-                        blockedAt={selected.blockedAt}
-                      />
-                    )}
-
-                    {/* Source preview */}
-                    {selected.websiteUrl && (
-                      <div>
-                        <div
-                          style={{
-                            fontSize: 10,
-                            fontWeight: 700,
-                            letterSpacing: '0.08em',
-                            textTransform: 'uppercase' as const,
-                            color: 'var(--fg-subtle)',
-                            marginBottom: 8,
-                          }}
-                        >
-                          Source
                         </div>
-                        <div
-                          style={{
-                            padding: '12px 14px',
-                            background: 'var(--surface-1)',
-                            borderRadius: 8,
-                            border: '1px solid var(--border)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 10,
-                          }}
-                        >
-                          <span
+                      )}
+
+                      {/* Strategy */}
+                      {selected.strategy && selected.strategy !== '—' && (
+                        <div>
+                          <div
                             style={{
-                              fontSize: 13,
+                              fontSize: 10,
+                              fontWeight: 700,
+                              letterSpacing: '0.08em',
+                              textTransform: 'uppercase' as const,
                               color: 'var(--fg-subtle)',
-                              flexShrink: 0,
+                              marginBottom: 8,
                             }}
                           >
-                            ↗
-                          </span>
-                          <span
-                            style={{
-                              fontFamily: "'JetBrains Mono', monospace",
-                              fontSize: 12,
-                              color: 'var(--fg-muted)',
-                              flex: 1,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap' as const,
-                            }}
+                            Strategy
+                          </div>
+                          <StatusBadge
+                            kind={
+                              selected.strategy === 'structured'
+                                ? 'signal'
+                                : selected.strategy === 'llm'
+                                  ? 'warning'
+                                  : 'neutral'
+                            }
                           >
-                            {selected.websiteUrl}
-                          </span>
+                            {selected.strategy}
+                          </StatusBadge>
                         </div>
-                      </div>
-                    )}
-
-                    {/* Strategy */}
-                    {selected.strategy && selected.strategy !== '—' && (
-                      <div>
-                        <div
-                          style={{
-                            fontSize: 10,
-                            fontWeight: 700,
-                            letterSpacing: '0.08em',
-                            textTransform: 'uppercase' as const,
-                            color: 'var(--fg-subtle)',
-                            marginBottom: 8,
-                          }}
-                        >
-                          Strategy
-                        </div>
-                        <StatusBadge
-                          kind={
-                            selected.strategy === 'structured'
-                              ? 'signal'
-                              : selected.strategy === 'llm'
-                                ? 'warning'
-                                : 'neutral'
-                          }
-                        >
-                          {selected.strategy}
-                        </StatusBadge>
-                      </div>
-                    )}
-                  </>
-                ) : !venueRunsLoading ? (
-                  <div
-                    style={{
-                      flex: 1,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 12,
-                      padding: '40px 24px',
-                      textAlign: 'center',
-                    }}
-                  >
+                      )}
+                    </>
+                  ) : !venueRunsLoading ? (
                     <div
                       style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: '50%',
-                        background: 'var(--surface-1)',
-                        border: '1px solid var(--border)',
+                        flex: 1,
                         display: 'flex',
+                        flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
+                        gap: 12,
+                        padding: '40px 24px',
+                        textAlign: 'center',
                       }}
                     >
-                      <RefreshCw size={22} style={{ opacity: 0.35 }} />
-                    </div>
-                    <div>
                       <div
                         style={{
-                          fontSize: 14,
-                          fontWeight: 600,
-                          color: 'var(--fg-muted)',
-                          marginBottom: 4,
+                          width: 48,
+                          height: 48,
+                          borderRadius: '50%',
+                          background: 'var(--surface-1)',
+                          border: '1px solid var(--border)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                         }}
                       >
-                        No runs yet
+                        <RefreshCw size={22} style={{ opacity: 0.35 }} />
                       </div>
-                      <div style={{ fontSize: 12, color: 'var(--fg-subtle)' }}>
-                        Hit Re-crawl to trigger the first run for this venue.
+                      <div>
+                        <div
+                          style={{
+                            fontSize: 14,
+                            fontWeight: 600,
+                            color: 'var(--fg-muted)',
+                            marginBottom: 4,
+                          }}
+                        >
+                          No runs yet
+                        </div>
+                        <div
+                          style={{ fontSize: 12, color: 'var(--fg-subtle)' }}
+                        >
+                          Hit Re-crawl to trigger the first run for this venue.
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ) : null}
-              </div>
+                  ) : null}
+                </div>
+              )}
+
+              {/* Diagnostics tab content */}
+              {activeTab === 'diagnostics' && diagnosticsRun && (
+                <div style={{ overflowY: 'auto', flex: 1 }}>
+                  <DiagnosticsPanel
+                    run={diagnosticsRun}
+                    historyEntries={[]}
+                    onStage={(optId) => {
+                      setStagedId(optId)
+                    }}
+                    onApply={(optId) => {
+                      setStagedId(optId)
+                      setConfirmOpen(true)
+                    }}
+                    onDiscard={() => setStagedId(null)}
+                    stagedId={stagedId}
+                  />
+                </div>
+              )}
+
+              {/* History tab content */}
+              {activeTab === 'history' && (
+                <div style={{ overflowY: 'auto', flex: 1 }}>
+                  <CrawlRunHistoryTable
+                    runs={venueRuns}
+                    loading={venueRunsLoading}
+                    selectedVenueName={selected.venueName}
+                    selectedRunId={selectedRunId}
+                    onSelectRun={(runId) => setSelectedRunId(runId)}
+                  />
+                </div>
+              )}
+
+              {/* Staged apply confirm modal */}
+              {confirmOpen && stagedId && (
+                <StagedApplyConfirm
+                  stagedId={stagedId}
+                  venueName={selected.venueName}
+                  onCancel={() => setConfirmOpen(false)}
+                  onApply={() => {
+                    setConfirmOpen(false)
+                    setStagedId(null)
+                  }}
+                />
+              )}
             </>
           ) : (
             <div

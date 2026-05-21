@@ -32,11 +32,11 @@ describe('buildBreadcrumbs', () => {
     ])
   })
 
-  it('returns section link + New on a generic new-entity page', () => {
-    const crumbs = buildBreadcrumbs('/admin/events/new', NAV)
+  it('returns section link + sub-label on a review sub-page', () => {
+    const crumbs = buildBreadcrumbs('/admin/review/abc123', NAV)
     expect(crumbs).toEqual([
-      { label: 'Event review', href: '/admin/events' },
-      { label: 'New' },
+      { label: 'Review', href: '/admin/review' },
+      { label: 'Details' },
     ])
   })
 

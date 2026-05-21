@@ -15,7 +15,7 @@ import {
   MonoLabel,
 } from '@/components/admin/primitives'
 import { Check, X, Edit2, Filter, ChevronRight, Tag } from 'lucide-react'
-import type { AdminEvent } from '@/app/(protected)/admin/events/page'
+import type { AdminEvent } from '@/components/admin/events/types'
 
 type StatusTab = 'pending' | 'low_conf' | 'duplicates' | 'approved' | 'rejected'
 

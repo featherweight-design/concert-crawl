@@ -84,10 +84,11 @@ function buildAttentionItems(
     (row) => row.status === 'failed' || row.blockedAt !== null,
   )
   for (const venue of failedVenues.slice(0, 3)) {
-    const venueName = venues.find((vn) => vn.id === venue.id)?.name ?? venue.id
+    const venueName =
+      venues.find((vn) => vn.id === venue.venueId)?.name ?? venue.venueId
     const isBlocked = venue.blockedAt !== null
     items.push({
-      id: `crawl-${venue.id}`,
+      id: `crawl-${venue.venueId}`,
       severity: 'danger',
       iconName: isBlocked ? 'ShieldAlert' : 'AlertCircle',
       title: `${venueName} — crawl ${isBlocked ? 'blocked' : 'failed'}`,
@@ -254,14 +255,15 @@ export default async function AdminDashboardPage() {
           kind={
             pendingEventCount + pendingPriceCount > 0 ? 'warning' : 'neutral'
           }
-          hint={
-            [
+          {...(() => {
+            const hint = [
               pendingEventCount > 0 ? `${pendingEventCount} events` : '',
               pendingPriceCount > 0 ? `${pendingPriceCount} prices` : '',
             ]
               .filter(Boolean)
-              .join(' · ') || undefined
-          }
+              .join(' · ')
+            return hint ? { hint } : {}
+          })()}
           footer={
             <Link
               href="/admin/review"
@@ -327,7 +329,10 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* Attention feed */}
-      <AttentionFeed items={attentionItems} digestLabel={digestLabel} />
+      <AttentionFeed
+        items={attentionItems}
+        {...(digestLabel ? { digestLabel } : {})}
+      />
 
       {/* Crawl health detail */}
       <Panel title="Crawl health · today" padding={0}>
