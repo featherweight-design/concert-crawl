@@ -31,7 +31,7 @@ Several production services were provisioned with settings that differ from `ren
    - **Build Command:** `npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/api`
    - **Start Command:** `node apps/api/dist/index.js`
    - **Health Check Path:** `/v1/health` — must not be blank
-   - **Auto-Deploy:** `No` — GitHub Actions is the deploy trigger
+   - **Auto-Deploy:** `No` — production deploys are triggered manually from the Render dashboard (see Step 12)
 3. Save changes.
 
 ### concert-crawl-web
@@ -163,41 +163,41 @@ Go to each service in the Render dashboard → **Environment** tab. `DATABASE_UR
 
 ### concert-crawl-api
 
-| Variable                | Value                                                                |
-| ----------------------- | -------------------------------------------------------------------- |
-| `DATABASE_URL`          | Auto-set via `fromDatabase` in render.yaml — verify it's populated   |
-| `CLERK_SECRET_KEY`      | `sk_live_...` from Step 1                                            |
-| `ALLOWED_ORIGIN`        | `https://concertcrawl.app`                                           |
-| `ANTHROPIC_API_KEY`     | From Anthropic console                                               |
-| `STRIPE_SECRET_KEY`     | `sk_live_...` from Step 3                                            |
-| `STRIPE_WEBHOOK_SECRET` | Production webhook signing secret from Step 3                        |
-| `RESEND_API_KEY`        | From Step 3                                                          |
-| `SENTRY_DSN`            | API project DSN from Step 3                                          |
-| `SENTRY_ENVIRONMENT`    | `production`                                                         |
-| `LOG_LEVEL`             | `info`                                                               |
-| `NODE_ENV`              | `production`                                                         |
+| Variable                | Value                                                                                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `DATABASE_URL`          | Auto-set via `fromDatabase` in render.yaml — verify it's populated                                                                               |
+| `CLERK_SECRET_KEY`      | `sk_live_...` from Step 1                                                                                                                        |
+| `ALLOWED_ORIGIN`        | `https://concertcrawl.app`                                                                                                                       |
+| `ANTHROPIC_API_KEY`     | From Anthropic console                                                                                                                           |
+| `STRIPE_SECRET_KEY`     | `sk_live_...` from Step 3                                                                                                                        |
+| `STRIPE_WEBHOOK_SECRET` | Production webhook signing secret from Step 3                                                                                                    |
+| `RESEND_API_KEY`        | From Step 3                                                                                                                                      |
+| `SENTRY_DSN`            | API project DSN from Step 3                                                                                                                      |
+| `SENTRY_ENVIRONMENT`    | `production`                                                                                                                                     |
+| `LOG_LEVEL`             | `info`                                                                                                                                           |
+| `NODE_ENV`              | `production`                                                                                                                                     |
 | `REQUIRE_BETA_AUTH`     | `true` — gates public browse/search/venue routes behind Clerk auth during private beta. Remove or set to `false` at public launch (see Step 14). |
 
 > **PORT:** Render injects `PORT=10000` automatically for web services. Do not override it unless Hono is explicitly bound to a different port.
 
 ### concert-crawl-web
 
-| Variable                              | Value                                                           |
-| ------------------------------------- | --------------------------------------------------------------- |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`   | `pk_live_...` from Step 1                                       |
-| `CLERK_SECRET_KEY`                    | `sk_live_...` from Step 1                                       |
-| `NEXT_PUBLIC_API_URL`                 | `https://concert-crawl-api.onrender.com`                        |
-| `NEXT_PUBLIC_CLERK_SIGN_IN_URL`       | `/sign-in`                                                      |
-| `NEXT_PUBLIC_CLERK_SIGN_UP_URL`       | `/sign-up`                                                      |
-| `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` | `/events`                                                       |
-| `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL` | `/auth/complete`                                                |
-| `INVITE_COOKIE_SECRET`                | Generate: `openssl rand -hex 32` — gates the invite code wall   |
-| `SENTRY_DSN`                          | Web project DSN from Step 3                                     |
-| `NEXT_PUBLIC_SENTRY_DSN`              | Same as `SENTRY_DSN`                                            |
-| `SENTRY_ENVIRONMENT`                  | `production`                                                    |
-| `NEXT_PUBLIC_SENTRY_ENVIRONMENT`      | `production`                                                    |
+| Variable                              | Value                                                                  |
+| ------------------------------------- | ---------------------------------------------------------------------- |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`   | `pk_live_...` from Step 1                                              |
+| `CLERK_SECRET_KEY`                    | `sk_live_...` from Step 1                                              |
+| `NEXT_PUBLIC_API_URL`                 | `https://concert-crawl-api.onrender.com`                               |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_URL`       | `/sign-in`                                                             |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_URL`       | `/sign-up`                                                             |
+| `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` | `/events`                                                              |
+| `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL` | `/auth/complete`                                                       |
+| `INVITE_COOKIE_SECRET`                | Generate: `openssl rand -hex 32` — gates the invite code wall          |
+| `SENTRY_DSN`                          | Web project DSN from Step 3                                            |
+| `NEXT_PUBLIC_SENTRY_DSN`              | Same as `SENTRY_DSN`                                                   |
+| `SENTRY_ENVIRONMENT`                  | `production`                                                           |
+| `NEXT_PUBLIC_SENTRY_ENVIRONMENT`      | `production`                                                           |
 | `SENTRY_AUTH_TOKEN`                   | Auth token from Step 3 — required for source map uploads at build time |
-| `NODE_ENV`                            | `production`                                                    |
+| `NODE_ENV`                            | `production`                                                           |
 
 > `NEXT_PUBLIC_APP_VERSION` is auto-injected at build time: the version prefix comes from the `version` field in root `package.json` (bumped automatically by `semantic-release`), and the commit hash suffix comes from `RENDER_GIT_COMMIT`. No manual setup required.
 
@@ -205,16 +205,16 @@ Go to each service in the Render dashboard → **Environment** tab. `DATABASE_UR
 
 Both crawler cron jobs need the same set of variables. Set them on each service separately in the Render dashboard.
 
-| Variable             | Value                                                               |
-| -------------------- | ------------------------------------------------------------------- |
-| `DATABASE_URL`       | Auto-set via `fromDatabase` in render.yaml — verify it's populated  |
-| `ANTHROPIC_API_KEY`  | From Anthropic console                                              |
-| `RESEND_API_KEY`     | From Step 3                                                         |
-| `ADMIN_EMAIL`        | Your email address for crawl failure notifications                  |
-| `SENTRY_DSN`         | Crawler project DSN from Step 3                                     |
-| `SENTRY_ENVIRONMENT` | `production`                                                        |
-| `LOG_LEVEL`          | `info`                                                              |
-| `NODE_ENV`           | `production`                                                        |
+| Variable             | Value                                                              |
+| -------------------- | ------------------------------------------------------------------ |
+| `DATABASE_URL`       | Auto-set via `fromDatabase` in render.yaml — verify it's populated |
+| `ANTHROPIC_API_KEY`  | From Anthropic console                                             |
+| `RESEND_API_KEY`     | From Step 3                                                        |
+| `ADMIN_EMAIL`        | Your email address for crawl failure notifications                 |
+| `SENTRY_DSN`         | Crawler project DSN from Step 3                                    |
+| `SENTRY_ENVIRONMENT` | `production`                                                       |
+| `LOG_LEVEL`          | `info`                                                             |
+| `NODE_ENV`           | `production`                                                       |
 
 > `CRAWL_MODE` and `ADMIN_URL` are hardcoded in `render.yaml` — do not override them.
 
@@ -232,12 +232,12 @@ Go to the repository on GitHub → **Settings** → **Environments**.
 
 ### `staging` environment — Secrets
 
-| Secret                   | Value                                                                               |
-| ------------------------ | ----------------------------------------------------------------------------------- |
-| `RENDER_DEPLOY_HOOK_API` | Render → `concert-crawl-api-staging` → Settings → Deploy Hook → generate and copy  |
-| `RENDER_DEPLOY_HOOK_WEB` | Render → `concert-crawl-web-staging` → Settings → Deploy Hook → generate and copy  |
-| `DATABASE_URL`           | Staging DB connection string (from Render Postgres dashboard)                       |
-| `SENTRY_DSN`             | Crawler/API project DSN for the staging Sentry project                              |
+| Secret                   | Value                                                                             |
+| ------------------------ | --------------------------------------------------------------------------------- |
+| `RENDER_DEPLOY_HOOK_API` | Render → `concert-crawl-api-staging` → Settings → Deploy Hook → generate and copy |
+| `RENDER_DEPLOY_HOOK_WEB` | Render → `concert-crawl-web-staging` → Settings → Deploy Hook → generate and copy |
+| `DATABASE_URL`           | Staging DB connection string — for future crawler/migration GHA jobs              |
+| `SENTRY_DSN`             | Staging Sentry project DSN — for future observability GHA jobs                    |
 
 ### `staging` environment — Variables
 
@@ -248,41 +248,41 @@ Go to the repository on GitHub → **Settings** → **Environments**.
 
 ### `production` environment — Secrets
 
-| Secret                   | Value                                                                                       |
-| ------------------------ | ------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`           | Production DB connection string (from Render Postgres dashboard)                            |
-| `SENTRY_DSN`             | Crawler project DSN from Step 3                                                             |
-| `RENDER_DEPLOY_HOOK_API` | Render → `concert-crawl-api` → Settings → Deploy Hook → generate and copy *(needed once `deploy-production.yml` is built — pre-provision now)* |
-| `RENDER_DEPLOY_HOOK_WEB` | Render → `concert-crawl-web` → Settings → Deploy Hook → generate and copy *(same)*         |
+| Secret                   | Value                                                                                                                                          |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`           | Production DB connection string (from Render Postgres dashboard)                                                                               |
+| `SENTRY_DSN`             | Crawler project DSN from Step 3                                                                                                                |
+| `RENDER_DEPLOY_HOOK_API` | Render → `concert-crawl-api` → Settings → Deploy Hook → generate and copy _(needed once `deploy-production.yml` is built — pre-provision now)_ |
+| `RENDER_DEPLOY_HOOK_WEB` | Render → `concert-crawl-web` → Settings → Deploy Hook → generate and copy _(same)_                                                             |
 
 ### `production` environment — Variables
 
-| Variable             | Value        |
-| -------------------- | ------------ |
-| `SENTRY_ENVIRONMENT` | `production` |
-| `LOG_LEVEL`          | `info`       |
-| `ADMIN_EMAIL`        | Your email address for crawl failure notifications |
+| Variable             | Value                                                                       |
+| -------------------- | --------------------------------------------------------------------------- |
+| `SENTRY_ENVIRONMENT` | `production`                                                                |
+| `LOG_LEVEL`          | `info`                                                                      |
+| `ADMIN_EMAIL`        | Pre-provisioned for future crawler GHA jobs — no current workflow uses this |
 
 ### Repository-level secrets (Settings → Secrets → Actions)
 
-| Secret                     | Value                                                                                  |
-| -------------------------- | -------------------------------------------------------------------------------------- |
-| `GH_TOKEN`                 | Personal access token with `repo` scope — used by `release.yml` (semantic-release) to push the release commit back to `main`. Required before branch protection is enabled. Generate at GitHub → Settings → Developer Settings → Personal access tokens (classic). |
-| `SENTRY_DSN_SMOKE`         | Sentry DSN for smoke test error reporting                                              |
-| `E2E_TEST_USER_EMAIL`      | Email of the test Clerk user for staging E2E runs                                      |
-| `E2E_TEST_USER_PASSWORD`   | Password of the test Clerk user for staging E2E runs                                   |
-| `ANTHROPIC_API_KEY`        | Used by production crawl GitHub Actions jobs                                           |
-| `RESEND_API_KEY`           | Used by production crawl GitHub Actions jobs                                           |
+| Secret                   | Value                                                                                                                                                                                                                                                              |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GH_TOKEN`               | Personal access token with `repo` scope — used by `release.yml` (semantic-release) to push the release commit back to `main`. Required before branch protection is enabled. Generate at GitHub → Settings → Developer Settings → Personal access tokens (classic). |
+| `SENTRY_DSN_SMOKE`       | Sentry DSN for smoke test error reporting                                                                                                                                                                                                                          |
+| `E2E_TEST_USER_EMAIL`    | Email of the test Clerk user for staging E2E runs                                                                                                                                                                                                                  |
+| `E2E_TEST_USER_PASSWORD` | Password of the test Clerk user for staging E2E runs                                                                                                                                                                                                               |
+| `ANTHROPIC_API_KEY`      | Pre-provisioned for future crawler GHA jobs — no current workflow uses this                                                                                                                                                                                        |
+| `RESEND_API_KEY`         | Pre-provisioned for future crawler GHA jobs — no current workflow uses this                                                                                                                                                                                        |
 
 ### Repository-level variables (Settings → Variables → Actions)
 
-| Variable        | Value                                                                    |
-| --------------- | ------------------------------------------------------------------------ |
-| `SMOKE_ENABLED` | `false` — set to `true` only at public launch, not during private beta   |
-| `PROD_URL`      | `https://concertcrawl.app`                                               |
-| `PROD_API_URL`  | `https://concert-crawl-api.onrender.com`                                 |
-| `STAGING_URL`   | `https://concert-crawl-web-staging.onrender.com`                         |
-| `ADMIN_EMAIL`   | Your email address for crawl failure notifications                        |
+| Variable        | Value                                                                       |
+| --------------- | --------------------------------------------------------------------------- |
+| `SMOKE_ENABLED` | `false` — set to `true` only at public launch, not during private beta      |
+| `PROD_URL`      | `https://concertcrawl.app`                                                  |
+| `PROD_API_URL`  | `https://concert-crawl-api.onrender.com`                                    |
+| `STAGING_URL`   | `https://concert-crawl-web-staging.onrender.com`                            |
+| `ADMIN_EMAIL`   | Pre-provisioned for future crawler GHA jobs — no current workflow uses this |
 
 ### Auto-Deploy setting
 
@@ -313,7 +313,7 @@ These must be in place before any traffic reaches production.
    - **Do not allow bypassing the above settings** (applies to admins too)
 4. Save
 
-> `release.yml` pushes a release commit back to `main` via `GH_TOKEN`. This commit uses `[skip ci]` in its message and is authored by `github-actions[bot]`. The branch protection rule must allow this bot to push — Render's branch protection settings have a separate "allow specific actors to bypass" list; add `github-actions[bot]` there if the release workflow starts failing.
+> `release.yml` pushes a release commit back to `main` via `GH_TOKEN`. This commit uses `[skip ci]` in its message and is authored by `github-actions[bot]`. The branch protection rule must allow this bot to push — in GitHub's branch protection settings there is an "Allow specified actors to bypass required pull requests" field; add `github-actions[bot]` there if the release workflow starts failing after protection is enabled.
 
 ### `production` environment protection
 
@@ -327,7 +327,7 @@ This ensures no workflow can deploy to production without your approval, and onl
 
 ## Step 7 — Run Database Migrations (Production)
 
-Migrations do **not** run automatically on production deploys (unlike staging, which runs `pnpm db:migrate` in its build command). Run them manually before the first deploy and before any deploy that includes schema changes.
+Migrations do **not** run automatically on production deploys. The staging API service is configured to run `pnpm db:migrate` in its build command (set manually in the Render dashboard — `render.yaml` does not currently include this). Run production migrations manually before the first deploy and before any deploy that includes schema changes.
 
 ```bash
 # From your local machine — uses the production connection string
@@ -428,6 +428,7 @@ A `deploy-production.yml` workflow is needed to automate production deploys. The
 - **Concurrency:** serialize with `cancel-in-progress: false`, same pattern as `deploy-staging.yml`
 
 Until this workflow exists, the manual production deploy process is:
+
 1. Confirm the GitHub Release was created (check the **Releases** tab)
 2. Run pending migrations if any (Step 7)
 3. Render dashboard → `concert-crawl-api` → **Manual Deploy** → latest commit → wait for success
@@ -474,4 +475,4 @@ If a deploy breaks production:
 - Keep all `sk_live_*` keys out of git — Render dashboard and GitHub secrets only
 - Staging uses the same `render.yaml` structure with separate Clerk dev keys (`pk_test_` / `sk_test_`) and a separate staging DB
 - After a role change in Clerk, the user must sign out and back in before the API sees the new role (JWT reissue)
-- `SENTRY_DSN_CRAWLER` exists as a repo-level GitHub secret — verify it is referenced in any crawler-specific GHA workflow before public launch, or remove it to keep secrets clean
+- `SENTRY_DSN_CRAWLER` exists as a repo-level GitHub secret but is not referenced by any current workflow — remove it from GitHub repository secrets to avoid confusion, or wire it up when a crawler-specific GHA workflow is added
