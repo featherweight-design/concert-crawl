@@ -39,6 +39,7 @@
     "overrides": {
       "fast-uri": "^3.1.2",
       "ip-address": "^10.2.0",
+      "js-cookie": "^3.0.7",
       "postcss": "^8.5.14",
       "vite": "^6.0.0"
     },
