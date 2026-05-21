@@ -81,7 +81,7 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+          gridTemplateColumns: 'repeat(4, 1fr)',
           gap: 16,
         }}
       >
