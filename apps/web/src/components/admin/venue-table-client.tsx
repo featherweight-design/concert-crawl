@@ -86,15 +86,6 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
     })
   }
 
-  function handleFilterChange(evt: React.ChangeEvent<HTMLSelectElement>) {
-    const val = evt.target.value
-    if (val) {
-      router.push(`/admin/venues?status=${val}`)
-    } else {
-      router.push('/admin/venues')
-    }
-  }
-
   function runBulkAction(action: (ids: string[]) => Promise<void>) {
     const ids = Array.from(selected)
     startTransition(async () => {
@@ -177,45 +168,25 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
           ) : (
             <span
               style={{
-                fontSize: 12,
-                color: 'var(--fg-subtle)',
-                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 13,
+                fontWeight: 700,
+                color: 'var(--fg)',
+                fontFamily: 'var(--admin-font, Inter, sans-serif)',
               }}
             >
               Configured venues{' '}
-              <strong style={{ color: 'var(--fg-muted)' }}>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 400,
+                  color: 'var(--fg-subtle)',
+                }}
+              >
                 {venues.length}
-              </strong>
+              </span>
             </span>
           )}
         </div>
-
-        <select
-          aria-label="Filter by status"
-          value={currentFilter ?? ''}
-          onChange={handleFilterChange}
-          style={{
-            height: 32,
-            padding: '0 28px 0 10px',
-            borderRadius: 6,
-            fontSize: 13,
-            fontWeight: 500,
-            fontFamily: "'Inter', sans-serif",
-            cursor: 'pointer',
-            background: 'transparent',
-            color: 'var(--fg)',
-            border: '1px solid var(--border-strong)',
-            appearance: 'none',
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'right 8px center',
-          }}
-        >
-          <option value="">All statuses</option>
-          <option value="active">Active</option>
-          <option value="paused">Paused</option>
-          <option value="blocked">Blocked</option>
-        </select>
       </div>
 
       <AdminTable>
