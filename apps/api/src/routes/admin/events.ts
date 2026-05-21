@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { and, eq, desc, asc, sql } from 'drizzle-orm'
+import { and, eq, desc, asc, gte, sql } from 'drizzle-orm'
 import { db, events, venues } from '@concert-crawl/db'
 import { getAuthUser } from '../../middleware/auth.js'
 import type { AdminVariables } from './index.js'
@@ -79,6 +79,42 @@ eventsAdminRouter.get(
       .offset(offset)
 
     return ctx.json({ success: true, data: rows })
+  },
+)
+
+// POST /v1/admin/events/bulk-auto-approve — approve all unverified events above a confidence threshold
+// Used as a one-time backfill after the auto-approve threshold was introduced in the crawler.
+eventsAdminRouter.post(
+  '/bulk-auto-approve',
+  zValidator(
+    'json',
+    z.object({
+      confidenceThreshold: z.number().min(0).max(1).default(0.7),
+    }),
+  ),
+  async (ctx) => {
+    const { confidenceThreshold } = ctx.req.valid('json')
+
+    const updated = await db
+      .update(events)
+      .set({ verified: true, updatedAt: new Date() })
+      .where(
+        and(
+          eq(events.verified, false),
+          gte(events.confidenceScore, String(confidenceThreshold)),
+        ),
+      )
+      .returning({ id: events.id })
+
+    const actor = getAuthUser(ctx)
+    ctx.set('auditAction', 'event.bulk_auto_approve')
+    ctx.set('auditActorId', actor.userId)
+    ctx.set('auditMeta', {
+      count: updated.length,
+      confidenceThreshold,
+    })
+
+    return ctx.json({ success: true, data: { approved: updated.length } })
   },
 )
 

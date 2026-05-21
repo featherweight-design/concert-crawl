@@ -56,13 +56,11 @@ interface PriceEvent {
 interface ReviewPageClientProps {
   initialEvents: EventFlag[]
   initialSubmissions: PriceSubmission[]
-  priceEvents: PriceEvent[]
 }
 
 export const ReviewPageClient = ({
   initialEvents,
   initialSubmissions,
-  priceEvents,
 }: ReviewPageClientProps) => {
   const { getToken } = useAuth()
   const router = useRouter()
@@ -70,6 +68,8 @@ export const ReviewPageClient = ({
   const [events, setEvents] = useState<EventFlag[]>(initialEvents)
   const [submissions, setSubmissions] =
     useState<PriceSubmission[]>(initialSubmissions)
+  const [priceEvents, setPriceEvents] = useState<PriceEvent[]>([])
+  const [priceEventsLoading, setPriceEventsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isDesktop, setIsDesktop] = useState(true)
 
@@ -80,6 +80,30 @@ export const ReviewPageClient = ({
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
   }, [])
+
+  // Lazy-load price coverage data client-side — it's below the fold and has
+  // a heavy aggregating query that shouldn't block the initial page render.
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const token = await getToken()
+        if (!token || cancelled) return
+        const rows = await apiClient.get<PriceEvent[]>(
+          '/v1/admin/prices/events',
+          token,
+        )
+        if (!cancelled) setPriceEvents(rows)
+      } catch (err) {
+        if (!cancelled) console.error('Failed to load price coverage data', err)
+      } finally {
+        if (!cancelled) setPriceEventsLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [getToken])
 
   const approveEvent = useCallback(
     async (id: string) => {
@@ -240,7 +264,11 @@ export const ReviewPageClient = ({
           onApprove={approveSubmission}
           onDeny={denySubmission}
         />
-        <PriceCoverageTable events={priceEvents} onAddPrice={addPrice} />
+        <PriceCoverageTable
+          events={priceEvents}
+          loading={priceEventsLoading}
+          onAddPrice={addPrice}
+        />
       </div>
     </div>
   )

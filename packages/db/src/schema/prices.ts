@@ -70,6 +70,10 @@ export const priceRetrievalLog = pgTable(
     priceLogVenueSourceAttemptedAtIdx: index(
       'price_log_venue_source_attempted_at_idx',
     ).on(table.venueId, table.source, table.attemptedAt),
+    priceLogEventIdIdx: index('price_log_event_id_idx').on(
+      table.eventId,
+      table.attemptedAt,
+    ),
   }),
 )
 

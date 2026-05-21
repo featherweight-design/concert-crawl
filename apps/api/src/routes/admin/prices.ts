@@ -21,6 +21,22 @@ export const pricesAdminRouter = new Hono<AdminVariables>()
 
 // GET /v1/admin/prices/events — upcoming events with current price data + last retrieval info
 pricesAdminRouter.get('/events', async (ctx) => {
+  // Use a single aggregating join instead of two correlated subqueries per row.
+  // The subquery groups price_retrieval_log by event_id once, then LEFT JOINs in.
+  const latestLog = db
+    .select({
+      eventId: priceRetrievalLog.eventId,
+      lastRetrievedAt: max(priceRetrievalLog.attemptedAt).as(
+        'last_retrieved_at',
+      ),
+      lastOutcome: sql<string | null>`(
+        array_agg(${priceRetrievalLog.outcome} ORDER BY ${priceRetrievalLog.attemptedAt} DESC)
+      )[1]`.as('last_outcome'),
+    })
+    .from(priceRetrievalLog)
+    .groupBy(priceRetrievalLog.eventId)
+    .as('latest_log')
+
   const rows = await db
     .select({
       eventId: events.id,
@@ -32,19 +48,12 @@ pricesAdminRouter.get('/events', async (ctx) => {
       priceMin: events.ticketPriceMin,
       priceMax: events.ticketPriceMax,
       priceSource: events.priceSource,
-      lastRetrievedAt: sql<string | null>`(
-        SELECT MAX(attempted_at) FROM price_retrieval_log
-        WHERE event_id = ${events.id}
-      )`,
-      lastOutcome: sql<string | null>`(
-        SELECT outcome FROM price_retrieval_log
-        WHERE event_id = ${events.id}
-        ORDER BY attempted_at DESC
-        LIMIT 1
-      )`,
+      lastRetrievedAt: latestLog.lastRetrievedAt,
+      lastOutcome: latestLog.lastOutcome,
     })
     .from(events)
     .leftJoin(venues, eq(events.venueId, venues.id))
+    .leftJoin(latestLog, eq(latestLog.eventId, events.id))
     .where(eq(events.status, 'upcoming'))
     .orderBy(asc(events.date))
     .limit(100)

@@ -70,6 +70,10 @@ export const events = pgTable(
   },
   (table) => ({
     dateStatusIdx: index('events_date_status_idx').on(table.date, table.status),
+    verifiedDateIdx: index('events_verified_date_idx').on(
+      table.verified,
+      table.date,
+    ),
     venueIdx: index('events_venue_id_idx').on(table.venueId),
     artistIdx: index('events_artist_idx').on(table.artist),
     venueDateArtistIdx: uniqueIndex('events_venue_date_artist_idx').on(
