@@ -104,7 +104,7 @@ eventsAdminRouter.post(
           gte(events.confidenceScore, String(confidenceThreshold)),
         ),
       )
-      .returning({ id: events.id })
+      .returning({ n: sql<number>`1` })
 
     const actor = getAuthUser(ctx)
     ctx.set('auditAction', 'event.bulk_auto_approve')

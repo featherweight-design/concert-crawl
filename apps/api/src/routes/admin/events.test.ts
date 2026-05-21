@@ -13,6 +13,7 @@ vi.mock('drizzle-orm', () => ({
   desc: vi.fn((col) => ({ col, dir: 'desc' })),
   and: vi.fn((...args) => ({ args, op: 'and' })),
   asc: vi.fn((col) => ({ col, dir: 'asc' })),
+  gte: vi.fn((col, val) => ({ col, val, op: 'gte' })),
   sql: vi.fn((parts, ...vals) => ({ parts, vals })),
 }))
 
@@ -376,5 +377,83 @@ describe('DELETE /v1/admin/events/:id', () => {
       method: 'DELETE',
     })
     expect(res.status).toBe(404)
+  })
+})
+
+describe('POST /v1/admin/events/bulk-auto-approve', () => {
+  beforeEach(() => {
+    mockGetAuth.mockReset()
+  })
+
+  it('returns 401 for unauthenticated requests', async () => {
+    mockGetAuth.mockReturnValue(null)
+    const res = await createApp().request(
+      '/v1/admin/events/bulk-auto-approve',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      },
+    )
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 403 for non-admin users', async () => {
+    mockGetAuth.mockReturnValue({
+      userId: 'user_123',
+      sessionClaims: { metadata: { role: 'user' } },
+    })
+    const res = await createApp().request(
+      '/v1/admin/events/bulk-auto-approve',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      },
+    )
+    expect(res.status).toBe(403)
+  })
+
+  it('returns 200 with approved count using default threshold', async () => {
+    adminAuth()
+    const { db } = await import('@concert-crawl/db')
+    vi.mocked(db.update().set().where().returning).mockResolvedValueOnce([
+      { n: 1 },
+      { n: 1 },
+      { n: 1 },
+    ])
+    const res = await createApp().request(
+      '/v1/admin/events/bulk-auto-approve',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      },
+    )
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.success).toBe(true)
+    expect(body.data.approved).toBe(3)
+  })
+
+  it('returns 200 with approved count using custom threshold', async () => {
+    adminAuth()
+    const { db } = await import('@concert-crawl/db')
+    vi.mocked(db.update().set().where().returning).mockResolvedValueOnce([
+      { n: 1 },
+      { n: 1 },
+    ])
+    const res = await createApp().request(
+      '/v1/admin/events/bulk-auto-approve',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confidenceThreshold: 0.9 }),
+      },
+    )
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.success).toBe(true)
+    expect(body.data.approved).toBe(2)
   })
 })
