@@ -12,9 +12,9 @@ export const RunHistoryBlocks = ({ data }: RunHistoryBlocksProps) => {
           <div
             key={idx}
             style={{
-              width: 10,
+              width: 14,
               height: 16,
-              borderRadius: 2,
+              borderRadius: 3,
               background: val === 1 ? 'var(--success)' : 'var(--danger)',
             }}
           />

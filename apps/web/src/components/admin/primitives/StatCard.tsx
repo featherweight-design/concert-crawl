@@ -83,7 +83,7 @@ export const StatCard = ({
               {value}
             </span>
             {unit && (
-              <span style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
+              <span style={{ fontSize: 16, color: 'var(--fg-muted)' }}>
                 {unit}
               </span>
             )}
