@@ -113,6 +113,33 @@ describe('extractWithLlm', () => {
     expect(result.usage.cacheWriteTokens).toBe(8000)
   })
 
+  it("prefixes user message with today's date in YYYY-MM-DD format", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-03-15T12:00:00.000Z'))
+
+    mockCreate.mockResolvedValue(makeAnthropicResponse([]))
+
+    await extractWithLlm('<html>test</html>', SOURCE_URL)
+
+    const call = mockCreate.mock.calls[0]?.[0]
+    const userMessage = call.messages[0]
+    expect(userMessage.role).toBe('user')
+    expect(userMessage.content).toMatch(/^Today's date: 2026-03-15\n/)
+
+    vi.useRealTimers()
+  })
+
+  it('system prompt contains year-inference rule', async () => {
+    mockCreate.mockResolvedValue(makeAnthropicResponse([]))
+
+    await extractWithLlm('<html>test</html>', SOURCE_URL)
+
+    const call = mockCreate.mock.calls[0]?.[0]
+    const systemText: string = call.system[0].text
+    expect(systemText).toContain('year')
+    expect(systemText).toContain('current year')
+  })
+
   it('drops empty-string doorsTime and showTime fields', async () => {
     const mockEvents = [
       {
