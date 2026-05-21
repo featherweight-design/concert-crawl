@@ -1,3 +1,11 @@
+## [1.35.1](https://github.com/HartiganHM/concert-crawl/compare/v1.35.0...v1.35.1) (2026-05-21)
+
+
+### Bug Fixes
+
+* **seed:** drop redundant crawlWaitUntil on Gothic Theatre ([1c3364d](https://github.com/HartiganHM/concert-crawl/commit/1c3364da99d96ee01232772f03087abc699f7d2d))
+* **seed:** sync venue crawl configs with production DB state ([a290172](https://github.com/HartiganHM/concert-crawl/commit/a290172005344278be5ce618a9320b9d6ec483ec))
+
 # [1.35.0](https://github.com/HartiganHM/concert-crawl/compare/v1.34.0...v1.35.0) (2026-05-20)
 
 
