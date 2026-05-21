@@ -22,6 +22,15 @@ export const feedbackCategoryEnum = pgEnum('feedback_category', [
   'other',
 ])
 
+export const feedbackStatusEnum = pgEnum('feedback_status', [
+  'unread',
+  'read',
+  'flagged',
+  'issue_opened',
+  'resolved',
+  'archived',
+])
+
 export const userEvents = pgTable(
   'user_events',
   {
@@ -61,6 +70,9 @@ export const feedback = pgTable('feedback', {
   category: feedbackCategoryEnum('category').notNull(),
   message: text('message').notNull(),
   metadata: jsonb('metadata'),
+  status: feedbackStatusEnum('status').notNull().default('unread'),
+  adminNotes: text('admin_notes'),
+  issueUrl: text('issue_url'),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),

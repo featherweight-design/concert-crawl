@@ -9,6 +9,7 @@ import { notificationsAdminRouter } from './notifications.js'
 import { eventsAdminRouter } from './events.js'
 import { pricesAdminRouter } from './prices.js'
 import { usersAdminRouter } from './users.js'
+import { feedbackAdminRouter } from './feedback.js'
 
 export type AdminVariables = {
   Variables: {
@@ -63,3 +64,4 @@ adminRouter.route('/notifications', notificationsAdminRouter)
 adminRouter.route('/events', eventsAdminRouter)
 adminRouter.route('/prices', pricesAdminRouter)
 adminRouter.route('/users', usersAdminRouter)
+adminRouter.route('/feedback', feedbackAdminRouter)
