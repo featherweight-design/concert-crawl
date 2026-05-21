@@ -1,4 +1,4 @@
-export const formatCost = (value: number): string => `$${value.toFixed(2)}`
+export const formatCost = (value: number): string => `$${value.toFixed(4)}`
 
 export type StatusKind =
   | 'success'
