@@ -296,6 +296,7 @@ export default async function AdminDashboardPage() {
                 size="sm"
                 iconRight={ChevronRight}
                 fullWidth
+                style={{ fontWeight: 700, color: 'var(--fg)', fontSize: 14 }}
               >
                 Open Review
               </AdminButton>

@@ -42,10 +42,10 @@ export const StatCard = ({
         background: 'var(--bg-elevated)',
         border: '1px solid var(--border)',
         borderRadius: 12,
-        padding: '16px 20px',
+        padding: '20px 20px',
         display: 'flex',
         flexDirection: 'column',
-        gap: 12,
+        gap: 16,
         cursor: onClick ? 'pointer' : undefined,
       }}
     >
@@ -60,11 +60,11 @@ export const StatCard = ({
           <div
             style={{
               fontSize: 11,
-              fontWeight: 600,
+              fontWeight: 500,
               textTransform: 'uppercase' as const,
               letterSpacing: '0.07em',
               color: 'var(--fg-muted)',
-              marginBottom: 6,
+              marginBottom: 10,
             }}
           >
             {label}
@@ -110,9 +110,9 @@ export const StatCard = ({
         </div>
         <div
           style={{
-            width: 36,
-            height: 36,
-            borderRadius: 8,
+            width: 40,
+            height: 40,
+            borderRadius: 10,
             background: colors.bg,
             display: 'flex',
             alignItems: 'center',
@@ -120,7 +120,7 @@ export const StatCard = ({
             flexShrink: 0,
           }}
         >
-          {Icon && <Icon size={18} color={colors.fg} />}
+          {Icon && <Icon size={20} color={colors.fg} />}
         </div>
       </div>
       {footer && (

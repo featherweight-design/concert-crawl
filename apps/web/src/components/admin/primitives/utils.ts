@@ -25,9 +25,9 @@ export const KIND_COLORS: Record<
     border: 'rgba(47,122,77,0.25)',
   },
   warning: {
-    bg: 'rgba(184,117,20,0.12)',
+    bg: 'rgba(255,210,122,0.15)',
     fg: 'var(--warning)',
-    border: 'rgba(184,117,20,0.25)',
+    border: 'rgba(255,210,122,0.30)',
   },
   danger: {
     bg: 'rgba(184,56,26,0.12)',
