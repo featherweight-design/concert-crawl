@@ -1,8 +1,6 @@
-import { AppHeader } from '@/components/consumer/app-header'
-
 export default function EventDetailLoading() {
   return (
-    <div className="flex min-h-screen flex-col bg-bg">
+    <>
       <div
         style={{
           position: 'fixed',
@@ -14,10 +12,6 @@ export default function EventDetailLoading() {
           zIndex: 9999,
         }}
       />
-      {/* Desktop-only header */}
-      <div className="hidden sm:block">
-        <AppHeader />
-      </div>
 
       {/* Hero — 300px full-bleed */}
       <div
@@ -135,6 +129,6 @@ export default function EventDetailLoading() {
           />
         </div>
       </div>
-    </div>
+    </>
   )
 }

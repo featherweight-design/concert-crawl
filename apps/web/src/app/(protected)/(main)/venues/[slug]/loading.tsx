@@ -1,5 +1,3 @@
-import { AppHeader } from '@/components/consumer/app-header'
-
 function VenueEventRowSkeleton({ delay }: { delay: number }) {
   return (
     <div
@@ -52,7 +50,7 @@ function VenueEventRowSkeleton({ delay }: { delay: number }) {
 
 export default function VenueLoading() {
   return (
-    <div className="flex min-h-screen flex-col bg-bg">
+    <>
       <div
         style={{
           position: 'fixed',
@@ -64,10 +62,6 @@ export default function VenueLoading() {
           zIndex: 9999,
         }}
       />
-      {/* Desktop-only header */}
-      <div className="hidden sm:block">
-        <AppHeader />
-      </div>
 
       {/* Hero — 320px full-bleed */}
       <div
@@ -172,6 +166,6 @@ export default function VenueLoading() {
           ))}
         </div>
       </div>
-    </div>
+    </>
   )
 }

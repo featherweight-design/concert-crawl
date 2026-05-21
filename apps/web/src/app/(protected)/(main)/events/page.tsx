@@ -7,8 +7,6 @@ import type {
 import { publicApiClient, apiClient } from '@/lib/api'
 import { auth } from '@/lib/auth'
 import { fetchWatching } from '@/lib/watching'
-import { AppHeader } from '@/components/consumer/app-header'
-import { BottomNav } from '@/components/consumer/bottom-nav'
 import { HeroEventCard } from '@/components/consumer/hero-event-card'
 import { FilterBar } from '@/components/consumer/filter-bar'
 import { EmptyState } from '@/components/consumer/empty-state'
@@ -244,78 +242,70 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   })()
 
   return (
-    <div className="flex min-h-screen flex-col bg-bg">
-      <AppHeader />
+    <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-20 pt-4 sm:px-6 sm:pb-6">
+      {/* Filter bar */}
+      <div className="mb-5">
+        <Suspense>
+          <FilterBar venues={venues} genres={genres} />
+        </Suspense>
+      </div>
 
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-20 pt-4 sm:px-6 sm:pb-6">
-        {/* Filter bar */}
-        <div className="mb-5">
-          <Suspense>
-            <FilterBar venues={venues} genres={genres} />
-          </Suspense>
+      {events.length === 0 && view === 'list' && (
+        <EmptyState
+          state={isFiltered ? 'filtered' : 'no-data'}
+          eyebrow={
+            isFiltered ? copy.emptyFilteredEyebrow : copy.emptyTonightEyebrow
+          }
+          title={isFiltered ? copy.emptyFilteredTitle : copy.emptyTonightTitle}
+          body={isFiltered ? copy.emptyFilteredBody : copy.emptyTonightBody}
+          {...(isFiltered
+            ? {
+                secondaryCta: {
+                  label: copy.emptyFilteredCta,
+                  href: '/events',
+                },
+              }
+            : {
+                primaryCta: {
+                  label: copy.emptyTonightCta,
+                  href: '/events?filterWhen=this-week',
+                },
+              })}
+        />
+      )}
+
+      {heroEvent && view === 'list' && (
+        <div className="mb-6">
+          <HeroEventCard
+            event={heroEvent}
+            isWatching={watchedIds.has(heroEvent.id)}
+          />
         </div>
+      )}
 
-        {events.length === 0 && view === 'list' && (
-          <EmptyState
-            state={isFiltered ? 'filtered' : 'no-data'}
-            eyebrow={
-              isFiltered ? copy.emptyFilteredEyebrow : copy.emptyTonightEyebrow
-            }
-            title={
-              isFiltered ? copy.emptyFilteredTitle : copy.emptyTonightTitle
-            }
-            body={isFiltered ? copy.emptyFilteredBody : copy.emptyTonightBody}
-            {...(isFiltered
-              ? {
-                  secondaryCta: {
-                    label: copy.emptyFilteredCta,
-                    href: '/events',
-                  },
-                }
-              : {
-                  primaryCta: {
-                    label: copy.emptyTonightCta,
-                    href: '/events?filterWhen=this-week',
-                  },
-                })}
+      {view === 'cal' && selectedDate && (
+        <CalendarView
+          days={weekDays}
+          events={events}
+          initialSelectedDate={selectedDate}
+          today={today}
+          watchedIds={Array.from(watchedIds)}
+          prevWeekHref={calPrevWeekHref}
+          nextWeekHref={calNextWeekHref}
+        />
+      )}
+
+      {view === 'list' && events.length > 0 && (
+        <Suspense>
+          <EventsList
+            initialEvents={listEvents}
+            initialOffset={currentOffset}
+            total={total}
+            limit={limit}
+            initialWatchedIds={Array.from(watchedIds)}
           />
-        )}
-
-        {heroEvent && view === 'list' && (
-          <div className="mb-6">
-            <HeroEventCard
-              event={heroEvent}
-              isWatching={watchedIds.has(heroEvent.id)}
-            />
-          </div>
-        )}
-
-        {view === 'cal' && selectedDate && (
-          <CalendarView
-            days={weekDays}
-            events={events}
-            initialSelectedDate={selectedDate}
-            today={today}
-            watchedIds={Array.from(watchedIds)}
-            prevWeekHref={calPrevWeekHref}
-            nextWeekHref={calNextWeekHref}
-          />
-        )}
-
-        {view === 'list' && events.length > 0 && (
-          <Suspense>
-            <EventsList
-              initialEvents={listEvents}
-              initialOffset={currentOffset}
-              total={total}
-              limit={limit}
-              initialWatchedIds={Array.from(watchedIds)}
-            />
-          </Suspense>
-        )}
-      </main>
-
-      <BottomNav />
-    </div>
+        </Suspense>
+      )}
+    </main>
   )
 }

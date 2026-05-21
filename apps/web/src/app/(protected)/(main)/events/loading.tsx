@@ -1,6 +1,3 @@
-import { AppHeader } from '@/components/consumer/app-header'
-import { BottomNav } from '@/components/consumer/bottom-nav'
-
 function EventCardSkeleton({ delay }: { delay: number }) {
   return (
     <div
@@ -76,7 +73,7 @@ function EventCardSkeleton({ delay }: { delay: number }) {
 
 export default function EventsLoading() {
   return (
-    <div className="flex min-h-screen flex-col bg-bg">
+    <>
       <div
         style={{
           position: 'fixed',
@@ -88,7 +85,6 @@ export default function EventsLoading() {
           zIndex: 9999,
         }}
       />
-      <AppHeader />
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-20 pt-4 sm:px-6 sm:pb-6">
         {/* FilterBar skeleton */}
         <div className="mb-5 flex gap-2 overflow-hidden">
@@ -113,7 +109,6 @@ export default function EventsLoading() {
           ))}
         </div>
       </main>
-      <BottomNav />
-    </div>
+    </>
   )
 }

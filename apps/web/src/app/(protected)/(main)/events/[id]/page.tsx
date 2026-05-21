@@ -8,8 +8,6 @@ import type {
   EventsListResponse,
 } from '@concert-crawl/types'
 import { publicApiClient, apiClient } from '@/lib/api'
-import { AppHeader } from '@/components/consumer/app-header'
-import { BottomNav } from '@/components/consumer/bottom-nav'
 import { EventImage } from '@/components/consumer/event-image'
 import { SmallEventRow } from '@/components/consumer/small-event-row'
 import { SectionHeader } from '@/components/consumer/section-header'
@@ -84,9 +82,7 @@ export default async function EventDetailPage({
       : (showTime ?? doorsTime ?? '—')
 
   return (
-    <div className="flex min-h-screen flex-col bg-bg">
-      <AppHeader />
-
+    <>
       {/* Hero — 300px, full-bleed */}
       <div className="relative w-full shrink-0" style={{ height: 300 }}>
         <EventImage
@@ -342,8 +338,7 @@ export default async function EventDetailPage({
           )}
         </div>
       </div>
-      <BottomNav />
-    </div>
+    </>
   )
 }
 

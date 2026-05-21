@@ -2,8 +2,6 @@ import { notFound } from 'next/navigation'
 import { auth } from '@clerk/nextjs/server'
 import type { VenueWithEvents } from '@concert-crawl/types'
 import { publicApiClient, apiClient } from '@/lib/api'
-import { AppHeader } from '@/components/consumer/app-header'
-import { BottomNav } from '@/components/consumer/bottom-nav'
 import { SectionHeader } from '@/components/consumer/section-header'
 import { MapPlaceholder } from '@/components/consumer/map-placeholder'
 import { EmptyState } from '@/components/consumer/empty-state'
@@ -52,9 +50,7 @@ export default async function VenueProfilePage({
     venue.capacity != null ? venue.capacity.toLocaleString('en-US') : '—'
 
   return (
-    <div className="flex min-h-screen flex-col bg-bg">
-      <AppHeader />
-
+    <>
       {/* Hero — 320px */}
       <div className="relative w-full shrink-0" style={{ height: 320 }}>
         <IdentityArt
@@ -234,7 +230,6 @@ export default async function VenueProfilePage({
           </div>
         </div>
       </div>
-      <BottomNav />
-    </div>
+    </>
   )
 }
