@@ -1,6 +1,6 @@
 # Gap Report — Admin UI v2
 
-## IMPLEMENTED (89)
+## IMPLEMENTED (95)
 
 ### Shell / Navigation
 
@@ -109,21 +109,32 @@
 - FeedbackExpanded — no-issue block gap: not set→10 [FeedbackExpanded.tsx]
 - FeedbackExpanded — action shelf flexWrap: not set→wrap [FeedbackExpanded.tsx]
 
-## DEFERRED (17)
+### Mobile Review (AdminReviewMobile)
+
+- AdminReviewMobile — tab switcher "Event flags N" / "Prices N" [AdminReviewMobile.tsx]
+- AdminReviewMobile — EventFlagCard: title, venue/date, ConfidenceBar, flag chips [AdminReviewMobile.tsx]
+- AdminReviewMobile — EventFlagCard: LLM reasoning disclosure (strategy/confidence/sourceUrl) [AdminReviewMobile.tsx]
+- AdminReviewMobile — EventFlagCard: Reject/Approve action buttons [AdminReviewMobile.tsx]
+- AdminReviewMobile — Prices tab: community submissions + needs-price rows [AdminReviewMobile.tsx]
+- AdminReviewMobile — NeedsPriceRow: expandable inline price add form [AdminReviewMobile.tsx]
+
+### Deferred Items — Now Implemented
+
+- StagedApplyConfirm — "Trigger re-crawl now" checkbox calling triggerVenueCrawl [StagedApplyConfirm.tsx]
+- PriceCoverageTable — AddPriceInlineForm: inline low/high inputs with Cancel/Save [PriceCoverageTable.tsx]
+- FeedbackFilterRail — source checkboxes: FeedbackSurface functional, Sentry/Email with "soon" badges [FeedbackFilterRail.tsx]
+- FeedbackExpanded — screenshot slot: 200px image box with "Open full size" link [FeedbackExpanded.tsx]
+- VenueDetailsClient — Section 05 Identity Art: 96×96 preview, namespace toggle, seed + Roll [VenueDetailsClient.tsx]
+
+## DEFERRED (11)
 
 - AdminTopbar — search slot: deferred: requires Phase 8 search feature spec
 - AttentionFeed — SSE LIVE badge + mono time: deferred: requires SSE infrastructure (Phase 8)
 - AttentionFeed — EngagementPlaceholder: deferred: requires engagement data pipeline
 - AttentionFeed — mobile stat cards: deferred: mobile layout pass in Phase 8
 - MobileDrawer — zIndex higher stacking: deferred: intentional stacking decision, no product issue
-- StagedApplyConfirm — "Trigger re-crawl now" checkbox: deferred: requires backend trigger API
-- PriceCoverageTable — AddPriceInlineForm: deferred: requires price submission UI Phase 8
 - PriceCoverageTable — PriceRowMenu: deferred: requires price management actions Phase 8
 - BulkActionDock — Re-tag button: deferred: requires tagging system (Phase 9)
-- FeedbackFilterRail — source checkboxes: deferred: requires source tracking data schema
-- FeedbackExpanded — screenshot slot: deferred: requires screenshot capture pipeline
-- VenueDetailsClient — Section 05 Identity Art: deferred: generative art Phase 7.5 work
-- EventFlagsSection — mobile tabs: deferred: mobile review UI in Phase 8
 - FeedbackPage — mobile tabs: deferred: mobile review UI in Phase 8
 - ReviewPage — pending submissions panel loading state: deferred: needs skeleton designs
 - PriceCoverageTable — row-level stale badge tooltip: deferred: tooltip component Phase 8
