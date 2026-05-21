@@ -92,10 +92,11 @@ export const StatCard = ({
                 style={{
                   fontSize: 11,
                   fontWeight: 600,
+                  marginLeft: 'auto',
                   color: trend.good ? 'var(--success)' : 'var(--danger)',
                 }}
               >
-                {trend.text}
+                {trend.dir === 'up' ? '↑' : '↓'} {trend.text}
               </span>
             )}
           </div>

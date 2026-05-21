@@ -7,17 +7,16 @@ import {
   StatCard,
   AdminButton,
   ProgressBar,
-  Sparkline,
 } from '@/components/admin/primitives'
 import { CrawlHealthTable } from '@/components/admin/dashboard/CrawlHealthTable'
 import { AttentionFeed } from '@/components/admin/dashboard/AttentionFeed'
 import { DashboardGreeting } from '@/components/admin/dashboard/DashboardGreeting'
+import { RunHistoryBlocks } from '@/components/admin/dashboard/RunHistoryBlocks'
 import type { AttentionItemData } from '@/components/admin/dashboard/AttentionFeed'
 import {
   LLM_BUDGET_USD,
   toStatusRow,
   buildCrawlHealthHint,
-  buildActiveVenuesHint,
   buildSparklineData,
 } from '@/components/admin/dashboard/lib/dashboard'
 import type { RawVenueStatus } from '@/components/admin/dashboard/lib/dashboard'
@@ -165,13 +164,28 @@ export default async function AdminDashboardPage() {
     priorCost > 0
       ? {
           dir: recentCost > priorCost ? ('up' as const) : ('down' as const),
-          text: `${Math.round((Math.abs(recentCost - priorCost) / priorCost) * 100)}% wow`,
+          text: `+${Math.round((Math.abs(recentCost - priorCost) / priorCost) * 100)}%`,
           good: recentCost <= priorCost,
         }
       : undefined
 
   const crawlHealthHint = buildCrawlHealthHint(status)
-  const activeVenuesHint = buildActiveVenuesHint(venues)
+
+  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000
+  const venuesPaused = venues.filter(
+    (venue) => !venue.active && venue.blockedAt === null,
+  ).length
+  const venuesBlocked = venues.filter(
+    (venue) => venue.blockedAt !== null,
+  ).length
+  const venuesAddedThisWeek = venues.filter(
+    (venue) => Date.now() - new Date(venue.createdAt).getTime() < sevenDaysMs,
+  ).length
+  const activeVenuesHintParts = [
+    venuesPaused > 0 ? `${venuesPaused} paused` : '',
+    venuesBlocked > 0 ? `${venuesBlocked} blocked` : '',
+  ].filter(Boolean)
+  const activeVenuesHint = activeVenuesHintParts.join(' · ')
   const sparklineData = buildSparklineData(runs)
 
   const attentionItems = buildAttentionItems(
@@ -250,7 +264,7 @@ export default async function AdminDashboardPage() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+          gridTemplateColumns: 'repeat(4, 1fr)',
           gap: 16,
         }}
       >
@@ -259,7 +273,7 @@ export default async function AdminDashboardPage() {
           label="Needs review"
           value={String(pendingEventCount + pendingPriceCount)}
           unit="items"
-          iconName="CheckSquare"
+          iconName="CalendarCheck"
           kind={
             pendingEventCount + pendingPriceCount > 0 ? 'warning' : 'neutral'
           }
@@ -320,7 +334,7 @@ export default async function AdminDashboardPage() {
           {...(crawlHealthHint ? { hint: crawlHealthHint } : {})}
           footer={
             sparklineData.length > 0 ? (
-              <Sparkline data={sparklineData} height={24} />
+              <RunHistoryBlocks data={sparklineData} />
             ) : undefined
           }
         />
@@ -329,10 +343,23 @@ export default async function AdminDashboardPage() {
         <StatCard
           label="Active venues"
           value={String(venues.filter((venue) => venue.active).length)}
-          unit="venues"
+          unit={`of ${venues.length}`}
           iconName="MapPin"
           kind="neutral"
           {...(activeVenuesHint ? { hint: activeVenuesHint } : {})}
+          footer={
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                color: 'var(--fg-subtle)',
+              }}
+            >
+              +{venuesAddedThisWeek} this week
+            </span>
+          }
         />
       </div>
 
