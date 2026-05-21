@@ -307,6 +307,21 @@ export default async function AdminDashboardPage() {
           }
         />
 
+        {/* Crawl health */}
+        <StatCard
+          label="Crawl health"
+          value={`${greenCount}/${status.length}`}
+          unit="green"
+          iconName="Activity"
+          kind={blockedCount > 0 ? 'warning' : 'success'}
+          {...(crawlHealthHint ? { hint: crawlHealthHint } : {})}
+          footer={
+            sparklineData.length > 0 ? (
+              <RunHistoryBlocks data={sparklineData} />
+            ) : undefined
+          }
+        />
+
         {/* LLM cost */}
         <StatCard
           label="LLM cost · 30d"
@@ -324,24 +339,9 @@ export default async function AdminDashboardPage() {
           }
         />
 
-        {/* Crawl health */}
-        <StatCard
-          label="Crawl health"
-          value={`${greenCount}/${status.length}`}
-          unit="green"
-          iconName="Activity"
-          kind={blockedCount > 0 ? 'warning' : 'success'}
-          {...(crawlHealthHint ? { hint: crawlHealthHint } : {})}
-          footer={
-            sparklineData.length > 0 ? (
-              <RunHistoryBlocks data={sparklineData} />
-            ) : undefined
-          }
-        />
-
         {/* Active venues */}
         <StatCard
-          label="Active venues"
+          label="Active"
           value={String(venues.filter((venue) => venue.active).length)}
           unit={`of ${venues.length}`}
           iconName="MapPin"
