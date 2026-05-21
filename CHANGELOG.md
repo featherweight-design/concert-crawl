@@ -1,3 +1,12 @@
+## [1.36.1](https://github.com/HartiganHM/concert-crawl/compare/v1.36.0...v1.36.1) (2026-05-21)
+
+
+### Bug Fixes
+
+* **admin:** address Copilot review comments on PR [#516](https://github.com/HartiganHM/concert-crawl/issues/516) ([57929c4](https://github.com/HartiganHM/concert-crawl/commit/57929c485e8bbb78bfefd690e4ab94df3d816143))
+* **admin:** rename RETURNING key n → ok to satisfy id-length lint rule ([f1c47af](https://github.com/HartiganHM/concert-crawl/commit/f1c47afa08c4f3177a14e0182162760c415a4ef9))
+* **admin:** resolve review page load timeout ([7c87515](https://github.com/HartiganHM/concert-crawl/commit/7c87515a5074aaa0e7ea88bb2d822ab7d5d91757)), closes [hi#confidence](https://github.com/hi/issues/confidence)
+
 # [1.36.0](https://github.com/HartiganHM/concert-crawl/compare/v1.35.3...v1.36.0) (2026-05-21)
 
 
