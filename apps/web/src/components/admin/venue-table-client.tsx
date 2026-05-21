@@ -14,7 +14,8 @@ import {
   StatusBadge,
   RelTime,
 } from '@/components/admin/primitives'
-import { ShieldCheck, ShieldOff, Play, Pause } from 'lucide-react'
+import { ShieldCheck, ShieldOff, Play, Pause, ChevronRight } from 'lucide-react'
+import { VenueQuickView } from '@/components/admin/VenueQuickView'
 import {
   bulkVerifyVenues,
   bulkUnverifyVenues,
@@ -55,6 +56,11 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
   const router = useRouter()
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [isPending, startTransition] = useTransition()
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+
+  function toggleExpand(id: string) {
+    setExpandedId((prev) => (prev === id ? null : id))
+  }
 
   const allSelected = venues.length > 0 && selected.size === venues.length
   const someSelected = selected.size > 0
@@ -215,6 +221,7 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
       <AdminTable>
         <THead>
           <tr>
+            <TH width={36} />
             <TH width={40}>
               <input
                 type="checkbox"
@@ -238,146 +245,180 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
             const status = deriveVenueStatus(venue)
             const notes = venueSubNotes(venue)
             const health = venueHealthPercent(venue)
+            const isExpanded = expandedId === venue.id
 
             return (
-              <TR key={venue.id}>
-                <TD width={40}>
-                  <input
-                    type="checkbox"
-                    checked={selected.has(venue.id)}
-                    onChange={() => toggleOne(venue.id)}
-                    style={{ cursor: 'pointer' }}
-                    aria-label={`Select ${venue.name}`}
-                  />
-                </TD>
-                <TD>
-                  <div
-                    style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-                  >
-                    <ShieldCheck
-                      size={13}
-                      style={{
-                        flexShrink: 0,
-                        color: venue.verified
-                          ? 'var(--success)'
-                          : 'var(--fg-subtle)',
-                      }}
-                      aria-label={venue.verified ? 'Verified' : 'Unverified'}
-                    />
-                    <Link
-                      href={`/admin/venues/${venue.id}`}
-                      style={{
-                        fontWeight: 500,
-                        color: 'var(--fg)',
-                        textDecoration: 'none',
-                      }}
-                      onMouseEnter={(evt) =>
-                        (evt.currentTarget.style.textDecoration = 'underline')
+              <>
+                <TR key={venue.id}>
+                  <TD width={36}>
+                    <button
+                      aria-label={
+                        isExpanded ? 'Collapse venue' : 'Expand venue'
                       }
-                      onMouseLeave={(evt) =>
-                        (evt.currentTarget.style.textDecoration = 'none')
-                      }
-                    >
-                      {venue.name}
-                    </Link>
-                  </div>
-                  {notes.map((note, idx) => (
-                    <div
-                      key={`${venue.id}-note-${idx}`}
+                      aria-expanded={isExpanded}
+                      onClick={() => toggleExpand(venue.id)}
                       style={{
-                        fontSize: 11,
-                        color: 'var(--fg-subtle)',
-                        marginTop: 2,
-                        paddingLeft: 19,
-                      }}
-                    >
-                      {note}
-                    </div>
-                  ))}
-                </TD>
-                <TD mono color="var(--fg-muted)">
-                  <a
-                    href={venue.websiteUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: 'var(--signal)', textDecoration: 'none' }}
-                  >
-                    {sourceUrl(venue.websiteUrl)}
-                  </a>
-                </TD>
-                <TD>
-                  {venue.robotsTxtAllowed === null ? (
-                    <StatusBadge kind="neutral">unchecked</StatusBadge>
-                  ) : venue.robotsTxtAllowed ? (
-                    <StatusBadge kind="success" dot>
-                      allowed
-                    </StatusBadge>
-                  ) : (
-                    <StatusBadge kind="danger" dot>
-                      blocked
-                    </StatusBadge>
-                  )}
-                </TD>
-                <TD>
-                  {status === 'blocked' ? (
-                    <Link
-                      href={`/admin/crawl?venueId=${venue.id}`}
-                      style={{ textDecoration: 'none' }}
-                    >
-                      <StatusBadge kind={STATUS_BADGE_KIND[status]} dot>
-                        Blocked ↗
-                      </StatusBadge>
-                    </Link>
-                  ) : (
-                    <StatusBadge kind={STATUS_BADGE_KIND[status]} dot>
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
-                    </StatusBadge>
-                  )}
-                </TD>
-                <TD>
-                  <div
-                    style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-                  >
-                    <span
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: '50%',
-                        flexShrink: 0,
-                        background:
-                          health === 100
-                            ? 'var(--success)'
-                            : health >= 60
-                              ? 'var(--warning)'
-                              : 'var(--danger)',
-                      }}
-                    />
-                    <span
-                      style={{
-                        fontSize: 12,
+                        all: 'unset',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 24,
+                        height: 24,
+                        borderRadius: 6,
                         color: 'var(--fg-muted)',
-                        fontFamily: "'JetBrains Mono', monospace",
+                        transition: 'transform .15s',
+                        transform: isExpanded ? 'rotate(90deg)' : 'none',
                       }}
                     >
-                      {health}%
-                    </span>
-                  </div>
-                </TD>
-                <TD>
-                  {venue.lastCrawledAt ? (
-                    <RelTime iso={venue.lastCrawledAt} />
-                  ) : (
-                    <span style={{ color: 'var(--fg-subtle)' }}>—</span>
-                  )}
-                </TD>
-                <TD mono color="var(--fg-muted)">
-                  {venue.eventCount > 0 ? (
-                    String(venue.eventCount)
-                  ) : (
-                    <span style={{ color: 'var(--fg-subtle)' }}>—</span>
-                  )}
-                </TD>
-              </TR>
+                      <ChevronRight size={14} />
+                    </button>
+                  </TD>
+                  <TD width={40}>
+                    <input
+                      type="checkbox"
+                      checked={selected.has(venue.id)}
+                      onChange={() => toggleOne(venue.id)}
+                      style={{ cursor: 'pointer' }}
+                      aria-label={`Select ${venue.name}`}
+                    />
+                  </TD>
+                  <TD>
+                    <div
+                      style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <ShieldCheck
+                        size={13}
+                        style={{
+                          flexShrink: 0,
+                          color: venue.verified
+                            ? 'var(--success)'
+                            : 'var(--fg-subtle)',
+                        }}
+                        aria-label={venue.verified ? 'Verified' : 'Unverified'}
+                      />
+                      <Link
+                        href={`/admin/venues/${venue.id}`}
+                        style={{
+                          fontWeight: 500,
+                          color: 'var(--fg)',
+                          textDecoration: 'none',
+                        }}
+                        onMouseEnter={(evt) =>
+                          (evt.currentTarget.style.textDecoration = 'underline')
+                        }
+                        onMouseLeave={(evt) =>
+                          (evt.currentTarget.style.textDecoration = 'none')
+                        }
+                      >
+                        {venue.name}
+                      </Link>
+                    </div>
+                    {notes.map((note, idx) => (
+                      <div
+                        key={`${venue.id}-note-${idx}`}
+                        style={{
+                          fontSize: 11,
+                          color: 'var(--fg-subtle)',
+                          marginTop: 2,
+                          paddingLeft: 19,
+                        }}
+                      >
+                        {note}
+                      </div>
+                    ))}
+                  </TD>
+                  <TD mono color="var(--fg-muted)">
+                    <a
+                      href={venue.websiteUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--signal)', textDecoration: 'none' }}
+                    >
+                      {sourceUrl(venue.websiteUrl)}
+                    </a>
+                  </TD>
+                  <TD>
+                    {venue.robotsTxtAllowed === null ? (
+                      <StatusBadge kind="neutral">unchecked</StatusBadge>
+                    ) : venue.robotsTxtAllowed ? (
+                      <StatusBadge kind="success" dot>
+                        allowed
+                      </StatusBadge>
+                    ) : (
+                      <StatusBadge kind="danger" dot>
+                        blocked
+                      </StatusBadge>
+                    )}
+                  </TD>
+                  <TD>
+                    {status === 'blocked' ? (
+                      <Link
+                        href={`/admin/crawl?venueId=${venue.id}`}
+                        style={{ textDecoration: 'none' }}
+                      >
+                        <StatusBadge kind={STATUS_BADGE_KIND[status]} dot>
+                          Blocked ↗
+                        </StatusBadge>
+                      </Link>
+                    ) : (
+                      <StatusBadge kind={STATUS_BADGE_KIND[status]} dot>
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                      </StatusBadge>
+                    )}
+                  </TD>
+                  <TD>
+                    <div
+                      style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <span
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          flexShrink: 0,
+                          background:
+                            health === 100
+                              ? 'var(--success)'
+                              : health >= 60
+                                ? 'var(--warning)'
+                                : 'var(--danger)',
+                        }}
+                      />
+                      <span
+                        style={{
+                          fontSize: 12,
+                          color: 'var(--fg-muted)',
+                          fontFamily: "'JetBrains Mono', monospace",
+                        }}
+                      >
+                        {health}%
+                      </span>
+                    </div>
+                  </TD>
+                  <TD>
+                    {venue.lastCrawledAt ? (
+                      <RelTime iso={venue.lastCrawledAt} />
+                    ) : (
+                      <span style={{ color: 'var(--fg-subtle)' }}>—</span>
+                    )}
+                  </TD>
+                  <TD mono color="var(--fg-muted)">
+                    {venue.eventCount > 0 ? (
+                      String(venue.eventCount)
+                    ) : (
+                      <span style={{ color: 'var(--fg-subtle)' }}>—</span>
+                    )}
+                  </TD>
+                </TR>
+                {isExpanded && (
+                  <tr key={`${venue.id}-expand`}>
+                    <td colSpan={9} style={{ padding: 0 }}>
+                      <VenueQuickView venue={venue} />
+                    </td>
+                  </tr>
+                )}
+              </>
             )
           })}
         </tbody>
