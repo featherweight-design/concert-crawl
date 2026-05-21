@@ -1,3 +1,12 @@
+## [1.35.3](https://github.com/HartiganHM/concert-crawl/compare/v1.35.2...v1.35.3) (2026-05-21)
+
+
+### Bug Fixes
+
+* **nav-consistency:** address Copilot review comments ([04b37ac](https://github.com/HartiganHM/concert-crawl/commit/04b37ac2606b70991177ee357a1f611578dfbfef))
+* standardize AppHeader + BottomNav across all consumer pages ([901a845](https://github.com/HartiganHM/concert-crawl/commit/901a845800516d7875c4c4166864f3098fd51fdb)), closes [#510](https://github.com/HartiganHM/concert-crawl/issues/510)
+* update watching barrel export for renamed component ([3156adc](https://github.com/HartiganHM/concert-crawl/commit/3156adca93c0ac4df38c7e3e2aaa39ce8842f40a))
+
 ## [1.35.2](https://github.com/HartiganHM/concert-crawl/compare/v1.35.1...v1.35.2) (2026-05-21)
 
 
