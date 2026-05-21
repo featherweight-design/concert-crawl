@@ -92,13 +92,7 @@ If `concert-crawl-crawler-triggers` and `concert-crawl-crawler-daily` do not exi
      { "metadata": "{{user.public_metadata}}" }
      ```
    - Without this, `requireRole()` in the API will always return 403
-4. **Configure Spotify OAuth:**
-   - Go to **Social Connections** → Spotify → enable
-   - Create a production Spotify app at [developer.spotify.com](https://developer.spotify.com)
-   - Add the Clerk-provided redirect URI (shown in the Clerk dashboard) to your Spotify app's **Redirect URIs** — it will look like `https://accounts.concertcrawl.app/v1/oauth_callback`
-   - Paste the production Spotify **Client ID** and **Client Secret** into Clerk
-   - Staging uses its own Spotify redirect URI — add both URIs to the same Spotify app or use separate dev/prod Spotify apps
-5. Copy the following values — you'll need them in Step 4:
+4. Copy the following values — you'll need them in Step 4:
    - **Publishable Key** (`pk_live_...`)
    - **Secret Key** (`sk_live_...`)
 
