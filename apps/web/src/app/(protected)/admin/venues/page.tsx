@@ -1,10 +1,18 @@
+import { ExternalLink } from 'lucide-react'
+import Link from 'next/link'
 import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
-import { SectionHead, StatCard, Panel } from '@/components/admin/primitives'
+import {
+  SectionHead,
+  StatCard,
+  Panel,
+  AdminButton,
+} from '@/components/admin/primitives'
 import type { VenueWithEventCount } from '@concert-crawl/types'
 import { VenueTableClient } from '@/components/admin/venue-table-client'
 import { deriveVenueStatus, venueHealthPercent } from '@/lib/admin/venue-status'
 import { AddVenueModal } from '@/components/admin/AddVenueModal'
+import { VenueStatusFilterButton } from '@/components/admin/venues/VenueStatusFilterButton'
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -53,8 +61,21 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <SectionHead
         title="Venues"
-        subtitle="Configure crawl targets. Crawls run daily at 3 AM MT."
-        actions={<AddVenueModal />}
+        subtitle="Configure crawl targets. Click chevron for quick details, click name to open the full venue page."
+        actions={
+          <>
+            <VenueStatusFilterButton currentFilter={statusFilter} />
+            <Link
+              href="/admin/venues/robots-audit"
+              style={{ textDecoration: 'none' }}
+            >
+              <AdminButton variant="ghost" size="sm" iconRight={ExternalLink}>
+                robots.txt audit
+              </AdminButton>
+            </Link>
+            <AddVenueModal />
+          </>
+        }
       />
 
       <div
@@ -69,27 +90,28 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
           value={String(venues.length)}
           iconName="MapPin"
           kind="neutral"
+          noChip
         />
         <StatCard
           label="Active"
           value={String(activeCount)}
-          iconName="Activity"
+          iconName="MapPin"
           kind="success"
         />
         <StatCard
           label="Paused / Blocked"
           value={String(pausedBlockedCount)}
-          iconName="AlertTriangle"
+          iconName="MapPin"
           kind="warning"
         />
         <StatCard
           label="Avg health · 7d"
           value={`${String(avgHealth)}%`}
-          iconName="HeartPulse"
+          iconName="Activity"
           kind={
             avgHealth >= 80 ? 'success' : avgHealth >= 50 ? 'warning' : 'danger'
           }
-          hint="avg run success rate"
+          hint="median run success rate"
         />
       </div>
 

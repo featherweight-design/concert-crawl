@@ -13,6 +13,7 @@ interface StatCardProps {
   kind?: StatusKind
   iconName: string
   mono?: boolean
+  noChip?: boolean
   footer?: React.ReactNode
   onClick?: () => void
 }
@@ -26,6 +27,7 @@ export const StatCard = ({
   kind = 'neutral',
   iconName,
   mono = true,
+  noChip = false,
   footer,
   onClick,
 }: StatCardProps) => {
@@ -117,14 +119,16 @@ export const StatCard = ({
             width: 40,
             height: 40,
             borderRadius: 10,
-            background: colors.bg,
+            background: noChip ? 'transparent' : colors.bg,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0,
           }}
         >
-          {Icon && <Icon size={20} color={colors.fg} />}
+          {Icon && (
+            <Icon size={20} color={noChip ? 'var(--fg-subtle)' : colors.fg} />
+          )}
         </div>
       </div>
       {footer && (
