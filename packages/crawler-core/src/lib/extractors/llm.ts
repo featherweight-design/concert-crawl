@@ -34,7 +34,8 @@ Rules:
 - confidence reflects how certain you are the extraction is accurate (0.0-1.0)
 - Only include actual upcoming events, not past events
 - If artist is unclear, use the event title as the artist
-- Pass an empty events array if no concert events are found`
+- Pass an empty events array if no concert events are found
+- When a date has no year, infer it using today's date (provided in the user message): if the month/day is today or in the future within the current year, use the current year; if the month/day has already passed this year, use next year`
 
 const SAVE_EVENTS_TOOL: Anthropic.Tool = {
   name: 'save_events',
@@ -116,7 +117,7 @@ export async function extractWithLlm(
     messages: [
       {
         role: 'user',
-        content: `Extract all concert events from this venue page HTML:\n\nURL: ${sourceUrl}\n\n${cleanedHtml}`,
+        content: `Today's date: ${new Date().toISOString().slice(0, 10)}\n\nExtract all concert events from this venue page HTML:\n\nURL: ${sourceUrl}\n\n${cleanedHtml}`,
       },
     ],
   })

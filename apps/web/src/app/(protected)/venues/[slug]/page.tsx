@@ -172,7 +172,7 @@ export default async function VenueProfilePage({
                 <StatPill label="Capacity" value={capacityFormatted} />
                 <StatPill
                   label="Upcoming"
-                  value={String(upcomingEvents.length)}
+                  value={String(venue.upcomingCount)}
                   signal
                 />
                 <StatPill label="Type" value={venue.venueType ?? '—'} />
@@ -216,7 +216,7 @@ export default async function VenueProfilePage({
           <div className="mt-5">
             <SectionHeader
               title="Upcoming"
-              count={`${upcomingEvents.length} show${upcomingEvents.length !== 1 ? 's' : ''}`}
+              count={`${venue.upcomingCount} show${venue.upcomingCount !== 1 ? 's' : ''}`}
             />
 
             {upcomingEvents.length === 0 ? (
