@@ -1,3 +1,25 @@
+# [1.36.0](https://github.com/HartiganHM/concert-crawl/compare/v1.35.3...v1.36.0) (2026-05-21)
+
+
+### Bug Fixes
+
+* **admin-ui-v2:** apply design-review gap fixes across all components ([6e217d2](https://github.com/HartiganHM/concert-crawl/commit/6e217d2781872f73e5d7cc0c5b2b543fecddafe3))
+* **admin:** address all Copilot review issues ([5c36c68](https://github.com/HartiganHM/concert-crawl/commit/5c36c68a07802e0b83f0306219b46e0f432bb4e8))
+* **admin:** correct issueUrl nullable Zod schema to allow clearing the field ([b18fb88](https://github.com/HartiganHM/concert-crawl/commit/b18fb887827a2b5dbf505a7cfdf4dd4560705e57))
+
+
+### Features
+
+* **admin-crawl:** inspector tabs, diagnostics panel, staged apply confirm ([b41b135](https://github.com/HartiganHM/concert-crawl/commit/b41b1351c9cb31b1cf240e0f12e521ea3c5e04fd))
+* **admin-dashboard:** attention feed, remove run-all/add-venue ctas ([731e9a0](https://github.com/HartiganHM/concert-crawl/commit/731e9a06761943da648411cf28dc4dab0746d84d))
+* **admin-feedback:** feedback filter rail, row, expanded view, action shelf, page ([76f1029](https://github.com/HartiganHM/concert-crawl/commit/76f10294a46376432047a976d3db18b1f6209d59))
+* **admin-review:** event flags, pending submissions, price coverage, bulk dock ([c375bd7](https://github.com/HartiganHM/concert-crawl/commit/c375bd7cd1772b8c228720dfaa643c10d26510c1))
+* **admin-shell:** nav_v2, appswitcher, mobile shell (bottom bar + drawer) ([c146676](https://github.com/HartiganHM/concert-crawl/commit/c14667662b16c1b73376f12e16a8e8a71d4be0f5))
+* **admin-venue-detail:** vdsection redesign, generatefield 5-state, deletevenueconfirm ([1ae8f82](https://github.com/HartiganHM/concert-crawl/commit/1ae8f825cf1797c30f0466a602e8b2b212d37dce))
+* **admin-venues:** add venueQuickView accordion — chevron expansion, info grid, action shelf ([67995c6](https://github.com/HartiganHM/concert-crawl/commit/67995c630f6f6366c077d66c336809e5414dd6ea))
+* **admin:** implement deferred design items from admin UI v2 gap review ([fa40086](https://github.com/HartiganHM/concert-crawl/commit/fa40086420e206def91c28715759f4ee7fb159af))
+* **feedback-api:** add status/notes/issueUrl schema, migration, admin feedback CRUD ([43ee8ea](https://github.com/HartiganHM/concert-crawl/commit/43ee8ea6efb3e15a568de0762816770d4d61716d))
+
 ## [1.35.3](https://github.com/HartiganHM/concert-crawl/compare/v1.35.2...v1.35.3) (2026-05-21)
 
 
