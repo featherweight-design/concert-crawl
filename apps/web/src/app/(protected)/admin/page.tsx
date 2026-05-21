@@ -310,18 +310,14 @@ export default async function AdminDashboardPage() {
           value={`$${totalCost.toFixed(2)}`}
           iconName="DollarSign"
           kind="signal"
+          hint={`Budget $${LLM_BUDGET_USD} · ${llmBudgetPct}% used`}
           {...(costTrend !== undefined ? { trend: costTrend } : {})}
           footer={
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ fontSize: 11, color: 'var(--fg-subtle)' }}>
-                {`Budget $${LLM_BUDGET_USD} · ${llmBudgetPct}% used`}
-              </div>
-              <ProgressBar
-                value={Math.min(llmBudgetPct, 100)}
-                kind="signal"
-                showLabel={false}
-              />
-            </div>
+            <ProgressBar
+              value={Math.min(llmBudgetPct, 100)}
+              kind="signal"
+              showLabel={false}
+            />
           }
         />
 
