@@ -116,7 +116,7 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
       </div>
 
       <Panel padding={0}>
-        <VenueTableClient venues={filtered} currentFilter={statusFilter} />
+        <VenueTableClient venues={filtered} />
       </Panel>
     </div>
   )
