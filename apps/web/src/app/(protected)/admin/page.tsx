@@ -11,6 +11,7 @@ import {
 } from '@/components/admin/primitives'
 import { CrawlHealthTable } from '@/components/admin/dashboard/CrawlHealthTable'
 import { AttentionFeed } from '@/components/admin/dashboard/AttentionFeed'
+import { DashboardGreeting } from '@/components/admin/dashboard/DashboardGreeting'
 import type { AttentionItemData } from '@/components/admin/dashboard/AttentionFeed'
 import {
   LLM_BUDGET_USD,
@@ -147,10 +148,6 @@ export default async function AdminDashboardPage() {
   const { status, venues, runs, pendingEventCount, pendingPriceCount } =
     await fetchDashboardData(token)
 
-  const hour = new Date().getHours()
-  const greeting =
-    hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
-
   const greenCount = status.filter((row) => row.status === 'success').length
   const blockedCount = status.filter(
     (row) => row.blockedAt !== null || row.status === 'failed',
@@ -234,7 +231,7 @@ export default async function AdminDashboardPage() {
               letterSpacing: '-0.025em',
             }}
           >
-            {greeting}, {firstName}.
+            <DashboardGreeting firstName={firstName} />
           </h1>
           <div
             style={{
