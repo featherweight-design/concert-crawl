@@ -131,7 +131,7 @@ export default async function EventDetailPage({
 
       {/* Scrollable content — 880px max-width centered column, -60px hero overlap on desktop */}
       <div className="relative -mt-5 sm:-mt-[60px] sm:z-[1] flex-1">
-        <div className="mx-auto w-full max-w-[880px] box-border px-[18px] sm:px-8 pb-10 sm:pb-16 sm:pt-5">
+        <div className="mx-auto w-full max-w-[880px] box-border px-[18px] sm:px-8 pb-24 sm:pb-16 sm:pt-5">
           {/* Genre chips */}
           <GenreChips genres={event.genre} className="mb-2" />
 

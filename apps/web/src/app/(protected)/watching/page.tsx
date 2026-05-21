@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth'
 import { fetchWatching } from '@/lib/watching'
 import { AppHeader } from '@/components/consumer/app-header'
 import { BottomNav } from '@/components/consumer/bottom-nav'
-import { WatchingContent } from '@/components/consumer/watching/WatchingContent'
+import { WatchingContent } from '@/components/consumer/watching'
 
 export const metadata = { title: 'Watching — Concert Crawl' }
 

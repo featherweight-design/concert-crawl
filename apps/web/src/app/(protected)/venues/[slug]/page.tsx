@@ -80,7 +80,7 @@ export default async function VenueProfilePage({
       </div>
 
       {/* Content */}
-      <div className="relative -mt-5 flex-1 pb-10">
+      <div className="relative -mt-5 flex-1 pb-24 sm:pb-10">
         <div className="mx-auto w-full max-w-[880px] px-[18px] sm:px-8">
           {/* Type chip */}
           {venue.venueType && (
