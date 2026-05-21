@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useTransition } from 'react'
+import React, { useState, useTransition, useEffect } from 'react'
 import Link from 'next/link'
 import {
   ExternalLink,
@@ -70,6 +70,15 @@ export function VenueTableClient({ venues }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [isPending, startTransition] = useTransition()
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 640px)')
+    setIsMobile(mq.matches)
+    const handler = (evt: MediaQueryListEvent) => setIsMobile(evt.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   function toggleExpand(id: string) {
     setExpandedId((prev) => (prev === id ? null : id))
@@ -105,6 +114,116 @@ export function VenueTableClient({ venues }: Props) {
       await action(ids)
       setSelected(new Set())
     })
+  }
+
+  if (isMobile) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+          padding: 12,
+        }}
+      >
+        {venues.map((venue) => {
+          const status = deriveVenueStatus(venue)
+          const isExpanded = expandedId === venue.id
+
+          return (
+            <div
+              key={venue.id}
+              style={{
+                background: 'var(--bg-elevated)',
+                borderRadius: 12,
+                border: `1px solid ${isExpanded ? 'var(--border-strong)' : 'var(--border)'}`,
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  padding: '12px 14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Link
+                    href={`/admin/venues/${venue.id}`}
+                    style={{
+                      display: 'block',
+                      fontFamily: 'var(--admin-font, Inter, sans-serif)',
+                      fontSize: 14,
+                      fontWeight: 700,
+                      color: 'var(--fg)',
+                      textDecoration: 'none',
+                      marginBottom: 4,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {venue.name}
+                  </Link>
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: 6,
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <StatusBadge kind={STATUS_BADGE_KIND[status]} dot>
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </StatusBadge>
+                    <StatusBadge
+                      kind={strategyKind(venue.extractionStrategy)}
+                      variant="mono"
+                    >
+                      {strategyLabel(venue.extractionStrategy)}
+                    </StatusBadge>
+                    {venue.lastCrawledAt && (
+                      <span
+                        style={{
+                          fontFamily: "'JetBrains Mono', monospace",
+                          fontSize: 11,
+                          color: 'var(--fg-muted)',
+                        }}
+                      >
+                        · <RelTime iso={venue.lastCrawledAt} />
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  aria-label={isExpanded ? 'Collapse venue' : 'Expand venue'}
+                  aria-expanded={isExpanded}
+                  onClick={() => toggleExpand(venue.id)}
+                  style={{
+                    all: 'unset',
+                    cursor: 'pointer',
+                    padding: 8,
+                    borderRadius: 8,
+                    color: 'var(--fg-muted)',
+                    transition: 'transform .15s',
+                    transform: isExpanded ? 'rotate(90deg)' : 'none',
+                    flexShrink: 0,
+                  }}
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+              {isExpanded && (
+                <div style={{ borderTop: '1px solid var(--border)' }}>
+                  <VenueQuickView venue={venue} />
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    )
   }
 
   return (

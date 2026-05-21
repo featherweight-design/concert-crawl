@@ -13,6 +13,7 @@ import { VenueTableClient } from '@/components/admin/venue-table-client'
 import { deriveVenueStatus, venueHealthPercent } from '@/lib/admin/venue-status'
 import { AddVenueModal } from '@/components/admin/AddVenueModal'
 import { VenueStatusFilterButton } from '@/components/admin/venues/VenueStatusFilterButton'
+import { MobileAddVenueButton } from '@/components/admin/venues/MobileAddVenueButton'
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -39,6 +40,9 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
   const activeCount = venues.filter(
     (venue) => deriveVenueStatus(venue) === 'active',
   ).length
+  const blockedCount = venues.filter(
+    (venue) => deriveVenueStatus(venue) === 'blocked',
+  ).length
   const pausedBlockedCount = venues.filter(
     (venue) => deriveVenueStatus(venue) !== 'active',
   ).length
@@ -61,7 +65,7 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <SectionHead
         title="Venues"
-        subtitle="Configure crawl targets. Click chevron for quick details, click name to open the full venue page."
+        subtitle={`${venues.length} configured · ${blockedCount} blocked.`}
         actions={
           <>
             <VenueStatusFilterButton currentFilter={statusFilter} />
@@ -77,6 +81,8 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
           </>
         }
       />
+
+      <MobileAddVenueButton />
 
       <div
         style={{

@@ -108,7 +108,7 @@ export function VenueQuickView({ venue }: Props) {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(5, 1fr)',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
           gap: 18,
           marginBottom: 14,
         }}
