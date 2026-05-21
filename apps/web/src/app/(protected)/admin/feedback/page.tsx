@@ -118,7 +118,7 @@ export default function FeedbackPage() {
   ).length
 
   return (
-    <div style={{ padding: '0 24px 32px' }}>
+    <div>
       {/* Stat cards */}
       <div
         style={{

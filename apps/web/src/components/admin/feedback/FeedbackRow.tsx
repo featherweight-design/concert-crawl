@@ -36,6 +36,13 @@ export function FeedbackRow({ item, isExpanded, onToggle }: FeedbackRowProps) {
   const hasIssue = Boolean(item.issueUrl)
   const handle = item.userId.slice(0, 8)
 
+  let displayPath = item.pageUrl
+  try {
+    displayPath = new URL(item.pageUrl).pathname
+  } catch {
+    // pageUrl is relative or malformed; display raw
+  }
+
   return (
     <div
       style={{
@@ -133,7 +140,7 @@ export function FeedbackRow({ item, isExpanded, onToggle }: FeedbackRowProps) {
             whiteSpace: 'nowrap',
           }}
         >
-          {new URL(item.pageUrl).pathname}
+          {displayPath}
         </span>
 
         {/* Chevron */}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { AdminButton } from '@/components/admin/primitives'
 import { StatusBadge } from '@/components/admin/primitives'
@@ -103,6 +103,67 @@ const STAGED_DIFFS: Record<string, StagedDiff> = {
     rollback: 'Change crawl_mode back to auto from the venue settings.',
     nextRunIn: 'no further crawls scheduled',
   },
+  'opt-sched': {
+    title: 'Reduce crawl schedule to every 12 hours',
+    intent:
+      'Crawl more frequently so fresh events are discovered sooner after they go on sale.',
+    diff: [{ path: 'crawl.schedule_hours', before: '24', after: '12' }],
+    risks: [
+      'Doubles the number of crawl runs for this venue — higher infrastructure and LLM cost if extraction uses the LLM path.',
+    ],
+    rollback: 'Revert from the strategy history log.',
+    nextRunIn: 'next scheduled sweep · ~2h',
+  },
+  'opt-struct': {
+    title: 'Retrain structured extractor selector hints',
+    intent:
+      'Refresh the cached CSS selector hints so the structured extractor can parse the page again after a venue redesign.',
+    diff: [
+      {
+        path: 'extraction.selector_hints',
+        before: 'stale',
+        after: 'regenerated',
+      },
+    ],
+    risks: [
+      'Regeneration requires one LLM-assisted crawl to rebuild hints.',
+      'Confidence scores may dip on the first run.',
+    ],
+    rollback: 'Revert from the strategy history log.',
+    nextRunIn: 'trigger manual re-crawl now',
+  },
+  'opt-pw': {
+    title: 'Increase Playwright render timeout to 30s',
+    intent:
+      'Give the page more time to finish rendering before extraction — useful for slow SPAs or venues behind CDN challenges.',
+    diff: [
+      { path: 'crawl.render_timeout_ms', before: '10000', after: '30000' },
+    ],
+    risks: [
+      'Each crawl run takes up to 20s longer per page.',
+      'May mask a deeper issue if the venue is blocking or the page never fully loads.',
+    ],
+    rollback: 'Revert from the strategy history log.',
+    nextRunIn: 'next scheduled sweep · ~2h',
+  },
+  'opt-wait': {
+    title: 'Switch from networkidle to selector-based wait',
+    intent:
+      'Wait for a specific DOM element rather than network idle — more reliable on pages that stream content or have persistent websocket connections.',
+    diff: [
+      {
+        path: 'crawl.waitUntil',
+        before: 'networkidle',
+        after: 'domcontentloaded',
+      },
+      { path: 'crawl.waitForSelector', before: '—', after: '.event-card' },
+    ],
+    risks: [
+      'If the selector changes or is absent, the crawl will time out waiting for an element that never appears.',
+    ],
+    rollback: 'Revert from the strategy history log.',
+    nextRunIn: 'next scheduled sweep · ~2h',
+  },
 }
 
 interface StagedApplyConfirmProps {
@@ -122,8 +183,15 @@ export const StagedApplyConfirm = ({
 }: StagedApplyConfirmProps) => {
   const { getToken } = useAuth()
   const [triggerRecrawl, setTriggerRecrawl] = useState(false)
-  const diff = STAGED_DIFFS[stagedId] ?? STAGED_DIFFS['opt-headers']
-  if (!diff) return null
+  const diff = STAGED_DIFFS[stagedId]
+
+  useEffect(() => {
+    const handleKeyDown = (evt: KeyboardEvent) => {
+      if (evt.key === 'Escape') onCancel()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [onCancel])
 
   const handleApply = async () => {
     onApply()
@@ -133,6 +201,65 @@ export const StagedApplyConfirm = ({
         void triggerVenueCrawl(venueId, token)
       }
     }
+  }
+
+  if (!diff) {
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 100,
+          background: 'rgba(0,0,0,0.45)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 24,
+        }}
+        onClick={onCancel}
+      >
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="staged-apply-title"
+          style={{
+            width: 400,
+            background: 'var(--bg-elevated)',
+            border: '1px solid var(--border)',
+            borderRadius: 14,
+            boxShadow: '0 24px 64px rgba(0,0,0,0.35)',
+            padding: '24px 22px',
+          }}
+          onClick={(evt) => evt.stopPropagation()}
+        >
+          <h3
+            id="staged-apply-title"
+            style={{
+              margin: '0 0 12px',
+              fontFamily: 'var(--admin-font, Inter, sans-serif)',
+              fontSize: 16,
+              fontWeight: 700,
+              color: 'var(--danger)',
+            }}
+          >
+            Unknown optimization option
+          </h3>
+          <p
+            style={{
+              margin: '0 0 20px',
+              fontFamily: 'var(--admin-font, Inter, sans-serif)',
+              fontSize: 13,
+              color: 'var(--fg-muted)',
+            }}
+          >
+            Unknown optimization option. Please close and try again.
+          </p>
+          <AdminButton variant="ghost" onClick={onCancel}>
+            Close
+          </AdminButton>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -147,8 +274,12 @@ export const StagedApplyConfirm = ({
         justifyContent: 'center',
         padding: 24,
       }}
+      onClick={onCancel}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="staged-apply-title"
         style={{
           width: 640,
           maxWidth: 'calc(100vw - 48px)',
@@ -160,6 +291,7 @@ export const StagedApplyConfirm = ({
           display: 'flex',
           flexDirection: 'column',
         }}
+        onClick={(evt) => evt.stopPropagation()}
       >
         {/* Header */}
         <div
@@ -185,6 +317,7 @@ export const StagedApplyConfirm = ({
             </StatusBadge>
           </div>
           <h3
+            id="staged-apply-title"
             style={{
               margin: '6px 0 0',
               fontFamily: 'var(--admin-font, Inter, sans-serif)',

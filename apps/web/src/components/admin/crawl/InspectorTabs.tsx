@@ -50,7 +50,7 @@ export const InspectorTabs = ({
             onClick={() => !disabled && onChange(tab.key)}
             disabled={disabled}
             style={{
-              all: 'unset' as unknown as undefined,
+              all: 'unset' as const,
               cursor: disabled ? 'not-allowed' : 'pointer',
               position: 'relative',
               padding: '12px 14px',

@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import {
   MonoLabel,
   AdminButton,
@@ -40,6 +41,14 @@ export const BulkApproveConfirm = ({
   const previewEvents = events.slice(0, PREVIEW_LIMIT)
   const extraCount = events.length - PREVIEW_LIMIT
 
+  useEffect(() => {
+    const handleKeyDown = (evt: KeyboardEvent) => {
+      if (evt.key === 'Escape') onCancel()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [onCancel])
+
   return (
     /* Overlay / scrim */
     <div
@@ -56,6 +65,9 @@ export const BulkApproveConfirm = ({
     >
       {/* Dialog */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="bulk-approve-title"
         style={{
           width: 520,
           background: 'var(--bg-elevated)',
@@ -74,6 +86,7 @@ export const BulkApproveConfirm = ({
         >
           <MonoLabel>bulk approve</MonoLabel>
           <h3
+            id="bulk-approve-title"
             style={{
               fontSize: 18,
               fontWeight: 700,

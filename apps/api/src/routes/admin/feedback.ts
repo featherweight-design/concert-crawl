@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { eq, desc } from 'drizzle-orm'
+import { eq, desc, sql } from 'drizzle-orm'
 import { db, feedback } from '@concert-crawl/db'
 import { getAuthUser } from '../../middleware/auth.js'
 import type { AdminVariables } from './index.js'
@@ -42,6 +42,15 @@ feedbackAdminRouter.get(
     return ctx.json({ success: true, data: rows })
   },
 )
+
+// GET /v1/admin/feedback/counts — unread count for sidebar badge
+feedbackAdminRouter.get('/counts', async (ctx) => {
+  const [result] = await db
+    .select({ unread: sql<number>`count(*)::int` })
+    .from(feedback)
+    .where(eq(feedback.status, 'unread'))
+  return ctx.json({ success: true, data: { unread: result?.unread ?? 0 } })
+})
 
 // PATCH /v1/admin/feedback/:id — update status, adminNotes, issueUrl
 feedbackAdminRouter.patch(

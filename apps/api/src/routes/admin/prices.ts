@@ -128,6 +128,15 @@ pricesAdminRouter.get('/submissions', async (ctx) => {
   return ctx.json({ success: true, data: rows })
 })
 
+// GET /v1/admin/prices/submissions/count — pending submissions count for dashboard
+pricesAdminRouter.get('/submissions/count', async (ctx) => {
+  const [result] = await db
+    .select({ pending: sql<number>`count(*)::int` })
+    .from(priceSubmissions)
+    .where(eq(priceSubmissions.status, 'pending'))
+  return ctx.json({ success: true, data: { pending: result?.pending ?? 0 } })
+})
+
 const patchSubmissionSchema = z.object({
   status: z.enum(['corroborated', 'disputed', 'stale']),
 })

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import React, { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { VenueWithEventCount } from '@concert-crawl/types'
@@ -248,8 +248,8 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
             const isExpanded = expandedId === venue.id
 
             return (
-              <>
-                <TR key={venue.id}>
+              <React.Fragment key={venue.id}>
+                <TR>
                   <TD width={36}>
                     <button
                       aria-label={
@@ -418,7 +418,7 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
                     </td>
                   </tr>
                 )}
-              </>
+              </React.Fragment>
             )
           })}
         </tbody>

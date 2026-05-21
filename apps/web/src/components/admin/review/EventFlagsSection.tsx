@@ -79,18 +79,14 @@ export const EventFlagsSection = ({
     if (activeId === id) setActiveId(null)
   }
 
-  const handleBulkApprove = () => {
-    for (const id of selectedIds) {
-      onApprove(id)
-    }
+  const handleBulkApprove = async () => {
+    await Promise.allSettled(Array.from(selectedIds).map((id) => onApprove(id)))
     setSelectedIds(new Set())
     setActiveId(null)
   }
 
-  const handleBulkReject = () => {
-    for (const id of selectedIds) {
-      onReject(id)
-    }
+  const handleBulkReject = async () => {
+    await Promise.allSettled(Array.from(selectedIds).map((id) => onReject(id)))
     setSelectedIds(new Set())
     setActiveId(null)
   }
@@ -226,8 +222,8 @@ export const EventFlagsSection = ({
       {selectedIds.size > 0 && (
         <BulkActionDock
           count={selectedIds.size}
-          onApproveAll={handleBulkApprove}
-          onRejectAll={handleBulkReject}
+          onApproveAll={() => void handleBulkApprove()}
+          onRejectAll={() => void handleBulkReject()}
           onClear={() => setSelectedIds(new Set())}
         />
       )}

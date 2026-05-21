@@ -5,7 +5,7 @@ import { ExternalLink, RefreshCw, Settings, BarChart2 } from 'lucide-react'
 import type { VenueWithEventCount } from '@concert-crawl/types'
 import { AdminButton } from '@/components/admin/primitives'
 import { useTriggerVenueCrawl } from '@/lib/queries/use-admin-crawl-trigger'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 interface Props {
   venue: VenueWithEventCount
@@ -22,16 +22,24 @@ export function VenueQuickView({ venue }: Props) {
   const [crawlState, setCrawlState] = useState<
     'idle' | 'triggering' | 'queued' | 'error'
   >('idle')
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current !== null) clearTimeout(timeoutRef.current)
+    }
+  }, [])
 
   async function handleRunCrawl() {
+    if (timeoutRef.current !== null) clearTimeout(timeoutRef.current)
     setCrawlState('triggering')
     try {
       await triggerCrawl.mutateAsync(venue.id)
       setCrawlState('queued')
-      setTimeout(() => setCrawlState('idle'), 4000)
+      timeoutRef.current = setTimeout(() => setCrawlState('idle'), 4000)
     } catch {
       setCrawlState('error')
-      setTimeout(() => setCrawlState('idle'), 3000)
+      timeoutRef.current = setTimeout(() => setCrawlState('idle'), 3000)
     }
   }
 

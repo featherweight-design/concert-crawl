@@ -196,10 +196,21 @@ export default async function AdminDashboardPage() {
   if (summaryParts.length === 0)
     summaryParts.push(`${greenCount} of ${status.length} venues green`)
 
+  const lastRun = runs[0]
+  const lastSweepLabel = lastRun
+    ? new Date(lastRun.createdAt).toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZone: 'America/Denver',
+      })
+    : null
+
   const digestLabel =
-    greenCount > 0
-      ? `${greenCount} venue${greenCount === 1 ? '' : 's'} crawled cleanly · last sweep 3:02 AM`
-      : undefined
+    greenCount > 0 && lastSweepLabel
+      ? `${greenCount} venue${greenCount === 1 ? '' : 's'} crawled cleanly · last sweep ${lastSweepLabel}`
+      : greenCount > 0
+        ? `${greenCount} venue${greenCount === 1 ? '' : 's'} crawled cleanly`
+        : undefined
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>

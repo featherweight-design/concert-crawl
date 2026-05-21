@@ -1,7 +1,8 @@
 import { Hono } from 'hono'
 import { requireRole } from '../../middleware/role.js'
 import { clerkAuth } from '../../middleware/auth.js'
-import { db, auditLog } from '@concert-crawl/db'
+import { db, auditLog, events, priceSubmissions } from '@concert-crawl/db'
+import { eq, sql } from 'drizzle-orm'
 import { venuesAdminRouter } from './venues.js'
 import { inviteCodesAdminRouter } from './invite-codes.js'
 import { crawlAdminRouter } from './crawl.js'
@@ -55,6 +56,27 @@ adminRouter.use('*', async (ctx, next) => {
       })
     }
   }
+})
+
+// GET /v1/admin/review/counts — pending events + price submissions for sidebar badge
+adminRouter.get('/review/counts', async (ctx) => {
+  const [eventsResult, pricesResult] = await Promise.all([
+    db
+      .select({ pending: sql<number>`count(*)::int` })
+      .from(events)
+      .where(eq(events.verified, false)),
+    db
+      .select({ pending: sql<number>`count(*)::int` })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.status, 'pending')),
+  ])
+  return ctx.json({
+    success: true,
+    data: {
+      pendingEvents: eventsResult[0]?.pending ?? 0,
+      pendingPrices: pricesResult[0]?.pending ?? 0,
+    },
+  })
 })
 
 adminRouter.route('/venues', venuesAdminRouter)
