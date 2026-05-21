@@ -148,6 +148,7 @@ export default async function AdminDashboardPage() {
     await fetchDashboardData(token)
 
   const greenCount = status.filter((row) => row.status === 'success').length
+  const totalEventsFound = status.reduce((sum, row) => sum + row.eventsFound, 0)
   const blockedCount = status.filter(
     (row) => row.blockedAt !== null || row.status === 'failed',
   ).length
@@ -216,11 +217,13 @@ export default async function AdminDashboardPage() {
       })
     : null
 
+  const eventsIngested =
+    totalEventsFound > 0 ? ` · ${totalEventsFound} events ingested` : ''
   const digestLabel =
     greenCount > 0 && lastSweepLabel
-      ? `${greenCount} venue${greenCount === 1 ? '' : 's'} crawled cleanly · last sweep ${lastSweepLabel}`
+      ? `${greenCount} venue${greenCount === 1 ? '' : 's'} crawled cleanly · last sweep ${lastSweepLabel}${eventsIngested}`
       : greenCount > 0
-        ? `${greenCount} venue${greenCount === 1 ? '' : 's'} crawled cleanly`
+        ? `${greenCount} venue${greenCount === 1 ? '' : 's'} crawled cleanly${eventsIngested}`
         : undefined
 
   return (
@@ -365,6 +368,7 @@ export default async function AdminDashboardPage() {
       <AttentionFeed
         items={attentionItems}
         {...(digestLabel ? { digestLabel } : {})}
+        digestHref="/admin/crawl"
       />
 
       {/* Crawl health detail */}

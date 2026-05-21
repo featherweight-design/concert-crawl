@@ -1,5 +1,5 @@
 interface PanelProps {
-  title?: string
+  title?: React.ReactNode
   action?: React.ReactNode
   padding?: number | string
   children: React.ReactNode
