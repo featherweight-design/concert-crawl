@@ -343,6 +343,7 @@ export default async function AdminDashboardPage() {
           unit={`of ${venues.length}`}
           iconName="MapPin"
           kind="neutral"
+          mono={false}
           {...(activeVenuesHint ? { hint: activeVenuesHint } : {})}
           footer={
             <span

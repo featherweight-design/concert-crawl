@@ -12,6 +12,7 @@ interface StatCardProps {
   trend?: { dir: 'up' | 'down'; text: string; good: boolean }
   kind?: StatusKind
   iconName: string
+  mono?: boolean
   footer?: React.ReactNode
   onClick?: () => void
 }
@@ -24,6 +25,7 @@ export const StatCard = ({
   trend,
   kind = 'neutral',
   iconName,
+  mono = true,
   footer,
   onClick,
 }: StatCardProps) => {
@@ -72,7 +74,9 @@ export const StatCard = ({
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
             <span
               style={{
-                fontFamily: "'JetBrains Mono', monospace",
+                fontFamily: mono
+                  ? "'JetBrains Mono', monospace"
+                  : 'var(--admin-font, Inter, sans-serif)',
                 fontSize: 30,
                 fontWeight: 700,
                 fontVariantNumeric: 'tabular-nums',
