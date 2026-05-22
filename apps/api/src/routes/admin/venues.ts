@@ -99,6 +99,10 @@ const updateVenueSchema = createVenueSchema.partial().extend({
     .nullable()
     .optional()
     .transform((val) => (val?.trim() === '' ? null : val)),
+  extractionStrategy: z
+    .enum(['structured_data', 'llm', 'manual'])
+    .nullable()
+    .optional(),
 })
 
 export const venuesAdminRouter = new Hono<AdminVariables>()

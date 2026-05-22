@@ -447,6 +447,9 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
   const [crawlModeVal, setCrawlModeVal] = useState<'http' | 'browser' | null>(
     venue.crawlMode ?? null,
   )
+  const [extractionStrategyVal, setExtractionStrategyVal] = useState<
+    'structured_data' | 'llm' | 'manual' | null
+  >(venue.extractionStrategy ?? null)
   const [capacityVal, setCapacityVal] = useState<string>(
     venue.capacity != null ? String(venue.capacity) : '',
   )
@@ -469,6 +472,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     ticketVendorVal !== (venue.ticketVendor ?? null) ||
     priceUrlVal !== (venue.priceUrl ?? '') ||
     crawlModeVal !== (venue.crawlMode ?? null) ||
+    extractionStrategyVal !== (venue.extractionStrategy ?? null) ||
     capacityVal !== (venue.capacity != null ? String(venue.capacity) : '') ||
     venueTypeVal !== (venue.venueType ?? '') ||
     aboutVal !== (venue.about ?? '') ||
@@ -542,6 +546,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     setTicketVendorVal(venue.ticketVendor ?? null)
     setPriceUrlVal(venue.priceUrl ?? '')
     setCrawlModeVal(venue.crawlMode ?? null)
+    setExtractionStrategyVal(venue.extractionStrategy ?? null)
     setCapacityVal(venue.capacity != null ? String(venue.capacity) : '')
     setVenueTypeVal(venue.venueType ?? '')
     setAboutVal(venue.about ?? '')
@@ -577,6 +582,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
       formData.set('ticketVendor', ticketVendorVal)
     }
     formData.set('crawlMode', crawlModeVal ?? '')
+    formData.set('extractionStrategy', extractionStrategyVal ?? '')
     formData.set('capacity', capacityVal.trim())
     formData.set('venueType', venueTypeVal.trim())
     formData.set('about', aboutVal.trim())
@@ -1180,138 +1186,221 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
             </div>
           </VDSection>
 
-          {/* 03 · crawl */}
-          <VDSection eyebrow="03 · crawl" title="Crawl Settings">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {/* Fetch mode as segmented toggle */}
-              <VDField label="Fetch mode" htmlFor="edit-venue-crawl-mode">
-                <VDSegToggle
-                  options={[
-                    { value: 'auto', label: 'Auto-detect' },
-                    { value: 'http', label: 'HTTP only' },
-                    { value: 'browser', label: 'Browser' },
-                  ]}
-                  value={crawlModeVal ?? 'auto'}
-                  onChange={(val) =>
-                    setCrawlModeVal(
-                      val === 'auto' ? null : (val as 'http' | 'browser'),
-                    )
-                  }
-                  disabled={isDisabled}
-                />
-                <div
-                  style={{
-                    fontFamily: "'Inter', sans-serif",
-                    fontSize: 11,
-                    color: 'var(--fg-muted)',
-                    lineHeight: 1.5,
-                    marginTop: 4,
-                  }}
-                >
-                  {crawlModeVal === null && (
-                    <>
-                      <strong style={{ color: 'var(--fg)' }}>
-                        Auto-detect
-                      </strong>{' '}
-                      — tries plain HTTP first; falls back to browser if needed.
-                    </>
-                  )}
-                  {crawlModeVal === 'http' && (
-                    <>
-                      <strong style={{ color: 'var(--fg)' }}>HTTP only</strong>{' '}
-                      — plain request. Fails if events need JavaScript.
-                    </>
-                  )}
-                  {crawlModeVal === 'browser' && (
-                    <>
-                      <strong style={{ color: 'var(--fg)' }}>
-                        Browser only
-                      </strong>{' '}
-                      — always uses Playwright. Required for JS-rendered pages.
-                    </>
-                  )}
-                </div>
-              </VDField>
-
-              {/* Wait strategy */}
-              <VDField label="Wait strategy" htmlFor="edit-venue-wait-until">
-                <VDSelect
-                  id="edit-venue-wait-until"
-                  value={waitUntilVal}
-                  disabled={isDisabled}
-                  onChange={(evt) =>
-                    setWaitUntilVal(
-                      evt.target.value as
-                        | 'networkidle'
-                        | 'load'
-                        | 'domcontentloaded',
-                    )
-                  }
-                >
-                  <option value="networkidle">
-                    networkidle — wait for quiet network
-                  </option>
-                  <option value="load">load — wait for page load event</option>
-                  <option value="domcontentloaded">
-                    domcontentloaded — wait for HTML parse only
-                  </option>
-                </VDSelect>
-              </VDField>
-
-              {/* Crawl delay */}
-              <VDField
-                label="Crawl delay (ms)"
-                htmlFor="edit-venue-crawl-delay"
-                hint="Minimum wait between requests. Default 3000ms. Range: 1000–30000ms."
+          {/* 03 · crawl config */}
+          <VDSection
+            eyebrow="03 · crawl config"
+            title="How the scraper hits this venue"
+          >
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 16,
+                alignItems: 'start',
+              }}
+            >
+              {/* Left column */}
+              <div
+                style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
               >
-                <VDInput
-                  id="edit-venue-crawl-delay"
-                  type="number"
-                  inputRef={crawlDelayRef}
-                  defaultValue={venue.crawlDelayMs}
-                  disabled={isDisabled}
-                  min={1000}
-                  max={30000}
-                  step={500}
-                  onChange={(evt) => {
-                    const parsed = Number(evt.target.value)
-                    setCrawlDelayVal(
-                      Number.isFinite(parsed) && Number.isInteger(parsed)
-                        ? parsed
-                        : NaN,
-                    )
-                  }}
-                />
-              </VDField>
+                {/* Extraction strategy */}
+                <VDField
+                  label="Extraction strategy"
+                  htmlFor="edit-venue-extraction-strategy"
+                >
+                  <VDSelect
+                    id="edit-venue-extraction-strategy"
+                    value={extractionStrategyVal ?? ''}
+                    disabled={isDisabled}
+                    onChange={(evt) =>
+                      setExtractionStrategyVal(
+                        (evt.target.value || null) as
+                          | 'structured_data'
+                          | 'llm'
+                          | 'manual'
+                          | null,
+                      )
+                    }
+                  >
+                    <option value="">— Auto —</option>
+                    <option value="structured_data">
+                      structured — schema.org/Event
+                    </option>
+                    <option value="llm">LLM — Claude Haiku extraction</option>
+                    <option value="manual">manual — admin entry only</option>
+                  </VDSelect>
+                </VDField>
 
-              {/* Wait for selector */}
-              <VDField
-                label="Wait for selector (optional)"
-                htmlFor="edit-venue-wait-for-selector"
-                hint={
-                  <>
-                    CSS selector to wait for after page load. Example:{' '}
-                    <code
+                {/* Request delay */}
+                <VDField
+                  label="Request delay"
+                  htmlFor="edit-venue-crawl-delay"
+                  hint="Milliseconds between requests inside one sweep. Tune up if you hit rate limits."
+                >
+                  <div
+                    style={{ display: 'flex', gap: 0, alignItems: 'stretch' }}
+                  >
+                    <VDInput
+                      id="edit-venue-crawl-delay"
+                      type="number"
+                      inputRef={crawlDelayRef}
+                      defaultValue={venue.crawlDelayMs}
+                      disabled={isDisabled}
+                      min={1000}
+                      max={30000}
+                      step={500}
+                      onChange={(evt) => {
+                        const parsed = Number(evt.target.value)
+                        setCrawlDelayVal(
+                          Number.isFinite(parsed) && Number.isInteger(parsed)
+                            ? parsed
+                            : NaN,
+                        )
+                      }}
                       style={{
-                        fontFamily: 'monospace',
+                        borderTopRightRadius: 0,
+                        borderBottomRightRadius: 0,
+                        borderRight: 'none',
+                      }}
+                    />
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '0 10px',
                         background: 'var(--surface-1)',
-                        padding: '1px 3px',
-                        borderRadius: 3,
+                        border: '1px solid var(--border-strong)',
+                        borderTopRightRadius: 8,
+                        borderBottomRightRadius: 8,
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: 'var(--fg-subtle)',
+                        letterSpacing: '0.04em',
+                        flexShrink: 0,
                       }}
                     >
-                      .event-list-item
-                    </code>
-                  </>
-                }
+                      ms
+                    </div>
+                  </div>
+                </VDField>
+              </div>
+
+              {/* Right column */}
+              <div
+                style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
               >
-                <VDInput
-                  id="edit-venue-wait-for-selector"
-                  value={waitForSelectorVal}
-                  placeholder="e.g. .event-card or [data-testid='event']"
-                  disabled={isDisabled}
-                  onChange={(evt) => setWaitForSelectorVal(evt.target.value)}
-                />
-              </VDField>
+                {/* Fetch mode */}
+                <VDField label="Fetch mode" htmlFor="edit-venue-crawl-mode">
+                  <VDSegToggle
+                    options={[
+                      { value: 'auto', label: 'Auto-detect' },
+                      { value: 'http', label: 'HTTP only' },
+                      { value: 'browser', label: 'Browser' },
+                    ]}
+                    value={crawlModeVal ?? 'auto'}
+                    onChange={(val) =>
+                      setCrawlModeVal(
+                        val === 'auto' ? null : (val as 'http' | 'browser'),
+                      )
+                    }
+                    disabled={isDisabled}
+                  />
+                  <div
+                    style={{
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: 11,
+                      color: 'var(--fg-muted)',
+                      lineHeight: 1.5,
+                      marginTop: 4,
+                    }}
+                  >
+                    {crawlModeVal === null && (
+                      <>
+                        <strong style={{ color: 'var(--fg)' }}>
+                          Auto-detect
+                        </strong>{' '}
+                        — tries plain HTTP first; falls back to browser if
+                        needed.
+                      </>
+                    )}
+                    {crawlModeVal === 'http' && (
+                      <>
+                        <strong style={{ color: 'var(--fg)' }}>
+                          HTTP only
+                        </strong>{' '}
+                        — plain request. Fails if events need JavaScript.
+                      </>
+                    )}
+                    {crawlModeVal === 'browser' && (
+                      <>
+                        <strong style={{ color: 'var(--fg)' }}>
+                          Browser only
+                        </strong>{' '}
+                        — always uses Playwright. Required for JS-rendered
+                        pages.
+                      </>
+                    )}
+                  </div>
+                </VDField>
+
+                {/* Schedule — static (per-venue config tracked in #530) */}
+                <VDField
+                  label="Schedule (cron)"
+                  htmlFor="edit-venue-schedule"
+                  labelRight={
+                    <span
+                      style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        letterSpacing: '0.06em',
+                        textTransform: 'uppercase',
+                        color: 'var(--fg-subtle)',
+                      }}
+                    >
+                      Daily · 3 AM MT
+                    </span>
+                  }
+                >
+                  <VDInput
+                    id="edit-venue-schedule"
+                    value="0 3 * * *"
+                    disabled
+                    style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                  />
+                </VDField>
+
+                {/* Wait selector */}
+                <VDField
+                  label="Wait selector"
+                  htmlFor="edit-venue-wait-for-selector"
+                  labelRight={
+                    <span
+                      style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        letterSpacing: '0.06em',
+                        textTransform: 'uppercase',
+                        color: 'var(--fg-subtle)',
+                      }}
+                    >
+                      Optional
+                    </span>
+                  }
+                  hint="If set, Playwright waits for this selector before parsing."
+                >
+                  <VDInput
+                    id="edit-venue-wait-for-selector"
+                    value={waitForSelectorVal}
+                    placeholder="e.g. .event-card, [data-event]"
+                    disabled={isDisabled}
+                    onChange={(evt) => setWaitForSelectorVal(evt.target.value)}
+                    style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                  />
+                </VDField>
+              </div>
             </div>
           </VDSection>
 

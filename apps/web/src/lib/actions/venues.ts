@@ -126,6 +126,20 @@ export async function updateVenue(
           ? null
           : undefined
 
+    const extractionStrategyRaw = formData.get('extractionStrategy')
+    const VALID_EXTRACTION_STRATEGIES = [
+      'structured_data',
+      'llm',
+      'manual',
+    ] as const
+    const extractionStrategy = (
+      VALID_EXTRACTION_STRATEGIES as readonly string[]
+    ).includes(String(extractionStrategyRaw ?? ''))
+      ? (extractionStrategyRaw as (typeof VALID_EXTRACTION_STRATEGIES)[number])
+      : extractionStrategyRaw === '' || extractionStrategyRaw === null
+        ? null
+        : undefined
+
     const addressRaw = formData.get('address')
     const address =
       addressRaw !== null && String(addressRaw).trim()
@@ -191,6 +205,7 @@ export async function updateVenue(
       neighborhood,
       featured,
       priceUrl,
+      extractionStrategy,
     })
     revalidatePath('/admin/venues')
     revalidatePath(`/admin/venues/${id}`)
