@@ -4,6 +4,8 @@ import { useState, useCallback, useEffect } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { apiClient, ApiError } from '@/lib/api'
+import { SectionHead, AdminButton } from '@/components/admin/primitives'
+import { Filter, ExternalLink } from 'lucide-react'
 import { EventFlagsSection } from './EventFlagsSection'
 import { PendingSubmissionsPanel } from './PendingSubmissionsPanel'
 import { PriceCoverageTable } from './PriceCoverageTable'
@@ -208,6 +210,48 @@ export const ReviewPageClient = ({
     [getToken, router],
   )
 
+  const pendingCount = events.length + submissions.length
+
+  const sectionHead = (
+    <SectionHead
+      eyebrow="operations · moderation"
+      title={
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+          Review
+          {pendingCount > 0 && (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                padding: '3px 10px',
+                borderRadius: 20,
+                border: '1.5px solid var(--warning)',
+                fontSize: 13,
+                fontWeight: 600,
+                color: 'var(--warning)',
+                letterSpacing: 0,
+                lineHeight: 1.4,
+              }}
+            >
+              {pendingCount} pending
+            </span>
+          )}
+        </span>
+      }
+      subtitle="Most events auto-approve. This page is where flags and community price submissions land for triage."
+      actions={
+        <>
+          <AdminButton variant="outline" size="sm" icon={Filter}>
+            Filter rules
+          </AdminButton>
+          <AdminButton variant="outline" size="sm" icon={ExternalLink}>
+            Approval history
+          </AdminButton>
+        </>
+      }
+    />
+  )
+
   const errorBanner = error && (
     <div
       style={{
@@ -227,6 +271,7 @@ export const ReviewPageClient = ({
   if (!isDesktop) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {sectionHead}
         {errorBanner}
         <AdminReviewMobile
           events={events}
@@ -244,6 +289,7 @@ export const ReviewPageClient = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {sectionHead}
       {errorBanner}
 
       <EventFlagsSection
