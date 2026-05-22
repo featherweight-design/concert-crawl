@@ -23,7 +23,7 @@ docker exec -it concert-crawl-db psql -U postgres -d concert_crawl_db \
 
 On staging/prod, use the Render MCP tool (`mcp__render__query_render_postgres`) — it is read-only, so you can query but cannot roll back via it. Use it only to confirm state.
 
-The migration filename to roll back is in `packages/db/drizzle/` — match the hash from the query above to the file on disk.
+The migration filename to roll back is in `packages/db/migrations/` — match the hash from the query above to the file on disk.
 
 ---
 
@@ -73,7 +73,7 @@ Only after staging passes.
 psql "$PROD_DATABASE_URL" -f path/to/down_migration.sql
 ```
 
-Then manually update the Drizzle migrations journal to remove the rolled-back entry:
+Then remove the rolled-back entry from the Drizzle migrations log (the `drizzle.__drizzle_migrations` table — distinct from the `meta/_journal.json` file, which you do not need to edit):
 
 ```bash
 psql "$PROD_DATABASE_URL" \
@@ -111,7 +111,7 @@ API-level rate limits (feedback, invite code validation, waitlist) are **in-memo
 
 - A rollback + redeploy clears all active rate limit windows
 - On multi-instance scale-out (if Render ever runs more than one instance), each instance has its own independent counter
-- See issue #525 for the tracking ticket to replace these with a durable store
+- See issue #528 for the tracking ticket to replace these with a durable store
 
 During a rollback incident, treat rate limits as non-functional until a Redis-backed implementation ships.
 
