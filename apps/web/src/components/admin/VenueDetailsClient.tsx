@@ -443,6 +443,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
   const [ticketVendorVal, setTicketVendorVal] = useState<string | null>(
     venue.ticketVendor ?? null,
   )
+  const [priceUrlVal, setPriceUrlVal] = useState(venue.priceUrl ?? '')
   const [crawlModeVal, setCrawlModeVal] = useState<'http' | 'browser' | null>(
     venue.crawlMode ?? null,
   )
@@ -466,6 +467,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     crawlDelayVal !== venue.crawlDelayMs ||
     (waitForSelectorVal || null) !== venue.crawlWaitForSelector ||
     ticketVendorVal !== (venue.ticketVendor ?? null) ||
+    priceUrlVal !== (venue.priceUrl ?? '') ||
     crawlModeVal !== (venue.crawlMode ?? null) ||
     capacityVal !== (venue.capacity != null ? String(venue.capacity) : '') ||
     venueTypeVal !== (venue.venueType ?? '') ||
@@ -538,6 +540,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     setCrawlDelayVal(venue.crawlDelayMs)
     setWaitForSelectorVal(venue.crawlWaitForSelector ?? '')
     setTicketVendorVal(venue.ticketVendor ?? null)
+    setPriceUrlVal(venue.priceUrl ?? '')
     setCrawlModeVal(venue.crawlMode ?? null)
     setCapacityVal(venue.capacity != null ? String(venue.capacity) : '')
     setVenueTypeVal(venue.venueType ?? '')
@@ -578,6 +581,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     formData.set('venueType', venueTypeVal.trim())
     formData.set('about', aboutVal.trim())
     formData.set('neighborhood', neighborhoodVal.trim())
+    formData.set('priceUrl', priceUrlVal.trim())
 
     try {
       const result = await updateVenue(venue.id, formData)
@@ -1106,12 +1110,18 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
           </VDSection>
 
           {/* 02 · ticketing */}
-          <VDSection eyebrow="02 · ticketing" title="Ticket Vendor">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <VDSection eyebrow="02 · ticketing" title="Where fans buy">
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 2fr',
+                gap: 12,
+                alignItems: 'start',
+              }}
+            >
               <VDField
-                label="Ticket Vendor"
+                label="Primary vendor"
                 htmlFor="edit-venue-ticket-vendor"
-                hint="Override the auto-detected ticket vendor for this venue."
               >
                 <VDSelect
                   id="edit-venue-ticket-vendor"
@@ -1121,7 +1131,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                     setTicketVendorVal(evt.target.value || null)
                   }
                 >
-                  <option value="">— Auto-detected / Unknown —</option>
+                  <option value="">— Unknown —</option>
                   <option value="axs">AXS</option>
                   <option value="ticketmaster">Ticketmaster</option>
                   <option value="seatgeek">SeatGeek</option>
@@ -1130,6 +1140,42 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                   <option value="venue_box_office">Venue Box Office</option>
                   <option value="unknown">Unknown</option>
                 </VDSelect>
+              </VDField>
+              <VDField
+                label="Ticket URL"
+                htmlFor="edit-venue-price-url"
+                hint="Default destination for the 'Buy tickets' button when an event has no per-show URL."
+              >
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <VDInput
+                    id="edit-venue-price-url"
+                    type="url"
+                    defaultValue={venue.priceUrl ?? ''}
+                    disabled={isDisabled}
+                    placeholder="https://..."
+                    onChange={(evt) => setPriceUrlVal(evt.target.value)}
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      flex: 1,
+                    }}
+                  />
+                  {priceUrlVal && (
+                    <a
+                      href={priceUrlVal}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        color: 'var(--fg-muted)',
+                        flexShrink: 0,
+                      }}
+                      title="Open ticket URL"
+                    >
+                      <ExternalLink size={14} />
+                    </a>
+                  )}
+                </div>
               </VDField>
             </div>
           </VDSection>

@@ -167,6 +167,12 @@ export async function updateVenue(
     const featuredRaw = formData.get('featured')
     const featured = featuredRaw !== null ? featuredRaw === 'true' : undefined
 
+    const priceUrlRaw = formData.get('priceUrl')
+    const priceUrl =
+      priceUrlRaw !== null && String(priceUrlRaw).trim()
+        ? String(priceUrlRaw).trim()
+        : null
+
     await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
       name: formData.get('name'),
       slug: formData.get('slug'),
@@ -184,6 +190,7 @@ export async function updateVenue(
       about,
       neighborhood,
       featured,
+      priceUrl,
     })
     revalidatePath('/admin/venues')
     revalidatePath(`/admin/venues/${id}`)

@@ -93,6 +93,12 @@ const updateVenueSchema = createVenueSchema.partial().extend({
   verifiedBy: z.string().max(200).nullable().optional(),
   crawlMode: z.enum(['http', 'browser']).nullable().optional(),
   featured: z.boolean().optional(),
+  priceUrl: z
+    .string()
+    .url()
+    .nullable()
+    .optional()
+    .transform((val) => (val?.trim() === '' ? null : val)),
 })
 
 export const venuesAdminRouter = new Hono<AdminVariables>()
