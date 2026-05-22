@@ -251,7 +251,19 @@ export default function FeedbackPage() {
         />
 
         <Panel
-          title={`Active feedback`}
+          title={
+            activeFilter === 'all'
+              ? 'Active feedback'
+              : activeFilter === 'unread'
+                ? 'Unread feedback'
+                : activeFilter === 'flagged'
+                  ? 'Flagged feedback'
+                  : activeFilter === 'issue_opened'
+                    ? 'Issues opened'
+                    : activeFilter === 'resolved'
+                      ? 'Resolved feedback'
+                      : 'Archived feedback'
+          }
           action={
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <span

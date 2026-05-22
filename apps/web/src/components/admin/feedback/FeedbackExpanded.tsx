@@ -9,6 +9,8 @@ import {
   User,
   ChevronRight,
   X,
+  LayoutGrid,
+  Copy,
 } from 'lucide-react'
 import { MonoLabel } from '@/components/admin/primitives'
 import type { FeedbackItem } from './FeedbackRow'
@@ -93,6 +95,7 @@ export function FeedbackExpanded({
 }: FeedbackExpandedProps) {
   const [notes, setNotes] = useState(item.adminNotes ?? '')
   const [isSaving, setIsSaving] = useState(false)
+  const [isCopied, setIsCopied] = useState(false)
   const isUnread = item.status === 'unread'
   const isFlagged = item.status === 'flagged'
 
@@ -104,6 +107,13 @@ export function FeedbackExpanded({
     } finally {
       setIsSaving(false)
     }
+  }
+
+  const handleCopyIssueUrl = async () => {
+    if (!item.issueUrl) return
+    await navigator.clipboard.writeText(item.issueUrl)
+    setIsCopied(true)
+    setTimeout(() => setIsCopied(false), 1500)
   }
 
   const meta = item.metadata ?? {}
@@ -243,7 +253,7 @@ export function FeedbackExpanded({
                     )`,
                   }}
                 >
-                  <ExternalLink
+                  <LayoutGrid
                     size={22}
                     color="var(--fg-subtle)"
                     style={{ opacity: 0.4 }}
@@ -259,7 +269,7 @@ export function FeedbackExpanded({
                       opacity: 0.6,
                     }}
                   >
-                    No screenshot attached
+                    User-attached screenshot
                   </span>
                 </div>
               )}
@@ -335,15 +345,19 @@ export function FeedbackExpanded({
           {/* Create / Linked Issue */}
           {item.issueUrl ? (
             <div>
-              <MonoLabel>linked issue</MonoLabel>
+              <MonoLabel color="var(--accent)">linked issue</MonoLabel>
               <div
                 style={{
                   padding: '12px 14px',
                   marginTop: 8,
-                  background: 'var(--bg-elevated)',
+                  background:
+                    'color-mix(in oklab, var(--accent) 6%, var(--bg-elevated))',
                   border:
                     '1px solid color-mix(in oklab, var(--accent) 32%, transparent)',
                   borderRadius: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
                 }}
               >
                 <a
@@ -351,19 +365,44 @@ export function FeedbackExpanded({
                   target="_blank"
                   rel="noreferrer"
                   style={{
+                    flex: 1,
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 6,
                     fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: 700,
                     color: 'var(--accent)',
                     textDecoration: 'none',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
                   }}
                 >
-                  <ExternalLink size={12} />
-                  {item.issueUrl}
+                  <ExternalLink size={12} style={{ flexShrink: 0 }} />
+                  {item.issueUrl.replace('https://', '')}
                 </a>
+                <button
+                  type="button"
+                  onClick={() => void handleCopyIssueUrl()}
+                  title="Copy URL"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 26,
+                    height: 26,
+                    borderRadius: 6,
+                    border:
+                      '1px solid color-mix(in oklab, var(--accent) 32%, transparent)',
+                    background: 'transparent',
+                    color: isCopied ? 'var(--success)' : 'var(--accent)',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                  }}
+                >
+                  {isCopied ? <Check size={12} /> : <Copy size={12} />}
+                </button>
               </div>
             </div>
           ) : (
