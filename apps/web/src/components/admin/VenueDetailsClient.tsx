@@ -20,6 +20,7 @@ import {
   SectionHead,
   MetaCard,
 } from '@/components/admin/primitives'
+import { deriveVenueStatus } from '@/lib/admin/venue-status'
 import {
   IdentityArt,
   ia_getInitials,
@@ -44,7 +45,6 @@ import {
   AlertCircle,
   Check,
   Loader2,
-  MapPin,
   ChevronRight,
 } from 'lucide-react'
 import { formatDurationMs } from '@/lib/time'
@@ -58,6 +58,21 @@ function slugify(name: string): string {
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '')
     .slice(0, 60)
+}
+
+function strategyLabel(strategy: string | null): string {
+  if (strategy === 'structured_data') return 'structured'
+  if (strategy === 'llm') return 'llm'
+  if (strategy === 'manual') return 'manual'
+  return 'auto'
+}
+
+function strategyKind(
+  strategy: string | null,
+): 'signal' | 'accent' | 'neutral' {
+  if (strategy === 'structured_data') return 'signal'
+  if (strategy === 'llm') return 'accent'
+  return 'neutral'
 }
 
 // ── VD Primitives ─────────────────────────────────────────────
@@ -704,13 +719,6 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
 
   const { crawlHealth } = venue
 
-  let sourceHost = ''
-  try {
-    sourceHost = new URL(venue.websiteUrl).hostname
-  } catch {
-    sourceHost = venue.websiteUrl
-  }
-
   const healthColor =
     crawlHealth.sevenDayPercent >= 80
       ? 'var(--success)'
@@ -731,77 +739,145 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     >
       {/* Header */}
       <SectionHead
-        eyebrow="Venue details"
-        title={
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 12,
-              flexWrap: 'wrap',
-            }}
-          >
-            {venue.name}
-            <StatusBadge kind={venue.verified ? 'success' : 'warning'} dot>
-              {venue.verified ? 'Verified' : 'Unverified'}
-            </StatusBadge>
-            {!venue.active && <StatusBadge kind="danger">Paused</StatusBadge>}
-          </span>
-        }
-        subtitle={
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 10,
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 12,
-              letterSpacing: '0.02em',
-            }}
-          >
-            <MapPin size={12} color="var(--fg-subtle)" />
-            <span style={{ color: 'var(--fg-muted)' }}>{venue.city}</span>
-            <span style={{ color: 'var(--fg-subtle)' }}>·</span>
-            <a
-              href={venue.websiteUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                color: 'var(--signal)',
-                textDecoration: 'none',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 3,
-              }}
-            >
-              {sourceHost}
-              <ExternalLink size={10} />
-            </a>
-            {crawlHealth.lastCrawledAt && (
-              <>
-                <span style={{ color: 'var(--fg-subtle)' }}>·</span>
-                <span style={{ color: 'var(--fg-muted)' }}>
-                  last crawled <RelTime iso={crawlHealth.lastCrawledAt} />
-                </span>
-              </>
-            )}
-          </span>
-        }
+        eyebrow="Venues · edit"
+        title="Venue detail"
+        subtitle="Identity, ticketing, crawl config, editorial fields. LLM-assisted fields are always admin-reviewed before they save."
         actions={
           <>
-            <Link
-              href={`/v/${venue.slug}`}
-              target="_blank"
-              style={{ textDecoration: 'none' }}
-            >
-              <AdminButton variant="outline" size="sm" iconRight={ExternalLink}>
-                View public page
+            <Link href="/admin/venues" style={{ textDecoration: 'none' }}>
+              <AdminButton variant="ghost" size="sm" iconRight={ChevronRight}>
+                Back to venues
               </AdminButton>
             </Link>
-            <CrawlTriggerButton venueId={venue.id} />
+            <Link
+              href={`/admin/crawl?venueId=${venue.id}`}
+              style={{ textDecoration: 'none' }}
+            >
+              <AdminButton variant="outline" size="sm" icon={ExternalLink}>
+                Crawl history
+              </AdminButton>
+            </Link>
           </>
         }
       />
+
+      {/* Venue header summary card */}
+      {(() => {
+        const venueStatus = deriveVenueStatus(venue)
+        return (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              flexWrap: 'wrap',
+              padding: '12px 16px',
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border)',
+              borderRadius: 12,
+            }}
+          >
+            <div
+              style={{ borderRadius: 12, overflow: 'hidden', flexShrink: 0 }}
+            >
+              <IdentityArt
+                name={venue.name}
+                kind="venue"
+                scale="tile"
+                width={96}
+                height={96}
+                showInitials
+              />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: 8,
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  marginBottom: 4,
+                }}
+              >
+                <MonoLabel>{venue.slug} · venue</MonoLabel>
+                <StatusBadge
+                  kind={
+                    venueStatus === 'active'
+                      ? 'success'
+                      : venueStatus === 'paused'
+                        ? 'warning'
+                        : 'danger'
+                  }
+                  dot
+                >
+                  {venueStatus.charAt(0).toUpperCase() + venueStatus.slice(1)}
+                </StatusBadge>
+                <StatusBadge
+                  kind={strategyKind(venue.extractionStrategy)}
+                  variant="outline"
+                >
+                  {strategyLabel(venue.extractionStrategy)}
+                </StatusBadge>
+                {venue.consecutiveFailures > 0 && (
+                  <StatusBadge kind="danger">
+                    {venue.consecutiveFailures} consec. failures
+                  </StatusBadge>
+                )}
+              </div>
+              <h2
+                style={{
+                  margin: 0,
+                  fontFamily: 'var(--admin-font, Inter, sans-serif)',
+                  fontSize: 22,
+                  fontWeight: 700,
+                  color: 'var(--fg)',
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                {venue.name}
+              </h2>
+              <div
+                style={{
+                  marginTop: 4,
+                  display: 'flex',
+                  gap: 14,
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 11,
+                  color: 'var(--fg-muted)',
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                }}
+              >
+                <span>
+                  last crawl ·{' '}
+                  {crawlHealth.lastCrawledAt ? (
+                    <RelTime iso={crawlHealth.lastCrawledAt} />
+                  ) : (
+                    'never'
+                  )}
+                </span>
+                <span>·</span>
+                <span>{crawlHealth.eventsTracked} events live</span>
+                <span>·</span>
+                <span>health {crawlHealth.sevenDayPercent}%</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+              <CrawlTriggerButton venueId={venue.id} />
+              <a
+                href={venue.websiteUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ textDecoration: 'none' }}
+              >
+                <AdminButton variant="outline" size="sm" icon={ExternalLink}>
+                  View on site
+                </AdminButton>
+              </a>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Error banner */}
       {saveError && (
