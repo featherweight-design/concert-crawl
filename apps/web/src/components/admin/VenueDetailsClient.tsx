@@ -44,6 +44,7 @@ import {
   Check,
   Loader2,
   ChevronRight,
+  Sparkles,
 } from 'lucide-react'
 import { formatDurationMs } from '@/lib/time'
 
@@ -78,10 +79,11 @@ function strategyKind(
 interface VDSectionProps {
   eyebrow: string
   title: string
+  subtitle?: React.ReactNode
   children: React.ReactNode
 }
 
-function VDSection({ eyebrow, title, children }: VDSectionProps) {
+function VDSection({ eyebrow, title, subtitle, children }: VDSectionProps) {
   return (
     <div
       style={{
@@ -110,6 +112,19 @@ function VDSection({ eyebrow, title, children }: VDSectionProps) {
         >
           {title}
         </div>
+        {subtitle && (
+          <div
+            style={{
+              marginTop: 6,
+              fontFamily: "'Inter', sans-serif",
+              fontSize: 12,
+              color: 'var(--fg-muted)',
+              lineHeight: 1.5,
+            }}
+          >
+            {subtitle}
+          </div>
+        )}
       </div>
       <div style={{ padding: 22 }}>{children}</div>
     </div>
@@ -119,6 +134,7 @@ function VDSection({ eyebrow, title, children }: VDSectionProps) {
 interface VDFieldProps {
   label: string
   htmlFor: string
+  description?: React.ReactNode
   hint?: React.ReactNode
   labelRight?: React.ReactNode
   error?: string
@@ -128,6 +144,7 @@ interface VDFieldProps {
 function VDField({
   label,
   htmlFor,
+  description,
   hint,
   labelRight,
   error,
@@ -156,6 +173,19 @@ function VDField({
         </label>
         {labelRight}
       </div>
+      {description && (
+        <div
+          style={{
+            fontFamily: "'Inter', sans-serif",
+            fontSize: 11,
+            color: 'var(--fg-muted)',
+            lineHeight: 1.5,
+            marginTop: -2,
+          }}
+        >
+          {description}
+        </div>
+      )}
       {children}
       {error && (
         <span
@@ -393,17 +423,6 @@ function RobotsHint({ allowed }: { allowed: boolean | null }) {
   )
 }
 
-const VENUE_TYPE_SUGGESTIONS = [
-  'Amphitheater',
-  'Theater',
-  'Concert Hall',
-  'Music Hall',
-  'Ballroom',
-  'Bar',
-  'Auditorium',
-  'Outdoor Pavilion',
-]
-
 // ── Main component ───────────────────────────────────────────
 
 interface Props {
@@ -496,6 +515,8 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     GenerateFieldResult | undefined
   >()
   const [generateError, setGenerateError] = useState<string | undefined>()
+  const [capacityGenerated, setCapacityGenerated] = useState(false)
+  const [neighborhoodGenerated, setNeighborhoodGenerated] = useState(false)
 
   async function handleGenerateAbout() {
     setGenerateState('loading')
@@ -513,8 +534,10 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
       setGenerateState('review')
       // Pre-fill other fields
       setCapacityVal(capacity != null ? String(capacity) : '')
+      setCapacityGenerated(true)
       setVenueTypeVal(venueType)
       setNeighborhoodVal(neighborhood)
+      setNeighborhoodGenerated(true)
     } catch {
       setGenerateError('Network error — could not reach API')
       setGenerateState('error')
@@ -1405,59 +1428,65 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
           </VDSection>
 
           {/* 04 · editorial */}
-          <VDSection eyebrow="04 · editorial" title="Editorial Info">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
-              {/* Capacity + Venue type row */}
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: 12,
-                }}
-              >
-                <VDField label="Capacity" htmlFor="edit-venue-capacity">
-                  <VDInput
-                    id="edit-venue-capacity"
-                    type="number"
-                    value={capacityVal}
-                    placeholder="e.g. 1600"
-                    disabled={isDisabled}
-                    min={1}
-                    onChange={(evt) => setCapacityVal(evt.target.value)}
-                  />
-                </VDField>
-                <VDField label="Venue type" htmlFor="edit-venue-type">
-                  <>
-                    <VDInput
-                      id="edit-venue-type"
-                      value={venueTypeVal}
-                      placeholder="e.g. Theater"
-                      disabled={isDisabled}
-                      list="venue-type-suggestions"
-                      onChange={(evt) => setVenueTypeVal(evt.target.value)}
-                    />
-                    <datalist id="venue-type-suggestions">
-                      {VENUE_TYPE_SUGGESTIONS.map((suggestion) => (
-                        <option key={suggestion} value={suggestion} />
-                      ))}
-                    </datalist>
-                  </>
-                </VDField>
-              </div>
-
-              {/* Neighborhood */}
-              <VDField label="Neighborhood" htmlFor="edit-venue-neighborhood">
-                <VDInput
-                  id="edit-venue-neighborhood"
-                  value={neighborhoodVal}
-                  placeholder="e.g. Capitol Hill, RiNo, LoDo"
-                  disabled={isDisabled}
-                  onChange={(evt) => setNeighborhoodVal(evt.target.value)}
-                />
-              </VDField>
-
+          <VDSection
+            eyebrow="04 · editorial"
+            title="About · capacity · neighborhood"
+            subtitle={
+              <>
+                These fields render on the venue&apos;s public page.{' '}
+                <strong style={{ color: 'var(--accent)', fontWeight: 700 }}>
+                  LLM-assisted
+                </strong>{' '}
+                — every generation needs your sign-off before it saves.
+              </>
+            }
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
               {/* About */}
-              <VDField label="About" htmlFor="edit-venue-about">
+              <VDField
+                label="About"
+                htmlFor="edit-venue-about"
+                description="One short paragraph shown on the venue page (under the hero). Plain prose, no markdown."
+                labelRight={
+                  generateState === 'idle' || generateState === 'accepted' ? (
+                    <button
+                      type="button"
+                      disabled={isDisabled}
+                      onClick={() => void handleGenerateAbout()}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        padding: '4px 10px',
+                        borderRadius: 6,
+                        border:
+                          '1px solid color-mix(in oklab, var(--accent) 34%, transparent)',
+                        background:
+                          'color-mix(in oklab, var(--accent) 8%, var(--bg-elevated))',
+                        cursor: isDisabled ? 'not-allowed' : 'pointer',
+                        fontFamily: "'Inter', sans-serif",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: 'var(--accent)',
+                        opacity: isDisabled ? 0.66 : 1,
+                      }}
+                    >
+                      <Sparkles size={11} />
+                      Generate
+                      <span
+                        style={{
+                          fontFamily: "'JetBrains Mono', monospace",
+                          fontSize: 10,
+                          opacity: 0.75,
+                          fontWeight: 600,
+                        }}
+                      >
+                        ~$0.0042
+                      </span>
+                    </button>
+                  ) : null
+                }
+              >
                 <div
                   style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
                 >
@@ -1470,7 +1499,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                       generateState === 'loading' ||
                       generateState === 'review'
                     }
-                    rows={4}
+                    rows={5}
                     onChange={(evt) => setAboutVal(evt.target.value)}
                     style={{
                       width: '100%',
@@ -1490,15 +1519,306 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                       transition: 'border-color .12s',
                     }}
                   />
-                  <GenerateField
-                    state={generateState}
-                    {...(generateResult ? { result: generateResult } : {})}
-                    {...(generateError ? { errorMessage: generateError } : {})}
-                    onGenerate={() => void handleGenerateAbout()}
-                    onAccept={handleGenerateAccept}
-                    onDiscard={handleGenerateDiscard}
-                  />
+                  {generateState !== 'idle' && (
+                    <GenerateField
+                      state={generateState}
+                      {...(generateResult ? { result: generateResult } : {})}
+                      {...(generateError
+                        ? { errorMessage: generateError }
+                        : {})}
+                      onGenerate={() => void handleGenerateAbout()}
+                      onRegenerate={() => void handleGenerateAbout()}
+                      onAccept={handleGenerateAccept}
+                      onDiscard={handleGenerateDiscard}
+                    />
+                  )}
                 </div>
+              </VDField>
+
+              {/* Capacity */}
+              <VDField
+                label="Capacity"
+                htmlFor="edit-venue-capacity"
+                description="Used in the venue facts strip. Be specific (seated / standing / mixed)."
+                labelRight={
+                  <button
+                    type="button"
+                    disabled={isDisabled || generateState === 'loading'}
+                    onClick={() => void handleGenerateAbout()}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      padding: '4px 10px',
+                      borderRadius: 6,
+                      border:
+                        '1px solid color-mix(in oklab, var(--accent) 34%, transparent)',
+                      background:
+                        'color-mix(in oklab, var(--accent) 8%, var(--bg-elevated))',
+                      cursor:
+                        isDisabled || generateState === 'loading'
+                          ? 'not-allowed'
+                          : 'pointer',
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: 'var(--accent)',
+                      opacity:
+                        isDisabled || generateState === 'loading' ? 0.66 : 1,
+                    }}
+                  >
+                    <Sparkles size={11} />
+                    Generate
+                    <span
+                      style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: 10,
+                        opacity: 0.75,
+                        fontWeight: 600,
+                      }}
+                    >
+                      ~$0.0008
+                    </span>
+                  </button>
+                }
+              >
+                <VDInput
+                  id="edit-venue-capacity"
+                  type="number"
+                  value={capacityVal}
+                  placeholder="e.g. 1600"
+                  disabled={isDisabled}
+                  min={1}
+                  onChange={(evt) => {
+                    setCapacityVal(evt.target.value)
+                    setCapacityGenerated(false)
+                  }}
+                />
+                {capacityGenerated && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginTop: 2,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          padding: '3px 8px',
+                          borderRadius: 20,
+                          border:
+                            '1px solid color-mix(in oklab, var(--success) 38%, transparent)',
+                          background:
+                            'color-mix(in oklab, var(--success) 5%, var(--bg-elevated))',
+                          fontFamily: "'JetBrains Mono', monospace",
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: 'var(--success)',
+                          letterSpacing: '0.02em',
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: 5,
+                            height: 5,
+                            borderRadius: '50%',
+                            background: 'var(--success)',
+                            flexShrink: 0,
+                          }}
+                        />
+                        generated · accepted
+                      </span>
+                      <span
+                        style={{
+                          fontFamily: "'Inter', sans-serif",
+                          fontSize: 11,
+                          color: 'var(--fg-subtle)',
+                        }}
+                      >
+                        You can edit freely; the pill clears on save.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isDisabled || generateState === 'loading'}
+                      onClick={() => void handleGenerateAbout()}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        cursor:
+                          isDisabled || generateState === 'loading'
+                            ? 'not-allowed'
+                            : 'pointer',
+                        fontFamily: "'Inter', sans-serif",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: 'var(--fg-muted)',
+                        opacity:
+                          isDisabled || generateState === 'loading' ? 0.5 : 1,
+                      }}
+                    >
+                      Regenerate
+                    </button>
+                  </div>
+                )}
+              </VDField>
+
+              {/* Neighborhood */}
+              <VDField
+                label="Neighborhood"
+                htmlFor="edit-venue-neighborhood"
+                description="Single line — where it sits in the city. Helps fans gauge travel time."
+                labelRight={
+                  <button
+                    type="button"
+                    disabled={isDisabled || generateState === 'loading'}
+                    onClick={() => void handleGenerateAbout()}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      padding: '4px 10px',
+                      borderRadius: 6,
+                      border:
+                        '1px solid color-mix(in oklab, var(--accent) 34%, transparent)',
+                      background:
+                        'color-mix(in oklab, var(--accent) 8%, var(--bg-elevated))',
+                      cursor:
+                        isDisabled || generateState === 'loading'
+                          ? 'not-allowed'
+                          : 'pointer',
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: 'var(--accent)',
+                      opacity:
+                        isDisabled || generateState === 'loading' ? 0.66 : 1,
+                    }}
+                  >
+                    <Sparkles size={11} />
+                    Generate
+                    <span
+                      style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: 10,
+                        opacity: 0.75,
+                        fontWeight: 600,
+                      }}
+                    >
+                      ~$0.0012
+                    </span>
+                  </button>
+                }
+              >
+                <VDInput
+                  id="edit-venue-neighborhood"
+                  value={neighborhoodVal}
+                  placeholder="e.g. Capitol Hill, RiNo, LoDo"
+                  disabled={isDisabled}
+                  onChange={(evt) => {
+                    setNeighborhoodVal(evt.target.value)
+                    setNeighborhoodGenerated(false)
+                  }}
+                />
+                {neighborhoodGenerated && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginTop: 2,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          padding: '3px 8px',
+                          borderRadius: 20,
+                          border:
+                            '1px solid color-mix(in oklab, var(--success) 38%, transparent)',
+                          background:
+                            'color-mix(in oklab, var(--success) 5%, var(--bg-elevated))',
+                          fontFamily: "'JetBrains Mono', monospace",
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: 'var(--success)',
+                          letterSpacing: '0.02em',
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: 5,
+                            height: 5,
+                            borderRadius: '50%',
+                            background: 'var(--success)',
+                            flexShrink: 0,
+                          }}
+                        />
+                        generated · accepted
+                      </span>
+                      <span
+                        style={{
+                          fontFamily: "'Inter', sans-serif",
+                          fontSize: 11,
+                          color: 'var(--fg-subtle)',
+                        }}
+                      >
+                        You can edit freely; the pill clears on save.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isDisabled || generateState === 'loading'}
+                      onClick={() => void handleGenerateAbout()}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        cursor:
+                          isDisabled || generateState === 'loading'
+                            ? 'not-allowed'
+                            : 'pointer',
+                        fontFamily: "'Inter', sans-serif",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: 'var(--fg-muted)',
+                        opacity:
+                          isDisabled || generateState === 'loading' ? 0.5 : 1,
+                      }}
+                    >
+                      Regenerate
+                    </button>
+                  </div>
+                )}
               </VDField>
             </div>
           </VDSection>

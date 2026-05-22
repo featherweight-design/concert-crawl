@@ -22,6 +22,7 @@ interface GenerateFieldProps {
   errorMessage?: string | undefined
   estimatedCostLabel?: string | undefined
   onGenerate: () => void
+  onRegenerate?: () => void
   onAccept: (content: string) => void
   onDiscard: () => void
 }
@@ -32,6 +33,7 @@ export function GenerateField({
   errorMessage,
   estimatedCostLabel = '~$0.01',
   onGenerate,
+  onRegenerate,
   onAccept,
   onDiscard,
 }: GenerateFieldProps) {
@@ -194,9 +196,9 @@ export function GenerateField({
               fontSize: 10,
               letterSpacing: '0.04em',
               color: 'var(--fg-subtle)',
-              marginTop: 8,
             }}
           >
+            <span style={{ opacity: 0.6 }}>SOURCES: </span>
             {result.sources.join(' · ')}
           </div>
         )}
@@ -213,7 +215,7 @@ export function GenerateField({
               padding: '5px 10px',
               borderRadius: 6,
               border: 'none',
-              background: 'var(--accent)',
+              background: 'var(--success)',
               color: 'var(--fg-on-accent)',
               fontFamily: "'Inter', sans-serif",
               fontSize: 12,
@@ -222,8 +224,30 @@ export function GenerateField({
             }}
           >
             <Check size={11} />
-            Use this
+            Accept
           </button>
+          {onRegenerate && (
+            <button
+              type="button"
+              onClick={onRegenerate}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                padding: '5px 10px',
+                borderRadius: 6,
+                border: '1px solid var(--border-strong)',
+                background: 'transparent',
+                color: 'var(--fg-muted)',
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Regenerate
+            </button>
+          )}
           <button
             type="button"
             onClick={onDiscard}
