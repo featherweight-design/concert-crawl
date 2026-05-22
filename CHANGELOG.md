@@ -1,3 +1,10 @@
+## [1.36.4](https://github.com/HartiganHM/concert-crawl/compare/v1.36.3...v1.36.4) (2026-05-22)
+
+
+### Bug Fixes
+
+* **admin:** cast confidenceScore to float to fix Review page crash ([6c345da](https://github.com/HartiganHM/concert-crawl/commit/6c345da8d80f4c64c783fa9665986cedb1fd9130)), closes [#531](https://github.com/HartiganHM/concert-crawl/issues/531)
+
 ## [1.36.3](https://github.com/HartiganHM/concert-crawl/compare/v1.36.2...v1.36.3) (2026-05-22)
 
 
