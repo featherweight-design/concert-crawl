@@ -80,15 +80,24 @@ interface VDSectionProps {
   eyebrow: string
   title: string
   subtitle?: React.ReactNode
+  danger?: boolean
   children: React.ReactNode
 }
 
-function VDSection({ eyebrow, title, subtitle, children }: VDSectionProps) {
+function VDSection({
+  eyebrow,
+  title,
+  subtitle,
+  danger,
+  children,
+}: VDSectionProps) {
   return (
     <div
       style={{
         background: 'var(--bg-elevated)',
-        border: '1px solid var(--border)',
+        border: danger
+          ? '1px solid color-mix(in oklab, var(--danger) 28%, transparent)'
+          : '1px solid var(--border)',
         borderRadius: 12,
         overflow: 'hidden',
       }}
@@ -96,10 +105,16 @@ function VDSection({ eyebrow, title, subtitle, children }: VDSectionProps) {
       <div
         style={{
           padding: '16px 22px',
-          borderBottom: '1px solid var(--border)',
+          borderBottom: danger
+            ? '1px solid color-mix(in oklab, var(--danger) 20%, transparent)'
+            : '1px solid var(--border)',
         }}
       >
-        <MonoLabel>{eyebrow}</MonoLabel>
+        {danger ? (
+          <MonoLabel color="var(--danger)">{eyebrow}</MonoLabel>
+        ) : (
+          <MonoLabel>{eyebrow}</MonoLabel>
+        )}
         <div
           style={{
             marginTop: 4,
@@ -479,23 +494,33 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
   )
   const [slugManual, setSlugManual] = useState(true)
   const [slugFocused, setSlugFocused] = useState(false)
-  const isDirty =
-    nameVal !== venue.name ||
-    slugVal !== venue.slug ||
-    urlVal !== venue.websiteUrl ||
-    cityVal !== venue.city ||
-    addressVal !== (venue.address ?? '') ||
-    waitUntilVal !== venue.crawlWaitUntil ||
-    crawlDelayVal !== venue.crawlDelayMs ||
-    (waitForSelectorVal || null) !== venue.crawlWaitForSelector ||
-    ticketVendorVal !== (venue.ticketVendor ?? null) ||
-    priceUrlVal !== (venue.priceUrl ?? '') ||
-    crawlModeVal !== (venue.crawlMode ?? null) ||
-    extractionStrategyVal !== (venue.extractionStrategy ?? null) ||
-    capacityVal !== (venue.capacity != null ? String(venue.capacity) : '') ||
-    venueTypeVal !== (venue.venueType ?? '') ||
-    aboutVal !== (venue.about ?? '') ||
-    neighborhoodVal !== (venue.neighborhood ?? '')
+  const dirtyFields: string[] = [
+    ...(nameVal !== venue.name ? ['Name'] : []),
+    ...(slugVal !== venue.slug ? ['Slug'] : []),
+    ...(urlVal !== venue.websiteUrl ? ['URL'] : []),
+    ...(cityVal !== venue.city ? ['City'] : []),
+    ...(addressVal !== (venue.address ?? '') ? ['Address'] : []),
+    ...(waitUntilVal !== venue.crawlWaitUntil ? ['Wait until'] : []),
+    ...(crawlDelayVal !== venue.crawlDelayMs ? ['Crawl delay'] : []),
+    ...((waitForSelectorVal || null) !== venue.crawlWaitForSelector
+      ? ['Selector']
+      : []),
+    ...(ticketVendorVal !== (venue.ticketVendor ?? null)
+      ? ['Ticket vendor']
+      : []),
+    ...(priceUrlVal !== (venue.priceUrl ?? '') ? ['Price URL'] : []),
+    ...(crawlModeVal !== (venue.crawlMode ?? null) ? ['Fetch mode'] : []),
+    ...(extractionStrategyVal !== (venue.extractionStrategy ?? null)
+      ? ['Strategy']
+      : []),
+    ...(capacityVal !== (venue.capacity != null ? String(venue.capacity) : '')
+      ? ['Capacity']
+      : []),
+    ...(venueTypeVal !== (venue.venueType ?? '') ? ['Type'] : []),
+    ...(aboutVal !== (venue.about ?? '') ? ['About'] : []),
+    ...(neighborhoodVal !== (venue.neighborhood ?? '') ? ['Neighborhood'] : []),
+  ]
+  const isDirty = dirtyFields.length > 0
 
   const [saveState, setSaveState] = useState<
     'idle' | 'saving' | 'saved' | 'error'
@@ -2004,7 +2029,11 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
           </VDSection>
 
           {/* 06 · danger */}
-          <VDSection eyebrow="06 · danger" title="Danger Zone">
+          <VDSection
+            eyebrow="danger zone"
+            title="Pause or remove this venue"
+            danger
+          >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {/* Pause / activate */}
               <div
@@ -2024,7 +2053,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                       color: 'var(--fg)',
                     }}
                   >
-                    Pause this venue
+                    Pause crawling
                   </div>
                   <div
                     style={{
@@ -2035,7 +2064,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                       lineHeight: 1.4,
                     }}
                   >
-                    Stops daily crawls. Existing events stay published.
+                    Stops scheduled runs. Existing events stay published.
                   </div>
                 </div>
                 <AdminButton
@@ -2046,11 +2075,17 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                   onClick={handlePauseToggle}
                   type="button"
                 >
-                  {venue.active ? 'Pause' : 'Activate'}
+                  {venue.active ? 'Pause venue' : 'Activate venue'}
                 </AdminButton>
               </div>
 
-              <div style={{ height: 1, background: 'var(--border)' }} />
+              <div
+                style={{
+                  height: 1,
+                  background:
+                    'color-mix(in oklab, var(--danger) 16%, transparent)',
+                }}
+              />
 
               {/* Delete */}
               <div
@@ -2067,7 +2102,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                       fontFamily: "'Inter', sans-serif",
                       fontSize: 13,
                       fontWeight: 600,
-                      color: 'var(--fg)',
+                      color: 'var(--danger)',
                     }}
                   >
                     Delete venue
@@ -2081,7 +2116,8 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                       lineHeight: 1.4,
                     }}
                   >
-                    Removes the venue and detaches its events. Cannot be undone.
+                    Removes config + breaks links to existing events. Cannot be
+                    undone.
                   </div>
                 </div>
                 <DeleteVenueConfirm
@@ -2233,37 +2269,75 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '12px 18px',
+            padding: '10px 16px',
             background: 'var(--bg-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 12,
-            boxShadow: '0 -6px 18px rgba(0,0,0,0.06)',
+            boxShadow: '0 -6px 18px rgba(0,0,0,0.08)',
             fontFamily: "'Inter', sans-serif",
             fontSize: 13,
-            fontWeight: 600,
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* Pill badge */}
             <span
               style={{
-                width: 7,
-                height: 7,
-                borderRadius: 4,
-                background: 'var(--warning)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '3px 10px',
+                borderRadius: 20,
+                border:
+                  '1px solid color-mix(in oklab, var(--warning) 38%, transparent)',
+                background:
+                  'color-mix(in oklab, var(--warning) 10%, var(--bg-elevated))',
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 12,
+                fontWeight: 700,
+                color: 'var(--warning)',
               }}
-            />
-            <span style={{ color: 'var(--fg)' }}>Unsaved changes</span>
+            >
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: 'var(--warning)',
+                  flexShrink: 0,
+                }}
+              />
+              {dirtyFields.length} unsaved{' '}
+              {dirtyFields.length === 1 ? 'change' : 'changes'}
+            </span>
+            {/* Dirty field names */}
+            <span
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 12,
+                color: 'var(--fg-muted)',
+              }}
+            >
+              {dirtyFields.join(' · ')}
+            </span>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <AdminButton
-              variant="ghost"
-              size="sm"
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button
+              type="button"
               onClick={handleDiscard}
               disabled={isDisabled}
-              type="button"
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '0 4px',
+                cursor: isDisabled ? 'not-allowed' : 'pointer',
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 13,
+                fontWeight: 700,
+                color: 'var(--fg-muted)',
+              }}
             >
               Discard
-            </AdminButton>
+            </button>
             <button
               type="button"
               onClick={() => void handleSave()}
@@ -2297,7 +2371,10 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                   Saved
                 </>
               ) : (
-                'Save changes'
+                <>
+                  <Check size={12} />
+                  Save changes
+                </>
               )}
             </button>
           </div>

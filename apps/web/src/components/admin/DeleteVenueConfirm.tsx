@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Trash2, Loader2, AlertTriangle } from 'lucide-react'
+import { X, Trash2, Loader2, AlertTriangle } from 'lucide-react'
 import { deleteVenue } from '@/lib/actions/venues'
 import { AdminButton } from '@/components/admin/primitives'
 
@@ -56,11 +56,11 @@ export function DeleteVenueConfirm({
       <AdminButton
         variant="danger"
         size="sm"
-        icon={Trash2}
+        icon={X}
         onClick={() => setOpen(true)}
         type="button"
       >
-        Delete venue
+        Delete venue…
       </AdminButton>
 
       {open && (
