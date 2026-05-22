@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useTransition, useEffect, useMemo } from 'react'
+import { useState, useRef, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { VenueWithCrawlHealth, CrawlRun } from '@concert-crawl/types'
@@ -371,50 +371,6 @@ function VDSegToggle({ options, value, onChange, disabled }: VDSegToggleProps) {
 
 // ── Other local helpers ───────────────────────────────────────
 
-function FaviconChip({ url }: { url: string }) {
-  const host = useMemo(() => {
-    try {
-      return new URL(url.startsWith('http') ? url : `https://${url}`).hostname
-    } catch {
-      return null
-    }
-  }, [url])
-
-  if (!host) return null
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 5,
-        padding: '2px 8px 2px 4px',
-        borderRadius: 999,
-        background: 'var(--surface-1)',
-        border: '1px solid var(--border)',
-        fontFamily: "'JetBrains Mono', monospace",
-        fontSize: 11,
-        fontWeight: 600,
-        color: 'var(--fg-muted)',
-        letterSpacing: '0.02em',
-        flexShrink: 0,
-      }}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={`https://www.google.com/s2/favicons?domain=${host}&sz=32`}
-        alt=""
-        width={14}
-        height={14}
-        style={{ borderRadius: 3 }}
-        onError={(evt) => {
-          evt.currentTarget.style.visibility = 'hidden'
-        }}
-      />
-      {host}
-    </span>
-  )
-}
-
 function RobotsHint({ allowed }: { allowed: boolean | null }) {
   if (allowed === null)
     return (
@@ -499,8 +455,6 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
   const [featuredVal, setFeaturedVal] = useState(venue.featured ?? false)
   const [slugManual, setSlugManual] = useState(true)
   const [slugFocused, setSlugFocused] = useState(false)
-  const [urlFocused, setUrlFocused] = useState(false)
-
   const isDirty =
     nameVal !== venue.name ||
     slugVal !== venue.slug ||
@@ -655,6 +609,17 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
         await pauseVenue(venue.id)
       } else {
         await activateVenue(venue.id)
+      }
+      router.refresh()
+    })
+  }
+
+  function handleStatusChange(newStatus: 'active' | 'paused') {
+    startTransition(async () => {
+      if (newStatus === 'active') {
+        await activateVenue(venue.id)
+      } else {
+        await pauseVenue(venue.id)
       }
       router.refresh()
     })
@@ -848,190 +813,169 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
         {/* Left: VDSection cards */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* 01 · identity */}
-          <VDSection eyebrow="01 · identity" title="Basic Info">
+          <VDSection eyebrow="01 · identity" title="Name + slug + source">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {/* Venue name */}
-              <VDField label="Venue name" htmlFor="edit-venue-name">
-                <VDInput
-                  id="edit-venue-name"
-                  inputRef={nameRef}
-                  defaultValue={venue.name}
-                  disabled={isDisabled}
-                  onChange={(evt) => {
-                    const val = evt.target.value
-                    setNameVal(val)
-                    if (!slugManual && slugRef.current) {
-                      const generated = slugify(val)
-                      slugRef.current.value = generated
-                      setSlugVal(generated)
-                    }
-                  }}
-                />
-              </VDField>
-
-              {/* Slug */}
-              <VDField
-                label="Slug"
-                htmlFor="edit-venue-slug"
-                {...(fieldErrors.slug ? { error: fieldErrors.slug } : {})}
-                labelRight={
-                  <span
-                    style={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      letterSpacing: '0.06em',
-                      textTransform: 'uppercase',
-                      color: 'var(--fg-subtle)',
-                    }}
-                  >
-                    Auto-generated
-                  </span>
-                }
+              {/* Venue name + Slug side by side */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: 12,
+                }}
               >
-                <div
-                  onFocus={() => setSlugFocused(true)}
-                  onBlur={() => setSlugFocused(false)}
-                  style={{
-                    display: 'flex',
-                    height: 36,
-                    borderRadius: 8,
-                    border: `1px solid ${fieldErrors.slug ? 'var(--danger)' : slugFocused ? 'var(--signal)' : 'var(--border-strong)'}`,
-                    background: 'var(--bg-elevated)',
-                    overflow: 'hidden',
-                    boxShadow: slugFocused
-                      ? fieldErrors.slug
-                        ? '0 0 0 3px color-mix(in oklab, var(--danger) 18%, transparent)'
-                        : '0 0 0 3px color-mix(in oklab, var(--signal) 22%, transparent)'
-                      : 'none',
-                    transition: 'border-color .12s, box-shadow .12s',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '0 10px',
-                      background: 'var(--surface-1)',
-                      borderRight: '1px solid var(--border)',
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: 12,
-                      color: 'var(--fg-subtle)',
-                      whiteSpace: 'nowrap',
-                      flexShrink: 0,
-                    }}
-                  >
-                    concertcrawl.app/v/
-                  </div>
-                  <input
-                    ref={slugRef}
-                    id="edit-venue-slug"
-                    type="text"
-                    defaultValue={venue.slug}
+                <VDField label="Venue name" htmlFor="edit-venue-name">
+                  <VDInput
+                    id="edit-venue-name"
+                    inputRef={nameRef}
+                    defaultValue={venue.name}
                     disabled={isDisabled}
                     onChange={(evt) => {
-                      setSlugVal(evt.target.value)
-                      setSlugManual(true)
-                      setFieldErrors((prev) => ({ ...prev, slug: undefined }))
-                    }}
-                    style={{
-                      all: 'unset',
-                      flex: 1,
-                      minWidth: 0,
-                      padding: '0 10px',
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: 13,
-                      fontWeight: 500,
-                      color: 'var(--fg)',
-                      cursor: isDisabled ? 'not-allowed' : 'text',
-                      opacity: isDisabled ? 0.66 : 1,
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (nameRef.current && slugRef.current) {
-                        const generated = slugify(nameRef.current.value)
+                      const val = evt.target.value
+                      setNameVal(val)
+                      if (!slugManual && slugRef.current) {
+                        const generated = slugify(val)
                         slugRef.current.value = generated
                         setSlugVal(generated)
-                        setSlugManual(false)
-                        setFieldErrors((prev) => ({ ...prev, slug: undefined }))
                       }
                     }}
-                    disabled={isDisabled}
-                    title="Regenerate slug from name"
+                  />
+                </VDField>
+
+                <VDField
+                  label="Slug"
+                  htmlFor="edit-venue-slug"
+                  {...(fieldErrors.slug ? { error: fieldErrors.slug } : {})}
+                  labelRight={
+                    <span
+                      style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        letterSpacing: '0.06em',
+                        textTransform: 'uppercase',
+                        color: 'var(--fg-subtle)',
+                      }}
+                    >
+                      Auto-generated
+                    </span>
+                  }
+                >
+                  <div
+                    onFocus={() => setSlugFocused(true)}
+                    onBlur={() => setSlugFocused(false)}
                     style={{
-                      flexShrink: 0,
-                      width: 36,
-                      border: 'none',
-                      borderLeft: '1px solid var(--border)',
-                      background: 'var(--surface-1)',
-                      color: 'var(--fg-muted)',
-                      cursor: isDisabled ? 'not-allowed' : 'pointer',
                       display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
+                      height: 36,
+                      borderRadius: 8,
+                      border: `1px solid ${fieldErrors.slug ? 'var(--danger)' : slugFocused ? 'var(--signal)' : 'var(--border-strong)'}`,
+                      background: 'var(--bg-elevated)',
+                      overflow: 'hidden',
+                      boxShadow: slugFocused
+                        ? fieldErrors.slug
+                          ? '0 0 0 3px color-mix(in oklab, var(--danger) 18%, transparent)'
+                          : '0 0 0 3px color-mix(in oklab, var(--signal) 22%, transparent)'
+                        : 'none',
+                      transition: 'border-color .12s, box-shadow .12s',
                     }}
                   >
-                    <RefreshCw size={13} />
-                  </button>
-                </div>
-              </VDField>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '0 10px',
+                        background: 'var(--surface-1)',
+                        borderRight: '1px solid var(--border)',
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: 12,
+                        color: 'var(--fg-subtle)',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                      }}
+                    >
+                      /v/
+                    </div>
+                    <input
+                      ref={slugRef}
+                      id="edit-venue-slug"
+                      type="text"
+                      defaultValue={venue.slug}
+                      disabled={isDisabled}
+                      onChange={(evt) => {
+                        setSlugVal(evt.target.value)
+                        setSlugManual(true)
+                        setFieldErrors((prev) => ({ ...prev, slug: undefined }))
+                      }}
+                      style={{
+                        all: 'unset',
+                        flex: 1,
+                        minWidth: 0,
+                        padding: '0 10px',
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: 13,
+                        fontWeight: 500,
+                        color: 'var(--fg)',
+                        cursor: isDisabled ? 'not-allowed' : 'text',
+                        opacity: isDisabled ? 0.66 : 1,
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (nameRef.current && slugRef.current) {
+                          const generated = slugify(nameRef.current.value)
+                          slugRef.current.value = generated
+                          setSlugVal(generated)
+                          setSlugManual(false)
+                          setFieldErrors((prev) => ({
+                            ...prev,
+                            slug: undefined,
+                          }))
+                        }
+                      }}
+                      disabled={isDisabled}
+                      title="Regenerate slug from name"
+                      style={{
+                        flexShrink: 0,
+                        width: 36,
+                        border: 'none',
+                        borderLeft: '1px solid var(--border)',
+                        background: 'var(--surface-1)',
+                        color: 'var(--fg-muted)',
+                        cursor: isDisabled ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <RefreshCw size={13} />
+                    </button>
+                  </div>
+                </VDField>
+              </div>
 
               {/* Source URL */}
               <VDField
                 label="Source URL"
                 htmlFor="edit-venue-url"
                 labelRight={<RobotsHint allowed={venue.robotsTxtAllowed} />}
-                hint="The events page we crawl daily."
+                hint="The events page we crawl on the configured schedule."
               >
-                <div
-                  onFocus={() => setUrlFocused(true)}
-                  onBlur={() => setUrlFocused(false)}
-                  style={{
-                    display: 'flex',
-                    height: 36,
-                    borderRadius: 8,
-                    border: `1px solid ${urlFocused ? 'var(--signal)' : 'var(--border-strong)'}`,
-                    background: 'var(--bg-elevated)',
-                    overflow: 'hidden',
-                    alignItems: 'center',
-                    boxShadow: urlFocused
-                      ? '0 0 0 3px color-mix(in oklab, var(--signal) 22%, transparent)'
-                      : 'none',
-                    transition: 'border-color .12s, box-shadow .12s',
-                  }}
-                >
-                  <input
-                    ref={websiteUrlRef}
-                    id="edit-venue-url"
-                    type="url"
-                    defaultValue={venue.websiteUrl}
-                    disabled={isDisabled}
-                    onChange={(evt) => setUrlVal(evt.target.value)}
-                    style={{
-                      all: 'unset',
-                      flex: 1,
-                      minWidth: 0,
-                      padding: '0 10px',
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: 13,
-                      color: 'var(--fg)',
-                      cursor: isDisabled ? 'not-allowed' : 'text',
-                      opacity: isDisabled ? 0.66 : 1,
-                    }}
-                  />
-                  <div style={{ padding: '0 6px', flexShrink: 0 }}>
-                    <FaviconChip url={urlVal} />
-                  </div>
-                </div>
+                <VDInput
+                  id="edit-venue-url"
+                  type="url"
+                  inputRef={websiteUrlRef}
+                  defaultValue={venue.websiteUrl}
+                  disabled={isDisabled}
+                  onChange={(evt) => setUrlVal(evt.target.value)}
+                  style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                />
               </VDField>
 
-              {/* City + Address row */}
+              {/* City + Status row */}
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '1fr 2fr',
+                  gridTemplateColumns: '1fr 1fr',
                   gap: 12,
                 }}
               >
@@ -1044,77 +988,98 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                     onChange={(evt) => setCityVal(evt.target.value)}
                   />
                 </VDField>
-                <VDField label="Street address" htmlFor="edit-venue-address">
-                  <VDInput
-                    id="edit-venue-address"
-                    inputRef={addressRef}
-                    defaultValue={venue.address ?? ''}
-                    disabled={isDisabled}
-                    placeholder="e.g. 3317 E Colfax Ave"
-                    onChange={(evt) => setAddressVal(evt.target.value)}
-                  />
+                <VDField label="Status" htmlFor="venue-status-toggle">
+                  {(() => {
+                    const currentStatus = deriveVenueStatus(venue)
+                    const statuses = [
+                      {
+                        value: 'active' as const,
+                        label: 'Active',
+                        dot: 'var(--success)',
+                      },
+                      {
+                        value: 'paused' as const,
+                        label: 'Paused',
+                        dot: 'var(--warning)',
+                      },
+                      {
+                        value: 'blocked' as const,
+                        label: 'Blocked',
+                        dot: 'var(--danger)',
+                      },
+                    ]
+                    return (
+                      <div
+                        id="venue-status-toggle"
+                        role="group"
+                        aria-label="Venue status"
+                        style={{
+                          display: 'inline-flex',
+                          padding: 2,
+                          borderRadius: 8,
+                          background: 'var(--surface-1)',
+                          border: '1px solid var(--border)',
+                        }}
+                      >
+                        {statuses.map(({ value, label, dot }) => {
+                          const isActive = currentStatus === value
+                          const isBlocked = value === 'blocked'
+                          return (
+                            <button
+                              key={value}
+                              type="button"
+                              disabled={isPending || isBlocked}
+                              onClick={() =>
+                                !isBlocked && handleStatusChange(value)
+                              }
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 5,
+                                padding: '6px 12px',
+                                borderRadius: 6,
+                                border: 'none',
+                                background: isActive
+                                  ? value === 'blocked'
+                                    ? 'var(--signal)'
+                                    : value === 'active'
+                                      ? 'color-mix(in oklab, var(--success) 18%, var(--surface-1))'
+                                      : 'color-mix(in oklab, var(--warning) 18%, var(--surface-1))'
+                                  : 'transparent',
+                                color: isActive
+                                  ? 'var(--fg)'
+                                  : 'var(--fg-muted)',
+                                fontFamily: "'Inter', sans-serif",
+                                fontSize: 12,
+                                fontWeight: 700,
+                                cursor:
+                                  isPending || isBlocked
+                                    ? 'not-allowed'
+                                    : 'pointer',
+                                transition: 'background .12s, color .12s',
+                                opacity: isBlocked && !isActive ? 0.4 : 1,
+                              }}
+                            >
+                              <span
+                                style={{
+                                  width: 6,
+                                  height: 6,
+                                  borderRadius: '50%',
+                                  background: isActive
+                                    ? dot
+                                    : 'var(--fg-muted)',
+                                  flexShrink: 0,
+                                }}
+                              />
+                              {label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()}
                 </VDField>
               </div>
-
-              {/* Flagship toggle */}
-              <VDField
-                label="Flagship venue"
-                htmlFor="edit-venue-featured"
-                hint="The flagship venue gets a hero card at the top of the Venues index. Only one venue can be flagship at a time."
-              >
-                <button
-                  id="edit-venue-featured"
-                  type="button"
-                  role="switch"
-                  aria-checked={featuredVal}
-                  disabled={isDisabled}
-                  onClick={() => setFeaturedVal((prev) => !prev)}
-                  style={{
-                    alignSelf: 'flex-start',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    background: 'none',
-                    border: 'none',
-                    padding: 0,
-                    cursor: isDisabled ? 'not-allowed' : 'pointer',
-                    fontFamily: "'Inter', sans-serif",
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: featuredVal ? 'var(--signal)' : 'var(--fg-muted)',
-                  }}
-                >
-                  <span
-                    style={{
-                      display: 'inline-block',
-                      width: 36,
-                      height: 20,
-                      borderRadius: 10,
-                      background: featuredVal
-                        ? 'var(--signal)'
-                        : 'var(--border-strong)',
-                      position: 'relative',
-                      transition: 'background .15s',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <span
-                      style={{
-                        position: 'absolute',
-                        top: 2,
-                        left: featuredVal ? 18 : 2,
-                        width: 16,
-                        height: 16,
-                        borderRadius: '50%',
-                        background: 'var(--bg)',
-                        transition: 'left .15s',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
-                      }}
-                    />
-                  </span>
-                  {featuredVal ? 'Flagship' : 'Not flagship'}
-                </button>
-              </VDField>
             </div>
           </VDSection>
 
