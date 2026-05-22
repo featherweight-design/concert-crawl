@@ -8,8 +8,6 @@ import {
   updateVenue,
   pauseVenue,
   activateVenue,
-  verifyVenue,
-  unverifyVenue,
   generateVenueAbout,
 } from '@/lib/actions/venues'
 import {
@@ -38,8 +36,6 @@ import { usePageTitle } from '@/components/admin/shell/PageTitleContext'
 import {
   ExternalLink,
   RefreshCw,
-  ShieldCheck,
-  ShieldOff,
   Pause,
   Play,
   AlertCircle,
@@ -419,48 +415,6 @@ function FaviconChip({ url }: { url: string }) {
   )
 }
 
-function HealthBarSparkline({
-  sparkline,
-}: {
-  sparkline: { date: string; success: boolean; hasRun: boolean }[]
-}) {
-  const total = sparkline.length
-  if (total === 0 || sparkline.every((day) => !day.hasRun)) {
-    return (
-      <span style={{ fontSize: 12, color: 'var(--fg-subtle)' }}>No data</span>
-    )
-  }
-  const barWidth = Math.max(2, Math.floor((320 - (total - 1) * 3) / total))
-  const svgWidth = total * barWidth + (total - 1) * 3
-  return (
-    <svg
-      width="100%"
-      viewBox={`0 0 ${svgWidth} 28`}
-      preserveAspectRatio="none"
-      style={{ display: 'block', height: 28 }}
-    >
-      {sparkline.map((day, idx) => (
-        <rect
-          key={day.date}
-          x={idx * (barWidth + 3)}
-          y={!day.hasRun ? 20 : day.success ? 8 : 18}
-          width={barWidth}
-          height={!day.hasRun ? 6 : day.success ? 16 : 6}
-          rx={1.5}
-          fill={
-            !day.hasRun
-              ? 'var(--border)'
-              : day.success
-                ? 'var(--success)'
-                : 'var(--danger)'
-          }
-          opacity={!day.hasRun ? 0.5 : 0.9}
-        />
-      ))}
-    </svg>
-  )
-}
-
 function RobotsHint({ allowed }: { allowed: boolean | null }) {
   if (allowed === null)
     return (
@@ -695,17 +649,6 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     }
   }
 
-  function handleVerifyToggle() {
-    startTransition(async () => {
-      if (venue.verified) {
-        await unverifyVenue(venue.id)
-      } else {
-        await verifyVenue(venue.id)
-      }
-      router.refresh()
-    })
-  }
-
   function handlePauseToggle() {
     startTransition(async () => {
       if (venue.active) {
@@ -718,13 +661,6 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
   }
 
   const { crawlHealth } = venue
-
-  const healthColor =
-    crawlHealth.sevenDayPercent >= 80
-      ? 'var(--success)'
-      : crawlHealth.sevenDayPercent >= 50
-        ? 'var(--warning)'
-        : 'var(--danger)'
 
   return (
     <div
@@ -1675,135 +1611,6 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
 
         {/* Right: meta sidebar */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {/* Health */}
-          <MetaCard
-            title="Health · 7 days"
-            action={
-              <MonoLabel color={healthColor}>
-                {crawlHealth.sevenDayPercent}%
-              </MonoLabel>
-            }
-          >
-            <HealthBarSparkline sparkline={crawlHealth.sparkline} />
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 10,
-                marginTop: 12,
-              }}
-            >
-              {[
-                {
-                  label: 'Last crawl',
-                  value: crawlHealth.lastCrawledAt ? (
-                    <RelTime iso={crawlHealth.lastCrawledAt} />
-                  ) : (
-                    '—'
-                  ),
-                  valueColor: 'var(--fg)',
-                },
-                {
-                  label: 'Avg duration',
-                  value:
-                    crawlHealth.avgDurationMs !== null
-                      ? formatDurationMs(crawlHealth.avgDurationMs)
-                      : '—',
-                  valueColor: 'var(--fg)',
-                },
-                {
-                  label: 'Events tracked',
-                  value: String(crawlHealth.eventsTracked),
-                  valueColor: 'var(--fg)',
-                },
-                {
-                  label: 'Consecutive fails',
-                  value: String(crawlHealth.consecutiveFails),
-                  valueColor:
-                    crawlHealth.consecutiveFails === 0
-                      ? 'var(--success)'
-                      : 'var(--danger)',
-                },
-              ].map(({ label, value, valueColor }) => (
-                <div key={label}>
-                  <MonoLabel>{label}</MonoLabel>
-                  <div
-                    style={{
-                      marginTop: 4,
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: 15,
-                      fontWeight: 700,
-                      color: valueColor,
-                      letterSpacing: '0.01em',
-                      fontVariantNumeric: 'tabular-nums',
-                    }}
-                  >
-                    {value}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </MetaCard>
-
-          {/* Verification */}
-          <MetaCard
-            title="Verification"
-            action={
-              <StatusBadge kind={venue.verified ? 'success' : 'warning'} dot>
-                {venue.verified ? 'Verified' : 'Unverified'}
-              </StatusBadge>
-            }
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <p
-                style={{
-                  margin: 0,
-                  fontFamily: "'Inter', sans-serif",
-                  fontSize: 12.5,
-                  color: 'var(--fg-muted)',
-                  lineHeight: 1.5,
-                }}
-              >
-                {venue.verified && venue.verifiedBy && venue.verifiedAt ? (
-                  <>
-                    Verified by{' '}
-                    <span style={{ color: 'var(--fg)', fontWeight: 600 }}>
-                      {venue.verifiedBy}
-                    </span>{' '}
-                    on{' '}
-                    <span
-                      style={{
-                        fontFamily: "'JetBrains Mono', monospace",
-                        color: 'var(--fg)',
-                      }}
-                    >
-                      {new Intl.DateTimeFormat('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                        timeZone: 'America/Denver',
-                      }).format(new Date(venue.verifiedAt))}
-                    </span>
-                    . Verified venues appear on the public Browse page.
-                  </>
-                ) : (
-                  'Verified venues appear on the public Browse page.'
-                )}
-              </p>
-              <AdminButton
-                variant="ghost"
-                size="sm"
-                icon={venue.verified ? ShieldOff : ShieldCheck}
-                disabled={isPending}
-                onClick={handleVerifyToggle}
-                type="button"
-                style={{ alignSelf: 'flex-start' }}
-              >
-                {venue.verified ? 'Unverify venue' : 'Verify venue'}
-              </AdminButton>
-            </div>
-          </MetaCard>
-
           {/* Recent runs */}
           <MetaCard
             title="Recent runs"
