@@ -6,6 +6,7 @@ import {
   ConfidenceBar,
   AdminButton,
 } from '@/components/admin/primitives'
+import { SquarePen } from 'lucide-react'
 
 interface EventFlag {
   id: string
@@ -23,6 +24,12 @@ interface EventFlag {
   createdAt: string
   venueId: string
   venueName: string | null
+  // Optional enriched fields from LLM extraction runs
+  llmReasoning?: string | null
+  rawSource?: string | null
+  runId?: string | null
+  llmCost?: number | null
+  tokenCount?: number | null
 }
 
 interface EventFlagInspectorProps {
@@ -30,13 +37,34 @@ interface EventFlagInspectorProps {
   onApprove: (id: string) => void
   onReject: (id: string) => void
   onClose: () => void
+  onEdit?: (id: string) => void
+}
+
+function formatDateTime(date: string, showTime: string | null): string {
+  try {
+    const [year, month, day] = date.split('-').map(Number)
+    const dateObj = new Date(year ?? 0, (month ?? 1) - 1, day ?? 1)
+    const datePart = dateObj.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    })
+    if (!showTime) return datePart
+    const [hh, mm] = showTime.split(':')
+    const hours = parseInt(hh ?? '0', 10)
+    const mins = mm ?? '00'
+    const ampm = hours >= 12 ? 'PM' : 'AM'
+    const displayHour = hours % 12 || 12
+    return `${datePart} ${displayHour}:${mins} ${ampm}`
+  } catch {
+    return date
+  }
 }
 
 export const EventFlagInspector = ({
   event,
   onApprove,
   onReject,
-  onClose,
+  onEdit,
 }: EventFlagInspectorProps) => {
   if (!event) {
     return (
@@ -49,12 +77,20 @@ export const EventFlagInspector = ({
           color: 'var(--fg-subtle)',
           fontSize: 13,
           height: '100%',
+          borderLeft: '1px solid var(--border)',
         }}
       >
         Select an event to inspect
       </div>
     )
   }
+
+  const shortId = `EVT-${event.id.slice(-4).toUpperCase()}`
+  const flags = event.genre?.filter(Boolean) ?? []
+  const dateTime = formatDateTime(event.date, event.showTime)
+  const venueLine = [event.venueName ?? event.venueId, dateTime]
+    .filter(Boolean)
+    .join(' · ')
 
   return (
     <div
@@ -73,23 +109,70 @@ export const EventFlagInspector = ({
           background: 'var(--surface-1)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <MonoLabel>event · unverified</MonoLabel>
-          <StatusBadge kind="warning">Needs review</StatusBadge>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            marginBottom: 6,
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 10,
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              color: 'var(--fg-subtle)',
+            }}
+          >
+            {shortId}
+          </span>
+          {flags.length > 0 && (
+            <>
+              <span
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 10,
+                  color: 'var(--fg-subtle)',
+                }}
+              >
+                ·
+              </span>
+              <StatusBadge kind="warning" variant="outline">
+                {flags.join(' · ')}
+              </StatusBadge>
+            </>
+          )}
+          {flags.length === 0 && (
+            <StatusBadge kind="warning">Needs review</StatusBadge>
+          )}
         </div>
         <h3
           style={{
-            fontSize: 18,
-            fontWeight: 700,
-            letterSpacing: '-0.02em',
-            lineHeight: 1.3,
-            margin: 0,
+            fontSize: 22,
+            fontWeight: 800,
+            letterSpacing: '-0.03em',
+            lineHeight: 1.2,
+            margin: '0 0 4px',
             color: 'var(--fg)',
             fontFamily: "'Inter', sans-serif",
           }}
         >
           {event.title}
         </h3>
+        {venueLine && (
+          <span
+            style={{
+              fontFamily: "'Inter', sans-serif",
+              fontSize: 12,
+              color: 'var(--fg-muted)',
+            }}
+          >
+            {venueLine}
+          </span>
+        )}
       </div>
 
       {/* Body */}
@@ -99,7 +182,7 @@ export const EventFlagInspector = ({
           display: 'flex',
           flexDirection: 'column',
           gap: 16,
-          overflowY: 'auto' as const,
+          overflowY: 'auto',
           flex: 1,
         }}
       >
@@ -109,59 +192,107 @@ export const EventFlagInspector = ({
           <ConfidenceBar score={event.confidenceScore ?? 0} />
         </div>
 
-        {/* Extraction strategy */}
-        {event.extractionStrategy && (
-          <div
-            style={{
-              padding: '12px 14px',
-              background: 'color-mix(in oklab, var(--accent) 7%, transparent)',
-              border:
-                '1px solid color-mix(in oklab, var(--accent) 30%, transparent)',
-              borderRadius: 8,
-              fontFamily: "'Inter', sans-serif",
-              fontSize: 12,
-              lineHeight: 1.55,
-              marginTop: 8,
-            }}
-          >
-            <div style={{ marginBottom: 4 }}>
-              <MonoLabel>Extraction</MonoLabel>
+        {/* LLM Reasoning */}
+        {event.llmReasoning && (
+          <div>
+            <MonoLabel color="var(--danger)">LLM Reasoning</MonoLabel>
+            <div
+              style={{
+                padding: '14px 16px',
+                marginTop: 8,
+                background:
+                  'color-mix(in oklab, var(--danger) 6%, var(--bg-elevated))',
+                border:
+                  '1px solid color-mix(in oklab, var(--danger) 28%, transparent)',
+                borderRadius: 8,
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 13,
+                lineHeight: 1.6,
+                color: 'var(--fg)',
+              }}
+            >
+              {event.llmReasoning}
             </div>
-            <span style={{ color: 'var(--fg)' }}>
-              {event.extractionStrategy}
-            </span>
           </div>
         )}
 
-        {/* Source URL */}
-        {event.sourceUrl && (
-          <div
-            style={{
-              padding: '12px 14px',
-              background: 'var(--surface-1)',
-              border: '1px solid var(--border)',
-              borderRadius: 8,
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 11,
-              marginTop: 8,
-            }}
-          >
-            <div style={{ marginBottom: 4 }}>
-              <MonoLabel>Source</MonoLabel>
-            </div>
-            <a
-              href={event.sourceUrl}
-              target="_blank"
-              rel="noreferrer"
+        {/* Extraction strategy (fallback when no reasoning) */}
+        {!event.llmReasoning && event.extractionStrategy && (
+          <div>
+            <MonoLabel>Extraction</MonoLabel>
+            <div
               style={{
-                color: 'var(--fg-muted)',
-                textDecoration: 'none',
-                wordBreak: 'break-all',
-                whiteSpace: 'pre-wrap',
+                padding: '12px 14px',
+                marginTop: 8,
+                background:
+                  'color-mix(in oklab, var(--accent) 7%, transparent)',
+                border:
+                  '1px solid color-mix(in oklab, var(--accent) 30%, transparent)',
+                borderRadius: 8,
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 12,
+                lineHeight: 1.55,
+                color: 'var(--fg)',
               }}
             >
-              {event.sourceUrl}
-            </a>
+              {event.extractionStrategy}
+            </div>
+          </div>
+        )}
+
+        {/* Raw source HTML */}
+        {event.rawSource && (
+          <div>
+            <MonoLabel>Raw source</MonoLabel>
+            <pre
+              style={{
+                margin: '8px 0 0',
+                padding: '14px 16px',
+                background: 'var(--surface-1)',
+                border: '1px solid var(--border)',
+                borderRadius: 8,
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 11,
+                lineHeight: 1.6,
+                color: 'var(--fg-muted)',
+                overflowX: 'auto',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }}
+            >
+              {event.rawSource}
+            </pre>
+          </div>
+        )}
+
+        {/* Source URL (when no raw source) */}
+        {!event.rawSource && event.sourceUrl && (
+          <div>
+            <MonoLabel>Source</MonoLabel>
+            <div
+              style={{
+                padding: '12px 14px',
+                marginTop: 8,
+                background: 'var(--surface-1)',
+                border: '1px solid var(--border)',
+                borderRadius: 8,
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 11,
+              }}
+            >
+              <a
+                href={event.sourceUrl}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  color: 'var(--fg-muted)',
+                  textDecoration: 'none',
+                  wordBreak: 'break-all',
+                }}
+              >
+                {event.sourceUrl}
+              </a>
+            </div>
           </div>
         )}
 
@@ -206,6 +337,40 @@ export const EventFlagInspector = ({
             </span>
           )}
         </div>
+
+        {/* Run / cost strip */}
+        {event.runId && (
+          <div
+            style={{
+              padding: '10px 12px',
+              background: 'var(--surface-1)',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 11,
+              display: 'flex',
+              gap: 12,
+              color: 'var(--fg-muted)',
+              flexWrap: 'wrap',
+            }}
+          >
+            <span style={{ color: 'var(--fg)' }}>run {event.runId}</span>
+            {event.llmCost != null && (
+              <>
+                <span>·</span>
+                <span style={{ color: 'var(--accent)', fontWeight: 700 }}>
+                  ${event.llmCost.toFixed(4)}
+                </span>
+              </>
+            )}
+            {event.tokenCount != null && (
+              <>
+                <span>·</span>
+                <span>{event.tokenCount.toLocaleString()} tok</span>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Action shelf */}
@@ -216,18 +381,26 @@ export const EventFlagInspector = ({
           background: 'var(--bg-elevated)',
           display: 'flex',
           gap: 8,
+          alignItems: 'center',
         }}
       >
-        <AdminButton variant="ghost" size="sm" onClick={onClose}>
-          Close
-        </AdminButton>
         <AdminButton
-          variant="danger"
+          variant="ghost"
           size="sm"
           onClick={() => onReject(event.id)}
         >
           Reject
         </AdminButton>
+        {onEdit && (
+          <AdminButton
+            variant="outline"
+            size="sm"
+            icon={SquarePen}
+            onClick={() => onEdit(event.id)}
+          >
+            Edit & approve
+          </AdminButton>
+        )}
         <AdminButton
           variant="success"
           size="sm"
