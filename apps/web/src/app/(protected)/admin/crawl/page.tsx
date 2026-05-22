@@ -1,6 +1,12 @@
+import Link from 'next/link'
+import { Filter } from 'lucide-react'
 import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
-import { StatCard } from '@/components/admin/primitives'
+import {
+  StatCard,
+  SectionHead,
+  AdminButton,
+} from '@/components/admin/primitives'
 import {
   CrawlSplitView,
   CrawlRunAllButton,
@@ -143,38 +149,21 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
         gap: 24,
       }}
     >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          gap: 16,
-        }}
-      >
-        <div>
-          <h1
-            style={{
-              fontSize: 22,
-              fontWeight: 700,
-              color: 'var(--fg)',
-              margin: 0,
-            }}
-          >
-            Crawl status
-          </h1>
-          <p
-            style={{
-              fontSize: 13,
-              color: 'var(--fg-muted)',
-              margin: '4px 0 0',
-            }}
-          >
-            Every venue crawl, run by run. The dataset is only as fresh as this
-            page.
-          </p>
-        </div>
-        <CrawlRunAllButton />
-      </div>
+      <SectionHead
+        eyebrow="automation"
+        title="Crawl status"
+        subtitle="Every venue crawl, run by run. Click a failed row for diagnostics + staged remediation."
+        actions={
+          <>
+            <Link href="/admin/crawl" style={{ textDecoration: 'none' }}>
+              <AdminButton variant="outline" size="sm" icon={Filter}>
+                All venues
+              </AdminButton>
+            </Link>
+            <CrawlRunAllButton />
+          </>
+        }
+      />
 
       <IssuesBanner
         blockedVenues={status.filter(

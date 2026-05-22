@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { AlertCircle, ChevronRight } from 'lucide-react'
 
 interface IssueVenue {
   venueId: string
@@ -41,73 +42,96 @@ export function IssuesBanner({ blockedVenues }: Props) {
     router.push(`?venueId=${firstVenue.venueId}`)
   }
 
+  const venueDescriptions = blockedVenues.map((venue) => {
+    const detail =
+      venue.status === 'blocked'
+        ? `${venue.consecutiveFailures}${venue.consecutiveFailures > 0 ? `rd` : ''} consecutive ${venue.blockedAt ? '403' : 'failure'}`
+        : venue.status === 'paused'
+          ? 'disallowed'
+          : venue.consecutiveFailures > 0
+            ? `${venue.consecutiveFailures}×`
+            : null
+    return detail ? `${venue.venueName} (${detail})` : venue.venueName
+  })
+
   return (
     <div
       style={{
         display: 'flex',
-        alignItems: 'flex-start',
+        alignItems: 'center',
         gap: 12,
-        padding: '10px 14px',
+        padding: '12px 16px',
         borderRadius: 10,
-        background: 'rgba(184,56,26,0.08)',
-        border: '1px solid rgba(184,56,26,0.25)',
+        background: 'var(--bg-elevated)',
+        border: '1px solid var(--border-strong)',
       }}
     >
-      <span
-        style={{ color: 'var(--danger)', fontSize: 14, flexShrink: 0 }}
+      {/* Icon container */}
+      <div
+        style={{
+          flexShrink: 0,
+          width: 32,
+          height: 32,
+          borderRadius: 8,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background:
+            'color-mix(in oklab, var(--warning) 12%, var(--bg-elevated))',
+          border:
+            '1px solid color-mix(in oklab, var(--warning) 28%, transparent)',
+        }}
         aria-hidden
       >
-        ⚠
-      </span>
+        <AlertCircle size={15} color="var(--warning)" />
+      </div>
+
       <div style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ fontSize: 13, color: 'var(--danger)', fontWeight: 600 }}>
-          {headline}
-        </span>
         <div
           style={{
-            marginTop: 4,
-            display: 'flex',
-            flexWrap: 'wrap' as const,
-            gap: '4px 10px',
+            fontFamily: "'Inter', sans-serif",
+            fontSize: 13,
+            fontWeight: 700,
+            color: 'var(--fg)',
           }}
         >
-          {blockedVenues.map((venue) => (
-            <span
-              key={venue.venueId}
-              style={{ fontSize: 12, color: 'var(--fg-muted)' }}
-            >
-              {venue.venueName}
-              {venue.consecutiveFailures > 0 && (
-                <span style={{ color: 'var(--fg-subtle)' }}>
-                  {' '}
-                  ({venue.consecutiveFailures}×)
-                </span>
-              )}
-              {venue.status === 'blocked' && venue.blockedAt && (
-                <span style={{ color: 'var(--fg-subtle)' }}>
-                  {' '}
-                  · HTTP blocked
-                </span>
-              )}
-            </span>
-          ))}
+          {headline}
+        </div>
+        <div
+          style={{
+            marginTop: 2,
+            fontFamily: "'Inter', sans-serif",
+            fontSize: 12,
+            color: 'var(--fg-muted)',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {venueDescriptions.join(' · ')}
         </div>
       </div>
+
       <button
         onClick={jumpToIssues}
         style={{
           flexShrink: 0,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 3,
+          fontFamily: "'Inter', sans-serif",
           fontSize: 12,
-          fontWeight: 500,
-          color: 'var(--danger)',
+          fontWeight: 600,
+          color: 'var(--fg-muted)',
           background: 'transparent',
           border: 'none',
           cursor: 'pointer',
           padding: '2px 0',
-          whiteSpace: 'nowrap' as const,
+          whiteSpace: 'nowrap',
         }}
       >
-        Jump to issues ›
+        Jump to issues
+        <ChevronRight size={13} />
       </button>
     </div>
   )
