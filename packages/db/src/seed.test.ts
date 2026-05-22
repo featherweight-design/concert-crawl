@@ -28,8 +28,8 @@ describe('seed data', () => {
   })
 
   describe('FAKE_USER_PROFILES', () => {
-    it('contains exactly 5 profiles', () => {
-      expect(FAKE_USER_PROFILES.length).toBe(5)
+    it('contains exactly 9 profiles', () => {
+      expect(FAKE_USER_PROFILES.length).toBe(9)
     })
 
     it('hugh profile has handle and electric theme', () => {
@@ -55,17 +55,17 @@ describe('seed data', () => {
   })
 
   describe('FAKE_USER_ROLES', () => {
-    it('contains exactly 5 roles', () => {
-      expect(FAKE_USER_ROLES.length).toBe(5)
+    it('contains exactly 9 roles', () => {
+      expect(FAKE_USER_ROLES.length).toBe(9)
     })
 
-    it('hugh is admin with priceCredScore 15', () => {
+    it('hugh is admin with priceCredScore 150', () => {
       const hugh = FAKE_USER_ROLES.find(
         (role) => role.userId === 'user_3CoSI01LtxRAvremTpL0yDfuEJ6',
       )
       expect(hugh).toBeDefined()
       expect(hugh?.role).toBe('admin')
-      expect(hugh?.priceCredScore).toBe(15)
+      expect(hugh?.priceCredScore).toBe(150)
     })
 
     it('amy_k is sub_admin', () => {
@@ -83,18 +83,18 @@ describe('seed data', () => {
   })
 
   describe('SEED_INVITE_CODES', () => {
-    it('contains exactly 7 codes', () => {
-      expect(SEED_INVITE_CODES.length).toBe(7)
+    it('contains exactly 12 codes', () => {
+      expect(SEED_INVITE_CODES.length).toBe(12)
     })
 
-    it('5 codes are unused (no usedAt)', () => {
+    it('7 codes are unused (no usedAt)', () => {
       const unused = SEED_INVITE_CODES.filter((code) => !code.usedAt)
-      expect(unused.length).toBe(5)
+      expect(unused.length).toBe(7)
     })
 
-    it('2 codes are used (have usedAt)', () => {
+    it('5 codes are used (have usedAt)', () => {
       const used = SEED_INVITE_CODES.filter((code) => code.usedAt)
-      expect(used.length).toBe(2)
+      expect(used.length).toBe(5)
     })
 
     it('all codes are unique strings', () => {
@@ -104,17 +104,19 @@ describe('seed data', () => {
   })
 
   describe('SEED_FEEDBACK', () => {
-    it('contains exactly 6 entries', () => {
-      expect(SEED_FEEDBACK.length).toBe(6)
+    it('contains exactly 14 entries', () => {
+      expect(SEED_FEEDBACK.length).toBe(14)
     })
 
-    it('has 2 bug, 2 idea, and 2 praise entries', () => {
+    it('has 7 bug, 4 idea, 2 praise, and 1 other entries', () => {
       const bugs = SEED_FEEDBACK.filter((fb) => fb.category === 'bug')
       const ideas = SEED_FEEDBACK.filter((fb) => fb.category === 'idea')
       const praise = SEED_FEEDBACK.filter((fb) => fb.category === 'praise')
-      expect(bugs.length).toBe(2)
-      expect(ideas.length).toBe(2)
+      const other = SEED_FEEDBACK.filter((fb) => fb.category === 'other')
+      expect(bugs.length).toBe(7)
+      expect(ideas.length).toBe(4)
       expect(praise.length).toBe(2)
+      expect(other.length).toBe(1)
     })
 
     it('every entry has a userId, pageUrl, category, and message', () => {
@@ -128,8 +130,8 @@ describe('seed data', () => {
   })
 
   describe('SEED_NOTIFICATIONS', () => {
-    it('contains exactly 4 notifications', () => {
-      expect(SEED_NOTIFICATIONS.length).toBe(4)
+    it('contains exactly 8 notifications', () => {
+      expect(SEED_NOTIFICATIONS.length).toBe(8)
     })
 
     it('all notifications are admin_alert type', () => {

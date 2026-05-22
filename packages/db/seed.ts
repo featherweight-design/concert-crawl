@@ -706,7 +706,7 @@ async function seed() {
       set: {
         name: sql`excluded.name`,
         websiteUrl: sql`excluded.website_url`,
-        address: sql`excluded.address`,
+        address: sql`COALESCE(venues.address, excluded.address)`,
         capacity: sql`excluded.capacity`,
         venueType: sql`excluded.venue_type`,
         neighborhood: sql`excluded.neighborhood`,
@@ -717,8 +717,10 @@ async function seed() {
         crawlMode: sql`excluded.crawl_mode`,
         crawlWaitUntil: sql`excluded.crawl_wait_until`,
         crawlWaitForSelector: sql`excluded.crawl_wait_for_selector`,
+        crawlDelayMs: sql`excluded.crawl_delay_ms`,
         featured: sql`excluded.featured`,
         active: sql`excluded.active`,
+        verified: sql`excluded.verified`,
       },
     })
 
@@ -1261,7 +1263,7 @@ async function seed() {
     console.warn(`Inserted ${logEntries.length} price retrieval log entries.`)
 
     // Test events for UI state coverage
-    const venueForTests = insertedVenues[0]
+    const venueForTests = venueBySlug['red-rocks-amphitheatre']
     if (venueForTests) {
       await db
         .insert(eventsTable)
