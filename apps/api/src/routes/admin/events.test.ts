@@ -72,7 +72,7 @@ const mockEventRow = {
   showTime: null,
   ticketPriceMin: null,
   ticketPriceMax: null,
-  confidenceScore: '0.6',
+  confidenceScore: 0.6,
   verified: false,
   extractionStrategy: 'llm',
   sourceUrl: null,
@@ -157,6 +157,9 @@ describe('GET /v1/admin/events', () => {
     expect(Array.isArray(body.data)).toBe(true)
     expect(body.data[0].id).toBe(EVENT_ID)
     expect(body.data[0].venueName).toBe('Test Venue')
+    // Regression: confidenceScore must be a number, not a numeric string.
+    // The postgres driver returns numeric columns as strings; the query casts to ::float.
+    expect(typeof body.data[0].confidenceScore).toBe('number')
   })
 
   it('defaults to limit=50 and offset=0', async () => {

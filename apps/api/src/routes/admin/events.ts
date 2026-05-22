@@ -62,7 +62,7 @@ eventsAdminRouter.get(
         showTime: events.showTime,
         ticketPriceMin: events.ticketPriceMin,
         ticketPriceMax: events.ticketPriceMax,
-        confidenceScore: events.confidenceScore,
+        confidenceScore: sql<number | null>`(${events.confidenceScore})::float`,
         verified: events.verified,
         extractionStrategy: events.extractionStrategy,
         sourceUrl: events.sourceUrl,
