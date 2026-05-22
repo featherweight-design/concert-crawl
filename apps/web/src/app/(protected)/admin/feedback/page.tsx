@@ -73,6 +73,30 @@ export default function FeedbackPage() {
     router.refresh()
   }
 
+  const handleMarkAllRead = async () => {
+    const token = await getToken()
+    if (!token) return
+    const unreadItems = items.filter((item) => item.status === 'unread')
+    await Promise.all(
+      unreadItems.map((item) =>
+        fetch(`${API_BASE}/v1/admin/feedback/${item.id}`, {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ status: 'read' }),
+        }),
+      ),
+    )
+    setItems((prev) =>
+      prev.map((item) =>
+        item.status === 'unread' ? { ...item, status: 'read' as const } : item,
+      ),
+    )
+    router.refresh()
+  }
+
   const handleNotesChange = async (id: string, adminNotes: string) => {
     const token = await getToken()
     if (!token) return
@@ -227,17 +251,37 @@ export default function FeedbackPage() {
         />
 
         <Panel
-          title={`Feedback${activeFilter !== 'all' ? ` · ${activeFilter}` : ''}`}
+          title={`Active feedback`}
           action={
-            <span
-              style={{
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 11,
-                color: 'var(--fg-subtle)',
-              }}
-            >
-              {filtered.length} items
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <span
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 11,
+                  color: 'var(--fg-subtle)',
+                }}
+              >
+                {filtered.length} items
+              </span>
+              {counts.unread > 0 && (
+                <button
+                  type="button"
+                  onClick={handleMarkAllRead}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: 'var(--fg-muted)',
+                    padding: 0,
+                  }}
+                >
+                  Mark all read
+                </button>
+              )}
+            </div>
           }
           padding={0}
         >
