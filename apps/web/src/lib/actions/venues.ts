@@ -222,6 +222,16 @@ export async function deleteVenue(
   return result
 }
 
+export async function setVenueFeatured(
+  id: string,
+  featured: boolean,
+): Promise<void> {
+  const token = await getToken()
+  await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, { featured })
+  revalidatePath('/admin/venues')
+  revalidatePath(`/admin/venues/${id}`)
+}
+
 export async function activateVenue(id: string): Promise<void> {
   const token = await getToken()
   await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {

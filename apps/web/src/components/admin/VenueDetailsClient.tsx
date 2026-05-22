@@ -8,6 +8,7 @@ import {
   updateVenue,
   pauseVenue,
   activateVenue,
+  setVenueFeatured,
   generateVenueAbout,
 } from '@/lib/actions/venues'
 import {
@@ -36,6 +37,7 @@ import { usePageTitle } from '@/components/admin/shell/PageTitleContext'
 import {
   ExternalLink,
   RefreshCw,
+  Star,
   Pause,
   Play,
   AlertCircle,
@@ -452,7 +454,6 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
   const [neighborhoodVal, setNeighborhoodVal] = useState(
     venue.neighborhood ?? '',
   )
-  const [featuredVal, setFeaturedVal] = useState(venue.featured ?? false)
   const [slugManual, setSlugManual] = useState(true)
   const [slugFocused, setSlugFocused] = useState(false)
   const isDirty =
@@ -469,8 +470,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     capacityVal !== (venue.capacity != null ? String(venue.capacity) : '') ||
     venueTypeVal !== (venue.venueType ?? '') ||
     aboutVal !== (venue.about ?? '') ||
-    neighborhoodVal !== (venue.neighborhood ?? '') ||
-    featuredVal !== (venue.featured ?? false)
+    neighborhoodVal !== (venue.neighborhood ?? '')
 
   const [saveState, setSaveState] = useState<
     'idle' | 'saving' | 'saved' | 'error'
@@ -543,7 +543,6 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     setVenueTypeVal(venue.venueType ?? '')
     setAboutVal(venue.about ?? '')
     setNeighborhoodVal(venue.neighborhood ?? '')
-    setFeaturedVal(venue.featured ?? false)
     setSaveState('idle')
     setSaveError(null)
     setFieldErrors({})
@@ -579,7 +578,6 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     formData.set('venueType', venueTypeVal.trim())
     formData.set('about', aboutVal.trim())
     formData.set('neighborhood', neighborhoodVal.trim())
-    formData.set('featured', String(featuredVal))
 
     try {
       const result = await updateVenue(venue.id, formData)
@@ -610,6 +608,13 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
       } else {
         await activateVenue(venue.id)
       }
+      router.refresh()
+    })
+  }
+
+  function handleFeaturedToggle() {
+    startTransition(async () => {
+      await setVenueFeatured(venue.id, !venue.featured)
       router.refresh()
     })
   }
@@ -763,7 +768,24 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                 <span>health {crawlHealth.sevenDayPercent}%</span>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+            <div
+              style={{
+                display: 'flex',
+                gap: 8,
+                flexShrink: 0,
+                flexWrap: 'wrap',
+              }}
+            >
+              <AdminButton
+                variant={venue.featured ? 'success' : 'outline'}
+                size="sm"
+                icon={Star}
+                disabled={isPending}
+                onClick={handleFeaturedToggle}
+                type="button"
+              >
+                {venue.featured ? 'Flagship' : 'Make flagship'}
+              </AdminButton>
               <CrawlTriggerButton venueId={venue.id} />
               <a
                 href={venue.websiteUrl}
