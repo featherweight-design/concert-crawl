@@ -507,7 +507,9 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
 
   // Identity art preview state
   const [artNamespace, setArtNamespace] = useState<'venue' | 'artist'>('venue')
-  const [artSeed, setArtSeed] = useState(venue.name)
+  const [artSeedNum, setArtSeedNum] = useState(0)
+  const artSeedStr =
+    artSeedNum === 0 ? venue.name : `${venue.name}·${artSeedNum}`
 
   // Generate-about state
   const [generateState, setGenerateState] = useState<GenerateFieldState>('idle')
@@ -1824,8 +1826,33 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
           </VDSection>
 
           {/* 05 · identity art */}
-          <VDSection eyebrow="05 · identity" title="Identity Art">
+          <VDSection
+            eyebrow="05 · identity art"
+            title="Generative cover (Phase 7.5)"
+          >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {/* Description */}
+              <div
+                style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 13,
+                  color: 'var(--fg-muted)',
+                  lineHeight: 1.55,
+                }}
+              >
+                Deterministic generative art derived from the venue identity.
+                Current seed:{' '}
+                <span
+                  style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 12,
+                    color: 'var(--accent)',
+                  }}
+                >
+                  (venue · {venue.name})
+                </span>
+              </div>
+
               <div
                 style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}
               >
@@ -1842,7 +1869,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                   }}
                 >
                   <IdentityArt
-                    name={artSeed}
+                    name={artSeedStr}
                     kind={artNamespace}
                     scale="tile"
                     showInitials={false}
@@ -1851,9 +1878,9 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                     height={96}
                   />
                   {(() => {
-                    const identity = identityFor(artSeed, artNamespace)
+                    const identity = identityFor(artSeedStr, artNamespace)
                     const dark = ia_isDark(identity.palette.bg)
-                    const initials = ia_getInitials(artSeed, 2)
+                    const initials = ia_getInitials(artSeedStr, 2)
                     return (
                       <div
                         style={{
@@ -1880,11 +1907,11 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                   })()}
                 </div>
 
-                {/* Controls */}
+                {/* Controls — 2-column grid */}
                 <div
                   style={{
-                    display: 'flex',
-                    flexDirection: 'column',
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
                     gap: 12,
                     flex: 1,
                   }}
@@ -1892,7 +1919,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                   <VDField
                     label="Namespace"
                     htmlFor="edit-venue-art-namespace"
-                    hint="Controls which template set is used. Venues use architectural / spatial patterns; artists use more organic / gestural ones."
+                    hint="Venues use architectural patterns; artists use organic ones."
                   >
                     <VDSegToggle
                       options={[
@@ -1909,22 +1936,23 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                   <VDField
                     label="Seed"
                     htmlFor="edit-venue-art-seed"
-                    hint="The seed text is hashed to pick palette + template. Changing it gives a different art variation."
+                    hint={
+                      artSeedNum === 0
+                        ? 'LOCKED UNLESS BUMPED'
+                        : `Bumped to ${artSeedNum}`
+                    }
                   >
                     <div style={{ display: 'flex', gap: 8 }}>
                       <VDInput
                         id="edit-venue-art-seed"
-                        value={artSeed}
-                        placeholder={venue.name}
-                        onChange={(evt) => setArtSeed(evt.target.value)}
+                        value={artSeedNum === 0 ? '' : String(artSeedNum)}
+                        placeholder="0"
+                        disabled
                         style={{ flex: 1 }}
                       />
                       <button
                         type="button"
-                        onClick={() => {
-                          const roll = `${venue.name}-${Math.floor(Math.random() * 9999)}`
-                          setArtSeed(roll)
-                        }}
+                        onClick={() => setArtSeedNum((prev) => prev + 1)}
                         style={{
                           flexShrink: 0,
                           height: 36,
@@ -1946,16 +1974,31 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                 </div>
               </div>
 
+              {/* Phase 8 warning banner */}
               <div
                 style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '10px 14px',
+                  borderRadius: 8,
+                  border:
+                    '1px solid color-mix(in oklab, var(--warning) 32%, transparent)',
+                  background:
+                    'color-mix(in oklab, var(--warning) 8%, var(--bg-elevated))',
                   fontFamily: "'Inter', sans-serif",
                   fontSize: 12,
-                  color: 'var(--fg-subtle)',
-                  lineHeight: 1.5,
+                  color: 'var(--warning)',
+                  lineHeight: 1.45,
                 }}
               >
-                Preview only — production art always uses the venue name as
-                seed. Reset the seed to see the canonical art.
+                <span style={{ fontWeight: 700, flexShrink: 0 }}>
+                  Phase 8 —
+                </span>
+                <span>
+                  Seed + namespace will be persisted to the DB. Changes here are
+                  preview-only until then.
+                </span>
               </div>
             </div>
           </VDSection>
