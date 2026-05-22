@@ -49,7 +49,7 @@ export const StatCard = ({
         padding: '20px 20px',
         display: 'flex',
         flexDirection: 'column',
-        gap: 16,
+        gap: 12,
         cursor: onClick ? 'pointer' : undefined,
       }}
     >
@@ -63,12 +63,13 @@ export const StatCard = ({
         <div style={{ flex: 1 }}>
           <div
             style={{
+              fontFamily: "'JetBrains Mono', monospace",
               fontSize: 11,
-              fontWeight: 500,
+              fontWeight: 600,
               textTransform: 'uppercase' as const,
               letterSpacing: '0.07em',
               color: 'var(--fg-muted)',
-              marginBottom: 10,
+              marginBottom: 8,
             }}
           >
             {label}
@@ -79,8 +80,8 @@ export const StatCard = ({
                 fontFamily: mono
                   ? "'JetBrains Mono', monospace"
                   : 'var(--admin-font, Inter, sans-serif)',
-                fontSize: 30,
-                fontWeight: 700,
+                fontSize: 38,
+                fontWeight: 800,
                 fontVariantNumeric: 'tabular-nums',
                 lineHeight: 1,
                 color: 'var(--fg)',
@@ -89,7 +90,14 @@ export const StatCard = ({
               {value}
             </span>
             {unit && (
-              <span style={{ fontSize: 16, color: 'var(--fg-muted)' }}>
+              <span
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: 'var(--fg-muted)',
+                }}
+              >
                 {unit}
               </span>
             )}
@@ -116,9 +124,9 @@ export const StatCard = ({
         </div>
         <div
           style={{
-            width: 40,
-            height: 40,
-            borderRadius: 10,
+            width: 32,
+            height: 32,
+            borderRadius: 8,
             background: noChip ? 'transparent' : colors.bg,
             display: 'flex',
             alignItems: 'center',
@@ -127,7 +135,7 @@ export const StatCard = ({
           }}
         >
           {Icon && (
-            <Icon size={20} color={noChip ? 'var(--fg-subtle)' : colors.fg} />
+            <Icon size={15} color={noChip ? 'var(--fg-subtle)' : colors.fg} />
           )}
         </div>
       </div>

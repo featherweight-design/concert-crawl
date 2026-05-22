@@ -138,8 +138,9 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
 
   const mostRecentRun = runs[0]
   const lastSweepValue = mostRecentRun?.createdAt
-    ? `${String(Math.round((Date.now() - new Date(mostRecentRun.createdAt).getTime()) / 60000))}m ago`
+    ? `${String(Math.round((Date.now() - new Date(mostRecentRun.createdAt).getTime()) / 60000))}m`
     : '—'
+  const lastSweepUnit = mostRecentRun?.createdAt ? 'ago' : undefined
 
   return (
     <div
@@ -177,13 +178,14 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
           gap: 16,
         }}
       >
         <StatCard
           label="Last sweep"
           value={lastSweepValue}
+          {...(lastSweepUnit !== undefined && { unit: lastSweepUnit })}
           iconName="RefreshCw"
           kind="neutral"
           hint={sweepHint}
@@ -198,6 +200,7 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
         <StatCard
           label="Events ingested"
           value={String(totalInserted + totalUpdated)}
+          unit="today"
           iconName="CalendarCheck2"
           kind="success"
           hint={eventsHint}

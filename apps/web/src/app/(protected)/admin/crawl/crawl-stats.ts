@@ -56,7 +56,6 @@ export function formatRunsBreakdown(runs: { status: string }[]): string {
     .join(' · ')
 }
 
-
 /**
  * Sums llmCostUsd across runs and returns a formatted cost string, e.g. "$0.0012".
  * Returns empty string when no runs had LLM cost.
@@ -66,7 +65,7 @@ export function formatLlmCostTotal(
 ): string {
   const total = runs.reduce((acc, run) => acc + (run.llmCostUsd ?? 0), 0)
   if (total === 0) return ''
-  return `$${total.toFixed(4)}`
+  return `$${total.toFixed(2)}`
 }
 
 /**
