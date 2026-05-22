@@ -123,6 +123,14 @@ export default function FeedbackPage() {
       Date.now() - new Date(item.createdAt).getTime() < 7 * 24 * 60 * 60 * 1000,
   ).length
 
+  const now = new Date()
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  const issuesThisMonth = items.filter(
+    (item) =>
+      item.status === 'issue_opened' &&
+      new Date(item.createdAt) >= startOfMonth,
+  ).length
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <SectionHead
@@ -176,22 +184,28 @@ export default function FeedbackPage() {
         <StatCard
           label="Last 7 days"
           value={String(lastWeek)}
-          iconName="MessageSquare"
+          iconName="Inbox"
+          kind="signal"
         />
         <StatCard
           label="Unread"
           value={String(counts.unread)}
-          iconName="Inbox"
+          iconName="AlertCircle"
+          kind="warning"
         />
         <StatCard
           label="Flagged"
           value={String(counts.flagged)}
           iconName="Flag"
+          kind="danger"
+          hint="awaiting investigation"
         />
         <StatCard
           label="Issues opened"
-          value={String(counts.issue_opened)}
-          iconName="GitPullRequest"
+          value={String(issuesThisMonth)}
+          iconName="ExternalLink"
+          kind="accent"
+          hint="this month"
         />
       </div>
 
