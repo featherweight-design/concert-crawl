@@ -21,6 +21,25 @@ import type { FeedbackItem } from '@/components/admin/feedback/FeedbackRow'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
+const STATUS_CHIPS: { value: FeedbackStatusFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'unread', label: 'Unread' },
+  { value: 'flagged', label: 'Flagged' },
+  { value: 'issue_opened', label: 'Issue opened' },
+  { value: 'resolved', label: 'Resolved' },
+  { value: 'archived', label: 'Archived' },
+]
+
+const PANEL_TITLE: Record<FeedbackStatusFilter, string> = {
+  all: 'Active feedback',
+  unread: 'Unread feedback',
+  flagged: 'Flagged feedback',
+  issue_opened: 'Issues opened',
+  resolved: 'Resolved feedback',
+  archived: 'Archived feedback',
+  read: 'Read feedback',
+}
+
 export default function FeedbackPage() {
   const { getToken } = useAuth()
   const router = useRouter()
@@ -31,6 +50,15 @@ export default function FeedbackPage() {
     new Set(['feedback_surface']),
   )
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)')
+    setIsMobile(mq.matches)
+    const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   const fetchFeedback = async () => {
     const token = await getToken()
@@ -155,6 +183,137 @@ export default function FeedbackPage() {
       new Date(item.createdAt) >= startOfMonth,
   ).length
 
+  const mobileSubtitle = [
+    counts.unread > 0 ? `${counts.unread} unread` : null,
+    counts.flagged > 0 ? `${counts.flagged} flagged` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
+  const feedbackList = (
+    <>
+      {isLoading ? (
+        <div
+          style={{
+            padding: 32,
+            textAlign: 'center',
+            color: 'var(--fg-subtle)',
+            fontSize: 13,
+          }}
+        >
+          Loading…
+        </div>
+      ) : filtered.length === 0 ? (
+        <div
+          style={{
+            padding: 32,
+            textAlign: 'center',
+            color: 'var(--fg-subtle)',
+            fontSize: 13,
+          }}
+        >
+          No feedback in this category
+        </div>
+      ) : (
+        filtered.map((item) => (
+          <div key={item.id}>
+            <FeedbackRow
+              item={item}
+              isExpanded={expandedId === item.id}
+              onToggle={handleToggle}
+            />
+            {expandedId === item.id && (
+              <FeedbackExpanded
+                item={item}
+                onStatusChange={handleStatusChange}
+                onNotesChange={handleNotesChange}
+              />
+            )}
+          </div>
+        ))
+      )}
+    </>
+  )
+
+  if (isMobile) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <SectionHead
+          eyebrow="operations · users"
+          title={
+            <span
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}
+            >
+              Feedback
+              {counts.unread > 0 && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    padding: '3px 10px',
+                    borderRadius: 20,
+                    border: '1.5px solid var(--signal)',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: 'var(--signal)',
+                    letterSpacing: 0,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {counts.unread} unread
+                </span>
+              )}
+            </span>
+          }
+          subtitle={mobileSubtitle || undefined}
+        />
+
+        {/* Horizontal chip filter */}
+        <div
+          style={{
+            display: 'flex',
+            gap: 8,
+            overflowX: 'auto',
+            paddingBottom: 2,
+            scrollbarWidth: 'none',
+          }}
+        >
+          {STATUS_CHIPS.map((chip) => {
+            const isActive = activeFilter === chip.value
+            return (
+              <button
+                key={chip.value}
+                type="button"
+                onClick={() => setActiveFilter(chip.value)}
+                style={{
+                  flexShrink: 0,
+                  height: 32,
+                  padding: '0 14px',
+                  borderRadius: 20,
+                  border: isActive
+                    ? '1.5px solid var(--signal)'
+                    : '1px solid var(--border-strong)',
+                  background: isActive ? 'var(--signal)' : 'var(--bg-elevated)',
+                  color: isActive ? '#fff' : 'var(--fg-muted)',
+                  fontSize: 13,
+                  fontWeight: isActive ? 700 : 500,
+                  fontFamily: "'Inter', sans-serif",
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {chip.label}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Feedback list */}
+        <Panel padding={0}>{feedbackList}</Panel>
+      </div>
+    )
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <SectionHead
@@ -251,19 +410,7 @@ export default function FeedbackPage() {
         />
 
         <Panel
-          title={
-            activeFilter === 'all'
-              ? 'Active feedback'
-              : activeFilter === 'unread'
-                ? 'Unread feedback'
-                : activeFilter === 'flagged'
-                  ? 'Flagged feedback'
-                  : activeFilter === 'issue_opened'
-                    ? 'Issues opened'
-                    : activeFilter === 'resolved'
-                      ? 'Resolved feedback'
-                      : 'Archived feedback'
-          }
+          title={PANEL_TITLE[activeFilter]}
           action={
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <span
@@ -297,46 +444,7 @@ export default function FeedbackPage() {
           }
           padding={0}
         >
-          {isLoading ? (
-            <div
-              style={{
-                padding: 32,
-                textAlign: 'center',
-                color: 'var(--fg-subtle)',
-                fontSize: 13,
-              }}
-            >
-              Loading…
-            </div>
-          ) : filtered.length === 0 ? (
-            <div
-              style={{
-                padding: 32,
-                textAlign: 'center',
-                color: 'var(--fg-subtle)',
-                fontSize: 13,
-              }}
-            >
-              No feedback in this category
-            </div>
-          ) : (
-            filtered.map((item) => (
-              <div key={item.id}>
-                <FeedbackRow
-                  item={item}
-                  isExpanded={expandedId === item.id}
-                  onToggle={handleToggle}
-                />
-                {expandedId === item.id && (
-                  <FeedbackExpanded
-                    item={item}
-                    onStatusChange={handleStatusChange}
-                    onNotesChange={handleNotesChange}
-                  />
-                )}
-              </div>
-            ))
-          )}
+          {feedbackList}
         </Panel>
       </div>
     </div>
