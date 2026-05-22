@@ -530,6 +530,16 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
     {},
   )
 
+  // Responsive breakpoint
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)')
+    setIsMobile(mq.matches)
+    const handler = (evt: MediaQueryListEvent) => setIsMobile(evt.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
   // Identity art preview state
   const [artNamespace, setArtNamespace] = useState<'venue' | 'artist'>('venue')
   const [artSeedNum, setArtSeedNum] = useState(0)
@@ -887,7 +897,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) 360px',
+          gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1fr) 360px',
           gap: 20,
           alignItems: 'start',
         }}
@@ -901,7 +911,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
+                  gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
                   gap: 12,
                 }}
               >
@@ -1057,7 +1067,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
+                  gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
                   gap: 12,
                 }}
               >
@@ -1170,7 +1180,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 2fr',
+                gridTemplateColumns: isMobile ? '1fr' : '1fr 2fr',
                 gap: 12,
                 alignItems: 'start',
               }}
@@ -1244,7 +1254,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
+                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
                 gap: 16,
                 alignItems: 'start',
               }}
@@ -1555,6 +1565,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                         : {})}
                       onGenerate={() => void handleGenerateAbout()}
                       onRegenerate={() => void handleGenerateAbout()}
+                      onCancel={handleGenerateDiscard}
                       onAccept={handleGenerateAccept}
                       onDiscard={handleGenerateDiscard}
                     />
@@ -1936,7 +1947,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
+                    gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
                     gap: 12,
                     flex: 1,
                   }}
@@ -2310,15 +2321,21 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
               {dirtyFields.length === 1 ? 'change' : 'changes'}
             </span>
             {/* Dirty field names */}
-            <span
-              style={{
-                fontFamily: "'Inter', sans-serif",
-                fontSize: 12,
-                color: 'var(--fg-muted)',
-              }}
-            >
-              {dirtyFields.join(' · ')}
-            </span>
+            {!isMobile && (
+              <span
+                style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 12,
+                  color: 'var(--fg-muted)',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  maxWidth: 320,
+                }}
+              >
+                {dirtyFields.join(' · ')}
+              </span>
+            )}
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <button
