@@ -1,5 +1,6 @@
 'use client'
 
+import { Inbox, AlertCircle, Flag, SquarePen, Check, X } from 'lucide-react'
 import { MonoLabel } from '@/components/admin/primitives'
 
 export type FeedbackStatusFilter =
@@ -31,14 +32,17 @@ interface FeedbackFilterRailProps {
   onSourceToggle?: (source: FeedbackSource) => void
 }
 
-const STATUS_ITEMS: { value: FeedbackStatusFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'unread', label: 'Unread' },
-  { value: 'flagged', label: 'Flagged' },
-  { value: 'issue_opened', label: 'Issue opened' },
-  { value: 'read', label: 'Read' },
-  { value: 'resolved', label: 'Resolved' },
-  { value: 'archived', label: 'Archived' },
+const STATUS_ITEMS: {
+  value: FeedbackStatusFilter
+  label: string
+  Icon: React.ComponentType<{ size: number; color: string }>
+}[] = [
+  { value: 'all', label: 'All', Icon: Inbox },
+  { value: 'unread', label: 'Unread', Icon: AlertCircle },
+  { value: 'flagged', label: 'Flagged', Icon: Flag },
+  { value: 'issue_opened', label: 'Issue opened', Icon: SquarePen },
+  { value: 'resolved', label: 'Resolved', Icon: Check },
+  { value: 'archived', label: 'Archived', Icon: X },
 ]
 
 const SOURCE_ITEMS: {
@@ -47,7 +51,7 @@ const SOURCE_ITEMS: {
   soon: boolean
 }[] = [
   { value: 'feedback_surface', label: 'FeedbackSurface', soon: false },
-  { value: 'sentry', label: 'Sentry', soon: true },
+  { value: 'sentry', label: 'Sentry', soon: false },
   { value: 'email', label: 'Email', soon: true },
 ]
 
@@ -74,12 +78,13 @@ export function FeedbackFilterRail({
       }}
     >
       <div style={{ padding: '8px 10px' }}>
-        <MonoLabel>Status</MonoLabel>
+        <MonoLabel>View</MonoLabel>
       </div>
 
       {STATUS_ITEMS.map((item) => {
         const isActive = active === item.value
         const count = counts[item.value]
+        const iconColor = isActive ? 'var(--fg)' : 'var(--fg-muted)'
         return (
           <button
             key={item.value}
@@ -88,7 +93,7 @@ export function FeedbackFilterRail({
             style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
+              gap: 8,
               padding: '8px 10px',
               borderRadius: 8,
               border: 'none',
@@ -115,7 +120,8 @@ export function FeedbackFilterRail({
                 }}
               />
             )}
-            <span style={{ paddingLeft: isActive ? 6 : 0 }}>{item.label}</span>
+            <item.Icon size={14} color={iconColor} />
+            <span style={{ flex: 1 }}>{item.label}</span>
             {count > 0 && (
               <span
                 style={{
@@ -191,15 +197,14 @@ export function FeedbackFilterRail({
             {src.soon && (
               <span
                 style={{
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 9,
-                  fontWeight: 700,
-                  letterSpacing: '0.06em',
-                  textTransform: 'uppercase' as const,
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 10,
+                  fontWeight: 600,
                   color: 'var(--fg-subtle)',
+                  background: 'var(--surface-1)',
                   border: '1px solid var(--border)',
-                  borderRadius: 4,
-                  padding: '1px 5px',
+                  borderRadius: 20,
+                  padding: '1px 7px',
                 }}
               >
                 soon
