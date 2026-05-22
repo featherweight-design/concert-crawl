@@ -359,8 +359,8 @@ Get the production connection string from Render → `concert-crawl-db` → **In
      ```
    - Sign out and back in so the role is reflected in the JWT
 
-3. **Seed the FounderNote:**
-   The onboarding step 1 message is stored in the `app_config` table (key: `founder_note`). Set it via the admin panel at `https://concertcrawl.app/admin/config`, or directly via the API once the admin user is set up.
+3. **Verify the FounderNote:**
+   The onboarding step 1 message is hardcoded in `apps/web/src/components/onboarding/definitions/copy.ts` under `ONBOARDING_COPY.founderNote`. Confirm the copy is in launch voice before deploying. Updates require a code change + redeploy.
 
 ---
 

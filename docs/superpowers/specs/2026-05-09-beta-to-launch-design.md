@@ -103,8 +103,7 @@ Hard blockers — nothing ships to beta users without these:
 | ~~**Invite code error states**~~ | ✅ Done. Invalid code, expired code, no-code wall. |
 | **Feedback modal** | In-app, auth-only, rate-limited (1/hour). Category + message + auto-captured page URL → `feedback` table. |
 | **Empty states** | Per-route — browse (no results for filters), search (no results), Watching (no saved shows). |
-| ~~**FounderNote copy**~~ | ✅ Done. Personal message written and live in `app_config`. |
-| **FounderNote admin page** | `app_config` table (key-value), simple admin editor so copy can be updated without a redeploy. |
+| ~~**FounderNote copy**~~ | ✅ Done. Personal message written and live in `apps/web/src/components/onboarding/definitions/copy.ts`. |
 | **Legal for beta** | One-page "private beta, don't share" doc. T&C + Privacy Policy required before public launch. |
 | ~~**Seed additional venues**~~ | ✅ Done. Mission Ballroom + Fillmore added to active crawl. |
 
@@ -168,7 +167,7 @@ Two full weeks. Do not compress this.
 - API response time baseline documented
 
 ### Launch checklist
-- `app_config` FounderNote updated to launch voice (vs. beta voice)
+- FounderNote copy updated to launch voice (edit `apps/web/src/components/onboarding/definitions/copy.ts` + deploy)
 - Founder window configured (100-person cap or 30-day timer)
 - Stripe live mode keys configured in Render production environment
 - Smoke tests `SMOKE_ENABLED=true` set in GitHub `production` environment
@@ -307,9 +306,9 @@ These are separate affordances with separate buttons. Following an artist does n
 
 ---
 
-## FounderNote Admin Page
+## FounderNote
 
-The onboarding step 1 message (Hugh's personal note) is stored as a row in an `app_config` table (key-value: `key text, value text, updated_at timestamp`). A simple admin editor at `/admin/config` allows updating the message without a redeploy. The message will change at minimum twice: once for beta voice, once for launch voice.
+The onboarding step 1 message (Hugh's personal note) is hardcoded in `apps/web/src/components/onboarding/definitions/copy.ts` under `ONBOARDING_COPY.founderNote`. Updating it requires a code change and deploy. The message will change at minimum twice: once for beta voice, once for launch voice.
 
 ---
 

@@ -14,7 +14,7 @@ Concert Crawl aggregates live music events from Denver venue websites into a sin
 
 - Original design spec: `docs/superpowers/specs/2026-04-23-denver-concert-calendar-design.md`
 - **Beta-to-launch plan (current):** `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md`
-- DB rollback runbook: `docs/runbooks/db-rollback.md` (to be written)
+- DB rollback runbook: `docs/runbooks/db-rollback.md`
 
 ---
 
