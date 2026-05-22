@@ -3,7 +3,13 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
-import { StatCard, Panel } from '@/components/admin/primitives'
+import {
+  StatCard,
+  Panel,
+  SectionHead,
+  AdminButton,
+} from '@/components/admin/primitives'
+import { Filter, ExternalLink } from 'lucide-react'
 import { FeedbackFilterRail } from '@/components/admin/feedback/FeedbackFilterRail'
 import { FeedbackRow } from '@/components/admin/feedback/FeedbackRow'
 import { FeedbackExpanded } from '@/components/admin/feedback/FeedbackExpanded'
@@ -118,14 +124,53 @@ export default function FeedbackPage() {
   ).length
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <SectionHead
+        eyebrow="operations · users"
+        title={
+          <span
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}
+          >
+            Feedback
+            {counts.unread > 0 && (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '3px 10px',
+                  borderRadius: 20,
+                  border: '1.5px solid var(--signal)',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: 'var(--signal)',
+                  letterSpacing: 0,
+                  lineHeight: 1.4,
+                }}
+              >
+                {counts.unread} unread
+              </span>
+            )}
+          </span>
+        }
+        subtitle="Inbox for in-app feedback (and Sentry, soon email). Triage: mark read, flag for investigation, open a GH issue, or archive."
+        actions={
+          <>
+            <AdminButton variant="outline" size="sm" icon={Filter}>
+              Date range
+            </AdminButton>
+            <AdminButton variant="outline" size="sm" icon={ExternalLink}>
+              Export CSV
+            </AdminButton>
+          </>
+        }
+      />
+
       {/* Stat cards */}
       <div
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(4, 1fr)',
           gap: 16,
-          marginBottom: 24,
         }}
       >
         <StatCard
