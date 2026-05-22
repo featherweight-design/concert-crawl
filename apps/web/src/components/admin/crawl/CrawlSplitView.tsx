@@ -253,6 +253,15 @@ export const CrawlSplitView = ({
   const { data: venueRuns = [], isLoading: venueRunsLoading } =
     useAdminVenueRuns(selectedId)
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)')
+    setIsMobile(mq.matches)
+    const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   // Sync selectedId when IssuesBanner navigates to a new venueId via router.push
   useEffect(() => {
@@ -388,17 +397,19 @@ export const CrawlSplitView = ({
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(0, 460px) minmax(0, 1fr)',
-          height: 560,
+          gridTemplateColumns: isMobile
+            ? '1fr'
+            : 'minmax(0, 460px) minmax(0, 1fr)',
+          ...(isMobile ? {} : { height: 560 }),
           borderBottom: '1px solid var(--border)',
         }}
       >
-        {/* Left rail */}
+        {/* Left rail — hidden on mobile when a venue is selected */}
         <div
           style={{
-            borderRight: '1px solid var(--border)',
-            overflowY: 'auto',
-            display: 'flex',
+            borderRight: isMobile ? 'none' : '1px solid var(--border)',
+            overflowY: isMobile ? 'visible' : 'auto',
+            display: isMobile && selectedId !== null ? 'none' : 'flex',
             flexDirection: 'column',
           }}
         >
@@ -636,13 +647,12 @@ export const CrawlSplitView = ({
           ))}
         </div>
 
-        {/* Right inspector */}
+        {/* Right inspector — hidden on mobile when no venue selected */}
         <div
           style={{
-            display: 'flex',
+            display: isMobile && selectedId === null ? 'none' : 'flex',
             flexDirection: 'column',
-            overflow: 'hidden',
-            minHeight: 0,
+            ...(isMobile ? {} : { overflow: 'hidden', minHeight: 0 }),
           }}
         >
           {selected ? (
@@ -656,6 +666,27 @@ export const CrawlSplitView = ({
                   flexShrink: 0,
                 }}
               >
+                {isMobile && (
+                  <button
+                    onClick={() => selectVenue(null)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: 'var(--fg-muted)',
+                      padding: 0,
+                      marginBottom: 10,
+                    }}
+                  >
+                    ← All venues
+                  </button>
+                )}
                 {activeRun && (
                   <div
                     style={{
@@ -796,7 +827,9 @@ export const CrawlSplitView = ({
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(4, 1fr)',
+                    gridTemplateColumns: isMobile
+                      ? 'repeat(2, 1fr)'
+                      : 'repeat(4, 1fr)',
                     gap: 0,
                     borderBottom: '1px solid var(--border)',
                     flexShrink: 0,
@@ -836,8 +869,17 @@ export const CrawlSplitView = ({
                       key={stat.label}
                       style={{
                         padding: '14px 18px',
-                        borderRight:
-                          idx < 3 ? '1px solid var(--border)' : 'none',
+                        borderRight: isMobile
+                          ? idx % 2 === 0
+                            ? '1px solid var(--border)'
+                            : 'none'
+                          : idx < 3
+                            ? '1px solid var(--border)'
+                            : 'none',
+                        borderBottom:
+                          isMobile && idx < 2
+                            ? '1px solid var(--border)'
+                            : 'none',
                       }}
                     >
                       <div
@@ -875,8 +917,7 @@ export const CrawlSplitView = ({
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 18,
-                    overflowY: 'auto',
-                    flex: 1,
+                    ...(isMobile ? {} : { overflowY: 'auto', flex: 1 }),
                   }}
                 >
                   {activeRun ? (
@@ -1110,7 +1151,7 @@ export const CrawlSplitView = ({
 
               {/* Diagnostics tab content */}
               {activeTab === 'diagnostics' && diagnosticsRun && (
-                <div style={{ overflowY: 'auto', flex: 1 }}>
+                <div style={isMobile ? {} : { overflowY: 'auto', flex: 1 }}>
                   <DiagnosticsPanel
                     run={diagnosticsRun}
                     historyEntries={[]}
@@ -1129,7 +1170,12 @@ export const CrawlSplitView = ({
 
               {/* History tab content */}
               {activeTab === 'history' && (
-                <div style={{ overflowY: 'auto', flex: 1 }}>
+                <div
+                  style={{
+                    overflowX: 'auto',
+                    ...(isMobile ? {} : { overflowY: 'auto', flex: 1 }),
+                  }}
+                >
                   <CrawlRunHistoryTable
                     runs={venueRuns}
                     loading={venueRunsLoading}
