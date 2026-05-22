@@ -1,3 +1,10 @@
+## [1.36.3](https://github.com/HartiganHM/concert-crawl/compare/v1.36.2...v1.36.3) (2026-05-22)
+
+
+### Bug Fixes
+
+* **db:** address Copilot review comments on seed overhaul PR ([2a92799](https://github.com/HartiganHM/concert-crawl/commit/2a9279989cdc13535d15e8730e86eb91c36d5992))
+
 ## [1.36.2](https://github.com/HartiganHM/concert-crawl/compare/v1.36.1...v1.36.2) (2026-05-21)
 
 
