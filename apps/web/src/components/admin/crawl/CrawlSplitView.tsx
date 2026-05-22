@@ -269,7 +269,13 @@ export const CrawlSplitView = ({
   // Default to diagnostics tab when selected venue has a failed/blocked run
   useEffect(() => {
     const row = initialStatus.find((sr) => sr.venueId === selectedId)
-    if (row && (row.status === 'failed' || row.blockedAt !== null)) {
+    if (
+      row &&
+      (row.status === 'failed' ||
+        row.status === 'blocked' ||
+        row.lastRunStatus === 'failed' ||
+        row.blockedAt !== null)
+    ) {
       setActiveTab('diagnostics')
     } else {
       setActiveTab('overview')
@@ -352,6 +358,7 @@ export const CrawlSplitView = ({
     selected !== undefined &&
     (selected.status === 'failed' ||
       selected.status === 'blocked' ||
+      selected.lastRunStatus === 'failed' ||
       selected.blockedAt !== null)
 
   const diagnosticsRun =
@@ -1163,17 +1170,6 @@ export const CrawlSplitView = ({
           )}
         </div>
       </div>
-
-      {/* Run history — seamlessly joined inside the same outer container */}
-      <CrawlRunHistoryTable
-        runs={selectedId ? venueRuns : initialRuns}
-        loading={venueRunsLoading}
-        selectedVenueName={selected?.venueName ?? null}
-        selectedRunId={selectedId ? selectedRunId : null}
-        {...(selectedId
-          ? { onSelectRun: (runId: string) => setSelectedRunId(runId) }
-          : {})}
-      />
     </div>
   )
 }
