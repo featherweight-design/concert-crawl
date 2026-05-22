@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, Filter } from 'lucide-react'
 import { Panel, AdminButton, StatusBadge } from '@/components/admin/primitives'
 import { EventFlagRow } from './EventFlagRow'
 import { EventFlagInspector } from './EventFlagInspector'
@@ -36,8 +36,9 @@ export const EventFlagsSection = ({
   onApprove,
   onReject,
 }: EventFlagsSectionProps) => {
-  const [activeId, setActiveId] = useState<string | null>(null)
+  const [activeId, setActiveId] = useState<string | null>(events[0]?.id ?? null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [hideNonConcert, setHideNonConcert] = useState(false)
 
   const handleSelect = (id: string, checked: boolean) => {
     setSelectedIds((prev) => {
@@ -53,7 +54,7 @@ export const EventFlagsSection = ({
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedIds(new Set(events.map((ev) => ev.id)))
+      setSelectedIds(new Set(visibleEvents.map((ev) => ev.id)))
     } else {
       setSelectedIds(new Set())
     }
@@ -66,7 +67,10 @@ export const EventFlagsSection = ({
       next.delete(id)
       return next
     })
-    if (activeId === id) setActiveId(null)
+    if (activeId === id) {
+      const remaining = visibleEvents.filter((ev) => ev.id !== id)
+      setActiveId(remaining[0]?.id ?? null)
+    }
   }
 
   const handleReject = (id: string) => {
@@ -76,7 +80,10 @@ export const EventFlagsSection = ({
       next.delete(id)
       return next
     })
-    if (activeId === id) setActiveId(null)
+    if (activeId === id) {
+      const remaining = visibleEvents.filter((ev) => ev.id !== id)
+      setActiveId(remaining[0]?.id ?? null)
+    }
   }
 
   const handleBulkApprove = async () => {
@@ -135,67 +142,85 @@ export const EventFlagsSection = ({
     )
   }
 
-  const allSelected = events.length > 0 && selectedIds.size === events.length
+  const visibleEvents = hideNonConcert
+    ? events.filter(
+        (ev) =>
+          !ev.genre?.some((tag) => tag.toLowerCase().includes('non-concert')),
+      )
+    : events
 
-  return (
-    <Panel title="Event flags" padding={0}>
-      {/* Header */}
-      <div
+  const allSelected =
+    visibleEvents.length > 0 && selectedIds.size === visibleEvents.length
+
+  const panelTitle = (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+      Event flags
+      <span
         style={{
-          padding: '10px 16px',
-          display: 'flex',
+          display: 'inline-flex',
           alignItems: 'center',
-          gap: 12,
-          borderBottom: '1px solid var(--border)',
+          padding: '2px 9px',
+          borderRadius: 20,
+          border: '1.5px solid var(--warning)',
+          fontSize: 12,
+          fontWeight: 600,
+          color: 'var(--warning)',
+          letterSpacing: 0,
+          lineHeight: 1.4,
         }}
       >
-        <label
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            fontSize: 13,
-            color: 'var(--fg-muted)',
-            cursor: 'pointer',
-            fontFamily: "'Inter', sans-serif",
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={allSelected}
-            onChange={(evt) => handleSelectAll(evt.target.checked)}
-            style={{ accentColor: 'var(--signal)', width: 15, height: 15 }}
-          />
-          Select all
-        </label>
+        {events.length} pending
+      </span>
+    </span>
+  )
 
-        {selectedIds.size > 0 && (
-          <AdminButton
-            variant="ghost"
-            size="sm"
-            onClick={() => setSelectedIds(new Set())}
-          >
-            Deselect all
-          </AdminButton>
-        )}
+  const panelAction = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <label
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          fontSize: 13,
+          color: 'var(--fg-muted)',
+          cursor: 'pointer',
+          fontFamily: "'Inter', sans-serif",
+          userSelect: 'none',
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={allSelected}
+          onChange={(evt) => handleSelectAll(evt.target.checked)}
+          style={{ accentColor: 'var(--signal)', width: 15, height: 15 }}
+        />
+        Select all
+      </label>
+      <AdminButton
+        variant={hideNonConcert ? 'outline' : 'ghost'}
+        size="sm"
+        icon={Filter}
+        onClick={() => setHideNonConcert((prev) => !prev)}
+      >
+        Hide non-concert
+      </AdminButton>
+    </div>
+  )
 
-        <span style={{ marginLeft: 'auto' }}>
-          <StatusBadge kind="warning">{events.length}</StatusBadge>
-        </span>
-      </div>
-
-      {/* Body: split grid */}
+  return (
+    <Panel title={panelTitle} action={panelAction} padding={0}>
+      {/* Body: split grid with fixed height so list scrolls */}
       <div
         style={{
           display: 'grid',
           gridTemplateColumns: '1.1fr 1fr',
-          minHeight: 420,
+          height: 560,
           position: 'relative',
         }}
       >
-        {/* Left: list */}
+        {/* Left: scrollable list */}
         <div style={{ overflowY: 'auto' }}>
-          {events.map((ev) => (
+          {visibleEvents.map((ev) => (
             <EventFlagRow
               key={ev.id}
               event={ev}
@@ -211,7 +236,7 @@ export const EventFlagsSection = ({
 
         {/* Right: inspector */}
         <EventFlagInspector
-          event={events.find((ev) => ev.id === activeId) ?? null}
+          event={visibleEvents.find((ev) => ev.id === activeId) ?? null}
           onApprove={handleApprove}
           onReject={handleReject}
           onClose={() => setActiveId(null)}
