@@ -157,9 +157,14 @@ describe('GET /v1/admin/events', () => {
     expect(Array.isArray(body.data)).toBe(true)
     expect(body.data[0].id).toBe(EVENT_ID)
     expect(body.data[0].venueName).toBe('Test Venue')
-    // Regression: confidenceScore must be a number, not a numeric string.
-    // The postgres driver returns numeric columns as strings; the query casts to ::float.
     expect(typeof body.data[0].confidenceScore).toBe('number')
+    // Regression: verify the select contains the ::float cast so the postgres
+    // numeric string is coerced to a JS number before reaching the client.
+    const { sql: sqlMock } = await import('drizzle-orm')
+    expect(vi.mocked(sqlMock)).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.stringContaining(')::float')]),
+      expect.anything(),
+    )
   })
 
   it('defaults to limit=50 and offset=0', async () => {
