@@ -1089,68 +1089,74 @@ export function VenueDetailsClient({ venue }: Props) {
                     },
                   ]
                   return (
-                    <div
-                      id="venue-status-toggle"
-                      role="group"
-                      aria-label="Venue status"
-                      style={{
-                        display: 'inline-flex',
-                        padding: 2,
-                        borderRadius: 8,
-                        background: 'var(--surface-1)',
-                        border: '1px solid var(--border)',
-                      }}
-                    >
-                      {statuses.map(({ value, label, dot }) => {
-                        const isActive = currentStatus === value
-                        const isBlocked = value === 'blocked'
-                        return (
-                          <button
-                            key={value}
-                            type="button"
-                            disabled={isPending || isBlocked}
-                            onClick={() =>
-                              !isBlocked && handleStatusChange(value)
-                            }
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 5,
-                              padding: '6px 12px',
-                              borderRadius: 6,
-                              border: 'none',
-                              background: isActive
-                                ? value === 'blocked'
-                                  ? 'color-mix(in oklab, var(--danger) 14%, var(--surface-1))'
-                                  : value === 'active'
-                                    ? 'color-mix(in oklab, var(--success) 18%, var(--surface-1))'
-                                    : 'color-mix(in oklab, var(--warning) 18%, var(--surface-1))'
-                                : 'transparent',
-                              color: isActive ? 'var(--fg)' : 'var(--fg-muted)',
-                              fontFamily: "'Inter', sans-serif",
-                              fontSize: 12,
-                              fontWeight: 700,
-                              cursor:
-                                isPending || isBlocked
-                                  ? 'not-allowed'
-                                  : 'pointer',
-                              transition: 'background .12s, color .12s',
-                              opacity: isBlocked && !isActive ? 0.4 : 1,
-                            }}
-                          >
-                            <span
+                    <div style={{ alignSelf: 'flex-start' }}>
+                      <div
+                        id="venue-status-toggle"
+                        role="group"
+                        aria-label="Venue status"
+                        style={{
+                          display: 'inline-flex',
+                          padding: 2,
+                          borderRadius: 8,
+                          background: 'var(--surface-1)',
+                          border: '1px solid var(--border)',
+                        }}
+                      >
+                        {statuses.map(({ value, label, dot }) => {
+                          const isActive = currentStatus === value
+                          const isBlocked = value === 'blocked'
+                          return (
+                            <button
+                              key={value}
+                              type="button"
+                              disabled={isPending || isBlocked}
+                              onClick={() =>
+                                !isBlocked && handleStatusChange(value)
+                              }
                               style={{
-                                width: 6,
-                                height: 6,
-                                borderRadius: '50%',
-                                background: isActive ? dot : 'var(--fg-muted)',
-                                flexShrink: 0,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 5,
+                                padding: '6px 12px',
+                                borderRadius: 6,
+                                border: 'none',
+                                background: isActive
+                                  ? value === 'blocked'
+                                    ? 'color-mix(in oklab, var(--danger) 14%, var(--surface-1))'
+                                    : value === 'active'
+                                      ? 'color-mix(in oklab, var(--success) 18%, var(--surface-1))'
+                                      : 'color-mix(in oklab, var(--warning) 18%, var(--surface-1))'
+                                  : 'transparent',
+                                color: isActive
+                                  ? 'var(--fg)'
+                                  : 'var(--fg-muted)',
+                                fontFamily: "'Inter', sans-serif",
+                                fontSize: 12,
+                                fontWeight: 700,
+                                cursor:
+                                  isPending || isBlocked
+                                    ? 'not-allowed'
+                                    : 'pointer',
+                                transition: 'background .12s, color .12s',
+                                opacity: isBlocked && !isActive ? 0.4 : 1,
                               }}
-                            />
-                            {label}
-                          </button>
-                        )
-                      })}
+                            >
+                              <span
+                                style={{
+                                  width: 6,
+                                  height: 6,
+                                  borderRadius: '50%',
+                                  background: isActive
+                                    ? dot
+                                    : 'var(--fg-muted)',
+                                  flexShrink: 0,
+                                }}
+                              />
+                              {label}
+                            </button>
+                          )
+                        })}
+                      </div>
                     </div>
                   )
                 })()}
