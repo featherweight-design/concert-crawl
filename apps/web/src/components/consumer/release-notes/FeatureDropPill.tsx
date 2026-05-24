@@ -1,6 +1,7 @@
 'use client'
 
 import type { Release } from '@/lib/definitions/releases'
+import { COPY } from './definitions/copy'
 
 interface FeatureDropPillProps {
   release: Release
@@ -101,7 +102,7 @@ export function FeatureDropPill({
               textTransform: 'uppercase',
             }}
           >
-            Feature drop
+            {COPY.featureDropPill.eyebrow}
           </span>
           <span
             style={{
@@ -122,7 +123,7 @@ export function FeatureDropPill({
         <button
           type="button"
           onClick={onDismiss}
-          aria-label="Dismiss"
+          aria-label={COPY.featureDropPill.dismissAriaLabel}
           style={{
             all: 'unset',
             cursor: 'pointer',

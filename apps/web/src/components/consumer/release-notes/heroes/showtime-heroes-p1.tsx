@@ -7,6 +7,7 @@ import {
   ShowtimeStub,
   TierGlyph,
 } from './showtime-base'
+import { COPY } from '../definitions/copy'
 
 // ════════════════════════════════════════════════════════════════
 // Internal types
@@ -265,7 +266,7 @@ function TierMedallion({ tier }: { tier: TierDef }): React.ReactElement {
               textShadow: '0 1px 6px rgba(0,0,0,0.8)',
             }}
           >
-            FIRST 100 ONLY
+            {COPY.heroes.tiers.firstHundredOnly}
           </div>
         )}
       </div>
@@ -769,7 +770,7 @@ export function TierShowtime(): React.ReactElement {
         </div>
       ))}
 
-      <ShowtimeEyebrow dotHue="#7AE6FF">Pick your seat</ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#7AE6FF">{COPY.heroes.tiers.pickYourSeat}</ShowtimeEyebrow>
     </div>
   )
 }
@@ -937,7 +938,7 @@ export function HistoryShowtime(): React.ReactElement {
             animation: 'pc2EyebrowEnter 800ms 1s ease-out both',
           }}
         >
-          Nights kept
+          {COPY.heroes.history.nightsKept}
         </div>
         <div
           style={{
@@ -994,9 +995,7 @@ export function HistoryShowtime(): React.ReactElement {
         )
       })}
 
-      <ShowtimeEyebrow dotHue="#7AE6FF">
-        Every night, every year
-      </ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#7AE6FF">{COPY.heroes.history.eyebrow}</ShowtimeEyebrow>
     </div>
   )
 }
@@ -1120,7 +1119,7 @@ export function PricesShowtime(): React.ReactElement {
               textTransform: 'uppercase',
             }}
           >
-            Face value · Ogden Theatre
+            {COPY.heroes.prices.faceValue} · Ogden Theatre
           </div>
           <div
             style={{
@@ -1163,7 +1162,7 @@ export function PricesShowtime(): React.ReactElement {
                 strokeLinejoin="round"
               />
             </svg>
-            Verified
+            {COPY.heroes.prices.verified}
           </div>
         </div>
       </div>
@@ -1229,13 +1228,11 @@ export function PricesShowtime(): React.ReactElement {
             animation: 'pc2EyebrowEnter 800ms 1.4s ease-out both',
           }}
         >
-          6 reports · last 7 days
+          6 {COPY.heroes.prices.reportsLabel}
         </div>
       </div>
 
-      <ShowtimeEyebrow dotHue="#7AE6FF">
-        Crowd-sourced · verified
-      </ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#7AE6FF">{COPY.heroes.prices.eyebrow}</ShowtimeEyebrow>
     </div>
   )
 }
@@ -1468,7 +1465,7 @@ export function CalendarShowtime(): React.ReactElement {
         </span>
       </div>
 
-      <ShowtimeEyebrow dotHue="#7AE6FF">Sync your shows</ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#7AE6FF">{COPY.heroes.calendar.syncEyebrow}</ShowtimeEyebrow>
     </div>
   )
 }
@@ -1597,7 +1594,7 @@ export function ShareableShowtime(): React.ReactElement {
         </svg>
       </div>
 
-      <ShowtimeEyebrow dotHue="#FF7BD4">Take it with you</ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#FF7BD4">{COPY.heroes.shareable.eyebrow}</ShowtimeEyebrow>
     </div>
   )
 }
@@ -1692,11 +1689,11 @@ export function WatchersShowtime(): React.ReactElement {
             textTransform: 'uppercase',
           }}
         >
-          watching now
+          {COPY.heroes.watchers.watchingNow}
         </div>
       </div>
 
-      <ShowtimeEyebrow dotHue="#7AE6FF">Aggregate · no names</ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#7AE6FF">{COPY.heroes.watchers.eyebrow}</ShowtimeEyebrow>
     </div>
   )
 }
@@ -1751,7 +1748,7 @@ export function SpotifyShowtime(): React.ReactElement {
             textTransform: 'uppercase',
           }}
         >
-          Artists imported
+          {COPY.heroes.spotify.artistsImported}
         </div>
         <div
           style={{
@@ -1856,7 +1853,7 @@ export function SpotifyShowtime(): React.ReactElement {
         ))}
       </div>
 
-      <ShowtimeEyebrow dotHue="#FF7BD4">Library, on stage</ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#FF7BD4">{COPY.heroes.spotify.eyebrow}</ShowtimeEyebrow>
     </div>
   )
 }
@@ -2109,7 +2106,7 @@ export function PassportShowtimeStubs(): React.ReactElement {
             animation: 'pc2Pulse 1.6s ease-in-out infinite',
           }}
         />
-        Showtime · every night kept
+        {COPY.heroes.passport.passportEyebrow}
       </div>
     </div>
   )

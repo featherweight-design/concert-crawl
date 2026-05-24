@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { RELEASES } from '@/lib/definitions/releases'
 import { useReleaseReadState } from './useReleaseReadState'
+import { COPY } from './definitions/copy'
 
 interface UserMenuVersionFooterProps {
   build: string
@@ -17,7 +18,7 @@ export function UserMenuVersionFooter({ build }: UserMenuVersionFooterProps) {
     <button
       type="button"
       onClick={() => void router.push('/changelog')}
-      aria-label="View changelog"
+      aria-label={COPY.versionFooter.ariaLabel}
       style={{
         all: 'unset',
         cursor: 'pointer',
@@ -82,7 +83,7 @@ export function UserMenuVersionFooter({ build }: UserMenuVersionFooterProps) {
             }}
           />
         )}
-        {unread ? "What's new" : 'Changelog'}
+        {unread ? COPY.versionFooter.unreadLabel : COPY.versionFooter.readLabel}
         <svg width="9" height="9" viewBox="0 0 12 12" fill="none" aria-hidden>
           <path
             d="M4 3l4 3-4 3"

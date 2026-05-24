@@ -3,14 +3,14 @@ export const copy = {
   emptyTonightEyebrow: 'Tonight',
   emptyTonightTitle: 'No shows tonight, grandpa.',
   emptyTonightBody:
-    'Slow night on the calendar. Browse the rest of the week — usually picks up by the weekend.',
+    'Slow night on the calendar. Browse the rest of the week, things usually pick up by the weekend.',
   emptyTonightCta: 'View this week',
 
   // ── Browse — filtered (filter active, zero results) ────────────────
   emptyFilteredEyebrow: 'Filtered',
   emptyFilteredTitle: 'Crickets.',
   emptyFilteredBody:
-    'These filters are airtight. Drop one, or stretch the dates a few days either side and try again.',
+    'Nothing found with these filters. Drop one, or stretch the dates and try again.',
   emptyFilteredCta: 'Clear filters',
 
   // ── Browse — calendar (selected day has no events) ─────────────────
@@ -22,13 +22,13 @@ export const copy = {
   venueEmptyEyebrow: 'Upcoming',
   venueEmptyTitle: 'Nothing booked yet.',
   venueNoShows:
-    'No shows are scheduled at this venue right now. Check back soon.',
+    'We haven’t found any scheduled shows for this venue yet. Check back soon.',
 
   // ── Watching ───────────────────────────────────────────────────────
   watchingEmptyEyebrow: 'Watching',
   watchingEmptyTitle: 'No shows, grandpa.',
   watchingEmptyBody:
-    "Add a show and we'll watch the price for you — drops, spikes, sell-outs.",
+    "Add a show to follow it. Soon, we’ll watch the price for you and notify you of drops, spikes, or sell-outs.",
   watchingEmptyCta: "Browse tonight's shows",
 
   // ── Search ─────────────────────────────────────────────────────────

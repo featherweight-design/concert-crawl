@@ -2,6 +2,7 @@
 
 import type { Release, ReleaseItem } from '@/lib/definitions/releases'
 import { SpotlightHero } from './SpotlightHero'
+import { COPY } from './definitions/copy'
 
 const KIND_LABEL: Record<ReleaseItem['kind'], string> = {
   added: 'Added',
@@ -92,7 +93,7 @@ export function ReleaseEntry({
               borderRadius: 3,
             }}
           >
-            Live
+            {COPY.entry.liveBadge}
           </span>
         )}
       </div>
@@ -190,7 +191,7 @@ function SpotlightStrip({
               textTransform: 'uppercase',
             }}
           >
-            Feature drop · announcement
+            {COPY.entry.spotlightEyebrow}
           </span>
           <div
             style={{
@@ -217,7 +218,7 @@ function SpotlightStrip({
               gap: 6,
             }}
           >
-            See the announcement
+            {COPY.entry.spotlightCta}
             <svg
               width="9"
               height="9"

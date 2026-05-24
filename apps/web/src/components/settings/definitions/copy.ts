@@ -1,11 +1,11 @@
 export const SETTINGS_COPY = {
   anonymousLabel: 'anonymous fan',
   anonymousExplainer:
-    "You're browsing as an anonymous fan. Pick a handle to get credit for your price submissions — it applies retroactively.",
+    "You're browsing as an anonymous fan. Pick a handle to get credit for your price submissions (it applies retroactively).",
   goingAnonymousWarning:
     'Clearing your handle makes you anonymous again. Your past submissions will no longer show your name.',
   handlePlaceholder: 'lowercase_handle',
-  handleHint: 'Lowercase letters, numbers, underscores. 3–20 chars.',
+  handleHint: 'Lowercase letters, numbers, underscores. 3–20 characters.',
   handleErrors: {
     tooShort: 'Handle must be at least 3 characters.',
     invalidChars: 'Only lowercase letters, numbers, and underscores.',

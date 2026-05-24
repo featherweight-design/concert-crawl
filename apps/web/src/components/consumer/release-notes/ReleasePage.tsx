@@ -7,6 +7,7 @@ import { FeedbackModal } from '@/components/consumer/feedback/FeedbackModal'
 import { useReleaseReadState } from './useReleaseReadState'
 import { ReleaseEntry } from './ReleaseEntry'
 import { SpotlightModal } from './SpotlightModal'
+import { COPY } from './definitions/copy'
 
 interface ReleasePageProps {
   releases: Release[]
@@ -80,7 +81,7 @@ export function ReleasePage({ releases }: ReleasePageProps) {
                 textTransform: 'uppercase',
               }}
             >
-              Transmission log
+              {COPY.page.eyebrow}
             </span>
           </div>
 
@@ -93,7 +94,7 @@ export function ReleasePage({ releases }: ReleasePageProps) {
               lineHeight: 1.04,
             }}
           >
-            What we shipped.
+            {COPY.page.heading}
           </h1>
 
           <p
@@ -106,8 +107,7 @@ export function ReleasePage({ releases }: ReleasePageProps) {
               lineHeight: 1.5,
             }}
           >
-            Everything we&apos;ve shipped, in one place. Spotted a bug or got an
-            idea?{' '}
+            {COPY.page.description}{' '}
             <button
               type="button"
               onClick={() => setFeedbackOpen(true)}
@@ -118,7 +118,7 @@ export function ReleasePage({ releases }: ReleasePageProps) {
                 borderBottom: '1px dotted var(--accent)',
               }}
             >
-              Send us a note
+              {COPY.page.feedbackCta}
             </button>
             .
           </p>
@@ -159,7 +159,7 @@ export function ReleasePage({ releases }: ReleasePageProps) {
               textTransform: 'uppercase',
             }}
           >
-            — end of log —
+            {COPY.page.endOfLog}
           </div>
         </div>
       </div>

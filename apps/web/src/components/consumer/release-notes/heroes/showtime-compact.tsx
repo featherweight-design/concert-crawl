@@ -9,6 +9,7 @@ import {
   ShowtimeStub,
   useShowtimeKeyframes,
 } from './showtime-base'
+import { COPY } from '../definitions/copy'
 
 // ── Shared compact stage ─────────────────────────────────────────────────────
 // 200×132 strip backdrop: dark cinematic base + two contained color washes +
@@ -183,7 +184,7 @@ export function CompactEyebrow({
 // 1 · Submit a Price — verified pill
 export function PricesCompact(): React.ReactElement {
   return (
-    <CompactStage eyebrow="Crowd-sourced" eyebrowHue="#7AE6FF">
+    <CompactStage eyebrow={COPY.heroes.compact.prices.eyebrow} eyebrowHue="#7AE6FF">
       <div
         style={{
           position: 'absolute',
@@ -206,7 +207,7 @@ export function PricesCompact(): React.ReactElement {
             marginBottom: 2,
           }}
         >
-          Face value
+          {COPY.heroes.compact.prices.faceValue}
         </div>
         <div
           style={{
@@ -247,7 +248,7 @@ export function PricesCompact(): React.ReactElement {
               strokeLinejoin="round"
             />
           </svg>
-          Verified
+          {COPY.heroes.compact.prices.verifiedLabel}
         </div>
       </div>
     </CompactStage>
@@ -257,7 +258,7 @@ export function PricesCompact(): React.ReactElement {
 // 2 · Tier badges — single Founder medallion
 export function TierCompact(): React.ReactElement {
   return (
-    <CompactStage eyebrow="Founder" eyebrowHue="#7AE6FF" founderGlow>
+    <CompactStage eyebrow={COPY.heroes.compact.tiers.eyebrow} eyebrowHue="#7AE6FF" founderGlow>
       <div
         style={{
           position: 'absolute',
@@ -338,7 +339,7 @@ export function TierCompact(): React.ReactElement {
           animation: 'cmpFadeIn 500ms 0.65s ease-out both',
         }}
       >
-        First 100 only
+        {COPY.heroes.compact.tiers.firstHundredOnly}
       </div>
     </CompactStage>
   )
@@ -347,7 +348,7 @@ export function TierCompact(): React.ReactElement {
 // 3 · History — single hero stub + counter
 export function HistoryCompact(): React.ReactElement {
   return (
-    <CompactStage eyebrow="Concert history" eyebrowHue="#7AE6FF">
+    <CompactStage eyebrow={COPY.heroes.compact.history.eyebrow} eyebrowHue="#7AE6FF">
       {/* big counter */}
       <div
         style={{
@@ -383,7 +384,7 @@ export function HistoryCompact(): React.ReactElement {
             marginTop: 2,
           }}
         >
-          Nights kept
+          {COPY.heroes.compact.history.nightsKept}
         </div>
       </div>
       {/* tonight stub miniature */}
@@ -473,7 +474,7 @@ export function HistoryCompact(): React.ReactElement {
 // 4 · Calendar — mini calendar grid with one stamp
 export function CalendarCompact(): React.ReactElement {
   return (
-    <CompactStage eyebrow="Jun 2026" eyebrowHue="#7AE6FF">
+    <CompactStage eyebrow={COPY.heroes.compact.calendar.eyebrow} eyebrowHue="#7AE6FF">
       <div
         style={{
           position: 'absolute',
@@ -559,7 +560,7 @@ export function CalendarCompact(): React.ReactElement {
 // 5 · Shareable — single poster card
 export function ShareableCompact(): React.ReactElement {
   return (
-    <CompactStage eyebrow="Share card" eyebrowHue="#FF7BD4">
+    <CompactStage eyebrow={COPY.heroes.compact.shareable.eyebrow} eyebrowHue="#FF7BD4">
       <div
         style={
           {
@@ -658,7 +659,7 @@ export function ShareableCompact(): React.ReactElement {
 // 6 · Watchers — big count + 2 rings
 export function WatchersCompact(): React.ReactElement {
   return (
-    <CompactStage eyebrow="Watching now" eyebrowHue="#7AE6FF">
+    <CompactStage eyebrow={COPY.heroes.compact.watchers.eyebrow} eyebrowHue="#7AE6FF">
       {/* 2 rings */}
       {[0, 1.0].map((delay, idx) => (
         <div
@@ -717,7 +718,7 @@ export function SpotifyCompact(): React.ReactElement {
   })
 
   return (
-    <CompactStage eyebrow="Spotify sync" eyebrowHue="#FF7BD4">
+    <CompactStage eyebrow={COPY.heroes.compact.spotify.eyebrow} eyebrowHue="#FF7BD4">
       {/* counter */}
       <div
         style={{
@@ -753,7 +754,7 @@ export function SpotifyCompact(): React.ReactElement {
             marginTop: 2,
           }}
         >
-          Artists
+          {COPY.heroes.compact.spotify.artistsLabel}
         </div>
       </div>
       {/* bars */}
@@ -807,7 +808,7 @@ export function SpotifyCompact(): React.ReactElement {
 // 8 · Following — bell-glyph + 1 slow ping ring + artist wordmark
 export function FollowingCompact(): React.ReactElement {
   return (
-    <CompactStage eyebrow="Following" eyebrowHue="#FF7BD4">
+    <CompactStage eyebrow={COPY.heroes.compact.following.eyebrow} eyebrowHue="#FF7BD4">
       {/* ping ring — centered on bell */}
       <div
         style={{
@@ -888,7 +889,7 @@ export function FollowingCompact(): React.ReactElement {
 // 9 · Price Drop — old/new ticker
 export function PriceDropCompact(): React.ReactElement {
   return (
-    <CompactStage eyebrow="Price drop" eyebrowHue="#C9F26E">
+    <CompactStage eyebrow={COPY.heroes.compact.priceDrop.eyebrow} eyebrowHue="#C9F26E">
       <div
         style={{
           position: 'absolute',
@@ -985,7 +986,7 @@ export function SetlistCompact(): React.ReactElement {
   ]
 
   return (
-    <CompactStage eyebrow="Setlist" eyebrowHue="#7AE6FF">
+    <CompactStage eyebrow={COPY.heroes.compact.setlist.eyebrow} eyebrowHue="#7AE6FF">
       <div
         style={{
           position: 'absolute',
@@ -1079,7 +1080,7 @@ export function SetlistCompact(): React.ReactElement {
 // 11 · First-Timer — venue plate with seating diagram
 export function FirstTimerCompact(): React.ReactElement {
   return (
-    <CompactStage eyebrow="First-Timer" eyebrowHue="#7AE6FF">
+    <CompactStage eyebrow={COPY.heroes.compact.firstTimer.eyebrow} eyebrowHue="#7AE6FF">
       <div
         style={
           {
@@ -1175,7 +1176,7 @@ export function FirstTimerCompact(): React.ReactElement {
 // 12 · Last Time — single tilted polaroid
 export function LastTimeCompact(): React.ReactElement {
   return (
-    <CompactStage eyebrow="Last time" eyebrowHue="#A075FF">
+    <CompactStage eyebrow={COPY.heroes.compact.lastTime.eyebrow} eyebrowHue="#A075FF">
       <div
         style={
           {
@@ -1284,7 +1285,7 @@ export function LastTimeCompact(): React.ReactElement {
 // 13 · Support Act — single opener card
 export function SupportActCompact(): React.ReactElement {
   return (
-    <CompactStage eyebrow="Opening for" eyebrowHue="#FFE36B">
+    <CompactStage eyebrow={COPY.heroes.compact.supportAct.eyebrow} eyebrowHue="#FFE36B">
       <div
         style={
           {
@@ -1376,7 +1377,7 @@ export function SupportActCompact(): React.ReactElement {
               marginTop: 2,
             }}
           >
-            ★ Opener
+            {COPY.heroes.compact.supportAct.openerLabel}
           </div>
         </div>
       </div>
@@ -1489,7 +1490,7 @@ export function PassportCompact(): React.ReactElement {
   }))
 
   return (
-    <CompactStage eyebrow="Passport" eyebrowHue="#FFE36B">
+    <CompactStage eyebrow={COPY.heroes.compact.passport.eyebrow} eyebrowHue="#FFE36B">
       {sparkles.map((sp, idx) => (
         <span
           key={idx}
@@ -1544,7 +1545,7 @@ export function PassportCompact(): React.ReactElement {
 // 15 · Venue Passport — single big stamp
 export function VenuePassportCompact(): React.ReactElement {
   return (
-    <CompactStage eyebrow="Venue passport" eyebrowHue="#FF7BD4">
+    <CompactStage eyebrow={COPY.heroes.compact.venuePassport.eyebrow} eyebrowHue="#FF7BD4">
       <div
         style={
           {

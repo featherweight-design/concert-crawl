@@ -6,6 +6,7 @@ import {
   ShowtimeSparkles,
   StubGlyph,
 } from './showtime-base'
+import { COPY } from '../definitions/copy'
 
 // ════════════════════════════════════════════════════════════════
 // 8 · ARTIST FOLLOWING · Showtime
@@ -172,7 +173,7 @@ export function FollowingShowtime(): React.ReactElement {
               <circle cx="6" cy="10.5" r="0.8" fill="#FF7BD4" />
             </svg>
           </span>
-          Following
+          {COPY.heroes.following.followingChip}
         </div>
       </div>
 
@@ -212,7 +213,7 @@ export function FollowingShowtime(): React.ReactElement {
               marginBottom: 5,
             }}
           >
-            ★ New show announced
+            {COPY.heroes.following.newShowAnnounced}
           </div>
           <div
             style={{
@@ -280,9 +281,7 @@ export function FollowingShowtime(): React.ReactElement {
         </div>
       </div>
 
-      <ShowtimeEyebrow dotHue="#FF7BD4">
-        Following · we&apos;ll ping you
-      </ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#FF7BD4">{COPY.heroes.following.eyebrow}</ShowtimeEyebrow>
     </div>
   )
 }
@@ -552,13 +551,13 @@ export function PriceDropShowtime(): React.ReactElement {
                 marginTop: 4,
               }}
             >
-              Watching 14 d · lowest yet
+              {COPY.heroes.priceDrop.watchingTrend}
             </div>
           </div>
         </div>
       </div>
 
-      <ShowtimeEyebrow dotHue="#C9F26E">Watch · alert · save</ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#C9F26E">{COPY.heroes.priceDrop.eyebrow}</ShowtimeEyebrow>
     </div>
   )
 }
@@ -658,7 +657,7 @@ export function SetlistShowtime(): React.ReactElement {
                 textAlign: 'left',
               }}
             >
-              Likely · last 7
+              {COPY.heroes.setlist.likelyLabel}
             </div>
 
             <div
@@ -673,7 +672,7 @@ export function SetlistShowtime(): React.ReactElement {
                 whiteSpace: 'nowrap',
               }}
             >
-              SETLIST · TONIGHT
+              {COPY.heroes.setlist.setlistHeading}
             </div>
 
             <div
@@ -778,14 +777,12 @@ export function SetlistShowtime(): React.ReactElement {
             }}
           >
             <span>Est. 1h 42m</span>
-            <span style={{ color: '#7AE6FF' }}>tap to see full list</span>
+            <span style={{ color: '#7AE6FF' }}>{COPY.heroes.setlist.tapToSeeMore}</span>
           </div>
         </div>
       </div>
 
-      <ShowtimeEyebrow dotHue="#7AE6FF">
-        What they&apos;re playing
-      </ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#7AE6FF">{COPY.heroes.setlist.eyebrow}</ShowtimeEyebrow>
     </div>
   )
 }
@@ -844,21 +841,21 @@ export function FirstTimerShowtime(): React.ReactElement {
   const leftChips: ChipDef[] = [
     {
       accent: '#FFB838',
-      label: 'ALL AGES',
+      label: COPY.heroes.firstTimer.leftChipLabels[0],
       fx: '-50px',
       fy: '0px',
       delay: 0.4,
     },
     {
       accent: '#FF7BD4',
-      label: 'DOORS 7PM',
+      label: COPY.heroes.firstTimer.leftChipLabels[1],
       fx: '-50px',
       fy: '-10px',
       delay: 0.55,
     },
     {
       accent: '#A075FF',
-      label: 'NO RE-ENTRY',
+      label: COPY.heroes.firstTimer.leftChipLabels[2],
       fx: '-50px',
       fy: '-20px',
       delay: 0.7,
@@ -867,21 +864,21 @@ export function FirstTimerShowtime(): React.ReactElement {
   const rightChips: ChipDef[] = [
     {
       accent: '#7AE6FF',
-      label: 'CASH BAR',
+      label: COPY.heroes.firstTimer.rightChipLabels[0],
       fx: '50px',
       fy: '0px',
       delay: 0.85,
     },
     {
       accent: '#C9F26E',
-      label: '2 DRINKS MIN',
+      label: COPY.heroes.firstTimer.rightChipLabels[1],
       fx: '50px',
       fy: '-10px',
       delay: 1.0,
     },
     {
       accent: '#FFE36B',
-      label: 'CASH TIPS',
+      label: COPY.heroes.firstTimer.rightChipLabels[2],
       fx: '50px',
       fy: '-20px',
       delay: 1.15,
@@ -1071,9 +1068,7 @@ export function FirstTimerShowtime(): React.ReactElement {
         ))}
       </div>
 
-      <ShowtimeEyebrow dotHue="#7AE6FF">
-        First time? · here&apos;s the lay
-      </ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#7AE6FF">{COPY.heroes.firstTimer.eyebrow}</ShowtimeEyebrow>
     </div>
   )
 }
@@ -1454,7 +1449,7 @@ export function LastTimeShowtime(): React.ReactElement {
         ))}
       </div>
 
-      <ShowtimeEyebrow dotHue="#A075FF">Last time in town</ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#A075FF">{COPY.heroes.lastTime.eyebrow}</ShowtimeEyebrow>
     </div>
   )
 }
@@ -1656,7 +1651,7 @@ export function SupportActShowtime(): React.ReactElement {
       >
         <ArtistPosterCard
           band="Bon Iver"
-          role="HEADLINER · 9:00 PM"
+          role={COPY.heroes.supportAct.headlinerRole}
           palette={{ bg: '#1A2A30', primary: '#5DD4D6', secondary: '#FFB838' }}
           artStyle="stripes"
           size="small"
@@ -1684,7 +1679,7 @@ export function SupportActShowtime(): React.ReactElement {
       >
         <ArtistPosterCard
           band="Soccer Mommy"
-          role="★ OPENING · 8:00 PM"
+          role={COPY.heroes.supportAct.openerRole}
           palette={{ bg: '#2A1A1A', primary: '#FFE36B', secondary: '#FF7BD4' }}
           artStyle="rings"
           size="large"
@@ -1712,12 +1707,10 @@ export function SupportActShowtime(): React.ReactElement {
         }}
       >
         <span style={{ color: '#FFE36B' }}>Mission Ballroom</span>
-        &nbsp;·&nbsp;new to you
+        &nbsp;·&nbsp;{COPY.heroes.supportAct.newToYouSuffix}
       </div>
 
-      <ShowtimeEyebrow dotHue="#FFE36B">
-        Don&apos;t miss the opener
-      </ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#FFE36B">{COPY.heroes.supportAct.eyebrow}</ShowtimeEyebrow>
     </div>
   )
 }
@@ -1866,7 +1859,7 @@ export function VenuePassportShowtime(): React.ReactElement {
                 marginBottom: 3,
               }}
             >
-              Nights stamped
+              {COPY.heroes.venuePassport.nightsStamped}
             </div>
             <div
               style={{
@@ -1924,7 +1917,7 @@ export function VenuePassportShowtime(): React.ReactElement {
               marginBottom: 8,
             }}
           >
-            Stamp ledger
+            {COPY.heroes.venuePassport.stampLedger}
           </div>
           <div
             style={{
@@ -2013,11 +2006,11 @@ export function VenuePassportShowtime(): React.ReactElement {
             pointerEvents: 'none',
           }}
         >
-          STAMPED
+          {COPY.heroes.venuePassport.stampedBadge}
         </div>
       </div>
 
-      <ShowtimeEyebrow dotHue="#FF7BD4">The venues you collect</ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#FF7BD4">{COPY.heroes.venuePassport.eyebrow}</ShowtimeEyebrow>
     </div>
   )
 }

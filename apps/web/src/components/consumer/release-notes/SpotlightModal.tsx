@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import type { Release } from '@/lib/definitions/releases'
 import { SpotlightHero } from './SpotlightHero'
+import { COPY } from './definitions/copy'
 
 interface SpotlightModalProps {
   release: Release
@@ -129,7 +130,7 @@ export function SpotlightModal({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={COPY.modal.closeAriaLabel}
             style={{
               all: 'unset',
               cursor: 'pointer',
@@ -195,7 +196,7 @@ export function SpotlightModal({
                 textShadow: '0 1px 4px rgba(0,0,0,0.6)',
               }}
             >
-              Feature drop · {release.version}
+              {COPY.modal.featureDropPrefix}{release.version}
             </span>
           </div>
         </div>
@@ -261,7 +262,7 @@ export function SpotlightModal({
                     textTransform: 'uppercase',
                   }}
                 >
-                  How it works
+                  {COPY.modal.walkthroughLabel}
                 </span>
                 <span
                   style={{
@@ -272,8 +273,7 @@ export function SpotlightModal({
                     letterSpacing: '0.12em',
                   }}
                 >
-                  {String(step + 1).padStart(2, '0')} /{' '}
-                  {String(totalSteps).padStart(2, '0')}
+                  {String(step + 1).padStart(2, '0')}{COPY.modal.stepSeparator}{String(totalSteps).padStart(2, '0')}
                 </span>
               </div>
 
@@ -344,7 +344,7 @@ export function SpotlightModal({
                     opacity: step === 0 ? 0.4 : 1,
                   }}
                 >
-                  ← Back
+                  {COPY.modal.prevButton}
                 </button>
 
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -353,7 +353,7 @@ export function SpotlightModal({
                       key={idx}
                       type="button"
                       onClick={() => setStep(idx)}
-                      aria-label={`Go to step ${idx + 1}`}
+                      aria-label={COPY.modal.stepIndicatorAriaLabel(idx + 1)}
                       style={{
                         all: 'unset',
                         cursor: 'pointer',
@@ -389,7 +389,7 @@ export function SpotlightModal({
                     opacity: step === totalSteps - 1 ? 0.4 : 1,
                   }}
                 >
-                  Next →
+                  {COPY.modal.nextButton}
                 </button>
               </div>
             </div>
@@ -417,7 +417,7 @@ export function SpotlightModal({
                   marginBottom: 6,
                 }}
               >
-                {sp.founderEyebrow ?? 'Behind the build'}
+                {sp.founderEyebrow ?? COPY.modal.founderEyebrowFallback}
               </div>
               <p
                 style={{
@@ -441,7 +441,7 @@ export function SpotlightModal({
                   textTransform: 'uppercase',
                 }}
               >
-                {sp.founderSign ?? '— Hugh'}
+                {sp.founderSign ?? COPY.modal.founderSignFallback}
               </div>
             </div>
           )}
@@ -473,7 +473,7 @@ export function SpotlightModal({
               textTransform: 'uppercase',
             }}
           >
-            Maybe later
+            {COPY.modal.dismissCta}
           </button>
           <span style={{ flex: 1 }} />
           {sp.cta && sp.ctaHref ? (
@@ -530,7 +530,7 @@ export function SpotlightModal({
                 boxShadow: '0 6px 16px var(--overlay-press)',
               }}
             >
-              Got it
+              {COPY.modal.fallbackCta}
             </button>
           )}
         </div>
