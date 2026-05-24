@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Check } from 'lucide-react'
 import {
   ConfidenceBar,
   AdminButton,
@@ -584,14 +585,55 @@ export function AdminReviewMobile({
             {events.length === 0 ? (
               <div
                 style={{
-                  padding: 32,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 16,
+                  padding: '48px 32px',
                   textAlign: 'center',
-                  fontFamily: "'Inter', sans-serif",
-                  fontSize: 13,
-                  color: 'var(--fg-subtle)',
+                  height: '100%',
                 }}
               >
-                No events pending review
+                <div
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 28,
+                    background:
+                      'color-mix(in oklab, var(--success) 16%, transparent)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Check size={24} color="var(--success)" strokeWidth={2.5} />
+                </div>
+                <div>
+                  <div
+                    style={{
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: 17,
+                      fontWeight: 700,
+                      color: 'var(--fg)',
+                      marginBottom: 8,
+                    }}
+                  >
+                    Queue is clear.
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: 14,
+                      color: 'var(--fg-muted)',
+                      lineHeight: 1.5,
+                      maxWidth: 260,
+                    }}
+                  >
+                    Every flagged event has been triaged. Next sweep runs at
+                    18:00 MT.
+                  </div>
+                </div>
               </div>
             ) : (
               events.map((ev) => (
