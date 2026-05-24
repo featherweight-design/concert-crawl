@@ -128,6 +128,7 @@ export const StatCard = ({
             height: 32,
             borderRadius: 8,
             background: noChip ? 'transparent' : colors.bg,
+            border: noChip ? 'none' : `1px solid ${colors.border}`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
