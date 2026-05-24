@@ -7,7 +7,6 @@ import { Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CCMark } from '@/components/brand/cc-mark'
 import { UserMenu } from '../user-menu'
-import { MobileProfileEntry } from './MobileProfileEntry'
 import { SearchPalette } from '../search-palette/SearchPalette'
 
 const NAV_TABS = [
@@ -51,16 +50,13 @@ export function AppHeader() {
             <span className="text-accent">crawl.</span>
           </span>
         </Link>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setPaletteOpen(true)}
-            aria-label="Search"
-            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-border-strong"
-          >
-            <Search size={16} className="text-fg-muted" strokeWidth={1.5} />
-          </button>
-          <MobileProfileEntry />
-        </div>
+        <button
+          onClick={() => setPaletteOpen(true)}
+          aria-label="Search"
+          className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-border-strong"
+        >
+          <Search size={16} className="text-fg-muted" strokeWidth={1.5} />
+        </button>
       </div>
 
       {/* ── Desktop TopNav (shown sm+) ──────────────────── */}
