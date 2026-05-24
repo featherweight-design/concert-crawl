@@ -255,7 +255,7 @@ export function PricesCompact(): React.ReactElement {
 }
 
 // 2 · Tier badges — single Founder medallion
-export function TiersCompact(): React.ReactElement {
+export function TierCompact(): React.ReactElement {
   return (
     <CompactStage eyebrow="Founder" eyebrowHue="#7AE6FF" founderGlow>
       <div
@@ -557,7 +557,7 @@ export function CalendarCompact(): React.ReactElement {
 }
 
 // 5 · Shareable — single poster card
-export function ShareCompact(): React.ReactElement {
+export function ShareableCompact(): React.ReactElement {
   return (
     <CompactStage eyebrow="Share card" eyebrowHue="#FF7BD4">
       <div
@@ -1610,10 +1610,10 @@ export function VenuePassportCompact(): React.ReactElement {
 // use it to resolve <SpotlightHero hero="..." compact /> routes.
 export const SPOTLIGHT_COMPACT_HEROES: Record<string, React.ComponentType> = {
   'price': PricesCompact,
-  'tiers': TiersCompact,
+  'tiers': TierCompact,
   'history': HistoryCompact,
   'calendar': CalendarCompact,
-  'share': ShareCompact,
+  'share': ShareableCompact,
   'watchers': WatchersCompact,
   'spotify': SpotifyCompact,
   'following': FollowingCompact,
