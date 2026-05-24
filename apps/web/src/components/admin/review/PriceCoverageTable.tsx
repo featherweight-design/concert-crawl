@@ -159,25 +159,125 @@ export const PriceCoverageTable = ({
           Loading…
         </div>
       ) : (
-        <AdminTable>
-          <THead>
-            <tr>
-              <TH>Event</TH>
-              <TH>Venue / Date</TH>
-              <TH>Source</TH>
-              <TH>Current Price</TH>
-              <TH>Updated</TH>
-            </tr>
-          </THead>
-          <tbody>
-            {filteredEvents.map((ev) => {
-              const priceDisplay = ev.priceMin
-                ? `$${ev.priceMin}${ev.priceMax ? ` – $${ev.priceMax}` : ''}`
-                : null
-              const isMissingPrice = ev.priceMin === null
-              const isAddingHere = addingForEventId === ev.eventId
+        <div style={{ maxHeight: 480, overflowY: 'auto' }}>
+          <AdminTable>
+            <THead>
+              <tr>
+                <TH>Event</TH>
+                <TH>Venue / Date</TH>
+                <TH>Source</TH>
+                <TH>Current Price</TH>
+                <TH>Updated</TH>
+              </tr>
+            </THead>
+            <tbody>
+              {filteredEvents.map((ev) => {
+                const priceDisplay = ev.priceMin
+                  ? `$${ev.priceMin}${ev.priceMax ? ` – $${ev.priceMax}` : ''}`
+                  : null
+                const isMissingPrice = ev.priceMin === null
+                const isAddingHere = addingForEventId === ev.eventId
 
-              if (isAddingHere) {
+                if (isAddingHere) {
+                  return (
+                    <TR key={ev.eventId}>
+                      <TD>
+                        <div
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 600,
+                            color: 'var(--fg)',
+                            maxWidth: 200,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {ev.eventTitle}
+                        </div>
+                      </TD>
+                      <TD>
+                        <div style={{ fontSize: 12, color: 'var(--fg-muted)' }}>
+                          {ev.venueName ?? '—'}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color: 'var(--fg-subtle)',
+                            marginTop: 2,
+                          }}
+                        >
+                          {ev.date}
+                        </div>
+                      </TD>
+                      <TD>
+                        <input
+                          type="number"
+                          placeholder="Low"
+                          value={priceMin}
+                          onChange={(evt) => setPriceMin(evt.target.value)}
+                          min={0}
+                          step={0.01}
+                          style={{
+                            width: 80,
+                            height: 28,
+                            padding: '0 8px',
+                            border: '1px solid var(--border-strong)',
+                            borderRadius: 6,
+                            background: 'var(--bg-elevated)',
+                            color: 'var(--fg)',
+                            fontSize: 12,
+                            fontFamily: "'JetBrains Mono', monospace",
+                            outline: 'none',
+                          }}
+                        />
+                      </TD>
+                      <TD>
+                        <input
+                          type="number"
+                          placeholder="High"
+                          value={priceMax}
+                          onChange={(evt) => setPriceMax(evt.target.value)}
+                          min={0}
+                          step={0.01}
+                          style={{
+                            width: 80,
+                            height: 28,
+                            padding: '0 8px',
+                            border: '1px solid var(--border-strong)',
+                            borderRadius: 6,
+                            background: 'var(--bg-elevated)',
+                            color: 'var(--fg)',
+                            fontSize: 12,
+                            fontFamily: "'JetBrains Mono', monospace",
+                            outline: 'none',
+                          }}
+                        />
+                      </TD>
+                      <TD>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <AdminButton
+                            variant="ghost"
+                            size="sm"
+                            onClick={resetAddForm}
+                            disabled={isSaving}
+                          >
+                            Cancel
+                          </AdminButton>
+                          <AdminButton
+                            variant="success"
+                            size="sm"
+                            onClick={() => void handleSavePrice(ev.eventId)}
+                            disabled={isSaving || !priceMin.trim()}
+                          >
+                            {isSaving ? 'Saving…' : 'Save'}
+                          </AdminButton>
+                        </div>
+                      </TD>
+                    </TR>
+                  )
+                }
+
                 return (
                   <TR key={ev.eventId}>
                     <TD>
@@ -210,174 +310,84 @@ export const PriceCoverageTable = ({
                       </div>
                     </TD>
                     <TD>
-                      <input
-                        type="number"
-                        placeholder="Low"
-                        value={priceMin}
-                        onChange={(evt) => setPriceMin(evt.target.value)}
-                        min={0}
-                        step={0.01}
+                      <div
                         style={{
-                          width: 80,
-                          height: 28,
-                          padding: '0 8px',
-                          border: '1px solid var(--border-strong)',
-                          borderRadius: 6,
-                          background: 'var(--bg-elevated)',
-                          color: 'var(--fg)',
-                          fontSize: 12,
-                          fontFamily: "'JetBrains Mono', monospace",
-                          outline: 'none',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
                         }}
-                      />
-                    </TD>
-                    <TD>
-                      <input
-                        type="number"
-                        placeholder="High"
-                        value={priceMax}
-                        onChange={(evt) => setPriceMax(evt.target.value)}
-                        min={0}
-                        step={0.01}
-                        style={{
-                          width: 80,
-                          height: 28,
-                          padding: '0 8px',
-                          border: '1px solid var(--border-strong)',
-                          borderRadius: 6,
-                          background: 'var(--bg-elevated)',
-                          color: 'var(--fg)',
-                          fontSize: 12,
-                          fontFamily: "'JetBrains Mono', monospace",
-                          outline: 'none',
-                        }}
-                      />
-                    </TD>
-                    <TD>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <AdminButton
-                          variant="ghost"
-                          size="sm"
-                          onClick={resetAddForm}
-                          disabled={isSaving}
-                        >
-                          Cancel
-                        </AdminButton>
-                        <AdminButton
-                          variant="success"
-                          size="sm"
-                          onClick={() => void handleSavePrice(ev.eventId)}
-                          disabled={isSaving || !priceMin.trim()}
-                        >
-                          {isSaving ? 'Saving…' : 'Save'}
-                        </AdminButton>
+                      >
+                        {ev.priceSource === 'crawled' && (
+                          <StatusBadge kind="signal" variant="outline">
+                            crawled
+                          </StatusBadge>
+                        )}
+                        {ev.priceSource === 'community' && (
+                          <StatusBadge kind="accent" variant="outline">
+                            community
+                          </StatusBadge>
+                        )}
+                        {ev.priceSource === 'admin' && (
+                          <StatusBadge kind="warning" variant="outline">
+                            admin
+                          </StatusBadge>
+                        )}
+                        {ev.priceSource === null && (
+                          <StatusBadge kind="danger">no price</StatusBadge>
+                        )}
+                        {ev.lastOutcome === 'miss' && (
+                          <StatusBadge kind="danger" variant="soft">
+                            miss
+                          </StatusBadge>
+                        )}
                       </div>
+                    </TD>
+                    <TD mono>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                        }}
+                      >
+                        {priceDisplay ? (
+                          <span>{priceDisplay}</span>
+                        ) : (
+                          <span style={{ color: 'var(--fg-subtle)' }}>—</span>
+                        )}
+                        {isMissingPrice && onAddPrice && (
+                          <AdminButton
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setPriceMin('')
+                              setPriceMax('')
+                              setAddingForEventId(ev.eventId)
+                            }}
+                          >
+                            + Add price
+                          </AdminButton>
+                        )}
+                      </div>
+                    </TD>
+                    <TD>
+                      <span
+                        style={{
+                          fontSize: 12,
+                          color: ev.lastRetrievedAt
+                            ? 'var(--fg-muted)'
+                            : 'var(--fg-subtle)',
+                        }}
+                      >
+                        {formatDate(ev.lastRetrievedAt)}
+                      </span>
                     </TD>
                   </TR>
                 )
-              }
-
-              return (
-                <TR key={ev.eventId}>
-                  <TD>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 600,
-                        color: 'var(--fg)',
-                        maxWidth: 200,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {ev.eventTitle}
-                    </div>
-                  </TD>
-                  <TD>
-                    <div style={{ fontSize: 12, color: 'var(--fg-muted)' }}>
-                      {ev.venueName ?? '—'}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 11,
-                        color: 'var(--fg-subtle)',
-                        marginTop: 2,
-                      }}
-                    >
-                      {ev.date}
-                    </div>
-                  </TD>
-                  <TD>
-                    <div
-                      style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-                    >
-                      {ev.priceSource === 'crawled' && (
-                        <StatusBadge kind="signal" variant="outline">
-                          crawled
-                        </StatusBadge>
-                      )}
-                      {ev.priceSource === 'community' && (
-                        <StatusBadge kind="accent" variant="outline">
-                          community
-                        </StatusBadge>
-                      )}
-                      {ev.priceSource === 'admin' && (
-                        <StatusBadge kind="warning" variant="outline">
-                          admin
-                        </StatusBadge>
-                      )}
-                      {ev.priceSource === null && (
-                        <StatusBadge kind="danger">no price</StatusBadge>
-                      )}
-                      {ev.lastOutcome === 'miss' && (
-                        <StatusBadge kind="danger" variant="soft">
-                          miss
-                        </StatusBadge>
-                      )}
-                    </div>
-                  </TD>
-                  <TD mono>
-                    <div
-                      style={{ display: 'flex', alignItems: 'center', gap: 8 }}
-                    >
-                      {priceDisplay ? (
-                        <span>{priceDisplay}</span>
-                      ) : (
-                        <span style={{ color: 'var(--fg-subtle)' }}>—</span>
-                      )}
-                      {isMissingPrice && onAddPrice && (
-                        <AdminButton
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setPriceMin('')
-                            setPriceMax('')
-                            setAddingForEventId(ev.eventId)
-                          }}
-                        >
-                          + Add price
-                        </AdminButton>
-                      )}
-                    </div>
-                  </TD>
-                  <TD>
-                    <span
-                      style={{
-                        fontSize: 12,
-                        color: ev.lastRetrievedAt
-                          ? 'var(--fg-muted)'
-                          : 'var(--fg-subtle)',
-                      }}
-                    >
-                      {formatDate(ev.lastRetrievedAt)}
-                    </span>
-                  </TD>
-                </TR>
-              )
-            })}
-          </tbody>
-        </AdminTable>
+              })}
+            </tbody>
+          </AdminTable>
+        </div>
       )}
     </Panel>
   )

@@ -101,7 +101,7 @@ export const PendingSubmissionsPanel = ({
           No pending submissions
         </div>
       ) : (
-        <div>
+        <div style={{ maxHeight: 360, overflowY: 'auto' }}>
           {submissions.map((sub) => {
             const priceDisplay = formatPrice(sub.priceMin, sub.priceMax)
             const eventLine = sub.eventTitle
