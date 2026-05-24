@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { LandingPoster } from './LandingPoster'
 import type { LandingShow } from './LandingPoster'
 
@@ -67,9 +67,21 @@ function LPStack({ shows, width, height, intervalMs = 5200 }: LPStackProps) {
 
   return (
     <div
-      style={{ width: stageW, height: stageH, position: 'relative', perspective: 1400 }}
+      style={{
+        width: stageW,
+        height: stageH,
+        position: 'relative',
+        perspective: 1400,
+      }}
       onClick={advance}
+      onKeyDown={(ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') {
+          ev.preventDefault()
+          advance()
+        }
+      }}
       role="button"
+      tabIndex={0}
       aria-label="Next poster"
     >
       {([0, 1, 2, 3] as const).map((ii) => {
@@ -101,11 +113,13 @@ function LPStack({ shows, width, height, intervalMs = 5200 }: LPStackProps) {
           opacity = layer.opacity
         }
 
-        const brightnessFilter =
-          isOnDeck ? 'brightness(0.90)'
-          : isBottom ? 'brightness(0.92)'
-          : isMid ? 'brightness(0.96)'
-          : 'none'
+        const brightnessFilter = isOnDeck
+          ? 'brightness(0.90)'
+          : isBottom
+            ? 'brightness(0.92)'
+            : isMid
+              ? 'brightness(0.96)'
+              : 'none'
 
         return (
           <div
@@ -159,7 +173,9 @@ function LPStack({ shows, width, height, intervalMs = 5200 }: LPStackProps) {
                   width: isActive ? 16 : 6,
                   height: 6,
                   borderRadius: 3,
-                  background: isActive ? 'var(--fg, #fff)' : 'rgba(255,255,255,0.30)',
+                  background: isActive
+                    ? 'var(--fg, #fff)'
+                    : 'rgba(255,255,255,0.30)',
                   cursor: 'pointer',
                   transition: 'width 0.3s',
                 }}
@@ -208,7 +224,8 @@ function LPTicker({ shows, width, height, durationMs = 6000 }: LPTickerProps) {
         height: stageH,
         overflow: 'hidden',
         position: 'relative',
-        maskImage: 'linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%)',
+        maskImage:
+          'linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%)',
         WebkitMaskImage:
           'linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%)',
       }}
@@ -257,7 +274,13 @@ interface LPWallProps {
   durationMs?: number
 }
 
-function LPWall({ shows, width, height, columnHeight, durationMs = 22000 }: LPWallProps) {
+function LPWall({
+  shows,
+  width,
+  height,
+  columnHeight,
+  durationMs = 22000,
+}: LPWallProps) {
   const deck = [...shows, ...shows]
   const gap = Math.round(width * 0.08)
   const tileH = height
@@ -270,7 +293,8 @@ function LPWall({ shows, width, height, columnHeight, durationMs = 22000 }: LPWa
         height: colH,
         overflow: 'hidden',
         position: 'relative',
-        maskImage: 'linear-gradient(180deg, transparent 0%, #000 8%, #000 92%, transparent 100%)',
+        maskImage:
+          'linear-gradient(180deg, transparent 0%, #000 8%, #000 92%, transparent 100%)',
         WebkitMaskImage:
           'linear-gradient(180deg, transparent 0%, #000 8%, #000 92%, transparent 100%)',
       }}
@@ -324,17 +348,40 @@ export function LandingPosterAnimation({
   intervalMs = 5200,
 }: LandingPosterAnimationProps) {
   const hh = height ?? Math.round(width * 1.38)
-  const ordered = useMemo(() => lpShuffle(shows), [shows])
+  const [ordered, setOrdered] = useState<LandingShow[]>(shows)
+
+  useEffect(() => {
+    setOrdered(lpShuffle(shows))
+  }, [shows])
 
   if (!ordered.length) return null
 
   if (mode === 'ticker') {
     return (
-      <LPTicker shows={ordered} width={width} height={hh} durationMs={intervalMs * 1.15} />
+      <LPTicker
+        shows={ordered}
+        width={width}
+        height={hh}
+        durationMs={intervalMs * 1.15}
+      />
     )
   }
   if (mode === 'wall') {
-    return <LPWall shows={ordered} width={width} height={hh} durationMs={intervalMs * 4} />
+    return (
+      <LPWall
+        shows={ordered}
+        width={width}
+        height={hh}
+        durationMs={intervalMs * 4}
+      />
+    )
   }
-  return <LPStack shows={ordered} width={width} height={hh} intervalMs={intervalMs} />
+  return (
+    <LPStack
+      shows={ordered}
+      width={width}
+      height={hh}
+      intervalMs={intervalMs}
+    />
+  )
 }

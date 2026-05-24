@@ -5,7 +5,20 @@ import { publicApiClient, ApiError } from '@/lib/api'
 import type { EventsListResponse } from '@concert-crawl/types'
 import type { LandingShow } from '@/components/brand/landing-poster/LandingPoster'
 
-const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'] as const
+const MONTHS = [
+  'JAN',
+  'FEB',
+  'MAR',
+  'APR',
+  'MAY',
+  'JUN',
+  'JUL',
+  'AUG',
+  'SEP',
+  'OCT',
+  'NOV',
+  'DEC',
+] as const
 
 const FALLBACK_SHOWS: LandingShow[] = [
   {
@@ -13,6 +26,7 @@ const FALLBACK_SHOWS: LandingShow[] = [
     artist: 'Amyl and The Sniffers',
     venue: 'Ogden Theatre',
     city: 'Denver, CO',
+    date: '2026-05-23',
     dateShort: 'MAY 23',
     showTime: '8pm',
     opener: 'C.O.F.F.I.N.',
@@ -23,6 +37,7 @@ const FALLBACK_SHOWS: LandingShow[] = [
     artist: 'Wednesday',
     venue: 'Globe Hall',
     city: 'Denver, CO',
+    date: '2026-05-24',
     dateShort: 'MAY 24',
     showTime: '9pm',
     opener: 'Truth Club',
@@ -33,6 +48,7 @@ const FALLBACK_SHOWS: LandingShow[] = [
     artist: 'Geese',
     venue: 'Larimer Lounge',
     city: 'Denver, CO',
+    date: '2026-05-25',
     dateShort: 'MAY 25',
     showTime: '8pm',
     opener: null,
@@ -43,6 +59,7 @@ const FALLBACK_SHOWS: LandingShow[] = [
     artist: 'Mannequin Pussy',
     venue: 'Marquis Theater',
     city: 'Denver, CO',
+    date: '2026-05-27',
     dateShort: 'MAY 27',
     showTime: '7pm',
     opener: 'Soul Glo',
@@ -67,20 +84,13 @@ function formatShowTime(time: string | null | undefined): string {
 function formatDateShort(date: string): string {
   const dd = new Date(date + 'T12:00:00')
   const month = MONTHS[dd.getMonth()]
-  return `${month} ${dd.getDate()}`
-}
-
-function todayInDenver(): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Denver' }).format(new Date())
-}
-
-function deriveShowState(date: string): 'tonight' | null {
-  return date === todayInDenver() ? 'tonight' : null
+  return `${month} ${dd.getDate().toString().padStart(2, '0')}`
 }
 
 async function fetchHeroShows(): Promise<LandingShow[]> {
   try {
-    const result = await publicApiClient.get<EventsListResponse>('/v1/events?limit=4')
+    const result =
+      await publicApiClient.get<EventsListResponse>('/v1/events?limit=4')
     if (!result?.data?.length) return FALLBACK_SHOWS
 
     const mapped: LandingShow[] = result.data.map((row) => ({
@@ -88,10 +98,11 @@ async function fetchHeroShows(): Promise<LandingShow[]> {
       artist: row.artist,
       venue: row.venue.name,
       city: row.venue.city,
+      date: row.date,
       dateShort: formatDateShort(row.date),
       showTime: formatShowTime(row.showTime),
       opener: null,
-      state: deriveShowState(row.date),
+      state: null,
     }))
 
     return mapped.length >= 2 ? mapped : FALLBACK_SHOWS

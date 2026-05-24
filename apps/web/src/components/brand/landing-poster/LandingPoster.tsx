@@ -1,10 +1,15 @@
-import { IdentityArt, identityFor, ia_isDark } from '@/components/consumer/identity-art/IdentityArt'
+import {
+  IdentityArt,
+  identityFor,
+  ia_isDark,
+} from '@/components/consumer/identity-art/IdentityArt'
 
 export interface LandingShow {
   id: string
   artist: string
   venue: string
   city: string
+  date: string
   dateShort: string
   showTime: string
   opener: string | null
@@ -27,7 +32,18 @@ function lpSmartBreak(name: string, maxLines = 3): string[] {
     .filter(Boolean)
   if (words.length === 0) return []
   if (words.length === 1) return [words[0]!]
-  const connectors = new Set(['THE', 'AND', 'OF', 'A', 'AN', '&', 'FT', 'FT.', 'FEAT', 'FEAT.'])
+  const connectors = new Set([
+    'THE',
+    'AND',
+    'OF',
+    'A',
+    'AN',
+    '&',
+    'FT',
+    'FT.',
+    'FEAT',
+    'FEAT.',
+  ])
   if (words.length === 2) {
     const joined = words.join(' ')
     const longest = Math.max(words[0]!.length, words[1]!.length)
@@ -62,11 +78,23 @@ function lpSmartBreak(name: string, maxLines = 3): string[] {
   return groups
 }
 
-function lpAutoFit(lines: string[], innerWidth: number, max: number, min: number): number {
+function lpAutoFit(
+  lines: string[],
+  innerWidth: number,
+  max: number,
+  min: number,
+): number {
   const longest = lines.reduce((mm, ll) => Math.max(mm, ll.length), 0)
   if (!longest) return min
   const fitted = (innerWidth * 0.96) / longest / 0.6
   return Math.max(min, Math.min(max, Math.floor(fitted)))
+}
+
+function isTonightInDenver(date: string): boolean {
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Denver',
+  }).format(new Date())
+  return date === today
 }
 
 function lpPaperRgb(hex: string, alpha: number): string {
@@ -134,9 +162,17 @@ interface LandingPosterProps {
   grain?: number
 }
 
-export function LandingPoster({ show, width = 320, height, grain = 0.1 }: LandingPosterProps) {
+export function LandingPoster({
+  show,
+  width = 320,
+  height,
+  grain = 0.1,
+}: LandingPosterProps) {
   const ww = width
   const hh = height ?? Math.round(width * 1.38)
+
+  const effectiveState =
+    show.state ?? (isTonightInDenver(show.date) ? 'tonight' : null)
 
   const resolved = identityFor(show.artist, 'artist')
   const pal = resolved.palette
@@ -234,7 +270,7 @@ export function LandingPoster({ show, width = 320, height, grain = 0.1 }: Landin
         >
           {cityDisplay}
         </span>
-        <LPStatePill state={show.state} ink={ink} paper={paper} ww={ww} />
+        <LPStatePill state={effectiveState} ink={ink} paper={paper} ww={ww} />
       </div>
 
       {/* Bottom paper scrim */}
@@ -335,16 +371,18 @@ export function LandingPoster({ show, width = 320, height, grain = 0.1 }: Landin
 
         {/* Venue line */}
         <div
-          style={{
-            fontFamily: 'Inter, system-ui',
-            fontWeight: 700,
-            fontSize: venueSize,
-            letterSpacing: '-0.015em',
-            color: ink,
-            lineHeight: 1.15,
-            opacity: 0.92,
-            textWrap: 'balance',
-          } as React.CSSProperties}
+          style={
+            {
+              fontFamily: 'Inter, system-ui',
+              fontWeight: 700,
+              fontSize: venueSize,
+              letterSpacing: '-0.015em',
+              color: ink,
+              lineHeight: 1.15,
+              opacity: 0.92,
+              textWrap: 'balance',
+            } as React.CSSProperties
+          }
         >
           {show.venue}
           <span style={{ opacity: 0.55 }}> · {cityDisplay}</span>
