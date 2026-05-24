@@ -120,7 +120,9 @@ interface ShowtimeBackdropProps {
  * Theme-independent: always dark Showtime palette regardless of
  * electric / jade / light theme on the surrounding app chrome.
  */
-export function ShowtimeBackdrop({ founderGlow = false }: ShowtimeBackdropProps) {
+export function ShowtimeBackdrop({
+  founderGlow = false,
+}: ShowtimeBackdropProps) {
   useShowtimeKeyframes()
 
   return (
@@ -530,7 +532,7 @@ export interface StubDef {
   glyph: string
   subtitle: string
   top?: boolean
-  d: number
+  delay: number
 }
 
 interface StubGlyphProps {
@@ -539,14 +541,26 @@ interface StubGlyphProps {
   color: string
 }
 
-export function StubGlyph({ kind, size = 36, color }: StubGlyphProps): React.ReactElement | null {
+export function StubGlyph({
+  kind,
+  size = 36,
+  color,
+}: StubGlyphProps): React.ReactElement | null {
   injectHeroKeyframes()
-  const svgProps = { width: size, height: size, viewBox: '0 0 24 24', style: { display: 'block' as const } }
+  const svgProps = {
+    width: size,
+    height: size,
+    viewBox: '0 0 24 24',
+    style: { display: 'block' as const },
+  }
   switch (kind) {
     case '★':
       return (
         <svg {...svgProps}>
-          <polygon points="12,2 14.35,8.76 21.51,8.91 15.8,13.24 17.88,20.09 12,16 6.12,20.09 8.2,13.24 2.49,8.91 9.65,8.76" fill={color} />
+          <polygon
+            points="12,2 14.35,8.76 21.51,8.91 15.8,13.24 17.88,20.09 12,16 6.12,20.09 8.2,13.24 2.49,8.91 9.65,8.76"
+            fill={color}
+          />
         </svg>
       )
     case '△':
@@ -558,13 +572,23 @@ export function StubGlyph({ kind, size = 36, color }: StubGlyphProps): React.Rea
     case '○':
       return (
         <svg {...svgProps}>
-          <circle cx="12" cy="12" r="9" fill="none" stroke={color} strokeWidth="2.8" />
+          <circle
+            cx="12"
+            cy="12"
+            r="9"
+            fill="none"
+            stroke={color}
+            strokeWidth="2.8"
+          />
         </svg>
       )
     case '⬡':
       return (
         <svg {...svgProps}>
-          <polygon points="12,2 20.66,7 20.66,17 12,22 3.34,17 3.34,7" fill={color} />
+          <polygon
+            points="12,2 20.66,7 20.66,17 12,22 3.34,17 3.34,7"
+            fill={color}
+          />
         </svg>
       )
     case '◆':
@@ -576,13 +600,22 @@ export function StubGlyph({ kind, size = 36, color }: StubGlyphProps): React.Rea
     case '+':
       return (
         <svg {...svgProps}>
-          <path d="M12 3 L12 21 M3 12 L21 12" stroke={color} strokeWidth="3.8" strokeLinecap="round" fill="none" />
+          <path
+            d="M12 3 L12 21 M3 12 L21 12"
+            stroke={color}
+            strokeWidth="3.8"
+            strokeLinecap="round"
+            fill="none"
+          />
         </svg>
       )
     case '✦':
       return (
         <svg {...svgProps}>
-          <polygon points="12,1 15,9 23,12 15,15 12,23 9,15 1,12 9,9" fill={color} />
+          <polygon
+            points="12,1 15,9 23,12 15,15 12,23 9,15 1,12 9,9"
+            fill={color}
+          />
         </svg>
       )
     default:
@@ -602,39 +635,146 @@ export function ShowtimeStub({ stub }: { stub: StubDef }): React.ReactElement {
         <path
           d="M0 12 Q0 0 12 0 L162 0 L162 130 L12 130 Q0 130 0 118 Z"
           fill={stub.body}
-          stroke={stub.top ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.08)'}
+          stroke={
+            stub.top ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.08)'
+          }
           strokeWidth="1"
         />
         <path
           d="M170 0 L208 0 Q220 0 220 12 L220 118 Q220 130 208 130 L170 130 Z"
           fill={stub.body}
-          stroke={stub.top ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.08)'}
+          stroke={
+            stub.top ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.08)'
+          }
           strokeWidth="1"
         />
         {/* restrained mark — ring */}
-        <circle cx="40" cy="65" r="30" fill="none" stroke={stub.accent} strokeWidth="2" opacity={stub.top ? 0.9 : 0.65} />
+        <circle
+          cx="40"
+          cy="65"
+          r="30"
+          fill="none"
+          stroke={stub.accent}
+          strokeWidth="2"
+          opacity={stub.top ? 0.9 : 0.65}
+        />
         {/* right column copy */}
-        <text x="88" y={stub.top ? 32 : 30} fontFamily="Inter, sans-serif" fontSize={stub.top ? 17 : 14} fontWeight="900" fill="rgba(255,255,255,0.95)" letterSpacing="-0.04em">
+        <text
+          x="88"
+          y={stub.top ? 32 : 30}
+          fontFamily="Inter, sans-serif"
+          fontSize={stub.top ? 17 : 14}
+          fontWeight="900"
+          fill="rgba(255,255,255,0.95)"
+          letterSpacing="-0.04em"
+        >
           {stub.top ? 'TONIGHT' : stub.subtitle}
         </text>
-        <text x="88" y="46" fontFamily="'JetBrains Mono', monospace" fontSize="8" fontWeight="800" letterSpacing="1.5" fill={stub.accent} opacity="0.85">ADMIT ONE</text>
-        <line x1="88" y1="54" x2="156" y2="54" stroke={stub.accent} strokeWidth="1" opacity="0.5" />
+        <text
+          x="88"
+          y="46"
+          fontFamily="'JetBrains Mono', monospace"
+          fontSize="8"
+          fontWeight="800"
+          letterSpacing="1.5"
+          fill={stub.accent}
+          opacity="0.85"
+        >
+          ADMIT ONE
+        </text>
+        <line
+          x1="88"
+          y1="54"
+          x2="156"
+          y2="54"
+          stroke={stub.accent}
+          strokeWidth="1"
+          opacity="0.5"
+        />
         {stub.top ? (
           <>
-            <text x="88" y="74" fontFamily="'JetBrains Mono', monospace" fontSize="8" fontWeight="700" letterSpacing="1.4" fill="rgba(255,255,255,0.6)">DOORS · 8 PM</text>
-            <text x="88" y="88" fontFamily="'JetBrains Mono', monospace" fontSize="8" fontWeight="700" letterSpacing="1.4" fill="rgba(255,255,255,0.45)">GA · 21+</text>
-            <text x="88" y="116" fontFamily="'JetBrains Mono', monospace" fontSize="11" fontWeight="900" letterSpacing="2" fill={stub.accent}>№ 034</text>
+            <text
+              x="88"
+              y="74"
+              fontFamily="'JetBrains Mono', monospace"
+              fontSize="8"
+              fontWeight="700"
+              letterSpacing="1.4"
+              fill="rgba(255,255,255,0.6)"
+            >
+              DOORS · 8 PM
+            </text>
+            <text
+              x="88"
+              y="88"
+              fontFamily="'JetBrains Mono', monospace"
+              fontSize="8"
+              fontWeight="700"
+              letterSpacing="1.4"
+              fill="rgba(255,255,255,0.45)"
+            >
+              GA · 21+
+            </text>
+            <text
+              x="88"
+              y="116"
+              fontFamily="'JetBrains Mono', monospace"
+              fontSize="11"
+              fontWeight="900"
+              letterSpacing="2"
+              fill={stub.accent}
+            >
+              № 034
+            </text>
           </>
         ) : (
-          <text x="88" y="74" fontFamily="'JetBrains Mono', monospace" fontSize="7" fontWeight="700" letterSpacing="1.4" fill="rgba(255,255,255,0.4)">DOORS · 8 PM</text>
+          <text
+            x="88"
+            y="74"
+            fontFamily="'JetBrains Mono', monospace"
+            fontSize="7"
+            fontWeight="700"
+            letterSpacing="1.4"
+            fill="rgba(255,255,255,0.4)"
+          >
+            DOORS · 8 PM
+          </text>
         )}
         {/* perforation */}
-        <line x1="166" y1="6" x2="166" y2="124" stroke={stub.accent} strokeWidth="1" strokeDasharray="3 4" opacity="0.5" />
+        <line
+          x1="166"
+          y1="6"
+          x2="166"
+          y2="124"
+          stroke={stub.accent}
+          strokeWidth="1"
+          strokeDasharray="3 4"
+          opacity="0.5"
+        />
         {[14, 38, 62, 86, 110].map((yVal, jdx) => (
-          <circle key={jdx} cx="166" cy={yVal + 6} r="1.5" fill={stub.body} stroke={stub.accent} strokeWidth="0.5" opacity="0.55" />
+          <circle
+            key={jdx}
+            cx="166"
+            cy={yVal + 6}
+            r="1.5"
+            fill={stub.body}
+            stroke={stub.accent}
+            strokeWidth="0.5"
+            opacity="0.55"
+          />
         ))}
         {/* vertical tear-off text */}
-        <text x="195" y="12" fontFamily="'JetBrains Mono', monospace" fontSize="8" fontWeight="800" fill={stub.accent} opacity={stub.top ? 0.7 : 0.5} letterSpacing="2" transform="rotate(90 195 12)">
+        <text
+          x="195"
+          y="12"
+          fontFamily="'JetBrains Mono', monospace"
+          fontSize="8"
+          fontWeight="800"
+          fill={stub.accent}
+          opacity={stub.top ? 0.7 : 0.5}
+          letterSpacing="2"
+          transform="rotate(90 195 12)"
+        >
           {stub.top ? 'NO RE-ENTRY' : 'STUB'}
         </text>
       </svg>
@@ -649,7 +789,11 @@ export function ShowtimeStub({ stub }: { stub: StubDef }): React.ReactElement {
           pointerEvents: 'none',
         }}
       >
-        <StubGlyph kind={stub.glyph} size={stub.top ? 40 : 32} color={stub.accent} />
+        <StubGlyph
+          kind={stub.glyph}
+          size={stub.top ? 40 : 32}
+          color={stub.accent}
+        />
       </div>
     </div>
   )
@@ -666,25 +810,59 @@ interface TierGlyphProps {
   stroke?: string
 }
 
-export function TierGlyph({ tier, size = 50, color = '#fff', stroke }: TierGlyphProps): React.ReactElement | null {
+export function TierGlyph({
+  tier,
+  size = 50,
+  color = '#fff',
+  stroke,
+}: TierGlyphProps): React.ReactElement | null {
   if (tier === 'supporter') {
     return (
-      <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: 'block' }}>
-        <path d="M12 4.5 L12 19.5 M4.5 12 L19.5 12" stroke={color} strokeWidth="3.6" strokeLinecap="round" />
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        style={{ display: 'block' }}
+      >
+        <path
+          d="M12 4.5 L12 19.5 M4.5 12 L19.5 12"
+          stroke={color}
+          strokeWidth="3.6"
+          strokeLinecap="round"
+        />
       </svg>
     )
   }
   if (tier === 'premium') {
     return (
-      <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: 'block' }}>
-        <polygon points="12,2.5 14.85,8.45 21.5,9.45 16.5,13.85 18.05,20.5 12,17.05 5.95,20.5 7.5,13.85 2.5,9.45 9.15,8.45" fill={color} />
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        style={{ display: 'block' }}
+      >
+        <polygon
+          points="12,2.5 14.85,8.45 21.5,9.45 16.5,13.85 18.05,20.5 12,17.05 5.95,20.5 7.5,13.85 2.5,9.45 9.15,8.45"
+          fill={color}
+        />
       </svg>
     )
   }
   if (tier === 'founder') {
     return (
-      <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: 'block' }}>
-        <path d="M3 17 L3 7.5 L7.5 13 L12 4 L16.5 13 L21 7.5 L21 17 Z" fill={color} stroke={stroke ?? color} strokeWidth="0.6" strokeLinejoin="round" />
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        style={{ display: 'block' }}
+      >
+        <path
+          d="M3 17 L3 7.5 L7.5 13 L12 4 L16.5 13 L21 7.5 L21 17 Z"
+          fill={color}
+          stroke={stroke ?? color}
+          strokeWidth="0.6"
+          strokeLinejoin="round"
+        />
         <rect x="3" y="17.5" width="18" height="2.6" rx="0.5" fill={color} />
         <circle cx="7.5" cy="11.2" r="0.95" fill={stroke ?? color} />
         <circle cx="12" cy="6.5" r="0.95" fill={stroke ?? color} />
