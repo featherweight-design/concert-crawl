@@ -52,6 +52,8 @@ eventsAdminRouter.get(
   async (ctx) => {
     const { verified, limit, offset } = ctx.req.valid('query')
 
+    const today = new Date().toISOString().slice(0, 10)
+
     const rows = await db
       .select({
         id: events.id,
@@ -73,7 +75,7 @@ eventsAdminRouter.get(
       })
       .from(events)
       .leftJoin(venues, eq(events.venueId, venues.id))
-      .where(eq(events.verified, verified))
+      .where(and(eq(events.verified, verified), gte(events.date, today)))
       .orderBy(asc(events.date), desc(events.createdAt))
       .limit(limit)
       .offset(offset)

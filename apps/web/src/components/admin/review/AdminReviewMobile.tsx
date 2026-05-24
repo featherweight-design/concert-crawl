@@ -482,8 +482,10 @@ export function AdminReviewMobile({
   onAddPrice,
 }: AdminReviewMobileProps) {
   const [activeTab, setActiveTab] = useState<'flags' | 'prices'>('flags')
+  const [showMissingOnly, setShowMissingOnly] = useState(false)
 
   const missingPriceEvents = priceEvents.filter((ev) => ev.priceMin === null)
+  const visiblePriceEvents = showMissingOnly ? missingPriceEvents : priceEvents
   const priceCount = submissions.length + missingPriceEvents.length
 
   const cardStyle: React.CSSProperties = {
@@ -870,13 +872,11 @@ export function AdminReviewMobile({
               style={{
                 flexShrink: 0,
                 padding: '12px 16px 10px',
-                borderBottom:
-                  missingPriceEvents.length > 0
-                    ? '1px solid var(--border)'
-                    : 'none',
+                borderBottom: '1px solid var(--border)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
+                gap: 8,
               }}
             >
               <span
@@ -889,19 +889,43 @@ export function AdminReviewMobile({
               >
                 Needs price
               </span>
-              <StatusBadge kind="warning">
-                {missingPriceEvents.length}
-              </StatusBadge>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <AdminButton
+                  variant={showMissingOnly ? 'outline' : 'ghost'}
+                  size="sm"
+                  onClick={() => setShowMissingOnly((prev) => !prev)}
+                >
+                  Missing only
+                </AdminButton>
+                <StatusBadge kind="warning">
+                  {missingPriceEvents.length}
+                </StatusBadge>
+              </div>
             </div>
 
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-              {missingPriceEvents.map((ev) => (
-                <NeedsPriceRow
-                  key={ev.eventId}
-                  event={ev}
-                  onAddPrice={onAddPrice}
-                />
-              ))}
+              {visiblePriceEvents.length === 0 ? (
+                <div
+                  style={{
+                    padding: '12px 16px',
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: 13,
+                    color: 'var(--fg-subtle)',
+                  }}
+                >
+                  {showMissingOnly
+                    ? 'All events have prices.'
+                    : 'No upcoming events.'}
+                </div>
+              ) : (
+                visiblePriceEvents.map((ev) => (
+                  <NeedsPriceRow
+                    key={ev.eventId}
+                    event={ev}
+                    onAddPrice={onAddPrice}
+                  />
+                ))
+              )}
             </div>
           </div>
         </div>

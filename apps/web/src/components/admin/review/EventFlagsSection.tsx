@@ -143,19 +143,8 @@ export const EventFlagsSection = ({
       </span>
     )
 
-    const emptyAction = (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <AdminButton variant="ghost" size="sm" icon={Filter}>
-          Filter rules
-        </AdminButton>
-        <AdminButton variant="outline" size="sm">
-          View history
-        </AdminButton>
-      </div>
-    )
-
     return (
-      <Panel title={emptyTitle} action={emptyAction}>
+      <Panel title={emptyTitle}>
         <div
           style={{
             display: 'flex',

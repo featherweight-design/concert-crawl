@@ -60,26 +60,6 @@ export const PendingSubmissionsPanel = ({
       </span>
     ) : null
 
-  const allSubmissionsLink = (
-    <a
-      href="/admin/prices/submissions"
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 4,
-        fontSize: 13,
-        fontWeight: 600,
-        fontFamily: "'Inter', sans-serif",
-        color: 'var(--fg-muted)',
-        textDecoration: 'none',
-        whiteSpace: 'nowrap',
-      }}
-    >
-      All submissions
-      <span style={{ fontSize: 12 }}>›</span>
-    </a>
-  )
-
   const panelTitle = (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
       Community price submissions
@@ -88,7 +68,7 @@ export const PendingSubmissionsPanel = ({
   )
 
   return (
-    <Panel title={panelTitle} action={allSubmissionsLink} padding={0}>
+    <Panel title={panelTitle} padding={0}>
       {submissions.length === 0 ? (
         <div
           style={{

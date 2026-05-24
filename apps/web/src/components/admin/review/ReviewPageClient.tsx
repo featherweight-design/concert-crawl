@@ -4,8 +4,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { apiClient, ApiError } from '@/lib/api'
-import { SectionHead, AdminButton } from '@/components/admin/primitives'
-import { Filter, ExternalLink } from 'lucide-react'
+import { SectionHead } from '@/components/admin/primitives'
 import { EventFlagsSection } from './EventFlagsSection'
 import { PendingSubmissionsPanel } from './PendingSubmissionsPanel'
 import { PriceCoverageTable } from './PriceCoverageTable'
@@ -254,16 +253,6 @@ export const ReviewPageClient = ({
         </span>
       }
       subtitle="Most events auto-approve. This page is where flags and community price submissions land for triage."
-      actions={
-        <>
-          <AdminButton variant="outline" size="sm" icon={Filter}>
-            Filter rules
-          </AdminButton>
-          <AdminButton variant="outline" size="sm" icon={ExternalLink}>
-            Approval history
-          </AdminButton>
-        </>
-      }
     />
   )
 
