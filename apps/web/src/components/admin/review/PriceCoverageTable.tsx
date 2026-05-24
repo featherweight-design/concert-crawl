@@ -47,6 +47,32 @@ function formatDate(iso: string | null): string {
   })
 }
 
+function formatEventDate(iso: string): string {
+  try {
+    const [year, month, day] = iso.split('-').map(Number)
+    return new Date(year ?? 0, (month ?? 1) - 1, day ?? 1).toLocaleDateString(
+      'en-US',
+      { month: 'short', day: 'numeric' },
+    )
+  } catch {
+    return iso
+  }
+}
+
+const inputStyle: React.CSSProperties = {
+  width: 72,
+  height: 32,
+  padding: '0 8px',
+  border: '1px solid var(--border-strong)',
+  borderRadius: 6,
+  background: 'var(--bg-elevated)',
+  color: 'var(--fg)',
+  fontSize: 13,
+  fontFamily: "'JetBrains Mono', monospace",
+  fontWeight: 600,
+  outline: 'none',
+}
+
 export const PriceCoverageTable = ({
   events,
   loading = false,
@@ -57,12 +83,14 @@ export const PriceCoverageTable = ({
   const [addingForEventId, setAddingForEventId] = useState<string | null>(null)
   const [priceMin, setPriceMin] = useState('')
   const [priceMax, setPriceMax] = useState('')
+  const [sourceNote, setSourceNote] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
   const resetAddForm = () => {
     setAddingForEventId(null)
     setPriceMin('')
     setPriceMax('')
+    setSourceNote('')
   }
 
   const handleSavePrice = async (eventId: string) => {
@@ -178,8 +206,9 @@ export const PriceCoverageTable = ({
                 const isMissingPrice = ev.priceMin === null
                 const isAddingHere = addingForEventId === ev.eventId
 
-                if (isAddingHere) {
-                  return (
+                return (
+                  <>
+                    {/* Normal row — always visible */}
                     <TR key={ev.eventId}>
                       <TD>
                         <div
@@ -211,178 +240,353 @@ export const PriceCoverageTable = ({
                         </div>
                       </TD>
                       <TD>
-                        <input
-                          type="number"
-                          placeholder="Low"
-                          value={priceMin}
-                          onChange={(evt) => setPriceMin(evt.target.value)}
-                          min={0}
-                          step={0.01}
+                        <div
                           style={{
-                            width: 80,
-                            height: 28,
-                            padding: '0 8px',
-                            border: '1px solid var(--border-strong)',
-                            borderRadius: 6,
-                            background: 'var(--bg-elevated)',
-                            color: 'var(--fg)',
-                            fontSize: 12,
-                            fontFamily: "'JetBrains Mono', monospace",
-                            outline: 'none',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
                           }}
-                        />
-                      </TD>
-                      <TD>
-                        <input
-                          type="number"
-                          placeholder="High"
-                          value={priceMax}
-                          onChange={(evt) => setPriceMax(evt.target.value)}
-                          min={0}
-                          step={0.01}
-                          style={{
-                            width: 80,
-                            height: 28,
-                            padding: '0 8px',
-                            border: '1px solid var(--border-strong)',
-                            borderRadius: 6,
-                            background: 'var(--bg-elevated)',
-                            color: 'var(--fg)',
-                            fontSize: 12,
-                            fontFamily: "'JetBrains Mono', monospace",
-                            outline: 'none',
-                          }}
-                        />
-                      </TD>
-                      <TD>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <AdminButton
-                            variant="ghost"
-                            size="sm"
-                            onClick={resetAddForm}
-                            disabled={isSaving}
-                          >
-                            Cancel
-                          </AdminButton>
-                          <AdminButton
-                            variant="success"
-                            size="sm"
-                            onClick={() => void handleSavePrice(ev.eventId)}
-                            disabled={isSaving || !priceMin.trim()}
-                          >
-                            {isSaving ? 'Saving…' : 'Save'}
-                          </AdminButton>
+                        >
+                          {ev.priceSource === 'crawled' && (
+                            <StatusBadge kind="signal" variant="outline">
+                              crawled
+                            </StatusBadge>
+                          )}
+                          {ev.priceSource === 'community' && (
+                            <StatusBadge kind="accent" variant="outline">
+                              community
+                            </StatusBadge>
+                          )}
+                          {ev.priceSource === 'admin' && (
+                            <StatusBadge kind="warning" variant="outline">
+                              admin
+                            </StatusBadge>
+                          )}
+                          {ev.priceSource === null && (
+                            <StatusBadge kind="danger">no price</StatusBadge>
+                          )}
+                          {ev.lastOutcome === 'miss' && (
+                            <StatusBadge kind="danger" variant="soft">
+                              miss
+                            </StatusBadge>
+                          )}
                         </div>
                       </TD>
+                      <TD mono>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                          }}
+                        >
+                          {priceDisplay ? (
+                            <span>{priceDisplay}</span>
+                          ) : (
+                            <span style={{ color: 'var(--fg-subtle)' }}>—</span>
+                          )}
+                          {isMissingPrice && onAddPrice && !isAddingHere && (
+                            <AdminButton
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setPriceMin('')
+                                setPriceMax('')
+                                setSourceNote('')
+                                setAddingForEventId(ev.eventId)
+                              }}
+                            >
+                              + Add price
+                            </AdminButton>
+                          )}
+                        </div>
+                      </TD>
+                      <TD>
+                        <span
+                          style={{
+                            fontSize: 12,
+                            color: ev.lastRetrievedAt
+                              ? 'var(--fg-muted)'
+                              : 'var(--fg-subtle)',
+                          }}
+                        >
+                          {formatDate(ev.lastRetrievedAt)}
+                        </span>
+                      </TD>
                     </TR>
-                  )
-                }
 
-                return (
-                  <TR key={ev.eventId}>
-                    <TD>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          fontWeight: 600,
-                          color: 'var(--fg)',
-                          maxWidth: 200,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {ev.eventTitle}
-                      </div>
-                    </TD>
-                    <TD>
-                      <div style={{ fontSize: 12, color: 'var(--fg-muted)' }}>
-                        {ev.venueName ?? '—'}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: 'var(--fg-subtle)',
-                          marginTop: 2,
-                        }}
-                      >
-                        {ev.date}
-                      </div>
-                    </TD>
-                    <TD>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 6,
-                        }}
-                      >
-                        {ev.priceSource === 'crawled' && (
-                          <StatusBadge kind="signal" variant="outline">
-                            crawled
-                          </StatusBadge>
-                        )}
-                        {ev.priceSource === 'community' && (
-                          <StatusBadge kind="accent" variant="outline">
-                            community
-                          </StatusBadge>
-                        )}
-                        {ev.priceSource === 'admin' && (
-                          <StatusBadge kind="warning" variant="outline">
-                            admin
-                          </StatusBadge>
-                        )}
-                        {ev.priceSource === null && (
-                          <StatusBadge kind="danger">no price</StatusBadge>
-                        )}
-                        {ev.lastOutcome === 'miss' && (
-                          <StatusBadge kind="danger" variant="soft">
-                            miss
-                          </StatusBadge>
-                        )}
-                      </div>
-                    </TD>
-                    <TD mono>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                        }}
-                      >
-                        {priceDisplay ? (
-                          <span>{priceDisplay}</span>
-                        ) : (
-                          <span style={{ color: 'var(--fg-subtle)' }}>—</span>
-                        )}
-                        {isMissingPrice && onAddPrice && (
-                          <AdminButton
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setPriceMin('')
-                              setPriceMax('')
-                              setAddingForEventId(ev.eventId)
+                    {/* Edit panel — full-width row below */}
+                    {isAddingHere && (
+                      <tr key={`${ev.eventId}-edit`}>
+                        <td
+                          colSpan={5}
+                          style={{
+                            padding: '0 0 2px',
+                            borderBottom: '1px solid var(--border)',
+                          }}
+                        >
+                          <div
+                            style={{
+                              margin: '0 14px 12px',
+                              padding: '14px 18px',
+                              background:
+                                'color-mix(in oklab, var(--signal) 5%, var(--surface-1))',
+                              border: '1px solid var(--border-strong)',
+                              borderRadius: 10,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 20,
+                              flexWrap: 'wrap',
                             }}
                           >
-                            + Add price
-                          </AdminButton>
-                        )}
-                      </div>
-                    </TD>
-                    <TD>
-                      <span
-                        style={{
-                          fontSize: 12,
-                          color: ev.lastRetrievedAt
-                            ? 'var(--fg-muted)'
-                            : 'var(--fg-subtle)',
-                        }}
-                      >
-                        {formatDate(ev.lastRetrievedAt)}
-                      </span>
-                    </TD>
-                  </TR>
+                            {/* Context: adding price for */}
+                            <div style={{ minWidth: 160 }}>
+                              <div
+                                style={{
+                                  fontFamily: "'JetBrains Mono', monospace",
+                                  fontSize: 9,
+                                  fontWeight: 700,
+                                  letterSpacing: '0.1em',
+                                  textTransform: 'uppercase',
+                                  color: 'var(--fg-subtle)',
+                                  marginBottom: 4,
+                                }}
+                              >
+                                Adding price for
+                              </div>
+                              <div
+                                style={{
+                                  fontFamily: "'Inter', sans-serif",
+                                  fontSize: 13,
+                                  fontWeight: 700,
+                                  color: 'var(--fg)',
+                                }}
+                              >
+                                {ev.eventTitle}
+                              </div>
+                              <div
+                                style={{
+                                  fontFamily: "'Inter', sans-serif",
+                                  fontSize: 11,
+                                  color: 'var(--fg-muted)',
+                                  marginTop: 2,
+                                }}
+                              >
+                                {[ev.venueName, formatEventDate(ev.date)]
+                                  .filter(Boolean)
+                                  .join(' · ')}
+                              </div>
+                            </div>
+
+                            {/* LOW / HIGH inputs */}
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 10,
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontFamily: "'JetBrains Mono', monospace",
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  letterSpacing: '0.08em',
+                                  textTransform: 'uppercase',
+                                  color: 'var(--fg-subtle)',
+                                }}
+                              >
+                                Low
+                              </span>
+                              <div
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  border: '1px solid var(--border-strong)',
+                                  borderRadius: 6,
+                                  background: 'var(--bg-elevated)',
+                                  overflow: 'hidden',
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    padding: '0 6px 0 10px',
+                                    fontFamily: "'JetBrains Mono', monospace",
+                                    fontSize: 13,
+                                    fontWeight: 600,
+                                    color: 'var(--fg-muted)',
+                                  }}
+                                >
+                                  $
+                                </span>
+                                <input
+                                  type="number"
+                                  placeholder="0"
+                                  value={priceMin}
+                                  onChange={(evt) =>
+                                    setPriceMin(evt.target.value)
+                                  }
+                                  min={0}
+                                  step={1}
+                                  style={{
+                                    ...inputStyle,
+                                    border: 'none',
+                                    borderRadius: 0,
+                                    paddingLeft: 0,
+                                  }}
+                                />
+                              </div>
+
+                              <span
+                                style={{
+                                  fontFamily: "'JetBrains Mono', monospace",
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  letterSpacing: '0.08em',
+                                  textTransform: 'uppercase',
+                                  color: 'var(--fg-subtle)',
+                                }}
+                              >
+                                High
+                              </span>
+                              <div
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  border: '1px solid var(--border-strong)',
+                                  borderRadius: 6,
+                                  background: 'var(--bg-elevated)',
+                                  overflow: 'hidden',
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    padding: '0 6px 0 10px',
+                                    fontFamily: "'JetBrains Mono', monospace",
+                                    fontSize: 13,
+                                    fontWeight: 600,
+                                    color: 'var(--fg-muted)',
+                                  }}
+                                >
+                                  $
+                                </span>
+                                <input
+                                  type="number"
+                                  placeholder="0"
+                                  value={priceMax}
+                                  onChange={(evt) =>
+                                    setPriceMax(evt.target.value)
+                                  }
+                                  min={0}
+                                  step={1}
+                                  style={{
+                                    ...inputStyle,
+                                    border: 'none',
+                                    borderRadius: 0,
+                                    paddingLeft: 0,
+                                  }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Source note */}
+                            <div style={{ flex: 1, minWidth: 160 }}>
+                              <div
+                                style={{
+                                  fontFamily: "'JetBrains Mono', monospace",
+                                  fontSize: 9,
+                                  fontWeight: 700,
+                                  letterSpacing: '0.1em',
+                                  textTransform: 'uppercase',
+                                  color: 'var(--fg-subtle)',
+                                  marginBottom: 4,
+                                }}
+                              >
+                                Source note · Optional
+                              </div>
+                              <input
+                                type="text"
+                                placeholder="e.g. AXS listing 12:14"
+                                value={sourceNote}
+                                onChange={(evt) =>
+                                  setSourceNote(evt.target.value)
+                                }
+                                style={{
+                                  width: '100%',
+                                  height: 32,
+                                  padding: '0 10px',
+                                  border: '1px solid var(--border-strong)',
+                                  borderRadius: 6,
+                                  background: 'var(--bg-elevated)',
+                                  color: 'var(--fg)',
+                                  fontSize: 13,
+                                  fontFamily: "'Inter', sans-serif",
+                                  outline: 'none',
+                                  boxSizing: 'border-box',
+                                }}
+                              />
+                            </div>
+
+                            {/* Actions */}
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 12,
+                                flexShrink: 0,
+                              }}
+                            >
+                              <button
+                                onClick={resetAddForm}
+                                disabled={isSaving}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 5,
+                                  background: 'none',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  fontFamily: "'Inter', sans-serif",
+                                  fontSize: 13,
+                                  fontWeight: 600,
+                                  color: 'var(--fg-muted)',
+                                  padding: 0,
+                                }}
+                              >
+                                × Cancel
+                              </button>
+                              <button
+                                onClick={() => void handleSavePrice(ev.eventId)}
+                                disabled={isSaving || !priceMin.trim()}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 6,
+                                  padding: '7px 14px',
+                                  borderRadius: 8,
+                                  background:
+                                    isSaving || !priceMin.trim()
+                                      ? 'color-mix(in oklab, var(--success) 50%, transparent)'
+                                      : 'var(--success)',
+                                  border: 'none',
+                                  color: 'var(--fg-on-accent)',
+                                  fontFamily: "'Inter', sans-serif",
+                                  fontSize: 13,
+                                  fontWeight: 700,
+                                  cursor:
+                                    isSaving || !priceMin.trim()
+                                      ? 'not-allowed'
+                                      : 'pointer',
+                                }}
+                              >
+                                {isSaving ? 'Saving…' : '✓ Save price'}
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 )
               })}
             </tbody>
