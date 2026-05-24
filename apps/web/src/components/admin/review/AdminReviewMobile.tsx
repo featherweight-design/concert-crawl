@@ -471,25 +471,6 @@ export function AdminReviewMobile({
   const missingPriceEvents = priceEvents.filter((ev) => ev.priceMin === null)
   const priceCount = submissions.length + missingPriceEvents.length
 
-  const tabStyle = (isActive: boolean): React.CSSProperties => ({
-    flex: 1,
-    padding: '12px 16px',
-    border: 'none',
-    background: 'none',
-    borderBottom: isActive
-      ? '2px solid var(--signal)'
-      : '2px solid transparent',
-    fontFamily: "'Inter', sans-serif",
-    fontSize: 13,
-    fontWeight: isActive ? 700 : 500,
-    color: isActive ? 'var(--fg)' : 'var(--fg-muted)',
-    cursor: 'pointer',
-    textAlign: 'left' as const,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-  })
-
   return (
     <div
       style={{
@@ -499,33 +480,61 @@ export function AdminReviewMobile({
         overflow: 'hidden',
       }}
     >
-      {/* Tab switcher */}
+      {/* Segmented control tab switcher */}
       <div
         style={{
           display: 'flex',
-          borderBottom: '1px solid var(--border)',
+          padding: 4,
+          background: 'var(--surface-1)',
+          gap: 2,
         }}
       >
-        <button
-          type="button"
-          style={tabStyle(activeTab === 'flags')}
-          onClick={() => setActiveTab('flags')}
-        >
-          Event flags
-          {events.length > 0 && (
-            <StatusBadge kind="warning">{events.length}</StatusBadge>
-          )}
-        </button>
-        <button
-          type="button"
-          style={tabStyle(activeTab === 'prices')}
-          onClick={() => setActiveTab('prices')}
-        >
-          Prices
-          {priceCount > 0 && (
-            <StatusBadge kind="signal">{priceCount}</StatusBadge>
-          )}
-        </button>
+        {(
+          [
+            {
+              key: 'flags',
+              label: 'Event flags',
+              count: events.length,
+              badgeKind: 'warning',
+            },
+            {
+              key: 'prices',
+              label: 'Prices',
+              count: priceCount,
+              badgeKind: 'signal',
+            },
+          ] as const
+        ).map(({ key, label, count, badgeKind }) => {
+          const isActive = activeTab === key
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setActiveTab(key)}
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                padding: '8px 12px',
+                border: 'none',
+                borderRadius: 8,
+                background: isActive ? 'var(--bg-elevated)' : 'transparent',
+                boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.2)' : 'none',
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 13,
+                fontWeight: isActive ? 700 : 500,
+                color: isActive ? 'var(--fg)' : 'var(--fg-muted)',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {label}
+              {count > 0 && <StatusBadge kind={badgeKind}>{count}</StatusBadge>}
+            </button>
+          )
+        })}
       </div>
 
       {/* Event flags tab */}
