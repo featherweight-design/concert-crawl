@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import {
   Panel,
   StatusBadge,
@@ -214,9 +214,9 @@ export const PriceCoverageTable = ({
                   const isAddingHere = addingForEventId === ev.eventId
 
                   return (
-                    <>
+                    <React.Fragment key={ev.eventId}>
                       {/* Normal row — always visible */}
-                      <TR key={ev.eventId}>
+                      <TR>
                         <TD>
                           <div
                             style={{
@@ -320,7 +320,7 @@ export const PriceCoverageTable = ({
 
                       {/* Edit panel — full-width row below */}
                       {isAddingHere && (
-                        <tr key={`${ev.eventId}-edit`}>
+                        <tr>
                           <td
                             colSpan={5}
                             style={{
@@ -681,7 +681,7 @@ export const PriceCoverageTable = ({
                           </td>
                         </tr>
                       )}
-                    </>
+                    </React.Fragment>
                   )
                 })}
               </tbody>

@@ -334,14 +334,33 @@ function NeedsPriceRow({
             })}
           </div>
         </div>
-        {!isAdding && onAddPrice && (
-          <AdminButton
-            variant="outline"
-            size="sm"
-            onClick={() => setIsAdding(true)}
+        {event.priceMin !== null ? (
+          <span
+            style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 13,
+              fontWeight: 700,
+              color: 'var(--fg)',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}
           >
-            + Add
-          </AdminButton>
+            ${Math.round(parseFloat(event.priceMin))}
+            {event.priceMax
+              ? `–$${Math.round(parseFloat(event.priceMax))}`
+              : ''}
+          </span>
+        ) : (
+          !isAdding &&
+          onAddPrice && (
+            <AdminButton
+              variant="outline"
+              size="sm"
+              onClick={() => setIsAdding(true)}
+            >
+              + Add
+            </AdminButton>
+          )
         )}
       </div>
 
