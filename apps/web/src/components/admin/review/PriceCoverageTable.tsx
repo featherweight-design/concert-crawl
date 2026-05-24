@@ -26,6 +26,15 @@ interface PriceEvent {
   lastOutcome: string | null
 }
 
+type SubmissionVendor =
+  | 'AXS'
+  | 'Ticketmaster'
+  | 'SeatGeek'
+  | 'DICE'
+  | 'Eventbrite'
+  | 'VenueBoxOffice'
+type SubmissionHowFound = 'bought_myself' | 'saw_listing' | 'at_the_venue'
+
 interface PriceCoverageTableProps {
   events: PriceEvent[]
   loading?: boolean
@@ -33,10 +42,12 @@ interface PriceCoverageTableProps {
     eventId: string,
     priceMin: string,
     priceMax: string | null,
+    vendor: SubmissionVendor,
+    howFound: SubmissionHowFound,
   ) => Promise<void>
 }
 
-type SourceFilter = 'all' | 'crawled' | 'community' | 'admin' | null
+type SourceFilter = 'all' | 'crawled' | 'community' | null
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—'
@@ -83,21 +94,29 @@ export const PriceCoverageTable = ({
   const [addingForEventId, setAddingForEventId] = useState<string | null>(null)
   const [priceMin, setPriceMin] = useState('')
   const [priceMax, setPriceMax] = useState('')
-  const [sourceNote, setSourceNote] = useState('')
+  const [vendor, setVendor] = useState<SubmissionVendor>('Ticketmaster')
+  const [howFound, setHowFound] = useState<SubmissionHowFound>('saw_listing')
   const [isSaving, setIsSaving] = useState(false)
 
   const resetAddForm = () => {
     setAddingForEventId(null)
     setPriceMin('')
     setPriceMax('')
-    setSourceNote('')
+    setVendor('Ticketmaster')
+    setHowFound('saw_listing')
   }
 
   const handleSavePrice = async (eventId: string) => {
     if (!priceMin.trim() || !onAddPrice) return
     setIsSaving(true)
     try {
-      await onAddPrice(eventId, priceMin.trim(), priceMax.trim() || null)
+      await onAddPrice(
+        eventId,
+        priceMin.trim(),
+        priceMax.trim() || null,
+        vendor,
+        howFound,
+      )
       resetAddForm()
     } finally {
       setIsSaving(false)
@@ -105,7 +124,7 @@ export const PriceCoverageTable = ({
   }
 
   const handleSourceFilter = () => {
-    const cycle: SourceFilter[] = ['all', 'crawled', 'community', 'admin', null]
+    const cycle: SourceFilter[] = ['all', 'crawled', 'community', null]
     const idx = cycle.indexOf(sourceFilter)
     setSourceFilter(cycle[(idx + 1) % cycle.length] ?? 'all')
   }
@@ -257,11 +276,6 @@ export const PriceCoverageTable = ({
                               community
                             </StatusBadge>
                           )}
-                          {ev.priceSource === 'admin' && (
-                            <StatusBadge kind="warning" variant="outline">
-                              admin
-                            </StatusBadge>
-                          )}
                           {ev.priceSource === null && (
                             <StatusBadge kind="danger">no price</StatusBadge>
                           )}
@@ -292,7 +306,8 @@ export const PriceCoverageTable = ({
                               onClick={() => {
                                 setPriceMin('')
                                 setPriceMax('')
-                                setSourceNote('')
+                                setVendor('Ticketmaster')
+                                setHowFound('saw_listing')
                                 setAddingForEventId(ev.eventId)
                               }}
                             >
@@ -489,8 +504,8 @@ export const PriceCoverageTable = ({
                               </div>
                             </div>
 
-                            {/* Source note */}
-                            <div style={{ flex: 1, minWidth: 160 }}>
+                            {/* Vendor select */}
+                            <div>
                               <div
                                 style={{
                                   fontFamily: "'JetBrains Mono', monospace",
@@ -502,19 +517,18 @@ export const PriceCoverageTable = ({
                                   marginBottom: 4,
                                 }}
                               >
-                                Source note · Optional
+                                Vendor
                               </div>
-                              <input
-                                type="text"
-                                placeholder="e.g. AXS listing 12:14"
-                                value={sourceNote}
+                              <select
+                                value={vendor}
                                 onChange={(evt) =>
-                                  setSourceNote(evt.target.value)
+                                  setVendor(
+                                    evt.target.value as SubmissionVendor,
+                                  )
                                 }
                                 style={{
-                                  width: '100%',
                                   height: 32,
-                                  padding: '0 10px',
+                                  padding: '0 8px',
                                   border: '1px solid var(--border-strong)',
                                   borderRadius: 6,
                                   background: 'var(--bg-elevated)',
@@ -522,9 +536,63 @@ export const PriceCoverageTable = ({
                                   fontSize: 13,
                                   fontFamily: "'Inter', sans-serif",
                                   outline: 'none',
-                                  boxSizing: 'border-box',
                                 }}
-                              />
+                              >
+                                <option value="Ticketmaster">
+                                  Ticketmaster
+                                </option>
+                                <option value="AXS">AXS</option>
+                                <option value="SeatGeek">SeatGeek</option>
+                                <option value="DICE">DICE</option>
+                                <option value="Eventbrite">Eventbrite</option>
+                                <option value="VenueBoxOffice">
+                                  Venue box office
+                                </option>
+                              </select>
+                            </div>
+
+                            {/* How found select */}
+                            <div>
+                              <div
+                                style={{
+                                  fontFamily: "'JetBrains Mono', monospace",
+                                  fontSize: 9,
+                                  fontWeight: 700,
+                                  letterSpacing: '0.1em',
+                                  textTransform: 'uppercase',
+                                  color: 'var(--fg-subtle)',
+                                  marginBottom: 4,
+                                }}
+                              >
+                                How found
+                              </div>
+                              <select
+                                value={howFound}
+                                onChange={(evt) =>
+                                  setHowFound(
+                                    evt.target.value as SubmissionHowFound,
+                                  )
+                                }
+                                style={{
+                                  height: 32,
+                                  padding: '0 8px',
+                                  border: '1px solid var(--border-strong)',
+                                  borderRadius: 6,
+                                  background: 'var(--bg-elevated)',
+                                  color: 'var(--fg)',
+                                  fontSize: 13,
+                                  fontFamily: "'Inter', sans-serif",
+                                  outline: 'none',
+                                }}
+                              >
+                                <option value="saw_listing">Saw listing</option>
+                                <option value="bought_myself">
+                                  Bought tickets
+                                </option>
+                                <option value="at_the_venue">
+                                  At the venue
+                                </option>
+                              </select>
                             </div>
 
                             {/* Actions */}

@@ -63,6 +63,8 @@ interface AdminReviewMobileProps {
     eventId: string,
     priceMin: string,
     priceMax: string | null,
+    vendor: string,
+    howFound: string,
   ) => Promise<void>
 }
 
@@ -253,16 +255,26 @@ function NeedsPriceRow({
   const [isAdding, setIsAdding] = useState(false)
   const [priceMin, setPriceMin] = useState('')
   const [priceMax, setPriceMax] = useState('')
+  const [vendor, setVendor] = useState('Ticketmaster')
+  const [howFound, setHowFound] = useState('saw_listing')
   const [isSaving, setIsSaving] = useState(false)
 
   const handleSave = async () => {
     if (!priceMin.trim() || !onAddPrice) return
     setIsSaving(true)
     try {
-      await onAddPrice(event.eventId, priceMin.trim(), priceMax.trim() || null)
+      await onAddPrice(
+        event.eventId,
+        priceMin.trim(),
+        priceMax.trim() || null,
+        vendor,
+        howFound,
+      )
       setIsAdding(false)
       setPriceMin('')
       setPriceMax('')
+      setVendor('Ticketmaster')
+      setHowFound('saw_listing')
     } finally {
       setIsSaving(false)
     }
@@ -369,6 +381,47 @@ function NeedsPriceRow({
               outline: 'none',
             }}
           />
+          <select
+            value={vendor}
+            onChange={(evt) => setVendor(evt.target.value)}
+            style={{
+              height: 30,
+              padding: '0 6px',
+              border: '1px solid var(--border-strong)',
+              borderRadius: 6,
+              background: 'var(--bg-elevated)',
+              color: 'var(--fg)',
+              fontSize: 12,
+              fontFamily: "'Inter', sans-serif",
+              outline: 'none',
+            }}
+          >
+            <option value="Ticketmaster">Ticketmaster</option>
+            <option value="AXS">AXS</option>
+            <option value="SeatGeek">SeatGeek</option>
+            <option value="DICE">DICE</option>
+            <option value="Eventbrite">Eventbrite</option>
+            <option value="VenueBoxOffice">Box office</option>
+          </select>
+          <select
+            value={howFound}
+            onChange={(evt) => setHowFound(evt.target.value)}
+            style={{
+              height: 30,
+              padding: '0 6px',
+              border: '1px solid var(--border-strong)',
+              borderRadius: 6,
+              background: 'var(--bg-elevated)',
+              color: 'var(--fg)',
+              fontSize: 12,
+              fontFamily: "'Inter', sans-serif",
+              outline: 'none',
+            }}
+          >
+            <option value="saw_listing">Saw listing</option>
+            <option value="bought_myself">Bought tickets</option>
+            <option value="at_the_venue">At the venue</option>
+          </select>
           <AdminButton
             variant="ghost"
             size="sm"

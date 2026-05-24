@@ -169,14 +169,23 @@ export const ReviewPageClient = ({
   )
 
   const addPrice = useCallback(
-    async (eventId: string, priceMin: string, priceMax: string | null) => {
+    async (
+      eventId: string,
+      priceMin: string,
+      priceMax: string | null,
+      vendor: string,
+      howFound: string,
+    ) => {
       setError(null)
       try {
         const token = await getToken()
         if (!token) return
-        await apiClient.patch(`/v1/admin/events/${eventId}`, token, {
-          ticketPriceMin: priceMin,
-          ticketPriceMax: priceMax,
+        await apiClient.post('/v1/admin/prices/submissions', token, {
+          eventId,
+          priceMin,
+          ...(priceMax !== null && { priceMax }),
+          vendor,
+          howFound,
         })
         router.refresh()
       } catch (err) {

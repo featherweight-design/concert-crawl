@@ -234,6 +234,73 @@ pricesAdminRouter.get('/activity', async (ctx) => {
   return ctx.json({ success: true, data: rows })
 })
 
+const postAdminSubmissionSchema = z.object({
+  eventId: z.string().uuid(),
+  priceMin: z.string(),
+  priceMax: z.string().optional(),
+  vendor: z.enum([
+    'AXS',
+    'Ticketmaster',
+    'SeatGeek',
+    'DICE',
+    'Eventbrite',
+    'VenueBoxOffice',
+  ]),
+  howFound: z.enum(['bought_myself', 'saw_listing', 'at_the_venue']),
+})
+
+// POST /v1/admin/prices/submissions — admin manually enters a price (corroborated, tier GA)
+pricesAdminRouter.post(
+  '/submissions',
+  zValidator('json', postAdminSubmissionSchema, (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid submission data' }, 422)
+    }
+  }),
+  async (ctx) => {
+    const { eventId, priceMin, priceMax, vendor, howFound } =
+      ctx.req.valid('json')
+    const adminUser = getAuthUser(ctx)
+
+    const [event] = await db
+      .select({ id: events.id })
+      .from(events)
+      .where(eq(events.id, eventId))
+      .limit(1)
+
+    if (!event)
+      return ctx.json({ success: false, error: 'Event not found' }, 404)
+
+    await db.transaction(async (tx) => {
+      await tx.insert(priceSubmissions).values({
+        eventId,
+        userId: adminUser.userId,
+        tier: 'GA',
+        vendor,
+        howFound,
+        priceMin,
+        priceMax: priceMax ?? null,
+        status: 'corroborated',
+      })
+
+      await tx
+        .update(events)
+        .set({
+          ticketPriceMin: priceMin,
+          ticketPriceMax: priceMax ?? null,
+          priceSource: 'community',
+        })
+        .where(eq(events.id, eventId))
+    })
+
+    ctx.set('auditActorId', adminUser.userId)
+    ctx.set('auditAction', 'price.submission.admin_add')
+    ctx.set('auditTargetId', eventId)
+
+    return ctx.json({ success: true }, 201)
+  },
+)
+
 // POST /v1/admin/prices/pipeline/:eventId — on-demand price pipeline run
 pricesAdminRouter.post('/pipeline/:eventId', async (ctx) => {
   const { eventId } = ctx.req.param()
