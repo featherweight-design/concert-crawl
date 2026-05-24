@@ -11,7 +11,7 @@ export interface ReleaseSpotlight {
   cta?: string
   ctaHref?: string
   steps: Array<{ caption: string }>
-  founderNote?: string
+  founderNote?: string | [string] | [string, string] | [string, string, string]
   founderEyebrow?: string
   founderSign?: string
 }
@@ -28,7 +28,7 @@ export const RELEASES: Release[] = [
   {
     version: 'v0.5.0-beta',
     date: 'May 8, 2026',
-    headline: 'Community pricing is here. Help each other know what to pay.',
+    headline: 'Community Pricing is here. Grass roots price transparency, baby.',
     spotlight: {
       title: 'Submit a price. Help the next fan.',
       tagline: 'Community-sourced ticket prices, right on the event page.',
@@ -38,18 +38,18 @@ export const RELEASES: Release[] = [
       steps: [
         {
           caption:
-            "Open any event. If we don't have a price yet, you can submit what you paid.",
+            "Open any event. If we don't have a price yet, you can visit the ticket link and submit what you saw/paid.",
         },
         {
           caption:
-            'Submitted prices get a trust mark — venue-official, resale, or community-verified.',
+            'We give each price a trust mark. This shows you if it’s from the box office, resale, or community-verified. For a community price to get the verified trust mark, two other fans need to confirm that it’s accurate.',
         },
         {
-          caption: 'Prices expire automatically. Fresh data only.',
+          caption: 'As much as we want to keep prices up to date, they do go stale with price fluctuations. We expire prices after a week, and we’ll show you when a price is old. You can submit a new price to keep things fresh.',
         },
       ],
       founderNote:
-        "I built this after paying $90 for a show I thought was $20. The venue site had no price listed. We're fixing that, one show at a time.",
+        `So, this feature came out partly of frustration and partly out of wanting to build a community. The big ticket vendors hide pricing and there’s almost no way for me to access it in a "good" way. But, even so, price transparency was something I really wanted for the app. Tons of websits will tell you who is coming and when, but you always have to dig into another website to see the price. With Community Pricing, we try to get around that by having users do a little bit of legwork. Hell, I even try to add some prices myself when I can. And, the big idea we have with Community Pricing is driving concert goers to the box office. Sure, you have to drive/walk to the venue, but you cut out the corporate middlemen, skip the fees, and maybe get to know the folks the work at the venue. Down with the fees, up with the vibes. Grass roots concert revolution, baby!`,
       founderSign: '— Hugh',
     },
     items: [

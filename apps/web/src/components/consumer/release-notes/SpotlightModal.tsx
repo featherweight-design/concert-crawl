@@ -419,17 +419,24 @@ export function SpotlightModal({
               >
                 {sp.founderEyebrow ?? COPY.modal.founderEyebrowFallback}
               </div>
-              <p
-                style={{
-                  fontSize: 14,
-                  lineHeight: 1.5,
-                  color: 'var(--fg)',
-                  letterSpacing: '-0.005em',
-                  margin: 0,
-                }}
-              >
-                {sp.founderNote}
-              </p>
+              {(Array.isArray(sp.founderNote)
+                ? sp.founderNote
+                : [sp.founderNote]
+              ).map((para, idx) => (
+                <p
+                  key={idx}
+                  style={{
+                    fontSize: 14,
+                    lineHeight: 1.5,
+                    color: 'var(--fg)',
+                    letterSpacing: '-0.005em',
+                    margin: 0,
+                    marginTop: idx > 0 ? 10 : 0,
+                  }}
+                >
+                  {para}
+                </p>
+              ))}
               <div
                 style={{
                   marginTop: 8,
