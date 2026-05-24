@@ -6,6 +6,7 @@ import { Panel, AdminButton, StatusBadge } from '@/components/admin/primitives'
 import { EventFlagRow } from './EventFlagRow'
 import { EventFlagInspector } from './EventFlagInspector'
 import { BulkActionDock } from './BulkActionDock'
+import { BulkApproveModal } from './BulkApproveModal'
 
 interface EventFlag {
   id: string
@@ -39,6 +40,7 @@ export const EventFlagsSection = ({
   const [activeId, setActiveId] = useState<string | null>(events[0]?.id ?? null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [hideNonConcert, setHideNonConcert] = useState(false)
+  const [showBulkModal, setShowBulkModal] = useState(false)
 
   const handleSelect = (id: string, checked: boolean) => {
     setSelectedIds((prev) => {
@@ -90,6 +92,7 @@ export const EventFlagsSection = ({
     await Promise.allSettled(Array.from(selectedIds).map((id) => onApprove(id)))
     setSelectedIds(new Set())
     setActiveId(null)
+    setShowBulkModal(false)
   }
 
   const handleBulkReject = async () => {
@@ -247,9 +250,17 @@ export const EventFlagsSection = ({
       {selectedIds.size > 0 && (
         <BulkActionDock
           count={selectedIds.size}
-          onApproveAll={() => void handleBulkApprove()}
+          onApproveAll={() => setShowBulkModal(true)}
           onRejectAll={() => void handleBulkReject()}
           onClear={() => setSelectedIds(new Set())}
+        />
+      )}
+
+      {showBulkModal && (
+        <BulkApproveModal
+          events={visibleEvents.filter((ev) => selectedIds.has(ev.id))}
+          onConfirm={() => void handleBulkApprove()}
+          onCancel={() => setShowBulkModal(false)}
         />
       )}
     </Panel>
