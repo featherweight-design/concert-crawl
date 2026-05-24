@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/theme'
 import { THEMES } from '@/theme/themes'
 import { cn } from '@/lib/utils'
 import { QueryProvider } from '@/components/QueryProvider'
+import { Toaster } from 'sonner'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -76,6 +77,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
           <QueryProvider>
             <ThemeProvider>{children}</ThemeProvider>
           </QueryProvider>
+          <Toaster position="bottom-center" richColors />
         </body>
       </html>
     </ClerkProvider>

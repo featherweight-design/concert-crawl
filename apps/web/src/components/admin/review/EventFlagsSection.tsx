@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { CheckCircle2, Filter } from 'lucide-react'
+import { toast } from 'sonner'
 import { Panel, AdminButton, StatusBadge } from '@/components/admin/primitives'
 import { EventFlagRow } from './EventFlagRow'
 import { EventFlagInspector } from './EventFlagInspector'
@@ -41,6 +42,10 @@ export const EventFlagsSection = ({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [hideNonConcert, setHideNonConcert] = useState(false)
   const [showBulkModal, setShowBulkModal] = useState(false)
+  const [pendingApprovalIds, setPendingApprovalIds] = useState<Set<string>>(
+    new Set(),
+  )
+  const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleSelect = (id: string, checked: boolean) => {
     setSelectedIds((prev) => {
@@ -88,11 +93,40 @@ export const EventFlagsSection = ({
     }
   }
 
-  const handleBulkApprove = async () => {
-    await Promise.allSettled(Array.from(selectedIds).map((id) => onApprove(id)))
-    setSelectedIds(new Set())
-    setActiveId(null)
+  const handleBulkApprove = () => {
+    const ids = Array.from(selectedIds)
+    const approving = new Set(ids)
+
     setShowBulkModal(false)
+    setSelectedIds(new Set())
+    setActiveId((prev) =>
+      prev && approving.has(prev)
+        ? (visibleEvents.find((ev) => !approving.has(ev.id))?.id ?? null)
+        : prev,
+    )
+    setPendingApprovalIds(approving)
+
+    if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current)
+
+    pendingTimerRef.current = setTimeout(() => {
+      void Promise.allSettled(ids.map((id) => onApprove(id)))
+      setPendingApprovalIds(new Set())
+      pendingTimerRef.current = null
+    }, 6000)
+
+    toast(`${ids.length} event${ids.length !== 1 ? 's' : ''} approved`, {
+      duration: 6000,
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          if (pendingTimerRef.current) {
+            clearTimeout(pendingTimerRef.current)
+            pendingTimerRef.current = null
+          }
+          setPendingApprovalIds(new Set())
+        },
+      },
+    })
   }
 
   const handleBulkReject = async () => {
@@ -145,12 +179,14 @@ export const EventFlagsSection = ({
     )
   }
 
-  const visibleEvents = hideNonConcert
-    ? events.filter(
-        (ev) =>
-          !ev.genre?.some((tag) => tag.toLowerCase().includes('non-concert')),
-      )
-    : events
+  const visibleEvents = (
+    hideNonConcert
+      ? events.filter(
+          (ev) =>
+            !ev.genre?.some((tag) => tag.toLowerCase().includes('non-concert')),
+        )
+      : events
+  ).filter((ev) => !pendingApprovalIds.has(ev.id))
 
   const allSelected =
     visibleEvents.length > 0 && selectedIds.size === visibleEvents.length
@@ -250,7 +286,9 @@ export const EventFlagsSection = ({
       {selectedIds.size > 0 && (
         <BulkActionDock
           count={selectedIds.size}
-          onApproveAll={() => setShowBulkModal(true)}
+          onApproveAll={() => {
+            setShowBulkModal(true)
+          }}
           onRejectAll={() => void handleBulkReject()}
           onClear={() => setSelectedIds(new Set())}
         />
