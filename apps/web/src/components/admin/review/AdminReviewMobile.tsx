@@ -494,9 +494,12 @@ export function AdminReviewMobile({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* Standalone segmented control tab switcher */}
+      {/* Standalone segmented control tab switcher — sticky so it stays visible while scrolling */}
       <div
         style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
           display: 'flex',
           padding: 4,
           background: 'var(--surface-1)',
@@ -564,28 +567,30 @@ export function AdminReviewMobile({
       {/* Event flags tab — separate card */}
       {activeTab === 'flags' && (
         <div style={cardStyle}>
-          {events.length === 0 ? (
-            <div
-              style={{
-                padding: 32,
-                textAlign: 'center',
-                fontFamily: "'Inter', sans-serif",
-                fontSize: 13,
-                color: 'var(--fg-subtle)',
-              }}
-            >
-              No events pending review
-            </div>
-          ) : (
-            events.map((ev) => (
-              <EventFlagCard
-                key={ev.id}
-                event={ev}
-                onApprove={onApprove}
-                onReject={onReject}
-              />
-            ))
-          )}
+          <div style={{ maxHeight: 480, overflowY: 'auto' }}>
+            {events.length === 0 ? (
+              <div
+                style={{
+                  padding: 32,
+                  textAlign: 'center',
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 13,
+                  color: 'var(--fg-subtle)',
+                }}
+              >
+                No events pending review
+              </div>
+            ) : (
+              events.map((ev) => (
+                <EventFlagCard
+                  key={ev.id}
+                  event={ev}
+                  onApprove={onApprove}
+                  onReject={onReject}
+                />
+              ))
+            )}
+          </div>
         </div>
       )}
 
@@ -618,159 +623,165 @@ export function AdminReviewMobile({
               </StatusBadge>
             </div>
 
-            {submissions.length === 0 ? (
-              <div
-                style={{
-                  padding: '12px 16px',
-                  fontFamily: "'Inter', sans-serif",
-                  fontSize: 13,
-                  color: 'var(--fg-subtle)',
-                  borderBottom: '1px solid var(--border)',
-                }}
-              >
-                No pending submissions
-              </div>
-            ) : (
-              submissions.map((sub) => {
-                const formatPrice = (val: string) =>
-                  `$${Math.round(parseFloat(val))}`
-                const priceDisplay = sub.priceMin
-                  ? `${formatPrice(sub.priceMin)}${sub.priceMax ? `–${formatPrice(sub.priceMax)}` : ''}`
-                  : '—'
-                const linkedEvent = priceEvents.find(
-                  (ev) => ev.eventId === sub.eventId,
-                )
-                const eventTitle =
-                  linkedEvent?.eventTitle ?? sub.eventId.slice(0, 8) + '…'
-                const venueLine = linkedEvent
-                  ? [
-                      linkedEvent.venueName,
-                      new Date(
-                        linkedEvent.date + 'T12:00:00',
-                      ).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                      }),
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')
-                  : null
-                const handle = `@${sub.userId.slice(0, 10)}`
-                return (
-                  <div
-                    key={sub.id}
-                    style={{
-                      padding: '12px 16px',
-                      borderBottom: '1px solid var(--border)',
-                    }}
-                  >
+            <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+              {submissions.length === 0 ? (
+                <div
+                  style={{
+                    padding: '12px 16px',
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: 13,
+                    color: 'var(--fg-subtle)',
+                    borderBottom: '1px solid var(--border)',
+                  }}
+                >
+                  No pending submissions
+                </div>
+              ) : (
+                submissions.map((sub) => {
+                  const formatPrice = (val: string) =>
+                    `$${Math.round(parseFloat(val))}`
+                  const priceDisplay = sub.priceMin
+                    ? `${formatPrice(sub.priceMin)}${sub.priceMax ? `–${formatPrice(sub.priceMax)}` : ''}`
+                    : '—'
+                  const linkedEvent = priceEvents.find(
+                    (ev) => ev.eventId === sub.eventId,
+                  )
+                  const eventTitle =
+                    linkedEvent?.eventTitle ?? sub.eventId.slice(0, 8) + '…'
+                  const venueLine = linkedEvent
+                    ? [
+                        linkedEvent.venueName,
+                        new Date(
+                          linkedEvent.date + 'T12:00:00',
+                        ).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        }),
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')
+                    : null
+                  const handle = `@${sub.userId.slice(0, 10)}`
+                  return (
                     <div
+                      key={sub.id}
                       style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        justifyContent: 'space-between',
-                        gap: 12,
-                        marginBottom: 4,
+                        padding: '12px 16px',
+                        borderBottom: '1px solid var(--border)',
                       }}
                     >
-                      <div style={{ minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontFamily: "'Inter', sans-serif",
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: 'var(--fg)',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {eventTitle}
-                        </div>
-                        {venueLine && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          justifyContent: 'space-between',
+                          gap: 12,
+                          marginBottom: 4,
+                        }}
+                      >
+                        <div style={{ minWidth: 0 }}>
                           <div
                             style={{
                               fontFamily: "'Inter', sans-serif",
-                              fontSize: 12,
-                              color: 'var(--fg-muted)',
-                              marginTop: 1,
+                              fontSize: 13,
+                              fontWeight: 700,
+                              color: 'var(--fg)',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
                             }}
                           >
-                            {venueLine}
+                            {eventTitle}
                           </div>
-                        )}
-                      </div>
-                      <span
-                        style={{
-                          fontFamily: "'JetBrains Mono', monospace",
-                          fontSize: 13,
-                          fontWeight: 700,
-                          color: 'var(--fg)',
-                          whiteSpace: 'nowrap',
-                          flexShrink: 0,
-                        }}
-                      >
-                        {priceDisplay}
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        gap: 6,
-                        marginBottom: 8,
-                        fontSize: 12,
-                        overflow: 'hidden',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontFamily: "'JetBrains Mono', monospace",
-                          fontWeight: 700,
-                          color: 'var(--accent)',
-                          flexShrink: 0,
-                        }}
-                      >
-                        {handle}
-                      </span>
-                      {sub.note && (
+                          {venueLine && (
+                            <div
+                              style={{
+                                fontFamily: "'Inter', sans-serif",
+                                fontSize: 12,
+                                color: 'var(--fg-muted)',
+                                marginTop: 1,
+                              }}
+                            >
+                              {venueLine}
+                            </div>
+                          )}
+                        </div>
                         <span
                           style={{
-                            fontFamily: "'Inter', sans-serif",
-                            color: 'var(--fg-muted)',
-                            fontStyle: 'italic',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
+                            fontFamily: "'JetBrains Mono', monospace",
+                            fontSize: 13,
+                            fontWeight: 700,
+                            color: 'var(--fg)',
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0,
                           }}
                         >
-                          &ldquo;{sub.note}&rdquo;
+                          {priceDisplay}
                         </span>
-                      )}
-                    </div>
-                    <div
-                      style={{ display: 'flex', alignItems: 'center', gap: 8 }}
-                    >
-                      <AdminButton
-                        variant="ghost"
-                        size="sm"
-                        fullWidth
-                        onClick={() => onDenySubmission(sub.id)}
+                      </div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: 6,
+                          marginBottom: 8,
+                          fontSize: 12,
+                          overflow: 'hidden',
+                          whiteSpace: 'nowrap',
+                        }}
                       >
-                        × Deny
-                      </AdminButton>
-                      <AdminButton
-                        variant="success"
-                        size="sm"
-                        fullWidth
-                        onClick={() => onApproveSubmission(sub.id)}
+                        <span
+                          style={{
+                            fontFamily: "'JetBrains Mono', monospace",
+                            fontWeight: 700,
+                            color: 'var(--accent)',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {handle}
+                        </span>
+                        {sub.note && (
+                          <span
+                            style={{
+                              fontFamily: "'Inter', sans-serif",
+                              color: 'var(--fg-muted)',
+                              fontStyle: 'italic',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            &ldquo;{sub.note}&rdquo;
+                          </span>
+                        )}
+                      </div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                        }}
                       >
-                        ✓ Approve · cred
-                      </AdminButton>
+                        <AdminButton
+                          variant="ghost"
+                          size="sm"
+                          fullWidth
+                          onClick={() => onDenySubmission(sub.id)}
+                        >
+                          × Deny
+                        </AdminButton>
+                        <AdminButton
+                          variant="success"
+                          size="sm"
+                          fullWidth
+                          onClick={() => onApproveSubmission(sub.id)}
+                        >
+                          ✓ Approve · cred
+                        </AdminButton>
+                      </div>
                     </div>
-                  </div>
-                )
-              })
-            )}
+                  )
+                })
+              )}
+            </div>
           </div>
 
           {/* Needs price — separate card */}
@@ -802,13 +813,15 @@ export function AdminReviewMobile({
               </StatusBadge>
             </div>
 
-            {missingPriceEvents.map((ev) => (
-              <NeedsPriceRow
-                key={ev.eventId}
-                event={ev}
-                onAddPrice={onAddPrice}
-              />
-            ))}
+            <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+              {missingPriceEvents.map((ev) => (
+                <NeedsPriceRow
+                  key={ev.eventId}
+                  event={ev}
+                  onAddPrice={onAddPrice}
+                />
+              ))}
+            </div>
           </div>
         </div>
       )}
