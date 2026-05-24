@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { Release } from '@/lib/definitions/releases'
 import { SpotlightHero } from './SpotlightHero'
 
@@ -8,17 +8,18 @@ interface SpotlightModalProps {
   release: Release
   onClose: () => void
   onCTA?: () => void
-  variant?: 'desktop' | 'mobile'
 }
 
 export function SpotlightModal({
   release,
   onClose,
   onCTA,
-  variant = 'desktop',
 }: SpotlightModalProps) {
   const sp = release.spotlight
   const [step, setStep] = useState(0)
+  const heroRef = useRef<HTMLDivElement>(null)
+  const [heroScale, setHeroScale] = useState(1)
+  const [containerWidth, setContainerWidth] = useState(580)
 
   useEffect(() => {
     function handleKeyDown(ev: KeyboardEvent) {
@@ -28,9 +29,22 @@ export function SpotlightModal({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [onClose])
 
+  useEffect(() => {
+    const el = heroRef.current
+    if (!el) return
+    const ro = new ResizeObserver(([entry]) => {
+      if (!entry) return
+      const width = entry.contentRect.width
+      setContainerWidth(width)
+      setHeroScale(Math.min(1, width / 580))
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   if (!sp) return null
 
-  const isMobile = variant === 'mobile'
+  const isMobile = containerWidth < 580
   const totalSteps = sp.steps.length
 
   return (
@@ -69,6 +83,7 @@ export function SpotlightModal({
       >
         {/* hero — 580×300 Showtime stage per SHOWTIME_HANDOFF.md §2 */}
         <div
+          ref={heroRef}
           style={{
             position: 'relative',
             height: 300,
@@ -76,26 +91,22 @@ export function SpotlightModal({
             flexShrink: 0,
           }}
         >
-          {/* Scale wrapper for viewports narrower than 580px */}
-          {isMobile ? (
-            <div style={{ width: '100%', height: 300, overflow: 'hidden', position: 'relative' }}>
-              <div
-                style={{
-                  width: 580,
-                  height: 300,
-                  transform: `scale(${typeof window !== 'undefined' ? Math.min(1, window.innerWidth / 580) : 1})`,
-                  transformOrigin: 'top left',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                }}
-              >
-                <SpotlightHero hero={sp.hero} />
-              </div>
+          {/* Scale wrapper: always present; scale=1 when container ≥ 580px */}
+          <div style={{ width: '100%', height: 300, overflow: 'hidden', position: 'relative' }}>
+            <div
+              style={{
+                width: 580,
+                height: 300,
+                transform: `scale(${heroScale})`,
+                transformOrigin: 'top left',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+              }}
+            >
+              <SpotlightHero hero={sp.hero} />
             </div>
-          ) : (
-            <SpotlightHero hero={sp.hero} />
-          )}
+          </div>
 
           <button
             type="button"

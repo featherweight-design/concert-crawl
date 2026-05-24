@@ -52,7 +52,7 @@ export function SpotlightHero({ hero = 'price', compact = false }: SpotlightHero
     return <CompactCmp />
   }
 
-  const FullCmp = FULL_HEROES[hero]
+  const FullCmp = FULL_HEROES[hero] ?? FULL_HEROES['price']
   if (!FullCmp) return null
   return <FullCmp />
 }

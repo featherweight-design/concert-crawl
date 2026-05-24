@@ -7,6 +7,7 @@ import {
   ShowtimeSparkles,
   StubGlyph,
   ShowtimeStub,
+  useShowtimeKeyframes,
 } from './showtime-base'
 
 // ── Shared compact stage ─────────────────────────────────────────────────────
@@ -29,6 +30,7 @@ export function CompactStage({
   eyebrowHue = '#7AE6FF',
   founderGlow,
 }: CompactStageProps): React.ReactElement {
+  useShowtimeKeyframes()
   return (
     <div
       style={{
