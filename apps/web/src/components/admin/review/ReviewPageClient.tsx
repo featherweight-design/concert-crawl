@@ -314,19 +314,35 @@ export const ReviewPageClient = ({
     )
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {mobileSectionHead}
-        {errorBanner}
-        <AdminReviewMobile
-          events={events}
-          submissions={submissions}
-          priceEvents={priceEvents}
-          onApprove={approveEvent}
-          onReject={rejectEvent}
-          onApproveSubmission={approveSubmission}
-          onDenySubmission={denySubmission}
-          onAddPrice={addPrice}
-        />
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          gap: 16,
+        }}
+      >
+        <div style={{ flexShrink: 0 }}>{mobileSectionHead}</div>
+        {errorBanner && <div style={{ flexShrink: 0 }}>{errorBanner}</div>}
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <AdminReviewMobile
+            events={events}
+            submissions={submissions}
+            priceEvents={priceEvents}
+            onApprove={approveEvent}
+            onReject={rejectEvent}
+            onApproveSubmission={approveSubmission}
+            onDenySubmission={denySubmission}
+            onAddPrice={addPrice}
+          />
+        </div>
       </div>
     )
   }

@@ -493,18 +493,21 @@ export function AdminReviewMobile({
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* Standalone segmented control tab switcher — sticky so it stays visible while scrolling */}
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        gap: 16,
+      }}
+    >
+      {/* Tab switcher — not sticky; the component fills available height so the main scroll container never scrolls */}
       <div
         style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 10,
+          flexShrink: 0,
           display: 'flex',
           padding: 4,
-          background: 'color-mix(in oklab, var(--surface-1) 85%, transparent)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
+          background: 'var(--surface-1)',
           borderRadius: 10,
           border: '1px solid var(--border)',
           gap: 6,
@@ -566,10 +569,18 @@ export function AdminReviewMobile({
         })}
       </div>
 
-      {/* Event flags tab — separate card */}
+      {/* Event flags tab — fills remaining height, scrolls internally */}
       {activeTab === 'flags' && (
-        <div style={cardStyle}>
-          <div style={{ maxHeight: 480, overflowY: 'auto' }}>
+        <div
+          style={{
+            ...cardStyle,
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
             {events.length === 0 ? (
               <div
                 style={{
@@ -596,13 +607,30 @@ export function AdminReviewMobile({
         </div>
       )}
 
-      {/* Prices tab — community submissions card */}
+      {/* Prices tab — community submissions + needs price, each fills half the available height */}
       {activeTab === 'prices' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={cardStyle}>
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 16,
+          }}
+        >
+          <div
+            style={{
+              ...cardStyle,
+              flex: 1,
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
             {/* Community submissions header */}
             <div
               style={{
+                flexShrink: 0,
                 padding: '12px 16px 10px',
                 borderBottom: '1px solid var(--border)',
                 display: 'flex',
@@ -625,7 +653,7 @@ export function AdminReviewMobile({
               </StatusBadge>
             </div>
 
-            <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
               {submissions.length === 0 ? (
                 <div
                   style={{
@@ -786,10 +814,19 @@ export function AdminReviewMobile({
             </div>
           </div>
 
-          {/* Needs price — separate card */}
-          <div style={cardStyle}>
+          {/* Needs price — fills other half */}
+          <div
+            style={{
+              ...cardStyle,
+              flex: 1,
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
             <div
               style={{
+                flexShrink: 0,
                 padding: '12px 16px 10px',
                 borderBottom:
                   missingPriceEvents.length > 0
@@ -815,7 +852,7 @@ export function AdminReviewMobile({
               </StatusBadge>
             </div>
 
-            <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
               {missingPriceEvents.map((ev) => (
                 <NeedsPriceRow
                   key={ev.eventId}
