@@ -2,6 +2,11 @@
    Scoped to [data-admin-theme] on the layout root div.
    Never import this file outside the admin route group. */
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 @keyframes admin-skeleton-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.45; }
