@@ -1,12 +1,6 @@
-import Link from 'next/link'
-import { Filter } from 'lucide-react'
 import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
-import {
-  StatCard,
-  SectionHead,
-  AdminButton,
-} from '@/components/admin/primitives'
+import { StatCard, SectionHead } from '@/components/admin/primitives'
 import {
   CrawlSplitView,
   CrawlRunAllButton,
@@ -137,10 +131,22 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
   const eventsHint = eventsHintParts.join(' · ') || 'today'
 
   const mostRecentRun = runs[0]
-  const lastSweepValue = mostRecentRun?.createdAt
-    ? `${String(Math.round((Date.now() - new Date(mostRecentRun.createdAt).getTime()) / 60000))}m`
-    : '—'
-  const lastSweepUnit = mostRecentRun?.createdAt ? 'ago' : undefined
+  const lastSweepMinutes = mostRecentRun?.createdAt
+    ? Math.round(
+        (Date.now() - new Date(mostRecentRun.createdAt).getTime()) / 60000,
+      )
+    : null
+  let lastSweepValue = '—'
+  if (lastSweepMinutes !== null) {
+    if (lastSweepMinutes >= 60) {
+      const hours = Math.floor(lastSweepMinutes / 60)
+      const mins = lastSweepMinutes % 60
+      lastSweepValue = mins > 0 ? `${hours}h ${mins}m` : `${hours}h`
+    } else {
+      lastSweepValue = `${lastSweepMinutes}m`
+    }
+  }
+  const lastSweepUnit = lastSweepMinutes !== null ? 'ago' : undefined
 
   return (
     <div
@@ -154,16 +160,7 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
         eyebrow="automation"
         title="Crawl status"
         subtitle="Every venue crawl, run by run. Click a failed row for diagnostics + staged remediation."
-        actions={
-          <>
-            <Link href="/admin/crawl" style={{ textDecoration: 'none' }}>
-              <AdminButton variant="outline" size="sm" icon={Filter}>
-                All venues
-              </AdminButton>
-            </Link>
-            <CrawlRunAllButton />
-          </>
-        }
+        actions={<CrawlRunAllButton />}
       />
 
       <IssuesBanner

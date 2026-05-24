@@ -572,6 +572,18 @@ export const CrawlSplitView = ({
               )}
             </div>
           </div>
+          {filteredStatus.length === 0 && (
+            <div
+              style={{
+                padding: '40px 20px',
+                textAlign: 'center',
+                color: 'var(--fg-subtle)',
+                fontSize: 13,
+              }}
+            >
+              No venues match the current filter.
+            </div>
+          )}
           {filteredStatus.map((row) => (
             <button
               key={row.venueId}
@@ -1283,7 +1295,14 @@ export const CrawlRunHistoryTable = ({
           No runs yet — trigger a crawl to see history here
         </div>
       ) : (
-        <div style={{ minHeight: 200, maxHeight: 400, overflowY: 'auto' }}>
+        <div
+          style={{
+            minHeight: 200,
+            maxHeight: 400,
+            overflowY: 'auto',
+            overflowX: 'auto',
+          }}
+        >
           <AdminTable>
             <THead sticky>
               <tr>
@@ -1295,7 +1314,7 @@ export const CrawlRunHistoryTable = ({
                 <TH>Strategy</TH>
                 <TH align="right">Events</TH>
                 <TH align="right">LLM cost</TH>
-                <TH>Error</TH>
+                <TH width={240}>Error</TH>
               </tr>
             </THead>
             <tbody>
