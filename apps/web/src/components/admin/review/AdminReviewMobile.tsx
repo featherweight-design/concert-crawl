@@ -486,25 +486,17 @@ export function AdminReviewMobile({
           display: 'flex',
           padding: 4,
           background: 'var(--surface-1)',
-          gap: 2,
+          borderRadius: 10,
+          border: '1px solid var(--border)',
+          gap: 6,
         }}
       >
         {(
           [
-            {
-              key: 'flags',
-              label: 'Event flags',
-              count: events.length,
-              badgeKind: 'neutral',
-            },
-            {
-              key: 'prices',
-              label: 'Prices',
-              count: priceCount,
-              badgeKind: 'signal',
-            },
+            { key: 'flags', label: 'Event flags', count: events.length },
+            { key: 'prices', label: 'Prices', count: priceCount },
           ] as const
-        ).map(({ key, label, count, badgeKind }) => {
+        ).map(({ key, label, count }) => {
           const isActive = activeTab === key
           return (
             <button
@@ -513,25 +505,43 @@ export function AdminReviewMobile({
               onClick={() => setActiveTab(key)}
               style={{
                 flex: 1,
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: 8,
-                padding: '8px 12px',
+                gap: 6,
+                padding: '8px 0',
                 border: 'none',
-                borderRadius: 8,
+                borderRadius: 7,
                 background: isActive ? 'var(--bg-elevated)' : 'transparent',
-                boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.2)' : 'none',
+                boxShadow: isActive ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
                 fontFamily: "'Inter', sans-serif",
-                fontSize: 13,
-                fontWeight: isActive ? 700 : 500,
+                fontSize: 12,
+                fontWeight: 700,
                 color: isActive ? 'var(--fg)' : 'var(--fg-muted)',
                 cursor: 'pointer',
-                transition: 'all 0.15s ease',
               }}
             >
               {label}
-              {count > 0 && <StatusBadge kind={badgeKind}>{count}</StatusBadge>}
+              {count > 0 && (
+                <span
+                  style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    minWidth: 16,
+                    height: 16,
+                    padding: '0 4px',
+                    borderRadius: 8,
+                    background: isActive ? 'var(--signal)' : 'var(--surface-2)',
+                    color: isActive ? 'var(--fg-on-accent)' : 'var(--fg-muted)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {count}
+                </span>
+              )}
             </button>
           )
         })}
