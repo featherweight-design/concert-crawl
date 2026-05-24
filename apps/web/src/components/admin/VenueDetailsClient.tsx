@@ -1545,47 +1545,6 @@ export function VenueDetailsClient({ venue }: Props) {
               label="Capacity"
               htmlFor="edit-venue-capacity"
               description="Used in the venue facts strip. Be specific (seated / standing / mixed)."
-              labelRight={
-                <button
-                  type="button"
-                  disabled={isDisabled || generateState === 'loading'}
-                  onClick={() => void handleGenerateAbout()}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    padding: '4px 10px',
-                    borderRadius: 6,
-                    border:
-                      '1px solid color-mix(in oklab, var(--accent) 34%, transparent)',
-                    background:
-                      'color-mix(in oklab, var(--accent) 8%, var(--bg-elevated))',
-                    cursor:
-                      isDisabled || generateState === 'loading'
-                        ? 'not-allowed'
-                        : 'pointer',
-                    fontFamily: "'Inter', sans-serif",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: 'var(--accent)',
-                    opacity:
-                      isDisabled || generateState === 'loading' ? 0.66 : 1,
-                  }}
-                >
-                  <Sparkles size={11} />
-                  Generate
-                  <span
-                    style={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: 10,
-                      opacity: 0.75,
-                      fontWeight: 600,
-                    }}
-                  >
-                    ~$0.0008
-                  </span>
-                </button>
-              }
             >
               <VDInput
                 id="edit-venue-capacity"
@@ -1600,87 +1559,36 @@ export function VenueDetailsClient({ venue }: Props) {
                 }}
               />
               {capacityGenerated && (
-                <div
+                <span
                   style={{
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginTop: 2,
+                    gap: 5,
+                    marginTop: 4,
+                    padding: '3px 8px',
+                    borderRadius: 20,
+                    border:
+                      '1px solid color-mix(in oklab, var(--success) 38%, transparent)',
+                    background:
+                      'color-mix(in oklab, var(--success) 5%, var(--bg-elevated))',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: 'var(--success)',
+                    letterSpacing: '0.02em',
                   }}
                 >
-                  <div
+                  <span
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      flexWrap: 'wrap',
+                      width: 5,
+                      height: 5,
+                      borderRadius: '50%',
+                      background: 'var(--success)',
+                      flexShrink: 0,
                     }}
-                  >
-                    <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 5,
-                        padding: '3px 8px',
-                        borderRadius: 20,
-                        border:
-                          '1px solid color-mix(in oklab, var(--success) 38%, transparent)',
-                        background:
-                          'color-mix(in oklab, var(--success) 5%, var(--bg-elevated))',
-                        fontFamily: "'JetBrains Mono', monospace",
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: 'var(--success)',
-                        letterSpacing: '0.02em',
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: 5,
-                          height: 5,
-                          borderRadius: '50%',
-                          background: 'var(--success)',
-                          flexShrink: 0,
-                        }}
-                      />
-                      generated · accepted
-                    </span>
-                    <span
-                      style={{
-                        fontFamily: "'Inter', sans-serif",
-                        fontSize: 11,
-                        color: 'var(--fg-subtle)',
-                      }}
-                    >
-                      You can edit freely; the pill clears on save.
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={isDisabled || generateState === 'loading'}
-                    onClick={() => void handleGenerateAbout()}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      background: 'none',
-                      border: 'none',
-                      padding: 0,
-                      cursor:
-                        isDisabled || generateState === 'loading'
-                          ? 'not-allowed'
-                          : 'pointer',
-                      fontFamily: "'Inter', sans-serif",
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: 'var(--fg-muted)',
-                      opacity:
-                        isDisabled || generateState === 'loading' ? 0.5 : 1,
-                    }}
-                  >
-                    Regenerate
-                  </button>
-                </div>
+                  />
+                  generated · accepted
+                </span>
               )}
             </VDField>
 
@@ -1689,47 +1597,6 @@ export function VenueDetailsClient({ venue }: Props) {
               label="Neighborhood"
               htmlFor="edit-venue-neighborhood"
               description="Single line — where it sits in the city. Helps fans gauge travel time."
-              labelRight={
-                <button
-                  type="button"
-                  disabled={isDisabled || generateState === 'loading'}
-                  onClick={() => void handleGenerateAbout()}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    padding: '4px 10px',
-                    borderRadius: 6,
-                    border:
-                      '1px solid color-mix(in oklab, var(--accent) 34%, transparent)',
-                    background:
-                      'color-mix(in oklab, var(--accent) 8%, var(--bg-elevated))',
-                    cursor:
-                      isDisabled || generateState === 'loading'
-                        ? 'not-allowed'
-                        : 'pointer',
-                    fontFamily: "'Inter', sans-serif",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: 'var(--accent)',
-                    opacity:
-                      isDisabled || generateState === 'loading' ? 0.66 : 1,
-                  }}
-                >
-                  <Sparkles size={11} />
-                  Generate
-                  <span
-                    style={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: 10,
-                      opacity: 0.75,
-                      fontWeight: 600,
-                    }}
-                  >
-                    ~$0.0012
-                  </span>
-                </button>
-              }
             >
               <VDInput
                 id="edit-venue-neighborhood"
@@ -1742,87 +1609,36 @@ export function VenueDetailsClient({ venue }: Props) {
                 }}
               />
               {neighborhoodGenerated && (
-                <div
+                <span
                   style={{
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginTop: 2,
+                    gap: 5,
+                    marginTop: 4,
+                    padding: '3px 8px',
+                    borderRadius: 20,
+                    border:
+                      '1px solid color-mix(in oklab, var(--success) 38%, transparent)',
+                    background:
+                      'color-mix(in oklab, var(--success) 5%, var(--bg-elevated))',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: 'var(--success)',
+                    letterSpacing: '0.02em',
                   }}
                 >
-                  <div
+                  <span
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      flexWrap: 'wrap',
+                      width: 5,
+                      height: 5,
+                      borderRadius: '50%',
+                      background: 'var(--success)',
+                      flexShrink: 0,
                     }}
-                  >
-                    <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 5,
-                        padding: '3px 8px',
-                        borderRadius: 20,
-                        border:
-                          '1px solid color-mix(in oklab, var(--success) 38%, transparent)',
-                        background:
-                          'color-mix(in oklab, var(--success) 5%, var(--bg-elevated))',
-                        fontFamily: "'JetBrains Mono', monospace",
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: 'var(--success)',
-                        letterSpacing: '0.02em',
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: 5,
-                          height: 5,
-                          borderRadius: '50%',
-                          background: 'var(--success)',
-                          flexShrink: 0,
-                        }}
-                      />
-                      generated · accepted
-                    </span>
-                    <span
-                      style={{
-                        fontFamily: "'Inter', sans-serif",
-                        fontSize: 11,
-                        color: 'var(--fg-subtle)',
-                      }}
-                    >
-                      You can edit freely; the pill clears on save.
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={isDisabled || generateState === 'loading'}
-                    onClick={() => void handleGenerateAbout()}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      background: 'none',
-                      border: 'none',
-                      padding: 0,
-                      cursor:
-                        isDisabled || generateState === 'loading'
-                          ? 'not-allowed'
-                          : 'pointer',
-                      fontFamily: "'Inter', sans-serif",
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: 'var(--fg-muted)',
-                      opacity:
-                        isDisabled || generateState === 'loading' ? 0.5 : 1,
-                    }}
-                  >
-                    Regenerate
-                  </button>
-                </div>
+                  />
+                  generated · accepted
+                </span>
               )}
             </VDField>
           </div>
