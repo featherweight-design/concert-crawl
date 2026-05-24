@@ -576,7 +576,7 @@ function actionButtonStyle(
   return { ...base, color: 'var(--fg-muted)', border: '1px solid transparent' }
 }
 
-function actionLinkStyle(variant: 'ghost'): React.CSSProperties {
+function actionLinkStyle(_variant: 'ghost'): React.CSSProperties {
   return {
     display: 'inline-flex',
     alignItems: 'center',

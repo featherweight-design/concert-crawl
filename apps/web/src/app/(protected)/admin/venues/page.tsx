@@ -73,7 +73,7 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
               href="/admin/venues/robots-audit"
               style={{ textDecoration: 'none' }}
             >
-              <AdminButton variant="ghost" size="sm" iconRight={ExternalLink}>
+              <AdminButton variant="outline" size="sm" icon={ExternalLink}>
                 robots.txt audit
               </AdminButton>
             </Link>
@@ -84,13 +84,7 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
 
       <MobileAddVenueButton />
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 16,
-        }}
-      >
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
           label="Total venues"
           value={String(venues.length)}

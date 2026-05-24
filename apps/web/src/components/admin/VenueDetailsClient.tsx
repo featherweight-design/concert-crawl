@@ -3,7 +3,7 @@
 import { useState, useRef, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import type { VenueWithCrawlHealth, CrawlRun } from '@concert-crawl/types'
+import type { VenueWithCrawlHealth } from '@concert-crawl/types'
 import {
   updateVenue,
   pauseVenue,
@@ -17,7 +17,6 @@ import {
   StatusBadge,
   RelTime,
   SectionHead,
-  MetaCard,
 } from '@/components/admin/primitives'
 import { deriveVenueStatus } from '@/lib/admin/venue-status'
 import {
@@ -46,7 +45,6 @@ import {
   ChevronRight,
   Sparkles,
 } from 'lucide-react'
-import { formatDurationMs } from '@/lib/time'
 
 function slugify(name: string): string {
   return name
@@ -442,10 +440,9 @@ function RobotsHint({ allowed }: { allowed: boolean | null }) {
 
 interface Props {
   venue: VenueWithCrawlHealth
-  recentRuns: CrawlRun[]
 }
 
-export function VenueDetailsClient({ venue, recentRuns }: Props) {
+export function VenueDetailsClient({ venue }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const { setPageTitle } = usePageTitle()
@@ -709,7 +706,7 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
         flexDirection: 'column',
         gap: 18,
         maxWidth: 1080,
-        paddingBottom: 80,
+        paddingBottom: 32,
         position: 'relative',
       }}
     >
@@ -893,465 +890,442 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
         </div>
       )}
 
-      {/* 2-column layout */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1fr) 360px',
-          gap: 20,
-          alignItems: 'start',
-        }}
-      >
-        {/* Left: VDSection cards */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* 01 · identity */}
-          <VDSection eyebrow="01 · identity" title="Name + slug + source">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {/* Venue name + Slug side by side */}
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-                  gap: 12,
-                }}
-              >
-                <VDField label="Venue name" htmlFor="edit-venue-name">
-                  <VDInput
-                    id="edit-venue-name"
-                    inputRef={nameRef}
-                    defaultValue={venue.name}
-                    disabled={isDisabled}
-                    onChange={(evt) => {
-                      const val = evt.target.value
-                      setNameVal(val)
-                      if (!slugManual && slugRef.current) {
-                        const generated = slugify(val)
-                        slugRef.current.value = generated
-                        setSlugVal(generated)
-                      }
-                    }}
-                  />
-                </VDField>
-
-                <VDField
-                  label="Slug"
-                  htmlFor="edit-venue-slug"
-                  {...(fieldErrors.slug ? { error: fieldErrors.slug } : {})}
-                  labelRight={
-                    <span
-                      style={{
-                        fontFamily: "'JetBrains Mono', monospace",
-                        fontSize: 10,
-                        fontWeight: 700,
-                        letterSpacing: '0.06em',
-                        textTransform: 'uppercase',
-                        color: 'var(--fg-subtle)',
-                      }}
-                    >
-                      Auto-generated
-                    </span>
-                  }
-                >
-                  <div
-                    onFocus={() => setSlugFocused(true)}
-                    onBlur={() => setSlugFocused(false)}
-                    style={{
-                      display: 'flex',
-                      height: 36,
-                      borderRadius: 8,
-                      border: `1px solid ${fieldErrors.slug ? 'var(--danger)' : slugFocused ? 'var(--signal)' : 'var(--border-strong)'}`,
-                      background: 'var(--bg-elevated)',
-                      overflow: 'hidden',
-                      boxShadow: slugFocused
-                        ? fieldErrors.slug
-                          ? '0 0 0 3px color-mix(in oklab, var(--danger) 18%, transparent)'
-                          : '0 0 0 3px color-mix(in oklab, var(--signal) 22%, transparent)'
-                        : 'none',
-                      transition: 'border-color .12s, box-shadow .12s',
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '0 10px',
-                        background: 'var(--surface-1)',
-                        borderRight: '1px solid var(--border)',
-                        fontFamily: "'JetBrains Mono', monospace",
-                        fontSize: 12,
-                        color: 'var(--fg-subtle)',
-                        whiteSpace: 'nowrap',
-                        flexShrink: 0,
-                      }}
-                    >
-                      /v/
-                    </div>
-                    <input
-                      ref={slugRef}
-                      id="edit-venue-slug"
-                      type="text"
-                      defaultValue={venue.slug}
-                      disabled={isDisabled}
-                      onChange={(evt) => {
-                        setSlugVal(evt.target.value)
-                        setSlugManual(true)
-                        setFieldErrors((prev) => ({ ...prev, slug: undefined }))
-                      }}
-                      style={{
-                        all: 'unset',
-                        flex: 1,
-                        minWidth: 0,
-                        padding: '0 10px',
-                        fontFamily: "'JetBrains Mono', monospace",
-                        fontSize: 13,
-                        fontWeight: 500,
-                        color: 'var(--fg)',
-                        cursor: isDisabled ? 'not-allowed' : 'text',
-                        opacity: isDisabled ? 0.66 : 1,
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (nameRef.current && slugRef.current) {
-                          const generated = slugify(nameRef.current.value)
-                          slugRef.current.value = generated
-                          setSlugVal(generated)
-                          setSlugManual(false)
-                          setFieldErrors((prev) => ({
-                            ...prev,
-                            slug: undefined,
-                          }))
-                        }
-                      }}
-                      disabled={isDisabled}
-                      title="Regenerate slug from name"
-                      style={{
-                        flexShrink: 0,
-                        width: 36,
-                        border: 'none',
-                        borderLeft: '1px solid var(--border)',
-                        background: 'var(--surface-1)',
-                        color: 'var(--fg-muted)',
-                        cursor: isDisabled ? 'not-allowed' : 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <RefreshCw size={13} />
-                    </button>
-                  </div>
-                </VDField>
-              </div>
-
-              {/* Source URL */}
-              <VDField
-                label="Source URL"
-                htmlFor="edit-venue-url"
-                labelRight={<RobotsHint allowed={venue.robotsTxtAllowed} />}
-                hint="The events page we crawl on the configured schedule."
-              >
-                <VDInput
-                  id="edit-venue-url"
-                  type="url"
-                  inputRef={websiteUrlRef}
-                  defaultValue={venue.websiteUrl}
-                  disabled={isDisabled}
-                  onChange={(evt) => setUrlVal(evt.target.value)}
-                  style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                />
-              </VDField>
-
-              {/* City + Status row */}
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-                  gap: 12,
-                }}
-              >
-                <VDField label="City" htmlFor="edit-venue-city">
-                  <VDInput
-                    id="edit-venue-city"
-                    inputRef={cityRef}
-                    defaultValue={venue.city}
-                    disabled={isDisabled}
-                    onChange={(evt) => setCityVal(evt.target.value)}
-                  />
-                </VDField>
-                <VDField label="Status" htmlFor="venue-status-toggle">
-                  {(() => {
-                    const currentStatus = deriveVenueStatus(venue)
-                    const statuses = [
-                      {
-                        value: 'active' as const,
-                        label: 'Active',
-                        dot: 'var(--success)',
-                      },
-                      {
-                        value: 'paused' as const,
-                        label: 'Paused',
-                        dot: 'var(--warning)',
-                      },
-                      {
-                        value: 'blocked' as const,
-                        label: 'Blocked',
-                        dot: 'var(--danger)',
-                      },
-                    ]
-                    return (
-                      <div
-                        id="venue-status-toggle"
-                        role="group"
-                        aria-label="Venue status"
-                        style={{
-                          display: 'inline-flex',
-                          padding: 2,
-                          borderRadius: 8,
-                          background: 'var(--surface-1)',
-                          border: '1px solid var(--border)',
-                        }}
-                      >
-                        {statuses.map(({ value, label, dot }) => {
-                          const isActive = currentStatus === value
-                          const isBlocked = value === 'blocked'
-                          return (
-                            <button
-                              key={value}
-                              type="button"
-                              disabled={isPending || isBlocked}
-                              onClick={() =>
-                                !isBlocked && handleStatusChange(value)
-                              }
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 5,
-                                padding: '6px 12px',
-                                borderRadius: 6,
-                                border: 'none',
-                                background: isActive
-                                  ? value === 'blocked'
-                                    ? 'var(--signal)'
-                                    : value === 'active'
-                                      ? 'color-mix(in oklab, var(--success) 18%, var(--surface-1))'
-                                      : 'color-mix(in oklab, var(--warning) 18%, var(--surface-1))'
-                                  : 'transparent',
-                                color: isActive
-                                  ? 'var(--fg)'
-                                  : 'var(--fg-muted)',
-                                fontFamily: "'Inter', sans-serif",
-                                fontSize: 12,
-                                fontWeight: 700,
-                                cursor:
-                                  isPending || isBlocked
-                                    ? 'not-allowed'
-                                    : 'pointer',
-                                transition: 'background .12s, color .12s',
-                                opacity: isBlocked && !isActive ? 0.4 : 1,
-                              }}
-                            >
-                              <span
-                                style={{
-                                  width: 6,
-                                  height: 6,
-                                  borderRadius: '50%',
-                                  background: isActive
-                                    ? dot
-                                    : 'var(--fg-muted)',
-                                  flexShrink: 0,
-                                }}
-                              />
-                              {label}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    )
-                  })()}
-                </VDField>
-              </div>
-            </div>
-          </VDSection>
-
-          {/* 02 · ticketing */}
-          <VDSection eyebrow="02 · ticketing" title="Where fans buy">
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: isMobile ? '1fr' : '1fr 2fr',
-                gap: 12,
-                alignItems: 'start',
-              }}
-            >
-              <VDField
-                label="Primary vendor"
-                htmlFor="edit-venue-ticket-vendor"
-              >
-                <VDSelect
-                  id="edit-venue-ticket-vendor"
-                  value={ticketVendorVal ?? ''}
-                  disabled={isDisabled}
-                  onChange={(evt) =>
-                    setTicketVendorVal(evt.target.value || null)
-                  }
-                >
-                  <option value="">— Unknown —</option>
-                  <option value="axs">AXS</option>
-                  <option value="ticketmaster">Ticketmaster</option>
-                  <option value="seatgeek">SeatGeek</option>
-                  <option value="dice">DICE</option>
-                  <option value="eventbrite">Eventbrite</option>
-                  <option value="venue_box_office">Venue Box Office</option>
-                  <option value="unknown">Unknown</option>
-                </VDSelect>
-              </VDField>
-              <VDField
-                label="Ticket URL"
-                htmlFor="edit-venue-price-url"
-                hint="Default destination for the 'Buy tickets' button when an event has no per-show URL."
-              >
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <VDInput
-                    id="edit-venue-price-url"
-                    type="url"
-                    defaultValue={venue.priceUrl ?? ''}
-                    disabled={isDisabled}
-                    placeholder="https://..."
-                    onChange={(evt) => setPriceUrlVal(evt.target.value)}
-                    style={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      flex: 1,
-                    }}
-                  />
-                  {priceUrlVal && (
-                    <a
-                      href={priceUrlVal}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        color: 'var(--fg-muted)',
-                        flexShrink: 0,
-                      }}
-                      title="Open ticket URL"
-                    >
-                      <ExternalLink size={14} />
-                    </a>
-                  )}
-                </div>
-              </VDField>
-            </div>
-          </VDSection>
-
-          {/* 03 · crawl config */}
-          <VDSection
-            eyebrow="03 · crawl config"
-            title="How the scraper hits this venue"
-          >
+      {/* Main content */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* 01 · identity */}
+        <VDSection eyebrow="01 · identity" title="Name + slug + source">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* Venue name + Slug side by side */}
             <div
               style={{
                 display: 'grid',
                 gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-                gap: 16,
-                alignItems: 'start',
+                gap: 12,
               }}
             >
-              {/* Left column */}
-              <div
-                style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
-              >
-                {/* Extraction strategy */}
-                <VDField
-                  label="Extraction strategy"
-                  htmlFor="edit-venue-extraction-strategy"
-                >
-                  <VDSelect
-                    id="edit-venue-extraction-strategy"
-                    value={extractionStrategyVal ?? ''}
-                    disabled={isDisabled}
-                    onChange={(evt) =>
-                      setExtractionStrategyVal(
-                        (evt.target.value || null) as
-                          | 'structured_data'
-                          | 'llm'
-                          | 'manual'
-                          | null,
-                      )
+              <VDField label="Venue name" htmlFor="edit-venue-name">
+                <VDInput
+                  id="edit-venue-name"
+                  inputRef={nameRef}
+                  defaultValue={venue.name}
+                  disabled={isDisabled}
+                  onChange={(evt) => {
+                    const val = evt.target.value
+                    setNameVal(val)
+                    if (!slugManual && slugRef.current) {
+                      const generated = slugify(val)
+                      slugRef.current.value = generated
+                      setSlugVal(generated)
                     }
-                  >
-                    <option value="">— Auto —</option>
-                    <option value="structured_data">
-                      structured — schema.org/Event
-                    </option>
-                    <option value="llm">LLM — Claude Haiku extraction</option>
-                    <option value="manual">manual — admin entry only</option>
-                  </VDSelect>
-                </VDField>
+                  }}
+                />
+              </VDField>
 
-                {/* Request delay */}
-                <VDField
-                  label="Request delay"
-                  htmlFor="edit-venue-crawl-delay"
-                  hint="Milliseconds between requests inside one sweep. Tune up if you hit rate limits."
+              <VDField
+                label="Slug"
+                htmlFor="edit-venue-slug"
+                {...(fieldErrors.slug ? { error: fieldErrors.slug } : {})}
+                labelRight={
+                  <span
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                      color: 'var(--fg-subtle)',
+                    }}
+                  >
+                    Auto-generated
+                  </span>
+                }
+              >
+                <div
+                  onFocus={() => setSlugFocused(true)}
+                  onBlur={() => setSlugFocused(false)}
+                  style={{
+                    display: 'flex',
+                    height: 36,
+                    borderRadius: 8,
+                    border: `1px solid ${fieldErrors.slug ? 'var(--danger)' : slugFocused ? 'var(--signal)' : 'var(--border-strong)'}`,
+                    background: 'var(--bg-elevated)',
+                    overflow: 'hidden',
+                    boxShadow: slugFocused
+                      ? fieldErrors.slug
+                        ? '0 0 0 3px color-mix(in oklab, var(--danger) 18%, transparent)'
+                        : '0 0 0 3px color-mix(in oklab, var(--signal) 22%, transparent)'
+                      : 'none',
+                    transition: 'border-color .12s, box-shadow .12s',
+                  }}
                 >
                   <div
-                    style={{ display: 'flex', gap: 0, alignItems: 'stretch' }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '0 10px',
+                      background: 'var(--surface-1)',
+                      borderRight: '1px solid var(--border)',
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 12,
+                      color: 'var(--fg-subtle)',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                    }}
                   >
-                    <VDInput
-                      id="edit-venue-crawl-delay"
-                      type="number"
-                      inputRef={crawlDelayRef}
-                      defaultValue={venue.crawlDelayMs}
-                      disabled={isDisabled}
-                      min={1000}
-                      max={30000}
-                      step={500}
-                      onChange={(evt) => {
-                        const parsed = Number(evt.target.value)
-                        setCrawlDelayVal(
-                          Number.isFinite(parsed) && Number.isInteger(parsed)
-                            ? parsed
-                            : NaN,
-                        )
-                      }}
-                      style={{
-                        borderTopRightRadius: 0,
-                        borderBottomRightRadius: 0,
-                        borderRight: 'none',
-                      }}
-                    />
+                    /v/
+                  </div>
+                  <input
+                    ref={slugRef}
+                    id="edit-venue-slug"
+                    type="text"
+                    defaultValue={venue.slug}
+                    disabled={isDisabled}
+                    onChange={(evt) => {
+                      setSlugVal(evt.target.value)
+                      setSlugManual(true)
+                      setFieldErrors((prev) => ({ ...prev, slug: undefined }))
+                    }}
+                    style={{
+                      all: 'unset',
+                      flex: 1,
+                      minWidth: 0,
+                      padding: '0 10px',
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 13,
+                      fontWeight: 500,
+                      color: 'var(--fg)',
+                      cursor: isDisabled ? 'not-allowed' : 'text',
+                      opacity: isDisabled ? 0.66 : 1,
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (nameRef.current && slugRef.current) {
+                        const generated = slugify(nameRef.current.value)
+                        slugRef.current.value = generated
+                        setSlugVal(generated)
+                        setSlugManual(false)
+                        setFieldErrors((prev) => ({
+                          ...prev,
+                          slug: undefined,
+                        }))
+                      }
+                    }}
+                    disabled={isDisabled}
+                    title="Regenerate slug from name"
+                    style={{
+                      flexShrink: 0,
+                      width: 36,
+                      border: 'none',
+                      borderLeft: '1px solid var(--border)',
+                      background: 'var(--surface-1)',
+                      color: 'var(--fg-muted)',
+                      cursor: isDisabled ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <RefreshCw size={13} />
+                  </button>
+                </div>
+              </VDField>
+            </div>
+
+            {/* Source URL */}
+            <VDField
+              label="Source URL"
+              htmlFor="edit-venue-url"
+              labelRight={<RobotsHint allowed={venue.robotsTxtAllowed} />}
+              hint="The events page we crawl on the configured schedule."
+            >
+              <VDInput
+                id="edit-venue-url"
+                type="url"
+                inputRef={websiteUrlRef}
+                defaultValue={venue.websiteUrl}
+                disabled={isDisabled}
+                onChange={(evt) => setUrlVal(evt.target.value)}
+                style={{ fontFamily: "'JetBrains Mono', monospace" }}
+              />
+            </VDField>
+
+            {/* City + Status row */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                gap: 12,
+              }}
+            >
+              <VDField label="City" htmlFor="edit-venue-city">
+                <VDInput
+                  id="edit-venue-city"
+                  inputRef={cityRef}
+                  defaultValue={venue.city}
+                  disabled={isDisabled}
+                  onChange={(evt) => setCityVal(evt.target.value)}
+                />
+              </VDField>
+              <VDField label="Status" htmlFor="venue-status-toggle">
+                {(() => {
+                  const currentStatus = deriveVenueStatus(venue)
+                  const statuses = [
+                    {
+                      value: 'active' as const,
+                      label: 'Active',
+                      dot: 'var(--success)',
+                    },
+                    {
+                      value: 'paused' as const,
+                      label: 'Paused',
+                      dot: 'var(--warning)',
+                    },
+                    {
+                      value: 'blocked' as const,
+                      label: 'Blocked',
+                      dot: 'var(--danger)',
+                    },
+                  ]
+                  return (
                     <div
+                      id="venue-status-toggle"
+                      role="group"
+                      aria-label="Venue status"
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '0 10px',
+                        display: 'inline-flex',
+                        padding: 2,
+                        borderRadius: 8,
                         background: 'var(--surface-1)',
-                        border: '1px solid var(--border-strong)',
-                        borderTopRightRadius: 8,
-                        borderBottomRightRadius: 8,
-                        fontFamily: "'JetBrains Mono', monospace",
-                        fontSize: 11,
-                        fontWeight: 600,
-                        color: 'var(--fg-subtle)',
-                        letterSpacing: '0.04em',
-                        flexShrink: 0,
+                        border: '1px solid var(--border)',
                       }}
                     >
-                      ms
+                      {statuses.map(({ value, label, dot }) => {
+                        const isActive = currentStatus === value
+                        const isBlocked = value === 'blocked'
+                        return (
+                          <button
+                            key={value}
+                            type="button"
+                            disabled={isPending || isBlocked}
+                            onClick={() =>
+                              !isBlocked && handleStatusChange(value)
+                            }
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 5,
+                              padding: '6px 12px',
+                              borderRadius: 6,
+                              border: 'none',
+                              background: isActive
+                                ? value === 'blocked'
+                                  ? 'color-mix(in oklab, var(--danger) 14%, var(--surface-1))'
+                                  : value === 'active'
+                                    ? 'color-mix(in oklab, var(--success) 18%, var(--surface-1))'
+                                    : 'color-mix(in oklab, var(--warning) 18%, var(--surface-1))'
+                                : 'transparent',
+                              color: isActive ? 'var(--fg)' : 'var(--fg-muted)',
+                              fontFamily: "'Inter', sans-serif",
+                              fontSize: 12,
+                              fontWeight: 700,
+                              cursor:
+                                isPending || isBlocked
+                                  ? 'not-allowed'
+                                  : 'pointer',
+                              transition: 'background .12s, color .12s',
+                              opacity: isBlocked && !isActive ? 0.4 : 1,
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: 6,
+                                height: 6,
+                                borderRadius: '50%',
+                                background: isActive ? dot : 'var(--fg-muted)',
+                                flexShrink: 0,
+                              }}
+                            />
+                            {label}
+                          </button>
+                        )
+                      })}
                     </div>
-                  </div>
-                </VDField>
-              </div>
+                  )
+                })()}
+              </VDField>
+            </div>
+          </div>
+        </VDSection>
 
-              {/* Right column */}
-              <div
-                style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+        {/* 02 · ticketing */}
+        <VDSection eyebrow="02 · ticketing" title="Where fans buy">
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: isMobile ? '1fr' : '1fr 2fr',
+              gap: 12,
+              alignItems: 'start',
+            }}
+          >
+            <VDField label="Primary vendor" htmlFor="edit-venue-ticket-vendor">
+              <VDSelect
+                id="edit-venue-ticket-vendor"
+                value={ticketVendorVal ?? ''}
+                disabled={isDisabled}
+                onChange={(evt) => setTicketVendorVal(evt.target.value || null)}
               >
-                {/* Fetch mode */}
-                <VDField label="Fetch mode" htmlFor="edit-venue-crawl-mode">
+                <option value="">— Unknown —</option>
+                <option value="axs">AXS</option>
+                <option value="ticketmaster">Ticketmaster</option>
+                <option value="seatgeek">SeatGeek</option>
+                <option value="dice">DICE</option>
+                <option value="eventbrite">Eventbrite</option>
+                <option value="venue_box_office">Venue Box Office</option>
+                <option value="unknown">Unknown</option>
+              </VDSelect>
+            </VDField>
+            <VDField
+              label="Ticket URL"
+              htmlFor="edit-venue-price-url"
+              hint="Default destination for the 'Buy tickets' button when an event has no per-show URL."
+            >
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <VDInput
+                  id="edit-venue-price-url"
+                  type="url"
+                  defaultValue={venue.priceUrl ?? ''}
+                  disabled={isDisabled}
+                  placeholder="https://..."
+                  onChange={(evt) => setPriceUrlVal(evt.target.value)}
+                  style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    flex: 1,
+                  }}
+                />
+                {priceUrlVal && (
+                  <a
+                    href={priceUrlVal}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      color: 'var(--fg-muted)',
+                      flexShrink: 0,
+                    }}
+                    title="Open ticket URL"
+                  >
+                    <ExternalLink size={14} />
+                  </a>
+                )}
+              </div>
+            </VDField>
+          </div>
+        </VDSection>
+
+        {/* 03 · crawl config */}
+        <VDSection
+          eyebrow="03 · crawl config"
+          title="How the scraper hits this venue"
+        >
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+              gap: 16,
+              alignItems: 'start',
+            }}
+          >
+            {/* Left column */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Extraction strategy */}
+              <VDField
+                label="Extraction strategy"
+                htmlFor="edit-venue-extraction-strategy"
+              >
+                <VDSelect
+                  id="edit-venue-extraction-strategy"
+                  value={extractionStrategyVal ?? ''}
+                  disabled={isDisabled}
+                  onChange={(evt) =>
+                    setExtractionStrategyVal(
+                      (evt.target.value || null) as
+                        | 'structured_data'
+                        | 'llm'
+                        | 'manual'
+                        | null,
+                    )
+                  }
+                >
+                  <option value="">— Auto —</option>
+                  <option value="structured_data">
+                    structured — schema.org/Event
+                  </option>
+                  <option value="llm">LLM — Claude Haiku extraction</option>
+                  <option value="manual">manual — admin entry only</option>
+                </VDSelect>
+              </VDField>
+
+              {/* Request delay */}
+              <VDField
+                label="Request delay"
+                htmlFor="edit-venue-crawl-delay"
+                hint="Milliseconds between requests inside one sweep. Tune up if you hit rate limits."
+              >
+                <div style={{ display: 'flex', gap: 0, alignItems: 'stretch' }}>
+                  <VDInput
+                    id="edit-venue-crawl-delay"
+                    type="number"
+                    inputRef={crawlDelayRef}
+                    defaultValue={venue.crawlDelayMs}
+                    disabled={isDisabled}
+                    min={1000}
+                    max={30000}
+                    step={500}
+                    onChange={(evt) => {
+                      const parsed = Number(evt.target.value)
+                      setCrawlDelayVal(
+                        Number.isFinite(parsed) && Number.isInteger(parsed)
+                          ? parsed
+                          : NaN,
+                      )
+                    }}
+                    style={{
+                      borderTopRightRadius: 0,
+                      borderBottomRightRadius: 0,
+                      borderRight: 'none',
+                    }}
+                  />
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '0 10px',
+                      background: 'var(--surface-1)',
+                      border: '1px solid var(--border-strong)',
+                      borderTopRightRadius: 8,
+                      borderBottomRightRadius: 8,
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: 'var(--fg-subtle)',
+                      letterSpacing: '0.04em',
+                      flexShrink: 0,
+                    }}
+                  >
+                    ms
+                  </div>
+                </div>
+              </VDField>
+            </div>
+
+            {/* Right column */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Fetch mode */}
+              <VDField label="Fetch mode" htmlFor="edit-venue-crawl-mode">
+                <div style={{ alignSelf: 'flex-start' }}>
                   <VDSegToggle
                     options={[
                       { value: 'auto', label: 'Auto-detect' },
@@ -1366,597 +1340,589 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                     }
                     disabled={isDisabled}
                   />
-                  <div
-                    style={{
-                      fontFamily: "'Inter', sans-serif",
-                      fontSize: 11,
-                      color: 'var(--fg-muted)',
-                      lineHeight: 1.5,
-                      marginTop: 4,
-                    }}
-                  >
-                    {crawlModeVal === null && (
-                      <>
-                        <strong style={{ color: 'var(--fg)' }}>
-                          Auto-detect
-                        </strong>{' '}
-                        — tries plain HTTP first; falls back to browser if
-                        needed.
-                      </>
-                    )}
-                    {crawlModeVal === 'http' && (
-                      <>
-                        <strong style={{ color: 'var(--fg)' }}>
-                          HTTP only
-                        </strong>{' '}
-                        — plain request. Fails if events need JavaScript.
-                      </>
-                    )}
-                    {crawlModeVal === 'browser' && (
-                      <>
-                        <strong style={{ color: 'var(--fg)' }}>
-                          Browser only
-                        </strong>{' '}
-                        — always uses Playwright. Required for JS-rendered
-                        pages.
-                      </>
-                    )}
-                  </div>
-                </VDField>
-
-                {/* Schedule — static (per-venue config tracked in #530) */}
-                <VDField
-                  label="Schedule (cron)"
-                  htmlFor="edit-venue-schedule"
-                  labelRight={
-                    <span
-                      style={{
-                        fontFamily: "'JetBrains Mono', monospace",
-                        fontSize: 10,
-                        fontWeight: 700,
-                        letterSpacing: '0.06em',
-                        textTransform: 'uppercase',
-                        color: 'var(--fg-subtle)',
-                      }}
-                    >
-                      Daily · 3 AM MT
-                    </span>
-                  }
-                >
-                  <VDInput
-                    id="edit-venue-schedule"
-                    value="0 3 * * *"
-                    disabled
-                    style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                  />
-                </VDField>
-
-                {/* Wait selector */}
-                <VDField
-                  label="Wait selector"
-                  htmlFor="edit-venue-wait-for-selector"
-                  labelRight={
-                    <span
-                      style={{
-                        fontFamily: "'JetBrains Mono', monospace",
-                        fontSize: 10,
-                        fontWeight: 700,
-                        letterSpacing: '0.06em',
-                        textTransform: 'uppercase',
-                        color: 'var(--fg-subtle)',
-                      }}
-                    >
-                      Optional
-                    </span>
-                  }
-                  hint="If set, Playwright waits for this selector before parsing."
-                >
-                  <VDInput
-                    id="edit-venue-wait-for-selector"
-                    value={waitForSelectorVal}
-                    placeholder="e.g. .event-card, [data-event]"
-                    disabled={isDisabled}
-                    onChange={(evt) => setWaitForSelectorVal(evt.target.value)}
-                    style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                  />
-                </VDField>
-              </div>
-            </div>
-          </VDSection>
-
-          {/* 04 · editorial */}
-          <VDSection
-            eyebrow="04 · editorial"
-            title="About · capacity · neighborhood"
-            subtitle={
-              <>
-                These fields render on the venue&apos;s public page.{' '}
-                <strong style={{ color: 'var(--accent)', fontWeight: 700 }}>
-                  LLM-assisted
-                </strong>{' '}
-                — every generation needs your sign-off before it saves.
-              </>
-            }
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-              {/* About */}
-              <VDField
-                label="About"
-                htmlFor="edit-venue-about"
-                description="One short paragraph shown on the venue page (under the hero). Plain prose, no markdown."
-                labelRight={
-                  generateState === 'idle' || generateState === 'accepted' ? (
-                    <button
-                      type="button"
-                      disabled={isDisabled}
-                      onClick={() => void handleGenerateAbout()}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 5,
-                        padding: '4px 10px',
-                        borderRadius: 6,
-                        border:
-                          '1px solid color-mix(in oklab, var(--accent) 34%, transparent)',
-                        background:
-                          'color-mix(in oklab, var(--accent) 8%, var(--bg-elevated))',
-                        cursor: isDisabled ? 'not-allowed' : 'pointer',
-                        fontFamily: "'Inter', sans-serif",
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: 'var(--accent)',
-                        opacity: isDisabled ? 0.66 : 1,
-                      }}
-                    >
-                      <Sparkles size={11} />
-                      Generate
-                      <span
-                        style={{
-                          fontFamily: "'JetBrains Mono', monospace",
-                          fontSize: 10,
-                          opacity: 0.75,
-                          fontWeight: 600,
-                        }}
-                      >
-                        ~$0.0042
-                      </span>
-                    </button>
-                  ) : null
-                }
-              >
+                </div>
                 <div
-                  style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+                  style={{
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: 11,
+                    color: 'var(--fg-muted)',
+                    lineHeight: 1.5,
+                    marginTop: 4,
+                  }}
                 >
-                  <textarea
-                    id="edit-venue-about"
-                    value={aboutVal}
-                    placeholder="A short description of the venue's character and history."
-                    disabled={
-                      isDisabled ||
-                      generateState === 'loading' ||
-                      generateState === 'review'
-                    }
-                    rows={5}
-                    onChange={(evt) => setAboutVal(evt.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      border: '1px solid var(--border-strong)',
-                      background: 'var(--bg-elevated)',
-                      color: 'var(--fg)',
-                      fontSize: 13,
-                      fontFamily: "'Inter', sans-serif",
-                      outline: 'none',
-                      boxSizing: 'border-box' as const,
-                      resize: 'vertical' as const,
-                      lineHeight: 1.5,
-                      opacity: isDisabled ? 0.66 : 1,
-                      cursor: isDisabled ? 'not-allowed' : 'text',
-                      transition: 'border-color .12s',
-                    }}
-                  />
-                  {generateState !== 'idle' && (
-                    <GenerateField
-                      state={generateState}
-                      {...(generateResult ? { result: generateResult } : {})}
-                      {...(generateError
-                        ? { errorMessage: generateError }
-                        : {})}
-                      onGenerate={() => void handleGenerateAbout()}
-                      onRegenerate={() => void handleGenerateAbout()}
-                      onCancel={handleGenerateDiscard}
-                      onAccept={handleGenerateAccept}
-                      onDiscard={handleGenerateDiscard}
-                    />
+                  {crawlModeVal === null && (
+                    <>
+                      <strong style={{ color: 'var(--fg)' }}>
+                        Auto-detect
+                      </strong>{' '}
+                      — tries plain HTTP first; falls back to browser if needed.
+                    </>
+                  )}
+                  {crawlModeVal === 'http' && (
+                    <>
+                      <strong style={{ color: 'var(--fg)' }}>HTTP only</strong>{' '}
+                      — plain request. Fails if events need JavaScript.
+                    </>
+                  )}
+                  {crawlModeVal === 'browser' && (
+                    <>
+                      <strong style={{ color: 'var(--fg)' }}>
+                        Browser only
+                      </strong>{' '}
+                      — always uses Playwright. Required for JS-rendered pages.
+                    </>
                   )}
                 </div>
               </VDField>
 
-              {/* Capacity */}
+              {/* Schedule — static (per-venue config tracked in #530) */}
               <VDField
-                label="Capacity"
-                htmlFor="edit-venue-capacity"
-                description="Used in the venue facts strip. Be specific (seated / standing / mixed)."
+                label="Schedule (cron)"
+                htmlFor="edit-venue-schedule"
                 labelRight={
-                  <button
-                    type="button"
-                    disabled={isDisabled || generateState === 'loading'}
-                    onClick={() => void handleGenerateAbout()}
+                  <span
                     style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 5,
-                      padding: '4px 10px',
-                      borderRadius: 6,
-                      border:
-                        '1px solid color-mix(in oklab, var(--accent) 34%, transparent)',
-                      background:
-                        'color-mix(in oklab, var(--accent) 8%, var(--bg-elevated))',
-                      cursor:
-                        isDisabled || generateState === 'loading'
-                          ? 'not-allowed'
-                          : 'pointer',
-                      fontFamily: "'Inter', sans-serif",
-                      fontSize: 12,
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 10,
                       fontWeight: 700,
-                      color: 'var(--accent)',
-                      opacity:
-                        isDisabled || generateState === 'loading' ? 0.66 : 1,
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                      color: 'var(--fg-subtle)',
                     }}
                   >
-                    <Sparkles size={11} />
-                    Generate
-                    <span
-                      style={{
-                        fontFamily: "'JetBrains Mono', monospace",
-                        fontSize: 10,
-                        opacity: 0.75,
-                        fontWeight: 600,
-                      }}
-                    >
-                      ~$0.0008
-                    </span>
-                  </button>
+                    Daily · 3 AM MT
+                  </span>
                 }
               >
                 <VDInput
-                  id="edit-venue-capacity"
-                  type="number"
-                  value={capacityVal}
-                  placeholder="e.g. 1600"
-                  disabled={isDisabled}
-                  min={1}
-                  onChange={(evt) => {
-                    setCapacityVal(evt.target.value)
-                    setCapacityGenerated(false)
-                  }}
+                  id="edit-venue-schedule"
+                  value="0 3 * * *"
+                  disabled
+                  style={{ fontFamily: "'JetBrains Mono', monospace" }}
                 />
-                {capacityGenerated && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      marginTop: 2,
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        flexWrap: 'wrap',
-                      }}
-                    >
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 5,
-                          padding: '3px 8px',
-                          borderRadius: 20,
-                          border:
-                            '1px solid color-mix(in oklab, var(--success) 38%, transparent)',
-                          background:
-                            'color-mix(in oklab, var(--success) 5%, var(--bg-elevated))',
-                          fontFamily: "'JetBrains Mono', monospace",
-                          fontSize: 10,
-                          fontWeight: 700,
-                          color: 'var(--success)',
-                          letterSpacing: '0.02em',
-                        }}
-                      >
-                        <span
-                          style={{
-                            width: 5,
-                            height: 5,
-                            borderRadius: '50%',
-                            background: 'var(--success)',
-                            flexShrink: 0,
-                          }}
-                        />
-                        generated · accepted
-                      </span>
-                      <span
-                        style={{
-                          fontFamily: "'Inter', sans-serif",
-                          fontSize: 11,
-                          color: 'var(--fg-subtle)',
-                        }}
-                      >
-                        You can edit freely; the pill clears on save.
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={isDisabled || generateState === 'loading'}
-                      onClick={() => void handleGenerateAbout()}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 4,
-                        background: 'none',
-                        border: 'none',
-                        padding: 0,
-                        cursor:
-                          isDisabled || generateState === 'loading'
-                            ? 'not-allowed'
-                            : 'pointer',
-                        fontFamily: "'Inter', sans-serif",
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: 'var(--fg-muted)',
-                        opacity:
-                          isDisabled || generateState === 'loading' ? 0.5 : 1,
-                      }}
-                    >
-                      Regenerate
-                    </button>
-                  </div>
-                )}
               </VDField>
 
-              {/* Neighborhood */}
+              {/* Wait selector */}
               <VDField
-                label="Neighborhood"
-                htmlFor="edit-venue-neighborhood"
-                description="Single line — where it sits in the city. Helps fans gauge travel time."
+                label="Wait selector"
+                htmlFor="edit-venue-wait-for-selector"
                 labelRight={
-                  <button
-                    type="button"
-                    disabled={isDisabled || generateState === 'loading'}
-                    onClick={() => void handleGenerateAbout()}
+                  <span
                     style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 5,
-                      padding: '4px 10px',
-                      borderRadius: 6,
-                      border:
-                        '1px solid color-mix(in oklab, var(--accent) 34%, transparent)',
-                      background:
-                        'color-mix(in oklab, var(--accent) 8%, var(--bg-elevated))',
-                      cursor:
-                        isDisabled || generateState === 'loading'
-                          ? 'not-allowed'
-                          : 'pointer',
-                      fontFamily: "'Inter', sans-serif",
-                      fontSize: 12,
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 10,
                       fontWeight: 700,
-                      color: 'var(--accent)',
-                      opacity:
-                        isDisabled || generateState === 'loading' ? 0.66 : 1,
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                      color: 'var(--fg-subtle)',
                     }}
                   >
-                    <Sparkles size={11} />
-                    Generate
-                    <span
-                      style={{
-                        fontFamily: "'JetBrains Mono', monospace",
-                        fontSize: 10,
-                        opacity: 0.75,
-                        fontWeight: 600,
-                      }}
-                    >
-                      ~$0.0012
-                    </span>
-                  </button>
+                    Optional
+                  </span>
                 }
+                hint="If set, Playwright waits for this selector before parsing."
               >
                 <VDInput
-                  id="edit-venue-neighborhood"
-                  value={neighborhoodVal}
-                  placeholder="e.g. Capitol Hill, RiNo, LoDo"
+                  id="edit-venue-wait-for-selector"
+                  value={waitForSelectorVal}
+                  placeholder="e.g. .event-card, [data-event]"
                   disabled={isDisabled}
-                  onChange={(evt) => {
-                    setNeighborhoodVal(evt.target.value)
-                    setNeighborhoodGenerated(false)
-                  }}
+                  onChange={(evt) => setWaitForSelectorVal(evt.target.value)}
+                  style={{ fontFamily: "'JetBrains Mono', monospace" }}
                 />
-                {neighborhoodGenerated && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      marginTop: 2,
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        flexWrap: 'wrap',
-                      }}
-                    >
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 5,
-                          padding: '3px 8px',
-                          borderRadius: 20,
-                          border:
-                            '1px solid color-mix(in oklab, var(--success) 38%, transparent)',
-                          background:
-                            'color-mix(in oklab, var(--success) 5%, var(--bg-elevated))',
-                          fontFamily: "'JetBrains Mono', monospace",
-                          fontSize: 10,
-                          fontWeight: 700,
-                          color: 'var(--success)',
-                          letterSpacing: '0.02em',
-                        }}
-                      >
-                        <span
-                          style={{
-                            width: 5,
-                            height: 5,
-                            borderRadius: '50%',
-                            background: 'var(--success)',
-                            flexShrink: 0,
-                          }}
-                        />
-                        generated · accepted
-                      </span>
-                      <span
-                        style={{
-                          fontFamily: "'Inter', sans-serif",
-                          fontSize: 11,
-                          color: 'var(--fg-subtle)',
-                        }}
-                      >
-                        You can edit freely; the pill clears on save.
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={isDisabled || generateState === 'loading'}
-                      onClick={() => void handleGenerateAbout()}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 4,
-                        background: 'none',
-                        border: 'none',
-                        padding: 0,
-                        cursor:
-                          isDisabled || generateState === 'loading'
-                            ? 'not-allowed'
-                            : 'pointer',
-                        fontFamily: "'Inter', sans-serif",
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: 'var(--fg-muted)',
-                        opacity:
-                          isDisabled || generateState === 'loading' ? 0.5 : 1,
-                      }}
-                    >
-                      Regenerate
-                    </button>
-                  </div>
-                )}
               </VDField>
             </div>
-          </VDSection>
+          </div>
+        </VDSection>
 
-          {/* 05 · identity art */}
-          <VDSection
-            eyebrow="05 · identity art"
-            title="Generative cover (Phase 7.5)"
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              {/* Description */}
-              <div
+        {/* 04 · editorial */}
+        <VDSection
+          eyebrow="04 · editorial"
+          title="About · capacity · neighborhood"
+          subtitle={
+            <>
+              These fields render on the venue&apos;s public page.{' '}
+              <strong style={{ color: 'var(--accent)', fontWeight: 700 }}>
+                LLM-assisted
+              </strong>{' '}
+              — every generation needs your sign-off before it saves.
+            </>
+          }
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            {/* About */}
+            <VDField
+              label="About"
+              htmlFor="edit-venue-about"
+              description="One short paragraph shown on the venue page (under the hero). Plain prose, no markdown."
+              labelRight={
+                generateState === 'idle' || generateState === 'accepted' ? (
+                  <button
+                    type="button"
+                    disabled={isDisabled}
+                    onClick={() => void handleGenerateAbout()}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      padding: '4px 10px',
+                      borderRadius: 6,
+                      border:
+                        '1px solid color-mix(in oklab, var(--accent) 34%, transparent)',
+                      background:
+                        'color-mix(in oklab, var(--accent) 8%, var(--bg-elevated))',
+                      cursor: isDisabled ? 'not-allowed' : 'pointer',
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: 'var(--accent)',
+                      opacity: isDisabled ? 0.66 : 1,
+                    }}
+                  >
+                    <Sparkles size={11} />
+                    Generate
+                    <span
+                      style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: 10,
+                        opacity: 0.75,
+                        fontWeight: 600,
+                      }}
+                    >
+                      ~$0.0042
+                    </span>
+                  </button>
+                ) : null
+              }
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <textarea
+                  id="edit-venue-about"
+                  value={aboutVal}
+                  placeholder="A short description of the venue's character and history."
+                  disabled={
+                    isDisabled ||
+                    generateState === 'loading' ||
+                    generateState === 'review'
+                  }
+                  rows={5}
+                  onChange={(evt) => setAboutVal(evt.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    border: '1px solid var(--border-strong)',
+                    background: 'var(--bg-elevated)',
+                    color: 'var(--fg)',
+                    fontSize: 13,
+                    fontFamily: "'Inter', sans-serif",
+                    outline: 'none',
+                    boxSizing: 'border-box' as const,
+                    resize: 'vertical' as const,
+                    lineHeight: 1.5,
+                    opacity: isDisabled ? 0.66 : 1,
+                    cursor: isDisabled ? 'not-allowed' : 'text',
+                    transition: 'border-color .12s',
+                  }}
+                />
+                {generateState !== 'idle' && (
+                  <GenerateField
+                    state={generateState}
+                    {...(generateResult ? { result: generateResult } : {})}
+                    {...(generateError ? { errorMessage: generateError } : {})}
+                    onGenerate={() => void handleGenerateAbout()}
+                    onRegenerate={() => void handleGenerateAbout()}
+                    onCancel={handleGenerateDiscard}
+                    onAccept={handleGenerateAccept}
+                    onDiscard={handleGenerateDiscard}
+                  />
+                )}
+              </div>
+            </VDField>
+
+            {/* Capacity */}
+            <VDField
+              label="Capacity"
+              htmlFor="edit-venue-capacity"
+              description="Used in the venue facts strip. Be specific (seated / standing / mixed)."
+              labelRight={
+                <button
+                  type="button"
+                  disabled={isDisabled || generateState === 'loading'}
+                  onClick={() => void handleGenerateAbout()}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    padding: '4px 10px',
+                    borderRadius: 6,
+                    border:
+                      '1px solid color-mix(in oklab, var(--accent) 34%, transparent)',
+                    background:
+                      'color-mix(in oklab, var(--accent) 8%, var(--bg-elevated))',
+                    cursor:
+                      isDisabled || generateState === 'loading'
+                        ? 'not-allowed'
+                        : 'pointer',
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: 'var(--accent)',
+                    opacity:
+                      isDisabled || generateState === 'loading' ? 0.66 : 1,
+                  }}
+                >
+                  <Sparkles size={11} />
+                  Generate
+                  <span
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 10,
+                      opacity: 0.75,
+                      fontWeight: 600,
+                    }}
+                  >
+                    ~$0.0008
+                  </span>
+                </button>
+              }
+            >
+              <VDInput
+                id="edit-venue-capacity"
+                type="number"
+                value={capacityVal}
+                placeholder="e.g. 1600"
+                disabled={isDisabled}
+                min={1}
+                onChange={(evt) => {
+                  setCapacityVal(evt.target.value)
+                  setCapacityGenerated(false)
+                }}
+              />
+              {capacityGenerated && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginTop: 2,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        padding: '3px 8px',
+                        borderRadius: 20,
+                        border:
+                          '1px solid color-mix(in oklab, var(--success) 38%, transparent)',
+                        background:
+                          'color-mix(in oklab, var(--success) 5%, var(--bg-elevated))',
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: 'var(--success)',
+                        letterSpacing: '0.02em',
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 5,
+                          height: 5,
+                          borderRadius: '50%',
+                          background: 'var(--success)',
+                          flexShrink: 0,
+                        }}
+                      />
+                      generated · accepted
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: "'Inter', sans-serif",
+                        fontSize: 11,
+                        color: 'var(--fg-subtle)',
+                      }}
+                    >
+                      You can edit freely; the pill clears on save.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isDisabled || generateState === 'loading'}
+                    onClick={() => void handleGenerateAbout()}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      cursor:
+                        isDisabled || generateState === 'loading'
+                          ? 'not-allowed'
+                          : 'pointer',
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: 'var(--fg-muted)',
+                      opacity:
+                        isDisabled || generateState === 'loading' ? 0.5 : 1,
+                    }}
+                  >
+                    Regenerate
+                  </button>
+                </div>
+              )}
+            </VDField>
+
+            {/* Neighborhood */}
+            <VDField
+              label="Neighborhood"
+              htmlFor="edit-venue-neighborhood"
+              description="Single line — where it sits in the city. Helps fans gauge travel time."
+              labelRight={
+                <button
+                  type="button"
+                  disabled={isDisabled || generateState === 'loading'}
+                  onClick={() => void handleGenerateAbout()}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    padding: '4px 10px',
+                    borderRadius: 6,
+                    border:
+                      '1px solid color-mix(in oklab, var(--accent) 34%, transparent)',
+                    background:
+                      'color-mix(in oklab, var(--accent) 8%, var(--bg-elevated))',
+                    cursor:
+                      isDisabled || generateState === 'loading'
+                        ? 'not-allowed'
+                        : 'pointer',
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: 'var(--accent)',
+                    opacity:
+                      isDisabled || generateState === 'loading' ? 0.66 : 1,
+                  }}
+                >
+                  <Sparkles size={11} />
+                  Generate
+                  <span
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 10,
+                      opacity: 0.75,
+                      fontWeight: 600,
+                    }}
+                  >
+                    ~$0.0012
+                  </span>
+                </button>
+              }
+            >
+              <VDInput
+                id="edit-venue-neighborhood"
+                value={neighborhoodVal}
+                placeholder="e.g. Capitol Hill, RiNo, LoDo"
+                disabled={isDisabled}
+                onChange={(evt) => {
+                  setNeighborhoodVal(evt.target.value)
+                  setNeighborhoodGenerated(false)
+                }}
+              />
+              {neighborhoodGenerated && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginTop: 2,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        padding: '3px 8px',
+                        borderRadius: 20,
+                        border:
+                          '1px solid color-mix(in oklab, var(--success) 38%, transparent)',
+                        background:
+                          'color-mix(in oklab, var(--success) 5%, var(--bg-elevated))',
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: 'var(--success)',
+                        letterSpacing: '0.02em',
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 5,
+                          height: 5,
+                          borderRadius: '50%',
+                          background: 'var(--success)',
+                          flexShrink: 0,
+                        }}
+                      />
+                      generated · accepted
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: "'Inter', sans-serif",
+                        fontSize: 11,
+                        color: 'var(--fg-subtle)',
+                      }}
+                    >
+                      You can edit freely; the pill clears on save.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isDisabled || generateState === 'loading'}
+                    onClick={() => void handleGenerateAbout()}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      cursor:
+                        isDisabled || generateState === 'loading'
+                          ? 'not-allowed'
+                          : 'pointer',
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: 'var(--fg-muted)',
+                      opacity:
+                        isDisabled || generateState === 'loading' ? 0.5 : 1,
+                    }}
+                  >
+                    Regenerate
+                  </button>
+                </div>
+              )}
+            </VDField>
+          </div>
+        </VDSection>
+
+        {/* 05 · identity art */}
+        <VDSection
+          eyebrow="05 · identity art"
+          title="Generative cover (Phase 7.5)"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {/* Description */}
+            <div
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 13,
+                color: 'var(--fg-muted)',
+                lineHeight: 1.55,
+              }}
+            >
+              Deterministic generative art derived from the venue identity.
+              Current seed:{' '}
+              <span
                 style={{
-                  fontFamily: "'Inter', sans-serif",
-                  fontSize: 13,
-                  color: 'var(--fg-muted)',
-                  lineHeight: 1.55,
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 12,
+                  color: 'var(--accent)',
                 }}
               >
-                Deterministic generative art derived from the venue identity.
-                Current seed:{' '}
-                <span
-                  style={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: 12,
-                    color: 'var(--accent)',
-                  }}
-                >
-                  (venue · {venue.name})
-                </span>
+                (venue · {venue.name})
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+              {/* Preview tile */}
+              <div
+                style={{
+                  position: 'relative',
+                  width: 96,
+                  height: 96,
+                  flexShrink: 0,
+                  borderRadius: 10,
+                  overflow: 'hidden',
+                  border: '1px solid var(--border)',
+                }}
+              >
+                <IdentityArt
+                  name={artSeedStr}
+                  kind={artNamespace}
+                  scale="tile"
+                  showInitials={false}
+                  grain={0.08}
+                  width={96}
+                  height={96}
+                />
+                {(() => {
+                  const identity = identityFor(artSeedStr, artNamespace)
+                  const dark = ia_isDark(identity.palette.bg)
+                  const initials = ia_getInitials(artSeedStr, 2)
+                  return (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: 6,
+                        bottom: 6,
+                        padding: '2px 6px',
+                        borderRadius: 5,
+                        background: dark
+                          ? 'rgba(0,0,0,0.55)'
+                          : 'rgba(255,255,255,0.78)',
+                        backdropFilter: 'blur(4px)',
+                        fontFamily: 'var(--font-sans)',
+                        fontWeight: 900,
+                        fontSize: 10,
+                        letterSpacing: '0.04em',
+                        color: dark ? '#F1E6D5' : '#191418',
+                        lineHeight: 1,
+                      }}
+                    >
+                      {initials}
+                    </div>
+                  )
+                })()}
               </div>
 
+              {/* Controls — 2-column grid */}
               <div
-                style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                  gap: 12,
+                  flex: 1,
+                }}
               >
-                {/* Preview tile */}
-                <div
-                  style={{
-                    position: 'relative',
-                    width: 96,
-                    height: 96,
-                    flexShrink: 0,
-                    borderRadius: 10,
-                    overflow: 'hidden',
-                    border: '1px solid var(--border)',
-                  }}
+                <VDField
+                  label="Namespace"
+                  htmlFor="edit-venue-art-namespace"
+                  hint="Venues use architectural patterns; artists use organic ones."
                 >
-                  <IdentityArt
-                    name={artSeedStr}
-                    kind={artNamespace}
-                    scale="tile"
-                    showInitials={false}
-                    grain={0.08}
-                    width={96}
-                    height={96}
-                  />
-                  {(() => {
-                    const identity = identityFor(artSeedStr, artNamespace)
-                    const dark = ia_isDark(identity.palette.bg)
-                    const initials = ia_getInitials(artSeedStr, 2)
-                    return (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          left: 6,
-                          bottom: 6,
-                          padding: '2px 6px',
-                          borderRadius: 5,
-                          background: dark
-                            ? 'rgba(0,0,0,0.55)'
-                            : 'rgba(255,255,255,0.78)',
-                          backdropFilter: 'blur(4px)',
-                          fontFamily: 'var(--font-sans)',
-                          fontWeight: 900,
-                          fontSize: 10,
-                          letterSpacing: '0.04em',
-                          color: dark ? '#F1E6D5' : '#191418',
-                          lineHeight: 1,
-                        }}
-                      >
-                        {initials}
-                      </div>
-                    )
-                  })()}
-                </div>
-
-                {/* Controls — 2-column grid */}
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-                    gap: 12,
-                    flex: 1,
-                  }}
-                >
-                  <VDField
-                    label="Namespace"
-                    htmlFor="edit-venue-art-namespace"
-                    hint="Venues use architectural patterns; artists use organic ones."
-                  >
+                  <div style={{ alignSelf: 'flex-start' }}>
                     <VDSegToggle
                       options={[
                         { value: 'venue', label: 'Venue' },
@@ -1967,307 +1933,177 @@ export function VenueDetailsClient({ venue, recentRuns }: Props) {
                         setArtNamespace(val as 'venue' | 'artist')
                       }
                     />
-                  </VDField>
-
-                  <VDField
-                    label="Seed"
-                    htmlFor="edit-venue-art-seed"
-                    hint={
-                      artSeedNum === 0
-                        ? 'LOCKED UNLESS BUMPED'
-                        : `Bumped to ${artSeedNum}`
-                    }
-                  >
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <VDInput
-                        id="edit-venue-art-seed"
-                        value={artSeedNum === 0 ? '' : String(artSeedNum)}
-                        placeholder="0"
-                        disabled
-                        style={{ flex: 1 }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setArtSeedNum((prev) => prev + 1)}
-                        style={{
-                          flexShrink: 0,
-                          height: 36,
-                          padding: '0 14px',
-                          border: '1px solid var(--border-strong)',
-                          borderRadius: 8,
-                          background: 'var(--surface-1)',
-                          color: 'var(--fg-muted)',
-                          fontFamily: "'Inter', sans-serif",
-                          fontSize: 12,
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Roll
-                      </button>
-                    </div>
-                  </VDField>
-                </div>
-              </div>
-
-              {/* Phase 8 warning banner */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '10px 14px',
-                  borderRadius: 8,
-                  border:
-                    '1px solid color-mix(in oklab, var(--warning) 32%, transparent)',
-                  background:
-                    'color-mix(in oklab, var(--warning) 8%, var(--bg-elevated))',
-                  fontFamily: "'Inter', sans-serif",
-                  fontSize: 12,
-                  color: 'var(--warning)',
-                  lineHeight: 1.45,
-                }}
-              >
-                <span style={{ fontWeight: 700, flexShrink: 0 }}>
-                  Phase 8 —
-                </span>
-                <span>
-                  Seed + namespace will be persisted to the DB. Changes here are
-                  preview-only until then.
-                </span>
-              </div>
-            </div>
-          </VDSection>
-
-          {/* 06 · danger */}
-          <VDSection
-            eyebrow="danger zone"
-            title="Pause or remove this venue"
-            danger
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {/* Pause / activate */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 14,
-                }}
-              >
-                <div style={{ minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontFamily: "'Inter', sans-serif",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: 'var(--fg)',
-                    }}
-                  >
-                    Pause crawling
                   </div>
-                  <div
-                    style={{
-                      fontFamily: "'Inter', sans-serif",
-                      fontSize: 12,
-                      color: 'var(--fg-muted)',
-                      marginTop: 2,
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    Stops scheduled runs. Existing events stay published.
-                  </div>
-                </div>
-                <AdminButton
-                  variant="outline"
-                  size="sm"
-                  icon={venue.active ? Pause : Play}
-                  disabled={isPending}
-                  onClick={handlePauseToggle}
-                  type="button"
+                </VDField>
+
+                <VDField
+                  label="Seed"
+                  htmlFor="edit-venue-art-seed"
+                  hint={
+                    artSeedNum === 0
+                      ? 'LOCKED UNLESS BUMPED'
+                      : `Bumped to ${artSeedNum}`
+                  }
                 >
-                  {venue.active ? 'Pause venue' : 'Activate venue'}
-                </AdminButton>
-              </div>
-
-              <div
-                style={{
-                  height: 1,
-                  background:
-                    'color-mix(in oklab, var(--danger) 16%, transparent)',
-                }}
-              />
-
-              {/* Delete */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 14,
-                }}
-              >
-                <div style={{ minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontFamily: "'Inter', sans-serif",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: 'var(--danger)',
-                    }}
-                  >
-                    Delete venue
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: "'Inter', sans-serif",
-                      fontSize: 12,
-                      color: 'var(--fg-muted)',
-                      marginTop: 2,
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    Removes config + breaks links to existing events. Cannot be
-                    undone.
-                  </div>
-                </div>
-                <DeleteVenueConfirm
-                  venueId={venue.id}
-                  venueName={venue.name}
-                  eventsTracked={crawlHealth.eventsTracked}
-                />
-              </div>
-            </div>
-          </VDSection>
-        </div>
-
-        {/* Right: meta sidebar */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {/* Recent runs */}
-          <MetaCard
-            title="Recent runs"
-            action={
-              <Link
-                href={`/admin/crawl?venueId=${venue.id}`}
-                style={{
-                  fontFamily: "'Inter', sans-serif",
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: 'var(--signal)',
-                  textDecoration: 'none',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 3,
-                }}
-              >
-                View all
-                <ChevronRight size={11} />
-              </Link>
-            }
-          >
-            {recentRuns.length === 0 ? (
-              <p
-                style={{
-                  fontSize: 12,
-                  color: 'var(--fg-muted)',
-                  margin: 0,
-                  fontFamily: "'Inter', sans-serif",
-                }}
-              >
-                No crawl runs yet
-              </p>
-            ) : (
-              <div>
-                {recentRuns.map((run, idx) => (
-                  <div
-                    key={run.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      justifyContent: 'space-between',
-                      gap: 10,
-                      padding: '10px 0',
-                      borderBottom:
-                        idx < recentRuns.length - 1
-                          ? '1px solid var(--border)'
-                          : 'none',
-                    }}
-                  >
-                    <div
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <VDInput
+                      id="edit-venue-art-seed"
+                      value={artSeedNum === 0 ? '' : String(artSeedNum)}
+                      placeholder="0"
+                      disabled
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setArtSeedNum((prev) => prev + 1)}
                       style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: 8,
-                        minWidth: 0,
+                        flexShrink: 0,
+                        height: 36,
+                        padding: '0 14px',
+                        border: '1px solid var(--border-strong)',
+                        borderRadius: 8,
+                        background: 'var(--surface-1)',
+                        color: 'var(--fg-muted)',
+                        fontFamily: "'Inter', sans-serif",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: 'pointer',
                       }}
                     >
-                      <span
-                        style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: '50%',
-                          marginTop: 4,
-                          flexShrink: 0,
-                          background:
-                            run.status === 'success'
-                              ? 'var(--success)'
-                              : run.status === 'failed'
-                                ? 'var(--danger)'
-                                : 'var(--warning)',
-                        }}
-                      />
-                      <div style={{ minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontFamily: "'JetBrains Mono', monospace",
-                            fontSize: 11.5,
-                            fontWeight: 600,
-                            color: 'var(--fg)',
-                            letterSpacing: '0.02em',
-                          }}
-                        >
-                          <RelTime iso={run.createdAt} />
-                        </div>
-                        {run.errorMessage ? (
-                          <div
-                            style={{
-                              fontFamily: "'JetBrains Mono', monospace",
-                              fontSize: 10.5,
-                              color: 'var(--danger)',
-                              marginTop: 2,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {run.errorMessage}
-                          </div>
-                        ) : (
-                          <div
-                            style={{
-                              fontFamily: "'Inter', sans-serif",
-                              fontSize: 11,
-                              color: 'var(--fg-muted)',
-                              marginTop: 2,
-                            }}
-                          >
-                            {run.eventsFound} found · {run.eventsInserted}{' '}
-                            inserted
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    {run.durationMs !== null && (
-                      <MonoLabel color="var(--fg-subtle)">
-                        {formatDurationMs(run.durationMs)}
-                      </MonoLabel>
-                    )}
+                      Roll
+                    </button>
                   </div>
-                ))}
+                </VDField>
               </div>
-            )}
-          </MetaCard>
-        </div>
+            </div>
+
+            {/* Phase 8 warning banner */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '10px 14px',
+                borderRadius: 8,
+                border:
+                  '1px solid color-mix(in oklab, var(--warning) 32%, transparent)',
+                background:
+                  'color-mix(in oklab, var(--warning) 8%, var(--bg-elevated))',
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 12,
+                color: 'var(--warning)',
+                lineHeight: 1.45,
+              }}
+            >
+              <span style={{ fontWeight: 700, flexShrink: 0 }}>Phase 8 —</span>
+              <span>
+                Seed + namespace will be persisted to the DB. Changes here are
+                preview-only until then.
+              </span>
+            </div>
+          </div>
+        </VDSection>
+
+        {/* 06 · danger */}
+        <VDSection
+          eyebrow="danger zone"
+          title="Pause or remove this venue"
+          danger
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {/* Pause / activate */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 14,
+              }}
+            >
+              <div style={{ minWidth: 0 }}>
+                <div
+                  style={{
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: 'var(--fg)',
+                  }}
+                >
+                  Pause crawling
+                </div>
+                <div
+                  style={{
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: 12,
+                    color: 'var(--fg-muted)',
+                    marginTop: 2,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  Stops scheduled runs. Existing events stay published.
+                </div>
+              </div>
+              <AdminButton
+                variant="outline"
+                size="sm"
+                icon={venue.active ? Pause : Play}
+                disabled={isPending}
+                onClick={handlePauseToggle}
+                type="button"
+              >
+                {venue.active ? 'Pause venue' : 'Activate venue'}
+              </AdminButton>
+            </div>
+
+            <div
+              style={{
+                height: 1,
+                background:
+                  'color-mix(in oklab, var(--danger) 16%, transparent)',
+              }}
+            />
+
+            {/* Delete */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 14,
+              }}
+            >
+              <div style={{ minWidth: 0 }}>
+                <div
+                  style={{
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: 'var(--danger)',
+                  }}
+                >
+                  Delete venue
+                </div>
+                <div
+                  style={{
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: 12,
+                    color: 'var(--fg-muted)',
+                    marginTop: 2,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  Removes config + breaks links to existing events. Cannot be
+                  undone.
+                </div>
+              </div>
+              <DeleteVenueConfirm
+                venueId={venue.id}
+                venueName={venue.name}
+                eventsTracked={crawlHealth.eventsTracked}
+              />
+            </div>
+          </div>
+        </VDSection>
       </div>
 
       {/* Sticky save bar */}

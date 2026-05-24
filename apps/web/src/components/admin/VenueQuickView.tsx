@@ -287,7 +287,7 @@ export function VenueQuickView({ venue }: Props) {
         }}
       >
         <AdminButton
-          variant={crawlState === 'queued' ? 'success' : 'primary'}
+          variant={crawlState === 'queued' ? 'success' : 'outline'}
           size="sm"
           icon={RefreshCw}
           disabled={crawlState === 'triggering' || crawlState === 'queued'}
@@ -301,14 +301,6 @@ export function VenueQuickView({ venue }: Props) {
         >
           <AdminButton variant="outline" size="sm" icon={Settings}>
             Edit venue
-          </AdminButton>
-        </Link>
-        <Link
-          href={`/admin/venues/${venue.id}`}
-          style={{ textDecoration: 'none' }}
-        >
-          <AdminButton variant="outline" size="sm" icon={ExternalLink}>
-            Open detail
           </AdminButton>
         </Link>
         <div style={{ flex: 1 }} />

@@ -620,62 +620,97 @@ export const PriceCoverageTable = ({
                                 </div>
                               </div>
 
-                              {/* Row 2: actions */}
+                              {/* Row 2: save bar */}
                               <div
                                 style={{
                                   display: 'flex',
                                   alignItems: 'center',
-                                  justifyContent: 'flex-end',
+                                  justifyContent: 'space-between',
                                   gap: 12,
+                                  padding: '8px 12px',
+                                  borderRadius: 8,
+                                  background: 'var(--bg-elevated)',
+                                  border: '1px solid var(--border)',
                                 }}
                               >
-                                <button
-                                  onClick={resetAddForm}
-                                  disabled={isSaving}
-                                  style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: 5,
-                                    background: 'none',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    fontFamily: "'Inter', sans-serif",
-                                    fontSize: 13,
-                                    fontWeight: 600,
-                                    color: 'var(--fg-muted)',
-                                    padding: 0,
-                                  }}
-                                >
-                                  × Cancel
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    void handleSavePrice(ev.eventId)
-                                  }
-                                  disabled={isSaving || !priceMin.trim()}
+                                <span
                                   style={{
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     gap: 6,
-                                    padding: '7px 14px',
-                                    borderRadius: 8,
+                                    padding: '3px 10px',
+                                    borderRadius: 20,
+                                    border:
+                                      '1px solid color-mix(in oklab, var(--warning) 38%, transparent)',
                                     background:
-                                      isSaving || !priceMin.trim()
-                                        ? 'color-mix(in oklab, var(--success) 50%, transparent)'
-                                        : 'var(--success)',
-                                    border: 'none',
-                                    color: 'var(--fg-on-accent)',
+                                      'color-mix(in oklab, var(--warning) 10%, var(--bg-elevated))',
                                     fontFamily: "'Inter', sans-serif",
-                                    fontSize: 13,
+                                    fontSize: 12,
                                     fontWeight: 700,
-                                    cursor:
-                                      isSaving || !priceMin.trim()
-                                        ? 'not-allowed'
-                                        : 'pointer',
+                                    color: 'var(--warning)',
                                   }}
                                 >
-                                  {isSaving ? 'Saving…' : '✓ Save price'}
-                                </button>
+                                  <span
+                                    style={{
+                                      width: 6,
+                                      height: 6,
+                                      borderRadius: '50%',
+                                      background: 'var(--warning)',
+                                      flexShrink: 0,
+                                    }}
+                                  />
+                                  Adding price
+                                </span>
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    gap: 8,
+                                    alignItems: 'center',
+                                  }}
+                                >
+                                  <button
+                                    onClick={resetAddForm}
+                                    disabled={isSaving}
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      padding: '0 4px',
+                                      cursor: isSaving
+                                        ? 'not-allowed'
+                                        : 'pointer',
+                                      fontFamily: "'Inter', sans-serif",
+                                      fontSize: 13,
+                                      fontWeight: 700,
+                                      color: 'var(--fg-muted)',
+                                    }}
+                                  >
+                                    Discard
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      void handleSavePrice(ev.eventId)
+                                    }
+                                    disabled={isSaving || !priceMin.trim()}
+                                    style={{
+                                      background:
+                                        isSaving || !priceMin.trim()
+                                          ? 'color-mix(in oklab, var(--signal) 50%, transparent)'
+                                          : 'var(--signal)',
+                                      border: 'none',
+                                      borderRadius: 8,
+                                      padding: '6px 16px',
+                                      color: 'var(--fg-on-accent)',
+                                      fontSize: 13,
+                                      fontWeight: 700,
+                                      cursor:
+                                        isSaving || !priceMin.trim()
+                                          ? 'not-allowed'
+                                          : 'pointer',
+                                    }}
+                                  >
+                                    {isSaving ? 'Saving…' : 'Save changes'}
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </td>

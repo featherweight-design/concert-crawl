@@ -100,7 +100,7 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <AdminButton
-          variant="primary"
+          variant="outline"
           size="sm"
           icon={isLoading ? Loader2 : RefreshCw}
           onClick={startVenueCrawl}

@@ -1,6 +1,6 @@
 export const copy = {
   button: {
-    idle: 'Trigger Crawl',
+    idle: 'Run crawl now',
     triggering: 'Starting…',
     polling: 'Crawling…',
   },

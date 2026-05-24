@@ -117,6 +117,22 @@ export function VenueTableClient({ venues }: Props) {
   }
 
   if (isMobile) {
+    if (venues.length === 0) {
+      return (
+        <div
+          style={{
+            padding: '32px 16px',
+            textAlign: 'center',
+            fontFamily: "'Inter', sans-serif",
+            fontSize: 13,
+            color: 'var(--fg-muted)',
+          }}
+        >
+          No venues match the current filter.
+        </div>
+      )
+    }
+
     return (
       <div
         style={{
@@ -345,6 +361,22 @@ export function VenueTableClient({ venues }: Props) {
           </tr>
         </THead>
         <tbody>
+          {venues.length === 0 && (
+            <tr>
+              <td
+                colSpan={10}
+                style={{
+                  padding: '32px 16px',
+                  textAlign: 'center',
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 13,
+                  color: 'var(--fg-muted)',
+                }}
+              >
+                No venues match the current filter.
+              </td>
+            </tr>
+          )}
           {venues.map((venue) => {
             const status = deriveVenueStatus(venue)
             const health = venueHealthPercent(venue)

@@ -1,6 +1,6 @@
 import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
-import type { VenueWithCrawlHealth, CrawlRun } from '@concert-crawl/types'
+import type { VenueWithCrawlHealth } from '@concert-crawl/types'
 import { VenueDetailsClient } from '@/components/admin/VenueDetailsClient'
 import { notFound } from 'next/navigation'
 
@@ -25,15 +25,5 @@ export default async function VenueDetailPage({ params }: Props) {
     notFound()
   }
 
-  let recentRuns: CrawlRun[] = []
-  try {
-    recentRuns = await apiClient.get<CrawlRun[]>(
-      `/v1/admin/crawl/runs?venueId=${id}&limit=3`,
-      token,
-    )
-  } catch {
-    // Non-fatal — page still renders without recent runs
-  }
-
-  return <VenueDetailsClient venue={venue} recentRuns={recentRuns} />
+  return <VenueDetailsClient venue={venue} />
 }
