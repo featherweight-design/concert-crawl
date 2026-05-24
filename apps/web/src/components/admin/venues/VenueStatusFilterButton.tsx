@@ -2,16 +2,17 @@
 
 import { useRouter } from 'next/navigation'
 import { Filter } from 'lucide-react'
+import { venueStatusFilterCopy } from '@/components/admin/venues/definitions/copy'
 
 interface Props {
   currentFilter: string | undefined
 }
 
 const OPTIONS = [
-  { value: '', label: 'All statuses' },
-  { value: 'active', label: 'Active' },
-  { value: 'paused', label: 'Paused' },
-  { value: 'blocked', label: 'Blocked' },
+  { value: '', label: venueStatusFilterCopy.options.all },
+  { value: 'active', label: venueStatusFilterCopy.options.active },
+  { value: 'paused', label: venueStatusFilterCopy.options.paused },
+  { value: 'blocked', label: venueStatusFilterCopy.options.blocked },
 ]
 
 export function VenueStatusFilterButton({ currentFilter }: Props) {
@@ -52,11 +53,11 @@ export function VenueStatusFilterButton({ currentFilter }: Props) {
         <Filter size={14} />
         {isFiltered
           ? (OPTIONS.find((opt) => opt.value === currentFilter)?.label ??
-            'Status')
-          : 'Status'}
+            venueStatusFilterCopy.statusFallback)
+          : venueStatusFilterCopy.statusFallback}
       </div>
       <select
-        aria-label="Filter by status"
+        aria-label={venueStatusFilterCopy.ariaLabel}
         value={currentFilter ?? ''}
         onChange={handleChange}
         style={{

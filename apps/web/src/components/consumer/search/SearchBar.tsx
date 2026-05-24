@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, X, ArrowLeft } from 'lucide-react'
+import { copy } from './definitions/copy'
 
 interface SearchBarProps {
   value: string
@@ -38,7 +39,7 @@ export function SearchBar({
       {showBack && (
         <button
           onClick={() => router.back()}
-          aria-label="Back"
+          aria-label={copy.backAriaLabel}
           style={{
             all: 'unset',
             cursor: 'pointer',
@@ -81,7 +82,7 @@ export function SearchBar({
           ref={inputRef}
           value={value}
           onChange={(ev) => onChange(ev.target.value)}
-          placeholder="Search artists, venues…"
+          placeholder={copy.searchPlaceholder}
           style={{
             flex: 1,
             minWidth: 0,
@@ -98,7 +99,7 @@ export function SearchBar({
         {value && (
           <button
             onClick={onClear}
-            aria-label="Clear search"
+            aria-label={copy.clearSearchAriaLabel}
             style={{
               all: 'unset',
               cursor: 'pointer',

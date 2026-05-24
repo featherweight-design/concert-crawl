@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { createVenue, createVenueAndCrawl } from '@/lib/actions/venues'
 import { AdminButton, Kbd } from '@/components/admin/primitives'
+import { addVenueModalCopy } from '@/components/admin/definitions/add-venue-modal-copy'
 
 function slugify(name: string): string {
   return name
@@ -142,23 +143,23 @@ export function AddVenueModal({
     const city = cityRef.current?.value.trim() ?? ''
 
     if (!name || name.length < 2)
-      fieldErrors.name = 'Name is required (2+ chars)'
+      fieldErrors.name = addVenueModalCopy.validation.nameRequired
     if (
       !slug ||
       !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(slug) ||
       slug.length < 2
     ) {
-      fieldErrors.slug =
-        'Slug must be 2–60 chars, lowercase alphanumeric and hyphens'
+      fieldErrors.slug = addVenueModalCopy.validation.slugInvalid
     }
     try {
       new URL(url)
       if (!url.startsWith('http'))
-        fieldErrors.websiteUrl = 'Must be an http:// or https:// URL'
+        fieldErrors.websiteUrl = addVenueModalCopy.validation.urlNotHttp
     } catch {
-      fieldErrors.websiteUrl = 'Enter a valid URL (http:// or https://...)'
+      fieldErrors.websiteUrl = addVenueModalCopy.validation.urlInvalid
     }
-    if (!city || city.length < 2) fieldErrors.city = 'City is required'
+    if (!city || city.length < 2)
+      fieldErrors.city = addVenueModalCopy.validation.cityRequired
 
     return fieldErrors
   }
@@ -189,8 +190,10 @@ export function AddVenueModal({
 
       if (!result.success) {
         if (result.field === 'slug') {
-          setErrors({ slug: result.error ?? 'Slug already in use' })
-          setBannerError('Slug already in use — choose a different one')
+          setErrors({
+            slug: result.error ?? addVenueModalCopy.validation.slugInvalid,
+          })
+          setBannerError(addVenueModalCopy.errors.slugInUse)
         } else {
           setBannerError(result.error ?? 'Something went wrong')
         }
@@ -206,7 +209,7 @@ export function AddVenueModal({
         onSuccess?.()
       }, 400)
     } catch {
-      setBannerError('An unexpected error occurred. Please try again.')
+      setBannerError(addVenueModalCopy.errors.unexpected)
       setSubmitState('error')
     }
   }
@@ -238,7 +241,7 @@ export function AddVenueModal({
         fullWidth={fullWidth}
         onClick={() => setOpen(true)}
       >
-        Add venue
+        {addVenueModalCopy.trigger}
       </AdminButton>
 
       <Dialog.Root
@@ -302,7 +305,7 @@ export function AddVenueModal({
                       marginBottom: 6,
                     }}
                   >
-                    new venue
+                    {addVenueModalCopy.header.eyebrow}
                   </div>
                   <Dialog.Title
                     style={{
@@ -314,7 +317,7 @@ export function AddVenueModal({
                       lineHeight: 1.2,
                     }}
                   >
-                    Add a crawl target
+                    {addVenueModalCopy.header.title}
                   </Dialog.Title>
                   <div
                     style={{
@@ -324,8 +327,7 @@ export function AddVenueModal({
                       lineHeight: 1.5,
                     }}
                   >
-                    Point us at an events page. We&apos;ll respect robots.txt
-                    and crawl daily at 3 AM MT.
+                    {addVenueModalCopy.header.subtitle}
                   </div>
                 </div>
                 <Dialog.Close
@@ -345,7 +347,7 @@ export function AddVenueModal({
                           : 'none',
                         outlineOffset: 2,
                       }}
-                      aria-label="Close"
+                      aria-label={addVenueModalCopy.closeButton.ariaLabel}
                       onClick={resetState}
                       onFocus={() => setCloseButtonFocused(true)}
                       onBlur={() => setCloseButtonFocused(false)}
@@ -384,7 +386,7 @@ export function AddVenueModal({
                 >
                   {/* Venue name */}
                   <Field
-                    label="Venue name"
+                    label={addVenueModalCopy.fields.name.label}
                     htmlFor="add-venue-name"
                     error={errors.name}
                   >
@@ -392,7 +394,7 @@ export function AddVenueModal({
                       ref={nameRef}
                       id="add-venue-name"
                       type="text"
-                      placeholder="e.g. Bluebird Theater"
+                      placeholder={addVenueModalCopy.fields.name.placeholder}
                       disabled={disabled}
                       onChange={handleNameChange}
                       onFocus={() => setFocusedField('name')}
@@ -418,7 +420,7 @@ export function AddVenueModal({
                       }}
                     >
                       <label htmlFor="add-venue-slug" style={labelStyle}>
-                        Slug
+                        {addVenueModalCopy.fields.slug.label}
                       </label>
                       <span
                         style={{
@@ -429,7 +431,7 @@ export function AddVenueModal({
                           color: 'var(--fg-muted)',
                         }}
                       >
-                        auto-generated
+                        {addVenueModalCopy.fields.slug.autoGeneratedBadge}
                       </span>
                     </div>
                     <div
@@ -455,13 +457,13 @@ export function AddVenueModal({
                           background: 'var(--surface-1)',
                         }}
                       >
-                        concertcrawl.app/v/
+                        {addVenueModalCopy.fields.slug.prefix}
                       </span>
                       <input
                         ref={slugRef}
                         id="add-venue-slug"
                         type="text"
-                        placeholder="bluebird-theater"
+                        placeholder={addVenueModalCopy.fields.slug.placeholder}
                         disabled={disabled}
                         onChange={handleSlugChange}
                         onFocus={() => setFocusedField('slug')}
@@ -486,8 +488,10 @@ export function AddVenueModal({
                         type="button"
                         onClick={handleRegenerateSlug}
                         disabled={disabled}
-                        title="Regenerate slug from name"
-                        aria-label="Regenerate slug from name"
+                        title={addVenueModalCopy.slugButtons.regenerateTitle}
+                        aria-label={
+                          addVenueModalCopy.slugButtons.regenerateAriaLabel
+                        }
                         style={{
                           all: 'unset',
                           cursor: disabled ? 'not-allowed' : 'pointer',
@@ -527,8 +531,7 @@ export function AddVenueModal({
                           lineHeight: 1.4,
                         }}
                       >
-                        Used in the public URL. Auto-derived from the venue
-                        name.
+                        {addVenueModalCopy.fields.slug.hint}
                       </span>
                     )}
                   </div>
@@ -546,7 +549,7 @@ export function AddVenueModal({
                       }}
                     >
                       <label htmlFor="add-venue-url" style={labelStyle}>
-                        Source URL
+                        {addVenueModalCopy.fields.sourceUrl.label}
                       </label>
                       <RobotsChip state={robotsState} hasUrl={!!urlValue} />
                     </div>
@@ -561,7 +564,9 @@ export function AddVenueModal({
                         ref={websiteUrlRef}
                         id="add-venue-url"
                         type="url"
-                        placeholder="https://www.bluebirdtheater.net/calendar/"
+                        placeholder={
+                          addVenueModalCopy.fields.sourceUrl.placeholder
+                        }
                         disabled={disabled}
                         onFocus={() => setFocusedField('url')}
                         onBlur={handleUrlBlur}
@@ -625,15 +630,14 @@ export function AddVenueModal({
                           lineHeight: 1.4,
                         }}
                       >
-                        The events page we&apos;ll crawl. Usually a /calendar,
-                        /events, or /shows path.
+                        {addVenueModalCopy.fields.sourceUrl.hint}
                       </span>
                     )}
                   </div>
 
                   {/* City */}
                   <Field
-                    label="City"
+                    label={addVenueModalCopy.fields.city.label}
                     htmlFor="add-venue-city"
                     error={errors.city}
                   >
@@ -657,12 +661,15 @@ export function AddVenueModal({
                   </Field>
 
                   {/* Address */}
-                  <Field label="Street address" htmlFor="add-venue-address">
+                  <Field
+                    label={addVenueModalCopy.fields.address.label}
+                    htmlFor="add-venue-address"
+                  >
                     <input
                       ref={addressRef}
                       id="add-venue-address"
                       type="text"
-                      placeholder="e.g. 3317 E Colfax Ave, Denver, CO 80206"
+                      placeholder={addVenueModalCopy.fields.address.placeholder}
                       disabled={disabled}
                       onFocus={() => setFocusedField('address')}
                       onBlur={() => setFocusedField(null)}
@@ -697,7 +704,7 @@ export function AddVenueModal({
                     gap: 6,
                   }}
                 >
-                  <Kbd>Esc</Kbd> cancel
+                  <Kbd>Esc</Kbd> {addVenueModalCopy.actions.escHint}
                 </span>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -710,7 +717,7 @@ export function AddVenueModal({
                         type="button"
                         onClick={resetState}
                       >
-                        Cancel
+                        {addVenueModalCopy.actions.cancel}
                       </AdminButton>
                     }
                   />
@@ -724,10 +731,10 @@ export function AddVenueModal({
                   >
                     {submitState === 'success' ? (
                       <>
-                        <Check size={13} /> Saved
+                        <Check size={13} /> {addVenueModalCopy.actions.saved}
                       </>
                     ) : (
-                      'Save venue'
+                      addVenueModalCopy.actions.saveVenue
                     )}
                   </AdminButton>
 
@@ -757,10 +764,10 @@ export function AddVenueModal({
                       }}
                     >
                       {submitState === 'submitting'
-                        ? 'Saving…'
+                        ? addVenueModalCopy.actions.saving
                         : submitState === 'success'
-                          ? 'Saved'
-                          : 'Save & crawl now'}
+                          ? addVenueModalCopy.actions.saved
+                          : addVenueModalCopy.actions.saveAndCrawl}
                       {submitState === 'idle' || submitState === 'error' ? (
                         <span
                           style={{
@@ -848,14 +855,23 @@ function RobotsChip({
           fontFamily: 'var(--font-mono, monospace)',
         }}
       >
-        checking robots.txt…
+        {addVenueModalCopy.robots.checking}
       </span>
     )
   }
   const config = {
-    allowed: { color: 'var(--success)', text: 'robots ok' },
-    disallowed: { color: 'var(--danger)', text: 'robots blocked' },
-    unknown: { color: 'var(--fg-muted)', text: 'unchecked' },
+    allowed: {
+      color: 'var(--success)',
+      text: addVenueModalCopy.robots.allowed,
+    },
+    disallowed: {
+      color: 'var(--danger)',
+      text: addVenueModalCopy.robots.disallowed,
+    },
+    unknown: {
+      color: 'var(--fg-muted)',
+      text: addVenueModalCopy.robots.unknown,
+    },
   } as const
   const { color, text } = config[state as keyof typeof config] ?? config.unknown
   return (

@@ -7,6 +7,7 @@ import { SearchDefaultState } from '../search/SearchDefaultState'
 import { SearchResultsState } from '../search/SearchResultsState'
 import { SearchEmptyState } from '../search/SearchEmptyState'
 import { SearchLoadingState } from '../search/SearchLoadingState'
+import { copy } from '../search/definitions/copy'
 
 interface SearchPaletteProps {
   open: boolean
@@ -163,7 +164,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
             ref={inputRef}
             value={search.query}
             onChange={(ev) => search.setQuery(ev.target.value)}
-            placeholder="Search artists or venues…"
+            placeholder={copy.paletteSearchPlaceholder}
             style={{
               flex: 1,
               minWidth: 0,
@@ -180,7 +181,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
           {search.query && (
             <button
               onClick={search.clearQuery}
-              aria-label="Clear"
+              aria-label={copy.paletteClearAriaLabel}
               style={{
                 all: 'unset',
                 cursor: 'pointer',
@@ -207,7 +208,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
               border: '1px solid var(--border-strong)',
             }}
           >
-            esc
+            {copy.paletteEscHint}
           </span>
         </div>
 
@@ -266,10 +267,10 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <kbd style={kbdStyle}>↑</kbd>
-            <kbd style={kbdStyle}>↓</kbd> navigate
+            <kbd style={kbdStyle}>↓</kbd> {copy.paletteNavigateHint}
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <kbd style={kbdStyle}>↵</kbd> open
+            <kbd style={kbdStyle}>↵</kbd> {copy.paletteOpenHint}
           </span>
           <span
             style={{

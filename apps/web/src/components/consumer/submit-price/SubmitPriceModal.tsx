@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
+import { copy } from './definitions/copy'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { ShieldCheck } from 'lucide-react'
@@ -227,7 +228,7 @@ export function SubmitPriceModal({
       </div>
       <button
         type="button"
-        aria-label="Close"
+        aria-label={copy.modal.closeAriaLabel}
         onClick={onClose}
         style={{
           all: 'unset',
@@ -249,7 +250,7 @@ export function SubmitPriceModal({
 
   const footer = showForm ? (
     <SubmitButton loading={modalState === 'submitting'} onClick={handleSubmit}>
-      Submit price
+      {copy.form.submitButton}
     </SubmitButton>
   ) : undefined
 
@@ -257,7 +258,7 @@ export function SubmitPriceModal({
     <ModalShell
       open={open}
       onClose={onClose}
-      ariaLabel="Submit price"
+      ariaLabel={copy.modal.ariaLabel}
       sheetHeight={isShort ? 'short' : 'tall'}
       header={header}
       footer={footer}
@@ -275,7 +276,7 @@ export function SubmitPriceModal({
             letterSpacing: '0.08em',
           }}
         >
-          Checking…
+          {copy.modal.checkingLabel}
         </div>
       )}
 
@@ -336,7 +337,7 @@ export function SubmitPriceModal({
                 textTransform: 'uppercase',
               }}
             >
-              Submit a price
+              {copy.form.contextEyebrow}
             </p>
             <p
               style={{
@@ -387,8 +388,7 @@ export function SubmitPriceModal({
                 lineHeight: 1.5,
               }}
             >
-              Prices are capped at <strong>$2000</strong>. Submissions stay{' '}
-              <em>pending</em> until 2 fans confirm.
+              {copy.form.antiabuseNotice}
             </p>
           </div>
 
@@ -398,30 +398,30 @@ export function SubmitPriceModal({
           >
             <SPNumberField
               id="sp-floor"
-              label="Floor"
+              label={copy.form.floorLabel}
               value={formState.floor}
               onChange={(val) =>
                 setFormState((prev) => ({ ...prev, floor: val }))
               }
-              placeholder="35"
+              placeholder={copy.form.floorPlaceholder}
               required
               error={fieldErrors['floor']}
               warning={fieldWarnings['floor']}
             />
             <SPNumberField
               id="sp-ceiling"
-              label="Ceiling"
+              label={copy.form.ceilingLabel}
               value={formState.ceiling}
               onChange={(val) =>
                 setFormState((prev) => ({ ...prev, ceiling: val }))
               }
-              placeholder="75"
+              placeholder={copy.form.ceilingPlaceholder}
               error={fieldErrors['ceiling']}
             />
           </div>
 
           <ChipGroup
-            label="Tier *"
+            label={copy.form.tierLabel}
             options={TIER_OPTIONS}
             value={formState.tier}
             onChange={(val) => setFormState((prev) => ({ ...prev, tier: val }))}
@@ -429,7 +429,7 @@ export function SubmitPriceModal({
           />
 
           <ChipGroup
-            label="Where it's listed *"
+            label={copy.form.vendorLabel}
             options={VENDOR_OPTIONS}
             value={formState.vendor}
             onChange={(val) =>
@@ -439,7 +439,7 @@ export function SubmitPriceModal({
           />
 
           <ChipGroup
-            label="How you found out *"
+            label={copy.form.howFoundLabel}
             options={HOW_FOUND_OPTIONS}
             value={formState.howFound}
             onChange={(val) =>
@@ -458,7 +458,7 @@ export function SubmitPriceModal({
               lineHeight: 1.5,
             }}
           >
-            Anonymous to other fans. Rate-limited at 1 per show per 24h.
+            {copy.form.footerNote}
           </p>
         </div>
       )}
@@ -487,7 +487,7 @@ function SuccessState({ onClose }: { onClose: () => void }) {
           color: 'var(--fg)',
         }}
       >
-        Got it.
+        {copy.success.heading}
       </div>
       <div
         style={{
@@ -497,8 +497,7 @@ function SuccessState({ onClose }: { onClose: () => void }) {
           letterSpacing: '-0.005em',
         }}
       >
-        Your price is pending — two more fans confirming it moves it out of
-        pending.
+        {copy.success.body}
       </div>
       <div
         style={{
@@ -508,7 +507,9 @@ function SuccessState({ onClose }: { onClose: () => void }) {
           marginTop: 4,
         }}
       >
-        <PrimaryButton onClick={onClose}>Back to show</PrimaryButton>
+        <PrimaryButton onClick={onClose}>
+          {copy.success.backButton}
+        </PrimaryButton>
       </div>
     </div>
   )
@@ -525,10 +526,10 @@ function ErrorState({
 }) {
   const errorMessage =
     withdrawError === 'network'
-      ? 'Couldn’t reach the server — check your connection and try again.'
+      ? copy.error.networkWithdrawError
       : withdrawError === 'api'
-        ? 'Something went wrong withdrawing your submission. Try again or come back later.'
-        : 'Couldn’t reach the server — your inputs are still here. Try again or come back later.'
+        ? copy.error.apiWithdrawError
+        : copy.error.defaultError
 
   return (
     <div
@@ -549,7 +550,7 @@ function ErrorState({
           color: 'var(--fg)',
         }}
       >
-        Didn&apos;t go through.
+        {copy.error.heading}
       </div>
       <div
         style={{
@@ -569,8 +570,10 @@ function ErrorState({
           marginTop: 4,
         }}
       >
-        <PrimaryButton onClick={onReset}>Try again</PrimaryButton>
-        <GhostButton onClick={onClose}>Close</GhostButton>
+        <PrimaryButton onClick={onReset}>
+          {copy.error.tryAgainButton}
+        </PrimaryButton>
+        <GhostButton onClick={onClose}>{copy.error.closeButton}</GhostButton>
       </div>
     </div>
   )
@@ -603,7 +606,7 @@ function AlreadySubmittedState({
           color: 'var(--fg)',
         }}
       >
-        Already in.
+        {copy.alreadySubmitted.heading}
       </div>
       {submission && (
         <p
@@ -627,7 +630,7 @@ function AlreadySubmittedState({
           color: 'var(--fg-subtle)',
         }}
       >
-        You can submit one price per show every 24h.
+        {copy.alreadySubmitted.limitNote}
       </p>
       <div
         style={{
@@ -637,8 +640,12 @@ function AlreadySubmittedState({
           marginTop: 4,
         }}
       >
-        <PrimaryButton onClick={onEdit}>Edit submission</PrimaryButton>
-        <GhostButton onClick={onWithdraw}>Withdraw</GhostButton>
+        <PrimaryButton onClick={onEdit}>
+          {copy.alreadySubmitted.editButton}
+        </PrimaryButton>
+        <GhostButton onClick={onWithdraw}>
+          {copy.alreadySubmitted.withdrawButton}
+        </GhostButton>
       </div>
     </div>
   )
@@ -656,13 +663,19 @@ function PriceHeaderRail({ state }: { state: ModalState }) {
       ? 'var(--signal)'
       : 'var(--accent)'
   const eyebrow = isError
-    ? 'Hmm · stalled'
+    ? copy.header.eyebrow.error
     : isSuccess
-      ? 'Got it · submitted'
+      ? copy.header.eyebrow.success
       : isDone
-        ? 'Already submitted'
-        : 'Community prices · open'
-  const code = isError ? 'ERR' : isSuccess ? 'SENT' : isDone ? 'DONE' : 'OPEN'
+        ? copy.header.eyebrow.alreadySubmitted
+        : copy.header.eyebrow.open
+  const code = isError
+    ? copy.header.code.error
+    : isSuccess
+      ? copy.header.code.success
+      : isDone
+        ? copy.header.code.alreadySubmitted
+        : copy.header.code.open
   const pulse =
     state === 'form' || state === 'submitting' || state === 'loading-check'
 
@@ -737,7 +750,7 @@ function StatusRail({ tone }: { tone: 'error' }) {
           whiteSpace: 'nowrap',
         }}
       >
-        Didn&apos;t save · price channel
+        {copy.statusRail.errorLabel}
       </span>
       <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
       <span
@@ -750,7 +763,7 @@ function StatusRail({ tone }: { tone: 'error' }) {
           fontWeight: 700,
         }}
       >
-        ERR · 503
+        {copy.statusRail.errorCode}
       </span>
     </div>
   )

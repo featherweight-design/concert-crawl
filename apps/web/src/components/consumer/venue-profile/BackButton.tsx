@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { VENUE_PROFILE_COPY } from './definitions/copy'
 
 export function BackButton() {
   const router = useRouter()
@@ -15,7 +16,7 @@ export function BackButton() {
           router.back()
         }
       }}
-      aria-label="Go back"
+      aria-label={VENUE_PROFILE_COPY.backButton.ariaLabel}
       className="absolute left-3.5 top-14 z-10 flex h-9 w-9 items-center justify-center rounded-full"
       style={{ background: 'var(--scrim)' }}
     >

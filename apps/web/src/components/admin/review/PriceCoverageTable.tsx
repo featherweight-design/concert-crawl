@@ -11,6 +11,7 @@ import {
   TR,
   TD,
 } from '@/components/admin/primitives'
+import { REVIEW_COPY } from './definitions/copy'
 
 interface PriceEvent {
   eventId: string
@@ -149,7 +150,7 @@ export const PriceCoverageTable = ({
 
   const panelTitle = (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-      Price coverage
+      {REVIEW_COPY.priceCoverage.panelTitle}
       {missingBadge}
     </span>
   )
@@ -160,7 +161,7 @@ export const PriceCoverageTable = ({
       size="sm"
       onClick={() => setShowMissingOnly((prev) => !prev)}
     >
-      Missing only
+      {REVIEW_COPY.priceCoverage.missingOnly}
     </AdminButton>
   ) : null
 
@@ -176,7 +177,7 @@ export const PriceCoverageTable = ({
             fontFamily: "'Inter', sans-serif",
           }}
         >
-          Loading…
+          {REVIEW_COPY.priceCoverage.loading}
         </div>
       ) : (
         <div style={{ maxHeight: 480, overflowY: 'auto' }}>
@@ -191,18 +192,18 @@ export const PriceCoverageTable = ({
               }}
             >
               {showMissingOnly
-                ? 'All events have prices — nothing missing.'
-                : 'No upcoming events with price data.'}
+                ? REVIEW_COPY.priceCoverage.emptyAllPrices
+                : REVIEW_COPY.priceCoverage.emptyNoPrices}
             </div>
           ) : (
             <AdminTable>
               <THead>
                 <tr>
-                  <TH>Event</TH>
-                  <TH>Venue / Date</TH>
-                  <TH>Source</TH>
-                  <TH>Current Price</TH>
-                  <TH>Updated</TH>
+                  <TH>{REVIEW_COPY.priceCoverage.columnEvent}</TH>
+                  <TH>{REVIEW_COPY.priceCoverage.columnVenueDate}</TH>
+                  <TH>{REVIEW_COPY.priceCoverage.columnSource}</TH>
+                  <TH>{REVIEW_COPY.priceCoverage.columnCurrentPrice}</TH>
+                  <TH>{REVIEW_COPY.priceCoverage.columnUpdated}</TH>
                 </tr>
               </THead>
               <tbody>
@@ -259,16 +260,18 @@ export const PriceCoverageTable = ({
                             {ev.priceSource !== null &&
                               ev.priceSource !== 'community' && (
                                 <StatusBadge kind="signal" variant="outline">
-                                  crawled
+                                  {REVIEW_COPY.priceCoverage.sourceCrawled}
                                 </StatusBadge>
                               )}
                             {ev.priceSource === 'community' && (
                               <StatusBadge kind="accent" variant="outline">
-                                community
+                                {REVIEW_COPY.priceCoverage.sourceCommunity}
                               </StatusBadge>
                             )}
                             {ev.priceSource === null && (
-                              <StatusBadge kind="danger">no price</StatusBadge>
+                              <StatusBadge kind="danger">
+                                {REVIEW_COPY.priceCoverage.sourceNoPrice}
+                              </StatusBadge>
                             )}
                           </div>
                         </TD>
@@ -299,7 +302,7 @@ export const PriceCoverageTable = ({
                                   setAddingForEventId(ev.eventId)
                                 }}
                               >
-                                + Add price
+                                {REVIEW_COPY.priceCoverage.addPrice}
                               </AdminButton>
                             )}
                           </div>
@@ -362,7 +365,7 @@ export const PriceCoverageTable = ({
                                       marginBottom: 4,
                                     }}
                                   >
-                                    Adding price for
+                                    {REVIEW_COPY.priceCoverage.addingPriceFor}
                                   </div>
                                   <div
                                     style={{
@@ -407,7 +410,7 @@ export const PriceCoverageTable = ({
                                       }}
                                     >
                                       <span style={{ fontSize: 16 }}>↗</span>
-                                      Buy tickets
+                                      {REVIEW_COPY.priceCoverage.buyTickets}
                                     </a>
                                   )}
                                 </div>
@@ -425,7 +428,7 @@ export const PriceCoverageTable = ({
                                       marginBottom: 4,
                                     }}
                                   >
-                                    Low
+                                    {REVIEW_COPY.priceCoverage.priceLow}
                                   </div>
                                   <div
                                     style={{
@@ -481,7 +484,7 @@ export const PriceCoverageTable = ({
                                       marginBottom: 4,
                                     }}
                                   >
-                                    High
+                                    {REVIEW_COPY.priceCoverage.priceHigh}
                                   </div>
                                   <div
                                     style={{
@@ -537,7 +540,7 @@ export const PriceCoverageTable = ({
                                       marginBottom: 4,
                                     }}
                                   >
-                                    Vendor
+                                    {REVIEW_COPY.priceCoverage.vendor}
                                   </div>
                                   <select
                                     value={vendor}
@@ -559,16 +562,40 @@ export const PriceCoverageTable = ({
                                     }}
                                   >
                                     <option value="Ticketmaster">
-                                      Ticketmaster
+                                      {
+                                        REVIEW_COPY.priceCoverage.vendorOptions
+                                          .ticketmaster
+                                      }
                                     </option>
-                                    <option value="AXS">AXS</option>
-                                    <option value="SeatGeek">SeatGeek</option>
-                                    <option value="DICE">DICE</option>
+                                    <option value="AXS">
+                                      {
+                                        REVIEW_COPY.priceCoverage.vendorOptions
+                                          .axs
+                                      }
+                                    </option>
+                                    <option value="SeatGeek">
+                                      {
+                                        REVIEW_COPY.priceCoverage.vendorOptions
+                                          .seatgeek
+                                      }
+                                    </option>
+                                    <option value="DICE">
+                                      {
+                                        REVIEW_COPY.priceCoverage.vendorOptions
+                                          .dice
+                                      }
+                                    </option>
                                     <option value="Eventbrite">
-                                      Eventbrite
+                                      {
+                                        REVIEW_COPY.priceCoverage.vendorOptions
+                                          .eventbrite
+                                      }
                                     </option>
                                     <option value="VenueBoxOffice">
-                                      Venue box office
+                                      {
+                                        REVIEW_COPY.priceCoverage.vendorOptions
+                                          .venueBoxOffice
+                                      }
                                     </option>
                                   </select>
                                 </div>
@@ -586,7 +613,7 @@ export const PriceCoverageTable = ({
                                       marginBottom: 4,
                                     }}
                                   >
-                                    How found
+                                    {REVIEW_COPY.priceCoverage.howFound}
                                   </div>
                                   <select
                                     value={howFound}
@@ -608,13 +635,22 @@ export const PriceCoverageTable = ({
                                     }}
                                   >
                                     <option value="saw_listing">
-                                      Saw listing
+                                      {
+                                        REVIEW_COPY.priceCoverage
+                                          .howFoundOptions.sawListing
+                                      }
                                     </option>
                                     <option value="bought_myself">
-                                      Bought tickets
+                                      {
+                                        REVIEW_COPY.priceCoverage
+                                          .howFoundOptions.boughtMyself
+                                      }
                                     </option>
                                     <option value="at_the_venue">
-                                      At the venue
+                                      {
+                                        REVIEW_COPY.priceCoverage
+                                          .howFoundOptions.atTheVenue
+                                      }
                                     </option>
                                   </select>
                                 </div>
@@ -659,7 +695,7 @@ export const PriceCoverageTable = ({
                                       flexShrink: 0,
                                     }}
                                   />
-                                  Adding price
+                                  {REVIEW_COPY.priceCoverage.addingPriceStatus}
                                 </span>
                                 <div
                                   style={{
@@ -684,7 +720,7 @@ export const PriceCoverageTable = ({
                                       color: 'var(--fg-muted)',
                                     }}
                                   >
-                                    Discard
+                                    {REVIEW_COPY.priceCoverage.discard}
                                   </button>
                                   <button
                                     onClick={() =>
@@ -708,7 +744,9 @@ export const PriceCoverageTable = ({
                                           : 'pointer',
                                     }}
                                   >
-                                    {isSaving ? 'Saving…' : 'Save changes'}
+                                    {isSaving
+                                      ? REVIEW_COPY.priceCoverage.saving
+                                      : REVIEW_COPY.priceCoverage.saveChanges}
                                   </button>
                                 </div>
                               </div>

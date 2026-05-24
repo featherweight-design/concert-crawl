@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { X, Trash2, Loader2 } from 'lucide-react'
 import { deleteVenue } from '@/lib/actions/venues'
 import { AdminButton } from '@/components/admin/primitives'
+import { deleteVenueConfirmCopy } from '@/components/admin/definitions/delete-venue-confirm-copy'
 
 interface DeleteVenueConfirmProps {
   venueId: string
@@ -44,7 +45,7 @@ export function DeleteVenueConfirm({
       router.push('/admin/venues')
     } catch {
       setDeleteState('error')
-      setErrorMessage('Delete failed — please try again')
+      setErrorMessage(deleteVenueConfirmCopy.errors.deleteFailed)
     }
   }
 
@@ -57,7 +58,7 @@ export function DeleteVenueConfirm({
         onClick={() => setOpen(true)}
         type="button"
       >
-        Delete venue…
+        {deleteVenueConfirmCopy.trigger}
       </AdminButton>
 
       {open && (
@@ -107,7 +108,7 @@ export function DeleteVenueConfirm({
                   color: 'var(--danger)',
                 }}
               >
-                Destructive action
+                {deleteVenueConfirmCopy.header.eyebrow}
               </span>
 
               {/* Title */}
@@ -138,12 +139,7 @@ export function DeleteVenueConfirm({
                   lineHeight: 1.55,
                 }}
               >
-                This{' '}
-                <strong style={{ color: 'var(--danger)', fontWeight: 700 }}>
-                  can&rsquo;t be undone
-                </strong>
-                . The venue config, crawl schedule, and ticketing defaults will
-                be removed.
+                {deleteVenueConfirmCopy.header.description}
               </p>
             </div>
 
@@ -168,7 +164,7 @@ export function DeleteVenueConfirm({
                     marginBottom: 8,
                   }}
                 >
-                  What gets removed
+                  {deleteVenueConfirmCopy.removed.heading}
                 </div>
                 <ul
                   style={{
@@ -179,12 +175,7 @@ export function DeleteVenueConfirm({
                     gap: 3,
                   }}
                 >
-                  {[
-                    'Venue config (name, slug, source URL, ticketing)',
-                    'Crawl schedule + extraction strategy + history',
-                    'About / Capacity / Neighborhood editorial copy',
-                    'Identity art seed',
-                  ].map((item) => (
+                  {deleteVenueConfirmCopy.removed.items.map((item) => (
                     <li
                       key={item}
                       style={{
@@ -212,7 +203,7 @@ export function DeleteVenueConfirm({
                     marginBottom: 8,
                   }}
                 >
-                  What survives
+                  {deleteVenueConfirmCopy.survives.heading}
                 </div>
                 <ul
                   style={{
@@ -223,10 +214,7 @@ export function DeleteVenueConfirm({
                     gap: 3,
                   }}
                 >
-                  {[
-                    'Individual event records (orphaned, can be re-linked or re-deleted manually)',
-                    'Fan-submitted prices and confirmations on those events',
-                  ].map((item) => (
+                  {deleteVenueConfirmCopy.survives.items.map((item) => (
                     <li
                       key={item}
                       style={{
@@ -256,7 +244,7 @@ export function DeleteVenueConfirm({
                   marginBottom: 10,
                 }}
               >
-                Type{' '}
+                {deleteVenueConfirmCopy.gate.label}{' '}
                 <span
                   style={{
                     fontFamily: "'JetBrains Mono', monospace",
@@ -265,16 +253,16 @@ export function DeleteVenueConfirm({
                     letterSpacing: '0.08em',
                   }}
                 >
-                  DELETE
+                  {deleteVenueConfirmCopy.gate.keyword}
                 </span>{' '}
-                to confirm.
+                {deleteVenueConfirmCopy.gate.labelSuffix}
               </label>
               <input
                 id="delete-gate-input"
                 type="text"
                 value={typedValue}
                 onChange={(evt) => setTypedValue(evt.target.value)}
-                placeholder="DELETE"
+                placeholder={deleteVenueConfirmCopy.gate.placeholder}
                 autoComplete="off"
                 disabled={deleteState === 'deleting'}
                 style={{
@@ -326,7 +314,7 @@ export function DeleteVenueConfirm({
                 onClick={handleClose}
                 disabled={deleteState === 'deleting'}
               >
-                Keep venue
+                {deleteVenueConfirmCopy.actions.keep}
               </AdminButton>
               <button
                 type="button"
@@ -359,17 +347,17 @@ export function DeleteVenueConfirm({
                       size={13}
                       style={{ animation: 'spin 1s linear infinite' }}
                     />
-                    Deleting…
+                    {deleteVenueConfirmCopy.actions.deleting}
                   </>
                 ) : canDelete ? (
                   <>
                     <Trash2 size={13} />
-                    Delete permanently
+                    {deleteVenueConfirmCopy.actions.deletePermanently}
                   </>
                 ) : (
                   <>
                     <X size={13} />
-                    Type DELETE to enable
+                    {deleteVenueConfirmCopy.actions.typeToEnable}
                   </>
                 )}
               </button>

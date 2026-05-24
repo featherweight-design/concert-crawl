@@ -14,6 +14,7 @@ import {
   type VenueFilterState,
   type VenueWithDistance,
 } from './venue-filter-defs'
+import { VENUES_INDEX_COPY } from './definitions/copy'
 
 interface VenuesIndexClientProps {
   venues: VenuePublic[]
@@ -62,7 +63,7 @@ export function VenuesIndexClient({ venues }: VenuesIndexClientProps) {
       {/* Page heading — reactive to filtered count */}
       <div className="mb-[18px] flex flex-wrap items-baseline gap-[10px] sm:gap-[14px]">
         <h1 className="m-0 text-[28px] font-extrabold text-fg sm:text-[40px] [letter-spacing:-0.03em] sm:[letter-spacing:-0.035em]">
-          Venues
+          {VENUES_INDEX_COPY.pageHeading}
         </h1>
         <span
           style={{
@@ -73,7 +74,7 @@ export function VenuesIndexClient({ venues }: VenuesIndexClientProps) {
             textTransform: 'uppercase',
           }}
         >
-          {filtered.length} in Denver
+          {filtered.length} {VENUES_INDEX_COPY.venueCountSuffix}
         </span>
       </div>
 
@@ -107,9 +108,13 @@ export function VenuesIndexClient({ venues }: VenuesIndexClientProps) {
           }}
         >
           <div />
-          <div>Venue</div>
-          <div style={{ textAlign: 'right' }}>Capacity</div>
-          <div style={{ textAlign: 'right' }}>Upcoming</div>
+          <div>{VENUES_INDEX_COPY.columnHeaders.venue}</div>
+          <div style={{ textAlign: 'right' }}>
+            {VENUES_INDEX_COPY.columnHeaders.capacity}
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            {VENUES_INDEX_COPY.columnHeaders.upcoming}
+          </div>
           <div />
         </div>
       )}
@@ -128,10 +133,10 @@ export function VenuesIndexClient({ venues }: VenuesIndexClientProps) {
       ) : !featured ? (
         <div className="py-[60px] sm:py-20 text-center px-6 sm:px-0">
           <div className="text-[16px] sm:text-[18px] font-bold text-fg sm:[letter-spacing:-0.01em]">
-            No venues match.
+            {VENUES_INDEX_COPY.emptyState.heading}
           </div>
           <div className="mt-[5px] sm:mt-1.5 text-[13px] sm:text-[14px] text-fg-muted">
-            Loosen a filter or two and they&apos;ll come back.
+            {VENUES_INDEX_COPY.emptyState.body}
           </div>
           <button
             type="button"
@@ -144,7 +149,7 @@ export function VenuesIndexClient({ venues }: VenuesIndexClientProps) {
             }
             className="mt-[14px] sm:mt-4 inline-flex items-center gap-1.5 rounded-full border border-border-strong px-[13px] sm:px-3.5 py-[7px] sm:py-2 text-[12px] sm:text-[12.5px] font-semibold text-fg-muted hover:text-fg transition-colors"
           >
-            × Clear filters
+            {VENUES_INDEX_COPY.emptyState.clearButton}
           </button>
         </div>
       ) : null}

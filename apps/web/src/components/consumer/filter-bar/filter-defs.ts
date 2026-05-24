@@ -1,4 +1,5 @@
 import type { VenuePublic } from '@concert-crawl/types'
+import { copy } from './definitions/copy'
 
 export type FilterKey = 'when' | 'where' | 'price' | 'vibe'
 
@@ -15,39 +16,39 @@ export interface FilterDefinition {
 
 export const FILTER_DEFS: Record<FilterKey, FilterDefinition> = {
   when: {
-    label: 'When',
-    placeholder: 'Any date',
+    label: copy.whenLabel,
+    placeholder: copy.whenPlaceholder,
     queryKey: 'filterWhen',
   },
   where: {
-    label: 'Where',
-    placeholder: 'Any venue',
+    label: copy.whereLabel,
+    placeholder: copy.wherePlaceholder,
     queryKey: 'filterWhere',
   },
   price: {
-    label: 'How much',
-    placeholder: 'Any price',
+    label: copy.priceLabel,
+    placeholder: copy.pricePlaceholder,
     queryKey: 'filterPrice',
   },
   vibe: {
-    label: 'Vibe',
-    placeholder: 'Any vibe',
+    label: copy.vibeLabel,
+    placeholder: copy.vibePlaceholder,
     queryKey: 'filterVibe',
   },
 }
 
 const WHEN_OPTIONS: FilterOption[] = [
-  { value: 'tonight', label: 'Tonight' },
-  { value: 'this-weekend', label: 'This weekend' },
-  { value: 'this-week', label: 'This week' },
-  { value: 'next-week', label: 'Next week' },
+  { value: 'tonight', label: copy.whenTonight },
+  { value: 'this-weekend', label: copy.whenThisWeekend },
+  { value: 'this-week', label: copy.whenThisWeek },
+  { value: 'next-week', label: copy.whenNextWeek },
 ]
 
 const PRICE_OPTIONS: FilterOption[] = [
-  { value: 'under-25', label: 'Under $25' },
-  { value: '25-50', label: '$25 - $50' },
-  { value: '50-plus', label: '$50+' },
-  { value: 'tbd', label: 'Price TBD' },
+  { value: 'under-25', label: copy.priceUnder25 },
+  { value: '25-50', label: copy.price25to50 },
+  { value: '50-plus', label: copy.price50Plus },
+  { value: 'tbd', label: copy.priceTbd },
 ]
 
 export const FILTER_ORDER: FilterKey[] = ['when', 'where', 'price', 'vibe']

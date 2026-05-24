@@ -26,6 +26,7 @@ import {
   identityFor,
 } from '@/components/consumer/identity-art/IdentityArt'
 import { DeleteVenueConfirm } from './DeleteVenueConfirm'
+import { venueDetailsClientCopy } from '@/components/admin/definitions/venue-details-client-copy'
 import {
   GenerateField,
   type GenerateFieldState,
@@ -420,18 +421,18 @@ function RobotsHint({ allowed }: { allowed: boolean | null }) {
   if (allowed === null)
     return (
       <StatusBadge kind="neutral" variant="mono">
-        unchecked
+        {venueDetailsClientCopy.robots.unchecked}
       </StatusBadge>
     )
   if (allowed)
     return (
       <StatusBadge kind="success" variant="mono">
-        robots ok
+        {venueDetailsClientCopy.robots.allowed}
       </StatusBadge>
     )
   return (
     <StatusBadge kind="danger" variant="mono">
-      robots blocked
+      {venueDetailsClientCopy.robots.blocked}
     </StatusBadge>
   )
 }
@@ -559,7 +560,9 @@ export function VenueDetailsClient({ venue }: Props) {
     try {
       const result = await generateVenueAbout(venue.id)
       if (!result.success || !result.data) {
-        setGenerateError(result.error ?? 'Generation failed')
+        setGenerateError(
+          result.error ?? venueDetailsClientCopy.errors.generationFailed,
+        )
         setGenerateState('error')
         return
       }
@@ -573,7 +576,7 @@ export function VenueDetailsClient({ venue }: Props) {
       setNeighborhoodVal(neighborhood)
       setNeighborhoodGenerated(true)
     } catch {
-      setGenerateError('Network error — could not reach API')
+      setGenerateError(venueDetailsClientCopy.errors.networkError)
       setGenerateState('error')
     }
   }
@@ -650,9 +653,11 @@ export function VenueDetailsClient({ venue }: Props) {
       const result = await updateVenue(venue.id, formData)
       if (!result.success) {
         if (result.field === 'slug') {
-          setFieldErrors({ slug: result.error ?? 'Slug already in use' })
+          setFieldErrors({
+            slug: result.error ?? venueDetailsClientCopy.errors.slugInUse,
+          })
         } else {
-          setSaveError(result.error ?? 'Save failed')
+          setSaveError(result.error ?? venueDetailsClientCopy.errors.saveFailed)
         }
         setSaveState('error')
         return
@@ -663,7 +668,7 @@ export function VenueDetailsClient({ venue }: Props) {
         router.refresh()
       }, 1200)
     } catch {
-      setSaveError('An unexpected error occurred')
+      setSaveError(venueDetailsClientCopy.errors.unexpected)
       setSaveState('error')
     }
   }
@@ -712,14 +717,14 @@ export function VenueDetailsClient({ venue }: Props) {
     >
       {/* Header */}
       <SectionHead
-        eyebrow="Venues · edit"
-        title="Venue detail"
-        subtitle="Identity, ticketing, crawl config, editorial fields. LLM-assisted fields are always admin-reviewed before they save."
+        eyebrow={venueDetailsClientCopy.header.eyebrow}
+        title={venueDetailsClientCopy.header.title}
+        subtitle={venueDetailsClientCopy.header.subtitle}
         actions={
           <>
             <Link href="/admin/venues" style={{ textDecoration: 'none' }}>
               <AdminButton variant="ghost" size="sm" iconRight={ChevronRight}>
-                Back to venues
+                {venueDetailsClientCopy.actions.backToVenues}
               </AdminButton>
             </Link>
             <Link
@@ -727,7 +732,7 @@ export function VenueDetailsClient({ venue }: Props) {
               style={{ textDecoration: 'none' }}
             >
               <AdminButton variant="outline" size="sm" icon={ExternalLink}>
-                Crawl history
+                {venueDetailsClientCopy.actions.crawlHistory}
               </AdminButton>
             </Link>
           </>
@@ -822,17 +827,23 @@ export function VenueDetailsClient({ venue }: Props) {
                 }}
               >
                 <span>
-                  last crawl ·{' '}
+                  {venueDetailsClientCopy.summary.lastCrawl}{' '}
                   {crawlHealth.lastCrawledAt ? (
                     <RelTime iso={crawlHealth.lastCrawledAt} />
                   ) : (
-                    'never'
+                    venueDetailsClientCopy.summary.never
                   )}
                 </span>
                 <span>·</span>
-                <span>{crawlHealth.eventsTracked} events live</span>
+                <span>
+                  {crawlHealth.eventsTracked}{' '}
+                  {venueDetailsClientCopy.summary.eventsLive}
+                </span>
                 <span>·</span>
-                <span>health {crawlHealth.sevenDayPercent}%</span>
+                <span>
+                  {venueDetailsClientCopy.summary.health}{' '}
+                  {crawlHealth.sevenDayPercent}%
+                </span>
               </div>
             </div>
             <div
@@ -851,7 +862,9 @@ export function VenueDetailsClient({ venue }: Props) {
                 onClick={handleFeaturedToggle}
                 type="button"
               >
-                {venue.featured ? 'Flagship' : 'Make flagship'}
+                {venue.featured
+                  ? venueDetailsClientCopy.actions.flagship
+                  : venueDetailsClientCopy.actions.makeFlagship}
               </AdminButton>
               <CrawlTriggerButton venueId={venue.id} />
               <a
@@ -861,7 +874,7 @@ export function VenueDetailsClient({ venue }: Props) {
                 style={{ textDecoration: 'none' }}
               >
                 <AdminButton variant="outline" size="sm" icon={ExternalLink}>
-                  View on site
+                  {venueDetailsClientCopy.actions.viewOnSite}
                 </AdminButton>
               </a>
             </div>
@@ -893,7 +906,10 @@ export function VenueDetailsClient({ venue }: Props) {
       {/* Main content */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* 01 · identity */}
-        <VDSection eyebrow="01 · identity" title="Name + slug + source">
+        <VDSection
+          eyebrow={venueDetailsClientCopy.sections.identity.eyebrow}
+          title={venueDetailsClientCopy.sections.identity.title}
+        >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Venue name + Slug side by side */}
             <div
@@ -903,7 +919,10 @@ export function VenueDetailsClient({ venue }: Props) {
                 gap: 12,
               }}
             >
-              <VDField label="Venue name" htmlFor="edit-venue-name">
+              <VDField
+                label={venueDetailsClientCopy.fields.venueName}
+                htmlFor="edit-venue-name"
+              >
                 <VDInput
                   id="edit-venue-name"
                   inputRef={nameRef}
@@ -922,7 +941,7 @@ export function VenueDetailsClient({ venue }: Props) {
               </VDField>
 
               <VDField
-                label="Slug"
+                label={venueDetailsClientCopy.fields.slug.label}
                 htmlFor="edit-venue-slug"
                 {...(fieldErrors.slug ? { error: fieldErrors.slug } : {})}
                 labelRight={
@@ -936,7 +955,7 @@ export function VenueDetailsClient({ venue }: Props) {
                       color: 'var(--fg-subtle)',
                     }}
                   >
-                    Auto-generated
+                    {venueDetailsClientCopy.fields.slug.autoGeneratedBadge}
                   </span>
                 }
               >
@@ -972,7 +991,7 @@ export function VenueDetailsClient({ venue }: Props) {
                       flexShrink: 0,
                     }}
                   >
-                    /v/
+                    {venueDetailsClientCopy.fields.slug.prefix}
                   </div>
                   <input
                     ref={slugRef}
@@ -1013,7 +1032,7 @@ export function VenueDetailsClient({ venue }: Props) {
                       }
                     }}
                     disabled={isDisabled}
-                    title="Regenerate slug from name"
+                    title={venueDetailsClientCopy.fields.slug.regenerateTitle}
                     style={{
                       flexShrink: 0,
                       width: 36,
@@ -1035,10 +1054,10 @@ export function VenueDetailsClient({ venue }: Props) {
 
             {/* Source URL */}
             <VDField
-              label="Source URL"
+              label={venueDetailsClientCopy.fields.sourceUrl.label}
               htmlFor="edit-venue-url"
               labelRight={<RobotsHint allowed={venue.robotsTxtAllowed} />}
-              hint="The events page we crawl on the configured schedule."
+              hint={venueDetailsClientCopy.fields.sourceUrl.hint}
             >
               <VDInput
                 id="edit-venue-url"
@@ -1059,7 +1078,10 @@ export function VenueDetailsClient({ venue }: Props) {
                 gap: 12,
               }}
             >
-              <VDField label="City" htmlFor="edit-venue-city">
+              <VDField
+                label={venueDetailsClientCopy.fields.city}
+                htmlFor="edit-venue-city"
+              >
                 <VDInput
                   id="edit-venue-city"
                   inputRef={cityRef}
@@ -1068,23 +1090,26 @@ export function VenueDetailsClient({ venue }: Props) {
                   onChange={(evt) => setCityVal(evt.target.value)}
                 />
               </VDField>
-              <VDField label="Status" htmlFor="venue-status-toggle">
+              <VDField
+                label={venueDetailsClientCopy.fields.status.label}
+                htmlFor="venue-status-toggle"
+              >
                 {(() => {
                   const currentStatus = deriveVenueStatus(venue)
                   const statuses = [
                     {
                       value: 'active' as const,
-                      label: 'Active',
+                      label: venueDetailsClientCopy.fields.status.active,
                       dot: 'var(--success)',
                     },
                     {
                       value: 'paused' as const,
-                      label: 'Paused',
+                      label: venueDetailsClientCopy.fields.status.paused,
                       dot: 'var(--warning)',
                     },
                     {
                       value: 'blocked' as const,
-                      label: 'Blocked',
+                      label: venueDetailsClientCopy.fields.status.blocked,
                       dot: 'var(--danger)',
                     },
                   ]
@@ -1093,7 +1118,9 @@ export function VenueDetailsClient({ venue }: Props) {
                       <div
                         id="venue-status-toggle"
                         role="group"
-                        aria-label="Venue status"
+                        aria-label={
+                          venueDetailsClientCopy.fields.status.ariaLabel
+                        }
                         style={{
                           display: 'inline-flex',
                           padding: 2,
@@ -1166,7 +1193,10 @@ export function VenueDetailsClient({ venue }: Props) {
         </VDSection>
 
         {/* 02 · ticketing */}
-        <VDSection eyebrow="02 · ticketing" title="Where fans buy">
+        <VDSection
+          eyebrow={venueDetailsClientCopy.sections.ticketing.eyebrow}
+          title={venueDetailsClientCopy.sections.ticketing.title}
+        >
           <div
             style={{
               display: 'grid',
@@ -1175,27 +1205,46 @@ export function VenueDetailsClient({ venue }: Props) {
               alignItems: 'start',
             }}
           >
-            <VDField label="Primary vendor" htmlFor="edit-venue-ticket-vendor">
+            <VDField
+              label={venueDetailsClientCopy.fields.primaryVendor}
+              htmlFor="edit-venue-ticket-vendor"
+            >
               <VDSelect
                 id="edit-venue-ticket-vendor"
                 value={ticketVendorVal ?? ''}
                 disabled={isDisabled}
                 onChange={(evt) => setTicketVendorVal(evt.target.value || null)}
               >
-                <option value="">— Unknown —</option>
-                <option value="axs">AXS</option>
-                <option value="ticketmaster">Ticketmaster</option>
-                <option value="seatgeek">SeatGeek</option>
-                <option value="dice">DICE</option>
-                <option value="eventbrite">Eventbrite</option>
-                <option value="venue_box_office">Venue Box Office</option>
-                <option value="unknown">Unknown</option>
+                <option value="">
+                  {venueDetailsClientCopy.ticketVendors.unknown}
+                </option>
+                <option value="axs">
+                  {venueDetailsClientCopy.ticketVendors.axs}
+                </option>
+                <option value="ticketmaster">
+                  {venueDetailsClientCopy.ticketVendors.ticketmaster}
+                </option>
+                <option value="seatgeek">
+                  {venueDetailsClientCopy.ticketVendors.seatgeek}
+                </option>
+                <option value="dice">
+                  {venueDetailsClientCopy.ticketVendors.dice}
+                </option>
+                <option value="eventbrite">
+                  {venueDetailsClientCopy.ticketVendors.eventbrite}
+                </option>
+                <option value="venue_box_office">
+                  {venueDetailsClientCopy.ticketVendors.venueBoxOffice}
+                </option>
+                <option value="unknown">
+                  {venueDetailsClientCopy.ticketVendors.unknownValue}
+                </option>
               </VDSelect>
             </VDField>
             <VDField
-              label="Ticket URL"
+              label={venueDetailsClientCopy.fields.ticketUrl.label}
               htmlFor="edit-venue-price-url"
-              hint="Default destination for the 'Buy tickets' button when an event has no per-show URL."
+              hint={venueDetailsClientCopy.fields.ticketUrl.hint}
             >
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                 <VDInput
@@ -1203,7 +1252,9 @@ export function VenueDetailsClient({ venue }: Props) {
                   type="url"
                   defaultValue={venue.priceUrl ?? ''}
                   disabled={isDisabled}
-                  placeholder="https://..."
+                  placeholder={
+                    venueDetailsClientCopy.fields.ticketUrl.placeholder
+                  }
                   onChange={(evt) => setPriceUrlVal(evt.target.value)}
                   style={{
                     fontFamily: "'JetBrains Mono', monospace",
@@ -1221,7 +1272,7 @@ export function VenueDetailsClient({ venue }: Props) {
                       color: 'var(--fg-muted)',
                       flexShrink: 0,
                     }}
-                    title="Open ticket URL"
+                    title={venueDetailsClientCopy.fields.ticketUrl.openTitle}
                   >
                     <ExternalLink size={14} />
                   </a>
@@ -1233,8 +1284,8 @@ export function VenueDetailsClient({ venue }: Props) {
 
         {/* 03 · crawl config */}
         <VDSection
-          eyebrow="03 · crawl config"
-          title="How the scraper hits this venue"
+          eyebrow={venueDetailsClientCopy.sections.crawlConfig.eyebrow}
+          title={venueDetailsClientCopy.sections.crawlConfig.title}
         >
           <div
             style={{
@@ -1248,7 +1299,7 @@ export function VenueDetailsClient({ venue }: Props) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {/* Extraction strategy */}
               <VDField
-                label="Extraction strategy"
+                label={venueDetailsClientCopy.fields.extractionStrategy.label}
                 htmlFor="edit-venue-extraction-strategy"
               >
                 <VDSelect
@@ -1265,20 +1316,29 @@ export function VenueDetailsClient({ venue }: Props) {
                     )
                   }
                 >
-                  <option value="">— Auto —</option>
-                  <option value="structured_data">
-                    structured — schema.org/Event
+                  <option value="">
+                    {venueDetailsClientCopy.fields.extractionStrategy.auto}
                   </option>
-                  <option value="llm">LLM — Claude Haiku extraction</option>
-                  <option value="manual">manual — admin entry only</option>
+                  <option value="structured_data">
+                    {
+                      venueDetailsClientCopy.fields.extractionStrategy
+                        .structuredData
+                    }
+                  </option>
+                  <option value="llm">
+                    {venueDetailsClientCopy.fields.extractionStrategy.llm}
+                  </option>
+                  <option value="manual">
+                    {venueDetailsClientCopy.fields.extractionStrategy.manual}
+                  </option>
                 </VDSelect>
               </VDField>
 
               {/* Request delay */}
               <VDField
-                label="Request delay"
+                label={venueDetailsClientCopy.fields.requestDelay.label}
                 htmlFor="edit-venue-crawl-delay"
-                hint="Milliseconds between requests inside one sweep. Tune up if you hit rate limits."
+                hint={venueDetailsClientCopy.fields.requestDelay.hint}
               >
                 <div style={{ display: 'flex', gap: 0, alignItems: 'stretch' }}>
                   <VDInput
@@ -1321,7 +1381,7 @@ export function VenueDetailsClient({ venue }: Props) {
                       flexShrink: 0,
                     }}
                   >
-                    ms
+                    {venueDetailsClientCopy.fields.requestDelay.unit}
                   </div>
                 </div>
               </VDField>
@@ -1330,13 +1390,26 @@ export function VenueDetailsClient({ venue }: Props) {
             {/* Right column */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {/* Fetch mode */}
-              <VDField label="Fetch mode" htmlFor="edit-venue-crawl-mode">
+              <VDField
+                label={venueDetailsClientCopy.fields.fetchMode.label}
+                htmlFor="edit-venue-crawl-mode"
+              >
                 <div style={{ alignSelf: 'flex-start' }}>
                   <VDSegToggle
                     options={[
-                      { value: 'auto', label: 'Auto-detect' },
-                      { value: 'http', label: 'HTTP only' },
-                      { value: 'browser', label: 'Browser' },
+                      {
+                        value: 'auto',
+                        label:
+                          venueDetailsClientCopy.fields.fetchMode.autoDetect,
+                      },
+                      {
+                        value: 'http',
+                        label: venueDetailsClientCopy.fields.fetchMode.httpOnly,
+                      },
+                      {
+                        value: 'browser',
+                        label: venueDetailsClientCopy.fields.fetchMode.browser,
+                      },
                     ]}
                     value={crawlModeVal ?? 'auto'}
                     onChange={(val) =>
@@ -1359,23 +1432,31 @@ export function VenueDetailsClient({ venue }: Props) {
                   {crawlModeVal === null && (
                     <>
                       <strong style={{ color: 'var(--fg)' }}>
-                        Auto-detect
+                        {venueDetailsClientCopy.fields.fetchMode.autoDetect}
                       </strong>{' '}
-                      — tries plain HTTP first; falls back to browser if needed.
+                      —{' '}
+                      {venueDetailsClientCopy.fields.fetchMode.autoDescription}
                     </>
                   )}
                   {crawlModeVal === 'http' && (
                     <>
-                      <strong style={{ color: 'var(--fg)' }}>HTTP only</strong>{' '}
-                      — plain request. Fails if events need JavaScript.
+                      <strong style={{ color: 'var(--fg)' }}>
+                        {venueDetailsClientCopy.fields.fetchMode.httpOnly}
+                      </strong>{' '}
+                      —{' '}
+                      {venueDetailsClientCopy.fields.fetchMode.httpDescription}
                     </>
                   )}
                   {crawlModeVal === 'browser' && (
                     <>
                       <strong style={{ color: 'var(--fg)' }}>
-                        Browser only
+                        {venueDetailsClientCopy.fields.fetchMode.browser}
                       </strong>{' '}
-                      — always uses Playwright. Required for JS-rendered pages.
+                      —{' '}
+                      {
+                        venueDetailsClientCopy.fields.fetchMode
+                          .browserDescription
+                      }
                     </>
                   )}
                 </div>
@@ -1383,7 +1464,7 @@ export function VenueDetailsClient({ venue }: Props) {
 
               {/* Schedule — static (per-venue config tracked in #530) */}
               <VDField
-                label="Schedule (cron)"
+                label={venueDetailsClientCopy.fields.schedule.label}
                 htmlFor="edit-venue-schedule"
                 labelRight={
                   <span
@@ -1396,13 +1477,13 @@ export function VenueDetailsClient({ venue }: Props) {
                       color: 'var(--fg-subtle)',
                     }}
                   >
-                    Daily · 3 AM MT
+                    {venueDetailsClientCopy.fields.schedule.badge}
                   </span>
                 }
               >
                 <VDInput
                   id="edit-venue-schedule"
-                  value="0 3 * * *"
+                  value={venueDetailsClientCopy.fields.schedule.value}
                   disabled
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}
                 />
@@ -1410,7 +1491,7 @@ export function VenueDetailsClient({ venue }: Props) {
 
               {/* Wait selector */}
               <VDField
-                label="Wait selector"
+                label={venueDetailsClientCopy.fields.waitSelector.label}
                 htmlFor="edit-venue-wait-for-selector"
                 labelRight={
                   <span
@@ -1423,15 +1504,17 @@ export function VenueDetailsClient({ venue }: Props) {
                       color: 'var(--fg-subtle)',
                     }}
                   >
-                    Optional
+                    {venueDetailsClientCopy.fields.waitSelector.badge}
                   </span>
                 }
-                hint="If set, Playwright waits for this selector before parsing."
+                hint={venueDetailsClientCopy.fields.waitSelector.hint}
               >
                 <VDInput
                   id="edit-venue-wait-for-selector"
                   value={waitForSelectorVal}
-                  placeholder="e.g. .event-card, [data-event]"
+                  placeholder={
+                    venueDetailsClientCopy.fields.waitSelector.placeholder
+                  }
                   disabled={isDisabled}
                   onChange={(evt) => setWaitForSelectorVal(evt.target.value)}
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}
@@ -1443,24 +1526,24 @@ export function VenueDetailsClient({ venue }: Props) {
 
         {/* 04 · editorial */}
         <VDSection
-          eyebrow="04 · editorial"
-          title="About · capacity · neighborhood"
+          eyebrow={venueDetailsClientCopy.sections.editorial.eyebrow}
+          title={venueDetailsClientCopy.sections.editorial.title}
           subtitle={
             <>
-              These fields render on the venue&apos;s public page.{' '}
+              {venueDetailsClientCopy.sections.editorial.subtitle}{' '}
               <strong style={{ color: 'var(--accent)', fontWeight: 700 }}>
-                LLM-assisted
+                {venueDetailsClientCopy.sections.editorial.llmNote}
               </strong>{' '}
-              — every generation needs your sign-off before it saves.
+              {venueDetailsClientCopy.sections.editorial.llmSuffix}
             </>
           }
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             {/* About */}
             <VDField
-              label="About"
+              label={venueDetailsClientCopy.fields.about.label}
               htmlFor="edit-venue-about"
-              description="One short paragraph shown on the venue page (under the hero). Plain prose, no markdown."
+              description={venueDetailsClientCopy.fields.about.description}
               labelRight={
                 generateState === 'idle' || generateState === 'accepted' ? (
                   <button
@@ -1486,7 +1569,7 @@ export function VenueDetailsClient({ venue }: Props) {
                     }}
                   >
                     <Sparkles size={11} />
-                    Generate
+                    {venueDetailsClientCopy.fields.about.generate}
                     <span
                       style={{
                         fontFamily: "'JetBrains Mono', monospace",
@@ -1495,7 +1578,7 @@ export function VenueDetailsClient({ venue }: Props) {
                         fontWeight: 600,
                       }}
                     >
-                      ~$0.0042
+                      {venueDetailsClientCopy.fields.about.generateCost}
                     </span>
                   </button>
                 ) : null
@@ -1505,7 +1588,7 @@ export function VenueDetailsClient({ venue }: Props) {
                 <textarea
                   id="edit-venue-about"
                   value={aboutVal}
-                  placeholder="A short description of the venue's character and history."
+                  placeholder={venueDetailsClientCopy.fields.about.placeholder}
                   disabled={
                     isDisabled ||
                     generateState === 'loading' ||
@@ -1548,15 +1631,15 @@ export function VenueDetailsClient({ venue }: Props) {
 
             {/* Capacity */}
             <VDField
-              label="Capacity"
+              label={venueDetailsClientCopy.fields.capacity.label}
               htmlFor="edit-venue-capacity"
-              description="Used in the venue facts strip. Be specific (seated / standing / mixed)."
+              description={venueDetailsClientCopy.fields.capacity.description}
             >
               <VDInput
                 id="edit-venue-capacity"
                 type="number"
                 value={capacityVal}
-                placeholder="e.g. 1600"
+                placeholder={venueDetailsClientCopy.fields.capacity.placeholder}
                 disabled={isDisabled}
                 min={1}
                 onChange={(evt) => {
@@ -1593,21 +1676,25 @@ export function VenueDetailsClient({ venue }: Props) {
                       flexShrink: 0,
                     }}
                   />
-                  generated · accepted
+                  {venueDetailsClientCopy.fields.capacity.generatedBadge}
                 </span>
               )}
             </VDField>
 
             {/* Neighborhood */}
             <VDField
-              label="Neighborhood"
+              label={venueDetailsClientCopy.fields.neighborhood.label}
               htmlFor="edit-venue-neighborhood"
-              description="Single line — where it sits in the city. Helps fans gauge travel time."
+              description={
+                venueDetailsClientCopy.fields.neighborhood.description
+              }
             >
               <VDInput
                 id="edit-venue-neighborhood"
                 value={neighborhoodVal}
-                placeholder="e.g. Capitol Hill, RiNo, LoDo"
+                placeholder={
+                  venueDetailsClientCopy.fields.neighborhood.placeholder
+                }
                 disabled={isDisabled}
                 onChange={(evt) => {
                   setNeighborhoodVal(evt.target.value)
@@ -1643,7 +1730,7 @@ export function VenueDetailsClient({ venue }: Props) {
                       flexShrink: 0,
                     }}
                   />
-                  generated · accepted
+                  {venueDetailsClientCopy.fields.neighborhood.generatedBadge}
                 </span>
               )}
             </VDField>
@@ -1652,8 +1739,8 @@ export function VenueDetailsClient({ venue }: Props) {
 
         {/* 05 · identity art */}
         <VDSection
-          eyebrow="05 · identity art"
-          title="Generative cover (Phase 7.5)"
+          eyebrow={venueDetailsClientCopy.sections.identityArt.eyebrow}
+          title={venueDetailsClientCopy.sections.identityArt.title}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {/* Description */}
@@ -1665,8 +1752,7 @@ export function VenueDetailsClient({ venue }: Props) {
                 lineHeight: 1.55,
               }}
             >
-              Deterministic generative art derived from the venue identity.
-              Current seed:{' '}
+              {venueDetailsClientCopy.sections.identityArt.description}{' '}
               <span
                 style={{
                   fontFamily: "'JetBrains Mono', monospace",
@@ -1740,15 +1826,21 @@ export function VenueDetailsClient({ venue }: Props) {
                 }}
               >
                 <VDField
-                  label="Namespace"
+                  label={venueDetailsClientCopy.fields.namespace.label}
                   htmlFor="edit-venue-art-namespace"
-                  hint="Venues use architectural patterns; artists use organic ones."
+                  hint={venueDetailsClientCopy.fields.namespace.hint}
                 >
                   <div style={{ alignSelf: 'flex-start' }}>
                     <VDSegToggle
                       options={[
-                        { value: 'venue', label: 'Venue' },
-                        { value: 'artist', label: 'Artist' },
+                        {
+                          value: 'venue',
+                          label: venueDetailsClientCopy.fields.namespace.venue,
+                        },
+                        {
+                          value: 'artist',
+                          label: venueDetailsClientCopy.fields.namespace.artist,
+                        },
                       ]}
                       value={artNamespace}
                       onChange={(val) =>
@@ -1759,12 +1851,12 @@ export function VenueDetailsClient({ venue }: Props) {
                 </VDField>
 
                 <VDField
-                  label="Seed"
+                  label={venueDetailsClientCopy.fields.seed.label}
                   htmlFor="edit-venue-art-seed"
                   hint={
                     artSeedNum === 0
-                      ? 'LOCKED UNLESS BUMPED'
-                      : `Bumped to ${artSeedNum}`
+                      ? venueDetailsClientCopy.fields.seed.lockedHint
+                      : `${venueDetailsClientCopy.fields.seed.bumpedHint} ${artSeedNum}`
                   }
                 >
                   <div style={{ display: 'flex', gap: 8 }}>
@@ -1792,7 +1884,7 @@ export function VenueDetailsClient({ venue }: Props) {
                         cursor: 'pointer',
                       }}
                     >
-                      Roll
+                      {venueDetailsClientCopy.fields.seed.rollButton}
                     </button>
                   </div>
                 </VDField>
@@ -1817,10 +1909,11 @@ export function VenueDetailsClient({ venue }: Props) {
                 lineHeight: 1.45,
               }}
             >
-              <span style={{ fontWeight: 700, flexShrink: 0 }}>Phase 8 —</span>
+              <span style={{ fontWeight: 700, flexShrink: 0 }}>
+                {venueDetailsClientCopy.sections.identityArt.phase8Label}
+              </span>
               <span>
-                Seed + namespace will be persisted to the DB. Changes here are
-                preview-only until then.
+                {venueDetailsClientCopy.sections.identityArt.phase8Warning}
               </span>
             </div>
           </div>
@@ -1828,8 +1921,8 @@ export function VenueDetailsClient({ venue }: Props) {
 
         {/* 06 · danger */}
         <VDSection
-          eyebrow="danger zone"
-          title="Pause or remove this venue"
+          eyebrow={venueDetailsClientCopy.sections.dangerZone.eyebrow}
+          title={venueDetailsClientCopy.sections.dangerZone.title}
           danger
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -1851,7 +1944,7 @@ export function VenueDetailsClient({ venue }: Props) {
                     color: 'var(--fg)',
                   }}
                 >
-                  Pause crawling
+                  {venueDetailsClientCopy.dangerZone.pause.title}
                 </div>
                 <div
                   style={{
@@ -1862,7 +1955,7 @@ export function VenueDetailsClient({ venue }: Props) {
                     lineHeight: 1.4,
                   }}
                 >
-                  Stops scheduled runs. Existing events stay published.
+                  {venueDetailsClientCopy.dangerZone.pause.description}
                 </div>
               </div>
               <AdminButton
@@ -1873,7 +1966,9 @@ export function VenueDetailsClient({ venue }: Props) {
                 onClick={handlePauseToggle}
                 type="button"
               >
-                {venue.active ? 'Pause venue' : 'Activate venue'}
+                {venue.active
+                  ? venueDetailsClientCopy.dangerZone.pause.pauseButton
+                  : venueDetailsClientCopy.dangerZone.pause.activateButton}
               </AdminButton>
             </div>
 
@@ -1903,7 +1998,7 @@ export function VenueDetailsClient({ venue }: Props) {
                     color: 'var(--danger)',
                   }}
                 >
-                  Delete venue
+                  {venueDetailsClientCopy.dangerZone.delete.title}
                 </div>
                 <div
                   style={{
@@ -1914,8 +2009,7 @@ export function VenueDetailsClient({ venue }: Props) {
                     lineHeight: 1.4,
                   }}
                 >
-                  Removes config + breaks links to existing events. Cannot be
-                  undone.
+                  {venueDetailsClientCopy.dangerZone.delete.description}
                 </div>
               </div>
               <DeleteVenueConfirm
@@ -1975,8 +2069,10 @@ export function VenueDetailsClient({ venue }: Props) {
                   flexShrink: 0,
                 }}
               />
-              {dirtyFields.length} unsaved{' '}
-              {dirtyFields.length === 1 ? 'change' : 'changes'}
+              {dirtyFields.length} {venueDetailsClientCopy.saveBar.unsaved}{' '}
+              {dirtyFields.length === 1
+                ? venueDetailsClientCopy.saveBar.unsavedChange
+                : venueDetailsClientCopy.saveBar.unsavedChanges}
             </span>
             {/* Dirty field names */}
             {!isMobile && (
@@ -2011,7 +2107,7 @@ export function VenueDetailsClient({ venue }: Props) {
                 color: 'var(--fg-muted)',
               }}
             >
-              Discard
+              {venueDetailsClientCopy.saveBar.discard}
             </button>
             <button
               type="button"
@@ -2038,17 +2134,17 @@ export function VenueDetailsClient({ venue }: Props) {
                     size={12}
                     style={{ animation: 'spin 1s linear infinite' }}
                   />
-                  Saving…
+                  {venueDetailsClientCopy.saveBar.saving}
                 </>
               ) : saveState === 'saved' ? (
                 <>
                   <Check size={12} />
-                  Saved
+                  {venueDetailsClientCopy.saveBar.saved}
                 </>
               ) : (
                 <>
                   <Check size={12} />
-                  Save changes
+                  {venueDetailsClientCopy.saveBar.saveChanges}
                 </>
               )}
             </button>

@@ -12,6 +12,7 @@ import {
   fmtDistance,
   type VenueWithDistance,
 } from './venue-filter-defs'
+import { VENUES_INDEX_COPY } from './definitions/copy'
 
 interface VenueFeatureCardProps {
   venue: VenueWithDistance
@@ -61,7 +62,7 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
               color: '#F1E6D5',
             }}
           >
-            ★ Flagship
+            {VENUES_INDEX_COPY.featureCard.flagship}
           </div>
           {/* Monogram chip */}
           <div
@@ -160,7 +161,7 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
                     strokeLinejoin="round"
                   />
                 </svg>
-                Directions
+                {VENUES_INDEX_COPY.featureCard.directions}
               </span>
             </div>
           </div>
@@ -176,17 +177,17 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
           >
             {[
               {
-                label: 'Capacity',
+                label: VENUES_INDEX_COPY.statLabels.capacity,
                 value: venue.capacity ? fmtNum(venue.capacity) : '—',
                 signal: false,
               },
               {
-                label: 'Upcoming',
+                label: VENUES_INDEX_COPY.statLabels.upcoming,
                 value: String(venue.upcomingCount),
                 signal: true,
               },
               {
-                label: 'Distance',
+                label: VENUES_INDEX_COPY.statLabels.distance,
                 value: fmtDistance(venue.distanceMi),
                 signal: false,
               },
@@ -256,7 +257,7 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
               color: '#F1E6D5',
             }}
           >
-            ★ Flagship
+            {VENUES_INDEX_COPY.featureCard.flagship}
           </div>
           <div
             style={{
@@ -329,7 +330,7 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
                   strokeLinejoin="round"
                 />
               </svg>
-              Directions
+              {VENUES_INDEX_COPY.featureCard.directions}
             </span>
           </div>
           <div
@@ -338,17 +339,17 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
           >
             {[
               {
-                label: 'Capacity',
+                label: VENUES_INDEX_COPY.statLabels.capacity,
                 value: venue.capacity ? fmtNum(venue.capacity) : '—',
                 signal: false,
               },
               {
-                label: 'Upcoming',
+                label: VENUES_INDEX_COPY.statLabels.upcoming,
                 value: String(venue.upcomingCount),
                 signal: true,
               },
               {
-                label: 'Distance',
+                label: VENUES_INDEX_COPY.statLabels.distance,
                 value: fmtDistance(venue.distanceMi),
                 signal: false,
               },

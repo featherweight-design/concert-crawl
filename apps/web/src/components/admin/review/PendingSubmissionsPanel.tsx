@@ -2,6 +2,7 @@
 
 import { Panel, AdminButton, RelTime } from '@/components/admin/primitives'
 import { Check, ExternalLink, X } from 'lucide-react'
+import { REVIEW_COPY } from './definitions/copy'
 
 interface PriceSubmission {
   id: string
@@ -61,7 +62,7 @@ export const PendingSubmissionsPanel = ({
 
   const panelTitle = (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-      Community price submissions
+      {REVIEW_COPY.pendingSubmissions.panelTitle}
       {pendingBadge}
     </span>
   )
@@ -77,7 +78,7 @@ export const PendingSubmissionsPanel = ({
             fontFamily: "'Inter', sans-serif",
           }}
         >
-          No pending submissions
+          {REVIEW_COPY.pendingSubmissions.empty}
         </div>
       ) : (
         <div style={{ maxHeight: 360, overflowY: 'auto' }}>
@@ -216,7 +217,7 @@ export const PendingSubmissionsPanel = ({
                     icon={X}
                     onClick={() => onDeny(sub.id)}
                   >
-                    Deny
+                    {REVIEW_COPY.pendingSubmissions.deny}
                   </AdminButton>
                   <AdminButton
                     variant="success"
@@ -224,7 +225,7 @@ export const PendingSubmissionsPanel = ({
                     icon={Check}
                     onClick={() => onApprove(sub.id)}
                   >
-                    Approve · award cred
+                    {REVIEW_COPY.pendingSubmissions.approve}
                   </AdminButton>
                 </div>
               </div>

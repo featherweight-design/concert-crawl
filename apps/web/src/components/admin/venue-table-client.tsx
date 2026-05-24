@@ -35,6 +35,7 @@ import {
   type VenueStatus,
 } from '@/lib/admin/venue-status'
 import { deriveBulkVisibility } from './venue-table-bulk'
+import { venueTableClientCopy } from '@/components/admin/definitions/venue-table-client-copy'
 
 function sourceUrl(url: string): string {
   return url.replace(/^https?:\/\//, '')
@@ -128,7 +129,7 @@ export function VenueTableClient({ venues }: Props) {
             color: 'var(--fg-muted)',
           }}
         >
-          No venues match the current filter.
+          {venueTableClientCopy.empty}
         </div>
       )
     }
@@ -213,7 +214,11 @@ export function VenueTableClient({ venues }: Props) {
                   </div>
                 </div>
                 <button
-                  aria-label={isExpanded ? 'Collapse venue' : 'Expand venue'}
+                  aria-label={
+                    isExpanded
+                      ? venueTableClientCopy.expand.collapseAriaLabel
+                      : venueTableClientCopy.expand.expandAriaLabel
+                  }
                   aria-expanded={isExpanded}
                   onClick={() => toggleExpand(venue.id)}
                   style={{
@@ -266,7 +271,7 @@ export function VenueTableClient({ venues }: Props) {
                   fontFamily: "'JetBrains Mono', monospace",
                 }}
               >
-                {selected.size} selected
+                {selected.size} {venueTableClientCopy.bulkActions.selected}
               </span>
               {showVerify && (
                 <AdminButton
@@ -276,7 +281,7 @@ export function VenueTableClient({ venues }: Props) {
                   disabled={isPending}
                   onClick={() => runBulkAction(bulkVerifyVenues)}
                 >
-                  Verify
+                  {venueTableClientCopy.bulkActions.verify}
                 </AdminButton>
               )}
               {showUnverify && (
@@ -287,7 +292,7 @@ export function VenueTableClient({ venues }: Props) {
                   disabled={isPending}
                   onClick={() => runBulkAction(bulkUnverifyVenues)}
                 >
-                  Unverify
+                  {venueTableClientCopy.bulkActions.unverify}
                 </AdminButton>
               )}
               {showActivate && (
@@ -298,7 +303,7 @@ export function VenueTableClient({ venues }: Props) {
                   disabled={isPending}
                   onClick={() => runBulkAction(bulkActivateVenues)}
                 >
-                  Activate
+                  {venueTableClientCopy.bulkActions.activate}
                 </AdminButton>
               )}
               {showDeactivate && (
@@ -309,7 +314,7 @@ export function VenueTableClient({ venues }: Props) {
                   disabled={isPending}
                   onClick={() => runBulkAction(bulkDeactivateVenues)}
                 >
-                  Deactivate
+                  {venueTableClientCopy.bulkActions.deactivate}
                 </AdminButton>
               )}
             </>
@@ -322,7 +327,7 @@ export function VenueTableClient({ venues }: Props) {
                 fontFamily: 'var(--admin-font, Inter, sans-serif)',
               }}
             >
-              Configured venues{' '}
+              {venueTableClientCopy.configuredVenues}{' '}
               <span
                 style={{
                   fontSize: 11,
@@ -346,18 +351,18 @@ export function VenueTableClient({ venues }: Props) {
                 checked={allSelected}
                 onChange={toggleAll}
                 style={{ cursor: 'pointer' }}
-                aria-label="Select all venues"
+                aria-label={venueTableClientCopy.selectAll}
               />
             </TH>
             <TH width={32} />
-            <TH>Venue</TH>
-            <TH>Source URL</TH>
-            <TH>Strategy</TH>
-            <TH>Schedule</TH>
-            <TH>Status</TH>
-            <TH>Health</TH>
-            <TH>Last crawl</TH>
-            <TH>Events</TH>
+            <TH>{venueTableClientCopy.columns.venue}</TH>
+            <TH>{venueTableClientCopy.columns.sourceUrl}</TH>
+            <TH>{venueTableClientCopy.columns.strategy}</TH>
+            <TH>{venueTableClientCopy.columns.schedule}</TH>
+            <TH>{venueTableClientCopy.columns.status}</TH>
+            <TH>{venueTableClientCopy.columns.health}</TH>
+            <TH>{venueTableClientCopy.columns.lastCrawl}</TH>
+            <TH>{venueTableClientCopy.columns.events}</TH>
           </tr>
         </THead>
         <tbody>
@@ -373,7 +378,7 @@ export function VenueTableClient({ venues }: Props) {
                   color: 'var(--fg-muted)',
                 }}
               >
-                No venues match the current filter.
+                {venueTableClientCopy.empty}
               </td>
             </tr>
           )}
@@ -393,13 +398,15 @@ export function VenueTableClient({ venues }: Props) {
                       checked={selected.has(venue.id)}
                       onChange={() => toggleOne(venue.id)}
                       style={{ cursor: 'pointer' }}
-                      aria-label={`Select ${venue.name}`}
+                      aria-label={`${venueTableClientCopy.selectVenue} ${venue.name}`}
                     />
                   </TD>
                   <TD width={32}>
                     <button
                       aria-label={
-                        isExpanded ? 'Collapse venue' : 'Expand venue'
+                        isExpanded
+                          ? venueTableClientCopy.expand.collapseAriaLabel
+                          : venueTableClientCopy.expand.expandAriaLabel
                       }
                       aria-expanded={isExpanded}
                       onClick={() => toggleExpand(venue.id)}
@@ -485,7 +492,7 @@ export function VenueTableClient({ venues }: Props) {
                         fontFamily: 'var(--admin-font, Inter, sans-serif)',
                       }}
                     >
-                      daily · 3 AM MT
+                      {venueTableClientCopy.schedule}
                     </span>
                   </TD>
                   <TD>

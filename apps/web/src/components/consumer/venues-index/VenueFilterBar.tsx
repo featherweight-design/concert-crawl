@@ -11,6 +11,7 @@ import {
   type VenueFilterState,
 } from './venue-filter-defs'
 import { cn } from '@/lib/utils'
+import { VENUES_INDEX_COPY } from './definitions/copy'
 
 interface VenueFilterBarProps {
   state: VenueFilterState
@@ -108,7 +109,7 @@ export function VenueFilterBar({ state, onChange }: VenueFilterBarProps) {
                     color: active ? 'var(--fg-on-accent)' : 'var(--fg-subtle)',
                   }}
                 >
-                  Sort
+                  {VENUES_INDEX_COPY.filterBar.sortPrefix}
                 </span>
               )}
               <span className="whitespace-nowrap">{label}</span>
@@ -123,7 +124,7 @@ export function VenueFilterBar({ state, onChange }: VenueFilterBarProps) {
             onClick={clearFilters}
             className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-dashed border-border-strong bg-transparent px-3 py-1.5 text-[12px] font-semibold text-fg-subtle transition-colors hover:text-fg"
           >
-            × Clear
+            {VENUES_INDEX_COPY.filterBar.clearMobile}
           </button>
         )}
       </div>
@@ -165,7 +166,7 @@ export function VenueFilterBar({ state, onChange }: VenueFilterBarProps) {
                     color: active ? 'var(--fg-on-accent)' : 'var(--fg-subtle)',
                   }}
                 >
-                  Sort
+                  {VENUES_INDEX_COPY.filterBar.sortPrefix}
                 </span>
               )}
               <span className="whitespace-nowrap">{label}</span>
@@ -180,7 +181,7 @@ export function VenueFilterBar({ state, onChange }: VenueFilterBarProps) {
             onClick={clearFilters}
             className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-dashed border-border-strong px-3 py-[7px] text-[12.5px] font-semibold text-fg-muted transition-colors hover:text-fg"
           >
-            × Clear filters
+            {VENUES_INDEX_COPY.filterBar.clearDesktop}
           </button>
         )}
       </div>

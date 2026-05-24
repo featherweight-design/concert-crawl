@@ -12,6 +12,7 @@ import type { VenueWithEventCount } from '@concert-crawl/types'
 import { AdminButton, StatusBadge } from '@/components/admin/primitives'
 import { useTriggerVenueCrawl } from '@/lib/queries/use-admin-crawl-trigger'
 import { useState, useRef, useEffect } from 'react'
+import { venueQuickViewCopy } from '@/components/admin/definitions/venue-quick-view-copy'
 
 interface Props {
   venue: VenueWithEventCount
@@ -85,12 +86,12 @@ export function VenueQuickView({ venue }: Props) {
 
   const crawlLabel =
     crawlState === 'triggering'
-      ? 'Triggering…'
+      ? venueQuickViewCopy.actions.triggering
       : crawlState === 'queued'
-        ? 'Queued ✓'
+        ? venueQuickViewCopy.actions.queued
         : crawlState === 'error'
-          ? 'Error — retry?'
-          : 'Run crawl now'
+          ? venueQuickViewCopy.actions.error
+          : venueQuickViewCopy.actions.runCrawl
 
   const vendorLabel = venue.ticketVendor
     ? (TICKET_VENDOR_LABELS[venue.ticketVendor] ?? venue.ticketVendor)
@@ -115,7 +116,9 @@ export function VenueQuickView({ venue }: Props) {
       >
         {/* Ticket Vendor */}
         <div>
-          <div style={SECTION_LABEL}>Ticket vendor</div>
+          <div style={SECTION_LABEL}>
+            {venueQuickViewCopy.sections.ticketVendor}
+          </div>
           {vendorLabel ? (
             <div>
               <div
@@ -168,7 +171,9 @@ export function VenueQuickView({ venue }: Props) {
 
         {/* Crawl Schedule */}
         <div>
-          <div style={SECTION_LABEL}>Crawl schedule</div>
+          <div style={SECTION_LABEL}>
+            {venueQuickViewCopy.sections.crawlSchedule}
+          </div>
           <div
             style={{
               fontFamily: 'var(--admin-font, Inter, sans-serif)',
@@ -178,7 +183,7 @@ export function VenueQuickView({ venue }: Props) {
               marginBottom: 4,
             }}
           >
-            daily · 3 AM MT
+            {venueQuickViewCopy.crawlSchedule.label}
           </div>
           <div
             style={{
@@ -187,13 +192,15 @@ export function VenueQuickView({ venue }: Props) {
               color: 'var(--fg-subtle)',
             }}
           >
-            0 0 3 * * *
+            {venueQuickViewCopy.crawlSchedule.cron}
           </div>
         </div>
 
         {/* Extraction Strategy */}
         <div>
-          <div style={SECTION_LABEL}>Extraction strategy</div>
+          <div style={SECTION_LABEL}>
+            {venueQuickViewCopy.sections.extractionStrategy}
+          </div>
           <StatusBadge
             kind={strategyKind(venue.extractionStrategy)}
             variant="mono"
@@ -204,7 +211,9 @@ export function VenueQuickView({ venue }: Props) {
 
         {/* Consecutive Failures */}
         <div>
-          <div style={SECTION_LABEL}>Consecutive failures</div>
+          <div style={SECTION_LABEL}>
+            {venueQuickViewCopy.sections.consecutiveFailures}
+          </div>
           <span
             style={{
               fontFamily: "'JetBrains Mono', monospace",
@@ -223,22 +232,26 @@ export function VenueQuickView({ venue }: Props) {
               marginLeft: 4,
             }}
           >
-            of 4
+            {venueQuickViewCopy.consecutiveFailures.outOf}
           </span>
         </div>
 
         {/* Robots.txt */}
         <div>
-          <div style={SECTION_LABEL}>robots.txt</div>
+          <div style={SECTION_LABEL}>
+            {venueQuickViewCopy.sections.robotsTxt}
+          </div>
           {venue.robotsTxtAllowed === null ? (
-            <StatusBadge kind="neutral">unchecked</StatusBadge>
+            <StatusBadge kind="neutral">
+              {venueQuickViewCopy.robots.unchecked}
+            </StatusBadge>
           ) : venue.robotsTxtAllowed ? (
             <StatusBadge kind="success" variant="outline">
-              allowed
+              {venueQuickViewCopy.robots.allowed}
             </StatusBadge>
           ) : (
             <StatusBadge kind="danger" variant="outline">
-              disallowed
+              {venueQuickViewCopy.robots.disallowed}
             </StatusBadge>
           )}
         </div>
@@ -300,7 +313,7 @@ export function VenueQuickView({ venue }: Props) {
           style={{ textDecoration: 'none' }}
         >
           <AdminButton variant="outline" size="sm" icon={Settings}>
-            Edit venue
+            {venueQuickViewCopy.actions.editVenue}
           </AdminButton>
         </Link>
         <div style={{ flex: 1 }} />
@@ -317,7 +330,7 @@ export function VenueQuickView({ venue }: Props) {
             textDecoration: 'none',
           }}
         >
-          Crawl history
+          {venueQuickViewCopy.actions.crawlHistory}
           <ChevronRight size={14} />
         </Link>
       </div>

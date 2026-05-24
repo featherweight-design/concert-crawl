@@ -9,6 +9,7 @@ import {
   FileEdit,
 } from 'lucide-react'
 import { StatusBadge, AdminButton } from '@/components/admin/primitives'
+import { CRAWL_COPY } from '@/components/admin/crawl/definitions/copy'
 
 export interface CrawlRunForDiagnostics {
   id: string
@@ -36,28 +37,7 @@ type ErrorClass =
   | 'timeout'
   | 'unknown'
 
-const ERROR_REASONS: Record<ErrorClass, { label: string; body: string }> = {
-  bot_detection: {
-    label: 'Bot detection or IP blocking',
-    body: '403 from this venue usually means their edge layer (Cloudflare or similar) is denying the request. Could be IP-rate-based, user-agent fingerprinting, or a JS challenge.',
-  },
-  rate_limit: {
-    label: 'Rate limiting',
-    body: '429 means the venue is rate-limiting requests. Backing off the schedule or staggering with a delay is usually enough.',
-  },
-  parse_failure: {
-    label: 'Parse failure',
-    body: "The page returned 200 but the parser couldn't find the expected structure. Likely a layout change, schema.org markup removed, or a new template.",
-  },
-  timeout: {
-    label: 'Timeout',
-    body: 'Request did not complete in time. Often a JavaScript-heavy page that Playwright is struggling to render fully.',
-  },
-  unknown: {
-    label: 'Unclassified failure',
-    body: "The error doesn't match a known pattern. Open the raw response and inspect manually.",
-  },
-}
+const ERROR_REASONS = CRAWL_COPY.diagnostics.errorReasons
 
 interface DiagOption {
   id: string
@@ -68,104 +48,16 @@ interface DiagOption {
   cta: string
 }
 
-const DIAG_OPTIONS: Record<ErrorClass, DiagOption[]> = {
-  bot_detection: [
-    {
-      id: 'opt-headers',
-      iconName: 'FileEdit',
-      recommended: true,
-      title: 'Add custom request headers',
-      body: 'Send a browser-like User-Agent + Accept-Language. Lowest-impact change.',
-      cta: 'Stage header swap',
-    },
-    {
-      id: 'opt-playwright',
-      iconName: 'Play',
-      recommended: false,
-      title: 'Switch to Playwright with a real session',
-      body: 'Solve a JS challenge once, persist cookies, then re-use the session. Higher LLM cost.',
-      cta: 'Stage Playwright run',
-    },
-    {
-      id: 'opt-manual',
-      iconName: 'User',
-      recommended: false,
-      title: 'Mark venue as manual entry',
-      body: 'Stop crawling. Events for this venue will be added by the admin only.',
-      cta: 'Stage manual mode',
-    },
-  ],
-  rate_limit: [
-    {
-      id: 'opt-delay',
-      iconName: 'RefreshCw',
-      recommended: true,
-      title: 'Increase request delay to 8s',
-      body: 'Slows the sweep but stays under typical 10 req/min limits.',
-      cta: 'Stage delay 8s',
-    },
-    {
-      id: 'opt-sched',
-      iconName: 'RefreshCw',
-      recommended: false,
-      title: 'Reduce schedule to every 12h',
-      body: 'Half as many requests per day.',
-      cta: 'Stage schedule',
-    },
-  ],
-  parse_failure: [
-    {
-      id: 'opt-llm',
-      iconName: 'FileEdit',
-      recommended: true,
-      title: 'Switch to LLM extraction',
-      body: 'Fallback while the page template stabilizes. Cost goes up.',
-      cta: 'Stage LLM strategy',
-    },
-    {
-      id: 'opt-struct',
-      iconName: 'FileEdit',
-      recommended: false,
-      title: 'Refresh selector hints',
-      body: 'Re-train the structured extractor against the current DOM.',
-      cta: 'Stage retrain',
-    },
-  ],
-  timeout: [
-    {
-      id: 'opt-pw',
-      iconName: 'Play',
-      recommended: true,
-      title: 'Increase render timeout to 30s',
-      body: 'Gives heavy pages more room to settle.',
-      cta: 'Stage timeout 30s',
-    },
-    {
-      id: 'opt-wait',
-      iconName: 'RefreshCw',
-      recommended: false,
-      title: 'Wait for selector instead of load',
-      body: 'Stop waiting on the full load event; key off `.event-card`.',
-      cta: 'Stage selector wait',
-    },
-  ],
-  unknown: [
-    {
-      id: 'opt-manual',
-      iconName: 'User',
-      recommended: true,
-      title: 'Mark venue as manual entry',
-      body: 'Stop crawling and rely on admin entry.',
-      cta: 'Stage manual mode',
-    },
-  ],
-}
+const DIAG_OPTIONS: Record<ErrorClass, readonly DiagOption[]> =
+  CRAWL_COPY.diagnostics.diagOptions
 
 function getErrLabel(run: CrawlRunForDiagnostics): string {
-  if (run.httpStatusCode === 403) return 'HTTP 403 · venue blocked'
-  if (run.httpStatusCode === 429) return 'HTTP 429 · rate limited'
+  if (run.httpStatusCode === 403)
+    return CRAWL_COPY.diagnostics.errLabels.http403
+  if (run.httpStatusCode === 429)
+    return CRAWL_COPY.diagnostics.errLabels.http429
   if (run.errorMessage?.toLowerCase().includes('timeout'))
-    return 'Request timeout'
+    return CRAWL_COPY.diagnostics.errLabels.timeout
   if (run.errorMessage)
     return run.errorMessage.split('\n')[0] ?? run.errorMessage
   return `HTTP ${run.httpStatusCode ?? '—'}`
@@ -251,7 +143,7 @@ const OptionCard = ({
         </span>
         {opt.recommended && (
           <StatusBadge kind="signal" variant="mono">
-            rec.
+            {CRAWL_COPY.diagnostics.badgeRec}
           </StatusBadge>
         )}
       </div>
@@ -270,17 +162,17 @@ const OptionCard = ({
         {staged ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <StatusBadge kind="signal" dot>
-              Staged
+              {CRAWL_COPY.diagnostics.badgeStaged}
             </StatusBadge>
             <AdminButton
               variant="ghost"
               size="sm"
               onClick={() => onApply(opt.id)}
             >
-              Apply
+              {CRAWL_COPY.diagnostics.buttonApply}
             </AdminButton>
             <AdminButton variant="ghost" size="sm" onClick={onDiscard}>
-              Discard
+              {CRAWL_COPY.diagnostics.buttonDiscard}
             </AdminButton>
           </div>
         ) : (
@@ -339,7 +231,7 @@ export const DiagnosticsPanel = ({
             marginBottom: 8,
           }}
         >
-          What happened
+          {CRAWL_COPY.diagnostics.whatHappenedLabel}
         </div>
         <div
           style={{
@@ -380,11 +272,20 @@ export const DiagnosticsPanel = ({
             }}
           >
             {[
-              { label: 'HTTP status', value: run.httpStatusCode ?? '—' },
-              { label: 'Error class', value: errClass.replace(/_/g, ' ') },
-              { label: 'Strategy', value: run.strategy },
               {
-                label: 'Consecutive',
+                label: CRAWL_COPY.diagnostics.statHttpStatus,
+                value: run.httpStatusCode ?? '—',
+              },
+              {
+                label: CRAWL_COPY.diagnostics.statErrorClass,
+                value: errClass.replace(/_/g, ' '),
+              },
+              {
+                label: CRAWL_COPY.diagnostics.statStrategy,
+                value: run.strategy,
+              },
+              {
+                label: CRAWL_COPY.diagnostics.statConsecutive,
                 value: `${run.consecutiveFailures} of 4`,
               },
             ].map((stat) => (
@@ -430,7 +331,7 @@ export const DiagnosticsPanel = ({
             marginBottom: 8,
           }}
         >
-          Why it probably happened
+          {CRAWL_COPY.diagnostics.whyHappenedLabel}
         </div>
         <div
           style={{
@@ -460,7 +361,7 @@ export const DiagnosticsPanel = ({
               {reason.label}
             </span>
             <StatusBadge kind="neutral" variant="mono">
-              rule-based
+              {CRAWL_COPY.diagnostics.badgeRuleBased}
             </StatusBadge>
           </div>
           <div
@@ -489,7 +390,7 @@ export const DiagnosticsPanel = ({
             marginBottom: 8,
           }}
         >
-          Options · next steps
+          {CRAWL_COPY.diagnostics.optionsLabel}
         </div>
         <div
           style={{
@@ -522,10 +423,7 @@ export const DiagnosticsPanel = ({
             lineHeight: 1.5,
           }}
         >
-          Staged options are{' '}
-          <strong style={{ color: 'var(--fg)' }}>not auto-applied</strong>.
-          You&apos;ll review the diff and confirm before any change touches the
-          worker config.
+          {CRAWL_COPY.diagnostics.stagedNotice}
         </div>
       </div>
 
@@ -542,7 +440,7 @@ export const DiagnosticsPanel = ({
               marginBottom: 8,
             }}
           >
-            Strategy history
+            {CRAWL_COPY.diagnostics.strategyHistoryLabel}
           </div>
           <div
             style={{

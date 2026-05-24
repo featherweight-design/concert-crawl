@@ -9,6 +9,7 @@ import { LogOut } from 'lucide-react'
 import { NAV_V2, type NavItem } from './nav'
 import { CCMark } from '@/components/brand/cc-mark'
 import { CCWordmark } from '@/components/brand/cc-wordmark'
+import { COPY } from './definitions/copy'
 
 type SidebarMode = 'full' | 'rail' | 'auto'
 const STORAGE_KEY = 'cc-admin-sidebar'
@@ -247,7 +248,7 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
                   alignSelf: 'flex-start',
                 }}
               >
-                ADMIN
+                {COPY.sidebar.adminBadge}
               </div>
             </div>
           </div>
@@ -288,7 +289,7 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
               fontFamily: "'JetBrains Mono', monospace",
             }}
           >
-            Operations
+            {COPY.sidebar.sectionOperations}
           </div>
         )}
         {opsItems.map((item) => {
@@ -318,7 +319,7 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
               fontFamily: "'JetBrains Mono', monospace",
             }}
           >
-            Account
+            {COPY.sidebar.sectionAccount}
           </div>
         )}
         {accountItems.map((item) => {
@@ -390,7 +391,7 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
               }}
             >
               <LogOut size={14} />
-              Sign out
+              {COPY.sidebar.signOut}
             </button>
           </div>
         )}
@@ -451,7 +452,7 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
                   letterSpacing: '0.04em',
                 }}
               >
-                admin
+                {COPY.sidebar.userRoleLabel}
               </div>
             </div>
           </button>
@@ -465,8 +466,8 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
           >
             <button
               onClick={() => setSignOutOpen((prev) => !prev)}
-              aria-label="User menu"
-              title="User menu"
+              aria-label={COPY.sidebar.userMenuLabel}
+              title={COPY.sidebar.userMenuLabel}
               style={{
                 width: 28,
                 height: 28,
@@ -500,10 +501,10 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
           onClick={toggleMode}
           title={
             mode === 'full'
-              ? 'Switch to rail'
+              ? COPY.sidebar.toggleTitles.toRail
               : mode === 'rail'
-                ? 'Switch to auto'
-                : 'Switch to full'
+                ? COPY.sidebar.toggleTitles.toAuto
+                : COPY.sidebar.toggleTitles.toFull
           }
           style={{
             display: 'flex',
@@ -524,7 +525,7 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
             name={effectiveMode === 'full' ? 'PanelLeftClose' : 'PanelLeft'}
             size={16}
           />
-          {effectiveMode === 'full' && <span>Collapse</span>}
+          {effectiveMode === 'full' && <span>{COPY.sidebar.collapse}</span>}
         </button>
       </div>
     </aside>

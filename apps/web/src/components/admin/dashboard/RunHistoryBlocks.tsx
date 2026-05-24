@@ -1,3 +1,5 @@
+import { COPY } from './definitions/copy'
+
 interface RunHistoryBlocksProps {
   data: number[]
 }
@@ -30,7 +32,7 @@ export const RunHistoryBlocks = ({ data }: RunHistoryBlocksProps) => {
           color: 'var(--fg-subtle)',
         }}
       >
-        Last {data.length} runs
+        {COPY.runHistoryBlocks.lastNRuns(data.length)}
       </span>
     </div>
   )

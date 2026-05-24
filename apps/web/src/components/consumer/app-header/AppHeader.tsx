@@ -8,12 +8,7 @@ import { cn } from '@/lib/utils'
 import { CCMark } from '@/components/brand/cc-mark'
 import { UserMenu } from '../user-menu'
 import { SearchPalette } from '../search-palette/SearchPalette'
-
-const NAV_TABS = [
-  { label: 'Browse', href: '/events' },
-  { label: 'Venues', href: '/venues' },
-  { label: 'Watching', href: '/watching' },
-] as const
+import { copy } from './definitions/copy'
 
 export function AppHeader() {
   const pathname = usePathname()
@@ -46,13 +41,13 @@ export function AppHeader() {
             className="text-[17px] font-extrabold tracking-[-0.02em] text-fg"
             style={{ fontFamily: 'var(--font-ui)' }}
           >
-            concert
-            <span className="text-accent">crawl.</span>
+            {copy.brand.name}
+            <span className="text-accent">{copy.brand.accent}</span>
           </span>
         </Link>
         <button
           onClick={() => setPaletteOpen(true)}
-          aria-label="Search"
+          aria-label={copy.search.ariaLabel}
           className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-border-strong"
         >
           <Search size={16} className="text-fg-muted" strokeWidth={1.5} />
@@ -71,12 +66,13 @@ export function AppHeader() {
               className="text-[17px] font-extrabold tracking-[-0.02em] text-fg"
               style={{ fontFamily: 'var(--font-ui)' }}
             >
-              concert<span className="text-accent">crawl.</span>
+              {copy.brand.name}
+              <span className="text-accent">{copy.brand.accent}</span>
             </span>
           </Link>
 
           <nav className="flex gap-1 overflow-x-auto">
-            {NAV_TABS.map((tab) => {
+            {copy.nav.tabs.map((tab) => {
               const isActive = pathname.startsWith(tab.href)
               return (
                 <Link
@@ -100,18 +96,18 @@ export function AppHeader() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setPaletteOpen(true)}
-            aria-label="Search"
+            aria-label={copy.search.ariaLabel}
             className="flex h-9 w-9 cursor-pointer items-center justify-center gap-2 rounded-lg border border-border bg-surface-1 px-3 text-fg-subtle lg:w-[280px] lg:justify-start"
           >
             <Search size={14} strokeWidth={1.5} className="shrink-0" />
             <span className="hidden flex-1 text-[13px] lg:block">
-              Search artists or venues…
+              {copy.search.placeholder}
             </span>
             <span
               className="hidden rounded border border-border-strong px-1.5 py-0.5 text-[10px] text-fg-subtle lg:block"
               style={{ fontFamily: 'var(--font-mono)' }}
             >
-              ⌘K
+              {copy.search.keyboardShortcut}
             </span>
           </button>
 

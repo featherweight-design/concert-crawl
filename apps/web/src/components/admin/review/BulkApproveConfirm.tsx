@@ -6,6 +6,7 @@ import {
   AdminButton,
   ConfidenceBar,
 } from '@/components/admin/primitives'
+import { REVIEW_COPY } from './definitions/copy'
 
 interface EventFlag {
   id: string
@@ -84,7 +85,7 @@ export const BulkApproveConfirm = ({
             borderBottom: '1px solid var(--border)',
           }}
         >
-          <MonoLabel>bulk approve</MonoLabel>
+          <MonoLabel>{REVIEW_COPY.bulkApproveConfirm.eyebrow}</MonoLabel>
           <h3
             id="bulk-approve-title"
             style={{
@@ -96,7 +97,7 @@ export const BulkApproveConfirm = ({
               fontFamily: "'Inter', sans-serif",
             }}
           >
-            Approve {events.length} event{events.length !== 1 ? 's' : ''}?
+            {REVIEW_COPY.bulkApproveConfirm.heading(events.length)}
           </h3>
         </div>
 
@@ -151,7 +152,7 @@ export const BulkApproveConfirm = ({
                 fontFamily: "'Inter', sans-serif",
               }}
             >
-              +{extraCount} more event{extraCount !== 1 ? 's' : ''}
+              {REVIEW_COPY.bulkApproveConfirm.extraEvents(extraCount)}
             </div>
           )}
         </div>
@@ -170,7 +171,7 @@ export const BulkApproveConfirm = ({
             fontFamily: "'Inter', sans-serif",
           }}
         >
-          These events will be marked as verified and visible to users.
+          {REVIEW_COPY.bulkApproveConfirm.warningStrip}
         </div>
 
         {/* Action shelf */}
@@ -186,10 +187,10 @@ export const BulkApproveConfirm = ({
           }}
         >
           <AdminButton variant="ghost" onClick={onCancel}>
-            Cancel
+            {REVIEW_COPY.bulkApproveConfirm.cancel}
           </AdminButton>
           <AdminButton variant="success" onClick={onConfirm}>
-            Approve all
+            {REVIEW_COPY.bulkApproveConfirm.approveAll}
           </AdminButton>
         </div>
       </div>

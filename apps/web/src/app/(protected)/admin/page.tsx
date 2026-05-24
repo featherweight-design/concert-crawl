@@ -2,6 +2,7 @@ import { ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
+import { COPY } from './definitions/copy'
 import type { CrawlRun, Venue } from '@concert-crawl/types'
 import {
   StatCard,
@@ -91,13 +92,15 @@ function buildAttentionItems(
       id: `crawl-${venue.venueId}`,
       severity: 'danger',
       iconName: isBlocked ? 'ShieldAlert' : 'AlertCircle',
-      title: `${venueName} — crawl ${isBlocked ? 'blocked' : 'failed'}`,
+      title: isBlocked
+        ? COPY.attentionItems.crawlBlocked(venueName)
+        : COPY.attentionItems.crawlFailed(venueName),
       meta: isBlocked
-        ? 'Venue blocked · crawl schedule paused'
-        : `Status: ${venue.status} · check crawl inspector`,
-      timeLabel: 'recent',
+        ? COPY.attentionItems.crawlBlockedMeta
+        : COPY.attentionItems.crawlFailedMeta(venue.status),
+      timeLabel: COPY.attentionItems.crawlTimeLabel,
       action: {
-        label: 'Open crawl',
+        label: COPY.attentionItems.openCrawl,
         href: `/admin/crawl?venueId=${venue.venueId}`,
       },
     })
@@ -108,11 +111,11 @@ function buildAttentionItems(
       id: 'events-pending',
       severity: 'warning',
       iconName: 'CheckSquare',
-      title: `${pendingEventCount} event${pendingEventCount === 1 ? '' : 's'} flagged for review`,
-      meta: 'Needs manual verification before publishing',
-      timeLabel: 'pending',
+      title: COPY.attentionItems.eventsFlaggedTitle(pendingEventCount),
+      meta: COPY.attentionItems.eventsFlaggedMeta,
+      timeLabel: COPY.attentionItems.eventsTimeLabel,
       action: {
-        label: 'Open Review',
+        label: COPY.attentionItems.openReview,
         href: '/admin/review',
       },
     })
@@ -123,11 +126,11 @@ function buildAttentionItems(
       id: 'prices-pending',
       severity: 'signal',
       iconName: 'DollarSign',
-      title: `${pendingPriceCount} price submission${pendingPriceCount === 1 ? '' : 's'} waiting`,
-      meta: 'Community submissions need approval or dispute',
-      timeLabel: 'pending',
+      title: COPY.attentionItems.pricesWaitingTitle(pendingPriceCount),
+      meta: COPY.attentionItems.pricesMeta,
+      timeLabel: COPY.attentionItems.pricesTimeLabel,
       action: {
-        label: 'Open Review',
+        label: COPY.attentionItems.openPricesReview,
         href: '/admin/review?section=submissions',
       },
     })
@@ -198,15 +201,13 @@ export default async function AdminDashboardPage() {
 
   const summaryParts: string[] = []
   if (blockedCount > 0)
-    summaryParts.push(
-      `${blockedCount} venue${blockedCount === 1 ? '' : 's'} need${blockedCount === 1 ? 's' : ''} attention`,
-    )
+    summaryParts.push(COPY.summary.venuesNeedAttention(blockedCount))
   if (pendingEventCount > 0)
-    summaryParts.push(`${pendingEventCount} events flagged`)
+    summaryParts.push(COPY.summary.eventsFlagged(pendingEventCount))
   if (pendingPriceCount > 0)
-    summaryParts.push(`${pendingPriceCount} price submissions waiting`)
+    summaryParts.push(COPY.summary.pricesWaiting(pendingPriceCount))
   if (summaryParts.length === 0)
-    summaryParts.push(`${greenCount} of ${status.length} venues green`)
+    summaryParts.push(COPY.summary.venuesGreen(greenCount, status.length))
 
   const lastRun = runs[0]
   const lastSweepLabel = lastRun
@@ -267,9 +268,9 @@ export default async function AdminDashboardPage() {
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         {/* Needs review */}
         <StatCard
-          label="Needs review"
+          label={COPY.statCards.needsReview}
           value={String(pendingEventCount + pendingPriceCount)}
-          unit="items"
+          unit={COPY.statCards.needsReviewUnit}
           iconName="CalendarCheck"
           kind={
             pendingEventCount + pendingPriceCount > 0 ? 'warning' : 'neutral'
@@ -295,7 +296,7 @@ export default async function AdminDashboardPage() {
                 fullWidth
                 style={{ fontWeight: 700, color: 'var(--fg)' }}
               >
-                Open Review
+                {COPY.buttons.openReview}
               </AdminButton>
             </Link>
           }
@@ -303,11 +304,11 @@ export default async function AdminDashboardPage() {
 
         {/* LLM cost */}
         <StatCard
-          label="LLM cost · 30d"
+          label={COPY.statCards.llmCost}
           value={`$${totalCost.toFixed(2)}`}
           iconName="DollarSign"
           kind="signal"
-          hint={`Budget $${LLM_BUDGET_USD} · ${llmBudgetPct}% used`}
+          hint={COPY.budget.hint(LLM_BUDGET_USD, llmBudgetPct)}
           {...(costTrend !== undefined ? { trend: costTrend } : {})}
           footer={
             <ProgressBar
@@ -320,9 +321,9 @@ export default async function AdminDashboardPage() {
 
         {/* Crawl health */}
         <StatCard
-          label="Crawl health"
+          label={COPY.statCards.crawlHealth}
           value={`${greenCount}/${status.length}`}
-          unit="green"
+          unit={COPY.statCards.crawlHealthUnit}
           iconName="Activity"
           kind="success"
           {...(crawlHealthHint ? { hint: crawlHealthHint } : {})}
@@ -335,9 +336,9 @@ export default async function AdminDashboardPage() {
 
         {/* Active venues */}
         <StatCard
-          label="Active venues"
+          label={COPY.statCards.activeVenues}
           value={String(venues.filter((venue) => venue.active).length)}
-          unit={`of ${venues.length}`}
+          unit={COPY.activeVenues.venuesOfTotal(venues.length)}
           iconName="MapPin"
           kind="neutral"
           mono={false}
@@ -352,7 +353,7 @@ export default async function AdminDashboardPage() {
                 color: 'var(--fg-subtle)',
               }}
             >
-              +{venuesAddedThisWeek} this week
+              {COPY.activeVenues.addedThisWeek(venuesAddedThisWeek)}
             </span>
           }
         />
@@ -366,7 +367,7 @@ export default async function AdminDashboardPage() {
       />
 
       {/* Crawl health detail */}
-      <Panel title="Crawl health · today" padding={0}>
+      <Panel title={COPY.panels.crawlHealthToday} padding={0}>
         <CrawlHealthTable rows={status} />
       </Panel>
     </div>

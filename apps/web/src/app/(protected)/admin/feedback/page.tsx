@@ -12,27 +12,24 @@ import type {
   FeedbackSource,
 } from '@/components/admin/feedback/FeedbackFilterRail'
 import type { FeedbackItem } from '@/components/admin/feedback/FeedbackRow'
+import { FEEDBACK_PAGE_COPY } from './definitions/copy'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
 const STATUS_CHIPS: { value: FeedbackStatusFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'unread', label: 'Unread' },
-  { value: 'flagged', label: 'Flagged' },
-  { value: 'issue_opened', label: 'Issue opened' },
-  { value: 'resolved', label: 'Resolved' },
-  { value: 'archived', label: 'Archived' },
+  { value: 'all', label: FEEDBACK_PAGE_COPY.statusChips.all },
+  { value: 'unread', label: FEEDBACK_PAGE_COPY.statusChips.unread },
+  { value: 'flagged', label: FEEDBACK_PAGE_COPY.statusChips.flagged },
+  {
+    value: 'issue_opened',
+    label: FEEDBACK_PAGE_COPY.statusChips.issue_opened,
+  },
+  { value: 'resolved', label: FEEDBACK_PAGE_COPY.statusChips.resolved },
+  { value: 'archived', label: FEEDBACK_PAGE_COPY.statusChips.archived },
 ]
 
-const PANEL_TITLE: Record<FeedbackStatusFilter, string> = {
-  all: 'Active feedback',
-  unread: 'Unread feedback',
-  flagged: 'Flagged feedback',
-  issue_opened: 'Issues opened',
-  resolved: 'Resolved feedback',
-  archived: 'Archived feedback',
-  read: 'Read feedback',
-}
+const PANEL_TITLE: Record<FeedbackStatusFilter, string> =
+  FEEDBACK_PAGE_COPY.panelTitle
 
 export default function FeedbackPage() {
   const { getToken } = useAuth()
@@ -195,7 +192,7 @@ export default function FeedbackPage() {
             fontSize: 13,
           }}
         >
-          Loading…
+          {FEEDBACK_PAGE_COPY.loadingState}
         </div>
       ) : filtered.length === 0 ? (
         <div
@@ -206,7 +203,7 @@ export default function FeedbackPage() {
             fontSize: 13,
           }}
         >
-          No feedback in this category
+          {FEEDBACK_PAGE_COPY.emptyState}
         </div>
       ) : (
         filtered.map((item) => (
@@ -233,12 +230,12 @@ export default function FeedbackPage() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <SectionHead
-          eyebrow="operations · users"
+          eyebrow={FEEDBACK_PAGE_COPY.eyebrow}
           title={
             <span
               style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}
             >
-              Feedback
+              {FEEDBACK_PAGE_COPY.title}
               {counts.unread > 0 && (
                 <span
                   style={{
@@ -254,7 +251,7 @@ export default function FeedbackPage() {
                     lineHeight: 1.4,
                   }}
                 >
-                  {counts.unread} unread
+                  {counts.unread} {FEEDBACK_PAGE_COPY.unreadBadgeSuffix}
                 </span>
               )}
             </span>
@@ -311,12 +308,12 @@ export default function FeedbackPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <SectionHead
-        eyebrow="operations · users"
+        eyebrow={FEEDBACK_PAGE_COPY.eyebrow}
         title={
           <span
             style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}
           >
-            Feedback
+            {FEEDBACK_PAGE_COPY.title}
             {counts.unread > 0 && (
               <span
                 style={{
@@ -332,12 +329,12 @@ export default function FeedbackPage() {
                   lineHeight: 1.4,
                 }}
               >
-                {counts.unread} unread
+                {counts.unread} {FEEDBACK_PAGE_COPY.unreadBadgeSuffix}
               </span>
             )}
           </span>
         }
-        subtitle="Inbox for in-app feedback (and Sentry, soon email). Triage: mark read, flag for investigation, open a GH issue, or archive."
+        subtitle={FEEDBACK_PAGE_COPY.subtitle}
       />
 
       {/* Stat cards */}
@@ -349,30 +346,30 @@ export default function FeedbackPage() {
         }}
       >
         <StatCard
-          label="Last 7 days"
+          label={FEEDBACK_PAGE_COPY.statCards.lastSevenDays}
           value={String(lastWeek)}
           iconName="Inbox"
           kind="signal"
         />
         <StatCard
-          label="Unread"
+          label={FEEDBACK_PAGE_COPY.statCards.unread}
           value={String(counts.unread)}
           iconName="AlertCircle"
           kind="warning"
         />
         <StatCard
-          label="Flagged"
+          label={FEEDBACK_PAGE_COPY.statCards.flagged}
           value={String(counts.flagged)}
           iconName="Flag"
           kind="danger"
-          hint="awaiting investigation"
+          hint={FEEDBACK_PAGE_COPY.statCards.flaggedHint}
         />
         <StatCard
-          label="Issues opened"
+          label={FEEDBACK_PAGE_COPY.statCards.issuesOpened}
           value={String(issuesThisMonth)}
           iconName="ExternalLink"
           kind="accent"
-          hint="this month"
+          hint={FEEDBACK_PAGE_COPY.statCards.issuesOpenedHint}
         />
       </div>
 
@@ -404,7 +401,7 @@ export default function FeedbackPage() {
                   color: 'var(--fg-subtle)',
                 }}
               >
-                {filtered.length} items
+                {filtered.length} {FEEDBACK_PAGE_COPY.itemsCountSuffix}
               </span>
               {counts.unread > 0 && (
                 <button
@@ -421,7 +418,7 @@ export default function FeedbackPage() {
                     padding: 0,
                   }}
                 >
-                  Mark all read
+                  {FEEDBACK_PAGE_COPY.markAllRead}
                 </button>
               )}
             </div>

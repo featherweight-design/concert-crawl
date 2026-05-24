@@ -12,6 +12,7 @@ import {
   formatLlmCostTotal,
 } from './crawl-stats'
 import type { CrawlRun } from '@concert-crawl/types'
+import { ADMIN_CRAWL_PAGE_COPY } from '@/app/(protected)/admin/crawl/definitions/copy'
 
 export interface CrawlStatusRow {
   venueId: string
@@ -130,7 +131,8 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
   const eventsHintParts: string[] = []
   if (totalInserted > 0) eventsHintParts.push(`${totalInserted} new`)
   if (totalUpdated > 0) eventsHintParts.push(`${totalUpdated} updated`)
-  const eventsHint = eventsHintParts.join(' · ') || 'today'
+  const eventsHint =
+    eventsHintParts.join(' · ') || ADMIN_CRAWL_PAGE_COPY.statEventsHintFallback
 
   const mostRecentRun = runs[0]
   const lastSweepMinutes = mostRecentRun?.createdAt
@@ -159,9 +161,9 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
       }}
     >
       <SectionHead
-        eyebrow="automation"
-        title="Crawl status"
-        subtitle="Every venue crawl, run by run. Click a failed row for diagnostics + staged remediation."
+        eyebrow={ADMIN_CRAWL_PAGE_COPY.sectionEyebrow}
+        title={ADMIN_CRAWL_PAGE_COPY.sectionTitle}
+        subtitle={ADMIN_CRAWL_PAGE_COPY.sectionSubtitle}
         actions={<CrawlRunAllButton />}
       />
 
@@ -182,30 +184,32 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
         }}
       >
         <StatCard
-          label="Last sweep"
+          label={ADMIN_CRAWL_PAGE_COPY.statLastSweep}
           value={lastSweepValue}
-          {...(lastSweepUnit !== undefined && { unit: lastSweepUnit })}
+          {...(lastSweepUnit !== undefined && {
+            unit: ADMIN_CRAWL_PAGE_COPY.statLastSweepUnit,
+          })}
           iconName="RefreshCw"
           kind="neutral"
           hint={sweepHint}
         />
         <StatCard
-          label="Today's runs"
+          label={ADMIN_CRAWL_PAGE_COPY.statTodaysRuns}
           value={String(todayRuns.length)}
           iconName="Activity"
           kind="signal"
           hint={runsBreakdown}
         />
         <StatCard
-          label="Events ingested"
+          label={ADMIN_CRAWL_PAGE_COPY.statEventsIngested}
           value={String(totalInserted + totalUpdated)}
-          unit="today"
+          unit={ADMIN_CRAWL_PAGE_COPY.statEventsIngestedUnit}
           iconName="CalendarCheck2"
           kind="success"
           hint={eventsHint}
         />
         <StatCard
-          label="LLM cost · today"
+          label={ADMIN_CRAWL_PAGE_COPY.statLlmCost}
           value={formatLlmCostTotal(todayRuns) || '$0.00'}
           iconName="DollarSign"
           kind="signal"

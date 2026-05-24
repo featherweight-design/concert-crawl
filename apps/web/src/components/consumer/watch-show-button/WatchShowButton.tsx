@@ -5,6 +5,7 @@ import { useAuth } from '@clerk/nextjs'
 import { Eye, Loader2 } from 'lucide-react'
 import { useWatching } from '@/lib/queries/use-watching'
 import { useWatchToggle } from '@/lib/queries/use-watch-toggle'
+import { copy } from './definitions/copy'
 
 interface WatchShowButtonProps {
   eventId: string
@@ -95,7 +96,9 @@ export function WatchShowButton({
         onClick={handleToggle}
         disabled={isPending}
         aria-pressed={isWatching}
-        aria-label={isWatching ? 'Watching — click to stop' : 'Watch this show'}
+        aria-label={
+          isWatching ? copy.button.ariaWatching : copy.button.ariaWatch
+        }
         style={isWatching ? watchingStyle : unwatchedStyle}
       >
         {isPending ? (
@@ -166,8 +169,8 @@ export function WatchShowButton({
             }}
             aria-hidden
           />
-          {watchingCount} watching
-          {isWatching ? '' : ' · alerts on price + sold out'}
+          {watchingCount} {copy.watchingCount.suffix}
+          {isWatching ? '' : copy.watchingCount.alertsSuffix}
         </span>
       )}
     </div>

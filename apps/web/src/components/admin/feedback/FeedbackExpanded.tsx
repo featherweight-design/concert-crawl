@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { MonoLabel } from '@/components/admin/primitives'
 import type { FeedbackItem } from './FeedbackRow'
+import { FEEDBACK_COPY } from './definitions/copy'
 
 const REPO = 'HartiganHM/concert-crawl'
 const MT_TIMEZONE = 'America/Denver'
@@ -137,15 +138,27 @@ export function FeedbackExpanded({
   const handle = `@${item.userId.slice(0, 10)}`
 
   const contextRows: { label: string; value: string | null | undefined }[] = [
-    { label: 'Route', value: route },
-    { label: 'Theme', value: meta['theme'] as string | undefined },
-    { label: 'Build', value: meta['build'] as string | undefined },
+    { label: FEEDBACK_COPY.expanded.contextRowLabels.route, value: route },
     {
-      label: 'Device',
+      label: FEEDBACK_COPY.expanded.contextRowLabels.theme,
+      value: meta['theme'] as string | undefined,
+    },
+    {
+      label: FEEDBACK_COPY.expanded.contextRowLabels.build,
+      value: meta['build'] as string | undefined,
+    },
+    {
+      label: FEEDBACK_COPY.expanded.contextRowLabels.device,
       value: (meta['userAgent'] ?? meta['device']) as string | undefined,
     },
-    { label: 'Submitted', value: formatSubmitted(item.createdAt) },
-    { label: 'User ID', value: item.userId },
+    {
+      label: FEEDBACK_COPY.expanded.contextRowLabels.submitted,
+      value: formatSubmitted(item.createdAt),
+    },
+    {
+      label: FEEDBACK_COPY.expanded.contextRowLabels.userId,
+      value: item.userId,
+    },
   ]
 
   return (
@@ -168,7 +181,9 @@ export function FeedbackExpanded({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* Full Body */}
           <div>
-            <MonoLabel>full body</MonoLabel>
+            <MonoLabel>
+              {FEEDBACK_COPY.expanded.sectionLabels.fullBody}
+            </MonoLabel>
             <div
               style={{
                 padding: '14px 16px',
@@ -188,7 +203,9 @@ export function FeedbackExpanded({
 
           {/* Screenshot */}
           <div>
-            <MonoLabel>screenshot</MonoLabel>
+            <MonoLabel>
+              {FEEDBACK_COPY.expanded.sectionLabels.screenshot}
+            </MonoLabel>
             <div
               style={{
                 marginTop: 8,
@@ -236,7 +253,7 @@ export function FeedbackExpanded({
                     }}
                   >
                     <ExternalLink size={10} />
-                    Open full size
+                    {FEEDBACK_COPY.expanded.openFullSize}
                   </a>
                 </>
               ) : (
@@ -273,7 +290,7 @@ export function FeedbackExpanded({
                       opacity: 0.6,
                     }}
                   >
-                    User-attached screenshot
+                    {FEEDBACK_COPY.expanded.screenshotPlaceholder}
                   </span>
                 </div>
               )}
@@ -282,12 +299,14 @@ export function FeedbackExpanded({
 
           {/* Admin Notes */}
           <div>
-            <MonoLabel>admin notes</MonoLabel>
+            <MonoLabel>
+              {FEEDBACK_COPY.expanded.sectionLabels.adminNotes}
+            </MonoLabel>
             <textarea
               value={notes}
               onChange={(ev) => setNotes(ev.target.value)}
               onBlur={() => void handleNotesBlur()}
-              placeholder="Internal note — visible to you, not to the user…"
+              placeholder={FEEDBACK_COPY.expanded.adminNotesPlaceholder}
               rows={3}
               style={{
                 display: 'block',
@@ -313,7 +332,9 @@ export function FeedbackExpanded({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* Context */}
           <div>
-            <MonoLabel>context</MonoLabel>
+            <MonoLabel>
+              {FEEDBACK_COPY.expanded.sectionLabels.context}
+            </MonoLabel>
             <div
               style={{
                 padding: '10px 14px',
@@ -349,7 +370,9 @@ export function FeedbackExpanded({
           {/* Create / Linked Issue */}
           {item.issueUrl ? (
             <div>
-              <MonoLabel color="var(--accent)">linked issue</MonoLabel>
+              <MonoLabel color="var(--accent)">
+                {FEEDBACK_COPY.expanded.sectionLabels.linkedIssue}
+              </MonoLabel>
               <div
                 style={{
                   padding: '12px 14px',
@@ -389,7 +412,7 @@ export function FeedbackExpanded({
                 <button
                   type="button"
                   onClick={() => void handleCopyIssueUrl()}
-                  title="Copy URL"
+                  title={FEEDBACK_COPY.expanded.copyUrlTitle}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -411,7 +434,9 @@ export function FeedbackExpanded({
             </div>
           ) : (
             <div>
-              <MonoLabel>create issue</MonoLabel>
+              <MonoLabel>
+                {FEEDBACK_COPY.expanded.sectionLabels.createIssue}
+              </MonoLabel>
               <div
                 style={{
                   padding: '14px',
@@ -433,8 +458,7 @@ export function FeedbackExpanded({
                     fontFamily: "'Inter', sans-serif",
                   }}
                 >
-                  Stage a GitHub issue using this feedback&rsquo;s body +
-                  context strip as the description. You can edit before submit.
+                  {FEEDBACK_COPY.expanded.createIssuePrompt}
                 </p>
                 <a
                   href={ghUrl}
@@ -459,7 +483,7 @@ export function FeedbackExpanded({
                   }}
                 >
                   <ExternalLink size={14} />
-                  Open in GitHub…
+                  {FEEDBACK_COPY.expanded.openInGitHub}
                 </a>
               </div>
             </div>
@@ -486,7 +510,9 @@ export function FeedbackExpanded({
           style={actionButtonStyle('outline')}
         >
           <Check size={13} />
-          Mark {isUnread ? 'read' : 'unread'}
+          {isUnread
+            ? FEEDBACK_COPY.expanded.actions.markRead
+            : FEEDBACK_COPY.expanded.actions.markUnread}
         </button>
 
         <button
@@ -497,7 +523,9 @@ export function FeedbackExpanded({
           style={actionButtonStyle('ghost')}
         >
           <Flag size={13} />
-          {isFlagged ? 'Unflag' : 'Flag for investigation'}
+          {isFlagged
+            ? FEEDBACK_COPY.expanded.actions.unflag
+            : FEEDBACK_COPY.expanded.actions.flag}
         </button>
 
         <a
@@ -507,7 +535,7 @@ export function FeedbackExpanded({
           style={actionLinkStyle('ghost')}
         >
           <SquarePen size={13} />
-          Open in GitHub…
+          {FEEDBACK_COPY.expanded.actions.openInGitHub}
         </a>
 
         <a
@@ -528,7 +556,7 @@ export function FeedbackExpanded({
               style={actionButtonStyle('success')}
             >
               <Check size={13} />
-              Resolve
+              {FEEDBACK_COPY.expanded.actions.resolve}
             </button>
           )}
           {item.status !== 'archived' && (
@@ -538,7 +566,7 @@ export function FeedbackExpanded({
               style={actionButtonStyle('ghost')}
             >
               <X size={13} />
-              Archive
+              {FEEDBACK_COPY.expanded.actions.archive}
             </button>
           )}
         </div>

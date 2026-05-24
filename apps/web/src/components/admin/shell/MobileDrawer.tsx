@@ -10,6 +10,7 @@ import { NAV_V2 } from './nav'
 import { CCMark } from '@/components/brand/cc-mark'
 import { CCWordmark } from '@/components/brand/cc-wordmark'
 import { AppSwitcher } from './AppSwitcher'
+import { COPY } from './definitions/copy'
 
 interface MobileDrawerProps {
   open: boolean
@@ -118,7 +119,7 @@ export const MobileDrawer = ({
           <CCWordmark size={13} />
           <button
             onClick={onClose}
-            aria-label="Close menu"
+            aria-label={COPY.mobileDrawer.closeMenuAriaLabel}
             style={{
               marginLeft: 'auto',
               padding: 6,
@@ -158,7 +159,7 @@ export const MobileDrawer = ({
               fontFamily: "'JetBrains Mono', monospace",
             }}
           >
-            Operations
+            {COPY.mobileDrawer.sectionOperations}
           </div>
           {opsItems.map((item) => {
             const active =
@@ -242,7 +243,7 @@ export const MobileDrawer = ({
               fontFamily: "'JetBrains Mono', monospace",
             }}
           >
-            Account
+            {COPY.mobileDrawer.sectionAccount}
           </div>
           {accountItems.map((item) => {
             const active =
@@ -348,13 +349,13 @@ export const MobileDrawer = ({
                   letterSpacing: '0.04em',
                 }}
               >
-                admin
+                {COPY.mobileDrawer.userRoleLabel}
               </div>
             </div>
             <button
               onClick={() => void signOut({ redirectUrl: '/' })}
-              aria-label="Sign out"
-              title="Sign out"
+              aria-label={COPY.mobileDrawer.signOutAriaLabel}
+              title={COPY.mobileDrawer.signOutTitle}
               style={{
                 padding: 6,
                 background: 'transparent',

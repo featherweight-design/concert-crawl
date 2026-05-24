@@ -12,6 +12,7 @@ import { useTheme } from '@/theme'
 import { fetchMe } from '@/lib/users'
 import type { AvatarColor } from '@concert-crawl/types'
 import { UserMenuVersionFooter } from '@/components/consumer/release-notes/UserMenuVersionFooter'
+import { copy } from './definitions/copy'
 
 const APP_VERSION = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev'
 
@@ -106,7 +107,7 @@ export function UserMenu() {
         <button
           type="button"
           onClick={() => setOpen((prev) => !prev)}
-          aria-label="Account menu"
+          aria-label={copy.ariaLabels.accountMenu}
           aria-expanded={open}
           aria-haspopup="true"
           className="shrink-0 cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal)]"
@@ -214,7 +215,7 @@ function ThemeMenuRow() {
             letterSpacing: '-0.005em',
           }}
         >
-          Theme
+          {copy.rows.theme}
         </span>
         <span
           style={{
@@ -311,7 +312,7 @@ function MenuBody({
               textTransform: 'uppercase',
             }}
           >
-            Beta · founder
+            {copy.identity.badge}
           </span>
           <span
             style={{
@@ -355,26 +356,28 @@ function MenuBody({
       </div>
 
       {/* You section */}
-      <SectionLabel>You</SectionLabel>
+      <SectionLabel>{copy.sections.you}</SectionLabel>
       <MenuRow
-        label="Submitted prices"
+        label={copy.rows.submittedPrices}
         href="/me?section=submissions"
-        {...(submissionCount > 0 ? { meta: `${submissionCount} live` } : {})}
+        {...(submissionCount > 0
+          ? { meta: copy.rows.submittedPricesMeta(submissionCount) }
+          : {})}
         kbd="P"
         last
       />
 
       {/* App section */}
-      <SectionLabel>App</SectionLabel>
+      <SectionLabel>{copy.sections.app}</SectionLabel>
       <ThemeMenuRow />
-      <MenuRow label="Settings" onClick={onSettings} last />
+      <MenuRow label={copy.rows.settings} onClick={onSettings} last />
 
       {/* Admin section */}
       {isAdmin && (
         <>
-          <SectionLabel>Operations</SectionLabel>
+          <SectionLabel>{copy.sections.operations}</SectionLabel>
           <MenuRow
-            label="Admin"
+            label={copy.rows.admin}
             href="/admin"
             last
             leading={
@@ -400,7 +403,7 @@ function MenuBody({
 
       {/* Sign out */}
       <div style={{ borderTop: '1px solid var(--border)' }} />
-      <MenuRow label="Sign out" danger last onClick={onSignOut} />
+      <MenuRow label={copy.rows.signOut} danger last onClick={onSignOut} />
 
       {/* Status footer — routes to /changelog, shows unread dot */}
       <UserMenuVersionFooter build={buildLabel} />

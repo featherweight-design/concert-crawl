@@ -5,6 +5,7 @@ import { useAuth } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { apiClient, ApiError } from '@/lib/api'
 import { SectionHead } from '@/components/admin/primitives'
+import { REVIEW_COPY } from './definitions/copy'
 import { EventFlagsSection } from './EventFlagsSection'
 import { PendingSubmissionsPanel } from './PendingSubmissionsPanel'
 import { PriceCoverageTable } from './PriceCoverageTable'
@@ -253,10 +254,10 @@ export const ReviewPageClient = ({
 
   const sectionHead = (
     <SectionHead
-      eyebrow="operations · moderation"
+      eyebrow={REVIEW_COPY.reviewPageClient.eyebrow}
       title={
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-          Review
+          {REVIEW_COPY.reviewPageClient.title}
           {pendingCount > 0 && (
             <span
               style={{
@@ -277,7 +278,7 @@ export const ReviewPageClient = ({
           )}
         </span>
       }
-      subtitle="Most events auto-approve. This page is where flags and community price submissions land for triage."
+      subtitle={REVIEW_COPY.reviewPageClient.subtitle}
     />
   )
 
@@ -311,7 +312,7 @@ export const ReviewPageClient = ({
             marginBottom: 4,
           }}
         >
-          Review
+          {REVIEW_COPY.reviewPageClient.mobileTitle}
         </div>
         <div
           style={{
@@ -320,9 +321,10 @@ export const ReviewPageClient = ({
             color: 'var(--fg-muted)',
           }}
         >
-          {events.length} event{events.length !== 1 ? 's' : ''} ·{' '}
-          {submissions.length} price{submissions.length !== 1 ? 's' : ''}{' '}
-          waiting.
+          {REVIEW_COPY.reviewPageClient.mobileSubtitle(
+            events.length,
+            submissions.length,
+          )}
         </div>
       </div>
     )

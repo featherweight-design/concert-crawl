@@ -5,6 +5,7 @@ import { useAuth } from '@clerk/nextjs'
 import { AdminButton } from '@/components/admin/primitives'
 import { StatusBadge } from '@/components/admin/primitives'
 import { triggerVenueCrawl } from '@/components/admin/crawl-trigger-button/lib/crawl'
+import { CRAWL_COPY } from '@/components/admin/crawl/definitions/copy'
 
 interface ConfigDiffEntry {
   path: string
@@ -15,156 +16,14 @@ interface ConfigDiffEntry {
 export interface StagedDiff {
   title: string
   intent: string
-  diff: ConfigDiffEntry[]
-  risks: string[]
+  diff: readonly ConfigDiffEntry[]
+  risks: readonly string[]
   rollback: string
   nextRunIn: string
 }
 
-const STAGED_DIFFS: Record<string, StagedDiff> = {
-  'opt-headers': {
-    title: 'Add custom request headers',
-    intent:
-      "Try to look more like a real browser so the venue's edge layer stops blocking us.",
-    diff: [
-      {
-        path: 'headers.User-Agent',
-        before: 'ConcertCrawl/1.0',
-        after:
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko)',
-      },
-      {
-        path: 'headers.Accept-Language',
-        before: '(unset)',
-        after: 'en-US,en;q=0.9',
-      },
-    ],
-    risks: [
-      "If the venue rolls out a tighter bot policy, this stops working on its own — won't break the consumer app.",
-    ],
-    rollback: 'One click to revert from the strategy history log.',
-    nextRunIn: 'next scheduled sweep · ~2h',
-  },
-  'opt-delay': {
-    title: 'Increase request delay to 8s',
-    intent: 'Slow the sweep to stay under typical 10 req/min rate limits.',
-    diff: [{ path: 'request.delay_ms', before: '1500', after: '8000' }],
-    risks: ['Sweep takes ~5× longer; LLM cost per sweep is unchanged.'],
-    rollback: 'Revert from the strategy history log.',
-    nextRunIn: 'next scheduled sweep · ~2h',
-  },
-  'opt-llm': {
-    title: 'Switch to LLM extraction',
-    intent:
-      'Use the LLM to parse the page while the structured-data template stabilizes.',
-    diff: [
-      {
-        path: 'extraction.strategy',
-        before: 'structured_data',
-        after: 'llm',
-      },
-      {
-        path: 'extraction.model',
-        before: '(n/a)',
-        after: 'claude-haiku-4-5',
-      },
-      { path: 'budget.per_run_max_usd', before: '$0.00', after: '$0.60' },
-    ],
-    risks: [
-      'LLM cost jumps from $0 to ~$0.40/run for this venue.',
-      'Confidence scores drop; expect a flag spike in Review.',
-    ],
-    rollback: 'Revert from the strategy history log.',
-    nextRunIn: 'manual re-crawl now, or next scheduled sweep',
-  },
-  'opt-playwright': {
-    title: 'Switch to Playwright with a real session',
-    intent:
-      'Solve a JS challenge once, persist cookies, then re-use the session.',
-    diff: [
-      { path: 'extraction.mode', before: 'fetch', after: 'playwright' },
-      { path: 'session.persist_cookies', before: 'false', after: 'true' },
-    ],
-    risks: [
-      'Higher LLM cost per run.',
-      'Session may expire and require re-solving.',
-    ],
-    rollback: 'Revert from the strategy history log.',
-    nextRunIn: 'trigger manual re-crawl now',
-  },
-  'opt-manual': {
-    title: 'Mark venue as manual entry',
-    intent: 'Stop crawling and rely on admin entry for this venue.',
-    diff: [{ path: 'venue.crawl_mode', before: 'auto', after: 'manual' }],
-    risks: [
-      'Events will stop being automatically discovered.',
-      'Requires manual admin updates to keep event listings current.',
-    ],
-    rollback: 'Change crawl_mode back to auto from the venue settings.',
-    nextRunIn: 'no further crawls scheduled',
-  },
-  'opt-sched': {
-    title: 'Reduce crawl schedule to every 12 hours',
-    intent:
-      'Crawl more frequently so fresh events are discovered sooner after they go on sale.',
-    diff: [{ path: 'crawl.schedule_hours', before: '24', after: '12' }],
-    risks: [
-      'Doubles the number of crawl runs for this venue — higher infrastructure and LLM cost if extraction uses the LLM path.',
-    ],
-    rollback: 'Revert from the strategy history log.',
-    nextRunIn: 'next scheduled sweep · ~2h',
-  },
-  'opt-struct': {
-    title: 'Retrain structured extractor selector hints',
-    intent:
-      'Refresh the cached CSS selector hints so the structured extractor can parse the page again after a venue redesign.',
-    diff: [
-      {
-        path: 'extraction.selector_hints',
-        before: 'stale',
-        after: 'regenerated',
-      },
-    ],
-    risks: [
-      'Regeneration requires one LLM-assisted crawl to rebuild hints.',
-      'Confidence scores may dip on the first run.',
-    ],
-    rollback: 'Revert from the strategy history log.',
-    nextRunIn: 'trigger manual re-crawl now',
-  },
-  'opt-pw': {
-    title: 'Increase Playwright render timeout to 30s',
-    intent:
-      'Give the page more time to finish rendering before extraction — useful for slow SPAs or venues behind CDN challenges.',
-    diff: [
-      { path: 'crawl.render_timeout_ms', before: '10000', after: '30000' },
-    ],
-    risks: [
-      'Each crawl run takes up to 20s longer per page.',
-      'May mask a deeper issue if the venue is blocking or the page never fully loads.',
-    ],
-    rollback: 'Revert from the strategy history log.',
-    nextRunIn: 'next scheduled sweep · ~2h',
-  },
-  'opt-wait': {
-    title: 'Switch from networkidle to selector-based wait',
-    intent:
-      'Wait for a specific DOM element rather than network idle — more reliable on pages that stream content or have persistent websocket connections.',
-    diff: [
-      {
-        path: 'crawl.waitUntil',
-        before: 'networkidle',
-        after: 'domcontentloaded',
-      },
-      { path: 'crawl.waitForSelector', before: '—', after: '.event-card' },
-    ],
-    risks: [
-      'If the selector changes or is absent, the crawl will time out waiting for an element that never appears.',
-    ],
-    rollback: 'Revert from the strategy history log.',
-    nextRunIn: 'next scheduled sweep · ~2h',
-  },
-}
+const STAGED_DIFFS: Record<string, StagedDiff> =
+  CRAWL_COPY.stagedApply.stagedDiffs
 
 interface StagedApplyConfirmProps {
   stagedId: string
@@ -242,7 +101,7 @@ export const StagedApplyConfirm = ({
               color: 'var(--danger)',
             }}
           >
-            Unknown optimization option
+            {CRAWL_COPY.stagedApply.unknownOptionTitle}
           </h3>
           <p
             style={{
@@ -252,10 +111,10 @@ export const StagedApplyConfirm = ({
               color: 'var(--fg-muted)',
             }}
           >
-            Unknown optimization option. Please close and try again.
+            {CRAWL_COPY.stagedApply.unknownOptionBody}
           </p>
           <AdminButton variant="ghost" onClick={onCancel}>
-            Close
+            {CRAWL_COPY.stagedApply.unknownOptionClose}
           </AdminButton>
         </div>
       </div>
@@ -310,7 +169,7 @@ export const StagedApplyConfirm = ({
                 color: 'var(--signal)',
               }}
             >
-              Applying staged change
+              {CRAWL_COPY.stagedApply.headerEyebrow}
             </span>
             <StatusBadge kind="signal" variant="mono">
               {stagedId}
@@ -338,9 +197,8 @@ export const StagedApplyConfirm = ({
               lineHeight: 1.5,
             }}
           >
-            on <strong style={{ color: 'var(--fg)' }}>{venueName}</strong>. The
-            change writes to the worker config and is picked up on the next
-            crawl.
+            on <strong style={{ color: 'var(--fg)' }}>{venueName}</strong>
+            {CRAWL_COPY.stagedApply.headerBodySuffix}
           </div>
         </div>
 
@@ -365,7 +223,7 @@ export const StagedApplyConfirm = ({
                 marginBottom: 6,
               }}
             >
-              Why this change
+              {CRAWL_COPY.stagedApply.sectionWhyChange}
             </div>
             <div
               style={{
@@ -391,7 +249,7 @@ export const StagedApplyConfirm = ({
                 marginBottom: 8,
               }}
             >
-              Config diff
+              {CRAWL_COPY.stagedApply.sectionConfigDiff}
             </div>
             <div
               style={{
@@ -493,7 +351,7 @@ export const StagedApplyConfirm = ({
                   marginBottom: 6,
                 }}
               >
-                Risks
+                {CRAWL_COPY.stagedApply.sectionRisks}
               </div>
               <ul
                 style={{
@@ -523,7 +381,7 @@ export const StagedApplyConfirm = ({
                   marginBottom: 6,
                 }}
               >
-                Rollback
+                {CRAWL_COPY.stagedApply.sectionRollback}
               </div>
               <div
                 style={{
@@ -546,7 +404,7 @@ export const StagedApplyConfirm = ({
                   marginBottom: 6,
                 }}
               >
-                Next run
+                {CRAWL_COPY.stagedApply.sectionNextRun}
               </div>
               <div
                 style={{
@@ -597,14 +455,14 @@ export const StagedApplyConfirm = ({
                 cursor: 'pointer',
               }}
             />
-            Trigger re-crawl now
+            {CRAWL_COPY.stagedApply.footerTriggerLabel}
           </label>
           <div style={{ marginLeft: 'auto' }} />
           <AdminButton variant="ghost" onClick={onCancel}>
-            Cancel
+            {CRAWL_COPY.stagedApply.footerCancel}
           </AdminButton>
           <AdminButton variant="primary" onClick={() => void handleApply()}>
-            Apply change
+            {CRAWL_COPY.stagedApply.footerApply}
           </AdminButton>
         </div>
       </div>

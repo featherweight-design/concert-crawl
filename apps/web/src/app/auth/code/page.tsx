@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { validateAndSetInviteCode } from './actions'
 import { WaitlistModal } from '@/components/waitlist/WaitlistModal'
+import { copy } from './definitions/copy'
 
 type ErrorKind =
   | 'invalid_format'
@@ -13,15 +14,6 @@ type ErrorKind =
   | 'ratelimit'
   | 'server_error'
   | null
-
-const ERROR_MESSAGES: Record<NonNullable<ErrorKind>, string> = {
-  invalid_format: 'Code format is BETA-XXXX-XXXX. Check for typos.',
-  notfound: 'Code not found. Double-check for typos.',
-  used: 'This code has already been redeemed.',
-  expired: 'This code has expired.',
-  ratelimit: 'Too many attempts. Try again in a few minutes.',
-  server_error: 'Something went wrong. Try again.',
-}
 
 function formatCodeInput(raw: string): string {
   const clean = raw.toUpperCase().replace(/[^A-Z0-9-]/g, '')
@@ -91,7 +83,7 @@ export default function InviteCodePage() {
               textTransform: 'uppercase',
             }}
           >
-            Step 1 of 2
+            {copy.stepLabel}
           </div>
           <h1
             style={{
@@ -103,7 +95,7 @@ export default function InviteCodePage() {
               lineHeight: 1.1,
             }}
           >
-            Enter your invite code
+            {copy.heading}
           </h1>
           <p
             style={{
@@ -113,14 +105,14 @@ export default function InviteCodePage() {
               lineHeight: 1.5,
             }}
           >
-            Concert Crawl is invite-only right now. Your code looks like{' '}
+            {copy.description}{' '}
             <span
               style={{
                 fontFamily: "'JetBrains Mono', monospace",
                 color: 'var(--fg)',
               }}
             >
-              BETA-XXXX-XXXX
+              {copy.codeFormat}
             </span>
             .
           </p>
@@ -135,13 +127,13 @@ export default function InviteCodePage() {
               type="text"
               value={code}
               onChange={handleChange}
-              placeholder="BETA-XXXX-XXXX"
+              placeholder={copy.input.placeholder}
               maxLength={14}
               autoComplete="off"
               autoCorrect="off"
               spellCheck={false}
               disabled={isPending}
-              aria-label="Invite code"
+              aria-label={copy.input.ariaLabel}
               style={{
                 width: '100%',
                 boxSizing: 'border-box',
@@ -170,7 +162,7 @@ export default function InviteCodePage() {
                   lineHeight: 1.4,
                 }}
               >
-                {ERROR_MESSAGES[errorKind]}
+                {copy.errors[errorKind]}
               </div>
             )}
             {!errorKind && (
@@ -185,10 +177,10 @@ export default function InviteCodePage() {
                 }}
               >
                 {code.length === 0
-                  ? 'Format: BETA-XXXX-XXXX'
+                  ? copy.hint.empty
                   : isComplete
-                    ? 'Looks good ✓'
-                    : `${14 - code.length} characters remaining`}
+                    ? copy.hint.valid
+                    : copy.hint.remaining(14 - code.length)}
               </div>
             )}
           </div>
@@ -222,7 +214,7 @@ export default function InviteCodePage() {
                   : 'none',
             }}
           >
-            {isPending ? 'Checking…' : 'Continue →'}
+            {isPending ? copy.button.pending : copy.button.idle}
           </button>
         </form>
 
@@ -245,7 +237,7 @@ export default function InviteCodePage() {
               textDecorationColor: 'var(--border-strong)',
             }}
           >
-            Don&apos;t have a code? Join the waitlist
+            {copy.footer.waitlist}
           </button>
           <Link
             href="/"
@@ -255,7 +247,7 @@ export default function InviteCodePage() {
               textDecoration: 'none',
             }}
           >
-            ← Back to landing
+            {copy.footer.back}
           </Link>
         </div>
       </div>

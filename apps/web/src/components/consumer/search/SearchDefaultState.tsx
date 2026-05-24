@@ -1,6 +1,7 @@
 import { History, Flame } from 'lucide-react'
 import type { PopularEvent } from '../../../lib/search/useSearch'
 import { IdentityArt } from '../identity-art/IdentityArt'
+import { copy } from './definitions/copy'
 
 function formatDayLabel(dateStr: string): string {
   // Append T00:00:00 to force local-timezone parsing — bare YYYY-MM-DD
@@ -74,7 +75,7 @@ export function SearchDefaultState({
         <>
           <SectionHeader
             icon={<History size={13} strokeWidth={1.5} />}
-            label="Recent"
+            label={copy.recentSectionLabel}
           />
           {recentSearches.map((query) => (
             <button
@@ -121,7 +122,7 @@ export function SearchDefaultState({
         <>
           <SectionHeader
             icon={<Flame size={13} strokeWidth={1.5} />}
-            label="Popular this week"
+            label={copy.popularSectionLabel}
             accent
           />
           {popularEvents.map((event, idx) => (
@@ -204,7 +205,9 @@ export function SearchDefaultState({
                     : 'var(--fg-subtle)',
                 }}
               >
-                {event.ticketPriceMin ? `$${event.ticketPriceMin}` : 'TBA'}
+                {event.ticketPriceMin
+                  ? `$${event.ticketPriceMin}`
+                  : copy.priceNotAnnounced}
               </span>
             </button>
           ))}

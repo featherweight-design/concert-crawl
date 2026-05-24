@@ -7,6 +7,7 @@ import { NAV_V2 } from './nav'
 import { buildBreadcrumbs } from './breadcrumbs'
 import { usePageTitle } from './PageTitleContext'
 import { AppSwitcher } from './AppSwitcher'
+import { COPY } from './definitions/copy'
 
 const useBreadcrumbs = (pageTitle: string | null) => {
   const pathname = usePathname()
@@ -54,7 +55,7 @@ export const AdminTopbar = () => {
           }}
         />
         <nav
-          aria-label="Breadcrumb"
+          aria-label={COPY.topbar.breadcrumbAriaLabel}
           style={{
             display: 'flex',
             alignItems: 'center',

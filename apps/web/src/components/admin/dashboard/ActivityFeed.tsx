@@ -2,14 +2,15 @@
 
 import { useState } from 'react'
 import type { CrawlRun } from '@concert-crawl/types'
+import { COPY } from './definitions/copy'
 
 type FilterTab = 'all' | 'crawl' | 'events' | 'invites'
 
 const TABS: { id: FilterTab; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'crawl', label: 'Crawl' },
-  { id: 'events', label: 'Events' },
-  { id: 'invites', label: 'Invites' },
+  { id: 'all', label: COPY.activityFeed.tabs.all },
+  { id: 'crawl', label: COPY.activityFeed.tabs.crawl },
+  { id: 'events', label: COPY.activityFeed.tabs.events },
+  { id: 'invites', label: COPY.activityFeed.tabs.invites },
 ]
 
 interface Props {
@@ -59,7 +60,7 @@ export function ActivityFeed({ runs }: Props) {
             fontSize: 13,
           }}
         >
-          No recent activity.
+          {COPY.activityFeed.noRecentActivity}
         </div>
       ) : (
         <>
@@ -93,8 +94,13 @@ export function ActivityFeed({ runs }: Props) {
               <div style={{ flex: 1, fontSize: 13 }}>
                 <div style={{ color: 'var(--fg)', fontWeight: 500 }}>
                   {run.status === 'success'
-                    ? `${run.venueName ?? 'Venue'} crawl ok`
-                    : `${run.venueName ?? 'Venue'} crawl ${run.status}`}
+                    ? COPY.activityFeed.crawlOk(
+                        run.venueName ?? COPY.activityFeed.venueFallback,
+                      )
+                    : COPY.activityFeed.crawlStatus(
+                        run.venueName ?? COPY.activityFeed.venueFallback,
+                        run.status,
+                      )}
                 </div>
                 <div style={{ color: 'var(--fg-muted)', fontSize: 12 }}>
                   {run.eventsFound} events · {run.extractionStrategyUsed ?? '—'}
@@ -111,7 +117,7 @@ export function ActivityFeed({ runs }: Props) {
                 padding: '12px 0',
               }}
             >
-              No activity yet.
+              {COPY.activityFeed.noActivity}
             </div>
           )}
         </>

@@ -7,6 +7,7 @@ import {
   AdminButton,
   StatusBadge,
 } from '@/components/admin/primitives'
+import { REVIEW_COPY } from './definitions/copy'
 
 interface EventFlag {
   id: string
@@ -189,7 +190,7 @@ function EventFlagCard({
           }}
         >
           <span style={{ fontSize: 10 }}>{reasonOpen ? '▼' : '▶'}</span>
-          LLM reasoning
+          {REVIEW_COPY.adminReviewMobile.llmReasoning}
         </button>
         {reasonOpen && (
           <div
@@ -210,13 +211,13 @@ function EventFlagCard({
           >
             <div>
               <span style={{ color: 'var(--fg-subtle)', fontWeight: 700 }}>
-                strategy:{' '}
+                {REVIEW_COPY.adminReviewMobile.llmDetailsStrategy}{' '}
               </span>
               {event.extractionStrategy ?? '—'}
             </div>
             <div>
               <span style={{ color: 'var(--fg-subtle)', fontWeight: 700 }}>
-                confidence:{' '}
+                {REVIEW_COPY.adminReviewMobile.llmDetailsConfidence}{' '}
               </span>
               {event.confidenceScore !== null
                 ? `${Math.round(event.confidenceScore * 100)}%`
@@ -225,7 +226,7 @@ function EventFlagCard({
             {event.sourceUrl && (
               <div>
                 <span style={{ color: 'var(--fg-subtle)', fontWeight: 700 }}>
-                  source:{' '}
+                  {REVIEW_COPY.adminReviewMobile.llmDetailsSource}{' '}
                 </span>
                 <span style={{ wordBreak: 'break-all' }}>
                   {event.sourceUrl}
@@ -244,7 +245,7 @@ function EventFlagCard({
           fullWidth
           onClick={() => onReject(event.id)}
         >
-          × Reject
+          {REVIEW_COPY.adminReviewMobile.rejectEvent}
         </AdminButton>
         <AdminButton
           variant="success"
@@ -252,7 +253,7 @@ function EventFlagCard({
           fullWidth
           onClick={() => onApprove(event.id)}
         >
-          ✓ Approve
+          {REVIEW_COPY.adminReviewMobile.approveEvent}
         </AdminButton>
       </div>
     </div>
@@ -355,7 +356,7 @@ function NeedsPriceRow({
               }}
             >
               <span style={{ fontSize: 14 }}>↗</span>
-              Buy tickets
+              {REVIEW_COPY.adminReviewMobile.buyTickets}
             </a>
           )}
         </div>
@@ -402,7 +403,7 @@ function NeedsPriceRow({
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <input
               type="number"
-              placeholder="Low $"
+              placeholder={REVIEW_COPY.adminReviewMobile.priceLowPlaceholder}
               value={priceMin}
               onChange={(evt) => setPriceMin(evt.target.value)}
               min={0}
@@ -423,7 +424,7 @@ function NeedsPriceRow({
             />
             <input
               type="number"
-              placeholder="High $"
+              placeholder={REVIEW_COPY.adminReviewMobile.priceHighPlaceholder}
               value={priceMax}
               onChange={(evt) => setPriceMax(evt.target.value)}
               min={0}
@@ -459,12 +460,24 @@ function NeedsPriceRow({
                 outline: 'none',
               }}
             >
-              <option value="Ticketmaster">Ticketmaster</option>
-              <option value="AXS">AXS</option>
-              <option value="SeatGeek">SeatGeek</option>
-              <option value="DICE">DICE</option>
-              <option value="Eventbrite">Eventbrite</option>
-              <option value="VenueBoxOffice">Box office</option>
+              <option value="Ticketmaster">
+                {REVIEW_COPY.adminReviewMobile.vendorOptions.ticketmaster}
+              </option>
+              <option value="AXS">
+                {REVIEW_COPY.adminReviewMobile.vendorOptions.axs}
+              </option>
+              <option value="SeatGeek">
+                {REVIEW_COPY.adminReviewMobile.vendorOptions.seatgeek}
+              </option>
+              <option value="DICE">
+                {REVIEW_COPY.adminReviewMobile.vendorOptions.dice}
+              </option>
+              <option value="Eventbrite">
+                {REVIEW_COPY.adminReviewMobile.vendorOptions.eventbrite}
+              </option>
+              <option value="VenueBoxOffice">
+                {REVIEW_COPY.adminReviewMobile.vendorOptions.venueBoxOffice}
+              </option>
             </select>
             <select
               value={howFound}
@@ -483,9 +496,15 @@ function NeedsPriceRow({
                 outline: 'none',
               }}
             >
-              <option value="saw_listing">Saw listing</option>
-              <option value="bought_myself">Bought tickets</option>
-              <option value="at_the_venue">At the venue</option>
+              <option value="saw_listing">
+                {REVIEW_COPY.adminReviewMobile.howFoundOptions.sawListing}
+              </option>
+              <option value="bought_myself">
+                {REVIEW_COPY.adminReviewMobile.howFoundOptions.boughtMyself}
+              </option>
+              <option value="at_the_venue">
+                {REVIEW_COPY.adminReviewMobile.howFoundOptions.atTheVenue}
+              </option>
             </select>
           </div>
           {/* Row 2: actions */}
@@ -497,7 +516,7 @@ function NeedsPriceRow({
               onClick={() => setIsAdding(false)}
               disabled={isSaving}
             >
-              Cancel
+              {REVIEW_COPY.adminReviewMobile.cancel}
             </AdminButton>
             <AdminButton
               variant="success"
@@ -506,7 +525,9 @@ function NeedsPriceRow({
               onClick={() => void handleSave()}
               disabled={isSaving || !priceMin.trim()}
             >
-              {isSaving ? 'Saving…' : 'Save'}
+              {isSaving
+                ? REVIEW_COPY.adminReviewMobile.saving
+                : REVIEW_COPY.adminReviewMobile.save}
             </AdminButton>
           </div>
         </div>
@@ -563,8 +584,16 @@ export function AdminReviewMobile({
       >
         {(
           [
-            { key: 'flags', label: 'Event flags', count: events.length },
-            { key: 'prices', label: 'Prices', count: priceCount },
+            {
+              key: 'flags',
+              label: REVIEW_COPY.adminReviewMobile.tabEventFlags,
+              count: events.length,
+            },
+            {
+              key: 'prices',
+              label: REVIEW_COPY.adminReviewMobile.tabPrices,
+              count: priceCount,
+            },
           ] as const
         ).map(({ key, label, count }) => {
           const isActive = activeTab === key
@@ -666,7 +695,7 @@ export function AdminReviewMobile({
                       marginBottom: 8,
                     }}
                   >
-                    Queue is clear.
+                    {REVIEW_COPY.adminReviewMobile.queueClearHeading}
                   </div>
                   <div
                     style={{
@@ -677,8 +706,7 @@ export function AdminReviewMobile({
                       maxWidth: 260,
                     }}
                   >
-                    Every flagged event has been triaged. Next sweep runs at
-                    18:00 MT.
+                    {REVIEW_COPY.adminReviewMobile.queueClearBody}
                   </div>
                 </div>
               </div>
@@ -735,7 +763,7 @@ export function AdminReviewMobile({
                   color: 'var(--fg)',
                 }}
               >
-                Community submissions
+                {REVIEW_COPY.adminReviewMobile.communitySubmissionsHeader}
               </span>
               <StatusBadge kind="signal">
                 {submissions.length} pending
@@ -753,7 +781,7 @@ export function AdminReviewMobile({
                     borderBottom: '1px solid var(--border)',
                   }}
                 >
-                  No pending submissions
+                  {REVIEW_COPY.adminReviewMobile.noSubmissions}
                 </div>
               ) : (
                 submissions.map((sub) => {
@@ -885,7 +913,7 @@ export function AdminReviewMobile({
                           fullWidth
                           onClick={() => onDenySubmission(sub.id)}
                         >
-                          × Deny
+                          {REVIEW_COPY.adminReviewMobile.denySubmission}
                         </AdminButton>
                         <AdminButton
                           variant="success"
@@ -893,7 +921,7 @@ export function AdminReviewMobile({
                           fullWidth
                           onClick={() => onApproveSubmission(sub.id)}
                         >
-                          ✓ Approve · cred
+                          {REVIEW_COPY.adminReviewMobile.approveSubmission}
                         </AdminButton>
                       </div>
                     </div>
@@ -932,7 +960,7 @@ export function AdminReviewMobile({
                   color: 'var(--fg)',
                 }}
               >
-                Needs price
+                {REVIEW_COPY.adminReviewMobile.needsPrice}
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <AdminButton
@@ -940,7 +968,7 @@ export function AdminReviewMobile({
                   size="sm"
                   onClick={() => setShowMissingOnly((prev) => !prev)}
                 >
-                  Missing only
+                  {REVIEW_COPY.adminReviewMobile.missingOnly}
                 </AdminButton>
                 <StatusBadge kind="warning">
                   {missingPriceEvents.length}
@@ -959,8 +987,8 @@ export function AdminReviewMobile({
                   }}
                 >
                   {showMissingOnly
-                    ? 'All events have prices.'
-                    : 'No upcoming events.'}
+                    ? REVIEW_COPY.adminReviewMobile.allHavePrices
+                    : REVIEW_COPY.adminReviewMobile.noUpcomingEvents}
                 </div>
               ) : (
                 visiblePriceEvents.map((ev) => (

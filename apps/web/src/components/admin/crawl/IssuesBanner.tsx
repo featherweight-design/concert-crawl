@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { AlertCircle, ChevronRight } from 'lucide-react'
+import { CRAWL_COPY } from '@/components/admin/crawl/definitions/copy'
 
 interface IssueVenue {
   venueId: string
@@ -20,19 +21,29 @@ export function IssuesBanner({ blockedVenues }: Props) {
 
   if (blockedVenues.length === 0) return null
 
-  const blocked = blockedVenues.filter((row) => row.status === 'blocked')
-  const failed = blockedVenues.filter((row) => row.status === 'failed')
-  const paused = blockedVenues.filter((row) => row.status === 'paused')
+  const blocked = blockedVenues.filter(
+    (row) => row.status === CRAWL_COPY.issuesBanner.statusBlocked,
+  )
+  const failed = blockedVenues.filter(
+    (row) => row.status === CRAWL_COPY.issuesBanner.statusFailed,
+  )
+  const paused = blockedVenues.filter(
+    (row) => row.status === CRAWL_COPY.issuesBanner.statusPaused,
+  )
 
   const parts: string[] = []
   if (blocked.length > 0)
     parts.push(
-      `${blocked.length} venue${blocked.length > 1 ? 's' : ''} blocked`,
+      `${blocked.length} venue${blocked.length > 1 ? 's' : ''} ${CRAWL_COPY.issuesBanner.statusBlocked}`,
     )
   if (failed.length > 0)
-    parts.push(`${failed.length} venue${failed.length > 1 ? 's' : ''} failed`)
+    parts.push(
+      `${failed.length} venue${failed.length > 1 ? 's' : ''} ${CRAWL_COPY.issuesBanner.statusFailed}`,
+    )
   if (paused.length > 0)
-    parts.push(`${paused.length} venue${paused.length > 1 ? 's' : ''} paused`)
+    parts.push(
+      `${paused.length} venue${paused.length > 1 ? 's' : ''} ${CRAWL_COPY.issuesBanner.statusPaused}`,
+    )
 
   const headline = parts.join(' · ')
 
@@ -44,10 +55,10 @@ export function IssuesBanner({ blockedVenues }: Props) {
 
   const venueDescriptions = blockedVenues.map((venue) => {
     const detail =
-      venue.status === 'blocked'
+      venue.status === CRAWL_COPY.issuesBanner.statusBlocked
         ? `${venue.consecutiveFailures}× consecutive ${venue.blockedAt ? '403' : 'failure'}`
-        : venue.status === 'paused'
-          ? 'disallowed'
+        : venue.status === CRAWL_COPY.issuesBanner.statusPaused
+          ? CRAWL_COPY.issuesBanner.statusDetail.disallowed
           : venue.consecutiveFailures > 0
             ? `${venue.consecutiveFailures}×`
             : null
@@ -130,7 +141,7 @@ export function IssuesBanner({ blockedVenues }: Props) {
           whiteSpace: 'nowrap',
         }}
       >
-        Jump to issues
+        {CRAWL_COPY.issuesBanner.jumpToIssues}
         <ChevronRight size={13} />
       </button>
     </div>

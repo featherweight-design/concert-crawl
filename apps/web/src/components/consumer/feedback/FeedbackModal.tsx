@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
+import { copy } from './definitions/copy'
 import { usePathname } from 'next/navigation'
 import { useAuth, useUser } from '@clerk/nextjs'
 import { useTheme } from '@/theme/ThemeProvider'
@@ -11,10 +12,10 @@ type FeedbackCategory = 'bug' | 'idea' | 'praise' | 'other'
 type ModalState = 'form' | 'loading' | 'success' | 'error'
 
 const CATEGORIES: { key: FeedbackCategory; label: string }[] = [
-  { key: 'bug', label: 'Bug' },
-  { key: 'idea', label: 'Idea' },
-  { key: 'praise', label: 'Praise' },
-  { key: 'other', label: 'Other' },
+  { key: 'bug', label: copy.modal.categories.bug },
+  { key: 'idea', label: copy.modal.categories.idea },
+  { key: 'praise', label: copy.modal.categories.praise },
+  { key: 'other', label: copy.modal.categories.other },
 ]
 
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? ''
@@ -146,7 +147,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
       </div>
       <button
         type="button"
-        aria-label="Close feedback"
+        aria-label={copy.modal.closeAriaLabel}
         onClick={handleClose}
         style={{
           all: 'unset',
@@ -169,11 +170,11 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
   const footer = showForm ? (
     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
       <SecondaryButton onClick={handleClose} fullWidth={false}>
-        Cancel
+        {copy.modal.footer.cancel}
       </SecondaryButton>
       <div style={{ width: 200 }}>
         <SubmitButton loading={state === 'loading'} onClick={handleSubmit}>
-          Send →
+          {copy.modal.footer.submit}
         </SubmitButton>
       </div>
     </div>
@@ -181,7 +182,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
 
   const mobileFooter = showForm ? (
     <SubmitButton loading={state === 'loading'} onClick={handleSubmit}>
-      Send →
+      {copy.modal.footer.submit}
     </SubmitButton>
   ) : undefined
 
@@ -189,7 +190,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     <ModalShell
       open={open}
       onClose={handleClose}
-      ariaLabel="Feedback"
+      ariaLabel={copy.modal.ariaLabel}
       sheetHeight={state === 'success' || state === 'error' ? 'short' : 'tall'}
       header={header}
       footer={footer}
@@ -284,7 +285,7 @@ function FormFields({
             textWrap: 'balance',
           }}
         >
-          Holler at us.
+          {copy.modal.form.heading}
         </h2>
         <p
           style={{
@@ -297,14 +298,13 @@ function FormFields({
             textWrap: 'pretty',
           }}
         >
-          Bug, idea, or praise. We read all of it — usually within a couple
-          days.
+          {copy.modal.form.subheading}
         </p>
       </div>
 
       {/* Category chips */}
       <div>
-        <Eyebrow error={catError}>What kind?</Eyebrow>
+        <Eyebrow error={catError}>{copy.modal.form.categoryEyebrow}</Eyebrow>
         <div
           style={{
             display: 'flex',
@@ -349,20 +349,20 @@ function FormFields({
           })}
         </div>
         {catError && (
-          <HelpText tone="error">Pick a feedback category.</HelpText>
+          <HelpText tone="error">{copy.modal.errors.categoryRequired}</HelpText>
         )}
       </div>
 
       {/* Message */}
       <div>
-        <Eyebrow error={msgError}>What&apos;s up?</Eyebrow>
+        <Eyebrow error={msgError}>{copy.modal.form.messageEyebrow}</Eyebrow>
         <textarea
           className="fb-textarea"
           value={message}
           onChange={(ev) => setMessage(ev.target.value)}
           disabled={disabled}
           rows={5}
-          placeholder="What did you see? What did you expect? Anything that helps us reproduce it."
+          placeholder={copy.modal.form.messagePlaceholder}
           style={{
             width: '100%',
             boxSizing: 'border-box',
@@ -382,15 +382,13 @@ function FormFields({
           }}
         />
         {msgError && (
-          <HelpText tone="error">
-            Don&apos;t leave us hanging — give us a sentence.
-          </HelpText>
+          <HelpText tone="error">{copy.modal.errors.messageRequired}</HelpText>
         )}
       </div>
 
       {/* Screenshot attachment */}
       <div>
-        <Eyebrow>Proof (optional)</Eyebrow>
+        <Eyebrow>{copy.modal.form.screenshotEyebrow}</Eyebrow>
         <input
           ref={fileInputRef}
           type="file"
@@ -455,7 +453,7 @@ function FormFields({
             <button
               type="button"
               disabled={disabled}
-              aria-label="Remove screenshot"
+              aria-label={copy.modal.form.screenshotRemoveAriaLabel}
               onClick={() => {
                 onScreenshotChange(null)
                 if (fileInputRef.current) fileInputRef.current.value = ''
@@ -556,7 +554,7 @@ function FormFields({
               <span
                 style={{ color: 'var(--fg)', fontSize: 13, fontWeight: 700 }}
               >
-                Attach a screenshot
+                {copy.modal.form.screenshotAttachLabel}
               </span>
               <span
                 style={{
@@ -566,7 +564,7 @@ function FormFields({
                   letterSpacing: 0,
                 }}
               >
-                Optional · helps a lot
+                {copy.modal.form.screenshotAttachSublabel}
               </span>
             </span>
           </button>
@@ -606,7 +604,7 @@ function SuccessState({
           textWrap: 'balance',
         }}
       >
-        Loud and clear.
+        {copy.modal.success.heading}
       </div>
       <div
         style={{
@@ -617,8 +615,7 @@ function SuccessState({
           textWrap: 'pretty',
         }}
       >
-        Thanks for the feedback! We&apos;ll reach out if we need more
-        information.
+        {copy.modal.success.body}
       </div>
       <div
         style={{
@@ -628,8 +625,12 @@ function SuccessState({
           marginTop: 4,
         }}
       >
-        <SubmitButton onClick={onClose}>Back to the show</SubmitButton>
-        <SecondaryButton onClick={onReset}>Send another</SecondaryButton>
+        <SubmitButton onClick={onClose}>
+          {copy.modal.success.primaryAction}
+        </SubmitButton>
+        <SecondaryButton onClick={onReset}>
+          {copy.modal.success.secondaryAction}
+        </SecondaryButton>
       </div>
     </div>
   )
@@ -662,7 +663,7 @@ function ErrorState({
           textWrap: 'balance',
         }}
       >
-        Signal lost.
+        {copy.modal.error.heading}
       </div>
       <div
         style={{
@@ -673,8 +674,7 @@ function ErrorState({
           textWrap: 'pretty',
         }}
       >
-        We couldn&apos;t push that to the queue just now. Your message is saved
-        on this device — try again in a sec, or send it later.
+        {copy.modal.error.body}
       </div>
       <div
         style={{
@@ -684,8 +684,12 @@ function ErrorState({
           marginTop: 4,
         }}
       >
-        <SubmitButton onClick={onReset}>Try again</SubmitButton>
-        <SecondaryButton onClick={onClose}>Save and come back</SecondaryButton>
+        <SubmitButton onClick={onReset}>
+          {copy.modal.error.primaryAction}
+        </SubmitButton>
+        <SecondaryButton onClick={onClose}>
+          {copy.modal.error.secondaryAction}
+        </SecondaryButton>
       </div>
     </div>
   )
@@ -696,11 +700,11 @@ function ErrorState({
 function ContextDisclosure({ ctx }: { ctx: CtxData }) {
   const [open, setOpen] = useState(false)
   const rows: { key: string; value: string }[] = [
-    { key: 'Route', value: ctx.route },
-    { key: 'Theme', value: ctx.theme },
-    { key: 'Build', value: ctx.build },
-    { key: 'Device', value: ctx.device },
-    { key: 'User', value: ctx.user },
+    { key: copy.modal.contextDisclosure.fields.route, value: ctx.route },
+    { key: copy.modal.contextDisclosure.fields.theme, value: ctx.theme },
+    { key: copy.modal.contextDisclosure.fields.build, value: ctx.build },
+    { key: copy.modal.contextDisclosure.fields.device, value: ctx.device },
+    { key: copy.modal.contextDisclosure.fields.user, value: ctx.user },
   ]
   return (
     <div
@@ -755,7 +759,7 @@ function ContextDisclosure({ ctx }: { ctx: CtxData }) {
             textTransform: 'uppercase',
           }}
         >
-          Auto-attached · what we&apos;ll send
+          {copy.modal.contextDisclosure.toggleLabel}
         </span>
         <span style={{ flex: 1 }} />
         <span
@@ -767,7 +771,7 @@ function ContextDisclosure({ ctx }: { ctx: CtxData }) {
             letterSpacing: '0.10em',
           }}
         >
-          5 fields
+          {copy.modal.contextDisclosure.fieldCount}
         </span>
       </button>
       {open && (
@@ -881,11 +885,15 @@ function HeaderRail({ state }: { state: ModalState }) {
       ? 'var(--signal)'
       : 'var(--accent)'
   const eyebrow = isError
-    ? 'Beta channel · stalled'
+    ? copy.modal.headerRail.error
     : isSuccess
-      ? 'Got it · beta channel'
-      : 'Beta channel · always open'
-  const code = isError ? 'ERR' : isSuccess ? 'SENT' : 'OPEN'
+      ? copy.modal.headerRail.success
+      : copy.modal.headerRail.form
+  const code = isError
+    ? copy.modal.headerRail.codeError
+    : isSuccess
+      ? copy.modal.headerRail.codeSuccess
+      : copy.modal.headerRail.codeForm
   const pulse = state === 'form' || state === 'loading'
 
   return (
@@ -936,8 +944,13 @@ function HeaderRail({ state }: { state: ModalState }) {
 function StatusRail({ tone }: { tone: 'success' | 'error' }) {
   const accent = tone === 'success' ? 'var(--signal)' : 'var(--warning)'
   const label =
-    tone === 'success' ? 'Got it · beta channel' : "Didn't send · beta channel"
-  const code = tone === 'success' ? '200 · OK' : 'ERR · 503'
+    tone === 'success'
+      ? copy.modal.statusRail.successLabel
+      : copy.modal.statusRail.errorLabel
+  const code =
+    tone === 'success'
+      ? copy.modal.statusRail.successCode
+      : copy.modal.statusRail.errorCode
   return (
     <div
       style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}
@@ -1018,7 +1031,7 @@ function SubmitButton({
       }}
     >
       {loading && <Spinner />}
-      <span>{loading ? 'Sending…' : children}</span>
+      <span>{loading ? copy.modal.footer.submitting : children}</span>
     </button>
   )
 }

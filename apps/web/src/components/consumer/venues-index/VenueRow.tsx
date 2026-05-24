@@ -7,6 +7,7 @@ import {
   fmtDistance,
   type VenueWithDistance,
 } from './venue-filter-defs'
+import { VENUES_INDEX_COPY } from './definitions/copy'
 
 interface VenueRowProps {
   venue: VenueWithDistance
@@ -102,7 +103,7 @@ export function VenueRow({ venue, last = false }: VenueRowProps) {
               whiteSpace: 'nowrap',
             }}
           >
-            Capacity
+            {VENUES_INDEX_COPY.statLabels.capacity}
           </span>
           <span
             style={{
@@ -132,7 +133,7 @@ export function VenueRow({ venue, last = false }: VenueRowProps) {
               whiteSpace: 'nowrap',
             }}
           >
-            Upcoming
+            {VENUES_INDEX_COPY.statLabels.upcoming}
           </span>
           <span
             style={{
@@ -185,7 +186,8 @@ export function VenueRow({ venue, last = false }: VenueRowProps) {
             </span>
             <span style={{ color: 'var(--fg-subtle)' }}>·</span>
             <span className="truncate min-w-0">
-              {venue.capacity ? fmtNum(venue.capacity) : '—'} cap
+              {venue.capacity ? fmtNum(venue.capacity) : '—'}{' '}
+              {VENUES_INDEX_COPY.statLabels.capacityAbbr}
             </span>
           </div>
         </div>
@@ -212,7 +214,7 @@ export function VenueRow({ venue, last = false }: VenueRowProps) {
                 color: 'var(--fg-subtle)',
               }}
             >
-              shows
+              {VENUES_INDEX_COPY.statLabels.shows}
             </span>
           </div>
           <span className="text-fg-subtle">

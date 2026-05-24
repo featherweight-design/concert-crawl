@@ -14,6 +14,7 @@ import {
   getActiveFilterLabel,
   getFilterOptions,
 } from './filter-defs'
+import { copy } from './definitions/copy'
 
 interface FilterBarProps {
   venues: VenuePublic[]
@@ -188,13 +189,13 @@ export function FilterBar({ venues, genres = [], className }: FilterBarProps) {
             className="text-[10px] uppercase tracking-widest text-fg-muted"
             style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}
           >
-            Denver&nbsp;·&nbsp;This week
+            {copy.locationLine}
           </span>
           <h1
             className="text-[28px] font-black leading-none tracking-tight text-fg"
             style={{ letterSpacing: '-0.03em' }}
           >
-            What&apos;s on?
+            {copy.headingTitle}
           </h1>
         </div>
 
@@ -210,8 +211,8 @@ export function FilterBar({ venues, genres = [], className }: FilterBarProps) {
         >
           {(
             [
-              { key: 'list', label: 'List', Icon: IconList },
-              { key: 'cal', label: 'Cal', Icon: IconCal },
+              { key: 'list', label: copy.viewList, Icon: IconList },
+              { key: 'cal', label: copy.viewCal, Icon: IconCal },
             ] as const
           ).map(({ key, label, Icon }) => {
             const active = isCalendarView ? key === 'cal' : key === 'list'
@@ -273,7 +274,7 @@ export function FilterBar({ venues, genres = [], className }: FilterBarProps) {
             onClick={clearAllFilters}
             className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-dashed border-border-strong sm:hidden"
             style={{ color: 'var(--fg-muted)' }}
-            aria-label="Clear all filters"
+            aria-label={copy.clearAllFiltersAriaLabel}
           >
             <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">
               <path
@@ -344,7 +345,7 @@ export function FilterBar({ venues, genres = [], className }: FilterBarProps) {
               color: 'var(--fg-muted)',
             }}
           >
-            × Clear filters
+            {copy.clearFiltersButton}
           </button>
         )}
       </div>
@@ -382,7 +383,7 @@ export function FilterBar({ venues, genres = [], className }: FilterBarProps) {
           }}
           className="text-sm text-fg-subtle hover:text-fg underline-offset-4 hover:underline"
         >
-          Clear search
+          {copy.clearSearchButton}
         </button>
       )}
     </div>

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { LayoutDashboard, ExternalLink } from 'lucide-react'
+import { COPY } from './definitions/copy'
 
 interface AppSwitcherProps {
   size?: 'sm' | 'md'
@@ -18,7 +19,7 @@ export const AppSwitcher = ({ size = 'md' }: AppSwitcherProps) => {
   return (
     <div
       role="tablist"
-      aria-label="App context"
+      aria-label={COPY.appSwitcher.ariaLabel}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -34,7 +35,7 @@ export const AppSwitcher = ({ size = 'md' }: AppSwitcherProps) => {
         href="/"
         role="tab"
         aria-selected={false}
-        title="Open the consumer app in this tab"
+        title={COPY.appSwitcher.userAppTitle}
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -59,12 +60,12 @@ export const AppSwitcher = ({ size = 'md' }: AppSwitcherProps) => {
         }}
       >
         <ExternalLink size={sz.iconSize} />
-        <span>User app</span>
+        <span>{COPY.appSwitcher.userApp}</span>
       </Link>
       <div
         role="tab"
         aria-selected={true}
-        title="You are here"
+        title={COPY.appSwitcher.adminTitle}
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -83,7 +84,7 @@ export const AppSwitcher = ({ size = 'md' }: AppSwitcherProps) => {
         }}
       >
         <LayoutDashboard size={sz.iconSize} color="var(--signal)" />
-        <span>Admin</span>
+        <span>{COPY.appSwitcher.admin}</span>
       </div>
     </div>
   )

@@ -7,6 +7,7 @@ import {
   AdminButton,
 } from '@/components/admin/primitives'
 import { SquarePen } from 'lucide-react'
+import { REVIEW_COPY } from './definitions/copy'
 
 interface EventFlag {
   id: string
@@ -80,7 +81,7 @@ export const EventFlagInspector = ({
           borderLeft: '1px solid var(--border)',
         }}
       >
-        Select an event to inspect
+        {REVIEW_COPY.eventFlagInspector.emptyState}
       </div>
     )
   }
@@ -146,7 +147,9 @@ export const EventFlagInspector = ({
             </>
           )}
           {flags.length === 0 && (
-            <StatusBadge kind="warning">Needs review</StatusBadge>
+            <StatusBadge kind="warning">
+              {REVIEW_COPY.eventFlags.needsReview}
+            </StatusBadge>
           )}
         </div>
         <h3
@@ -188,14 +191,16 @@ export const EventFlagInspector = ({
       >
         {/* Confidence */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <MonoLabel>Confidence</MonoLabel>
+          <MonoLabel>{REVIEW_COPY.eventFlagInspector.confidence}</MonoLabel>
           <ConfidenceBar score={event.confidenceScore ?? 0} />
         </div>
 
         {/* LLM Reasoning */}
         {event.llmReasoning && (
           <div>
-            <MonoLabel color="var(--danger)">LLM Reasoning</MonoLabel>
+            <MonoLabel color="var(--danger)">
+              {REVIEW_COPY.eventFlagInspector.llmReasoning}
+            </MonoLabel>
             <div
               style={{
                 padding: '14px 16px',
@@ -219,7 +224,7 @@ export const EventFlagInspector = ({
         {/* Extraction strategy (fallback when no reasoning) */}
         {!event.llmReasoning && event.extractionStrategy && (
           <div>
-            <MonoLabel>Extraction</MonoLabel>
+            <MonoLabel>{REVIEW_COPY.eventFlagInspector.extraction}</MonoLabel>
             <div
               style={{
                 padding: '12px 14px',
@@ -243,7 +248,7 @@ export const EventFlagInspector = ({
         {/* Raw source HTML */}
         {event.rawSource && (
           <div>
-            <MonoLabel>Raw source</MonoLabel>
+            <MonoLabel>{REVIEW_COPY.eventFlagInspector.rawSource}</MonoLabel>
             <pre
               style={{
                 margin: '8px 0 0',
@@ -268,7 +273,7 @@ export const EventFlagInspector = ({
         {/* Source URL (when no raw source) */}
         {!event.rawSource && event.sourceUrl && (
           <div>
-            <MonoLabel>Source</MonoLabel>
+            <MonoLabel>{REVIEW_COPY.eventFlagInspector.source}</MonoLabel>
             <div
               style={{
                 padding: '12px 14px',
@@ -312,24 +317,24 @@ export const EventFlagInspector = ({
           }}
         >
           <span>
-            <MonoLabel>Date</MonoLabel>{' '}
+            <MonoLabel>{REVIEW_COPY.eventFlagInspector.date}</MonoLabel>{' '}
             <span style={{ color: 'var(--fg)' }}>{event.date}</span>
           </span>
           {event.doorsTime && (
             <span>
-              <MonoLabel>Doors</MonoLabel>{' '}
+              <MonoLabel>{REVIEW_COPY.eventFlagInspector.doors}</MonoLabel>{' '}
               <span style={{ color: 'var(--fg)' }}>{event.doorsTime}</span>
             </span>
           )}
           {event.showTime && (
             <span>
-              <MonoLabel>Show</MonoLabel>{' '}
+              <MonoLabel>{REVIEW_COPY.eventFlagInspector.show}</MonoLabel>{' '}
               <span style={{ color: 'var(--fg)' }}>{event.showTime}</span>
             </span>
           )}
           {event.ticketPriceMin && (
             <span>
-              <MonoLabel>Price</MonoLabel>{' '}
+              <MonoLabel>{REVIEW_COPY.eventFlagInspector.price}</MonoLabel>{' '}
               <span style={{ color: 'var(--fg)' }}>
                 ${event.ticketPriceMin}
                 {event.ticketPriceMax ? ` – $${event.ticketPriceMax}` : ''}
@@ -389,7 +394,7 @@ export const EventFlagInspector = ({
           size="sm"
           onClick={() => onReject(event.id)}
         >
-          Reject
+          {REVIEW_COPY.eventFlagInspector.reject}
         </AdminButton>
         {onEdit && (
           <AdminButton
@@ -398,7 +403,7 @@ export const EventFlagInspector = ({
             icon={SquarePen}
             onClick={() => onEdit(event.id)}
           >
-            Edit & approve
+            {REVIEW_COPY.eventFlagInspector.editAndApprove}
           </AdminButton>
         )}
         <AdminButton
@@ -407,7 +412,7 @@ export const EventFlagInspector = ({
           onClick={() => onApprove(event.id)}
           style={{ marginLeft: 'auto' }}
         >
-          Approve
+          {REVIEW_COPY.eventFlagInspector.approve}
         </AdminButton>
       </div>
     </div>
