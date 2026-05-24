@@ -65,7 +65,7 @@ export function formatLlmCostTotal(
 ): string {
   const total = runs.reduce((acc, run) => acc + (run.llmCostUsd ?? 0), 0)
   if (total === 0) return ''
-  return `$${total.toFixed(2)}`
+  return `$${total.toFixed(4)}`
 }
 
 /**

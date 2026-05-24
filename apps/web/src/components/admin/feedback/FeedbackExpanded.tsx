@@ -111,9 +111,13 @@ export function FeedbackExpanded({
 
   const handleCopyIssueUrl = async () => {
     if (!item.issueUrl) return
-    await navigator.clipboard.writeText(item.issueUrl)
-    setIsCopied(true)
-    setTimeout(() => setIsCopied(false), 1500)
+    try {
+      await navigator.clipboard.writeText(item.issueUrl)
+      setIsCopied(true)
+      setTimeout(() => setIsCopied(false), 1500)
+    } catch {
+      // clipboard write unavailable in this context
+    }
   }
 
   const meta = item.metadata ?? {}

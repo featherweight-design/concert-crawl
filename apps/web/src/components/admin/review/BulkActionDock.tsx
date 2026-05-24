@@ -6,7 +6,7 @@ interface BulkActionDockProps {
   count: number
   onApproveAll: () => void
   onRejectAll: () => void
-  onClear: () => void
+  onClear?: () => void
   onRetag?: () => void
 }
 

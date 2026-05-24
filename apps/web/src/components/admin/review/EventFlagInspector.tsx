@@ -36,7 +36,7 @@ interface EventFlagInspectorProps {
   event: EventFlag | null
   onApprove: (id: string) => void
   onReject: (id: string) => void
-  onClose: () => void
+  onClose?: () => void
   onEdit?: (id: string) => void
 }
 

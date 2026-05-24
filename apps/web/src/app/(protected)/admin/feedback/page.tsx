@@ -3,13 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
-import {
-  StatCard,
-  Panel,
-  SectionHead,
-  AdminButton,
-} from '@/components/admin/primitives'
-import { Filter, ExternalLink } from 'lucide-react'
+import { StatCard, Panel, SectionHead } from '@/components/admin/primitives'
 import { FeedbackFilterRail } from '@/components/admin/feedback/FeedbackFilterRail'
 import { FeedbackRow } from '@/components/admin/feedback/FeedbackRow'
 import { FeedbackExpanded } from '@/components/admin/feedback/FeedbackExpanded'
@@ -344,16 +338,6 @@ export default function FeedbackPage() {
           </span>
         }
         subtitle="Inbox for in-app feedback (and Sentry, soon email). Triage: mark read, flag for investigation, open a GH issue, or archive."
-        actions={
-          <>
-            <AdminButton variant="outline" size="sm" icon={Filter}>
-              Date range
-            </AdminButton>
-            <AdminButton variant="outline" size="sm" icon={ExternalLink}>
-              Export CSV
-            </AdminButton>
-          </>
-        }
       />
 
       {/* Stat cards */}

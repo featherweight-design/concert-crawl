@@ -165,7 +165,7 @@ export default async function AdminDashboardPage() {
     priorCost > 0
       ? {
           dir: recentCost > priorCost ? ('up' as const) : ('down' as const),
-          text: `+${Math.round((Math.abs(recentCost - priorCost) / priorCost) * 100)}%`,
+          text: `${recentCost > priorCost ? '+' : '-'}${Math.round((Math.abs(recentCost - priorCost) / priorCost) * 100)}%`,
           good: recentCost <= priorCost,
         }
       : undefined

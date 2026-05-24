@@ -45,7 +45,7 @@ export function IssuesBanner({ blockedVenues }: Props) {
   const venueDescriptions = blockedVenues.map((venue) => {
     const detail =
       venue.status === 'blocked'
-        ? `${venue.consecutiveFailures}${venue.consecutiveFailures > 0 ? `rd` : ''} consecutive ${venue.blockedAt ? '403' : 'failure'}`
+        ? `${venue.consecutiveFailures}× consecutive ${venue.blockedAt ? '403' : 'failure'}`
         : venue.status === 'paused'
           ? 'disallowed'
           : venue.consecutiveFailures > 0

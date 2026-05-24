@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { CheckCircle2, Filter } from 'lucide-react'
 import { toast } from 'sonner'
 import { Panel, AdminButton, StatusBadge } from '@/components/admin/primitives'
@@ -46,6 +46,12 @@ export const EventFlagsSection = ({
     new Set(),
   )
   const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current)
+    }
+  }, [])
 
   const handleSelect = (id: string, checked: boolean) => {
     setSelectedIds((prev) => {

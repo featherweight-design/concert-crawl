@@ -111,7 +111,7 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
           kind={
             avgHealth >= 80 ? 'success' : avgHealth >= 50 ? 'warning' : 'danger'
           }
-          hint="median run success rate"
+          hint="average run success rate"
         />
       </div>
 

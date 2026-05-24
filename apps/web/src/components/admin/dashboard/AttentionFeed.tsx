@@ -191,25 +191,8 @@ export const AttentionFeed = ({
     </div>
   )
 
-  const panelAction = (
-    <button
-      style={{
-        background: 'none',
-        border: 'none',
-        padding: 0,
-        cursor: 'pointer',
-        fontFamily: 'var(--admin-font, Inter, sans-serif)',
-        fontSize: 12,
-        fontWeight: 500,
-        color: 'var(--fg-muted)',
-      }}
-    >
-      Mark all read
-    </button>
-  )
-
   return (
-    <Panel title={panelTitle} action={panelAction} padding={0}>
+    <Panel title={panelTitle} padding={0}>
       {allItems.length === 0 ? (
         <div
           style={{
