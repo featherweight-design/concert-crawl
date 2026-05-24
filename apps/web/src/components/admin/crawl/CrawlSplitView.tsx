@@ -398,7 +398,7 @@ export const CrawlSplitView = ({
         style={{
           display: 'grid',
           gridTemplateColumns: isMobile
-            ? '1fr'
+            ? 'minmax(0, 1fr)'
             : 'minmax(0, 460px) minmax(0, 1fr)',
           ...(isMobile ? {} : { height: 560 }),
           borderBottom: '1px solid var(--border)',
