@@ -342,266 +342,301 @@ export const PriceCoverageTable = ({
                         >
                           <div
                             style={{
-                              margin: '0 14px 12px',
+                              margin: '10px 14px',
                               padding: '14px 18px',
                               background:
                                 'color-mix(in oklab, var(--signal) 5%, var(--surface-1))',
                               border: '1px solid var(--border-strong)',
                               borderRadius: 10,
                               display: 'flex',
-                              alignItems: 'flex-end',
-                              gap: 20,
-                              flexWrap: 'wrap',
+                              flexDirection: 'column',
+                              gap: 12,
                             }}
                           >
-                            {/* Context: adding price for */}
-                            <div style={{ minWidth: 160 }}>
-                              <div
-                                style={{
-                                  fontFamily: "'JetBrains Mono', monospace",
-                                  fontSize: 9,
-                                  fontWeight: 700,
-                                  letterSpacing: '0.1em',
-                                  textTransform: 'uppercase',
-                                  color: 'var(--fg-subtle)',
-                                  marginBottom: 4,
-                                }}
-                              >
-                                Adding price for
-                              </div>
-                              <div
-                                style={{
-                                  fontFamily: "'Inter', sans-serif",
-                                  fontSize: 13,
-                                  fontWeight: 700,
-                                  color: 'var(--fg)',
-                                }}
-                              >
-                                {ev.eventTitle}
-                              </div>
-                              <div
-                                style={{
-                                  fontFamily: "'Inter', sans-serif",
-                                  fontSize: 11,
-                                  color: 'var(--fg-muted)',
-                                  marginTop: 2,
-                                }}
-                              >
-                                {[ev.venueName, formatEventDate(ev.date)]
-                                  .filter(Boolean)
-                                  .join(' · ')}
-                              </div>
-                            </div>
-
-                            {/* LOW / HIGH inputs */}
+                            {/* Row 1: context + controls */}
                             <div
                               style={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: 10,
+                                gap: 16,
+                                flexWrap: 'wrap',
                               }}
                             >
-                              <span
-                                style={{
-                                  fontFamily: "'JetBrains Mono', monospace",
-                                  fontSize: 10,
-                                  fontWeight: 700,
-                                  letterSpacing: '0.08em',
-                                  textTransform: 'uppercase',
-                                  color: 'var(--fg-subtle)',
-                                }}
-                              >
-                                Low
-                              </span>
+                              {/* Context: adding price for */}
+                              <div style={{ minWidth: 140, maxWidth: 200 }}>
+                                <div
+                                  style={{
+                                    fontFamily: "'JetBrains Mono', monospace",
+                                    fontSize: 9,
+                                    fontWeight: 700,
+                                    letterSpacing: '0.1em',
+                                    textTransform: 'uppercase',
+                                    color: 'var(--fg-subtle)',
+                                    marginBottom: 4,
+                                  }}
+                                >
+                                  Adding price for
+                                </div>
+                                <div
+                                  style={{
+                                    fontFamily: "'Inter', sans-serif",
+                                    fontSize: 13,
+                                    fontWeight: 700,
+                                    color: 'var(--fg)',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                >
+                                  {ev.eventTitle}
+                                </div>
+                                <div
+                                  style={{
+                                    fontFamily: "'Inter', sans-serif",
+                                    fontSize: 11,
+                                    color: 'var(--fg-muted)',
+                                    marginTop: 2,
+                                  }}
+                                >
+                                  {[ev.venueName, formatEventDate(ev.date)]
+                                    .filter(Boolean)
+                                    .join(' · ')}
+                                </div>
+                                {ev.ticketUrl && (
+                                  <a
+                                    href={ev.ticketUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: 3,
+                                      marginTop: 4,
+                                      fontFamily: "'Inter', sans-serif",
+                                      fontSize: 11,
+                                      fontWeight: 600,
+                                      color: 'var(--signal)',
+                                      textDecoration: 'none',
+                                    }}
+                                  >
+                                    ↗ Buy tickets
+                                  </a>
+                                )}
+                              </div>
+
+                              {/* LOW / HIGH inputs */}
                               <div
                                 style={{
-                                  display: 'inline-flex',
+                                  display: 'flex',
                                   alignItems: 'center',
-                                  border: '1px solid var(--border-strong)',
-                                  borderRadius: 6,
-                                  background: 'var(--bg-elevated)',
-                                  overflow: 'hidden',
+                                  gap: 10,
+                                  flexShrink: 0,
                                 }}
                               >
                                 <span
                                   style={{
-                                    padding: '0 6px 0 10px',
                                     fontFamily: "'JetBrains Mono', monospace",
-                                    fontSize: 13,
-                                    fontWeight: 600,
-                                    color: 'var(--fg-muted)',
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    letterSpacing: '0.08em',
+                                    textTransform: 'uppercase',
+                                    color: 'var(--fg-subtle)',
                                   }}
                                 >
-                                  $
+                                  Low
                                 </span>
-                                <input
-                                  type="number"
-                                  placeholder="0"
-                                  value={priceMin}
-                                  onChange={(evt) =>
-                                    setPriceMin(evt.target.value)
-                                  }
-                                  min={0}
-                                  step={1}
+                                <div
                                   style={{
-                                    ...inputStyle,
-                                    border: 'none',
-                                    borderRadius: 0,
-                                    paddingLeft: 0,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    border: '1px solid var(--border-strong)',
+                                    borderRadius: 6,
+                                    background: 'var(--bg-elevated)',
+                                    overflow: 'hidden',
                                   }}
-                                />
-                              </div>
+                                >
+                                  <span
+                                    style={{
+                                      padding: '0 6px 0 10px',
+                                      fontFamily: "'JetBrains Mono', monospace",
+                                      fontSize: 13,
+                                      fontWeight: 600,
+                                      color: 'var(--fg-muted)',
+                                    }}
+                                  >
+                                    $
+                                  </span>
+                                  <input
+                                    type="number"
+                                    placeholder="0"
+                                    value={priceMin}
+                                    onChange={(evt) =>
+                                      setPriceMin(evt.target.value)
+                                    }
+                                    min={0}
+                                    step={1}
+                                    style={{
+                                      ...inputStyle,
+                                      border: 'none',
+                                      borderRadius: 0,
+                                      paddingLeft: 0,
+                                    }}
+                                  />
+                                </div>
 
-                              <span
-                                style={{
-                                  fontFamily: "'JetBrains Mono', monospace",
-                                  fontSize: 10,
-                                  fontWeight: 700,
-                                  letterSpacing: '0.08em',
-                                  textTransform: 'uppercase',
-                                  color: 'var(--fg-subtle)',
-                                }}
-                              >
-                                High
-                              </span>
-                              <div
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  border: '1px solid var(--border-strong)',
-                                  borderRadius: 6,
-                                  background: 'var(--bg-elevated)',
-                                  overflow: 'hidden',
-                                }}
-                              >
                                 <span
                                   style={{
-                                    padding: '0 6px 0 10px',
                                     fontFamily: "'JetBrains Mono', monospace",
-                                    fontSize: 13,
-                                    fontWeight: 600,
-                                    color: 'var(--fg-muted)',
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    letterSpacing: '0.08em',
+                                    textTransform: 'uppercase',
+                                    color: 'var(--fg-subtle)',
                                   }}
                                 >
-                                  $
+                                  High
                                 </span>
-                                <input
-                                  type="number"
-                                  placeholder="0"
-                                  value={priceMax}
-                                  onChange={(evt) =>
-                                    setPriceMax(evt.target.value)
-                                  }
-                                  min={0}
-                                  step={1}
+                                <div
                                   style={{
-                                    ...inputStyle,
-                                    border: 'none',
-                                    borderRadius: 0,
-                                    paddingLeft: 0,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    border: '1px solid var(--border-strong)',
+                                    borderRadius: 6,
+                                    background: 'var(--bg-elevated)',
+                                    overflow: 'hidden',
                                   }}
-                                />
+                                >
+                                  <span
+                                    style={{
+                                      padding: '0 6px 0 10px',
+                                      fontFamily: "'JetBrains Mono', monospace",
+                                      fontSize: 13,
+                                      fontWeight: 600,
+                                      color: 'var(--fg-muted)',
+                                    }}
+                                  >
+                                    $
+                                  </span>
+                                  <input
+                                    type="number"
+                                    placeholder="0"
+                                    value={priceMax}
+                                    onChange={(evt) =>
+                                      setPriceMax(evt.target.value)
+                                    }
+                                    min={0}
+                                    step={1}
+                                    style={{
+                                      ...inputStyle,
+                                      border: 'none',
+                                      borderRadius: 0,
+                                      paddingLeft: 0,
+                                    }}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Vendor select */}
+                              <div style={{ flexShrink: 0 }}>
+                                <div
+                                  style={{
+                                    fontFamily: "'JetBrains Mono', monospace",
+                                    fontSize: 9,
+                                    fontWeight: 700,
+                                    letterSpacing: '0.1em',
+                                    textTransform: 'uppercase',
+                                    color: 'var(--fg-subtle)',
+                                    marginBottom: 4,
+                                  }}
+                                >
+                                  Vendor
+                                </div>
+                                <select
+                                  value={vendor}
+                                  onChange={(evt) =>
+                                    setVendor(
+                                      evt.target.value as SubmissionVendor,
+                                    )
+                                  }
+                                  style={{
+                                    height: 32,
+                                    padding: '0 8px',
+                                    border: '1px solid var(--border-strong)',
+                                    borderRadius: 6,
+                                    background: 'var(--bg-elevated)',
+                                    color: 'var(--fg)',
+                                    fontSize: 13,
+                                    fontFamily: "'Inter', sans-serif",
+                                    outline: 'none',
+                                  }}
+                                >
+                                  <option value="Ticketmaster">
+                                    Ticketmaster
+                                  </option>
+                                  <option value="AXS">AXS</option>
+                                  <option value="SeatGeek">SeatGeek</option>
+                                  <option value="DICE">DICE</option>
+                                  <option value="Eventbrite">Eventbrite</option>
+                                  <option value="VenueBoxOffice">
+                                    Venue box office
+                                  </option>
+                                </select>
+                              </div>
+
+                              {/* How found select */}
+                              <div style={{ flexShrink: 0 }}>
+                                <div
+                                  style={{
+                                    fontFamily: "'JetBrains Mono', monospace",
+                                    fontSize: 9,
+                                    fontWeight: 700,
+                                    letterSpacing: '0.1em',
+                                    textTransform: 'uppercase',
+                                    color: 'var(--fg-subtle)',
+                                    marginBottom: 4,
+                                  }}
+                                >
+                                  How found
+                                </div>
+                                <select
+                                  value={howFound}
+                                  onChange={(evt) =>
+                                    setHowFound(
+                                      evt.target.value as SubmissionHowFound,
+                                    )
+                                  }
+                                  style={{
+                                    height: 32,
+                                    padding: '0 8px',
+                                    border: '1px solid var(--border-strong)',
+                                    borderRadius: 6,
+                                    background: 'var(--bg-elevated)',
+                                    color: 'var(--fg)',
+                                    fontSize: 13,
+                                    fontFamily: "'Inter', sans-serif",
+                                    outline: 'none',
+                                  }}
+                                >
+                                  <option value="saw_listing">
+                                    Saw listing
+                                  </option>
+                                  <option value="bought_myself">
+                                    Bought tickets
+                                  </option>
+                                  <option value="at_the_venue">
+                                    At the venue
+                                  </option>
+                                </select>
                               </div>
                             </div>
 
-                            {/* Vendor select */}
-                            <div>
-                              <div
-                                style={{
-                                  fontFamily: "'JetBrains Mono', monospace",
-                                  fontSize: 9,
-                                  fontWeight: 700,
-                                  letterSpacing: '0.1em',
-                                  textTransform: 'uppercase',
-                                  color: 'var(--fg-subtle)',
-                                  marginBottom: 4,
-                                }}
-                              >
-                                Vendor
-                              </div>
-                              <select
-                                value={vendor}
-                                onChange={(evt) =>
-                                  setVendor(
-                                    evt.target.value as SubmissionVendor,
-                                  )
-                                }
-                                style={{
-                                  height: 32,
-                                  padding: '0 8px',
-                                  border: '1px solid var(--border-strong)',
-                                  borderRadius: 6,
-                                  background: 'var(--bg-elevated)',
-                                  color: 'var(--fg)',
-                                  fontSize: 13,
-                                  fontFamily: "'Inter', sans-serif",
-                                  outline: 'none',
-                                }}
-                              >
-                                <option value="Ticketmaster">
-                                  Ticketmaster
-                                </option>
-                                <option value="AXS">AXS</option>
-                                <option value="SeatGeek">SeatGeek</option>
-                                <option value="DICE">DICE</option>
-                                <option value="Eventbrite">Eventbrite</option>
-                                <option value="VenueBoxOffice">
-                                  Venue box office
-                                </option>
-                              </select>
-                            </div>
-
-                            {/* How found select */}
-                            <div>
-                              <div
-                                style={{
-                                  fontFamily: "'JetBrains Mono', monospace",
-                                  fontSize: 9,
-                                  fontWeight: 700,
-                                  letterSpacing: '0.1em',
-                                  textTransform: 'uppercase',
-                                  color: 'var(--fg-subtle)',
-                                  marginBottom: 4,
-                                }}
-                              >
-                                How found
-                              </div>
-                              <select
-                                value={howFound}
-                                onChange={(evt) =>
-                                  setHowFound(
-                                    evt.target.value as SubmissionHowFound,
-                                  )
-                                }
-                                style={{
-                                  height: 32,
-                                  padding: '0 8px',
-                                  border: '1px solid var(--border-strong)',
-                                  borderRadius: 6,
-                                  background: 'var(--bg-elevated)',
-                                  color: 'var(--fg)',
-                                  fontSize: 13,
-                                  fontFamily: "'Inter', sans-serif",
-                                  outline: 'none',
-                                }}
-                              >
-                                <option value="saw_listing">Saw listing</option>
-                                <option value="bought_myself">
-                                  Bought tickets
-                                </option>
-                                <option value="at_the_venue">
-                                  At the venue
-                                </option>
-                              </select>
-                            </div>
-
-                            {/* Actions */}
+                            {/* Row 2: actions */}
                             <div
                               style={{
                                 display: 'flex',
                                 alignItems: 'center',
+                                justifyContent: 'flex-end',
                                 gap: 12,
-                                flexShrink: 0,
                               }}
                             >
                               <button
