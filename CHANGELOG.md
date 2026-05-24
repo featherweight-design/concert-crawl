@@ -1,3 +1,15 @@
+# [1.38.0](https://github.com/HartiganHM/concert-crawl/compare/v1.37.0...v1.38.0) (2026-05-24)
+
+
+### Bug Fixes
+
+* **landing:** address Copilot review feedback ([011add2](https://github.com/HartiganHM/concert-crawl/commit/011add214daf7b991fa05796cd38baf18a541220))
+
+
+### Features
+
+* **web:** landing poster v2 — IdentityArt-backed animated hero poster ([3e6a295](https://github.com/HartiganHM/concert-crawl/commit/3e6a295a2cc027c275bcb15746fff847653b1082))
+
 # [1.37.0](https://github.com/HartiganHM/concert-crawl/compare/v1.36.4...v1.37.0) (2026-05-24)
 
 
