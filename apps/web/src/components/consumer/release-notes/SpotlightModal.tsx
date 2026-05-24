@@ -22,23 +22,25 @@ export function SpotlightModal({
   const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
+    if (!sp) return
     function handleKeyDown(ev: KeyboardEvent) {
       if (ev.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
+  }, [onClose, sp])
 
   // isMobile tracks viewport width — intentionally separate from heroScale so
   // the dialog layout never feeds back into the ResizeObserver measurement.
   useEffect(() => {
+    if (!sp) return
     function update() {
       setIsMobile(window.innerWidth < 580)
     }
     update()
     window.addEventListener('resize', update)
     return () => window.removeEventListener('resize', update)
-  }, [])
+  }, [sp])
 
   // heroScale tracks the actual rendered width of the hero container so the
   // 580×300 stage scales down correctly on narrow viewports.
