@@ -418,34 +418,27 @@ export const PriceCoverageTable = ({
                                       textDecoration: 'none',
                                     }}
                                   >
-                                    <span style={{ fontSize: 14 }}>↗</span>
+                                    <span style={{ fontSize: 16 }}>↗</span>
                                     Buy tickets
                                   </a>
                                 )}
                               </div>
 
-                              {/* LOW / HIGH inputs */}
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 10,
-                                  flexShrink: 0,
-                                  alignSelf: 'center',
-                                }}
-                              >
-                                <span
+                              {/* LOW input */}
+                              <div style={{ flexShrink: 0 }}>
+                                <div
                                   style={{
                                     fontFamily: "'JetBrains Mono', monospace",
-                                    fontSize: 10,
+                                    fontSize: 9,
                                     fontWeight: 700,
-                                    letterSpacing: '0.08em',
+                                    letterSpacing: '0.1em',
                                     textTransform: 'uppercase',
                                     color: 'var(--fg-subtle)',
+                                    marginBottom: 4,
                                   }}
                                 >
                                   Low
-                                </span>
+                                </div>
                                 <div
                                   style={{
                                     display: 'inline-flex',
@@ -484,19 +477,23 @@ export const PriceCoverageTable = ({
                                     }}
                                   />
                                 </div>
+                              </div>
 
-                                <span
+                              {/* HIGH input */}
+                              <div style={{ flexShrink: 0 }}>
+                                <div
                                   style={{
                                     fontFamily: "'JetBrains Mono', monospace",
-                                    fontSize: 10,
+                                    fontSize: 9,
                                     fontWeight: 700,
-                                    letterSpacing: '0.08em',
+                                    letterSpacing: '0.1em',
                                     textTransform: 'uppercase',
                                     color: 'var(--fg-subtle)',
+                                    marginBottom: 4,
                                   }}
                                 >
                                   High
-                                </span>
+                                </div>
                                 <div
                                   style={{
                                     display: 'inline-flex',
