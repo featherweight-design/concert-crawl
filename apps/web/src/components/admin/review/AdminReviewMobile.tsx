@@ -99,7 +99,7 @@ function EventFlagCard({
   return (
     <div
       style={{
-        padding: '16px 16px 14px',
+        padding: '12px 14px',
         borderBottom: '1px solid var(--border)',
         background: 'var(--bg-elevated)',
       }}
@@ -236,6 +236,7 @@ function EventFlagCard({
         <AdminButton
           variant="ghost"
           size="sm"
+          fullWidth
           onClick={() => onReject(event.id)}
         >
           × Reject
@@ -243,7 +244,7 @@ function EventFlagCard({
         <AdminButton
           variant="success"
           size="sm"
-          style={{ flex: 1 }}
+          fullWidth
           onClick={() => onApprove(event.id)}
         >
           ✓ Approve
@@ -348,108 +349,121 @@ function NeedsPriceRow({
           style={{
             marginTop: 10,
             display: 'flex',
+            flexDirection: 'column',
             gap: 8,
-            alignItems: 'center',
-            flexWrap: 'wrap',
           }}
         >
-          <input
-            type="number"
-            placeholder="Low $"
-            value={priceMin}
-            onChange={(evt) => setPriceMin(evt.target.value)}
-            min={0}
-            step={0.01}
-            style={{
-              width: 80,
-              height: 30,
-              padding: '0 8px',
-              border: '1px solid var(--border-strong)',
-              borderRadius: 6,
-              background: 'var(--bg-elevated)',
-              color: 'var(--fg)',
-              fontSize: 12,
-              fontFamily: "'JetBrains Mono', monospace",
-              outline: 'none',
-            }}
-          />
-          <input
-            type="number"
-            placeholder="High $"
-            value={priceMax}
-            onChange={(evt) => setPriceMax(evt.target.value)}
-            min={0}
-            step={0.01}
-            style={{
-              width: 80,
-              height: 30,
-              padding: '0 8px',
-              border: '1px solid var(--border-strong)',
-              borderRadius: 6,
-              background: 'var(--bg-elevated)',
-              color: 'var(--fg)',
-              fontSize: 12,
-              fontFamily: "'JetBrains Mono', monospace",
-              outline: 'none',
-            }}
-          />
-          <select
-            value={vendor}
-            onChange={(evt) => setVendor(evt.target.value)}
-            style={{
-              height: 30,
-              padding: '0 6px',
-              border: '1px solid var(--border-strong)',
-              borderRadius: 6,
-              background: 'var(--bg-elevated)',
-              color: 'var(--fg)',
-              fontSize: 12,
-              fontFamily: "'Inter', sans-serif",
-              outline: 'none',
-            }}
-          >
-            <option value="Ticketmaster">Ticketmaster</option>
-            <option value="AXS">AXS</option>
-            <option value="SeatGeek">SeatGeek</option>
-            <option value="DICE">DICE</option>
-            <option value="Eventbrite">Eventbrite</option>
-            <option value="VenueBoxOffice">Box office</option>
-          </select>
-          <select
-            value={howFound}
-            onChange={(evt) => setHowFound(evt.target.value)}
-            style={{
-              height: 30,
-              padding: '0 6px',
-              border: '1px solid var(--border-strong)',
-              borderRadius: 6,
-              background: 'var(--bg-elevated)',
-              color: 'var(--fg)',
-              fontSize: 12,
-              fontFamily: "'Inter', sans-serif",
-              outline: 'none',
-            }}
-          >
-            <option value="saw_listing">Saw listing</option>
-            <option value="bought_myself">Bought tickets</option>
-            <option value="at_the_venue">At the venue</option>
-          </select>
-          <AdminButton
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsAdding(false)}
-            disabled={isSaving}
-          >
-            Cancel
-          </AdminButton>
-          <AdminButton
-            variant="success"
-            size="sm"
-            onClick={() => void handleSave()}
-            disabled={isSaving || !priceMin.trim()}
-          >
-            {isSaving ? 'Saving…' : 'Save'}
-          </AdminButton>
+          {/* Row 1: price inputs + selects */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              type="number"
+              placeholder="Low $"
+              value={priceMin}
+              onChange={(evt) => setPriceMin(evt.target.value)}
+              min={0}
+              step={1}
+              style={{
+                width: 72,
+                flexShrink: 0,
+                height: 30,
+                padding: '0 8px',
+                border: '1px solid var(--border-strong)',
+                borderRadius: 6,
+                background: 'var(--bg-elevated)',
+                color: 'var(--fg)',
+                fontSize: 12,
+                fontFamily: "'JetBrains Mono', monospace",
+                outline: 'none',
+              }}
+            />
+            <input
+              type="number"
+              placeholder="High $"
+              value={priceMax}
+              onChange={(evt) => setPriceMax(evt.target.value)}
+              min={0}
+              step={1}
+              style={{
+                width: 72,
+                flexShrink: 0,
+                height: 30,
+                padding: '0 8px',
+                border: '1px solid var(--border-strong)',
+                borderRadius: 6,
+                background: 'var(--bg-elevated)',
+                color: 'var(--fg)',
+                fontSize: 12,
+                fontFamily: "'JetBrains Mono', monospace",
+                outline: 'none',
+              }}
+            />
+            <select
+              value={vendor}
+              onChange={(evt) => setVendor(evt.target.value)}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                height: 30,
+                padding: '0 6px',
+                border: '1px solid var(--border-strong)',
+                borderRadius: 6,
+                background: 'var(--bg-elevated)',
+                color: 'var(--fg)',
+                fontSize: 12,
+                fontFamily: "'Inter', sans-serif",
+                outline: 'none',
+              }}
+            >
+              <option value="Ticketmaster">Ticketmaster</option>
+              <option value="AXS">AXS</option>
+              <option value="SeatGeek">SeatGeek</option>
+              <option value="DICE">DICE</option>
+              <option value="Eventbrite">Eventbrite</option>
+              <option value="VenueBoxOffice">Box office</option>
+            </select>
+            <select
+              value={howFound}
+              onChange={(evt) => setHowFound(evt.target.value)}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                height: 30,
+                padding: '0 6px',
+                border: '1px solid var(--border-strong)',
+                borderRadius: 6,
+                background: 'var(--bg-elevated)',
+                color: 'var(--fg)',
+                fontSize: 12,
+                fontFamily: "'Inter', sans-serif",
+                outline: 'none',
+              }}
+            >
+              <option value="saw_listing">Saw listing</option>
+              <option value="bought_myself">Bought tickets</option>
+              <option value="at_the_venue">At the venue</option>
+            </select>
+          </div>
+          {/* Row 2: actions */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <AdminButton
+              variant="ghost"
+              size="sm"
+              fullWidth
+              onClick={() => setIsAdding(false)}
+              disabled={isSaving}
+            >
+              Cancel
+            </AdminButton>
+            <AdminButton
+              variant="success"
+              size="sm"
+              fullWidth
+              onClick={() => void handleSave()}
+              disabled={isSaving || !priceMin.trim()}
+            >
+              {isSaving ? 'Saving…' : 'Save'}
+            </AdminButton>
+          </div>
         </div>
       )}
     </div>
@@ -618,8 +632,10 @@ export function AdminReviewMobile({
               </div>
             ) : (
               submissions.map((sub) => {
+                const formatPrice = (val: string) =>
+                  `$${Math.round(parseFloat(val))}`
                 const priceDisplay = sub.priceMin
-                  ? `$${sub.priceMin}${sub.priceMax ? `–$${sub.priceMax}` : ''}`
+                  ? `${formatPrice(sub.priceMin)}${sub.priceMax ? `–${formatPrice(sub.priceMax)}` : ''}`
                   : '—'
                 const linkedEvent = priceEvents.find(
                   (ev) => ev.eventId === sub.eventId,
@@ -737,6 +753,7 @@ export function AdminReviewMobile({
                       <AdminButton
                         variant="ghost"
                         size="sm"
+                        fullWidth
                         onClick={() => onDenySubmission(sub.id)}
                       >
                         × Deny
@@ -744,7 +761,7 @@ export function AdminReviewMobile({
                       <AdminButton
                         variant="success"
                         size="sm"
-                        style={{ flex: 1 }}
+                        fullWidth
                         onClick={() => onApproveSubmission(sub.id)}
                       >
                         ✓ Approve · cred
@@ -780,7 +797,7 @@ export function AdminReviewMobile({
               >
                 Needs price
               </span>
-              <StatusBadge kind="neutral">
+              <StatusBadge kind="warning">
                 {missingPriceEvents.length}
               </StatusBadge>
             </div>
