@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Concert Crawl — Landing Poster v2</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: #0A0E22; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 999px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<!-- Infra -->
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+
+<!-- Identity art engine (Phase 7.5) -->
+<script type="text/babel" src="identity-art.jsx"></script>
+
+<!-- Landing poster + animation -->
+<script type="text/babel" src="landing-events.jsx"></script>
+<script type="text/babel" src="landing-poster.jsx"></script>
+<script type="text/babel" src="landing-poster-stack.jsx"></script>
+<script type="text/babel" src="landing-screens-v2.jsx"></script>
+
+<script type="text/babel">
+// ── Frames (no device chrome — same convention as the Auth Gate canvas) ──
+function PhoneFrame({ children }) {
+  return (
+    <div style={{
+      width: 393, height: 852,
+      background: "#070A1A",
+      borderRadius: 28,
+      overflow: "hidden",
+      border: "1px solid rgba(255,255,255,0.08)",
+      boxShadow: "0 24px 60px -20px rgba(0,0,0,0.55)",
+      position: "relative",
+    }}>{children}</div>
+  );
+}
+function DesktopShell({ children, width = 1280, height = 820 }) {
+  return (
+    <div style={{
+      width, height,
+      background: "#070A1A",
+      borderRadius: 14,
+      border: "1px solid rgba(255,255,255,0.10)",
+      overflow: "hidden",
+      boxShadow: "0 32px 80px -24px rgba(0,0,0,0.6)",
+      position: "relative",
+    }}>{children}</div>
+  );
+}
+
+// ── Inert isolated stage for showing just the animation in section 2/3 ──
+function MotionStage({ children, width, height, theme = "electric" }) {
+  return (
+    <div style={{
+      ...window.ccTokenVars(theme),
+      width, height,
+      background: "var(--bg)",
+      borderRadius: 14,
+      border: "1px solid var(--border)",
+      overflow: "hidden",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      position: "relative",
+    }}>{children}</div>
+  );
+}
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "animationMode": "stack",
+  "theme": "electric",
+  "grain": 0.2
+}/*EDITMODE-END*/;
+
+function CanvasApp() {
+  const [t, setTweak] = window.useTweaks(TWEAK_DEFAULTS);
+  const theme = t.theme;
+  const mode  = t.animationMode;
+  const shows = window.LP_EVENTS || [];
+
+  return (
+    <>
+      <window.DesignCanvas
+        title="Concert Crawl · Landing Poster v2"
+        subtitle="Re-skin of the landing-page hero animation. Posters now match the shipped sharable poster + Phase 7.5 IdentityArt system. Three motion modes for comparison."
+      >
+        {/* ─── 1 — Landing pages with the new posters ─── */}
+        <window.DCSection
+          id="landing"
+          title="1 · Landing — new poster animation in context"
+          subtitle="Mobile + desktop landing with the IdentityArt-backed poster in the hero slot. Animation mode driven by the tweaks panel (default: stack)."
+        >
+          <window.DCArtboard id="landing-mobile" label={`mobile · ${mode}`} width={393} height={852}>
+            <PhoneFrame>
+              <window.LandingMobileV2 theme={theme} animationMode={mode} />
+            </PhoneFrame>
+          </window.DCArtboard>
+          <window.DCArtboard id="landing-desktop" label={`desktop · ${mode}`} width={1280} height={820}>
+            <DesktopShell>
+              <window.LandingDesktopV2 theme={theme} animationMode={mode} />
+            </DesktopShell>
+          </window.DCArtboard>
+        </window.DCSection>
+
+        {/* ─── 2 — Three animation modes, side-by-side ─── */}
+        <window.DCSection
+          id="motion"
+          title="2 · Animation modes head-to-head"
+          subtitle="Same posters, same data. Pick the motion that fits the brand best — A/B these against each other, then set the winner as default and ship."
+        >
+          <window.DCArtboard id="motion-stack" label="A · Stack (drift + fade)" width={520} height={780}>
+            <MotionStage width={520} height={780} theme={theme}>
+              <window.LandingPosterAnimation
+                mode="stack" shows={shows}
+                width={340} height={Math.round(340 * 1.38)}
+                intervalMs={5200}
+              />
+            </MotionStage>
+          </window.DCArtboard>
+          <window.DCArtboard id="motion-ticker" label="B · Ticker (horizontal pan)" width={760} height={780}>
+            <MotionStage width={760} height={780} theme={theme}>
+              <window.LandingPosterAnimation
+                mode="ticker" shows={shows}
+                width={300} height={Math.round(300 * 1.38)}
+                intervalMs={5600}
+              />
+            </MotionStage>
+          </window.DCArtboard>
+          <window.DCArtboard id="motion-wall" label="C · Wall (vertical scroll)" width={460} height={780}>
+            <MotionStage width={460} height={780} theme={theme}>
+              <window.LandingPosterAnimation
+                mode="wall" shows={shows}
+                width={280} height={Math.round(280 * 1.38)}
+                intervalMs={6500}
+              />
+            </MotionStage>
+          </window.DCArtboard>
+        </window.DCSection>
+
+        {/* ─── 3 — Single-poster QA ─── */}
+        <window.DCSection
+          id="qa"
+          title="3 · Single-poster QA"
+          subtitle="One static poster per event. Verifies the design holds across IdentityArt palettes (light + dark papers) and varied artist-name lengths (1 / 2 / 3+ words) and across all four state pills."
+        >
+          {shows.map((show) => (
+            <window.DCArtboard
+              key={show.id}
+              id={`qa-${show.id}`}
+              label={`${show.artist} · ${(window.LP_STATE_PILLS[show.state] || {}).label || show.state}`}
+              width={320} height={520}
+            >
+              <MotionStage width={320} height={520} theme={theme}>
+                <window.LandingPoster show={show} width={280} height={Math.round(280 * 1.38)} grain={t.grain}/>
+              </MotionStage>
+            </window.DCArtboard>
+          ))}
+        </window.DCSection>
+
+        {/* ─── 4 — Big single hero (for screenshots) ─── */}
+        <window.DCSection
+          id="hero"
+          title="4 · Big hero (1:1 with shipped poster aspect)"
+          subtitle="The mode the user is most likely to see on desktop. Captures what one frame of the animation looks like at full size."
+        >
+          <window.DCArtboard id="hero-big" label="hero · 420w" width={680} height={820}>
+            <MotionStage width={680} height={820} theme={theme}>
+              <window.LandingPosterAnimation
+                mode={mode} shows={shows}
+                width={420} height={Math.round(420 * 1.38)}
+                intervalMs={5200}
+              />
+            </MotionStage>
+          </window.DCArtboard>
+        </window.DCSection>
+      </window.DesignCanvas>
+
+      <window.TweaksPanel title="Tweaks">
+        <window.TweakSection label="Animation">
+          <window.TweakRadio
+            label="Motion mode"
+            value={mode}
+            onChange={(v) => setTweak("animationMode", v)}
+            options={[
+              { value: "stack",  label: "Stack" },
+              { value: "ticker", label: "Ticker" },
+              { value: "wall",   label: "Wall" },
+            ]}
+          />
+        </window.TweakSection>
+        <window.TweakSection label="Theme">
+          <window.TweakRadio
+            label="Chrome theme"
+            value={theme}
+            onChange={(v) => setTweak("theme", v)}
+            options={[
+              { value: "electric", label: "Electric" },
+              { value: "jade",     label: "Jade" },
+              { value: "light",    label: "Light" },
+            ]}
+          />
+        </window.TweakSection>
+        <window.TweakSection label="Print feel">
+          <window.TweakSlider
+            label="Grain"
+            value={t.grain}
+            onChange={(v) => setTweak("grain", v)}
+            min={0} max={0.4} step={0.02}
+          />
+        </window.TweakSection>
+      </window.TweaksPanel>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("app")).render(<CanvasApp />);
+</script>
+</body>
+</html>
