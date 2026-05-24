@@ -1,3 +1,11 @@
+## [1.38.2](https://github.com/HartiganHM/concert-crawl/compare/v1.38.1...v1.38.2) (2026-05-24)
+
+
+### Bug Fixes
+
+* **web:** fix theme swatch truncation in user menu desktop popover ([9333cd4](https://github.com/HartiganHM/concert-crawl/commit/9333cd484d6b98d1f0b227a8db73c4b269cb69b0))
+* **web:** remove redundant avatar from mobile top nav bar ([7135cc1](https://github.com/HartiganHM/concert-crawl/commit/7135cc155a7c605fda4ad7ad1dfc3b3ac1d4f9b9))
+
 ## [1.38.1](https://github.com/HartiganHM/concert-crawl/compare/v1.38.0...v1.38.1) (2026-05-24)
 
 
