@@ -333,6 +333,27 @@ function NeedsPriceRow({
               day: 'numeric',
             })}
           </div>
+          {event.ticketUrl && (
+            <a
+              href={event.ticketUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 3,
+                marginTop: 4,
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 11,
+                fontWeight: 600,
+                color: 'var(--signal)',
+                textDecoration: 'none',
+              }}
+            >
+              <span style={{ fontSize: 14 }}>↗</span>
+              Buy tickets
+            </a>
+          )}
         </div>
         {event.priceMin !== null ? (
           <span
