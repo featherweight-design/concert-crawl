@@ -126,7 +126,14 @@ function EventFlagCard({
           marginBottom: 10,
         }}
       >
-        {event.venueName ?? event.venueId} · {event.date}
+        {event.venueName ?? event.venueId} ·{' '}
+        {new Date(event.date + 'T12:00:00').toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+        })}
+        {event.showTime
+          ? ` ${new Date(`1970-01-01T${event.showTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
+          : ''}
       </div>
 
       {/* Confidence bar */}
@@ -145,12 +152,12 @@ function EventFlagCard({
           }}
         >
           {chips.map((chip) => (
-            <StatusBadge key={chip.label} kind={chip.kind} variant="soft">
+            <StatusBadge key={chip.label} kind={chip.kind} variant="outline">
               {chip.label}
             </StatusBadge>
           ))}
           {event.genre?.map((tag) => (
-            <StatusBadge key={tag} kind="neutral" variant="soft">
+            <StatusBadge key={tag} kind="neutral" variant="outline">
               {tag}
             </StatusBadge>
           ))}
@@ -173,7 +180,7 @@ function EventFlagCard({
             fontFamily: "'Inter', sans-serif",
             fontSize: 12,
             fontWeight: 600,
-            color: 'var(--fg-muted)',
+            color: 'var(--accent)',
           }}
         >
           <span style={{ fontSize: 10 }}>{reasonOpen ? '▼' : '▶'}</span>
@@ -225,7 +232,7 @@ function EventFlagCard({
       </div>
 
       {/* Actions */}
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <AdminButton
           variant="ghost"
           size="sm"
@@ -236,6 +243,7 @@ function EventFlagCard({
         <AdminButton
           variant="success"
           size="sm"
+          style={{ flex: 1 }}
           onClick={() => onApprove(event.id)}
         >
           ✓ Approve
