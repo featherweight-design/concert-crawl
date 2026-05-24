@@ -3,36 +3,50 @@ import { auth } from '@clerk/nextjs/server'
 import LandingClientShell from './_components/LandingClientShell'
 import { publicApiClient, ApiError } from '@/lib/api'
 import type { EventsListResponse } from '@concert-crawl/types'
-import type { Show } from '@/components/brand/gig-poster/GigPoster'
+import type { LandingShow } from '@/components/brand/landing-poster/LandingPoster'
 
-const FALLBACK_SHOWS: Show[] = [
+const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'] as const
+
+const FALLBACK_SHOWS: LandingShow[] = [
   {
+    id: 'fallback-1',
     artist: 'Amyl and The Sniffers',
     venue: 'Ogden Theatre',
-    date: '2026-05-23',
-    time: '8pm',
+    city: 'Denver, CO',
+    dateShort: 'MAY 23',
+    showTime: '8pm',
     opener: 'C.O.F.F.I.N.',
+    state: null,
   },
   {
+    id: 'fallback-2',
     artist: 'Wednesday',
     venue: 'Globe Hall',
-    date: '2026-05-24',
-    time: '9pm',
+    city: 'Denver, CO',
+    dateShort: 'MAY 24',
+    showTime: '9pm',
     opener: 'Truth Club',
+    state: null,
   },
   {
+    id: 'fallback-3',
     artist: 'Geese',
     venue: 'Larimer Lounge',
-    date: '2026-05-25',
-    time: '8pm',
+    city: 'Denver, CO',
+    dateShort: 'MAY 25',
+    showTime: '8pm',
     opener: null,
+    state: null,
   },
   {
+    id: 'fallback-4',
     artist: 'Mannequin Pussy',
     venue: 'Marquis Theater',
-    date: '2026-05-27',
-    time: '7pm',
+    city: 'Denver, CO',
+    dateShort: 'MAY 27',
+    showTime: '7pm',
     opener: 'Soul Glo',
+    state: null,
   },
 ]
 
@@ -50,18 +64,34 @@ function formatShowTime(time: string | null | undefined): string {
     : `${displayHours}:${minutesStr}${period}`
 }
 
-async function fetchHeroShows(): Promise<Show[]> {
+function formatDateShort(date: string): string {
+  const dd = new Date(date + 'T12:00:00')
+  const month = MONTHS[dd.getMonth()]
+  return `${month} ${dd.getDate()}`
+}
+
+function todayInDenver(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Denver' }).format(new Date())
+}
+
+function deriveShowState(date: string): 'tonight' | null {
+  return date === todayInDenver() ? 'tonight' : null
+}
+
+async function fetchHeroShows(): Promise<LandingShow[]> {
   try {
-    const result =
-      await publicApiClient.get<EventsListResponse>('/v1/events?limit=4')
+    const result = await publicApiClient.get<EventsListResponse>('/v1/events?limit=4')
     if (!result?.data?.length) return FALLBACK_SHOWS
 
-    const mapped = result.data.map((row) => ({
+    const mapped: LandingShow[] = result.data.map((row) => ({
+      id: row.id,
       artist: row.artist,
       venue: row.venue.name,
-      date: row.date,
-      time: formatShowTime(row.showTime),
-      opener: null as string | null,
+      city: row.venue.city,
+      dateShort: formatDateShort(row.date),
+      showTime: formatShowTime(row.showTime),
+      opener: null,
+      state: deriveShowState(row.date),
     }))
 
     return mapped.length >= 2 ? mapped : FALLBACK_SHOWS

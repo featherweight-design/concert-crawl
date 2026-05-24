@@ -1,0 +1,340 @@
+'use client'
+
+import { useState, useCallback, useEffect, useMemo } from 'react'
+import { LandingPoster } from './LandingPoster'
+import type { LandingShow } from './LandingPoster'
+
+function lpShuffle<T>(arr: T[]): T[] {
+  const out = arr.slice()
+  for (let ii = out.length - 1; ii > 0; ii--) {
+    const jj = Math.floor(Math.random() * (ii + 1))
+    const tmp = out[ii]!
+    out[ii] = out[jj]!
+    out[jj] = tmp
+  }
+  return out
+}
+
+// ── LPStack ───────────────────────────────────────────────────────
+
+interface LPStackProps {
+  shows: LandingShow[]
+  width: number
+  height: number
+  intervalMs?: number
+}
+
+function LPStack({ shows, width, height, intervalMs = 5200 }: LPStackProps) {
+  const [idx, setIdx] = useState(0)
+  const [phase, setPhase] = useState<'rest' | 'advancing'>('rest')
+
+  const advance = useCallback(() => {
+    if (phase !== 'rest') return
+    setPhase('advancing')
+    setTimeout(() => {
+      setIdx((prev) => (prev + 1) % shows.length)
+      setPhase('rest')
+    }, 900)
+  }, [phase, shows.length])
+
+  useEffect(() => {
+    if (shows.length < 2) return
+    const timer = setTimeout(advance, intervalMs)
+    return () => clearTimeout(timer)
+  }, [advance, idx, intervalMs, shows.length])
+
+  if (!shows.length) return null
+
+  const off = width * 0.04
+  const layers = [
+    { xx: 0, yy: 0, rr: -1.5, scale: 1, opacity: 1 },
+    { xx: off, yy: off * 0.7, rr: 3.5, scale: 0.985, opacity: 1 },
+    { xx: -off * 0.8, yy: off * 1.4, rr: -5, scale: 0.97, opacity: 1 },
+    { xx: off * 0.4, yy: off * 2.4, rr: 1.0, scale: 0.94, opacity: 0 },
+  ] as const
+
+  const padX = Math.max(28, Math.round(width * 0.14))
+  const padY = Math.max(36, Math.round(width * 0.18))
+  const stageW = width + padX * 2
+  const stageH = height + padY * 2
+
+  const order: LandingShow[] = [
+    shows[idx % shows.length]!,
+    shows[(idx + 1) % shows.length]!,
+    shows[(idx + 2) % shows.length]!,
+    shows[(idx + 3) % shows.length]!,
+  ]
+
+  return (
+    <div
+      style={{ width: stageW, height: stageH, position: 'relative', perspective: 1400 }}
+      onClick={advance}
+      role="button"
+      aria-label="Next poster"
+    >
+      {([0, 1, 2, 3] as const).map((ii) => {
+        const layer = layers[ii]
+        const isTop = ii === 0
+        const isMid = ii === 1
+        const isBottom = ii === 2
+        const isOnDeck = ii === 3
+
+        let transform: string
+        let opacity: number
+
+        if (phase === 'advancing') {
+          if (isTop) {
+            transform = `translate(${layer.xx - width * 0.06}px, ${layer.yy - height * 0.14}px) rotate(${layer.rr - 10}deg) scale(${layer.scale * 1.03})`
+            opacity = 0
+          } else if (isMid) {
+            transform = `translate(${layers[0].xx}px, ${layers[0].yy}px) rotate(${layers[0].rr}deg) scale(${layers[0].scale})`
+            opacity = 1
+          } else if (isBottom) {
+            transform = `translate(${layers[1].xx}px, ${layers[1].yy}px) rotate(${layers[1].rr}deg) scale(${layers[1].scale})`
+            opacity = 1
+          } else {
+            transform = `translate(${layers[2].xx}px, ${layers[2].yy}px) rotate(${layers[2].rr}deg) scale(${layers[2].scale})`
+            opacity = 1
+          }
+        } else {
+          transform = `translate(${layer.xx}px, ${layer.yy}px) rotate(${layer.rr}deg) scale(${layer.scale})`
+          opacity = layer.opacity
+        }
+
+        const brightnessFilter =
+          isOnDeck ? 'brightness(0.90)'
+          : isBottom ? 'brightness(0.92)'
+          : isMid ? 'brightness(0.96)'
+          : 'none'
+
+        return (
+          <div
+            key={`${idx}-${ii}`}
+            style={{
+              position: 'absolute',
+              left: padX,
+              top: padY,
+              zIndex: 10 - ii,
+              transform,
+              transformOrigin: '30% 100%',
+              transition:
+                phase === 'advancing'
+                  ? 'transform 0.85s cubic-bezier(0.32, 0.72, 0.28, 1), opacity 0.7s ease-out'
+                  : 'transform 0.4s ease-out, opacity 0.4s ease-out',
+              opacity,
+              cursor: 'pointer',
+              willChange: 'transform, opacity',
+              filter: brightnessFilter,
+              pointerEvents: isOnDeck && phase === 'rest' ? 'none' : 'auto',
+            }}
+          >
+            <LandingPoster show={order[ii]!} width={width} height={height} />
+          </div>
+        )
+      })}
+
+      {shows.length > 1 && (
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            bottom: Math.round(padY * 0.25),
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            gap: 6,
+            zIndex: 20,
+          }}
+        >
+          {shows.map((_, dotIdx) => {
+            const isActive = dotIdx === idx % shows.length
+            return (
+              <div
+                key={dotIdx}
+                onClick={(ev) => {
+                  ev.stopPropagation()
+                  if (isActive || phase !== 'rest') return
+                  setIdx(dotIdx)
+                }}
+                style={{
+                  width: isActive ? 16 : 6,
+                  height: 6,
+                  borderRadius: 3,
+                  background: isActive ? 'var(--fg, #fff)' : 'rgba(255,255,255,0.30)',
+                  cursor: 'pointer',
+                  transition: 'width 0.3s',
+                }}
+              />
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── LPTicker ──────────────────────────────────────────────────────
+
+interface LPTickerProps {
+  shows: LandingShow[]
+  width: number
+  height: number
+  durationMs?: number
+}
+
+function LPTicker({ shows, width, height, durationMs = 6000 }: LPTickerProps) {
+  const [tick, setTick] = useState(0)
+
+  useEffect(() => {
+    const timer = setInterval(() => setTick((xx) => xx + 1), durationMs)
+    return () => clearInterval(timer)
+  }, [durationMs])
+
+  const nn = Math.max(shows.length, 4)
+  const cards: LandingShow[] = []
+  for (let ii = 0; ii < nn + 1; ii++) {
+    cards.push(shows[(tick + ii) % shows.length]!)
+  }
+
+  const gap = Math.round(width * 0.06)
+  const cardW = width
+  const stripW = (cardW + gap) * cards.length
+  const padY = Math.round(width * 0.1)
+  const stageH = height + padY * 2
+
+  return (
+    <div
+      style={{
+        width: '100%',
+        height: stageH,
+        overflow: 'hidden',
+        position: 'relative',
+        maskImage: 'linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%)',
+        WebkitMaskImage:
+          'linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%)',
+      }}
+    >
+      <div
+        key={tick}
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: padY,
+          width: stripW,
+          display: 'flex',
+          gap,
+          animation: `lpTickerSlide ${durationMs}ms linear`,
+        }}
+      >
+        {cards.map((show, ii) => (
+          <div
+            key={`${tick}-${ii}-${show.id}`}
+            style={{
+              flexShrink: 0,
+              transform: `rotate(${ii % 2 === 0 ? -1.6 : 1.6}deg)`,
+            }}
+          >
+            <LandingPoster show={show} width={cardW} height={height} />
+          </div>
+        ))}
+      </div>
+      <style>{`
+        @keyframes lpTickerSlide {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-${cardW + gap}px); }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+// ── LPWall ────────────────────────────────────────────────────────
+
+interface LPWallProps {
+  shows: LandingShow[]
+  width: number
+  height: number
+  columnHeight?: number
+  durationMs?: number
+}
+
+function LPWall({ shows, width, height, columnHeight, durationMs = 22000 }: LPWallProps) {
+  const deck = [...shows, ...shows]
+  const gap = Math.round(width * 0.08)
+  const tileH = height
+  const colH = columnHeight ?? (tileH + gap) * shows.length
+
+  return (
+    <div
+      style={{
+        width,
+        height: colH,
+        overflow: 'hidden',
+        position: 'relative',
+        maskImage: 'linear-gradient(180deg, transparent 0%, #000 8%, #000 92%, transparent 100%)',
+        WebkitMaskImage:
+          'linear-gradient(180deg, transparent 0%, #000 8%, #000 92%, transparent 100%)',
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          gap,
+          animation: `lpWallSlide ${durationMs}ms linear infinite`,
+          willChange: 'transform',
+        }}
+      >
+        {deck.map((show, ii) => (
+          <div
+            key={`${ii}-${show.id}`}
+            style={{ transform: `rotate(${ii % 2 === 0 ? -1.2 : 1.2}deg)` }}
+          >
+            <LandingPoster show={show} width={width} height={tileH} />
+          </div>
+        ))}
+      </div>
+      <style>{`
+        @keyframes lpWallSlide {
+          0%   { transform: translateY(0); }
+          100% { transform: translateY(-${(tileH + gap) * shows.length}px); }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+// ── LandingPosterAnimation ────────────────────────────────────────
+
+interface LandingPosterAnimationProps {
+  mode?: 'stack' | 'ticker' | 'wall'
+  shows?: LandingShow[]
+  width?: number
+  height?: number
+  intervalMs?: number
+}
+
+export function LandingPosterAnimation({
+  mode = 'stack',
+  shows = [],
+  width = 320,
+  height,
+  intervalMs = 5200,
+}: LandingPosterAnimationProps) {
+  const hh = height ?? Math.round(width * 1.38)
+  const ordered = useMemo(() => lpShuffle(shows), [shows])
+
+  if (!ordered.length) return null
+
+  if (mode === 'ticker') {
+    return (
+      <LPTicker shows={ordered} width={width} height={hh} durationMs={intervalMs * 1.15} />
+    )
+  }
+  if (mode === 'wall') {
+    return <LPWall shows={ordered} width={width} height={hh} durationMs={intervalMs * 4} />
+  }
+  return <LPStack shows={ordered} width={width} height={hh} intervalMs={intervalMs} />
+}

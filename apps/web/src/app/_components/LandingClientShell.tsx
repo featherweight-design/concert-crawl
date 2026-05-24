@@ -4,13 +4,13 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { CCWordmark } from '@/components/brand/cc-wordmark/CCWordmark'
 import { BetaPill } from '@/components/brand/beta-pill/BetaPill'
-import { GigPosterStack } from '@/components/brand/gig-poster-stack/GigPosterStack'
+import { LandingPosterAnimation } from '@/components/brand/landing-poster/LandingPosterAnimation'
 import { WaitlistModal } from '@/components/waitlist/WaitlistModal'
 import { CCMark } from '@/components/brand/cc-mark'
-import type { Show } from '@/components/brand/gig-poster/GigPoster'
+import type { LandingShow } from '@/components/brand/landing-poster/LandingPoster'
 
 interface LandingClientShellProps {
-  shows: Show[]
+  shows: LandingShow[]
 }
 
 export default function LandingClientShell({ shows }: LandingClientShellProps) {
@@ -182,10 +182,10 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
 
         {/* Right column: poster stack */}
         <div className="flex justify-center md:justify-end">
-          <GigPosterStack
+          <LandingPosterAnimation
+            mode="stack"
             shows={shows}
             width={290}
-            height={400}
             intervalMs={5500}
           />
         </div>
