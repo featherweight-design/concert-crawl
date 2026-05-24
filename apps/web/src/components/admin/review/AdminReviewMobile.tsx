@@ -325,12 +325,16 @@ function NeedsPriceRow({
               marginTop: 2,
             }}
           >
-            {event.venueName ?? '—'} · {event.date}
+            {event.venueName ?? '—'} ·{' '}
+            {new Date(event.date + 'T12:00:00').toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+            })}
           </div>
         </div>
         {!isAdding && onAddPrice && (
           <AdminButton
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={() => setIsAdding(true)}
           >
@@ -558,7 +562,7 @@ export function AdminReviewMobile({
           {/* Community submissions */}
           <div
             style={{
-              padding: '10px 16px 8px',
+              padding: '12px 16px 10px',
               borderBottom: '1px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
@@ -568,11 +572,9 @@ export function AdminReviewMobile({
             <span
               style={{
                 fontFamily: "'Inter', sans-serif",
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: 700,
-                color: 'var(--fg-muted)',
-                letterSpacing: '0.04em',
-                textTransform: 'uppercase',
+                color: 'var(--fg)',
               }}
             >
               Community submissions
@@ -599,6 +601,23 @@ export function AdminReviewMobile({
               const priceDisplay = sub.priceMin
                 ? `$${sub.priceMin}${sub.priceMax ? `–$${sub.priceMax}` : ''}`
                 : '—'
+              const linkedEvent = priceEvents.find(
+                (ev) => ev.eventId === sub.eventId,
+              )
+              const eventTitle =
+                linkedEvent?.eventTitle ?? sub.eventId.slice(0, 8) + '…'
+              const venueLine = linkedEvent
+                ? [
+                    linkedEvent.venueName,
+                    new Date(linkedEvent.date + 'T12:00:00').toLocaleDateString(
+                      'en-US',
+                      { month: 'short', day: 'numeric' },
+                    ),
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')
+                : null
+              const handle = `@${sub.userId.slice(0, 10)}`
               return (
                 <div
                   key={sub.id}
@@ -613,34 +632,33 @@ export function AdminReviewMobile({
                       alignItems: 'flex-start',
                       justifyContent: 'space-between',
                       gap: 12,
-                      marginBottom: 8,
+                      marginBottom: 4,
                     }}
                   >
                     <div style={{ minWidth: 0 }}>
                       <div
                         style={{
-                          fontFamily: "'JetBrains Mono', monospace",
-                          fontSize: 11,
+                          fontFamily: "'Inter', sans-serif",
+                          fontSize: 13,
                           fontWeight: 700,
-                          color: 'var(--accent)',
+                          color: 'var(--fg)',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        {sub.eventId}
+                        {eventTitle}
                       </div>
-                      {sub.note && (
+                      {venueLine && (
                         <div
                           style={{
                             fontFamily: "'Inter', sans-serif",
                             fontSize: 12,
                             color: 'var(--fg-muted)',
-                            fontStyle: 'italic',
-                            marginTop: 2,
+                            marginTop: 1,
                           }}
                         >
-                          {sub.note}
+                          {venueLine}
                         </div>
                       )}
                     </div>
@@ -657,20 +675,57 @@ export function AdminReviewMobile({
                       {priceDisplay}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', gap: 6 }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: 6,
+                      marginBottom: 8,
+                      fontSize: 12,
+                      overflow: 'hidden',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontWeight: 700,
+                        color: 'var(--accent)',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {handle}
+                    </span>
+                    {sub.note && (
+                      <span
+                        style={{
+                          fontFamily: "'Inter', sans-serif",
+                          color: 'var(--fg-muted)',
+                          fontStyle: 'italic',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        &ldquo;{sub.note}&rdquo;
+                      </span>
+                    )}
+                  </div>
+                  <div
+                    style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+                  >
                     <AdminButton
                       variant="ghost"
                       size="sm"
                       onClick={() => onDenySubmission(sub.id)}
                     >
-                      Deny
+                      × Deny
                     </AdminButton>
                     <AdminButton
                       variant="success"
                       size="sm"
+                      style={{ flex: 1 }}
                       onClick={() => onApproveSubmission(sub.id)}
                     >
-                      Approve · cred
+                      ✓ Approve · cred
                     </AdminButton>
                   </div>
                 </div>
@@ -681,7 +736,7 @@ export function AdminReviewMobile({
           {/* Needs price */}
           <div
             style={{
-              padding: '10px 16px 8px',
+              padding: '12px 16px 10px',
               borderBottom:
                 missingPriceEvents.length > 0
                   ? '1px solid var(--border)'
@@ -694,16 +749,14 @@ export function AdminReviewMobile({
             <span
               style={{
                 fontFamily: "'Inter', sans-serif",
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: 700,
-                color: 'var(--fg-muted)',
-                letterSpacing: '0.04em',
-                textTransform: 'uppercase',
+                color: 'var(--fg)',
               }}
             >
               Needs price
             </span>
-            <StatusBadge kind="warning">
+            <StatusBadge kind="neutral">
               {missingPriceEvents.length}
             </StatusBadge>
           </div>

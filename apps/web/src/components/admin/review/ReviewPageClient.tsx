@@ -284,9 +284,38 @@ export const ReviewPageClient = ({
   )
 
   if (!isDesktop) {
+    const mobileSectionHead = (
+      <div style={{ padding: '4px 0' }}>
+        <div
+          style={{
+            fontFamily: "'Inter', sans-serif",
+            fontSize: 28,
+            fontWeight: 800,
+            color: 'var(--fg)',
+            letterSpacing: '-0.02em',
+            lineHeight: 1.1,
+            marginBottom: 4,
+          }}
+        >
+          Review
+        </div>
+        <div
+          style={{
+            fontFamily: "'Inter', sans-serif",
+            fontSize: 13,
+            color: 'var(--fg-muted)',
+          }}
+        >
+          {events.length} event{events.length !== 1 ? 's' : ''} ·{' '}
+          {submissions.length} price{submissions.length !== 1 ? 's' : ''}{' '}
+          waiting.
+        </div>
+      </div>
+    )
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {sectionHead}
+        {mobileSectionHead}
         {errorBanner}
         <AdminReviewMobile
           events={events}
