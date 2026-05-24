@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Showtime · Beta Launch Heroes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="passport-concepts-v2.jsx"></script>
+<script type="text/babel" src="passport-concepts-v3.jsx"></script>
+<script type="text/babel" src="more-features-showtime.jsx"></script>
+<script type="text/babel" src="priority-1-heroes.jsx"></script>
+
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard } = window;
+const {
+  PassportShowtimeStubs,
+  TierShowtime,
+  HistoryShowtime,
+  CalendarShowtime,
+  ShareableShowtime,
+  WatchersShowtime,
+  SpotifyShowtime,
+  PricesShowtime,
+} = window;
+
+const HERO_W = 580, HERO_H = 300;
+
+function Frame({ children, label, sub }) {
+  return (
+    <div style={{
+      position: "relative",
+      width: HERO_W, height: HERO_H,
+      overflow: "hidden",
+      borderRadius: 14,
+      boxShadow: "0 18px 40px rgba(0,0,0,0.25), 0 2px 0 rgba(255,255,255,0.4)",
+    }}>
+      {children}
+      <div style={{
+        position: "absolute",
+        right: 16, bottom: 14,
+        zIndex: 25, pointerEvents: "none",
+        display: "flex", flexDirection: "column", gap: 2, alignItems: "flex-end",
+      }}>
+        <div style={{
+          fontFamily: "Inter, sans-serif",
+          fontSize: 12, fontWeight: 900,
+          color: "rgba(255,255,255,0.95)",
+          letterSpacing: "-0.01em",
+          textShadow: "0 1px 8px rgba(0,0,0,0.9)",
+        }}>{label}</div>
+        <div style={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 9, fontWeight: 700,
+          color: "rgba(255,255,255,0.7)",
+          letterSpacing: "0.16em", textTransform: "uppercase",
+          textShadow: "0 1px 8px rgba(0,0,0,0.9)",
+        }}>{sub}</div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <DesignCanvas
+      title="Showtime · Beta Launch Heroes (priority 1)"
+      subtitle="All 7 beta-window features (Jun–Aug) — each in the Showtime visual system. Same stage (dark backdrop · warm + cool drifting washes · mono eyebrow). Different motion personality per feature: each hero earns its own grammar."
+    >
+      <DCSection
+        id="all-7"
+        title="The seven · in feature-list order"
+        subtitle="Watch each play through once and feel the motion personality. Sparkles are reserved for Passport — the marquee. The others lean on the artifact's own motion (stamp-pop, card-reveal, sonar ring, EQ rhythm)."
+      >
+        <DCArtboard id="passport" label="14 · Concert Passport (paired w/ #15)" width={HERO_W} height={HERO_H}>
+          <Frame
+            label="Concert Passport"
+            sub="Fan stack · 7 stubs · sparkles (marquee only)"
+          ><PassportShowtimeStubs/></Frame>
+        </DCArtboard>
+
+        <DCArtboard id="tiers" label="2 · Upgrade · Tier Badges" width={HERO_W} height={HERO_H}>
+          <Frame
+            label="Tier Badges"
+            sub="3 medallions · Founder crown · brand glyphs (+, ★, ♔)"
+          ><TierShowtime/></Frame>
+        </DCArtboard>
+
+        <DCArtboard id="history" label="3 · Concert History" width={HERO_W} height={HERO_H}>
+          <Frame
+            label="Concert History"
+            sub="Horizontal cascade · year axis · '47 nights' counter"
+          ><HistoryShowtime/></Frame>
+        </DCArtboard>
+
+        <DCArtboard id="calendar" label="4 · Calendar Export" width={HERO_W} height={HERO_H}>
+          <Frame
+            label="Calendar Export"
+            sub="Calendar grid · 4 stamps land · current pulses · destinations row"
+          ><CalendarShowtime/></Frame>
+        </DCArtboard>
+
+        <DCArtboard id="share" label="5 · Shareable Show Cards" width={HERO_W} height={HERO_H}>
+          <Frame
+            label="Shareable Show Cards"
+            sub="Main poster · 2 behind · shine sweep · share-arrow pulse"
+          ><ShareableShowtime/></Frame>
+        </DCArtboard>
+
+        <DCArtboard id="watchers" label="6 · Who Else Is Watching" width={HERO_W} height={HERO_H}>
+          <Frame
+            label="Who Else Is Watching"
+            sub="Centre count · 4 sonar rings emanating · pure radar"
+          ><WatchersShowtime/></Frame>
+        </DCArtboard>
+
+        <DCArtboard id="spotify" label="7 · Spotify Sync" width={HERO_W} height={HERO_H}>
+          <Frame
+            label="Spotify Sync"
+            sub="EQ bars (slow rhythm) · '27 imported' counter · 3 artist tags"
+          ><SpotifyShowtime/></Frame>
+        </DCArtboard>
+
+        <DCArtboard id="prices" label="1 · Submit a Price" width={HERO_W} height={HERO_H}>
+          <Frame
+            label="Submit a Price"
+            sub="Central $48 verified · submitted tags drift inward + dissolve"
+          ><PricesShowtime/></Frame>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection
+        id="vocabulary"
+        title="Motion personalities · what carries, what flexes"
+        subtitle="Each row of the table is one knob in the Showtime system."
+      >
+        <DCArtboard id="table" label="Motion table" width={1280} height={620}>
+          <div style={{
+            width: 1280, height: 620,
+            background: "#f0eee9",
+            padding: "40px 48px",
+            color: "#15131A",
+            fontFamily: "Inter, sans-serif",
+            display: "flex", flexDirection: "column", gap: 16,
+            overflow: "hidden",
+          }}>
+            <div style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 11, fontWeight: 800,
+              color: "rgba(0,0,0,0.55)",
+              letterSpacing: "0.18em", textTransform: "uppercase",
+            }}>What's shared across all 7</div>
+            <div style={{ fontSize: 14, lineHeight: 1.55, color: "#15131A", textWrap: "pretty" }}>
+              Dark cinematic backdrop · warm amber + cool teal drifting washes · JetBrains Mono eyebrow with pulsing dot · the brand 7-colour accent set (cyan / pink / amber / violet / lime / gold / teal) · entrance choreography on a 0.2–1.2s timeline · the headline element "breathes" after settling.
+            </div>
+
+            <div style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 11, fontWeight: 800,
+              color: "rgba(0,0,0,0.55)",
+              letterSpacing: "0.18em", textTransform: "uppercase",
+              marginTop: 8,
+            }}>What flexes per feature</div>
+
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "140px repeat(8, 1fr)",
+              columnGap: 12, rowGap: 12,
+              fontSize: 11.5, lineHeight: 1.45,
+              alignItems: "start",
+            }}>
+              {/* header row */}
+              <div/>
+              {["Passport","Tiers","History","Calendar","Share","Watchers","Spotify","Prices"].map(h => (
+                <div key={h} style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 10, fontWeight: 800,
+                  color: "#15131A",
+                  letterSpacing: "0.16em", textTransform: "uppercase",
+                }}>{h}</div>
+              ))}
+
+              {/* Artifact */}
+              <div style={{ fontWeight: 800 }}>Artifact</div>
+              <div>Stubs (7, fanned)</div>
+              <div>Medallions (3)</div>
+              <div>Stubs (7, cascade)</div>
+              <div>Calendar grid + stamps</div>
+              <div>Poster cards (1 + 2)</div>
+              <div>Count + rings</div>
+              <div>EQ bars + tags</div>
+              <div>$48 + drifting tags</div>
+
+              {/* Composition */}
+              <div style={{ fontWeight: 800 }}>Composition</div>
+              <div>Centred fan stack</div>
+              <div>Trio row, Founder centred</div>
+              <div>Horizontal cascade</div>
+              <div>Centred grid + footer row</div>
+              <div>Centred trio fan</div>
+              <div>Single radial focus</div>
+              <div>Bottom-anchored visualizer</div>
+              <div>Radial inflow to centre</div>
+
+              {/* Motion language */}
+              <div style={{ fontWeight: 800 }}>Motion language</div>
+              <div>Stub deal-in + breathe</div>
+              <div>Medallion deal-in + halo</div>
+              <div>Stub cascade across axis</div>
+              <div>Stamp-pop on dates</div>
+              <div>Card reveal + shine</div>
+              <div>Continuous sonar rings (out)</div>
+              <div>Continuous EQ rhythm</div>
+              <div>Continuous tag inflow (in)</div>
+
+              {/* Particles */}
+              <div style={{ fontWeight: 800 }}>Particles</div>
+              <div>12 sparkles ★</div>
+              <div>None</div>
+              <div>None</div>
+              <div>None</div>
+              <div>None</div>
+              <div>None — rings are it</div>
+              <div>None — bars are it</div>
+              <div>None — inflow is it</div>
+
+              {/* Headline element */}
+              <div style={{ fontWeight: 800 }}>Headline element</div>
+              <div>"TONIGHT" top stub</div>
+              <div>Founder medallion</div>
+              <div>"47 NIGHTS" + tonight stub</div>
+              <div>Current-show stamp (cyan ★)</div>
+              <div>Main poster card</div>
+              <div>"247" count</div>
+              <div>"27 ARTISTS" + bars</div>
+              <div>"$48 VERIFIED" ✓</div>
+
+              {/* Eyebrow */}
+              <div style={{ fontWeight: 800 }}>Eyebrow copy</div>
+              <div style={{ fontStyle: "italic", color: "rgba(0,0,0,0.7)" }}>"Showtime · every night kept"</div>
+              <div style={{ fontStyle: "italic", color: "rgba(0,0,0,0.7)" }}>"Pick your seat"</div>
+              <div style={{ fontStyle: "italic", color: "rgba(0,0,0,0.7)" }}>"Every night, every year"</div>
+              <div style={{ fontStyle: "italic", color: "rgba(0,0,0,0.7)" }}>"Sync your shows"</div>
+              <div style={{ fontStyle: "italic", color: "rgba(0,0,0,0.7)" }}>"Take it with you"</div>
+              <div style={{ fontStyle: "italic", color: "rgba(0,0,0,0.7)" }}>"Aggregate · no names"</div>
+              <div style={{ fontStyle: "italic", color: "rgba(0,0,0,0.7)" }}>"Library, on stage"</div>
+              <div style={{ fontStyle: "italic", color: "rgba(0,0,0,0.7)" }}>"Crowd-sourced · verified"</div>
+            </div>
+
+            <div style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 11, fontWeight: 800,
+              color: "rgba(0,0,0,0.55)",
+              letterSpacing: "0.18em", textTransform: "uppercase",
+              marginTop: 12,
+            }}>What's still open</div>
+            <div style={{ fontSize: 13.5, lineHeight: 1.5, color: "#15131A", textWrap: "pretty", maxWidth: 1080 }}>
+              <strong>Priority 2 (pre-public-launch, ~Aug 18):</strong> Artist Following (#8), Price Drop Alerts (#9), Setlist Preview (#10), Venue First-Timer Guide (#11), Last Time in Denver (#12), Support Act Spotlight (#13), Venue Passport Card (#15, paired with Passport). All of these slot into the Showtime system — each will pick its own artifact + motion (e.g., follow notification ping, price-drop arrow trail, setlist as typed-in tracklist, venue map plate, etc.). Submit-a-Price (#1) was rejected — needs a different language since the feature is already live; we can revisit if you want to surface it again.
+            </div>
+          </div>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

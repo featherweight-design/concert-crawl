@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Showtime · Compact Heroes (200×132)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<!-- shared infra: canvas + base keyframes + StubGlyph + Showtime backdrop/eyebrow -->
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="passport-concepts-v2.jsx"></script>
+<script type="text/babel" src="passport-concepts-v3.jsx"></script>
+<script type="text/babel" src="more-features-showtime.jsx"></script>
+
+<!-- compact heroes -->
+<script type="text/babel" src="compact-heroes.jsx"></script>
+
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard } = window;
+const COMPACTS = window.SPOTLIGHT_COMPACT_HEROES;
+
+const CW = 200, CH = 132;
+
+function CompactTile({ children, label, fnum }) {
+  return (
+    <div style={{
+      display: "flex", flexDirection: "column", gap: 8,
+      alignItems: "flex-start",
+    }}>
+      <div style={{
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: 10, fontWeight: 800,
+        color: "#15131A",
+        letterSpacing: "1.5px",
+        textTransform: "uppercase",
+        opacity: 0.65,
+      }}>
+        <span style={{ color: "#15131A", opacity: 0.5, marginRight: 6 }}>#{fnum}</span>
+        {label}
+      </div>
+      <div style={{
+        position: "relative",
+        width: CW, height: CH,
+        overflow: "hidden",
+        borderRadius: 8,
+        boxShadow: "0 8px 18px rgba(0,0,0,0.18), 0 1px 0 rgba(255,255,255,0.45)",
+      }}>{children}</div>
+    </div>
+  );
+}
+
+const heroes = [
+  // priority-1 (locked)
+  { id: "price",          fnum: 1,  label: "Submit a Price"  },
+  { id: "tiers",          fnum: 2,  label: "Tier Badges"     },
+  { id: "history",        fnum: 3,  label: "Concert History" },
+  { id: "calendar",       fnum: 4,  label: "Calendar Export" },
+  { id: "share",          fnum: 5,  label: "Share Cards"     },
+  { id: "watchers",       fnum: 6,  label: "Who's Watching"  },
+  { id: "spotify",        fnum: 7,  label: "Spotify Sync"    },
+  // priority-2
+  { id: "following",      fnum: 8,  label: "Artist Following"},
+  { id: "price-drop",     fnum: 9,  label: "Price Drop"      },
+  { id: "setlist",        fnum: 10, label: "Setlist Preview" },
+  { id: "first-timer",    fnum: 11, label: "First-Timer"     },
+  { id: "last-time",      fnum: 12, label: "Last Time"       },
+  { id: "support-act",    fnum: 13, label: "Support Act"     },
+  // passport pair
+  { id: "passport",       fnum: 14, label: "Concert Passport (marquee)" },
+  { id: "venue-passport", fnum: 15, label: "Venue Passport"  },
+];
+
+function App() {
+  return (
+    <DesignCanvas
+      title="Showtime · Compact Heroes (200×132 changelog strip)"
+      subtitle="One compact teaser per hero. Each is hand-composed at 200×132 — not a scaled-down version of the 580×300 hero. Single strong artifact + minimal mono eyebrow + same Showtime stage (smaller, contained washes). Designed for the in-changelog strip where the full hero would be unreadable."
+    >
+      <DCSection
+        id="compact-grid"
+        title="All 15 · in feature-list order"
+        subtitle="200 × 132 px each. Open any one for a focused view."
+      >
+        {heroes.map(h => {
+          const Cmp = COMPACTS[h.id];
+          return (
+            <DCArtboard key={h.id} id={h.id} label={`${h.fnum} · ${h.label}`} width={CW} height={CH}>
+              <CompactTile label={h.label} fnum={h.fnum}>
+                {Cmp ? <Cmp/> : (
+                  <div style={{
+                    width: CW, height: CH,
+                    background: "#15131A",
+                    color: "#fff",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 10,
+                  }}>missing</div>
+                )}
+              </CompactTile>
+            </DCArtboard>
+          );
+        })}
+      </DCSection>
+
+      <DCSection
+        id="full-vs-compact"
+        title="Reading notes"
+        subtitle="What each compact carries vs drops."
+      >
+        <DCArtboard id="notes" label="Compact-mode notes" width={1280} height={620}>
+          <div style={{
+            width: 1280, height: 620,
+            background: "#f0eee9",
+            padding: "36px 44px",
+            color: "#15131A",
+            fontFamily: "Inter, sans-serif",
+            display: "flex", flexDirection: "column", gap: 12,
+            overflow: "hidden",
+          }}>
+            <div style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 11, fontWeight: 800,
+              color: "rgba(0,0,0,0.55)",
+              letterSpacing: "0.18em", textTransform: "uppercase",
+            }}>Design rules for compact mode</div>
+            <div style={{ fontSize: 14, lineHeight: 1.5, textWrap: "pretty", maxWidth: 1180 }}>
+              <strong>One artifact per hero.</strong> No multi-element compositions — pick the strongest visual mnemonic and let it stand alone. Watchers loses 4 rings → 2; First-Timer loses 6 chips → 0; Last Time loses the TONIGHT plate and the dot trail. Support Act loses the headliner card. Passport loses the 7-stub fan → 3 stubs (still keeps a few sparkles since it's the marquee).
+              <br/><br/>
+              <strong>One mono eyebrow, no headline phrase.</strong> Eyebrow drops to 7px JetBrains Mono with a smaller dot. No subtitle line, no headline sentence. The artifact carries the meaning.
+              <br/><br/>
+              <strong>Stage stays Showtime.</strong> Same dark cinematic backdrop, same amber + teal drifting washes — but smaller and contained (140×140 / 130×130 instead of 360×360 / 320×320). The stage is the brand cue, so it has to read even at 200×132.
+              <br/><br/>
+              <strong>Motion budget is tighter.</strong> Each compact runs ≤ 2 looping animations. No multi-stage choreography — entrance + breathe (for the headline artifact) + one rhythmic loop if the feature requires it (Watchers' rings, Spotify's EQ bars, Price Drop's arrow). Everything else is one-shot.
+            </div>
+
+            <div style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 11, fontWeight: 800,
+              color: "rgba(0,0,0,0.55)",
+              letterSpacing: "0.18em", textTransform: "uppercase",
+              marginTop: 8,
+            }}>What each compact carries</div>
+
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "180px 1fr 1fr",
+              columnGap: 20, rowGap: 10,
+              fontSize: 12, lineHeight: 1.45,
+              alignItems: "start",
+            }}>
+              {/* header */}
+              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase", color: "#15131A" }}>Hero</div>
+              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase", color: "#15131A" }}>Compact keeps</div>
+              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase", color: "#15131A" }}>Drops vs full hero</div>
+
+              <div style={{ fontWeight: 800 }}>1 · Prices</div>
+              <div>$48 + ✓ verified pill</div>
+              <div>6 drifting tags, sparkline, footer</div>
+
+              <div style={{ fontWeight: 800 }}>2 · Tiers</div>
+              <div>Founder medallion only</div>
+              <div>Supporter + Premium medallions</div>
+
+              <div style={{ fontWeight: 800 }}>3 · History</div>
+              <div>"47" counter + 1 tonight stub</div>
+              <div>6 past stubs + year axis</div>
+
+              <div style={{ fontWeight: 800 }}>4 · Calendar</div>
+              <div>4-row grid + 1 stamp on the 14th</div>
+              <div>4 stamps, weekday row, JUN 2026 header, destinations</div>
+
+              <div style={{ fontWeight: 800 }}>5 · Share Cards</div>
+              <div>1 main poster (halftone) tilted</div>
+              <div>2 satellite cards, share arrow</div>
+
+              <div style={{ fontWeight: 800 }}>6 · Watchers</div>
+              <div>"247" + 2 ripple rings</div>
+              <div>4 rings → 2; halo simplified</div>
+
+              <div style={{ fontWeight: 800 }}>7 · Spotify</div>
+              <div>10 EQ bars + "27" count</div>
+              <div>3 artist tags, divider</div>
+
+              <div style={{ fontWeight: 800 }}>8 · Following</div>
+              <div>Bell glyph + ping ring + "RUN THE JEWELS"</div>
+              <div>Notification stack, presale chip</div>
+
+              <div style={{ fontWeight: 800 }}>9 · Price Drop</div>
+              <div>$120 → $48 + ↓ SAVED chip</div>
+              <div>Sparkline floor, twin arrow trails</div>
+
+              <div style={{ fontWeight: 800 }}>10 · Setlist</div>
+              <div>Mini receipt: SETLIST + 5/14 + 3 lines (1 debut)</div>
+              <div>Full 5-track list, footer, runtime</div>
+
+              <div style={{ fontWeight: 800 }}>11 · First-Timer</div>
+              <div>Venue octagonal plate + "THE GOTHIC"</div>
+              <div>All 6 info chips</div>
+
+              <div style={{ fontWeight: 800 }}>12 · Last Time</div>
+              <div>Single tilted polaroid with riso art</div>
+              <div>TONIGHT plate, dot trail, copy column</div>
+
+              <div style={{ fontWeight: 800 }}>13 · Support Act</div>
+              <div>Opener card only (rings + Marriages)</div>
+              <div>Headliner card behind</div>
+
+              <div style={{ fontWeight: 800 }}>14 · Passport (marquee)</div>
+              <div>3 stubs fanned + 6 sparkles</div>
+              <div>4 stubs (7 → 3), sparkles 12 → 6</div>
+
+              <div style={{ fontWeight: 800 }}>15 · Venue Passport</div>
+              <div>Single "RED ROCKS · 10" stamp</div>
+              <div>5×2 stamp ledger grid, perforation, label column</div>
+            </div>
+
+            <div style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 11, fontWeight: 800,
+              color: "rgba(0,0,0,0.55)",
+              letterSpacing: "0.18em", textTransform: "uppercase",
+              marginTop: 12,
+            }}>Engineering notes</div>
+            <div style={{ fontSize: 13, lineHeight: 1.5, textWrap: "pretty", maxWidth: 1180 }}>
+              <strong>Dispatcher:</strong> route on the existing <code>hero</code> string + a new <code>compact</code> bool. <code>window.SPOTLIGHT_COMPACT_HEROES[hero]</code> is the lookup map. Pseudocode in <code>SHOWTIME_HANDOFF.md §5</code>.<br/>
+              <strong>Sizing:</strong> wrap in a <code>200×132</code> div with <code>position: relative; overflow: hidden; border-radius: 8px</code>. Each compact renders <code>position: absolute; inset: 0</code> inside that.<br/>
+              <strong>No props needed yet:</strong> compacts use the same static placeholders as the full heroes. Same prop refactor (per-hero data fields) will apply to both surfaces — full and compact will share the same props.
+            </div>
+          </div>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

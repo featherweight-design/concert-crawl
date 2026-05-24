@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Stub Stack · finding the middle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="passport-concepts.jsx"></script>
+<script type="text/babel" src="passport-concepts-v2.jsx"></script>
+<script type="text/babel" src="passport-concepts-v3.jsx"></script>
+
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard } = window;
+const {
+  PassportStubStack,        // v1 · restraint
+  PassportShowtimeStubs,    // v3 · middle (Showtime)
+  PassportEncoreStubs,      // v2 · pushed (Encore)
+} = window;
+
+const HERO_W = 580, HERO_H = 300;
+
+function Frame({ children, label, sub }) {
+  return (
+    <div style={{
+      position: "relative",
+      width: HERO_W, height: HERO_H,
+      overflow: "hidden",
+      borderRadius: 14,
+      boxShadow: "0 18px 40px rgba(0,0,0,0.25), 0 2px 0 rgba(255,255,255,0.4)",
+    }}>
+      {children}
+      <div style={{
+        position: "absolute",
+        left: 16, bottom: 14,
+        zIndex: 20, pointerEvents: "none",
+        display: "flex", flexDirection: "column", gap: 2,
+      }}>
+        <div style={{
+          fontFamily: "Inter, sans-serif",
+          fontSize: 12, fontWeight: 900,
+          color: "rgba(255,255,255,0.95)",
+          letterSpacing: "-0.01em",
+          textShadow: "0 1px 8px rgba(0,0,0,0.9)",
+        }}>{label}</div>
+        <div style={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 9, fontWeight: 700,
+          color: "rgba(255,255,255,0.7)",
+          letterSpacing: "0.16em", textTransform: "uppercase",
+          textShadow: "0 1px 8px rgba(0,0,0,0.9)",
+        }}>{sub}</div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <DesignCanvas
+      title="Stub Stack · finding the middle"
+      subtitle="v1 (restraint), v3 (Showtime — the middle), v2 (Encore — pushed). Same composition across all three so the differences are purely tonal: background warmth, per-stub identity, graphic density, particle count."
+    >
+      <DCSection
+        id="three"
+        title="Restraint  ·  Middle  ·  Pushed"
+        subtitle="Watch each play through once. The middle keeps the dark stage + restrained graphic vocabulary, but each stub now has one accent colour for identity. Two slow warm/cool washes instead of three. Twelve sparkles instead of 28 confetti."
+      >
+        <DCArtboard id="v1" label="v1 · Restraint" width={HERO_W} height={HERO_H}>
+          <Frame
+            label="v1 · Restraint"
+            sub="Dark spotlight · all stubs dim siblings · no colour identity · no particles"
+          >
+            <PassportStubStack/>
+          </Frame>
+        </DCArtboard>
+
+        <DCArtboard id="v3" label="v3 · Showtime · MIDDLE" width={HERO_W} height={HERO_H}>
+          <Frame
+            label="v3 · Showtime · MIDDLE"
+            sub="Dark stage kept · one accent colour per stub · two soft washes · 12 sparkles"
+          >
+            <PassportShowtimeStubs/>
+          </Frame>
+        </DCArtboard>
+
+        <DCArtboard id="v2" label="v2 · Encore" width={HERO_W} height={HERO_H}>
+          <Frame
+            label="v2 · Encore"
+            sub="3 colour washes · each stub a mini-poster · 28-piece confetti · varied deal angles"
+          >
+            <PassportEncoreStubs/>
+          </Frame>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection
+        id="notes"
+        title="What 'middle' means"
+        subtitle="Each lever moved partway, not the average of all of them."
+      >
+        <DCArtboard id="read" label="Notes" width={1200} height={420}>
+          <div style={{
+            width: 1200, height: 420,
+            background: "#f0eee9",
+            padding: "40px 48px",
+            color: "#15131A",
+            fontFamily: "Inter, sans-serif",
+            display: "flex", flexDirection: "column", gap: 16,
+          }}>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "200px 1fr 1fr 1fr",
+              columnGap: 28,
+              rowGap: 14,
+              fontSize: 13.5, lineHeight: 1.5,
+              alignItems: "start",
+            }}>
+              <div/>
+              <div style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 11, fontWeight: 800,
+                color: "rgba(0,0,0,0.55)",
+                letterSpacing: "0.18em", textTransform: "uppercase",
+              }}>v1 · Restraint</div>
+              <div style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 11, fontWeight: 800,
+                color: "#15131A",
+                letterSpacing: "0.18em", textTransform: "uppercase",
+              }}>v3 · Showtime (middle)</div>
+              <div style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 11, fontWeight: 800,
+                color: "rgba(0,0,0,0.55)",
+                letterSpacing: "0.18em", textTransform: "uppercase",
+              }}>v2 · Encore</div>
+
+              <div style={{ fontWeight: 800 }}>Background</div>
+              <div style={{ color: "rgba(0,0,0,0.7)" }}>One warm key light from upper-right, otherwise dark void</div>
+              <div>One warm (amber) + one cool (teal) drifting wash, slow</div>
+              <div style={{ color: "rgba(0,0,0,0.7)" }}>Three saturated washes (magenta, teal, gold) drifting at different rates</div>
+
+              <div style={{ fontWeight: 800 }}>Per-stub identity</div>
+              <div style={{ color: "rgba(0,0,0,0.7)" }}>Dim siblings — all dark bodies, all the same template</div>
+              <div>One accent colour each (used in perforation, glyph, mono line) — body stays dark</div>
+              <div style={{ color: "rgba(0,0,0,0.7)" }}>Each stub a saturated mini-poster — different body, different graphic</div>
+
+              <div style={{ fontWeight: 800 }}>Graphic per stub</div>
+              <div style={{ color: "rgba(0,0,0,0.7)" }}>Same: small ring + dim glyph</div>
+              <div>Same: ring + glyph (restrained), but in stub's accent colour</div>
+              <div style={{ color: "rgba(0,0,0,0.7)" }}>Different per stub: sunburst, rings, halftone, stripes, quad</div>
+
+              <div style={{ fontWeight: 800 }}>Particles</div>
+              <div style={{ color: "rgba(0,0,0,0.7)" }}>None</div>
+              <div>12 sparkles, slow twinkle</div>
+              <div style={{ color: "rgba(0,0,0,0.7)" }}>28-piece confetti swirling continuously</div>
+
+              <div style={{ fontWeight: 800 }}>Deal-in</div>
+              <div style={{ color: "rgba(0,0,0,0.7)" }}>From above only</div>
+              <div>Varied angles, tighter spread (off-corners only)</div>
+              <div style={{ color: "rgba(0,0,0,0.7)" }}>Varied angles, wide spread (all sides)</div>
+
+              <div style={{ fontWeight: 800 }}>Tone</div>
+              <div style={{ color: "rgba(0,0,0,0.7)" }}>Cinematic intimacy</div>
+              <div>The room when the lights drop and the stage is lit, but the band hasn't walked on</div>
+              <div style={{ color: "rgba(0,0,0,0.7)" }}>The encore confetti hitting the floor</div>
+            </div>
+          </div>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

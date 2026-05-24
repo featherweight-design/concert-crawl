@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Showtime system check</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="passport-concepts-v2.jsx"></script>
+<script type="text/babel" src="passport-concepts-v3.jsx"></script>
+<script type="text/babel" src="more-features-showtime.jsx"></script>
+
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard } = window;
+const {
+  PassportShowtimeStubs,
+  TierShowtime,
+  HistoryShowtime,
+} = window;
+
+const HERO_W = 580, HERO_H = 300;
+
+function Frame({ children, label, sub }) {
+  return (
+    <div style={{
+      position: "relative",
+      width: HERO_W, height: HERO_H,
+      overflow: "hidden",
+      borderRadius: 14,
+      boxShadow: "0 18px 40px rgba(0,0,0,0.25), 0 2px 0 rgba(255,255,255,0.4)",
+    }}>
+      {children}
+      <div style={{
+        position: "absolute",
+        right: 16, bottom: 14,
+        zIndex: 25, pointerEvents: "none",
+        display: "flex", flexDirection: "column", gap: 2, alignItems: "flex-end",
+      }}>
+        <div style={{
+          fontFamily: "Inter, sans-serif",
+          fontSize: 12, fontWeight: 900,
+          color: "rgba(255,255,255,0.95)",
+          letterSpacing: "-0.01em",
+          textShadow: "0 1px 8px rgba(0,0,0,0.9)",
+        }}>{label}</div>
+        <div style={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 9, fontWeight: 700,
+          color: "rgba(255,255,255,0.7)",
+          letterSpacing: "0.16em", textTransform: "uppercase",
+          textShadow: "0 1px 8px rgba(0,0,0,0.9)",
+        }}>{sub}</div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <DesignCanvas
+      title="Showtime · system check across three features"
+      subtitle="Confirming the Stub Stack · Showtime visual language extends beyond Passport. Same backdrop, particles, eyebrow grammar, and restrained graphic vocabulary (ring + accent glyph) — different central artifact per feature."
+    >
+      <DCSection
+        id="three"
+        title="Passport  ·  Tiers  ·  Concert History"
+        subtitle="Watch all three play through. Shared: dark stage, warm/cool washes, 12 sparkles, ring+glyph mark, mono eyebrow with pulsing dot, per-piece accent. Different: composition + central artifact."
+      >
+        <DCArtboard id="passport" label="Passport · v3 (locked, star fixed)" width={HERO_W} height={HERO_H}>
+          <Frame
+            label="Concert Passport"
+            sub="Fan stack · 7 stubs · the keepsake"
+          >
+            <PassportShowtimeStubs/>
+          </Frame>
+        </DCArtboard>
+
+        <DCArtboard id="tiers" label="Tiers · Showtime" width={HERO_W} height={HERO_H}>
+          <Frame
+            label="Upgrade · Tier Badges"
+            sub="3 medallions · Founder crown centered · brand glyphs (+, ★, ♔) · brand colours"
+          >
+            <TierShowtime/>
+          </Frame>
+        </DCArtboard>
+
+        <DCArtboard id="history" label="Concert History · Showtime" width={HERO_W} height={HERO_H}>
+          <Frame
+            label="Concert History"
+            sub="Horizontal cascade · year axis · big counter · tonight's stub right-most"
+          >
+            <HistoryShowtime/>
+          </Frame>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection
+        id="notes"
+        title="System check"
+        subtitle="What carries through. What flexes per feature."
+      >
+        <DCArtboard id="read" label="Notes" width={1200} height={460}>
+          <div style={{
+            width: 1200, height: 460,
+            background: "#f0eee9",
+            padding: "40px 48px",
+            color: "#15131A",
+            fontFamily: "Inter, sans-serif",
+            display: "flex", flexDirection: "column", gap: 16,
+          }}>
+            <div>
+              <div style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 11, fontWeight: 800,
+                color: "rgba(0,0,0,0.55)",
+                letterSpacing: "0.18em", textTransform: "uppercase",
+                marginBottom: 8,
+              }}>The Showtime system · what's shared</div>
+              <div style={{ fontSize: 14.5, lineHeight: 1.5, color: "#15131A", textWrap: "pretty" }}>
+                <strong>Backdrop:</strong> radial dark plum → near-black, with warm amber wash from upper-right and cool teal wash from lower-left, both drifting on different rhythms. &nbsp; <strong>Particles:</strong> 12 sparkles in pink / gold / teal / white, slow twinkle. &nbsp; <strong>Eyebrow:</strong> JetBrains Mono uppercase, 10px, letter-spaced 0.24em, pulsing accent dot. &nbsp; <strong>Graphic vocabulary on each piece:</strong> single ring + bold glyph, both in the piece's accent colour. &nbsp; <strong>Per-piece identity:</strong> one accent colour each (pulled from the same 7-colour set: cyan / pink / amber / violet / lime / gold / teal). &nbsp; <strong>Deal-in:</strong> from off-axis with rotation, cubic-bezier; the headline piece breathes after settling.
+              </div>
+            </div>
+
+            <div>
+              <div style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 11, fontWeight: 800,
+                color: "rgba(0,0,0,0.55)",
+                letterSpacing: "0.18em", textTransform: "uppercase",
+                marginBottom: 8,
+              }}>What flexes per feature</div>
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, 1fr)",
+                gap: 32,
+                fontSize: 14, lineHeight: 1.5,
+                color: "#15131A",
+              }}>
+                <div style={{ textWrap: "pretty" }}>
+                  <div style={{ fontWeight: 900, fontSize: 15, marginBottom: 4 }}>Passport — Fan Stack</div>
+                  <div style={{ color: "rgba(0,0,0,0.7)" }}>
+                    Composition: centered overlapping fan. Headline stub is top of the stack. Artifact: stubs. Tells the story "every night I've kept."
+                  </div>
+                </div>
+                <div style={{ textWrap: "pretty" }}>
+                  <div style={{ fontWeight: 900, fontSize: 15, marginBottom: 4 }}>Tiers — Three Medallions</div>
+                  <div style={{ color: "rgba(0,0,0,0.7)" }}>
+                    Composition: 3 luminous discs (not cards), Founder centered + larger + gradient ring + extra halo. Uses the existing tier iconography from monetization-shared.jsx: Supporter · plus · brand pink · $2/mo; Premium · star · brand cyan · $5/mo; Founder · crown · cyan+pink gradient · $3/mo for life, first 100 only. Tells "pick your seat."
+                  </div>
+                </div>
+                <div style={{ textWrap: "pretty" }}>
+                  <div style={{ fontWeight: 900, fontSize: 15, marginBottom: 4 }}>History — Horizontal Cascade</div>
+                  <div style={{ color: "rgba(0,0,0,0.7)" }}>
+                    Composition: stubs fanned along the bottom across a year axis at the top. Right-most stub is "tonight" — larger, glowing, brighter. Older stubs dim and shrink. Big "47" counter top-right anchors the meaning. Tells "every night, every year."
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 11, fontWeight: 800,
+                color: "rgba(0,0,0,0.55)",
+                letterSpacing: "0.18em", textTransform: "uppercase",
+                marginBottom: 4,
+              }}>Read</div>
+              <div style={{ fontSize: 14, lineHeight: 1.5, color: "#15131A", textWrap: "pretty", maxWidth: 1040 }}>
+                The language holds, and the artifact varies per feature — that's the principle: <strong>same stage, different object on it</strong>. Passport = stubs (the keepsake). History = stubs (the archive, in a year-axis composition). Tiers = medallions (earned/awarded). When we roll the rest (Calendar, Shareable, Watchers, Spotify), each gets its own object — calendar grid, share card fan, count + ripple, sync waveform — not all stubs, not all cards. The shared DNA stays the backdrop, the sparkles, the eyebrow grammar, the ring-around-a-mark restraint, and the per-piece accent colour.
+              </div>
+            </div>
+          </div>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

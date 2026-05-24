@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Passport hero v2 · pushed harder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="passport-concepts.jsx"></script>
+<script type="text/babel" src="passport-concepts-v2.jsx"></script>
+
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard } = window;
+const {
+  PassportStubStack, PassportSpotlightPhone,
+  PassportEncoreStubs, PassportRevealPhone,
+} = window;
+
+const HERO_W = 580, HERO_H = 300;
+
+function Frame({ children, label, sub }) {
+  return (
+    <div style={{
+      position: "relative",
+      width: HERO_W, height: HERO_H,
+      overflow: "hidden",
+      borderRadius: 14,
+      boxShadow: "0 18px 40px rgba(0,0,0,0.25), 0 2px 0 rgba(255,255,255,0.4)",
+    }}>
+      {children}
+      <div style={{
+        position: "absolute",
+        left: 16, bottom: 14,
+        zIndex: 20, pointerEvents: "none",
+        display: "flex", flexDirection: "column", gap: 2,
+      }}>
+        <div style={{
+          fontFamily: "Inter, sans-serif",
+          fontSize: 12, fontWeight: 900,
+          color: "rgba(255,255,255,0.95)",
+          letterSpacing: "-0.01em",
+          textShadow: "0 1px 8px rgba(0,0,0,0.9)",
+        }}>{label}</div>
+        <div style={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 9, fontWeight: 700,
+          color: "rgba(255,255,255,0.7)",
+          letterSpacing: "0.16em", textTransform: "uppercase",
+          textShadow: "0 1px 8px rgba(0,0,0,0.9)",
+        }}>{sub}</div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <DesignCanvas
+      title="Passport hero v2 · Wrapped energy pushed harder"
+      subtitle="Same two directions you liked, but cranked. Stubs become saturated mini-posters, each its own colour world; Phone reveal gets multi-hue aura, denser confetti, and stamps that are bold colour tiles instead of glyphs on dark squares. v1 paired alongside for direct comparison."
+    >
+      <DCSection
+        id="compare"
+        title="v1 vs v2 · side-by-side"
+        subtitle="Top row: original Stub Stack and the Encore push. Bottom row: original Spotlight Phone and the Reveal push. Watch the animation play through once to feel the staging difference."
+      >
+        <DCArtboard id="stub-v1" label="Stub Stack · v1 (restraint)" width={HERO_W} height={HERO_H}>
+          <Frame
+            label="Stub Stack · v1"
+            sub="Cinematic restraint · dark space · subtle stage light"
+          >
+            <PassportStubStack/>
+          </Frame>
+        </DCArtboard>
+        <DCArtboard id="stub-v2" label="Stub Stack · v2 (Encore · pushed)" width={HERO_W} height={HERO_H}>
+          <Frame
+            label="Stub Stack · v2 · Encore"
+            sub="Each stub a mini-poster · saturated colour world · confetti drift · varied deal angles"
+          >
+            <PassportEncoreStubs/>
+          </Frame>
+        </DCArtboard>
+
+        <DCArtboard id="phone-v1" label="Spotlight Phone · v1 (single-hue)" width={HERO_W} height={HERO_H}>
+          <Frame
+            label="Spotlight Phone · v1"
+            sub="Single-hue pink aura · light confetti · glyph stamps in dark cells"
+          >
+            <PassportSpotlightPhone/>
+          </Frame>
+        </DCArtboard>
+        <DCArtboard id="phone-v2" label="Spotlight Phone · v2 (Reveal · pushed)" width={HERO_W} height={HERO_H}>
+          <Frame
+            label="Spotlight Phone · v2 · Reveal"
+            sub="Multi-hue aura (pink/gold/teal/violet) · dense confetti · bold colour-tile stamps"
+          >
+            <PassportRevealPhone/>
+          </Frame>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection
+        id="notes"
+        title="Read on the push"
+        subtitle="What I changed and where the trade-off lives."
+      >
+        <DCArtboard id="read" label="Notes" width={1200} height={420}>
+          <div style={{
+            width: 1200, height: 420,
+            background: "#f0eee9",
+            padding: "40px 48px",
+            color: "#15131A",
+            fontFamily: "Inter, sans-serif",
+            display: "flex", flexDirection: "column", gap: 18,
+          }}>
+            <div style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 11, fontWeight: 800,
+              color: "rgba(0,0,0,0.55)",
+              letterSpacing: "0.18em", textTransform: "uppercase",
+            }}>What changed</div>
+
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, 1fr)",
+              gap: 40,
+              fontSize: 14.5, lineHeight: 1.55,
+              color: "#15131A",
+            }}>
+              <div style={{ textWrap: "pretty" }}>
+                <div style={{ fontWeight: 900, fontSize: 16, marginBottom: 6 }}>Stub Stack · Encore</div>
+                <div style={{ color: "rgba(0,0,0,0.7)" }}>
+                  Background went from "muted dark spotlight" to <strong>drifting saturated colour washes</strong> (magenta + teal + gold radials, screen-blended). Stubs themselves now <strong>each carry their own colour</strong> with a bold geometric graphic — sunburst, rings, halftone mass, stripes, quad-grid — so each one reads as a tiny poster instead of a dim sibling of the top one. Deal-in now <strong>comes from varied angles</strong> (not just falling from above). Confetti drifts continuously across the whole frame. Cost: more visual noise, weaker as "the thing you'd keep in a shoebox" — it's more "the wall above your desk."
+                </div>
+              </div>
+              <div style={{ textWrap: "pretty" }}>
+                <div style={{ fontWeight: 900, fontSize: 16, marginBottom: 6 }}>Spotlight Phone · Reveal</div>
+                <div style={{ color: "rgba(0,0,0,0.7)" }}>
+                  Aura went from <strong>single pink ring</strong> to <strong>four staggered rings in different hues</strong> (pink, gold, teal, violet) — colour-cycles the reveal moment. Background got 3 drifting colour washes underneath. Confetti density doubled, mix of shapes (dots / lines / triangles / squares) at multiple sizes. <strong>Stamps inside the phone became bold colour tiles</strong> instead of glyphs over dark — each one its own saturated poster cell. Tiny sparkles in the negative space. Cost: visually loud — less "Apple precision," more "TikTok reveal moment." Whether that's right depends on the brand stance.
+                </div>
+              </div>
+            </div>
+
+            <div style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 11, fontWeight: 800,
+              color: "rgba(0,0,0,0.55)",
+              letterSpacing: "0.18em", textTransform: "uppercase",
+              marginTop: 6,
+            }}>Open question</div>
+            <div style={{
+              fontSize: 14, lineHeight: 1.55,
+              color: "#15131A",
+              maxWidth: 1040,
+              textWrap: "pretty",
+            }}>
+              Both pushes work, but they pull in slightly different directions: <strong>Encore</strong> doubles down on the artifact-with-attitude reading; <strong>Reveal</strong> doubles down on product-launch-with-hype. If we ship both as different feature-drop heroes (Encore for personal/archival features, Reveal for new feature launches), the system already reads as a real language. Or pick one, and use the other's pieces (the colour washes, the confetti config) as the shared vocabulary across heroes.
+            </div>
+          </div>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

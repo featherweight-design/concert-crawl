@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Passport hero · direction exploration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="passport-concepts.jsx"></script>
+
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard } = window;
+const { PassportElectricRig, PassportStubStack, PassportSpotlightPhone } = window;
+
+const HERO_W = 580, HERO_H = 300;
+
+function HeroFrame({ children, label, sub }) {
+  return (
+    <div style={{
+      position: "relative",
+      width: HERO_W, height: HERO_H,
+      overflow: "hidden",
+      borderRadius: 14,
+      boxShadow: "0 18px 40px rgba(0,0,0,0.25), 0 2px 0 rgba(255,255,255,0.4)",
+    }}>
+      {children}
+      <div style={{
+        position: "absolute",
+        left: 16, bottom: 14,
+        display: "flex", flexDirection: "column", gap: 2,
+        zIndex: 20,
+        pointerEvents: "none",
+      }}>
+        <div style={{
+          fontFamily: "Inter, sans-serif",
+          fontSize: 13, fontWeight: 900,
+          color: "rgba(255,255,255,0.95)",
+          letterSpacing: "-0.01em",
+          textShadow: "0 1px 8px rgba(0,0,0,0.9)",
+        }}>{label}</div>
+        <div style={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 9, fontWeight: 700,
+          color: "rgba(255,255,255,0.65)",
+          letterSpacing: "0.16em", textTransform: "uppercase",
+          textShadow: "0 1px 8px rgba(0,0,0,0.9)",
+        }}>{sub}</div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <DesignCanvas
+      title="Concert Passport · hero direction exploration"
+      subtitle="Three SVG+CSS directions for the Concert Passport feature drop. No must-share brand threads — each direction picks its own visual world (Wrapped-energy stage lighting, ticket-stub artifact, AirPods-reveal product splash). All representing the FEELING of all those nights, not user data."
+    >
+      <DCSection
+        id="concepts"
+        title="Concepts at a glance"
+        subtitle="Three radically different worlds. Pick a direction (or a hybrid)."
+      >
+        <DCArtboard id="c1" label="1 · Electric Rig" width={HERO_W} height={HERO_H}>
+          <HeroFrame
+            label="1 · Electric Rig"
+            sub="Stage lighting · maximalist · 10 colour beams sweep + pulse · dust drifts upward"
+          >
+            <PassportElectricRig/>
+          </HeroFrame>
+        </DCArtboard>
+
+        <DCArtboard id="c2" label="2 · Stub Stack" width={HERO_W} height={HERO_H}>
+          <HeroFrame
+            label="2 · Stub Stack"
+            sub="Boarding-pass artifact · cinematic restraint · stubs deal into a stack · the thing IS the hero"
+          >
+            <PassportStubStack/>
+          </HeroFrame>
+        </DCArtboard>
+
+        <DCArtboard id="c3" label="3 · Spotlight Phone" width={HERO_W} height={HERO_H}>
+          <HeroFrame
+            label="3 · Spotlight Phone"
+            sub="AirPods-reveal energy · the actual UI is the hero · glow aura + confetti · most product-led"
+          >
+            <PassportSpotlightPhone/>
+          </HeroFrame>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection
+        id="notes"
+        title="Read"
+        subtitle="My take. Hugh's call."
+      >
+        <DCArtboard id="read" label="Direction notes" width={1200} height={460}>
+          <div style={{
+            width: 1200, height: 460,
+            background: "#f0eee9",
+            padding: "40px 48px",
+            color: "#15131A",
+            fontFamily: "Inter, sans-serif",
+            display: "flex", flexDirection: "column", gap: 18,
+          }}>
+            <div style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 11, fontWeight: 800,
+              color: "rgba(0,0,0,0.55)",
+              letterSpacing: "0.18em", textTransform: "uppercase",
+            }}>What each direction is doing</div>
+
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: 32,
+              fontSize: 14.5, lineHeight: 1.55,
+              color: "#15131A",
+              maxWidth: "100%",
+            }}>
+              <div style={{ textWrap: "pretty" }}>
+                <div style={{ fontWeight: 900, fontSize: 16, letterSpacing: "-0.01em", marginBottom: 6 }}>1 · Electric Rig</div>
+                <div style={{ color: "rgba(0,0,0,0.7)" }}>
+                  Stage lights from the back of the venue, sweeping the crowd just before the band walks on. Each beam is generic — not "your 47 shows" — but the energy is the through-line. Easiest to vary per feature (different colour rig per release, different angles for different metaphors).
+                </div>
+              </div>
+              <div style={{ textWrap: "pretty" }}>
+                <div style={{ fontWeight: 900, fontSize: 16, letterSpacing: "-0.01em", marginBottom: 6 }}>2 · Stub Stack</div>
+                <div style={{ color: "rgba(0,0,0,0.7)" }}>
+                  Tickets as cultural objects — the thing you'd save in a shoebox. Every stub abstracted (no real venue names), the top one detailed enough to feel real. Restrained, Apple-y, holds attention. Most "Concert Crawl as a thoughtful product."
+                </div>
+              </div>
+              <div style={{ textWrap: "pretty" }}>
+                <div style={{ fontWeight: 900, fontSize: 16, letterSpacing: "-0.01em", marginBottom: 6 }}>3 · Spotlight Phone</div>
+                <div style={{ color: "rgba(0,0,0,0.7)" }}>
+                  Apple feature-reveal posture: the phone is the hero, the UI inside is the proof, the glow aura sells the moment. Best for features where the UI itself is interesting to look at. Has the highest "ohh look at it" payoff and lowest abstraction — pairs strongest with marketing.
+                </div>
+              </div>
+            </div>
+
+            <div style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 11, fontWeight: 800,
+              color: "rgba(0,0,0,0.55)",
+              letterSpacing: "0.18em", textTransform: "uppercase",
+              marginTop: 6,
+            }}>How they'd extend across the other features</div>
+
+            <div style={{
+              fontSize: 14, lineHeight: 1.55,
+              color: "#15131A",
+              maxWidth: 1040,
+              textWrap: "pretty",
+            }}>
+              <strong>1 · Rig</strong> generalises easiest — every feature gets its own colour rig + beam pattern (Spotify sync = green + blue beams converging; Price drop = downward red beam; Tiers = three colour beams). <strong>2 · Stubs</strong> is more specialised — natural for Passport, Concert History, Calendar Export, Shareable Cards, but harder to flex into Spotify Sync or Price Drop. <strong>3 · Phone</strong> needs every feature to have UI you'd want to show off — true for some (Map, Passport, Setlist Preview), thin for others (Who Else Is Watching, Last Time in Denver). Hybrid is realistic: pick ONE as the system spine, and reserve another for the 2–3 features where it earns its place. None of these has to be the only language.
+            </div>
+          </div>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
