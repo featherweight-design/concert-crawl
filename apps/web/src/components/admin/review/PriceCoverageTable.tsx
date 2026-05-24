@@ -359,7 +359,6 @@ export const PriceCoverageTable = ({
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 16,
-                                flexWrap: 'wrap',
                               }}
                             >
                               {/* Context: adding price for */}
@@ -419,7 +418,8 @@ export const PriceCoverageTable = ({
                                       textDecoration: 'none',
                                     }}
                                   >
-                                    ↗ Buy tickets
+                                    <span style={{ fontSize: 14 }}>↗</span>
+                                    Buy tickets
                                   </a>
                                 )}
                               </div>
@@ -431,6 +431,7 @@ export const PriceCoverageTable = ({
                                   alignItems: 'center',
                                   gap: 10,
                                   flexShrink: 0,
+                                  alignSelf: 'center',
                                 }}
                               >
                                 <span
