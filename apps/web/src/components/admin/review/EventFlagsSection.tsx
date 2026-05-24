@@ -136,42 +136,69 @@ export const EventFlagsSection = ({
   }
 
   if (events.length === 0) {
+    const emptyTitle = (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+        Event flags
+        <StatusBadge kind="success">queue clear</StatusBadge>
+      </span>
+    )
+
+    const emptyAction = (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <AdminButton variant="ghost" size="sm" icon={Filter}>
+          Filter rules
+        </AdminButton>
+        <AdminButton variant="outline" size="sm">
+          View history
+        </AdminButton>
+      </div>
+    )
+
     return (
-      <Panel title="Event flags">
+      <Panel title={emptyTitle} action={emptyAction}>
         <div
           style={{
-            padding: '18px 22px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
+            gap: 12,
+            padding: '4px 0',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              background:
+                'color-mix(in oklab, var(--success) 14%, transparent)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <CheckCircle2 size={18} color="var(--success)" />
+          </div>
+          <div>
             <div
               style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                background:
-                  'color-mix(in oklab, var(--success) 14%, transparent)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 14,
+                fontWeight: 700,
+                color: 'var(--fg)',
               }}
             >
-              <CheckCircle2 size={18} color="var(--success)" />
+              Queue is clear.
             </div>
-            <div>
-              <StatusBadge kind="success">queue clear</StatusBadge>
-              <div
-                style={{
-                  fontSize: 13,
-                  color: 'var(--fg-muted)',
-                  fontFamily: "'Inter', sans-serif",
-                }}
-              >
-                No events pending review
-              </div>
+            <div
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 13,
+                color: 'var(--fg-muted)',
+                marginTop: 2,
+              }}
+            >
+              Every flagged event has been triaged. Next sweep runs at 18:00 MT.
             </div>
           </div>
         </div>
