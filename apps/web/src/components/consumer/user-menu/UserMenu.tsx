@@ -418,7 +418,7 @@ function UserMenuPopover(props: MenuBodyProps) {
         right: 0,
         top: 'calc(100% + 8px)',
         zIndex: 100,
-        width: 280,
+        width: 360,
         background: 'var(--bg-elevated)',
         border: '1px solid var(--border-strong)',
         borderRadius: 14,

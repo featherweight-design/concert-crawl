@@ -149,9 +149,18 @@ export function ThemeSwatch({
       </div>
 
       {/* Label + role pill */}
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'baseline',
+          justifyContent: 'space-between',
+          gap: 6,
+        }}
+      >
         <span
           style={{
+            flex: 1,
+            minWidth: 0,
             fontFamily: 'var(--font-ui)',
             fontSize: 13,
             fontWeight: 700,
@@ -166,7 +175,6 @@ export function ThemeSwatch({
         </span>
         <span
           style={{
-            marginLeft: 'auto',
             fontFamily: 'var(--font-mono)',
             fontSize: 8,
             fontWeight: 600,
