@@ -19,11 +19,10 @@ export const BulkActionDock = ({
   return (
     <div
       style={{
-        position: 'sticky',
-        bottom: 18,
-        alignSelf: 'center',
-        marginLeft: 'auto',
-        marginRight: 'auto',
+        position: 'fixed',
+        bottom: 24,
+        left: '50%',
+        transform: 'translateX(-50%)',
         display: 'inline-flex',
         alignItems: 'center',
         gap: 12,
