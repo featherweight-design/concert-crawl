@@ -471,16 +471,16 @@ export function AdminReviewMobile({
   const missingPriceEvents = priceEvents.filter((ev) => ev.priceMin === null)
   const priceCount = submissions.length + missingPriceEvents.length
 
+  const cardStyle: React.CSSProperties = {
+    background: 'var(--bg-elevated)',
+    border: '1px solid var(--border)',
+    borderRadius: 12,
+    overflow: 'hidden',
+  }
+
   return (
-    <div
-      style={{
-        background: 'var(--bg-elevated)',
-        border: '1px solid var(--border)',
-        borderRadius: 12,
-        overflow: 'hidden',
-      }}
-    >
-      {/* Segmented control tab switcher */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Standalone segmented control tab switcher */}
       <div
         style={{
           display: 'flex',
@@ -547,9 +547,9 @@ export function AdminReviewMobile({
         })}
       </div>
 
-      {/* Event flags tab */}
+      {/* Event flags tab — separate card */}
       {activeTab === 'flags' && (
-        <div>
+        <div style={cardStyle}>
           {events.length === 0 ? (
             <div
               style={{
@@ -575,218 +575,224 @@ export function AdminReviewMobile({
         </div>
       )}
 
-      {/* Prices tab */}
+      {/* Prices tab — community submissions card */}
       {activeTab === 'prices' && (
-        <div>
-          {/* Community submissions */}
-          <div
-            style={{
-              padding: '12px 16px 10px',
-              borderBottom: '1px solid var(--border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <span
-              style={{
-                fontFamily: "'Inter', sans-serif",
-                fontSize: 13,
-                fontWeight: 700,
-                color: 'var(--fg)',
-              }}
-            >
-              Community submissions
-            </span>
-            <StatusBadge kind="signal">
-              {submissions.length} pending
-            </StatusBadge>
-          </div>
-
-          {submissions.length === 0 ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={cardStyle}>
+            {/* Community submissions header */}
             <div
               style={{
-                padding: '12px 16px',
-                fontFamily: "'Inter', sans-serif",
-                fontSize: 13,
-                color: 'var(--fg-subtle)',
+                padding: '12px 16px 10px',
                 borderBottom: '1px solid var(--border)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
               }}
             >
-              No pending submissions
+              <span
+                style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: 'var(--fg)',
+                }}
+              >
+                Community submissions
+              </span>
+              <StatusBadge kind="signal">
+                {submissions.length} pending
+              </StatusBadge>
             </div>
-          ) : (
-            submissions.map((sub) => {
-              const priceDisplay = sub.priceMin
-                ? `$${sub.priceMin}${sub.priceMax ? `–$${sub.priceMax}` : ''}`
-                : '—'
-              const linkedEvent = priceEvents.find(
-                (ev) => ev.eventId === sub.eventId,
-              )
-              const eventTitle =
-                linkedEvent?.eventTitle ?? sub.eventId.slice(0, 8) + '…'
-              const venueLine = linkedEvent
-                ? [
-                    linkedEvent.venueName,
-                    new Date(linkedEvent.date + 'T12:00:00').toLocaleDateString(
-                      'en-US',
-                      { month: 'short', day: 'numeric' },
-                    ),
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')
-                : null
-              const handle = `@${sub.userId.slice(0, 10)}`
-              return (
-                <div
-                  key={sub.id}
-                  style={{
-                    padding: '12px 16px',
-                    borderBottom: '1px solid var(--border)',
-                  }}
-                >
+
+            {submissions.length === 0 ? (
+              <div
+                style={{
+                  padding: '12px 16px',
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 13,
+                  color: 'var(--fg-subtle)',
+                  borderBottom: '1px solid var(--border)',
+                }}
+              >
+                No pending submissions
+              </div>
+            ) : (
+              submissions.map((sub) => {
+                const priceDisplay = sub.priceMin
+                  ? `$${sub.priceMin}${sub.priceMax ? `–$${sub.priceMax}` : ''}`
+                  : '—'
+                const linkedEvent = priceEvents.find(
+                  (ev) => ev.eventId === sub.eventId,
+                )
+                const eventTitle =
+                  linkedEvent?.eventTitle ?? sub.eventId.slice(0, 8) + '…'
+                const venueLine = linkedEvent
+                  ? [
+                      linkedEvent.venueName,
+                      new Date(
+                        linkedEvent.date + 'T12:00:00',
+                      ).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                      }),
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')
+                  : null
+                const handle = `@${sub.userId.slice(0, 10)}`
+                return (
                   <div
+                    key={sub.id}
                     style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      justifyContent: 'space-between',
-                      gap: 12,
-                      marginBottom: 4,
+                      padding: '12px 16px',
+                      borderBottom: '1px solid var(--border)',
                     }}
                   >
-                    <div style={{ minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontFamily: "'Inter', sans-serif",
-                          fontSize: 13,
-                          fontWeight: 700,
-                          color: 'var(--fg)',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {eventTitle}
-                      </div>
-                      {venueLine && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        justifyContent: 'space-between',
+                        gap: 12,
+                        marginBottom: 4,
+                      }}
+                    >
+                      <div style={{ minWidth: 0 }}>
                         <div
                           style={{
                             fontFamily: "'Inter', sans-serif",
-                            fontSize: 12,
-                            color: 'var(--fg-muted)',
-                            marginTop: 1,
+                            fontSize: 13,
+                            fontWeight: 700,
+                            color: 'var(--fg)',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
                           }}
                         >
-                          {venueLine}
+                          {eventTitle}
                         </div>
-                      )}
-                    </div>
-                    <span
-                      style={{
-                        fontFamily: "'JetBrains Mono', monospace",
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: 'var(--fg)',
-                        whiteSpace: 'nowrap',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {priceDisplay}
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      display: 'flex',
-                      gap: 6,
-                      marginBottom: 8,
-                      fontSize: 12,
-                      overflow: 'hidden',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontFamily: "'JetBrains Mono', monospace",
-                        fontWeight: 700,
-                        color: 'var(--accent)',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {handle}
-                    </span>
-                    {sub.note && (
+                        {venueLine && (
+                          <div
+                            style={{
+                              fontFamily: "'Inter', sans-serif",
+                              fontSize: 12,
+                              color: 'var(--fg-muted)',
+                              marginTop: 1,
+                            }}
+                          >
+                            {venueLine}
+                          </div>
+                        )}
+                      </div>
                       <span
                         style={{
-                          fontFamily: "'Inter', sans-serif",
-                          color: 'var(--fg-muted)',
-                          fontStyle: 'italic',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
+                          fontFamily: "'JetBrains Mono', monospace",
+                          fontSize: 13,
+                          fontWeight: 700,
+                          color: 'var(--fg)',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0,
                         }}
                       >
-                        &ldquo;{sub.note}&rdquo;
+                        {priceDisplay}
                       </span>
-                    )}
-                  </div>
-                  <div
-                    style={{ display: 'flex', alignItems: 'center', gap: 8 }}
-                  >
-                    <AdminButton
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onDenySubmission(sub.id)}
+                    </div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: 6,
+                        marginBottom: 8,
+                        fontSize: 12,
+                        overflow: 'hidden',
+                        whiteSpace: 'nowrap',
+                      }}
                     >
-                      × Deny
-                    </AdminButton>
-                    <AdminButton
-                      variant="success"
-                      size="sm"
-                      style={{ flex: 1 }}
-                      onClick={() => onApproveSubmission(sub.id)}
+                      <span
+                        style={{
+                          fontFamily: "'JetBrains Mono', monospace",
+                          fontWeight: 700,
+                          color: 'var(--accent)',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {handle}
+                      </span>
+                      {sub.note && (
+                        <span
+                          style={{
+                            fontFamily: "'Inter', sans-serif",
+                            color: 'var(--fg-muted)',
+                            fontStyle: 'italic',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          &ldquo;{sub.note}&rdquo;
+                        </span>
+                      )}
+                    </div>
+                    <div
+                      style={{ display: 'flex', alignItems: 'center', gap: 8 }}
                     >
-                      ✓ Approve · cred
-                    </AdminButton>
+                      <AdminButton
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onDenySubmission(sub.id)}
+                      >
+                        × Deny
+                      </AdminButton>
+                      <AdminButton
+                        variant="success"
+                        size="sm"
+                        style={{ flex: 1 }}
+                        onClick={() => onApproveSubmission(sub.id)}
+                      >
+                        ✓ Approve · cred
+                      </AdminButton>
+                    </div>
                   </div>
-                </div>
-              )
-            })
-          )}
-
-          {/* Needs price */}
-          <div
-            style={{
-              padding: '12px 16px 10px',
-              borderBottom:
-                missingPriceEvents.length > 0
-                  ? '1px solid var(--border)'
-                  : 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <span
-              style={{
-                fontFamily: "'Inter', sans-serif",
-                fontSize: 13,
-                fontWeight: 700,
-                color: 'var(--fg)',
-              }}
-            >
-              Needs price
-            </span>
-            <StatusBadge kind="neutral">
-              {missingPriceEvents.length}
-            </StatusBadge>
+                )
+              })
+            )}
           </div>
 
-          {missingPriceEvents.map((ev) => (
-            <NeedsPriceRow
-              key={ev.eventId}
-              event={ev}
-              onAddPrice={onAddPrice}
-            />
-          ))}
+          {/* Needs price — separate card */}
+          <div style={cardStyle}>
+            <div
+              style={{
+                padding: '12px 16px 10px',
+                borderBottom:
+                  missingPriceEvents.length > 0
+                    ? '1px solid var(--border)'
+                    : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: 'var(--fg)',
+                }}
+              >
+                Needs price
+              </span>
+              <StatusBadge kind="neutral">
+                {missingPriceEvents.length}
+              </StatusBadge>
+            </div>
+
+            {missingPriceEvents.map((ev) => (
+              <NeedsPriceRow
+                key={ev.eventId}
+                event={ev}
+                onAddPrice={onAddPrice}
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>
