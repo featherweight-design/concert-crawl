@@ -266,11 +266,12 @@ export const PriceCoverageTable = ({
                             gap: 6,
                           }}
                         >
-                          {ev.priceSource === 'crawled' && (
-                            <StatusBadge kind="signal" variant="outline">
-                              crawled
-                            </StatusBadge>
-                          )}
+                          {ev.priceSource !== null &&
+                            ev.priceSource !== 'community' && (
+                              <StatusBadge kind="signal" variant="outline">
+                                crawled
+                              </StatusBadge>
+                            )}
                           {ev.priceSource === 'community' && (
                             <StatusBadge kind="accent" variant="outline">
                               community

@@ -187,7 +187,13 @@ export const ReviewPageClient = ({
           vendor,
           howFound,
         })
-        router.refresh()
+        setPriceEvents((prev) =>
+          prev.map((ev) =>
+            ev.eventId === eventId
+              ? { ...ev, priceMin, priceMax, priceSource: 'community' }
+              : ev,
+          ),
+        )
       } catch (err) {
         const message =
           err instanceof ApiError ? err.message : 'Failed to save price.'
@@ -195,7 +201,7 @@ export const ReviewPageClient = ({
         setError(message)
       }
     },
-    [getToken, router],
+    [getToken],
   )
 
   const denySubmission = useCallback(
