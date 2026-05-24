@@ -1,3 +1,11 @@
+## [1.38.1](https://github.com/HartiganHM/concert-crawl/compare/v1.38.0...v1.38.1) (2026-05-24)
+
+
+### Bug Fixes
+
+* **release-notes:** decouple isMobile from ResizeObserver to break feedback loop ([182afef](https://github.com/HartiganHM/concert-crawl/commit/182afefae284fde68ad1e1e02e086597e5272883))
+* **spotlight-modal:** guard side-effect hooks when spotlight is absent ([5893132](https://github.com/HartiganHM/concert-crawl/commit/5893132febf21221d8bfc7dba59384ef18331197))
+
 # [1.38.0](https://github.com/HartiganHM/concert-crawl/compare/v1.37.0...v1.38.0) (2026-05-24)
 
 
