@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Check } from 'lucide-react'
 import {
   ConfidenceBar,
   AdminButton,
@@ -63,7 +64,10 @@ interface AdminReviewMobileProps {
     eventId: string,
     priceMin: string,
     priceMax: string | null,
+    vendor: string,
+    howFound: string,
   ) => Promise<void>
+  initialTab?: 'flags' | 'prices'
 }
 
 function getEventFlagChips(
@@ -97,7 +101,7 @@ function EventFlagCard({
   return (
     <div
       style={{
-        padding: '16px 16px 14px',
+        padding: '12px 14px',
         borderBottom: '1px solid var(--border)',
         background: 'var(--bg-elevated)',
       }}
@@ -124,7 +128,14 @@ function EventFlagCard({
           marginBottom: 10,
         }}
       >
-        {event.venueName ?? event.venueId} · {event.date}
+        {event.venueName ?? event.venueId} ·{' '}
+        {new Date(event.date + 'T12:00:00').toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+        })}
+        {event.showTime
+          ? ` ${new Date(`1970-01-01T${event.showTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
+          : ''}
       </div>
 
       {/* Confidence bar */}
@@ -143,12 +154,12 @@ function EventFlagCard({
           }}
         >
           {chips.map((chip) => (
-            <StatusBadge key={chip.label} kind={chip.kind} variant="soft">
+            <StatusBadge key={chip.label} kind={chip.kind} variant="outline">
               {chip.label}
             </StatusBadge>
           ))}
           {event.genre?.map((tag) => (
-            <StatusBadge key={tag} kind="neutral" variant="soft">
+            <StatusBadge key={tag} kind="neutral" variant="outline">
               {tag}
             </StatusBadge>
           ))}
@@ -171,7 +182,7 @@ function EventFlagCard({
             fontFamily: "'Inter', sans-serif",
             fontSize: 12,
             fontWeight: 600,
-            color: 'var(--fg-muted)',
+            color: 'var(--accent)',
           }}
         >
           <span style={{ fontSize: 10 }}>{reasonOpen ? '▼' : '▶'}</span>
@@ -223,10 +234,11 @@ function EventFlagCard({
       </div>
 
       {/* Actions */}
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <AdminButton
           variant="ghost"
           size="sm"
+          fullWidth
           onClick={() => onReject(event.id)}
         >
           × Reject
@@ -234,6 +246,7 @@ function EventFlagCard({
         <AdminButton
           variant="success"
           size="sm"
+          fullWidth
           onClick={() => onApprove(event.id)}
         >
           ✓ Approve
@@ -253,16 +266,26 @@ function NeedsPriceRow({
   const [isAdding, setIsAdding] = useState(false)
   const [priceMin, setPriceMin] = useState('')
   const [priceMax, setPriceMax] = useState('')
+  const [vendor, setVendor] = useState('Ticketmaster')
+  const [howFound, setHowFound] = useState('saw_listing')
   const [isSaving, setIsSaving] = useState(false)
 
   const handleSave = async () => {
     if (!priceMin.trim() || !onAddPrice) return
     setIsSaving(true)
     try {
-      await onAddPrice(event.eventId, priceMin.trim(), priceMax.trim() || null)
+      await onAddPrice(
+        event.eventId,
+        priceMin.trim(),
+        priceMax.trim() || null,
+        vendor,
+        howFound,
+      )
       setIsAdding(false)
       setPriceMin('')
       setPriceMax('')
+      setVendor('Ticketmaster')
+      setHowFound('saw_listing')
     } finally {
       setIsSaving(false)
     }
@@ -305,17 +328,61 @@ function NeedsPriceRow({
               marginTop: 2,
             }}
           >
-            {event.venueName ?? '—'} · {event.date}
+            {event.venueName ?? '—'} ·{' '}
+            {new Date(event.date + 'T12:00:00').toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+            })}
           </div>
+          {event.ticketUrl && (
+            <a
+              href={event.ticketUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 3,
+                marginTop: 4,
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 11,
+                fontWeight: 600,
+                color: 'var(--signal)',
+                textDecoration: 'none',
+              }}
+            >
+              <span style={{ fontSize: 14 }}>↗</span>
+              Buy tickets
+            </a>
+          )}
         </div>
-        {!isAdding && onAddPrice && (
-          <AdminButton
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsAdding(true)}
+        {event.priceMin !== null ? (
+          <span
+            style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 13,
+              fontWeight: 700,
+              color: 'var(--fg)',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}
           >
-            + Add
-          </AdminButton>
+            ${Math.round(parseFloat(event.priceMin))}
+            {event.priceMax
+              ? `–$${Math.round(parseFloat(event.priceMax))}`
+              : ''}
+          </span>
+        ) : (
+          !isAdding &&
+          onAddPrice && (
+            <AdminButton
+              variant="outline"
+              size="sm"
+              onClick={() => setIsAdding(true)}
+            >
+              + Add
+            </AdminButton>
+          )
         )}
       </div>
 
@@ -324,67 +391,121 @@ function NeedsPriceRow({
           style={{
             marginTop: 10,
             display: 'flex',
+            flexDirection: 'column',
             gap: 8,
-            alignItems: 'center',
-            flexWrap: 'wrap',
           }}
         >
-          <input
-            type="number"
-            placeholder="Low $"
-            value={priceMin}
-            onChange={(evt) => setPriceMin(evt.target.value)}
-            min={0}
-            step={0.01}
-            style={{
-              width: 80,
-              height: 30,
-              padding: '0 8px',
-              border: '1px solid var(--border-strong)',
-              borderRadius: 6,
-              background: 'var(--bg-elevated)',
-              color: 'var(--fg)',
-              fontSize: 12,
-              fontFamily: "'JetBrains Mono', monospace",
-              outline: 'none',
-            }}
-          />
-          <input
-            type="number"
-            placeholder="High $"
-            value={priceMax}
-            onChange={(evt) => setPriceMax(evt.target.value)}
-            min={0}
-            step={0.01}
-            style={{
-              width: 80,
-              height: 30,
-              padding: '0 8px',
-              border: '1px solid var(--border-strong)',
-              borderRadius: 6,
-              background: 'var(--bg-elevated)',
-              color: 'var(--fg)',
-              fontSize: 12,
-              fontFamily: "'JetBrains Mono', monospace",
-              outline: 'none',
-            }}
-          />
-          <AdminButton
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsAdding(false)}
-            disabled={isSaving}
-          >
-            Cancel
-          </AdminButton>
-          <AdminButton
-            variant="success"
-            size="sm"
-            onClick={() => void handleSave()}
-            disabled={isSaving || !priceMin.trim()}
-          >
-            {isSaving ? 'Saving…' : 'Save'}
-          </AdminButton>
+          {/* Row 1: price inputs + selects */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              type="number"
+              placeholder="Low $"
+              value={priceMin}
+              onChange={(evt) => setPriceMin(evt.target.value)}
+              min={0}
+              step={1}
+              style={{
+                width: 72,
+                flexShrink: 0,
+                height: 30,
+                padding: '0 8px',
+                border: '1px solid var(--border-strong)',
+                borderRadius: 6,
+                background: 'var(--bg-elevated)',
+                color: 'var(--fg)',
+                fontSize: 12,
+                fontFamily: "'JetBrains Mono', monospace",
+                outline: 'none',
+              }}
+            />
+            <input
+              type="number"
+              placeholder="High $"
+              value={priceMax}
+              onChange={(evt) => setPriceMax(evt.target.value)}
+              min={0}
+              step={1}
+              style={{
+                width: 72,
+                flexShrink: 0,
+                height: 30,
+                padding: '0 8px',
+                border: '1px solid var(--border-strong)',
+                borderRadius: 6,
+                background: 'var(--bg-elevated)',
+                color: 'var(--fg)',
+                fontSize: 12,
+                fontFamily: "'JetBrains Mono', monospace",
+                outline: 'none',
+              }}
+            />
+            <select
+              value={vendor}
+              onChange={(evt) => setVendor(evt.target.value)}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                height: 30,
+                padding: '0 6px',
+                border: '1px solid var(--border-strong)',
+                borderRadius: 6,
+                background: 'var(--bg-elevated)',
+                color: 'var(--fg)',
+                fontSize: 12,
+                fontFamily: "'Inter', sans-serif",
+                outline: 'none',
+              }}
+            >
+              <option value="Ticketmaster">Ticketmaster</option>
+              <option value="AXS">AXS</option>
+              <option value="SeatGeek">SeatGeek</option>
+              <option value="DICE">DICE</option>
+              <option value="Eventbrite">Eventbrite</option>
+              <option value="VenueBoxOffice">Box office</option>
+            </select>
+            <select
+              value={howFound}
+              onChange={(evt) => setHowFound(evt.target.value)}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                height: 30,
+                padding: '0 6px',
+                border: '1px solid var(--border-strong)',
+                borderRadius: 6,
+                background: 'var(--bg-elevated)',
+                color: 'var(--fg)',
+                fontSize: 12,
+                fontFamily: "'Inter', sans-serif",
+                outline: 'none',
+              }}
+            >
+              <option value="saw_listing">Saw listing</option>
+              <option value="bought_myself">Bought tickets</option>
+              <option value="at_the_venue">At the venue</option>
+            </select>
+          </div>
+          {/* Row 2: actions */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <AdminButton
+              variant="ghost"
+              size="sm"
+              fullWidth
+              onClick={() => setIsAdding(false)}
+              disabled={isSaving}
+            >
+              Cancel
+            </AdminButton>
+            <AdminButton
+              variant="success"
+              size="sm"
+              fullWidth
+              onClick={() => void handleSave()}
+              disabled={isSaving || !priceMin.trim()}
+            >
+              {isSaving ? 'Saving…' : 'Save'}
+            </AdminButton>
+          </div>
         </div>
       )}
     </div>
@@ -400,260 +521,455 @@ export function AdminReviewMobile({
   onApproveSubmission,
   onDenySubmission,
   onAddPrice,
+  initialTab = 'flags',
 }: AdminReviewMobileProps) {
-  const [activeTab, setActiveTab] = useState<'flags' | 'prices'>('flags')
+  const [activeTab, setActiveTab] = useState<'flags' | 'prices'>(initialTab)
+  const [showMissingOnly, setShowMissingOnly] = useState(false)
 
   const missingPriceEvents = priceEvents.filter((ev) => ev.priceMin === null)
+  const visiblePriceEvents = showMissingOnly ? missingPriceEvents : priceEvents
   const priceCount = submissions.length + missingPriceEvents.length
 
-  const tabStyle = (isActive: boolean): React.CSSProperties => ({
-    flex: 1,
-    padding: '12px 16px',
-    border: 'none',
-    background: 'none',
-    borderBottom: isActive
-      ? '2px solid var(--signal)'
-      : '2px solid transparent',
-    fontFamily: "'Inter', sans-serif",
-    fontSize: 13,
-    fontWeight: isActive ? 700 : 500,
-    color: isActive ? 'var(--fg)' : 'var(--fg-muted)',
-    cursor: 'pointer',
-    textAlign: 'left' as const,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-  })
+  const cardStyle: React.CSSProperties = {
+    background: 'var(--bg-elevated)',
+    border: '1px solid var(--border)',
+    borderRadius: 12,
+    overflow: 'hidden',
+  }
 
   return (
     <div
       style={{
-        background: 'var(--bg-elevated)',
-        border: '1px solid var(--border)',
-        borderRadius: 12,
-        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        gap: 16,
       }}
     >
-      {/* Tab switcher */}
+      {/* Tab switcher — not sticky; the component fills available height so the main scroll container never scrolls */}
       <div
         style={{
+          flexShrink: 0,
           display: 'flex',
-          borderBottom: '1px solid var(--border)',
+          padding: 4,
+          background: 'var(--surface-1)',
+          borderRadius: 10,
+          border: '1px solid var(--border)',
+          gap: 6,
         }}
       >
-        <button
-          type="button"
-          style={tabStyle(activeTab === 'flags')}
-          onClick={() => setActiveTab('flags')}
-        >
-          Event flags
-          {events.length > 0 && (
-            <StatusBadge kind="warning">{events.length}</StatusBadge>
-          )}
-        </button>
-        <button
-          type="button"
-          style={tabStyle(activeTab === 'prices')}
-          onClick={() => setActiveTab('prices')}
-        >
-          Prices
-          {priceCount > 0 && (
-            <StatusBadge kind="signal">{priceCount}</StatusBadge>
-          )}
-        </button>
-      </div>
-
-      {/* Event flags tab */}
-      {activeTab === 'flags' && (
-        <div>
-          {events.length === 0 ? (
-            <div
+        {(
+          [
+            { key: 'flags', label: 'Event flags', count: events.length },
+            { key: 'prices', label: 'Prices', count: priceCount },
+          ] as const
+        ).map(({ key, label, count }) => {
+          const isActive = activeTab === key
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setActiveTab(key)}
               style={{
-                padding: 32,
-                textAlign: 'center',
-                fontFamily: "'Inter', sans-serif",
-                fontSize: 13,
-                color: 'var(--fg-subtle)',
-              }}
-            >
-              No events pending review
-            </div>
-          ) : (
-            events.map((ev) => (
-              <EventFlagCard
-                key={ev.id}
-                event={ev}
-                onApprove={onApprove}
-                onReject={onReject}
-              />
-            ))
-          )}
-        </div>
-      )}
-
-      {/* Prices tab */}
-      {activeTab === 'prices' && (
-        <div>
-          {/* Community submissions */}
-          <div
-            style={{
-              padding: '10px 16px 8px',
-              borderBottom: '1px solid var(--border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <span
-              style={{
+                flex: 1,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                padding: '8px 0',
+                border: 'none',
+                borderRadius: 7,
+                background: isActive ? 'var(--bg-elevated)' : 'transparent',
+                boxShadow: isActive ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
                 fontFamily: "'Inter', sans-serif",
                 fontSize: 12,
                 fontWeight: 700,
-                color: 'var(--fg-muted)',
-                letterSpacing: '0.04em',
-                textTransform: 'uppercase',
+                color: isActive ? 'var(--fg)' : 'var(--fg-muted)',
+                cursor: 'pointer',
               }}
             >
-              Community submissions
-            </span>
-            <StatusBadge kind="signal">
-              {submissions.length} pending
-            </StatusBadge>
-          </div>
-
-          {submissions.length === 0 ? (
-            <div
-              style={{
-                padding: '12px 16px',
-                fontFamily: "'Inter', sans-serif",
-                fontSize: 13,
-                color: 'var(--fg-subtle)',
-                borderBottom: '1px solid var(--border)',
-              }}
-            >
-              No pending submissions
-            </div>
-          ) : (
-            submissions.map((sub) => {
-              const priceDisplay = sub.priceMin
-                ? `$${sub.priceMin}${sub.priceMax ? `–$${sub.priceMax}` : ''}`
-                : '—'
-              return (
-                <div
-                  key={sub.id}
+              {label}
+              {count > 0 && (
+                <span
                   style={{
-                    padding: '12px 16px',
-                    borderBottom: '1px solid var(--border)',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    minWidth: 16,
+                    height: 16,
+                    padding: '0 4px',
+                    borderRadius: 8,
+                    background: isActive ? 'var(--signal)' : 'var(--surface-2)',
+                    color: isActive ? 'var(--fg-on-accent)' : 'var(--fg-muted)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
                 >
+                  {count}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Event flags tab — fills remaining height, scrolls internally */}
+      {activeTab === 'flags' && (
+        <div
+          style={{
+            ...cardStyle,
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+            {events.length === 0 ? (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 16,
+                  padding: '48px 32px',
+                  textAlign: 'center',
+                  height: '100%',
+                }}
+              >
+                <div
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 28,
+                    background:
+                      'color-mix(in oklab, var(--success) 16%, transparent)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Check size={24} color="var(--success)" strokeWidth={2.5} />
+                </div>
+                <div>
                   <div
                     style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      justifyContent: 'space-between',
-                      gap: 12,
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: 17,
+                      fontWeight: 700,
+                      color: 'var(--fg)',
                       marginBottom: 8,
                     }}
                   >
-                    <div style={{ minWidth: 0 }}>
+                    Queue is clear.
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: 14,
+                      color: 'var(--fg-muted)',
+                      lineHeight: 1.5,
+                      maxWidth: 260,
+                    }}
+                  >
+                    Every flagged event has been triaged. Next sweep runs at
+                    18:00 MT.
+                  </div>
+                </div>
+              </div>
+            ) : (
+              events.map((ev) => (
+                <EventFlagCard
+                  key={ev.id}
+                  event={ev}
+                  onApprove={onApprove}
+                  onReject={onReject}
+                />
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Prices tab — community submissions + needs price, each fills half the available height */}
+      {activeTab === 'prices' && (
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 16,
+          }}
+        >
+          <div
+            style={{
+              ...cardStyle,
+              flex: 1,
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            {/* Community submissions header */}
+            <div
+              style={{
+                flexShrink: 0,
+                padding: '12px 16px 10px',
+                borderBottom: '1px solid var(--border)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: 'var(--fg)',
+                }}
+              >
+                Community submissions
+              </span>
+              <StatusBadge kind="signal">
+                {submissions.length} pending
+              </StatusBadge>
+            </div>
+
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+              {submissions.length === 0 ? (
+                <div
+                  style={{
+                    padding: '12px 16px',
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: 13,
+                    color: 'var(--fg-subtle)',
+                    borderBottom: '1px solid var(--border)',
+                  }}
+                >
+                  No pending submissions
+                </div>
+              ) : (
+                submissions.map((sub) => {
+                  const formatPrice = (val: string) =>
+                    `$${Math.round(parseFloat(val))}`
+                  const priceDisplay = sub.priceMin
+                    ? `${formatPrice(sub.priceMin)}${sub.priceMax ? `–${formatPrice(sub.priceMax)}` : ''}`
+                    : '—'
+                  const linkedEvent = priceEvents.find(
+                    (ev) => ev.eventId === sub.eventId,
+                  )
+                  const eventTitle =
+                    linkedEvent?.eventTitle ?? sub.eventId.slice(0, 8) + '…'
+                  const venueLine = linkedEvent
+                    ? [
+                        linkedEvent.venueName,
+                        new Date(
+                          linkedEvent.date + 'T12:00:00',
+                        ).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        }),
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')
+                    : null
+                  const handle = `@${sub.userId.slice(0, 10)}`
+                  return (
+                    <div
+                      key={sub.id}
+                      style={{
+                        padding: '12px 16px',
+                        borderBottom: '1px solid var(--border)',
+                      }}
+                    >
                       <div
                         style={{
-                          fontFamily: "'JetBrains Mono', monospace",
-                          fontSize: 11,
-                          fontWeight: 700,
-                          color: 'var(--accent)',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          justifyContent: 'space-between',
+                          gap: 12,
+                          marginBottom: 4,
+                        }}
+                      >
+                        <div style={{ minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontFamily: "'Inter', sans-serif",
+                              fontSize: 13,
+                              fontWeight: 700,
+                              color: 'var(--fg)',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {eventTitle}
+                          </div>
+                          {venueLine && (
+                            <div
+                              style={{
+                                fontFamily: "'Inter', sans-serif",
+                                fontSize: 12,
+                                color: 'var(--fg-muted)',
+                                marginTop: 1,
+                              }}
+                            >
+                              {venueLine}
+                            </div>
+                          )}
+                        </div>
+                        <span
+                          style={{
+                            fontFamily: "'JetBrains Mono', monospace",
+                            fontSize: 13,
+                            fontWeight: 700,
+                            color: 'var(--fg)',
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {priceDisplay}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: 6,
+                          marginBottom: 8,
+                          fontSize: 12,
                           overflow: 'hidden',
-                          textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        {sub.eventId}
-                      </div>
-                      {sub.note && (
-                        <div
+                        <span
                           style={{
-                            fontFamily: "'Inter', sans-serif",
-                            fontSize: 12,
-                            color: 'var(--fg-muted)',
-                            fontStyle: 'italic',
-                            marginTop: 2,
+                            fontFamily: "'JetBrains Mono', monospace",
+                            fontWeight: 700,
+                            color: 'var(--accent)',
+                            flexShrink: 0,
                           }}
                         >
-                          {sub.note}
-                        </div>
-                      )}
+                          {handle}
+                        </span>
+                        {sub.note && (
+                          <span
+                            style={{
+                              fontFamily: "'Inter', sans-serif",
+                              color: 'var(--fg-muted)',
+                              fontStyle: 'italic',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            &ldquo;{sub.note}&rdquo;
+                          </span>
+                        )}
+                      </div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                        }}
+                      >
+                        <AdminButton
+                          variant="ghost"
+                          size="sm"
+                          fullWidth
+                          onClick={() => onDenySubmission(sub.id)}
+                        >
+                          × Deny
+                        </AdminButton>
+                        <AdminButton
+                          variant="success"
+                          size="sm"
+                          fullWidth
+                          onClick={() => onApproveSubmission(sub.id)}
+                        >
+                          ✓ Approve · cred
+                        </AdminButton>
+                      </div>
                     </div>
-                    <span
-                      style={{
-                        fontFamily: "'JetBrains Mono', monospace",
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: 'var(--fg)',
-                        whiteSpace: 'nowrap',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {priceDisplay}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <AdminButton
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onDenySubmission(sub.id)}
-                    >
-                      Deny
-                    </AdminButton>
-                    <AdminButton
-                      variant="success"
-                      size="sm"
-                      onClick={() => onApproveSubmission(sub.id)}
-                    >
-                      Approve · cred
-                    </AdminButton>
-                  </div>
-                </div>
-              )
-            })
-          )}
-
-          {/* Needs price */}
-          <div
-            style={{
-              padding: '10px 16px 8px',
-              borderBottom:
-                missingPriceEvents.length > 0
-                  ? '1px solid var(--border)'
-                  : 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <span
-              style={{
-                fontFamily: "'Inter', sans-serif",
-                fontSize: 12,
-                fontWeight: 700,
-                color: 'var(--fg-muted)',
-                letterSpacing: '0.04em',
-                textTransform: 'uppercase',
-              }}
-            >
-              Needs price
-            </span>
-            <StatusBadge kind="warning">
-              {missingPriceEvents.length}
-            </StatusBadge>
+                  )
+                })
+              )}
+            </div>
           </div>
 
-          {missingPriceEvents.map((ev) => (
-            <NeedsPriceRow
-              key={ev.eventId}
-              event={ev}
-              onAddPrice={onAddPrice}
-            />
-          ))}
+          {/* Needs price — fills other half */}
+          <div
+            style={{
+              ...cardStyle,
+              flex: 1,
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <div
+              style={{
+                flexShrink: 0,
+                padding: '12px 16px 10px',
+                borderBottom: '1px solid var(--border)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 8,
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: 'var(--fg)',
+                }}
+              >
+                Needs price
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <AdminButton
+                  variant={showMissingOnly ? 'outline' : 'ghost'}
+                  size="sm"
+                  onClick={() => setShowMissingOnly((prev) => !prev)}
+                >
+                  Missing only
+                </AdminButton>
+                <StatusBadge kind="warning">
+                  {missingPriceEvents.length}
+                </StatusBadge>
+              </div>
+            </div>
+
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+              {visiblePriceEvents.length === 0 ? (
+                <div
+                  style={{
+                    padding: '12px 16px',
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: 13,
+                    color: 'var(--fg-subtle)',
+                  }}
+                >
+                  {showMissingOnly
+                    ? 'All events have prices.'
+                    : 'No upcoming events.'}
+                </div>
+              ) : (
+                visiblePriceEvents.map((ev) => (
+                  <NeedsPriceRow
+                    key={ev.eventId}
+                    event={ev}
+                    onAddPrice={onAddPrice}
+                  />
+                ))
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

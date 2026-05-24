@@ -40,9 +40,13 @@ interface FieldError {
 
 interface AddVenueModalProps {
   onSuccess?: () => void
+  fullWidth?: boolean
 }
 
-export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
+export function AddVenueModal({
+  onSuccess,
+  fullWidth = false,
+}: AddVenueModalProps) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [submitState, setSubmitState] = useState<SubmitState>('idle')
@@ -231,6 +235,7 @@ export function AddVenueModal({ onSuccess }: AddVenueModalProps) {
         variant="primary"
         icon={Plus}
         type="button"
+        fullWidth={fullWidth}
         onClick={() => setOpen(true)}
       >
         Add venue

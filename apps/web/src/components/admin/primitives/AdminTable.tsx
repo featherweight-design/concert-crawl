@@ -5,15 +5,18 @@ import { cn } from '@/lib/utils'
 export const AdminTable = ({
   children,
   className,
+  minWidth,
 }: {
   children: React.ReactNode
   className?: string
+  minWidth?: number | string
 }) => (
   <div style={{ overflowX: 'auto' }}>
     <table
       className={cn(className)}
       style={{
         width: '100%',
+        minWidth,
         borderCollapse: 'collapse',
         fontSize: 13,
         color: 'var(--fg)',

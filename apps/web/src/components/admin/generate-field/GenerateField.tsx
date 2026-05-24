@@ -22,6 +22,8 @@ interface GenerateFieldProps {
   errorMessage?: string | undefined
   estimatedCostLabel?: string | undefined
   onGenerate: () => void
+  onRegenerate?: () => void
+  onCancel?: () => void
   onAccept: (content: string) => void
   onDiscard: () => void
 }
@@ -32,6 +34,8 @@ export function GenerateField({
   errorMessage,
   estimatedCostLabel = '~$0.01',
   onGenerate,
+  onRegenerate,
+  onCancel,
   onAccept,
   onDiscard,
 }: GenerateFieldProps) {
@@ -80,6 +84,7 @@ export function GenerateField({
         style={{
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'space-between',
           gap: 8,
           padding: '14px 16px',
           borderRadius: 8,
@@ -89,21 +94,46 @@ export function GenerateField({
             'color-mix(in oklab, var(--signal) 6%, var(--bg-elevated))',
           fontFamily: "'Inter', sans-serif",
           fontSize: 12,
-          color: 'var(--signal)',
         }}
       >
-        <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
-        <span style={{ fontWeight: 600 }}>Generating…</span>
-        <span
-          style={{
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: 10,
-            opacity: 0.7,
-            color: 'var(--fg-muted)',
-          }}
-        >
-          ~3–5s
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Loader2
+            size={14}
+            color="var(--signal)"
+            style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }}
+          />
+          <span style={{ fontWeight: 600, color: 'var(--signal)' }}>
+            Generating…
+          </span>
+          <span
+            style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 10,
+              color: 'var(--fg-muted)',
+            }}
+          >
+            ~3–5s
+          </span>
+        </div>
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: '0 4px',
+              cursor: 'pointer',
+              fontFamily: "'Inter', sans-serif",
+              fontSize: 12,
+              fontWeight: 600,
+              color: 'var(--fg-muted)',
+              flexShrink: 0,
+            }}
+          >
+            Cancel
+          </button>
+        )}
       </div>
     )
   }
@@ -194,9 +224,9 @@ export function GenerateField({
               fontSize: 10,
               letterSpacing: '0.04em',
               color: 'var(--fg-subtle)',
-              marginTop: 8,
             }}
           >
+            <span style={{ opacity: 0.6 }}>SOURCES: </span>
             {result.sources.join(' · ')}
           </div>
         )}
@@ -213,7 +243,7 @@ export function GenerateField({
               padding: '5px 10px',
               borderRadius: 6,
               border: 'none',
-              background: 'var(--accent)',
+              background: 'var(--success)',
               color: 'var(--fg-on-accent)',
               fontFamily: "'Inter', sans-serif",
               fontSize: 12,
@@ -222,8 +252,30 @@ export function GenerateField({
             }}
           >
             <Check size={11} />
-            Use this
+            Accept
           </button>
+          {onRegenerate && (
+            <button
+              type="button"
+              onClick={onRegenerate}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                padding: '5px 10px',
+                borderRadius: 6,
+                border: '1px solid var(--border-strong)',
+                background: 'transparent',
+                color: 'var(--fg-muted)',
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Regenerate
+            </button>
+          )}
           <button
             type="button"
             onClick={onDiscard}

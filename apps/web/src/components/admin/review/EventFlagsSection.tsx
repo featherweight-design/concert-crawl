@@ -1,11 +1,13 @@
 'use client'
 
-import { useState } from 'react'
-import { CheckCircle2 } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { CheckCircle2, Filter } from 'lucide-react'
+import { toast } from 'sonner'
 import { Panel, AdminButton, StatusBadge } from '@/components/admin/primitives'
 import { EventFlagRow } from './EventFlagRow'
 import { EventFlagInspector } from './EventFlagInspector'
 import { BulkActionDock } from './BulkActionDock'
+import { BulkApproveModal } from './BulkApproveModal'
 
 interface EventFlag {
   id: string
@@ -36,8 +38,20 @@ export const EventFlagsSection = ({
   onApprove,
   onReject,
 }: EventFlagsSectionProps) => {
-  const [activeId, setActiveId] = useState<string | null>(null)
+  const [activeId, setActiveId] = useState<string | null>(events[0]?.id ?? null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [hideNonConcert, setHideNonConcert] = useState(false)
+  const [showBulkModal, setShowBulkModal] = useState(false)
+  const [pendingApprovalIds, setPendingApprovalIds] = useState<Set<string>>(
+    new Set(),
+  )
+  const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current)
+    }
+  }, [])
 
   const handleSelect = (id: string, checked: boolean) => {
     setSelectedIds((prev) => {
@@ -53,7 +67,7 @@ export const EventFlagsSection = ({
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedIds(new Set(events.map((ev) => ev.id)))
+      setSelectedIds(new Set(visibleEvents.map((ev) => ev.id)))
     } else {
       setSelectedIds(new Set())
     }
@@ -66,7 +80,10 @@ export const EventFlagsSection = ({
       next.delete(id)
       return next
     })
-    if (activeId === id) setActiveId(null)
+    if (activeId === id) {
+      const remaining = visibleEvents.filter((ev) => ev.id !== id)
+      setActiveId(remaining[0]?.id ?? null)
+    }
   }
 
   const handleReject = (id: string) => {
@@ -76,13 +93,46 @@ export const EventFlagsSection = ({
       next.delete(id)
       return next
     })
-    if (activeId === id) setActiveId(null)
+    if (activeId === id) {
+      const remaining = visibleEvents.filter((ev) => ev.id !== id)
+      setActiveId(remaining[0]?.id ?? null)
+    }
   }
 
-  const handleBulkApprove = async () => {
-    await Promise.allSettled(Array.from(selectedIds).map((id) => onApprove(id)))
+  const handleBulkApprove = () => {
+    const ids = Array.from(selectedIds)
+    const approving = new Set(ids)
+
+    setShowBulkModal(false)
     setSelectedIds(new Set())
-    setActiveId(null)
+    setActiveId((prev) =>
+      prev && approving.has(prev)
+        ? (visibleEvents.find((ev) => !approving.has(ev.id))?.id ?? null)
+        : prev,
+    )
+    setPendingApprovalIds(approving)
+
+    if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current)
+
+    pendingTimerRef.current = setTimeout(() => {
+      void Promise.allSettled(ids.map((id) => onApprove(id)))
+      setPendingApprovalIds(new Set())
+      pendingTimerRef.current = null
+    }, 6000)
+
+    toast(`${ids.length} event${ids.length !== 1 ? 's' : ''} approved`, {
+      duration: 6000,
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          if (pendingTimerRef.current) {
+            clearTimeout(pendingTimerRef.current)
+            pendingTimerRef.current = null
+          }
+          setPendingApprovalIds(new Set())
+        },
+      },
+    })
   }
 
   const handleBulkReject = async () => {
@@ -92,42 +142,58 @@ export const EventFlagsSection = ({
   }
 
   if (events.length === 0) {
+    const emptyTitle = (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+        Event flags
+        <StatusBadge kind="success">queue clear</StatusBadge>
+      </span>
+    )
+
     return (
-      <Panel title="Event flags">
+      <Panel title={emptyTitle}>
         <div
           style={{
-            padding: '18px 22px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
+            gap: 12,
+            padding: '4px 0',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              background:
+                'color-mix(in oklab, var(--success) 14%, transparent)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <CheckCircle2 size={18} color="var(--success)" />
+          </div>
+          <div>
             <div
               style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                background:
-                  'color-mix(in oklab, var(--success) 14%, transparent)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 14,
+                fontWeight: 700,
+                color: 'var(--fg)',
               }}
             >
-              <CheckCircle2 size={18} color="var(--success)" />
+              Queue is clear.
             </div>
-            <div>
-              <StatusBadge kind="success">queue clear</StatusBadge>
-              <div
-                style={{
-                  fontSize: 13,
-                  color: 'var(--fg-muted)',
-                  fontFamily: "'Inter', sans-serif",
-                }}
-              >
-                No events pending review
-              </div>
+            <div
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 13,
+                color: 'var(--fg-muted)',
+                marginTop: 2,
+              }}
+            >
+              Every flagged event has been triaged. Next sweep runs at 18:00 MT.
             </div>
           </div>
         </div>
@@ -135,67 +201,87 @@ export const EventFlagsSection = ({
     )
   }
 
-  const allSelected = events.length > 0 && selectedIds.size === events.length
+  const visibleEvents = (
+    hideNonConcert
+      ? events.filter(
+          (ev) =>
+            !ev.genre?.some((tag) => tag.toLowerCase().includes('non-concert')),
+        )
+      : events
+  ).filter((ev) => !pendingApprovalIds.has(ev.id))
 
-  return (
-    <Panel title="Event flags" padding={0}>
-      {/* Header */}
-      <div
+  const allSelected =
+    visibleEvents.length > 0 && selectedIds.size === visibleEvents.length
+
+  const panelTitle = (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+      Event flags
+      <span
         style={{
-          padding: '10px 16px',
-          display: 'flex',
+          display: 'inline-flex',
           alignItems: 'center',
-          gap: 12,
-          borderBottom: '1px solid var(--border)',
+          padding: '2px 9px',
+          borderRadius: 20,
+          border: '1.5px solid var(--warning)',
+          fontSize: 12,
+          fontWeight: 600,
+          color: 'var(--warning)',
+          letterSpacing: 0,
+          lineHeight: 1.4,
         }}
       >
-        <label
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            fontSize: 13,
-            color: 'var(--fg-muted)',
-            cursor: 'pointer',
-            fontFamily: "'Inter', sans-serif",
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={allSelected}
-            onChange={(evt) => handleSelectAll(evt.target.checked)}
-            style={{ accentColor: 'var(--signal)', width: 15, height: 15 }}
-          />
-          Select all
-        </label>
+        {events.length} pending
+      </span>
+    </span>
+  )
 
-        {selectedIds.size > 0 && (
-          <AdminButton
-            variant="ghost"
-            size="sm"
-            onClick={() => setSelectedIds(new Set())}
-          >
-            Deselect all
-          </AdminButton>
-        )}
+  const panelAction = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <label
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          fontSize: 13,
+          color: 'var(--fg-muted)',
+          cursor: 'pointer',
+          fontFamily: "'Inter', sans-serif",
+          userSelect: 'none',
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={allSelected}
+          onChange={(evt) => handleSelectAll(evt.target.checked)}
+          style={{ accentColor: 'var(--signal)', width: 15, height: 15 }}
+        />
+        Select all
+      </label>
+      <AdminButton
+        variant={hideNonConcert ? 'outline' : 'ghost'}
+        size="sm"
+        icon={Filter}
+        onClick={() => setHideNonConcert((prev) => !prev)}
+      >
+        Hide non-concert
+      </AdminButton>
+    </div>
+  )
 
-        <span style={{ marginLeft: 'auto' }}>
-          <StatusBadge kind="warning">{events.length}</StatusBadge>
-        </span>
-      </div>
-
-      {/* Body: split grid */}
+  return (
+    <Panel title={panelTitle} action={panelAction} padding={0}>
+      {/* Body: split grid with fixed height so list scrolls */}
       <div
         style={{
           display: 'grid',
           gridTemplateColumns: '1.1fr 1fr',
-          minHeight: 420,
+          height: 560,
           position: 'relative',
         }}
       >
-        {/* Left: list */}
+        {/* Left: scrollable list */}
         <div style={{ overflowY: 'auto' }}>
-          {events.map((ev) => (
+          {visibleEvents.map((ev) => (
             <EventFlagRow
               key={ev.id}
               event={ev}
@@ -211,7 +297,7 @@ export const EventFlagsSection = ({
 
         {/* Right: inspector */}
         <EventFlagInspector
-          event={events.find((ev) => ev.id === activeId) ?? null}
+          event={visibleEvents.find((ev) => ev.id === activeId) ?? null}
           onApprove={handleApprove}
           onReject={handleReject}
           onClose={() => setActiveId(null)}
@@ -222,9 +308,19 @@ export const EventFlagsSection = ({
       {selectedIds.size > 0 && (
         <BulkActionDock
           count={selectedIds.size}
-          onApproveAll={() => void handleBulkApprove()}
+          onApproveAll={() => {
+            setShowBulkModal(true)
+          }}
           onRejectAll={() => void handleBulkReject()}
           onClear={() => setSelectedIds(new Set())}
+        />
+      )}
+
+      {showBulkModal && (
+        <BulkApproveModal
+          events={visibleEvents.filter((ev) => selectedIds.has(ev.id))}
+          onConfirm={() => void handleBulkApprove()}
+          onCancel={() => setShowBulkModal(false)}
         />
       )}
     </Panel>

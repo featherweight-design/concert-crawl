@@ -1,6 +1,6 @@
 import type { CrawlRun, Event, Venue } from '@concert-crawl/types'
 
-export const LLM_BUDGET_USD = 40
+export const LLM_BUDGET_USD = 20
 
 export interface RawVenueStatus {
   id: string
@@ -105,7 +105,11 @@ export function buildCrawlHealthHint(rows: CrawlStatusRow[]): string {
     const worst = blockedRows.reduce((aa, bb) =>
       bb.consecutiveFailures > aa.consecutiveFailures ? bb : aa,
     )
-    return `${worst.venueName} blocked · ${ordinal(worst.consecutiveFailures)} failure`
+    const failureSuffix =
+      worst.consecutiveFailures > 0
+        ? ` · ${ordinal(worst.consecutiveFailures)} failure`
+        : ''
+    return `${worst.venueName} blocked${failureSuffix}`
   }
 
   const mostFailing = rows

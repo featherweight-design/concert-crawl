@@ -1,5 +1,5 @@
 interface PanelProps {
-  title?: string
+  title?: React.ReactNode
   action?: React.ReactNode
   padding?: number | string
   children: React.ReactNode
@@ -29,9 +29,9 @@ export const Panel = ({
           borderBottom: '1px solid var(--border)',
         }}
       >
-        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--fg)' }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--fg)' }}>
           {title}
-        </span>
+        </div>
         {action && <div>{action}</div>}
       </div>
     )}

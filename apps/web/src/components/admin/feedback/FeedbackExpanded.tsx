@@ -1,14 +1,91 @@
 'use client'
 
 import { useState } from 'react'
-import { ExternalLink } from 'lucide-react'
-import { MonoLabel, AdminButton } from '@/components/admin/primitives'
+import {
+  ExternalLink,
+  Check,
+  Flag,
+  SquarePen,
+  User,
+  ChevronRight,
+  X,
+  LayoutGrid,
+  Copy,
+} from 'lucide-react'
+import { MonoLabel } from '@/components/admin/primitives'
 import type { FeedbackItem } from './FeedbackRow'
+
+const REPO = 'HartiganHM/concert-crawl'
+const MT_TIMEZONE = 'America/Denver'
 
 interface FeedbackExpandedProps {
   item: FeedbackItem
   onStatusChange: (id: string, status: FeedbackItem['status']) => void
   onNotesChange: (id: string, notes: string) => void
+}
+
+function buildGitHubIssueUrl(item: FeedbackItem): string {
+  const meta = item.metadata ?? {}
+  const route = (() => {
+    try {
+      return new URL(item.pageUrl).pathname
+    } catch {
+      return item.pageUrl
+    }
+  })()
+  const title = `[${item.category}] ${item.message.slice(0, 72)}`
+  const body = [
+    `**User feedback:**`,
+    item.message,
+    ``,
+    `**Context:**`,
+    `- Route: ${route}`,
+    meta['theme'] ? `- Theme: ${String(meta['theme'])}` : null,
+    meta['build'] ? `- Build: ${String(meta['build'])}` : null,
+    meta['userAgent'] ? `- Device: ${String(meta['userAgent'])}` : null,
+    `- User ID: ${item.userId}`,
+    `- Submitted: ${new Date(item.createdAt).toISOString()}`,
+  ]
+    .filter(Boolean)
+    .join('\n')
+
+  return `https://github.com/${REPO}/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=${encodeURIComponent(`type: bug,source: beta-feedback,phase: beta,priority: normal`)}`
+}
+
+function formatSubmitted(iso: string): string {
+  return (
+    new Date(iso)
+      .toLocaleString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+        timeZone: MT_TIMEZONE,
+      })
+      .replace(',', '') + ' MT'
+  )
+}
+
+const CONTEXT_ROW_STYLE: React.CSSProperties = {
+  width: 80,
+  fontSize: 10,
+  textTransform: 'uppercase',
+  letterSpacing: '0.06em',
+  fontWeight: 700,
+  color: 'var(--fg-subtle)',
+  flexShrink: 0,
+  paddingTop: 1,
+}
+
+const CONTEXT_VALUE_STYLE: React.CSSProperties = {
+  flex: 1,
+  fontWeight: 600,
+  color: 'var(--fg)',
+  wordBreak: 'break-all',
+  lineHeight: 1.4,
 }
 
 export function FeedbackExpanded({
@@ -18,7 +95,9 @@ export function FeedbackExpanded({
 }: FeedbackExpandedProps) {
   const [notes, setNotes] = useState(item.adminNotes ?? '')
   const [isSaving, setIsSaving] = useState(false)
+  const [isCopied, setIsCopied] = useState(false)
   const isUnread = item.status === 'unread'
+  const isFlagged = item.status === 'flagged'
 
   const handleNotesBlur = async () => {
     if (notes === (item.adminNotes ?? '')) return
@@ -30,12 +109,44 @@ export function FeedbackExpanded({
     }
   }
 
-  const screenshot = item.metadata?.screenshot as string | null | undefined
-  const metaEntries = item.metadata
-    ? Object.entries(item.metadata).filter(
-        ([key, val]) => val != null && key !== 'screenshot',
-      )
-    : []
+  const handleCopyIssueUrl = async () => {
+    if (!item.issueUrl) return
+    try {
+      await navigator.clipboard.writeText(item.issueUrl)
+      setIsCopied(true)
+      setTimeout(() => setIsCopied(false), 1500)
+    } catch {
+      // clipboard write unavailable in this context
+    }
+  }
+
+  const meta = item.metadata ?? {}
+  const screenshot =
+    (meta['screenshot'] as string | null | undefined) ??
+    (meta['screenshotDataUrl'] as string | null | undefined)
+
+  const route = (() => {
+    try {
+      return new URL(item.pageUrl).pathname
+    } catch {
+      return item.pageUrl
+    }
+  })()
+
+  const ghUrl = buildGitHubIssueUrl(item)
+  const handle = `@${item.userId.slice(0, 10)}`
+
+  const contextRows: { label: string; value: string | null | undefined }[] = [
+    { label: 'Route', value: route },
+    { label: 'Theme', value: meta['theme'] as string | undefined },
+    { label: 'Build', value: meta['build'] as string | undefined },
+    {
+      label: 'Device',
+      value: (meta['userAgent'] ?? meta['device']) as string | undefined,
+    },
+    { label: 'Submitted', value: formatSubmitted(item.createdAt) },
+    { label: 'User ID', value: item.userId },
+  ]
 
   return (
     <div
@@ -53,8 +164,9 @@ export function FeedbackExpanded({
           marginTop: 12,
         }}
       >
-        {/* Left column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* Left column: Full Body + Screenshot + Admin Notes */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* Full Body */}
           <div>
             <MonoLabel>full body</MonoLabel>
             <div
@@ -74,18 +186,113 @@ export function FeedbackExpanded({
             </div>
           </div>
 
+          {/* Screenshot */}
+          <div>
+            <MonoLabel>screenshot</MonoLabel>
+            <div
+              style={{
+                marginTop: 8,
+                borderRadius: 8,
+                overflow: 'hidden',
+                border: '1px solid var(--border)',
+                background: screenshot ? 'var(--surface-1)' : undefined,
+                position: 'relative',
+              }}
+            >
+              {screenshot ? (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={screenshot}
+                    alt="User screenshot"
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      maxHeight: 240,
+                      objectFit: 'cover',
+                      objectPosition: 'top',
+                    }}
+                  />
+                  <a
+                    href={screenshot}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      position: 'absolute',
+                      bottom: 8,
+                      right: 8,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: '#F1E6D5',
+                      background: 'rgba(0,0,0,0.55)',
+                      backdropFilter: 'blur(4px)',
+                      padding: '4px 8px',
+                      borderRadius: 6,
+                      textDecoration: 'none',
+                      fontFamily: "'Inter', sans-serif",
+                    }}
+                  >
+                    <ExternalLink size={10} />
+                    Open full size
+                  </a>
+                </>
+              ) : (
+                <div
+                  style={{
+                    height: 160,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 10,
+                    background: `repeating-linear-gradient(
+                      -45deg,
+                      color-mix(in oklab, var(--border) 60%, transparent),
+                      color-mix(in oklab, var(--border) 60%, transparent) 1px,
+                      var(--surface-1) 1px,
+                      var(--surface-1) 12px
+                    )`,
+                  }}
+                >
+                  <LayoutGrid
+                    size={22}
+                    color="var(--fg-subtle)"
+                    style={{ opacity: 0.4 }}
+                  />
+                  <span
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: '0.1em',
+                      color: 'var(--fg-subtle)',
+                      textTransform: 'uppercase',
+                      opacity: 0.6,
+                    }}
+                  >
+                    User-attached screenshot
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Admin Notes */}
           <div>
             <MonoLabel>admin notes</MonoLabel>
             <textarea
               value={notes}
               onChange={(ev) => setNotes(ev.target.value)}
               onBlur={() => void handleNotesBlur()}
-              placeholder="Internal notes…"
+              placeholder="Internal note — visible to you, not to the user…"
               rows={3}
               style={{
                 display: 'block',
                 width: '100%',
-                marginTop: 6,
+                marginTop: 8,
                 padding: '10px 12px',
                 borderRadius: 8,
                 border: '1px solid var(--border-strong)',
@@ -102,8 +309,9 @@ export function FeedbackExpanded({
           </div>
         </div>
 
-        {/* Right column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* Right column: Context + Create Issue */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* Context */}
           <div>
             <MonoLabel>context</MonoLabel>
             <div
@@ -114,209 +322,146 @@ export function FeedbackExpanded({
                 borderRadius: 8,
                 fontFamily: "'JetBrains Mono', monospace",
                 fontSize: 11,
-                marginTop: 6,
+                marginTop: 8,
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 8,
               }}
             >
-              <div style={{ display: 'flex', gap: 8 }}>
-                <span
-                  style={{
-                    width: 70,
-                    fontSize: 10,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                    fontWeight: 700,
-                    color: 'var(--fg-subtle)',
-                    flexShrink: 0,
-                  }}
-                >
-                  page
-                </span>
-                <span
-                  style={{
-                    flex: 1,
-                    fontWeight: 600,
-                    color: 'var(--fg)',
-                    wordBreak: 'break-all',
-                  }}
-                >
-                  {item.pageUrl}
-                </span>
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <span
-                  style={{
-                    width: 70,
-                    fontSize: 10,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                    fontWeight: 700,
-                    color: 'var(--fg-subtle)',
-                    flexShrink: 0,
-                  }}
-                >
-                  user
-                </span>
-                <span style={{ flex: 1, fontWeight: 600, color: 'var(--fg)' }}>
-                  {item.userId}
-                </span>
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <span
-                  style={{
-                    width: 70,
-                    fontSize: 10,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                    fontWeight: 700,
-                    color: 'var(--fg-subtle)',
-                    flexShrink: 0,
-                  }}
-                >
-                  category
-                </span>
-                <span style={{ flex: 1, fontWeight: 600, color: 'var(--fg)' }}>
-                  {item.category}
-                </span>
-              </div>
-              {metaEntries.map(([key, val]) => (
-                <div key={key} style={{ display: 'flex', gap: 8 }}>
-                  <span
+              {contextRows.map(({ label, value }) =>
+                value ? (
+                  <div
+                    key={label}
                     style={{
-                      width: 70,
-                      fontSize: 10,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.06em',
-                      fontWeight: 700,
-                      color: 'var(--fg-subtle)',
-                      flexShrink: 0,
+                      display: 'flex',
+                      gap: 8,
+                      alignItems: 'flex-start',
                     }}
                   >
-                    {key}
-                  </span>
-                  <span
-                    style={{ flex: 1, fontWeight: 600, color: 'var(--fg)' }}
-                  >
-                    {String(val)}
-                  </span>
-                </div>
-              ))}
+                    <span style={CONTEXT_ROW_STYLE}>{label}</span>
+                    <span style={CONTEXT_VALUE_STYLE}>{value}</span>
+                  </div>
+                ) : null,
+              )}
             </div>
           </div>
 
-          {screenshot && (
+          {/* Create / Linked Issue */}
+          {item.issueUrl ? (
             <div>
-              <MonoLabel>screenshot</MonoLabel>
+              <MonoLabel color="var(--accent)">linked issue</MonoLabel>
               <div
                 style={{
-                  marginTop: 6,
-                  position: 'relative',
+                  padding: '12px 14px',
+                  marginTop: 8,
+                  background:
+                    'color-mix(in oklab, var(--accent) 6%, var(--bg-elevated))',
+                  border:
+                    '1px solid color-mix(in oklab, var(--accent) 32%, transparent)',
                   borderRadius: 8,
-                  overflow: 'hidden',
-                  border: '1px solid var(--border)',
-                  background: 'var(--surface-1)',
-                  height: 200,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
                 }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={screenshot}
-                  alt="User screenshot"
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    objectPosition: 'top',
-                  }}
-                />
                 <a
-                  href={screenshot}
+                  href={item.issueUrl}
                   target="_blank"
                   rel="noreferrer"
                   style={{
-                    position: 'absolute',
-                    bottom: 8,
-                    right: 8,
+                    flex: 1,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    fontFamily: "'JetBrains Mono', monospace",
                     fontSize: 11,
-                    fontWeight: 600,
-                    color: '#F1E6D5',
-                    background: 'rgba(0,0,0,0.55)',
-                    backdropFilter: 'blur(4px)',
-                    padding: '3px 8px',
-                    borderRadius: 6,
+                    fontWeight: 700,
+                    color: 'var(--accent)',
                     textDecoration: 'none',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <ExternalLink size={12} style={{ flexShrink: 0 }} />
+                  {item.issueUrl.replace('https://', '')}
+                </a>
+                <button
+                  type="button"
+                  onClick={() => void handleCopyIssueUrl()}
+                  title="Copy URL"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 26,
+                    height: 26,
+                    borderRadius: 6,
+                    border:
+                      '1px solid color-mix(in oklab, var(--accent) 32%, transparent)',
+                    background: 'transparent',
+                    color: isCopied ? 'var(--success)' : 'var(--accent)',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                  }}
+                >
+                  {isCopied ? <Check size={12} /> : <Copy size={12} />}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <MonoLabel>create issue</MonoLabel>
+              <div
+                style={{
+                  padding: '14px',
+                  marginTop: 8,
+                  background: 'var(--bg-elevated)',
+                  border: '1px dashed var(--border-strong)',
+                  borderRadius: 8,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 12,
+                }}
+              >
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 12,
+                    lineHeight: 1.55,
+                    color: 'var(--fg-muted)',
                     fontFamily: "'Inter', sans-serif",
                   }}
                 >
-                  Open full size ↗
+                  Stage a GitHub issue using this feedback&rsquo;s body +
+                  context strip as the description. You can edit before submit.
+                </p>
+                <a
+                  href={ghUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    height: 32,
+                    padding: '0 12px',
+                    borderRadius: 6,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    fontFamily: "'Inter', sans-serif",
+                    color: 'var(--fg)',
+                    background: 'transparent',
+                    border: '1px solid var(--border-strong)',
+                    textDecoration: 'none',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <ExternalLink size={14} />
+                  Open in GitHub…
                 </a>
               </div>
-            </div>
-          )}
-
-          {item.issueUrl ? (
-            <div
-              style={{
-                padding: '12px 14px',
-                background: 'var(--bg-elevated)',
-                border:
-                  '1px solid color-mix(in oklab, var(--accent) 32%, transparent)',
-                borderRadius: 8,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 10,
-              }}
-            >
-              <MonoLabel>linked issue</MonoLabel>
-              <a
-                href={item.issueUrl}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: 'var(--accent)',
-                  textDecoration: 'none',
-                }}
-              >
-                <ExternalLink size={12} />
-                {item.issueUrl}
-              </a>
-            </div>
-          ) : (
-            <div
-              style={{
-                padding: '12px 14px',
-                background: 'var(--bg-elevated)',
-                border: '1px dashed var(--border-strong)',
-                borderRadius: 8,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 10,
-              }}
-            >
-              <MonoLabel>no linked issue</MonoLabel>
-              <a
-                href={`https://github.com/HartiganHM/concert-crawl/issues/new?title=${encodeURIComponent(`[${item.category}] ${item.message.slice(0, 60)}`)}&body=${encodeURIComponent(`User feedback:\n\n${item.message}\n\nPage: ${item.pageUrl}\nUser: ${item.userId}`)}`}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: 'var(--signal)',
-                  textDecoration: 'none',
-                }}
-              >
-                Open in GitHub →
-              </a>
             </div>
           )}
         </div>
@@ -334,42 +479,123 @@ export function FeedbackExpanded({
           borderTop: '1px solid var(--border)',
         }}
       >
-        <AdminButton
-          size="sm"
-          variant="outline"
+        {/* Left actions */}
+        <button
+          type="button"
           onClick={() => onStatusChange(item.id, isUnread ? 'read' : 'unread')}
+          style={actionButtonStyle('outline')}
         >
+          <Check size={13} />
           Mark {isUnread ? 'read' : 'unread'}
-        </AdminButton>
-        <AdminButton
-          size="sm"
-          variant="ghost"
-          onClick={() => onStatusChange(item.id, 'flagged')}
-        >
-          Flag
-        </AdminButton>
+        </button>
 
+        <button
+          type="button"
+          onClick={() =>
+            onStatusChange(item.id, isFlagged ? 'unread' : 'flagged')
+          }
+          style={actionButtonStyle('ghost')}
+        >
+          <Flag size={13} />
+          {isFlagged ? 'Unflag' : 'Flag for investigation'}
+        </button>
+
+        <a
+          href={ghUrl}
+          target="_blank"
+          rel="noreferrer"
+          style={actionLinkStyle('ghost')}
+        >
+          <SquarePen size={13} />
+          Open in GitHub…
+        </a>
+
+        <a
+          href={`/admin/users/${item.userId}`}
+          style={actionLinkStyle('ghost')}
+        >
+          <User size={13} />
+          View {handle}
+          <ChevronRight size={12} />
+        </a>
+
+        {/* Right actions */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
           {item.status !== 'resolved' && (
-            <AdminButton
-              size="sm"
-              variant="success"
+            <button
+              type="button"
               onClick={() => onStatusChange(item.id, 'resolved')}
+              style={actionButtonStyle('success')}
             >
+              <Check size={13} />
               Resolve
-            </AdminButton>
+            </button>
           )}
           {item.status !== 'archived' && (
-            <AdminButton
-              size="sm"
-              variant="ghost"
+            <button
+              type="button"
               onClick={() => onStatusChange(item.id, 'archived')}
+              style={actionButtonStyle('ghost')}
             >
+              <X size={13} />
               Archive
-            </AdminButton>
+            </button>
           )}
         </div>
       </div>
     </div>
   )
+}
+
+function actionButtonStyle(
+  variant: 'outline' | 'ghost' | 'success',
+): React.CSSProperties {
+  const base: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    height: 28,
+    padding: '0 10px',
+    borderRadius: 6,
+    fontSize: 12,
+    fontWeight: 500,
+    fontFamily: "'Inter', sans-serif",
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+    background: 'transparent',
+  }
+  if (variant === 'outline')
+    return {
+      ...base,
+      color: 'var(--fg)',
+      border: '1px solid var(--border-strong)',
+    }
+  if (variant === 'success')
+    return {
+      ...base,
+      color: 'var(--success)',
+      border: '1px solid rgba(47,122,77,0.3)',
+      background: 'rgba(47,122,77,0.08)',
+    }
+  return { ...base, color: 'var(--fg-muted)', border: '1px solid transparent' }
+}
+
+function actionLinkStyle(_variant: 'ghost'): React.CSSProperties {
+  return {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    height: 28,
+    padding: '0 10px',
+    borderRadius: 6,
+    fontSize: 12,
+    fontWeight: 500,
+    fontFamily: "'Inter', sans-serif",
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+    background: 'transparent',
+    color: 'var(--fg-muted)',
+    border: '1px solid transparent',
+    textDecoration: 'none',
+  }
 }

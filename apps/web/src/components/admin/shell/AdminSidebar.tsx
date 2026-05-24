@@ -169,9 +169,7 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
 
   const toggleMode = () => {
     setMode((prev) => {
-      const cycle: SidebarMode[] = ['full', 'rail', 'auto']
-      const idx = cycle.indexOf(prev)
-      const next = cycle[(idx + 1) % cycle.length] ?? 'auto'
+      const next = prev === 'rail' ? 'full' : 'rail'
       localStorage.setItem(STORAGE_KEY, next)
       return next
     })
@@ -526,15 +524,7 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
             name={effectiveMode === 'full' ? 'PanelLeftClose' : 'PanelLeft'}
             size={16}
           />
-          {effectiveMode === 'full' && (
-            <span>
-              {mode === 'auto'
-                ? 'Auto'
-                : mode === 'full'
-                  ? 'Collapse'
-                  : 'Expand'}
-            </span>
-          )}
+          {effectiveMode === 'full' && <span>Collapse</span>}
         </button>
       </div>
     </aside>

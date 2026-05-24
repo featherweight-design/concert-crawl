@@ -1,6 +1,6 @@
 import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
-import { StatCard } from '@/components/admin/primitives'
+import { StatCard, SectionHead } from '@/components/admin/primitives'
 import {
   CrawlSplitView,
   CrawlRunAllButton,
@@ -131,9 +131,22 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
   const eventsHint = eventsHintParts.join(' · ') || 'today'
 
   const mostRecentRun = runs[0]
-  const lastSweepValue = mostRecentRun?.createdAt
-    ? `${String(Math.round((Date.now() - new Date(mostRecentRun.createdAt).getTime()) / 60000))}m ago`
-    : '—'
+  const lastSweepMinutes = mostRecentRun?.createdAt
+    ? Math.round(
+        (Date.now() - new Date(mostRecentRun.createdAt).getTime()) / 60000,
+      )
+    : null
+  let lastSweepValue = '—'
+  if (lastSweepMinutes !== null) {
+    if (lastSweepMinutes >= 60) {
+      const hours = Math.floor(lastSweepMinutes / 60)
+      const mins = lastSweepMinutes % 60
+      lastSweepValue = mins > 0 ? `${hours}h ${mins}m` : `${hours}h`
+    } else {
+      lastSweepValue = `${lastSweepMinutes}m`
+    }
+  }
+  const lastSweepUnit = lastSweepMinutes !== null ? 'ago' : undefined
 
   return (
     <div
@@ -143,38 +156,12 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
         gap: 24,
       }}
     >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          gap: 16,
-        }}
-      >
-        <div>
-          <h1
-            style={{
-              fontSize: 22,
-              fontWeight: 700,
-              color: 'var(--fg)',
-              margin: 0,
-            }}
-          >
-            Crawl status
-          </h1>
-          <p
-            style={{
-              fontSize: 13,
-              color: 'var(--fg-muted)',
-              margin: '4px 0 0',
-            }}
-          >
-            Every venue crawl, run by run. The dataset is only as fresh as this
-            page.
-          </p>
-        </div>
-        <CrawlRunAllButton />
-      </div>
+      <SectionHead
+        eyebrow="automation"
+        title="Crawl status"
+        subtitle="Every venue crawl, run by run. Click a failed row for diagnostics + staged remediation."
+        actions={<CrawlRunAllButton />}
+      />
 
       <IssuesBanner
         blockedVenues={status.filter(
@@ -188,13 +175,14 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
           gap: 16,
         }}
       >
         <StatCard
           label="Last sweep"
           value={lastSweepValue}
+          {...(lastSweepUnit !== undefined && { unit: lastSweepUnit })}
           iconName="RefreshCw"
           kind="neutral"
           hint={sweepHint}
@@ -209,6 +197,7 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
         <StatCard
           label="Events ingested"
           value={String(totalInserted + totalUpdated)}
+          unit="today"
           iconName="CalendarCheck2"
           kind="success"
           hint={eventsHint}

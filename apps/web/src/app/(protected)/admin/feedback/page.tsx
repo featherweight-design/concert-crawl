@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
-import { StatCard, Panel } from '@/components/admin/primitives'
+import { StatCard, Panel, SectionHead } from '@/components/admin/primitives'
 import { FeedbackFilterRail } from '@/components/admin/feedback/FeedbackFilterRail'
 import { FeedbackRow } from '@/components/admin/feedback/FeedbackRow'
 import { FeedbackExpanded } from '@/components/admin/feedback/FeedbackExpanded'
@@ -15,6 +15,25 @@ import type { FeedbackItem } from '@/components/admin/feedback/FeedbackRow'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
+const STATUS_CHIPS: { value: FeedbackStatusFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'unread', label: 'Unread' },
+  { value: 'flagged', label: 'Flagged' },
+  { value: 'issue_opened', label: 'Issue opened' },
+  { value: 'resolved', label: 'Resolved' },
+  { value: 'archived', label: 'Archived' },
+]
+
+const PANEL_TITLE: Record<FeedbackStatusFilter, string> = {
+  all: 'Active feedback',
+  unread: 'Unread feedback',
+  flagged: 'Flagged feedback',
+  issue_opened: 'Issues opened',
+  resolved: 'Resolved feedback',
+  archived: 'Archived feedback',
+  read: 'Read feedback',
+}
+
 export default function FeedbackPage() {
   const { getToken } = useAuth()
   const router = useRouter()
@@ -25,6 +44,15 @@ export default function FeedbackPage() {
     new Set(['feedback_surface']),
   )
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)')
+    setIsMobile(mq.matches)
+    const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   const fetchFeedback = async () => {
     const token = await getToken()
@@ -63,6 +91,30 @@ export default function FeedbackPage() {
     })
     setItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, status } : item)),
+    )
+    router.refresh()
+  }
+
+  const handleMarkAllRead = async () => {
+    const token = await getToken()
+    if (!token) return
+    const unreadItems = items.filter((item) => item.status === 'unread')
+    await Promise.all(
+      unreadItems.map((item) =>
+        fetch(`${API_BASE}/v1/admin/feedback/${item.id}`, {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ status: 'read' }),
+        }),
+      ),
+    )
+    setItems((prev) =>
+      prev.map((item) =>
+        item.status === 'unread' ? { ...item, status: 'read' as const } : item,
+      ),
     )
     router.refresh()
   }
@@ -117,36 +169,210 @@ export default function FeedbackPage() {
       Date.now() - new Date(item.createdAt).getTime() < 7 * 24 * 60 * 60 * 1000,
   ).length
 
+  const now = new Date()
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  const issuesThisMonth = items.filter(
+    (item) =>
+      item.status === 'issue_opened' &&
+      new Date(item.createdAt) >= startOfMonth,
+  ).length
+
+  const mobileSubtitle = [
+    counts.unread > 0 ? `${counts.unread} unread` : null,
+    counts.flagged > 0 ? `${counts.flagged} flagged` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
+  const feedbackList = (
+    <>
+      {isLoading ? (
+        <div
+          style={{
+            padding: 32,
+            textAlign: 'center',
+            color: 'var(--fg-subtle)',
+            fontSize: 13,
+          }}
+        >
+          Loading…
+        </div>
+      ) : filtered.length === 0 ? (
+        <div
+          style={{
+            padding: 32,
+            textAlign: 'center',
+            color: 'var(--fg-subtle)',
+            fontSize: 13,
+          }}
+        >
+          No feedback in this category
+        </div>
+      ) : (
+        filtered.map((item) => (
+          <div key={item.id}>
+            <FeedbackRow
+              item={item}
+              isExpanded={expandedId === item.id}
+              onToggle={handleToggle}
+            />
+            {expandedId === item.id && (
+              <FeedbackExpanded
+                item={item}
+                onStatusChange={handleStatusChange}
+                onNotesChange={handleNotesChange}
+              />
+            )}
+          </div>
+        ))
+      )}
+    </>
+  )
+
+  if (isMobile) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <SectionHead
+          eyebrow="operations · users"
+          title={
+            <span
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}
+            >
+              Feedback
+              {counts.unread > 0 && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    padding: '3px 10px',
+                    borderRadius: 20,
+                    border: '1.5px solid var(--signal)',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: 'var(--signal)',
+                    letterSpacing: 0,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {counts.unread} unread
+                </span>
+              )}
+            </span>
+          }
+          subtitle={mobileSubtitle || undefined}
+        />
+
+        {/* Horizontal chip filter */}
+        <div
+          style={{
+            display: 'flex',
+            gap: 8,
+            overflowX: 'auto',
+            paddingBottom: 2,
+            scrollbarWidth: 'none',
+          }}
+        >
+          {STATUS_CHIPS.map((chip) => {
+            const isActive = activeFilter === chip.value
+            return (
+              <button
+                key={chip.value}
+                type="button"
+                onClick={() => setActiveFilter(chip.value)}
+                style={{
+                  flexShrink: 0,
+                  height: 32,
+                  padding: '0 14px',
+                  borderRadius: 20,
+                  border: isActive
+                    ? '1.5px solid var(--signal)'
+                    : '1px solid var(--border-strong)',
+                  background: isActive ? 'var(--signal)' : 'var(--bg-elevated)',
+                  color: isActive ? 'var(--fg-on-accent)' : 'var(--fg-muted)',
+                  fontSize: 13,
+                  fontWeight: isActive ? 700 : 500,
+                  fontFamily: "'Inter', sans-serif",
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {chip.label}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Feedback list */}
+        <Panel padding={0}>{feedbackList}</Panel>
+      </div>
+    )
+  }
+
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <SectionHead
+        eyebrow="operations · users"
+        title={
+          <span
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}
+          >
+            Feedback
+            {counts.unread > 0 && (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '3px 10px',
+                  borderRadius: 20,
+                  border: '1.5px solid var(--signal)',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: 'var(--signal)',
+                  letterSpacing: 0,
+                  lineHeight: 1.4,
+                }}
+              >
+                {counts.unread} unread
+              </span>
+            )}
+          </span>
+        }
+        subtitle="Inbox for in-app feedback (and Sentry, soon email). Triage: mark read, flag for investigation, open a GH issue, or archive."
+      />
+
       {/* Stat cards */}
       <div
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(4, 1fr)',
           gap: 16,
-          marginBottom: 24,
         }}
       >
         <StatCard
           label="Last 7 days"
           value={String(lastWeek)}
-          iconName="MessageSquare"
+          iconName="Inbox"
+          kind="signal"
         />
         <StatCard
           label="Unread"
           value={String(counts.unread)}
-          iconName="Inbox"
+          iconName="AlertCircle"
+          kind="warning"
         />
         <StatCard
           label="Flagged"
           value={String(counts.flagged)}
           iconName="Flag"
+          kind="danger"
+          hint="awaiting investigation"
         />
         <StatCard
           label="Issues opened"
-          value={String(counts.issue_opened)}
-          iconName="GitPullRequest"
+          value={String(issuesThisMonth)}
+          iconName="ExternalLink"
+          kind="accent"
+          hint="this month"
         />
       </div>
 
@@ -168,60 +394,41 @@ export default function FeedbackPage() {
         />
 
         <Panel
-          title={`Feedback${activeFilter !== 'all' ? ` · ${activeFilter}` : ''}`}
+          title={PANEL_TITLE[activeFilter]}
           action={
-            <span
-              style={{
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 11,
-                color: 'var(--fg-subtle)',
-              }}
-            >
-              {filtered.length} items
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <span
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 11,
+                  color: 'var(--fg-subtle)',
+                }}
+              >
+                {filtered.length} items
+              </span>
+              {counts.unread > 0 && (
+                <button
+                  type="button"
+                  onClick={handleMarkAllRead}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: 'var(--fg-muted)',
+                    padding: 0,
+                  }}
+                >
+                  Mark all read
+                </button>
+              )}
+            </div>
           }
           padding={0}
         >
-          {isLoading ? (
-            <div
-              style={{
-                padding: 32,
-                textAlign: 'center',
-                color: 'var(--fg-subtle)',
-                fontSize: 13,
-              }}
-            >
-              Loading…
-            </div>
-          ) : filtered.length === 0 ? (
-            <div
-              style={{
-                padding: 32,
-                textAlign: 'center',
-                color: 'var(--fg-subtle)',
-                fontSize: 13,
-              }}
-            >
-              No feedback in this category
-            </div>
-          ) : (
-            filtered.map((item) => (
-              <div key={item.id}>
-                <FeedbackRow
-                  item={item}
-                  isExpanded={expandedId === item.id}
-                  onToggle={handleToggle}
-                />
-                {expandedId === item.id && (
-                  <FeedbackExpanded
-                    item={item}
-                    onStatusChange={handleStatusChange}
-                    onNotesChange={handleNotesChange}
-                  />
-                )}
-              </div>
-            ))
-          )}
+          {feedbackList}
         </Panel>
       </div>
     </div>

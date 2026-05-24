@@ -1,10 +1,19 @@
+import { ExternalLink } from 'lucide-react'
+import Link from 'next/link'
 import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
-import { SectionHead, StatCard, Panel } from '@/components/admin/primitives'
+import {
+  SectionHead,
+  StatCard,
+  Panel,
+  AdminButton,
+} from '@/components/admin/primitives'
 import type { VenueWithEventCount } from '@concert-crawl/types'
 import { VenueTableClient } from '@/components/admin/venue-table-client'
 import { deriveVenueStatus, venueHealthPercent } from '@/lib/admin/venue-status'
 import { AddVenueModal } from '@/components/admin/AddVenueModal'
+import { VenueStatusFilterButton } from '@/components/admin/venues/VenueStatusFilterButton'
+import { MobileAddVenueButton } from '@/components/admin/venues/MobileAddVenueButton'
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -31,6 +40,9 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
   const activeCount = venues.filter(
     (venue) => deriveVenueStatus(venue) === 'active',
   ).length
+  const blockedCount = venues.filter(
+    (venue) => deriveVenueStatus(venue) === 'blocked',
+  ).length
   const pausedBlockedCount = venues.filter(
     (venue) => deriveVenueStatus(venue) !== 'active',
   ).length
@@ -53,48 +65,58 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <SectionHead
         title="Venues"
-        subtitle="Configure crawl targets. Crawls run daily at 3 AM MT."
-        actions={<AddVenueModal />}
+        subtitle={`${venues.length} configured · ${blockedCount} blocked.`}
+        actions={
+          <>
+            <VenueStatusFilterButton currentFilter={statusFilter} />
+            <Link
+              href="/admin/venues/robots-audit"
+              style={{ textDecoration: 'none' }}
+            >
+              <AdminButton variant="outline" size="sm" icon={ExternalLink}>
+                robots.txt audit
+              </AdminButton>
+            </Link>
+            <AddVenueModal />
+          </>
+        }
       />
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-          gap: 16,
-        }}
-      >
+      <MobileAddVenueButton />
+
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
           label="Total venues"
           value={String(venues.length)}
           iconName="MapPin"
           kind="neutral"
+          noChip
         />
         <StatCard
           label="Active"
           value={String(activeCount)}
-          iconName="Activity"
+          iconName="MapPin"
           kind="success"
         />
         <StatCard
           label="Paused / Blocked"
           value={String(pausedBlockedCount)}
-          iconName="AlertTriangle"
+          iconName="MapPin"
           kind="warning"
         />
         <StatCard
           label="Avg health · 7d"
           value={`${String(avgHealth)}%`}
-          iconName="HeartPulse"
+          iconName="Activity"
           kind={
             avgHealth >= 80 ? 'success' : avgHealth >= 50 ? 'warning' : 'danger'
           }
-          hint="avg run success rate"
+          hint="average run success rate"
         />
       </div>
 
       <Panel padding={0}>
-        <VenueTableClient venues={filtered} currentFilter={statusFilter} />
+        <VenueTableClient venues={filtered} />
       </Panel>
     </div>
   )

@@ -1,32 +1,32 @@
 'use client'
 
-import { X } from 'lucide-react'
+import { Tag } from 'lucide-react'
 
 interface BulkActionDockProps {
   count: number
   onApproveAll: () => void
   onRejectAll: () => void
-  onClear: () => void
+  onClear?: () => void
+  onRetag?: () => void
 }
 
 export const BulkActionDock = ({
   count,
   onApproveAll,
   onRejectAll,
-  onClear,
+  onRetag,
 }: BulkActionDockProps) => {
   return (
     <div
       style={{
-        position: 'sticky',
-        bottom: 18,
-        alignSelf: 'center',
-        marginLeft: 'auto',
-        marginRight: 'auto',
+        position: 'fixed',
+        bottom: 24,
+        left: '50%',
+        transform: 'translateX(-50%)',
         display: 'inline-flex',
         alignItems: 'center',
         gap: 12,
-        padding: '10px 12px 10px 18px',
+        padding: '10px 14px',
         background: 'var(--ink)',
         borderRadius: 14,
         boxShadow: '0 12px 36px rgba(0,0,0,0.32), 0 2px 6px rgba(0,0,0,0.18)',
@@ -64,15 +64,29 @@ export const BulkActionDock = ({
         selected
       </span>
 
-      {/* Separator */}
-      <span
-        style={{
-          width: 1,
-          height: 18,
-          background: 'rgba(255,255,255,0.16)',
-          flexShrink: 0,
-        }}
-      />
+      {/* Re-tag (optional) */}
+      {onRetag && (
+        <button
+          onClick={onRetag}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+            padding: '6px 10px',
+            borderRadius: 7,
+            fontSize: 12,
+            fontWeight: 600,
+            fontFamily: "'Inter', sans-serif",
+            color: 'rgba(255,255,255,0.75)',
+            background: 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,255,255,0.14)',
+            cursor: 'pointer',
+          }}
+        >
+          <Tag size={12} />
+          Re-tag
+        </button>
+      )}
 
       {/* Reject all */}
       <button
@@ -89,13 +103,16 @@ export const BulkActionDock = ({
           cursor: 'pointer',
         }}
       >
-        Reject all
+        × Reject all
       </button>
 
       {/* Approve N */}
       <button
         onClick={onApproveAll}
         style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
           padding: '8px 14px',
           borderRadius: 8,
           background: 'var(--success)',
@@ -107,26 +124,7 @@ export const BulkActionDock = ({
           cursor: 'pointer',
         }}
       >
-        Approve {count}
-      </button>
-
-      {/* Clear */}
-      <button
-        onClick={onClear}
-        style={{
-          padding: 6,
-          borderRadius: 6,
-          background: 'transparent',
-          border: 'none',
-          cursor: 'pointer',
-          color: 'rgba(255,255,255,0.6)',
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-        aria-label="Clear selection"
-      >
-        <X size={14} />
+        ✓ Approve {count}
       </button>
     </div>
   )

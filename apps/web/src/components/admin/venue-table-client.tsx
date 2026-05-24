@@ -1,9 +1,17 @@
 'use client'
 
-import React, { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
+import React, { useState, useTransition, useEffect } from 'react'
 import Link from 'next/link'
+import {
+  ExternalLink,
+  ChevronRight,
+  ShieldCheck,
+  ShieldOff,
+  Play,
+  Pause,
+} from 'lucide-react'
 import type { VenueWithEventCount } from '@concert-crawl/types'
+import type { ExtractionStrategy } from '@concert-crawl/types'
 import {
   AdminButton,
   AdminTable,
@@ -14,7 +22,6 @@ import {
   StatusBadge,
   RelTime,
 } from '@/components/admin/primitives'
-import { ShieldCheck, ShieldOff, Play, Pause, ChevronRight } from 'lucide-react'
 import { VenueQuickView } from '@/components/admin/VenueQuickView'
 import {
   bulkVerifyVenues,
@@ -33,13 +40,6 @@ function sourceUrl(url: string): string {
   return url.replace(/^https?:\/\//, '')
 }
 
-function venueSubNotes(venue: VenueWithEventCount): string[] {
-  const notes: string[] = []
-  if (venue.robotsTxtAllowed === false) notes.push('robots.txt disallows')
-  if (venue.crawlNotes) notes.push(venue.crawlNotes)
-  return notes
-}
-
 const STATUS_BADGE_KIND: Record<VenueStatus, 'success' | 'warning' | 'danger'> =
   {
     active: 'success',
@@ -47,16 +47,38 @@ const STATUS_BADGE_KIND: Record<VenueStatus, 'success' | 'warning' | 'danger'> =
     blocked: 'danger',
   }
 
-interface Props {
-  venues: VenueWithEventCount[]
-  currentFilter: string | undefined
+function strategyLabel(strategy: ExtractionStrategy | null): string {
+  if (strategy === 'structured_data') return 'structured'
+  if (strategy === 'llm') return 'llm'
+  if (strategy === 'manual') return 'manual'
+  return 'auto'
 }
 
-export function VenueTableClient({ venues, currentFilter }: Props) {
-  const router = useRouter()
+function strategyKind(
+  strategy: ExtractionStrategy | null,
+): 'signal' | 'accent' | 'neutral' {
+  if (strategy === 'structured_data') return 'signal'
+  if (strategy === 'llm') return 'accent'
+  return 'neutral'
+}
+
+interface Props {
+  venues: VenueWithEventCount[]
+}
+
+export function VenueTableClient({ venues }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [isPending, startTransition] = useTransition()
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 640px)')
+    setIsMobile(mq.matches)
+    const handler = (evt: MediaQueryListEvent) => setIsMobile(evt.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   function toggleExpand(id: string) {
     setExpandedId((prev) => (prev === id ? null : id))
@@ -86,21 +108,138 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
     })
   }
 
-  function handleFilterChange(evt: React.ChangeEvent<HTMLSelectElement>) {
-    const val = evt.target.value
-    if (val) {
-      router.push(`/admin/venues?status=${val}`)
-    } else {
-      router.push('/admin/venues')
-    }
-  }
-
   function runBulkAction(action: (ids: string[]) => Promise<void>) {
     const ids = Array.from(selected)
     startTransition(async () => {
       await action(ids)
       setSelected(new Set())
     })
+  }
+
+  if (isMobile) {
+    if (venues.length === 0) {
+      return (
+        <div
+          style={{
+            padding: '32px 16px',
+            textAlign: 'center',
+            fontFamily: "'Inter', sans-serif",
+            fontSize: 13,
+            color: 'var(--fg-muted)',
+          }}
+        >
+          No venues match the current filter.
+        </div>
+      )
+    }
+
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+          padding: 12,
+        }}
+      >
+        {venues.map((venue) => {
+          const status = deriveVenueStatus(venue)
+          const isExpanded = expandedId === venue.id
+
+          return (
+            <div
+              key={venue.id}
+              style={{
+                background: 'var(--bg-elevated)',
+                borderRadius: 12,
+                border: `1px solid ${isExpanded ? 'var(--border-strong)' : 'var(--border)'}`,
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  padding: '12px 14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Link
+                    href={`/admin/venues/${venue.id}`}
+                    style={{
+                      display: 'block',
+                      fontFamily: 'var(--admin-font, Inter, sans-serif)',
+                      fontSize: 14,
+                      fontWeight: 700,
+                      color: 'var(--fg)',
+                      textDecoration: 'none',
+                      marginBottom: 4,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {venue.name}
+                  </Link>
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: 6,
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <StatusBadge kind={STATUS_BADGE_KIND[status]} dot>
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </StatusBadge>
+                    <StatusBadge
+                      kind={strategyKind(venue.extractionStrategy)}
+                      variant="mono"
+                    >
+                      {strategyLabel(venue.extractionStrategy)}
+                    </StatusBadge>
+                    {venue.lastCrawledAt && (
+                      <span
+                        style={{
+                          fontFamily: "'JetBrains Mono', monospace",
+                          fontSize: 11,
+                          color: 'var(--fg-muted)',
+                        }}
+                      >
+                        · <RelTime iso={venue.lastCrawledAt} />
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  aria-label={isExpanded ? 'Collapse venue' : 'Expand venue'}
+                  aria-expanded={isExpanded}
+                  onClick={() => toggleExpand(venue.id)}
+                  style={{
+                    all: 'unset',
+                    cursor: 'pointer',
+                    padding: 8,
+                    borderRadius: 8,
+                    color: 'var(--fg-muted)',
+                    transition: 'transform .15s',
+                    transform: isExpanded ? 'rotate(90deg)' : 'none',
+                    flexShrink: 0,
+                  }}
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+              {isExpanded && (
+                <div style={{ borderTop: '1px solid var(--border)' }}>
+                  <VenueQuickView venue={venue} />
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    )
   }
 
   return (
@@ -177,51 +316,30 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
           ) : (
             <span
               style={{
-                fontSize: 12,
-                color: 'var(--fg-subtle)',
-                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 13,
+                fontWeight: 700,
+                color: 'var(--fg)',
+                fontFamily: 'var(--admin-font, Inter, sans-serif)',
               }}
             >
               Configured venues{' '}
-              <strong style={{ color: 'var(--fg-muted)' }}>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 400,
+                  color: 'var(--fg-subtle)',
+                }}
+              >
                 {venues.length}
-              </strong>
+              </span>
             </span>
           )}
         </div>
-
-        <select
-          aria-label="Filter by status"
-          value={currentFilter ?? ''}
-          onChange={handleFilterChange}
-          style={{
-            height: 32,
-            padding: '0 28px 0 10px',
-            borderRadius: 6,
-            fontSize: 13,
-            fontWeight: 500,
-            fontFamily: "'Inter', sans-serif",
-            cursor: 'pointer',
-            background: 'transparent',
-            color: 'var(--fg)',
-            border: '1px solid var(--border-strong)',
-            appearance: 'none',
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'right 8px center',
-          }}
-        >
-          <option value="">All statuses</option>
-          <option value="active">Active</option>
-          <option value="paused">Paused</option>
-          <option value="blocked">Blocked</option>
-        </select>
       </div>
 
       <AdminTable>
         <THead>
           <tr>
-            <TH width={36} />
             <TH width={40}>
               <input
                 type="checkbox"
@@ -231,9 +349,11 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
                 aria-label="Select all venues"
               />
             </TH>
+            <TH width={32} />
             <TH>Venue</TH>
             <TH>Source URL</TH>
-            <TH>robots.txt</TH>
+            <TH>Strategy</TH>
+            <TH>Schedule</TH>
             <TH>Status</TH>
             <TH>Health</TH>
             <TH>Last crawl</TH>
@@ -241,16 +361,42 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
           </tr>
         </THead>
         <tbody>
+          {venues.length === 0 && (
+            <tr>
+              <td
+                colSpan={10}
+                style={{
+                  padding: '32px 16px',
+                  textAlign: 'center',
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: 13,
+                  color: 'var(--fg-muted)',
+                }}
+              >
+                No venues match the current filter.
+              </td>
+            </tr>
+          )}
           {venues.map((venue) => {
             const status = deriveVenueStatus(venue)
-            const notes = venueSubNotes(venue)
             const health = venueHealthPercent(venue)
             const isExpanded = expandedId === venue.id
+            const hasError =
+              venue.consecutiveFailures > 0 || venue.blockedAt !== null
 
             return (
               <React.Fragment key={venue.id}>
                 <TR>
-                  <TD width={36}>
+                  <TD width={40}>
+                    <input
+                      type="checkbox"
+                      checked={selected.has(venue.id)}
+                      onChange={() => toggleOne(venue.id)}
+                      style={{ cursor: 'pointer' }}
+                      aria-label={`Select ${venue.name}`}
+                    />
+                  </TD>
+                  <TD width={32}>
                     <button
                       aria-label={
                         isExpanded ? 'Collapse venue' : 'Expand venue'
@@ -274,82 +420,73 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
                       <ChevronRight size={14} />
                     </button>
                   </TD>
-                  <TD width={40}>
-                    <input
-                      type="checkbox"
-                      checked={selected.has(venue.id)}
-                      onChange={() => toggleOne(venue.id)}
-                      style={{ cursor: 'pointer' }}
-                      aria-label={`Select ${venue.name}`}
-                    />
-                  </TD>
                   <TD>
-                    <div
-                      style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                    <Link
+                      href={`/admin/venues/${venue.id}`}
+                      style={{
+                        fontWeight: 600,
+                        color: 'var(--fg)',
+                        textDecoration: 'none',
+                      }}
+                      onMouseEnter={(evt) =>
+                        (evt.currentTarget.style.textDecoration = 'underline')
+                      }
+                      onMouseLeave={(evt) =>
+                        (evt.currentTarget.style.textDecoration = 'none')
+                      }
                     >
-                      <ShieldCheck
-                        size={13}
-                        style={{
-                          flexShrink: 0,
-                          color: venue.verified
-                            ? 'var(--success)'
-                            : 'var(--fg-subtle)',
-                        }}
-                        aria-label={venue.verified ? 'Verified' : 'Unverified'}
-                      />
-                      <Link
-                        href={`/admin/venues/${venue.id}`}
-                        style={{
-                          fontWeight: 500,
-                          color: 'var(--fg)',
-                          textDecoration: 'none',
-                        }}
-                        onMouseEnter={(evt) =>
-                          (evt.currentTarget.style.textDecoration = 'underline')
-                        }
-                        onMouseLeave={(evt) =>
-                          (evt.currentTarget.style.textDecoration = 'none')
-                        }
-                      >
-                        {venue.name}
-                      </Link>
-                    </div>
-                    {notes.map((note, idx) => (
+                      {venue.name}
+                    </Link>
+                    {hasError && venue.crawlNotes && (
                       <div
-                        key={`${venue.id}-note-${idx}`}
                         style={{
                           fontSize: 11,
-                          color: 'var(--fg-subtle)',
+                          color: 'var(--danger)',
                           marginTop: 2,
-                          paddingLeft: 19,
+                          fontFamily: "'JetBrains Mono', monospace",
                         }}
                       >
-                        {note}
+                        {venue.crawlNotes}
                       </div>
-                    ))}
+                    )}
                   </TD>
-                  <TD mono color="var(--fg-muted)">
+                  <TD>
                     <a
                       href={venue.websiteUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{ color: 'var(--signal)', textDecoration: 'none' }}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        color: 'var(--fg-muted)',
+                        textDecoration: 'none',
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: 12,
+                      }}
                     >
+                      <ExternalLink size={11} style={{ flexShrink: 0 }} />
                       {sourceUrl(venue.websiteUrl)}
                     </a>
                   </TD>
                   <TD>
-                    {venue.robotsTxtAllowed === null ? (
-                      <StatusBadge kind="neutral">unchecked</StatusBadge>
-                    ) : venue.robotsTxtAllowed ? (
-                      <StatusBadge kind="success" dot>
-                        allowed
-                      </StatusBadge>
-                    ) : (
-                      <StatusBadge kind="danger" dot>
-                        blocked
-                      </StatusBadge>
-                    )}
+                    <StatusBadge
+                      kind={strategyKind(venue.extractionStrategy)}
+                      variant="mono"
+                    >
+                      {strategyLabel(venue.extractionStrategy)}
+                    </StatusBadge>
+                  </TD>
+                  <TD>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        color: 'var(--fg-muted)',
+                        fontFamily: 'var(--admin-font, Inter, sans-serif)',
+                      }}
+                    >
+                      daily · 3 AM MT
+                    </span>
                   </TD>
                   <TD>
                     {status === 'blocked' ? (
@@ -413,7 +550,7 @@ export function VenueTableClient({ venues, currentFilter }: Props) {
                 </TR>
                 {isExpanded && (
                   <tr key={`${venue.id}-expand`}>
-                    <td colSpan={9} style={{ padding: 0 }}>
+                    <td colSpan={10} style={{ padding: 0 }}>
                       <VenueQuickView venue={venue} />
                     </td>
                   </tr>

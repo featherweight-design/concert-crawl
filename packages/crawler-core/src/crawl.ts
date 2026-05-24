@@ -97,6 +97,14 @@ export async function crawlVenue(
       })
       .returning()
     if (!crawlRun) throw new Error('crawl_runs insert returned no row')
+    await db
+      .update(venues)
+      .set({
+        robotsTxtAllowed: false,
+        robotsTxtCheckedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(venues.id, venueId))
     return crawlRun
   }
 
@@ -187,6 +195,8 @@ export async function crawlVenue(
         .set({
           lastCrawledAt: new Date(),
           consecutiveFailures: 0,
+          robotsTxtAllowed: true,
+          robotsTxtCheckedAt: new Date(),
           ...(venue.crawlMode === null ? { crawlMode: resolvedMode } : {}),
           updatedAt: new Date(),
         })
@@ -415,6 +425,8 @@ export async function crawlVenue(
         lastCrawledAt: new Date(),
         consecutiveFailures: 0,
         blockedAt: null,
+        robotsTxtAllowed: true,
+        robotsTxtCheckedAt: new Date(),
         ...(venue.crawlMode === null ? { crawlMode: resolvedMode } : {}),
         updatedAt: new Date(),
       })

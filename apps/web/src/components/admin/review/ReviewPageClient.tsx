@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { apiClient, ApiError } from '@/lib/api'
+import { SectionHead } from '@/components/admin/primitives'
 import { EventFlagsSection } from './EventFlagsSection'
 import { PendingSubmissionsPanel } from './PendingSubmissionsPanel'
 import { PriceCoverageTable } from './PriceCoverageTable'
@@ -72,14 +73,36 @@ export const ReviewPageClient = ({
   const [priceEventsLoading, setPriceEventsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isDesktop, setIsDesktop] = useState(true)
+  const [mobileInitialTab, setMobileInitialTab] = useState<'flags' | 'prices'>(
+    'flags',
+  )
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 1280px)')
     setIsDesktop(mq.matches)
     const handler = (evt: MediaQueryListEvent) => setIsDesktop(evt.matches)
     mq.addEventListener('change', handler)
+
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('section') === 'submissions') {
+      setMobileInitialTab('prices')
+    }
+
     return () => mq.removeEventListener('change', handler)
   }, [])
+
+  useEffect(() => {
+    if (!isDesktop) return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('section') === 'submissions') {
+      // Small delay to let the page render first
+      const timer = setTimeout(() => {
+        const el = document.getElementById('submissions-section')
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 200)
+      return () => clearTimeout(timer)
+    }
+  }, [isDesktop])
 
   // Lazy-load price coverage data client-side — it's below the fold and has
   // a heavy aggregating query that shouldn't block the initial page render.
@@ -167,16 +190,31 @@ export const ReviewPageClient = ({
   )
 
   const addPrice = useCallback(
-    async (eventId: string, priceMin: string, priceMax: string | null) => {
+    async (
+      eventId: string,
+      priceMin: string,
+      priceMax: string | null,
+      vendor: string,
+      howFound: string,
+    ) => {
       setError(null)
       try {
         const token = await getToken()
         if (!token) return
-        await apiClient.patch(`/v1/admin/events/${eventId}`, token, {
-          ticketPriceMin: priceMin,
-          ticketPriceMax: priceMax,
+        await apiClient.post('/v1/admin/prices/submissions', token, {
+          eventId,
+          priceMin,
+          ...(priceMax !== null && { priceMax }),
+          vendor,
+          howFound,
         })
-        router.refresh()
+        setPriceEvents((prev) =>
+          prev.map((ev) =>
+            ev.eventId === eventId
+              ? { ...ev, priceMin, priceMax, priceSource: 'community' }
+              : ev,
+          ),
+        )
       } catch (err) {
         const message =
           err instanceof ApiError ? err.message : 'Failed to save price.'
@@ -184,7 +222,7 @@ export const ReviewPageClient = ({
         setError(message)
       }
     },
-    [getToken, router],
+    [getToken],
   )
 
   const denySubmission = useCallback(
@@ -208,6 +246,38 @@ export const ReviewPageClient = ({
     [getToken, router],
   )
 
+  const pendingCount = events.length + submissions.length
+
+  const sectionHead = (
+    <SectionHead
+      eyebrow="operations · moderation"
+      title={
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+          Review
+          {pendingCount > 0 && (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                padding: '3px 10px',
+                borderRadius: 20,
+                border: '1.5px solid var(--warning)',
+                fontSize: 13,
+                fontWeight: 600,
+                color: 'var(--warning)',
+                letterSpacing: 0,
+                lineHeight: 1.4,
+              }}
+            >
+              {pendingCount} pending
+            </span>
+          )}
+        </span>
+      }
+      subtitle="Most events auto-approve. This page is where flags and community price submissions land for triage."
+    />
+  )
+
   const errorBanner = error && (
     <div
       style={{
@@ -225,25 +295,73 @@ export const ReviewPageClient = ({
   )
 
   if (!isDesktop) {
+    const mobileSectionHead = (
+      <div style={{ padding: '4px 0' }}>
+        <div
+          style={{
+            fontFamily: "'Inter', sans-serif",
+            fontSize: 28,
+            fontWeight: 800,
+            color: 'var(--fg)',
+            letterSpacing: '-0.02em',
+            lineHeight: 1.1,
+            marginBottom: 4,
+          }}
+        >
+          Review
+        </div>
+        <div
+          style={{
+            fontFamily: "'Inter', sans-serif",
+            fontSize: 13,
+            color: 'var(--fg-muted)',
+          }}
+        >
+          {events.length} event{events.length !== 1 ? 's' : ''} ·{' '}
+          {submissions.length} price{submissions.length !== 1 ? 's' : ''}{' '}
+          waiting.
+        </div>
+      </div>
+    )
+
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {errorBanner}
-        <AdminReviewMobile
-          events={events}
-          submissions={submissions}
-          priceEvents={priceEvents}
-          onApprove={approveEvent}
-          onReject={rejectEvent}
-          onApproveSubmission={approveSubmission}
-          onDenySubmission={denySubmission}
-          onAddPrice={addPrice}
-        />
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          gap: 16,
+        }}
+      >
+        <div style={{ flexShrink: 0 }}>{mobileSectionHead}</div>
+        {errorBanner && <div style={{ flexShrink: 0 }}>{errorBanner}</div>}
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <AdminReviewMobile
+            events={events}
+            submissions={submissions}
+            priceEvents={priceEvents}
+            onApprove={approveEvent}
+            onReject={rejectEvent}
+            onApproveSubmission={approveSubmission}
+            onDenySubmission={denySubmission}
+            onAddPrice={addPrice}
+            initialTab={mobileInitialTab}
+          />
+        </div>
       </div>
     )
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {sectionHead}
       {errorBanner}
 
       <EventFlagsSection
@@ -253,11 +371,8 @@ export const ReviewPageClient = ({
       />
 
       <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: 20,
-        }}
+        id="submissions-section"
+        style={{ display: 'flex', flexDirection: 'column', gap: 20 }}
       >
         <PendingSubmissionsPanel
           submissions={submissions}

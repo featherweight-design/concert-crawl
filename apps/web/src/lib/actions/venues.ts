@@ -126,6 +126,20 @@ export async function updateVenue(
           ? null
           : undefined
 
+    const extractionStrategyRaw = formData.get('extractionStrategy')
+    const VALID_EXTRACTION_STRATEGIES = [
+      'structured_data',
+      'llm',
+      'manual',
+    ] as const
+    const extractionStrategy = (
+      VALID_EXTRACTION_STRATEGIES as readonly string[]
+    ).includes(String(extractionStrategyRaw ?? ''))
+      ? (extractionStrategyRaw as (typeof VALID_EXTRACTION_STRATEGIES)[number])
+      : extractionStrategyRaw === '' || extractionStrategyRaw === null
+        ? null
+        : undefined
+
     const addressRaw = formData.get('address')
     const address =
       addressRaw !== null && String(addressRaw).trim()
@@ -167,6 +181,12 @@ export async function updateVenue(
     const featuredRaw = formData.get('featured')
     const featured = featuredRaw !== null ? featuredRaw === 'true' : undefined
 
+    const priceUrlRaw = formData.get('priceUrl')
+    const priceUrl =
+      priceUrlRaw !== null && String(priceUrlRaw).trim()
+        ? String(priceUrlRaw).trim()
+        : null
+
     await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
       name: formData.get('name'),
       slug: formData.get('slug'),
@@ -184,6 +204,8 @@ export async function updateVenue(
       about,
       neighborhood,
       featured,
+      priceUrl,
+      extractionStrategy,
     })
     revalidatePath('/admin/venues')
     revalidatePath(`/admin/venues/${id}`)
@@ -220,6 +242,16 @@ export async function deleteVenue(
   )
   revalidatePath('/admin/venues')
   return result
+}
+
+export async function setVenueFeatured(
+  id: string,
+  featured: boolean,
+): Promise<void> {
+  const token = await getToken()
+  await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, { featured })
+  revalidatePath('/admin/venues')
+  revalidatePath(`/admin/venues/${id}`)
 }
 
 export async function activateVenue(id: string): Promise<void> {

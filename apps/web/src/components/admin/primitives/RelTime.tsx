@@ -17,9 +17,10 @@ const toRel = (iso: string): string => {
 }
 
 export const RelTime = ({ iso }: RelTimeProps) => {
-  const [label, setLabel] = useState(toRel(iso))
+  const [label, setLabel] = useState('')
 
   useEffect(() => {
+    setLabel(toRel(iso))
     const interval = setInterval(() => setLabel(toRel(iso)), 30_000)
     return () => clearInterval(interval)
   }, [iso])

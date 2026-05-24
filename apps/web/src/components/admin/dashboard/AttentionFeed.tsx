@@ -20,6 +20,7 @@ export interface AttentionItemData {
 interface AttentionFeedProps {
   items: AttentionItemData[]
   digestLabel?: string
+  digestHref?: string
 }
 
 const SEV_TINT: Record<
@@ -153,32 +154,45 @@ const AttentionItemRow = ({ item }: { item: AttentionItemData }) => {
   )
 }
 
-export const AttentionFeed = ({ items, digestLabel }: AttentionFeedProps) => {
+export const AttentionFeed = ({
+  items,
+  digestLabel,
+  digestHref,
+}: AttentionFeedProps) => {
   const activeItems = items.filter((item) => item.severity !== 'neutral')
   const neutralItems = items.filter((item) => item.severity === 'neutral')
   const allItems = [...activeItems, ...neutralItems]
 
   const activeCount = activeItems.length
 
-  return (
-    <Panel
-      title="Needs attention"
-      action={
+  const panelTitle = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span>Needs your attention</span>
+      {activeCount > 0 && (
         <span
           style={{
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: 10,
+            display: 'inline-flex',
+            alignItems: 'center',
+            padding: '2px 8px',
+            borderRadius: 99,
+            background: 'color-mix(in oklab, var(--accent) 16%, transparent)',
+            border:
+              '1px solid color-mix(in oklab, var(--accent) 32%, transparent)',
+            fontFamily: 'var(--admin-font, Inter, sans-serif)',
+            fontSize: 11,
             fontWeight: 700,
-            color: activeCount > 0 ? 'var(--warning)' : 'var(--fg-subtle)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.06em',
+            color: 'var(--accent)',
+            letterSpacing: '0.01em',
           }}
         >
-          {activeCount > 0 ? `${activeCount} active` : 'all clear'}
+          {activeCount} active
         </span>
-      }
-      padding={0}
-    >
+      )}
+    </div>
+  )
+
+  return (
+    <Panel title={panelTitle} padding={0}>
       {allItems.length === 0 ? (
         <div
           style={{
@@ -229,6 +243,7 @@ export const AttentionFeed = ({ items, digestLabel }: AttentionFeedProps) => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              flexShrink: 0,
             }}
           >
             <CheckCircle size={12} />
@@ -237,12 +252,32 @@ export const AttentionFeed = ({ items, digestLabel }: AttentionFeedProps) => {
             style={{
               fontFamily: 'var(--admin-font, Inter, sans-serif)',
               fontSize: 12,
-              color: 'var(--fg-muted)',
+              fontWeight: 500,
+              color: 'var(--fg)',
               flex: 1,
             }}
           >
             {digestLabel}
           </span>
+          {digestHref && (
+            <Link
+              href={digestHref}
+              style={{
+                fontFamily: 'var(--admin-font, Inter, sans-serif)',
+                fontSize: 11,
+                fontWeight: 700,
+                color: 'var(--signal)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 3,
+                textDecoration: 'none',
+                flexShrink: 0,
+              }}
+            >
+              View crawl log
+              <ChevronRight size={11} />
+            </Link>
+          )}
         </div>
       )}
     </Panel>

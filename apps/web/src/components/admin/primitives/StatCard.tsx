@@ -12,6 +12,8 @@ interface StatCardProps {
   trend?: { dir: 'up' | 'down'; text: string; good: boolean }
   kind?: StatusKind
   iconName: string
+  mono?: boolean
+  noChip?: boolean
   footer?: React.ReactNode
   onClick?: () => void
 }
@@ -24,6 +26,8 @@ export const StatCard = ({
   trend,
   kind = 'neutral',
   iconName,
+  mono = true,
+  noChip = false,
   footer,
   onClick,
 }: StatCardProps) => {
@@ -42,7 +46,7 @@ export const StatCard = ({
         background: 'var(--bg-elevated)',
         border: '1px solid var(--border)',
         borderRadius: 12,
-        padding: '16px 20px',
+        padding: '20px 20px',
         display: 'flex',
         flexDirection: 'column',
         gap: 12,
@@ -59,12 +63,13 @@ export const StatCard = ({
         <div style={{ flex: 1 }}>
           <div
             style={{
+              fontFamily: "'JetBrains Mono', monospace",
               fontSize: 11,
               fontWeight: 600,
               textTransform: 'uppercase' as const,
               letterSpacing: '0.07em',
               color: 'var(--fg-muted)',
-              marginBottom: 6,
+              marginBottom: 8,
             }}
           >
             {label}
@@ -72,9 +77,11 @@ export const StatCard = ({
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
             <span
               style={{
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 30,
-                fontWeight: 700,
+                fontFamily: mono
+                  ? "'JetBrains Mono', monospace"
+                  : 'var(--admin-font, Inter, sans-serif)',
+                fontSize: 38,
+                fontWeight: 800,
                 fontVariantNumeric: 'tabular-nums',
                 lineHeight: 1,
                 color: 'var(--fg)',
@@ -83,7 +90,14 @@ export const StatCard = ({
               {value}
             </span>
             {unit && (
-              <span style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
+              <span
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: 'var(--fg-muted)',
+                }}
+              >
                 {unit}
               </span>
             )}
@@ -92,10 +106,11 @@ export const StatCard = ({
                 style={{
                   fontSize: 11,
                   fontWeight: 600,
+                  marginLeft: 'auto',
                   color: trend.good ? 'var(--success)' : 'var(--danger)',
                 }}
               >
-                {trend.text}
+                {trend.dir === 'up' ? '↑' : '↓'} {trend.text}
               </span>
             )}
           </div>
@@ -109,17 +124,20 @@ export const StatCard = ({
         </div>
         <div
           style={{
-            width: 36,
-            height: 36,
+            width: 32,
+            height: 32,
             borderRadius: 8,
-            background: colors.bg,
+            background: noChip ? 'transparent' : colors.bg,
+            border: noChip ? 'none' : `1px solid ${colors.border}`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0,
           }}
         >
-          {Icon && <Icon size={18} color={colors.fg} />}
+          {Icon && (
+            <Icon size={15} color={noChip ? 'var(--fg-subtle)' : colors.fg} />
+          )}
         </div>
       </div>
       {footer && (

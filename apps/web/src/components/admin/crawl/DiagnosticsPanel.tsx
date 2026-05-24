@@ -161,6 +161,16 @@ const DIAG_OPTIONS: Record<ErrorClass, DiagOption[]> = {
   ],
 }
 
+function getErrLabel(run: CrawlRunForDiagnostics): string {
+  if (run.httpStatusCode === 403) return 'HTTP 403 · venue blocked'
+  if (run.httpStatusCode === 429) return 'HTTP 429 · rate limited'
+  if (run.errorMessage?.toLowerCase().includes('timeout'))
+    return 'Request timeout'
+  if (run.errorMessage)
+    return run.errorMessage.split('\n')[0] ?? run.errorMessage
+  return `HTTP ${run.httpStatusCode ?? '—'}`
+}
+
 function classifyError(run: CrawlRunForDiagnostics): ErrorClass {
   if (run.httpStatusCode === 403 || run.httpStatusCode === 429) {
     return run.httpStatusCode === 429 ? 'rate_limit' : 'bot_detection'
@@ -353,12 +363,12 @@ export const DiagnosticsPanel = ({
             <span
               style={{
                 fontFamily: 'var(--admin-font, Inter, sans-serif)',
-                fontSize: 20,
+                fontSize: 14,
                 fontWeight: 700,
                 color: 'var(--danger)',
               }}
             >
-              {run.errorMessage ?? `HTTP ${run.httpStatusCode ?? '—'}`}
+              {getErrLabel(run)}
             </span>
           </div>
           <div
