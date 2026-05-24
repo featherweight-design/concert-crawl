@@ -280,11 +280,6 @@ export const PriceCoverageTable = ({
                           {ev.priceSource === null && (
                             <StatusBadge kind="danger">no price</StatusBadge>
                           )}
-                          {ev.lastOutcome === 'miss' && (
-                            <StatusBadge kind="danger" variant="soft">
-                              miss
-                            </StatusBadge>
-                          )}
                         </div>
                       </TD>
                       <TD mono>
