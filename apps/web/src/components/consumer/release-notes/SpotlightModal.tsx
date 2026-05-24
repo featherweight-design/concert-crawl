@@ -19,7 +19,7 @@ export function SpotlightModal({
   const [step, setStep] = useState(0)
   const heroRef = useRef<HTMLDivElement>(null)
   const [heroScale, setHeroScale] = useState(1)
-  const [containerWidth, setContainerWidth] = useState(580)
+  const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
     function handleKeyDown(ev: KeyboardEvent) {
@@ -29,22 +29,31 @@ export function SpotlightModal({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [onClose])
 
+  // isMobile tracks viewport width — intentionally separate from heroScale so
+  // the dialog layout never feeds back into the ResizeObserver measurement.
+  useEffect(() => {
+    function update() {
+      setIsMobile(window.innerWidth < 580)
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+
+  // heroScale tracks the actual rendered width of the hero container so the
+  // 580×300 stage scales down correctly on narrow viewports.
   useEffect(() => {
     const el = heroRef.current
     if (!el) return
     const ro = new ResizeObserver(([entry]) => {
       if (!entry) return
-      const width = entry.contentRect.width
-      setContainerWidth(width)
-      setHeroScale(Math.min(1, width / 580))
+      setHeroScale(Math.min(1, entry.contentRect.width / 580))
     })
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
 
   if (!sp) return null
-
-  const isMobile = containerWidth < 580
   const totalSteps = sp.steps.length
 
   return (
@@ -92,7 +101,14 @@ export function SpotlightModal({
           }}
         >
           {/* Scale wrapper: always present; scale=1 when container ≥ 580px */}
-          <div style={{ width: '100%', height: 300, overflow: 'hidden', position: 'relative' }}>
+          <div
+            style={{
+              width: '100%',
+              height: 300,
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
             <div
               style={{
                 width: 580,

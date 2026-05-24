@@ -2,6 +2,8 @@
 
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, expect, it, vi, beforeAll } from 'vitest'
+import type { Release } from '@/lib/definitions/releases'
+import { SpotlightModal } from './SpotlightModal'
 
 beforeAll(() => {
   global.ResizeObserver = class ResizeObserver {
@@ -10,8 +12,6 @@ beforeAll(() => {
     disconnect() {}
   }
 })
-import type { Release } from '@/lib/definitions/releases'
-import { SpotlightModal } from './SpotlightModal'
 
 const RELEASE: Release = {
   version: 'v0.5.0-beta',
