@@ -334,7 +334,7 @@ export const PriceCoverageTable = ({
                               border: '1px solid var(--border-strong)',
                               borderRadius: 10,
                               display: 'flex',
-                              alignItems: 'center',
+                              alignItems: 'flex-end',
                               gap: 20,
                               flexWrap: 'wrap',
                             }}
