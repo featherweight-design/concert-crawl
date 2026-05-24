@@ -192,38 +192,20 @@ export const AttentionFeed = ({
   )
 
   const panelAction = (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <button
-        style={{
-          background: 'none',
-          border: 'none',
-          padding: 0,
-          cursor: 'pointer',
-          fontFamily: 'var(--admin-font, Inter, sans-serif)',
-          fontSize: 12,
-          fontWeight: 500,
-          color: 'var(--fg-muted)',
-        }}
-      >
-        Mark all read
-      </button>
-      <Link
-        href="/admin/inbox"
-        style={{
-          fontFamily: 'var(--admin-font, Inter, sans-serif)',
-          fontSize: 12,
-          fontWeight: 700,
-          color: 'var(--fg)',
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 2,
-          textDecoration: 'none',
-        }}
-      >
-        Inbox
-        <ChevronRight size={13} />
-      </Link>
-    </div>
+    <button
+      style={{
+        background: 'none',
+        border: 'none',
+        padding: 0,
+        cursor: 'pointer',
+        fontFamily: 'var(--admin-font, Inter, sans-serif)',
+        fontSize: 12,
+        fontWeight: 500,
+        color: 'var(--fg-muted)',
+      }}
+    >
+      Mark all read
+    </button>
   )
 
   return (

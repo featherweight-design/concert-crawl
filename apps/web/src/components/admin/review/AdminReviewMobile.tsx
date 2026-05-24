@@ -67,6 +67,7 @@ interface AdminReviewMobileProps {
     vendor: string,
     howFound: string,
   ) => Promise<void>
+  initialTab?: 'flags' | 'prices'
 }
 
 function getEventFlagChips(
@@ -520,8 +521,9 @@ export function AdminReviewMobile({
   onApproveSubmission,
   onDenySubmission,
   onAddPrice,
+  initialTab = 'flags',
 }: AdminReviewMobileProps) {
-  const [activeTab, setActiveTab] = useState<'flags' | 'prices'>('flags')
+  const [activeTab, setActiveTab] = useState<'flags' | 'prices'>(initialTab)
   const [showMissingOnly, setShowMissingOnly] = useState(false)
 
   const missingPriceEvents = priceEvents.filter((ev) => ev.priceMin === null)

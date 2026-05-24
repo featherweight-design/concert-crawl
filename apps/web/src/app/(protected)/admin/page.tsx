@@ -98,7 +98,7 @@ function buildAttentionItems(
       timeLabel: 'recent',
       action: {
         label: 'Open crawl',
-        href: '/admin/crawl',
+        href: `/admin/crawl?venueId=${venue.venueId}`,
       },
     })
   }
@@ -128,7 +128,7 @@ function buildAttentionItems(
       timeLabel: 'pending',
       action: {
         label: 'Open Review',
-        href: '/admin/review',
+        href: '/admin/review?section=submissions',
       },
     })
   }
@@ -299,26 +299,11 @@ export default async function AdminDashboardPage() {
                 size="sm"
                 iconRight={ChevronRight}
                 fullWidth
-                style={{ fontWeight: 700, color: 'var(--fg)', fontSize: 14 }}
+                style={{ fontWeight: 700, color: 'var(--fg)' }}
               >
                 Open Review
               </AdminButton>
             </Link>
-          }
-        />
-
-        {/* Crawl health */}
-        <StatCard
-          label="Crawl health"
-          value={`${greenCount}/${status.length}`}
-          unit="green"
-          iconName="Activity"
-          kind={blockedCount > 0 ? 'warning' : 'success'}
-          {...(crawlHealthHint ? { hint: crawlHealthHint } : {})}
-          footer={
-            sparklineData.length > 0 ? (
-              <RunHistoryBlocks data={sparklineData} />
-            ) : undefined
           }
         />
 
@@ -339,9 +324,24 @@ export default async function AdminDashboardPage() {
           }
         />
 
+        {/* Crawl health */}
+        <StatCard
+          label="Crawl health"
+          value={`${greenCount}/${status.length}`}
+          unit="green"
+          iconName="Activity"
+          kind="success"
+          {...(crawlHealthHint ? { hint: crawlHealthHint } : {})}
+          footer={
+            sparklineData.length > 0 ? (
+              <RunHistoryBlocks data={sparklineData} />
+            ) : undefined
+          }
+        />
+
         {/* Active venues */}
         <StatCard
-          label="Active"
+          label="Active venues"
           value={String(venues.filter((venue) => venue.active).length)}
           unit={`of ${venues.length}`}
           iconName="MapPin"

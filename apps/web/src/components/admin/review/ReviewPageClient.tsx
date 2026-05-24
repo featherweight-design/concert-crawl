@@ -73,14 +73,36 @@ export const ReviewPageClient = ({
   const [priceEventsLoading, setPriceEventsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isDesktop, setIsDesktop] = useState(true)
+  const [mobileInitialTab, setMobileInitialTab] = useState<'flags' | 'prices'>(
+    'flags',
+  )
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 1280px)')
     setIsDesktop(mq.matches)
     const handler = (evt: MediaQueryListEvent) => setIsDesktop(evt.matches)
     mq.addEventListener('change', handler)
+
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('section') === 'submissions') {
+      setMobileInitialTab('prices')
+    }
+
     return () => mq.removeEventListener('change', handler)
   }, [])
+
+  useEffect(() => {
+    if (!isDesktop) return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('section') === 'submissions') {
+      // Small delay to let the page render first
+      const timer = setTimeout(() => {
+        const el = document.getElementById('submissions-section')
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 200)
+      return () => clearTimeout(timer)
+    }
+  }, [isDesktop])
 
   // Lazy-load price coverage data client-side — it's below the fold and has
   // a heavy aggregating query that shouldn't block the initial page render.
@@ -330,6 +352,7 @@ export const ReviewPageClient = ({
             onApproveSubmission={approveSubmission}
             onDenySubmission={denySubmission}
             onAddPrice={addPrice}
+            initialTab={mobileInitialTab}
           />
         </div>
       </div>
@@ -347,7 +370,10 @@ export const ReviewPageClient = ({
         onReject={rejectEvent}
       />
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div
+        id="submissions-section"
+        style={{ display: 'flex', flexDirection: 'column', gap: 20 }}
+      >
         <PendingSubmissionsPanel
           submissions={submissions}
           onApprove={approveSubmission}

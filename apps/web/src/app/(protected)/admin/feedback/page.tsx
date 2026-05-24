@@ -294,7 +294,7 @@ export default function FeedbackPage() {
                     ? '1.5px solid var(--signal)'
                     : '1px solid var(--border-strong)',
                   background: isActive ? 'var(--signal)' : 'var(--bg-elevated)',
-                  color: isActive ? '#fff' : 'var(--fg-muted)',
+                  color: isActive ? 'var(--fg-on-accent)' : 'var(--fg-muted)',
                   fontSize: 13,
                   fontWeight: isActive ? 700 : 500,
                   fontFamily: "'Inter', sans-serif",
