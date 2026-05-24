@@ -1,3 +1,18 @@
+# [1.37.0](https://github.com/HartiganHM/concert-crawl/compare/v1.36.4...v1.37.0) (2026-05-24)
+
+
+### Bug Fixes
+
+* **release-notes:** address Copilot review — keyframe injection, hero scale, fallback ([a78be89](https://github.com/HartiganHM/concert-crawl/commit/a78be8961b7dce4bee5d79091eb8a631692ece8a))
+* **release-notes:** rename StubDef.d to delay to satisfy id-length lint rule ([067e10e](https://github.com/HartiganHM/concert-crawl/commit/067e10ed91f4d4d3e54eee95828d1c27897263be))
+* **release-notes:** rename TiersCompact→TierCompact, ShareCompact→ShareableCompact; add gap report ([e72243b](https://github.com/HartiganHM/concert-crawl/commit/e72243b5e0eefb814def0a4991050524b45058be))
+* **release-notes:** resolve CI lint, type, and test failures in spotlight heroes ([0ed3821](https://github.com/HartiganHM/concert-crawl/commit/0ed382196baaf7570476183f82c023a29da2142b))
+
+
+### Features
+
+* **release-notes:** implement Showtime spotlight heroes (15 full + compact) ([a820f99](https://github.com/HartiganHM/concert-crawl/commit/a820f99acc1c4dca3252c9157a009fabad6ffa0a))
+
 ## [1.36.4](https://github.com/HartiganHM/concert-crawl/compare/v1.36.3...v1.36.4) (2026-05-22)
 
 
