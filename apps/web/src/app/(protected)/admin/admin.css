@@ -2,6 +2,17 @@
    Scoped to [data-admin-theme] on the layout root div.
    Never import this file outside the admin route group. */
 
+@keyframes admin-skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.admin-skeleton {
+  background: var(--surface-1);
+  border-radius: 6px;
+  animation: admin-skeleton-pulse 1.6s ease-in-out infinite;
+}
+
 [data-admin-theme="light"] {
   --bg: #f7f5f0;
   --bg-elevated: #ffffff;
