@@ -495,7 +495,7 @@ export function AdminReviewMobile({
               key: 'flags',
               label: 'Event flags',
               count: events.length,
-              badgeKind: 'warning',
+              badgeKind: 'neutral',
             },
             {
               key: 'prices',
