@@ -1,6 +1,7 @@
 'use client'
 
 import type { Release, ReleaseItem } from '@/lib/definitions/releases'
+import { SpotlightHero } from './SpotlightHero'
 
 const KIND_LABEL: Record<ReleaseItem['kind'], string> = {
   added: 'Added',
@@ -166,28 +167,8 @@ function SpotlightStrip({
           minHeight: 132,
         }}
       >
-        <div style={{ position: 'relative', background: 'var(--surface-2)' }}>
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <span
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 16,
-                background: 'var(--accent)',
-                boxShadow: '0 0 24px var(--accent)',
-                opacity: 0.6,
-                animation: 'rnPulse 2s ease-in-out infinite',
-              }}
-            />
-          </div>
+        <div style={{ position: 'relative', overflow: 'hidden', borderRadius: '14px 0 0 14px' }}>
+          <SpotlightHero hero={sp.hero} compact />
         </div>
 
         <div

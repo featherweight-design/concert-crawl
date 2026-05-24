@@ -32,7 +32,7 @@ export const RELEASES: Release[] = [
     spotlight: {
       title: 'Submit a price. Help the next fan.',
       tagline: 'Community-sourced ticket prices, right on the event page.',
-      hero: 'map',
+      hero: 'price',
       cta: 'Try it on an event',
       ctaHref: '/events',
       steps: [

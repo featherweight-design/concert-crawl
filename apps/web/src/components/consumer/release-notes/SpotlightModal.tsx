@@ -67,16 +67,35 @@ export function SpotlightModal({
           color: 'var(--fg)',
         }}
       >
-        {/* hero */}
+        {/* hero — 580×300 Showtime stage per SHOWTIME_HANDOFF.md §2 */}
         <div
           style={{
             position: 'relative',
-            height: isMobile ? 280 : 300,
-            background: 'var(--surface-2)',
+            height: 300,
+            overflow: 'hidden',
             flexShrink: 0,
           }}
         >
-          <SpotlightHero hero={sp.hero} />
+          {/* Scale wrapper for viewports narrower than 580px */}
+          {isMobile ? (
+            <div style={{ width: '100%', height: 300, overflow: 'hidden', position: 'relative' }}>
+              <div
+                style={{
+                  width: 580,
+                  height: 300,
+                  transform: `scale(${typeof window !== 'undefined' ? Math.min(1, window.innerWidth / 580) : 1})`,
+                  transformOrigin: 'top left',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                }}
+              >
+                <SpotlightHero hero={sp.hero} />
+              </div>
+            </div>
+          ) : (
+            <SpotlightHero hero={sp.hero} />
+          )}
 
           <button
             type="button"
