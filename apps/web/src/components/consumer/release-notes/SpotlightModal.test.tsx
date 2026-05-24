@@ -1,7 +1,15 @@
 // @vitest-environment jsdom
 
 import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi, beforeAll } from 'vitest'
+
+beforeAll(() => {
+  global.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+})
 import type { Release } from '@/lib/definitions/releases'
 import { SpotlightModal } from './SpotlightModal'
 
