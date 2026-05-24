@@ -1300,10 +1300,9 @@ export const CrawlRunHistoryTable = ({
             minHeight: 200,
             maxHeight: 400,
             overflowY: 'auto',
-            overflowX: 'auto',
           }}
         >
-          <AdminTable>
+          <AdminTable minWidth={860}>
             <THead sticky>
               <tr>
                 <TH width={92}>Run</TH>
