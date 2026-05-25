@@ -40,7 +40,7 @@ export const venues = pgTable('venues', {
   city: text('city').notNull().default('Denver'),
   timezone: text('timezone').notNull().default('America/Denver'),
   active: boolean('active').notNull().default(true),
-  verified: boolean('verified').notNull().default(false),
+  verified: boolean('verified').notNull().default(true),
   verifiedBy: text('verified_by'),
   verifiedAt: timestamp('verified_at', { withTimezone: true }),
   lastCrawledAt: timestamp('last_crawled_at', { withTimezone: true }),

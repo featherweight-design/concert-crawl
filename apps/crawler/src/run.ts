@@ -172,7 +172,13 @@ export async function runDailyCrawl(): Promise<{
   const activeVenues = await db
     .select({ id: venues.id, name: venues.name })
     .from(venues)
-    .where(and(eq(venues.active, true), eq(venues.verified, true)))
+    .where(
+      and(
+        eq(venues.active, true),
+        eq(venues.verified, true),
+        isNull(venues.blockedAt),
+      ),
+    )
 
   logger.info({ venueCount: activeVenues.length }, 'Fetched active venues')
 

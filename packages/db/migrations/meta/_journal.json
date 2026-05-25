@@ -197,6 +197,13 @@
       "when": 1779000000003,
       "tag": "0027_review_page_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1779738151465,
+      "tag": "0028_venue_verified_default_true",
+      "breakpoints": true
     }
   ]
 }
