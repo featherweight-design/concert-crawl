@@ -1,7 +1,7 @@
 'use client'
 
 import { Panel, AdminButton, RelTime } from '@/components/admin/primitives'
-import { Check, X } from 'lucide-react'
+import { Check, ExternalLink, X } from 'lucide-react'
 
 interface PriceSubmission {
   id: string
@@ -9,14 +9,13 @@ interface PriceSubmission {
   userId: string
   priceMin: string | null
   priceMax: string | null
-  source: string | null
-  note: string | null
+  note?: string | null
   status: string
   createdAt: string
-  // Optional enriched fields — populated once API JOIN is added
-  eventTitle?: string | null
-  venueName?: string | null
-  eventDate?: string | null
+  eventTitle: string | null
+  venueName: string | null
+  eventDate: string | null
+  ticketUrl: string | null
   userHandle?: string | null
 }
 
@@ -109,16 +108,41 @@ export const PendingSubmissionsPanel = ({
                 <div style={{ minWidth: 0 }}>
                   <div
                     style={{
-                      fontFamily: "'Inter', sans-serif",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: 'var(--fg)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
                       overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
                     }}
                   >
-                    {eventLine}
+                    <span
+                      style={{
+                        fontFamily: "'Inter', sans-serif",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: 'var(--fg)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {eventLine}
+                    </span>
+                    {sub.ticketUrl && (
+                      <a
+                        href={sub.ticketUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Open ticket page"
+                        style={{
+                          flexShrink: 0,
+                          color: 'var(--fg-muted)',
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <ExternalLink size={12} />
+                      </a>
+                    )}
                   </div>
                   <div
                     style={{

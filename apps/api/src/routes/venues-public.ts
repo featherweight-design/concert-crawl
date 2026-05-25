@@ -121,6 +121,8 @@ venuesPublicRouter.get('/:slug', async (ctx) => {
       description: events.description,
       imageUrl: events.imageUrl,
       genre: events.genre,
+      priceSource: events.priceSource,
+      pipelineExhaustedAt: events.pipelineExhaustedAt,
       status: events.status,
       confidenceScore: events.confidenceScore,
       verified: events.verified,

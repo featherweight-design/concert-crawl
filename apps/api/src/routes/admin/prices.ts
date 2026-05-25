@@ -129,8 +129,22 @@ pricesAdminRouter.get('/coverage', async (ctx) => {
 // GET /v1/admin/prices/submissions — community submission queue
 pricesAdminRouter.get('/submissions', async (ctx) => {
   const rows = await db
-    .select()
+    .select({
+      id: priceSubmissions.id,
+      eventId: priceSubmissions.eventId,
+      userId: priceSubmissions.userId,
+      priceMin: priceSubmissions.priceMin,
+      priceMax: priceSubmissions.priceMax,
+      status: priceSubmissions.status,
+      createdAt: priceSubmissions.createdAt,
+      eventTitle: events.title,
+      eventDate: events.date,
+      ticketUrl: events.ticketUrl,
+      venueName: venues.name,
+    })
     .from(priceSubmissions)
+    .leftJoin(events, eq(priceSubmissions.eventId, events.id))
+    .leftJoin(venues, eq(events.venueId, venues.id))
     .orderBy(desc(priceSubmissions.createdAt))
     .limit(50)
 

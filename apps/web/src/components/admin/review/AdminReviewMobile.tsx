@@ -32,10 +32,13 @@ interface PriceSubmission {
   userId: string
   priceMin: string | null
   priceMax: string | null
-  source: string | null
-  note: string | null
+  note?: string | null
   status: string
   createdAt: string
+  eventTitle: string | null
+  eventDate: string | null
+  ticketUrl: string | null
+  venueName: string | null
 }
 
 interface PriceEvent {
