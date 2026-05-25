@@ -282,9 +282,10 @@ export interface EventDetailResponse extends EventWithVenue {
   // Price detail fields — not yet in DB schema; null until added via migration
   ticketPriceOpenedAt?: number | null
   ticketFees?: number | null
-  // Community price enrichment — vendor (e.g. "VenueBoxOffice") and submitter handle
+  // Community price enrichment — vendor, submitter handle, and observation timestamp
   priceVendor?: string | null
   priceSubmitterHandle?: string | null
+  priceObservedAt?: string | null
 }
 
 // Public events list query params

@@ -64,6 +64,7 @@ interface PriceDisplayProps {
   ticketFees?: number | null
   priceVendor?: string | null
   priceSubmitterHandle?: string | null
+  priceObservedAt?: string | null
 }
 
 // ── Color constants ───────────────────────────────────────────────
@@ -90,6 +91,7 @@ function resolveSourceKind(
 function resolveSourceName(
   source: PriceSource | null,
   venueName: string,
+  vendor?: string | null,
 ): string | null {
   if (!source) return venueName
   switch (source) {
@@ -108,7 +110,7 @@ function resolveSourceName(
     case 'seatgeek':
       return 'SeatGeek'
     case 'community':
-      return null
+      return vendor === 'SeatGeek' ? 'SeatGeek' : null
   }
 }
 
@@ -1006,13 +1008,15 @@ export function PriceDisplay({
   ticketFees,
   priceVendor,
   priceSubmitterHandle,
+  priceObservedAt,
 }: PriceDisplayProps) {
   const parsedMin = priceMin ? parseFloat(priceMin) : null
   const parsedMax = priceMax ? parseFloat(priceMax) : null
   const face = parsedMin !== null && !isNaN(parsedMin) ? parsedMin : null
   const faceMax = parsedMax !== null && !isNaN(parsedMax) ? parsedMax : null
   const sourceKind = resolveSourceKind(priceSource, priceVendor)
-  const sourceName = resolveSourceName(priceSource, venueName)
+  const sourceName = resolveSourceName(priceSource, venueName, priceVendor)
+  const effectiveObservedAt = observedAt ?? priceObservedAt ?? null
   const sourceUrl = ticketUrl
 
   // No-price state → community-handoff card
@@ -1037,7 +1041,7 @@ export function PriceDisplay({
     sourceKind,
     source: sourceName,
     sourceUrl: ticketUrl,
-    observedAt: observedAt ?? null,
+    observedAt: effectiveObservedAt,
     openedAt: ticketPriceOpenedAt ?? null,
     range14d: range14d ?? null,
     status: priceStatus ?? 'live',
@@ -1390,10 +1394,10 @@ export function PriceDisplay({
             flexWrap: 'wrap',
           }}
         >
-          <StaleStamp observedAt={observedAt} />
+          <StaleStamp observedAt={effectiveObservedAt} />
           {sourceName && !isCommunity && (
             <>
-              {observedAt && (
+              {effectiveObservedAt && (
                 <span style={{ color: 'var(--fg-subtle)', opacity: 0.4 }}>
                   ·
                 </span>

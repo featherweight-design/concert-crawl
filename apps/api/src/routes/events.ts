@@ -275,12 +275,14 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   // attribution line.
   let priceVendor: string | null = null
   let priceSubmitterHandle: string | null = null
+  let priceObservedAt: string | null = null
 
   if (row.priceSource === 'community') {
     const [latestSub] = await db
       .select({
         vendor: priceSubmissions.vendor,
         userId: priceSubmissions.userId,
+        createdAt: priceSubmissions.createdAt,
       })
       .from(priceSubmissions)
       .where(
@@ -294,6 +296,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
 
     if (latestSub) {
       priceVendor = latestSub.vendor
+      priceObservedAt = latestSub.createdAt.toISOString()
       if (latestSub.userId) {
         const [profile] = await db
           .select({ handle: userProfiles.handle })
@@ -314,6 +317,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       priceStatus,
       priceVendor,
       priceSubmitterHandle,
+      priceObservedAt,
     },
   })
 })
