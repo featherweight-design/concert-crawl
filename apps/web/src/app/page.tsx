@@ -116,9 +116,10 @@ async function fetchHeroShows(): Promise<LandingShow[]> {
 
     return mapped.length >= 2 ? mapped : makeFallbackShows()
   } catch (err) {
-    if (!(err instanceof ApiError)) {
-      console.error('[landing] unexpected error fetching hero shows:', err)
-    }
+    console.error(
+      '[landing] failed to fetch hero shows:',
+      err instanceof ApiError ? `HTTP ${err.status} ${err.message}` : err,
+    )
     return makeFallbackShows()
   }
 }

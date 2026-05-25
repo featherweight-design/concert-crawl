@@ -1,4 +1,7 @@
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
+// Server-side only — undefined in the browser bundle (not NEXT_PUBLIC_).
+// Sent as x-service-key so the API can allow Next.js SSR calls without a user token.
+const SERVICE_KEY = process.env['INTERNAL_API_SECRET']
 
 export class ApiError extends Error {
   constructor(
@@ -18,12 +21,16 @@ async function request<T>(
   const authHeaders: Record<string, string> = token
     ? { Authorization: `Bearer ${token}` }
     : {}
+  const serviceHeaders: Record<string, string> = SERVICE_KEY
+    ? { 'x-service-key': SERVICE_KEY }
+    : {}
 
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
       ...authHeaders,
+      ...serviceHeaders,
       ...options.headers,
     },
   })
