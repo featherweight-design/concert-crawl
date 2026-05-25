@@ -342,7 +342,11 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
           eq(priceSubmissions.status, 'corroborated'),
         ),
       )
-      .orderBy(desc(priceSubmissions.createdAt))
+      // Sort by trust priority: box office (0) > community (1) > resale (2), then newest first
+      .orderBy(
+        sql`CASE WHEN ${priceSubmissions.vendor} = 'VenueBoxOffice' THEN 0 WHEN ${priceSubmissions.vendor} = 'SeatGeek' THEN 2 ELSE 1 END ASC`,
+        desc(priceSubmissions.createdAt),
+      )
 
     const [latestSub, ...otherSubs] = allSubs
 
