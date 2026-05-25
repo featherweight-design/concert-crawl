@@ -9,6 +9,7 @@ import {
   userEvents,
   userProfiles,
   priceSubmissions,
+  submissionConfirms,
 } from '@concert-crawl/db'
 import {
   type SQL,
@@ -283,6 +284,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   if (row.priceSource === 'community') {
     const [latestSub] = await db
       .select({
+        id: priceSubmissions.id,
         vendor: priceSubmissions.vendor,
         userId: priceSubmissions.userId,
         createdAt: priceSubmissions.createdAt,
@@ -303,8 +305,12 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       priceObservedAt = latestSub.createdAt.toISOString()
       // updatedAt reflects when status changed to corroborated (the approval timestamp)
       priceApprovedAt = latestSub.updatedAt.toISOString()
-      // All current approvals are admin-driven; fan corroboration UI doesn't exist yet
-      priceApprovalKind = 'admin'
+      // If submission_confirms has rows, at least one fan corroborated it; otherwise admin approved it
+      const [confirmCount] = await db
+        .select({ total: count() })
+        .from(submissionConfirms)
+        .where(eq(submissionConfirms.submissionId, latestSub.id))
+      priceApprovalKind = (confirmCount?.total ?? 0) > 0 ? 'fan' : 'admin'
       if (latestSub.userId) {
         const [profile] = await db
           .select({ handle: userProfiles.handle })
