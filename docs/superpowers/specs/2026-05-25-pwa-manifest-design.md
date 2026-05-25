@@ -34,11 +34,11 @@ icons: [
 
 `start_url: "/"` is relative — resolves correctly on any domain (staging.concertcrawl.app, concertcrawl.app) without hardcoding.
 
-### `src/app/api/pwa/icon-192/route.ts`
+### `src/app/api/pwa/icon-192/route.tsx`
 
 Route handler returning a 192×192 `ImageResponse` using the same graphic as `apple-icon.tsx` (dark Electric palette: `#171D3A` background, `#FF7BD4`/`#7AE6FF` signal, `#E8F3FF` dots).
 
-### `src/app/api/pwa/icon-512/route.ts`
+### `src/app/api/pwa/icon-512/route.tsx`
 
 Same as above at 512×512. Both handlers share the same SVG graphic — only `size` differs.
 
