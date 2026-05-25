@@ -79,7 +79,9 @@ function resolveSourceKind(
   vendor?: string | null,
 ): 'primary' | 'resale' | 'community' | 'boxoffice' {
   if (source === 'community') {
-    return vendor === 'VenueBoxOffice' ? 'boxoffice' : 'community'
+    if (vendor === 'VenueBoxOffice') return 'boxoffice'
+    if (vendor === 'SeatGeek') return 'resale'
+    return 'community'
   }
   if (source === 'seatgeek') return 'resale'
   return 'primary'
