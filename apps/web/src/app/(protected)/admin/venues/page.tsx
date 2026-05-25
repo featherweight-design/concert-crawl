@@ -11,7 +11,7 @@ import {
 import type { VenueWithEventCount } from '@concert-crawl/types'
 import { VenueTableClient } from '@/components/admin/venue-table-client'
 import { deriveVenueStatus, venueHealthPercent } from '@/lib/admin/venue-status'
-import { AddVenueModal } from '@/components/admin/AddVenueModal'
+import { MobileAddVenueButton } from '@/components/admin/venues/MobileAddVenueButton'
 import { VenueStatusFilterButton } from '@/components/admin/venues/VenueStatusFilterButton'
 
 interface Props {
@@ -76,7 +76,6 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
                 robots.txt audit
               </AdminButton>
             </Link>
-            <AddVenueModal />
           </>
         }
       />
@@ -111,6 +110,8 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
           hint="average run success rate"
         />
       </div>
+
+      <MobileAddVenueButton />
 
       <Panel padding={0}>
         <VenueTableClient venues={filtered} />

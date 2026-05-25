@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { Eye, Loader2 } from 'lucide-react'
 import { useWatching } from '@/lib/queries/use-watching'
@@ -19,6 +20,15 @@ export function WatchShowButton({
   const { isSignedIn } = useAuth()
   const { data: watchedShows } = useWatching()
   const toggle = useWatchToggle()
+
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)')
+    setIsMobile(mq.matches)
+    const handler = (evt: MediaQueryListEvent) => setIsMobile(evt.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   const isPending = toggle.isPending
 
@@ -94,64 +104,43 @@ export function WatchShowButton({
             aria-hidden
             style={{ animation: 'fbSpin 0.7s linear infinite' }}
           />
+        ) : isMobile ? (
+          <Eye size={12} aria-hidden style={{ flexShrink: 0 }} />
         ) : isWatching ? (
-          <>
-            {/* On mobile: pink eye icon instead of checkmark */}
-            <Eye
-              size={12}
-              aria-hidden
-              className="block sm:hidden"
-              style={{ flexShrink: 0 }}
+          <svg
+            width="10"
+            height="10"
+            viewBox="0 0 12 12"
+            fill="none"
+            aria-hidden
+          >
+            <path
+              d="M2.5 6.5l2.5 2.5L9.5 4"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             />
-            {/* On desktop: checkmark */}
-            <svg
-              width="10"
-              height="10"
-              viewBox="0 0 12 12"
-              fill="none"
-              aria-hidden
-              className="hidden sm:block"
-            >
-              <path
-                d="M2.5 6.5l2.5 2.5L9.5 4"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </>
+          </svg>
         ) : (
-          <>
-            {/* Eye icon — shown only on mobile (sm and below) */}
-            <Eye
-              size={12}
-              aria-hidden
-              className="block sm:hidden"
-              style={{ flexShrink: 0 }}
+          <svg
+            width="10"
+            height="10"
+            viewBox="0 0 12 12"
+            fill="none"
+            aria-hidden
+          >
+            <path
+              d="M6 2.5v7M2.5 6h7"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
             />
-            {/* Plus icon — shown only on desktop */}
-            <svg
-              width="10"
-              height="10"
-              viewBox="0 0 12 12"
-              fill="none"
-              aria-hidden
-              className="hidden sm:block"
-            >
-              <path
-                d="M6 2.5v7M2.5 6h7"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-              />
-            </svg>
-          </>
+          </svg>
         )}
-        {/* Label — hidden on mobile in both states (icon replaces it) */}
-        <span className="hidden sm:inline">
-          {isWatching ? 'Watching' : 'Watch this show'}
-        </span>
+        {!isMobile && (
+          <span>{isWatching ? 'Watching' : 'Watch this show'}</span>
+        )}
       </button>
 
       {watchingCount > 0 && (
