@@ -14,7 +14,9 @@ import {
   getActiveFilterLabel,
   getFilterOptions,
 } from './filter-defs'
-import { copy } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY.filterBar
 
 interface FilterBarProps {
   venues: VenuePublic[]

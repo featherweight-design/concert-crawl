@@ -3,7 +3,9 @@
 import { useEffect } from 'react'
 import { useClerk } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
-import { copy } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY.error
 
 interface ProtectedErrorProps {
   error: Error & { digest?: string }

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import * as LucideIcons from 'lucide-react'
 import { ChevronRight, CheckCircle } from 'lucide-react'
 import { Panel } from '@/components/admin/primitives'
-import { COPY } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 export type AttentionSeverity = 'danger' | 'warning' | 'signal' | 'neutral'
 
@@ -168,7 +168,7 @@ export const AttentionFeed = ({
 
   const panelTitle = (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <span>{COPY.attentionFeed.panelTitle}</span>
+      <span>{ADMIN_COPY.dashboard.attentionFeed.panelTitle}</span>
       {activeCount > 0 && (
         <span
           style={{
@@ -186,7 +186,7 @@ export const AttentionFeed = ({
             letterSpacing: '0.01em',
           }}
         >
-          {activeCount} {COPY.attentionFeed.activeSuffix}
+          {activeCount} {ADMIN_COPY.dashboard.attentionFeed.activeSuffix}
         </span>
       )}
     </div>
@@ -211,7 +211,7 @@ export const AttentionFeed = ({
               fontSize: 13,
             }}
           >
-            {COPY.attentionFeed.empty}
+            {ADMIN_COPY.dashboard.attentionFeed.empty}
           </span>
         </div>
       ) : (
@@ -275,7 +275,7 @@ export const AttentionFeed = ({
                 flexShrink: 0,
               }}
             >
-              {COPY.attentionFeed.viewCrawlLog}
+              {ADMIN_COPY.dashboard.attentionFeed.viewCrawlLog}
               <ChevronRight size={11} />
             </Link>
           )}

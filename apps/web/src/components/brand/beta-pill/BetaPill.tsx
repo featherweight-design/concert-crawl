@@ -1,4 +1,4 @@
-import { COPY } from './definitions/copy'
+import { LANDING_COPY } from '@/app/_components/definitions/copy'
 
 export function BetaPill() {
   return (
@@ -29,7 +29,7 @@ export function BetaPill() {
           boxShadow: '0 0 8px var(--signal)',
         }}
       />
-      {COPY.label}
+      {LANDING_COPY.betaPill.label}
     </span>
   )
 }

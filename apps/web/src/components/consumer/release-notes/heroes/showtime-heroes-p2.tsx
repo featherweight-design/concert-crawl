@@ -6,7 +6,9 @@ import {
   ShowtimeSparkles,
   StubGlyph,
 } from './showtime-base'
-import { COPY } from '../definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const COPY = CONSUMER_COPY.releaseNotes
 
 // ════════════════════════════════════════════════════════════════
 // 8 · ARTIST FOLLOWING · Showtime
@@ -281,7 +283,9 @@ export function FollowingShowtime(): React.ReactElement {
         </div>
       </div>
 
-      <ShowtimeEyebrow dotHue="#FF7BD4">{COPY.heroes.following.eyebrow}</ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#FF7BD4">
+        {COPY.heroes.following.eyebrow}
+      </ShowtimeEyebrow>
     </div>
   )
 }
@@ -557,7 +561,9 @@ export function PriceDropShowtime(): React.ReactElement {
         </div>
       </div>
 
-      <ShowtimeEyebrow dotHue="#C9F26E">{COPY.heroes.priceDrop.eyebrow}</ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#C9F26E">
+        {COPY.heroes.priceDrop.eyebrow}
+      </ShowtimeEyebrow>
     </div>
   )
 }
@@ -777,12 +783,16 @@ export function SetlistShowtime(): React.ReactElement {
             }}
           >
             <span>Est. 1h 42m</span>
-            <span style={{ color: '#7AE6FF' }}>{COPY.heroes.setlist.tapToSeeMore}</span>
+            <span style={{ color: '#7AE6FF' }}>
+              {COPY.heroes.setlist.tapToSeeMore}
+            </span>
           </div>
         </div>
       </div>
 
-      <ShowtimeEyebrow dotHue="#7AE6FF">{COPY.heroes.setlist.eyebrow}</ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#7AE6FF">
+        {COPY.heroes.setlist.eyebrow}
+      </ShowtimeEyebrow>
     </div>
   )
 }
@@ -1068,7 +1078,9 @@ export function FirstTimerShowtime(): React.ReactElement {
         ))}
       </div>
 
-      <ShowtimeEyebrow dotHue="#7AE6FF">{COPY.heroes.firstTimer.eyebrow}</ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#7AE6FF">
+        {COPY.heroes.firstTimer.eyebrow}
+      </ShowtimeEyebrow>
     </div>
   )
 }
@@ -1449,7 +1461,9 @@ export function LastTimeShowtime(): React.ReactElement {
         ))}
       </div>
 
-      <ShowtimeEyebrow dotHue="#A075FF">{COPY.heroes.lastTime.eyebrow}</ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#A075FF">
+        {COPY.heroes.lastTime.eyebrow}
+      </ShowtimeEyebrow>
     </div>
   )
 }
@@ -1710,7 +1724,9 @@ export function SupportActShowtime(): React.ReactElement {
         &nbsp;·&nbsp;{COPY.heroes.supportAct.newToYouSuffix}
       </div>
 
-      <ShowtimeEyebrow dotHue="#FFE36B">{COPY.heroes.supportAct.eyebrow}</ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#FFE36B">
+        {COPY.heroes.supportAct.eyebrow}
+      </ShowtimeEyebrow>
     </div>
   )
 }
@@ -2010,7 +2026,9 @@ export function VenuePassportShowtime(): React.ReactElement {
         </div>
       </div>
 
-      <ShowtimeEyebrow dotHue="#FF7BD4">{COPY.heroes.venuePassport.eyebrow}</ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#FF7BD4">
+        {COPY.heroes.venuePassport.eyebrow}
+      </ShowtimeEyebrow>
     </div>
   )
 }

@@ -1,7 +1,9 @@
 'use client'
 
 import type { Release } from '@/lib/definitions/releases'
-import { COPY } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const COPY = CONSUMER_COPY.releaseNotes
 
 interface FeatureDropPillProps {
   release: Release

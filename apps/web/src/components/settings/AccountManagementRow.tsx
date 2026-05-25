@@ -1,7 +1,9 @@
 'use client'
 
 import { useClerk, useUser } from '@clerk/nextjs'
-import { SETTINGS_COPY } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const SETTINGS_COPY = CONSUMER_COPY.settings
 
 interface AccountManagementRowProps {
   email: string

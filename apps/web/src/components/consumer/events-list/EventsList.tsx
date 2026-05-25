@@ -7,7 +7,9 @@ import { useEvents } from '@/lib/queries/use-events'
 import { useWatching } from '@/lib/queries/use-watching'
 import { EventCard } from '@/components/consumer/event-card/EventCard'
 import { dateGroupLabel } from '@/components/consumer/definitions/lib'
-import { copy } from '@/components/consumer/definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY
 
 const PAGE_LIMIT = 20
 

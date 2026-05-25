@@ -4,7 +4,9 @@ import { useState, useRef, useEffect } from 'react'
 import { useAuth, useClerk } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { deleteAccount } from '@/lib/users'
-import { SETTINGS_COPY } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const SETTINGS_COPY = CONSUMER_COPY.settings
 
 interface DeleteAccountSheetProps {
   open: boolean

@@ -1,7 +1,9 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { VENUE_PROFILE_COPY } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const VENUE_PROFILE_COPY = CONSUMER_COPY.venueProfile
 
 export function BackButton() {
   const router = useRouter()

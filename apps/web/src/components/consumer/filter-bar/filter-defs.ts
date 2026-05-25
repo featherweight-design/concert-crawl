@@ -1,5 +1,7 @@
 import type { VenuePublic } from '@concert-crawl/types'
-import { copy } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY.filterBar
 
 export type FilterKey = 'when' | 'where' | 'price' | 'vibe'
 

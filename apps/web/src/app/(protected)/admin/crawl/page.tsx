@@ -12,7 +12,7 @@ import {
   formatLlmCostTotal,
 } from './crawl-stats'
 import type { CrawlRun } from '@concert-crawl/types'
-import { ADMIN_CRAWL_PAGE_COPY } from '@/app/(protected)/admin/crawl/definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 export interface CrawlStatusRow {
   venueId: string
@@ -132,7 +132,7 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
   if (totalInserted > 0) eventsHintParts.push(`${totalInserted} new`)
   if (totalUpdated > 0) eventsHintParts.push(`${totalUpdated} updated`)
   const eventsHint =
-    eventsHintParts.join(' · ') || ADMIN_CRAWL_PAGE_COPY.statEventsHintFallback
+    eventsHintParts.join(' · ') || ADMIN_COPY.crawlPage.statEventsHintFallback
 
   const mostRecentRun = runs[0]
   const lastSweepMinutes = mostRecentRun?.createdAt
@@ -161,9 +161,9 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
       }}
     >
       <SectionHead
-        eyebrow={ADMIN_CRAWL_PAGE_COPY.sectionEyebrow}
-        title={ADMIN_CRAWL_PAGE_COPY.sectionTitle}
-        subtitle={ADMIN_CRAWL_PAGE_COPY.sectionSubtitle}
+        eyebrow={ADMIN_COPY.crawlPage.sectionEyebrow}
+        title={ADMIN_COPY.crawlPage.sectionTitle}
+        subtitle={ADMIN_COPY.crawlPage.sectionSubtitle}
         actions={<CrawlRunAllButton />}
       />
 
@@ -184,32 +184,32 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
         }}
       >
         <StatCard
-          label={ADMIN_CRAWL_PAGE_COPY.statLastSweep}
+          label={ADMIN_COPY.crawlPage.statLastSweep}
           value={lastSweepValue}
           {...(lastSweepUnit !== undefined && {
-            unit: ADMIN_CRAWL_PAGE_COPY.statLastSweepUnit,
+            unit: ADMIN_COPY.crawlPage.statLastSweepUnit,
           })}
           iconName="RefreshCw"
           kind="neutral"
           hint={sweepHint}
         />
         <StatCard
-          label={ADMIN_CRAWL_PAGE_COPY.statTodaysRuns}
+          label={ADMIN_COPY.crawlPage.statTodaysRuns}
           value={String(todayRuns.length)}
           iconName="Activity"
           kind="signal"
           hint={runsBreakdown}
         />
         <StatCard
-          label={ADMIN_CRAWL_PAGE_COPY.statEventsIngested}
+          label={ADMIN_COPY.crawlPage.statEventsIngested}
           value={String(totalInserted + totalUpdated)}
-          unit={ADMIN_CRAWL_PAGE_COPY.statEventsIngestedUnit}
+          unit={ADMIN_COPY.crawlPage.statEventsIngestedUnit}
           iconName="CalendarCheck2"
           kind="success"
           hint={eventsHint}
         />
         <StatCard
-          label={ADMIN_CRAWL_PAGE_COPY.statLlmCost}
+          label={ADMIN_COPY.crawlPage.statLlmCost}
           value={formatLlmCostTotal(todayRuns) || '$0.00'}
           iconName="DollarSign"
           kind="signal"

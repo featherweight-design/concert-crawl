@@ -6,13 +6,15 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { patchMe, checkHandleAvailability } from '@/lib/users'
 import { Avatar } from './Avatar'
-import { SETTINGS_COPY } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import {
   HANDLE_REGEX,
   RESERVED_HANDLES,
   AVATAR_COLORS,
 } from './definitions/constants'
 import type { AvatarColor, UserProfileResponse } from '@concert-crawl/types'
+
+const SETTINGS_COPY = CONSUMER_COPY.settings
 
 export const EDIT_PROFILE_FORM_ID = 'edit-profile-form'
 

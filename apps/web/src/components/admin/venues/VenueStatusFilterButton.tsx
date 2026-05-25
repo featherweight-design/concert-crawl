@@ -2,17 +2,17 @@
 
 import { useRouter } from 'next/navigation'
 import { Filter } from 'lucide-react'
-import { venueStatusFilterCopy } from '@/components/admin/venues/definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 interface Props {
   currentFilter: string | undefined
 }
 
 const OPTIONS = [
-  { value: '', label: venueStatusFilterCopy.options.all },
-  { value: 'active', label: venueStatusFilterCopy.options.active },
-  { value: 'paused', label: venueStatusFilterCopy.options.paused },
-  { value: 'blocked', label: venueStatusFilterCopy.options.blocked },
+  { value: '', label: ADMIN_COPY.venuesPage.options.all },
+  { value: 'active', label: ADMIN_COPY.venuesPage.options.active },
+  { value: 'paused', label: ADMIN_COPY.venuesPage.options.paused },
+  { value: 'blocked', label: ADMIN_COPY.venuesPage.options.blocked },
 ]
 
 export function VenueStatusFilterButton({ currentFilter }: Props) {
@@ -53,11 +53,11 @@ export function VenueStatusFilterButton({ currentFilter }: Props) {
         <Filter size={14} />
         {isFiltered
           ? (OPTIONS.find((opt) => opt.value === currentFilter)?.label ??
-            venueStatusFilterCopy.statusFallback)
-          : venueStatusFilterCopy.statusFallback}
+            ADMIN_COPY.venuesPage.statusFallback)
+          : ADMIN_COPY.venuesPage.statusFallback}
       </div>
       <select
-        aria-label={venueStatusFilterCopy.ariaLabel}
+        aria-label={ADMIN_COPY.venuesPage.ariaLabel}
         value={currentFilter ?? ''}
         onChange={handleChange}
         style={{

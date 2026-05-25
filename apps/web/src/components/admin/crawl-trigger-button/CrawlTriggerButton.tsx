@@ -10,7 +10,7 @@ import { AdminButton, StatusBadge } from '@/components/admin/primitives'
 import { RefreshCw, Loader2 } from 'lucide-react'
 import { triggerVenueCrawl, fetchCrawlRun } from './lib/crawl'
 import { CRAWL_STATUS_BADGES, POLL_INTERVAL_MS } from './definitions/constants'
-import { copy } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import type { TriggerState } from './definitions/types'
 
 interface CrawlTriggerButtonProps {
@@ -38,7 +38,8 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
 
     try {
       const token = await getToken()
-      if (!token) throw new Error(copy.errors.notAuthenticated)
+      if (!token)
+        throw new Error(ADMIN_COPY.crawlTriggerButton.errors.notAuthenticated)
 
       const { crawlRunId } = await triggerVenueCrawl(venueId, token)
 
@@ -47,7 +48,10 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
       pollInterval.current = setInterval(async () => {
         try {
           const pollToken = await getToken()
-          if (!pollToken) throw new Error(copy.errors.notAuthenticated)
+          if (!pollToken)
+            throw new Error(
+              ADMIN_COPY.crawlTriggerButton.errors.notAuthenticated,
+            )
 
           const run = await fetchCrawlRun(crawlRunId, pollToken)
 
@@ -65,7 +69,7 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
           setErrorMessage(
             err instanceof ApiError || err instanceof Error
               ? err.message
-              : copy.errors.pollFailed,
+              : ADMIN_COPY.crawlTriggerButton.errors.pollFailed,
           )
         }
       }, POLL_INTERVAL_MS)
@@ -74,7 +78,7 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
       setErrorMessage(
         err instanceof ApiError || err instanceof Error
           ? err.message
-          : copy.errors.triggerFailed,
+          : ADMIN_COPY.crawlTriggerButton.errors.triggerFailed,
       )
     }
   }
@@ -83,10 +87,10 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
 
   const buttonLabel =
     triggerState === 'triggering'
-      ? copy.button.triggering
+      ? ADMIN_COPY.crawlTriggerButton.button.triggering
       : triggerState === 'polling'
-        ? copy.button.polling
-        : copy.button.idle
+        ? ADMIN_COPY.crawlTriggerButton.button.polling
+        : ADMIN_COPY.crawlTriggerButton.button.idle
 
   const statusBadgeConfig =
     result && result.status in CRAWL_STATUS_BADGES
@@ -117,8 +121,8 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
             }}
           >
             {triggerState === 'triggering'
-              ? copy.status.initiating
-              : copy.status.waiting}
+              ? ADMIN_COPY.crawlTriggerButton.status.initiating
+              : ADMIN_COPY.crawlTriggerButton.status.waiting}
           </span>
         )}
       </div>

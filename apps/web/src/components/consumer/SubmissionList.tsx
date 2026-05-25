@@ -4,7 +4,9 @@ import { useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import type { SubmissionWithMeta } from '@concert-crawl/types'
-import { copy } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY
 
 interface SubmissionListProps {
   submissions: SubmissionWithMeta[]

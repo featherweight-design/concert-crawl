@@ -1,8 +1,10 @@
 import Link from 'next/link'
 import { Avatar } from './Avatar'
 import { CredChip } from './CredChip'
-import { SETTINGS_COPY } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import type { AvatarColor, DisplayRole, RoleBadge } from '@concert-crawl/types'
+
+const SETTINGS_COPY = CONSUMER_COPY.settings
 
 interface ProfileHeroProps {
   handle: string | null

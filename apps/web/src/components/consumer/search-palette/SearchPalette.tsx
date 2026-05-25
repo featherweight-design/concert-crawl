@@ -7,7 +7,9 @@ import { SearchDefaultState } from '../search/SearchDefaultState'
 import { SearchResultsState } from '../search/SearchResultsState'
 import { SearchEmptyState } from '../search/SearchEmptyState'
 import { SearchLoadingState } from '../search/SearchLoadingState'
-import { copy } from '../search/definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY.search
 
 interface SearchPaletteProps {
   open: boolean

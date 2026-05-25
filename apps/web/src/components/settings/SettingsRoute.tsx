@@ -6,13 +6,14 @@ import { ThemePickerInline } from './ThemePickerInline'
 import { MySubmissionsList } from './MySubmissionsList'
 import { DangerZone } from './DangerZone'
 import { UserMenuVersionFooter } from '@/components/consumer/release-notes/UserMenuVersionFooter'
-import { SETTINGS_COPY } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import type {
   UserProfileResponse,
   UserSubmissionItem,
 } from '@concert-crawl/types'
 
 const APP_VERSION = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev'
+const SETTINGS_COPY = CONSUMER_COPY.settings
 
 interface SettingsRouteProps {
   profile: UserProfileResponse

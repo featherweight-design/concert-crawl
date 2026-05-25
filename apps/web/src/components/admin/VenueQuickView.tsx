@@ -12,7 +12,7 @@ import type { VenueWithEventCount } from '@concert-crawl/types'
 import { AdminButton, StatusBadge } from '@/components/admin/primitives'
 import { useTriggerVenueCrawl } from '@/lib/queries/use-admin-crawl-trigger'
 import { useState, useRef, useEffect } from 'react'
-import { venueQuickViewCopy } from '@/components/admin/definitions/venue-quick-view-copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 interface Props {
   venue: VenueWithEventCount
@@ -86,12 +86,12 @@ export function VenueQuickView({ venue }: Props) {
 
   const crawlLabel =
     crawlState === 'triggering'
-      ? venueQuickViewCopy.actions.triggering
+      ? ADMIN_COPY.venueQuickView.actions.triggering
       : crawlState === 'queued'
-        ? venueQuickViewCopy.actions.queued
+        ? ADMIN_COPY.venueQuickView.actions.queued
         : crawlState === 'error'
-          ? venueQuickViewCopy.actions.error
-          : venueQuickViewCopy.actions.runCrawl
+          ? ADMIN_COPY.venueQuickView.actions.error
+          : ADMIN_COPY.venueQuickView.actions.runCrawl
 
   const vendorLabel = venue.ticketVendor
     ? (TICKET_VENDOR_LABELS[venue.ticketVendor] ?? venue.ticketVendor)
@@ -117,7 +117,7 @@ export function VenueQuickView({ venue }: Props) {
         {/* Ticket Vendor */}
         <div>
           <div style={SECTION_LABEL}>
-            {venueQuickViewCopy.sections.ticketVendor}
+            {ADMIN_COPY.venueQuickView.sections.ticketVendor}
           </div>
           {vendorLabel ? (
             <div>
@@ -172,7 +172,7 @@ export function VenueQuickView({ venue }: Props) {
         {/* Crawl Schedule */}
         <div>
           <div style={SECTION_LABEL}>
-            {venueQuickViewCopy.sections.crawlSchedule}
+            {ADMIN_COPY.venueQuickView.sections.crawlSchedule}
           </div>
           <div
             style={{
@@ -183,7 +183,7 @@ export function VenueQuickView({ venue }: Props) {
               marginBottom: 4,
             }}
           >
-            {venueQuickViewCopy.crawlSchedule.label}
+            {ADMIN_COPY.venueQuickView.crawlSchedule.label}
           </div>
           <div
             style={{
@@ -192,14 +192,14 @@ export function VenueQuickView({ venue }: Props) {
               color: 'var(--fg-subtle)',
             }}
           >
-            {venueQuickViewCopy.crawlSchedule.cron}
+            {ADMIN_COPY.venueQuickView.crawlSchedule.cron}
           </div>
         </div>
 
         {/* Extraction Strategy */}
         <div>
           <div style={SECTION_LABEL}>
-            {venueQuickViewCopy.sections.extractionStrategy}
+            {ADMIN_COPY.venueQuickView.sections.extractionStrategy}
           </div>
           <StatusBadge
             kind={strategyKind(venue.extractionStrategy)}
@@ -212,7 +212,7 @@ export function VenueQuickView({ venue }: Props) {
         {/* Consecutive Failures */}
         <div>
           <div style={SECTION_LABEL}>
-            {venueQuickViewCopy.sections.consecutiveFailures}
+            {ADMIN_COPY.venueQuickView.sections.consecutiveFailures}
           </div>
           <span
             style={{
@@ -232,26 +232,26 @@ export function VenueQuickView({ venue }: Props) {
               marginLeft: 4,
             }}
           >
-            {venueQuickViewCopy.consecutiveFailures.outOf}
+            {ADMIN_COPY.venueQuickView.consecutiveFailures.outOf}
           </span>
         </div>
 
         {/* Robots.txt */}
         <div>
           <div style={SECTION_LABEL}>
-            {venueQuickViewCopy.sections.robotsTxt}
+            {ADMIN_COPY.venueQuickView.sections.robotsTxt}
           </div>
           {venue.robotsTxtAllowed === null ? (
             <StatusBadge kind="neutral">
-              {venueQuickViewCopy.robots.unchecked}
+              {ADMIN_COPY.venueQuickView.robots.unchecked}
             </StatusBadge>
           ) : venue.robotsTxtAllowed ? (
             <StatusBadge kind="success" variant="outline">
-              {venueQuickViewCopy.robots.allowed}
+              {ADMIN_COPY.venueQuickView.robots.allowed}
             </StatusBadge>
           ) : (
             <StatusBadge kind="danger" variant="outline">
-              {venueQuickViewCopy.robots.disallowed}
+              {ADMIN_COPY.venueQuickView.robots.disallowed}
             </StatusBadge>
           )}
         </div>
@@ -313,7 +313,7 @@ export function VenueQuickView({ venue }: Props) {
           style={{ textDecoration: 'none' }}
         >
           <AdminButton variant="outline" size="sm" icon={Settings}>
-            {venueQuickViewCopy.actions.editVenue}
+            {ADMIN_COPY.venueQuickView.actions.editVenue}
           </AdminButton>
         </Link>
         <div style={{ flex: 1 }} />
@@ -330,7 +330,7 @@ export function VenueQuickView({ venue }: Props) {
             textDecoration: 'none',
           }}
         >
-          {venueQuickViewCopy.actions.crawlHistory}
+          {ADMIN_COPY.venueQuickView.actions.crawlHistory}
           <ChevronRight size={14} />
         </Link>
       </div>

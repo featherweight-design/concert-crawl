@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
-import { copy } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { usePathname } from 'next/navigation'
 import { useAuth, useUser } from '@clerk/nextjs'
 import { useTheme } from '@/theme/ThemeProvider'
@@ -12,10 +12,10 @@ type FeedbackCategory = 'bug' | 'idea' | 'praise' | 'other'
 type ModalState = 'form' | 'loading' | 'success' | 'error'
 
 const CATEGORIES: { key: FeedbackCategory; label: string }[] = [
-  { key: 'bug', label: copy.modal.categories.bug },
-  { key: 'idea', label: copy.modal.categories.idea },
-  { key: 'praise', label: copy.modal.categories.praise },
-  { key: 'other', label: copy.modal.categories.other },
+  { key: 'bug', label: CONSUMER_COPY.feedback.modal.categories.bug },
+  { key: 'idea', label: CONSUMER_COPY.feedback.modal.categories.idea },
+  { key: 'praise', label: CONSUMER_COPY.feedback.modal.categories.praise },
+  { key: 'other', label: CONSUMER_COPY.feedback.modal.categories.other },
 ]
 
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? ''
@@ -147,7 +147,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
       </div>
       <button
         type="button"
-        aria-label={copy.modal.closeAriaLabel}
+        aria-label={CONSUMER_COPY.feedback.modal.closeAriaLabel}
         onClick={handleClose}
         style={{
           all: 'unset',
@@ -170,11 +170,11 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
   const footer = showForm ? (
     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
       <SecondaryButton onClick={handleClose} fullWidth={false}>
-        {copy.modal.footer.cancel}
+        {CONSUMER_COPY.feedback.modal.footer.cancel}
       </SecondaryButton>
       <div style={{ width: 200 }}>
         <SubmitButton loading={state === 'loading'} onClick={handleSubmit}>
-          {copy.modal.footer.submit}
+          {CONSUMER_COPY.feedback.modal.footer.submit}
         </SubmitButton>
       </div>
     </div>
@@ -182,7 +182,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
 
   const mobileFooter = showForm ? (
     <SubmitButton loading={state === 'loading'} onClick={handleSubmit}>
-      {copy.modal.footer.submit}
+      {CONSUMER_COPY.feedback.modal.footer.submit}
     </SubmitButton>
   ) : undefined
 
@@ -190,7 +190,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     <ModalShell
       open={open}
       onClose={handleClose}
-      ariaLabel={copy.modal.ariaLabel}
+      ariaLabel={CONSUMER_COPY.feedback.modal.ariaLabel}
       sheetHeight={state === 'success' || state === 'error' ? 'short' : 'tall'}
       header={header}
       footer={footer}
@@ -285,7 +285,7 @@ function FormFields({
             textWrap: 'balance',
           }}
         >
-          {copy.modal.form.heading}
+          {CONSUMER_COPY.feedback.modal.form.heading}
         </h2>
         <p
           style={{
@@ -298,13 +298,15 @@ function FormFields({
             textWrap: 'pretty',
           }}
         >
-          {copy.modal.form.subheading}
+          {CONSUMER_COPY.feedback.modal.form.subheading}
         </p>
       </div>
 
       {/* Category chips */}
       <div>
-        <Eyebrow error={catError}>{copy.modal.form.categoryEyebrow}</Eyebrow>
+        <Eyebrow error={catError}>
+          {CONSUMER_COPY.feedback.modal.form.categoryEyebrow}
+        </Eyebrow>
         <div
           style={{
             display: 'flex',
@@ -349,20 +351,24 @@ function FormFields({
           })}
         </div>
         {catError && (
-          <HelpText tone="error">{copy.modal.errors.categoryRequired}</HelpText>
+          <HelpText tone="error">
+            {CONSUMER_COPY.feedback.modal.errors.categoryRequired}
+          </HelpText>
         )}
       </div>
 
       {/* Message */}
       <div>
-        <Eyebrow error={msgError}>{copy.modal.form.messageEyebrow}</Eyebrow>
+        <Eyebrow error={msgError}>
+          {CONSUMER_COPY.feedback.modal.form.messageEyebrow}
+        </Eyebrow>
         <textarea
           className="fb-textarea"
           value={message}
           onChange={(ev) => setMessage(ev.target.value)}
           disabled={disabled}
           rows={5}
-          placeholder={copy.modal.form.messagePlaceholder}
+          placeholder={CONSUMER_COPY.feedback.modal.form.messagePlaceholder}
           style={{
             width: '100%',
             boxSizing: 'border-box',
@@ -382,13 +388,15 @@ function FormFields({
           }}
         />
         {msgError && (
-          <HelpText tone="error">{copy.modal.errors.messageRequired}</HelpText>
+          <HelpText tone="error">
+            {CONSUMER_COPY.feedback.modal.errors.messageRequired}
+          </HelpText>
         )}
       </div>
 
       {/* Screenshot attachment */}
       <div>
-        <Eyebrow>{copy.modal.form.screenshotEyebrow}</Eyebrow>
+        <Eyebrow>{CONSUMER_COPY.feedback.modal.form.screenshotEyebrow}</Eyebrow>
         <input
           ref={fileInputRef}
           type="file"
@@ -453,7 +461,9 @@ function FormFields({
             <button
               type="button"
               disabled={disabled}
-              aria-label={copy.modal.form.screenshotRemoveAriaLabel}
+              aria-label={
+                CONSUMER_COPY.feedback.modal.form.screenshotRemoveAriaLabel
+              }
               onClick={() => {
                 onScreenshotChange(null)
                 if (fileInputRef.current) fileInputRef.current.value = ''
@@ -554,7 +564,7 @@ function FormFields({
               <span
                 style={{ color: 'var(--fg)', fontSize: 13, fontWeight: 700 }}
               >
-                {copy.modal.form.screenshotAttachLabel}
+                {CONSUMER_COPY.feedback.modal.form.screenshotAttachLabel}
               </span>
               <span
                 style={{
@@ -564,7 +574,7 @@ function FormFields({
                   letterSpacing: 0,
                 }}
               >
-                {copy.modal.form.screenshotAttachSublabel}
+                {CONSUMER_COPY.feedback.modal.form.screenshotAttachSublabel}
               </span>
             </span>
           </button>
@@ -604,7 +614,7 @@ function SuccessState({
           textWrap: 'balance',
         }}
       >
-        {copy.modal.success.heading}
+        {CONSUMER_COPY.feedback.modal.success.heading}
       </div>
       <div
         style={{
@@ -615,7 +625,7 @@ function SuccessState({
           textWrap: 'pretty',
         }}
       >
-        {copy.modal.success.body}
+        {CONSUMER_COPY.feedback.modal.success.body}
       </div>
       <div
         style={{
@@ -626,10 +636,10 @@ function SuccessState({
         }}
       >
         <SubmitButton onClick={onClose}>
-          {copy.modal.success.primaryAction}
+          {CONSUMER_COPY.feedback.modal.success.primaryAction}
         </SubmitButton>
         <SecondaryButton onClick={onReset}>
-          {copy.modal.success.secondaryAction}
+          {CONSUMER_COPY.feedback.modal.success.secondaryAction}
         </SecondaryButton>
       </div>
     </div>
@@ -663,7 +673,7 @@ function ErrorState({
           textWrap: 'balance',
         }}
       >
-        {copy.modal.error.heading}
+        {CONSUMER_COPY.feedback.modal.error.heading}
       </div>
       <div
         style={{
@@ -674,7 +684,7 @@ function ErrorState({
           textWrap: 'pretty',
         }}
       >
-        {copy.modal.error.body}
+        {CONSUMER_COPY.feedback.modal.error.body}
       </div>
       <div
         style={{
@@ -685,10 +695,10 @@ function ErrorState({
         }}
       >
         <SubmitButton onClick={onReset}>
-          {copy.modal.error.primaryAction}
+          {CONSUMER_COPY.feedback.modal.error.primaryAction}
         </SubmitButton>
         <SecondaryButton onClick={onClose}>
-          {copy.modal.error.secondaryAction}
+          {CONSUMER_COPY.feedback.modal.error.secondaryAction}
         </SecondaryButton>
       </div>
     </div>
@@ -700,11 +710,26 @@ function ErrorState({
 function ContextDisclosure({ ctx }: { ctx: CtxData }) {
   const [open, setOpen] = useState(false)
   const rows: { key: string; value: string }[] = [
-    { key: copy.modal.contextDisclosure.fields.route, value: ctx.route },
-    { key: copy.modal.contextDisclosure.fields.theme, value: ctx.theme },
-    { key: copy.modal.contextDisclosure.fields.build, value: ctx.build },
-    { key: copy.modal.contextDisclosure.fields.device, value: ctx.device },
-    { key: copy.modal.contextDisclosure.fields.user, value: ctx.user },
+    {
+      key: CONSUMER_COPY.feedback.modal.contextDisclosure.fields.route,
+      value: ctx.route,
+    },
+    {
+      key: CONSUMER_COPY.feedback.modal.contextDisclosure.fields.theme,
+      value: ctx.theme,
+    },
+    {
+      key: CONSUMER_COPY.feedback.modal.contextDisclosure.fields.build,
+      value: ctx.build,
+    },
+    {
+      key: CONSUMER_COPY.feedback.modal.contextDisclosure.fields.device,
+      value: ctx.device,
+    },
+    {
+      key: CONSUMER_COPY.feedback.modal.contextDisclosure.fields.user,
+      value: ctx.user,
+    },
   ]
   return (
     <div
@@ -759,7 +784,7 @@ function ContextDisclosure({ ctx }: { ctx: CtxData }) {
             textTransform: 'uppercase',
           }}
         >
-          {copy.modal.contextDisclosure.toggleLabel}
+          {CONSUMER_COPY.feedback.modal.contextDisclosure.toggleLabel}
         </span>
         <span style={{ flex: 1 }} />
         <span
@@ -771,7 +796,7 @@ function ContextDisclosure({ ctx }: { ctx: CtxData }) {
             letterSpacing: '0.10em',
           }}
         >
-          {copy.modal.contextDisclosure.fieldCount}
+          {CONSUMER_COPY.feedback.modal.contextDisclosure.fieldCount}
         </span>
       </button>
       {open && (
@@ -885,15 +910,15 @@ function HeaderRail({ state }: { state: ModalState }) {
       ? 'var(--signal)'
       : 'var(--accent)'
   const eyebrow = isError
-    ? copy.modal.headerRail.error
+    ? CONSUMER_COPY.feedback.modal.headerRail.error
     : isSuccess
-      ? copy.modal.headerRail.success
-      : copy.modal.headerRail.form
+      ? CONSUMER_COPY.feedback.modal.headerRail.success
+      : CONSUMER_COPY.feedback.modal.headerRail.form
   const code = isError
-    ? copy.modal.headerRail.codeError
+    ? CONSUMER_COPY.feedback.modal.headerRail.codeError
     : isSuccess
-      ? copy.modal.headerRail.codeSuccess
-      : copy.modal.headerRail.codeForm
+      ? CONSUMER_COPY.feedback.modal.headerRail.codeSuccess
+      : CONSUMER_COPY.feedback.modal.headerRail.codeForm
   const pulse = state === 'form' || state === 'loading'
 
   return (
@@ -945,12 +970,12 @@ function StatusRail({ tone }: { tone: 'success' | 'error' }) {
   const accent = tone === 'success' ? 'var(--signal)' : 'var(--warning)'
   const label =
     tone === 'success'
-      ? copy.modal.statusRail.successLabel
-      : copy.modal.statusRail.errorLabel
+      ? CONSUMER_COPY.feedback.modal.statusRail.successLabel
+      : CONSUMER_COPY.feedback.modal.statusRail.errorLabel
   const code =
     tone === 'success'
-      ? copy.modal.statusRail.successCode
-      : copy.modal.statusRail.errorCode
+      ? CONSUMER_COPY.feedback.modal.statusRail.successCode
+      : CONSUMER_COPY.feedback.modal.statusRail.errorCode
   return (
     <div
       style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}
@@ -1031,7 +1056,9 @@ function SubmitButton({
       }}
     >
       {loading && <Spinner />}
-      <span>{loading ? copy.modal.footer.submitting : children}</span>
+      <span>
+        {loading ? CONSUMER_COPY.feedback.modal.footer.submitting : children}
+      </span>
     </button>
   )
 }

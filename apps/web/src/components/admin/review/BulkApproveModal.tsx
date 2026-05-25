@@ -5,7 +5,7 @@ import {
   confidenceColor,
   KIND_COLORS,
 } from '@/components/admin/primitives/utils'
-import { REVIEW_COPY } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 interface EventSummary {
   id: string
@@ -87,7 +87,7 @@ export const BulkApproveModal = ({
               marginBottom: 8,
             }}
           >
-            {REVIEW_COPY.bulkApproveModal.eyebrow}
+            {ADMIN_COPY.review.bulkApproveModal.eyebrow}
           </div>
           <h2
             style={{
@@ -99,7 +99,7 @@ export const BulkApproveModal = ({
               margin: '0 0 6px',
             }}
           >
-            {REVIEW_COPY.bulkApproveModal.heading(events.length)}
+            {ADMIN_COPY.review.bulkApproveModal.heading(events.length)}
           </h2>
           <p
             style={{
@@ -110,7 +110,7 @@ export const BulkApproveModal = ({
               lineHeight: 1.5,
             }}
           >
-            {REVIEW_COPY.bulkApproveModal.subtext}
+            {ADMIN_COPY.review.bulkApproveModal.subtext}
           </p>
         </div>
 
@@ -132,7 +132,7 @@ export const BulkApproveModal = ({
               color: 'var(--fg-subtle)',
             }}
           >
-            {REVIEW_COPY.bulkApproveModal.aboutToApprove}
+            {ADMIN_COPY.review.bulkApproveModal.aboutToApprove}
           </div>
           <div style={{ maxHeight: 240, overflowY: 'auto' }}>
             {events.map((ev) => {
@@ -251,7 +251,7 @@ export const BulkApproveModal = ({
                 lineHeight: 1.5,
               }}
             >
-              {REVIEW_COPY.bulkApproveModal.lowConfidenceWarning(
+              {ADMIN_COPY.review.bulkApproveModal.lowConfidenceWarning(
                 lowConfidenceCount,
               )}
             </span>
@@ -282,7 +282,7 @@ export const BulkApproveModal = ({
               cursor: 'pointer',
             }}
           >
-            {REVIEW_COPY.bulkApproveModal.cancel}
+            {ADMIN_COPY.review.bulkApproveModal.cancel}
           </button>
           <button
             onClick={onConfirm}
@@ -301,7 +301,7 @@ export const BulkApproveModal = ({
               cursor: 'pointer',
             }}
           >
-            {REVIEW_COPY.bulkApproveModal.confirmApprove(events.length)}
+            {ADMIN_COPY.review.bulkApproveModal.confirmApprove(events.length)}
           </button>
         </div>
       </div>

@@ -16,7 +16,7 @@ import {
 } from '@/components/admin/primitives'
 import { Check, X, Edit2, Filter, ChevronRight, Tag } from 'lucide-react'
 import type { AdminEvent } from '@/components/admin/events/types'
-import { COPY } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 type StatusTab = 'pending' | 'low_conf' | 'duplicates' | 'approved' | 'rejected'
 
@@ -216,7 +216,7 @@ function FieldRow({
               cursor: 'pointer',
             }}
           >
-            {COPY.fields.addTag}
+            {ADMIN_COPY.events.fields.addTag}
           </button>
         </div>
       ) : (
@@ -385,7 +385,9 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
       } catch (err) {
         console.error('[EventQueueSplit] approve failed:', err)
         setActionError(
-          err instanceof Error ? err.message : COPY.errors.actionFailed,
+          err instanceof Error
+            ? err.message
+            : ADMIN_COPY.events.errors.actionFailed,
         )
       } finally {
         setProcessing(null)
@@ -396,7 +398,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
 
   const reject = useCallback(
     async (id: string) => {
-      if (!confirm(COPY.confirms.deleteEvent)) return
+      if (!confirm(ADMIN_COPY.events.confirms.deleteEvent)) return
       setProcessing(id)
       setActionError(null)
       try {
@@ -408,7 +410,9 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
       } catch (err) {
         console.error('[EventQueueSplit] reject failed:', err)
         setActionError(
-          err instanceof Error ? err.message : COPY.errors.actionFailed,
+          err instanceof Error
+            ? err.message
+            : ADMIN_COPY.events.errors.actionFailed,
         )
       } finally {
         setProcessing(null)
@@ -448,7 +452,9 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
       setIsEditing(false)
     } catch (err) {
       setActionError(
-        err instanceof Error ? err.message : COPY.errors.saveFailed,
+        err instanceof Error
+          ? err.message
+          : ADMIN_COPY.events.errors.saveFailed,
       )
     }
   }
@@ -481,15 +487,23 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
   }, [selectedId, selectedIdx, filtered, approve, reject])
 
   const TABS: { key: StatusTab; label: string; count: number }[] = [
-    { key: 'pending', label: COPY.tabs.pending, count: pendingEvents.length },
-    { key: 'low_conf', label: COPY.tabs.lowConf, count: lowConfEvents.length },
-    { key: 'duplicates', label: COPY.tabs.duplicates, count: 0 },
+    {
+      key: 'pending',
+      label: ADMIN_COPY.events.tabs.pending,
+      count: pendingEvents.length,
+    },
+    {
+      key: 'low_conf',
+      label: ADMIN_COPY.events.tabs.lowConf,
+      count: lowConfEvents.length,
+    },
+    { key: 'duplicates', label: ADMIN_COPY.events.tabs.duplicates, count: 0 },
     {
       key: 'approved',
-      label: COPY.tabs.approved,
+      label: ADMIN_COPY.events.tabs.approved,
       count: approvedEvents.length,
     },
-    { key: 'rejected', label: COPY.tabs.rejected, count: 0 },
+    { key: 'rejected', label: ADMIN_COPY.events.tabs.rejected, count: 0 },
   ]
 
   if (events.length === 0) {
@@ -507,9 +521,9 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
       >
         <div style={{ fontSize: 24 }}>&#x2713;</div>
         <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--fg)' }}>
-          {COPY.empty.title}
+          {ADMIN_COPY.events.empty.title}
         </div>
-        <div style={{ fontSize: 13 }}>{COPY.empty.subtitle}</div>
+        <div style={{ fontSize: 13 }}>{ADMIN_COPY.events.empty.subtitle}</div>
       </div>
     )
   }
@@ -620,7 +634,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
             icon={Filter}
             iconRight={ChevronRight}
           >
-            {COPY.filters.allVenues}
+            {ADMIN_COPY.events.filters.allVenues}
           </AdminButton>
           <AdminButton
             variant="outline"
@@ -628,7 +642,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
             icon={Filter}
             iconRight={ChevronRight}
           >
-            {COPY.filters.dateRange}
+            {ADMIN_COPY.events.filters.dateRange}
           </AdminButton>
           <AdminButton
             variant="outline"
@@ -636,7 +650,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
             icon={Filter}
             iconRight={ChevronRight}
           >
-            {COPY.filters.source}
+            {ADMIN_COPY.events.filters.source}
           </AdminButton>
         </div>
       </div>
@@ -689,9 +703,9 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
             <MonoLabel>
               {filtered.length}{' '}
               {tab === 'approved'
-                ? COPY.listHeader.approved
-                : COPY.listHeader.pending}{' '}
-              · {COPY.listHeader.sortLabel}
+                ? ADMIN_COPY.events.listHeader.approved
+                : ADMIN_COPY.events.listHeader.pending}{' '}
+              · {ADMIN_COPY.events.listHeader.sortLabel}
             </MonoLabel>
           </div>
 
@@ -788,12 +802,12 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                     <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                       {isLowConf && (
                         <FlagBadge kind="warning">
-                          {COPY.flags.lowConf}
+                          {ADMIN_COPY.events.flags.lowConf}
                         </FlagBadge>
                       )}
                       {missingPrice && (
                         <FlagBadge kind="danger">
-                          {COPY.flags.noPrice}
+                          {ADMIN_COPY.events.flags.noPrice}
                         </FlagBadge>
                       )}
                       <SourceBadge strategy={ev.extractionStrategy} />
@@ -867,14 +881,14 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                           '0 0 0 3px color-mix(in oklab, var(--warning) 22%, transparent)',
                       }}
                     />
-                    {COPY.inspector.pendingReview}
+                    {ADMIN_COPY.events.inspector.pendingReview}
                   </span>
                 )}
                 {!selected.verified &&
                   Number(selected.confidenceScore) > 0 &&
                   Number(selected.confidenceScore) < 0.7 && (
                     <FlagBadge kind="warning">
-                      {COPY.inspector.lowConfidence}
+                      {ADMIN_COPY.events.inspector.lowConfidence}
                     </FlagBadge>
                   )}
               </div>
@@ -924,7 +938,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                       disabled={processing === selected.id}
                       onClick={() => void reject(selected.id)}
                     >
-                      {COPY.actions.reject}
+                      {ADMIN_COPY.events.actions.reject}
                     </AdminButton>
                   )}
                   {isEditing ? (
@@ -936,15 +950,15 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                         disabled={updateEvent.isPending}
                       >
                         {updateEvent.isPending
-                          ? COPY.actions.savePending
-                          : COPY.actions.save}
+                          ? ADMIN_COPY.events.actions.savePending
+                          : ADMIN_COPY.events.actions.save}
                       </AdminButton>
                       <AdminButton
                         variant="ghost"
                         size="sm"
                         onClick={handleEditCancel}
                       >
-                        {COPY.actions.cancel}
+                        {ADMIN_COPY.events.actions.cancel}
                       </AdminButton>
                     </>
                   ) : (
@@ -954,7 +968,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                       icon={Edit2}
                       onClick={handleEditStart}
                     >
-                      {COPY.actions.edit}
+                      {ADMIN_COPY.events.actions.edit}
                     </AdminButton>
                   )}
                   {!selected.verified && (
@@ -965,7 +979,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                       disabled={processing === selected.id}
                       onClick={() => void approve(selected.id)}
                     >
-                      {COPY.actions.approve}
+                      {ADMIN_COPY.events.actions.approve}
                     </AdminButton>
                   )}
                 </div>
@@ -980,10 +994,10 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                 flexShrink: 0,
               }}
             >
-              <VitalCell label={COPY.vitals.confidence}>
+              <VitalCell label={ADMIN_COPY.events.vitals.confidence}>
                 <ConfidenceBar score={Number(selected.confidenceScore ?? 0)} />
               </VitalCell>
-              <VitalCell label={COPY.vitals.source}>
+              <VitalCell label={ADMIN_COPY.events.vitals.source}>
                 <span
                   style={{
                     fontFamily: "'JetBrains Mono', monospace",
@@ -997,7 +1011,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                       : (selected.extractionStrategy ?? '—')}
                 </span>
               </VitalCell>
-              <VitalCell label={COPY.vitals.discovered}>
+              <VitalCell label={ADMIN_COPY.events.vitals.discovered}>
                 <span
                   style={{
                     fontFamily: "'JetBrains Mono', monospace",
@@ -1007,7 +1021,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                   {formatDiscovered(selected.createdAt)}
                 </span>
               </VitalCell>
-              <VitalCell label={COPY.vitals.priceRange} noBorder>
+              <VitalCell label={ADMIN_COPY.events.vitals.priceRange} noBorder>
                 <span
                   style={{
                     fontFamily: "'JetBrains Mono', monospace",
@@ -1062,8 +1076,8 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                 <div>
                   <MonoLabel>
                     {isEditing
-                      ? COPY.inspector.extractedEditing
-                      : COPY.inspector.extractedEditable}
+                      ? ADMIN_COPY.events.inspector.extractedEditing
+                      : ADMIN_COPY.events.inspector.extractedEditable}
                   </MonoLabel>
                   <div
                     style={{
@@ -1080,21 +1094,21 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                     {isEditing ? (
                       <>
                         <EditFieldRow
-                          label={COPY.fields.title}
+                          label={ADMIN_COPY.events.fields.title}
                           value={editDraft.title}
                           onChange={(val) =>
                             setEditDraft((prev) => ({ ...prev, title: val }))
                           }
                         />
                         <EditFieldRow
-                          label={COPY.fields.artist}
+                          label={ADMIN_COPY.events.fields.artist}
                           value={editDraft.artist}
                           onChange={(val) =>
                             setEditDraft((prev) => ({ ...prev, artist: val }))
                           }
                         />
                         <EditFieldRow
-                          label={COPY.fields.date}
+                          label={ADMIN_COPY.events.fields.date}
                           value={editDraft.date}
                           type="date"
                           mono
@@ -1103,7 +1117,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                           }
                         />
                         <EditFieldRow
-                          label={COPY.fields.doors}
+                          label={ADMIN_COPY.events.fields.doors}
                           value={editDraft.doorsTime}
                           type="time"
                           mono
@@ -1115,7 +1129,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                           }
                         />
                         <EditFieldRow
-                          label={COPY.fields.show}
+                          label={ADMIN_COPY.events.fields.show}
                           value={editDraft.showTime}
                           type="time"
                           mono
@@ -1124,7 +1138,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                           }
                         />
                         <EditFieldRow
-                          label={COPY.fields.priceLow}
+                          label={ADMIN_COPY.events.fields.priceLow}
                           value={editDraft.ticketPriceMin}
                           type="number"
                           mono
@@ -1136,7 +1150,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                           }
                         />
                         <EditFieldRow
-                          label={COPY.fields.priceHigh}
+                          label={ADMIN_COPY.events.fields.priceHigh}
                           value={editDraft.ticketPriceMax}
                           type="number"
                           mono
@@ -1149,7 +1163,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                         />
                         {selected.genre && selected.genre.length > 0 && (
                           <FieldRow
-                            label={COPY.fields.tags}
+                            label={ADMIN_COPY.events.fields.tags}
                             tags={selected.genre}
                           />
                         )}
@@ -1157,34 +1171,34 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                     ) : (
                       <>
                         <FieldRow
-                          label={COPY.fields.title}
+                          label={ADMIN_COPY.events.fields.title}
                           value={selected.title}
                         />
                         <FieldRow
-                          label={COPY.fields.artist}
+                          label={ADMIN_COPY.events.fields.artist}
                           value={selected.artist}
                         />
                         <FieldRow
-                          label={COPY.fields.venue}
+                          label={ADMIN_COPY.events.fields.venue}
                           value={selected.venueName}
                         />
                         <FieldRow
-                          label={COPY.fields.date}
+                          label={ADMIN_COPY.events.fields.date}
                           value={formatDate(selected.date)}
                           mono
                         />
                         <FieldRow
-                          label={COPY.fields.doors}
+                          label={ADMIN_COPY.events.fields.doors}
                           value={formatTime(selected.doorsTime)}
                           mono
                         />
                         <FieldRow
-                          label={COPY.fields.show}
+                          label={ADMIN_COPY.events.fields.show}
                           value={formatTime(selected.showTime)}
                           mono
                         />
                         <FieldRow
-                          label={COPY.fields.priceLow}
+                          label={ADMIN_COPY.events.fields.priceLow}
                           value={
                             selected.ticketPriceMin
                               ? `$${Math.round(parseFloat(selected.ticketPriceMin))}`
@@ -1194,7 +1208,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                           warn={!selected.ticketPriceMin}
                         />
                         <FieldRow
-                          label={COPY.fields.priceHigh}
+                          label={ADMIN_COPY.events.fields.priceHigh}
                           value={
                             selected.ticketPriceMax
                               ? `$${Math.round(parseFloat(selected.ticketPriceMax))}`
@@ -1205,7 +1219,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                         />
                         {selected.genre && selected.genre.length > 0 && (
                           <FieldRow
-                            label={COPY.fields.tags}
+                            label={ADMIN_COPY.events.fields.tags}
                             tags={selected.genre}
                           />
                         )}
@@ -1216,7 +1230,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
 
                 {/* Right: raw source */}
                 <div>
-                  <MonoLabel>{COPY.inspector.rawSource}</MonoLabel>
+                  <MonoLabel>{ADMIN_COPY.events.inspector.rawSource}</MonoLabel>
                   <div
                     style={{
                       marginTop: 10,
@@ -1282,13 +1296,13 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
               >
                 <Kbd>J</Kbd>
                 <Kbd>K</Kbd>
-                <span>{COPY.keyboard.navigate}</span>
+                <span>{ADMIN_COPY.events.keyboard.navigate}</span>
                 <span style={{ width: 8, display: 'inline-block' }} />
                 <Kbd>A</Kbd>
-                <span>{COPY.keyboard.approve}</span>
+                <span>{ADMIN_COPY.events.keyboard.approve}</span>
                 <span style={{ width: 8, display: 'inline-block' }} />
                 <Kbd>R</Kbd>
-                <span>{COPY.keyboard.reject}</span>
+                <span>{ADMIN_COPY.events.keyboard.reject}</span>
               </div>
             </div>
           </div>
@@ -1302,7 +1316,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
               fontSize: 13,
             }}
           >
-            {COPY.noSelection}
+            {ADMIN_COPY.events.noSelection}
           </div>
         )}
       </div>
@@ -1351,7 +1365,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
               color: 'var(--paper)',
             }}
           >
-            {COPY.bulkActions.eventsSelected}
+            {ADMIN_COPY.events.bulkActions.eventsSelected}
           </span>
           <span
             style={{
@@ -1380,7 +1394,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
             }}
           >
             <Check size={13} />
-            {COPY.bulkActions.approveAll}
+            {ADMIN_COPY.events.bulkActions.approveAll}
           </button>
           <button
             disabled={processing !== null}
@@ -1401,7 +1415,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
             }}
           >
             <X size={13} />
-            {COPY.bulkActions.reject}
+            {ADMIN_COPY.events.bulkActions.reject}
           </button>
           <button
             disabled={processing !== null}
@@ -1422,7 +1436,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
             }}
           >
             <Tag size={13} />
-            {COPY.bulkActions.retag}
+            {ADMIN_COPY.events.bulkActions.retag}
           </button>
           <span style={{ flex: 1 }} />
           <button

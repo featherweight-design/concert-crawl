@@ -1,7 +1,9 @@
 'use client'
 
 import type { SubmissionWithMeta } from '@concert-crawl/types'
-import { copy } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY
 
 interface CommunityPriceChipProps {
   topSubmission: SubmissionWithMeta

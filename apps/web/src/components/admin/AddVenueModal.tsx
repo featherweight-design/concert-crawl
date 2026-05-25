@@ -15,7 +15,7 @@ import {
 } from 'lucide-react'
 import { createVenue, createVenueAndCrawl } from '@/lib/actions/venues'
 import { AdminButton, Kbd } from '@/components/admin/primitives'
-import { addVenueModalCopy } from '@/components/admin/definitions/add-venue-modal-copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 function slugify(name: string): string {
   return name
@@ -143,23 +143,23 @@ export function AddVenueModal({
     const city = cityRef.current?.value.trim() ?? ''
 
     if (!name || name.length < 2)
-      fieldErrors.name = addVenueModalCopy.validation.nameRequired
+      fieldErrors.name = ADMIN_COPY.addVenueModal.validation.nameRequired
     if (
       !slug ||
       !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(slug) ||
       slug.length < 2
     ) {
-      fieldErrors.slug = addVenueModalCopy.validation.slugInvalid
+      fieldErrors.slug = ADMIN_COPY.addVenueModal.validation.slugInvalid
     }
     try {
       new URL(url)
       if (!url.startsWith('http'))
-        fieldErrors.websiteUrl = addVenueModalCopy.validation.urlNotHttp
+        fieldErrors.websiteUrl = ADMIN_COPY.addVenueModal.validation.urlNotHttp
     } catch {
-      fieldErrors.websiteUrl = addVenueModalCopy.validation.urlInvalid
+      fieldErrors.websiteUrl = ADMIN_COPY.addVenueModal.validation.urlInvalid
     }
     if (!city || city.length < 2)
-      fieldErrors.city = addVenueModalCopy.validation.cityRequired
+      fieldErrors.city = ADMIN_COPY.addVenueModal.validation.cityRequired
 
     return fieldErrors
   }
@@ -191,9 +191,9 @@ export function AddVenueModal({
       if (!result.success) {
         if (result.field === 'slug') {
           setErrors({
-            slug: result.error ?? addVenueModalCopy.errors.slugInUse,
+            slug: result.error ?? ADMIN_COPY.addVenueModal.errors.slugInUse,
           })
-          setBannerError(addVenueModalCopy.errors.slugInUse)
+          setBannerError(ADMIN_COPY.addVenueModal.errors.slugInUse)
         } else {
           setBannerError(result.error ?? 'Something went wrong')
         }
@@ -209,7 +209,7 @@ export function AddVenueModal({
         onSuccess?.()
       }, 400)
     } catch {
-      setBannerError(addVenueModalCopy.errors.unexpected)
+      setBannerError(ADMIN_COPY.addVenueModal.errors.unexpected)
       setSubmitState('error')
     }
   }
@@ -241,7 +241,7 @@ export function AddVenueModal({
         fullWidth={fullWidth}
         onClick={() => setOpen(true)}
       >
-        {addVenueModalCopy.trigger}
+        {ADMIN_COPY.addVenueModal.trigger}
       </AdminButton>
 
       <Dialog.Root
@@ -305,7 +305,7 @@ export function AddVenueModal({
                       marginBottom: 6,
                     }}
                   >
-                    {addVenueModalCopy.header.eyebrow}
+                    {ADMIN_COPY.addVenueModal.header.eyebrow}
                   </div>
                   <Dialog.Title
                     style={{
@@ -317,7 +317,7 @@ export function AddVenueModal({
                       lineHeight: 1.2,
                     }}
                   >
-                    {addVenueModalCopy.header.title}
+                    {ADMIN_COPY.addVenueModal.header.title}
                   </Dialog.Title>
                   <div
                     style={{
@@ -327,7 +327,7 @@ export function AddVenueModal({
                       lineHeight: 1.5,
                     }}
                   >
-                    {addVenueModalCopy.header.subtitle}
+                    {ADMIN_COPY.addVenueModal.header.subtitle}
                   </div>
                 </div>
                 <Dialog.Close
@@ -347,7 +347,9 @@ export function AddVenueModal({
                           : 'none',
                         outlineOffset: 2,
                       }}
-                      aria-label={addVenueModalCopy.closeButton.ariaLabel}
+                      aria-label={
+                        ADMIN_COPY.addVenueModal.closeButton.ariaLabel
+                      }
                       onClick={resetState}
                       onFocus={() => setCloseButtonFocused(true)}
                       onBlur={() => setCloseButtonFocused(false)}
@@ -386,7 +388,7 @@ export function AddVenueModal({
                 >
                   {/* Venue name */}
                   <Field
-                    label={addVenueModalCopy.fields.name.label}
+                    label={ADMIN_COPY.addVenueModal.fields.name.label}
                     htmlFor="add-venue-name"
                     error={errors.name}
                   >
@@ -394,7 +396,9 @@ export function AddVenueModal({
                       ref={nameRef}
                       id="add-venue-name"
                       type="text"
-                      placeholder={addVenueModalCopy.fields.name.placeholder}
+                      placeholder={
+                        ADMIN_COPY.addVenueModal.fields.name.placeholder
+                      }
                       disabled={disabled}
                       onChange={handleNameChange}
                       onFocus={() => setFocusedField('name')}
@@ -420,7 +424,7 @@ export function AddVenueModal({
                       }}
                     >
                       <label htmlFor="add-venue-slug" style={labelStyle}>
-                        {addVenueModalCopy.fields.slug.label}
+                        {ADMIN_COPY.addVenueModal.fields.slug.label}
                       </label>
                       <span
                         style={{
@@ -431,7 +435,10 @@ export function AddVenueModal({
                           color: 'var(--fg-muted)',
                         }}
                       >
-                        {addVenueModalCopy.fields.slug.autoGeneratedBadge}
+                        {
+                          ADMIN_COPY.addVenueModal.fields.slug
+                            .autoGeneratedBadge
+                        }
                       </span>
                     </div>
                     <div
@@ -457,13 +464,15 @@ export function AddVenueModal({
                           background: 'var(--surface-1)',
                         }}
                       >
-                        {addVenueModalCopy.fields.slug.prefix}
+                        {ADMIN_COPY.addVenueModal.fields.slug.prefix}
                       </span>
                       <input
                         ref={slugRef}
                         id="add-venue-slug"
                         type="text"
-                        placeholder={addVenueModalCopy.fields.slug.placeholder}
+                        placeholder={
+                          ADMIN_COPY.addVenueModal.fields.slug.placeholder
+                        }
                         disabled={disabled}
                         onChange={handleSlugChange}
                         onFocus={() => setFocusedField('slug')}
@@ -488,9 +497,12 @@ export function AddVenueModal({
                         type="button"
                         onClick={handleRegenerateSlug}
                         disabled={disabled}
-                        title={addVenueModalCopy.slugButtons.regenerateTitle}
+                        title={
+                          ADMIN_COPY.addVenueModal.slugButtons.regenerateTitle
+                        }
                         aria-label={
-                          addVenueModalCopy.slugButtons.regenerateAriaLabel
+                          ADMIN_COPY.addVenueModal.slugButtons
+                            .regenerateAriaLabel
                         }
                         style={{
                           all: 'unset',
@@ -531,7 +543,7 @@ export function AddVenueModal({
                           lineHeight: 1.4,
                         }}
                       >
-                        {addVenueModalCopy.fields.slug.hint}
+                        {ADMIN_COPY.addVenueModal.fields.slug.hint}
                       </span>
                     )}
                   </div>
@@ -549,7 +561,7 @@ export function AddVenueModal({
                       }}
                     >
                       <label htmlFor="add-venue-url" style={labelStyle}>
-                        {addVenueModalCopy.fields.sourceUrl.label}
+                        {ADMIN_COPY.addVenueModal.fields.sourceUrl.label}
                       </label>
                       <RobotsChip state={robotsState} hasUrl={!!urlValue} />
                     </div>
@@ -565,7 +577,7 @@ export function AddVenueModal({
                         id="add-venue-url"
                         type="url"
                         placeholder={
-                          addVenueModalCopy.fields.sourceUrl.placeholder
+                          ADMIN_COPY.addVenueModal.fields.sourceUrl.placeholder
                         }
                         disabled={disabled}
                         onFocus={() => setFocusedField('url')}
@@ -630,14 +642,14 @@ export function AddVenueModal({
                           lineHeight: 1.4,
                         }}
                       >
-                        {addVenueModalCopy.fields.sourceUrl.hint}
+                        {ADMIN_COPY.addVenueModal.fields.sourceUrl.hint}
                       </span>
                     )}
                   </div>
 
                   {/* City */}
                   <Field
-                    label={addVenueModalCopy.fields.city.label}
+                    label={ADMIN_COPY.addVenueModal.fields.city.label}
                     htmlFor="add-venue-city"
                     error={errors.city}
                   >
@@ -662,14 +674,16 @@ export function AddVenueModal({
 
                   {/* Address */}
                   <Field
-                    label={addVenueModalCopy.fields.address.label}
+                    label={ADMIN_COPY.addVenueModal.fields.address.label}
                     htmlFor="add-venue-address"
                   >
                     <input
                       ref={addressRef}
                       id="add-venue-address"
                       type="text"
-                      placeholder={addVenueModalCopy.fields.address.placeholder}
+                      placeholder={
+                        ADMIN_COPY.addVenueModal.fields.address.placeholder
+                      }
                       disabled={disabled}
                       onFocus={() => setFocusedField('address')}
                       onBlur={() => setFocusedField(null)}
@@ -704,7 +718,7 @@ export function AddVenueModal({
                     gap: 6,
                   }}
                 >
-                  <Kbd>Esc</Kbd> {addVenueModalCopy.actions.escHint}
+                  <Kbd>Esc</Kbd> {ADMIN_COPY.addVenueModal.actions.escHint}
                 </span>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -717,7 +731,7 @@ export function AddVenueModal({
                         type="button"
                         onClick={resetState}
                       >
-                        {addVenueModalCopy.actions.cancel}
+                        {ADMIN_COPY.addVenueModal.actions.cancel}
                       </AdminButton>
                     }
                   />
@@ -731,10 +745,11 @@ export function AddVenueModal({
                   >
                     {submitState === 'success' ? (
                       <>
-                        <Check size={13} /> {addVenueModalCopy.actions.saved}
+                        <Check size={13} />{' '}
+                        {ADMIN_COPY.addVenueModal.actions.saved}
                       </>
                     ) : (
-                      addVenueModalCopy.actions.saveVenue
+                      ADMIN_COPY.addVenueModal.actions.saveVenue
                     )}
                   </AdminButton>
 
@@ -764,10 +779,10 @@ export function AddVenueModal({
                       }}
                     >
                       {submitState === 'submitting'
-                        ? addVenueModalCopy.actions.saving
+                        ? ADMIN_COPY.addVenueModal.actions.saving
                         : submitState === 'success'
-                          ? addVenueModalCopy.actions.saved
-                          : addVenueModalCopy.actions.saveAndCrawl}
+                          ? ADMIN_COPY.addVenueModal.actions.saved
+                          : ADMIN_COPY.addVenueModal.actions.saveAndCrawl}
                       {submitState === 'idle' || submitState === 'error' ? (
                         <span
                           style={{
@@ -855,22 +870,22 @@ function RobotsChip({
           fontFamily: 'var(--font-mono, monospace)',
         }}
       >
-        {addVenueModalCopy.robots.checking}
+        {ADMIN_COPY.addVenueModal.robots.checking}
       </span>
     )
   }
   const config = {
     allowed: {
       color: 'var(--success)',
-      text: addVenueModalCopy.robots.allowed,
+      text: ADMIN_COPY.addVenueModal.robots.allowed,
     },
     disallowed: {
       color: 'var(--danger)',
-      text: addVenueModalCopy.robots.disallowed,
+      text: ADMIN_COPY.addVenueModal.robots.disallowed,
     },
     unknown: {
       color: 'var(--fg-muted)',
-      text: addVenueModalCopy.robots.unknown,
+      text: ADMIN_COPY.addVenueModal.robots.unknown,
     },
   } as const
   const { color, text } = config[state as keyof typeof config] ?? config.unknown

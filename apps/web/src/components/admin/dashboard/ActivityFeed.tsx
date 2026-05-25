@@ -2,15 +2,15 @@
 
 import { useState } from 'react'
 import type { CrawlRun } from '@concert-crawl/types'
-import { COPY } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 type FilterTab = 'all' | 'crawl' | 'events' | 'invites'
 
 const TABS: { id: FilterTab; label: string }[] = [
-  { id: 'all', label: COPY.activityFeed.tabs.all },
-  { id: 'crawl', label: COPY.activityFeed.tabs.crawl },
-  { id: 'events', label: COPY.activityFeed.tabs.events },
-  { id: 'invites', label: COPY.activityFeed.tabs.invites },
+  { id: 'all', label: ADMIN_COPY.dashboard.activityFeed.tabs.all },
+  { id: 'crawl', label: ADMIN_COPY.dashboard.activityFeed.tabs.crawl },
+  { id: 'events', label: ADMIN_COPY.dashboard.activityFeed.tabs.events },
+  { id: 'invites', label: ADMIN_COPY.dashboard.activityFeed.tabs.invites },
 ]
 
 interface Props {
@@ -60,7 +60,7 @@ export function ActivityFeed({ runs }: Props) {
             fontSize: 13,
           }}
         >
-          {COPY.activityFeed.noRecentActivity}
+          {ADMIN_COPY.dashboard.activityFeed.noRecentActivity}
         </div>
       ) : (
         <>
@@ -94,11 +94,13 @@ export function ActivityFeed({ runs }: Props) {
               <div style={{ flex: 1, fontSize: 13 }}>
                 <div style={{ color: 'var(--fg)', fontWeight: 500 }}>
                   {run.status === 'success'
-                    ? COPY.activityFeed.crawlOk(
-                        run.venueName ?? COPY.activityFeed.venueFallback,
+                    ? ADMIN_COPY.dashboard.activityFeed.crawlOk(
+                        run.venueName ??
+                          ADMIN_COPY.dashboard.activityFeed.venueFallback,
                       )
-                    : COPY.activityFeed.crawlStatus(
-                        run.venueName ?? COPY.activityFeed.venueFallback,
+                    : ADMIN_COPY.dashboard.activityFeed.crawlStatus(
+                        run.venueName ??
+                          ADMIN_COPY.dashboard.activityFeed.venueFallback,
                         run.status,
                       )}
                 </div>
@@ -117,7 +119,7 @@ export function ActivityFeed({ runs }: Props) {
                 padding: '12px 0',
               }}
             >
-              {COPY.activityFeed.noActivity}
+              {ADMIN_COPY.dashboard.activityFeed.noActivity}
             </div>
           )}
         </>

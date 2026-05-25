@@ -1,7 +1,7 @@
 'use client'
 
 import { Loader2, Sparkles, Check, AlertCircle } from 'lucide-react'
-import { COPY } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 export type GenerateFieldState =
   | 'idle'
@@ -64,7 +64,7 @@ export function GenerateField({
         }}
       >
         <Sparkles size={12} />
-        {COPY.idle.generateButton}
+        {ADMIN_COPY.generateField.idle.generateButton}
         <span
           style={{
             fontFamily: "'JetBrains Mono', monospace",
@@ -104,7 +104,7 @@ export function GenerateField({
             style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }}
           />
           <span style={{ fontWeight: 600, color: 'var(--signal)' }}>
-            {COPY.loading.label}
+            {ADMIN_COPY.generateField.loading.label}
           </span>
           <span
             style={{
@@ -113,7 +113,7 @@ export function GenerateField({
               color: 'var(--fg-muted)',
             }}
           >
-            {COPY.loading.estimatedTime}
+            {ADMIN_COPY.generateField.loading.estimatedTime}
           </span>
         </div>
         {onCancel && (
@@ -132,7 +132,7 @@ export function GenerateField({
               flexShrink: 0,
             }}
           >
-            {COPY.loading.cancel}
+            {ADMIN_COPY.generateField.loading.cancel}
           </button>
         )}
       </div>
@@ -166,7 +166,7 @@ export function GenerateField({
               color: 'var(--fg-subtle)',
             }}
           >
-            {COPY.review.suggestedLabel}
+            {ADMIN_COPY.generateField.review.suggestedLabel}
           </span>
           <span
             style={{
@@ -183,7 +183,7 @@ export function GenerateField({
               textTransform: 'uppercase' as const,
             }}
           >
-            {COPY.review.llmBadge}
+            {ADMIN_COPY.generateField.review.llmBadge}
           </span>
           {(result.costUsd !== undefined ||
             result.tokensUsed !== undefined) && (
@@ -227,7 +227,9 @@ export function GenerateField({
               color: 'var(--fg-subtle)',
             }}
           >
-            <span style={{ opacity: 0.6 }}>{COPY.review.sourcesPrefix}</span>
+            <span style={{ opacity: 0.6 }}>
+              {ADMIN_COPY.generateField.review.sourcesPrefix}
+            </span>
             {result.sources.join(' · ')}
           </div>
         )}
@@ -253,7 +255,7 @@ export function GenerateField({
             }}
           >
             <Check size={11} />
-            {COPY.review.accept}
+            {ADMIN_COPY.generateField.review.accept}
           </button>
           {onRegenerate && (
             <button
@@ -274,7 +276,7 @@ export function GenerateField({
                 cursor: 'pointer',
               }}
             >
-              {COPY.review.regenerate}
+              {ADMIN_COPY.generateField.review.regenerate}
             </button>
           )}
           <button
@@ -294,7 +296,7 @@ export function GenerateField({
               cursor: 'pointer',
             }}
           >
-            {COPY.review.discard}
+            {ADMIN_COPY.generateField.review.discard}
           </button>
         </div>
       </div>
@@ -330,7 +332,7 @@ export function GenerateField({
             flexShrink: 0,
           }}
         />
-        {COPY.accepted.label}
+        {ADMIN_COPY.generateField.accepted.label}
       </div>
     )
   }
@@ -355,7 +357,7 @@ export function GenerateField({
       >
         <AlertCircle size={13} />
         <span style={{ fontWeight: 600 }}>
-          {errorMessage ?? COPY.error.fallback}
+          {errorMessage ?? ADMIN_COPY.generateField.error.fallback}
         </span>
         <button
           type="button"
@@ -375,7 +377,7 @@ export function GenerateField({
             textDecoration: 'underline',
           }}
         >
-          {COPY.error.retry}
+          {ADMIN_COPY.generateField.error.retry}
         </button>
       </div>
     )

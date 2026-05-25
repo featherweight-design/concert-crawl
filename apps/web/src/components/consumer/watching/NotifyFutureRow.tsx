@@ -1,4 +1,6 @@
-import { COPY } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const COPY = CONSUMER_COPY.watching
 
 export function NotifyFutureRow() {
   return (

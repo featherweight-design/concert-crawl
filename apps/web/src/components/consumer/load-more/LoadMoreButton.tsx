@@ -3,7 +3,9 @@
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useTransition } from 'react'
 import { cn } from '@/lib/utils'
-import { copy } from '../definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY
 
 interface LoadMoreButtonProps {
   currentOffset: number

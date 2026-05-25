@@ -1,5 +1,7 @@
-import { SETTINGS_COPY } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import type { UserPlan } from '@concert-crawl/types'
+
+const SETTINGS_COPY = CONSUMER_COPY.settings
 
 interface PlanCardProps {
   plan: UserPlan

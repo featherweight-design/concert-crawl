@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import type { Setlist } from '@concert-crawl/types'
-import { copy } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY.setlistPreview
 
 interface SetlistPreviewProps {
   setlist: Setlist | null | undefined

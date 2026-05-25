@@ -3,7 +3,9 @@
 import { useState } from 'react'
 import { useClerk } from '@clerk/nextjs'
 import { DeleteAccountSheet } from './DeleteAccountSheet'
-import { SETTINGS_COPY } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const SETTINGS_COPY = CONSUMER_COPY.settings
 
 interface DangerZoneProps {
   handle?: string | null

@@ -12,24 +12,24 @@ import type {
   FeedbackSource,
 } from '@/components/admin/feedback/FeedbackFilterRail'
 import type { FeedbackItem } from '@/components/admin/feedback/FeedbackRow'
-import { FEEDBACK_PAGE_COPY } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
 const STATUS_CHIPS: { value: FeedbackStatusFilter; label: string }[] = [
-  { value: 'all', label: FEEDBACK_PAGE_COPY.statusChips.all },
-  { value: 'unread', label: FEEDBACK_PAGE_COPY.statusChips.unread },
-  { value: 'flagged', label: FEEDBACK_PAGE_COPY.statusChips.flagged },
+  { value: 'all', label: ADMIN_COPY.feedback.statusChips.all },
+  { value: 'unread', label: ADMIN_COPY.feedback.statusChips.unread },
+  { value: 'flagged', label: ADMIN_COPY.feedback.statusChips.flagged },
   {
     value: 'issue_opened',
-    label: FEEDBACK_PAGE_COPY.statusChips.issue_opened,
+    label: ADMIN_COPY.feedback.statusChips.issue_opened,
   },
-  { value: 'resolved', label: FEEDBACK_PAGE_COPY.statusChips.resolved },
-  { value: 'archived', label: FEEDBACK_PAGE_COPY.statusChips.archived },
+  { value: 'resolved', label: ADMIN_COPY.feedback.statusChips.resolved },
+  { value: 'archived', label: ADMIN_COPY.feedback.statusChips.archived },
 ]
 
 const PANEL_TITLE: Record<FeedbackStatusFilter, string> =
-  FEEDBACK_PAGE_COPY.panelTitle
+  ADMIN_COPY.feedback.panelTitle
 
 export default function FeedbackPage() {
   const { getToken } = useAuth()
@@ -192,7 +192,7 @@ export default function FeedbackPage() {
             fontSize: 13,
           }}
         >
-          {FEEDBACK_PAGE_COPY.loadingState}
+          {ADMIN_COPY.feedback.loadingState}
         </div>
       ) : filtered.length === 0 ? (
         <div
@@ -203,7 +203,7 @@ export default function FeedbackPage() {
             fontSize: 13,
           }}
         >
-          {FEEDBACK_PAGE_COPY.emptyState}
+          {ADMIN_COPY.feedback.emptyState}
         </div>
       ) : (
         filtered.map((item) => (
@@ -230,12 +230,12 @@ export default function FeedbackPage() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <SectionHead
-          eyebrow={FEEDBACK_PAGE_COPY.eyebrow}
+          eyebrow={ADMIN_COPY.feedback.eyebrow}
           title={
             <span
               style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}
             >
-              {FEEDBACK_PAGE_COPY.title}
+              {ADMIN_COPY.feedback.title}
               {counts.unread > 0 && (
                 <span
                   style={{
@@ -251,7 +251,7 @@ export default function FeedbackPage() {
                     lineHeight: 1.4,
                   }}
                 >
-                  {counts.unread} {FEEDBACK_PAGE_COPY.unreadBadgeSuffix}
+                  {counts.unread} {ADMIN_COPY.feedback.unreadBadgeSuffix}
                 </span>
               )}
             </span>
@@ -308,12 +308,12 @@ export default function FeedbackPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <SectionHead
-        eyebrow={FEEDBACK_PAGE_COPY.eyebrow}
+        eyebrow={ADMIN_COPY.feedback.eyebrow}
         title={
           <span
             style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}
           >
-            {FEEDBACK_PAGE_COPY.title}
+            {ADMIN_COPY.feedback.title}
             {counts.unread > 0 && (
               <span
                 style={{
@@ -329,12 +329,12 @@ export default function FeedbackPage() {
                   lineHeight: 1.4,
                 }}
               >
-                {counts.unread} {FEEDBACK_PAGE_COPY.unreadBadgeSuffix}
+                {counts.unread} {ADMIN_COPY.feedback.unreadBadgeSuffix}
               </span>
             )}
           </span>
         }
-        subtitle={FEEDBACK_PAGE_COPY.subtitle}
+        subtitle={ADMIN_COPY.feedback.subtitle}
       />
 
       {/* Stat cards */}
@@ -346,30 +346,30 @@ export default function FeedbackPage() {
         }}
       >
         <StatCard
-          label={FEEDBACK_PAGE_COPY.statCards.lastSevenDays}
+          label={ADMIN_COPY.feedback.statCards.lastSevenDays}
           value={String(lastWeek)}
           iconName="Inbox"
           kind="signal"
         />
         <StatCard
-          label={FEEDBACK_PAGE_COPY.statCards.unread}
+          label={ADMIN_COPY.feedback.statCards.unread}
           value={String(counts.unread)}
           iconName="AlertCircle"
           kind="warning"
         />
         <StatCard
-          label={FEEDBACK_PAGE_COPY.statCards.flagged}
+          label={ADMIN_COPY.feedback.statCards.flagged}
           value={String(counts.flagged)}
           iconName="Flag"
           kind="danger"
-          hint={FEEDBACK_PAGE_COPY.statCards.flaggedHint}
+          hint={ADMIN_COPY.feedback.statCards.flaggedHint}
         />
         <StatCard
-          label={FEEDBACK_PAGE_COPY.statCards.issuesOpened}
+          label={ADMIN_COPY.feedback.statCards.issuesOpened}
           value={String(issuesThisMonth)}
           iconName="ExternalLink"
           kind="accent"
-          hint={FEEDBACK_PAGE_COPY.statCards.issuesOpenedHint}
+          hint={ADMIN_COPY.feedback.statCards.issuesOpenedHint}
         />
       </div>
 
@@ -401,7 +401,7 @@ export default function FeedbackPage() {
                   color: 'var(--fg-subtle)',
                 }}
               >
-                {filtered.length} {FEEDBACK_PAGE_COPY.itemsCountSuffix}
+                {filtered.length} {ADMIN_COPY.feedback.itemsCountSuffix}
               </span>
               {counts.unread > 0 && (
                 <button
@@ -418,7 +418,7 @@ export default function FeedbackPage() {
                     padding: 0,
                   }}
                 >
-                  {FEEDBACK_PAGE_COPY.markAllRead}
+                  {ADMIN_COPY.feedback.markAllRead}
                 </button>
               )}
             </div>

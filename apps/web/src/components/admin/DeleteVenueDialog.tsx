@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { deleteVenue } from '@/lib/actions/venues'
 import { AdminButton, MonoLabel } from '@/components/admin/primitives'
-import { DELETE_VENUE_DIALOG_COPY as COPY } from '@/components/admin/definitions/delete-venue-dialog-copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 interface DeleteVenueDialogProps {
   venueId: string
@@ -58,7 +58,7 @@ export function DeleteVenueDialog({
         `/admin/venues?deleted=${encodeURIComponent(venueName)}&detached=${result.eventsDetached}`,
       )
     } catch {
-      setErrorMessage(COPY.errors.deleteFailed)
+      setErrorMessage(ADMIN_COPY.deleteVenueDialog.errors.deleteFailed)
       setDeleteState('error')
     }
   }
@@ -149,7 +149,7 @@ export function DeleteVenueDialog({
         type="button"
         onClick={() => setOpen(true)}
       >
-        {COPY.trigger}
+        {ADMIN_COPY.deleteVenueDialog.trigger}
       </AdminButton>
 
       <Dialog.Root
@@ -221,7 +221,7 @@ export function DeleteVenueDialog({
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <MonoLabel color="var(--danger)">
-                    {COPY.header.dangerLabel}
+                    {ADMIN_COPY.deleteVenueDialog.header.dangerLabel}
                   </MonoLabel>
                   <Dialog.Title
                     style={{
@@ -248,7 +248,7 @@ export function DeleteVenueDialog({
                     lineHeight: 1.55,
                   }}
                 >
-                  {COPY.body.description}
+                  {ADMIN_COPY.deleteVenueDialog.body.description}
                 </p>
                 <ul
                   style={{
@@ -307,7 +307,7 @@ export function DeleteVenueDialog({
                     marginBottom: 6,
                   }}
                 >
-                  {COPY.confirmInput.labelPrefix}{' '}
+                  {ADMIN_COPY.deleteVenueDialog.confirmInput.labelPrefix}{' '}
                   <span
                     style={{
                       fontFamily: "'JetBrains Mono', monospace",
@@ -320,7 +320,7 @@ export function DeleteVenueDialog({
                   >
                     {venueName}
                   </span>{' '}
-                  {COPY.confirmInput.labelSuffix}
+                  {ADMIN_COPY.deleteVenueDialog.confirmInput.labelSuffix}
                 </label>
                 <input
                   id="delete-confirm-input"
@@ -362,7 +362,7 @@ export function DeleteVenueDialog({
                       fontFamily: "'Inter', sans-serif",
                     }}
                   >
-                    {COPY.confirmInput.matchMessage}
+                    {ADMIN_COPY.deleteVenueDialog.confirmInput.matchMessage}
                   </span>
                 )}
                 {isMismatch && (
@@ -375,8 +375,9 @@ export function DeleteVenueDialog({
                       fontFamily: "'Inter', sans-serif",
                     }}
                   >
-                    {COPY.confirmInput.mismatchPrefix} &ldquo;{venueName}&rdquo;
-                    {COPY.confirmInput.mismatchSuffix}
+                    {ADMIN_COPY.deleteVenueDialog.confirmInput.mismatchPrefix}{' '}
+                    &ldquo;{venueName}&rdquo;
+                    {ADMIN_COPY.deleteVenueDialog.confirmInput.mismatchSuffix}
                   </span>
                 )}
                 {errorMessage && (
@@ -433,7 +434,7 @@ export function DeleteVenueDialog({
                   >
                     Esc
                   </kbd>{' '}
-                  {COPY.footer.escCancel}
+                  {ADMIN_COPY.deleteVenueDialog.footer.escCancel}
                 </span>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <Dialog.Close
@@ -445,7 +446,7 @@ export function DeleteVenueDialog({
                         disabled={deleteState === 'deleting'}
                         onClick={handleClose}
                       >
-                        {COPY.footer.cancelButton}
+                        {ADMIN_COPY.deleteVenueDialog.footer.cancelButton}
                       </AdminButton>
                     }
                   />
@@ -458,8 +459,8 @@ export function DeleteVenueDialog({
                     onClick={() => void handleDelete()}
                   >
                     {deleteState === 'deleting'
-                      ? COPY.footer.deleteButtonPending
-                      : COPY.footer.deleteButtonIdle}
+                      ? ADMIN_COPY.deleteVenueDialog.footer.deleteButtonPending
+                      : ADMIN_COPY.deleteVenueDialog.footer.deleteButtonIdle}
                   </AdminButton>
                 </div>
               </div>

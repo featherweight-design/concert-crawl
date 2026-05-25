@@ -2,7 +2,9 @@ import Link from 'next/link'
 import type { EventWithVenue, Event } from '@concert-crawl/types'
 import { EventImage } from '../event-image'
 import { formatShowTime } from '../definitions/lib'
-import { copy } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY.smallEventRow
 
 interface SmallEventRowProps {
   event: EventWithVenue | Event

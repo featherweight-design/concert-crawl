@@ -6,7 +6,9 @@ import { usePathname } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { fetchMe } from '@/lib/users'
 import type { AvatarColor } from '@concert-crawl/types'
-import { COPY } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const COPY = CONSUMER_COPY.bottomNav
 
 const STATIC_TABS = [
   {

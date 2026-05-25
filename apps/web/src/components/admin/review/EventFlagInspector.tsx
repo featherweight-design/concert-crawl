@@ -7,7 +7,7 @@ import {
   AdminButton,
 } from '@/components/admin/primitives'
 import { SquarePen } from 'lucide-react'
-import { REVIEW_COPY } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 interface EventFlag {
   id: string
@@ -81,7 +81,7 @@ export const EventFlagInspector = ({
           borderLeft: '1px solid var(--border)',
         }}
       >
-        {REVIEW_COPY.eventFlagInspector.emptyState}
+        {ADMIN_COPY.review.eventFlagInspector.emptyState}
       </div>
     )
   }
@@ -148,7 +148,7 @@ export const EventFlagInspector = ({
           )}
           {flags.length === 0 && (
             <StatusBadge kind="warning">
-              {REVIEW_COPY.eventFlags.needsReview}
+              {ADMIN_COPY.review.eventFlags.needsReview}
             </StatusBadge>
           )}
         </div>
@@ -191,7 +191,9 @@ export const EventFlagInspector = ({
       >
         {/* Confidence */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <MonoLabel>{REVIEW_COPY.eventFlagInspector.confidence}</MonoLabel>
+          <MonoLabel>
+            {ADMIN_COPY.review.eventFlagInspector.confidence}
+          </MonoLabel>
           <ConfidenceBar score={event.confidenceScore ?? 0} />
         </div>
 
@@ -199,7 +201,7 @@ export const EventFlagInspector = ({
         {event.llmReasoning && (
           <div>
             <MonoLabel color="var(--danger)">
-              {REVIEW_COPY.eventFlagInspector.llmReasoning}
+              {ADMIN_COPY.review.eventFlagInspector.llmReasoning}
             </MonoLabel>
             <div
               style={{
@@ -224,7 +226,9 @@ export const EventFlagInspector = ({
         {/* Extraction strategy (fallback when no reasoning) */}
         {!event.llmReasoning && event.extractionStrategy && (
           <div>
-            <MonoLabel>{REVIEW_COPY.eventFlagInspector.extraction}</MonoLabel>
+            <MonoLabel>
+              {ADMIN_COPY.review.eventFlagInspector.extraction}
+            </MonoLabel>
             <div
               style={{
                 padding: '12px 14px',
@@ -248,7 +252,9 @@ export const EventFlagInspector = ({
         {/* Raw source HTML */}
         {event.rawSource && (
           <div>
-            <MonoLabel>{REVIEW_COPY.eventFlagInspector.rawSource}</MonoLabel>
+            <MonoLabel>
+              {ADMIN_COPY.review.eventFlagInspector.rawSource}
+            </MonoLabel>
             <pre
               style={{
                 margin: '8px 0 0',
@@ -273,7 +279,7 @@ export const EventFlagInspector = ({
         {/* Source URL (when no raw source) */}
         {!event.rawSource && event.sourceUrl && (
           <div>
-            <MonoLabel>{REVIEW_COPY.eventFlagInspector.source}</MonoLabel>
+            <MonoLabel>{ADMIN_COPY.review.eventFlagInspector.source}</MonoLabel>
             <div
               style={{
                 padding: '12px 14px',
@@ -317,24 +323,28 @@ export const EventFlagInspector = ({
           }}
         >
           <span>
-            <MonoLabel>{REVIEW_COPY.eventFlagInspector.date}</MonoLabel>{' '}
+            <MonoLabel>{ADMIN_COPY.review.eventFlagInspector.date}</MonoLabel>{' '}
             <span style={{ color: 'var(--fg)' }}>{event.date}</span>
           </span>
           {event.doorsTime && (
             <span>
-              <MonoLabel>{REVIEW_COPY.eventFlagInspector.doors}</MonoLabel>{' '}
+              <MonoLabel>
+                {ADMIN_COPY.review.eventFlagInspector.doors}
+              </MonoLabel>{' '}
               <span style={{ color: 'var(--fg)' }}>{event.doorsTime}</span>
             </span>
           )}
           {event.showTime && (
             <span>
-              <MonoLabel>{REVIEW_COPY.eventFlagInspector.show}</MonoLabel>{' '}
+              <MonoLabel>{ADMIN_COPY.review.eventFlagInspector.show}</MonoLabel>{' '}
               <span style={{ color: 'var(--fg)' }}>{event.showTime}</span>
             </span>
           )}
           {event.ticketPriceMin && (
             <span>
-              <MonoLabel>{REVIEW_COPY.eventFlagInspector.price}</MonoLabel>{' '}
+              <MonoLabel>
+                {ADMIN_COPY.review.eventFlagInspector.price}
+              </MonoLabel>{' '}
               <span style={{ color: 'var(--fg)' }}>
                 ${event.ticketPriceMin}
                 {event.ticketPriceMax ? ` – $${event.ticketPriceMax}` : ''}
@@ -394,7 +404,7 @@ export const EventFlagInspector = ({
           size="sm"
           onClick={() => onReject(event.id)}
         >
-          {REVIEW_COPY.eventFlagInspector.reject}
+          {ADMIN_COPY.review.eventFlagInspector.reject}
         </AdminButton>
         {onEdit && (
           <AdminButton
@@ -403,7 +413,7 @@ export const EventFlagInspector = ({
             icon={SquarePen}
             onClick={() => onEdit(event.id)}
           >
-            {REVIEW_COPY.eventFlagInspector.editAndApprove}
+            {ADMIN_COPY.review.eventFlagInspector.editAndApprove}
           </AdminButton>
         )}
         <AdminButton
@@ -412,7 +422,7 @@ export const EventFlagInspector = ({
           onClick={() => onApprove(event.id)}
           style={{ marginLeft: 'auto' }}
         >
-          {REVIEW_COPY.eventFlagInspector.approve}
+          {ADMIN_COPY.review.eventFlagInspector.approve}
         </AdminButton>
       </div>
     </div>

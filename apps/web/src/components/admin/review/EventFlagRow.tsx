@@ -5,7 +5,7 @@ import {
   ConfidenceBar,
   AdminButton,
 } from '@/components/admin/primitives'
-import { REVIEW_COPY } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 interface EventFlag {
   id: string
@@ -163,14 +163,14 @@ export const EventFlagRow = ({
           size="sm"
           onClick={() => onApprove(event.id)}
         >
-          {REVIEW_COPY.eventFlagRow.approve}
+          {ADMIN_COPY.review.eventFlagRow.approve}
         </AdminButton>
         <AdminButton
           variant="danger"
           size="sm"
           onClick={() => onReject(event.id)}
         >
-          {REVIEW_COPY.eventFlagRow.reject}
+          {ADMIN_COPY.review.eventFlagRow.reject}
         </AdminButton>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { COPY } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 interface RunHistoryBlocksProps {
   data: number[]
@@ -32,7 +32,7 @@ export const RunHistoryBlocks = ({ data }: RunHistoryBlocksProps) => {
           color: 'var(--fg-subtle)',
         }}
       >
-        {COPY.runHistoryBlocks.lastNRuns(data.length)}
+        {ADMIN_COPY.dashboard.runHistoryBlocks.lastNRuns(data.length)}
       </span>
     </div>
   )

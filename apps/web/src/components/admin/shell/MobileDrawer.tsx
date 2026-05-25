@@ -10,7 +10,7 @@ import { NAV_V2 } from './nav'
 import { CCMark } from '@/components/brand/cc-mark'
 import { CCWordmark } from '@/components/brand/cc-wordmark'
 import { AppSwitcher } from './AppSwitcher'
-import { COPY } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 interface MobileDrawerProps {
   open: boolean
@@ -119,7 +119,7 @@ export const MobileDrawer = ({
           <CCWordmark size={13} />
           <button
             onClick={onClose}
-            aria-label={COPY.mobileDrawer.closeMenuAriaLabel}
+            aria-label={ADMIN_COPY.shell.mobileDrawer.closeMenuAriaLabel}
             style={{
               marginLeft: 'auto',
               padding: 6,
@@ -159,7 +159,7 @@ export const MobileDrawer = ({
               fontFamily: "'JetBrains Mono', monospace",
             }}
           >
-            {COPY.mobileDrawer.sectionOperations}
+            {ADMIN_COPY.shell.mobileDrawer.sectionOperations}
           </div>
           {opsItems.map((item) => {
             const active =
@@ -243,7 +243,7 @@ export const MobileDrawer = ({
               fontFamily: "'JetBrains Mono', monospace",
             }}
           >
-            {COPY.mobileDrawer.sectionAccount}
+            {ADMIN_COPY.shell.mobileDrawer.sectionAccount}
           </div>
           {accountItems.map((item) => {
             const active =
@@ -349,13 +349,13 @@ export const MobileDrawer = ({
                   letterSpacing: '0.04em',
                 }}
               >
-                {COPY.mobileDrawer.userRoleLabel}
+                {ADMIN_COPY.shell.mobileDrawer.userRoleLabel}
               </div>
             </div>
             <button
               onClick={() => void signOut({ redirectUrl: '/' })}
-              aria-label={COPY.mobileDrawer.signOutAriaLabel}
-              title={COPY.mobileDrawer.signOutTitle}
+              aria-label={ADMIN_COPY.shell.mobileDrawer.signOutAriaLabel}
+              title={ADMIN_COPY.shell.mobileDrawer.signOutTitle}
               style={{
                 padding: 6,
                 background: 'transparent',

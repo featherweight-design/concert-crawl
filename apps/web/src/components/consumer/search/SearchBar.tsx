@@ -3,7 +3,9 @@
 import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, X, ArrowLeft } from 'lucide-react'
-import { copy } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY.search
 
 interface SearchBarProps {
   value: string

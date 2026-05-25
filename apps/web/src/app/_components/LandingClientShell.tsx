@@ -8,7 +8,7 @@ import { LandingPosterAnimation } from '@/components/brand/landing-poster/Landin
 import { WaitlistModal } from '@/components/waitlist/WaitlistModal'
 import { CCMark } from '@/components/brand/cc-mark'
 import type { LandingShow } from '@/components/brand/landing-poster/LandingPoster'
-import { COPY } from './definitions/copy'
+import { LANDING_COPY } from './definitions/copy'
 
 interface LandingClientShellProps {
   shows: LandingShow[]
@@ -42,7 +42,7 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
         whiteSpace: 'nowrap',
       }}
     >
-      {COPY.cta.code}
+      {LANDING_COPY.cta.code}
     </Link>
   )
 
@@ -69,7 +69,7 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
         whiteSpace: 'nowrap',
       }}
     >
-      {COPY.cta.waitlist}
+      {LANDING_COPY.cta.waitlist}
     </button>
   )
 
@@ -116,7 +116,7 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
             }}
             className="hidden md:inline-flex items-center"
           >
-            {COPY.nav.codeLink}
+            {LANDING_COPY.nav.codeLink}
           </Link>
         </div>
       </header>
@@ -139,12 +139,12 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
                 lineHeight: 0.95,
               }}
             >
-              {COPY.hero.headingLine1}
+              {LANDING_COPY.hero.headingLine1}
               <br />
-              {COPY.hero.headingLine2}
+              {LANDING_COPY.hero.headingLine2}
               <br />
               <span style={{ color: 'var(--accent)' }}>
-                {COPY.hero.headingAccent}
+                {LANDING_COPY.hero.headingAccent}
               </span>
             </h1>
             <p
@@ -157,7 +157,7 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
                 maxWidth: '44ch',
               }}
             >
-              {COPY.hero.subheading}
+              {LANDING_COPY.hero.subheading}
             </p>
           </div>
 
@@ -177,7 +177,7 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
                 fontWeight: 500,
               }}
             >
-              {COPY.cta.signIn}
+              {LANDING_COPY.cta.signIn}
             </Link>
           </div>
         </div>
@@ -206,7 +206,7 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
               fontWeight: 500,
             }}
           >
-            {COPY.cta.signIn}
+            {LANDING_COPY.cta.signIn}
           </Link>
         </div>
       </main>

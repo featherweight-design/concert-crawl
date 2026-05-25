@@ -19,7 +19,9 @@ import {
   type WeekDayInfo,
 } from '@/components/consumer/definitions/lib'
 import { localDateString } from '@/lib/time'
-import { copy } from '@/components/consumer/definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY
 
 export const dynamic = 'force-dynamic'
 

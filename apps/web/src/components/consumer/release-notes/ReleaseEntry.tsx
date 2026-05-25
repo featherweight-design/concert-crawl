@@ -2,7 +2,9 @@
 
 import type { Release, ReleaseItem } from '@/lib/definitions/releases'
 import { SpotlightHero } from './SpotlightHero'
-import { COPY } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const COPY = CONSUMER_COPY.releaseNotes
 
 const KIND_LABEL: Record<ReleaseItem['kind'], string> = {
   added: 'Added',
@@ -168,7 +170,13 @@ function SpotlightStrip({
           minHeight: 132,
         }}
       >
-        <div style={{ position: 'relative', overflow: 'hidden', borderRadius: '14px 0 0 14px' }}>
+        <div
+          style={{
+            position: 'relative',
+            overflow: 'hidden',
+            borderRadius: '14px 0 0 14px',
+          }}
+        >
           <SpotlightHero hero={sp.hero} compact />
         </div>
 

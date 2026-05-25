@@ -2,7 +2,7 @@
 
 import { Inbox, AlertCircle, Flag, SquarePen, Check, X } from 'lucide-react'
 import { MonoLabel } from '@/components/admin/primitives'
-import { FEEDBACK_COPY } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 export type FeedbackStatusFilter =
   | 'all'
@@ -40,32 +40,32 @@ const STATUS_ITEMS: {
 }[] = [
   {
     value: 'all',
-    label: FEEDBACK_COPY.filterRail.statusItems.all,
+    label: ADMIN_COPY.feedback.filterRail.statusItems.all,
     Icon: Inbox,
   },
   {
     value: 'unread',
-    label: FEEDBACK_COPY.filterRail.statusItems.unread,
+    label: ADMIN_COPY.feedback.filterRail.statusItems.unread,
     Icon: AlertCircle,
   },
   {
     value: 'flagged',
-    label: FEEDBACK_COPY.filterRail.statusItems.flagged,
+    label: ADMIN_COPY.feedback.filterRail.statusItems.flagged,
     Icon: Flag,
   },
   {
     value: 'issue_opened',
-    label: FEEDBACK_COPY.filterRail.statusItems.issue_opened,
+    label: ADMIN_COPY.feedback.filterRail.statusItems.issue_opened,
     Icon: SquarePen,
   },
   {
     value: 'resolved',
-    label: FEEDBACK_COPY.filterRail.statusItems.resolved,
+    label: ADMIN_COPY.feedback.filterRail.statusItems.resolved,
     Icon: Check,
   },
   {
     value: 'archived',
-    label: FEEDBACK_COPY.filterRail.statusItems.archived,
+    label: ADMIN_COPY.feedback.filterRail.statusItems.archived,
     Icon: X,
   },
 ]
@@ -77,17 +77,17 @@ const SOURCE_ITEMS: {
 }[] = [
   {
     value: 'feedback_surface',
-    label: FEEDBACK_COPY.filterRail.sourceItems.feedback_surface,
+    label: ADMIN_COPY.feedback.filterRail.sourceItems.feedback_surface,
     soon: false,
   },
   {
     value: 'sentry',
-    label: FEEDBACK_COPY.filterRail.sourceItems.sentry,
+    label: ADMIN_COPY.feedback.filterRail.sourceItems.sentry,
     soon: false,
   },
   {
     value: 'email',
-    label: FEEDBACK_COPY.filterRail.sourceItems.email,
+    label: ADMIN_COPY.feedback.filterRail.sourceItems.email,
     soon: true,
   },
 ]
@@ -115,7 +115,7 @@ export function FeedbackFilterRail({
       }}
     >
       <div style={{ padding: '8px 10px' }}>
-        <MonoLabel>{FEEDBACK_COPY.filterRail.viewLabel}</MonoLabel>
+        <MonoLabel>{ADMIN_COPY.feedback.filterRail.viewLabel}</MonoLabel>
       </div>
 
       {STATUS_ITEMS.map((item) => {
@@ -189,7 +189,7 @@ export function FeedbackFilterRail({
       />
 
       <div style={{ padding: '4px 10px 8px' }}>
-        <MonoLabel>{FEEDBACK_COPY.filterRail.sourceLabel}</MonoLabel>
+        <MonoLabel>{ADMIN_COPY.feedback.filterRail.sourceLabel}</MonoLabel>
       </div>
 
       {SOURCE_ITEMS.map((src) => {
@@ -244,7 +244,7 @@ export function FeedbackFilterRail({
                   padding: '1px 7px',
                 }}
               >
-                {FEEDBACK_COPY.filterRail.soonBadge}
+                {ADMIN_COPY.feedback.filterRail.soonBadge}
               </span>
             )}
           </label>

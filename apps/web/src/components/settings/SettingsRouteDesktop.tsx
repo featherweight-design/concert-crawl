@@ -11,13 +11,15 @@ import { ThemePickerInline } from './ThemePickerInline'
 import { MySubmissionsList } from './MySubmissionsList'
 import { DangerZone } from './DangerZone'
 import { EditProfileForm } from './EditProfileForm'
-import { SETTINGS_COPY } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { CCClusterMark } from '@/components/brand/cc-cluster-mark/CCClusterMark'
 import { CCWordmark } from '@/components/brand/cc-wordmark/CCWordmark'
 import type {
   UserProfileResponse,
   UserSubmissionItem,
 } from '@concert-crawl/types'
+
+const SETTINGS_COPY = CONSUMER_COPY.settings
 
 type NavSection =
   | 'profile'

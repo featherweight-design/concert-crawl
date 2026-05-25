@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
-import { copy } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { ShieldCheck } from 'lucide-react'
@@ -228,7 +228,7 @@ export function SubmitPriceModal({
       </div>
       <button
         type="button"
-        aria-label={copy.modal.closeAriaLabel}
+        aria-label={CONSUMER_COPY.submitPrice.modal.closeAriaLabel}
         onClick={onClose}
         style={{
           all: 'unset',
@@ -250,7 +250,7 @@ export function SubmitPriceModal({
 
   const footer = showForm ? (
     <SubmitButton loading={modalState === 'submitting'} onClick={handleSubmit}>
-      {copy.form.submitButton}
+      {CONSUMER_COPY.submitPrice.form.submitButton}
     </SubmitButton>
   ) : undefined
 
@@ -258,7 +258,7 @@ export function SubmitPriceModal({
     <ModalShell
       open={open}
       onClose={onClose}
-      ariaLabel={copy.modal.ariaLabel}
+      ariaLabel={CONSUMER_COPY.submitPrice.modal.ariaLabel}
       sheetHeight={isShort ? 'short' : 'tall'}
       header={header}
       footer={footer}
@@ -276,7 +276,7 @@ export function SubmitPriceModal({
             letterSpacing: '0.08em',
           }}
         >
-          {copy.modal.checkingLabel}
+          {CONSUMER_COPY.submitPrice.modal.checkingLabel}
         </div>
       )}
 
@@ -337,7 +337,7 @@ export function SubmitPriceModal({
                 textTransform: 'uppercase',
               }}
             >
-              {copy.form.contextEyebrow}
+              {CONSUMER_COPY.submitPrice.form.contextEyebrow}
             </p>
             <p
               style={{
@@ -399,30 +399,30 @@ export function SubmitPriceModal({
           >
             <SPNumberField
               id="sp-floor"
-              label={copy.form.floorLabel}
+              label={CONSUMER_COPY.submitPrice.form.floorLabel}
               value={formState.floor}
               onChange={(val) =>
                 setFormState((prev) => ({ ...prev, floor: val }))
               }
-              placeholder={copy.form.floorPlaceholder}
+              placeholder={CONSUMER_COPY.submitPrice.form.floorPlaceholder}
               required
               error={fieldErrors['floor']}
               warning={fieldWarnings['floor']}
             />
             <SPNumberField
               id="sp-ceiling"
-              label={copy.form.ceilingLabel}
+              label={CONSUMER_COPY.submitPrice.form.ceilingLabel}
               value={formState.ceiling}
               onChange={(val) =>
                 setFormState((prev) => ({ ...prev, ceiling: val }))
               }
-              placeholder={copy.form.ceilingPlaceholder}
+              placeholder={CONSUMER_COPY.submitPrice.form.ceilingPlaceholder}
               error={fieldErrors['ceiling']}
             />
           </div>
 
           <ChipGroup
-            label={copy.form.tierLabel}
+            label={CONSUMER_COPY.submitPrice.form.tierLabel}
             options={TIER_OPTIONS}
             value={formState.tier}
             onChange={(val) => setFormState((prev) => ({ ...prev, tier: val }))}
@@ -430,7 +430,7 @@ export function SubmitPriceModal({
           />
 
           <ChipGroup
-            label={copy.form.vendorLabel}
+            label={CONSUMER_COPY.submitPrice.form.vendorLabel}
             options={VENDOR_OPTIONS}
             value={formState.vendor}
             onChange={(val) =>
@@ -440,7 +440,7 @@ export function SubmitPriceModal({
           />
 
           <ChipGroup
-            label={copy.form.howFoundLabel}
+            label={CONSUMER_COPY.submitPrice.form.howFoundLabel}
             options={HOW_FOUND_OPTIONS}
             value={formState.howFound}
             onChange={(val) =>
@@ -459,7 +459,7 @@ export function SubmitPriceModal({
               lineHeight: 1.5,
             }}
           >
-            {copy.form.footerNote}
+            {CONSUMER_COPY.submitPrice.form.footerNote}
           </p>
         </div>
       )}
@@ -488,7 +488,7 @@ function SuccessState({ onClose }: { onClose: () => void }) {
           color: 'var(--fg)',
         }}
       >
-        {copy.success.heading}
+        {CONSUMER_COPY.submitPrice.success.heading}
       </div>
       <div
         style={{
@@ -498,7 +498,7 @@ function SuccessState({ onClose }: { onClose: () => void }) {
           letterSpacing: '-0.005em',
         }}
       >
-        {copy.success.body}
+        {CONSUMER_COPY.submitPrice.success.body}
       </div>
       <div
         style={{
@@ -509,7 +509,7 @@ function SuccessState({ onClose }: { onClose: () => void }) {
         }}
       >
         <PrimaryButton onClick={onClose}>
-          {copy.success.backButton}
+          {CONSUMER_COPY.submitPrice.success.backButton}
         </PrimaryButton>
       </div>
     </div>
@@ -527,10 +527,10 @@ function ErrorState({
 }) {
   const errorMessage =
     withdrawError === 'network'
-      ? copy.error.networkWithdrawError
+      ? CONSUMER_COPY.submitPrice.error.networkWithdrawError
       : withdrawError === 'api'
-        ? copy.error.apiWithdrawError
-        : copy.error.defaultError
+        ? CONSUMER_COPY.submitPrice.error.apiWithdrawError
+        : CONSUMER_COPY.submitPrice.error.defaultError
 
   return (
     <div
@@ -551,7 +551,7 @@ function ErrorState({
           color: 'var(--fg)',
         }}
       >
-        {copy.error.heading}
+        {CONSUMER_COPY.submitPrice.error.heading}
       </div>
       <div
         style={{
@@ -572,9 +572,11 @@ function ErrorState({
         }}
       >
         <PrimaryButton onClick={onReset}>
-          {copy.error.tryAgainButton}
+          {CONSUMER_COPY.submitPrice.error.tryAgainButton}
         </PrimaryButton>
-        <GhostButton onClick={onClose}>{copy.error.closeButton}</GhostButton>
+        <GhostButton onClick={onClose}>
+          {CONSUMER_COPY.submitPrice.error.closeButton}
+        </GhostButton>
       </div>
     </div>
   )
@@ -607,7 +609,7 @@ function AlreadySubmittedState({
           color: 'var(--fg)',
         }}
       >
-        {copy.alreadySubmitted.heading}
+        {CONSUMER_COPY.submitPrice.alreadySubmitted.heading}
       </div>
       {submission && (
         <p
@@ -631,7 +633,7 @@ function AlreadySubmittedState({
           color: 'var(--fg-subtle)',
         }}
       >
-        {copy.alreadySubmitted.limitNote}
+        {CONSUMER_COPY.submitPrice.alreadySubmitted.limitNote}
       </p>
       <div
         style={{
@@ -642,10 +644,10 @@ function AlreadySubmittedState({
         }}
       >
         <PrimaryButton onClick={onEdit}>
-          {copy.alreadySubmitted.editButton}
+          {CONSUMER_COPY.submitPrice.alreadySubmitted.editButton}
         </PrimaryButton>
         <GhostButton onClick={onWithdraw}>
-          {copy.alreadySubmitted.withdrawButton}
+          {CONSUMER_COPY.submitPrice.alreadySubmitted.withdrawButton}
         </GhostButton>
       </div>
     </div>
@@ -664,19 +666,19 @@ function PriceHeaderRail({ state }: { state: ModalState }) {
       ? 'var(--signal)'
       : 'var(--accent)'
   const eyebrow = isError
-    ? copy.header.eyebrow.error
+    ? CONSUMER_COPY.submitPrice.header.eyebrow.error
     : isSuccess
-      ? copy.header.eyebrow.success
+      ? CONSUMER_COPY.submitPrice.header.eyebrow.success
       : isDone
-        ? copy.header.eyebrow.alreadySubmitted
-        : copy.header.eyebrow.open
+        ? CONSUMER_COPY.submitPrice.header.eyebrow.alreadySubmitted
+        : CONSUMER_COPY.submitPrice.header.eyebrow.open
   const code = isError
-    ? copy.header.code.error
+    ? CONSUMER_COPY.submitPrice.header.code.error
     : isSuccess
-      ? copy.header.code.success
+      ? CONSUMER_COPY.submitPrice.header.code.success
       : isDone
-        ? copy.header.code.alreadySubmitted
-        : copy.header.code.open
+        ? CONSUMER_COPY.submitPrice.header.code.alreadySubmitted
+        : CONSUMER_COPY.submitPrice.header.code.open
   const pulse =
     state === 'form' || state === 'submitting' || state === 'loading-check'
 
@@ -751,7 +753,7 @@ function StatusRail({ tone }: { tone: 'error' }) {
           whiteSpace: 'nowrap',
         }}
       >
-        {copy.statusRail.errorLabel}
+        {CONSUMER_COPY.submitPrice.statusRail.errorLabel}
       </span>
       <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
       <span
@@ -764,7 +766,7 @@ function StatusRail({ tone }: { tone: 'error' }) {
           fontWeight: 700,
         }}
       >
-        {copy.statusRail.errorCode}
+        {CONSUMER_COPY.submitPrice.statusRail.errorCode}
       </span>
     </div>
   )

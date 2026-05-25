@@ -6,7 +6,7 @@ import { AdminUsersClient } from '@/components/admin/users/AdminUsersClient'
 import type { AdminUserRow } from '@/components/admin/users/AdminUsersClient'
 import type { Role } from '@concert-crawl/types'
 import { isRole } from '@concert-crawl/types'
-import { COPY } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 interface AdminUserAPIRow {
   id: string
@@ -42,8 +42,8 @@ export default async function AdminUsersPage() {
   return (
     <>
       <SectionHead
-        title={COPY.page.title}
-        subtitle={COPY.page.subtitle(result.total)}
+        title={ADMIN_COPY.users.page.title}
+        subtitle={ADMIN_COPY.users.page.subtitle(result.total)}
       />
       <Panel>
         <AdminUsersClient initialUsers={users} total={result.total} />

@@ -6,7 +6,9 @@ import { EventCard } from '@/components/consumer/event-card'
 import { EmptyState } from '@/components/consumer/empty-state'
 import { WeekStrip } from '@/components/consumer/week-strip'
 import { dateGroupLabel } from '@/components/consumer/definitions/lib'
-import { copy } from '@/components/consumer/definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY
 import type { WeekStripDay } from '@/components/consumer/week-strip'
 
 interface CalendarViewProps {

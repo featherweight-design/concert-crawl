@@ -7,7 +7,9 @@ import { FeedbackModal } from '@/components/consumer/feedback/FeedbackModal'
 import { useReleaseReadState } from './useReleaseReadState'
 import { ReleaseEntry } from './ReleaseEntry'
 import { SpotlightModal } from './SpotlightModal'
-import { COPY } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const COPY = CONSUMER_COPY.releaseNotes
 
 interface ReleasePageProps {
   releases: Release[]

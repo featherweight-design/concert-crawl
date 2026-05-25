@@ -9,7 +9,7 @@ import {
   FileEdit,
 } from 'lucide-react'
 import { StatusBadge, AdminButton } from '@/components/admin/primitives'
-import { CRAWL_COPY } from '@/components/admin/crawl/definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 export interface CrawlRunForDiagnostics {
   id: string
@@ -37,7 +37,7 @@ type ErrorClass =
   | 'timeout'
   | 'unknown'
 
-const ERROR_REASONS = CRAWL_COPY.diagnostics.errorReasons
+const ERROR_REASONS = ADMIN_COPY.crawl.diagnostics.errorReasons
 
 interface DiagOption {
   id: string
@@ -49,15 +49,15 @@ interface DiagOption {
 }
 
 const DIAG_OPTIONS: Record<ErrorClass, readonly DiagOption[]> =
-  CRAWL_COPY.diagnostics.diagOptions
+  ADMIN_COPY.crawl.diagnostics.diagOptions
 
 function getErrLabel(run: CrawlRunForDiagnostics): string {
   if (run.httpStatusCode === 403)
-    return CRAWL_COPY.diagnostics.errLabels.http403
+    return ADMIN_COPY.crawl.diagnostics.errLabels.http403
   if (run.httpStatusCode === 429)
-    return CRAWL_COPY.diagnostics.errLabels.http429
+    return ADMIN_COPY.crawl.diagnostics.errLabels.http429
   if (run.errorMessage?.toLowerCase().includes('timeout'))
-    return CRAWL_COPY.diagnostics.errLabels.timeout
+    return ADMIN_COPY.crawl.diagnostics.errLabels.timeout
   if (run.errorMessage)
     return run.errorMessage.split('\n')[0] ?? run.errorMessage
   return `HTTP ${run.httpStatusCode ?? '—'}`
@@ -143,7 +143,7 @@ const OptionCard = ({
         </span>
         {opt.recommended && (
           <StatusBadge kind="signal" variant="mono">
-            {CRAWL_COPY.diagnostics.badgeRec}
+            {ADMIN_COPY.crawl.diagnostics.badgeRec}
           </StatusBadge>
         )}
       </div>
@@ -162,17 +162,17 @@ const OptionCard = ({
         {staged ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <StatusBadge kind="signal" dot>
-              {CRAWL_COPY.diagnostics.badgeStaged}
+              {ADMIN_COPY.crawl.diagnostics.badgeStaged}
             </StatusBadge>
             <AdminButton
               variant="ghost"
               size="sm"
               onClick={() => onApply(opt.id)}
             >
-              {CRAWL_COPY.diagnostics.buttonApply}
+              {ADMIN_COPY.crawl.diagnostics.buttonApply}
             </AdminButton>
             <AdminButton variant="ghost" size="sm" onClick={onDiscard}>
-              {CRAWL_COPY.diagnostics.buttonDiscard}
+              {ADMIN_COPY.crawl.diagnostics.buttonDiscard}
             </AdminButton>
           </div>
         ) : (
@@ -231,7 +231,7 @@ export const DiagnosticsPanel = ({
             marginBottom: 8,
           }}
         >
-          {CRAWL_COPY.diagnostics.whatHappenedLabel}
+          {ADMIN_COPY.crawl.diagnostics.whatHappenedLabel}
         </div>
         <div
           style={{
@@ -273,19 +273,19 @@ export const DiagnosticsPanel = ({
           >
             {[
               {
-                label: CRAWL_COPY.diagnostics.statHttpStatus,
+                label: ADMIN_COPY.crawl.diagnostics.statHttpStatus,
                 value: run.httpStatusCode ?? '—',
               },
               {
-                label: CRAWL_COPY.diagnostics.statErrorClass,
+                label: ADMIN_COPY.crawl.diagnostics.statErrorClass,
                 value: errClass.replace(/_/g, ' '),
               },
               {
-                label: CRAWL_COPY.diagnostics.statStrategy,
+                label: ADMIN_COPY.crawl.diagnostics.statStrategy,
                 value: run.strategy,
               },
               {
-                label: CRAWL_COPY.diagnostics.statConsecutive,
+                label: ADMIN_COPY.crawl.diagnostics.statConsecutive,
                 value: `${run.consecutiveFailures} of 4`,
               },
             ].map((stat) => (
@@ -331,7 +331,7 @@ export const DiagnosticsPanel = ({
             marginBottom: 8,
           }}
         >
-          {CRAWL_COPY.diagnostics.whyHappenedLabel}
+          {ADMIN_COPY.crawl.diagnostics.whyHappenedLabel}
         </div>
         <div
           style={{
@@ -361,7 +361,7 @@ export const DiagnosticsPanel = ({
               {reason.label}
             </span>
             <StatusBadge kind="neutral" variant="mono">
-              {CRAWL_COPY.diagnostics.badgeRuleBased}
+              {ADMIN_COPY.crawl.diagnostics.badgeRuleBased}
             </StatusBadge>
           </div>
           <div
@@ -390,7 +390,7 @@ export const DiagnosticsPanel = ({
             marginBottom: 8,
           }}
         >
-          {CRAWL_COPY.diagnostics.optionsLabel}
+          {ADMIN_COPY.crawl.diagnostics.optionsLabel}
         </div>
         <div
           style={{
@@ -443,7 +443,7 @@ export const DiagnosticsPanel = ({
               marginBottom: 8,
             }}
           >
-            {CRAWL_COPY.diagnostics.strategyHistoryLabel}
+            {ADMIN_COPY.crawl.diagnostics.strategyHistoryLabel}
           </div>
           <div
             style={{

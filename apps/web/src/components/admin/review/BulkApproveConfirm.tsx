@@ -6,7 +6,7 @@ import {
   AdminButton,
   ConfidenceBar,
 } from '@/components/admin/primitives'
-import { REVIEW_COPY } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 interface EventFlag {
   id: string
@@ -85,7 +85,7 @@ export const BulkApproveConfirm = ({
             borderBottom: '1px solid var(--border)',
           }}
         >
-          <MonoLabel>{REVIEW_COPY.bulkApproveConfirm.eyebrow}</MonoLabel>
+          <MonoLabel>{ADMIN_COPY.review.bulkApproveConfirm.eyebrow}</MonoLabel>
           <h3
             id="bulk-approve-title"
             style={{
@@ -97,7 +97,7 @@ export const BulkApproveConfirm = ({
               fontFamily: "'Inter', sans-serif",
             }}
           >
-            {REVIEW_COPY.bulkApproveConfirm.heading(events.length)}
+            {ADMIN_COPY.review.bulkApproveConfirm.heading(events.length)}
           </h3>
         </div>
 
@@ -152,7 +152,7 @@ export const BulkApproveConfirm = ({
                 fontFamily: "'Inter', sans-serif",
               }}
             >
-              {REVIEW_COPY.bulkApproveConfirm.extraEvents(extraCount)}
+              {ADMIN_COPY.review.bulkApproveConfirm.extraEvents(extraCount)}
             </div>
           )}
         </div>
@@ -171,7 +171,7 @@ export const BulkApproveConfirm = ({
             fontFamily: "'Inter', sans-serif",
           }}
         >
-          {REVIEW_COPY.bulkApproveConfirm.warningStrip}
+          {ADMIN_COPY.review.bulkApproveConfirm.warningStrip}
         </div>
 
         {/* Action shelf */}
@@ -187,10 +187,10 @@ export const BulkApproveConfirm = ({
           }}
         >
           <AdminButton variant="ghost" onClick={onCancel}>
-            {REVIEW_COPY.bulkApproveConfirm.cancel}
+            {ADMIN_COPY.review.bulkApproveConfirm.cancel}
           </AdminButton>
           <AdminButton variant="success" onClick={onConfirm}>
-            {REVIEW_COPY.bulkApproveConfirm.approveAll}
+            {ADMIN_COPY.review.bulkApproveConfirm.approveAll}
           </AdminButton>
         </div>
       </div>

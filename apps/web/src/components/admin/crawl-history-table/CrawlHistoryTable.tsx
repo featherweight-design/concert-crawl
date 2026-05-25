@@ -12,7 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { CRAWL_STATUS_BADGES } from './definitions/constants'
-import { copy } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 async function fetchCrawlHistory(venueId: string): Promise<CrawlRun[]> {
   const { getToken } = await auth()
@@ -35,25 +35,39 @@ export const CrawlHistoryTable = async ({
   const runs = await fetchCrawlHistory(venueId)
 
   return (
-    <section aria-label={copy.heading}>
-      <h2 className="text-lg font-semibold mb-3">{copy.heading}</h2>
+    <section aria-label={ADMIN_COPY.crawlHistoryTable.heading}>
+      <h2 className="text-lg font-semibold mb-3">
+        {ADMIN_COPY.crawlHistoryTable.heading}
+      </h2>
       {runs.length === 0 ? (
-        <p className="text-sm text-fg-muted">{copy.empty}</p>
+        <p className="text-sm text-fg-muted">
+          {ADMIN_COPY.crawlHistoryTable.empty}
+        </p>
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{copy.columns.timestamp}</TableHead>
-              <TableHead>{copy.columns.status}</TableHead>
-              <TableHead>{copy.columns.strategy}</TableHead>
-              <TableHead className="text-right">
-                {copy.columns.eventsFound}
+              <TableHead>
+                {ADMIN_COPY.crawlHistoryTable.columns.timestamp}
+              </TableHead>
+              <TableHead>
+                {ADMIN_COPY.crawlHistoryTable.columns.status}
+              </TableHead>
+              <TableHead>
+                {ADMIN_COPY.crawlHistoryTable.columns.strategy}
               </TableHead>
               <TableHead className="text-right">
-                {copy.columns.eventsInserted}
+                {ADMIN_COPY.crawlHistoryTable.columns.eventsFound}
               </TableHead>
-              <TableHead>{copy.columns.duration}</TableHead>
-              <TableHead>{copy.columns.error}</TableHead>
+              <TableHead className="text-right">
+                {ADMIN_COPY.crawlHistoryTable.columns.eventsInserted}
+              </TableHead>
+              <TableHead>
+                {ADMIN_COPY.crawlHistoryTable.columns.duration}
+              </TableHead>
+              <TableHead>
+                {ADMIN_COPY.crawlHistoryTable.columns.error}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -67,7 +81,7 @@ export const CrawlHistoryTable = async ({
                 <TableRow key={run.id}>
                   <TableCell className="whitespace-nowrap">
                     {formatISODate(run.createdAt, DENVER_TIME_ZONE)}{' '}
-                    {copy.timeSuffix}
+                    {ADMIN_COPY.crawlHistoryTable.timeSuffix}
                   </TableCell>
                   <TableCell>
                     {badgeConfig ? (
@@ -79,7 +93,8 @@ export const CrawlHistoryTable = async ({
                     )}
                   </TableCell>
                   <TableCell>
-                    {run.extractionStrategyUsed ?? copy.noValue}
+                    {run.extractionStrategyUsed ??
+                      ADMIN_COPY.crawlHistoryTable.noValue}
                   </TableCell>
                   <TableCell className="text-right">
                     {run.eventsFound}
@@ -90,12 +105,12 @@ export const CrawlHistoryTable = async ({
                   <TableCell>
                     {run.durationMs !== null
                       ? formatDurationMs(run.durationMs)
-                      : copy.noValue}
+                      : ADMIN_COPY.crawlHistoryTable.noValue}
                   </TableCell>
                   <TableCell
                     className={`text-xs max-w-xs truncate ${run.errorMessage ? 'text-danger' : 'text-fg-muted'}`}
                   >
-                    {run.errorMessage ?? copy.noValue}
+                    {run.errorMessage ?? ADMIN_COPY.crawlHistoryTable.noValue}
                   </TableCell>
                 </TableRow>
               )

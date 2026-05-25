@@ -5,7 +5,7 @@ import { useAuth } from '@clerk/nextjs'
 import { AdminButton } from '@/components/admin/primitives'
 import { StatusBadge } from '@/components/admin/primitives'
 import { triggerVenueCrawl } from '@/components/admin/crawl-trigger-button/lib/crawl'
-import { CRAWL_COPY } from '@/components/admin/crawl/definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 interface ConfigDiffEntry {
   path: string
@@ -23,7 +23,7 @@ export interface StagedDiff {
 }
 
 const STAGED_DIFFS: Record<string, StagedDiff> =
-  CRAWL_COPY.stagedApply.stagedDiffs
+  ADMIN_COPY.crawl.stagedApply.stagedDiffs
 
 interface StagedApplyConfirmProps {
   stagedId: string
@@ -101,7 +101,7 @@ export const StagedApplyConfirm = ({
               color: 'var(--danger)',
             }}
           >
-            {CRAWL_COPY.stagedApply.unknownOptionTitle}
+            {ADMIN_COPY.crawl.stagedApply.unknownOptionTitle}
           </h3>
           <p
             style={{
@@ -111,10 +111,10 @@ export const StagedApplyConfirm = ({
               color: 'var(--fg-muted)',
             }}
           >
-            {CRAWL_COPY.stagedApply.unknownOptionBody}
+            {ADMIN_COPY.crawl.stagedApply.unknownOptionBody}
           </p>
           <AdminButton variant="ghost" onClick={onCancel}>
-            {CRAWL_COPY.stagedApply.unknownOptionClose}
+            {ADMIN_COPY.crawl.stagedApply.unknownOptionClose}
           </AdminButton>
         </div>
       </div>
@@ -169,7 +169,7 @@ export const StagedApplyConfirm = ({
                 color: 'var(--signal)',
               }}
             >
-              {CRAWL_COPY.stagedApply.headerEyebrow}
+              {ADMIN_COPY.crawl.stagedApply.headerEyebrow}
             </span>
             <StatusBadge kind="signal" variant="mono">
               {stagedId}
@@ -198,7 +198,7 @@ export const StagedApplyConfirm = ({
             }}
           >
             on <strong style={{ color: 'var(--fg)' }}>{venueName}</strong>
-            {CRAWL_COPY.stagedApply.headerBodySuffix}
+            {ADMIN_COPY.crawl.stagedApply.headerBodySuffix}
           </div>
         </div>
 
@@ -223,7 +223,7 @@ export const StagedApplyConfirm = ({
                 marginBottom: 6,
               }}
             >
-              {CRAWL_COPY.stagedApply.sectionWhyChange}
+              {ADMIN_COPY.crawl.stagedApply.sectionWhyChange}
             </div>
             <div
               style={{
@@ -249,7 +249,7 @@ export const StagedApplyConfirm = ({
                 marginBottom: 8,
               }}
             >
-              {CRAWL_COPY.stagedApply.sectionConfigDiff}
+              {ADMIN_COPY.crawl.stagedApply.sectionConfigDiff}
             </div>
             <div
               style={{
@@ -351,7 +351,7 @@ export const StagedApplyConfirm = ({
                   marginBottom: 6,
                 }}
               >
-                {CRAWL_COPY.stagedApply.sectionRisks}
+                {ADMIN_COPY.crawl.stagedApply.sectionRisks}
               </div>
               <ul
                 style={{
@@ -381,7 +381,7 @@ export const StagedApplyConfirm = ({
                   marginBottom: 6,
                 }}
               >
-                {CRAWL_COPY.stagedApply.sectionRollback}
+                {ADMIN_COPY.crawl.stagedApply.sectionRollback}
               </div>
               <div
                 style={{
@@ -404,7 +404,7 @@ export const StagedApplyConfirm = ({
                   marginBottom: 6,
                 }}
               >
-                {CRAWL_COPY.stagedApply.sectionNextRun}
+                {ADMIN_COPY.crawl.stagedApply.sectionNextRun}
               </div>
               <div
                 style={{
@@ -455,14 +455,14 @@ export const StagedApplyConfirm = ({
                 cursor: 'pointer',
               }}
             />
-            {CRAWL_COPY.stagedApply.footerTriggerLabel}
+            {ADMIN_COPY.crawl.stagedApply.footerTriggerLabel}
           </label>
           <div style={{ marginLeft: 'auto' }} />
           <AdminButton variant="ghost" onClick={onCancel}>
-            {CRAWL_COPY.stagedApply.footerCancel}
+            {ADMIN_COPY.crawl.stagedApply.footerCancel}
           </AdminButton>
           <AdminButton variant="primary" onClick={() => void handleApply()}>
-            {CRAWL_COPY.stagedApply.footerApply}
+            {ADMIN_COPY.crawl.stagedApply.footerApply}
           </AdminButton>
         </div>
       </div>

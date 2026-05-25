@@ -8,7 +8,9 @@ import { cn } from '@/lib/utils'
 import { CCMark } from '@/components/brand/cc-mark'
 import { UserMenu } from '../user-menu'
 import { SearchPalette } from '../search-palette/SearchPalette'
-import { copy } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY.appHeader
 
 export function AppHeader() {
   const pathname = usePathname()
@@ -72,7 +74,7 @@ export function AppHeader() {
           </Link>
 
           <nav className="flex gap-1 overflow-x-auto">
-            {copy.nav.tabs.map((tab) => {
+            {copy.nav.tabs.map((tab: { label: string; href: string }) => {
               const isActive = pathname.startsWith(tab.href)
               return (
                 <Link

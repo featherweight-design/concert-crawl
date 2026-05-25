@@ -7,7 +7,9 @@ import { useWatchToggle } from '@/lib/queries/use-watch-toggle'
 import { WatchingItem } from './WatchingItem'
 import { WatchingEmpty } from './WatchingEmpty'
 import { NotifyFutureRow } from './NotifyFutureRow'
-import { COPY } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const COPY = CONSUMER_COPY.watching
 
 interface WatchingContentProps {
   initialShows: WatchingShow[]

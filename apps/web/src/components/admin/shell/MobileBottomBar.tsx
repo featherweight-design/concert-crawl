@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import * as LucideIcons from 'lucide-react'
 import { NAV_V2 } from './nav'
-import { COPY } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 interface MobileBottomBarProps {
   badgeCounts?: { crawl: number; review: number; feedback: number }
@@ -37,7 +37,7 @@ export const MobileBottomBar = ({ badgeCounts }: MobileBottomBarProps) => {
 
   return (
     <nav
-      aria-label={COPY.mobileBottomBar.navAriaLabel}
+      aria-label={ADMIN_COPY.shell.mobileBottomBar.navAriaLabel}
       style={{
         position: 'fixed',
         left: 0,

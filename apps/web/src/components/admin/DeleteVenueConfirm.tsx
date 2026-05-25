@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { X, Trash2, Loader2 } from 'lucide-react'
 import { deleteVenue } from '@/lib/actions/venues'
 import { AdminButton } from '@/components/admin/primitives'
-import { deleteVenueConfirmCopy } from '@/components/admin/definitions/delete-venue-confirm-copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 interface DeleteVenueConfirmProps {
   venueId: string
@@ -45,7 +45,7 @@ export function DeleteVenueConfirm({
       router.push('/admin/venues')
     } catch {
       setDeleteState('error')
-      setErrorMessage(deleteVenueConfirmCopy.errors.deleteFailed)
+      setErrorMessage(ADMIN_COPY.deleteVenueConfirm.errors.deleteFailed)
     }
   }
 
@@ -58,7 +58,7 @@ export function DeleteVenueConfirm({
         onClick={() => setOpen(true)}
         type="button"
       >
-        {deleteVenueConfirmCopy.trigger}
+        {ADMIN_COPY.deleteVenueConfirm.trigger}
       </AdminButton>
 
       {open && (
@@ -108,7 +108,7 @@ export function DeleteVenueConfirm({
                   color: 'var(--danger)',
                 }}
               >
-                {deleteVenueConfirmCopy.header.eyebrow}
+                {ADMIN_COPY.deleteVenueConfirm.header.eyebrow}
               </span>
 
               {/* Title */}
@@ -169,7 +169,7 @@ export function DeleteVenueConfirm({
                     marginBottom: 8,
                   }}
                 >
-                  {deleteVenueConfirmCopy.removed.heading}
+                  {ADMIN_COPY.deleteVenueConfirm.removed.heading}
                 </div>
                 <ul
                   style={{
@@ -180,7 +180,7 @@ export function DeleteVenueConfirm({
                     gap: 3,
                   }}
                 >
-                  {deleteVenueConfirmCopy.removed.items.map((item) => (
+                  {ADMIN_COPY.deleteVenueConfirm.removed.items.map((item) => (
                     <li
                       key={item}
                       style={{
@@ -208,7 +208,7 @@ export function DeleteVenueConfirm({
                     marginBottom: 8,
                   }}
                 >
-                  {deleteVenueConfirmCopy.survives.heading}
+                  {ADMIN_COPY.deleteVenueConfirm.survives.heading}
                 </div>
                 <ul
                   style={{
@@ -219,7 +219,7 @@ export function DeleteVenueConfirm({
                     gap: 3,
                   }}
                 >
-                  {deleteVenueConfirmCopy.survives.items.map((item) => (
+                  {ADMIN_COPY.deleteVenueConfirm.survives.items.map((item) => (
                     <li
                       key={item}
                       style={{
@@ -249,7 +249,7 @@ export function DeleteVenueConfirm({
                   marginBottom: 10,
                 }}
               >
-                {deleteVenueConfirmCopy.gate.label}{' '}
+                {ADMIN_COPY.deleteVenueConfirm.gate.label}{' '}
                 <span
                   style={{
                     fontFamily: "'JetBrains Mono', monospace",
@@ -258,16 +258,16 @@ export function DeleteVenueConfirm({
                     letterSpacing: '0.08em',
                   }}
                 >
-                  {deleteVenueConfirmCopy.gate.keyword}
+                  {ADMIN_COPY.deleteVenueConfirm.gate.keyword}
                 </span>{' '}
-                {deleteVenueConfirmCopy.gate.labelSuffix}
+                {ADMIN_COPY.deleteVenueConfirm.gate.labelSuffix}
               </label>
               <input
                 id="delete-gate-input"
                 type="text"
                 value={typedValue}
                 onChange={(evt) => setTypedValue(evt.target.value)}
-                placeholder={deleteVenueConfirmCopy.gate.placeholder}
+                placeholder={ADMIN_COPY.deleteVenueConfirm.gate.placeholder}
                 autoComplete="off"
                 disabled={deleteState === 'deleting'}
                 style={{
@@ -319,7 +319,7 @@ export function DeleteVenueConfirm({
                 onClick={handleClose}
                 disabled={deleteState === 'deleting'}
               >
-                {deleteVenueConfirmCopy.actions.keep}
+                {ADMIN_COPY.deleteVenueConfirm.actions.keep}
               </AdminButton>
               <button
                 type="button"
@@ -352,17 +352,17 @@ export function DeleteVenueConfirm({
                       size={13}
                       style={{ animation: 'spin 1s linear infinite' }}
                     />
-                    {deleteVenueConfirmCopy.actions.deleting}
+                    {ADMIN_COPY.deleteVenueConfirm.actions.deleting}
                   </>
                 ) : canDelete ? (
                   <>
                     <Trash2 size={13} />
-                    {deleteVenueConfirmCopy.actions.deletePermanently}
+                    {ADMIN_COPY.deleteVenueConfirm.actions.deletePermanently}
                   </>
                 ) : (
                   <>
                     <X size={13} />
-                    {deleteVenueConfirmCopy.actions.typeToEnable}
+                    {ADMIN_COPY.deleteVenueConfirm.actions.typeToEnable}
                   </>
                 )}
               </button>

@@ -1,7 +1,9 @@
 'use client'
 
 import type { FilterOption } from './filter-defs'
-import { copy } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY.filterBar
 
 interface FilterSheetProps {
   open: boolean

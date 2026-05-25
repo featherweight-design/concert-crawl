@@ -14,7 +14,7 @@ import {
 import type { StatusKind } from '@/components/admin/primitives'
 import { formatStrategy } from './lib/dashboard'
 import type { CrawlStatusRow } from './lib/dashboard'
-import { COPY } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 const STATUS_KIND: Record<string, StatusKind> = {
   success: 'success',
@@ -32,15 +32,15 @@ export function CrawlHealthTable({ rows }: { rows: CrawlStatusRow[] }) {
     <AdminTable>
       <THead>
         <tr>
-          <TH>{COPY.crawlHealthTable.columns.venue}</TH>
-          <TH>{COPY.crawlHealthTable.columns.status}</TH>
-          <TH>{COPY.crawlHealthTable.columns.lastCrawl}</TH>
-          <TH>{COPY.crawlHealthTable.columns.strategy}</TH>
+          <TH>{ADMIN_COPY.dashboard.crawlHealthTable.columns.venue}</TH>
+          <TH>{ADMIN_COPY.dashboard.crawlHealthTable.columns.status}</TH>
+          <TH>{ADMIN_COPY.dashboard.crawlHealthTable.columns.lastCrawl}</TH>
+          <TH>{ADMIN_COPY.dashboard.crawlHealthTable.columns.strategy}</TH>
           <TH align="right" mono>
-            {COPY.crawlHealthTable.columns.events}
+            {ADMIN_COPY.dashboard.crawlHealthTable.columns.events}
           </TH>
           <TH align="right" mono>
-            {COPY.crawlHealthTable.columns.cost}
+            {ADMIN_COPY.dashboard.crawlHealthTable.columns.cost}
           </TH>
         </tr>
       </THead>

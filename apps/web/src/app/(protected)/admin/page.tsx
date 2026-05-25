@@ -2,7 +2,7 @@ import { ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
-import { COPY } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import type { CrawlRun, Venue } from '@concert-crawl/types'
 import {
   StatCard,
@@ -93,14 +93,14 @@ function buildAttentionItems(
       severity: 'danger',
       iconName: isBlocked ? 'ShieldAlert' : 'AlertCircle',
       title: isBlocked
-        ? COPY.attentionItems.crawlBlocked(venueName)
-        : COPY.attentionItems.crawlFailed(venueName),
+        ? ADMIN_COPY.dashboard.attentionItems.crawlBlocked(venueName)
+        : ADMIN_COPY.dashboard.attentionItems.crawlFailed(venueName),
       meta: isBlocked
-        ? COPY.attentionItems.crawlBlockedMeta
-        : COPY.attentionItems.crawlFailedMeta(venue.status),
-      timeLabel: COPY.attentionItems.crawlTimeLabel,
+        ? ADMIN_COPY.dashboard.attentionItems.crawlBlockedMeta
+        : ADMIN_COPY.dashboard.attentionItems.crawlFailedMeta(venue.status),
+      timeLabel: ADMIN_COPY.dashboard.attentionItems.crawlTimeLabel,
       action: {
-        label: COPY.attentionItems.openCrawl,
+        label: ADMIN_COPY.dashboard.attentionItems.openCrawl,
         href: `/admin/crawl?venueId=${venue.venueId}`,
       },
     })
@@ -111,11 +111,14 @@ function buildAttentionItems(
       id: 'events-pending',
       severity: 'warning',
       iconName: 'CheckSquare',
-      title: COPY.attentionItems.eventsFlaggedTitle(pendingEventCount),
-      meta: COPY.attentionItems.eventsFlaggedMeta,
-      timeLabel: COPY.attentionItems.eventsTimeLabel,
+      title:
+        ADMIN_COPY.dashboard.attentionItems.eventsFlaggedTitle(
+          pendingEventCount,
+        ),
+      meta: ADMIN_COPY.dashboard.attentionItems.eventsFlaggedMeta,
+      timeLabel: ADMIN_COPY.dashboard.attentionItems.eventsTimeLabel,
       action: {
-        label: COPY.attentionItems.openReview,
+        label: ADMIN_COPY.dashboard.attentionItems.openReview,
         href: '/admin/review',
       },
     })
@@ -126,11 +129,14 @@ function buildAttentionItems(
       id: 'prices-pending',
       severity: 'signal',
       iconName: 'DollarSign',
-      title: COPY.attentionItems.pricesWaitingTitle(pendingPriceCount),
-      meta: COPY.attentionItems.pricesMeta,
-      timeLabel: COPY.attentionItems.pricesTimeLabel,
+      title:
+        ADMIN_COPY.dashboard.attentionItems.pricesWaitingTitle(
+          pendingPriceCount,
+        ),
+      meta: ADMIN_COPY.dashboard.attentionItems.pricesMeta,
+      timeLabel: ADMIN_COPY.dashboard.attentionItems.pricesTimeLabel,
       action: {
-        label: COPY.attentionItems.openPricesReview,
+        label: ADMIN_COPY.dashboard.attentionItems.openPricesReview,
         href: '/admin/review?section=submissions',
       },
     })
@@ -201,13 +207,21 @@ export default async function AdminDashboardPage() {
 
   const summaryParts: string[] = []
   if (blockedCount > 0)
-    summaryParts.push(COPY.summary.venuesNeedAttention(blockedCount))
+    summaryParts.push(
+      ADMIN_COPY.dashboard.summary.venuesNeedAttention(blockedCount),
+    )
   if (pendingEventCount > 0)
-    summaryParts.push(COPY.summary.eventsFlagged(pendingEventCount))
+    summaryParts.push(
+      ADMIN_COPY.dashboard.summary.eventsFlagged(pendingEventCount),
+    )
   if (pendingPriceCount > 0)
-    summaryParts.push(COPY.summary.pricesWaiting(pendingPriceCount))
+    summaryParts.push(
+      ADMIN_COPY.dashboard.summary.pricesWaiting(pendingPriceCount),
+    )
   if (summaryParts.length === 0)
-    summaryParts.push(COPY.summary.venuesGreen(greenCount, status.length))
+    summaryParts.push(
+      ADMIN_COPY.dashboard.summary.venuesGreen(greenCount, status.length),
+    )
 
   const lastRun = runs[0]
   const lastSweepLabel = lastRun
@@ -268,9 +282,9 @@ export default async function AdminDashboardPage() {
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         {/* Needs review */}
         <StatCard
-          label={COPY.statCards.needsReview}
+          label={ADMIN_COPY.dashboard.statCards.needsReview}
           value={String(pendingEventCount + pendingPriceCount)}
-          unit={COPY.statCards.needsReviewUnit}
+          unit={ADMIN_COPY.dashboard.statCards.needsReviewUnit}
           iconName="CalendarCheck"
           kind={
             pendingEventCount + pendingPriceCount > 0 ? 'warning' : 'neutral'
@@ -296,7 +310,7 @@ export default async function AdminDashboardPage() {
                 fullWidth
                 style={{ fontWeight: 700, color: 'var(--fg)' }}
               >
-                {COPY.buttons.openReview}
+                {ADMIN_COPY.dashboard.buttons.openReview}
               </AdminButton>
             </Link>
           }
@@ -304,11 +318,11 @@ export default async function AdminDashboardPage() {
 
         {/* LLM cost */}
         <StatCard
-          label={COPY.statCards.llmCost}
+          label={ADMIN_COPY.dashboard.statCards.llmCost}
           value={`$${totalCost.toFixed(2)}`}
           iconName="DollarSign"
           kind="signal"
-          hint={COPY.budget.hint(LLM_BUDGET_USD, llmBudgetPct)}
+          hint={ADMIN_COPY.dashboard.budget.hint(LLM_BUDGET_USD, llmBudgetPct)}
           {...(costTrend !== undefined ? { trend: costTrend } : {})}
           footer={
             <ProgressBar
@@ -321,9 +335,9 @@ export default async function AdminDashboardPage() {
 
         {/* Crawl health */}
         <StatCard
-          label={COPY.statCards.crawlHealth}
+          label={ADMIN_COPY.dashboard.statCards.crawlHealth}
           value={`${greenCount}/${status.length}`}
-          unit={COPY.statCards.crawlHealthUnit}
+          unit={ADMIN_COPY.dashboard.statCards.crawlHealthUnit}
           iconName="Activity"
           kind="success"
           {...(crawlHealthHint ? { hint: crawlHealthHint } : {})}
@@ -336,9 +350,9 @@ export default async function AdminDashboardPage() {
 
         {/* Active venues */}
         <StatCard
-          label={COPY.statCards.activeVenues}
+          label={ADMIN_COPY.dashboard.statCards.activeVenues}
           value={String(venues.filter((venue) => venue.active).length)}
-          unit={COPY.activeVenues.venuesOfTotal(venues.length)}
+          unit={ADMIN_COPY.dashboard.activeVenues.venuesOfTotal(venues.length)}
           iconName="MapPin"
           kind="neutral"
           mono={false}
@@ -353,7 +367,9 @@ export default async function AdminDashboardPage() {
                 color: 'var(--fg-subtle)',
               }}
             >
-              {COPY.activeVenues.addedThisWeek(venuesAddedThisWeek)}
+              {ADMIN_COPY.dashboard.activeVenues.addedThisWeek(
+                venuesAddedThisWeek,
+              )}
             </span>
           }
         />
@@ -367,7 +383,7 @@ export default async function AdminDashboardPage() {
       />
 
       {/* Crawl health detail */}
-      <Panel title={COPY.panels.crawlHealthToday} padding={0}>
+      <Panel title={ADMIN_COPY.dashboard.panels.crawlHealthToday} padding={0}>
         <CrawlHealthTable rows={status} />
       </Panel>
     </div>

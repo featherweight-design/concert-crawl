@@ -3,7 +3,9 @@
 import { useRouter } from 'next/navigation'
 import { RELEASES } from '@/lib/definitions/releases'
 import { useReleaseReadState } from './useReleaseReadState'
-import { COPY } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const COPY = CONSUMER_COPY.releaseNotes
 
 interface UserMenuVersionFooterProps {
   build: string

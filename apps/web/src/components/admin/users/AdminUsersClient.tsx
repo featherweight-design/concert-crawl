@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition, useCallback } from 'react'
-import { COPY } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import {
   AdminTable,
   THead,
@@ -100,7 +100,7 @@ function RoleSelect({
         if (result.success) {
           onSuccess(newRole)
         } else {
-          setError(result.error ?? COPY.roleSelect.errorFallback)
+          setError(result.error ?? ADMIN_COPY.users.roleSelect.errorFallback)
         }
       })
     },
@@ -113,7 +113,7 @@ function RoleSelect({
         value={currentRole}
         disabled={pending}
         onChange={(ev) => handleChange(ev.target.value as Role)}
-        aria-label={COPY.roleSelect.ariaLabel}
+        aria-label={ADMIN_COPY.users.roleSelect.ariaLabel}
         style={{
           appearance: 'none',
           WebkitAppearance: 'none',
@@ -247,7 +247,9 @@ export function AdminUsersClient({
         }}
       >
         {total}{' '}
-        {total !== 1 ? COPY.summary.userPlural : COPY.summary.userSingular}
+        {total !== 1
+          ? ADMIN_COPY.users.summary.userPlural
+          : ADMIN_COPY.users.summary.userSingular}
       </div>
 
       {/* Desktop table */}
@@ -255,10 +257,10 @@ export function AdminUsersClient({
         <AdminTable>
           <THead sticky>
             <tr>
-              <TH>{COPY.columns.emailHandle}</TH>
-              <TH>{COPY.columns.role}</TH>
-              <TH>{COPY.columns.joined}</TH>
-              <TH>{COPY.columns.assignRole}</TH>
+              <TH>{ADMIN_COPY.users.columns.emailHandle}</TH>
+              <TH>{ADMIN_COPY.users.columns.role}</TH>
+              <TH>{ADMIN_COPY.users.columns.joined}</TH>
+              <TH>{ADMIN_COPY.users.columns.assignRole}</TH>
             </tr>
           </THead>
           <tbody>
@@ -329,7 +331,7 @@ export function AdminUsersClient({
             fontSize: 12,
           }}
         >
-          {COPY.empty}
+          {ADMIN_COPY.users.empty}
         </div>
       )}
 
@@ -342,7 +344,7 @@ export function AdminUsersClient({
             color: 'var(--fg-subtle)',
           }}
         >
-          {COPY.pagination(users.length, total)}
+          {ADMIN_COPY.users.pagination(users.length, total)}
         </div>
       )}
     </div>

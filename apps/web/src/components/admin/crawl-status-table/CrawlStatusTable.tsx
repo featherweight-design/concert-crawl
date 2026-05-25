@@ -1,5 +1,5 @@
 import { Badge } from '@/components/ui/badge'
-import { COPY } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 type LastRun = {
   id: string
@@ -49,7 +49,11 @@ type Props = {
 
 export const CrawlStatusTable = ({ venues }: Props) => {
   if (venues.length === 0) {
-    return <p className="text-sm text-fg-muted">{COPY.empty}</p>
+    return (
+      <p className="text-sm text-fg-muted">
+        {ADMIN_COPY.crawlStatusTable.empty}
+      </p>
+    )
   }
 
   return (
@@ -57,12 +61,24 @@ export const CrawlStatusTable = ({ venues }: Props) => {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border text-left text-fg-muted">
-            <th className="pb-3 pr-4 font-medium">{COPY.columns.venue}</th>
-            <th className="pb-3 pr-4 font-medium">{COPY.columns.lastCrawl}</th>
-            <th className="pb-3 pr-4 font-medium">{COPY.columns.status}</th>
-            <th className="pb-3 pr-4 font-medium">{COPY.columns.events}</th>
-            <th className="pb-3 pr-4 font-medium">{COPY.columns.strategy}</th>
-            <th className="pb-3 font-medium">{COPY.columns.failures}</th>
+            <th className="pb-3 pr-4 font-medium">
+              {ADMIN_COPY.crawlStatusTable.columns.venue}
+            </th>
+            <th className="pb-3 pr-4 font-medium">
+              {ADMIN_COPY.crawlStatusTable.columns.lastCrawl}
+            </th>
+            <th className="pb-3 pr-4 font-medium">
+              {ADMIN_COPY.crawlStatusTable.columns.status}
+            </th>
+            <th className="pb-3 pr-4 font-medium">
+              {ADMIN_COPY.crawlStatusTable.columns.events}
+            </th>
+            <th className="pb-3 pr-4 font-medium">
+              {ADMIN_COPY.crawlStatusTable.columns.strategy}
+            </th>
+            <th className="pb-3 font-medium">
+              {ADMIN_COPY.crawlStatusTable.columns.failures}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -75,12 +91,12 @@ export const CrawlStatusTable = ({ venues }: Props) => {
                 {venue.name}
                 {!venue.active && (
                   <span className="ml-2 text-xs text-fg-muted">
-                    {COPY.statusLabels.paused}
+                    {ADMIN_COPY.crawlStatusTable.statusLabels.paused}
                   </span>
                 )}
                 {venue.blockedAt && (
                   <span className="ml-2 text-xs text-red-500">
-                    {COPY.statusLabels.blocked}
+                    {ADMIN_COPY.crawlStatusTable.statusLabels.blocked}
                   </span>
                 )}
               </td>
@@ -96,7 +112,7 @@ export const CrawlStatusTable = ({ venues }: Props) => {
                   </Badge>
                 ) : (
                   <span className="text-fg-muted">
-                    {COPY.statusLabels.never}
+                    {ADMIN_COPY.crawlStatusTable.statusLabels.never}
                   </span>
                 )}
               </td>

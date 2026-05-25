@@ -12,11 +12,8 @@ import type { VenueWithEventCount } from '@concert-crawl/types'
 import { VenueTableClient } from '@/components/admin/venue-table-client'
 import { deriveVenueStatus, venueHealthPercent } from '@/lib/admin/venue-status'
 import { MobileAddVenueButton } from '@/components/admin/venues/MobileAddVenueButton'
-<<<<<<< HEAD
 import { VenueStatusFilterButton } from '@/components/admin/venues/VenueStatusFilterButton'
-=======
-import { COPY } from './definitions/copy'
->>>>>>> bd0e1762 (refactor: extract all remaining app copy to definitions files and address Copilot review)
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -67,8 +64,11 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <SectionHead
-        title={COPY.page.title}
-        subtitle={COPY.page.subtitle(venues.length, blockedCount)}
+        title={ADMIN_COPY.venuesPage.page.title}
+        subtitle={ADMIN_COPY.venuesPage.page.subtitle(
+          venues.length,
+          blockedCount,
+        )}
         actions={
           <>
             <VenueStatusFilterButton currentFilter={statusFilter} />
@@ -77,7 +77,7 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
               style={{ textDecoration: 'none' }}
             >
               <AdminButton variant="outline" size="sm" icon={ExternalLink}>
-                {COPY.page.robotsAuditButton}
+                {ADMIN_COPY.venuesPage.page.robotsAuditButton}
               </AdminButton>
             </Link>
           </>
@@ -86,32 +86,32 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
-          label={COPY.stats.totalVenues}
+          label={ADMIN_COPY.venuesPage.stats.totalVenues}
           value={String(venues.length)}
           iconName="MapPin"
           kind="neutral"
           noChip
         />
         <StatCard
-          label={COPY.stats.active}
+          label={ADMIN_COPY.venuesPage.stats.active}
           value={String(activeCount)}
           iconName="MapPin"
           kind="success"
         />
         <StatCard
-          label={COPY.stats.pausedBlocked}
+          label={ADMIN_COPY.venuesPage.stats.pausedBlocked}
           value={String(pausedBlockedCount)}
           iconName="MapPin"
           kind="warning"
         />
         <StatCard
-          label={COPY.stats.avgHealth}
+          label={ADMIN_COPY.venuesPage.stats.avgHealth}
           value={`${String(avgHealth)}%`}
           iconName="Activity"
           kind={
             avgHealth >= 80 ? 'success' : avgHealth >= 50 ? 'warning' : 'danger'
           }
-          hint={COPY.stats.avgHealthHint}
+          hint={ADMIN_COPY.venuesPage.stats.avgHealthHint}
         />
       </div>
 

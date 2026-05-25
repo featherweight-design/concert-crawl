@@ -1,5 +1,7 @@
 import { EmptyState } from '@/components/consumer/empty-state'
-import { copy } from '@/components/consumer/definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY
 
 export function WatchingEmpty() {
   return (

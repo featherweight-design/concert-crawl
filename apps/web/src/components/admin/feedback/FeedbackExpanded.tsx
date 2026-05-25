@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { MonoLabel } from '@/components/admin/primitives'
 import type { FeedbackItem } from './FeedbackRow'
-import { FEEDBACK_COPY } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 const REPO = 'HartiganHM/concert-crawl'
 const MT_TIMEZONE = 'America/Denver'
@@ -138,25 +138,28 @@ export function FeedbackExpanded({
   const handle = `@${item.userId.slice(0, 10)}`
 
   const contextRows: { label: string; value: string | null | undefined }[] = [
-    { label: FEEDBACK_COPY.expanded.contextRowLabels.route, value: route },
     {
-      label: FEEDBACK_COPY.expanded.contextRowLabels.theme,
+      label: ADMIN_COPY.feedback.expanded.contextRowLabels.route,
+      value: route,
+    },
+    {
+      label: ADMIN_COPY.feedback.expanded.contextRowLabels.theme,
       value: meta['theme'] as string | undefined,
     },
     {
-      label: FEEDBACK_COPY.expanded.contextRowLabels.build,
+      label: ADMIN_COPY.feedback.expanded.contextRowLabels.build,
       value: meta['build'] as string | undefined,
     },
     {
-      label: FEEDBACK_COPY.expanded.contextRowLabels.device,
+      label: ADMIN_COPY.feedback.expanded.contextRowLabels.device,
       value: (meta['userAgent'] ?? meta['device']) as string | undefined,
     },
     {
-      label: FEEDBACK_COPY.expanded.contextRowLabels.submitted,
+      label: ADMIN_COPY.feedback.expanded.contextRowLabels.submitted,
       value: formatSubmitted(item.createdAt),
     },
     {
-      label: FEEDBACK_COPY.expanded.contextRowLabels.userId,
+      label: ADMIN_COPY.feedback.expanded.contextRowLabels.userId,
       value: item.userId,
     },
   ]
@@ -182,7 +185,7 @@ export function FeedbackExpanded({
           {/* Full Body */}
           <div>
             <MonoLabel>
-              {FEEDBACK_COPY.expanded.sectionLabels.fullBody}
+              {ADMIN_COPY.feedback.expanded.sectionLabels.fullBody}
             </MonoLabel>
             <div
               style={{
@@ -204,7 +207,7 @@ export function FeedbackExpanded({
           {/* Screenshot */}
           <div>
             <MonoLabel>
-              {FEEDBACK_COPY.expanded.sectionLabels.screenshot}
+              {ADMIN_COPY.feedback.expanded.sectionLabels.screenshot}
             </MonoLabel>
             <div
               style={{
@@ -253,7 +256,7 @@ export function FeedbackExpanded({
                     }}
                   >
                     <ExternalLink size={10} />
-                    {FEEDBACK_COPY.expanded.openFullSize}
+                    {ADMIN_COPY.feedback.expanded.openFullSize}
                   </a>
                 </>
               ) : (
@@ -290,7 +293,7 @@ export function FeedbackExpanded({
                       opacity: 0.6,
                     }}
                   >
-                    {FEEDBACK_COPY.expanded.screenshotPlaceholder}
+                    {ADMIN_COPY.feedback.expanded.screenshotPlaceholder}
                   </span>
                 </div>
               )}
@@ -300,13 +303,13 @@ export function FeedbackExpanded({
           {/* Admin Notes */}
           <div>
             <MonoLabel>
-              {FEEDBACK_COPY.expanded.sectionLabels.adminNotes}
+              {ADMIN_COPY.feedback.expanded.sectionLabels.adminNotes}
             </MonoLabel>
             <textarea
               value={notes}
               onChange={(ev) => setNotes(ev.target.value)}
               onBlur={() => void handleNotesBlur()}
-              placeholder={FEEDBACK_COPY.expanded.adminNotesPlaceholder}
+              placeholder={ADMIN_COPY.feedback.expanded.adminNotesPlaceholder}
               rows={3}
               style={{
                 display: 'block',
@@ -333,7 +336,7 @@ export function FeedbackExpanded({
           {/* Context */}
           <div>
             <MonoLabel>
-              {FEEDBACK_COPY.expanded.sectionLabels.context}
+              {ADMIN_COPY.feedback.expanded.sectionLabels.context}
             </MonoLabel>
             <div
               style={{
@@ -371,7 +374,7 @@ export function FeedbackExpanded({
           {item.issueUrl ? (
             <div>
               <MonoLabel color="var(--accent)">
-                {FEEDBACK_COPY.expanded.sectionLabels.linkedIssue}
+                {ADMIN_COPY.feedback.expanded.sectionLabels.linkedIssue}
               </MonoLabel>
               <div
                 style={{
@@ -412,7 +415,7 @@ export function FeedbackExpanded({
                 <button
                   type="button"
                   onClick={() => void handleCopyIssueUrl()}
-                  title={FEEDBACK_COPY.expanded.copyUrlTitle}
+                  title={ADMIN_COPY.feedback.expanded.copyUrlTitle}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -435,7 +438,7 @@ export function FeedbackExpanded({
           ) : (
             <div>
               <MonoLabel>
-                {FEEDBACK_COPY.expanded.sectionLabels.createIssue}
+                {ADMIN_COPY.feedback.expanded.sectionLabels.createIssue}
               </MonoLabel>
               <div
                 style={{
@@ -458,7 +461,7 @@ export function FeedbackExpanded({
                     fontFamily: "'Inter', sans-serif",
                   }}
                 >
-                  {FEEDBACK_COPY.expanded.createIssuePrompt}
+                  {ADMIN_COPY.feedback.expanded.createIssuePrompt}
                 </p>
                 <a
                   href={ghUrl}
@@ -483,7 +486,7 @@ export function FeedbackExpanded({
                   }}
                 >
                   <ExternalLink size={14} />
-                  {FEEDBACK_COPY.expanded.openInGitHub}
+                  {ADMIN_COPY.feedback.expanded.openInGitHub}
                 </a>
               </div>
             </div>
@@ -511,8 +514,8 @@ export function FeedbackExpanded({
         >
           <Check size={13} />
           {isUnread
-            ? FEEDBACK_COPY.expanded.actions.markRead
-            : FEEDBACK_COPY.expanded.actions.markUnread}
+            ? ADMIN_COPY.feedback.expanded.actions.markRead
+            : ADMIN_COPY.feedback.expanded.actions.markUnread}
         </button>
 
         <button
@@ -524,8 +527,8 @@ export function FeedbackExpanded({
         >
           <Flag size={13} />
           {isFlagged
-            ? FEEDBACK_COPY.expanded.actions.unflag
-            : FEEDBACK_COPY.expanded.actions.flag}
+            ? ADMIN_COPY.feedback.expanded.actions.unflag
+            : ADMIN_COPY.feedback.expanded.actions.flag}
         </button>
 
         <a
@@ -535,7 +538,7 @@ export function FeedbackExpanded({
           style={actionLinkStyle('ghost')}
         >
           <SquarePen size={13} />
-          {FEEDBACK_COPY.expanded.actions.openInGitHub}
+          {ADMIN_COPY.feedback.expanded.actions.openInGitHub}
         </a>
 
         <a
@@ -556,7 +559,7 @@ export function FeedbackExpanded({
               style={actionButtonStyle('success')}
             >
               <Check size={13} />
-              {FEEDBACK_COPY.expanded.actions.resolve}
+              {ADMIN_COPY.feedback.expanded.actions.resolve}
             </button>
           )}
           {item.status !== 'archived' && (
@@ -566,7 +569,7 @@ export function FeedbackExpanded({
               style={actionButtonStyle('ghost')}
             >
               <X size={13} />
-              {FEEDBACK_COPY.expanded.actions.archive}
+              {ADMIN_COPY.feedback.expanded.actions.archive}
             </button>
           )}
         </div>

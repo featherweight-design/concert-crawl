@@ -6,7 +6,9 @@ import { EventImage } from '../event-image'
 import { WatchShowButton } from '../watch-show-button'
 import { GenreChips } from '../GenreChips'
 import { formatShowTime, venueShort } from '../definitions/lib'
-import { copy } from '../definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY
 
 interface EventCardProps {
   event: EventWithVenue

@@ -4,7 +4,7 @@ import { ChevronDown, ChevronRight, Image } from 'lucide-react'
 import { StatusBadge } from '@/components/admin/primitives'
 import type { FeedbackStatusFilter } from './FeedbackFilterRail'
 import type { StatusKind } from '@/components/admin/primitives/utils'
-import { FEEDBACK_COPY } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 export interface FeedbackItem {
   id: string
@@ -35,7 +35,7 @@ const STATUS_KIND: Record<string, StatusKind> = {
   archived: 'neutral',
 }
 
-const STATUS_LABEL = FEEDBACK_COPY.row.statusLabel
+const STATUS_LABEL = ADMIN_COPY.feedback.row.statusLabel
 
 function formatRelativeTime(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime()
@@ -159,7 +159,7 @@ export function FeedbackRow({ item, isExpanded, onToggle }: FeedbackRowProps) {
                 }}
               >
                 <Image size={10} color="var(--fg-subtle)" />
-                {FEEDBACK_COPY.row.screenshotBadge}
+                {ADMIN_COPY.feedback.row.screenshotBadge}
               </span>
             )}
           </div>

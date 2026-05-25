@@ -35,7 +35,7 @@ import {
   type VenueStatus,
 } from '@/lib/admin/venue-status'
 import { deriveBulkVisibility } from './venue-table-bulk'
-import { venueTableClientCopy } from '@/components/admin/definitions/venue-table-client-copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 function sourceUrl(url: string): string {
   return url.replace(/^https?:\/\//, '')
@@ -129,7 +129,7 @@ export function VenueTableClient({ venues }: Props) {
             color: 'var(--fg-muted)',
           }}
         >
-          {venueTableClientCopy.empty}
+          {ADMIN_COPY.venueTableClient.empty}
         </div>
       )
     }
@@ -216,8 +216,8 @@ export function VenueTableClient({ venues }: Props) {
                 <button
                   aria-label={
                     isExpanded
-                      ? venueTableClientCopy.expand.collapseAriaLabel
-                      : venueTableClientCopy.expand.expandAriaLabel
+                      ? ADMIN_COPY.venueTableClient.expand.collapseAriaLabel
+                      : ADMIN_COPY.venueTableClient.expand.expandAriaLabel
                   }
                   aria-expanded={isExpanded}
                   onClick={() => toggleExpand(venue.id)}
@@ -271,7 +271,8 @@ export function VenueTableClient({ venues }: Props) {
                   fontFamily: "'JetBrains Mono', monospace",
                 }}
               >
-                {selected.size} {venueTableClientCopy.bulkActions.selected}
+                {selected.size}{' '}
+                {ADMIN_COPY.venueTableClient.bulkActions.selected}
               </span>
               {showVerify && (
                 <AdminButton
@@ -281,7 +282,7 @@ export function VenueTableClient({ venues }: Props) {
                   disabled={isPending}
                   onClick={() => runBulkAction(bulkVerifyVenues)}
                 >
-                  {venueTableClientCopy.bulkActions.verify}
+                  {ADMIN_COPY.venueTableClient.bulkActions.verify}
                 </AdminButton>
               )}
               {showUnverify && (
@@ -292,7 +293,7 @@ export function VenueTableClient({ venues }: Props) {
                   disabled={isPending}
                   onClick={() => runBulkAction(bulkUnverifyVenues)}
                 >
-                  {venueTableClientCopy.bulkActions.unverify}
+                  {ADMIN_COPY.venueTableClient.bulkActions.unverify}
                 </AdminButton>
               )}
               {showActivate && (
@@ -303,7 +304,7 @@ export function VenueTableClient({ venues }: Props) {
                   disabled={isPending}
                   onClick={() => runBulkAction(bulkActivateVenues)}
                 >
-                  {venueTableClientCopy.bulkActions.activate}
+                  {ADMIN_COPY.venueTableClient.bulkActions.activate}
                 </AdminButton>
               )}
               {showDeactivate && (
@@ -314,7 +315,7 @@ export function VenueTableClient({ venues }: Props) {
                   disabled={isPending}
                   onClick={() => runBulkAction(bulkDeactivateVenues)}
                 >
-                  {venueTableClientCopy.bulkActions.deactivate}
+                  {ADMIN_COPY.venueTableClient.bulkActions.deactivate}
                 </AdminButton>
               )}
             </>
@@ -327,7 +328,7 @@ export function VenueTableClient({ venues }: Props) {
                 fontFamily: 'var(--admin-font, Inter, sans-serif)',
               }}
             >
-              {venueTableClientCopy.configuredVenues}{' '}
+              {ADMIN_COPY.venueTableClient.configuredVenues}{' '}
               <span
                 style={{
                   fontSize: 11,
@@ -351,18 +352,18 @@ export function VenueTableClient({ venues }: Props) {
                 checked={allSelected}
                 onChange={toggleAll}
                 style={{ cursor: 'pointer' }}
-                aria-label={venueTableClientCopy.selectAll}
+                aria-label={ADMIN_COPY.venueTableClient.selectAll}
               />
             </TH>
             <TH width={32} />
-            <TH>{venueTableClientCopy.columns.venue}</TH>
-            <TH>{venueTableClientCopy.columns.sourceUrl}</TH>
-            <TH>{venueTableClientCopy.columns.strategy}</TH>
-            <TH>{venueTableClientCopy.columns.schedule}</TH>
-            <TH>{venueTableClientCopy.columns.status}</TH>
-            <TH>{venueTableClientCopy.columns.health}</TH>
-            <TH>{venueTableClientCopy.columns.lastCrawl}</TH>
-            <TH>{venueTableClientCopy.columns.events}</TH>
+            <TH>{ADMIN_COPY.venueTableClient.columns.venue}</TH>
+            <TH>{ADMIN_COPY.venueTableClient.columns.sourceUrl}</TH>
+            <TH>{ADMIN_COPY.venueTableClient.columns.strategy}</TH>
+            <TH>{ADMIN_COPY.venueTableClient.columns.schedule}</TH>
+            <TH>{ADMIN_COPY.venueTableClient.columns.status}</TH>
+            <TH>{ADMIN_COPY.venueTableClient.columns.health}</TH>
+            <TH>{ADMIN_COPY.venueTableClient.columns.lastCrawl}</TH>
+            <TH>{ADMIN_COPY.venueTableClient.columns.events}</TH>
           </tr>
         </THead>
         <tbody>
@@ -378,7 +379,7 @@ export function VenueTableClient({ venues }: Props) {
                   color: 'var(--fg-muted)',
                 }}
               >
-                {venueTableClientCopy.empty}
+                {ADMIN_COPY.venueTableClient.empty}
               </td>
             </tr>
           )}
@@ -398,15 +399,15 @@ export function VenueTableClient({ venues }: Props) {
                       checked={selected.has(venue.id)}
                       onChange={() => toggleOne(venue.id)}
                       style={{ cursor: 'pointer' }}
-                      aria-label={`${venueTableClientCopy.selectVenue} ${venue.name}`}
+                      aria-label={`${ADMIN_COPY.venueTableClient.selectVenue} ${venue.name}`}
                     />
                   </TD>
                   <TD width={32}>
                     <button
                       aria-label={
                         isExpanded
-                          ? venueTableClientCopy.expand.collapseAriaLabel
-                          : venueTableClientCopy.expand.expandAriaLabel
+                          ? ADMIN_COPY.venueTableClient.expand.collapseAriaLabel
+                          : ADMIN_COPY.venueTableClient.expand.expandAriaLabel
                       }
                       aria-expanded={isExpanded}
                       onClick={() => toggleExpand(venue.id)}
@@ -492,7 +493,7 @@ export function VenueTableClient({ venues }: Props) {
                         fontFamily: 'var(--admin-font, Inter, sans-serif)',
                       }}
                     >
-                      {venueTableClientCopy.schedule}
+                      {ADMIN_COPY.venueTableClient.schedule}
                     </span>
                   </TD>
                   <TD>

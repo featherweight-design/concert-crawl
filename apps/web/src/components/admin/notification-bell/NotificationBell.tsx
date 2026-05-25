@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { COPY } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { useAuth } from '@clerk/nextjs'
 import { apiClient } from '@/lib/api'
 
@@ -102,8 +102,8 @@ export const NotificationBell = () => {
         className="relative inline-flex items-center justify-center rounded-md px-2 py-1.5 text-sm hover:bg-surface-2 hover:text-fg"
         aria-label={
           unreadCount > 0
-            ? COPY.button.ariaLabelWithCount(unreadCount)
-            : COPY.button.ariaLabel
+            ? ADMIN_COPY.notificationBell.button.ariaLabelWithCount(unreadCount)
+            : ADMIN_COPY.notificationBell.button.ariaLabel
         }
         aria-expanded={open}
         aria-haspopup="true"
@@ -111,7 +111,9 @@ export const NotificationBell = () => {
         <span className="text-base">🔔</span>
         {unreadCount > 0 && (
           <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-brand text-[10px] font-medium text-white">
-            {unreadCount > 9 ? COPY.button.unreadOverflow : unreadCount}
+            {unreadCount > 9
+              ? ADMIN_COPY.notificationBell.button.unreadOverflow
+              : unreadCount}
           </span>
         )}
       </button>
@@ -119,21 +121,23 @@ export const NotificationBell = () => {
       {open && (
         <div className="absolute bottom-full left-0 mb-2 w-80 rounded-lg border border-border bg-surface-1 shadow-lg">
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <p className="text-sm font-medium text-fg">{COPY.panel.title}</p>
+            <p className="text-sm font-medium text-fg">
+              {ADMIN_COPY.notificationBell.panel.title}
+            </p>
             {unreadCount > 0 && (
               <button
                 type="button"
                 onClick={markAllRead}
                 className="text-xs text-fg-muted hover:text-fg"
               >
-                {COPY.panel.markAllRead}
+                {ADMIN_COPY.notificationBell.panel.markAllRead}
               </button>
             )}
           </div>
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
               <p className="px-4 py-6 text-center text-sm text-fg-muted">
-                {COPY.panel.empty}
+                {ADMIN_COPY.notificationBell.panel.empty}
               </p>
             ) : (
               notifications.map((notif) => (
@@ -157,7 +161,9 @@ export const NotificationBell = () => {
                         type="button"
                         onClick={() => markAsRead(notif.id)}
                         className="shrink-0 text-xs text-fg-muted hover:text-fg"
-                        aria-label={COPY.panel.markAsRead}
+                        aria-label={
+                          ADMIN_COPY.notificationBell.panel.markAsRead
+                        }
                       >
                         ✕
                       </button>
@@ -168,7 +174,7 @@ export const NotificationBell = () => {
                       href={notif.actionUrl}
                       className="mt-1 text-xs text-brand hover:underline"
                     >
-                      {COPY.panel.viewAction}
+                      {ADMIN_COPY.notificationBell.panel.viewAction}
                     </a>
                   )}
                 </div>

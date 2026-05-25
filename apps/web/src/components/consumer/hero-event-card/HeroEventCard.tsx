@@ -3,7 +3,9 @@ import type { EventWithVenue } from '@concert-crawl/types'
 import { EventImage } from '../event-image'
 import { WatchShowButton } from '../watch-show-button'
 import { formatShowTime, venueShort } from '../definitions/lib'
-import { copy } from '../definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY
 import { GenreChips } from '../GenreChips'
 
 interface HeroEventCardProps {

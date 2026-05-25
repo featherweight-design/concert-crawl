@@ -1,6 +1,8 @@
 import { MapPin, User } from 'lucide-react'
 import type { ArtistResult, VenueResult } from '../../../lib/search/useSearch'
-import { copy } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY.search
 
 interface SearchResultsStateProps {
   artistResults: ArtistResult[]

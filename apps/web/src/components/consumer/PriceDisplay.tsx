@@ -3,7 +3,9 @@
 import { useState } from 'react'
 import type { PriceSource } from '@concert-crawl/types'
 import { SubmitPriceModal } from '@/components/consumer/submit-price'
-import { copy } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY
 
 // ── Price shape used by PriceBlockB ─────────────────────────────
 // Maps from the flat EventDetailResponse fields into a richer object

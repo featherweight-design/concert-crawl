@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { COPY } from './definitions/copy'
+import { LANDING_COPY } from '@/app/_components/definitions/copy'
 
 interface WaitlistModalProps {
   open: boolean
@@ -105,7 +105,7 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
       >
         <button
           onClick={onClose}
-          aria-label={COPY.closeButtonAriaLabel}
+          aria-label={LANDING_COPY.waitlist.closeButtonAriaLabel}
           style={{
             all: 'unset',
             cursor: 'pointer',
@@ -167,7 +167,7 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
                 letterSpacing: '-0.02em',
               }}
             >
-              {COPY.success.heading}
+              {LANDING_COPY.waitlist.success.heading}
             </h2>
             <p
               style={{
@@ -180,7 +180,7 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
                 marginInline: 'auto',
               }}
             >
-              {COPY.success.body}
+              {LANDING_COPY.waitlist.success.body}
             </p>
             <button
               onClick={onClose}
@@ -198,7 +198,7 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
                 color: 'var(--fg)',
               }}
             >
-              {COPY.success.closeButton}
+              {LANDING_COPY.waitlist.success.closeButton}
             </button>
           </div>
         ) : (
@@ -213,7 +213,7 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
                 fontWeight: 700,
               }}
             >
-              {COPY.form.eyebrow}
+              {LANDING_COPY.waitlist.form.eyebrow}
             </div>
             <h2
               style={{
@@ -225,7 +225,7 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
                 letterSpacing: '-0.02em',
               }}
             >
-              {COPY.form.heading}
+              {LANDING_COPY.waitlist.form.heading}
             </h2>
             <p
               style={{
@@ -236,7 +236,7 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
                 lineHeight: 1.45,
               }}
             >
-              {COPY.form.body}
+              {LANDING_COPY.waitlist.form.body}
             </p>
 
             {state === 'error' && (
@@ -252,7 +252,7 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
                   color: 'var(--danger)',
                 }}
               >
-                {COPY.form.errorMessage}
+                {LANDING_COPY.waitlist.form.errorMessage}
               </div>
             )}
 
@@ -278,7 +278,7 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
                     fontWeight: 700,
                   }}
                 >
-                  {COPY.form.emailLabel}{' '}
+                  {LANDING_COPY.waitlist.form.emailLabel}{' '}
                   <span style={{ color: 'var(--accent)' }}>*</span>
                 </span>
                 <input
@@ -286,7 +286,7 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
                   type="email"
                   value={email}
                   onChange={(ev) => setEmail(ev.target.value)}
-                  placeholder={COPY.form.emailPlaceholder}
+                  placeholder={LANDING_COPY.waitlist.form.emailPlaceholder}
                   required
                   style={inputStyle}
                 />
@@ -317,8 +317,8 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
                 }}
               >
                 {state === 'submitting'
-                  ? COPY.form.submittingButton
-                  : COPY.form.submitButton}
+                  ? LANDING_COPY.waitlist.form.submittingButton
+                  : LANDING_COPY.waitlist.form.submitButton}
               </button>
             </form>
 
@@ -333,7 +333,7 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
                 textAlign: 'center',
               }}
             >
-              {COPY.form.footerNote}
+              {LANDING_COPY.waitlist.form.footerNote}
             </p>
           </>
         )}

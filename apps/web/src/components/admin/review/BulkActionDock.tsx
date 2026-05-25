@@ -1,7 +1,7 @@
 'use client'
 
 import { Tag } from 'lucide-react'
-import { REVIEW_COPY } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 interface BulkActionDockProps {
   count: number
@@ -62,7 +62,7 @@ export const BulkActionDock = ({
           color: 'var(--paper)',
         }}
       >
-        {REVIEW_COPY.bulkActionDock.selected}
+        {ADMIN_COPY.review.bulkActionDock.selected}
       </span>
 
       {/* Re-tag (optional) */}
@@ -85,7 +85,7 @@ export const BulkActionDock = ({
           }}
         >
           <Tag size={12} />
-          {REVIEW_COPY.bulkActionDock.retag}
+          {ADMIN_COPY.review.bulkActionDock.retag}
         </button>
       )}
 
@@ -104,7 +104,7 @@ export const BulkActionDock = ({
           cursor: 'pointer',
         }}
       >
-        {REVIEW_COPY.bulkActionDock.rejectAll}
+        {ADMIN_COPY.review.bulkActionDock.rejectAll}
       </button>
 
       {/* Approve N */}
@@ -125,7 +125,7 @@ export const BulkActionDock = ({
           cursor: 'pointer',
         }}
       >
-        {REVIEW_COPY.bulkActionDock.approveCount(count)}
+        {ADMIN_COPY.review.bulkActionDock.approveCount(count)}
       </button>
     </div>
   )

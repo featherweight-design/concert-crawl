@@ -19,7 +19,7 @@ import { InspectorTabs } from '@/components/admin/crawl/InspectorTabs'
 import type { InspectorTab } from '@/components/admin/crawl/InspectorTabs'
 import { DiagnosticsPanel } from '@/components/admin/crawl/DiagnosticsPanel'
 import { StagedApplyConfirm } from '@/components/admin/crawl/StagedApplyConfirm'
-import { CRAWL_COPY } from '@/components/admin/crawl/definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 const MT_TIMEZONE = 'America/Denver'
 
@@ -61,7 +61,7 @@ const STATUS_KIND: Record<
   never: 'neutral',
 }
 
-const STATUS_FILTER_OPTIONS = CRAWL_COPY.splitView.statusFilterOptions
+const STATUS_FILTER_OPTIONS = ADMIN_COPY.crawl.splitView.statusFilterOptions
 
 function fmtTimeMT(iso: string): string {
   return new Date(iso).toLocaleTimeString('en-US', {
@@ -122,7 +122,7 @@ function ErrorBlock({
 
   const title = isHttpBlock
     ? `HTTP ${httpStatusCode} · venue blocked`
-    : CRAWL_COPY.splitView.errorCrawlFailed
+    : ADMIN_COPY.crawl.splitView.errorCrawlFailed
 
   return (
     <div>
@@ -136,7 +136,7 @@ function ErrorBlock({
           marginBottom: 6,
         }}
       >
-        {CRAWL_COPY.splitView.errorSectionLabel}
+        {ADMIN_COPY.crawl.splitView.errorSectionLabel}
       </div>
       <div
         style={{
@@ -172,10 +172,10 @@ function ErrorBlock({
                 margin: '2px 0',
               }}
             >
-              {CRAWL_COPY.splitView.errorConsecutiveFailures}{' '}
+              {ADMIN_COPY.crawl.splitView.errorConsecutiveFailures}{' '}
               {consecutiveFailures}
               {consecutiveFailures >= 2
-                ? CRAWL_COPY.splitView.errorWillPause
+                ? ADMIN_COPY.crawl.splitView.errorWillPause
                 : '.'}
             </p>
             {blockedAt && (
@@ -193,7 +193,7 @@ function ErrorBlock({
                   year: 'numeric',
                   timeZone: MT_TIMEZONE,
                 })}{' '}
-                {CRAWL_COPY.splitView.errorIpAllowlist}
+                {ADMIN_COPY.crawl.splitView.errorIpAllowlist}
               </p>
             )}
           </div>
@@ -438,7 +438,7 @@ export const CrawlSplitView = ({
                 color: 'var(--fg-muted)',
               }}
             >
-              {CRAWL_COPY.splitView.latestRunHeader}{' '}
+              {ADMIN_COPY.crawl.splitView.latestRunHeader}{' '}
               <span style={{ fontWeight: 700, color: 'var(--fg)' }}>
                 {filteredStatus.length}
               </span>
@@ -464,7 +464,7 @@ export const CrawlSplitView = ({
                 }}
               >
                 <Filter size={13} />
-                {CRAWL_COPY.splitView.filterLabel}
+                {ADMIN_COPY.crawl.splitView.filterLabel}
               </button>
               {filterOpen && (
                 <div
@@ -496,7 +496,7 @@ export const CrawlSplitView = ({
                         marginBottom: 4,
                       }}
                     >
-                      {CRAWL_COPY.splitView.filterStatusLabel}
+                      {ADMIN_COPY.crawl.splitView.filterStatusLabel}
                     </label>
                     <select
                       value={statusFilter}
@@ -531,11 +531,13 @@ export const CrawlSplitView = ({
                         marginBottom: 4,
                       }}
                     >
-                      {CRAWL_COPY.splitView.filterVenueLabel}
+                      {ADMIN_COPY.crawl.splitView.filterVenueLabel}
                     </label>
                     <input
                       type="text"
-                      placeholder={CRAWL_COPY.splitView.filterVenuePlaceholder}
+                      placeholder={
+                        ADMIN_COPY.crawl.splitView.filterVenuePlaceholder
+                      }
                       value={venueNameFilter}
                       onChange={(ev) => setVenueNameFilter(ev.target.value)}
                       style={{
@@ -568,7 +570,7 @@ export const CrawlSplitView = ({
                         padding: 0,
                       }}
                     >
-                      {CRAWL_COPY.splitView.filterClearButton}
+                      {ADMIN_COPY.crawl.splitView.filterClearButton}
                     </button>
                   )}
                 </div>
@@ -584,7 +586,7 @@ export const CrawlSplitView = ({
                 fontSize: 13,
               }}
             >
-              {CRAWL_COPY.splitView.filterNoResults}
+              {ADMIN_COPY.crawl.splitView.filterNoResults}
             </div>
           )}
           {filteredStatus.map((row) => (
@@ -636,7 +638,7 @@ export const CrawlSplitView = ({
                 <div style={{ fontSize: 12, color: 'var(--fg-muted)' }}>
                   {row.lastRunAt
                     ? `${fmtTimeMT(row.lastRunAt)} MT`
-                    : CRAWL_COPY.splitView.venueLastRunNever}
+                    : ADMIN_COPY.crawl.splitView.venueLastRunNever}
                   {row.durationMs != null
                     ? ` · ${(row.durationMs / 1000).toFixed(1)}s`
                     : ''}
@@ -701,7 +703,7 @@ export const CrawlSplitView = ({
                       marginBottom: 10,
                     }}
                   >
-                    {CRAWL_COPY.splitView.backToAllVenues}
+                    {ADMIN_COPY.crawl.splitView.backToAllVenues}
                   </button>
                 )}
                 {activeRun && (
@@ -776,7 +778,7 @@ export const CrawlSplitView = ({
                         }}
                       >
                         <ExternalLink size={15} />
-                        {CRAWL_COPY.splitView.sourceUrlButton}
+                        {ADMIN_COPY.crawl.splitView.sourceUrlButton}
                       </a>
                     )}
                     <button
@@ -810,10 +812,10 @@ export const CrawlSplitView = ({
                     >
                       <RefreshCw size={15} />
                       {venueRecrawlState === 'triggering'
-                        ? CRAWL_COPY.splitView.recrawlTriggering
+                        ? ADMIN_COPY.crawl.splitView.recrawlTriggering
                         : venueRecrawlState === 'queued'
-                          ? CRAWL_COPY.splitView.recrawlQueued
-                          : CRAWL_COPY.splitView.recrawlButton}
+                          ? ADMIN_COPY.crawl.splitView.recrawlQueued
+                          : ADMIN_COPY.crawl.splitView.recrawlButton}
                     </button>
                   </div>
                 </div>
@@ -854,21 +856,21 @@ export const CrawlSplitView = ({
                 >
                   {[
                     {
-                      label: CRAWL_COPY.splitView.vitalStartedLabel,
+                      label: ADMIN_COPY.crawl.splitView.vitalStartedLabel,
                       value: fmtDateTimeMT(
                         activeRun.startedAt ?? activeRun.createdAt,
                       ),
                       danger: false,
                     },
                     {
-                      label: CRAWL_COPY.splitView.vitalDurationLabel,
+                      label: ADMIN_COPY.crawl.splitView.vitalDurationLabel,
                       value: activeRun.durationMs
                         ? `${(activeRun.durationMs / 1000).toFixed(1)}s`
                         : '—',
                       danger: false,
                     },
                     {
-                      label: CRAWL_COPY.splitView.vitalHttpLabel,
+                      label: ADMIN_COPY.crawl.splitView.vitalHttpLabel,
                       value: activeRun.httpStatusCode
                         ? String(activeRun.httpStatusCode)
                         : '—',
@@ -877,7 +879,7 @@ export const CrawlSplitView = ({
                         activeRun.httpStatusCode >= 400,
                     },
                     {
-                      label: CRAWL_COPY.splitView.vitalLlmCostLabel,
+                      label: ADMIN_COPY.crawl.splitView.vitalLlmCostLabel,
                       value: formatCostValue(activeRun.llmCostUsd),
                       danger: false,
                     },
@@ -951,7 +953,7 @@ export const CrawlSplitView = ({
                             marginBottom: 10,
                           }}
                         >
-                          {CRAWL_COPY.splitView.eventsSectionLabel}
+                          {ADMIN_COPY.crawl.splitView.eventsSectionLabel}
                         </div>
                         <div
                           style={{
@@ -962,7 +964,8 @@ export const CrawlSplitView = ({
                         >
                           {[
                             {
-                              label: CRAWL_COPY.splitView.eventsFoundLabel,
+                              label:
+                                ADMIN_COPY.crawl.splitView.eventsFoundLabel,
                               value: activeRun.eventsFound as string | number,
                               color:
                                 activeRun.eventsFound > 0
@@ -970,7 +973,8 @@ export const CrawlSplitView = ({
                                   : 'var(--fg-subtle)',
                             },
                             {
-                              label: CRAWL_COPY.splitView.eventsCreatedLabel,
+                              label:
+                                ADMIN_COPY.crawl.splitView.eventsCreatedLabel,
                               value: activeRun.eventsInserted as
                                 | string
                                 | number,
@@ -980,7 +984,8 @@ export const CrawlSplitView = ({
                                   : 'var(--fg-subtle)',
                             },
                             {
-                              label: CRAWL_COPY.splitView.eventsUpdatedLabel,
+                              label:
+                                ADMIN_COPY.crawl.splitView.eventsUpdatedLabel,
                               value: activeRun.eventsUpdated as string | number,
                               color:
                                 activeRun.eventsUpdated > 0
@@ -1049,7 +1054,7 @@ export const CrawlSplitView = ({
                               marginBottom: 8,
                             }}
                           >
-                            {CRAWL_COPY.splitView.sourceSectionLabel}
+                            {ADMIN_COPY.crawl.splitView.sourceSectionLabel}
                           </div>
                           <div
                             style={{
@@ -1101,7 +1106,7 @@ export const CrawlSplitView = ({
                               marginBottom: 8,
                             }}
                           >
-                            {CRAWL_COPY.splitView.strategySectionLabel}
+                            {ADMIN_COPY.crawl.splitView.strategySectionLabel}
                           </div>
                           <StatusBadge
                             kind={
@@ -1153,12 +1158,12 @@ export const CrawlSplitView = ({
                             marginBottom: 4,
                           }}
                         >
-                          {CRAWL_COPY.splitView.noRunsYetTitle}
+                          {ADMIN_COPY.crawl.splitView.noRunsYetTitle}
                         </div>
                         <div
                           style={{ fontSize: 12, color: 'var(--fg-subtle)' }}
                         >
-                          {CRAWL_COPY.splitView.noRunsYetBody}
+                          {ADMIN_COPY.crawl.splitView.noRunsYetBody}
                         </div>
                       </div>
                     </div>
@@ -1228,7 +1233,7 @@ export const CrawlSplitView = ({
                 fontSize: 14,
               }}
             >
-              {CRAWL_COPY.splitView.selectVenuePrompt}
+              {ADMIN_COPY.crawl.splitView.selectVenuePrompt}
             </div>
           )}
         </div>
@@ -1262,7 +1267,7 @@ export const CrawlRunHistoryTable = ({
         }}
       >
         <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--fg)' }}>
-          {CRAWL_COPY.splitView.runHistoryTitle}
+          {ADMIN_COPY.crawl.splitView.runHistoryTitle}
         </span>
         <span
           style={{
@@ -1280,8 +1285,8 @@ export const CrawlRunHistoryTable = ({
             </>
           ) : null}
           {loading
-            ? CRAWL_COPY.splitView.runHistoryLoading
-            : `${CRAWL_COPY.splitView.runHistoryShowing} ${displayRuns.length}`}
+            ? ADMIN_COPY.crawl.splitView.runHistoryLoading
+            : `${ADMIN_COPY.crawl.splitView.runHistoryShowing} ${displayRuns.length}`}
         </span>
       </div>
 
@@ -1299,7 +1304,7 @@ export const CrawlRunHistoryTable = ({
           }}
         >
           <RefreshCw size={28} style={{ opacity: 0.4 }} />
-          {CRAWL_COPY.splitView.runHistoryEmpty}
+          {ADMIN_COPY.crawl.splitView.runHistoryEmpty}
         </div>
       ) : (
         <div
@@ -1312,15 +1317,19 @@ export const CrawlRunHistoryTable = ({
           <AdminTable minWidth={860}>
             <THead sticky>
               <tr>
-                <TH width={92}>{CRAWL_COPY.splitView.tableColRun}</TH>
-                <TH>{CRAWL_COPY.splitView.tableColVenue}</TH>
-                <TH>{CRAWL_COPY.splitView.tableColStarted}</TH>
-                <TH>{CRAWL_COPY.splitView.tableColDuration}</TH>
-                <TH>{CRAWL_COPY.splitView.tableColStatus}</TH>
-                <TH>{CRAWL_COPY.splitView.tableColStrategy}</TH>
-                <TH align="right">{CRAWL_COPY.splitView.tableColEvents}</TH>
-                <TH align="right">{CRAWL_COPY.splitView.tableColLlmCost}</TH>
-                <TH width={240}>{CRAWL_COPY.splitView.tableColError}</TH>
+                <TH width={92}>{ADMIN_COPY.crawl.splitView.tableColRun}</TH>
+                <TH>{ADMIN_COPY.crawl.splitView.tableColVenue}</TH>
+                <TH>{ADMIN_COPY.crawl.splitView.tableColStarted}</TH>
+                <TH>{ADMIN_COPY.crawl.splitView.tableColDuration}</TH>
+                <TH>{ADMIN_COPY.crawl.splitView.tableColStatus}</TH>
+                <TH>{ADMIN_COPY.crawl.splitView.tableColStrategy}</TH>
+                <TH align="right">
+                  {ADMIN_COPY.crawl.splitView.tableColEvents}
+                </TH>
+                <TH align="right">
+                  {ADMIN_COPY.crawl.splitView.tableColLlmCost}
+                </TH>
+                <TH width={240}>{ADMIN_COPY.crawl.splitView.tableColError}</TH>
               </tr>
             </THead>
             <tbody>
@@ -1420,12 +1429,12 @@ export const CrawlRunAllButton = () => {
 
   const label =
     state === 'triggering'
-      ? CRAWL_COPY.splitView.runAllQueuing
+      ? ADMIN_COPY.crawl.splitView.runAllQueuing
       : state === 'queued'
-        ? CRAWL_COPY.splitView.runAllQueued
+        ? ADMIN_COPY.crawl.splitView.runAllQueued
         : state === 'error'
-          ? CRAWL_COPY.splitView.runAllError
-          : CRAWL_COPY.splitView.runAllButton
+          ? ADMIN_COPY.crawl.splitView.runAllError
+          : ADMIN_COPY.crawl.splitView.runAllButton
 
   return (
     <button

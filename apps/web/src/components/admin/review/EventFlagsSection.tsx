@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { CheckCircle2, Filter } from 'lucide-react'
 import { toast } from 'sonner'
 import { Panel, AdminButton, StatusBadge } from '@/components/admin/primitives'
-import { REVIEW_COPY } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { EventFlagRow } from './EventFlagRow'
 import { EventFlagInspector } from './EventFlagInspector'
 import { BulkActionDock } from './BulkActionDock'
@@ -121,10 +121,10 @@ export const EventFlagsSection = ({
       pendingTimerRef.current = null
     }, 6000)
 
-    toast(REVIEW_COPY.bulkToast.approved(ids.length), {
+    toast(ADMIN_COPY.review.bulkToast.approved(ids.length), {
       duration: 6000,
       action: {
-        label: REVIEW_COPY.bulkToast.undo,
+        label: ADMIN_COPY.review.bulkToast.undo,
         onClick: () => {
           if (pendingTimerRef.current) {
             clearTimeout(pendingTimerRef.current)
@@ -145,9 +145,9 @@ export const EventFlagsSection = ({
   if (events.length === 0) {
     const emptyTitle = (
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-        {REVIEW_COPY.eventFlags.panelTitle}
+        {ADMIN_COPY.review.eventFlags.panelTitle}
         <StatusBadge kind="success">
-          {REVIEW_COPY.eventFlags.queueClearBadge}
+          {ADMIN_COPY.review.eventFlags.queueClearBadge}
         </StatusBadge>
       </span>
     )
@@ -186,7 +186,7 @@ export const EventFlagsSection = ({
                 color: 'var(--fg)',
               }}
             >
-              {REVIEW_COPY.eventFlags.queueClearHeading}
+              {ADMIN_COPY.review.eventFlags.queueClearHeading}
             </div>
             <div
               style={{
@@ -196,7 +196,7 @@ export const EventFlagsSection = ({
                 marginTop: 2,
               }}
             >
-              {REVIEW_COPY.eventFlags.queueClearBody}
+              {ADMIN_COPY.review.eventFlags.queueClearBody}
             </div>
           </div>
         </div>
@@ -218,7 +218,7 @@ export const EventFlagsSection = ({
 
   const panelTitle = (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-      {REVIEW_COPY.eventFlags.panelTitle}
+      {ADMIN_COPY.review.eventFlags.panelTitle}
       <span
         style={{
           display: 'inline-flex',
@@ -258,7 +258,7 @@ export const EventFlagsSection = ({
           onChange={(evt) => handleSelectAll(evt.target.checked)}
           style={{ accentColor: 'var(--signal)', width: 15, height: 15 }}
         />
-        {REVIEW_COPY.eventFlags.selectAll}
+        {ADMIN_COPY.review.eventFlags.selectAll}
       </label>
       <AdminButton
         variant={hideNonConcert ? 'outline' : 'ghost'}
@@ -266,7 +266,7 @@ export const EventFlagsSection = ({
         icon={Filter}
         onClick={() => setHideNonConcert((prev) => !prev)}
       >
-        {REVIEW_COPY.eventFlags.hideNonConcert}
+        {ADMIN_COPY.review.eventFlags.hideNonConcert}
       </AdminButton>
     </div>
   )

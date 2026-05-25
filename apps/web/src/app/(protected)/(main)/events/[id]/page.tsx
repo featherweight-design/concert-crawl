@@ -21,7 +21,9 @@ import {
   formatEventDate,
   formatShowTime,
 } from '@/components/consumer/definitions/lib'
-import { copy } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY.eventDetail
 
 interface EventDetailPageProps {
   params: Promise<{ id: string }>

@@ -11,7 +11,9 @@ import {
   type VenueFilterState,
 } from './venue-filter-defs'
 import { cn } from '@/lib/utils'
-import { VENUES_INDEX_COPY } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const VENUES_INDEX_COPY = CONSUMER_COPY.venuesIndex
 
 interface VenueFilterBarProps {
   state: VenueFilterState

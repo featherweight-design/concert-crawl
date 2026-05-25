@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import { SubmitPriceModal } from '@/components/consumer/submit-price'
-import { copy } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY
 
 interface SubmitPriceCardCtaProps {
   eventId: string

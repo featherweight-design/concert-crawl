@@ -5,7 +5,9 @@ import { useAuth } from '@clerk/nextjs'
 import { fetchMe } from '@/lib/users'
 import { ProfileEntryAvatar } from '@/components/settings/ProfileEntryAvatar'
 import type { UserProfileResponse } from '@concert-crawl/types'
-import { copy } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY.appHeader
 
 export function MobileProfileEntry() {
   const { getToken, isSignedIn } = useAuth()

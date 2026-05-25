@@ -5,7 +5,7 @@ import { useAuth } from '@clerk/nextjs'
 import { Eye, Loader2 } from 'lucide-react'
 import { useWatching } from '@/lib/queries/use-watching'
 import { useWatchToggle } from '@/lib/queries/use-watch-toggle'
-import { copy } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
 interface WatchShowButtonProps {
   eventId: string
@@ -97,7 +97,9 @@ export function WatchShowButton({
         disabled={isPending}
         aria-pressed={isWatching}
         aria-label={
-          isWatching ? copy.button.ariaWatching : copy.button.ariaWatch
+          isWatching
+            ? CONSUMER_COPY.watchShowButton.button.ariaWatching
+            : CONSUMER_COPY.watchShowButton.button.ariaWatch
         }
         style={isWatching ? watchingStyle : unwatchedStyle}
       >
@@ -142,7 +144,11 @@ export function WatchShowButton({
           </svg>
         )}
         {!isMobile && (
-          <span>{isWatching ? 'Watching' : 'Watch this show'}</span>
+          <span>
+            {isWatching
+              ? CONSUMER_COPY.watchShowButton.button.watchingLabel
+              : CONSUMER_COPY.watchShowButton.button.watchLabel}
+          </span>
         )}
       </button>
 
@@ -169,8 +175,10 @@ export function WatchShowButton({
             }}
             aria-hidden
           />
-          {watchingCount} {copy.watchingCount.suffix}
-          {isWatching ? '' : copy.watchingCount.alertsSuffix}
+          {watchingCount} {CONSUMER_COPY.watchShowButton.watchingCount.suffix}
+          {isWatching
+            ? ''
+            : CONSUMER_COPY.watchShowButton.watchingCount.alertsSuffix}
         </span>
       )}
     </div>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { LayoutDashboard, ExternalLink } from 'lucide-react'
-import { COPY } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 interface AppSwitcherProps {
   size?: 'sm' | 'md'
@@ -19,7 +19,7 @@ export const AppSwitcher = ({ size = 'md' }: AppSwitcherProps) => {
   return (
     <div
       role="tablist"
-      aria-label={COPY.appSwitcher.ariaLabel}
+      aria-label={ADMIN_COPY.shell.appSwitcher.ariaLabel}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -35,7 +35,7 @@ export const AppSwitcher = ({ size = 'md' }: AppSwitcherProps) => {
         href="/"
         role="tab"
         aria-selected={false}
-        title={COPY.appSwitcher.userAppTitle}
+        title={ADMIN_COPY.shell.appSwitcher.userAppTitle}
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -60,12 +60,12 @@ export const AppSwitcher = ({ size = 'md' }: AppSwitcherProps) => {
         }}
       >
         <ExternalLink size={sz.iconSize} />
-        <span>{COPY.appSwitcher.userApp}</span>
+        <span>{ADMIN_COPY.shell.appSwitcher.userApp}</span>
       </Link>
       <div
         role="tab"
         aria-selected={true}
-        title={COPY.appSwitcher.adminTitle}
+        title={ADMIN_COPY.shell.appSwitcher.adminTitle}
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -84,7 +84,7 @@ export const AppSwitcher = ({ size = 'md' }: AppSwitcherProps) => {
         }}
       >
         <LayoutDashboard size={sz.iconSize} color="var(--signal)" />
-        <span>{COPY.appSwitcher.admin}</span>
+        <span>{ADMIN_COPY.shell.appSwitcher.admin}</span>
       </div>
     </div>
   )

@@ -5,7 +5,7 @@ import { useAuth } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { apiClient, ApiError } from '@/lib/api'
 import { SectionHead } from '@/components/admin/primitives'
-import { REVIEW_COPY } from './definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { EventFlagsSection } from './EventFlagsSection'
 import { PendingSubmissionsPanel } from './PendingSubmissionsPanel'
 import { PriceCoverageTable } from './PriceCoverageTable'
@@ -254,10 +254,10 @@ export const ReviewPageClient = ({
 
   const sectionHead = (
     <SectionHead
-      eyebrow={REVIEW_COPY.reviewPageClient.eyebrow}
+      eyebrow={ADMIN_COPY.review.reviewPageClient.eyebrow}
       title={
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-          {REVIEW_COPY.reviewPageClient.title}
+          {ADMIN_COPY.review.reviewPageClient.title}
           {pendingCount > 0 && (
             <span
               style={{
@@ -278,7 +278,7 @@ export const ReviewPageClient = ({
           )}
         </span>
       }
-      subtitle={REVIEW_COPY.reviewPageClient.subtitle}
+      subtitle={ADMIN_COPY.review.reviewPageClient.subtitle}
     />
   )
 
@@ -312,7 +312,7 @@ export const ReviewPageClient = ({
             marginBottom: 4,
           }}
         >
-          {REVIEW_COPY.reviewPageClient.mobileTitle}
+          {ADMIN_COPY.review.reviewPageClient.mobileTitle}
         </div>
         <div
           style={{
@@ -321,7 +321,7 @@ export const ReviewPageClient = ({
             color: 'var(--fg-muted)',
           }}
         >
-          {REVIEW_COPY.reviewPageClient.mobileSubtitle(
+          {ADMIN_COPY.review.reviewPageClient.mobileSubtitle(
             events.length,
             submissions.length,
           )}

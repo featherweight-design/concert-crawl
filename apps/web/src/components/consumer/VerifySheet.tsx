@@ -2,7 +2,9 @@
 
 import type { SubmissionWithMeta } from '@concert-crawl/types'
 import { SubmissionList } from './SubmissionList'
-import { copy } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY
 
 interface VerifySheetProps {
   open: boolean

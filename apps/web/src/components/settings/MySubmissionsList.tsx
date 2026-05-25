@@ -2,9 +2,11 @@
 
 import { useState } from 'react'
 import { SubmissionItem } from './SubmissionItem'
-import { SETTINGS_COPY } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { SUBMISSION_CAP_MOBILE } from './definitions/constants'
 import type { UserSubmissionItem } from '@concert-crawl/types'
+
+const SETTINGS_COPY = CONSUMER_COPY.settings
 
 interface MySubmissionsListProps {
   submissions: UserSubmissionItem[]

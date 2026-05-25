@@ -7,7 +7,9 @@ import {
   ShowtimeStub,
   TierGlyph,
 } from './showtime-base'
-import { COPY } from '../definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const COPY = CONSUMER_COPY.releaseNotes
 
 // ════════════════════════════════════════════════════════════════
 // Internal types
@@ -770,7 +772,9 @@ export function TierShowtime(): React.ReactElement {
         </div>
       ))}
 
-      <ShowtimeEyebrow dotHue="#7AE6FF">{COPY.heroes.tiers.pickYourSeat}</ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#7AE6FF">
+        {COPY.heroes.tiers.pickYourSeat}
+      </ShowtimeEyebrow>
     </div>
   )
 }
@@ -995,7 +999,9 @@ export function HistoryShowtime(): React.ReactElement {
         )
       })}
 
-      <ShowtimeEyebrow dotHue="#7AE6FF">{COPY.heroes.history.eyebrow}</ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#7AE6FF">
+        {COPY.heroes.history.eyebrow}
+      </ShowtimeEyebrow>
     </div>
   )
 }
@@ -1232,7 +1238,9 @@ export function PricesShowtime(): React.ReactElement {
         </div>
       </div>
 
-      <ShowtimeEyebrow dotHue="#7AE6FF">{COPY.heroes.prices.eyebrow}</ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#7AE6FF">
+        {COPY.heroes.prices.eyebrow}
+      </ShowtimeEyebrow>
     </div>
   )
 }
@@ -1465,7 +1473,9 @@ export function CalendarShowtime(): React.ReactElement {
         </span>
       </div>
 
-      <ShowtimeEyebrow dotHue="#7AE6FF">{COPY.heroes.calendar.syncEyebrow}</ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#7AE6FF">
+        {COPY.heroes.calendar.syncEyebrow}
+      </ShowtimeEyebrow>
     </div>
   )
 }
@@ -1594,7 +1604,9 @@ export function ShareableShowtime(): React.ReactElement {
         </svg>
       </div>
 
-      <ShowtimeEyebrow dotHue="#FF7BD4">{COPY.heroes.shareable.eyebrow}</ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#FF7BD4">
+        {COPY.heroes.shareable.eyebrow}
+      </ShowtimeEyebrow>
     </div>
   )
 }
@@ -1693,7 +1705,9 @@ export function WatchersShowtime(): React.ReactElement {
         </div>
       </div>
 
-      <ShowtimeEyebrow dotHue="#7AE6FF">{COPY.heroes.watchers.eyebrow}</ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#7AE6FF">
+        {COPY.heroes.watchers.eyebrow}
+      </ShowtimeEyebrow>
     </div>
   )
 }
@@ -1853,7 +1867,9 @@ export function SpotifyShowtime(): React.ReactElement {
         ))}
       </div>
 
-      <ShowtimeEyebrow dotHue="#FF7BD4">{COPY.heroes.spotify.eyebrow}</ShowtimeEyebrow>
+      <ShowtimeEyebrow dotHue="#FF7BD4">
+        {COPY.heroes.spotify.eyebrow}
+      </ShowtimeEyebrow>
     </div>
   )
 }

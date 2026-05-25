@@ -9,7 +9,9 @@ import {
   ShowtimeStub,
   useShowtimeKeyframes,
 } from './showtime-base'
-import { COPY } from '../definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const COPY = CONSUMER_COPY.releaseNotes
 
 // ── Shared compact stage ─────────────────────────────────────────────────────
 // 200×132 strip backdrop: dark cinematic base + two contained color washes +
@@ -38,7 +40,8 @@ export function CompactStage({
         position: 'absolute',
         inset: 0,
         overflow: 'hidden',
-        background: 'radial-gradient(ellipse at 70% 30%, #1A1228 0%, #0A0613 80%)',
+        background:
+          'radial-gradient(ellipse at 70% 30%, #1A1228 0%, #0A0613 80%)',
         fontFamily: 'Inter, system-ui',
       }}
     >
@@ -51,7 +54,8 @@ export function CompactStage({
           width: 140,
           height: 140,
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(255,184,56,0.22) 0%, transparent 65%)',
+          background:
+            'radial-gradient(circle, rgba(255,184,56,0.22) 0%, transparent 65%)',
           animation: 'cmpBgShift 10s ease-in-out infinite',
           mixBlendMode: 'screen',
           pointerEvents: 'none',
@@ -65,7 +69,8 @@ export function CompactStage({
           width: 130,
           height: 130,
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(122,230,255,0.20) 0%, transparent 65%)',
+          background:
+            'radial-gradient(circle, rgba(122,230,255,0.20) 0%, transparent 65%)',
           animation: 'cmpBgShift 12s 1s ease-in-out infinite',
           mixBlendMode: 'screen',
           pointerEvents: 'none',
@@ -82,7 +87,8 @@ export function CompactStage({
             marginLeft: -60,
             marginTop: -60,
             borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(255,227,107,0.18) 0%, transparent 65%)',
+            background:
+              'radial-gradient(circle, rgba(255,227,107,0.18) 0%, transparent 65%)',
             pointerEvents: 'none',
           }}
         />
@@ -184,7 +190,10 @@ export function CompactEyebrow({
 // 1 · Submit a Price — verified pill
 export function PricesCompact(): React.ReactElement {
   return (
-    <CompactStage eyebrow={COPY.heroes.compact.prices.eyebrow} eyebrowHue="#7AE6FF">
+    <CompactStage
+      eyebrow={COPY.heroes.compact.prices.eyebrow}
+      eyebrowHue="#7AE6FF"
+    >
       <div
         style={{
           position: 'absolute',
@@ -258,19 +267,25 @@ export function PricesCompact(): React.ReactElement {
 // 2 · Tier badges — single Founder medallion
 export function TierCompact(): React.ReactElement {
   return (
-    <CompactStage eyebrow={COPY.heroes.compact.tiers.eyebrow} eyebrowHue="#7AE6FF" founderGlow>
+    <CompactStage
+      eyebrow={COPY.heroes.compact.tiers.eyebrow}
+      eyebrowHue="#7AE6FF"
+      founderGlow
+    >
       <div
-        style={{
-          position: 'absolute',
-          left: '50%',
-          top: '48%',
-          ['--cmp-base' as string]: 'translate(-50%, -50%)',
-          transform: 'translate(-50%, -50%)',
-          opacity: 0,
-          animation: 'cmpScaleIn 700ms 0.2s cubic-bezier(.2,.85,.2,1) both',
-          filter:
-            'drop-shadow(0 8px 14px rgba(0,0,0,0.55)) drop-shadow(0 0 18px rgba(122,230,255,0.45))',
-        } as React.CSSProperties}
+        style={
+          {
+            position: 'absolute',
+            left: '50%',
+            top: '48%',
+            ['--cmp-base' as string]: 'translate(-50%, -50%)',
+            transform: 'translate(-50%, -50%)',
+            opacity: 0,
+            animation: 'cmpScaleIn 700ms 0.2s cubic-bezier(.2,.85,.2,1) both',
+            filter:
+              'drop-shadow(0 8px 14px rgba(0,0,0,0.55)) drop-shadow(0 0 18px rgba(122,230,255,0.45))',
+          } as React.CSSProperties
+        }
       >
         <div style={{ position: 'relative', width: 78, height: 78 }}>
           <svg width="78" height="78" viewBox="0 0 120 120">
@@ -315,7 +330,14 @@ export function TierCompact(): React.ReactElement {
                 strokeWidth="0.6"
                 strokeLinejoin="round"
               />
-              <rect x="3" y="17.5" width="18" height="2.6" rx="0.5" fill="#7AE6FF" />
+              <rect
+                x="3"
+                y="17.5"
+                width="18"
+                height="2.6"
+                rx="0.5"
+                fill="#7AE6FF"
+              />
               <circle cx="7.5" cy="11.2" r="0.95" fill="#FF7BD4" />
               <circle cx="12" cy="6.5" r="0.95" fill="#FF7BD4" />
               <circle cx="16.5" cy="11.2" r="0.95" fill="#FF7BD4" />
@@ -348,7 +370,10 @@ export function TierCompact(): React.ReactElement {
 // 3 · History — single hero stub + counter
 export function HistoryCompact(): React.ReactElement {
   return (
-    <CompactStage eyebrow={COPY.heroes.compact.history.eyebrow} eyebrowHue="#7AE6FF">
+    <CompactStage
+      eyebrow={COPY.heroes.compact.history.eyebrow}
+      eyebrowHue="#7AE6FF"
+    >
       {/* big counter */}
       <div
         style={{
@@ -423,7 +448,14 @@ export function HistoryCompact(): React.ReactElement {
             stroke="rgba(255,255,255,0.18)"
             strokeWidth="1"
           />
-          <circle cx="40" cy="65" r="30" fill="none" stroke="#7AE6FF" strokeWidth="2.5" />
+          <circle
+            cx="40"
+            cy="65"
+            r="30"
+            fill="none"
+            stroke="#7AE6FF"
+            strokeWidth="2.5"
+          />
           <text
             x="88"
             y="36"
@@ -474,7 +506,10 @@ export function HistoryCompact(): React.ReactElement {
 // 4 · Calendar — mini calendar grid with one stamp
 export function CalendarCompact(): React.ReactElement {
   return (
-    <CompactStage eyebrow={COPY.heroes.compact.calendar.eyebrow} eyebrowHue="#7AE6FF">
+    <CompactStage
+      eyebrow={COPY.heroes.compact.calendar.eyebrow}
+      eyebrowHue="#7AE6FF"
+    >
       <div
         style={{
           position: 'absolute',
@@ -505,7 +540,9 @@ export function CalendarCompact(): React.ReactElement {
                   height: 17,
                   borderRadius: 2,
                   border: '1px solid rgba(255,255,255,0.07)',
-                  background: isStamp ? 'rgba(255,255,255,0.04)' : 'transparent',
+                  background: isStamp
+                    ? 'rgba(255,255,255,0.04)'
+                    : 'transparent',
                 }}
               >
                 <span
@@ -560,7 +597,10 @@ export function CalendarCompact(): React.ReactElement {
 // 5 · Shareable — single poster card
 export function ShareableCompact(): React.ReactElement {
   return (
-    <CompactStage eyebrow={COPY.heroes.compact.shareable.eyebrow} eyebrowHue="#FF7BD4">
+    <CompactStage
+      eyebrow={COPY.heroes.compact.shareable.eyebrow}
+      eyebrowHue="#FF7BD4"
+    >
       <div
         style={
           {
@@ -613,7 +653,14 @@ export function ShareableCompact(): React.ReactElement {
               const dist = Math.sqrt((5 - col) ** 2 + row ** 2)
               const dotR = Math.max(0.8, 3.4 - dist * 0.5)
               return (
-                <circle key={idx} cx={xPos} cy={yPos} r={dotR} fill="#FF7BD4" opacity="0.85" />
+                <circle
+                  key={idx}
+                  cx={xPos}
+                  cy={yPos}
+                  r={dotR}
+                  fill="#FF7BD4"
+                  opacity="0.85"
+                />
               )
             })}
           </svg>
@@ -659,7 +706,10 @@ export function ShareableCompact(): React.ReactElement {
 // 6 · Watchers — big count + 2 rings
 export function WatchersCompact(): React.ReactElement {
   return (
-    <CompactStage eyebrow={COPY.heroes.compact.watchers.eyebrow} eyebrowHue="#7AE6FF">
+    <CompactStage
+      eyebrow={COPY.heroes.compact.watchers.eyebrow}
+      eyebrowHue="#7AE6FF"
+    >
       {/* 2 rings */}
       {[0, 1.0].map((delay, idx) => (
         <div
@@ -712,13 +762,16 @@ export function WatchersCompact(): React.ReactElement {
 export function SpotifyCompact(): React.ReactElement {
   const bars = Array.from({ length: 10 }).map((_, idx) => {
     const minVal = 0.22 + Math.abs(Math.sin(idx * 0.8) * 0.18)
-    const maxVal = 0.60 + Math.abs(Math.sin(idx * 0.6 + 1) * 0.40)
+    const maxVal = 0.6 + Math.abs(Math.sin(idx * 0.6 + 1) * 0.4)
     const dur = 1.8 + Math.abs(Math.sin(idx * 0.42) * 1.3)
     return { min: minVal, max: maxVal, dur, offset: -idx * 0.18 }
   })
 
   return (
-    <CompactStage eyebrow={COPY.heroes.compact.spotify.eyebrow} eyebrowHue="#FF7BD4">
+    <CompactStage
+      eyebrow={COPY.heroes.compact.spotify.eyebrow}
+      eyebrowHue="#FF7BD4"
+    >
       {/* counter */}
       <div
         style={{
@@ -808,7 +861,10 @@ export function SpotifyCompact(): React.ReactElement {
 // 8 · Following — bell-glyph + 1 slow ping ring + artist wordmark
 export function FollowingCompact(): React.ReactElement {
   return (
-    <CompactStage eyebrow={COPY.heroes.compact.following.eyebrow} eyebrowHue="#FF7BD4">
+    <CompactStage
+      eyebrow={COPY.heroes.compact.following.eyebrow}
+      eyebrowHue="#FF7BD4"
+    >
       {/* ping ring — centered on bell */}
       <div
         style={{
@@ -889,7 +945,10 @@ export function FollowingCompact(): React.ReactElement {
 // 9 · Price Drop — old/new ticker
 export function PriceDropCompact(): React.ReactElement {
   return (
-    <CompactStage eyebrow={COPY.heroes.compact.priceDrop.eyebrow} eyebrowHue="#C9F26E">
+    <CompactStage
+      eyebrow={COPY.heroes.compact.priceDrop.eyebrow}
+      eyebrowHue="#C9F26E"
+    >
       <div
         style={{
           position: 'absolute',
@@ -986,7 +1045,10 @@ export function SetlistCompact(): React.ReactElement {
   ]
 
   return (
-    <CompactStage eyebrow={COPY.heroes.compact.setlist.eyebrow} eyebrowHue="#7AE6FF">
+    <CompactStage
+      eyebrow={COPY.heroes.compact.setlist.eyebrow}
+      eyebrowHue="#7AE6FF"
+    >
       <div
         style={{
           position: 'absolute',
@@ -1065,7 +1127,9 @@ export function SetlistCompact(): React.ReactElement {
                 style={{
                   height: 4,
                   width: track.barWidth,
-                  background: track.debut ? '#FFE36B' : 'rgba(255,255,255,0.30)',
+                  background: track.debut
+                    ? '#FFE36B'
+                    : 'rgba(255,255,255,0.30)',
                   borderRadius: 1,
                 }}
               />
@@ -1080,7 +1144,10 @@ export function SetlistCompact(): React.ReactElement {
 // 11 · First-Timer — venue plate with seating diagram
 export function FirstTimerCompact(): React.ReactElement {
   return (
-    <CompactStage eyebrow={COPY.heroes.compact.firstTimer.eyebrow} eyebrowHue="#7AE6FF">
+    <CompactStage
+      eyebrow={COPY.heroes.compact.firstTimer.eyebrow}
+      eyebrowHue="#7AE6FF"
+    >
       <div
         style={
           {
@@ -1096,7 +1163,12 @@ export function FirstTimerCompact(): React.ReactElement {
           } as React.CSSProperties
         }
       >
-        <svg width="78" height="78" viewBox="0 0 180 180" style={{ display: 'block' }}>
+        <svg
+          width="78"
+          height="78"
+          viewBox="0 0 180 180"
+          style={{ display: 'block' }}
+        >
           <polygon
             points="44,8 136,8 172,44 172,136 136,172 44,172 8,136 8,44"
             fill="rgba(255,255,255,0.04)"
@@ -1176,7 +1248,10 @@ export function FirstTimerCompact(): React.ReactElement {
 // 12 · Last Time — single tilted polaroid
 export function LastTimeCompact(): React.ReactElement {
   return (
-    <CompactStage eyebrow={COPY.heroes.compact.lastTime.eyebrow} eyebrowHue="#A075FF">
+    <CompactStage
+      eyebrow={COPY.heroes.compact.lastTime.eyebrow}
+      eyebrowHue="#A075FF"
+    >
       <div
         style={
           {
@@ -1217,7 +1292,12 @@ export function LastTimeCompact(): React.ReactElement {
             <svg
               viewBox="0 0 100 100"
               preserveAspectRatio="none"
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+              }}
             >
               <g style={{ mixBlendMode: 'screen' }}>
                 {[36, 26, 16].map((radius, idx) => (
@@ -1285,7 +1365,10 @@ export function LastTimeCompact(): React.ReactElement {
 // 13 · Support Act — single opener card
 export function SupportActCompact(): React.ReactElement {
   return (
-    <CompactStage eyebrow={COPY.heroes.compact.supportAct.eyebrow} eyebrowHue="#FFE36B">
+    <CompactStage
+      eyebrow={COPY.heroes.compact.supportAct.eyebrow}
+      eyebrowHue="#FFE36B"
+    >
       <div
         style={
           {
@@ -1315,7 +1398,12 @@ export function SupportActCompact(): React.ReactElement {
           <svg
             viewBox="0 0 100 100"
             preserveAspectRatio="none"
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+            }}
           >
             <g style={{ mixBlendMode: 'screen' }}>
               {[42, 30, 18].map((radius, idx) => (
@@ -1396,20 +1484,28 @@ interface MiniStubConfig {
   top?: boolean
 }
 
-function MiniStub({ stubConfig }: { stubConfig: MiniStubConfig }): React.ReactElement {
+function MiniStub({
+  stubConfig,
+}: {
+  stubConfig: MiniStubConfig
+}): React.ReactElement {
   return (
     <div style={{ position: 'relative', width: 110, height: 65 }}>
       <svg width="110" height="65" viewBox="0 0 220 130">
         <path
           d="M0 12 Q0 0 12 0 L162 0 L162 130 L12 130 Q0 130 0 118 Z"
           fill={stubConfig.top ? '#0C0A14' : '#1A1626'}
-          stroke={stubConfig.top ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.08)'}
+          stroke={
+            stubConfig.top ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.08)'
+          }
           strokeWidth="1"
         />
         <path
           d="M170 0 L208 0 Q220 0 220 12 L220 118 Q220 130 208 130 L170 130 Z"
           fill={stubConfig.top ? '#0C0A14' : '#1A1626'}
-          stroke={stubConfig.top ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.08)'}
+          stroke={
+            stubConfig.top ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.08)'
+          }
           strokeWidth="1"
         />
         <circle
@@ -1428,7 +1524,9 @@ function MiniStub({ stubConfig }: { stubConfig: MiniStubConfig }): React.ReactEl
           fontSize="22"
           fontWeight="900"
           letterSpacing="-0.04em"
-          fill={stubConfig.top ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.5)'}
+          fill={
+            stubConfig.top ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.5)'
+          }
         >
           {stubConfig.top ? 'TONIGHT' : 'ADMIT'}
         </text>
@@ -1452,7 +1550,7 @@ function MiniStub({ stubConfig }: { stubConfig: MiniStubConfig }): React.ReactEl
           stroke={stubConfig.accent}
           strokeWidth="1"
           strokeDasharray="3 4"
-          opacity={stubConfig.top ? 0.55 : 0.40}
+          opacity={stubConfig.top ? 0.55 : 0.4}
         />
       </svg>
       <div
@@ -1477,9 +1575,17 @@ function MiniStub({ stubConfig }: { stubConfig: MiniStubConfig }): React.ReactEl
 // 14 · Concert Passport — 3 stubs fanned + sparkles (the marquee)
 export function PassportCompact(): React.ReactElement {
   const stubs: Array<MiniStubConfig & { delay: number }> = [
-    { tx: -38, ty: 10, rot: -14, delay: 0.30, accent: '#FF7BD4', glyph: '○' },
+    { tx: -38, ty: 10, rot: -14, delay: 0.3, accent: '#FF7BD4', glyph: '○' },
     { tx: 38, ty: 10, rot: 14, delay: 0.45, accent: '#A075FF', glyph: '◆' },
-    { tx: 0, ty: -4, rot: 0, delay: 0.65, accent: '#7AE6FF', glyph: '★', top: true },
+    {
+      tx: 0,
+      ty: -4,
+      rot: 0,
+      delay: 0.65,
+      accent: '#7AE6FF',
+      glyph: '★',
+      top: true,
+    },
   ]
   // 6 sparkles — restrained but present
   const sparkles = Array.from({ length: 6 }).map((_, idx) => ({
@@ -1490,7 +1596,10 @@ export function PassportCompact(): React.ReactElement {
   }))
 
   return (
-    <CompactStage eyebrow={COPY.heroes.compact.passport.eyebrow} eyebrowHue="#FFE36B">
+    <CompactStage
+      eyebrow={COPY.heroes.compact.passport.eyebrow}
+      eyebrowHue="#FFE36B"
+    >
       {sparkles.map((sp, idx) => (
         <span
           key={idx}
@@ -1545,7 +1654,10 @@ export function PassportCompact(): React.ReactElement {
 // 15 · Venue Passport — single big stamp
 export function VenuePassportCompact(): React.ReactElement {
   return (
-    <CompactStage eyebrow={COPY.heroes.compact.venuePassport.eyebrow} eyebrowHue="#FF7BD4">
+    <CompactStage
+      eyebrow={COPY.heroes.compact.venuePassport.eyebrow}
+      eyebrowHue="#FF7BD4"
+    >
       <div
         style={
           {
@@ -1558,7 +1670,8 @@ export function VenuePassportCompact(): React.ReactElement {
             background: 'rgba(0,0,0,0.55)',
             border: '2px solid #FF7BD4',
             borderRadius: 4,
-            boxShadow: '0 0 22px rgba(255,123,212,0.40), 0 8px 16px rgba(0,0,0,0.5)',
+            boxShadow:
+              '0 0 22px rgba(255,123,212,0.40), 0 8px 16px rgba(0,0,0,0.5)',
             textAlign: 'center',
             opacity: 0,
             animation: 'cmpStampIn 600ms 0.25s cubic-bezier(.2,.85,.2,1) both',
@@ -1610,24 +1723,30 @@ export function VenuePassportCompact(): React.ReactElement {
 // Maps hero key → compact component. Import this in SpotlightHero.tsx and
 // use it to resolve <SpotlightHero hero="..." compact /> routes.
 export const SPOTLIGHT_COMPACT_HEROES: Record<string, React.ComponentType> = {
-  'price': PricesCompact,
-  'tiers': TierCompact,
-  'history': HistoryCompact,
-  'calendar': CalendarCompact,
-  'share': ShareableCompact,
-  'watchers': WatchersCompact,
-  'spotify': SpotifyCompact,
-  'following': FollowingCompact,
+  price: PricesCompact,
+  tiers: TierCompact,
+  history: HistoryCompact,
+  calendar: CalendarCompact,
+  share: ShareableCompact,
+  watchers: WatchersCompact,
+  spotify: SpotifyCompact,
+  following: FollowingCompact,
   'price-drop': PriceDropCompact,
-  'setlist': SetlistCompact,
+  setlist: SetlistCompact,
   'first-timer': FirstTimerCompact,
   'last-time': LastTimeCompact,
   'support-act': SupportActCompact,
-  'passport': PassportCompact,
+  passport: PassportCompact,
   'venue-passport': VenuePassportCompact,
 }
 
 // Re-export ShowtimeBackdrop, ShowtimeEyebrow, ShowtimeSparkles, StubGlyph,
 // ShowtimeStub so consumers only need to import from this file if they
 // exclusively use the compact surface. Named imports are forwarded unchanged.
-export { ShowtimeBackdrop, ShowtimeEyebrow, ShowtimeSparkles, StubGlyph, ShowtimeStub }
+export {
+  ShowtimeBackdrop,
+  ShowtimeEyebrow,
+  ShowtimeSparkles,
+  StubGlyph,
+  ShowtimeStub,
+}

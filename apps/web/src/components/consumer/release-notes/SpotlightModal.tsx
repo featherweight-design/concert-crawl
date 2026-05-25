@@ -3,7 +3,9 @@
 import { useState, useEffect, useRef } from 'react'
 import type { Release } from '@/lib/definitions/releases'
 import { SpotlightHero } from './SpotlightHero'
-import { COPY } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const COPY = CONSUMER_COPY.releaseNotes
 
 interface SpotlightModalProps {
   release: Release
@@ -196,7 +198,8 @@ export function SpotlightModal({
                 textShadow: '0 1px 4px rgba(0,0,0,0.6)',
               }}
             >
-              {COPY.modal.featureDropPrefix}{release.version}
+              {COPY.modal.featureDropPrefix}
+              {release.version}
             </span>
           </div>
         </div>
@@ -273,7 +276,9 @@ export function SpotlightModal({
                     letterSpacing: '0.12em',
                   }}
                 >
-                  {String(step + 1).padStart(2, '0')}{COPY.modal.stepSeparator}{String(totalSteps).padStart(2, '0')}
+                  {String(step + 1).padStart(2, '0')}
+                  {COPY.modal.stepSeparator}
+                  {String(totalSteps).padStart(2, '0')}
                 </span>
               </div>
 

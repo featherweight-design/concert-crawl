@@ -1,6 +1,6 @@
 'use client'
 
-import { CRAWL_COPY } from '@/components/admin/crawl/definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 export type InspectorTab = 'overview' | 'diagnostics' | 'history'
 
@@ -21,14 +21,14 @@ export const InspectorTabs = ({
     disabled?: boolean
     dot?: 'danger' | null
   }> = [
-    { key: 'overview', label: CRAWL_COPY.inspectorTabs.overview },
+    { key: 'overview', label: ADMIN_COPY.crawl.inspectorTabs.overview },
     {
       key: 'diagnostics',
-      label: CRAWL_COPY.inspectorTabs.diagnostics,
+      label: ADMIN_COPY.crawl.inspectorTabs.diagnostics,
       disabled: !hasDiagnostics,
       dot: hasDiagnostics ? 'danger' : null,
     },
-    { key: 'history', label: CRAWL_COPY.inspectorTabs.history },
+    { key: 'history', label: ADMIN_COPY.crawl.inspectorTabs.history },
   ]
 
   return (

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { FeedbackModal } from './FeedbackModal'
-import { copy } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
 export function FeedbackEdgeTab() {
   const [open, setOpen] = useState(false)
@@ -12,7 +12,7 @@ export function FeedbackEdgeTab() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label={copy.edgeTab.ariaLabel}
+        aria-label={CONSUMER_COPY.feedback.edgeTab.ariaLabel}
         style={{
           all: 'unset',
           cursor: 'pointer',
@@ -54,7 +54,7 @@ export function FeedbackEdgeTab() {
             transform: 'rotate(180deg)',
           }}
         >
-          {copy.edgeTab.label}
+          {CONSUMER_COPY.feedback.edgeTab.label}
         </span>
       </button>
 

@@ -1,7 +1,9 @@
 import { History, Flame } from 'lucide-react'
 import type { PopularEvent } from '../../../lib/search/useSearch'
 import { IdentityArt } from '../identity-art/IdentityArt'
-import { copy } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY.search
 
 function formatDayLabel(dateStr: string): string {
   // Append T00:00:00 to force local-timezone parsing — bare YYYY-MM-DD

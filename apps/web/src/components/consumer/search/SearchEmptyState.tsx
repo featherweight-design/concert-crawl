@@ -1,5 +1,7 @@
 import { EmptyState } from '../empty-state/EmptyState'
-import { copy } from '../definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY
 
 interface SearchEmptyStateProps {
   query: string

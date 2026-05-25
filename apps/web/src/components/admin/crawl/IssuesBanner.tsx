@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { AlertCircle, ChevronRight } from 'lucide-react'
-import { CRAWL_COPY } from '@/components/admin/crawl/definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 interface IssueVenue {
   venueId: string
@@ -28,15 +28,15 @@ export function IssuesBanner({ blockedVenues }: Props) {
   const parts: string[] = []
   if (blocked.length > 0)
     parts.push(
-      `${blocked.length} venue${blocked.length > 1 ? 's' : ''} ${CRAWL_COPY.issuesBanner.statusBlocked}`,
+      `${blocked.length} venue${blocked.length > 1 ? 's' : ''} ${ADMIN_COPY.crawl.issuesBanner.statusBlocked}`,
     )
   if (failed.length > 0)
     parts.push(
-      `${failed.length} venue${failed.length > 1 ? 's' : ''} ${CRAWL_COPY.issuesBanner.statusFailed}`,
+      `${failed.length} venue${failed.length > 1 ? 's' : ''} ${ADMIN_COPY.crawl.issuesBanner.statusFailed}`,
     )
   if (paused.length > 0)
     parts.push(
-      `${paused.length} venue${paused.length > 1 ? 's' : ''} ${CRAWL_COPY.issuesBanner.statusPaused}`,
+      `${paused.length} venue${paused.length > 1 ? 's' : ''} ${ADMIN_COPY.crawl.issuesBanner.statusPaused}`,
     )
 
   const headline = parts.join(' · ')
@@ -52,7 +52,7 @@ export function IssuesBanner({ blockedVenues }: Props) {
       venue.status === 'blocked'
         ? `${venue.consecutiveFailures}× consecutive ${venue.blockedAt ? '403' : 'failure'}`
         : venue.status === 'paused'
-          ? CRAWL_COPY.issuesBanner.statusDetail.disallowed
+          ? ADMIN_COPY.crawl.issuesBanner.statusDetail.disallowed
           : venue.consecutiveFailures > 0
             ? `${venue.consecutiveFailures}×`
             : null
@@ -135,7 +135,7 @@ export function IssuesBanner({ blockedVenues }: Props) {
           whiteSpace: 'nowrap',
         }}
       >
-        {CRAWL_COPY.issuesBanner.jumpToIssues}
+        {ADMIN_COPY.crawl.issuesBanner.jumpToIssues}
         <ChevronRight size={13} />
       </button>
     </div>

@@ -7,7 +7,9 @@ import { SPNumberField } from './SPNumberField'
 import { ChipGroup } from './ChipGroup'
 import type { PriceSubmission } from '@concert-crawl/types'
 import { SP_POLICY } from '@concert-crawl/types'
-import { copy } from './definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY
 
 const VENDOR_OPTIONS = [
   { value: 'AXS', label: 'AXS' },
