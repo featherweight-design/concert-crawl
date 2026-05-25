@@ -31,7 +31,7 @@ export const VENUES_INDEX_COPY = {
 
   emptyState: {
     heading: 'No venues match.',
-    body: "Loosen a filter or two and they'll come back.",
+    body: "Loosen a filter or two and they’ll come back.",
     clearButton: '× Clear filters',
   },
 } as const

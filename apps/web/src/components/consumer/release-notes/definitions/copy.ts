@@ -84,7 +84,7 @@ export const COPY = {
     firstTimer: {
       leftChipLabels: ['ALL AGES', 'DOORS 7PM', 'NO RE-ENTRY'],
       rightChipLabels: ['CASH BAR', '2 DRINKS MIN', 'CASH TIPS'],
-      eyebrow: 'First time? · here’s the lay',
+      eyebrow: 'First time? · here’s the sitch',
     },
     lastTime: {
       eyebrow: 'Last time in town',

@@ -19,8 +19,8 @@ export const SETTINGS_COPY = {
       badge: 'Founder',
       yourPlanLabel: 'Your plan',
       tagline: 'Free for life.',
-      body: 'You showed up during the private beta — you keep Concert Crawl free, forever. No card needed.',
-      subline: '— Yes, even when we charge new users.',
+      body: 'You showed up during the private beta, so you keep Concert Crawl free, forever. No card needed.',
+      subline: 'Yes, even when we charge new users.',
     },
     paid: {
       badge: 'Supporter',
@@ -45,11 +45,11 @@ export const SETTINGS_COPY = {
     deleteAccountSubtitle:
       'Permanently remove your handle, profile, and history.',
     deleteCardBody:
-      "This is permanent. Your handle, email, and plan are gone. Price submissions stay on the public record — your name is removed from them. You can't undo it.",
+      "This is permanent. Your handle, email, and plan are gone. Price submissions stay on the public record, but your name is removed from them. You can't undo deletion.",
     deleteAccountCta: 'Delete my account',
     deleteSheetTitle: 'Delete account permanently',
     deleteSheetBody:
-      "Your handle and profile will be gone. Price submissions you made will stay (they're part of the public record), but your name will be removed from them. Other fans' confirmations belong to them.",
+      "Your handle and profile will be gone. Price submissions you made will stay (they're part of the public record), but your name will be removed from them. Other fans' confirmations belong to them and will persist.",
     deleteConfirmPlaceholder: 'Type DELETE to enable',
     deleteButtonArmed: 'Delete my account permanently',
     deleteButtonDisabled: 'Type DELETE to enable',

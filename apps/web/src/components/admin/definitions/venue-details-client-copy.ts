@@ -41,7 +41,7 @@ export const venueDetailsClientCopy = {
     },
     identityArt: {
       eyebrow: '05 · identity art',
-      title: 'Generative cover (Phase 7.5)',
+      title: 'Generative cover',
       description:
         'Deterministic generative art derived from the venue identity. Current seed:',
       phase8Warning:
