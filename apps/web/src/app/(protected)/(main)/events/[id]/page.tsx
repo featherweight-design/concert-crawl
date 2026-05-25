@@ -195,6 +195,7 @@ export default async function EventDetailPage({
             priceObservedAt={event.priceObservedAt ?? null}
             priceApprovalKind={event.priceApprovalKind ?? null}
             priceApprovedAt={event.priceApprovedAt ?? null}
+            priceAlternates={event.priceAlternates ?? null}
           />
 
           {/* Submit-a-price card CTA — only when a price exists to revise */}

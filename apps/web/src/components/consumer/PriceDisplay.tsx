@@ -67,6 +67,11 @@ interface PriceDisplayProps {
   priceObservedAt?: string | null
   priceApprovalKind?: 'admin' | 'fan' | null
   priceApprovedAt?: string | null
+  priceAlternates?: Array<{
+    vendor: string | null
+    priceMin: string
+    priceMax: string | null
+  }> | null
 }
 
 // ── Color constants ───────────────────────────────────────────────
@@ -994,6 +999,37 @@ function CommunityHandoffCard({
 // ── PriceBlockB — spacious dedicated card ────────────────────────
 // When price is null → community-handoff card.
 // When price exists → full card with headline, breakdown, trust marks, etc.
+// ── Alternate vendor helpers ──────────────────────────────────────
+function resolveAlternateKind(
+  vendor: string | null,
+): 'primary' | 'resale' | 'community' | 'boxoffice' {
+  if (vendor === 'VenueBoxOffice') return 'boxoffice'
+  if (vendor === 'SeatGeek') return 'resale'
+  return 'community'
+}
+
+function resolveAlternateName(
+  vendor: string | null,
+  venueNameStr: string,
+): string | null {
+  switch (vendor) {
+    case 'VenueBoxOffice':
+      return `${venueNameStr} Box Office`
+    case 'SeatGeek':
+      return 'SeatGeek'
+    case 'AXS':
+      return 'AXS'
+    case 'Ticketmaster':
+      return 'Ticketmaster'
+    case 'DICE':
+      return 'Dice.fm'
+    case 'Eventbrite':
+      return 'Eventbrite'
+    default:
+      return null
+  }
+}
+
 export function PriceDisplay({
   priceMin,
   priceMax,
@@ -1013,6 +1049,7 @@ export function PriceDisplay({
   priceObservedAt,
   priceApprovalKind,
   priceApprovedAt,
+  priceAlternates,
 }: PriceDisplayProps) {
   const parsedMin = priceMin ? parseFloat(priceMin) : null
   const parsedMax = priceMax ? parseFloat(priceMax) : null
@@ -1059,7 +1096,16 @@ export function PriceDisplay({
             by: { kind: 'admin' as const, label: 'the team' },
           }
         : null,
-    alternates: [],
+    alternates: (priceAlternates ?? []).map((alt) => ({
+      source:
+        resolveAlternateName(alt.vendor, venueName) ??
+        alt.vendor ??
+        'Community',
+      sourceKind: resolveAlternateKind(alt.vendor),
+      face: parseFloat(alt.priceMin),
+      fees: null,
+      sourceUrl: null,
+    })),
     // Box-office / community fields — null until API wires them
     venueName: venueName,
     soldOutBy: null,
@@ -1186,9 +1232,7 @@ export function PriceDisplay({
               ? 'face value · no fees'
               : faceMax
                 ? 'starting, all-in'
-                : priceObj.fees && priceObj.fees > 0
-                  ? 'all-in'
-                  : 'face value'}
+                : 'all-in'}
           </span>
         )}
 
@@ -1281,8 +1325,8 @@ export function PriceDisplay({
           }}
         >
           <StaleStamp observedAt={effectiveObservedAt} />
-          {/* Submitter handle — community and boxoffice tiers */}
-          {(isCommunity || isBoxOffice) && priceObj.submitter && (
+          {/* Submitter handle — community tier only (boxoffice uses BoxOfficeAttribution above) */}
+          {isCommunity && priceObj.submitter && (
             <>
               {effectiveObservedAt && (
                 <span style={{ color: 'var(--fg-subtle)', opacity: 0.4 }}>

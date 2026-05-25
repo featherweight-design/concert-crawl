@@ -271,6 +271,8 @@ export interface EventWithVenue extends Event {
     Venue,
     'id' | 'name' | 'slug' | 'city' | 'websiteUrl' | 'timezone'
   >
+  // Vendor from the corroborated community submission — only present for community-priced events
+  priceVendor?: string | null
 }
 
 // EventDetailResponse — single event detail with computed watch state and setlist
@@ -289,6 +291,12 @@ export interface EventDetailResponse extends EventWithVenue {
   // Approval metadata — who corroborated and when
   priceApprovalKind?: 'admin' | 'fan' | null
   priceApprovedAt?: string | null
+  // Alternate corroborated submissions (other vendors/sources beyond the primary)
+  priceAlternates?: Array<{
+    vendor: string | null
+    priceMin: string
+    priceMax: string | null
+  }> | null
 }
 
 // Public events list query params

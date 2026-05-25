@@ -14,20 +14,29 @@ interface EventCardProps {
   isWatching?: boolean
 }
 
-type SourceKind = 'primary' | 'resale' | 'community'
+type SourceKind = 'primary' | 'resale' | 'community' | 'boxoffice'
+
+const GOLD = 'oklch(0.66 0.14 78)'
+const CORAL = 'oklch(0.65 0.20 25)'
+const COMMUNITY = 'var(--trust-community)'
 
 function resolveKind(
   priceSource: EventWithVenue['priceSource'],
+  priceVendor: string | null | undefined,
 ): SourceKind | null {
   if (!priceSource) return null
   if (priceSource === 'seatgeek') return 'resale'
-  if (priceSource === 'community') return 'community'
+  if (priceSource === 'community') {
+    if (priceVendor === 'VenueBoxOffice') return 'boxoffice'
+    if (priceVendor === 'SeatGeek') return 'resale'
+    return 'community'
+  }
   return 'primary'
 }
 
 // ── PriceChip — inline price with trust tell ─────────────────────
 // No directional arrows: we lack historical data for delta detection.
-// Trust tell: "R" = resale, "C" = community.
+// Trust tell: boxoffice → gold ★, "R" = resale, "C" = community.
 
 function PriceChip({
   price,
@@ -37,19 +46,21 @@ function PriceChip({
   kind: SourceKind | null
 }) {
   const trustTell =
-    kind === 'resale'
-      ? {
-          letter: 'R',
-          color: 'oklch(0.65 0.20 25)',
-          bg: 'color-mix(in oklab, oklch(0.65 0.20 25) 16%, transparent)',
-        }
-      : kind === 'community'
+    kind === 'boxoffice'
+      ? { color: GOLD, bg: `color-mix(in oklab, ${GOLD} 22%, transparent)` }
+      : kind === 'resale'
         ? {
-            letter: 'C',
-            color: 'var(--trust-community)',
-            bg: 'color-mix(in oklab, var(--trust-community) 14%, transparent)',
+            letter: 'R',
+            color: CORAL,
+            bg: `color-mix(in oklab, ${CORAL} 16%, transparent)`,
           }
-        : null
+        : kind === 'community'
+          ? {
+              letter: 'C',
+              color: COMMUNITY,
+              bg: `color-mix(in oklab, ${COMMUNITY} 14%, transparent)`,
+            }
+          : null
 
   return (
     <span
@@ -74,19 +85,31 @@ function PriceChip({
       {trustTell && (
         <span
           style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             fontFamily: 'var(--font-mono)',
             fontSize: 8,
             color: trustTell.color,
             letterSpacing: '0.06em',
             marginLeft: 1,
             opacity: 0.85,
-            padding: '1px 3px',
+            padding: kind === 'boxoffice' ? '2px 3px' : '1px 3px',
             borderRadius: 3,
             background: trustTell.bg,
             lineHeight: 1,
           }}
         >
-          {trustTell.letter}
+          {kind === 'boxoffice' ? (
+            <svg width="7" height="7" viewBox="0 0 10 10" aria-hidden>
+              <path
+                d="M5 1l1.18 2.46L9 3.78l-2 1.92.55 2.8L5 7.2 2.45 8.5 3 5.7 1 3.78l2.82-.32L5 1z"
+                fill={GOLD}
+              />
+            </svg>
+          ) : (
+            (trustTell as { letter: string }).letter
+          )}
         </span>
       )}
     </span>
@@ -107,7 +130,7 @@ export function EventCard({
       ? `$${Math.round(parseFloat(event.ticketPriceMin))}`
       : null
 
-  const sourceKind = resolveKind(event.priceSource)
+  const sourceKind = resolveKind(event.priceSource, event.priceVendor)
 
   return (
     <div

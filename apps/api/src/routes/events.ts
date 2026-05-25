@@ -20,6 +20,7 @@ import {
   eq,
   gte,
   ilike,
+  inArray,
   isNotNull,
   isNull,
   lt,
@@ -174,9 +175,46 @@ eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
     .limit(limit)
     .offset(offset)
 
+  // Batch-fetch corroborated submission vendor for community-priced events so the
+  // browse card can show the correct trust tier (boxoffice ★, resale R, community C).
+  const communityEventIds = rows
+    .filter((row) => row.priceSource === 'community')
+    .map((row) => row.id)
+
+  const vendorByEventId: Record<string, string | null> = {}
+  if (communityEventIds.length > 0) {
+    const vendorRows = await db
+      .select({
+        eventId: priceSubmissions.eventId,
+        vendor: priceSubmissions.vendor,
+      })
+      .from(priceSubmissions)
+      .where(
+        and(
+          inArray(priceSubmissions.eventId, communityEventIds),
+          eq(priceSubmissions.status, 'corroborated'),
+        ),
+      )
+      .orderBy(desc(priceSubmissions.createdAt))
+
+    for (const vRow of vendorRows) {
+      if (!(vRow.eventId in vendorByEventId)) {
+        vendorByEventId[vRow.eventId] = vRow.vendor
+      }
+    }
+  }
+
+  const enrichedRows = rows.map((row) => ({
+    ...row,
+    priceVendor:
+      row.priceSource === 'community'
+        ? (vendorByEventId[row.id] ?? null)
+        : null,
+  }))
+
   return ctx.json({
     success: true,
-    data: { data: rows, total, limit, offset },
+    data: { data: enrichedRows, total, limit, offset },
   })
 })
 
@@ -280,13 +318,20 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
 
   let priceApprovalKind: 'admin' | 'fan' | null = null
   let priceApprovedAt: string | null = null
+  let priceAlternates: Array<{
+    vendor: string | null
+    priceMin: string
+    priceMax: string | null
+  }> = []
 
   if (row.priceSource === 'community') {
-    const [latestSub] = await db
+    const allSubs = await db
       .select({
         id: priceSubmissions.id,
         vendor: priceSubmissions.vendor,
         userId: priceSubmissions.userId,
+        priceMin: priceSubmissions.priceMin,
+        priceMax: priceSubmissions.priceMax,
         createdAt: priceSubmissions.createdAt,
         updatedAt: priceSubmissions.updatedAt,
       })
@@ -298,7 +343,8 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         ),
       )
       .orderBy(desc(priceSubmissions.createdAt))
-      .limit(1)
+
+    const [latestSub, ...otherSubs] = allSubs
 
     if (latestSub) {
       priceVendor = latestSub.vendor
@@ -319,6 +365,11 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
           .limit(1)
         priceSubmitterHandle = profile?.handle ?? null
       }
+      priceAlternates = otherSubs.map((sub) => ({
+        vendor: sub.vendor,
+        priceMin: sub.priceMin,
+        priceMax: sub.priceMax,
+      }))
     }
   }
 
@@ -334,6 +385,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       priceObservedAt,
       priceApprovalKind,
       priceApprovedAt,
+      priceAlternates,
     },
   })
 })
