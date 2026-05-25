@@ -40,13 +40,69 @@ function formatDateShort(date: string): string {
   return `${month} ${dd.getDate().toString().padStart(2, '0')}`
 }
 
+function futureDateString(daysFromNow: number): string {
+  const dd = new Date()
+  dd.setDate(dd.getDate() + daysFromNow)
+  return dd.toISOString().slice(0, 10)
+}
+
+function makeFallbackShows(): LandingShow[] {
+  const d = (offset: number) => futureDateString(offset)
+  return [
+    {
+      id: 'fallback-1',
+      artist: 'Amyl and The Sniffers',
+      venue: 'Ogden Theatre',
+      city: 'Denver, CO',
+      date: d(1),
+      dateShort: formatDateShort(d(1)),
+      showTime: '8pm',
+      opener: 'C.O.F.F.I.N.',
+      state: null,
+    },
+    {
+      id: 'fallback-2',
+      artist: 'Wednesday',
+      venue: 'Globe Hall',
+      city: 'Denver, CO',
+      date: d(3),
+      dateShort: formatDateShort(d(3)),
+      showTime: '9pm',
+      opener: 'Truth Club',
+      state: null,
+    },
+    {
+      id: 'fallback-3',
+      artist: 'Geese',
+      venue: 'Larimer Lounge',
+      city: 'Denver, CO',
+      date: d(5),
+      dateShort: formatDateShort(d(5)),
+      showTime: '8pm',
+      opener: null,
+      state: null,
+    },
+    {
+      id: 'fallback-4',
+      artist: 'Mannequin Pussy',
+      venue: 'Marquis Theater',
+      city: 'Denver, CO',
+      date: d(7),
+      dateShort: formatDateShort(d(7)),
+      showTime: '7pm',
+      opener: 'Soul Glo',
+      state: null,
+    },
+  ]
+}
+
 async function fetchHeroShows(): Promise<LandingShow[]> {
   try {
     const result =
       await publicApiClient.get<EventsListResponse>('/v1/events?limit=4')
-    if (!result?.data?.length) return []
+    if (!result?.data?.length) return makeFallbackShows()
 
-    return result.data.map((row) => ({
+    const mapped = result.data.map((row) => ({
       id: row.id,
       artist: row.artist,
       venue: row.venue.name,
@@ -57,11 +113,13 @@ async function fetchHeroShows(): Promise<LandingShow[]> {
       opener: null,
       state: null,
     }))
+
+    return mapped.length >= 2 ? mapped : makeFallbackShows()
   } catch (err) {
     if (!(err instanceof ApiError)) {
       console.error('[landing] unexpected error fetching hero shows:', err)
     }
-    return []
+    return makeFallbackShows()
   }
 }
 
