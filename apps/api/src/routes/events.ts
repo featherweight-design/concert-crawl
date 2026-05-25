@@ -1,6 +1,5 @@
 import { Hono } from 'hono'
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
-import { createClerkClient } from '@clerk/backend'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import {
@@ -8,6 +7,7 @@ import {
   events,
   venues,
   userEvents,
+  userProfiles,
   priceSubmissions,
 } from '@concert-crawl/db'
 import {
@@ -29,9 +29,6 @@ import {
 import { todayInTimezone } from '../lib/time.js'
 import { apiLogger } from '../lib/logger.js'
 import { serviceOrClerkAuth } from '../middleware/auth.js'
-
-const secretKey = process.env['CLERK_SECRET_KEY']
-const clerkClient = secretKey ? createClerkClient({ secretKey }) : null
 
 const uuidSchema = z.string().uuid()
 
@@ -297,14 +294,13 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
 
     if (latestSub) {
       priceVendor = latestSub.vendor
-      if (latestSub.userId && clerkClient) {
-        try {
-          const clerkUser = await clerkClient.users.getUser(latestSub.userId)
-          priceSubmitterHandle =
-            clerkUser.username ?? latestSub.userId.slice(0, 10)
-        } catch {
-          priceSubmitterHandle = latestSub.userId.slice(0, 10)
-        }
+      if (latestSub.userId) {
+        const [profile] = await db
+          .select({ handle: userProfiles.handle })
+          .from(userProfiles)
+          .where(eq(userProfiles.userId, latestSub.userId))
+          .limit(1)
+        priceSubmitterHandle = profile?.handle ?? null
       }
     }
   }
