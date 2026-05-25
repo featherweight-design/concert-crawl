@@ -1,3 +1,12 @@
+# [1.40.0](https://github.com/HartiganHM/concert-crawl/compare/v1.39.0...v1.40.0) (2026-05-25)
+
+
+### Features
+
+* **pwa:** add 192x192 PWA icon route ([26b685e](https://github.com/HartiganHM/concert-crawl/commit/26b685ebacb3c893e184f9b6ae17f54bc0b73f36))
+* **pwa:** add 512x512 PWA icon route ([d9145ba](https://github.com/HartiganHM/concert-crawl/commit/d9145ba52ffae4f5801db2a5eb619fb78ba5d698))
+* **pwa:** add web app manifest ([e0c2bb1](https://github.com/HartiganHM/concert-crawl/commit/e0c2bb13f59626b026f3a14812e809e425bf6178))
+
 # [1.39.0](https://github.com/HartiganHM/concert-crawl/compare/v1.38.2...v1.39.0) (2026-05-24)
 
 
