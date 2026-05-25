@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useCallback } from 'react'
+import { COPY } from './definitions/copy'
 import {
   AdminTable,
   THead,
@@ -99,7 +100,7 @@ function RoleSelect({
         if (result.success) {
           onSuccess(newRole)
         } else {
-          setError(result.error ?? 'Failed to update role')
+          setError(result.error ?? COPY.roleSelect.errorFallback)
         }
       })
     },
@@ -112,7 +113,7 @@ function RoleSelect({
         value={currentRole}
         disabled={pending}
         onChange={(ev) => handleChange(ev.target.value as Role)}
-        aria-label="Assign role"
+        aria-label={COPY.roleSelect.ariaLabel}
         style={{
           appearance: 'none',
           WebkitAppearance: 'none',
@@ -245,7 +246,8 @@ export function AdminUsersClient({
           letterSpacing: '0.04em',
         }}
       >
-        {total} user{total !== 1 ? 's' : ''}
+        {total}{' '}
+        {total !== 1 ? COPY.summary.userPlural : COPY.summary.userSingular}
       </div>
 
       {/* Desktop table */}
@@ -253,10 +255,10 @@ export function AdminUsersClient({
         <AdminTable>
           <THead sticky>
             <tr>
-              <TH>Email / Handle</TH>
-              <TH>Role</TH>
-              <TH>Joined</TH>
-              <TH>Assign role</TH>
+              <TH>{COPY.columns.emailHandle}</TH>
+              <TH>{COPY.columns.role}</TH>
+              <TH>{COPY.columns.joined}</TH>
+              <TH>{COPY.columns.assignRole}</TH>
             </tr>
           </THead>
           <tbody>
@@ -327,7 +329,7 @@ export function AdminUsersClient({
             fontSize: 12,
           }}
         >
-          No users found.
+          {COPY.empty}
         </div>
       )}
 
@@ -340,8 +342,7 @@ export function AdminUsersClient({
             color: 'var(--fg-subtle)',
           }}
         >
-          Showing {users.length} of {total}. Use the API limit/offset params for
-          pagination.
+          {COPY.pagination(users.length, total)}
         </div>
       )}
     </div>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { Setlist } from '@concert-crawl/types'
+import { copy } from './definitions/copy'
 
 interface SetlistPreviewProps {
   setlist: Setlist | null | undefined
@@ -56,7 +57,7 @@ export function SetlistPreview({
               textTransform: 'uppercase',
             }}
           >
-            Likely setlist
+            {copy.sectionLabel}
           </div>
           <div
             style={{
@@ -69,7 +70,7 @@ export function SetlistPreview({
             }}
           >
             {open ? (
-              `${setlist.songs.length} songs`
+              `${setlist.songs.length} ${copy.songCountSuffix}`
             ) : (
               <>
                 <span style={{ color: 'var(--fg-muted)' }}>
@@ -77,7 +78,7 @@ export function SetlistPreview({
                 </span>
                 {setlist.songs.length > previewCount && (
                   <span style={{ color: 'var(--fg-subtle)' }}>
-                    {` +${setlist.songs.length - previewCount} more`}
+                    {` +${setlist.songs.length - previewCount} ${copy.moreSuffix}`}
                   </span>
                 )}
               </>
@@ -158,7 +159,7 @@ export function SetlistPreview({
                       flexShrink: 0,
                     }}
                   >
-                    Encore
+                    {copy.encoreLabel}
                   </span>
                   <div
                     style={{ flex: 1, height: 1, background: 'var(--border)' }}
@@ -210,7 +211,11 @@ export function SetlistPreview({
                 letterSpacing: '0.04em',
               }}
             >
-              {setlist.when && <span>Last played {setlist.when}</span>}
+              {setlist.when && (
+                <span>
+                  {copy.lastPlayedPrefix} {setlist.when}
+                </span>
+              )}
               {setlist.when && setlist.source && (
                 <span style={{ opacity: 0.4 }}>·</span>
               )}
@@ -227,10 +232,12 @@ export function SetlistPreview({
                       textUnderlineOffset: 2,
                     }}
                   >
-                    via {setlist.source}
+                    {copy.viaPrefix} {setlist.source}
                   </a>
                 ) : (
-                  <span>via {setlist.source}</span>
+                  <span>
+                    {copy.viaPrefix} {setlist.source}
+                  </span>
                 ))}
             </div>
           )}

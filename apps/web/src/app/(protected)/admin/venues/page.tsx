@@ -12,7 +12,11 @@ import type { VenueWithEventCount } from '@concert-crawl/types'
 import { VenueTableClient } from '@/components/admin/venue-table-client'
 import { deriveVenueStatus, venueHealthPercent } from '@/lib/admin/venue-status'
 import { MobileAddVenueButton } from '@/components/admin/venues/MobileAddVenueButton'
+<<<<<<< HEAD
 import { VenueStatusFilterButton } from '@/components/admin/venues/VenueStatusFilterButton'
+=======
+import { COPY } from './definitions/copy'
+>>>>>>> bd0e1762 (refactor: extract all remaining app copy to definitions files and address Copilot review)
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -63,8 +67,8 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <SectionHead
-        title="Venues"
-        subtitle={`${venues.length} configured · ${blockedCount} blocked.`}
+        title={COPY.page.title}
+        subtitle={COPY.page.subtitle(venues.length, blockedCount)}
         actions={
           <>
             <VenueStatusFilterButton currentFilter={statusFilter} />
@@ -73,7 +77,7 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
               style={{ textDecoration: 'none' }}
             >
               <AdminButton variant="outline" size="sm" icon={ExternalLink}>
-                robots.txt audit
+                {COPY.page.robotsAuditButton}
               </AdminButton>
             </Link>
           </>
@@ -82,32 +86,32 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
-          label="Total venues"
+          label={COPY.stats.totalVenues}
           value={String(venues.length)}
           iconName="MapPin"
           kind="neutral"
           noChip
         />
         <StatCard
-          label="Active"
+          label={COPY.stats.active}
           value={String(activeCount)}
           iconName="MapPin"
           kind="success"
         />
         <StatCard
-          label="Paused / Blocked"
+          label={COPY.stats.pausedBlocked}
           value={String(pausedBlockedCount)}
           iconName="MapPin"
           kind="warning"
         />
         <StatCard
-          label="Avg health · 7d"
+          label={COPY.stats.avgHealth}
           value={`${String(avgHealth)}%`}
           iconName="Activity"
           kind={
             avgHealth >= 80 ? 'success' : avgHealth >= 50 ? 'warning' : 'danger'
           }
-          hint="average run success rate"
+          hint={COPY.stats.avgHealthHint}
         />
       </div>
 

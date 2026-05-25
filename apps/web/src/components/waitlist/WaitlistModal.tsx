@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { COPY } from './definitions/copy'
 
 interface WaitlistModalProps {
   open: boolean
@@ -104,7 +105,7 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
       >
         <button
           onClick={onClose}
-          aria-label="Close"
+          aria-label={COPY.closeButtonAriaLabel}
           style={{
             all: 'unset',
             cursor: 'pointer',
@@ -166,7 +167,7 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
                 letterSpacing: '-0.02em',
               }}
             >
-              You&apos;re on the list.
+              {COPY.success.heading}
             </h2>
             <p
               style={{
@@ -179,8 +180,7 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
                 marginInline: 'auto',
               }}
             >
-              We&apos;ll email you the moment a beta slot opens up. Thanks for
-              caring about live music.
+              {COPY.success.body}
             </p>
             <button
               onClick={onClose}
@@ -198,7 +198,7 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
                 color: 'var(--fg)',
               }}
             >
-              Close
+              {COPY.success.closeButton}
             </button>
           </div>
         ) : (
@@ -213,7 +213,7 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
                 fontWeight: 700,
               }}
             >
-              Waitlist
+              {COPY.form.eyebrow}
             </div>
             <h2
               style={{
@@ -225,7 +225,7 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
                 letterSpacing: '-0.02em',
               }}
             >
-              Get on the list
+              {COPY.form.heading}
             </h2>
             <p
               style={{
@@ -236,8 +236,7 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
                 lineHeight: 1.45,
               }}
             >
-              We&apos;re letting people in slowly. Drop your email — we&apos;ll
-              ping you when there&apos;s room.
+              {COPY.form.body}
             </p>
 
             {state === 'error' && (
@@ -253,7 +252,7 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
                   color: 'var(--danger)',
                 }}
               >
-                Something went wrong. Try again.
+                {COPY.form.errorMessage}
               </div>
             )}
 
@@ -279,14 +278,15 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
                     fontWeight: 700,
                   }}
                 >
-                  Email <span style={{ color: 'var(--accent)' }}>*</span>
+                  {COPY.form.emailLabel}{' '}
+                  <span style={{ color: 'var(--accent)' }}>*</span>
                 </span>
                 <input
                   ref={inputRef}
                   type="email"
                   value={email}
                   onChange={(ev) => setEmail(ev.target.value)}
-                  placeholder="you@email.com"
+                  placeholder={COPY.form.emailPlaceholder}
                   required
                   style={inputStyle}
                 />
@@ -316,7 +316,9 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
                   fontSize: 16,
                 }}
               >
-                {state === 'submitting' ? 'Adding you…' : 'Add me to the list'}
+                {state === 'submitting'
+                  ? COPY.form.submittingButton
+                  : COPY.form.submitButton}
               </button>
             </form>
 
@@ -331,7 +333,7 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
                 textAlign: 'center',
               }}
             >
-              No spam. We&apos;ll only email when there&apos;s beta access.
+              {COPY.form.footerNote}
             </p>
           </>
         )}

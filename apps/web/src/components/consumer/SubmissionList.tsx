@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import type { SubmissionWithMeta } from '@concert-crawl/types'
+import { copy } from './definitions/copy'
 
 interface SubmissionListProps {
   submissions: SubmissionWithMeta[]
@@ -47,16 +48,16 @@ function SubmissionCard({
       <div className="flex items-center gap-2">
         {isCorroborated ? (
           <span className="text-[10px] font-bold uppercase tracking-widest font-mono text-success border border-success rounded-full px-2 py-0.5">
-            confirmed
+            {copy.submissionList.confirmedBadge}
           </span>
         ) : (
           <span className="text-[10px] font-bold uppercase tracking-widest font-mono text-warning border border-warning rounded-full px-2 py-0.5">
-            pending
+            {copy.submissionList.pendingBadge}
           </span>
         )}
         {isOwn && (
           <span className="text-[10px] font-bold uppercase tracking-widest font-mono text-accent border border-accent rounded-full px-2 py-0.5">
-            you
+            {copy.submissionList.youBadge}
           </span>
         )}
         <span className="ml-auto text-xs text-fg-subtle font-mono">
@@ -73,7 +74,8 @@ function SubmissionCard({
       </p>
 
       <p className="text-xs font-mono text-fg-muted">
-        seen on {submission.vendor} · {submission.howFound.replace(/_/g, ' ')}
+        {copy.submissionList.seenOnPrefix} {submission.vendor} ·{' '}
+        {submission.howFound.replace(/_/g, ' ')}
       </p>
 
       {!isOwn && (
@@ -84,7 +86,9 @@ function SubmissionCard({
               disabled={isConfirming}
               className="text-xs text-signal underline disabled:opacity-50 disabled:cursor-default"
             >
-              {isConfirming ? 'Confirming…' : 'Confirm'}
+              {isConfirming
+                ? copy.submissionList.confirmingLabel
+                : copy.submissionList.confirmButton}
             </button>
           )}
           <button
@@ -95,7 +99,7 @@ function SubmissionCard({
             }
             className="text-xs text-danger underline"
           >
-            Dispute
+            {copy.submissionList.disputeButton}
           </button>
         </div>
       )}
@@ -160,7 +164,7 @@ export function SubmissionList({
       ))}
       {localSubmissions.length === 0 && (
         <p className="text-sm text-fg-subtle text-center py-4">
-          No submissions yet.
+          {copy.submissionList.noSubmissions}
         </p>
       )}
     </div>

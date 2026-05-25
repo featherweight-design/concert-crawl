@@ -7,6 +7,7 @@ import { useWatchToggle } from '@/lib/queries/use-watch-toggle'
 import { WatchingItem } from './WatchingItem'
 import { WatchingEmpty } from './WatchingEmpty'
 import { NotifyFutureRow } from './NotifyFutureRow'
+import { COPY } from './definitions/copy'
 
 interface WatchingContentProps {
   initialShows: WatchingShow[]
@@ -72,9 +73,9 @@ function bucketKey(bucket: DateBucket): string {
 }
 
 function bucketLabel(bucket: DateBucket): string {
-  if (bucket === 'tonight') return 'Tonight'
-  if (bucket === 'thisWeek') return 'This week'
-  if (bucket === 'nextWeek') return 'Next week'
+  if (bucket === 'tonight') return COPY.watchingContent.bucketTonight
+  if (bucket === 'thisWeek') return COPY.watchingContent.bucketThisWeek
+  if (bucket === 'nextWeek') return COPY.watchingContent.bucketNextWeek
   return bucket.month
 }
 
@@ -133,10 +134,13 @@ export function WatchingContent({ initialShows }: WatchingContentProps) {
 
   const changeSummary = () => {
     const parts: string[] = []
-    if (drops > 0) parts.push(`${drops} dropped`)
-    if (spikes > 0) parts.push(`${spikes} went up`)
-    if (soldOut > 0) parts.push(`${soldOut} sold out`)
-    if (parts.length === 0) return 'prices held'
+    if (drops > 0)
+      parts.push(`${drops} ${COPY.watchingContent.priceSummaryDropped}`)
+    if (spikes > 0)
+      parts.push(`${spikes} ${COPY.watchingContent.priceSummaryUp}`)
+    if (soldOut > 0)
+      parts.push(`${soldOut} ${COPY.watchingContent.priceSummarySoldOut}`)
+    if (parts.length === 0) return COPY.watchingContent.priceSummaryHeld
     return parts.join(' · ')
   }
 
@@ -155,7 +159,7 @@ export function WatchingContent({ initialShows }: WatchingContentProps) {
             margin: '0 0 4px',
           }}
         >
-          WATCHING
+          {COPY.watchingContent.eyebrow}
         </p>
         <div className="flex items-baseline gap-3">
           <p
@@ -169,7 +173,10 @@ export function WatchingContent({ initialShows }: WatchingContentProps) {
               lineHeight: 1,
             }}
           >
-            {displayedShows.length} show{displayedShows.length !== 1 ? 's' : ''}
+            {displayedShows.length}{' '}
+            {displayedShows.length !== 1
+              ? COPY.watchingContent.showsPlural
+              : COPY.watchingContent.showsSingular}
           </p>
           <p
             style={{

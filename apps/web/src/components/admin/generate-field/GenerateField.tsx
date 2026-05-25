@@ -1,6 +1,7 @@
 'use client'
 
 import { Loader2, Sparkles, Check, AlertCircle } from 'lucide-react'
+import { COPY } from './definitions/copy'
 
 export type GenerateFieldState =
   | 'idle'
@@ -63,7 +64,7 @@ export function GenerateField({
         }}
       >
         <Sparkles size={12} />
-        Generate with AI
+        {COPY.idle.generateButton}
         <span
           style={{
             fontFamily: "'JetBrains Mono', monospace",
@@ -103,7 +104,7 @@ export function GenerateField({
             style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }}
           />
           <span style={{ fontWeight: 600, color: 'var(--signal)' }}>
-            Generating…
+            {COPY.loading.label}
           </span>
           <span
             style={{
@@ -112,7 +113,7 @@ export function GenerateField({
               color: 'var(--fg-muted)',
             }}
           >
-            ~3–5s
+            {COPY.loading.estimatedTime}
           </span>
         </div>
         {onCancel && (
@@ -131,7 +132,7 @@ export function GenerateField({
               flexShrink: 0,
             }}
           >
-            Cancel
+            {COPY.loading.cancel}
           </button>
         )}
       </div>
@@ -165,7 +166,7 @@ export function GenerateField({
               color: 'var(--fg-subtle)',
             }}
           >
-            suggested
+            {COPY.review.suggestedLabel}
           </span>
           <span
             style={{
@@ -182,7 +183,7 @@ export function GenerateField({
               textTransform: 'uppercase' as const,
             }}
           >
-            llm
+            {COPY.review.llmBadge}
           </span>
           {(result.costUsd !== undefined ||
             result.tokensUsed !== undefined) && (
@@ -226,7 +227,7 @@ export function GenerateField({
               color: 'var(--fg-subtle)',
             }}
           >
-            <span style={{ opacity: 0.6 }}>SOURCES: </span>
+            <span style={{ opacity: 0.6 }}>{COPY.review.sourcesPrefix}</span>
             {result.sources.join(' · ')}
           </div>
         )}
@@ -252,7 +253,7 @@ export function GenerateField({
             }}
           >
             <Check size={11} />
-            Accept
+            {COPY.review.accept}
           </button>
           {onRegenerate && (
             <button
@@ -273,7 +274,7 @@ export function GenerateField({
                 cursor: 'pointer',
               }}
             >
-              Regenerate
+              {COPY.review.regenerate}
             </button>
           )}
           <button
@@ -293,7 +294,7 @@ export function GenerateField({
               cursor: 'pointer',
             }}
           >
-            Discard
+            {COPY.review.discard}
           </button>
         </div>
       </div>
@@ -329,7 +330,7 @@ export function GenerateField({
             flexShrink: 0,
           }}
         />
-        generated · accepted
+        {COPY.accepted.label}
       </div>
     )
   }
@@ -354,7 +355,7 @@ export function GenerateField({
       >
         <AlertCircle size={13} />
         <span style={{ fontWeight: 600 }}>
-          {errorMessage ?? 'Generation failed'}
+          {errorMessage ?? COPY.error.fallback}
         </span>
         <button
           type="button"
@@ -374,7 +375,7 @@ export function GenerateField({
             textDecoration: 'underline',
           }}
         >
-          retry
+          {COPY.error.retry}
         </button>
       </div>
     )

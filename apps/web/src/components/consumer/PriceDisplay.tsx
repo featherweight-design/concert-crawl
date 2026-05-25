@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { PriceSource } from '@concert-crawl/types'
 import { SubmitPriceModal } from '@/components/consumer/submit-price'
+import { copy } from './definitions/copy'
 
 // ── Price shape used by PriceBlockB ─────────────────────────────
 // Maps from the flat EventDetailResponse fields into a richer object
@@ -223,12 +224,12 @@ export function TrustMark({
 }) {
   const label =
     kind === 'resale'
-      ? 'resale'
+      ? copy.priceDisplay.resaleLabel
       : kind === 'community'
-        ? 'community'
+        ? copy.priceDisplay.communityLabel
         : kind === 'boxoffice'
-          ? 'box office'
-          : 'vendor'
+          ? copy.priceDisplay.boxOfficeTrustLabel
+          : copy.priceDisplay.vendorLabel
 
   const tint =
     kind === 'resale'
@@ -524,7 +525,9 @@ function FeeBreakdown({ price }: { price: PriceBlockPrice }) {
               color: 'var(--fg-muted)',
             }}
           >
-            <span style={{ color: 'var(--fg-subtle)' }}>Face value</span>
+            <span style={{ color: 'var(--fg-subtle)' }}>
+              {copy.priceDisplay.faceValueRow}
+            </span>
             <span style={{ color: 'var(--fg)' }}>
               {formatUSD(price.face, { whole: true })}
             </span>
@@ -540,7 +543,7 @@ function FeeBreakdown({ price }: { price: PriceBlockPrice }) {
               fontWeight: 700,
             }}
           >
-            <span>all-in, including fees</span>
+            <span>{copy.priceDisplay.allInIncludingFees}</span>
             <span>{formatUSD(allIn)}</span>
           </div>
         </div>
@@ -568,12 +571,12 @@ function AlternateSourceRow({
           : 'var(--fg-muted)'
   const kindLabel =
     alt.sourceKind === 'resale'
-      ? 'resale'
+      ? copy.priceDisplay.resaleLabel
       : alt.sourceKind === 'community'
-        ? 'community'
+        ? copy.priceDisplay.communityLabel
         : alt.sourceKind === 'boxoffice'
-          ? 'box office'
-          : 'vendor'
+          ? copy.priceDisplay.boxOfficeTrustLabel
+          : copy.priceDisplay.vendorLabel
 
   const inner = (
     <>
@@ -634,7 +637,7 @@ function AlternateSourceRow({
             letterSpacing: '0.04em',
           }}
         >
-          all-in
+          {copy.priceDisplay.allInSuffix}
         </span>
       )}
       {alt.sourceUrl && <ExternalIcon size={8} />}
@@ -698,8 +701,8 @@ function DeltaPill({
   const absDiff = Math.abs(diff)
   const deltaStr = formatUSD(absDiff, { whole: absDiff >= 1 })
   const text = isDown
-    ? `${deltaStr} cheaper than on-sale`
-    : `+${deltaStr} since on-sale`
+    ? `${deltaStr} ${copy.priceDisplay.cheaperThanOnSale}`
+    : `+${deltaStr} ${copy.priceDisplay.sinceOnSale}`
 
   return (
     <span
@@ -726,10 +729,14 @@ function BoxOfficeAttribution({ price }: { price: PriceBlockPrice }) {
   const { boxOfficeAction, boxOfficeMethod, venueName, submitter } = price
   // Render nothing unless we have at least the venue name
   if (!venueName) return null
-  const actionWord = boxOfficeAction === 'saw' ? 'Saw' : 'Bought'
+  const actionWord =
+    boxOfficeAction === 'saw'
+      ? copy.priceDisplay.sawVerb
+      : copy.priceDisplay.boughtVerb
   // Phone purchases use "from" (called remotely); in-person uses "at" (was there)
   const prep = boxOfficeMethod === 'phone' ? 'from' : 'at'
-  const methodSuffix = boxOfficeMethod === 'phone' ? ' · by phone' : ''
+  const methodSuffix =
+    boxOfficeMethod === 'phone' ? ` ${copy.priceDisplay.byPhoneSuffix}` : ''
   const byLine = submitter ? (
     <>
       {' by '}
@@ -752,7 +759,7 @@ function BoxOfficeAttribution({ price }: { price: PriceBlockPrice }) {
   ) : (
     <>
       {' '}
-      by <em>an anonymous fan</em>
+      by <em>{copy.priceDisplay.anonymousFan}</em>
     </>
   )
 
@@ -786,12 +793,12 @@ function SoldOutReporterAttribution({ price }: { price: PriceBlockPrice }) {
     return null
   const confirmsText =
     soldOutConfirms != null && soldOutConfirms > 0
-      ? ` · ${soldOutConfirms} fan${soldOutConfirms !== 1 ? 's' : ''} confirmed`
+      ? ` · ${soldOutConfirms} ${soldOutConfirms !== 1 ? copy.priceDisplay.fansConfirmedSuffix : copy.priceDisplay.fanConfirmedSuffix}`
       : ''
 
   const reportedBy = soldOutBy ? (
     <>
-      {'Reported sold out by '}
+      {`${copy.priceDisplay.reportedSoldOutBy} `}
       {soldOutBy.url ? (
         <a
           href={soldOutBy.url}
@@ -809,7 +816,7 @@ function SoldOutReporterAttribution({ price }: { price: PriceBlockPrice }) {
       )}
     </>
   ) : (
-    'Reported sold out'
+    copy.priceDisplay.reportedSoldOut
   )
 
   return (
@@ -873,7 +880,7 @@ function CommunityHandoffCard({
           whiteSpace: 'nowrap',
         }}
       >
-        community
+        {copy.priceDisplay.communityBadge}
       </span>
 
       <div
@@ -885,7 +892,7 @@ function CommunityHandoffCard({
           textTransform: 'uppercase',
         }}
       >
-        Tickets
+        {copy.priceDisplay.ticketsLabel}
       </div>
 
       <div
@@ -907,7 +914,7 @@ function CommunityHandoffCard({
             lineHeight: 1.05,
           }}
         >
-          No price yet.
+          {copy.priceDisplay.noPriceYet}
         </span>
         <span
           style={{
@@ -918,7 +925,7 @@ function CommunityHandoffCard({
             letterSpacing: '-0.005em',
           }}
         >
-          Your call.
+          {copy.priceDisplay.yourCall}
         </span>
       </div>
 
@@ -932,9 +939,7 @@ function CommunityHandoffCard({
           letterSpacing: '-0.005em',
         }}
       >
-        Ticketing APIs don&apos;t share prices with us, and we&apos;re not
-        waiting on them. The community fills the gap — if you saw a number out
-        there, drop it here.
+        {copy.priceDisplay.communityGapBody}
       </p>
 
       <button
@@ -960,7 +965,7 @@ function CommunityHandoffCard({
           letterSpacing: '-0.005em',
         }}
       >
-        Submit a price
+        {copy.priceDisplay.submitPriceButton}
         <svg width="13" height="13" viewBox="0 0 12 12" fill="none" aria-hidden>
           <path
             d="M2.5 6h7M6 2.5l3.5 3.5L6 9.5"
@@ -990,7 +995,7 @@ function CommunityHandoffCard({
           textTransform: 'uppercase',
         }}
       >
-        Anonymous works · two confirms moves it live
+        {copy.priceDisplay.anonymousWorksHint}
       </div>
     </div>
   )
@@ -1187,7 +1192,9 @@ export function PriceDisplay({
             textTransform: 'uppercase',
           }}
         >
-          {isBoxOffice ? 'Box office' : 'Tickets'}
+          {isBoxOffice
+            ? copy.priceDisplay.boxOfficeLabel
+            : copy.priceDisplay.ticketsLabel}
         </div>
         {hasSpark && range14d && (
           <Sparkline values={range14d} flag={sparkFlag} dim={soldOut} />
@@ -1229,10 +1236,12 @@ export function PriceDisplay({
             }}
           >
             {isBoxOffice
-              ? 'face value · no fees'
+              ? copy.priceDisplay.faceValueNoFees
               : faceMax
-                ? 'starting, all-in'
-                : 'all-in'}
+                ? copy.priceDisplay.startingAllIn
+                : priceObj.fees && priceObj.fees > 0
+                  ? copy.priceDisplay.allIn
+                  : copy.priceDisplay.faceValue}
           </span>
         )}
 
@@ -1254,10 +1263,119 @@ export function PriceDisplay({
               textTransform: 'uppercase',
             }}
           >
-            Sold out
+            {copy.priceDisplay.soldOutPill}
           </span>
         )}
       </div>
+
+      {/* Source attribution — community shows submitter handle or "anonymous fan" */}
+      {!soldOut && isCommunity && (
+        <div style={{ marginTop: 6 }}>
+          {/* Community box-office context — shown when fan saw (not bought) the price
+              at the venue in person or by phone. Renders above the @handle line. */}
+          {priceObj.boxOfficeAction === 'saw' &&
+            priceObj.venueName &&
+            priceObj.boxOfficeMethod && (
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  marginBottom: 4,
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 9,
+                  color: 'var(--fg-muted)',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                {/* Phone or location icon matches the source of the observation */}
+                {priceObj.boxOfficeMethod === 'phone' ? (
+                  <svg
+                    width="9"
+                    height="9"
+                    viewBox="0 0 10 10"
+                    fill="none"
+                    aria-hidden
+                  >
+                    <path
+                      d="M2 2.5C2 2 2.4 1.5 3 1.5h1.2c.4 0 .8.3.9.7l.3 1.2c.1.4-.1.8-.4 1L4.5 4.8c.6 1.1 1.6 2.1 2.7 2.7l.4-.5c.2-.3.6-.5 1-.4l1.2.3c.4.1.7.5.7.9V9c0 .6-.5 1-1 1-3.9 0-7-3.1-7-7v-.5z"
+                      stroke="currentColor"
+                      strokeWidth="0.9"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    width="9"
+                    height="9"
+                    viewBox="0 0 10 10"
+                    fill="none"
+                    aria-hidden
+                  >
+                    <circle
+                      cx="5"
+                      cy="5"
+                      r="1.8"
+                      stroke="currentColor"
+                      strokeWidth="0.9"
+                    />
+                    <circle
+                      cx="5"
+                      cy="5"
+                      r="3.5"
+                      stroke="currentColor"
+                      strokeWidth="0.9"
+                      opacity="0.5"
+                    />
+                  </svg>
+                )}
+                {/* Verb is bold fg — it's the trust signal, same pattern as BoxOfficeAttribution */}
+                <span style={{ color: 'var(--fg)', fontWeight: 700 }}>
+                  {priceObj.boxOfficeMethod === 'phone'
+                    ? copy.priceDisplay.calledVerb
+                    : copy.priceDisplay.sawVerb}
+                </span>
+                {priceObj.boxOfficeMethod === 'phone'
+                  ? `the ${priceObj.venueName} box office`
+                  : `at ${priceObj.venueName} box office`}
+                <span style={{ opacity: 0.5 }}>·</span>
+                <span style={{ opacity: 0.85 }}>
+                  {priceObj.boxOfficeMethod === 'phone'
+                    ? copy.priceDisplay.byPhoneObservation
+                    : copy.priceDisplay.inPersonObservation}
+                </span>
+              </div>
+            )}
+          {priceObj.submitter ? (
+            <a
+              href={priceObj.submitter.url}
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 9,
+                color: 'var(--fg-subtle)',
+                letterSpacing: '0.04em',
+                textDecoration: 'underline',
+                textDecorationColor: 'var(--border-strong)',
+                textUnderlineOffset: 2,
+              }}
+            >
+              @{priceObj.submitter.handle}
+            </a>
+          ) : (
+            <span
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 9,
+                color: 'var(--fg-subtle)',
+                letterSpacing: '0.04em',
+                fontStyle: 'italic',
+              }}
+            >
+              {copy.priceDisplay.anonymousFan}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Box-office attribution line */}
       {!soldOut && isBoxOffice && <BoxOfficeAttribution price={priceObj} />}
@@ -1299,7 +1417,7 @@ export function PriceDisplay({
               marginBottom: 2,
             }}
           >
-            Or pay for convenience
+            {copy.priceDisplay.orPayForConvenience}
           </div>
           {priceObj.alternates.map((alt, idx) => (
             <AlternateSourceRow key={idx} alt={alt} />

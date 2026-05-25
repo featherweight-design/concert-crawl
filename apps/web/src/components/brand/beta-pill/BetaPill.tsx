@@ -1,3 +1,5 @@
+import { COPY } from './definitions/copy'
+
 export function BetaPill() {
   return (
     <span
@@ -27,7 +29,7 @@ export function BetaPill() {
           boxShadow: '0 0 8px var(--signal)',
         }}
       />
-      Private Beta
+      {COPY.label}
     </span>
   )
 }

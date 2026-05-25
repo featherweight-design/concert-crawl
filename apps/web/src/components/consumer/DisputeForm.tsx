@@ -7,6 +7,7 @@ import { SPNumberField } from './SPNumberField'
 import { ChipGroup } from './ChipGroup'
 import type { PriceSubmission } from '@concert-crawl/types'
 import { SP_POLICY } from '@concert-crawl/types'
+import { copy } from './definitions/copy'
 
 const VENDOR_OPTIONS = [
   { value: 'AXS', label: 'AXS' },
@@ -36,15 +37,17 @@ export function DisputeForm({ submission, eventId }: DisputeFormProps) {
   if (success) {
     return (
       <div className="rounded-xl border border-border p-4 bg-surface-1">
-        <p className="text-sm font-semibold text-fg">Logged.</p>
+        <p className="text-sm font-semibold text-fg">
+          {copy.disputeForm.successTitle}
+        </p>
         <p className="text-sm text-fg-muted mt-1">
-          Your alternate price will show up alongside this one.
+          {copy.disputeForm.successBody}
         </p>
         <button
           onClick={() => router.push(`/events/${eventId}`)}
           className="mt-3 text-sm text-signal underline"
         >
-          Back to show
+          {copy.disputeForm.successCta}
         </button>
       </div>
     )
@@ -54,19 +57,19 @@ export function DisputeForm({ submission, eventId }: DisputeFormProps) {
     const newErrors: Record<string, string> = {}
     const floorNum = Number(floor)
     if (!floor || isNaN(floorNum) || floorNum < SP_POLICY.floorMin) {
-      newErrors['floor'] = 'Has to be at least $1.'
+      newErrors['floor'] = copy.disputeForm.floorErrorMin
     } else if (floorNum > SP_POLICY.floorMax) {
-      newErrors['floor'] = 'Cap is $2000.'
+      newErrors['floor'] = copy.disputeForm.floorErrorMax
     }
     if (ceiling) {
       const ceilNum = Number(ceiling)
       if (ceilNum > SP_POLICY.ceilingMax) {
-        newErrors['ceiling'] = 'Cap is $2000.'
+        newErrors['ceiling'] = copy.disputeForm.ceilingErrorMax
       } else if (!newErrors['floor'] && ceilNum < floorNum) {
-        newErrors['ceiling'] = "Ceiling can't be below floor."
+        newErrors['ceiling'] = copy.disputeForm.ceilingErrorBelowFloor
       }
     }
-    if (!vendor) newErrors['vendor'] = "Pick where it's listed."
+    if (!vendor) newErrors['vendor'] = copy.disputeForm.vendorError
     setErrors(newErrors)
     if (Object.keys(newErrors).length > 0) return
 
@@ -74,7 +77,7 @@ export function DisputeForm({ submission, eventId }: DisputeFormProps) {
     try {
       const token = await getToken()
       if (!token) {
-        setErrorMsg('You must be signed in to file a dispute.')
+        setErrorMsg(copy.disputeForm.authError)
         setSubmitting(false)
         return
       }
@@ -99,7 +102,9 @@ export function DisputeForm({ submission, eventId }: DisputeFormProps) {
       }
       setSuccess(true)
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'Something went wrong.')
+      setErrorMsg(
+        err instanceof Error ? err.message : copy.disputeForm.genericError,
+      )
     } finally {
       setSubmitting(false)
     }
@@ -109,35 +114,35 @@ export function DisputeForm({ submission, eventId }: DisputeFormProps) {
     <div className="rounded-xl border border-danger p-4 flex flex-col gap-4">
       <div>
         <p className="text-sm font-semibold text-fg">
-          What did <em>you</em> see instead?
+          {copy.disputeForm.heading}
         </p>
         <p className="text-xs text-fg-muted mt-1">
-          Disputes have to come with a price and a vendor. Keeps it honest.
+          {copy.disputeForm.subheading}
         </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <SPNumberField
           id="dispute-floor"
-          label="Floor"
+          label={copy.disputeForm.floorLabel}
           value={floor}
           onChange={setFloor}
-          placeholder="35"
+          placeholder={copy.disputeForm.floorPlaceholder}
           required
           error={errors['floor']}
         />
         <SPNumberField
           id="dispute-ceiling"
-          label="Ceiling"
+          label={copy.disputeForm.ceilingLabel}
           value={ceiling}
           onChange={setCeiling}
-          placeholder="75"
+          placeholder={copy.disputeForm.ceilingPlaceholder}
           error={errors['ceiling']}
         />
       </div>
 
       <ChipGroup
-        label="Where it's listed *"
+        label={copy.disputeForm.vendorLabel}
         options={VENDOR_OPTIONS}
         value={vendor}
         onChange={setVendor}
@@ -151,14 +156,16 @@ export function DisputeForm({ submission, eventId }: DisputeFormProps) {
           onClick={() => router.back()}
           className="flex-1 h-11 rounded-xl border border-border-strong text-sm text-fg"
         >
-          Cancel
+          {copy.disputeForm.cancelButton}
         </button>
         <button
           onClick={handleSubmit}
           disabled={submitting}
           className="flex-1 h-11 rounded-xl bg-danger text-white font-semibold text-sm disabled:opacity-60"
         >
-          {submitting ? 'Filing…' : 'File dispute'}
+          {submitting
+            ? copy.disputeForm.submittingButton
+            : copy.disputeForm.submitButton}
         </button>
       </div>
     </div>

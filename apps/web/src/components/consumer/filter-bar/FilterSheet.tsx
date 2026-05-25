@@ -1,6 +1,7 @@
 'use client'
 
 import type { FilterOption } from './filter-defs'
+import { copy } from './definitions/copy'
 
 interface FilterSheetProps {
   open: boolean
@@ -31,7 +32,7 @@ export function FilterSheet({
         type="button"
         className="absolute inset-0"
         style={{ background: 'var(--scrim)' }}
-        aria-label="Close filter sheet"
+        aria-label={copy.filterSheet.closeAriaLabel}
         onClick={onClose}
       />
 

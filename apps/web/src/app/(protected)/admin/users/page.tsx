@@ -6,6 +6,7 @@ import { AdminUsersClient } from '@/components/admin/users/AdminUsersClient'
 import type { AdminUserRow } from '@/components/admin/users/AdminUsersClient'
 import type { Role } from '@concert-crawl/types'
 import { isRole } from '@concert-crawl/types'
+import { COPY } from './definitions/copy'
 
 interface AdminUserAPIRow {
   id: string
@@ -41,8 +42,8 @@ export default async function AdminUsersPage() {
   return (
     <>
       <SectionHead
-        title="Users"
-        subtitle={`${result.total} total · manage role assignments`}
+        title={COPY.page.title}
+        subtitle={COPY.page.subtitle(result.total)}
       />
       <Panel>
         <AdminUsersClient initialUsers={users} total={result.total} />

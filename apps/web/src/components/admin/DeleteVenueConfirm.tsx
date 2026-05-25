@@ -139,7 +139,12 @@ export function DeleteVenueConfirm({
                   lineHeight: 1.55,
                 }}
               >
-                {deleteVenueConfirmCopy.header.description}
+                This{' '}
+                <strong style={{ color: 'var(--danger)', fontWeight: 700 }}>
+                  can&rsquo;t be undone
+                </strong>
+                . The venue config, crawl schedule, and ticketing defaults will
+                be removed.
               </p>
             </div>
 

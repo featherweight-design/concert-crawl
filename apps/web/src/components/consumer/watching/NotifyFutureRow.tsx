@@ -1,3 +1,5 @@
+import { COPY } from './definitions/copy'
+
 export function NotifyFutureRow() {
   return (
     <div
@@ -54,7 +56,7 @@ export function NotifyFutureRow() {
             letterSpacing: '-0.01em',
           }}
         >
-          Price drop alerts
+          {COPY.notifyFutureRow.title}
         </span>
         <span
           style={{
@@ -64,7 +66,7 @@ export function NotifyFutureRow() {
             letterSpacing: '0.02em',
           }}
         >
-          Coming soon.
+          {COPY.notifyFutureRow.subtitle}
         </span>
       </div>
 
@@ -86,7 +88,7 @@ export function NotifyFutureRow() {
           lineHeight: 1,
         }}
       >
-        SOON
+        {COPY.notifyFutureRow.badge}
       </span>
     </div>
   )

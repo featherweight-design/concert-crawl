@@ -1,5 +1,6 @@
 import { MapPin, User } from 'lucide-react'
 import type { ArtistResult, VenueResult } from '../../../lib/search/useSearch'
+import { copy } from './definitions/copy'
 
 interface SearchResultsStateProps {
   artistResults: ArtistResult[]
@@ -76,7 +77,7 @@ function ArtistSection({
     <>
       <SectionHeader
         icon={<User size={13} strokeWidth={1.5} />}
-        label={`Artists · ${artistResults.length}`}
+        label={`${copy.artistsSectionPrefix} · ${artistResults.length}`}
       />
       {artistResults.map((artist, idx) => {
         const itemIdx = baseIdx + idx
@@ -174,7 +175,7 @@ function VenueSection({
     <>
       <SectionHeader
         icon={<MapPin size={13} strokeWidth={1.5} />}
-        label={`Venues · ${venueResults.length}`}
+        label={`${copy.venuesSectionPrefix} · ${venueResults.length}`}
       />
       {venueResults.map((venue, idx) => {
         const itemIdx = baseIdx + idx
@@ -242,8 +243,10 @@ function VenueSection({
                     letterSpacing: '0.02em',
                   }}
                 >
-                  {venue.showCount} upcoming show
-                  {venue.showCount !== 1 ? 's' : ''}
+                  {venue.showCount}{' '}
+                  {venue.showCount !== 1
+                    ? copy.upcomingShowPlural
+                    : copy.upcomingShowSingular}
                 </div>
               </div>
             </button>

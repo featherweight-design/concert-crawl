@@ -1,9 +1,11 @@
+import { copy } from './definitions/copy'
+
 export function SoldOutCta() {
   return (
     <button
       type="button"
       disabled
-      aria-label="Sold out"
+      aria-label={copy.soldOutCta.ariaLabel}
       style={{
         all: 'unset',
         boxSizing: 'border-box',
@@ -23,7 +25,7 @@ export function SoldOutCta() {
         letterSpacing: '-0.005em',
       }}
     >
-      Sold out
+      {copy.soldOutCta.label}
     </button>
   )
 }

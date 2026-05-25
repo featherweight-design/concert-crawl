@@ -191,7 +191,7 @@ export function AddVenueModal({
       if (!result.success) {
         if (result.field === 'slug') {
           setErrors({
-            slug: result.error ?? addVenueModalCopy.validation.slugInvalid,
+            slug: result.error ?? addVenueModalCopy.errors.slugInUse,
           })
           setBannerError(addVenueModalCopy.errors.slugInUse)
         } else {

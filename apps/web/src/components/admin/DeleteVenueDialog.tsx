@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { deleteVenue } from '@/lib/actions/venues'
 import { AdminButton, MonoLabel } from '@/components/admin/primitives'
+import { DELETE_VENUE_DIALOG_COPY as COPY } from '@/components/admin/definitions/delete-venue-dialog-copy'
 
 interface DeleteVenueDialogProps {
   venueId: string
@@ -57,7 +58,7 @@ export function DeleteVenueDialog({
         `/admin/venues?deleted=${encodeURIComponent(venueName)}&detached=${result.eventsDetached}`,
       )
     } catch {
-      setErrorMessage('Delete failed. Please try again.')
+      setErrorMessage(COPY.errors.deleteFailed)
       setDeleteState('error')
     }
   }
@@ -148,7 +149,7 @@ export function DeleteVenueDialog({
         type="button"
         onClick={() => setOpen(true)}
       >
-        Delete…
+        {COPY.trigger}
       </AdminButton>
 
       <Dialog.Root
@@ -220,7 +221,7 @@ export function DeleteVenueDialog({
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <MonoLabel color="var(--danger)">
-                    danger · permanent
+                    {COPY.header.dangerLabel}
                   </MonoLabel>
                   <Dialog.Title
                     style={{
@@ -247,10 +248,7 @@ export function DeleteVenueDialog({
                     lineHeight: 1.55,
                   }}
                 >
-                  This will{' '}
-                  <b style={{ color: 'var(--fg)' }}>permanently delete</b> the
-                  venue and detach all events that reference it. This cannot be
-                  undone.
+                  {COPY.body.description}
                 </p>
                 <ul
                   style={{
@@ -309,7 +307,7 @@ export function DeleteVenueDialog({
                     marginBottom: 6,
                   }}
                 >
-                  Type{' '}
+                  {COPY.confirmInput.labelPrefix}{' '}
                   <span
                     style={{
                       fontFamily: "'JetBrains Mono', monospace",
@@ -322,7 +320,7 @@ export function DeleteVenueDialog({
                   >
                     {venueName}
                   </span>{' '}
-                  to confirm
+                  {COPY.confirmInput.labelSuffix}
                 </label>
                 <input
                   id="delete-confirm-input"
@@ -364,7 +362,7 @@ export function DeleteVenueDialog({
                       fontFamily: "'Inter', sans-serif",
                     }}
                   >
-                    Match — delete is now enabled.
+                    {COPY.confirmInput.matchMessage}
                   </span>
                 )}
                 {isMismatch && (
@@ -377,8 +375,8 @@ export function DeleteVenueDialog({
                       fontFamily: "'Inter', sans-serif",
                     }}
                   >
-                    Doesn&apos;t match &ldquo;{venueName}&rdquo;. Type exactly,
-                    including capitalization.
+                    {COPY.confirmInput.mismatchPrefix} &ldquo;{venueName}&rdquo;
+                    {COPY.confirmInput.mismatchSuffix}
                   </span>
                 )}
                 {errorMessage && (
@@ -435,7 +433,7 @@ export function DeleteVenueDialog({
                   >
                     Esc
                   </kbd>{' '}
-                  cancel
+                  {COPY.footer.escCancel}
                 </span>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <Dialog.Close
@@ -447,7 +445,7 @@ export function DeleteVenueDialog({
                         disabled={deleteState === 'deleting'}
                         onClick={handleClose}
                       >
-                        Cancel
+                        {COPY.footer.cancelButton}
                       </AdminButton>
                     }
                   />
@@ -459,7 +457,9 @@ export function DeleteVenueDialog({
                     disabled={!canDelete}
                     onClick={() => void handleDelete()}
                   >
-                    {deleteState === 'deleting' ? 'Deleting…' : 'Delete venue'}
+                    {deleteState === 'deleting'
+                      ? COPY.footer.deleteButtonPending
+                      : COPY.footer.deleteButtonIdle}
                   </AdminButton>
                 </div>
               </div>

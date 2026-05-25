@@ -1,6 +1,7 @@
 'use client'
 
 import { useFormStatus } from 'react-dom'
+import { GENERATE_INVITE_FORM_COPY as COPY } from '@/components/admin/definitions/generate-invite-form-copy'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,7 +11,7 @@ function SubmitButton() {
   const { pending } = useFormStatus()
   return (
     <Button type="submit" disabled={pending}>
-      {pending ? 'Generating…' : 'Generate Code'}
+      {pending ? COPY.submitPending : COPY.submitIdle}
     </Button>
   )
 }
@@ -27,7 +28,7 @@ export function GenerateInviteForm() {
   return (
     <form action={handleSubmit} className="flex items-end gap-4">
       <div className="space-y-1">
-        <Label htmlFor="expiresAt">Expires (optional)</Label>
+        <Label htmlFor="expiresAt">{COPY.expiresLabel}</Label>
         <Input id="expiresAt" name="expiresAt" type="date" />
       </div>
       <SubmitButton />

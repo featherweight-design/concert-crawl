@@ -17,4 +17,8 @@ export const copy = {
     placeholder: 'Search artists or venues…',
     keyboardShortcut: '⌘K',
   },
+  mobileProfileEntry: {
+    loadErrorLog:
+      'MobileProfileEntry: could not load profile, showing anonymous avatar',
+  },
 } as const

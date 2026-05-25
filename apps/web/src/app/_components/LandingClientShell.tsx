@@ -8,6 +8,7 @@ import { LandingPosterAnimation } from '@/components/brand/landing-poster/Landin
 import { WaitlistModal } from '@/components/waitlist/WaitlistModal'
 import { CCMark } from '@/components/brand/cc-mark'
 import type { LandingShow } from '@/components/brand/landing-poster/LandingPoster'
+import { COPY } from './definitions/copy'
 
 interface LandingClientShellProps {
   shows: LandingShow[]
@@ -41,7 +42,7 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
         whiteSpace: 'nowrap',
       }}
     >
-      I have a code →
+      {COPY.cta.code}
     </Link>
   )
 
@@ -68,7 +69,7 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
         whiteSpace: 'nowrap',
       }}
     >
-      Join the waitlist
+      {COPY.cta.waitlist}
     </button>
   )
 
@@ -115,7 +116,7 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
             }}
             className="hidden md:inline-flex items-center"
           >
-            I have a code →
+            {COPY.nav.codeLink}
           </Link>
         </div>
       </header>
@@ -138,11 +139,13 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
                 lineHeight: 0.95,
               }}
             >
-              See who&apos;s
+              {COPY.hero.headingLine1}
               <br />
-              playing
+              {COPY.hero.headingLine2}
               <br />
-              <span style={{ color: 'var(--accent)' }}>tonight.</span>
+              <span style={{ color: 'var(--accent)' }}>
+                {COPY.hero.headingAccent}
+              </span>
             </h1>
             <p
               style={{
@@ -154,8 +157,7 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
                 maxWidth: '44ch',
               }}
             >
-              Every show in Denver, in one place — sorted, savable, shareable.
-              Built by fans, not algorithms.
+              {COPY.hero.subheading}
             </p>
           </div>
 
@@ -175,7 +177,7 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
                 fontWeight: 500,
               }}
             >
-              Already have an account? Sign in →
+              {COPY.cta.signIn}
             </Link>
           </div>
         </div>
@@ -204,7 +206,7 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
               fontWeight: 500,
             }}
           >
-            Already have an account? Sign in →
+            {COPY.cta.signIn}
           </Link>
         </div>
       </main>

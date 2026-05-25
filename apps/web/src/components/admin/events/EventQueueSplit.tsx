@@ -16,6 +16,7 @@ import {
 } from '@/components/admin/primitives'
 import { Check, X, Edit2, Filter, ChevronRight, Tag } from 'lucide-react'
 import type { AdminEvent } from '@/components/admin/events/types'
+import { COPY } from './definitions/copy'
 
 type StatusTab = 'pending' | 'low_conf' | 'duplicates' | 'approved' | 'rejected'
 
@@ -215,7 +216,7 @@ function FieldRow({
               cursor: 'pointer',
             }}
           >
-            + tag
+            {COPY.fields.addTag}
           </button>
         </div>
       ) : (
@@ -383,7 +384,9 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
         setSelectedId(remaining[nextIdx]?.id ?? null)
       } catch (err) {
         console.error('[EventQueueSplit] approve failed:', err)
-        setActionError(err instanceof Error ? err.message : 'Action failed')
+        setActionError(
+          err instanceof Error ? err.message : COPY.errors.actionFailed,
+        )
       } finally {
         setProcessing(null)
       }
@@ -393,7 +396,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
 
   const reject = useCallback(
     async (id: string) => {
-      if (!confirm('Delete this event? Cannot be undone.')) return
+      if (!confirm(COPY.confirms.deleteEvent)) return
       setProcessing(id)
       setActionError(null)
       try {
@@ -404,7 +407,9 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
         setSelectedId(remaining[nextIdx]?.id ?? null)
       } catch (err) {
         console.error('[EventQueueSplit] reject failed:', err)
-        setActionError(err instanceof Error ? err.message : 'Action failed')
+        setActionError(
+          err instanceof Error ? err.message : COPY.errors.actionFailed,
+        )
       } finally {
         setProcessing(null)
       }
@@ -442,7 +447,9 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
       await updateEvent.mutateAsync({ id: selected.id, payload })
       setIsEditing(false)
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Save failed')
+      setActionError(
+        err instanceof Error ? err.message : COPY.errors.saveFailed,
+      )
     }
   }
 
@@ -474,11 +481,15 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
   }, [selectedId, selectedIdx, filtered, approve, reject])
 
   const TABS: { key: StatusTab; label: string; count: number }[] = [
-    { key: 'pending', label: 'Pending', count: pendingEvents.length },
-    { key: 'low_conf', label: 'Low conf.', count: lowConfEvents.length },
-    { key: 'duplicates', label: 'Duplicates', count: 0 },
-    { key: 'approved', label: 'Approved', count: approvedEvents.length },
-    { key: 'rejected', label: 'Rejected', count: 0 },
+    { key: 'pending', label: COPY.tabs.pending, count: pendingEvents.length },
+    { key: 'low_conf', label: COPY.tabs.lowConf, count: lowConfEvents.length },
+    { key: 'duplicates', label: COPY.tabs.duplicates, count: 0 },
+    {
+      key: 'approved',
+      label: COPY.tabs.approved,
+      count: approvedEvents.length,
+    },
+    { key: 'rejected', label: COPY.tabs.rejected, count: 0 },
   ]
 
   if (events.length === 0) {
@@ -496,9 +507,9 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
       >
         <div style={{ fontSize: 24 }}>&#x2713;</div>
         <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--fg)' }}>
-          Queue is clear.
+          {COPY.empty.title}
         </div>
-        <div style={{ fontSize: 13 }}>Every event has been reviewed.</div>
+        <div style={{ fontSize: 13 }}>{COPY.empty.subtitle}</div>
       </div>
     )
   }
@@ -609,7 +620,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
             icon={Filter}
             iconRight={ChevronRight}
           >
-            All venues
+            {COPY.filters.allVenues}
           </AdminButton>
           <AdminButton
             variant="outline"
@@ -617,7 +628,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
             icon={Filter}
             iconRight={ChevronRight}
           >
-            Date · next 30d
+            {COPY.filters.dateRange}
           </AdminButton>
           <AdminButton
             variant="outline"
@@ -625,7 +636,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
             icon={Filter}
             iconRight={ChevronRight}
           >
-            Source · any
+            {COPY.filters.source}
           </AdminButton>
         </div>
       </div>
@@ -676,8 +687,11 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
               }}
             />
             <MonoLabel>
-              {filtered.length} {tab === 'approved' ? 'approved' : 'pending'} ·
-              sort: discovered ↓
+              {filtered.length}{' '}
+              {tab === 'approved'
+                ? COPY.listHeader.approved
+                : COPY.listHeader.pending}{' '}
+              · {COPY.listHeader.sortLabel}
             </MonoLabel>
           </div>
 
@@ -773,10 +787,14 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                   {(isLowConf || missingPrice) && (
                     <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                       {isLowConf && (
-                        <FlagBadge kind="warning">low conf.</FlagBadge>
+                        <FlagBadge kind="warning">
+                          {COPY.flags.lowConf}
+                        </FlagBadge>
                       )}
                       {missingPrice && (
-                        <FlagBadge kind="danger">no price</FlagBadge>
+                        <FlagBadge kind="danger">
+                          {COPY.flags.noPrice}
+                        </FlagBadge>
                       )}
                       <SourceBadge strategy={ev.extractionStrategy} />
                     </div>
@@ -849,13 +867,15 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                           '0 0 0 3px color-mix(in oklab, var(--warning) 22%, transparent)',
                       }}
                     />
-                    Pending review
+                    {COPY.inspector.pendingReview}
                   </span>
                 )}
                 {!selected.verified &&
                   Number(selected.confidenceScore) > 0 &&
                   Number(selected.confidenceScore) < 0.7 && (
-                    <FlagBadge kind="warning">low confidence</FlagBadge>
+                    <FlagBadge kind="warning">
+                      {COPY.inspector.lowConfidence}
+                    </FlagBadge>
                   )}
               </div>
 
@@ -904,7 +924,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                       disabled={processing === selected.id}
                       onClick={() => void reject(selected.id)}
                     >
-                      Reject
+                      {COPY.actions.reject}
                     </AdminButton>
                   )}
                   {isEditing ? (
@@ -915,14 +935,16 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                         onClick={() => void handleEditSave()}
                         disabled={updateEvent.isPending}
                       >
-                        {updateEvent.isPending ? 'Saving…' : 'Save'}
+                        {updateEvent.isPending
+                          ? COPY.actions.savePending
+                          : COPY.actions.save}
                       </AdminButton>
                       <AdminButton
                         variant="ghost"
                         size="sm"
                         onClick={handleEditCancel}
                       >
-                        Cancel
+                        {COPY.actions.cancel}
                       </AdminButton>
                     </>
                   ) : (
@@ -932,7 +954,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                       icon={Edit2}
                       onClick={handleEditStart}
                     >
-                      Edit
+                      {COPY.actions.edit}
                     </AdminButton>
                   )}
                   {!selected.verified && (
@@ -943,7 +965,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                       disabled={processing === selected.id}
                       onClick={() => void approve(selected.id)}
                     >
-                      Approve
+                      {COPY.actions.approve}
                     </AdminButton>
                   )}
                 </div>
@@ -958,10 +980,10 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                 flexShrink: 0,
               }}
             >
-              <VitalCell label="Confidence">
+              <VitalCell label={COPY.vitals.confidence}>
                 <ConfidenceBar score={Number(selected.confidenceScore ?? 0)} />
               </VitalCell>
-              <VitalCell label="Source">
+              <VitalCell label={COPY.vitals.source}>
                 <span
                   style={{
                     fontFamily: "'JetBrains Mono', monospace",
@@ -975,7 +997,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                       : (selected.extractionStrategy ?? '—')}
                 </span>
               </VitalCell>
-              <VitalCell label="Discovered">
+              <VitalCell label={COPY.vitals.discovered}>
                 <span
                   style={{
                     fontFamily: "'JetBrains Mono', monospace",
@@ -985,7 +1007,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                   {formatDiscovered(selected.createdAt)}
                 </span>
               </VitalCell>
-              <VitalCell label="Price range" noBorder>
+              <VitalCell label={COPY.vitals.priceRange} noBorder>
                 <span
                   style={{
                     fontFamily: "'JetBrains Mono', monospace",
@@ -1039,7 +1061,9 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                 {/* Left: extracted (editable) */}
                 <div>
                   <MonoLabel>
-                    extracted {isEditing ? '· editing' : '(editable)'}
+                    {isEditing
+                      ? COPY.inspector.extractedEditing
+                      : COPY.inspector.extractedEditable}
                   </MonoLabel>
                   <div
                     style={{
@@ -1056,21 +1080,21 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                     {isEditing ? (
                       <>
                         <EditFieldRow
-                          label="Title"
+                          label={COPY.fields.title}
                           value={editDraft.title}
                           onChange={(val) =>
                             setEditDraft((prev) => ({ ...prev, title: val }))
                           }
                         />
                         <EditFieldRow
-                          label="Artist"
+                          label={COPY.fields.artist}
                           value={editDraft.artist}
                           onChange={(val) =>
                             setEditDraft((prev) => ({ ...prev, artist: val }))
                           }
                         />
                         <EditFieldRow
-                          label="Date"
+                          label={COPY.fields.date}
                           value={editDraft.date}
                           type="date"
                           mono
@@ -1079,7 +1103,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                           }
                         />
                         <EditFieldRow
-                          label="Doors"
+                          label={COPY.fields.doors}
                           value={editDraft.doorsTime}
                           type="time"
                           mono
@@ -1091,7 +1115,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                           }
                         />
                         <EditFieldRow
-                          label="Show"
+                          label={COPY.fields.show}
                           value={editDraft.showTime}
                           type="time"
                           mono
@@ -1100,7 +1124,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                           }
                         />
                         <EditFieldRow
-                          label="Price low"
+                          label={COPY.fields.priceLow}
                           value={editDraft.ticketPriceMin}
                           type="number"
                           mono
@@ -1112,7 +1136,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                           }
                         />
                         <EditFieldRow
-                          label="Price high"
+                          label={COPY.fields.priceHigh}
                           value={editDraft.ticketPriceMax}
                           type="number"
                           mono
@@ -1124,31 +1148,43 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                           }
                         />
                         {selected.genre && selected.genre.length > 0 && (
-                          <FieldRow label="Tags" tags={selected.genre} />
+                          <FieldRow
+                            label={COPY.fields.tags}
+                            tags={selected.genre}
+                          />
                         )}
                       </>
                     ) : (
                       <>
-                        <FieldRow label="Title" value={selected.title} />
-                        <FieldRow label="Artist" value={selected.artist} />
-                        <FieldRow label="Venue" value={selected.venueName} />
                         <FieldRow
-                          label="Date"
+                          label={COPY.fields.title}
+                          value={selected.title}
+                        />
+                        <FieldRow
+                          label={COPY.fields.artist}
+                          value={selected.artist}
+                        />
+                        <FieldRow
+                          label={COPY.fields.venue}
+                          value={selected.venueName}
+                        />
+                        <FieldRow
+                          label={COPY.fields.date}
                           value={formatDate(selected.date)}
                           mono
                         />
                         <FieldRow
-                          label="Doors"
+                          label={COPY.fields.doors}
                           value={formatTime(selected.doorsTime)}
                           mono
                         />
                         <FieldRow
-                          label="Show"
+                          label={COPY.fields.show}
                           value={formatTime(selected.showTime)}
                           mono
                         />
                         <FieldRow
-                          label="Price low"
+                          label={COPY.fields.priceLow}
                           value={
                             selected.ticketPriceMin
                               ? `$${Math.round(parseFloat(selected.ticketPriceMin))}`
@@ -1158,7 +1194,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                           warn={!selected.ticketPriceMin}
                         />
                         <FieldRow
-                          label="Price high"
+                          label={COPY.fields.priceHigh}
                           value={
                             selected.ticketPriceMax
                               ? `$${Math.round(parseFloat(selected.ticketPriceMax))}`
@@ -1168,7 +1204,10 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                           warn={!selected.ticketPriceMax}
                         />
                         {selected.genre && selected.genre.length > 0 && (
-                          <FieldRow label="Tags" tags={selected.genre} />
+                          <FieldRow
+                            label={COPY.fields.tags}
+                            tags={selected.genre}
+                          />
                         )}
                       </>
                     )}
@@ -1177,7 +1216,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
 
                 {/* Right: raw source */}
                 <div>
-                  <MonoLabel>raw source · llm input</MonoLabel>
+                  <MonoLabel>{COPY.inspector.rawSource}</MonoLabel>
                   <div
                     style={{
                       marginTop: 10,
@@ -1243,13 +1282,13 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
               >
                 <Kbd>J</Kbd>
                 <Kbd>K</Kbd>
-                <span>navigate</span>
+                <span>{COPY.keyboard.navigate}</span>
                 <span style={{ width: 8, display: 'inline-block' }} />
                 <Kbd>A</Kbd>
-                <span>approve</span>
+                <span>{COPY.keyboard.approve}</span>
                 <span style={{ width: 8, display: 'inline-block' }} />
                 <Kbd>R</Kbd>
-                <span>reject</span>
+                <span>{COPY.keyboard.reject}</span>
               </div>
             </div>
           </div>
@@ -1263,7 +1302,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
               fontSize: 13,
             }}
           >
-            Select an event to review
+            {COPY.noSelection}
           </div>
         )}
       </div>
@@ -1312,7 +1351,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
               color: 'var(--paper)',
             }}
           >
-            events selected
+            {COPY.bulkActions.eventsSelected}
           </span>
           <span
             style={{
@@ -1341,7 +1380,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
             }}
           >
             <Check size={13} />
-            Approve all
+            {COPY.bulkActions.approveAll}
           </button>
           <button
             disabled={processing !== null}
@@ -1362,7 +1401,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
             }}
           >
             <X size={13} />
-            Reject
+            {COPY.bulkActions.reject}
           </button>
           <button
             disabled={processing !== null}
@@ -1383,7 +1422,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
             }}
           >
             <Tag size={13} />
-            Re-tag
+            {COPY.bulkActions.retag}
           </button>
           <span style={{ flex: 1 }} />
           <button

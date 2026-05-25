@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useClerk } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
+import { copy } from './definitions/copy'
 
 interface ProtectedErrorProps {
   error: Error & { digest?: string }
@@ -47,7 +48,7 @@ export default function ProtectedError({ error, reset }: ProtectedErrorProps) {
             margin: 0,
           }}
         >
-          Something went wrong
+          {copy.errorHeading}
         </h1>
         <p
           style={{
@@ -57,8 +58,7 @@ export default function ProtectedError({ error, reset }: ProtectedErrorProps) {
             maxWidth: 320,
           }}
         >
-          An error occurred loading this page. Try again, or sign out and back
-          in.
+          {copy.errorBody}
         </p>
         {error.digest && (
           <p
@@ -97,7 +97,7 @@ export default function ProtectedError({ error, reset }: ProtectedErrorProps) {
             cursor: 'pointer',
           }}
         >
-          Try again
+          {copy.tryAgainButton}
         </button>
         <button
           type="button"
@@ -114,7 +114,7 @@ export default function ProtectedError({ error, reset }: ProtectedErrorProps) {
             cursor: 'pointer',
           }}
         >
-          Sign out
+          {copy.signOutButton}
         </button>
       </div>
     </div>

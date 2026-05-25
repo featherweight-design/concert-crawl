@@ -19,4 +19,12 @@ export const copy = {
 
   // SearchDefaultState price fallback
   priceNotAnnounced: 'TBA',
+
+  // SearchResultsState section headers (count appended at runtime)
+  artistsSectionPrefix: 'Artists',
+  venuesSectionPrefix: 'Venues',
+
+  // SearchResultsState venue sub-label
+  upcomingShowSingular: 'upcoming show',
+  upcomingShowPlural: 'upcoming shows',
 } as const

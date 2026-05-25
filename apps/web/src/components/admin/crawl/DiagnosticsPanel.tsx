@@ -423,7 +423,10 @@ export const DiagnosticsPanel = ({
             lineHeight: 1.5,
           }}
         >
-          {CRAWL_COPY.diagnostics.stagedNotice}
+          Staged options are{' '}
+          <strong style={{ color: 'var(--fg)' }}>not auto-applied</strong>.
+          You&apos;ll review the diff and confirm before any change touches the
+          worker config.
         </div>
       </div>
 

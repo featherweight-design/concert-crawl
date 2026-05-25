@@ -21,15 +21,9 @@ export function IssuesBanner({ blockedVenues }: Props) {
 
   if (blockedVenues.length === 0) return null
 
-  const blocked = blockedVenues.filter(
-    (row) => row.status === CRAWL_COPY.issuesBanner.statusBlocked,
-  )
-  const failed = blockedVenues.filter(
-    (row) => row.status === CRAWL_COPY.issuesBanner.statusFailed,
-  )
-  const paused = blockedVenues.filter(
-    (row) => row.status === CRAWL_COPY.issuesBanner.statusPaused,
-  )
+  const blocked = blockedVenues.filter((row) => row.status === 'blocked')
+  const failed = blockedVenues.filter((row) => row.status === 'failed')
+  const paused = blockedVenues.filter((row) => row.status === 'paused')
 
   const parts: string[] = []
   if (blocked.length > 0)
@@ -55,9 +49,9 @@ export function IssuesBanner({ blockedVenues }: Props) {
 
   const venueDescriptions = blockedVenues.map((venue) => {
     const detail =
-      venue.status === CRAWL_COPY.issuesBanner.statusBlocked
+      venue.status === 'blocked'
         ? `${venue.consecutiveFailures}× consecutive ${venue.blockedAt ? '403' : 'failure'}`
-        : venue.status === CRAWL_COPY.issuesBanner.statusPaused
+        : venue.status === 'paused'
           ? CRAWL_COPY.issuesBanner.statusDetail.disallowed
           : venue.consecutiveFailures > 0
             ? `${venue.consecutiveFailures}×`

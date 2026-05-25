@@ -39,4 +39,8 @@ export const COPY = {
   runHistoryBlocks: {
     lastNRuns: (count: number) => `Last ${count} runs`,
   },
+  runAllVenuesButton: {
+    pending: 'Running…',
+    idle: 'Run all venues',
+  },
 } as const

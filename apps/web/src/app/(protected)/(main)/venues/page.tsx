@@ -3,6 +3,7 @@ import type { VenuePublic } from '@concert-crawl/types'
 import { publicApiClient, apiClient } from '@/lib/api'
 import { EmptyState } from '@/components/consumer/empty-state'
 import { VenuesIndexClient } from '@/components/consumer/venues-index'
+import { copy } from './definitions/copy'
 
 export const metadata = { title: 'Venues — Concert Crawl' }
 
@@ -34,7 +35,7 @@ export default async function VenuesPage() {
               className="m-0 text-[28px] font-extrabold text-fg sm:text-[40px]"
               style={{ letterSpacing: '-0.035em' }}
             >
-              Venues
+              {copy.pageTitle}
             </h1>
             <span
               style={{
@@ -45,15 +46,15 @@ export default async function VenuesPage() {
                 textTransform: 'uppercase',
               }}
             >
-              0 in Denver
+              {copy.zeroCountLabel}
             </span>
           </div>
           <EmptyState
             state="no-data"
             density="dense"
-            eyebrow="No venues"
-            title="Nothing here yet"
-            body="Venues will appear here once they're added."
+            eyebrow={copy.emptyEyebrow}
+            title={copy.emptyTitle}
+            body={copy.emptyBody}
           />
         </>
       ) : (

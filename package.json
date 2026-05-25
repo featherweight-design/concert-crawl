@@ -13,10 +13,11 @@
     "db:migrate": "turbo run db:migrate --filter=@concert-crawl/db",
     "db:seed": "turbo run db:seed --filter=@concert-crawl/db",
     "db:sync-local": "docker exec -i concert-crawl-db psql -U postgres -d concert_crawl_db < scripts/staging-snapshot.sql && pnpm db:seed",
-    "release:draft": "node --experimental-strip-types scripts/draft-release.ts",
+    "release:draft": "tsx scripts/draft-release.ts",
     "prepare": "husky"
   },
   "devDependencies": {
+    "tsx": "^4.22.3",
     "turbo": "2.9.14",
     "prettier": "3.8.3",
     "@commitlint/cli": "21.0.1",

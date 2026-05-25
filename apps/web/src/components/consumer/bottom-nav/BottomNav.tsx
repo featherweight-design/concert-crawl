@@ -6,12 +6,13 @@ import { usePathname } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { fetchMe } from '@/lib/users'
 import type { AvatarColor } from '@concert-crawl/types'
+import { COPY } from './definitions/copy'
 
 const STATIC_TABS = [
   {
-    key: 'browse',
-    label: 'browse',
-    href: '/events',
+    key: COPY.nav.tabs[0].key,
+    label: COPY.nav.tabs[0].label,
+    href: COPY.nav.tabs[0].href,
     icon: (
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
         <line
@@ -45,9 +46,9 @@ const STATIC_TABS = [
     ),
   },
   {
-    key: 'venues',
-    label: 'venues',
-    href: '/venues',
+    key: COPY.nav.tabs[1].key,
+    label: COPY.nav.tabs[1].label,
+    href: COPY.nav.tabs[1].href,
     icon: (
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
         <path
@@ -61,9 +62,9 @@ const STATIC_TABS = [
     ),
   },
   {
-    key: 'watching',
-    label: 'watching',
-    href: '/watching',
+    key: COPY.nav.tabs[2].key,
+    label: COPY.nav.tabs[2].label,
+    href: COPY.nav.tabs[2].href,
     icon: (
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
         <path
@@ -193,7 +194,7 @@ export function BottomNav() {
         height: 'calc(52px + env(safe-area-inset-bottom, 0px))',
         paddingBottom: 'env(safe-area-inset-bottom, 2px)',
       }}
-      aria-label="Main navigation"
+      aria-label={COPY.nav.ariaLabel}
     >
       {STATIC_TABS.map((tab) => {
         const isActive = pathname.startsWith(tab.href)
@@ -219,7 +220,7 @@ export function BottomNav() {
       })}
       <Link
         href="/me"
-        aria-label="Profile"
+        aria-label={COPY.nav.profileAriaLabel}
         className="flex flex-col items-center gap-[3px]"
         style={{ color: isMeActive ? 'var(--signal)' : 'var(--fg-subtle)' }}
       >

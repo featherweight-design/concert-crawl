@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { COPY } from './definitions/copy'
 import { useAuth } from '@clerk/nextjs'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -38,9 +39,7 @@ export const EventReviewTable = ({ initialEvents }: Props) => {
       setEvents((prev) => prev.filter((ev) => ev.id !== id))
     } catch (err) {
       const message =
-        err instanceof ApiError
-          ? err.message
-          : 'Failed to approve event. Please try again.'
+        err instanceof ApiError ? err.message : COPY.errors.approveFailed
       console.error('approveEvent error:', err)
       setError(message)
     } finally {
@@ -49,7 +48,7 @@ export const EventReviewTable = ({ initialEvents }: Props) => {
   }
 
   const rejectEvent = async (id: string) => {
-    if (!confirm('Delete this event? This cannot be undone.')) return
+    if (!confirm(COPY.confirms.deleteEvent)) return
     setProcessing(id)
     setError(null)
     try {
@@ -59,9 +58,7 @@ export const EventReviewTable = ({ initialEvents }: Props) => {
       setEvents((prev) => prev.filter((ev) => ev.id !== id))
     } catch (err) {
       const message =
-        err instanceof ApiError
-          ? err.message
-          : 'Failed to delete event. Please try again.'
+        err instanceof ApiError ? err.message : COPY.errors.deleteFailed
       console.error('rejectEvent error:', err)
       setError(message)
     } finally {
@@ -70,11 +67,7 @@ export const EventReviewTable = ({ initialEvents }: Props) => {
   }
 
   if (events.length === 0) {
-    return (
-      <p className="text-sm text-fg-muted">
-        No events pending review. All extractions have been verified.
-      </p>
-    )
+    return <p className="text-sm text-fg-muted">{COPY.empty}</p>
   }
 
   return (
@@ -90,19 +83,19 @@ export const EventReviewTable = ({ initialEvents }: Props) => {
           <thead>
             <tr className="border-b border-border bg-surface-1">
               <th className="px-4 py-3 text-left font-medium text-fg-muted">
-                Event
+                {COPY.columns.event}
               </th>
               <th className="px-4 py-3 text-left font-medium text-fg-muted">
-                Date
+                {COPY.columns.date}
               </th>
               <th className="px-4 py-3 text-left font-medium text-fg-muted">
-                Flags
+                {COPY.columns.flags}
               </th>
               <th className="px-4 py-3 text-left font-medium text-fg-muted">
-                Source
+                {COPY.columns.source}
               </th>
               <th className="px-4 py-3 text-right font-medium text-fg-muted">
-                Actions
+                {COPY.columns.actions}
               </th>
             </tr>
           </thead>
@@ -151,7 +144,7 @@ export const EventReviewTable = ({ initialEvents }: Props) => {
                         rel="noopener noreferrer"
                         className="truncate text-xs text-fg-muted underline-offset-2 hover:text-fg hover:underline"
                       >
-                        View source
+                        {COPY.source.viewSource}
                       </a>
                     ) : (
                       <span className="text-xs text-fg-muted">—</span>
@@ -164,18 +157,20 @@ export const EventReviewTable = ({ initialEvents }: Props) => {
                         size="sm"
                         onClick={() => approveEvent(ev.id)}
                         disabled={isProcessing}
-                        aria-label={`Approve ${ev.title}`}
+                        aria-label={COPY.actions.approveAriaLabel(ev.title)}
                       >
-                        {isProcessing ? 'Saving…' : 'Approve'}
+                        {isProcessing
+                          ? COPY.actions.approvePending
+                          : COPY.actions.approve}
                       </Button>
                       <Button
                         variant="destructive"
                         size="sm"
                         onClick={() => rejectEvent(ev.id)}
                         disabled={isProcessing}
-                        aria-label={`Reject ${ev.title}`}
+                        aria-label={COPY.actions.rejectAriaLabel(ev.title)}
                       >
-                        Reject
+                        {COPY.actions.reject}
                       </Button>
                     </div>
                   </td>

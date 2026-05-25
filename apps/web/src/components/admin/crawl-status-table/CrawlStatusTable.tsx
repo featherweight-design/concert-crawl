@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge'
+import { COPY } from './definitions/copy'
 
 type LastRun = {
   id: string
@@ -48,11 +49,7 @@ type Props = {
 
 export const CrawlStatusTable = ({ venues }: Props) => {
   if (venues.length === 0) {
-    return (
-      <p className="text-sm text-fg-muted">
-        No venues found. Add venues in the Venues section.
-      </p>
-    )
+    return <p className="text-sm text-fg-muted">{COPY.empty}</p>
   }
 
   return (
@@ -60,12 +57,12 @@ export const CrawlStatusTable = ({ venues }: Props) => {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border text-left text-fg-muted">
-            <th className="pb-3 pr-4 font-medium">Venue</th>
-            <th className="pb-3 pr-4 font-medium">Last Crawl</th>
-            <th className="pb-3 pr-4 font-medium">Status</th>
-            <th className="pb-3 pr-4 font-medium">Events</th>
-            <th className="pb-3 pr-4 font-medium">Strategy</th>
-            <th className="pb-3 font-medium">Failures</th>
+            <th className="pb-3 pr-4 font-medium">{COPY.columns.venue}</th>
+            <th className="pb-3 pr-4 font-medium">{COPY.columns.lastCrawl}</th>
+            <th className="pb-3 pr-4 font-medium">{COPY.columns.status}</th>
+            <th className="pb-3 pr-4 font-medium">{COPY.columns.events}</th>
+            <th className="pb-3 pr-4 font-medium">{COPY.columns.strategy}</th>
+            <th className="pb-3 font-medium">{COPY.columns.failures}</th>
           </tr>
         </thead>
         <tbody>
@@ -77,10 +74,14 @@ export const CrawlStatusTable = ({ venues }: Props) => {
               <td className="py-3 pr-4 font-medium text-fg">
                 {venue.name}
                 {!venue.active && (
-                  <span className="ml-2 text-xs text-fg-muted">(paused)</span>
+                  <span className="ml-2 text-xs text-fg-muted">
+                    {COPY.statusLabels.paused}
+                  </span>
                 )}
                 {venue.blockedAt && (
-                  <span className="ml-2 text-xs text-red-500">(blocked)</span>
+                  <span className="ml-2 text-xs text-red-500">
+                    {COPY.statusLabels.blocked}
+                  </span>
                 )}
               </td>
               <td className="py-3 pr-4 text-fg-muted">
@@ -94,7 +95,9 @@ export const CrawlStatusTable = ({ venues }: Props) => {
                     {venue.lastRun.status}
                   </Badge>
                 ) : (
-                  <span className="text-fg-muted">never</span>
+                  <span className="text-fg-muted">
+                    {COPY.statusLabels.never}
+                  </span>
                 )}
               </td>
               <td className="py-3 pr-4 text-fg-muted">

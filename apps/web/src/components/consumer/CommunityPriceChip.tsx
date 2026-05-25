@@ -1,6 +1,7 @@
 'use client'
 
 import type { SubmissionWithMeta } from '@concert-crawl/types'
+import { copy } from './definitions/copy'
 
 interface CommunityPriceChipProps {
   topSubmission: SubmissionWithMeta
@@ -28,15 +29,15 @@ export function CommunityPriceChip({
       {/* Pills */}
       <div className="flex items-center gap-2">
         <span className="text-[10px] font-bold uppercase tracking-widest font-mono text-fg-muted border border-border-strong rounded-full px-2 py-0.5">
-          community
+          {copy.communityPriceChip.communityBadge}
         </span>
         {isCorroborated ? (
           <span className="text-[10px] font-bold uppercase tracking-widest font-mono text-success border border-success rounded-full px-2 py-0.5">
-            confirmed
+            {copy.communityPriceChip.confirmedBadge}
           </span>
         ) : (
           <span className="text-[10px] font-bold uppercase tracking-widest font-mono text-warning border border-warning rounded-full px-2 py-0.5">
-            pending
+            {copy.communityPriceChip.pendingBadge}
           </span>
         )}
       </div>
@@ -52,12 +53,15 @@ export function CommunityPriceChip({
 
       {/* Vendor line */}
       <p className="text-[11px] font-mono text-fg-muted">
-        seen on {topSubmission.vendor}
+        {copy.communityPriceChip.seenOnPrefix} {topSubmission.vendor}
       </p>
 
       {/* Attribution */}
       <p className="text-[11px] font-mono text-fg-subtle">
-        Submitted by {submissionCount} {submissionCount === 1 ? 'fan' : 'fans'}
+        {copy.communityPriceChip.submittedByPrefix} {submissionCount}{' '}
+        {submissionCount === 1
+          ? copy.communityPriceChip.fanSingular
+          : copy.communityPriceChip.fanPlural}
       </p>
 
       {/* Actions */}
@@ -67,14 +71,18 @@ export function CommunityPriceChip({
             onClick={onConfirm}
             className="text-sm text-signal font-medium"
           >
-            Saw the same
+            {copy.communityPriceChip.sawTheSame}
           </button>
         )}
         <button
           onClick={onOpenVerify}
           className="text-sm text-fg-muted underline"
         >
-          {submissionCount} {submissionCount === 1 ? 'report' : 'reports'} →
+          {submissionCount}{' '}
+          {submissionCount === 1
+            ? copy.communityPriceChip.reportSingular
+            : copy.communityPriceChip.reportPlural}{' '}
+          →
         </button>
       </div>
     </div>

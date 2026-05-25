@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { SubmitPriceModal } from '@/components/consumer/submit-price'
+import { copy } from './definitions/copy'
 
 interface SubmitPriceCardCtaProps {
   eventId: string
@@ -48,7 +49,7 @@ export function SubmitPriceCardCta({
               letterSpacing: '-0.005em',
             }}
           >
-            Saw a different price?
+            {copy.submitPriceCardCta.heading}
           </span>
           <span
             style={{
@@ -58,7 +59,7 @@ export function SubmitPriceCardCta({
               letterSpacing: '-0.005em',
             }}
           >
-            Two confirms move a community price out of pending.
+            {copy.submitPriceCardCta.subheading}
           </span>
         </div>
         <span
@@ -74,7 +75,7 @@ export function SubmitPriceCardCta({
             flexShrink: 0,
           }}
         >
-          Submit
+          {copy.submitPriceCardCta.ctaLabel}
           <svg width="9" height="9" viewBox="0 0 10 10" fill="none" aria-hidden>
             <path
               d="M3 2l4 3-4 3"

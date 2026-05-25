@@ -6,6 +6,7 @@ import type { WatchingShow } from '@concert-crawl/types'
 import { EventImage } from '../event-image'
 import { DeltaTag } from './DeltaTag'
 import { SourcePill } from './SourcePill'
+import { COPY } from './definitions/copy'
 
 type Density = 'compact' | 'cozy' | 'roomy'
 
@@ -210,11 +211,12 @@ export function WatchingItem({ show, density, onRemove }: WatchingItemProps) {
               letterSpacing: '0.02em',
             }}
           >
-            saved {formatRelTime(show.savedAt)}
+            {COPY.watchingItem.savedPrefix} {formatRelTime(show.savedAt)}
             {show.savedPrice !== null && (
               <>
                 {' '}
-                <span style={{ opacity: 0.4 }}>·</span> at $
+                <span style={{ opacity: 0.4 }}>·</span>{' '}
+                {COPY.watchingItem.savedPricePrefix}
                 {Math.round(show.savedPrice)}
               </>
             )}
@@ -249,7 +251,7 @@ export function WatchingItem({ show, density, onRemove }: WatchingItemProps) {
                 'color-mix(in oklch, var(--warning) 14%, transparent)',
             }}
           >
-            SOLD OUT
+            {COPY.watchingItem.soldOut}
           </span>
         ) : show.currentPrice === null ? (
           <span
@@ -260,7 +262,7 @@ export function WatchingItem({ show, density, onRemove }: WatchingItemProps) {
               letterSpacing: '0.04em',
             }}
           >
-            tba
+            {COPY.watchingItem.priceTba}
           </span>
         ) : (
           <>
@@ -280,7 +282,9 @@ export function WatchingItem({ show, density, onRemove }: WatchingItemProps) {
             </span>
             {stale && (
               <span
-                title={`Last checked ${formatRelTime(show.updatedAt)} — could be stale`}
+                title={COPY.watchingItem.staleTooltip(
+                  formatRelTime(show.updatedAt),
+                )}
                 style={{
                   fontFamily: 'var(--font-mono)',
                   fontSize: 9,
@@ -298,7 +302,8 @@ export function WatchingItem({ show, density, onRemove }: WatchingItemProps) {
                   whiteSpace: 'nowrap',
                 }}
               >
-                Stale · {formatRelTime(show.updatedAt)}
+                {COPY.watchingItem.stalePrefix}
+                {formatRelTime(show.updatedAt)}
               </span>
             )}
           </>
@@ -321,7 +326,7 @@ export function WatchingItem({ show, density, onRemove }: WatchingItemProps) {
       {/* Remove button — absolutely positioned top-right inside padR */}
       <button
         type="button"
-        aria-label={`Remove ${show.artist} from watching`}
+        aria-label={COPY.watchingItem.removeAriaLabel(show.artist)}
         onClick={(ev) => {
           ev.stopPropagation()
           onRemove(show.userEventId)

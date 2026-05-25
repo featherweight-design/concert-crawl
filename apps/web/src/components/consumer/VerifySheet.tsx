@@ -2,6 +2,7 @@
 
 import type { SubmissionWithMeta } from '@concert-crawl/types'
 import { SubmissionList } from './SubmissionList'
+import { copy } from './definitions/copy'
 
 interface VerifySheetProps {
   open: boolean
@@ -56,8 +57,7 @@ export function VerifySheet({
             {venueName} · {dateStr}
           </p>
           <p className="text-xs text-fg-muted mt-2">
-            Confirm what you saw, dispute what looks off. Two confirms move a
-            price out of <em>pending</em>.
+            {copy.verifySheet.instructions}
           </p>
         </div>
 
@@ -76,7 +76,7 @@ export function VerifySheet({
             onClick={onClose}
             className="w-full h-11 rounded-xl border border-border-strong text-sm text-fg"
           >
-            Close
+            {copy.verifySheet.closeButton}
           </button>
         </div>
       </div>

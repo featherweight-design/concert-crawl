@@ -5,6 +5,7 @@ import { useAuth } from '@clerk/nextjs'
 import { fetchMe } from '@/lib/users'
 import { ProfileEntryAvatar } from '@/components/settings/ProfileEntryAvatar'
 import type { UserProfileResponse } from '@concert-crawl/types'
+import { copy } from './definitions/copy'
 
 export function MobileProfileEntry() {
   const { getToken, isSignedIn } = useAuth()
@@ -29,10 +30,7 @@ export function MobileProfileEntry() {
         const data = await fetchMe(token)
         if (!cancelled) setProfile(data)
       } catch (err) {
-        console.warn(
-          'MobileProfileEntry: could not load profile, showing anonymous avatar',
-          err,
-        )
+        console.warn(copy.mobileProfileEntry.loadErrorLog, err)
       } finally {
         if (!cancelled) setProfileLoaded(true)
       }

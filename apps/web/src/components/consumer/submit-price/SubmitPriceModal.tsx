@@ -388,7 +388,8 @@ export function SubmitPriceModal({
                 lineHeight: 1.5,
               }}
             >
-              {copy.form.antiabuseNotice}
+              Prices are capped at <strong>$2,000</strong>. Submissions stay{' '}
+              <em>pending</em> until 2 fans confirm.
             </p>
           </div>
 

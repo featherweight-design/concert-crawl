@@ -2,6 +2,7 @@
 
 import { useTransition } from 'react'
 import { AdminButton } from '@/components/admin/primitives'
+import { COPY } from './definitions/copy'
 
 interface RunAllVenuesButtonProps {
   action: () => Promise<void>
@@ -21,7 +22,9 @@ export const RunAllVenuesButton = ({ action }: RunAllVenuesButtonProps) => {
         })
       }}
     >
-      {isPending ? 'Running…' : 'Run all venues'}
+      {isPending
+        ? COPY.runAllVenuesButton.pending
+        : COPY.runAllVenuesButton.idle}
     </AdminButton>
   )
 }

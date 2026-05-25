@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { EventWithVenue, Event } from '@concert-crawl/types'
 import { EventImage } from '../event-image'
 import { formatShowTime } from '../definitions/lib'
+import { copy } from './definitions/copy'
 
 interface SmallEventRowProps {
   event: EventWithVenue | Event
@@ -79,7 +80,7 @@ export function SmallEventRow({
               letterSpacing: '0.03em',
             }}
           >
-            tba
+            {copy.priceNotAnnounced}
           </span>
         )}
       </div>

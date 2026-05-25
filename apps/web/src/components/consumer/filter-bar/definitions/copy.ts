@@ -37,4 +37,9 @@ export const copy = {
   price25to50: '$25 - $50',
   price50Plus: '$50+',
   priceTbd: 'Price TBD',
+
+  // FilterSheet
+  filterSheet: {
+    closeAriaLabel: 'Close filter sheet',
+  },
 } as const

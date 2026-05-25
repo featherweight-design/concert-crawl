@@ -21,6 +21,7 @@ import {
   formatEventDate,
   formatShowTime,
 } from '@/components/consumer/definitions/lib'
+import { copy } from './definitions/copy'
 
 interface EventDetailPageProps {
   params: Promise<{ id: string }>
@@ -102,7 +103,7 @@ export default async function EventDetailPage({
         {/* Floating back button */}
         <Link
           href="/events"
-          aria-label="Back to browse"
+          aria-label={copy.backAriaLabel}
           className="absolute left-3.5 top-14 z-10 flex h-9 w-9 items-center justify-center rounded-full"
           style={{ background: 'var(--scrim)' }}
         >
@@ -163,18 +164,26 @@ export default async function EventDetailPage({
           <div className="mt-4 border-y border-border py-1">
             <InfoRow
               icon={<IconPin />}
-              label="Venue"
+              label={copy.venueLabel}
               value={event.venue.name}
               href={`/venues/${event.venue.slug}`}
               data-testid="event-venue-name"
             />
-            <InfoRow icon={<IconCalendar />} label="Date" value={dateLabel} />
+            <InfoRow
+              icon={<IconCalendar />}
+              label={copy.dateLabel}
+              value={dateLabel}
+            />
             <InfoRow
               icon={<IconClock />}
-              label="Doors / Show"
+              label={copy.doorsShowLabel}
               value={doorsShow}
             />
-            <InfoRow icon={<IconUsers />} label="Ages" value="All Ages" />
+            <InfoRow
+              icon={<IconUsers />}
+              label={copy.agesLabel}
+              value={copy.allAges}
+            />
           </div>
 
           {/* Price card — PriceBlockB. Renders community-handoff card when no price. */}
@@ -226,12 +235,10 @@ export default async function EventDetailPage({
                   letterSpacing: '0.06em',
                 }}
               >
-                {isCancelled ? 'Cancelled' : 'Postponed'}
+                {isCancelled ? copy.cancelledLabel : copy.postponedLabel}
               </p>
               <p className="mt-1 text-[13px] leading-[1.55] text-fg-muted">
-                {isCancelled
-                  ? 'This show has been cancelled.'
-                  : 'This show has been postponed. Check back for updates.'}
+                {isCancelled ? copy.cancelledBody : copy.postponedBody}
               </p>
             </div>
           )}
@@ -267,14 +274,14 @@ export default async function EventDetailPage({
                   whiteSpace: 'nowrap',
                 }}
               >
-                {event.ticketUrl ? 'Get Tickets' : 'Visit Venue Website'}
+                {event.ticketUrl ? copy.getTickets : copy.visitVenueWebsite}
                 <ExternalLinkIcon />
               </a>
             ) : (
               <button
                 type="button"
                 disabled
-                aria-label="No tickets available"
+                aria-label={copy.noTicketsAriaLabel}
                 style={{
                   all: 'unset',
                   boxSizing: 'border-box',
@@ -294,7 +301,7 @@ export default async function EventDetailPage({
                   letterSpacing: '-0.005em',
                 }}
               >
-                No tickets available
+                {copy.noTicketsAvailable}
               </button>
             )}
           </div>
@@ -310,7 +317,7 @@ export default async function EventDetailPage({
                   letterSpacing: '0.06em',
                 }}
               >
-                About
+                {copy.aboutLabel}
               </p>
               <p
                 className="text-[13px] leading-[1.55] text-fg-muted"
@@ -325,8 +332,8 @@ export default async function EventDetailPage({
           {related.length > 0 && (
             <div className="mt-6">
               <SectionHeader
-                title={`More at ${event.venue.name}`}
-                count={`${related.length} show${related.length !== 1 ? 's' : ''}`}
+                title={`${copy.moreAtVenuePrefix} ${event.venue.name}`}
+                count={`${related.length} ${related.length !== 1 ? copy.showPlural : copy.showSingular}`}
               />
               {related.map((rel, idx) => (
                 <Fragment key={rel.id}>

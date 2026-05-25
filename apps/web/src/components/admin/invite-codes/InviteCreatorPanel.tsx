@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { COPY } from './definitions/copy'
 import { mintInviteCodeWithOptions } from '@/app/(protected)/admin/invite-codes/actions'
 
 type ExpiresIn = '7d' | '30d' | 'never'
@@ -78,7 +79,7 @@ export function InviteCreatorPanel() {
           opacity: isPending ? 0.7 : 1,
         }}
       >
-        {isPending ? 'Minting…' : 'Mint code'}
+        {isPending ? COPY.mintButton.pending : COPY.mintButton.idle}
       </button>
       {result?.ok === true && result.code !== undefined && (
         <span
