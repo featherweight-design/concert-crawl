@@ -13,6 +13,7 @@
     "db:migrate": "turbo run db:migrate --filter=@concert-crawl/db",
     "db:seed": "turbo run db:seed --filter=@concert-crawl/db",
     "db:sync-local": "docker exec -i concert-crawl-db psql -U postgres -d concert_crawl_db < scripts/staging-snapshot.sql && pnpm db:seed",
+    "release:draft": "node --experimental-strip-types scripts/draft-release.ts",
     "prepare": "husky"
   },
   "devDependencies": {
