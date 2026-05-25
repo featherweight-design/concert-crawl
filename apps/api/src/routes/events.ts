@@ -300,10 +300,11 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       if (latestSub.userId && clerkClient) {
         try {
           const clerkUser = await clerkClient.users.getUser(latestSub.userId)
-          priceSubmitterHandle =
+          const rawHandle =
             clerkUser.username ??
             clerkUser.firstName ??
             latestSub.userId.slice(0, 10)
+          priceSubmitterHandle = rawHandle.toLowerCase()
         } catch {
           priceSubmitterHandle = latestSub.userId.slice(0, 10)
         }
