@@ -29,7 +29,7 @@ describe('UserMenuVersionFooter', () => {
   it("shows What's new when unread", () => {
     // no lastSeen in localStorage → unread
     render(<UserMenuVersionFooter build="v0.5.0-beta" />)
-    expect(screen.getByText("What's new")).toBeTruthy()
+    expect(screen.getByText('What’s new')).toBeTruthy()
   })
 
   it('navigates to /changelog when clicked', () => {

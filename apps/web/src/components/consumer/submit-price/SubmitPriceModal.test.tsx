@@ -142,7 +142,7 @@ describe('SubmitPriceModal — error state (#398)', () => {
 
     fireEvent.click(screen.getByText('Submit price'))
     await waitFor(() =>
-      expect(screen.getByText("Didn't go through.")).toBeTruthy(),
+      expect(screen.getByText('Didn’t go through.')).toBeTruthy(),
     )
     expect(screen.getByText('Try again')).toBeTruthy()
     expect(screen.getByText('Close')).toBeTruthy()
@@ -174,7 +174,7 @@ describe('SubmitPriceModal — error state (#398)', () => {
     await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy())
     fireEvent.click(screen.getByText('Submit price'))
     await waitFor(() =>
-      expect(screen.getByText("Didn't go through.")).toBeTruthy(),
+      expect(screen.getByText('Didn’t go through.')).toBeTruthy(),
     )
     fireEvent.click(screen.getByText('Try again'))
     await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy())
@@ -328,7 +328,7 @@ describe('SubmitPriceModal — alreadySubmitted state', () => {
 
     fireEvent.click(screen.getByText('Withdraw'))
     await waitFor(() =>
-      expect(screen.getByText("Didn't go through.")).toBeTruthy(),
+      expect(screen.getByText('Didn’t go through.')).toBeTruthy(),
     )
     expect(screen.getByText('Try again')).toBeTruthy()
     // Should show a non-network-specific error for a 403

@@ -40,7 +40,7 @@ describe('FeedbackModal', () => {
   it('renders the dialog with form content when open', () => {
     render(<FeedbackModal open={true} onClose={vi.fn()} />)
     expect(screen.getByRole('dialog')).toBeTruthy()
-    expect(screen.getByText('Holler at us.')).toBeTruthy()
+    expect(screen.getByText('Holler at ya boi.')).toBeTruthy()
   })
 
   it('renders nothing when closed', () => {
