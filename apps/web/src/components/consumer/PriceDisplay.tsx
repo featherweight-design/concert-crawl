@@ -62,6 +62,8 @@ interface PriceDisplayProps {
   priceStatus?: 'live' | 'soldout' | null
   ticketPriceOpenedAt?: number | null
   ticketFees?: number | null
+  priceVendor?: string | null
+  priceSubmitterHandle?: string | null
 }
 
 // ── Color constants ───────────────────────────────────────────────
@@ -74,9 +76,12 @@ const COMMUNITY = 'var(--trust-community)'
 
 function resolveSourceKind(
   source: PriceSource | null,
+  vendor?: string | null,
 ): 'primary' | 'resale' | 'community' | 'boxoffice' {
+  if (source === 'community') {
+    return vendor === 'VenueBoxOffice' ? 'boxoffice' : 'community'
+  }
   if (source === 'seatgeek') return 'resale'
-  if (source === 'community') return 'community'
   return 'primary'
 }
 
@@ -997,12 +1002,14 @@ export function PriceDisplay({
   priceStatus,
   ticketPriceOpenedAt,
   ticketFees,
+  priceVendor,
+  priceSubmitterHandle,
 }: PriceDisplayProps) {
   const parsedMin = priceMin ? parseFloat(priceMin) : null
   const parsedMax = priceMax ? parseFloat(priceMax) : null
   const face = parsedMin !== null && !isNaN(parsedMin) ? parsedMin : null
   const faceMax = parsedMax !== null && !isNaN(parsedMax) ? parsedMax : null
-  const sourceKind = resolveSourceKind(priceSource)
+  const sourceKind = resolveSourceKind(priceSource, priceVendor)
   const sourceName = resolveSourceName(priceSource, venueName)
   const sourceUrl = ticketUrl
 
@@ -1032,7 +1039,9 @@ export function PriceDisplay({
     openedAt: ticketPriceOpenedAt ?? null,
     range14d: range14d ?? null,
     status: priceStatus ?? 'live',
-    submitter: null,
+    submitter: priceSubmitterHandle
+      ? { handle: priceSubmitterHandle, url: '' }
+      : null,
     verification: null,
     alternates: [],
     // Box-office / community fields — null until API wires them
@@ -1267,20 +1276,33 @@ export function PriceDisplay({
               </div>
             )}
           {priceObj.submitter ? (
-            <a
-              href={priceObj.submitter.url}
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 9,
-                color: 'var(--fg-subtle)',
-                letterSpacing: '0.04em',
-                textDecoration: 'underline',
-                textDecorationColor: 'var(--border-strong)',
-                textUnderlineOffset: 2,
-              }}
-            >
-              @{priceObj.submitter.handle}
-            </a>
+            priceObj.submitter.url ? (
+              <a
+                href={priceObj.submitter.url}
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 9,
+                  color: 'var(--fg-subtle)',
+                  letterSpacing: '0.04em',
+                  textDecoration: 'underline',
+                  textDecorationColor: 'var(--border-strong)',
+                  textUnderlineOffset: 2,
+                }}
+              >
+                @{priceObj.submitter.handle}
+              </a>
+            ) : (
+              <span
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 9,
+                  color: 'var(--fg-subtle)',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                @{priceObj.submitter.handle}
+              </span>
+            )
           ) : (
             <span
               style={{

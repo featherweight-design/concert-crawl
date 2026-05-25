@@ -1,13 +1,21 @@
 import { Hono } from 'hono'
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
+import { createClerkClient } from '@clerk/backend'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { db, events, venues, userEvents } from '@concert-crawl/db'
+import {
+  db,
+  events,
+  venues,
+  userEvents,
+  priceSubmissions,
+} from '@concert-crawl/db'
 import {
   type SQL,
   and,
   asc,
   count,
+  desc,
   eq,
   gte,
   ilike,
@@ -21,6 +29,9 @@ import {
 import { todayInTimezone } from '../lib/time.js'
 import { apiLogger } from '../lib/logger.js'
 import { serviceOrClerkAuth } from '../middleware/auth.js'
+
+const secretKey = process.env['CLERK_SECRET_KEY']
+const clerkClient = secretKey ? createClerkClient({ secretKey }) : null
 
 const uuidSchema = z.string().uuid()
 
@@ -262,9 +273,54 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   // can consume it without a breaking change once real data arrives.
   const priceStatus: 'live' | 'soldout' | null = null
 
+  // For community-priced events, surface the vendor and submitter handle so the
+  // price card can show the correct trust tier (box office vs. community) and
+  // attribution line.
+  let priceVendor: string | null = null
+  let priceSubmitterHandle: string | null = null
+
+  if (row.priceSource === 'community') {
+    const [latestSub] = await db
+      .select({
+        vendor: priceSubmissions.vendor,
+        userId: priceSubmissions.userId,
+      })
+      .from(priceSubmissions)
+      .where(
+        and(
+          eq(priceSubmissions.eventId, id),
+          eq(priceSubmissions.status, 'corroborated'),
+        ),
+      )
+      .orderBy(desc(priceSubmissions.createdAt))
+      .limit(1)
+
+    if (latestSub) {
+      priceVendor = latestSub.vendor
+      if (latestSub.userId && clerkClient) {
+        try {
+          const clerkUser = await clerkClient.users.getUser(latestSub.userId)
+          priceSubmitterHandle =
+            clerkUser.username ??
+            clerkUser.firstName ??
+            latestSub.userId.slice(0, 10)
+        } catch {
+          priceSubmitterHandle = latestSub.userId.slice(0, 10)
+        }
+      }
+    }
+  }
+
   return ctx.json({
     success: true,
-    data: { ...row, watching: watchingCount, isWatching, priceStatus },
+    data: {
+      ...row,
+      watching: watchingCount,
+      isWatching,
+      priceStatus,
+      priceVendor,
+      priceSubmitterHandle,
+    },
   })
 })
 
