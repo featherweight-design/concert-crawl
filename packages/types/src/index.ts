@@ -286,6 +286,9 @@ export interface EventDetailResponse extends EventWithVenue {
   priceVendor?: string | null
   priceSubmitterHandle?: string | null
   priceObservedAt?: string | null
+  // Approval metadata — who corroborated and when
+  priceApprovalKind?: 'admin' | 'fan' | null
+  priceApprovedAt?: string | null
 }
 
 // Public events list query params

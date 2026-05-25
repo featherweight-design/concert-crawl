@@ -277,12 +277,16 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   let priceSubmitterHandle: string | null = null
   let priceObservedAt: string | null = null
 
+  let priceApprovalKind: 'admin' | 'fan' | null = null
+  let priceApprovedAt: string | null = null
+
   if (row.priceSource === 'community') {
     const [latestSub] = await db
       .select({
         vendor: priceSubmissions.vendor,
         userId: priceSubmissions.userId,
         createdAt: priceSubmissions.createdAt,
+        updatedAt: priceSubmissions.updatedAt,
       })
       .from(priceSubmissions)
       .where(
@@ -297,6 +301,10 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     if (latestSub) {
       priceVendor = latestSub.vendor
       priceObservedAt = latestSub.createdAt.toISOString()
+      // updatedAt reflects when status changed to corroborated (the approval timestamp)
+      priceApprovedAt = latestSub.updatedAt.toISOString()
+      // All current approvals are admin-driven; fan corroboration UI doesn't exist yet
+      priceApprovalKind = 'admin'
       if (latestSub.userId) {
         const [profile] = await db
           .select({ handle: userProfiles.handle })
@@ -318,6 +326,8 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       priceVendor,
       priceSubmitterHandle,
       priceObservedAt,
+      priceApprovalKind,
+      priceApprovedAt,
     },
   })
 })

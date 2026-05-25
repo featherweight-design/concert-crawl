@@ -65,6 +65,8 @@ interface PriceDisplayProps {
   priceVendor?: string | null
   priceSubmitterHandle?: string | null
   priceObservedAt?: string | null
+  priceApprovalKind?: 'admin' | 'fan' | null
+  priceApprovedAt?: string | null
 }
 
 // ── Color constants ───────────────────────────────────────────────
@@ -418,7 +420,7 @@ function VerifiedStamp({
   } else if (by.label) {
     head = (
       <>
-        {headWord} · {by.label}
+        {headWord} by {by.label}
       </>
     )
   } else {
@@ -1009,6 +1011,8 @@ export function PriceDisplay({
   priceVendor,
   priceSubmitterHandle,
   priceObservedAt,
+  priceApprovalKind,
+  priceApprovedAt,
 }: PriceDisplayProps) {
   const parsedMin = priceMin ? parseFloat(priceMin) : null
   const parsedMax = priceMax ? parseFloat(priceMax) : null
@@ -1048,7 +1052,13 @@ export function PriceDisplay({
     submitter: priceSubmitterHandle
       ? { handle: priceSubmitterHandle, url: '' }
       : null,
-    verification: null,
+    verification:
+      priceApprovalKind === 'admin' && priceApprovedAt
+        ? {
+            at: priceApprovedAt,
+            by: { kind: 'admin' as const, label: 'the team' },
+          }
+        : null,
     alternates: [],
     // Box-office / community fields — null until API wires them
     venueName: venueName,
@@ -1205,126 +1215,6 @@ export function PriceDisplay({
         )}
       </div>
 
-      {/* Source attribution — community shows submitter handle or "anonymous fan" */}
-      {!soldOut && isCommunity && (
-        <div style={{ marginTop: 6 }}>
-          {/* Community box-office context — shown when fan saw (not bought) the price
-              at the venue in person or by phone. Renders above the @handle line. */}
-          {priceObj.boxOfficeAction === 'saw' &&
-            priceObj.venueName &&
-            priceObj.boxOfficeMethod && (
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 5,
-                  marginBottom: 4,
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 9,
-                  color: 'var(--fg-muted)',
-                  letterSpacing: '0.04em',
-                }}
-              >
-                {/* Phone or location icon matches the source of the observation */}
-                {priceObj.boxOfficeMethod === 'phone' ? (
-                  <svg
-                    width="9"
-                    height="9"
-                    viewBox="0 0 10 10"
-                    fill="none"
-                    aria-hidden
-                  >
-                    <path
-                      d="M2 2.5C2 2 2.4 1.5 3 1.5h1.2c.4 0 .8.3.9.7l.3 1.2c.1.4-.1.8-.4 1L4.5 4.8c.6 1.1 1.6 2.1 2.7 2.7l.4-.5c.2-.3.6-.5 1-.4l1.2.3c.4.1.7.5.7.9V9c0 .6-.5 1-1 1-3.9 0-7-3.1-7-7v-.5z"
-                      stroke="currentColor"
-                      strokeWidth="0.9"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                ) : (
-                  <svg
-                    width="9"
-                    height="9"
-                    viewBox="0 0 10 10"
-                    fill="none"
-                    aria-hidden
-                  >
-                    <circle
-                      cx="5"
-                      cy="5"
-                      r="1.8"
-                      stroke="currentColor"
-                      strokeWidth="0.9"
-                    />
-                    <circle
-                      cx="5"
-                      cy="5"
-                      r="3.5"
-                      stroke="currentColor"
-                      strokeWidth="0.9"
-                      opacity="0.5"
-                    />
-                  </svg>
-                )}
-                {/* Verb is bold fg — it's the trust signal, same pattern as BoxOfficeAttribution */}
-                <span style={{ color: 'var(--fg)', fontWeight: 700 }}>
-                  {priceObj.boxOfficeMethod === 'phone' ? 'Called' : 'Saw'}
-                </span>
-                {priceObj.boxOfficeMethod === 'phone'
-                  ? `the ${priceObj.venueName} box office`
-                  : `at ${priceObj.venueName} box office`}
-                <span style={{ opacity: 0.5 }}>·</span>
-                <span style={{ opacity: 0.85 }}>
-                  {priceObj.boxOfficeMethod === 'phone'
-                    ? 'by phone'
-                    : 'in person'}
-                </span>
-              </div>
-            )}
-          {priceObj.submitter ? (
-            priceObj.submitter.url ? (
-              <a
-                href={priceObj.submitter.url}
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 9,
-                  color: 'var(--fg-subtle)',
-                  letterSpacing: '0.04em',
-                  textDecoration: 'underline',
-                  textDecorationColor: 'var(--border-strong)',
-                  textUnderlineOffset: 2,
-                }}
-              >
-                @{priceObj.submitter.handle}
-              </a>
-            ) : (
-              <span
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 9,
-                  color: 'var(--fg-subtle)',
-                  letterSpacing: '0.04em',
-                }}
-              >
-                @{priceObj.submitter.handle}
-              </span>
-            )
-          ) : (
-            <span
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 9,
-                color: 'var(--fg-subtle)',
-                letterSpacing: '0.04em',
-                fontStyle: 'italic',
-              }}
-            >
-              an anonymous fan
-            </span>
-          )}
-        </div>
-      )}
-
       {/* Box-office attribution line */}
       {!soldOut && isBoxOffice && <BoxOfficeAttribution price={priceObj} />}
 
@@ -1373,19 +1263,15 @@ export function PriceDisplay({
         </div>
       )}
 
-      {/* Footer — source link + stale stamp */}
+      {/* Footer — stale stamp · submitter · source + verification line */}
       <div
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 10,
           marginTop: 10,
           paddingTop: 9,
           borderTop: '1px solid var(--border)',
-          flexWrap: 'wrap',
         }}
       >
+        {/* Row 1: stale stamp, submitter handle (community/boxoffice), source name (primary/resale) */}
         <div
           style={{
             display: 'flex',
@@ -1395,7 +1281,28 @@ export function PriceDisplay({
           }}
         >
           <StaleStamp observedAt={effectiveObservedAt} />
-          {sourceName && !isCommunity && (
+          {/* Submitter handle — community and boxoffice tiers */}
+          {(isCommunity || isBoxOffice) && priceObj.submitter && (
+            <>
+              {effectiveObservedAt && (
+                <span style={{ color: 'var(--fg-subtle)', opacity: 0.4 }}>
+                  ·
+                </span>
+              )}
+              <span
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 9,
+                  color: 'var(--fg-subtle)',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                @{priceObj.submitter.handle}
+              </span>
+            </>
+          )}
+          {/* Source name — primary and resale tiers */}
+          {sourceName && !isCommunity && !isBoxOffice && (
             <>
               {effectiveObservedAt && (
                 <span style={{ color: 'var(--fg-subtle)', opacity: 0.4 }}>
@@ -1435,22 +1342,59 @@ export function PriceDisplay({
               )}
             </>
           )}
-          {priceObj.verification && (
+          {/* Source name for resale community tier (e.g. SeatGeek) */}
+          {sourceName && isCommunity && (
             <>
               <span style={{ color: 'var(--fg-subtle)', opacity: 0.4 }}>·</span>
-              <VerifiedStamp
-                verification={priceObj.verification}
-                subject={
-                  isBoxOffice &&
-                  priceObj.alternates &&
-                  priceObj.alternates.length > 0
-                    ? 'Box-office price'
-                    : null
-                }
-              />
+              {sourceUrl ? (
+                <a
+                  href={sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 3,
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 9,
+                    color: 'var(--fg-subtle)',
+                    textDecoration: 'none',
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  {sourceName}
+                  <ExternalIcon />
+                </a>
+              ) : (
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 9,
+                    color: 'var(--fg-subtle)',
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  {sourceName}
+                </span>
+              )}
             </>
           )}
         </div>
+        {/* Row 2: verification — "Verified by the team" (admin) or "Verified by @handle" (fan) */}
+        {priceObj.verification && (
+          <div style={{ marginTop: 5 }}>
+            <VerifiedStamp
+              verification={priceObj.verification}
+              subject={
+                isBoxOffice &&
+                priceObj.alternates &&
+                priceObj.alternates.length > 0
+                  ? 'Box-office price'
+                  : null
+              }
+            />
+          </div>
+        )}
       </div>
     </div>
   )
