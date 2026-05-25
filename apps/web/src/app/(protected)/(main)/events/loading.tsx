@@ -26,23 +26,14 @@ function EventCardSkeleton({ delay }: { delay: number }) {
           minWidth: 0,
           display: 'flex',
           flexDirection: 'column',
-          gap: 5,
+          gap: 4,
         }}
       >
         {/* Artist name */}
         <div
           style={{
             height: 14,
-            width: '58%',
-            borderRadius: 4,
-            background: 'var(--surface-2)',
-          }}
-        />
-        {/* Subtitle */}
-        <div
-          style={{
-            height: 11,
-            width: '42%',
+            width: '52%',
             borderRadius: 4,
             background: 'var(--surface-2)',
           }}
@@ -51,20 +42,46 @@ function EventCardSkeleton({ delay }: { delay: number }) {
         <div
           style={{
             height: 10,
-            width: '35%',
+            width: '38%',
             borderRadius: 3,
             background: 'var(--surface-2)',
           }}
         />
+        {/* Genre chips row */}
+        <div style={{ display: 'flex', gap: 4, marginTop: 2 }}>
+          {[52, 44, 36].map((width, chipIdx) => (
+            <div
+              key={chipIdx}
+              style={{
+                height: 18,
+                width,
+                borderRadius: 20,
+                background: 'var(--surface-2)',
+                opacity: 0.7,
+              }}
+            />
+          ))}
+        </div>
       </div>
-      {/* Watch button placeholder */}
+      {/* Watch button placeholder — pill-shaped to match actual button */}
       <div
         style={{
-          width: 32,
-          height: 32,
-          borderRadius: 8,
+          width: 28,
+          height: 28,
+          borderRadius: 7,
           background: 'var(--surface-2)',
           flexShrink: 0,
+        }}
+      />
+      {/* Price placeholder */}
+      <div
+        style={{
+          width: 28,
+          height: 14,
+          borderRadius: 3,
+          background: 'var(--surface-2)',
+          flexShrink: 0,
+          alignSelf: 'center',
         }}
       />
     </div>
@@ -104,7 +121,7 @@ export default function EventsLoading() {
         </div>
         {/* Event card skeletons */}
         <div className="flex flex-col">
-          {Array.from({ length: 6 }).map((_, idx) => (
+          {Array.from({ length: 8 }).map((_, idx) => (
             <EventCardSkeleton key={idx} delay={idx * 0.07} />
           ))}
         </div>

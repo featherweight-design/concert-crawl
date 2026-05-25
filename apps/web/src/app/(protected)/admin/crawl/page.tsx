@@ -99,6 +99,8 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
   const rawVenueId = resolvedParams.venueId
   const initialVenueId =
     (Array.isArray(rawVenueId) ? rawVenueId[0] : rawVenueId) || undefined
+  const rawTab = resolvedParams.tab
+  const initialTab = (Array.isArray(rawTab) ? rawTab[0] : rawTab) || undefined
 
   const [rawStatus, runs] = await Promise.all([
     apiClient.get<RawVenueStatus[]>('/v1/admin/crawl/status', token),
@@ -216,6 +218,7 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
         {...(initialVenueId !== undefined && {
           initialSelectedId: initialVenueId,
         })}
+        {...(initialTab === 'history' && { initialTab: 'history' })}
       />
     </div>
   )

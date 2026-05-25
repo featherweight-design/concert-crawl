@@ -7,7 +7,9 @@ const DISMISSED_KEY = 'cc.dismissedSpotlights'
 
 export function useReleaseReadState(latestVersion: string) {
   const [unread, setUnread] = useState(false)
-  const [pillDismissed, setPillDismissed] = useState(false)
+  // Initialize to true (hidden) — the effect sets it to false if not dismissed.
+  // Prevents the pill from flashing visible on pages where it was already dismissed.
+  const [pillDismissed, setPillDismissed] = useState(true)
 
   useEffect(() => {
     const lastSeen = localStorage.getItem(LAST_SEEN_KEY)
@@ -16,14 +18,15 @@ export function useReleaseReadState(latestVersion: string) {
     try {
       const raw = localStorage.getItem(DISMISSED_KEY)
       const dismissed = JSON.parse(raw ?? '[]') as unknown[]
-      setPillDismissed(
-        Array.isArray(dismissed) && dismissed.includes(latestVersion),
-      )
+      const isDismissed =
+        Array.isArray(dismissed) && dismissed.includes(latestVersion)
+      setPillDismissed(isDismissed)
     } catch (err) {
       console.warn(
         'useReleaseReadState: failed to parse dismissed spotlights',
         err,
       )
+      setPillDismissed(false)
     }
   }, [latestVersion])
 

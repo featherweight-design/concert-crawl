@@ -5,16 +5,19 @@ import { PlanCard } from './PlanCard'
 import { ThemePickerInline } from './ThemePickerInline'
 import { MySubmissionsList } from './MySubmissionsList'
 import { DangerZone } from './DangerZone'
-import { WatchingTeaser } from './WatchingTeaser'
+import { UserMenuVersionFooter } from '@/components/consumer/release-notes/UserMenuVersionFooter'
 import { SETTINGS_COPY } from './definitions/copy'
 import type {
   UserProfileResponse,
   UserSubmissionItem,
 } from '@concert-crawl/types'
 
+const APP_VERSION = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev'
+
 interface SettingsRouteProps {
   profile: UserProfileResponse
   submissions: UserSubmissionItem[]
+  isAdmin?: boolean
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -28,7 +31,11 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function SettingsRoute({ profile, submissions }: SettingsRouteProps) {
+export function SettingsRoute({
+  profile,
+  submissions,
+  isAdmin = false,
+}: SettingsRouteProps) {
   const confirmedCount = submissions.filter(
     (sub) => sub.status === 'confirmed',
   ).length
@@ -116,11 +123,45 @@ export function SettingsRoute({ profile, submissions }: SettingsRouteProps) {
           <AccountManagementRow email={profile.email} />
         </div>
 
-        {/* Lists */}
-        <div className="px-4">
-          <SectionLabel>{SETTINGS_COPY.listsSection}</SectionLabel>
-          <WatchingTeaser />
-        </div>
+        {/* Admin link — only for admins */}
+        {isAdmin && (
+          <>
+            <div className="mx-4 h-px bg-border" />
+            <div className="px-4">
+              <SectionLabel>Operations</SectionLabel>
+              <Link
+                href="/admin"
+                className="flex items-center gap-3 rounded-[10px] border border-border bg-surface-1 px-4 py-3 transition-colors"
+              >
+                <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[6px] bg-surface-2 text-signal">
+                  <svg
+                    width="11"
+                    height="11"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    aria-hidden
+                  >
+                    <path
+                      d="M8 1.5l5.5 2v4.2c0 3.4-2.4 6.4-5.5 7.3-3.1-0.9-5.5-3.9-5.5-7.3V3.5L8 1.5z"
+                      stroke="currentColor"
+                      strokeWidth="1.4"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+                <span
+                  className="text-[13.5px] font-semibold text-fg"
+                  style={{
+                    fontFamily: 'var(--font-ui)',
+                    letterSpacing: '-0.005em',
+                  }}
+                >
+                  Admin
+                </span>
+              </Link>
+            </div>
+          </>
+        )}
 
         <div className="mx-4 h-px bg-border" />
 
@@ -133,13 +174,10 @@ export function SettingsRoute({ profile, submissions }: SettingsRouteProps) {
           />
         </div>
 
-        {/* Version footer */}
-        <div
-          className="pb-4 pt-2 text-center text-[9px] font-semibold uppercase tracking-[0.10em] text-fg-subtle"
-          style={{ fontFamily: 'var(--font-mono)' }}
-        >
-          concertcrawl · beta · Denver
-        </div>
+        {/* Changelog / version footer */}
+        <UserMenuVersionFooter
+          build={APP_VERSION.split(' · ')[0] ?? APP_VERSION}
+        />
       </div>
     </>
   )

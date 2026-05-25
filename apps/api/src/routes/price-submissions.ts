@@ -90,11 +90,27 @@ priceSubmissionsRouter.get('/:id/price-submissions', clerkAuth, async (ctx) => {
         ) ?? null)
       : null
 
+  // Block resubmission if the user has any non-stale submission within the last 24h,
+  // including approved (corroborated) ones. This prevents the submit form from
+  // reappearing after an admin approves the user's price.
+  const rateLimitCutoff = new Date(
+    Date.now() - SP_POLICY.rateLimitHours * 60 * 60 * 1000,
+  )
+  const recentSubmission =
+    userId != null
+      ? (submissions.find(
+          (sub) =>
+            sub.userId === userId &&
+            (sub.status === 'pending' || sub.status === 'corroborated') &&
+            new Date(sub.createdAt) > rateLimitCutoff,
+        ) ?? null)
+      : null
+
   return ctx.json({
     success: true,
     data: {
       submissions,
-      alreadySubmitted: userSubmission != null,
+      alreadySubmitted: recentSubmission != null,
       userSubmission,
     },
   })

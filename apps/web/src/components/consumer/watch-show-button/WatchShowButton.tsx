@@ -95,21 +95,32 @@ export function WatchShowButton({
             style={{ animation: 'fbSpin 0.7s linear infinite' }}
           />
         ) : isWatching ? (
-          <svg
-            width="10"
-            height="10"
-            viewBox="0 0 12 12"
-            fill="none"
-            aria-hidden
-          >
-            <path
-              d="M2.5 6.5l2.5 2.5L9.5 4"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          <>
+            {/* On mobile: pink eye icon instead of checkmark */}
+            <Eye
+              size={12}
+              aria-hidden
+              className="block sm:hidden"
+              style={{ flexShrink: 0 }}
             />
-          </svg>
+            {/* On desktop: checkmark */}
+            <svg
+              width="10"
+              height="10"
+              viewBox="0 0 12 12"
+              fill="none"
+              aria-hidden
+              className="hidden sm:block"
+            >
+              <path
+                d="M2.5 6.5l2.5 2.5L9.5 4"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </>
         ) : (
           <>
             {/* Eye icon — shown only on mobile (sm and below) */}
@@ -137,8 +148,8 @@ export function WatchShowButton({
             </svg>
           </>
         )}
-        {/* Label — hidden on mobile when not watching (eye icon replaces it) */}
-        <span className={isWatching ? undefined : 'hidden sm:inline'}>
+        {/* Label — hidden on mobile in both states (icon replaces it) */}
+        <span className="hidden sm:inline">
           {isWatching ? 'Watching' : 'Watch this show'}
         </span>
       </button>

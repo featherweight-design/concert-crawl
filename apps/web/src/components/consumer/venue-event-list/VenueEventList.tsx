@@ -1,17 +1,22 @@
 'use client'
 
 import { Fragment, useEffect, useRef } from 'react'
-import type { Event } from '@concert-crawl/types'
-import { SmallEventRow } from '../small-event-row'
-import { formatShortDate } from '../definitions/lib'
+import type { EventWithVenue } from '@concert-crawl/types'
+import { EventCard } from '../event-card/EventCard'
 
 interface VenueEventListProps {
-  events: Event[]
+  events: EventWithVenue[]
   highlightId?: string
+  watchedIds?: string[]
 }
 
-export function VenueEventList({ events, highlightId }: VenueEventListProps) {
+export function VenueEventList({
+  events,
+  highlightId,
+  watchedIds = [],
+}: VenueEventListProps) {
   const highlightRef = useRef<HTMLDivElement>(null)
+  const watchedSet = new Set(watchedIds)
 
   useEffect(() => {
     if (!highlightId || !highlightRef.current) return
@@ -34,17 +39,13 @@ export function VenueEventList({ events, highlightId }: VenueEventListProps) {
 
   return (
     <div>
-      {events.map((event: Event, idx: number) => (
+      {events.map((event: EventWithVenue, idx: number) => (
         <Fragment key={event.id}>
           {idx > 0 && (
-            <div className="h-px bg-border" style={{ marginLeft: 50 }} />
+            <div className="h-px bg-border" style={{ marginLeft: 60 }} />
           )}
           <div ref={event.id === highlightId ? highlightRef : undefined}>
-            <SmallEventRow
-              event={event}
-              date={formatShortDate(event.date)}
-              showVenue={false}
-            />
+            <EventCard event={event} isWatching={watchedSet.has(event.id)} />
           </div>
         </Fragment>
       ))}

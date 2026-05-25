@@ -7,9 +7,11 @@ import { ThemeSync } from '@/components/settings/ThemeSync'
 export const metadata = { title: 'Settings — Concert Crawl' }
 
 export default async function MePage() {
-  const { getToken } = await auth()
+  const { getToken, sessionClaims } = await auth()
   const token = await getToken()
   if (!token) return null
+
+  const isAdmin = sessionClaims?.metadata?.role === 'admin'
 
   const [profile, submissions] = await Promise.all([
     fetchMe(token),
@@ -21,7 +23,11 @@ export default async function MePage() {
       <ThemeSync serverTheme={profile.theme} />
       {/* Mobile (< sm) */}
       <div className="sm:hidden">
-        <SettingsRoute profile={profile} submissions={submissions} />
+        <SettingsRoute
+          profile={profile}
+          submissions={submissions}
+          isAdmin={isAdmin}
+        />
       </div>
       {/* Desktop (sm+) */}
       <div className="hidden sm:block">

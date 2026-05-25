@@ -723,7 +723,7 @@ export function VenueDetailsClient({ venue }: Props) {
               </AdminButton>
             </Link>
             <Link
-              href={`/admin/crawl?venueId=${venue.id}`}
+              href={`/admin/crawl?venueId=${venue.id}&tab=history`}
               style={{ textDecoration: 'none' }}
             >
               <AdminButton variant="outline" size="sm" icon={ExternalLink}>

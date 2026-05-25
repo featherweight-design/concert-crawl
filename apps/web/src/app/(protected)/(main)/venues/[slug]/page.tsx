@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation'
 import { auth } from '@clerk/nextjs/server'
-import type { VenueWithEvents } from '@concert-crawl/types'
+import type { VenueWithEvents, EventWithVenue } from '@concert-crawl/types'
 import { publicApiClient, apiClient } from '@/lib/api'
+import { fetchWatching } from '@/lib/watching'
 import { SectionHeader } from '@/components/consumer/section-header'
 import { MapPlaceholder } from '@/components/consumer/map-placeholder'
 import { EmptyState } from '@/components/consumer/empty-state'
@@ -39,10 +40,28 @@ export default async function VenueProfilePage({
   const { highlight } = await searchParams
   const { getToken } = await auth()
   const token = await getToken()
-  const result = await fetchVenueWithEvents(slug, token)
+
+  const [result, watchedShows] = await Promise.all([
+    fetchVenueWithEvents(slug, token),
+    token ? fetchWatching(token).catch(() => []) : Promise.resolve([]),
+  ])
   if (!result) notFound()
 
   const { venue, upcomingEvents } = result
+  const watchedIds = watchedShows.map((show) => show.eventId)
+
+  // Enrich events with venue data so EventCard can render venue links
+  const enrichedEvents: EventWithVenue[] = upcomingEvents.map((ev) => ({
+    ...ev,
+    venue: {
+      id: venue.id,
+      name: venue.name,
+      slug: venue.slug,
+      city: venue.city,
+      websiteUrl: venue.websiteUrl,
+      timezone: venue.timezone,
+    },
+  }))
 
   const mapSearchQuery = `${venue.name}, ${venue.city}`
   const hasStats = venue.capacity != null || venue.venueType != null
@@ -223,7 +242,8 @@ export default async function VenueProfilePage({
               />
             ) : (
               <VenueEventList
-                events={upcomingEvents}
+                events={enrichedEvents}
+                watchedIds={watchedIds}
                 {...(highlight ? { highlightId: highlight } : {})}
               />
             )}

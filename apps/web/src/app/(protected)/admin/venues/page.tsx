@@ -13,7 +13,6 @@ import { VenueTableClient } from '@/components/admin/venue-table-client'
 import { deriveVenueStatus, venueHealthPercent } from '@/lib/admin/venue-status'
 import { AddVenueModal } from '@/components/admin/AddVenueModal'
 import { VenueStatusFilterButton } from '@/components/admin/venues/VenueStatusFilterButton'
-import { MobileAddVenueButton } from '@/components/admin/venues/MobileAddVenueButton'
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -81,8 +80,6 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
           </>
         }
       />
-
-      <MobileAddVenueButton />
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard

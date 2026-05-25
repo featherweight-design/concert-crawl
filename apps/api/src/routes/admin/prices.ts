@@ -171,6 +171,9 @@ pricesAdminRouter.patch(
         .select({
           userId: priceSubmissions.userId,
           status: priceSubmissions.status,
+          eventId: priceSubmissions.eventId,
+          priceMin: priceSubmissions.priceMin,
+          priceMax: priceSubmissions.priceMax,
         })
         .from(priceSubmissions)
         .where(eq(priceSubmissions.id, id))
@@ -187,15 +190,24 @@ pricesAdminRouter.patch(
 
       if (!updated) return { ok: false }
 
-      if (
-        status === 'corroborated' &&
-        existing.status !== 'corroborated' &&
-        existing.userId !== null
-      ) {
+      if (status === 'corroborated' && existing.status !== 'corroborated') {
+        // Award cred to the submitter
+        if (existing.userId !== null) {
+          await tx
+            .update(userRoles)
+            .set({ priceCredScore: sql`${userRoles.priceCredScore} + 1` })
+            .where(eq(userRoles.userId, existing.userId))
+        }
+
+        // Propagate the approved community price to the event
         await tx
-          .update(userRoles)
-          .set({ priceCredScore: sql`${userRoles.priceCredScore} + 1` })
-          .where(eq(userRoles.userId, existing.userId))
+          .update(events)
+          .set({
+            ticketPriceMin: existing.priceMin,
+            ticketPriceMax: existing.priceMax ?? null,
+            priceSource: 'community',
+          })
+          .where(eq(events.id, existing.eventId))
       }
 
       return { ok: true, updated }

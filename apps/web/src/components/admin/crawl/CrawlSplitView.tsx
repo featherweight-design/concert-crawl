@@ -45,6 +45,7 @@ interface Props {
   initialStatus: CrawlStatusRow[]
   initialRuns: CrawlRun[]
   initialSelectedId?: string
+  initialTab?: InspectorTab
 }
 
 const STATUS_KIND: Record<
@@ -226,6 +227,7 @@ export const CrawlSplitView = ({
   initialStatus,
   initialRuns,
   initialSelectedId,
+  initialTab,
 }: Props) => {
   const resolvedInitialId =
     initialSelectedId &&
@@ -234,7 +236,9 @@ export const CrawlSplitView = ({
       : (initialStatus[0]?.venueId ?? null)
 
   const [selectedId, setSelectedId] = useState<string | null>(resolvedInitialId)
-  const [activeTab, setActiveTab] = useState<InspectorTab>('overview')
+  const [activeTab, setActiveTab] = useState<InspectorTab>(
+    initialTab ?? 'overview',
+  )
   const [stagedId, setStagedId] = useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
 
@@ -257,11 +261,16 @@ export const CrawlSplitView = ({
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)')
-    setIsMobile(mq.matches)
+    const isMobileNow = mq.matches
+    setIsMobile(isMobileNow)
+    // On mobile with no explicit venue preselected, show the full list first
+    if (isMobileNow && !initialSelectedId) {
+      setSelectedId(null)
+    }
     const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches)
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
-  }, [])
+  }, [initialSelectedId])
 
   // Sync selectedId when IssuesBanner navigates to a new venueId via router.push
   useEffect(() => {

@@ -264,13 +264,7 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* Stat row */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 16,
-        }}
-      >
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         {/* Needs review */}
         <StatCard
           label="Needs review"

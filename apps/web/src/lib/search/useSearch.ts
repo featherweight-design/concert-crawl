@@ -142,7 +142,7 @@ export function useSearch() {
     abortRef.current?.abort()
 
     const trimmed = query.trim()
-    if (!trimmed) {
+    if (trimmed.length < 2) {
       setArtistResults([])
       setVenueResults([])
       setIsLoading(false)

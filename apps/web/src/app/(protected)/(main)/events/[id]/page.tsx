@@ -9,7 +9,7 @@ import type {
 } from '@concert-crawl/types'
 import { publicApiClient, apiClient } from '@/lib/api'
 import { EventImage } from '@/components/consumer/event-image'
-import { SmallEventRow } from '@/components/consumer/small-event-row'
+import { EventCard } from '@/components/consumer/event-card/EventCard'
 import { SectionHeader } from '@/components/consumer/section-header'
 import { PriceDisplay } from '@/components/consumer/PriceDisplay'
 import { WatchShowButton } from '@/components/consumer/watch-show-button'
@@ -20,7 +20,6 @@ import { GenreChips } from '@/components/consumer/GenreChips'
 import {
   formatEventDate,
   formatShowTime,
-  formatShortDate,
 } from '@/components/consumer/definitions/lib'
 
 interface EventDetailPageProps {
@@ -328,10 +327,10 @@ export default async function EventDetailPage({
                   {idx > 0 && (
                     <div
                       className="h-px bg-border"
-                      style={{ marginLeft: 50 }}
+                      style={{ marginLeft: 60 }}
                     />
                   )}
-                  <SmallEventRow event={rel} date={formatShortDate(rel.date)} />
+                  <EventCard event={rel} />
                 </Fragment>
               ))}
             </div>
