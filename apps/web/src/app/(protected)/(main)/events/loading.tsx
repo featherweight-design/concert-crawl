@@ -63,10 +63,10 @@ function EventCardSkeleton({ delay }: { delay: number }) {
           ))}
         </div>
       </div>
-      {/* Watch button placeholder — pill-shaped to match actual button */}
+      {/* Watch button — 28px icon on mobile, ~112px pill with text on desktop */}
       <div
+        className="w-7 sm:w-[112px]"
         style={{
-          width: 28,
           height: 28,
           borderRadius: 7,
           background: 'var(--surface-2)',
