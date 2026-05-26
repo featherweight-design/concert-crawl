@@ -1,3 +1,10 @@
+# [1.42.0](https://github.com/HartiganHM/concert-crawl/compare/v1.41.0...v1.42.0) (2026-05-26)
+
+
+### Features
+
+* **corroboration:** open Phase 8.5 — price corroboration, dispute flow, event status reporting ([8888b68](https://github.com/HartiganHM/concert-crawl/commit/8888b68cd883b6cf9b0c701af4ffec4a58b7d3ad))
+
 # [1.41.0](https://github.com/HartiganHM/concert-crawl/compare/v1.40.1...v1.41.0) (2026-05-26)
 
 
