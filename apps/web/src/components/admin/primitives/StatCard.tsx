@@ -50,6 +50,7 @@ export const StatCard = ({
         display: 'flex',
         flexDirection: 'column',
         gap: 12,
+        overflow: 'hidden',
         cursor: onClick ? 'pointer' : undefined,
       }}
     >
