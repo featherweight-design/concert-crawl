@@ -4,19 +4,24 @@ import { notFound } from 'next/navigation'
 import { auth } from '@clerk/nextjs/server'
 import type {
   EventDetailResponse,
+  EventReport,
   EventWithVenue,
   EventsListResponse,
 } from '@concert-crawl/types'
 import { publicApiClient, apiClient } from '@/lib/api'
+import { fetchEventReports } from '@/lib/events'
 import { EventImage } from '@/components/consumer/event-image'
 import { EventCard } from '@/components/consumer/event-card/EventCard'
 import { SectionHeader } from '@/components/consumer/section-header'
-import { PriceDisplay } from '@/components/consumer/PriceDisplay'
 import { WatchShowButton } from '@/components/consumer/watch-show-button'
 import { SetlistPreview } from '@/components/consumer/setlist-preview'
 import { SoldOutCta } from '@/components/consumer/SoldOutCta'
-import { SubmitPriceCardCta } from '@/components/consumer/SubmitPriceCardCta'
 import { GenreChips } from '@/components/consumer/GenreChips'
+import {
+  EventDetailBanners,
+  EventDetailPriceBlock,
+  EventDetailFooter,
+} from '@/components/consumer/EventDetailClient'
 import {
   formatEventDate,
   formatShowTime,
@@ -43,6 +48,17 @@ async function fetchEvent(
   }
 }
 
+async function fetchReports(
+  eventId: string,
+  token: string | null,
+): Promise<EventReport[]> {
+  try {
+    return await fetchEventReports(eventId, token ?? undefined)
+  } catch {
+    return []
+  }
+}
+
 async function fetchRelated(
   venueSlug: string,
   excludeId: string,
@@ -61,10 +77,13 @@ export default async function EventDetailPage({
   params,
 }: EventDetailPageProps) {
   const { id } = await params
-  const { getToken } = await auth()
+  const { getToken, userId } = await auth()
   const token = await getToken()
 
-  const event = await fetchEvent(id, token)
+  const [event, reports] = await Promise.all([
+    fetchEvent(id, token),
+    fetchReports(id, token),
+  ])
   if (!event) notFound()
 
   const related = await fetchRelated(event.venue.slug, event.id)
@@ -72,8 +91,6 @@ export default async function EventDetailPage({
   const showTime = formatShowTime(event.showTime)
   const doorsTime = formatShowTime(event.doorsTime)
   const dateLabel = formatEventDate(event.date, event.venue.timezone)
-  const isCancelled = event.status === 'cancelled'
-  const isPostponed = event.status === 'postponed'
   // Sold-out is a community claim surfaced via the API priceStatus field.
   // The field is null until a corroborated sold-out submission exists.
   const isSoldOut = event.priceStatus === 'soldout'
@@ -133,6 +150,13 @@ export default async function EventDetailPage({
           {/* Genre chips */}
           <GenreChips genres={event.genre} className="mb-2" />
 
+          {/* Phase 8.5 — live/pending report banners render above the title */}
+          <EventDetailBanners
+            event={event}
+            reports={reports}
+            currentUserId={userId ?? null}
+          />
+
           {/* Title */}
           <h1
             className="text-fg"
@@ -188,62 +212,14 @@ export default async function EventDetailPage({
             />
           </div>
 
-          {/* Price card — PriceBlockB. Renders community-handoff card when no price. */}
-          <PriceDisplay
-            priceMin={event.ticketPriceMin}
-            priceMax={event.ticketPriceMax}
-            priceSource={event.priceSource}
-            venueName={event.venue.name}
-            ticketUrl={event.ticketUrl}
-            eventId={event.id}
-            artist={event.artist}
-            date={event.date}
-            priceStatus={event.priceStatus ?? null}
-            ticketPriceOpenedAt={event.ticketPriceOpenedAt ?? null}
-            ticketFees={event.ticketFees ?? null}
-            priceVendor={event.priceVendor ?? null}
-            priceSubmitterHandle={event.priceSubmitterHandle ?? null}
-            priceObservedAt={event.priceObservedAt ?? null}
-            priceApprovalKind={event.priceApprovalKind ?? null}
-            priceApprovedAt={event.priceApprovedAt ?? null}
-            priceAlternates={event.priceAlternates ?? null}
+          {/* Phase 8.5 — price slot. Renders the appropriate card based on event
+              and community report state. Falls back to the standard PriceDisplay
+              when no Phase 8.5 override applies. */}
+          <EventDetailPriceBlock
+            event={event}
+            reports={reports}
+            currentUserId={userId ?? null}
           />
-
-          {/* Submit-a-price card CTA — only when a price exists to revise */}
-          {event.ticketPriceMin != null && (
-            <div className="mt-3">
-              <SubmitPriceCardCta
-                eventId={event.id}
-                artist={event.artist}
-                venueName={event.venue.name}
-                date={event.date}
-              />
-            </div>
-          )}
-
-          {/* Status banner — renders above SetlistPreview so the setlist and CTA
-              remain adjacent regardless of event status. Per spec, the banner
-              is still visible; it just doesn't split the setlist from the CTA. */}
-          {(isCancelled || isPostponed) && (
-            <div
-              className="mt-5 rounded-[10px] border border-border px-4 py-3"
-              style={{ background: 'var(--surface-1)' }}
-            >
-              <p
-                className="uppercase text-signal"
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '9px',
-                  letterSpacing: '0.06em',
-                }}
-              >
-                {isCancelled ? copy.cancelledLabel : copy.postponedLabel}
-              </p>
-              <p className="mt-1 text-[13px] leading-[1.55] text-fg-muted">
-                {isCancelled ? copy.cancelledBody : copy.postponedBody}
-              </p>
-            </div>
-          )}
 
           {/* Setlist preview — owns its own card surface (bg, border, radius) */}
           {event.setlist && (
@@ -350,6 +326,9 @@ export default async function EventDetailPage({
               ))}
             </div>
           )}
+
+          {/* Phase 8.5 — report footer link + sheet */}
+          <EventDetailFooter event={event} reports={reports} />
         </div>
       </div>
     </>

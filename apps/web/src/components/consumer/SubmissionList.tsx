@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import type { SubmissionWithMeta } from '@concert-crawl/types'
+import { confirmPriceSubmission } from '@/lib/events'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
 const copy = CONSUMER_COPY
@@ -123,30 +124,26 @@ export function SubmissionList({
     try {
       const token = await getToken()
       if (!token) return
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/v1/submissions/${submissionId}/confirm`,
-        {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-        },
+      const result = await confirmPriceSubmission(
+        eventId,
+        submissionId,
+        'same_vendor',
+        token,
       )
-      if (res.ok) {
-        const data = (await res.json()) as {
-          data: { confirms: number; status: SubmissionWithMeta['status'] }
-        }
-        setLocalSubmissions((prev) =>
-          prev.map((sub) =>
-            sub.id === submissionId
-              ? {
-                  ...sub,
-                  confirms: data.data.confirms,
-                  status: data.data.status,
-                  byYou: true,
-                }
-              : sub,
-          ),
-        )
-      }
+      setLocalSubmissions((prev) =>
+        prev.map((sub) =>
+          sub.id === submissionId
+            ? {
+                ...sub,
+                confirms: result.confirmsCount,
+                status: result.submissionStatus as SubmissionWithMeta['status'],
+                byYou: true,
+              }
+            : sub,
+        ),
+      )
+    } catch {
+      // swallow — submission list will show stale data until next refresh
     } finally {
       setConfirmingId(null)
     }
