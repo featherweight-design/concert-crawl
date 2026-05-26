@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>404 — Concert Crawl</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" />
+<style>
+  html, body { margin: 0; background: #f0eee9; font-family: Inter, system-ui, sans-serif; color: #15131A; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<template id="__bundler_thumbnail">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+    <rect width="400" height="400" fill="#15131A"/>
+    <circle cx="300" cy="100" r="60" fill="#7A5AF8" opacity="0.22"/>
+    <circle cx="300" cy="100" r="36" fill="#7A5AF8" opacity="0.42"/>
+    <circle cx="300" cy="100" r="22" fill="#3DD5B0"/>
+    <text x="200" y="240" text-anchor="middle" font-family="Inter, system-ui" font-weight="900" font-size="120" fill="#fff" letter-spacing="-6">404</text>
+    <text x="200" y="300" text-anchor="middle" font-family="Inter, system-ui" font-weight="800" font-size="22" fill="#fff" letter-spacing="-0.5">concert<tspan fill="#7A5AF8">crawl.</tspan></text>
+  </svg>
+</template>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<!-- foundation -->
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="identity-art.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+
+<!-- 404 module + canvas -->
+<script type="text/babel" src="not-found-screen.jsx"></script>
+<script type="text/babel" src="not-found-canvas.jsx"></script>
+
+<script type="text/babel" data-presets="env,react">
+  function boot() {
+    if (!window.__nf_ready || !window.__nf_canvas_ready) {
+      requestAnimationFrame(boot);
+      return;
+    }
+    window.nfBindGlobals();
+    const Canvas = window.NotFoundCanvas;
+    ReactDOM.createRoot(document.getElementById("root")).render(<Canvas />);
+  }
+  boot();
+</script>
+
+</body>
+</html>

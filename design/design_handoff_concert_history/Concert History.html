@@ -1,0 +1,831 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Concert History — Concert Crawl</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" />
+<style>
+  html, body { margin: 0; background: #0a0a0a; font-family: Inter, system-ui, sans-serif; color: #f4f4f4; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="identity-art.jsx"></script>
+<script type="text/babel" src="history-data.jsx"></script>
+<script type="text/babel" src="history-screens.jsx"></script>
+<script type="text/babel" src="going-cta.jsx"></script>
+<script type="text/babel" src="history-routes.jsx"></script>
+
+<script type="text/babel" data-presets="env,react">
+const { useState } = React;
+
+// ─── Mobile shell ─────────────────────────────────────────────
+function MobileShell({ children, themeKey = "electric" }) {
+  return (
+    <ThemeProvider theme={themeKey}>
+      <div style={{
+        width: 393, height: 852,
+        background: "var(--bg)",
+        color: "var(--fg)",
+        position: "relative",
+        overflow: "hidden",
+      }}>
+        <IOSStatusBar/>
+        <div style={{ position: "absolute", top: 47, left: 0, right: 0, bottom: 0 }}>
+          {children}
+        </div>
+      </div>
+    </ThemeProvider>
+  );
+}
+
+function IOSStatusBar() {
+  return (
+    <div style={{
+      position: "absolute", top: 0, left: 0, right: 0,
+      height: 47, padding: "14px 28px 0",
+      display: "flex", alignItems: "flex-start", justifyContent: "space-between",
+      fontFamily: "Inter, system-ui",
+      fontSize: 15, fontWeight: 600,
+      color: "var(--fg)",
+      zIndex: 10, pointerEvents: "none",
+      letterSpacing: "-0.01em",
+    }}>
+      <span>9:41</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="none"><path d="M1 8h2v2H1zM5 6h2v4H5zM9 4h2v6H9zM13 1h2v9h-2z" fill="currentColor"/></svg>
+        <svg width="14" height="11" viewBox="0 0 14 11" fill="none"><path d="M7 1.5L1 4.5l6 5 6-5z" stroke="currentColor" strokeWidth="1.2" fill="none"/></svg>
+        <svg width="22" height="11" viewBox="0 0 22 11" fill="none"><rect x="1" y="1" width="18" height="9" rx="2" stroke="currentColor" strokeWidth="1" fill="currentColor" fillOpacity="0.4"/><rect x="20" y="4" width="1.5" height="3" rx=".5" fill="currentColor"/></svg>
+      </div>
+    </div>
+  );
+}
+
+function DesktopShell({ children, themeKey = "electric" }) {
+  return (
+    <ThemeProvider theme={themeKey}>
+      <div style={{
+        width: 1280, height: 900,
+        background: "var(--bg)",
+        color: "var(--fg)",
+        overflow: "hidden",
+      }}>{children}</div>
+    </ThemeProvider>
+  );
+}
+
+// ─── Helpers ──────────────────────────────────────────────────
+function pickShows(count) {
+  if (count === "none")  return [];
+  if (count === "light") return H_SHOWS_LIGHT;
+  if (count === "mid")   return H_SHOWS_MID;
+  return H_SHOWS_POWER;
+}
+
+// ─── Live tweakable artboards ─────────────────────────────────
+function LiveMobile({ tweaks }) {
+  return (
+    <MobileShell themeKey={tweaks.theme}>
+      <HistoryRoute
+        shows={pickShows(tweaks.count)}
+        density={tweaks.density}
+        locked={tweaks.locked}
+        themeKey={tweaks.theme}
+      />
+    </MobileShell>
+  );
+}
+function LiveDesktop({ tweaks }) {
+  return (
+    <DesktopShell themeKey={tweaks.theme}>
+      <HistoryRouteDesktop
+        shows={pickShows(tweaks.count)}
+        density={tweaks.density}
+        locked={tweaks.locked}
+      />
+    </DesktopShell>
+  );
+}
+
+// ─── Going CTA live preview ───────────────────────────────────
+function GoingButtonLive({ tweaks }) {
+  const [state, setState] = useState(tweaks.goingState);
+  React.useEffect(() => setState(tweaks.goingState), [tweaks.goingState]);
+  const show = H_SHOWS_POWER[0]; // Geese — has a stub identity already
+  return (
+    <ThemeProvider theme={tweaks.theme}>
+      <div style={{
+        width: 560, height: 240, background: "var(--bg)",
+        display: "flex", alignItems: "center", justifyContent: "center", padding: 32,
+        flexDirection: "column", gap: 18,
+      }}>
+        <GoingButton show={show} state={state} size={tweaks.goingSize} onChange={setState}/>
+        <div style={{
+          fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 600,
+          color: "var(--fg-subtle)", letterSpacing: "0.06em",
+        }}>
+          Click the stub to toggle. State: {state}
+        </div>
+      </div>
+    </ThemeProvider>
+  );
+}
+
+// ─── EventDetail CTA block in faux context ───────────────────
+function EventDetailContext({ themeKey = "electric", going = "default", watching = false, past = false }) {
+  const show = H_SHOWS_POWER[0]; // Geese
+  return (
+    <ThemeProvider theme={themeKey}>
+      <div style={{
+        width: 393, height: 520, background: "var(--bg)",
+        color: "var(--fg)",
+        display: "flex", flexDirection: "column",
+        fontFamily: "Inter, system-ui",
+      }}>
+        {/* faux hero — identity art band */}
+        <div style={{
+          height: 200, position: "relative",
+          background: "var(--surface-2)",
+          overflow: "hidden",
+        }}>
+          <IdentityArt name={show.artist} kind="artist" scale="hero" showInitials={false} grain={0.05}/>
+          <div style={{
+            position: "absolute", inset: 0,
+            background: "linear-gradient(to bottom, transparent 40%, var(--bg) 100%)",
+          }}/>
+        </div>
+        {/* faux meta */}
+        <div style={{ padding: "16px 20px 20px", display: "flex", flexDirection: "column", gap: 4 }}>
+          <span style={{
+            fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700,
+            letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--fg-subtle)",
+          }}>{past ? "Mon · Oct 20 · 2026" : "Mon · Oct 20 · 8:00 PM"}</span>
+          <h2 style={{
+            margin: 0, fontFamily: "Inter, system-ui",
+            fontSize: 24, fontWeight: 900, letterSpacing: "-0.025em",
+          }}>{show.artist}</h2>
+          <span style={{
+            fontFamily: "'JetBrains Mono', monospace", fontSize: 11.5, fontWeight: 600,
+            color: "var(--fg-muted)", letterSpacing: "0.02em",
+          }}>{show.venue} · {show.neighborhood}</span>
+        </div>
+        {/* CTA area */}
+        <div style={{ padding: "0 20px" }}>
+          {past
+            ? <HistoryStampInline show={show}/>
+            : <EventDetailCTABlock show={show} going={going} watching={watching} variant="mobile"/>}
+        </div>
+      </div>
+    </ThemeProvider>
+  );
+}
+
+// ─── Desktop Event Detail context ────────────────────────────
+// Wider hero, two-column meta, CTA in a right-hand sidebar. Same
+// EventDetailCTABlock — the eye + Going-stub layout reads identically
+// on both breakpoints; desktop just gives the stub button more horizontal
+// room so the supporting copy line stays comfortable.
+function EventDetailContextDesktop({ themeKey = "electric", going = "default", watching = false, past = false }) {
+  const show = H_SHOWS_POWER[0];
+  return (
+    <ThemeProvider theme={themeKey}>
+      <div style={{
+        width: 1080, height: 700, background: "var(--bg)",
+        color: "var(--fg)",
+        display: "flex", flexDirection: "column",
+        fontFamily: "Inter, system-ui",
+      }}>
+        {/* fake TopNav band */}
+        <div style={{
+          height: 64, flexShrink: 0,
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "0 32px",
+          borderBottom: "1px solid var(--border)", background: "var(--bg-elevated)",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <CCMark size={28}/>
+              <span style={{ fontFamily: "Inter, system-ui", fontWeight: 800, fontSize: 17,
+                letterSpacing: "-0.02em", color: "var(--fg)" }}>
+                concert<span style={{ color: "var(--accent)" }}>crawl.</span>
+              </span>
+            </div>
+            <nav style={{ display: "flex", gap: 4 }}>
+              {["Browse", "Search", "My shows"].map(t => (
+                <span key={t} style={{
+                  padding: "8px 14px", borderRadius: 8,
+                  fontFamily: "Inter, system-ui", fontWeight: 500, fontSize: 13,
+                  color: "var(--fg-muted)", letterSpacing: "-0.01em",
+                }}>{t}</span>
+              ))}
+            </nav>
+          </div>
+        </div>
+
+        <div style={{ flex: 1, overflow: "auto", padding: "32px 48px" }}>
+          <div style={{
+            display: "grid", gridTemplateColumns: "1fr 380px", gap: 48, alignItems: "start",
+            maxWidth: 1200, margin: "0 auto",
+          }}>
+            {/* Left: hero + meta */}
+            <div>
+              <div style={{
+                height: 320, borderRadius: 16, overflow: "hidden", position: "relative",
+                marginBottom: 24,
+              }}>
+                <IdentityArt name={show.artist} kind="artist" scale="hero" showInitials={false} grain={0.05}/>
+              </div>
+              <span style={{
+                fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700,
+                letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--fg-subtle)",
+              }}>{past ? "Mon · Oct 20 · 2026" : "Mon · Oct 20 · 8:00 PM · Doors 7:30"}</span>
+              <h1 style={{
+                margin: "8px 0 6px", fontFamily: "Inter, system-ui",
+                fontSize: 42, fontWeight: 900, letterSpacing: "-0.025em",
+              }}>{show.artist}</h1>
+              <p style={{
+                margin: 0,
+                fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 600,
+                color: "var(--fg-muted)", letterSpacing: "0.02em",
+              }}>{show.venue} · {show.neighborhood}</p>
+            </div>
+            {/* Right: CTA rail */}
+            <aside style={{
+              display: "flex", flexDirection: "column", gap: 16,
+              position: "sticky", top: 0,
+            }}>
+              {past
+                ? <HistoryStampInline show={show}/>
+                : <EventDetailCTABlock show={show} going={going} watching={watching} variant="desktop"/>}
+              {/* faux price + secondary metadata block, just for visual context */}
+              <div style={{
+                background: "var(--surface-1)",
+                border: "1px solid var(--border)",
+                borderRadius: 14, padding: 16,
+                display: "flex", flexDirection: "column", gap: 8,
+              }}>
+                <span style={{
+                  fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700,
+                  letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--fg-subtle)",
+                }}>Face price</span>
+                <span style={{
+                  fontFamily: "Inter, system-ui", fontSize: 28, fontWeight: 900,
+                  letterSpacing: "-0.025em", color: "var(--fg)",
+                }}>$28</span>
+                <span style={{
+                  fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 600,
+                  color: "var(--fg-muted)", letterSpacing: "0.02em",
+                }}>From AXS · last checked 2h ago</span>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </div>
+    </ThemeProvider>
+  );
+}
+
+// ─── Watching tab with nudge attached ────────────────────────
+function WatchingWithNudgeMobile({ themeKey = "electric" }) {
+  const [marks, setMarks] = useState({}); // id -> "going" | "declined" | "dismissed"
+  const onMark = (id, kind) => setMarks(m => ({ ...m, [id]: kind }));
+  const onDismiss = (id) => setMarks(m => ({ ...m, [id]: "dismissed" }));
+  return (
+    <ThemeProvider theme={themeKey}>
+      <div style={{
+        width: 393, height: 852,
+        background: "var(--bg)", color: "var(--fg)",
+        display: "flex", flexDirection: "column",
+        position: "relative", overflow: "hidden",
+        fontFamily: "Inter, system-ui",
+      }}>
+        <IOSStatusBar/>
+        <div style={{ height: 47 }}/>
+        {/* Watching/History tabs */}
+        <WatchingHistoryTabs active="watching" onChange={() => {}}/>
+        {/* fake "Watching" header */}
+        <div style={{
+          padding: "16px 20px 14px",
+          borderBottom: "1px solid var(--border)",
+          background: "var(--bg)",
+          display: "flex", flexDirection: "column", gap: 4,
+        }}>
+          <span style={{
+            fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700,
+            letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--fg-subtle)",
+          }}>Watching</span>
+          <span style={{ fontSize: 24, fontWeight: 900, letterSpacing: "-0.025em" }}>5 shows</span>
+        </div>
+        <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px 100px" }}>
+          {/* Section: This week — has 3 in nudge window */}
+          <div style={{ padding: "10px 4px 4px" }}>
+            <span style={{
+              fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700,
+              letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--accent)",
+            }}>This week · 3</span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
+            {H_UPCOMING.slice(0, 3).map(s => {
+              const m = marks[s.id];
+              const going = m === "going" ? "going" : "default";
+              const dismissed = m === "dismissed" || m === "declined";
+              return (
+                <WatchingRowWithNudge key={s.id}
+                  show={dismissed ? { ...s, goingMarkedAt: "skip" } : s}
+                  going={going}
+                  onMark={onMark}
+                  onDismiss={onDismiss}
+                />
+              );
+            })}
+          </div>
+          <div style={{ padding: "10px 4px 4px" }}>
+            <span style={{
+              fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700,
+              letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--fg-subtle)",
+            }}>Later · 2</span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {H_UPCOMING.slice(3).map(s => (
+              <WatchingRowWithNudge key={s.id} show={s} going="default" onMark={onMark} onDismiss={onDismiss}/>
+            ))}
+          </div>
+        </div>
+      </div>
+    </ThemeProvider>
+  );
+}
+
+// ─── App ──────────────────────────────────────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "electric",
+  "density": "roomy",
+  "count": "power",
+  "locked": false,
+  "goingState": "default",
+  "goingSize": "lg"
+}/*EDITMODE-END*/;
+
+function App() {
+  const [t, setT] = useTweaks(TWEAK_DEFAULTS);
+
+  return (
+    <>
+      <DesignCanvas
+        title="Concert History · Passport"
+        subtitle={"First Supporter-gated feature ($2/mo). Two surfaces feed it: the I'm going! CTA on Event Detail, and a one-shot Watching nudge inside the 7-day window. The history list itself is keepsake-only — no price-tracking, no remove — and ships with an optional shareable Passport card."}
+      >
+        {/* ── 1. Live tweakable artboards ────────────────────── */}
+        <DCSection id="live" title="Live tweaks" subtitle="Drive these with the panel in the bottom-right. Theme, density, item count, locked/free, Going CTA state + size.">
+          <DCArtboard id="live-mobile" label="Mobile · History tab" width={393} height={852}>
+            <LiveMobile tweaks={t}/>
+          </DCArtboard>
+          <DCArtboard id="live-desktop" label="Desktop · History" width={1280} height={900}>
+            <LiveDesktop tweaks={t}/>
+          </DCArtboard>
+          <DCArtboard id="live-going" label="Going CTA · isolated" width={560} height={240}>
+            <GoingButtonLive tweaks={t}/>
+          </DCArtboard>
+        </DCSection>
+
+        {/* ── 2. The I'm going! CTA — all states ──────────────── */}
+        <DCSection id="going-states"
+          title="2. I'm going! CTA · states"
+          subtitle="The CTA is a ticket-stub. Default = outlined empty stub. Going = filled stub in the show's per-show accent + glyph + perforation lit. The button visually equals the History stamp it will turn into. Past-yes is the disabled keepsake; past-no is the dimmed 'didn't make it' state (only surfaced if the user explicitly declined a nudge).">
+          <DCArtboard id="g-default" label="Default — empty stub" width={560} height={240}>
+            <ThemeProvider theme="electric">
+              <div style={{ width: 560, height: 240, background: "var(--bg)",
+                display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <GoingButton show={H_SHOWS_POWER[0]} state="default" size="lg"/>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+          <DCArtboard id="g-going" label="Going — locked in" width={560} height={240}>
+            <ThemeProvider theme="electric">
+              <div style={{ width: 560, height: 240, background: "var(--bg)",
+                display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <GoingButton show={H_SHOWS_POWER[0]} state="going" size="lg"/>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+          <DCArtboard id="g-past-yes" label="Past — in your history" width={560} height={240}>
+            <ThemeProvider theme="electric">
+              <div style={{ width: 560, height: 240, background: "var(--bg)",
+                display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <GoingButton show={H_SHOWS_POWER[1]} state="past-yes" size="lg"/>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+          <DCArtboard id="g-past-no" label="Past — didn't make it" width={560} height={240}>
+            <ThemeProvider theme="electric">
+              <div style={{ width: 560, height: 240, background: "var(--bg)",
+                display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <GoingButton show={H_SHOWS_POWER[2]} state="past-no" size="lg"/>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+        </DCSection>
+
+        {/* ── 3. Going CTA · size scale ──────────────────────── */}
+        <DCSection id="going-sizes"
+          title="2b. Going CTA · sizes"
+          subtitle="lg lives on Event Detail (full-CTA pair). md fits on an event card. sm sits inline in list rows. Glyph + perforation scale; everything else just changes height + font.">
+          <DCArtboard id="g-lg" label="lg · 52h · Event Detail" width={460} height={140}>
+            <ThemeProvider theme="electric">
+              <div style={{ width: 460, height: 140, background: "var(--bg)",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 16 }}>
+                <GoingButton show={H_SHOWS_POWER[0]} state="default" size="lg"/>
+                <GoingButton show={H_SHOWS_POWER[0]} state="going" size="lg"/>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+          <DCArtboard id="g-md" label="md · 44h · event card" width={460} height={140}>
+            <ThemeProvider theme="electric">
+              <div style={{ width: 460, height: 140, background: "var(--bg)",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 16 }}>
+                <GoingButton show={H_SHOWS_POWER[0]} state="default" size="md"/>
+                <GoingButton show={H_SHOWS_POWER[0]} state="going" size="md"/>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+          <DCArtboard id="g-sm" label="sm · 36h · inline rows" width={460} height={140}>
+            <ThemeProvider theme="electric">
+              <div style={{ width: 460, height: 140, background: "var(--bg)",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 16 }}>
+                <GoingButton show={H_SHOWS_POWER[0]} state="default" size="sm"/>
+                <GoingButton show={H_SHOWS_POWER[0]} state="going" size="sm"/>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+        </DCSection>
+
+        {/* ── 4. Event Detail CTA block ──────────────────────── */}
+        <DCSection id="event-detail"
+          title="2c. Event Detail · Going + eye"
+          subtitle="One layout, both breakpoints. Going is the full-width primary (stub-shaped); Watch is the icon-only eye square next to it — mirrors the live mobile Watch affordance, so users already recognize it. Below: a one-line mono support copy. Past Event Detail swaps the pair for a read-only history stamp.">
+          <DCArtboard id="ed-default" label="Mobile · default" width={393} height={520}>
+            <EventDetailContext going="default" watching={false}/>
+          </DCArtboard>
+          <DCArtboard id="ed-watch" label="Mobile · watching" width={393} height={520}>
+            <EventDetailContext going="default" watching={true}/>
+          </DCArtboard>
+          <DCArtboard id="ed-going" label="Mobile · going!" width={393} height={520}>
+            <EventDetailContext going="going" watching={false}/>
+          </DCArtboard>
+          <DCArtboard id="ed-going-watch" label="Mobile · both" width={393} height={520}>
+            <EventDetailContext going="going" watching={true}/>
+          </DCArtboard>
+          <DCArtboard id="ed-past" label="Mobile · past (in history)" width={393} height={520}>
+            <EventDetailContext past={true}/>
+          </DCArtboard>
+          <DCArtboard id="ed-desktop-default" label="Desktop · default" width={1080} height={700}>
+            <EventDetailContextDesktop going="default" watching={false}/>
+          </DCArtboard>
+          <DCArtboard id="ed-desktop-going" label="Desktop · going!" width={1080} height={700}>
+            <EventDetailContextDesktop going="going" watching={true}/>
+          </DCArtboard>
+          <DCArtboard id="ed-desktop-past" label="Desktop · past (in history)" width={1080} height={700}>
+            <EventDetailContextDesktop past={true}/>
+          </DCArtboard>
+        </DCSection>
+
+        {/* ── 4b. Browse: eye-only, no Going ──────────────────── */}
+        <DCSection id="browse-stays-eye"
+          title="2d. Browse stays eye-only"
+          subtitle="Browse is for triage; the eye icon is the right intent there (soft 'remind me'). We deliberately do NOT add Going to Browse cards — Going needs the date/venue/ticket context that lives on Event Detail. Visual: just the eye square on a row, same affordance the live mobile UI already uses.">
+          <DCArtboard id="b-eye-default" label="Eye · default" width={420} height={140}>
+            <ThemeProvider theme="electric">
+              <div style={{ width: 420, height: 140, background: "var(--bg)",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 16 }}>
+                <WatchingEye watching={false} size="lg"/>
+                <WatchingEye watching={true} size="lg"/>
+                <WatchingEye watching={false} size="md"/>
+                <WatchingEye watching={true} size="md"/>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+          <DCArtboard id="b-row-eye" label="Browse row · eye sits where the price ends" width={460} height={120}>
+            <ThemeProvider theme="electric">
+              <div style={{ width: 460, height: 120, background: "var(--bg)", padding: "16px 20px",
+                display: "flex", alignItems: "center", gap: 14,
+                borderBottom: "1px solid var(--border)" }}>
+                <div style={{ width: 56, height: 56, borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
+                  <IdentityArt name="Geese" kind="artist" scale="tile" showInitials={false} grain={0.05}/>
+                </div>
+                <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                  <span style={{ fontWeight: 700, fontSize: 14.5, color: "var(--fg)", letterSpacing: "-0.01em" }}>Geese</span>
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11.5, color: "var(--fg-muted)", letterSpacing: "0.02em" }}>
+                    Larimer Lounge · Mon Oct 20 · 8:00 PM
+                  </span>
+                </div>
+                <span style={{ fontFamily: "Inter, system-ui", fontSize: 16, fontWeight: 800,
+                  color: "var(--signal)", fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>$28</span>
+                <WatchingEye watching={false} size="md"/>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+        </DCSection>
+
+        {/* ── 5. Watching nudge ──────────────────────────────── */}
+        <DCSection id="nudge"
+          title="3. Watching nudge · one-shot prompt"
+          subtitle="When a watched show falls inside 7 days and the user hasn't marked Going, the row sprouts a one-line nudge underneath. Yes → 'Going' commits + the row badge lights up. Not me → silent decline, no nag. × → dismiss, stored locally so the prompt never re-appears for this show. We ask in advance — there's no post-show 'did you go?' interrogation.">
+          <DCArtboard id="nudge-row" label="Watching row + nudge" width={460} height={180}>
+            <ThemeProvider theme="electric">
+              <div style={{ width: 460, height: 180, background: "var(--bg)", padding: "16px 20px" }}>
+                <WatchingRowWithNudge show={H_UPCOMING[0]} going="default"/>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+          <DCArtboard id="nudge-committed" label="Row · after Yes, going" width={460} height={140}>
+            <ThemeProvider theme="electric">
+              <div style={{ width: 460, height: 140, background: "var(--bg)", padding: "16px 20px" }}>
+                <WatchingRowWithNudge show={H_UPCOMING[2]} going="going"/>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+          <DCArtboard id="nudge-isolated" label="Nudge · standalone" width={460} height={120}>
+            <ThemeProvider theme="electric">
+              <div style={{ width: 460, height: 120, background: "var(--bg)", padding: "16px 20px" }}>
+                <GoingNudge show={H_UPCOMING[1]} onYes={()=>{}} onDecline={()=>{}} onDismiss={()=>{}}/>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+          <DCArtboard id="nudge-in-watching" label="In context · Watching mobile" width={393} height={852}>
+            <WatchingWithNudgeMobile themeKey="electric"/>
+          </DCArtboard>
+        </DCSection>
+
+        {/* ── 6. History — state matrix · mobile ─────────────── */}
+        <DCSection id="states"
+          title="1. History list · state matrix · mobile"
+          subtitle="Empty (Supporter, no Going yet) → first 3 nights → ~half a year → power user (18 nights, 10 venues). Stat header at the top, reverse-chrono buckets below, calendar-export + Passport teaser pinned at the bottom.">
+          <DCArtboard id="h-empty" label="Empty · 0 nights" width={393} height={852}>
+            <MobileShell><HistoryRoute shows={H_SHOWS_NONE}/></MobileShell>
+          </DCArtboard>
+          <DCArtboard id="h-light" label="Light · 3 nights" width={393} height={852}>
+            <MobileShell><HistoryRoute shows={H_SHOWS_LIGHT}/></MobileShell>
+          </DCArtboard>
+          <DCArtboard id="h-mid" label="Mid · 8 nights" width={393} height={852}>
+            <MobileShell><HistoryRoute shows={H_SHOWS_MID}/></MobileShell>
+          </DCArtboard>
+          <DCArtboard id="h-power" label="Power · 18 nights" width={393} height={852}>
+            <MobileShell><HistoryRoute shows={H_SHOWS_POWER}/></MobileShell>
+          </DCArtboard>
+        </DCSection>
+
+        {/* ── 7. Locked state ────────────────────────────────── */}
+        <DCSection id="locked"
+          title="1b. Locked · Free user paywall"
+          subtitle="The first Supporter-gated surface. Silhouetted stubs sit behind a centered upsell card. Voice is honest, not aggressive — same Sour-Patch register as the monetization handoff. The card lists the three Supporter perks (history, calendar export, passport) and the footer reminds Free users the rest of the product stays free.">
+          <DCArtboard id="lk-mobile" label="Locked · mobile" width={393} height={852}>
+            <MobileShell><HistoryRoute shows={H_SHOWS_POWER} locked/></MobileShell>
+          </DCArtboard>
+          <DCArtboard id="lk-mobile-jade" label="Locked · jade" width={393} height={852}>
+            <MobileShell themeKey="jade"><HistoryRoute shows={H_SHOWS_POWER} locked themeKey="jade"/></MobileShell>
+          </DCArtboard>
+          <DCArtboard id="lk-mobile-light" label="Locked · light" width={393} height={852}>
+            <MobileShell themeKey="light"><HistoryRoute shows={H_SHOWS_POWER} locked themeKey="light"/></MobileShell>
+          </DCArtboard>
+          <DCArtboard id="lk-desktop" label="Locked · desktop" width={1280} height={900}>
+            <DesktopShell><HistoryRouteDesktop shows={H_SHOWS_POWER} locked/></DesktopShell>
+          </DCArtboard>
+        </DCSection>
+
+        {/* ── 8. Density variants ─────────────────────────────── */}
+        <DCSection id="density"
+          title="Row density"
+          subtitle="Same row anatomy as Watching. Compact drops art to 40px; cozy is the default; roomy adds a genre + paid-price line under the venue meta. Stub stamp on the right scales with density — 24 / 28 / 32 — without ever competing with the artist line.">
+          <DCArtboard id="d-compact" label="Compact" width={393} height={852}>
+            <MobileShell><HistoryRoute shows={H_SHOWS_POWER} density="compact"/></MobileShell>
+          </DCArtboard>
+          <DCArtboard id="d-cozy" label="Cozy (default)" width={393} height={852}>
+            <MobileShell><HistoryRoute shows={H_SHOWS_POWER} density="cozy"/></MobileShell>
+          </DCArtboard>
+          <DCArtboard id="d-roomy" label="Roomy" width={393} height={852}>
+            <MobileShell><HistoryRoute shows={H_SHOWS_POWER} density="roomy"/></MobileShell>
+          </DCArtboard>
+        </DCSection>
+
+        {/* ── 9. Themes ──────────────────────────────────────── */}
+        <DCSection id="themes"
+          title="All three themes"
+          subtitle="Same data, electric / jade / light. Confirms the per-show stub accent + stamp glyph hold legibility across all paper colors. The CCMark + wordmark in the desktop TopNav re-tint via tokens.">
+          <DCArtboard id="t-electric" label="Electric (default)" width={393} height={852}>
+            <MobileShell themeKey="electric"><HistoryRoute shows={H_SHOWS_MID} themeKey="electric"/></MobileShell>
+          </DCArtboard>
+          <DCArtboard id="t-jade" label="Jade" width={393} height={852}>
+            <MobileShell themeKey="jade"><HistoryRoute shows={H_SHOWS_MID} themeKey="jade"/></MobileShell>
+          </DCArtboard>
+          <DCArtboard id="t-light" label="Light" width={393} height={852}>
+            <MobileShell themeKey="light"><HistoryRoute shows={H_SHOWS_MID} themeKey="light"/></MobileShell>
+          </DCArtboard>
+        </DCSection>
+
+        {/* ── 10. Desktop ────────────────────────────────────── */}
+        <DCSection id="desktop"
+          title="Desktop · main shell"
+          subtitle="TopNav matches Browse / Watching (no separate sidebar). The History page has a big stat hero, two-column body — bucket list left, action rail right (calendar export + Passport preview). Caps at 960 so the row never gets unreadably wide.">
+          <DCArtboard id="d-power" label="Power user · 18 nights" width={1280} height={900}>
+            <DesktopShell><HistoryRouteDesktop shows={H_SHOWS_POWER}/></DesktopShell>
+          </DCArtboard>
+          <DCArtboard id="d-empty" label="Empty · desktop" width={1280} height={900}>
+            <DesktopShell><HistoryRouteDesktop shows={H_SHOWS_NONE}/></DesktopShell>
+          </DCArtboard>
+          <DCArtboard id="d-light" label="Light theme · desktop" width={1280} height={900}>
+            <DesktopShell themeKey="light"><HistoryRouteDesktop shows={H_SHOWS_MID}/></DesktopShell>
+          </DCArtboard>
+        </DCSection>
+
+        {/* ── 11. Row anatomy ────────────────────────────────── */}
+        <DCSection id="anatomy"
+          title="Row anatomy"
+          subtitle="What's on each row, isolated. Identity art · artist + meta · stub stamp. The stamp is the right-edge column where Watching puts price — keeps the visual rhythm consistent between sibling tabs. Per-show accent + glyph derive from the artist hash, so the same artist always reads as the same color across rows.">
+          <DCArtboard id="a-row-compact" label="Row · compact" width={460} height={88}>
+            <ThemeProvider theme="electric">
+              <div style={{ width: 460, height: 88, background: "var(--bg)", padding: "12px 20px" }}>
+                <HistoryItem show={H_SHOWS_POWER[0]} density="compact"/>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+          <DCArtboard id="a-row-cozy" label="Row · cozy" width={460} height={110}>
+            <ThemeProvider theme="electric">
+              <div style={{ width: 460, height: 110, background: "var(--bg)", padding: "12px 20px" }}>
+                <HistoryItem show={H_SHOWS_POWER[1]} density="cozy"/>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+          <DCArtboard id="a-row-roomy" label="Row · roomy" width={460} height={130}>
+            <ThemeProvider theme="electric">
+              <div style={{ width: 460, height: 130, background: "var(--bg)", padding: "12px 20px" }}>
+                <HistoryItem show={H_SHOWS_POWER[2]} density="roomy"/>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+          <DCArtboard id="a-stub" label="Stub stamps · the seven brand accents" width={460} height={110}>
+            <ThemeProvider theme="electric">
+              <div style={{ width: 460, height: 110, background: "var(--bg)",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 14 }}>
+                {H_ACCENTS.map((c, i) => (
+                  <StubStamp key={i} artist={`acc-${i}`} size={36}/>
+                ))}
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+        </DCSection>
+
+        {/* ── 12. Passport card ──────────────────────────────── */}
+        <DCSection id="passport"
+          title="Passport card · stretch surface"
+          subtitle="Designed as a stamp book. A wall of real per-show stamps — each one shows the artist, venue, date, and the artist's deterministic accent + glyph (same vocabulary as the History row stamp, just bigger). Stat band on top. Slight per-stamp rotation so the page reads stamped, not aligned. Compact (320×460) lives in the sidebar / inline teaser; full (1080×1080) is the social-share image with up to 24 stamps surfaced and a '+ N more' tag for overflow.">
+          <DCArtboard id="p-teaser" label="Inline teaser · in History list" width={460} height={130}>
+            <ThemeProvider theme="electric">
+              <div style={{ width: 460, height: 130, background: "var(--bg)", padding: "16px 20px" }}>
+                <PassportTeaser stats={h_stats(H_SHOWS_POWER)} shows={H_SHOWS_POWER}/>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+          <DCArtboard id="p-compact" label="Compact · desktop sidebar" width={380} height={560}>
+            <ThemeProvider theme="electric">
+              <div style={{ width: 380, height: 520, background: "var(--bg)", padding: 20,
+                display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <PassportCard stats={h_stats(H_SHOWS_POWER)} shows={H_SHOWS_POWER} compact/>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+          <DCArtboard id="p-compact-mid" label="Compact · mid-size history" width={380} height={560}>
+            <ThemeProvider theme="electric">
+              <div style={{ width: 380, height: 520, background: "var(--bg)", padding: 20,
+                display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <PassportCard stats={h_stats(H_SHOWS_MID)} shows={H_SHOWS_MID} compact/>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+          <DCArtboard id="p-full" label="Full · 1080 share" width={620} height={620}>
+            <ThemeProvider theme="electric">
+              <div style={{ width: 620, height: 620, background: "#0a0a0a",
+                display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                <div style={{ transform: "scale(0.5556)", transformOrigin: "center center" }}>
+                  <PassportCard stats={h_stats(H_SHOWS_POWER)} shows={H_SHOWS_POWER}/>
+                </div>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+          <DCArtboard id="p-light" label="Compact · light theme surface" width={380} height={560}>
+            <ThemeProvider theme="light">
+              <div style={{ width: 380, height: 520, background: "var(--bg)", padding: 20,
+                display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <PassportCard stats={h_stats(H_SHOWS_POWER)} shows={H_SHOWS_POWER} compact/>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+          <DCArtboard id="p-stamp-detail" label="Single stamp · detail" width={460} height={260}>
+            <ThemeProvider theme="electric">
+              <div style={{ width: 460, height: 260,
+                background: "radial-gradient(ellipse at 70% 30%, #1F1538 0%, #08050F 78%)",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 20, padding: 20 }}>
+                <PassportStamp show={H_SHOWS_POWER[0]} idx={0} compact={false}/>
+                <PassportStamp show={H_SHOWS_POWER[7]} idx={7} compact={false}/>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+        </DCSection>
+
+      </DesignCanvas>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection title="Theme">
+          <TweakRadio
+            label="Theme"
+            value={t.theme}
+            onChange={v => setT("theme", v)}
+            options={[
+              { label: "Electric", value: "electric" },
+              { label: "Jade",     value: "jade" },
+              { label: "Light",    value: "light" },
+            ]}
+          />
+        </TweakSection>
+        <TweakSection title="History list">
+          <TweakRadio
+            label="Density"
+            value={t.density}
+            onChange={v => setT("density", v)}
+            options={[
+              { label: "Compact", value: "compact" },
+              { label: "Cozy",    value: "cozy" },
+              { label: "Roomy",   value: "roomy" },
+            ]}
+          />
+          <TweakRadio
+            label="Items"
+            value={t.count}
+            onChange={v => setT("count", v)}
+            options={[
+              { label: "0",   value: "none" },
+              { label: "3",   value: "light" },
+              { label: "8",   value: "mid" },
+              { label: "18",  value: "power" },
+            ]}
+          />
+          <TweakToggle
+            label="Locked (Free user)"
+            value={t.locked}
+            onChange={v => setT("locked", v)}
+          />
+        </TweakSection>
+        <TweakSection title="Going CTA">
+          <TweakRadio
+            label="State"
+            value={t.goingState}
+            onChange={v => setT("goingState", v)}
+            options={[
+              { label: "Default", value: "default" },
+              { label: "Going",   value: "going" },
+              { label: "Past +",  value: "past-yes" },
+              { label: "Past −",  value: "past-no" },
+            ]}
+          />
+          <TweakRadio
+            label="Size"
+            value={t.goingSize}
+            onChange={v => setT("goingSize", v)}
+            options={[
+              { label: "sm", value: "sm" },
+              { label: "md", value: "md" },
+              { label: "lg", value: "lg" },
+            ]}
+          />
+        </TweakSection>
+      </TweaksPanel>
+    </>
+  );
+}
+
+function boot() {
+  if (!window.HistoryRoute || !window.H_SHOWS || !window.IdentityArt
+    || !window.DesignCanvas || !window.TweaksPanel || !window.ThemeProvider
+    || !window.GoingButton || !window.WatchingHistoryTabs) {
+    requestAnimationFrame(boot);
+    return;
+  }
+  ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+}
+boot();
+</script>
+
+</body>
+</html>
