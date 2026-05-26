@@ -9,7 +9,10 @@ export const submissionConfirms = pgTable(
       .notNull()
       .references(() => priceSubmissions.id, { onDelete: 'cascade' }),
     userId: text('user_id').notNull(),
-    method: text('method').notNull().default('same-vendor'),
+    method: text('method')
+      .notNull()
+      .default('same-vendor')
+      .$type<'same-vendor' | 'other-vendor' | 'box-office'>(),
     confirmedAt: timestamp('confirmed_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

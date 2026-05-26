@@ -7,15 +7,21 @@ export const eventReports = pgTable('event_reports', {
     .notNull()
     .references(() => events.id, { onDelete: 'cascade' }),
   reporterId: text('reporter_id').notNull(),
-  status: text('status').notNull(),
-  evidenceMethod: text('evidence_method').notNull(),
+  status: text('status')
+    .notNull()
+    .$type<'sold-out' | 'cancelled' | 'postponed'>(),
+  evidenceMethod: text('evidence_method')
+    .notNull()
+    .$type<'bought_myself' | 'saw_listing' | 'venue_site' | 'other'>(),
   evidenceUrl: varchar('evidence_url', { length: 500 }),
   note: varchar('note', { length: 280 }),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
   resolvedAt: timestamp('resolved_at', { withTimezone: true }),
-  resolution: text('resolution'),
+  resolution: text('resolution').$type<
+    'promoted' | 'rejected' | 'needs-more-info'
+  >(),
   adminNote: varchar('admin_note', { length: 500 }),
 })
 

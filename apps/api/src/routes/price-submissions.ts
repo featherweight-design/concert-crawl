@@ -164,7 +164,12 @@ priceSubmissionsRouter.post(
       const [disputed] = await db
         .select({ id: priceSubmissions.id, status: priceSubmissions.status })
         .from(priceSubmissions)
-        .where(eq(priceSubmissions.id, body.disputedSubmissionId))
+        .where(
+          and(
+            eq(priceSubmissions.id, body.disputedSubmissionId),
+            eq(priceSubmissions.eventId, eventId),
+          ),
+        )
         .limit(1)
       if (!disputed) {
         return ctx.json(

@@ -110,7 +110,7 @@ export const SP_POLICY = {
 // Event report policy — server enforces, client mirrors for UX
 export const ER_POLICY = {
   confirmsRequired: 2,
-  confirmsRequiredImminentCancelled: 3,
+  confirmsRequiredImminent: 3,
   imminentThresholdDays: 7,
 } as const
 

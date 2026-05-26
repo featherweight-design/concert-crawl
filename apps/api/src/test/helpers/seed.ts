@@ -1,6 +1,8 @@
 import { sql } from 'drizzle-orm'
 import {
   crawlRuns,
+  eventReportConfirms,
+  eventReports,
   events,
   priceRetrievalLog,
   priceSubmissions,
@@ -19,7 +21,7 @@ export async function clearTables(): Promise<void> {
   await testDb.transaction(async (tx) => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(7777)`)
     await tx.execute(
-      sql`TRUNCATE submission_confirms, price_submissions, user_events, events, venues, crawl_runs, audit_log, invite_codes, user_roles, price_retrieval_log, user_profiles, feedback RESTART IDENTITY CASCADE`,
+      sql`TRUNCATE event_report_confirms, event_reports, submission_confirms, price_submissions, user_events, events, venues, crawl_runs, audit_log, invite_codes, user_roles, price_retrieval_log, user_profiles, feedback RESTART IDENTITY CASCADE`,
     )
   })
 }
@@ -171,6 +173,37 @@ export async function seedPriceRetrievalLog(
     })
     .returning()
   if (!row) throw new Error('seedPriceRetrievalLog: insert returned no rows')
+  return row
+}
+
+export async function seedEventReport(
+  eventId: string,
+  reporterId: string,
+  overrides: Partial<typeof eventReports.$inferInsert> = {},
+): Promise<typeof eventReports.$inferSelect> {
+  const [row] = await testDb
+    .insert(eventReports)
+    .values({
+      eventId,
+      reporterId,
+      status: 'sold-out',
+      evidenceMethod: 'saw_listing',
+      ...overrides,
+    })
+    .returning()
+  if (!row) throw new Error('seedEventReport: insert returned no rows')
+  return row
+}
+
+export async function seedEventReportConfirm(
+  reportId: string,
+  userId: string,
+): Promise<typeof eventReportConfirms.$inferSelect> {
+  const [row] = await testDb
+    .insert(eventReportConfirms)
+    .values({ reportId, userId })
+    .returning()
+  if (!row) throw new Error('seedEventReportConfirm: insert returned no rows')
   return row
 }
 

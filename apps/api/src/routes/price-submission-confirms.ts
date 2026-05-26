@@ -2,11 +2,7 @@ import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { and, count, eq } from 'drizzle-orm'
-import {
-  db,
-  priceSubmissions,
-  submissionConfirms,
-} from '@concert-crawl/db'
+import { db, priceSubmissions, submissionConfirms } from '@concert-crawl/db'
 import { SP_POLICY } from '@concert-crawl/types'
 import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js'
 
@@ -24,7 +20,11 @@ priceSubmissionConfirmsRouter.post(
   zValidator('json', confirmBodySchema, (result, ctx) => {
     if (!result.success) {
       return ctx.json(
-        { success: false, error: 'Invalid input', details: result.error.flatten() },
+        {
+          success: false,
+          error: 'Invalid input',
+          details: result.error.flatten(),
+        },
         422,
       )
     }
@@ -64,52 +64,36 @@ priceSubmissionConfirmsRouter.post(
       )
     }
 
-    // Check for duplicate confirm
-    const [existing] = await db
-      .select({ id: submissionConfirms.id })
-      .from(submissionConfirms)
-      .where(
-        and(
-          eq(submissionConfirms.submissionId, submissionId),
-          eq(submissionConfirms.userId, userId),
-        ),
-      )
-      .limit(1)
+    const [inserted] = await db
+      .insert(submissionConfirms)
+      .values({ submissionId, userId, method })
+      .onConflictDoNothing()
+      .returning()
 
-    if (existing) {
+    if (!inserted) {
       return ctx.json(
         { success: false, error: 'Already confirmed this submission' },
         409,
       )
     }
 
-    // Insert the confirm
-    await db.insert(submissionConfirms).values({
-      submissionId,
-      userId,
-      method,
-    })
-
-    // Count total confirms for this submission
     const [countResult] = await db
       .select({ total: count() })
       .from(submissionConfirms)
       .where(eq(submissionConfirms.submissionId, submissionId))
 
     const confirmsCount = countResult?.total ?? 0
+    const promoted = confirmsCount >= SP_POLICY.confirmsRequired
 
-    // Auto-promote to live if threshold reached
-    let submissionStatus: string = submission.status
-    if (confirmsCount >= SP_POLICY.confirmsRequired) {
-      await db
-        .update(priceSubmissions)
-        .set({
-          status: 'corroborated',
-          updatedAt: new Date(),
-        })
-        .where(eq(priceSubmissions.id, submissionId))
-      submissionStatus = 'corroborated'
-    }
+    await db
+      .update(priceSubmissions)
+      .set({
+        corroborationCount: confirmsCount,
+        ...(promoted ? { status: 'corroborated', updatedAt: new Date() } : {}),
+      })
+      .where(eq(priceSubmissions.id, submissionId))
+
+    const submissionStatus = promoted ? 'corroborated' : submission.status
 
     return ctx.json({
       success: true,

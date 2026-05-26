@@ -27,10 +27,14 @@ const EVIDENCE_METHODS = [
 
 function isImminent(eventDate: string | null): boolean {
   if (!eventDate) return false
-  const now = new Date()
-  const date = new Date(eventDate)
-  const diffMs = date.getTime() - now.getTime()
-  const diffDays = diffMs / (1000 * 60 * 60 * 24)
+  const [year, month, day] = eventDate.split('-').map(Number)
+  const eventMs = Date.UTC(year!, month! - 1, day!)
+  const todayMs = Date.UTC(
+    new Date().getUTCFullYear(),
+    new Date().getUTCMonth(),
+    new Date().getUTCDate(),
+  )
+  const diffDays = (eventMs - todayMs) / (1000 * 60 * 60 * 24)
   return diffDays >= 0 && diffDays <= ER_POLICY.imminentThresholdDays
 }
 
@@ -145,10 +149,9 @@ eventReportsRouter.get('/:id/reports', clerkAuth, async (ctx) => {
 
   const imminent = isImminent(event.date)
   const confirmsNeeded = imminent
-    ? ER_POLICY.confirmsRequiredImminentCancelled
+    ? ER_POLICY.confirmsRequiredImminent
     : ER_POLICY.confirmsRequired
 
-  // Fetch all unresolved reports for the event
   const reportRows = await db
     .select({
       id: eventReports.id,
@@ -160,45 +163,26 @@ eventReportsRouter.get('/:id/reports', clerkAuth, async (ctx) => {
       note: eventReports.note,
       createdAt: eventReports.createdAt,
       confirmsCount: sql<number>`(SELECT COUNT(*)::int FROM event_report_confirms WHERE event_report_confirms.report_id = ${eventReports.id})`,
+      userHasConfirmed: userId
+        ? sql<boolean>`EXISTS (
+            SELECT 1 FROM event_report_confirms
+            WHERE event_report_confirms.report_id = ${eventReports.id}
+            AND event_report_confirms.user_id = ${userId}
+          )`
+        : sql<boolean>`false`,
     })
     .from(eventReports)
     .where(
       and(eq(eventReports.eventId, eventId), isNull(eventReports.resolvedAt)),
     )
 
-  const enrichedReports = await Promise.all(
-    reportRows.map(async (report) => {
-      let isReporter = false
-      let userHasConfirmed = false
-
-      if (userId) {
-        isReporter = report.reporterId === userId
-
-        if (!isReporter) {
-          const [confirmRow] = await db
-            .select({ id: eventReportConfirms.id })
-            .from(eventReportConfirms)
-            .where(
-              and(
-                eq(eventReportConfirms.reportId, report.id),
-                eq(eventReportConfirms.userId, userId),
-              ),
-            )
-            .limit(1)
-
-          userHasConfirmed = confirmRow != null
-        }
-      }
-
-      return {
-        ...report,
-        confirmsCount: Number(report.confirmsCount),
-        confirmsNeeded,
-        isReporter,
-        userHasConfirmed,
-      }
-    }),
-  )
+  const enrichedReports = reportRows.map((report) => ({
+    ...report,
+    confirmsCount: Number(report.confirmsCount),
+    confirmsNeeded,
+    isReporter: report.reporterId === userId,
+    userHasConfirmed: Boolean(report.userHasConfirmed),
+  }))
 
   return ctx.json({ success: true, data: enrichedReports })
 })
@@ -240,27 +224,18 @@ eventReportsRouter.post(
       )
     }
 
-    // Check for duplicate confirm
-    const [existingConfirm] = await db
-      .select({ id: eventReportConfirms.id })
-      .from(eventReportConfirms)
-      .where(
-        and(
-          eq(eventReportConfirms.reportId, reportId),
-          eq(eventReportConfirms.userId, userId),
-        ),
-      )
-      .limit(1)
+    const [insertedConfirm] = await db
+      .insert(eventReportConfirms)
+      .values({ reportId, userId })
+      .onConflictDoNothing()
+      .returning()
 
-    if (existingConfirm) {
+    if (!insertedConfirm) {
       return ctx.json(
         { success: false, error: 'Already confirmed this report' },
         409,
       )
     }
-
-    // Insert confirm
-    await db.insert(eventReportConfirms).values({ reportId, userId })
 
     // Count total confirms
     const [countResult] = await db
@@ -279,7 +254,7 @@ eventReportsRouter.post(
 
     const imminent = isImminent(eventRow?.date ?? null)
     const threshold = imminent
-      ? ER_POLICY.confirmsRequiredImminentCancelled
+      ? ER_POLICY.confirmsRequiredImminent
       : ER_POLICY.confirmsRequired
 
     let resolved = false
