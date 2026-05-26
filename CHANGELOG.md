@@ -1,3 +1,17 @@
+# [1.41.0](https://github.com/HartiganHM/concert-crawl/compare/v1.40.1...v1.41.0) (2026-05-26)
+
+
+### Bug Fixes
+
+* **copy:** waitlist body, price caps, community gap, filter empty state, aria labels, anon warning ([85d8427](https://github.com/HartiganHM/concert-crawl/commit/85d8427e15ab447e238761ec1e8ed39401f8d3ef))
+* **tests:** update copy assertions to match updated typography in copy.ts files ([b2f8e0e](https://github.com/HartiganHM/concert-crawl/commit/b2f8e0e64e61ee9624b4d00d7b905eb66d88ceaa))
+
+
+### Features
+
+* **release:** add pnpm release:draft script to generate changelog entries from merged PRs ([bf0c238](https://github.com/HartiganHM/concert-crawl/commit/bf0c2386b176c7a5bf5bf8e02ffe8b24b501bdfe))
+* **spotlight-modal:** support up to three paragraphs in founderNote ([c6fbb3b](https://github.com/HartiganHM/concert-crawl/commit/c6fbb3b4f80f39497f9209432b5d9ddcd8e26f2b))
+
 ## [1.40.1](https://github.com/HartiganHM/concert-crawl/compare/v1.40.0...v1.40.1) (2026-05-26)
 
 
