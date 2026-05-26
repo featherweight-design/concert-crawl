@@ -24,6 +24,8 @@ import { PendingSoldOutCard } from '@/components/consumer/reporting/PendingSoldO
 import { LiveReportBanner } from '@/components/consumer/reporting/LiveReportBanner'
 import { ReportFooterLink } from '@/components/consumer/reporting/ReportFooterLink'
 import { ReportSheet } from '@/components/consumer/reporting/ReportSheet'
+import { EvidenceForm } from '@/components/consumer/reporting/EvidenceForm'
+import { ConfirmReportSheet } from '@/components/consumer/reporting/ConfirmReportSheet'
 import { PriceDisplay } from '@/components/consumer/PriceDisplay'
 import { SubmitPriceCardCta } from '@/components/consumer/SubmitPriceCardCta'
 
@@ -62,6 +64,12 @@ export function EventDetailBanners({
 }: EventDetailSharedProps) {
   const { getToken } = useAuth()
   const router = useRouter()
+  const [confirmSheetOpen, setConfirmSheetOpen] = useState(false)
+  const [sawDifferentSheetOpen, setSawDifferentSheetOpen] = useState(false)
+  const [evidenceFormOpen, setEvidenceFormOpen] = useState(false)
+  const [evidenceFormReportType, setEvidenceFormReportType] = useState<
+    'sold-out' | 'cancelled' | 'postponed'
+  >('cancelled')
 
   const pendingCancelledReport = findPendingReport(reports, 'cancelled')
   const pendingPostponedReport = findPendingReport(reports, 'postponed')
@@ -86,22 +94,6 @@ export function EventDetailBanners({
         ? pendingPostponedReport
         : null
 
-  const handleConfirmReport = useCallback(
-    (reportId: string) => {
-      void (async () => {
-        const token = await getToken()
-        if (!token) return
-        try {
-          await confirmEventReport(event.id, reportId, token)
-          router.refresh()
-        } catch {
-          // swallow — user sees stale state until next page refresh
-        }
-      })()
-    },
-    [event.id, getToken, router],
-  )
-
   const handleWithdrawReport = useCallback(
     (reportId: string) => {
       void (async () => {
@@ -118,51 +110,137 @@ export function EventDetailBanners({
     [event.id, getToken, router],
   )
 
+  const handleConfirmSuccess = useCallback(() => {
+    setConfirmSheetOpen(false)
+    router.refresh()
+  }, [router])
+
+  const handleSawDifferentSelect = useCallback(
+    (reportType: 'sold-out' | 'cancelled' | 'postponed') => {
+      setSawDifferentSheetOpen(false)
+      setEvidenceFormReportType(reportType)
+      setEvidenceFormOpen(true)
+    },
+    [],
+  )
+
   // Nothing to render when no banners are active
   if (liveReportStatus === null && activePendingReport === null) {
     return null
   }
 
+  // liveStatus for the "Saw something different?" ReportSheet — treat the
+  // pending report as if it were live so the sheet shows counter options.
+  const sawDifferentLiveStatus: 'cancelled' | 'postponed' | null =
+    activePendingReport?.status === 'cancelled'
+      ? 'cancelled'
+      : activePendingReport?.status === 'postponed'
+        ? 'postponed'
+        : null
+
   return (
-    <div className="mb-3">
-      {/* Live (promoted) report banner */}
-      {liveReportStatus !== null && (
-        <LiveReportBanner
-          status={liveReportStatus}
-          promotedAt={event.updatedAt}
+    <>
+      <div className="mb-3">
+        {/* Live (promoted) report banner */}
+        {liveReportStatus !== null && (
+          <LiveReportBanner
+            status={liveReportStatus}
+            promotedAt={event.updatedAt}
+          />
+        )}
+
+        {/* Pending community report banner */}
+        {activePendingReport !== null && (
+          <PendingReportBanner
+            kind={
+              activePendingReport.status === 'cancelled'
+                ? 'cancelled'
+                : 'postponed'
+            }
+            confirms={activePendingReport.confirmsCount}
+            needed={activePendingReport.confirmsNeeded}
+            view={
+              activePendingReport.isReporter
+                ? 'reporter'
+                : activePendingReport.userHasConfirmed
+                  ? 'self-locked'
+                  : 'other'
+            }
+            reportedAt={activePendingReport.createdAt}
+            evidenceMethod={activePendingReport.evidenceMethod}
+            evidenceUrl={activePendingReport.evidenceUrl}
+            reporter={null}
+            onConfirm={() => setConfirmSheetOpen(true)}
+            onWithdraw={() => handleWithdrawReport(activePendingReport.id)}
+            onEdit={() => {
+              // Edit evidence — future flow
+            }}
+            onAddEvidence={() => {
+              // Add evidence — future flow
+            }}
+            onSawDifferent={() => setSawDifferentSheetOpen(true)}
+          />
+        )}
+      </div>
+
+      {/* Confirm report sheet */}
+      {activePendingReport !== null && (
+        <ConfirmReportSheet
+          open={confirmSheetOpen}
+          onClose={() => setConfirmSheetOpen(false)}
+          reportType={
+            activePendingReport.status === 'cancelled'
+              ? 'cancelled'
+              : activePendingReport.status === 'postponed'
+                ? 'postponed'
+                : 'sold-out'
+          }
+          reporter={null}
+          reportedAt={activePendingReport.createdAt}
+          eventId={event.id}
+          reportId={activePendingReport.id}
+          onSuccess={handleConfirmSuccess}
+          onFileCounter={() => {
+            setConfirmSheetOpen(false)
+            setSawDifferentSheetOpen(true)
+          }}
         />
       )}
 
-      {/* Pending community report banner */}
-      {activePendingReport !== null && (
-        <PendingReportBanner
-          kind={
-            activePendingReport.status === 'cancelled'
-              ? 'cancelled'
-              : 'postponed'
-          }
-          confirms={activePendingReport.confirmsCount}
-          needed={activePendingReport.confirmsNeeded}
-          view={
-            activePendingReport.isReporter
-              ? 'reporter'
-              : activePendingReport.userHasConfirmed
-                ? 'self-locked'
-                : 'other'
-          }
-          reportedAt={activePendingReport.createdAt}
-          reporter={null}
-          onConfirm={() => handleConfirmReport(activePendingReport.id)}
-          onWithdraw={() => handleWithdrawReport(activePendingReport.id)}
-          onEdit={() => {
-            // Edit evidence — future flow
-          }}
-          onAddEvidence={() => {
-            // Add evidence — future flow
+      {/* "Saw something different?" report type sheet */}
+      {sawDifferentLiveStatus !== null && (
+        <ReportSheet
+          open={sawDifferentSheetOpen}
+          onClose={() => setSawDifferentSheetOpen(false)}
+          liveStatus={sawDifferentLiveStatus}
+          eventDate={event.date}
+          onSelect={(reportType) => {
+            if (
+              reportType === 'sold-out' ||
+              reportType === 'cancelled' ||
+              reportType === 'postponed'
+            ) {
+              handleSawDifferentSelect(reportType)
+            } else {
+              setSawDifferentSheetOpen(false)
+            }
           }}
         />
       )}
-    </div>
+
+      {/* Evidence form for the counter-report */}
+      <EvidenceForm
+        open={evidenceFormOpen}
+        onClose={() => setEvidenceFormOpen(false)}
+        reportType={evidenceFormReportType}
+        eventId={event.id}
+        eventDate={event.date}
+        onSuccess={() => {
+          setEvidenceFormOpen(false)
+          router.refresh()
+        }}
+      />
+    </>
   )
 }
 

@@ -150,13 +150,6 @@ export default async function EventDetailPage({
           {/* Genre chips */}
           <GenreChips genres={event.genre} className="mb-2" />
 
-          {/* Phase 8.5 — live/pending report banners render above the title */}
-          <EventDetailBanners
-            event={event}
-            reports={reports}
-            currentUserId={userId ?? null}
-          />
-
           {/* Title */}
           <h1
             className="text-fg"
@@ -211,6 +204,13 @@ export default async function EventDetailPage({
               value={copy.allAges}
             />
           </div>
+
+          {/* Phase 8.5 — live/pending report banners render below the info block */}
+          <EventDetailBanners
+            event={event}
+            reports={reports}
+            currentUserId={userId ?? null}
+          />
 
           {/* Phase 8.5 — price slot. Renders the appropriate card based on event
               and community report state. Falls back to the standard PriceDisplay

@@ -2,7 +2,7 @@
 
 import { REPORTING_COPY } from './definitions/copy'
 import { REPORT_TOKENS } from './reportTokens'
-import { LockGlyph } from '../glyphs'
+import { CheckGlyph, LockGlyph } from '../glyphs'
 
 // ── Kind glyphs at 14×14 ──────────────────────────────────────────
 
@@ -57,7 +57,44 @@ const PostponedGlyph14 = () => (
   </svg>
 )
 
+const LinkChainIcon = () => (
+  <svg
+    width="13"
+    height="13"
+    viewBox="0 0 14 14"
+    fill="none"
+    aria-hidden="true"
+    style={{ flexShrink: 0 }}
+  >
+    <path
+      d="M5.5 8.5L8.5 5.5M4.5 9.5L3 8a2.5 2.5 0 010-3.5L4.5 3M9.5 4.5L11 6a2.5 2.5 0 010 3.5L9.5 11"
+      stroke="var(--fg-muted)"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+)
+
 const copy = REPORTING_COPY.pendingReportBanner
+
+// ── Helper ────────────────────────────────────────────────────────
+
+const formatTimeAgo = (isoDate: string): string => {
+  const diffMs = Date.now() - new Date(isoDate).getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  if (diffMins < 60) return `${diffMins}m ago`
+  const diffHours = Math.floor(diffMins / 60)
+  if (diffHours < 24) return `${diffHours}h ago`
+  return `${Math.floor(diffHours / 24)}d ago`
+}
+
+const EVIDENCE_METHOD_LABELS: Record<string, string> = {
+  bought_myself: 'First-hand',
+  saw_listing: 'Saw listing',
+  venue_site: 'Venue site',
+  other: 'Other',
+}
 
 // ── Props ─────────────────────────────────────────────────────────
 
@@ -68,11 +105,13 @@ export interface PendingReportBannerProps {
   view: 'other' | 'reporter' | 'self-locked'
   reportedAt: string // ISO
   evidenceMethod?: string
+  evidenceUrl?: string | null
   reporter: { handle: string; url: string } | null
   onConfirm: () => void
   onWithdraw: () => void
   onEdit: () => void
   onAddEvidence: () => void
+  onSawDifferent: () => void
 }
 
 // ── Component ─────────────────────────────────────────────────────
@@ -82,13 +121,18 @@ export const PendingReportBanner = ({
   confirms,
   needed,
   view,
+  reportedAt,
   evidenceMethod,
+  evidenceUrl,
   reporter,
   onConfirm,
   onWithdraw,
   onAddEvidence,
+  onSawDifferent,
 }: PendingReportBannerProps) => {
   const tokens = REPORT_TOKENS[kind]
+  const timeAgo = formatTimeAgo(reportedAt)
+  const isReporter = view === 'reporter' || view === 'self-locked'
 
   const badgeLabel =
     kind === 'cancelled' ? copy.cancelledBadge : copy.postponedBadge
@@ -96,13 +140,11 @@ export const PendingReportBanner = ({
   const leadText =
     kind === 'cancelled' ? copy.cancelledLead : copy.postponedLead
 
-  const reporterHandle = reporter
-    ? copy.reportedBy(reporter.handle)
-    : copy.reportedAnonymously
-
-  const attributionLine = evidenceMethod
-    ? `${reporterHandle} · ${evidenceMethod}`
-    : reporterHandle
+  const evidenceLabel = evidenceUrl
+    ? evidenceUrl
+    : evidenceMethod
+      ? (EVIDENCE_METHOD_LABELS[evidenceMethod] ?? evidenceMethod)
+      : null
 
   return (
     <div
@@ -113,7 +155,7 @@ export const PendingReportBanner = ({
         overflow: 'hidden',
       }}
     >
-      {/* Top strip */}
+      {/* Top strip — kind label + dot tracker */}
       <div
         style={{
           padding: '10px 14px',
@@ -124,6 +166,7 @@ export const PendingReportBanner = ({
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: 8,
+          flexWrap: 'wrap',
         }}
       >
         {/* Left: kind label */}
@@ -136,23 +179,44 @@ export const PendingReportBanner = ({
             fontSize: 10,
             fontWeight: 700,
             color: tokens.color,
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
           }}
         >
           {kind === 'cancelled' ? <CancelledGlyph14 /> : <PostponedGlyph14 />}
           {badgeLabel}
         </span>
 
-        {/* Right: confirms progress */}
+        {/* Right: dot tracker */}
         <span
           style={{
-            fontFamily: 'var(--font-mono)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 3,
+            fontFamily: "'JetBrains Mono', monospace",
             fontSize: 9,
-            color: 'var(--fg-subtle)',
-            whiteSpace: 'nowrap',
+            color: tokens.color,
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
+            fontWeight: 700,
           }}
         >
-          {copy.confirmsProgress(confirms, needed)}{' '}
-          <span style={{ opacity: 0.4 }}>{copy.confirmsToGo}</span>
+          {Array.from({ length: needed }).map((_, idx) => (
+            <span
+              key={idx}
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
+                background: idx < confirms ? tokens.color : 'transparent',
+                border: `1.1px solid ${tokens.color}`,
+                display: 'inline-block',
+              }}
+            />
+          ))}
+          <span style={{ marginLeft: 4 }}>
+            {confirms} of {needed}
+          </span>
         </span>
       </div>
 
@@ -167,174 +231,207 @@ export const PendingReportBanner = ({
             color: 'var(--fg)',
             letterSpacing: '-0.01em',
             margin: '0 0 10px',
-            lineHeight: 1.3,
+            lineHeight: 1.4,
           }}
         >
           {leadText}
         </p>
 
         {/* Evidence card */}
-        <div
-          style={{
-            background: 'color-mix(in oklab, var(--fg) 4%, transparent)',
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-            padding: '8px 10px',
-          }}
-        >
-          <span
-            style={{
-              marginTop: '10px',
-              display: 'inline-flex',
-              gap: '6px',
-              alignItems: 'center',
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 9,
-              color: 'var(--fg-muted)',
-            }}
-          >
-            {attributionLine}
-          </span>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div
-        style={{
-          padding: '10px 14px',
-          borderTop: `1px solid ${tokens.border}`,
-        }}
-      >
-        {view === 'other' && (
+        {evidenceLabel !== null && (
           <div
             style={{
+              marginBottom: 10,
+              padding: '8px 10px',
+              background: 'color-mix(in oklab, var(--fg) 4%, transparent)',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
               display: 'flex',
-              flexDirection: 'row',
               alignItems: 'center',
-              justifyContent: 'space-between',
               gap: 8,
             }}
           >
+            <LinkChainIcon />
             <span
               style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 10,
-                color: 'var(--fg-subtle)',
-                letterSpacing: '0.04em',
-                flexShrink: 1,
+                flex: 1,
                 minWidth: 0,
-              }}
-            >
-              {copy.footerQuestion}
-            </span>
-
-            <button
-              type="button"
-              onClick={onConfirm}
-              style={{
-                all: 'unset',
-                cursor: 'pointer',
-                background: tokens.color,
-                color: 'var(--fg-on-accent)',
-                fontFamily: 'var(--font-ui)',
-                fontWeight: 700,
+                fontFamily: 'Inter, system-ui, sans-serif',
                 fontSize: 12.5,
-                padding: '7px 12px',
-                borderRadius: 8,
+                color: 'var(--fg)',
+                letterSpacing: '-0.005em',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
-                flexShrink: 0,
-                lineHeight: 1,
               }}
             >
-              {copy.confirmButton}
-            </button>
-          </div>
-        )}
-
-        {view === 'reporter' && (
-          <div>
-            <div
-              style={{
-                fontFamily: 'var(--font-ui)',
-                fontWeight: 600,
-                fontSize: 12,
-                color: 'var(--fg-muted)',
-                marginBottom: 8,
-              }}
-            >
-              {copy.yourReportLabel}
-            </div>
-
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 12,
-              }}
-            >
-              <button
-                type="button"
-                onClick={onAddEvidence}
-                style={{
-                  all: 'unset',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-ui)',
-                  fontWeight: 600,
-                  fontSize: 12,
-                  color: 'var(--signal)',
-                  lineHeight: 1,
-                }}
-              >
-                {copy.addEvidenceButton}
-              </button>
-
-              <button
-                type="button"
-                onClick={onWithdraw}
-                style={{
-                  all: 'unset',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-ui)',
-                  fontWeight: 600,
-                  fontSize: 12,
-                  color: 'var(--warning)',
-                  lineHeight: 1,
-                }}
-              >
-                {copy.withdrawButton}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {view === 'self-locked' && (
-          <div
-            style={{
-              background: 'color-mix(in oklab, var(--fg) 5%, transparent)',
-              border: '1px dashed var(--border-strong)',
-              borderRadius: 8,
-              padding: '7px 12px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              marginLeft: 'auto',
-            }}
-          >
-            <LockGlyph size={10} />
-            <span
-              style={{
-                fontFamily: 'var(--font-ui)',
-                fontWeight: 600,
-                fontSize: 12,
-                color: 'var(--fg-muted)',
-                lineHeight: 1,
-              }}
-            >
-              {copy.waitingForConfirms}
+              {evidenceLabel}
             </span>
           </div>
         )}
+
+        {/* Attribution */}
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            flexWrap: 'wrap',
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 9,
+            color: 'var(--fg-muted)',
+            letterSpacing: '0.04em',
+          }}
+        >
+          <span>Reported by</span>
+          {isReporter ? (
+            <span style={{ color: tokens.color, fontWeight: 700 }}>you</span>
+          ) : reporter !== null ? (
+            <span>{reporter.handle}</span>
+          ) : (
+            <span>{copy.reportedAnonymously}</span>
+          )}
+          <span style={{ opacity: 0.5 }}>·</span>
+          <span>{timeAgo}</span>
+        </div>
+
+        {/* Action row — inside body, separated by borderTop */}
+        <div
+          style={{
+            marginTop: 12,
+            paddingTop: 10,
+            borderTop: '1px solid var(--border)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 10,
+            flexWrap: 'wrap',
+          }}
+        >
+          {view === 'other' && (
+            <>
+              <button
+                type="button"
+                onClick={onSawDifferent}
+                style={{
+                  all: 'unset',
+                  cursor: 'pointer',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 10,
+                  color: 'var(--fg-subtle)',
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {copy.footerQuestion}
+              </button>
+
+              <button
+                type="button"
+                onClick={onConfirm}
+                style={{
+                  all: 'unset',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '8px 14px',
+                  borderRadius: 8,
+                  background: tokens.color,
+                  color: 'var(--fg-on-accent)',
+                  fontFamily: 'Inter, system-ui, sans-serif',
+                  fontWeight: 700,
+                  fontSize: 12.5,
+                  letterSpacing: '-0.005em',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  lineHeight: 1,
+                }}
+              >
+                <CheckGlyph size={11} color="var(--fg-on-accent)" />
+                {copy.confirmButton}
+              </button>
+            </>
+          )}
+
+          {view === 'reporter' && (
+            <>
+              <span
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 10,
+                  color: 'var(--fg-subtle)',
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {copy.yourReportLabel}
+              </span>
+
+              <div style={{ display: 'flex', gap: 14 }}>
+                <button
+                  type="button"
+                  onClick={onAddEvidence}
+                  style={{
+                    all: 'unset',
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font-ui)',
+                    fontWeight: 600,
+                    fontSize: 12,
+                    color: 'var(--signal)',
+                    lineHeight: 1,
+                  }}
+                >
+                  {copy.addEvidenceButton}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onWithdraw}
+                  style={{
+                    all: 'unset',
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font-ui)',
+                    fontWeight: 600,
+                    fontSize: 12,
+                    color: 'var(--warning)',
+                    lineHeight: 1,
+                  }}
+                >
+                  {copy.withdrawButton}
+                </button>
+              </div>
+            </>
+          )}
+
+          {view === 'self-locked' && (
+            <div
+              style={{
+                background: 'color-mix(in oklab, var(--fg) 5%, transparent)',
+                border: '1px dashed var(--border-strong)',
+                borderRadius: 8,
+                padding: '7px 12px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                marginLeft: 'auto',
+              }}
+            >
+              <LockGlyph size={10} />
+              <span
+                style={{
+                  fontFamily: 'var(--font-ui)',
+                  fontWeight: 600,
+                  fontSize: 12,
+                  color: 'var(--fg-muted)',
+                  lineHeight: 1,
+                }}
+              >
+                {copy.waitingForConfirms}
+              </span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

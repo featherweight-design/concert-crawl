@@ -144,8 +144,8 @@ export const REPORTING_COPY = {
     confirmsProgress: (confirms: number, needed: number) =>
       `${confirms}/${needed} confirms`,
     confirmsToGo: 'to go',
-    cancelledLead: 'This show may be cancelled.',
-    postponedLead: 'This show may be postponed.',
+    cancelledLead: 'A fan reports the show is cancelled.',
+    postponedLead: 'A fan reports the show is being rescheduled.',
     footerQuestion: 'Saw something different?',
     confirmButton: 'Confirm',
     yourReportLabel: 'Your report',
