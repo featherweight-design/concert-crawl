@@ -77,6 +77,7 @@ export const ReviewPageClient = ({
   const [priceEventsLoading, setPriceEventsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isFetchingMoreEvents, setIsFetchingMoreEvents] = useState(false)
+  const [eventsOffset, setEventsOffset] = useState(initialEvents.length)
   // If the server returned a full page, assume there are more unreviewed events.
   const [hasMoreEvents, setHasMoreEvents] = useState(
     initialEvents.length >= 100,
@@ -147,7 +148,7 @@ export const ReviewPageClient = ({
         return
       }
       const batch = await apiClient.get<EventFlag[]>(
-        '/v1/admin/events?verified=false&limit=10',
+        `/v1/admin/events?verified=false&limit=10&offset=${eventsOffset}`,
         token,
       )
       if (batch.length === 0) {
@@ -157,6 +158,7 @@ export const ReviewPageClient = ({
           const seen = new Set(prev.map((ev) => ev.id))
           return [...prev, ...batch.filter((ev) => !seen.has(ev.id))]
         })
+        setEventsOffset((prev) => prev + batch.length)
         if (batch.length < 10) setHasMoreEvents(false)
       }
     } catch (fetchErr) {
@@ -165,7 +167,7 @@ export const ReviewPageClient = ({
     } finally {
       setIsFetchingMoreEvents(false)
     }
-  }, [isFetchingMoreEvents, hasMoreEvents, getToken])
+  }, [isFetchingMoreEvents, hasMoreEvents, getToken, eventsOffset])
 
   // Auto-fetch when the queue runs low — fires before the list empties so
   // there's no gap between batches.
