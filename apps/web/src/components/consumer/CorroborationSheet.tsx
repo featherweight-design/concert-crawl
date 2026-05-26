@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { LockGlyph } from './glyphs'
+import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
 
 const copy = CONSUMER_COPY.corroborationSheet
 
@@ -335,8 +336,6 @@ export const CorroborationSheet = ({
     null,
   )
 
-  if (!open) return null
-
   const accentColor = submission.kind === 'boxoffice' ? GOLD : AZURE
 
   const verifyOptions: Array<{
@@ -367,105 +366,55 @@ export const CorroborationSheet = ({
   ]
 
   return (
-    <>
-      {/* Scrim */}
-      <div
-        className="fixed inset-0 bg-black/60 z-40"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      {/* Sheet */}
-      <div
-        className="fixed bottom-0 left-0 right-0 z-50 flex flex-col overflow-hidden"
-        style={{
-          maxWidth: '393px',
-          margin: '0 auto',
-          borderRadius: '18px 18px 0 0',
-          border: '1px solid var(--border)',
-          background: 'var(--bg)',
-          maxHeight: isSelfLocked ? '620px' : '820px',
-        }}
-      >
-        {/* Drag handle */}
-        <div
-          style={{
-            position: 'relative',
-            height: '20px',
-            flexShrink: 0,
-          }}
-          aria-hidden="true"
-        >
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      ariaLabel="Corroborate price submission"
+      sheetHeight="tall"
+      header={
+        <>
           <div
             style={{
-              position: 'absolute',
-              top: '8px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: '36px',
-              height: '4px',
-              borderRadius: '999px',
-              background: 'var(--border-strong)',
-            }}
-          />
-        </div>
-
-        {/* Eyebrow / cancel row */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '10px 16px 8px',
-          }}
-        >
-          <span
-            style={{
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: '9px',
-              color: 'var(--fg-subtle)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 10,
             }}
           >
-            {copy.eyebrow}
-          </span>
-          <button
-            onClick={onClose}
-            style={{
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: '9px',
-              color: 'var(--fg-subtle)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              background: 'none',
-              border: 'none',
-              padding: '4px 0',
-              cursor: 'pointer',
-            }}
-          >
-            {copy.cancelButton}
-          </button>
-        </div>
-
-        {/* Scrollable body */}
-        <div
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '12px 20px 0',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px',
-          }}
-        >
-          {/* Heading */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span
+              style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: 9,
+                color: 'var(--fg-subtle)',
+                textTransform: 'uppercase' as const,
+                letterSpacing: '0.08em',
+              }}
+            >
+              {copy.eyebrow}
+            </span>
+            <button
+              onClick={onClose}
+              style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: 9,
+                color: 'var(--fg-subtle)',
+                textTransform: 'uppercase' as const,
+                letterSpacing: '0.08em',
+                background: 'none',
+                border: 'none',
+                padding: '4px 0',
+                cursor: 'pointer',
+              }}
+            >
+              {copy.cancelButton}
+            </button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <h2
               style={{
                 fontFamily: 'Inter, sans-serif',
                 fontWeight: 900,
-                fontSize: '24px',
+                fontSize: 24,
                 letterSpacing: '-0.025em',
                 color: 'var(--fg)',
                 margin: 0,
@@ -478,7 +427,7 @@ export const CorroborationSheet = ({
               <p
                 style={{
                   fontFamily: 'Inter, sans-serif',
-                  fontSize: '13.5px',
+                  fontSize: 13.5,
                   color: 'var(--fg-muted)',
                   margin: 0,
                 }}
@@ -487,187 +436,174 @@ export const CorroborationSheet = ({
               </p>
             )}
           </div>
-
-          {/* Submission detail card */}
-          <SubmissionDetailCard
-            floor={submission.floor}
-            {...(submission.ceiling !== undefined
-              ? { ceiling: submission.ceiling }
-              : {})}
-            tier={submission.tier}
-            vendor={submission.vendor}
-            kind={submission.kind}
-            submitter={submission.submitter}
-            accentColor={accentColor}
-          />
-
-          {isSelfLocked ? (
-            /* Self-locked waiting notice */
-            <div
+        </>
+      }
+      footer={
+        isSelfLocked ? (
+          /* Self-locked footer: Edit + Withdraw */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <button
+              onClick={onSubmitUpdate}
               style={{
-                background: 'color-mix(in oklab, var(--fg) 4%, transparent)',
-                border: '1px dashed var(--border-strong)',
-                borderRadius: '10px',
-                padding: '12px 14px',
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '10px',
+                background: 'var(--surface-1)',
+                border: '1px solid var(--border-strong)',
+                borderRadius: 10,
+                height: 44,
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: 700,
+                fontSize: 13.5,
+                color: 'var(--fg)',
+                cursor: 'pointer',
+                width: '100%',
               }}
             >
-              {/* Lock icon */}
-              <LockGlyph size={10} />
+              {copy.selfLocked.editButton}
+            </button>
+            <button
+              onClick={onWithdraw ?? onClose}
+              style={{
+                background: 'transparent',
+                border: '1px solid var(--warning)',
+                borderRadius: 10,
+                height: 44,
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: 700,
+                fontSize: 13.5,
+                color: 'var(--warning)',
+                cursor: 'pointer',
+                width: '100%',
+              }}
+            >
+              {copy.selfLocked.withdrawButton}
+            </button>
+          </div>
+        ) : (
+          /* Fresh state footer: Confirm CTA + escape link + disclaimer */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <button
+              onClick={() => {
+                if (selectedMethod !== null) {
+                  onConfirm(VERIFY_METHOD_TO_API[selectedMethod])
+                }
+              }}
+              disabled={selectedMethod === null}
+              style={{
+                background: accentColor,
+                height: 48,
+                borderRadius: 10,
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: 800,
+                fontSize: 14.5,
+                color: 'var(--fg-on-accent)',
+                border: 'none',
+                cursor: selectedMethod !== null ? 'pointer' : 'not-allowed',
+                opacity: selectedMethod !== null ? 1 : 0.45,
+                width: '100%',
+                transition: 'opacity 0.12s',
+              }}
+            >
+              {copy.confirmButton}
+            </button>
+            <button
+              onClick={onSubmitUpdate}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: 600,
+                fontSize: 13,
+                color: 'var(--fg-muted)',
+                cursor: 'pointer',
+                textAlign: 'center' as const,
+                lineHeight: 1.4,
+              }}
+            >
+              {copy.escapeLink}
+            </button>
+            <div
+              style={{
+                background: 'color-mix(in oklab, var(--fg) 3%, transparent)',
+                border: '1px solid var(--border)',
+                borderRadius: 10,
+                padding: '10px 14px',
+              }}
+            >
               <span
                 style={{
-                  fontFamily: 'JetBrains Mono, monospace',
-                  fontSize: '9px',
-                  color: 'var(--fg-muted)',
+                  fontFamily: 'Inter, system-ui',
+                  fontSize: 12,
+                  color: 'var(--fg-subtle)',
                   lineHeight: 1.5,
                 }}
               >
-                {copy.selfLocked.waitingNotice}
+                {copy.honestyDisclaimer}
               </span>
             </div>
-          ) : (
-            /* Verify options (fresh state) */
-            <div
-              role="radiogroup"
-              aria-label="Verification method"
-              style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
+          </div>
+        )
+      }
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* Submission detail card */}
+        <SubmissionDetailCard
+          floor={submission.floor}
+          {...(submission.ceiling !== undefined
+            ? { ceiling: submission.ceiling }
+            : {})}
+          tier={submission.tier}
+          vendor={submission.vendor}
+          kind={submission.kind}
+          submitter={submission.submitter}
+          accentColor={accentColor}
+        />
+
+        {isSelfLocked ? (
+          /* Self-locked waiting notice */
+          <div
+            style={{
+              background: 'color-mix(in oklab, var(--fg) 4%, transparent)',
+              border: '1px dashed var(--border-strong)',
+              borderRadius: 10,
+              padding: '12px 14px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 10,
+            }}
+          >
+            <LockGlyph size={10} />
+            <span
+              style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: 9,
+                color: 'var(--fg-muted)',
+                lineHeight: 1.5,
+              }}
             >
-              {verifyOptions.map((opt) => (
-                <VerifyOption
-                  key={opt.method}
-                  method={opt.method}
-                  label={opt.label}
-                  description={opt.description}
-                  isSelected={selectedMethod === opt.method}
-                  accentColor={accentColor}
-                  onSelect={setSelectedMethod}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div
-          style={{
-            padding: '16px 20px 28px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
-            flexShrink: 0,
-          }}
-        >
-          {isSelfLocked ? (
-            /* Self-locked footer: Edit + Withdraw */
-            <div
-              style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}
-            >
-              <button
-                onClick={onSubmitUpdate}
-                style={{
-                  background: 'var(--surface-1)',
-                  border: '1px solid var(--border-strong)',
-                  borderRadius: '10px',
-                  height: '44px',
-                  fontFamily: 'Inter, sans-serif',
-                  fontWeight: 700,
-                  fontSize: '13.5px',
-                  color: 'var(--fg)',
-                  cursor: 'pointer',
-                  width: '100%',
-                }}
-              >
-                {copy.selfLocked.editButton}
-              </button>
-              <button
-                onClick={onWithdraw ?? onClose}
-                style={{
-                  background: 'transparent',
-                  border: '1px solid var(--warning)',
-                  borderRadius: '10px',
-                  height: '44px',
-                  fontFamily: 'Inter, sans-serif',
-                  fontWeight: 700,
-                  fontSize: '13.5px',
-                  color: 'var(--warning)',
-                  cursor: 'pointer',
-                  width: '100%',
-                }}
-              >
-                {copy.selfLocked.withdrawButton}
-              </button>
-            </div>
-          ) : (
-            /* Fresh state footer: Confirm CTA + escape link + disclaimer */
-            <>
-              <button
-                onClick={() => {
-                  if (selectedMethod !== null) {
-                    onConfirm(VERIFY_METHOD_TO_API[selectedMethod])
-                  }
-                }}
-                disabled={selectedMethod === null}
-                style={{
-                  background: accentColor,
-                  height: '48px',
-                  borderRadius: '10px',
-                  fontFamily: 'Inter, sans-serif',
-                  fontWeight: 800,
-                  fontSize: '14.5px',
-                  color: 'var(--fg-on-accent)',
-                  border: 'none',
-                  cursor: selectedMethod !== null ? 'pointer' : 'not-allowed',
-                  opacity: selectedMethod !== null ? 1 : 0.45,
-                  width: '100%',
-                  transition: 'opacity 0.12s',
-                }}
-              >
-                {copy.confirmButton}
-              </button>
-
-              <button
-                onClick={onSubmitUpdate}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: 0,
-                  fontFamily: 'Inter, sans-serif',
-                  fontWeight: 600,
-                  fontSize: '13px',
-                  color: 'var(--fg-muted)',
-                  cursor: 'pointer',
-                  textAlign: 'center',
-                  lineHeight: 1.4,
-                }}
-              >
-                {copy.escapeLink}
-              </button>
-
-              <div
-                style={{
-                  background: 'color-mix(in oklab, var(--fg) 3%, transparent)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '10px',
-                  padding: '10px 14px',
-                }}
-              >
-                <span
-                  style={{
-                    fontFamily: 'Inter, system-ui',
-                    fontSize: '12px',
-                    color: 'var(--fg-subtle)',
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {copy.honestyDisclaimer}
-                </span>
-              </div>
-            </>
-          )}
-        </div>
+              {copy.selfLocked.waitingNotice}
+            </span>
+          </div>
+        ) : (
+          /* Verify options (fresh state) */
+          <div
+            role="radiogroup"
+            aria-label="Verification method"
+            style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+          >
+            {verifyOptions.map((opt) => (
+              <VerifyOption
+                key={opt.method}
+                method={opt.method}
+                label={opt.label}
+                description={opt.description}
+                isSelected={selectedMethod === opt.method}
+                accentColor={accentColor}
+                onSelect={setSelectedMethod}
+              />
+            ))}
+          </div>
+        )}
       </div>
-    </>
+    </ModalShell>
   )
 }

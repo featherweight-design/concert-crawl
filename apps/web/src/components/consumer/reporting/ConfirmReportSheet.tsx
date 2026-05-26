@@ -5,6 +5,7 @@ import { useAuth } from '@clerk/nextjs'
 import { confirmEventReport } from '@/lib/events'
 import { REPORT_TOKENS } from './reportTokens'
 import { REPORTING_COPY } from './definitions/copy'
+import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
 
 const copy = REPORTING_COPY.confirmReportSheet
 
@@ -284,8 +285,6 @@ export const ConfirmReportSheet = ({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { getToken } = useAuth()
 
-  if (!open) return null
-
   const token = REPORT_TOKENS[reportType]
   const Glyph = GLYPHS_16[reportType]
   const timeAgo = formatTimeAgo(reportedAt)
@@ -333,101 +332,55 @@ export const ConfirmReportSheet = ({
   }
 
   return (
-    <>
-      {/* Scrim */}
-      <div
-        className="fixed inset-0 bg-black/60 z-40"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      {/* Sheet */}
-      <div
-        className="fixed bottom-0 left-0 right-0 z-50 flex flex-col overflow-hidden"
-        style={{
-          maxWidth: '393px',
-          margin: '0 auto',
-          borderRadius: '18px 18px 0 0',
-          border: '1px solid var(--border)',
-          background: 'var(--bg)',
-          maxHeight: '820px',
-        }}
-      >
-        {/* Drag handle */}
-        <div
-          style={{ position: 'relative', height: '20px', flexShrink: 0 }}
-          aria-hidden="true"
-        >
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      ariaLabel="Confirm community report"
+      sheetHeight="tall"
+      header={
+        <>
           <div
             style={{
-              position: 'absolute',
-              top: '8px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: '36px',
-              height: '4px',
-              borderRadius: '999px',
-              background: 'var(--border-strong)',
-            }}
-          />
-        </div>
-
-        {/* Eyebrow / cancel row */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '10px 20px 0',
-          }}
-        >
-          <span
-            style={{
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: '9px',
-              color: 'var(--fg-subtle)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 10,
             }}
           >
-            {copy.eyebrow}
-          </span>
-          <button
-            onClick={onClose}
-            style={{
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: '9px',
-              color: 'var(--fg-subtle)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              background: 'none',
-              border: 'none',
-              padding: '4px 0',
-              cursor: 'pointer',
-            }}
-          >
-            {copy.cancelButton}
-          </button>
-        </div>
-
-        {/* Scrollable body */}
-        <div
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '12px 20px 0',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px',
-          }}
-        >
-          {/* Heading */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span
+              style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: 9,
+                color: 'var(--fg-subtle)',
+                textTransform: 'uppercase' as const,
+                letterSpacing: '0.08em',
+              }}
+            >
+              {copy.eyebrow}
+            </span>
+            <button
+              onClick={onClose}
+              style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: 9,
+                color: 'var(--fg-subtle)',
+                textTransform: 'uppercase' as const,
+                letterSpacing: '0.08em',
+                background: 'none',
+                border: 'none',
+                padding: '4px 0',
+                cursor: 'pointer',
+              }}
+            >
+              {copy.cancelButton}
+            </button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <h2
               style={{
                 fontFamily: 'Inter, sans-serif',
                 fontWeight: 900,
-                fontSize: '24px',
+                fontSize: 24,
                 letterSpacing: '-0.025em',
                 color: 'var(--fg)',
                 margin: 0,
@@ -436,144 +389,27 @@ export const ConfirmReportSheet = ({
             >
               {copy.heading}
             </h2>
-            <p
-              style={{
-                fontFamily: 'Inter, sans-serif',
-                fontSize: '13.5px',
-                color: 'var(--fg-muted)',
-                margin: 0,
-              }}
-            >
+            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 13.5, color: 'var(--fg-muted)', margin: 0 }}>
               {copy.subtitle}
             </p>
           </div>
-
-          {/* Recap card */}
-          <div
-            style={{
-              borderRadius: '12px',
-              background: token.bg,
-              border: `1px solid ${token.border}`,
-              padding: '12px 14px',
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '12px',
-            }}
-          >
-            {/* Icon container */}
-            <div
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '8px',
-                background: token.bgStrong,
-                flexShrink: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: token.color,
-              }}
-            >
-              <Glyph />
-            </div>
-
-            {/* Text */}
-            <div
-              style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}
-            >
-              <span
-                style={{
-                  fontFamily: 'Inter, sans-serif',
-                  fontWeight: 800,
-                  fontSize: '16px',
-                  color: 'var(--fg)',
-                  letterSpacing: '-0.01em',
-                  lineHeight: 1.2,
-                }}
-              >
-                {token.label}
-              </span>
-              <span
-                style={{
-                  fontFamily: 'JetBrains Mono, monospace',
-                  fontSize: '9px',
-                  color: 'var(--fg-muted)',
-                }}
-              >
-                {attributionText} · {timeAgo}
-              </span>
-            </div>
-          </div>
-
-          {/* Verify options */}
-          <div
-            role="radiogroup"
-            aria-label="Confirmation method"
-            style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
-          >
-            {verifyOptions.map((opt) => (
-              <VerifyOption
-                key={opt.method}
-                method={opt.method}
-                label={opt.label}
-                description={opt.description}
-                isSelected={selectedMethod === opt.method}
-                accentColor={token.color}
-                onSelect={setSelectedMethod}
-              />
-            ))}
-          </div>
-
-          {/* Caution note */}
-          <div
-            style={{
-              background: 'color-mix(in oklab, var(--fg) 3%, transparent)',
-              border: '1px solid var(--border)',
-              borderRadius: '8px',
-              padding: '10px 14px',
-            }}
-          >
-            <span
-              style={{
-                fontFamily: 'Inter, system-ui',
-                fontSize: '12px',
-                color: 'var(--fg-subtle)',
-                lineHeight: 1.5,
-              }}
-            >
-              {copy.cautionNote}
-            </span>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div
-          style={{
-            padding: '16px 20px 28px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
-            flexShrink: 0,
-          }}
-        >
+        </>
+      }
+      footer={
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <button
-            onClick={() => {
-              void handleConfirm()
-            }}
+            onClick={() => { void handleConfirm() }}
             disabled={selectedMethod === null || isSubmitting}
             style={{
               background: token.color,
-              height: '48px',
-              borderRadius: '10px',
+              height: 48,
+              borderRadius: 10,
               fontFamily: 'Inter, sans-serif',
               fontWeight: 800,
-              fontSize: '14.5px',
+              fontSize: 14.5,
               color: 'var(--fg-on-accent)',
               border: 'none',
-              cursor:
-                selectedMethod !== null && !isSubmitting
-                  ? 'pointer'
-                  : 'not-allowed',
+              cursor: selectedMethod !== null && !isSubmitting ? 'pointer' : 'not-allowed',
               opacity: selectedMethod !== null && !isSubmitting ? 1 : 0.45,
               width: '100%',
               transition: 'opacity 0.12s',
@@ -581,7 +417,6 @@ export const ConfirmReportSheet = ({
           >
             {copy.confirmButton}
           </button>
-
           <button
             onClick={onFileCounter}
             style={{
@@ -590,17 +425,85 @@ export const ConfirmReportSheet = ({
               padding: 0,
               fontFamily: 'Inter, sans-serif',
               fontWeight: 600,
-              fontSize: '13px',
+              fontSize: 13,
               color: 'var(--fg-muted)',
               cursor: 'pointer',
-              textAlign: 'center',
+              textAlign: 'center' as const,
               lineHeight: 1.4,
             }}
           >
             {copy.counterReportLink}
           </button>
         </div>
+      }
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* Recap card */}
+        <div
+          style={{
+            borderRadius: 12,
+            background: token.bg,
+            border: `1px solid ${token.border}`,
+            padding: '12px 14px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 12,
+          }}
+        >
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              background: token.bgStrong,
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: token.color,
+            }}
+          >
+            <Glyph />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 800, fontSize: 16, color: 'var(--fg)', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
+              {token.label}
+            </span>
+            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, color: 'var(--fg-muted)' }}>
+              {attributionText} · {timeAgo}
+            </span>
+          </div>
+        </div>
+
+        {/* Verify options */}
+        <div role="radiogroup" aria-label="Confirmation method" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {verifyOptions.map((opt) => (
+            <VerifyOption
+              key={opt.method}
+              method={opt.method}
+              label={opt.label}
+              description={opt.description}
+              isSelected={selectedMethod === opt.method}
+              accentColor={token.color}
+              onSelect={setSelectedMethod}
+            />
+          ))}
+        </div>
+
+        {/* Caution note */}
+        <div
+          style={{
+            background: 'color-mix(in oklab, var(--fg) 3%, transparent)',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+            padding: '10px 14px',
+          }}
+        >
+          <span style={{ fontFamily: 'Inter, system-ui', fontSize: 12, color: 'var(--fg-subtle)', lineHeight: 1.5 }}>
+            {copy.cautionNote}
+          </span>
+        </div>
       </div>
-    </>
+    </ModalShell>
   )
 }

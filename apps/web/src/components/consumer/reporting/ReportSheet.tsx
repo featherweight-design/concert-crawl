@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { REPORTING_COPY } from './definitions/copy'
 import { REPORT_TOKENS } from './reportTokens'
 import { ReportTypeMark } from './ReportTypeMark'
+import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
 
 // ── Report type glyphs (15×15) ────────────────────────────────────
 
@@ -269,10 +270,8 @@ export const ReportSheet = ({
 }: ReportSheetProps) => {
   const [selectedType, setSelectedType] = useState<ReportType | null>(null)
 
-  if (!open) return null
-
   const visibleOptions = getVisibleOptions(liveStatus)
-  const sheetHeight = visibleOptions.length === 1 ? '600px' : '760px'
+  const sheetHeight: 'tall' | 'short' = visibleOptions.length === 1 ? 'short' : 'tall'
 
   const handleContinue = () => {
     if (selectedType !== null) {
@@ -281,100 +280,54 @@ export const ReportSheet = ({
   }
 
   return (
-    <>
-      {/* Scrim */}
-      <div
-        className="fixed inset-0 bg-black/60 z-40"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      {/* Sheet */}
-      <div
-        className="fixed bottom-0 left-0 right-0 z-50 flex flex-col overflow-hidden"
-        style={{
-          maxWidth: '393px',
-          margin: '0 auto',
-          borderRadius: '18px 18px 0 0',
-          border: '1px solid var(--border)',
-          background: 'var(--bg)',
-          maxHeight: sheetHeight,
-        }}
-      >
-        {/* Drag handle */}
-        <div
-          style={{ position: 'relative', height: '20px', flexShrink: 0 }}
-          aria-hidden="true"
-        >
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      ariaLabel="Report a status change"
+      sheetHeight={sheetHeight}
+      header={
+        <>
           <div
             style={{
-              position: 'absolute',
-              top: '8px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: '36px',
-              height: '4px',
-              borderRadius: '999px',
-              background: 'var(--border-strong)',
-            }}
-          />
-        </div>
-
-        {/* Eyebrow / cancel row */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '10px 20px 0',
-          }}
-        >
-          <span
-            style={{
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: '9px',
-              color: 'var(--fg-subtle)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 10,
             }}
           >
-            {copy.eyebrow}
-          </span>
-          <button
-            onClick={onClose}
-            style={{
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: '9px',
-              color: 'var(--fg-subtle)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              background: 'none',
-              border: 'none',
-              padding: '4px 0',
-              cursor: 'pointer',
-            }}
-          >
-            {copy.cancelButton}
-          </button>
-        </div>
-
-        {/* Scrollable body */}
-        <div
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '12px 20px 0',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px',
-          }}
-        >
-          {/* Heading */}
+            <span
+              style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: 9,
+                color: 'var(--fg-subtle)',
+                textTransform: 'uppercase' as const,
+                letterSpacing: '0.08em',
+              }}
+            >
+              {copy.eyebrow}
+            </span>
+            <button
+              onClick={onClose}
+              style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: 9,
+                color: 'var(--fg-subtle)',
+                textTransform: 'uppercase' as const,
+                letterSpacing: '0.08em',
+                background: 'none',
+                border: 'none',
+                padding: '4px 0',
+                cursor: 'pointer',
+              }}
+            >
+              {copy.cancelButton}
+            </button>
+          </div>
           <h2
             style={{
               fontFamily: 'Inter, sans-serif',
               fontWeight: 900,
-              fontSize: '24px',
+              fontSize: 24,
               letterSpacing: '-0.025em',
               color: 'var(--fg)',
               margin: 0,
@@ -383,78 +336,70 @@ export const ReportSheet = ({
           >
             {copy.heading}
           </h2>
-
-          {/* Currently live section */}
-          {liveStatus !== null && (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '6px',
-                marginBottom: '14px',
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: 'JetBrains Mono, monospace',
-                  fontSize: '9px',
-                  color: 'var(--fg-subtle)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                }}
-              >
-                {copy.currentlyShowingAs}
-              </span>
-              <ReportTypeMark kind={liveStatus} />
-            </div>
-          )}
-
-          {/* Report options */}
-          <div
-            role="radiogroup"
-            aria-label="Report type"
-            style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
-          >
-            {visibleOptions.map((optionType) => (
-              <ReportOptionRow
-                key={optionType}
-                option={OPTION_DATA[optionType]}
-                isSelected={selectedType === optionType}
-                onSelect={setSelectedType}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div
+        </>
+      }
+      footer={
+        <button
+          onClick={handleContinue}
+          disabled={selectedType === null}
           style={{
-            padding: '16px 20px 28px',
-            flexShrink: 0,
+            background: 'var(--signal)',
+            height: 48,
+            borderRadius: 10,
+            fontFamily: 'Inter, sans-serif',
+            fontWeight: 800,
+            fontSize: 14.5,
+            color: 'var(--fg-on-accent)',
+            border: 'none',
+            cursor: selectedType !== null ? 'pointer' : 'not-allowed',
+            opacity: selectedType !== null ? 1 : 0.45,
+            width: '100%',
+            transition: 'opacity 0.12s',
           }}
         >
-          <button
-            onClick={handleContinue}
-            disabled={selectedType === null}
+          {copy.continueButton}
+        </button>
+      }
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {liveStatus !== null && (
+          <div
             style={{
-              background: 'var(--signal)',
-              height: '48px',
-              borderRadius: '10px',
-              fontFamily: 'Inter, sans-serif',
-              fontWeight: 800,
-              fontSize: '14.5px',
-              color: 'var(--fg-on-accent)',
-              border: 'none',
-              cursor: selectedType !== null ? 'pointer' : 'not-allowed',
-              opacity: selectedType !== null ? 1 : 0.45,
-              width: '100%',
-              transition: 'opacity 0.12s',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 6,
+              marginBottom: 14,
             }}
           >
-            {copy.continueButton}
-          </button>
+            <span
+              style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: 9,
+                color: 'var(--fg-subtle)',
+                textTransform: 'uppercase' as const,
+                letterSpacing: '0.06em',
+              }}
+            >
+              {copy.currentlyShowingAs}
+            </span>
+            <ReportTypeMark kind={liveStatus} />
+          </div>
+        )}
+        <div
+          role="radiogroup"
+          aria-label="Report type"
+          style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+        >
+          {visibleOptions.map((optionType) => (
+            <ReportOptionRow
+              key={optionType}
+              option={OPTION_DATA[optionType]}
+              isSelected={selectedType === optionType}
+              onSelect={setSelectedType}
+            />
+          ))}
         </div>
       </div>
-    </>
+    </ModalShell>
   )
 }

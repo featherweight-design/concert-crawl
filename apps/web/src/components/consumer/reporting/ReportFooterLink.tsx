@@ -17,7 +17,6 @@ export const ReportFooterLink = ({
     <div
       style={{
         width: '100%',
-        maxWidth: '393px',
         padding: '24px 18px 32px',
         borderTop: '1px dashed var(--border)',
         background: 'var(--bg)',

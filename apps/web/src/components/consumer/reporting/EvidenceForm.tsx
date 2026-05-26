@@ -5,6 +5,7 @@ import { useAuth } from '@clerk/nextjs'
 import { fileEventReport } from '@/lib/events'
 import { REPORTING_COPY } from './definitions/copy'
 import { REPORT_TOKENS } from './reportTokens'
+import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
 
 const copy = REPORTING_COPY.evidenceForm
 
@@ -211,8 +212,6 @@ export const EvidenceForm = ({
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
-  if (!open) return null
-
   const daysUntil = getDaysUntil(eventDate)
   const isImminent = daysUntil >= 0 && daysUntil < 7
   const tokens = REPORT_TOKENS[reportType]
@@ -254,100 +253,54 @@ export const EvidenceForm = ({
   }
 
   return (
-    <>
-      {/* Scrim */}
-      <div
-        className="fixed inset-0 bg-black/60 z-40"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      {/* Sheet */}
-      <div
-        className="fixed bottom-0 left-0 right-0 z-50 flex flex-col overflow-hidden"
-        style={{
-          maxWidth: '393px',
-          margin: '0 auto',
-          borderRadius: '18px 18px 0 0',
-          border: '1px solid var(--border)',
-          background: 'var(--bg)',
-          maxHeight: '860px',
-        }}
-      >
-        {/* Drag handle */}
-        <div
-          style={{ position: 'relative', height: '20px', flexShrink: 0 }}
-          aria-hidden="true"
-        >
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      ariaLabel="Add evidence for your report"
+      sheetHeight="tall"
+      header={
+        <>
           <div
             style={{
-              position: 'absolute',
-              top: '8px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: '36px',
-              height: '4px',
-              borderRadius: '999px',
-              background: 'var(--border-strong)',
-            }}
-          />
-        </div>
-
-        {/* Eyebrow / cancel row */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '10px 20px 0',
-          }}
-        >
-          <span
-            style={{
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: '9px',
-              color: 'var(--fg-subtle)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 10,
             }}
           >
-            {copy.eyebrow}
-          </span>
-          <button
-            onClick={onClose}
-            style={{
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: '9px',
-              color: 'var(--fg-subtle)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              background: 'none',
-              border: 'none',
-              padding: '4px 0',
-              cursor: 'pointer',
-            }}
-          >
-            {copy.cancelButton}
-          </button>
-        </div>
-
-        {/* Scrollable body */}
-        <div
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '12px 20px 0',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px',
-          }}
-        >
-          {/* Heading */}
+            <span
+              style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: 9,
+                color: 'var(--fg-subtle)',
+                textTransform: 'uppercase' as const,
+                letterSpacing: '0.08em',
+              }}
+            >
+              {copy.eyebrow}
+            </span>
+            <button
+              onClick={onClose}
+              style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: 9,
+                color: 'var(--fg-subtle)',
+                textTransform: 'uppercase' as const,
+                letterSpacing: '0.08em',
+                background: 'none',
+                border: 'none',
+                padding: '4px 0',
+                cursor: 'pointer',
+              }}
+            >
+              {copy.cancelButton}
+            </button>
+          </div>
           <h2
             style={{
               fontFamily: 'Inter, sans-serif',
               fontWeight: 900,
-              fontSize: '24px',
+              fontSize: 24,
               letterSpacing: '-0.025em',
               color: 'var(--fg)',
               margin: 0,
@@ -356,200 +309,23 @@ export const EvidenceForm = ({
           >
             {copy.heading}
           </h2>
-
-          {/* Imminent warning */}
-          {isImminent && (
-            <div
-              style={{
-                background:
-                  'color-mix(in oklab, var(--warning) 8%, transparent)',
-                border:
-                  '1px solid color-mix(in oklab, var(--warning) 36%, var(--border))',
-                borderRadius: '10px',
-                padding: '10px 14px',
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '8px',
-              }}
-            >
-              {/* Warning triangle */}
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 16 16"
-                fill="none"
-                aria-hidden="true"
-                style={{ flexShrink: 0, marginTop: '1px' }}
-              >
-                <path
-                  d="M8 2L14 13H2L8 2z"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinejoin="round"
-                  fill="none"
-                />
-                <path
-                  d="M8 6.5V9"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                />
-                <circle cx="8" cy="10.8" r="0.7" fill="currentColor" />
-              </svg>
-              <span
-                style={{
-                  fontFamily: 'Inter, sans-serif',
-                  fontSize: '12px',
-                  color: 'var(--fg-muted)',
-                  lineHeight: 1.5,
-                }}
-              >
-                {copy.imminentWarning(daysUntil)}
-              </span>
-            </div>
-          )}
-
-          {/* Evidence options */}
-          <div
-            role="radiogroup"
-            aria-label="Evidence method"
-            style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
-          >
-            {EVIDENCE_OPTIONS.map((opt) => (
-              <EvidenceOption
-                key={opt.method}
-                option={opt}
-                isSelected={selectedMethod === opt.method}
-                onSelect={setSelectedMethod}
-              />
-            ))}
-          </div>
-
-          {/* Source URL */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label
-              style={{
-                fontFamily: 'Inter, sans-serif',
-                fontWeight: 600,
-                fontSize: '12px',
-                color: 'var(--fg-muted)',
-              }}
-            >
-              {copy.sourceLinkLabel}
-            </label>
-            <input
-              type="url"
-              value={sourceUrl}
-              onChange={(evt) => setSourceUrl(evt.target.value)}
-              placeholder={copy.sourceLinkPlaceholder}
-              style={{
-                border: '1px solid var(--border-strong)',
-                borderRadius: '10px',
-                padding: '8px 10px',
-                fontFamily: 'Inter, sans-serif',
-                fontSize: '13px',
-                color: 'var(--fg)',
-                background: 'var(--surface-1)',
-                outline: 'none',
-                width: '100%',
-                boxSizing: 'border-box',
-              }}
-            />
-          </div>
-
-          {/* Notes */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <label
-                style={{
-                  fontFamily: 'Inter, sans-serif',
-                  fontWeight: 600,
-                  fontSize: '12px',
-                  color: 'var(--fg-muted)',
-                }}
-              >
-                {copy.notesLabel}
-              </label>
-              <span
-                style={{
-                  fontFamily: 'Inter, sans-serif',
-                  fontSize: '11px',
-                  color: 'var(--fg-subtle)',
-                }}
-              >
-                {copy.charCountSuffix(notes.length, NOTES_MAX_CHARS)}
-              </span>
-            </div>
-            <textarea
-              value={notes}
-              onChange={(evt) => {
-                if (evt.target.value.length <= NOTES_MAX_CHARS) {
-                  setNotes(evt.target.value)
-                }
-              }}
-              placeholder={copy.notesPlaceholder}
-              maxLength={NOTES_MAX_CHARS}
-              style={{
-                border: '1px solid var(--border-strong)',
-                borderRadius: '10px',
-                padding: '8px 10px',
-                fontFamily: 'Inter, sans-serif',
-                fontSize: '13px',
-                color: 'var(--fg-subtle)',
-                background: 'var(--surface-1)',
-                outline: 'none',
-                width: '100%',
-                minHeight: '56px',
-                resize: 'vertical',
-                boxSizing: 'border-box',
-              }}
-            />
-          </div>
-
-          {/* Error */}
-          {errorMsg && (
-            <p
-              style={{
-                fontFamily: 'Inter, sans-serif',
-                fontSize: '12px',
-                color: 'var(--danger)',
-                margin: 0,
-              }}
-            >
-              {errorMsg}
-            </p>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div
-          style={{
-            padding: '16px 20px 28px',
-            flexShrink: 0,
-          }}
-        >
+        </>
+      }
+      footer={
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <button
-            onClick={handleSubmit}
+            onClick={() => { void handleSubmit() }}
             disabled={selectedMethod === null || submitting}
             style={{
               background: tokens.color,
-              height: '48px',
-              borderRadius: '10px',
+              height: 48,
+              borderRadius: 10,
               fontFamily: 'Inter, sans-serif',
               fontWeight: 800,
-              fontSize: '14.5px',
+              fontSize: 14.5,
               color: 'var(--fg-on-accent)',
               border: 'none',
-              cursor:
-                selectedMethod !== null && !submitting
-                  ? 'pointer'
-                  : 'not-allowed',
+              cursor: selectedMethod !== null && !submitting ? 'pointer' : 'not-allowed',
               opacity: selectedMethod !== null && !submitting ? 1 : 0.45,
               width: '100%',
               transition: 'opacity 0.12s',
@@ -559,20 +335,120 @@ export const EvidenceForm = ({
           </button>
           <p
             style={{
-              marginTop: '10px',
               fontFamily: "'JetBrains Mono', monospace",
-              fontSize: '9px',
+              fontSize: 9,
               color: 'var(--fg-subtle)',
               letterSpacing: '0.04em',
-              textTransform: 'uppercase',
-              textAlign: 'center',
-              margin: '10px 0 0',
+              textTransform: 'uppercase' as const,
+              textAlign: 'center' as const,
+              margin: 0,
             }}
           >
             Community reports need 2–3 confirms to take effect.
           </p>
         </div>
+      }
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {isImminent && (
+          <div
+            style={{
+              background: 'color-mix(in oklab, var(--warning) 8%, transparent)',
+              border: '1px solid color-mix(in oklab, var(--warning) 36%, var(--border))',
+              borderRadius: 10,
+              padding: '10px 14px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 8,
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ flexShrink: 0, marginTop: 1 }}>
+              <path d="M8 2L14 13H2L8 2z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" fill="none" />
+              <path d="M8 6.5V9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <circle cx="8" cy="10.8" r="0.7" fill="currentColor" />
+            </svg>
+            <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'var(--fg-muted)', lineHeight: 1.5 }}>
+              {copy.imminentWarning(daysUntil)}
+            </span>
+          </div>
+        )}
+
+        <div role="radiogroup" aria-label="Evidence method" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {EVIDENCE_OPTIONS.map((opt) => (
+            <EvidenceOption
+              key={opt.method}
+              option={opt}
+              isSelected={selectedMethod === opt.method}
+              onSelect={setSelectedMethod}
+            />
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 12, color: 'var(--fg-muted)' }}>
+            {copy.sourceLinkLabel}
+          </label>
+          <input
+            type="url"
+            value={sourceUrl}
+            onChange={(evt) => setSourceUrl(evt.target.value)}
+            placeholder={copy.sourceLinkPlaceholder}
+            style={{
+              border: '1px solid var(--border-strong)',
+              borderRadius: 10,
+              padding: '8px 10px',
+              fontFamily: 'Inter, sans-serif',
+              fontSize: 13,
+              color: 'var(--fg)',
+              background: 'var(--surface-1)',
+              outline: 'none',
+              width: '100%',
+              boxSizing: 'border-box' as const,
+            }}
+          />
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <label style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 12, color: 'var(--fg-muted)' }}>
+              {copy.notesLabel}
+            </label>
+            <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 11, color: 'var(--fg-subtle)' }}>
+              {copy.charCountSuffix(notes.length, NOTES_MAX_CHARS)}
+            </span>
+          </div>
+          <textarea
+            value={notes}
+            onChange={(evt) => {
+              if (evt.target.value.length <= NOTES_MAX_CHARS) {
+                setNotes(evt.target.value)
+              }
+            }}
+            placeholder={copy.notesPlaceholder}
+            maxLength={NOTES_MAX_CHARS}
+            style={{
+              border: '1px solid var(--border-strong)',
+              borderRadius: 10,
+              padding: '8px 10px',
+              fontFamily: 'Inter, sans-serif',
+              fontSize: 13,
+              color: 'var(--fg-subtle)',
+              background: 'var(--surface-1)',
+              outline: 'none',
+              width: '100%',
+              minHeight: 56,
+              resize: 'vertical' as const,
+              boxSizing: 'border-box' as const,
+            }}
+          />
+        </div>
+
+        {errorMsg && (
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'var(--danger)', margin: 0 }}>
+            {errorMsg}
+          </p>
+        )}
       </div>
-    </>
+    </ModalShell>
   )
 }
