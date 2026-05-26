@@ -75,6 +75,10 @@ export const ReviewPageClient = ({
     useState<PriceSubmission[]>(initialSubmissions)
   const [priceEvents, setPriceEvents] = useState<PriceEvent[]>([])
   const [priceEventsLoading, setPriceEventsLoading] = useState(true)
+  const [priceFilter, setPriceFilter] = useState<'missing' | 'all'>('missing')
+  const [priceOffset, setPriceOffset] = useState(0)
+  const [hasMorePriceEvents, setHasMorePriceEvents] = useState(true)
+  const [priceLoadingMore, setPriceLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isFetchingMoreEvents, setIsFetchingMoreEvents] = useState(false)
   const [eventsOffset, setEventsOffset] = useState(initialEvents.length)
@@ -116,27 +120,60 @@ export const ReviewPageClient = ({
 
   // Lazy-load price coverage data client-side — it's below the fold and has
   // a heavy aggregating query that shouldn't block the initial page render.
-  useEffect(() => {
-    let cancelled = false
-    void (async () => {
+  const fetchPriceEvents = useCallback(
+    async (filter: 'missing' | 'all', offset: number, append: boolean) => {
       try {
         const token = await getToken()
-        if (!token || cancelled) return
+        if (!token) return
+        const missingOnly = filter === 'missing'
         const rows = await apiClient.get<PriceEvent[]>(
-          '/v1/admin/prices/events',
+          `/v1/admin/prices/events?missingOnly=${String(missingOnly)}&limit=50&offset=${offset}`,
           token,
         )
-        if (!cancelled) setPriceEvents(rows)
+        if (append) {
+          setPriceEvents((prev) => [...prev, ...rows])
+        } else {
+          setPriceEvents(rows)
+        }
+        setHasMorePriceEvents(rows.length === 50)
       } catch (err) {
-        if (!cancelled) console.error('Failed to load price coverage data', err)
+        console.error('Failed to load price coverage data', err)
+        setHasMorePriceEvents(false)
       } finally {
-        if (!cancelled) setPriceEventsLoading(false)
+        setPriceEventsLoading(false)
+        setPriceLoadingMore(false)
       }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [getToken])
+    },
+    [getToken],
+  )
+
+  useEffect(() => {
+    void fetchPriceEvents('missing', 0, false)
+  }, [fetchPriceEvents])
+
+  const loadMorePriceEvents = useCallback(() => {
+    if (!hasMorePriceEvents || priceLoadingMore) return
+    const nextOffset = priceOffset + 50
+    setPriceOffset(nextOffset)
+    setPriceLoadingMore(true)
+    void fetchPriceEvents(priceFilter, nextOffset, true)
+  }, [
+    fetchPriceEvents,
+    hasMorePriceEvents,
+    priceLoadingMore,
+    priceOffset,
+    priceFilter,
+  ])
+
+  const togglePriceFilter = useCallback(() => {
+    const newFilter: 'missing' | 'all' =
+      priceFilter === 'missing' ? 'all' : 'missing'
+    setPriceFilter(newFilter)
+    setPriceOffset(0)
+    setPriceEventsLoading(true)
+    setHasMorePriceEvents(true)
+    void fetchPriceEvents(newFilter, 0, false)
+  }, [fetchPriceEvents, priceFilter])
 
   const fetchMoreEvents = useCallback(async () => {
     if (isFetchingMoreEvents || !hasMoreEvents) return
@@ -403,6 +440,11 @@ export const ReviewPageClient = ({
             onDenySubmission={denySubmission}
             onAddPrice={addPrice}
             initialTab={mobileInitialTab}
+            pricesMissingOnly={priceFilter === 'missing'}
+            hasMorePriceEvents={hasMorePriceEvents}
+            priceLoadingMore={priceLoadingMore}
+            onTogglePriceFilter={togglePriceFilter}
+            onLoadMorePriceEvents={loadMorePriceEvents}
           />
         </div>
       </div>
@@ -433,6 +475,11 @@ export const ReviewPageClient = ({
           events={priceEvents}
           loading={priceEventsLoading}
           onAddPrice={addPrice}
+          missingOnly={priceFilter === 'missing'}
+          hasMore={hasMorePriceEvents}
+          loadingMore={priceLoadingMore}
+          onToggleFilter={togglePriceFilter}
+          onLoadMore={loadMorePriceEvents}
         />
       </div>
     </div>

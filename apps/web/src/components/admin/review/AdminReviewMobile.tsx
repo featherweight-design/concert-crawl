@@ -72,6 +72,11 @@ interface AdminReviewMobileProps {
     howFound: string,
   ) => Promise<void>
   initialTab?: 'flags' | 'prices'
+  pricesMissingOnly: boolean
+  hasMorePriceEvents: boolean
+  priceLoadingMore?: boolean
+  onTogglePriceFilter: () => void
+  onLoadMorePriceEvents: () => void
 }
 
 function getEventFlagChips(
@@ -556,13 +561,16 @@ export function AdminReviewMobile({
   onDenySubmission,
   onAddPrice,
   initialTab = 'flags',
+  pricesMissingOnly,
+  hasMorePriceEvents,
+  priceLoadingMore = false,
+  onTogglePriceFilter,
+  onLoadMorePriceEvents,
 }: AdminReviewMobileProps) {
   const [activeTab, setActiveTab] = useState<'flags' | 'prices'>(initialTab)
-  const [showMissingOnly, setShowMissingOnly] = useState(false)
 
-  const missingPriceEvents = priceEvents.filter((ev) => ev.priceMin === null)
-  const visiblePriceEvents = showMissingOnly ? missingPriceEvents : priceEvents
-  const priceCount = submissions.length + missingPriceEvents.length
+  const missingCount = priceEvents.filter((ev) => ev.priceMin === null).length
+  const priceCount = submissions.length + missingCount
 
   const cardStyle: React.CSSProperties = {
     background: 'var(--bg-elevated)',
@@ -979,20 +987,18 @@ export function AdminReviewMobile({
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <AdminButton
-                  variant={showMissingOnly ? 'outline' : 'ghost'}
+                  variant={pricesMissingOnly ? 'outline' : 'ghost'}
                   size="sm"
-                  onClick={() => setShowMissingOnly((prev) => !prev)}
+                  onClick={onTogglePriceFilter}
                 >
                   {ADMIN_COPY.review.adminReviewMobile.missingOnly}
                 </AdminButton>
-                <StatusBadge kind="warning">
-                  {missingPriceEvents.length}
-                </StatusBadge>
+                <StatusBadge kind="warning">{missingCount}</StatusBadge>
               </div>
             </div>
 
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-              {visiblePriceEvents.length === 0 ? (
+              {priceEvents.length === 0 ? (
                 <div
                   style={{
                     padding: '12px 16px',
@@ -1001,18 +1007,41 @@ export function AdminReviewMobile({
                     color: 'var(--fg-subtle)',
                   }}
                 >
-                  {showMissingOnly
+                  {pricesMissingOnly
                     ? ADMIN_COPY.review.adminReviewMobile.allHavePrices
                     : ADMIN_COPY.review.adminReviewMobile.noUpcomingEvents}
                 </div>
               ) : (
-                visiblePriceEvents.map((ev) => (
-                  <NeedsPriceRow
-                    key={ev.eventId}
-                    event={ev}
-                    onAddPrice={onAddPrice}
-                  />
-                ))
+                <>
+                  {priceEvents.map((ev) => (
+                    <NeedsPriceRow
+                      key={ev.eventId}
+                      event={ev}
+                      onAddPrice={onAddPrice}
+                    />
+                  ))}
+                  {(hasMorePriceEvents || priceLoadingMore) && (
+                    <div
+                      style={{
+                        padding: '10px 16px',
+                        borderTop: '1px solid var(--border)',
+                        display: 'flex',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <AdminButton
+                        variant="ghost"
+                        size="sm"
+                        onClick={onLoadMorePriceEvents}
+                        disabled={priceLoadingMore}
+                      >
+                        {priceLoadingMore
+                          ? ADMIN_COPY.review.adminReviewMobile.loadingMore
+                          : ADMIN_COPY.review.adminReviewMobile.loadMore}
+                      </AdminButton>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

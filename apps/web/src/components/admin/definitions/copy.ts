@@ -1201,6 +1201,8 @@ export const ADMIN_COPY = {
         boughtMyself: 'Bought tickets',
         atTheVenue: 'At the venue',
       },
+      loadMore: 'Load more events',
+      loadingMore: 'Loading…',
     },
 
     pendingSubmissions: {
@@ -1232,6 +1234,8 @@ export const ADMIN_COPY = {
       missingOnly: 'Missing only',
       allHavePrices: 'All events have prices.',
       noUpcomingEvents: 'No upcoming events.',
+      loadMore: 'Load more',
+      loadingMore: 'Loading…',
       llmReasoning: 'LLM reasoning',
       llmDetailsStrategy: 'strategy:',
       llmDetailsConfidence: 'confidence:',
