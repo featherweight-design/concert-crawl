@@ -10,6 +10,7 @@ import {
   getAuthUser,
   getAuthOptional,
 } from '../middleware/auth.js'
+import { moderateNote } from '../lib/moderate-note.js'
 
 const submissionBodySchema = z
   .object({
@@ -25,6 +26,8 @@ const submissionBodySchema = z
       'VenueBoxOffice',
     ]),
     howFound: z.enum(['bought_myself', 'saw_listing', 'at_the_venue']),
+    note: z.string().max(280).optional(),
+    disputedSubmissionId: z.string().uuid().optional(),
   })
   .refine((data) => !data.priceMax || data.priceMax >= data.priceMin, {
     message: "Ceiling can't be below floor.",
@@ -137,6 +140,17 @@ priceSubmissionsRouter.post(
     const { userId } = getAuthUser(ctx)
     const body = ctx.req.valid('json')
 
+    // Content moderation for note
+    if (body.note) {
+      const modResult = moderateNote(body.note)
+      if (!modResult.ok) {
+        return ctx.json(
+          { success: false, error: modResult.reason ?? 'Note rejected.' },
+          422,
+        )
+      }
+    }
+
     const [event] = await db
       .select({ id: events.id })
       .from(events)
@@ -144,6 +158,30 @@ priceSubmissionsRouter.post(
       .limit(1)
     if (!event)
       return ctx.json({ success: false, error: 'Event not found' }, 404)
+
+    // Validate disputedSubmissionId if provided
+    if (body.disputedSubmissionId) {
+      const [disputed] = await db
+        .select({ id: priceSubmissions.id, status: priceSubmissions.status })
+        .from(priceSubmissions)
+        .where(eq(priceSubmissions.id, body.disputedSubmissionId))
+        .limit(1)
+      if (!disputed) {
+        return ctx.json(
+          { success: false, error: 'Disputed submission not found' },
+          404,
+        )
+      }
+      if (disputed.status !== 'corroborated') {
+        return ctx.json(
+          {
+            success: false,
+            error: 'Can only dispute a corroborated submission',
+          },
+          400,
+        )
+      }
+    }
 
     // 409 — existing pending submission
     const existing = await db
@@ -200,6 +238,8 @@ priceSubmissionsRouter.post(
         tier: body.tier,
         vendor: body.vendor,
         howFound: body.howFound,
+        note: body.note ?? null,
+        disputedSubmissionId: body.disputedSubmissionId ?? null,
       })
       .returning()
 
