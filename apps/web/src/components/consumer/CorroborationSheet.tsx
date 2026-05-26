@@ -40,6 +40,15 @@ type VerifyMethod =
   | 'saw_listing'
   | 'bought_myself'
 
+type ApiConfirmMethod = 'same-vendor' | 'other-vendor' | 'box-office'
+
+const VERIFY_METHOD_TO_API: Record<VerifyMethod, ApiConfirmMethod> = {
+  same_vendor: 'same-vendor',
+  other_vendor: 'other-vendor',
+  saw_listing: 'box-office',
+  bought_myself: 'box-office',
+}
+
 // ── Props ────────────────────────────────────────────────────────
 export interface CorroborationSheetProps {
   submission: {
@@ -58,7 +67,8 @@ export interface CorroborationSheetProps {
   open: boolean
   isSelfLocked?: boolean
   onClose: () => void
-  onConfirm: (method: string) => void
+  onConfirm: (method: ApiConfirmMethod) => void
+  onWithdraw?: () => void
   onSubmitUpdate: () => void
 }
 
@@ -318,6 +328,7 @@ export const CorroborationSheet = ({
   isSelfLocked = false,
   onClose,
   onConfirm,
+  onWithdraw,
   onSubmitUpdate,
 }: CorroborationSheetProps) => {
   const [selectedMethod, setSelectedMethod] = useState<VerifyMethod | null>(
@@ -571,7 +582,7 @@ export const CorroborationSheet = ({
                 {copy.selfLocked.editButton}
               </button>
               <button
-                onClick={onClose}
+                onClick={onWithdraw ?? onClose}
                 style={{
                   background: 'transparent',
                   border: '1px solid var(--warning)',
@@ -594,7 +605,7 @@ export const CorroborationSheet = ({
               <button
                 onClick={() => {
                   if (selectedMethod !== null) {
-                    onConfirm(selectedMethod)
+                    onConfirm(VERIFY_METHOD_TO_API[selectedMethod])
                   }
                 }}
                 disabled={selectedMethod === null}

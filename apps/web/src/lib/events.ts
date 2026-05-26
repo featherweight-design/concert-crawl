@@ -14,7 +14,7 @@ export async function fetchEventReports(
 export async function confirmPriceSubmission(
   eventId: string,
   submissionId: string,
-  method: string,
+  method: 'same-vendor' | 'other-vendor' | 'box-office',
   token: string,
 ): Promise<{
   confirmed: boolean

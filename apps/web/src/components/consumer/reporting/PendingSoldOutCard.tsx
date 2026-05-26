@@ -28,6 +28,7 @@ export interface PendingSoldOutCardProps {
   confirms: number
   needed: number
   view: 'other' | 'reporter' // NO self-locked for sold-out per design
+  userHasConfirmed?: boolean
   onConfirm: () => void
   onWithdraw: () => void
   onEdit: () => void
@@ -44,6 +45,7 @@ export const PendingSoldOutCard = ({
   confirms,
   needed,
   view,
+  userHasConfirmed = false,
   onConfirm,
   onWithdraw,
   onEdit,
@@ -193,7 +195,7 @@ export const PendingSoldOutCard = ({
           borderTop: `1px solid ${tokens.border}`,
         }}
       >
-        {view === 'other' && (
+        {view === 'other' && !userHasConfirmed && (
           <div
             style={{
               display: 'flex',

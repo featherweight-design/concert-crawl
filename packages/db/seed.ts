@@ -2105,7 +2105,7 @@ async function seed() {
           artist: '[P8.5] Cancelled Live Artist',
           date: '2026-08-19',
           showTime: '20:00',
-          status: 'upcoming' as const,
+          status: 'cancelled' as const,
           verified: false,
         },
         // I — Imminent show (within 6 days) + pending cancelled report

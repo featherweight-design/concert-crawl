@@ -16,7 +16,6 @@ const TIER_OPTIONS: { value: string; label: string }[] = [
   { value: 'GA', label: 'GA' },
   { value: 'Reserved', label: 'Reserved' },
   { value: 'VIP', label: 'VIP' },
-  { value: 'Other', label: 'Other' },
 ]
 
 const VENDOR_OPTIONS: { value: string; label: string }[] = [

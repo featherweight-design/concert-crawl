@@ -17,7 +17,7 @@ const dotColor = (kind: 'community' | 'boxoffice' | null): string => {
 }
 
 const formatPrice = (floor: number, ceiling?: number): string => {
-  if (ceiling !== undefined) return `$${floor}–${ceiling}`
+  if (ceiling !== undefined) return `$${floor}–$${ceiling}`
   return `$${floor}`
 }
 

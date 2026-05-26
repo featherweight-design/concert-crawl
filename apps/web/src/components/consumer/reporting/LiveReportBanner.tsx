@@ -109,7 +109,7 @@ const GLYPHS_16: Record<LiveReportStatus, () => React.JSX.Element> = {
 export interface LiveReportBannerProps {
   status: LiveReportStatus
   promotedAt: string // ISO
-  confirmCount: number
+  confirmCount?: number
 }
 
 // ── Component ─────────────────────────────────────────────────────
@@ -176,7 +176,9 @@ export const LiveReportBanner = ({
             letterSpacing: '0.04em',
           }}
         >
-          {copy.confirmsAndTime(confirmCount, timeAgo)}
+          {confirmCount !== undefined
+            ? copy.confirmsAndTime(confirmCount, timeAgo)
+            : timeAgo}
         </span>
       </div>
     </div>

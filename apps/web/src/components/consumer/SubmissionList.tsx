@@ -127,7 +127,7 @@ export function SubmissionList({
       const result = await confirmPriceSubmission(
         eventId,
         submissionId,
-        'same_vendor',
+        'same-vendor',
         token,
       )
       setLocalSubmissions((prev) =>

@@ -15,11 +15,7 @@ import { useState, useCallback } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import type { EventReport, EventDetailResponse } from '@concert-crawl/types'
-import {
-  confirmPriceSubmission,
-  confirmEventReport,
-  withdrawEventReport,
-} from '@/lib/events'
+import { confirmEventReport, withdrawEventReport } from '@/lib/events'
 import { PendingCardB } from '@/components/consumer/PendingCardB'
 import { CorroborationSheet } from '@/components/consumer/CorroborationSheet'
 import { MultiTierLiveCard } from '@/components/consumer/multi-tier/MultiTierLiveCard'
@@ -134,7 +130,6 @@ export function EventDetailBanners({
         <LiveReportBanner
           status={liveReportStatus}
           promotedAt={event.updatedAt}
-          confirmCount={0}
         />
       )}
 
@@ -148,7 +143,13 @@ export function EventDetailBanners({
           }
           confirms={activePendingReport.confirmsCount}
           needed={activePendingReport.confirmsNeeded}
-          view={activePendingReport.isReporter ? 'reporter' : 'other'}
+          view={
+            activePendingReport.isReporter
+              ? 'reporter'
+              : activePendingReport.userHasConfirmed
+                ? 'self-locked'
+                : 'other'
+          }
           reportedAt={activePendingReport.createdAt}
           reporter={null}
           onConfirm={() => handleConfirmReport(activePendingReport.id)}
@@ -183,7 +184,7 @@ export function EventDetailBanners({
 export function EventDetailPriceBlock({
   event,
   reports,
-  currentUserId,
+  currentUserId: _currentUserId,
 }: EventDetailSharedProps) {
   const { getToken } = useAuth()
   const router = useRouter()
@@ -223,20 +224,6 @@ export function EventDetailPriceBlock({
           // swallow
         }
       })()
-    },
-    [event.id, getToken, router],
-  )
-
-  const handleConfirmSubmission = useCallback(
-    async (submissionId: string, method: string) => {
-      const token = await getToken()
-      if (!token) return
-      try {
-        await confirmPriceSubmission(event.id, submissionId, method, token)
-        router.refresh()
-      } catch {
-        // swallow
-      }
     },
     [event.id, getToken, router],
   )
@@ -322,11 +309,9 @@ export function EventDetailPriceBlock({
     event.priceApprovalKind == null &&
     event.priceStatus !== 'live'
   ) {
-    const isSelf =
-      currentUserId !== null &&
-      event.priceSubmitterHandle !== null &&
-      event.priceSubmitterHandle !== undefined
-
+    // API does not expose submitter userId or isSubmitter boolean;
+    // isSelf cannot be determined client-side. Always show the 'other' view
+    // until the API surfaces a dedicated field.
     return (
       <>
         <PendingCardB
@@ -343,7 +328,7 @@ export function EventDetailPriceBlock({
           submittedAt={event.priceObservedAt ?? new Date().toISOString()}
           confirms={0}
           needed={2}
-          view={isSelf ? 'submitter' : 'other'}
+          view="other"
           onConfirm={() => setCorroborationOpen(true)}
           onWithdraw={() => {
             // Requires submissionId from API — future work
@@ -371,12 +356,11 @@ export function EventDetailPriceBlock({
               submissionId: '',
             }}
             open={corroborationOpen}
-            isSelfLocked={isSelf}
             onClose={() => setCorroborationOpen(false)}
-            onConfirm={(method) => {
-              void handleConfirmSubmission('', method).then(() => {
-                setCorroborationOpen(false)
-              })
+            onConfirm={(_method) => {
+              // submissionId not yet in EventDetailResponse; confirm is a no-op
+              // until the API exposes it. Sheet will close without confirming.
+              setCorroborationOpen(false)
             }}
             onSubmitUpdate={() => setCorroborationOpen(false)}
           />

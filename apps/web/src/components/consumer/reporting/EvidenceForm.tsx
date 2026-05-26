@@ -19,7 +19,21 @@ type EvidenceMethod =
   | 'was_there'
   | 'something_else'
 
-type ReportType = 'sold-out' | 'cancelled' | 'postponed' | 'available'
+type ApiEvidenceMethod =
+  | 'bought_myself'
+  | 'saw_listing'
+  | 'venue_site'
+  | 'other'
+
+const EVIDENCE_METHOD_TO_API: Record<EvidenceMethod, ApiEvidenceMethod> = {
+  got_email: 'saw_listing',
+  saw_social: 'saw_listing',
+  venue_posted: 'venue_site',
+  was_there: 'bought_myself',
+  something_else: 'other',
+}
+
+type ReportType = 'sold-out' | 'cancelled' | 'postponed'
 
 // ── Evidence option data ──────────────────────────────────────────
 interface EvidenceOptionData {
@@ -160,10 +174,13 @@ const EvidenceOption = ({
 
 // ── Days until show ───────────────────────────────────────────────
 const getDaysUntil = (eventDate: string): number => {
-  const now = new Date()
-  const date = new Date(eventDate)
-  const diffMs = date.getTime() - now.getTime()
-  return Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+  const nowUtc = Date.UTC(
+    new Date().getUTCFullYear(),
+    new Date().getUTCMonth(),
+    new Date().getUTCDate(),
+  )
+  const eventUtc = new Date(eventDate).getTime()
+  return Math.ceil((eventUtc - nowUtc) / (1000 * 60 * 60 * 24))
 }
 
 // ── Props ─────────────────────────────────────────────────────────
@@ -217,10 +234,10 @@ export const EvidenceForm = ({
       await fileEventReport(
         eventId,
         {
-          reportType,
-          evidenceMethod: selectedMethod,
-          ...(sourceUrl.trim() ? { sourceUrl: sourceUrl.trim() } : {}),
-          ...(notes.trim() ? { notes: notes.trim() } : {}),
+          status: reportType,
+          evidenceMethod: EVIDENCE_METHOD_TO_API[selectedMethod],
+          ...(sourceUrl.trim() ? { evidenceUrl: sourceUrl.trim() } : {}),
+          ...(notes.trim() ? { note: notes.trim() } : {}),
         },
         token,
       )
