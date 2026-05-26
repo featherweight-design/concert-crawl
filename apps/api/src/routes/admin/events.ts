@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { and, eq, desc, asc, gte, sql } from 'drizzle-orm'
-import { db, events, venues } from '@concert-crawl/db'
+import { db, eventReports, events, venues } from '@concert-crawl/db'
 import { getAuthUser } from '../../middleware/auth.js'
 import type { AdminVariables } from './index.js'
 
@@ -44,6 +44,72 @@ eventsAdminRouter.get('/count', async (ctx) => {
     },
   })
 })
+
+// PATCH /v1/admin/events/reports/:reportId/resolve — admin resolve a fan event report
+const resolveReportSchema = z.object({
+  resolution: z.enum(['promoted', 'rejected', 'needs-more-info']),
+  adminNote: z.string().max(500).optional(),
+})
+
+eventsAdminRouter.patch(
+  '/reports/:reportId/resolve',
+  zValidator('json', resolveReportSchema, (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid input' }, 422)
+    }
+  }),
+  async (ctx) => {
+    const { reportId } = ctx.req.param()
+    const { resolution, adminNote } = ctx.req.valid('json')
+
+    const [report] = await db
+      .select({
+        id: eventReports.id,
+        eventId: eventReports.eventId,
+        status: eventReports.status,
+        resolvedAt: eventReports.resolvedAt,
+      })
+      .from(eventReports)
+      .where(eq(eventReports.id, reportId))
+      .limit(1)
+
+    if (!report) {
+      return ctx.json({ success: false, error: 'Report not found' }, 404)
+    }
+
+    if (report.resolvedAt != null) {
+      return ctx.json({ success: false, error: 'Report already resolved' }, 400)
+    }
+
+    const [updated] = await db
+      .update(eventReports)
+      .set({
+        resolvedAt: new Date(),
+        resolution,
+        adminNote: adminNote ?? null,
+      })
+      .where(eq(eventReports.id, reportId))
+      .returning()
+
+    // If promoted and report maps to an event status — update the event
+    if (resolution === 'promoted') {
+      if (report.status === 'cancelled' || report.status === 'postponed') {
+        await db
+          .update(events)
+          .set({ status: report.status })
+          .where(eq(events.id, report.eventId))
+      }
+    }
+
+    const actor = getAuthUser(ctx)
+    ctx.set('auditAction', 'event.report.resolve')
+    ctx.set('auditTargetId', reportId)
+    ctx.set('auditActorId', actor.userId)
+    ctx.set('auditMeta', { resolution, adminNote: adminNote ?? null })
+
+    return ctx.json({ success: true, data: updated })
+  },
+)
 
 // GET /v1/admin/events?verified=false&limit=50&offset=0
 eventsAdminRouter.get(
