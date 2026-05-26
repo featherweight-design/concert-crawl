@@ -330,6 +330,21 @@ export interface EventDetailResponse extends EventWithVenue {
     priceMin: string
     priceMax: string | null
   }> | null
+  // Top pending submission when no corroborated price exists yet
+  pendingSubmission?: {
+    id: string
+    priceMin: string
+    priceMax: string | null
+    tier: string
+    vendor: string
+    howFound: string
+    note: string | null
+    submitterHandle: string | null
+    submittedAt: string
+    confirmsCount: number
+    confirmsNeeded: number
+    isSubmitter: boolean
+  } | null
 }
 
 // Public events list query params

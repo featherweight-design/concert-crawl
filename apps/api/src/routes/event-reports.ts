@@ -285,7 +285,7 @@ eventReportsRouter.post(
       : ER_POLICY.confirmsRequired
 
     let resolved = false
-    if (confirmsCount >= threshold) {
+    if (confirmsCount >= threshold - 1) {
       await db
         .update(eventReports)
         .set({

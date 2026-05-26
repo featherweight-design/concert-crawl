@@ -71,7 +71,7 @@ eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
   } = ctx.req.valid('query')
 
   const conditions: SQL[] = [
-    eq(events.status, 'upcoming'),
+    inArray(events.status, ['upcoming', 'cancelled', 'postponed']),
     gte(events.date, from ?? todayInTimezone('UTC')),
   ]
 
@@ -380,6 +380,90 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     }
   }
 
+  // Surface top pending submission when no corroborated price exists yet
+  let pendingSubmission: {
+    id: string
+    priceMin: string
+    priceMax: string | null
+    tier: string
+    vendor: string
+    howFound: string
+    note: string | null
+    submitterHandle: string | null
+    submittedAt: string
+    confirmsCount: number
+    confirmsNeeded: number
+    isSubmitter: boolean
+  } | null = null
+
+  if (row.ticketPriceMin === null && priceApprovalKind === null) {
+    const [topPending] = await db
+      .select({
+        id: priceSubmissions.id,
+        priceMin: priceSubmissions.priceMin,
+        priceMax: priceSubmissions.priceMax,
+        tier: priceSubmissions.tier,
+        vendor: priceSubmissions.vendor,
+        howFound: priceSubmissions.howFound,
+        note: priceSubmissions.note,
+        userId: priceSubmissions.userId,
+        createdAt: priceSubmissions.createdAt,
+      })
+      .from(priceSubmissions)
+      .where(
+        and(
+          eq(priceSubmissions.eventId, id),
+          eq(priceSubmissions.status, 'pending'),
+        ),
+      )
+      .orderBy(
+        sql`CASE WHEN ${priceSubmissions.vendor} = 'VenueBoxOffice' THEN 0 ELSE 1 END ASC`,
+        desc(priceSubmissions.createdAt),
+      )
+      .limit(1)
+
+    if (topPending) {
+      const [confirmCountRow] = await db
+        .select({ total: count() })
+        .from(submissionConfirms)
+        .where(eq(submissionConfirms.submissionId, topPending.id))
+
+      const confirmsCount = confirmCountRow?.total ?? 0
+
+      let submitterHandle: string | null = null
+      if (topPending.userId) {
+        const [profile] = await db
+          .select({ handle: userProfiles.handle })
+          .from(userProfiles)
+          .where(eq(userProfiles.userId, topPending.userId))
+          .limit(1)
+        submitterHandle = profile?.handle ?? null
+      }
+
+      const eventDate = row.date ?? ''
+      const diffDays = Math.floor(
+        (new Date(eventDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+      )
+      const isEventImminent = diffDays >= 0 && diffDays <= 6
+      const confirmsNeeded = isEventImminent ? 3 : 2
+
+      pendingSubmission = {
+        id: topPending.id,
+        priceMin: topPending.priceMin,
+        priceMax: topPending.priceMax,
+        tier: topPending.tier,
+        vendor: topPending.vendor ?? 'Unknown',
+        howFound: topPending.howFound,
+        note: topPending.note ?? null,
+        submitterHandle,
+        submittedAt: topPending.createdAt.toISOString(),
+        confirmsCount,
+        confirmsNeeded,
+        isSubmitter: topPending.userId === authInfo?.userId,
+      }
+    }
+  }
+
   return ctx.json({
     success: true,
     data: {
@@ -393,6 +477,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       priceApprovalKind,
       priceApprovedAt,
       priceAlternates,
+      pendingSubmission,
     },
   })
 })
