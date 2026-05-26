@@ -280,11 +280,14 @@ export function EventDetailPriceBlock({
     alternates.length > 0 &&
     event.priceStatus !== 'soldout'
   ) {
+    const headlineKind: 'community' | 'boxoffice' =
+      event.priceApprovalKind === 'admin' ? 'boxoffice' : 'community'
     const headline = {
       floor: priceMin,
       ...(priceMax !== null ? { ceiling: priceMax } : {}),
       tier: 'General Admission',
       vendor: event.priceVendor ?? event.venue.name,
+      kind: headlineKind,
     }
 
     const alternateRows = alternates.map((alt) => ({

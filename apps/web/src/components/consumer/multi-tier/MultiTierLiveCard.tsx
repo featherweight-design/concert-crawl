@@ -1,6 +1,7 @@
 'use client'
 
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { Eyebrow, PendingTrustPill } from '@/components/consumer/glyphs'
 import {
   TierAlternateRow,
   type TierAlternateRowProps,
@@ -27,6 +28,7 @@ export interface MultiTierLiveCardProps {
     ceiling?: number
     tier: string
     vendor: string
+    kind: 'community' | 'boxoffice'
   }
   alternates: Array<AlternateTier>
 }
@@ -53,64 +55,73 @@ export const MultiTierLiveCard = ({
         padding: '14px 14px 12px',
       }}
     >
-      {/* "from" label */}
-      <p
-        style={{
-          fontFamily: 'Inter, sans-serif',
-          fontWeight: 600,
-          fontSize: '13px',
-          color: 'var(--fg-muted)',
-          margin: 0,
-        }}
-      >
-        {copy.fromLabel}
-      </p>
+      {/* Eyebrow */}
+      <Eyebrow>Tickets</Eyebrow>
 
-      {/* Headline price */}
-      <p
+      {/* Headline flex row */}
+      <div
         style={{
-          fontFamily: 'Inter, sans-serif',
-          fontWeight: 800,
-          fontSize: '28px',
-          color: 'var(--fg)',
-          letterSpacing: '-0.025em',
-          lineHeight: 1.05,
-          margin: '2px 0 0',
+          marginTop: '6px',
+          display: 'flex',
+          alignItems: 'baseline',
+          gap: '8px',
+          flexWrap: 'wrap',
         }}
       >
-        {formatHeadlinePrice(headline.floor, headline.ceiling)}
-      </p>
+        <span
+          style={{
+            fontFamily: 'Inter, system-ui',
+            fontWeight: 600,
+            fontSize: '13px',
+            color: 'var(--fg-muted)',
+          }}
+        >
+          {copy.fromLabel}
+        </span>
+        <span
+          style={{
+            fontFamily: 'Inter, sans-serif',
+            fontWeight: 800,
+            fontSize: '28px',
+            color: 'var(--fg)',
+            letterSpacing: '-0.025em',
+            lineHeight: 1.05,
+          }}
+        >
+          {formatHeadlinePrice(headline.floor, headline.ceiling)}
+        </span>
+        <span
+          style={{
+            fontFamily: 'JetBrains Mono, monospace',
+            fontWeight: 700,
+            fontSize: '11px',
+            color: 'var(--fg-muted)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+          }}
+        >
+          {headline.tier}
+        </span>
+        <PendingTrustPill kind={headline.kind} />
+      </div>
 
-      {/* Headline tier label */}
-      <p
+      {/* Vendor/observation line */}
+      <div
         style={{
-          fontFamily: 'JetBrains Mono, monospace',
-          fontWeight: 700,
-          fontSize: '11px',
+          marginTop: '6px',
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: '10px',
           color: 'var(--fg-muted)',
-          letterSpacing: '0.06em',
-          textTransform: 'uppercase',
-          margin: '4px 0 0',
+          letterSpacing: '0.04em',
         }}
       >
-        {headline.tier}
-      </p>
+        {'seen on ' + headline.vendor}
+      </div>
 
       {/* Other tiers section */}
       {hasAlternates && (
         <div style={{ marginTop: '12px' }}>
-          <p
-            style={{
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: '9px',
-              color: 'var(--fg-subtle)',
-              textTransform: 'uppercase',
-              marginBottom: '2px',
-              marginTop: 0,
-            }}
-          >
-            {copy.otherTiersEyebrow}
-          </p>
+          <Eyebrow>{copy.otherTiersEyebrow}</Eyebrow>
           {alternates.map((alt, idx) => {
             const rowProps: TierAlternateRowProps = {
               tier: alt.tier,

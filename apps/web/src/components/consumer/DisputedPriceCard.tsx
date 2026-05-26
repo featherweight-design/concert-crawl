@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { CounterSubmitSheet } from './CounterSubmitSheet'
+import { ArrowGlyph } from '@/components/consumer/glyphs'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
 const copy = CONSUMER_COPY.disputedPriceCard
@@ -107,7 +108,7 @@ export const DisputedPriceCard = ({
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: 8,
+            gap: 10,
           }}
         >
           {/* Left side: badge + attribution */}
@@ -130,7 +131,7 @@ export const DisputedPriceCard = ({
                 fontFamily: 'var(--font-mono)',
                 fontSize: 9,
                 fontWeight: 700,
-                color: 'var(--fg-muted)',
+                color: 'var(--fg)',
                 letterSpacing: '0.06em',
                 textTransform: 'uppercase',
                 whiteSpace: 'nowrap',
@@ -160,18 +161,6 @@ export const DisputedPriceCard = ({
 
         {/* Main price area */}
         <div style={{ padding: '14px 14px 12px' }}>
-          {/* "from" label */}
-          <div
-            style={{
-              fontFamily: 'var(--font-ui)',
-              fontWeight: 600,
-              fontSize: 13,
-              color: 'var(--fg-muted)',
-            }}
-          >
-            {copy.priceArea.fromLabel}
-          </div>
-
           {/* Headline price */}
           <div
             style={{
@@ -209,7 +198,7 @@ export const DisputedPriceCard = ({
               fontSize: 10,
               color: 'var(--fg-muted)',
               letterSpacing: '0.04em',
-              marginTop: 3,
+              marginTop: 6,
             }}
           >
             {vendor}
@@ -231,8 +220,8 @@ export const DisputedPriceCard = ({
           {/* Copy before button */}
           <span
             style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 9,
+              fontFamily: 'Inter, system-ui',
+              fontSize: '12px',
               color: 'var(--fg-subtle)',
               letterSpacing: '0.04em',
               flexShrink: 1,
@@ -260,8 +249,12 @@ export const DisputedPriceCard = ({
               whiteSpace: 'nowrap',
               flexShrink: 0,
               lineHeight: 1,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
             }}
           >
+            <ArrowGlyph size={11} />
             {copy.footer.buttonLabel}
           </button>
         </div>

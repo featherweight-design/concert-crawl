@@ -70,6 +70,7 @@ export const TierAlternateRow = ({
             fontSize: '10.5px',
             textTransform: 'uppercase',
             letterSpacing: '0.08em',
+            color: 'var(--fg)',
           }}
         >
           {tier}
@@ -95,6 +96,8 @@ export const TierAlternateRow = ({
               fontSize: '9.5px',
               color: AZURE_M,
               textTransform: 'uppercase',
+              fontWeight: 700,
+              letterSpacing: '0.06em',
             }}
           >
             {copy.pendingTemplate(confirms, needed)}
@@ -105,6 +108,7 @@ export const TierAlternateRow = ({
               fontFamily: 'Inter, sans-serif',
               fontSize: '12px',
               color: 'var(--fg-muted)',
+              letterSpacing: '-0.005em',
             }}
           >
             {vendor}
