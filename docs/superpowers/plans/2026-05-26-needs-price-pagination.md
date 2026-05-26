@@ -13,7 +13,6 @@
 ### Task 1: API — add `missingOnly`, `limit`, `offset` to `GET /v1/admin/prices/events`
 
 **Files:**
-
 - Modify: `apps/api/src/routes/admin/prices.ts:22-62`
 - Modify: `apps/api/src/routes/admin/prices.integration.test.ts` (add new `describe` block at the end)
 
@@ -231,7 +230,6 @@ git commit -m "feat(api): add missingOnly + pagination to admin prices/events en
 The client currently fetches once and passes the whole array to children. After this task it owns `missingOnly` + `offset` state and provides a `loadMorePriceEvents` callback and `hasMorePriceEvents` flag to pass down.
 
 **Files:**
-
 - Modify: `apps/web/src/components/admin/review/ReviewPageClient.tsx`
 
 - [ ] **Step 1: Replace the price-events fetch effect and add state**
@@ -367,7 +365,10 @@ git commit -m "feat(web): lift price filter+pagination state into ReviewPageClie
 ### Task 3: `PriceCoverageTable` — remove client-side filter, accept server-driven props
 
 **Files:**
+<<<<<<< HEAD
 
+=======
+>>>>>>> 31edb99a (chore: sync plan docs and progress from main repo)
 - Modify: `apps/web/src/components/admin/review/PriceCoverageTable.tsx`
 
 - [ ] **Step 1: Update the props interface**
@@ -466,6 +467,7 @@ const panelAction = !loading ? (
 Just before the closing `</Panel>` tag, inside the scrollable area after the `<AdminTable>` closing tag, add:
 
 ```tsx
+<<<<<<< HEAD
 {
   hasMore && (
     <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)' }}>
@@ -482,6 +484,22 @@ Just before the closing `</Panel>` tag, inside the scrollable area after the `<A
     </div>
   )
 }
+=======
+{hasMore && (
+  <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)' }}>
+    <AdminButton
+      variant="ghost"
+      size="sm"
+      onClick={onLoadMore}
+      disabled={isFetchingMore}
+    >
+      {isFetchingMore
+        ? ADMIN_COPY.review.priceCoverage.loadingMore
+        : ADMIN_COPY.review.priceCoverage.loadMore}
+    </AdminButton>
+  </div>
+)}
+>>>>>>> 31edb99a (chore: sync plan docs and progress from main repo)
 ```
 
 Add the two copy strings to `apps/web/src/components/admin/definitions/copy.ts` under `review.priceCoverage`:
@@ -512,7 +530,10 @@ git commit -m "feat(web): server-driven filter and load-more in PriceCoverageTab
 ### Task 4: `AdminReviewMobile` — remove client-side filter, use server-driven props
 
 **Files:**
+<<<<<<< HEAD
 
+=======
+>>>>>>> 31edb99a (chore: sync plan docs and progress from main repo)
 - Modify: `apps/web/src/components/admin/review/AdminReviewMobile.tsx`
 
 - [ ] **Step 1: Extend the `AdminReviewMobileProps` interface**
@@ -570,7 +591,10 @@ export function AdminReviewMobile({
 - [ ] **Step 3: Remove client-side filter state and wire server-driven props**
 
 Delete the local `showMissingOnly` state:
+<<<<<<< HEAD
 
+=======
+>>>>>>> 31edb99a (chore: sync plan docs and progress from main repo)
 ```typescript
 // DELETE this line:
 const [showMissingOnly, setShowMissingOnly] = useState(false)
@@ -621,6 +645,7 @@ In the "Needs price" section header, replace the toggle button:
 After the `visiblePriceEvents.map(...)` block, just before the closing `</div>` of the scrollable area in the "Needs price" section, add:
 
 ```tsx
+<<<<<<< HEAD
 {
   hasMorePriceEvents && (
     <div
@@ -640,6 +665,23 @@ After the `visiblePriceEvents.map(...)` block, just before the closing `</div>` 
     </div>
   )
 }
+=======
+{hasMorePriceEvents && (
+  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
+    <AdminButton
+      variant="ghost"
+      size="sm"
+      fullWidth
+      onClick={onLoadMorePriceEvents}
+      disabled={isFetchingMorePriceEvents}
+    >
+      {isFetchingMorePriceEvents
+        ? ADMIN_COPY.review.adminReviewMobile.loadingMore
+        : ADMIN_COPY.review.adminReviewMobile.loadMore}
+    </AdminButton>
+  </div>
+)}
+>>>>>>> 31edb99a (chore: sync plan docs and progress from main repo)
 ```
 
 Add the copy keys to `apps/web/src/components/admin/definitions/copy.ts` under `review.adminReviewMobile`:
@@ -672,7 +714,10 @@ git commit -m "feat(web): server-driven filter and load-more in AdminReviewMobil
 This is the real bug identified in comment 1 and 2 of the Copilot review: if `getToken()` returns null or the network throws, the `useEffect` re-fires in a loop.
 
 **Files:**
+<<<<<<< HEAD
 
+=======
+>>>>>>> 31edb99a (chore: sync plan docs and progress from main repo)
 - Modify: `apps/web/src/components/admin/review/ReviewPageClient.tsx`
 
 - [ ] **Step 1: Add `hasMoreEvents = false` in the catch and empty-token paths**
@@ -686,7 +731,11 @@ const fetchMoreEvents = useCallback(async () => {
   try {
     const token = await getToken()
     if (!token) {
+<<<<<<< HEAD
       setHasMoreEvents(false) // can't fetch without a token; stop the loop
+=======
+      setHasMoreEvents(false)  // can't fetch without a token; stop the loop
+>>>>>>> 31edb99a (chore: sync plan docs and progress from main repo)
       return
     }
     const batch = await apiClient.get<EventFlag[]>(
@@ -704,7 +753,11 @@ const fetchMoreEvents = useCallback(async () => {
     }
   } catch (fetchErr) {
     console.error('Failed to fetch more events', fetchErr)
+<<<<<<< HEAD
     setHasMoreEvents(false) // stop the loop on persistent error
+=======
+    setHasMoreEvents(false)  // stop the loop on persistent error
+>>>>>>> 31edb99a (chore: sync plan docs and progress from main repo)
   } finally {
     setIsFetchingMoreEvents(false)
   }
@@ -732,7 +785,10 @@ git commit -m "fix(web): stop auto-fetch loop on token failure or network error"
 The 500-limit in `prices.ts` was a stopgap that this plan supersedes. The limit is now controlled by the `limit` query param (max 100).
 
 **Files:**
+<<<<<<< HEAD
 
+=======
+>>>>>>> 31edb99a (chore: sync plan docs and progress from main repo)
 - Modify: `apps/api/src/routes/admin/prices.ts`
 
 - [ ] **Step 1: Confirm the limit is now controlled by the query schema**
