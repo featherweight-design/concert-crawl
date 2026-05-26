@@ -288,12 +288,12 @@ describe('GET /v1/admin/prices/events', () => {
   it('returns only missing-price events by default', async () => {
     const venue = await seedVenue()
     await seedEvent(venue.id, {
-      date: '2026-07-01',
+      date: '2099-07-01',
       status: 'upcoming',
       ticketPriceMin: null,
     })
     await seedEvent(venue.id, {
-      date: '2026-07-02',
+      date: '2099-07-02',
       status: 'upcoming',
       ticketPriceMin: '25.00',
     })
@@ -311,12 +311,12 @@ describe('GET /v1/admin/prices/events', () => {
   it('returns all upcoming events when missingOnly=false', async () => {
     const venue = await seedVenue()
     await seedEvent(venue.id, {
-      date: '2026-07-01',
+      date: '2099-07-01',
       status: 'upcoming',
       ticketPriceMin: null,
     })
     await seedEvent(venue.id, {
-      date: '2026-07-02',
+      date: '2099-07-02',
       status: 'upcoming',
       ticketPriceMin: '25.00',
     })
@@ -334,7 +334,7 @@ describe('GET /v1/admin/prices/events', () => {
     const venue = await seedVenue()
     for (let idx = 1; idx <= 5; idx++) {
       await seedEvent(venue.id, {
-        date: `2026-07-0${idx}`,
+        date: `2099-07-0${idx}`,
         status: 'upcoming',
         ticketPriceMin: null,
       })
@@ -348,8 +348,8 @@ describe('GET /v1/admin/prices/events', () => {
     const body = await res.json()
     expect(body.success).toBe(true)
     expect(body.data).toHaveLength(2)
-    expect(body.data[0].date).toBe('2026-07-03')
-    expect(body.data[1].date).toBe('2026-07-04')
+    expect(body.data[0].date).toBe('2099-07-03')
+    expect(body.data[1].date).toBe('2099-07-04')
   })
 
   it('excludes past events', async () => {
@@ -360,7 +360,7 @@ describe('GET /v1/admin/prices/events', () => {
       ticketPriceMin: null,
     })
     await seedEvent(venue.id, {
-      date: '2026-07-01',
+      date: '2099-07-01',
       status: 'upcoming',
       ticketPriceMin: null,
     })
@@ -370,6 +370,6 @@ describe('GET /v1/admin/prices/events', () => {
     })
     const body = await res.json()
     expect(body.data).toHaveLength(1)
-    expect(body.data[0].date).toBe('2026-07-01')
+    expect(body.data[0].date).toBe('2099-07-01')
   })
 })

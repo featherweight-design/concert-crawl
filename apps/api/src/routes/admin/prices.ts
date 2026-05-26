@@ -82,7 +82,7 @@ pricesAdminRouter.get(
       .leftJoin(venues, eq(events.venueId, venues.id))
       .leftJoin(latestLog, eq(latestLog.eventId, events.id))
       .where(and(...conditions))
-      .orderBy(asc(events.date))
+      .orderBy(asc(events.date), asc(events.id))
       .limit(limit)
       .offset(offset)
 

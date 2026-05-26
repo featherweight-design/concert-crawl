@@ -76,7 +76,6 @@ export const ReviewPageClient = ({
   const [priceEvents, setPriceEvents] = useState<PriceEvent[]>([])
   const [priceEventsLoading, setPriceEventsLoading] = useState(true)
   const [priceFilter, setPriceFilter] = useState<'missing' | 'all'>('missing')
-  const [priceOffset, setPriceOffset] = useState(0)
   const [hasMorePriceEvents, setHasMorePriceEvents] = useState(true)
   const [priceLoadingMore, setPriceLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -153,15 +152,13 @@ export const ReviewPageClient = ({
 
   const loadMorePriceEvents = useCallback(() => {
     if (!hasMorePriceEvents || priceLoadingMore) return
-    const nextOffset = priceOffset + 50
-    setPriceOffset(nextOffset)
     setPriceLoadingMore(true)
-    void fetchPriceEvents(priceFilter, nextOffset, true)
+    void fetchPriceEvents(priceFilter, priceEvents.length, true)
   }, [
     fetchPriceEvents,
     hasMorePriceEvents,
     priceLoadingMore,
-    priceOffset,
+    priceEvents.length,
     priceFilter,
   ])
 
@@ -169,7 +166,6 @@ export const ReviewPageClient = ({
     const newFilter: 'missing' | 'all' =
       priceFilter === 'missing' ? 'all' : 'missing'
     setPriceFilter(newFilter)
-    setPriceOffset(0)
     setPriceEventsLoading(true)
     setHasMorePriceEvents(true)
     void fetchPriceEvents(newFilter, 0, false)
