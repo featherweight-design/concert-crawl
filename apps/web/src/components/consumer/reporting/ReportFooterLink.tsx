@@ -20,6 +20,9 @@ export const ReportFooterLink = ({
         maxWidth: '393px',
         padding: '24px 18px 32px',
         borderTop: '1px dashed var(--border)',
+        background: 'var(--bg)',
+        color: 'var(--fg)',
+        boxSizing: 'border-box',
       }}
     >
       {/* Eyebrow */}
@@ -59,6 +62,7 @@ export const ReportFooterLink = ({
               fontWeight: 700,
               fontSize: '14px',
               color: 'var(--fg)',
+              letterSpacing: '-0.005em',
             }}
           >
             {copy.title}
@@ -68,6 +72,7 @@ export const ReportFooterLink = ({
               fontFamily: 'Inter, sans-serif',
               fontSize: '12px',
               color: 'var(--fg-muted)',
+              letterSpacing: '-0.005em',
             }}
           >
             {copy.subtitle}
@@ -97,6 +102,8 @@ export const ReportFooterLink = ({
           color: 'var(--fg-subtle)',
           margin: '10px 0 0',
           lineHeight: 1.5,
+          letterSpacing: '0.04em',
+          textTransform: 'uppercase',
         }}
       >
         {copy.bottomNote}

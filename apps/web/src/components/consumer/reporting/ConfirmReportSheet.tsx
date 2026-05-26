@@ -228,7 +228,7 @@ const VerifyOption = ({
         <span
           style={{
             fontFamily: 'Inter, sans-serif',
-            fontWeight: 600,
+            fontWeight: 700,
             fontSize: '13.5px',
             color: 'var(--fg)',
             lineHeight: 1.3,
@@ -454,7 +454,7 @@ export const ConfirmReportSheet = ({
               borderRadius: '12px',
               background: token.bg,
               border: `1px solid ${token.border}`,
-              padding: '14px 16px',
+              padding: '12px 14px',
               display: 'flex',
               alignItems: 'flex-start',
               gap: '12px',
@@ -528,14 +528,15 @@ export const ConfirmReportSheet = ({
           <div
             style={{
               background: 'color-mix(in oklab, var(--fg) 3%, transparent)',
+              border: '1px solid var(--border)',
               borderRadius: '8px',
               padding: '10px 14px',
             }}
           >
             <span
               style={{
-                fontFamily: 'JetBrains Mono, monospace',
-                fontSize: '9px',
+                fontFamily: 'Inter, system-ui',
+                fontSize: '12px',
                 color: 'var(--fg-subtle)',
                 lineHeight: 1.5,
               }}

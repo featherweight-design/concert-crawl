@@ -8,13 +8,7 @@ const copy = REPORTING_COPY.reportTypeMark
 // ── Glyphs ────────────────────────────────────────────────────────
 
 const CancelledGlyph = () => (
-  <svg
-    width="10"
-    height="10"
-    viewBox="0 0 10 10"
-    fill="none"
-    aria-hidden="true"
-  >
+  <svg width="9" height="9" viewBox="0 0 10 10" fill="none" aria-hidden="true">
     <circle
       cx="5"
       cy="5"
@@ -33,13 +27,7 @@ const CancelledGlyph = () => (
 )
 
 const PostponedGlyph = () => (
-  <svg
-    width="10"
-    height="10"
-    viewBox="0 0 10 10"
-    fill="none"
-    aria-hidden="true"
-  >
+  <svg width="9" height="9" viewBox="0 0 10 10" fill="none" aria-hidden="true">
     <circle
       cx="5"
       cy="5"
@@ -59,13 +47,7 @@ const PostponedGlyph = () => (
 )
 
 const SoldOutGlyph = () => (
-  <svg
-    width="10"
-    height="10"
-    viewBox="0 0 10 10"
-    fill="none"
-    aria-hidden="true"
-  >
+  <svg width="9" height="9" viewBox="0 0 10 10" fill="none" aria-hidden="true">
     <rect
       x="1"
       y="2.5"
@@ -86,13 +68,7 @@ const SoldOutGlyph = () => (
 )
 
 const AvailableGlyph = () => (
-  <svg
-    width="10"
-    height="10"
-    viewBox="0 0 10 10"
-    fill="none"
-    aria-hidden="true"
-  >
+  <svg width="9" height="9" viewBox="0 0 10 10" fill="none" aria-hidden="true">
     <rect
       x="1"
       y="2.5"
@@ -152,16 +128,17 @@ export const ReportTypeMark = ({
         letterSpacing: '0.06em',
         textTransform: 'uppercase',
         fontWeight: 700,
-        opacity: pending ? 0.4 : 1,
+        lineHeight: 1,
+        whiteSpace: 'nowrap',
       }}
     >
       <Glyph />
+      {token.label}
       {pending && (
-        <span aria-hidden="true" style={{ marginRight: '1px' }}>
-          {copy.pendingDot}
+        <span aria-hidden="true" style={{ opacity: 0.4 }}>
+          {copy.pendingDot} pending
         </span>
       )}
-      {token.label}
     </span>
   )
 }

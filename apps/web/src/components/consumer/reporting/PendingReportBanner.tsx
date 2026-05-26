@@ -2,6 +2,60 @@
 
 import { REPORTING_COPY } from './definitions/copy'
 import { REPORT_TOKENS } from './reportTokens'
+import { LockGlyph } from '../glyphs'
+
+// ── Kind glyphs at 14×14 ──────────────────────────────────────────
+
+const CancelledGlyph14 = () => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 10 10"
+    fill="none"
+    aria-hidden="true"
+  >
+    <circle
+      cx="5"
+      cy="5"
+      r="4"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      fill="none"
+    />
+    <path
+      d="M3 3 L7 7 M7 3 L3 7"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      strokeLinecap="round"
+    />
+  </svg>
+)
+
+const PostponedGlyph14 = () => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 10 10"
+    fill="none"
+    aria-hidden="true"
+  >
+    <circle
+      cx="5"
+      cy="5"
+      r="4"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      fill="none"
+    />
+    <path
+      d="M5 3 L5 5 L6.5 6.5"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+)
 
 const copy = REPORTING_COPY.pendingReportBanner
 
@@ -72,23 +126,19 @@ export const PendingReportBanner = ({
           gap: 8,
         }}
       >
-        {/* Left: badge */}
+        {/* Left: kind label */}
         <span
           style={{
-            background: tokens.bg,
-            border: `1px solid color-mix(in oklab, ${tokens.color} 50%, transparent)`,
-            borderRadius: 4,
-            padding: '2px 7px',
-            fontFamily: 'var(--font-mono)',
-            fontSize: 9,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 10,
             fontWeight: 700,
             color: tokens.color,
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-            whiteSpace: 'nowrap',
-            lineHeight: 1,
           }}
         >
+          {kind === 'cancelled' ? <CancelledGlyph14 /> : <PostponedGlyph14 />}
           {badgeLabel}
         </span>
 
@@ -134,11 +184,13 @@ export const PendingReportBanner = ({
         >
           <span
             style={{
-              fontFamily: 'var(--font-mono)',
+              marginTop: '10px',
+              display: 'inline-flex',
+              gap: '6px',
+              alignItems: 'center',
+              fontFamily: "'JetBrains Mono', monospace",
               fontSize: 9,
               color: 'var(--fg-muted)',
-              letterSpacing: '0.04em',
-              lineHeight: 1.4,
             }}
           >
             {attributionLine}
@@ -262,10 +314,14 @@ export const PendingReportBanner = ({
               background: 'color-mix(in oklab, var(--fg) 5%, transparent)',
               border: '1px dashed var(--border-strong)',
               borderRadius: 8,
-              padding: '6px 10px',
-              display: 'inline-block',
+              padding: '7px 12px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              marginLeft: 'auto',
             }}
           >
+            <LockGlyph size={10} />
             <span
               style={{
                 fontFamily: 'var(--font-ui)',

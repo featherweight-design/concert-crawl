@@ -347,7 +347,7 @@ export const EvidenceForm = ({
                 background:
                   'color-mix(in oklab, var(--warning) 8%, transparent)',
                 border:
-                  '1px solid color-mix(in oklab, var(--warning) 36%, transparent)',
+                  '1px solid color-mix(in oklab, var(--warning) 36%, var(--border))',
                 borderRadius: '10px',
                 padding: '10px 14px',
                 display: 'flex',
@@ -357,26 +357,27 @@ export const EvidenceForm = ({
             >
               {/* Warning triangle */}
               <svg
-                width="16"
-                height="16"
+                width="14"
+                height="14"
                 viewBox="0 0 16 16"
                 fill="none"
                 aria-hidden="true"
                 style={{ flexShrink: 0, marginTop: '1px' }}
               >
                 <path
-                  d="M8 2L14.5 13H1.5L8 2Z"
-                  stroke="var(--warning)"
-                  strokeWidth="1.3"
+                  d="M8 2L14 13H2L8 2z"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
                   strokeLinejoin="round"
+                  fill="none"
                 />
                 <path
-                  d="M8 6.5V9.5"
-                  stroke="var(--warning)"
-                  strokeWidth="1.3"
+                  d="M8 6.5V9"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
                   strokeLinecap="round"
                 />
-                <circle cx="8" cy="11.5" r="0.6" fill="var(--warning)" />
+                <circle cx="8" cy="10.8" r="0.7" fill="currentColor" />
               </svg>
               <span
                 style={{
@@ -425,8 +426,8 @@ export const EvidenceForm = ({
               onChange={(evt) => setSourceUrl(evt.target.value)}
               placeholder={copy.sourceLinkPlaceholder}
               style={{
-                border: '1px solid var(--border)',
-                borderRadius: '8px',
+                border: '1px solid var(--border-strong)',
+                borderRadius: '10px',
                 padding: '8px 10px',
                 fontFamily: 'Inter, sans-serif',
                 fontSize: '13px',
@@ -478,12 +479,12 @@ export const EvidenceForm = ({
               placeholder={copy.notesPlaceholder}
               maxLength={NOTES_MAX_CHARS}
               style={{
-                border: '1px solid var(--border)',
-                borderRadius: '8px',
+                border: '1px solid var(--border-strong)',
+                borderRadius: '10px',
                 padding: '8px 10px',
                 fontFamily: 'Inter, sans-serif',
                 fontSize: '13px',
-                color: 'var(--fg)',
+                color: 'var(--fg-subtle)',
                 background: 'var(--surface-1)',
                 outline: 'none',
                 width: '100%',
@@ -539,6 +540,20 @@ export const EvidenceForm = ({
           >
             {submitting ? 'Submitting…' : copy.submitButton}
           </button>
+          <p
+            style={{
+              marginTop: '10px',
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: '9px',
+              color: 'var(--fg-subtle)',
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+              textAlign: 'center',
+              margin: '10px 0 0',
+            }}
+          >
+            Community reports need 2–3 confirms to take effect.
+          </p>
         </div>
       </div>
     </>

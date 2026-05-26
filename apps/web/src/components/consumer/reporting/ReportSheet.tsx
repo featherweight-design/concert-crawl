@@ -5,6 +5,100 @@ import { REPORTING_COPY } from './definitions/copy'
 import { REPORT_TOKENS } from './reportTokens'
 import { ReportTypeMark } from './ReportTypeMark'
 
+// ── Report type glyphs (15×15) ────────────────────────────────────
+
+const CancelledGlyph15 = ({ color }: { color: string }) => (
+  <svg
+    width="15"
+    height="15"
+    viewBox="0 0 10 10"
+    fill="none"
+    aria-hidden="true"
+  >
+    <circle cx="5" cy="5" r="4" stroke={color} strokeWidth="1.2" fill="none" />
+    <path
+      d="M3 3 L7 7 M7 3 L3 7"
+      stroke={color}
+      strokeWidth="1.2"
+      strokeLinecap="round"
+    />
+  </svg>
+)
+
+const PostponedGlyph15 = ({ color }: { color: string }) => (
+  <svg
+    width="15"
+    height="15"
+    viewBox="0 0 10 10"
+    fill="none"
+    aria-hidden="true"
+  >
+    <circle cx="5" cy="5" r="4" stroke={color} strokeWidth="1.2" fill="none" />
+    <path
+      d="M5 3 L5 5 L6.5 6.5"
+      stroke={color}
+      strokeWidth="1.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+)
+
+const SoldOutGlyph15 = ({ color }: { color: string }) => (
+  <svg
+    width="15"
+    height="15"
+    viewBox="0 0 10 10"
+    fill="none"
+    aria-hidden="true"
+  >
+    <rect
+      x="1"
+      y="2.5"
+      width="8"
+      height="5"
+      rx="1"
+      stroke={color}
+      strokeWidth="1.2"
+      fill="none"
+    />
+    <path
+      d="M3.5 3.5 L6.5 6.5 M6.5 3.5 L3.5 6.5"
+      stroke={color}
+      strokeWidth="1.2"
+      strokeLinecap="round"
+    />
+  </svg>
+)
+
+const AvailableGlyph15 = ({ color }: { color: string }) => (
+  <svg
+    width="15"
+    height="15"
+    viewBox="0 0 10 10"
+    fill="none"
+    aria-hidden="true"
+  >
+    <rect
+      x="1"
+      y="2.5"
+      width="8"
+      height="5"
+      rx="1"
+      stroke={color}
+      strokeWidth="1.2"
+      fill="none"
+    />
+    <path
+      d="M3.5 5 L4.5 6 L6.5 4"
+      stroke={color}
+      strokeWidth="1.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+)
+
 const copy = REPORTING_COPY.reportSheet
 
 // ── Report type ───────────────────────────────────────────────────
@@ -71,12 +165,12 @@ const ReportOptionRow = ({
       }}
       style={{
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         gap: '12px',
         padding: '12px 14px',
         borderRadius: '10px',
         border: isSelected
-          ? `1.5px solid ${tokens.border}`
+          ? `1.5px solid ${tokens.color}`
           : '1px solid var(--border)',
         background: isSelected ? tokens.bg : 'var(--surface-1)',
         cursor: 'pointer',
@@ -97,19 +191,16 @@ const ReportOptionRow = ({
         }}
         aria-hidden="true"
       >
-        <span
-          style={{
-            fontFamily: 'Inter, sans-serif',
-            fontSize: '14px',
-            color: tokens.color,
-          }}
-        >
-          {option.type === 'available'
-            ? '✓'
-            : option.type === 'cancelled'
-              ? '✕'
-              : '!'}
-        </span>
+        {option.type === 'cancelled' && (
+          <CancelledGlyph15 color={tokens.color} />
+        )}
+        {option.type === 'postponed' && (
+          <PostponedGlyph15 color={tokens.color} />
+        )}
+        {option.type === 'sold-out' && <SoldOutGlyph15 color={tokens.color} />}
+        {option.type === 'available' && (
+          <AvailableGlyph15 color={tokens.color} />
+        )}
       </div>
 
       {/* Text */}
@@ -296,7 +387,12 @@ export const ReportSheet = ({
           {/* Currently live section */}
           {liveStatus !== null && (
             <div
-              style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+                marginBottom: '14px',
+              }}
             >
               <span
                 style={{
@@ -304,7 +400,7 @@ export const ReportSheet = ({
                   fontSize: '9px',
                   color: 'var(--fg-subtle)',
                   textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
+                  letterSpacing: '0.06em',
                 }}
               >
                 {copy.currentlyShowingAs}

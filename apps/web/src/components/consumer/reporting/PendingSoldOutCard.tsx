@@ -68,7 +68,7 @@ export const PendingSoldOutCard = ({
       {/* Top pending strip */}
       <div
         style={{
-          padding: '10px 14px',
+          padding: '8px 14px',
           background: tokens.bgStrong,
           borderBottom: `1px solid ${tokens.border}`,
           display: 'flex',
@@ -112,7 +112,7 @@ export const PendingSoldOutCard = ({
       </div>
 
       {/* Card body */}
-      <div style={{ padding: '12px 14px' }}>
+      <div style={{ padding: '14px 14px 12px' }}>
         {/* Price row */}
         <div
           style={{
@@ -211,6 +211,7 @@ export const PendingSoldOutCard = ({
                 letterSpacing: '0.04em',
                 flexShrink: 1,
                 minWidth: 0,
+                textTransform: 'uppercase',
               }}
             >
               {copy.footerQuestion}

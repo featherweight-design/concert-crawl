@@ -133,8 +133,8 @@ export const LiveReportBanner = ({
         border: `1px solid ${token.border}`,
         padding: '12px 14px',
         display: 'flex',
-        gap: '12px',
-        alignItems: 'flex-start',
+        gap: '10px',
+        alignItems: 'center',
       }}
     >
       {/* Icon container */}
@@ -173,6 +173,7 @@ export const LiveReportBanner = ({
             fontFamily: 'JetBrains Mono, monospace',
             fontSize: '9px',
             color: 'var(--fg-muted)',
+            letterSpacing: '0.04em',
           }}
         >
           {copy.confirmsAndTime(confirmCount, timeAgo)}
