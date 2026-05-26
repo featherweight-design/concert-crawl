@@ -767,6 +767,31 @@ export const CONSUMER_COPY = {
     signOutButton: 'Sign out',
   },
 
+  // ── PendingCardB ────────────────────────────────────────────────
+  // Shown on the event detail page — pending price card for community and box-office tiers
+  pendingCardB: {
+    // Strip eyebrow (left side): "{confirms}/{needed} confirms · pending"
+    stripEyebrowTemplate: (confirms: number, needed: number) =>
+      `${confirms}/${needed} confirms · pending`,
+    // Strip right side: "{N} to go"
+    toGoTemplate: (remaining: number) => `${remaining} to go`,
+    // "Face value · no fees" line (box-office only)
+    faceValueNoFees: 'Face value · no fees',
+    // Footer — other view
+    confirmPrice: 'Confirm price',
+    sawDifferentNumber: 'Saw a different number?',
+    // Footer — self-locked view
+    yourSubmissionLabel: 'Your submission',
+    waitingForConfirms: 'Waiting for confirms',
+    // Footer — submitter view
+    editButton: 'Edit',
+    withdrawButton: 'Withdraw',
+    // Attribution
+    viaAnonymous: 'via anonymous',
+    yourSubmissionAttribution: 'your submission',
+    viaHandlePrefix: 'via @',
+  },
+
   // ── Settings ────────────────────────────────────────────────────
   settings: {
     anonymousLabel: 'anonymous fan',
