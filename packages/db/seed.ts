@@ -2222,6 +2222,7 @@ async function seed() {
               howFound: 'bought_myself' as const,
               status: 'corroborated' as const,
               corroborationCount: 2,
+              note: 'Checked the AXS app day of sale. GA was $45 + $10 fees showed at checkout.',
             })
             .returning()
         : null
@@ -2297,6 +2298,7 @@ async function seed() {
                 status: 'pending' as const,
                 corroborationCount: 0,
                 disputedSubmissionId: phase85SubmissionBLive[0]!.id,
+                note: 'Saw it listed at $65 on SeatGeek resale. Might be different tier.',
               },
             ]
           : []
@@ -2315,6 +2317,7 @@ async function seed() {
               howFound: 'bought_myself' as const,
               status: 'pending' as const,
               corroborationCount: 1,
+              note: 'Walked up to the Bluebird box office. GA face value, no fees.',
             })
             .returning()
         : null
@@ -2620,6 +2623,7 @@ async function seed() {
           howFound: 'bought_myself' as const,
           status: 'corroborated' as const,
           corroborationCount: 2,
+          note: 'Checked the AXS app day of sale. GA was $45 + $10 fees showed at checkout.',
         })
         .returning()
 
@@ -2654,6 +2658,7 @@ async function seed() {
             status: 'pending' as const,
             corroborationCount: 0,
             disputedSubmissionId: primarySub[0].id,
+            note: 'Saw it listed at $65 on SeatGeek resale. Might be different tier.',
           })
           .onConflictDoNothing()
 
@@ -2740,6 +2745,7 @@ async function seed() {
             status: 'pending' as const,
             corroborationCount: 0,
             disputedSubmissionId: targetSub.id,
+            note: 'Saw it listed at $65 on SeatGeek resale. Might be different tier.',
           })
           .onConflictDoNothing()
         console.warn(
@@ -2762,6 +2768,7 @@ async function seed() {
           howFound: 'bought_myself' as const,
           status: 'pending' as const,
           corroborationCount: 1,
+          note: 'Walked up to the Bluebird box office. GA face value, no fees.',
         })
         .returning()
 
@@ -2954,6 +2961,206 @@ async function seed() {
     }
 
     console.warn('Phase 8.5 full data patch complete.')
+  }
+
+  // -----------------------------------------------------------------------
+  // P8.5 events K–P: price confirmation UI test states
+  // -----------------------------------------------------------------------
+  const phase85KPCount = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(eventsTable)
+    .where(sql`title LIKE '[P8.5] Community Confirm%'`)
+  const hasPhase85KP = (phase85KPCount[0]?.count ?? 0) > 0
+
+  if (!hasPhase85KP) {
+    const allVenuesKP = await db.select().from(venues)
+    const ogdenKP = allVenuesKP.find((vn) => vn.slug === 'ogden-theatre')
+    const missionKP = allVenuesKP.find((vn) => vn.slug === 'mission-ballroom')
+    const bluebirdKP = allVenuesKP.find((vn) => vn.slug === 'bluebird-theater')
+    const gothicKP = allVenuesKP.find((vn) => vn.slug === 'gothic-theatre')
+    const summitKP = allVenuesKP.find((vn) => vn.slug === 'summit-music-hall')
+    const marquisKP = allVenuesKP.find((vn) => vn.slug === 'marquis-theater')
+
+    const venueKP_A = ogdenKP ?? allVenuesKP[0]
+    const venueKP_B = missionKP ?? allVenuesKP[0]
+    const venueKP_C = bluebirdKP ?? allVenuesKP[0]
+    const venueKP_D = gothicKP ?? allVenuesKP[0]
+    const venueKP_E = summitKP ?? allVenuesKP[0]
+    const venueKP_F = marquisKP ?? allVenuesKP[0]
+
+    if (
+      !venueKP_A ||
+      !venueKP_B ||
+      !venueKP_C ||
+      !venueKP_D ||
+      !venueKP_E ||
+      !venueKP_F
+    ) {
+      console.warn('Phase 8.5 K–P: no venues found — skipping.')
+    } else {
+      const phase85KPRows = [
+        // K — Community price submitted by another fan (user sees "Confirm price")
+        {
+          venueId: venueKP_A.id,
+          title: '[P8.5] Community Confirm',
+          artist: '[P8.5] Community Confirm Artist',
+          date: '2026-09-02',
+          showTime: '20:00',
+          status: 'upcoming' as const,
+          verified: false,
+        },
+        // L — Community price, no submission yet (user submits themselves to test self-view)
+        {
+          venueId: venueKP_B.id,
+          title: '[P8.5] Community Self',
+          artist: '[P8.5] Community Self Artist',
+          date: '2026-09-09',
+          showTime: '20:00',
+          status: 'upcoming' as const,
+          verified: false,
+        },
+        // M — Community price submitted by another fan (user confirms to test confirmed state)
+        {
+          venueId: venueKP_C.id,
+          title: '[P8.5] Community Confirmed',
+          artist: '[P8.5] Community Confirmed Artist',
+          date: '2026-09-16',
+          showTime: '20:00',
+          status: 'upcoming' as const,
+          verified: false,
+        },
+        // N — Box office price submitted by another fan (user sees "Confirm price")
+        {
+          venueId: venueKP_D.id,
+          title: '[P8.5] Box Office Confirm',
+          artist: '[P8.5] Box Office Confirm Artist',
+          date: '2026-09-23',
+          showTime: '20:00',
+          status: 'upcoming' as const,
+          verified: false,
+        },
+        // O — Box office price, no submission yet (user submits themselves to test self-view)
+        {
+          venueId: venueKP_E.id,
+          title: '[P8.5] Box Office Self',
+          artist: '[P8.5] Box Office Self Artist',
+          date: '2026-09-30',
+          showTime: '20:00',
+          status: 'upcoming' as const,
+          verified: false,
+        },
+        // P — Box office price submitted by another fan (user confirms to test confirmed state)
+        {
+          venueId: venueKP_F.id,
+          title: '[P8.5] Box Office Confirmed',
+          artist: '[P8.5] Box Office Confirmed Artist',
+          date: '2026-10-07',
+          showTime: '20:00',
+          status: 'upcoming' as const,
+          verified: false,
+        },
+      ]
+
+      const insertedKP = await db
+        .insert(eventsTable)
+        .values(phase85KPRows)
+        .returning()
+      console.warn(`Inserted ${insertedKP.length} Phase 8.5 K–P test events.`)
+
+      const kpEvent = (suffix: string) =>
+        insertedKP.find((ev) => ev.title === `[P8.5] ${suffix}`)
+
+      const eventK = kpEvent('Community Confirm')
+      const eventL = kpEvent('Community Self') // intentionally no submission seeded
+      const eventM = kpEvent('Community Confirmed')
+      const eventN = kpEvent('Box Office Confirm')
+      const eventO = kpEvent('Box Office Self') // intentionally no submission seeded
+      const eventP = kpEvent('Box Office Confirmed')
+
+      void eventL // no submission needed
+      void eventO // no submission needed
+
+      const kpSubmissions = [
+        // K — community GA, submitted by another fake user, with note
+        ...(eventK
+          ? [
+              {
+                eventId: eventK.id,
+                userId: FAKE_USER_IDS.marco,
+                priceMin: '48.00',
+                priceMax: '58.00',
+                tier: 'GA' as const,
+                vendor: 'AXS' as const,
+                howFound: 'saw_listing' as const,
+                status: 'pending' as const,
+                corroborationCount: 0,
+                note: 'GA standing — checked the cart on AXS. Showed $48 face, $58 with fees.',
+              },
+            ]
+          : []),
+        // M — community GA, submitted by another fake user, with note (user confirms via UI)
+        ...(eventM
+          ? [
+              {
+                eventId: eventM.id,
+                userId: FAKE_USER_IDS.jess,
+                priceMin: '48.00',
+                priceMax: '58.00',
+                tier: 'GA' as const,
+                vendor: 'AXS' as const,
+                howFound: 'bought_myself' as const,
+                status: 'pending' as const,
+                corroborationCount: 0,
+                note: 'GA standing — checked the cart on AXS. Showed $48 face, $58 with fees.',
+              },
+            ]
+          : []),
+        // N — box office GA, submitted by another fake user, with note
+        ...(eventN
+          ? [
+              {
+                eventId: eventN.id,
+                userId: FAKE_USER_IDS.riley,
+                priceMin: '42.00',
+                priceMax: null,
+                tier: 'GA' as const,
+                vendor: 'VenueBoxOffice' as const,
+                howFound: 'at_the_venue' as const,
+                status: 'pending' as const,
+                corroborationCount: 0,
+                note: 'Walked up to the Mission window, bought GA face. No fees.',
+              },
+            ]
+          : []),
+        // P — box office GA, submitted by another fake user, with note (user confirms via UI)
+        ...(eventP
+          ? [
+              {
+                eventId: eventP.id,
+                userId: FAKE_USER_IDS.taylor,
+                priceMin: '42.00',
+                priceMax: null,
+                tier: 'GA' as const,
+                vendor: 'VenueBoxOffice' as const,
+                howFound: 'at_the_venue' as const,
+                status: 'pending' as const,
+                corroborationCount: 0,
+                note: 'Walked up to the Mission window, bought GA face. No fees.',
+              },
+            ]
+          : []),
+      ]
+
+      if (kpSubmissions.length > 0) {
+        await db
+          .insert(priceSubmissions)
+          .values(kpSubmissions)
+          .onConflictDoNothing()
+        console.warn(`Inserted ${kpSubmissions.length} K–P price submissions.`)
+      }
+    }
+  } else {
+    console.warn('Phase 8.5 K–P test events already seeded, skipping.')
   }
 
   process.exit(0)
