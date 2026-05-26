@@ -864,4 +864,99 @@ export const CONSUMER_COPY = {
     watchlistRow: 'Saved shows',
     watchlistComingSoon: 'Coming soon',
   },
+
+  // ── Multi-tier price display ────────────────────────────────────
+  // Shared copy for TierAlternateRow, MultiTierLiveCard, MixedTierCard, TwoPendingStack
+  multiTier: {
+    // TierAlternateRow — pending middle column: "pending · {confirms}/{needed}"
+    pendingTemplate: (confirms: number, needed: number) =>
+      `pending · ${confirms}/${needed}`,
+    // MultiTierLiveCard / MixedTierCard — price card top label
+    fromLabel: 'from',
+    // MultiTierLiveCard / MixedTierCard — alternate tiers section header
+    otherTiersEyebrow: 'Other tiers',
+  },
+
+  // ── CorroborationSheet ──────────────────────────────────────────
+  // Bottom sheet for confirming a pending price submission
+  corroborationSheet: {
+    eyebrow: 'Confirm price',
+    cancelButton: 'Cancel',
+    heading: 'Is this right?',
+    subtitle: 'Pick how you know this price is correct.',
+
+    // VerifyOption labels and descriptions
+    options: {
+      sameVendor: {
+        label: (vendor: string) => `I saw it on ${vendor}`,
+        description: (vendor: string) =>
+          `I checked ${vendor}'s site and saw this price`,
+      },
+      otherVendor: {
+        label: 'I saw it elsewhere',
+        description: 'Found the same price on a different listing',
+      },
+      sawListing: {
+        label: 'I saw a box-office listing',
+        description: 'I saw this at a box-office price on a verified source',
+      },
+      boughtMyself: {
+        label: 'I bought tickets at this price',
+        description: 'I personally purchased at this price',
+      },
+    },
+
+    // Confirm CTA
+    confirmButton: 'Confirm price',
+
+    // Escape link
+    escapeLink:
+      'Saw a different tier or a different price? Submit an update instead.',
+
+    // Honesty disclaimer
+    honestyDisclaimer:
+      "By confirming, you're vouching this is accurate. Repeated bad-faith confirms can affect your account.",
+
+    // Self-locked state
+    selfLocked: {
+      waitingNotice:
+        "Your submission is pending. You can't confirm your own price — but 2 other fans can.",
+      editButton: 'Edit submission',
+      withdrawButton: 'Withdraw',
+    },
+
+    // SubmissionDetailCard attribution (reuses pendingCardB patterns)
+    viaAnonymous: 'via anonymous',
+    yourSubmissionAttribution: 'your submission',
+    viaHandlePrefix: 'via @',
+  },
+
+  // ── CounterSubmitSheet ──────────────────────────────────────────
+  // Bottom sheet for submitting a counter/update to an existing price submission
+  counterSubmitSheet: {
+    eyebrow: 'Price update',
+    heading: 'Update the price.',
+    subtitleWithRange: (floor: number, ceiling: number, vendor: string) =>
+      `Currently listed: $${floor}–$${ceiling} on ${vendor}. Your update goes pending until another fan confirms.`,
+    subtitleFloorOnly: (floor: number, vendor: string) =>
+      `Currently listed: $${floor} on ${vendor}. Your update goes pending until another fan confirms.`,
+    floorLabel: 'Floor price',
+    floorPlaceholder: '35',
+    ceilingLabel: 'Ceiling price (optional)',
+    ceilingPlaceholder: '75',
+    tierLabel: 'Tier *',
+    vendorLabel: "Where it's listed *",
+    submitButton: 'Submit update',
+    submittingButton: 'Submitting…',
+    cancelButton: 'Cancel',
+    successHeading: 'Update submitted.',
+    successBody:
+      'Your update is pending — one more fan confirming it moves it forward.',
+    successBackButton: 'Back to show',
+    errorHeading: "Didn't go through.",
+    errorBody:
+      "Couldn't reach the server — your inputs are still here. Try again or come back later.",
+    errorTryAgainButton: 'Try again',
+    errorCloseButton: 'Close',
+  },
 } as const
