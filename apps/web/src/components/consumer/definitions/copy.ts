@@ -770,26 +770,32 @@ export const CONSUMER_COPY = {
   // ── PendingCardB ────────────────────────────────────────────────
   // Shown on the event detail page — pending price card for community and box-office tiers
   pendingCardB: {
-    // Strip eyebrow (left side): "{confirms}/{needed} confirms · pending"
-    stripEyebrowTemplate: (confirms: number, needed: number) =>
-      `${confirms}/${needed} confirms · pending`,
+    // Strip left group
+    pending: 'Pending',
+    of: 'of',
+    confirmed: 'confirmed',
     // Strip right side: "{N} to go"
-    toGoTemplate: (remaining: number) => `${remaining} to go`,
+    toGo: 'to go',
+    // Eyebrow labels
+    boxOfficeLabel: 'Box office',
+    ticketsLabel: 'Tickets',
     // "Face value · no fees" line (box-office only)
-    faceValueNoFees: 'Face value · no fees',
+    faceValueNoFees: 'face value · no fees',
+    // Vendor line prefix
+    seenOnPrefix: 'seen on',
+    // Attribution line
+    submittedByPrefix: 'Submitted by',
+    you: 'you',
+    anonymousFan: 'an anonymous fan',
     // Footer — other view
     confirmPrice: 'Confirm price',
     sawDifferentNumber: 'Saw a different number?',
     // Footer — self-locked view
     yourSubmissionLabel: 'Your submission',
-    waitingForConfirms: 'Waiting for confirms',
+    waitingOnOneFan: 'Waiting on one more fan',
     // Footer — submitter view
     editButton: 'Edit',
     withdrawButton: 'Withdraw',
-    // Attribution
-    viaAnonymous: 'via anonymous',
-    yourSubmissionAttribution: 'your submission',
-    viaHandlePrefix: 'via @',
   },
 
   // ── Settings ────────────────────────────────────────────────────

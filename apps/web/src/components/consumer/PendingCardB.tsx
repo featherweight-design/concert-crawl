@@ -1,6 +1,13 @@
 'use client'
 
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import {
+  CheckGlyph,
+  Eyebrow,
+  LockGlyph,
+  PendingDot,
+  PendingTrustPill,
+} from './glyphs'
 
 const copy = CONSUMER_COPY.pendingCardB
 
@@ -43,16 +50,16 @@ const pendingTokens = (kind: 'community' | 'boxoffice'): PendingTokens => {
 // ── Props ────────────────────────────────────────────────────────
 export interface PendingCardBProps {
   floor: number
-  ceiling?: number
+  ceiling?: number | null
   tier: string
   vendor: string
   kind: 'community' | 'boxoffice'
   submitter: { handle: string; url: string } | null
-  submittedAt: string // ISO date
+  submittedAt: string
   confirms: number
   needed: number
   view: 'other' | 'submitter' | 'self-locked'
-  note?: string
+  note?: string | null
   onConfirm: () => void
   onWithdraw: () => void
   onEdit: () => void
@@ -66,6 +73,7 @@ export const PendingCardB = ({
   vendor,
   kind,
   submitter,
+  submittedAt,
   view,
   note,
   confirms,
@@ -74,195 +82,29 @@ export const PendingCardB = ({
   onWithdraw,
   onEdit,
 }: PendingCardBProps) => {
-  const tokens = pendingTokens(kind)
+  const tok = pendingTokens(kind)
+  const isBox = kind === 'boxoffice'
+  const isSubmitter = view === 'submitter' || view === 'self-locked'
   const remaining = needed - confirms
 
   // ── Card background / border ─────────────────────────────────
-  const cardStyle =
-    kind === 'boxoffice'
-      ? {
-          background: tokens.bg,
-          border: `1px solid ${tokens.border}`,
-          boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
-          borderRadius: '12px',
-        }
-      : {
-          background: 'var(--surface-1)',
-          border: '1px solid var(--border)',
-          borderRadius: '12px',
-        }
-
-  // ── Attribution line ──────────────────────────────────────────
-  const attributionNode = (() => {
-    if (view === 'submitter') {
-      return (
-        <span
-          style={{
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: '9px',
-            color: 'var(--fg-muted)',
-          }}
-        >
-          {copy.yourSubmissionAttribution}
-        </span>
-      )
-    }
-
-    if (submitter === null) {
-      return (
-        <span
-          style={{
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: '9px',
-            color: 'var(--fg-muted)',
-          }}
-        >
-          {copy.viaAnonymous}
-        </span>
-      )
-    }
-
-    return (
-      <span
-        style={{
-          fontFamily: 'JetBrains Mono, monospace',
-          fontSize: '9px',
-          color: 'var(--fg-muted)',
-        }}
-      >
-        {copy.viaHandlePrefix}
-        <a
-          href={submitter.url}
-          style={{ color: 'var(--fg-muted)', textDecoration: 'underline' }}
-        >
-          {submitter.handle}
-        </a>
-      </span>
-    )
-  })()
-
-  // ── Footer ───────────────────────────────────────────────────
-  const footerNode = (() => {
-    if (view === 'other') {
-      return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <button
-            onClick={onConfirm}
-            style={{
-              background: tokens.color,
-              color: 'var(--fg-on-accent)',
-              fontFamily: 'Inter, sans-serif',
-              fontWeight: 700,
-              fontSize: '12.5px',
-              padding: '7px 12px',
-              borderRadius: '8px',
-              border: 'none',
-              cursor: 'pointer',
-              alignSelf: 'flex-start',
-            }}
-          >
-            {copy.confirmPrice}
-          </button>
-          <button
-            onClick={onEdit}
-            style={{
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: '10px',
-              color: 'var(--fg-subtle)',
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-              background: 'none',
-              border: 'none',
-              padding: 0,
-              alignSelf: 'flex-start',
-            }}
-          >
-            {copy.sawDifferentNumber}
-          </button>
-        </div>
-      )
-    }
-
-    if (view === 'self-locked') {
-      return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <span
-            style={{
-              fontFamily: 'Inter, sans-serif',
-              fontWeight: 600,
-              fontSize: '12px',
-              color: 'var(--fg-muted)',
-            }}
-          >
-            {copy.yourSubmissionLabel}
-          </span>
-          <div
-            style={{
-              background: 'color-mix(in oklab, var(--fg) 5%, transparent)',
-              border: '1px dashed var(--border-strong)',
-              borderRadius: '8px',
-              padding: '6px 10px',
-              fontFamily: 'Inter, sans-serif',
-              fontWeight: 600,
-              fontSize: '12px',
-              color: 'var(--fg-muted)',
-              display: 'inline-block',
-            }}
-          >
-            {copy.waitingForConfirms}
-          </div>
-        </div>
-      )
-    }
-
-    // view === 'submitter'
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        <span
-          style={{
-            fontFamily: 'Inter, sans-serif',
-            fontWeight: 600,
-            fontSize: '12px',
-            color: 'var(--fg-muted)',
-          }}
-        >
-          {copy.yourSubmissionLabel}
-        </span>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button
-            onClick={onEdit}
-            style={{
-              fontFamily: 'Inter, sans-serif',
-              fontWeight: 600,
-              fontSize: '12px',
-              color: 'var(--signal)',
-              background: 'none',
-              border: 'none',
-              padding: 0,
-              cursor: 'pointer',
-            }}
-          >
-            {copy.editButton}
-          </button>
-          <button
-            onClick={onWithdraw}
-            style={{
-              fontFamily: 'Inter, sans-serif',
-              fontWeight: 600,
-              fontSize: '12px',
-              color: 'var(--warning)',
-              background: 'none',
-              border: 'none',
-              padding: 0,
-              cursor: 'pointer',
-            }}
-          >
-            {copy.withdrawButton}
-          </button>
-        </div>
-      </div>
-    )
-  })()
+  const cardStyle = isBox
+    ? {
+        borderRadius: '12px',
+        overflow: 'hidden' as const,
+        padding: 0,
+        background: tok.bg,
+        border: `1px solid ${tok.border}`,
+        boxShadow: `inset 0 1px 0 color-mix(in oklab, ${GOLD} 40%, transparent)`,
+      }
+    : {
+        borderRadius: '12px',
+        overflow: 'hidden' as const,
+        padding: 0,
+        background: 'var(--surface-1)',
+        border: '1px solid var(--border)',
+        boxShadow: 'none',
+      }
 
   return (
     <div style={cardStyle}>
@@ -270,124 +112,335 @@ export const PendingCardB = ({
       <div
         style={{
           padding: '8px 14px',
-          background: tokens.strip,
-          borderBottom: `1px solid ${tokens.stripBorder}`,
+          background: tok.strip,
+          borderBottom: `1px solid ${tok.stripBorder}`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          gap: '10px',
+          flexWrap: 'wrap',
         }}
       >
-        <span
+        {/* Strip left group */}
+        <div
           style={{
-            fontFamily: 'Inter, sans-serif',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontFamily: "'JetBrains Mono', monospace",
             fontSize: '9.5px',
+            color: tok.color,
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
-            color: tokens.color,
+            fontWeight: 700,
           }}
         >
-          {copy.stripEyebrowTemplate(confirms, needed)}
-        </span>
+          <span>{copy.pending}</span>
+          <span style={{ opacity: 0.4 }}>·</span>
+          <span style={{ display: 'inline-flex', gap: '3px' }}>
+            {Array.from({ length: needed }).map((_, idx) => (
+              <PendingDot
+                key={idx}
+                size={7}
+                filled={idx < confirms}
+                color={tok.color}
+              />
+            ))}
+          </span>
+          <span>
+            {confirms} {copy.of} {needed} {copy.confirmed}
+          </span>
+        </div>
+
+        {/* Strip right */}
         <span
           style={{
-            fontFamily: 'JetBrains Mono, monospace',
+            fontFamily: "'JetBrains Mono', monospace",
             fontSize: '9px',
             color: 'var(--fg-subtle)',
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
           }}
         >
-          {copy.toGoTemplate(remaining)}
+          {remaining} {copy.toGo}
         </span>
       </div>
 
       {/* ── Body ── */}
-      <div
-        style={{
-          padding: '14px 14px 12px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '6px',
-        }}
-      >
-        {/* Headline price */}
-        <p
+      <div style={{ padding: '14px 14px 12px' }}>
+        {/* Top row (eyebrow row) */}
+        <div
           style={{
-            fontFamily: 'Inter, sans-serif',
-            fontWeight: 800,
-            fontSize: '28px',
-            color: 'var(--fg)',
-            letterSpacing: '-0.025em',
-            lineHeight: 1.05,
-            margin: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
           }}
         >
-          {ceiling !== undefined ? `$${floor}–${ceiling}` : `$${floor}`}
-        </p>
+          <Eyebrow color={isBox ? tok.color : 'var(--fg-subtle)'}>
+            {isBox ? copy.boxOfficeLabel : copy.ticketsLabel}
+          </Eyebrow>
+        </div>
 
-        {/* Tier chip row */}
-        <p
+        {/* Headline row */}
+        <div
           style={{
-            fontFamily: 'JetBrains Mono, monospace',
-            fontWeight: 700,
-            fontSize: '11px',
-            color: 'var(--fg-muted)',
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-            margin: 0,
+            marginTop: '6px',
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: '10px',
+            flexWrap: 'wrap',
           }}
         >
-          {tier}
-        </p>
-
-        {/* Face value · no fees (box-office only) */}
-        {kind === 'boxoffice' && (
-          <p
+          <span
             style={{
-              fontFamily: 'Inter, sans-serif',
-              fontWeight: 600,
-              fontSize: '12px',
-              color: tokens.color,
-              margin: 0,
+              fontFamily: 'Inter, system-ui',
+              fontWeight: 800,
+              fontSize: '28px',
+              color: 'var(--fg)',
+              letterSpacing: '-0.025em',
+              lineHeight: 1.05,
             }}
           >
-            {copy.faceValueNoFees}
-          </p>
-        )}
+            {ceiling != null && ceiling > floor
+              ? `$${floor}–$${ceiling}`
+              : `$${floor}`}
+          </span>
+          <span
+            style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: '11px',
+              color: 'var(--fg-muted)',
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              fontWeight: 700,
+            }}
+          >
+            {tier}
+          </span>
+          {isBox && (
+            <span
+              style={{
+                fontFamily: 'Inter, system-ui',
+                fontWeight: 600,
+                fontSize: '12px',
+                color: tok.color,
+                letterSpacing: '-0.005em',
+              }}
+            >
+              {copy.faceValueNoFees}
+            </span>
+          )}
+          <PendingTrustPill kind={kind} />
+        </div>
 
         {/* Vendor line */}
-        <p
+        <div
           style={{
-            fontFamily: 'JetBrains Mono, monospace',
+            marginTop: '6px',
+            fontFamily: "'JetBrains Mono', monospace",
             fontSize: '10px',
             color: 'var(--fg-muted)',
             letterSpacing: '0.04em',
-            margin: 0,
           }}
         >
-          {vendor}
-        </p>
+          {copy.seenOnPrefix} {vendor}
+        </div>
 
-        {/* Attribution */}
-        <div>{attributionNode}</div>
+        {/* Attribution line */}
+        <div
+          style={{
+            marginTop: '8px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            flexWrap: 'wrap',
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: '9px',
+            color: 'var(--fg-muted)',
+            letterSpacing: '0.04em',
+          }}
+        >
+          <span>{copy.submittedByPrefix}</span>
+          {isSubmitter ? (
+            <span style={{ color: tok.color, fontWeight: 700 }}>
+              {copy.you}
+            </span>
+          ) : submitter !== null ? (
+            <a
+              href={submitter.url}
+              style={{
+                color: 'var(--fg-muted)',
+                textDecoration: 'underline',
+                textDecorationColor: 'var(--border-strong)',
+                textUnderlineOffset: '2px',
+              }}
+            >
+              {submitter.handle}
+            </a>
+          ) : (
+            <span style={{ fontStyle: 'italic', opacity: 0.85 }}>
+              {copy.anonymousFan}
+            </span>
+          )}
+          <span style={{ opacity: 0.5 }}>·</span>
+          <span>{submittedAt}</span>
+        </div>
 
         {/* Optional note */}
-        {note !== undefined && (
+        {note != null && note !== '' && (
           <div
             style={{
+              marginTop: '10px',
               padding: '8px 10px',
               background: 'color-mix(in oklab, var(--fg) 4%, transparent)',
               border: '1px solid var(--border)',
               borderRadius: '8px',
-              fontFamily: 'Inter, sans-serif',
+              fontFamily: 'Inter, system-ui',
               fontSize: '12.5px',
+              color: 'var(--fg-muted)',
+              letterSpacing: '-0.005em',
+              lineHeight: 1.45,
               fontStyle: 'italic',
             }}
           >
-            {note}
+            &ldquo;{note}&rdquo;
           </div>
         )}
 
         {/* Footer */}
-        <div style={{ marginTop: '4px' }}>{footerNode}</div>
+        <div
+          style={{
+            marginTop: '12px',
+            paddingTop: '10px',
+            borderTop: '1px solid var(--border)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '10px',
+            flexWrap: 'wrap',
+          }}
+        >
+          {view === 'other' && (
+            <>
+              <button
+                onClick={onEdit}
+                style={{
+                  all: 'unset',
+                  cursor: 'pointer',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: '10px',
+                  color: 'var(--fg-subtle)',
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {copy.sawDifferentNumber}
+              </button>
+              <button
+                onClick={onConfirm}
+                style={{
+                  all: 'unset',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 12px',
+                  borderRadius: '8px',
+                  background: tok.color,
+                  color: 'var(--fg-on-accent)',
+                  fontFamily: 'Inter, system-ui',
+                  fontWeight: 700,
+                  fontSize: '12.5px',
+                  letterSpacing: '-0.005em',
+                }}
+              >
+                <CheckGlyph size={11} color="var(--fg-on-accent)" />
+                {copy.confirmPrice}
+              </button>
+            </>
+          )}
+
+          {view === 'self-locked' && (
+            <>
+              <span
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: '10px',
+                  color: 'var(--fg-subtle)',
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {copy.yourSubmissionLabel}
+              </span>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 12px',
+                  borderRadius: '8px',
+                  background: 'color-mix(in oklab, var(--fg) 5%, transparent)',
+                  border: '1px dashed var(--border-strong)',
+                  fontFamily: 'Inter, system-ui',
+                  fontWeight: 600,
+                  fontSize: '12px',
+                  color: 'var(--fg-muted)',
+                  letterSpacing: '-0.005em',
+                }}
+              >
+                <LockGlyph size={10} />
+                {copy.waitingOnOneFan}
+              </span>
+            </>
+          )}
+
+          {view === 'submitter' && (
+            <>
+              <span
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: '10px',
+                  color: 'var(--fg-subtle)',
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {copy.yourSubmissionLabel}
+              </span>
+              <div style={{ display: 'flex', gap: '14px' }}>
+                <button
+                  onClick={onEdit}
+                  style={{
+                    all: 'unset',
+                    cursor: 'pointer',
+                    fontFamily: 'Inter, system-ui',
+                    fontWeight: 600,
+                    fontSize: '12px',
+                    color: 'var(--signal)',
+                    letterSpacing: '-0.005em',
+                  }}
+                >
+                  {copy.editButton}
+                </button>
+                <button
+                  onClick={onWithdraw}
+                  style={{
+                    all: 'unset',
+                    cursor: 'pointer',
+                    fontFamily: 'Inter, system-ui',
+                    fontWeight: 600,
+                    fontSize: '12px',
+                    color: 'var(--warning)',
+                    letterSpacing: '-0.005em',
+                  }}
+                >
+                  {copy.withdrawButton}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   )
