@@ -26,11 +26,11 @@
   "devDependencies": {
     "@concert-crawl/config": "workspace:*",
     "@concert-crawl/types": "workspace:*",
-    "@types/node": "^25.9.0",
+    "@types/node": "^25.9.1",
     "drizzle-kit": "^0.31.10",
     "tsx": "^4.22.3",
     "typescript": "^5.0.0",
-    "vitest": "^4.1.6",
+    "vitest": "^4.1.7",
     "vite": "^6.0.0"
   }
 }
