@@ -83,6 +83,45 @@ export const REPORTING_COPY = {
     pendingDot: '·',
   },
 
+  // ── ConfirmReportSheet ───────────────────────────────────────────
+  confirmReportSheet: {
+    eyebrow: 'Confirm report',
+    cancelButton: 'Cancel',
+    heading: 'Is this right?',
+    subtitle: 'Confirm what you know about this event.',
+    recapCard: {
+      anonymousLabel: 'Anonymous',
+    },
+    verifyOptions: {
+      sawSameSource: {
+        label: 'I saw the same source',
+        description: 'Same announcement or listing',
+      },
+      ownEvidence: {
+        label: 'I have my own evidence',
+        description: 'Different source, same conclusion',
+      },
+      heardFromVenue: {
+        label: 'I heard from someone at the venue',
+        description: 'Word of mouth, venue staff',
+      },
+    },
+    cautionNote: 'False confirms affect your community standing.',
+    confirmButton: 'Confirm',
+    counterReportLink: "This isn't right — file a counter-report.",
+  },
+
+  // ── LiveReportBanner ─────────────────────────────────────────────
+  liveReportBanner: {
+    headlines: {
+      'sold-out': 'This show is sold out.',
+      cancelled: 'This show has been cancelled.',
+      postponed: 'This show has been postponed.',
+    },
+    confirmsAndTime: (confirmCount: number, timeAgo: string) =>
+      `${confirmCount} confirms · ${timeAgo}`,
+  },
+
   // ── PendingSoldOutCard ───────────────────────────────────────────
   pendingSoldOutCard: {
     stripBadge: 'Sold out · pending',
