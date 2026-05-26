@@ -8,6 +8,7 @@ import {
   text,
   timestamp,
   uuid,
+  varchar,
 } from 'drizzle-orm/pg-core'
 import { events, priceSourceEnum } from './events.js'
 import { venues } from './venues.js'
@@ -93,6 +94,7 @@ export const priceSubmissions = pgTable('price_submissions', {
   ),
   status: priceSubmissionStatusEnum('status').notNull().default('pending'),
   corroborationCount: integer('corroboration_count').notNull().default(0),
+  note: varchar('note', { length: 280 }),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
