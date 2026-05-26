@@ -263,6 +263,32 @@ export interface SubmissionListResponse {
   userSubmission: SubmissionWithMeta | null
 }
 
+// EventReport status options
+export type EventReportStatus = 'sold-out' | 'cancelled' | 'postponed'
+
+// EventReport evidence methods
+export type EventReportEvidenceMethod =
+  | 'bought_myself'
+  | 'saw_listing'
+  | 'venue_site'
+  | 'other'
+
+// EventReport — community-filed report about an event's status
+export interface EventReport {
+  id: string
+  eventId: string
+  reporterId: string
+  status: EventReportStatus
+  evidenceMethod: EventReportEvidenceMethod
+  evidenceUrl: string | null
+  note: string | null
+  createdAt: string
+  confirmsCount: number
+  confirmsNeeded: number
+  isReporter: boolean
+  userHasConfirmed: boolean
+}
+
 // Setlist — likely setlist for an event, sourced from Setlist.fm
 export interface Setlist {
   songs: string[]
