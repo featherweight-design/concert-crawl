@@ -1,7 +1,18 @@
 import { Hono } from 'hono'
 import { clerkMiddleware } from '@hono/clerk-auth'
-import { db, events, venues } from '@concert-crawl/db'
-import { type SQL, and, asc, count, eq, gte, isNotNull } from 'drizzle-orm'
+import { db, events, priceSubmissions, venues } from '@concert-crawl/db'
+import {
+  type SQL,
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  sql,
+} from 'drizzle-orm'
 import { todayInTimezone } from '../lib/time.js'
 import { requireAuth } from '../middleware/auth.js'
 
@@ -135,8 +146,48 @@ venuesPublicRouter.get('/:slug', async (ctx) => {
     .orderBy(asc(events.date), asc(events.showTime))
     .limit(50)
 
+  const communityEventIds = upcomingEvents
+    .filter((evt) => evt.priceSource === 'community')
+    .map((evt) => evt.id)
+
+  const vendorByEventId: Record<string, string | null> = {}
+  if (communityEventIds.length > 0) {
+    const vendorRows = await db
+      .select({
+        eventId: priceSubmissions.eventId,
+        vendor: priceSubmissions.vendor,
+      })
+      .from(priceSubmissions)
+      .where(
+        and(
+          inArray(priceSubmissions.eventId, communityEventIds),
+          eq(priceSubmissions.status, 'corroborated'),
+        ),
+      )
+      .orderBy(
+        sql`CASE WHEN ${priceSubmissions.vendor} = 'VenueBoxOffice' THEN 0 WHEN ${priceSubmissions.vendor} = 'SeatGeek' THEN 2 ELSE 1 END ASC`,
+        desc(priceSubmissions.createdAt),
+      )
+    for (const vRow of vendorRows) {
+      if (!(vRow.eventId in vendorByEventId)) {
+        vendorByEventId[vRow.eventId] = vRow.vendor
+      }
+    }
+  }
+
+  const enrichedEvents = upcomingEvents.map((evt) => ({
+    ...evt,
+    priceVendor:
+      evt.priceSource === 'community'
+        ? (vendorByEventId[evt.id] ?? null)
+        : null,
+  }))
+
   return ctx.json({
     success: true,
-    data: { venue: { ...venue, upcomingCount }, upcomingEvents },
+    data: {
+      venue: { ...venue, upcomingCount },
+      upcomingEvents: enrichedEvents,
+    },
   })
 })

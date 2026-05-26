@@ -195,7 +195,10 @@ eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
           eq(priceSubmissions.status, 'corroborated'),
         ),
       )
-      .orderBy(desc(priceSubmissions.createdAt))
+      .orderBy(
+        sql`CASE WHEN ${priceSubmissions.vendor} = 'VenueBoxOffice' THEN 0 WHEN ${priceSubmissions.vendor} = 'SeatGeek' THEN 2 ELSE 1 END ASC`,
+        desc(priceSubmissions.createdAt),
+      )
 
     for (const vRow of vendorRows) {
       if (!(vRow.eventId in vendorByEventId)) {
