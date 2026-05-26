@@ -1,3 +1,29 @@
+## [1.40.1](https://github.com/HartiganHM/concert-crawl/compare/v1.40.0...v1.40.1) (2026-05-26)
+
+
+### Bug Fixes
+
+* **admin:** show event name + ticket link in price submission queue ([0f72fd2](https://github.com/HartiganHM/concert-crawl/commit/0f72fd26a7448ac6ee2dcc2bfd9b1866f1067614))
+* **api:** derive priceApprovalKind from submission_confirms instead of hardcoding ([e71ccff](https://github.com/HartiganHM/concert-crawl/commit/e71ccff5b5183a90410ccd9fa5a81cb996efd7e4))
+* **api:** service key bypass for events router under REQUIRE_BETA_AUTH ([1df8888](https://github.com/HartiganHM/concert-crawl/commit/1df888869fab5f1dbcef16e3c06aa5088557ee89))
+* **api:** trust-priority sort for browse vendor; priceVendor on venue profile ([11903f1](https://github.com/HartiganHM/concert-crawl/commit/11903f1de66391af18a9d83ff4459bb33ccaf733))
+* **consumer:** move submitter to footer and add verification line on price card ([8e118b2](https://github.com/HartiganHM/concert-crawl/commit/8e118b2aa4aefb3cbf834610a6528c1ba299b4c8))
+* correct watch button mobile detection and add venue button placement ([f4d63bb](https://github.com/HartiganHM/concert-crawl/commit/f4d63bb978ab21e7ba2c220d45943d9b24200f53))
+* **events:** lowercase price submitter handle ([6a777ad](https://github.com/HartiganHM/concert-crawl/commit/6a777ad0b168bd6259a5e53161d1885d1bc63fa2))
+* **events:** map SeatGeek community submission to resale trust tier ([41b8047](https://github.com/HartiganHM/concert-crawl/commit/41b80479a41595bd34d1338cd4b006c0327d9bb9))
+* **events:** resolve price submitter handle from user_profiles table ([c2cdc8b](https://github.com/HartiganHM/concert-crawl/commit/c2cdc8b0c2856e460859c5c73fe67942bd0513f4))
+* **events:** show correct trust tier and submitter on community-priced events ([8c68d1f](https://github.com/HartiganHM/concert-crawl/commit/8c68d1fb8f268063165e9872b01f7247bc29c4e6))
+* **events:** show vendor name and observation time in resale price card footer ([01f92fb](https://github.com/HartiganHM/concert-crawl/commit/01f92fb03c56f5c5ec8d7264489368eadcc8a56b))
+* **events:** use Clerk username (not firstName) as price submitter handle ([4475a4d](https://github.com/HartiganHM/concert-crawl/commit/4475a4d0ff01d9377acd9c1c271616a17694e4a3))
+* **landing:** generate fallback poster dates dynamically from today ([6eda3a9](https://github.com/HartiganHM/concert-crawl/commit/6eda3a9e8316ace6360734af410cd489b37de5c3))
+* **landing:** remove stale hardcoded fallback shows from poster carousel ([72493b2](https://github.com/HartiganHM/concert-crawl/commit/72493b2b20e87e73ee2c00fdbf7a6528afc1fb07))
+* **lint:** rename single-char variable d → dateAt in fallback shows helper ([8e131b6](https://github.com/HartiganHM/concert-crawl/commit/8e131b677113ee03cc1d2581c4ba662c5f0d565c))
+* **loading:** add page header and date groups to browse skeleton ([0360f46](https://github.com/HartiganHM/concert-crawl/commit/0360f46ad9dfa3ce0c72714ddef8dffe1eef3c08))
+* **loading:** match skeleton layouts to actual rendered components ([61e8f12](https://github.com/HartiganHM/concert-crawl/commit/61e8f1276218000ec9f50aaf0d5bc3f07a9940cf))
+* **price:** browse trust indicators, label copy, footer attribution, and alternates ([6ccffe7](https://github.com/HartiganHM/concert-crawl/commit/6ccffe720f9d3d6e1708d3646254321d1370da0d))
+* **price:** sort corroborated submissions by trust priority before recency ([f29888a](https://github.com/HartiganHM/concert-crawl/commit/f29888a3005ac8a72efc7badbcccd4cb29d4e7a9))
+* ui polish batch 2 — 13 pre-beta issues ([2134686](https://github.com/HartiganHM/concert-crawl/commit/213468643eebcdb2c9c625cfbc968499b92feebc))
+
 # [1.40.0](https://github.com/HartiganHM/concert-crawl/compare/v1.39.0...v1.40.0) (2026-05-25)
 
 
