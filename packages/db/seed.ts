@@ -10,6 +10,8 @@ import {
   userEvents,
   priceSubmissions,
   submissionConfirms,
+  eventReports,
+  eventReportConfirms,
   feedback,
   notifications,
   waitlistEntries,
@@ -1978,6 +1980,447 @@ async function seed() {
     } else {
       console.warn('Audit log already seeded, skipping.')
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Phase 8.5 — test events for price corroboration & event report flows
+  // -------------------------------------------------------------------------
+  const phase85EventsCount = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(eventsTable)
+    .where(sql`title LIKE '[P8.5]%'`)
+  const hasPhase85Events = (phase85EventsCount[0]?.count ?? 0) > 0
+
+  if (!hasPhase85Events) {
+    // Use the first active venue for all Phase 8.5 test events
+    const allVenues = await db.select().from(venues)
+    const ogden = allVenues.find((vn) => vn.slug === 'ogden-theatre')
+    const mission = allVenues.find((vn) => vn.slug === 'mission-ballroom')
+    const bluebird = allVenues.find((vn) => vn.slug === 'bluebird-theater')
+    const gothic = allVenues.find((vn) => vn.slug === 'gothic-theatre')
+    const summit = allVenues.find((vn) => vn.slug === 'summit-music-hall')
+    const marquis = allVenues.find((vn) => vn.slug === 'marquis-theater')
+    const hiDive = allVenues.find((vn) => vn.slug === 'hi-dive')
+    const larimer = allVenues.find((vn) => vn.slug === 'larimer-lounge')
+    const fillmore = allVenues.find((vn) => vn.slug === 'fillmore-auditorium')
+
+    const venueA = ogden ?? allVenues[0]
+    const venueB = mission ?? allVenues[0]
+    const venueC = bluebird ?? allVenues[0]
+    const venueD = gothic ?? allVenues[0]
+    const venueE = summit ?? allVenues[0]
+    const venueF = marquis ?? allVenues[0]
+    const venueG = hiDive ?? allVenues[0]
+    const venueH = larimer ?? allVenues[0]
+    const venueI = fillmore ?? allVenues[0]
+
+    if (
+      !venueA ||
+      !venueB ||
+      !venueC ||
+      !venueD ||
+      !venueE ||
+      !venueF ||
+      !venueG ||
+      !venueH ||
+      !venueI
+    ) {
+      console.warn('Phase 8.5: no venues found — skipping.')
+    } else {
+      const phase85EventRows = [
+        // A — TwoPendingStack: two pending community submissions at different tiers
+        {
+          venueId: venueA.id,
+          title: '[P8.5] Two Tiers Pending',
+          artist: '[P8.5] Dual Tier Artist',
+          date: '2026-07-01',
+          showTime: '20:00',
+          status: 'upcoming' as const,
+          verified: false,
+        },
+        // B — DisputedPriceCard: live submission + counter-submission
+        {
+          venueId: venueB.id,
+          title: '[P8.5] Counter Submission',
+          artist: '[P8.5] Counter Artist',
+          date: '2026-07-08',
+          showTime: '20:00',
+          status: 'upcoming' as const,
+          verified: false,
+        },
+        // C — Gold card: pending box-office VIP submission
+        {
+          venueId: venueC.id,
+          title: '[P8.5] Gold Pending',
+          artist: '[P8.5] Gold Artist',
+          date: '2026-07-15',
+          showTime: '20:00',
+          status: 'upcoming' as const,
+          verified: false,
+        },
+        // D — Pending sold-out report
+        {
+          venueId: venueD.id,
+          title: '[P8.5] Sold Out Report',
+          artist: '[P8.5] Sold Out Artist',
+          date: '2026-07-22',
+          showTime: '20:00',
+          status: 'upcoming' as const,
+          verified: false,
+        },
+        // E — Pending cancelled report (price should be hidden)
+        {
+          venueId: venueE.id,
+          title: '[P8.5] Cancelled Report',
+          artist: '[P8.5] Cancelled Artist',
+          date: '2026-07-29',
+          showTime: '20:00',
+          status: 'upcoming' as const,
+          verified: false,
+        },
+        // F — Pending postponed report (price visible)
+        {
+          venueId: venueF.id,
+          title: '[P8.5] Postponed Report',
+          artist: '[P8.5] Postponed Artist',
+          date: '2026-08-05',
+          showTime: '20:00',
+          status: 'upcoming' as const,
+          verified: false,
+        },
+        // G — Live sold-out (promoted report)
+        {
+          venueId: venueG.id,
+          title: '[P8.5] Sold Out Live',
+          artist: '[P8.5] Sold Out Live Artist',
+          date: '2026-08-12',
+          showTime: '20:00',
+          status: 'upcoming' as const,
+          verified: false,
+        },
+        // H — Live cancelled (promoted report)
+        {
+          venueId: venueH.id,
+          title: '[P8.5] Cancelled Live',
+          artist: '[P8.5] Cancelled Live Artist',
+          date: '2026-08-19',
+          showTime: '20:00',
+          status: 'upcoming' as const,
+          verified: false,
+        },
+        // I — Imminent show (within 6 days) + pending cancelled report
+        {
+          venueId: venueI.id,
+          title: '[P8.5] Imminent Cancelled',
+          artist: '[P8.5] Imminent Artist',
+          date: '2026-05-31',
+          showTime: '20:00',
+          status: 'upcoming' as const,
+          verified: false,
+        },
+      ]
+
+      const insertedPhase85Events = await db
+        .insert(eventsTable)
+        .values(phase85EventRows)
+        .returning()
+      console.warn(
+        `Inserted ${insertedPhase85Events.length} Phase 8.5 test events.`,
+      )
+
+      // Helper to find event by title suffix
+      const p85Event = (suffix: string) =>
+        insertedPhase85Events.find((ev) => ev.title === `[P8.5] ${suffix}`)
+
+      const eventA = p85Event('Two Tiers Pending')
+      const eventB = p85Event('Counter Submission')
+      const eventC = p85Event('Gold Pending')
+      const eventD = p85Event('Sold Out Report')
+      const eventE = p85Event('Cancelled Report')
+      const eventF = p85Event('Postponed Report')
+      const eventG = p85Event('Sold Out Live')
+      const eventH = p85Event('Cancelled Live')
+      const eventI = p85Event('Imminent Cancelled')
+
+      // -----------------------------------------------------------------------
+      // Price submissions for Phase 8.5 events
+      // -----------------------------------------------------------------------
+
+      // Event A — two pending community submissions (GA + Reserved), no live
+      const phase85SubmissionsA = eventA
+        ? [
+            {
+              eventId: eventA.id,
+              userId: FAKE_USER_IDS.jess,
+              priceMin: '25.00',
+              priceMax: '35.00',
+              tier: 'GA' as const,
+              vendor: 'Ticketmaster' as const,
+              howFound: 'saw_listing' as const,
+              status: 'pending' as const,
+              corroborationCount: 0,
+            },
+            {
+              eventId: eventA.id,
+              userId: FAKE_USER_IDS.marco,
+              priceMin: '55.00',
+              priceMax: '75.00',
+              tier: 'Reserved' as const,
+              vendor: 'Ticketmaster' as const,
+              howFound: 'saw_listing' as const,
+              status: 'pending' as const,
+              corroborationCount: 0,
+            },
+          ]
+        : []
+
+      // Event B — one live/corroborated submission + one pending counter-submission
+      // Insert the live one first so we can reference its id for disputedSubmissionId
+      const phase85SubmissionBLive = eventB
+        ? await db
+            .insert(priceSubmissions)
+            .values({
+              eventId: eventB.id,
+              userId: FAKE_USER_IDS.riley,
+              priceMin: '45.00',
+              priceMax: '55.00',
+              tier: 'GA' as const,
+              vendor: 'Ticketmaster' as const,
+              howFound: 'bought_myself' as const,
+              status: 'corroborated' as const,
+              corroborationCount: 2,
+            })
+            .returning()
+        : null
+
+      // Submission confirms for the live B submission (2 confirms)
+      if (phase85SubmissionBLive && phase85SubmissionBLive.length > 0) {
+        const liveSub = phase85SubmissionBLive[0]!
+        await db
+          .insert(submissionConfirms)
+          .values([
+            {
+              submissionId: liveSub.id,
+              userId: FAKE_USER_IDS.amy,
+              method: 'same-vendor' as const,
+            },
+            {
+              submissionId: liveSub.id,
+              userId: FAKE_USER_IDS.taylor,
+              method: 'same-vendor' as const,
+            },
+          ])
+          .onConflictDoNothing()
+      }
+
+      // Counter-submission for Event B
+      const phase85SubmissionsB =
+        eventB && phase85SubmissionBLive && phase85SubmissionBLive.length > 0
+          ? [
+              {
+                eventId: eventB.id,
+                userId: FAKE_USER_IDS.sam,
+                priceMin: '60.00',
+                priceMax: '70.00',
+                tier: 'GA' as const,
+                vendor: 'Ticketmaster' as const,
+                howFound: 'saw_listing' as const,
+                status: 'pending' as const,
+                corroborationCount: 0,
+                disputedSubmissionId: phase85SubmissionBLive[0]!.id,
+              },
+            ]
+          : []
+
+      // Event C — pending box-office VIP submission with 1 confirm
+      const phase85SubmissionCInserted = eventC
+        ? await db
+            .insert(priceSubmissions)
+            .values({
+              eventId: eventC.id,
+              userId: FAKE_USER_IDS.riley,
+              priceMin: '85.00',
+              priceMax: '110.00',
+              tier: 'VIP' as const,
+              vendor: 'AXS' as const,
+              howFound: 'bought_myself' as const,
+              status: 'pending' as const,
+              corroborationCount: 1,
+            })
+            .returning()
+        : null
+
+      if (phase85SubmissionCInserted && phase85SubmissionCInserted.length > 0) {
+        await db
+          .insert(submissionConfirms)
+          .values({
+            submissionId: phase85SubmissionCInserted[0]!.id,
+            userId: FAKE_USER_IDS.marco,
+            method: 'box-office' as const,
+          })
+          .onConflictDoNothing()
+      }
+
+      // Events D, E, F — each get one live price submission
+      const phase85SubmissionsDEF = [
+        eventD
+          ? {
+              eventId: eventD.id,
+              userId: FAKE_USER_IDS.jess,
+              priceMin: '40.00',
+              tier: 'GA' as const,
+              vendor: 'AXS' as const,
+              howFound: 'bought_myself' as const,
+              status: 'corroborated' as const,
+              corroborationCount: 1,
+            }
+          : null,
+        eventE
+          ? {
+              eventId: eventE.id,
+              userId: FAKE_USER_IDS.marco,
+              priceMin: '30.00',
+              priceMax: '45.00',
+              tier: 'GA' as const,
+              vendor: 'Ticketmaster' as const,
+              howFound: 'saw_listing' as const,
+              status: 'corroborated' as const,
+              corroborationCount: 1,
+            }
+          : null,
+        eventF
+          ? {
+              eventId: eventF.id,
+              userId: FAKE_USER_IDS.taylor,
+              priceMin: '35.00',
+              tier: 'GA' as const,
+              vendor: 'AXS' as const,
+              howFound: 'bought_myself' as const,
+              status: 'corroborated' as const,
+              corroborationCount: 1,
+            }
+          : null,
+      ].filter((row): row is NonNullable<typeof row> => row !== null)
+
+      // Batch insert all remaining price submissions
+      const remainingSubmissions = [
+        ...phase85SubmissionsA,
+        ...phase85SubmissionsB,
+        ...phase85SubmissionsDEF,
+      ]
+
+      if (remainingSubmissions.length > 0) {
+        await db
+          .insert(priceSubmissions)
+          .values(remainingSubmissions)
+          .onConflictDoNothing()
+        console.warn(
+          `Inserted ${remainingSubmissions.length} Phase 8.5 price submissions.`,
+        )
+      }
+
+      // -----------------------------------------------------------------------
+      // Event reports for Phase 8.5 events
+      // -----------------------------------------------------------------------
+      const pastDate = new Date(now.getTime() - 2 * 86_400_000)
+
+      const phase85ReportRows = [
+        // D — pending sold-out report
+        eventD
+          ? {
+              eventId: eventD.id,
+              reporterId: FAKE_USER_IDS.riley,
+              status: 'sold-out' as const,
+              evidenceMethod: 'venue_site' as const,
+              resolvedAt: null,
+              resolution: undefined,
+            }
+          : null,
+        // E — pending cancelled report
+        eventE
+          ? {
+              eventId: eventE.id,
+              reporterId: FAKE_USER_IDS.sam,
+              status: 'cancelled' as const,
+              evidenceMethod: 'saw_listing' as const,
+              resolvedAt: null,
+              resolution: undefined,
+            }
+          : null,
+        // F — pending postponed report
+        eventF
+          ? {
+              eventId: eventF.id,
+              reporterId: FAKE_USER_IDS.jess,
+              status: 'postponed' as const,
+              evidenceMethod: 'other' as const,
+              resolvedAt: null,
+              resolution: undefined,
+            }
+          : null,
+        // G — promoted sold-out (resolved)
+        eventG
+          ? {
+              eventId: eventG.id,
+              reporterId: FAKE_USER_IDS.marco,
+              status: 'sold-out' as const,
+              evidenceMethod: 'bought_myself' as const,
+              resolvedAt: pastDate,
+              resolution: 'promoted' as const,
+            }
+          : null,
+        // H — promoted cancelled (resolved)
+        eventH
+          ? {
+              eventId: eventH.id,
+              reporterId: FAKE_USER_IDS.taylor,
+              status: 'cancelled' as const,
+              evidenceMethod: 'saw_listing' as const,
+              resolvedAt: pastDate,
+              resolution: 'promoted' as const,
+            }
+          : null,
+        // I — pending cancelled report (imminent show, tests 3-confirm threshold)
+        eventI
+          ? {
+              eventId: eventI.id,
+              reporterId: FAKE_USER_IDS.kai,
+              status: 'cancelled' as const,
+              evidenceMethod: 'venue_site' as const,
+              resolvedAt: null,
+              resolution: undefined,
+            }
+          : null,
+      ].filter((row): row is NonNullable<typeof row> => row !== null)
+
+      if (phase85ReportRows.length > 0) {
+        const insertedReports = await db
+          .insert(eventReports)
+          .values(phase85ReportRows)
+          .returning()
+        console.warn(
+          `Inserted ${insertedReports.length} Phase 8.5 event reports.`,
+        )
+
+        // Event G — promoted sold-out gets 3 confirms
+        const reportG = insertedReports.find(
+          (rpt) => eventG && rpt.eventId === eventG.id,
+        )
+        if (reportG) {
+          await db
+            .insert(eventReportConfirms)
+            .values([
+              { reportId: reportG.id, userId: FAKE_USER_IDS.amy },
+              { reportId: reportG.id, userId: FAKE_USER_IDS.riley },
+              { reportId: reportG.id, userId: FAKE_USER_IDS.jess },
+            ])
+            .onConflictDoNothing()
+          console.warn('Inserted 3 confirms for Event G sold-out report.')
+        }
+      }
+    }
+  } else {
+    console.warn('Phase 8.5 test events already seeded, skipping.')
   }
 
   process.exit(0)
