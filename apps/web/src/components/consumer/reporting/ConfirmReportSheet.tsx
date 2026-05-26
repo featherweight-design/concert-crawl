@@ -326,7 +326,6 @@ export const ConfirmReportSheet = ({
       onSuccess?.()
       onClose()
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('Failed to confirm report:', err)
     } finally {
       setIsSubmitting(false)
