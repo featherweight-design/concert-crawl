@@ -47,15 +47,15 @@ function futureDateString(daysFromNow: number): string {
 }
 
 function makeFallbackShows(): LandingShow[] {
-  const d = (offset: number) => futureDateString(offset)
+  const dateAt = (offset: number) => futureDateString(offset)
   return [
     {
       id: 'fallback-1',
       artist: 'Amyl and The Sniffers',
       venue: 'Ogden Theatre',
       city: 'Denver, CO',
-      date: d(1),
-      dateShort: formatDateShort(d(1)),
+      date: dateAt(1),
+      dateShort: formatDateShort(dateAt(1)),
       showTime: '8pm',
       opener: 'C.O.F.F.I.N.',
       state: null,
@@ -65,8 +65,8 @@ function makeFallbackShows(): LandingShow[] {
       artist: 'Wednesday',
       venue: 'Globe Hall',
       city: 'Denver, CO',
-      date: d(3),
-      dateShort: formatDateShort(d(3)),
+      date: dateAt(3),
+      dateShort: formatDateShort(dateAt(3)),
       showTime: '9pm',
       opener: 'Truth Club',
       state: null,
@@ -76,8 +76,8 @@ function makeFallbackShows(): LandingShow[] {
       artist: 'Geese',
       venue: 'Larimer Lounge',
       city: 'Denver, CO',
-      date: d(5),
-      dateShort: formatDateShort(d(5)),
+      date: dateAt(5),
+      dateShort: formatDateShort(dateAt(5)),
       showTime: '8pm',
       opener: null,
       state: null,
@@ -87,8 +87,8 @@ function makeFallbackShows(): LandingShow[] {
       artist: 'Mannequin Pussy',
       venue: 'Marquis Theater',
       city: 'Denver, CO',
-      date: d(7),
-      dateShort: formatDateShort(d(7)),
+      date: dateAt(7),
+      dateShort: formatDateShort(dateAt(7)),
       showTime: '7pm',
       opener: 'Soul Glo',
       state: null,
