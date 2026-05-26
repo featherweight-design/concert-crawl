@@ -142,7 +142,10 @@ export const ReviewPageClient = ({
     setIsFetchingMoreEvents(true)
     try {
       const token = await getToken()
-      if (!token) return
+      if (!token) {
+        setHasMoreEvents(false)
+        return
+      }
       const batch = await apiClient.get<EventFlag[]>(
         '/v1/admin/events?verified=false&limit=10',
         token,
@@ -158,6 +161,7 @@ export const ReviewPageClient = ({
       }
     } catch (fetchErr) {
       console.error('Failed to fetch more events', fetchErr)
+      setHasMoreEvents(false)
     } finally {
       setIsFetchingMoreEvents(false)
     }
