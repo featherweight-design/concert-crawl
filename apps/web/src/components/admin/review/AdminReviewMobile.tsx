@@ -804,7 +804,9 @@ export function AdminReviewMobile({
                     (ev) => ev.eventId === sub.eventId,
                   )
                   const eventTitle =
-                    linkedEvent?.eventTitle ?? sub.eventId.slice(0, 8) + '…'
+                    linkedEvent?.eventTitle ??
+                    sub.eventTitle ??
+                    sub.eventId.slice(0, 8) + '…'
                   const venueLine = linkedEvent
                     ? [
                         linkedEvent.venueName,
