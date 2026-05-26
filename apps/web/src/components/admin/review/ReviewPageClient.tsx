@@ -76,6 +76,11 @@ export const ReviewPageClient = ({
   const [priceEvents, setPriceEvents] = useState<PriceEvent[]>([])
   const [priceEventsLoading, setPriceEventsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isFetchingMoreEvents, setIsFetchingMoreEvents] = useState(false)
+  // If the server returned a full page, assume there are more unreviewed events.
+  const [hasMoreEvents, setHasMoreEvents] = useState(
+    initialEvents.length >= 100,
+  )
   const [isDesktop, setIsDesktop] = useState(true)
   const [mobileInitialTab, setMobileInitialTab] = useState<'flags' | 'prices'>(
     'flags',
@@ -131,6 +136,40 @@ export const ReviewPageClient = ({
       cancelled = true
     }
   }, [getToken])
+
+  const fetchMoreEvents = useCallback(async () => {
+    if (isFetchingMoreEvents || !hasMoreEvents) return
+    setIsFetchingMoreEvents(true)
+    try {
+      const token = await getToken()
+      if (!token) return
+      const batch = await apiClient.get<EventFlag[]>(
+        '/v1/admin/events?verified=false&limit=10',
+        token,
+      )
+      if (batch.length === 0) {
+        setHasMoreEvents(false)
+      } else {
+        setEvents((prev) => {
+          const seen = new Set(prev.map((ev) => ev.id))
+          return [...prev, ...batch.filter((ev) => !seen.has(ev.id))]
+        })
+        if (batch.length < 10) setHasMoreEvents(false)
+      }
+    } catch (fetchErr) {
+      console.error('Failed to fetch more events', fetchErr)
+    } finally {
+      setIsFetchingMoreEvents(false)
+    }
+  }, [isFetchingMoreEvents, hasMoreEvents, getToken])
+
+  // Auto-fetch when the queue runs low — fires before the list empties so
+  // there's no gap between batches.
+  useEffect(() => {
+    if (events.length <= 5 && hasMoreEvents && !isFetchingMoreEvents) {
+      void fetchMoreEvents()
+    }
+  }, [events.length, hasMoreEvents, isFetchingMoreEvents, fetchMoreEvents])
 
   const approveEvent = useCallback(
     async (id: string) => {

@@ -56,7 +56,7 @@ pricesAdminRouter.get('/events', async (ctx) => {
     .leftJoin(latestLog, eq(latestLog.eventId, events.id))
     .where(eq(events.status, 'upcoming'))
     .orderBy(asc(events.date))
-    .limit(100)
+    .limit(500)
 
   return ctx.json({ success: true, data: rows } as const)
 })

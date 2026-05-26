@@ -43,6 +43,7 @@ export const StatCard = ({
     <div
       onClick={onClick}
       style={{
+        position: 'relative',
         background: 'var(--bg-elevated)',
         border: '1px solid var(--border)',
         borderRadius: 12,
@@ -50,97 +51,92 @@ export const StatCard = ({
         display: 'flex',
         flexDirection: 'column',
         gap: 12,
-        overflow: 'hidden',
         cursor: onClick ? 'pointer' : undefined,
       }}
     >
+      {/* Icon pinned to top-right; removed from flex flow so it never displaces content */}
       <div
         style={{
+          position: 'absolute',
+          top: 20,
+          right: 20,
+          width: 32,
+          height: 32,
+          borderRadius: 8,
+          background: noChip ? 'transparent' : colors.bg,
+          border: noChip ? 'none' : `1px solid ${colors.border}`,
           display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
-        <div style={{ flex: 1 }}>
-          <div
-            style={{
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 11,
-              fontWeight: 600,
-              textTransform: 'uppercase' as const,
-              letterSpacing: '0.07em',
-              color: 'var(--fg-muted)',
-              marginBottom: 8,
-            }}
-          >
-            {label}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-            <span
-              style={{
-                fontFamily: mono
-                  ? "'JetBrains Mono', monospace"
-                  : 'var(--admin-font, Inter, sans-serif)',
-                fontSize: 38,
-                fontWeight: 800,
-                fontVariantNumeric: 'tabular-nums',
-                lineHeight: 1,
-                color: 'var(--fg)',
-              }}
-            >
-              {value}
-            </span>
-            {unit && (
-              <span
-                style={{
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: 'var(--fg-muted)',
-                }}
-              >
-                {unit}
-              </span>
-            )}
-            {trend && (
-              <span
-                style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  marginLeft: 'auto',
-                  color: trend.good ? 'var(--success)' : 'var(--danger)',
-                }}
-              >
-                {trend.dir === 'up' ? '↑' : '↓'} {trend.text}
-              </span>
-            )}
-          </div>
-          {hint && (
-            <div
-              style={{ marginTop: 4, fontSize: 12, color: 'var(--fg-muted)' }}
-            >
-              {hint}
-            </div>
-          )}
-        </div>
+        {Icon && (
+          <Icon size={15} color={noChip ? 'var(--fg-subtle)' : colors.fg} />
+        )}
+      </div>
+
+      {/* Content — right-padded so text never runs under the icon */}
+      <div style={{ paddingRight: 44 }}>
         <div
           style={{
-            width: 32,
-            height: 32,
-            borderRadius: 8,
-            background: noChip ? 'transparent' : colors.bg,
-            border: noChip ? 'none' : `1px solid ${colors.border}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 11,
+            fontWeight: 600,
+            textTransform: 'uppercase' as const,
+            letterSpacing: '0.07em',
+            color: 'var(--fg-muted)',
+            marginBottom: 8,
           }}
         >
-          {Icon && (
-            <Icon size={15} color={noChip ? 'var(--fg-subtle)' : colors.fg} />
+          {label}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+          <span
+            style={{
+              fontFamily: mono
+                ? "'JetBrains Mono', monospace"
+                : 'var(--admin-font, Inter, sans-serif)',
+              fontSize: 38,
+              fontWeight: 800,
+              fontVariantNumeric: 'tabular-nums',
+              lineHeight: 1,
+              color: 'var(--fg)',
+            }}
+          >
+            {value}
+          </span>
+          {unit && (
+            <span
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 14,
+                fontWeight: 600,
+                color: 'var(--fg-muted)',
+              }}
+            >
+              {unit}
+            </span>
+          )}
+          {trend && (
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                marginLeft: 'auto',
+                color: trend.good ? 'var(--success)' : 'var(--danger)',
+              }}
+            >
+              {trend.dir === 'up' ? '↑' : '↓'} {trend.text}
+            </span>
           )}
         </div>
+        {hint && (
+          <div style={{ marginTop: 4, fontSize: 12, color: 'var(--fg-muted)' }}>
+            {hint}
+          </div>
+        )}
       </div>
+
       {footer && (
         <div
           style={{
