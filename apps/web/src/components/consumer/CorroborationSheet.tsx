@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { LockGlyph } from './glyphs'
 
 const copy = CONSUMER_COPY.corroborationSheet
 
@@ -128,7 +129,7 @@ const SubmissionDetailCard = ({
     >
       <div
         style={{
-          padding: '14px 16px',
+          padding: '12px 14px',
           display: 'flex',
           flexDirection: 'column',
           gap: '4px',
@@ -153,7 +154,7 @@ const SubmissionDetailCard = ({
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
+            gridTemplateColumns: 'auto 1fr',
             gap: '4px 12px',
             marginTop: '4px',
           }}
@@ -287,7 +288,7 @@ const VerifyOption = ({
         <span
           style={{
             fontFamily: 'Inter, sans-serif',
-            fontWeight: 600,
+            fontWeight: 700,
             fontSize: '13.5px',
             color: 'var(--fg)',
             lineHeight: 1.3,
@@ -404,7 +405,7 @@ export const CorroborationSheet = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '10px 20px 0',
+            padding: '10px 16px 8px',
           }}
         >
           <span
@@ -499,34 +500,11 @@ export const CorroborationSheet = ({
                 padding: '12px 14px',
                 display: 'flex',
                 alignItems: 'flex-start',
-                gap: '8px',
+                gap: '10px',
               }}
             >
               {/* Lock icon */}
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 14 14"
-                fill="none"
-                aria-hidden="true"
-                style={{ flexShrink: 0, marginTop: '1px' }}
-              >
-                <rect
-                  x="2.5"
-                  y="6"
-                  width="9"
-                  height="7"
-                  rx="1.5"
-                  stroke="var(--fg-muted)"
-                  strokeWidth="1.2"
-                />
-                <path
-                  d="M4.5 6V4.5a2.5 2.5 0 0 1 5 0V6"
-                  stroke="var(--fg-muted)"
-                  strokeWidth="1.2"
-                  strokeLinecap="round"
-                />
-              </svg>
+              <LockGlyph size={10} />
               <span
                 style={{
                   fontFamily: 'JetBrains Mono, monospace',
@@ -573,18 +551,18 @@ export const CorroborationSheet = ({
           {isSelfLocked ? (
             /* Self-locked footer: Edit + Withdraw */
             <div
-              style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}
             >
               <button
                 onClick={onSubmitUpdate}
                 style={{
                   background: 'var(--surface-1)',
-                  border: '1px solid var(--border)',
+                  border: '1px solid var(--border-strong)',
                   borderRadius: '10px',
                   height: '44px',
                   fontFamily: 'Inter, sans-serif',
                   fontWeight: 700,
-                  fontSize: '13px',
+                  fontSize: '13.5px',
                   color: 'var(--fg)',
                   cursor: 'pointer',
                   width: '100%',
@@ -601,7 +579,7 @@ export const CorroborationSheet = ({
                   height: '44px',
                   fontFamily: 'Inter, sans-serif',
                   fontWeight: 700,
-                  fontSize: '13px',
+                  fontSize: '13.5px',
                   color: 'var(--warning)',
                   cursor: 'pointer',
                   width: '100%',
@@ -666,8 +644,8 @@ export const CorroborationSheet = ({
               >
                 <span
                   style={{
-                    fontFamily: 'JetBrains Mono, monospace',
-                    fontSize: '9px',
+                    fontFamily: 'Inter, system-ui',
+                    fontSize: '12px',
                     color: 'var(--fg-subtle)',
                     lineHeight: 1.5,
                   }}
