@@ -1,0 +1,283 @@
+'use client'
+
+import { useState, useCallback } from 'react'
+import { CounterSubmitSheet } from './CounterSubmitSheet'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const copy = CONSUMER_COPY.disputedPriceCard
+
+// ── Helper ────────────────────────────────────────────────────────
+
+const formatTimeAgo = (isoDate: string): string => {
+  const diffMs = Date.now() - new Date(isoDate).getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  if (diffMins < 60) return `${diffMins}m ago`
+  const diffHours = Math.floor(diffMins / 60)
+  if (diffHours < 24) return `${diffHours}h ago`
+  return `${Math.floor(diffHours / 24)}d ago`
+}
+
+// ── Props ─────────────────────────────────────────────────────────
+
+export interface DisputedPriceCardProps {
+  // Live price (current corroborated price)
+  floor: number
+  ceiling?: number
+  tier: string
+  vendor: string
+
+  // The pending counter-submission
+  disputer: { handle: string; url: string } | null
+  disputeFloor: number
+  disputeCeiling?: number
+  disputedAt: string // ISO date
+
+  // For CounterSubmitSheet
+  eventId: string
+  disputedSubmissionId: string
+
+  onUpdateSuccess?: () => void
+}
+
+// ── Component ─────────────────────────────────────────────────────
+
+export const DisputedPriceCard = ({
+  floor,
+  ceiling,
+  tier,
+  vendor,
+  disputer,
+  disputeFloor,
+  disputeCeiling,
+  disputedAt,
+  eventId,
+  disputedSubmissionId,
+  onUpdateSuccess,
+}: DisputedPriceCardProps) => {
+  const [isSheetOpen, setIsSheetOpen] = useState(false)
+
+  const handleOpenSheet = useCallback(() => {
+    setIsSheetOpen(true)
+  }, [])
+
+  const handleCloseSheet = useCallback(() => {
+    setIsSheetOpen(false)
+  }, [])
+
+  const handleSuccess = useCallback(() => {
+    setIsSheetOpen(false)
+    onUpdateSuccess?.()
+  }, [onUpdateSuccess])
+
+  const timeAgo = formatTimeAgo(disputedAt)
+
+  // Build the attribution text
+  const attributionText = disputer
+    ? disputeCeiling != null
+      ? `@${disputer.handle} ${copy.strip.sawVerb} $${disputeFloor}–$${disputeCeiling} · ${timeAgo}`
+      : `@${disputer.handle} ${copy.strip.sawVerb} $${disputeFloor} · ${timeAgo}`
+    : disputeCeiling != null
+      ? `${copy.strip.anonymousLabel} ${copy.strip.sawVerb} $${disputeFloor}–$${disputeCeiling} · ${timeAgo}`
+      : `${copy.strip.anonymousLabel} ${copy.strip.sawVerb} $${disputeFloor} · ${timeAgo}`
+
+  // Build the live price headline
+  const headlineStr =
+    ceiling != null
+      ? `$${Math.round(floor)}–$${Math.round(ceiling)}`
+      : `$${Math.round(floor)}`
+
+  return (
+    <>
+      {/* Card */}
+      <div
+        style={{
+          borderRadius: 12,
+          background: 'var(--surface-1)',
+          border: '1px solid var(--border)',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Dashed update strip */}
+        <div
+          style={{
+            padding: '9px 14px',
+            background: 'color-mix(in oklab, var(--fg-muted) 8%, transparent)',
+            borderBottom: '1px dashed var(--border-strong)',
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+          }}
+        >
+          {/* Left side: badge + attribution */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              minWidth: 0,
+            }}
+          >
+            {/* "update pending" badge */}
+            <span
+              style={{
+                background:
+                  'color-mix(in oklab, var(--fg-muted) 14%, transparent)',
+                borderRadius: 4,
+                padding: '2px 6px',
+                fontFamily: 'var(--font-mono)',
+                fontSize: 9,
+                fontWeight: 700,
+                color: 'var(--fg-muted)',
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+                lineHeight: 1,
+              }}
+            >
+              {copy.strip.badgeLabel}
+            </span>
+
+            {/* Attribution text */}
+            <span
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 9.5,
+                color: 'var(--fg-muted)',
+                letterSpacing: '0.04em',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {attributionText}
+            </span>
+          </div>
+        </div>
+
+        {/* Main price area */}
+        <div style={{ padding: '14px 14px 12px' }}>
+          {/* "from" label */}
+          <div
+            style={{
+              fontFamily: 'var(--font-ui)',
+              fontWeight: 600,
+              fontSize: 13,
+              color: 'var(--fg-muted)',
+            }}
+          >
+            {copy.priceArea.fromLabel}
+          </div>
+
+          {/* Headline price */}
+          <div
+            style={{
+              fontFamily: 'var(--font-ui)',
+              fontWeight: 800,
+              fontSize: 28,
+              color: 'var(--fg)',
+              letterSpacing: '-0.025em',
+              lineHeight: 1.05,
+              marginTop: 4,
+            }}
+          >
+            {headlineStr}
+          </div>
+
+          {/* Tier chip */}
+          <div
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontWeight: 700,
+              fontSize: 11,
+              color: 'var(--fg-muted)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              marginTop: 6,
+            }}
+          >
+            {tier}
+          </div>
+
+          {/* Vendor line */}
+          <div
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              color: 'var(--fg-muted)',
+              letterSpacing: '0.04em',
+              marginTop: 3,
+            }}
+          >
+            {vendor}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div
+          style={{
+            padding: '10px 14px',
+            borderTop: '1px solid var(--border)',
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+          }}
+        >
+          {/* Copy before button */}
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 9,
+              color: 'var(--fg-subtle)',
+              letterSpacing: '0.04em',
+              flexShrink: 1,
+              minWidth: 0,
+            }}
+          >
+            {copy.footer.preButtonCopy}
+          </span>
+
+          {/* Submit an update button */}
+          <button
+            type="button"
+            onClick={handleOpenSheet}
+            style={{
+              all: 'unset',
+              cursor: 'pointer',
+              background: 'transparent',
+              border: '1px solid var(--border-strong)',
+              borderRadius: 8,
+              padding: '7px 12px',
+              fontFamily: 'var(--font-ui)',
+              fontWeight: 700,
+              fontSize: 12.5,
+              color: 'var(--fg)',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              lineHeight: 1,
+            }}
+          >
+            {copy.footer.buttonLabel}
+          </button>
+        </div>
+      </div>
+
+      {/* CounterSubmitSheet */}
+      <CounterSubmitSheet
+        open={isSheetOpen}
+        onClose={handleCloseSheet}
+        eventId={eventId}
+        disputedSubmissionId={disputedSubmissionId}
+        currentFloor={floor}
+        {...(ceiling != null ? { currentCeiling: ceiling } : {})}
+        currentVendor={vendor}
+        onSuccess={handleSuccess}
+      />
+    </>
+  )
+}
