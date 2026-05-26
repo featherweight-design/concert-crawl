@@ -58,10 +58,10 @@ export const CONSUMER_COPY = {
     floorLabel: 'Floor',
     floorPlaceholder: '35',
     floorErrorMin: 'Has to be at least $1.',
-    floorErrorMax: 'Cap is $2000.',
+    floorErrorMax: 'Cap is $2,000.',
     ceilingLabel: 'Ceiling',
     ceilingPlaceholder: '75',
-    ceilingErrorMax: 'Cap is $2000.',
+    ceilingErrorMax: 'Cap is $2,000.',
     ceilingErrorBelowFloor: "Ceiling can't be below floor.",
     vendorLabel: "Where it's listed *",
     vendorError: "Pick where it's listed.",
@@ -104,7 +104,7 @@ export const CONSUMER_COPY = {
     noPriceYet: 'No price yet.',
     yourCall: 'Your call.',
     communityGapBody:
-      "Ticketing APIs don't share prices with us, and we're not waiting on them. The community fills the gap — if you saw a number out there, drop it here.",
+      "Ticketing APIs don't share prices with us, and we're not waiting on them. The community fills the gap, so if you saw a number out there, drop it here.",
     submitPriceButton: 'Submit a price',
     anonymousWorksHint: 'Anonymous works · two confirms moves it live',
 
@@ -686,7 +686,7 @@ export const CONSUMER_COPY = {
 
     emptyState: {
       heading: 'No venues match.',
-      body: "Loosen a filter or two and they'll come back.",
+      body: "Drop a filter or two and they'll come back.",
       clearButton: '× Clear filters',
     },
   },
@@ -698,7 +698,7 @@ export const CONSUMER_COPY = {
       watchLabel: 'Watch this show',
       watchingLabel: 'Watching',
       ariaWatch: 'Watch this show',
-      ariaWatching: 'Watching — click to stop',
+      ariaWatching: 'Watching, click to stop',
     },
     watchingCount: {
       suffix: 'watching',
@@ -773,7 +773,7 @@ export const CONSUMER_COPY = {
     anonymousExplainer:
       "You're browsing as an anonymous fan. Pick a handle to get credit for your price submissions (it applies retroactively).",
     goingAnonymousWarning:
-      'Clearing your handle makes you anonymous again. Your past submissions will no longer show your name.',
+      'Clearing your handle makes you anonymous again. You may lose your handle and your past submissions will no longer show your name.',
     handlePlaceholder: 'lowercase_handle',
     handleHint: 'Lowercase letters, numbers, underscores. 3–20 characters.',
     handleErrors: {

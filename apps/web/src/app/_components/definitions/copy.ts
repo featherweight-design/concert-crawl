@@ -25,7 +25,7 @@ export const LANDING_COPY = {
     form: {
       eyebrow: 'Waitlist',
       heading: 'Get on the list',
-      body: "We're letting people in slowly. Drop your email — we'll ping you when there's room.",
+      body: "We're letting people in slowly. Drop your email and we'll ping you when there's room.",
       errorMessage: 'Something went wrong. Try again.',
       emailLabel: 'Email',
       emailPlaceholder: 'you@email.com',
