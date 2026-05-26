@@ -1,0 +1,119 @@
+export const REPORTING_COPY = {
+  // ── ReportFooterLink ─────────────────────────────────────────────
+  reportFooterLink: {
+    eyebrow: 'Spot something off?',
+    title: 'Report a status change',
+    subtitle: 'Sold out, cancelled, postponed — or back on.',
+    bottomNote:
+      'Reports are reviewed by the community. Good-faith reports help everyone.',
+  },
+
+  // ── ReportSheet ──────────────────────────────────────────────────
+  reportSheet: {
+    eyebrow: 'Report',
+    cancelButton: 'Cancel',
+    heading: 'What happened?',
+    currentlyShowingAs: 'Currently showing as:',
+
+    options: {
+      soldOut: {
+        title: 'Sold out',
+        subtitle: 'Tickets are no longer available',
+      },
+      postponed: {
+        title: 'Postponed',
+        subtitle: 'Show date has been pushed back',
+      },
+      cancelled: {
+        title: 'Cancelled',
+        subtitle: 'Show has been called off',
+      },
+      available: {
+        title: 'Tickets available',
+        subtitle: 'Tickets are back on sale',
+      },
+    },
+
+    continueButton: 'Continue',
+  },
+
+  // ── EvidenceForm ─────────────────────────────────────────────────
+  evidenceForm: {
+    eyebrow: 'Evidence',
+    cancelButton: 'Cancel',
+    heading: 'How do you know?',
+
+    evidenceOptions: {
+      gotEmail: {
+        label: 'Got an email',
+        description: 'From the venue or ticketing service',
+      },
+      sawSocial: {
+        label: 'Saw it on social',
+        description: 'Twitter, Instagram, Facebook announcement',
+      },
+      venuePosted: {
+        label: 'Venue posted it',
+        description: 'On their website or calendar',
+      },
+      wasThere: {
+        label: 'I was at / called the venue',
+        description: 'First-hand knowledge',
+      },
+      somethingElse: {
+        label: 'Something else',
+        description: 'Other information',
+      },
+    },
+
+    sourceLinkLabel: 'Source link (optional)',
+    sourceLinkPlaceholder: 'https://',
+    notesLabel: 'Notes (optional)',
+    notesPlaceholder: 'Any other context…',
+    charCountSuffix: (current: number, max: number) => `${current} / ${max}`,
+
+    imminentWarning: (daysUntil: number) =>
+      `This show is in ${daysUntil} days — reports need 3 confirms instead of 2.`,
+
+    submitButton: 'Submit report',
+  },
+
+  // ── ReportTypeMark ───────────────────────────────────────────────
+  reportTypeMark: {
+    pendingDot: '·',
+  },
+
+  // ── PendingSoldOutCard ───────────────────────────────────────────
+  pendingSoldOutCard: {
+    stripBadge: 'Sold out · pending',
+    confirmsProgress: (confirms: number, needed: number) =>
+      `${confirms}/${needed} confirms`,
+    soldOutPill: 'Sold out',
+    reportedBy: (handle: string) => `Reported by @${handle}`,
+    reportedAnonymously: 'Reported anonymously',
+    footerQuestion: 'Tickets still available?',
+    confirmButton: 'Confirm sold out',
+    yourReportLabel: 'Your report',
+    addEvidenceButton: 'Add evidence',
+    withdrawButton: 'Withdraw',
+  },
+
+  // ── PendingReportBanner ──────────────────────────────────────────
+  pendingReportBanner: {
+    cancelledBadge: 'Cancelled · pending',
+    postponedBadge: 'Postponed · pending',
+    confirmsProgress: (confirms: number, needed: number) =>
+      `${confirms}/${needed} confirms`,
+    confirmsToGo: 'to go',
+    cancelledLead: 'This show may be cancelled.',
+    postponedLead: 'This show may be postponed.',
+    footerQuestion: 'Saw something different?',
+    confirmButton: 'Confirm',
+    yourReportLabel: 'Your report',
+    addEvidenceButton: 'Add evidence',
+    withdrawButton: 'Withdraw',
+    waitingForConfirms: 'Waiting for confirms',
+    reportedBy: (handle: string) => `@${handle}`,
+    reportedAnonymously: 'Anonymous',
+  },
+} as const

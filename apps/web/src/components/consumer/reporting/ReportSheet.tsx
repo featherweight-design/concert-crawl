@@ -1,0 +1,399 @@
+'use client'
+
+import { useState } from 'react'
+import { REPORTING_COPY } from './definitions/copy'
+// ReportTypeMark will exist in this folder — forward-reference OK
+import { ReportTypeMark } from './ReportTypeMark'
+
+const copy = REPORTING_COPY.reportSheet
+
+// ── Report type ───────────────────────────────────────────────────
+type ReportType = 'sold-out' | 'cancelled' | 'postponed' | 'available'
+
+// ── Color tokens ──────────────────────────────────────────────────
+interface ReportTokens {
+  color: string
+  bg: string
+  bgStrong: string
+  border: string
+}
+
+const REPORT_TOKENS: Record<ReportType, ReportTokens> = {
+  cancelled: {
+    color: 'var(--danger)',
+    bg: 'color-mix(in oklab, var(--danger) 8%, transparent)',
+    bgStrong: 'color-mix(in oklab, var(--danger) 14%, transparent)',
+    border: 'color-mix(in oklab, var(--danger) 36%, transparent)',
+  },
+  postponed: {
+    color: 'var(--warning)',
+    bg: 'color-mix(in oklab, var(--warning) 8%, transparent)',
+    bgStrong: 'color-mix(in oklab, var(--warning) 14%, transparent)',
+    border: 'color-mix(in oklab, var(--warning) 36%, transparent)',
+  },
+  'sold-out': {
+    color: 'var(--warning)',
+    bg: 'color-mix(in oklab, var(--warning) 8%, transparent)',
+    bgStrong: 'color-mix(in oklab, var(--warning) 14%, transparent)',
+    border: 'color-mix(in oklab, var(--warning) 36%, transparent)',
+  },
+  available: {
+    color: 'var(--success)',
+    bg: 'color-mix(in oklab, var(--success) 8%, transparent)',
+    bgStrong: 'color-mix(in oklab, var(--success) 14%, transparent)',
+    border: 'color-mix(in oklab, var(--success) 36%, transparent)',
+  },
+}
+
+export const reportTokens = (kind: ReportType): ReportTokens =>
+  REPORT_TOKENS[kind]
+
+// ── Option data ───────────────────────────────────────────────────
+interface ReportOptionData {
+  type: ReportType
+  title: string
+  subtitle: string
+}
+
+const OPTION_DATA: Record<ReportType, ReportOptionData> = {
+  'sold-out': {
+    type: 'sold-out',
+    title: copy.options.soldOut.title,
+    subtitle: copy.options.soldOut.subtitle,
+  },
+  postponed: {
+    type: 'postponed',
+    title: copy.options.postponed.title,
+    subtitle: copy.options.postponed.subtitle,
+  },
+  cancelled: {
+    type: 'cancelled',
+    title: copy.options.cancelled.title,
+    subtitle: copy.options.cancelled.subtitle,
+  },
+  available: {
+    type: 'available',
+    title: copy.options.available.title,
+    subtitle: copy.options.available.subtitle,
+  },
+}
+
+// ── ReportOptionRow (internal) ────────────────────────────────────
+interface ReportOptionRowProps {
+  option: ReportOptionData
+  isSelected: boolean
+  onSelect: (type: ReportType) => void
+}
+
+const ReportOptionRow = ({
+  option,
+  isSelected,
+  onSelect,
+}: ReportOptionRowProps) => {
+  const tokens = reportTokens(option.type)
+
+  return (
+    <div
+      role="radio"
+      aria-checked={isSelected}
+      tabIndex={0}
+      onClick={() => onSelect(option.type)}
+      onKeyDown={(evt) => {
+        if (evt.key === 'Enter' || evt.key === ' ') {
+          evt.preventDefault()
+          onSelect(option.type)
+        }
+      }}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        padding: '12px 14px',
+        borderRadius: '10px',
+        border: isSelected
+          ? `1.5px solid ${tokens.border}`
+          : '1px solid var(--border)',
+        background: isSelected ? tokens.bg : 'var(--surface-1)',
+        cursor: 'pointer',
+        transition: 'border-color 0.12s, background 0.12s',
+      }}
+    >
+      {/* Icon container */}
+      <div
+        style={{
+          width: '32px',
+          height: '32px',
+          borderRadius: '8px',
+          background: tokens.bgStrong,
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+        aria-hidden="true"
+      >
+        <span
+          style={{
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '14px',
+            color: tokens.color,
+          }}
+        >
+          {option.type === 'available'
+            ? '✓'
+            : option.type === 'cancelled'
+              ? '✕'
+              : '!'}
+        </span>
+      </div>
+
+      {/* Text */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '2px',
+          flex: 1,
+        }}
+      >
+        <span
+          style={{
+            fontFamily: 'Inter, sans-serif',
+            fontWeight: 700,
+            fontSize: '14px',
+            color: 'var(--fg)',
+            lineHeight: 1.3,
+          }}
+        >
+          {option.title}
+        </span>
+        <span
+          style={{
+            fontFamily: 'Inter, sans-serif',
+            fontWeight: 500,
+            fontSize: '12.5px',
+            color: 'var(--fg-muted)',
+            lineHeight: 1.4,
+          }}
+        >
+          {option.subtitle}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+// ── Props ─────────────────────────────────────────────────────────
+export interface ReportSheetProps {
+  open: boolean
+  onClose: () => void
+  liveStatus: null | 'sold-out' | 'cancelled' | 'postponed'
+  eventDate: string
+  onSelect: (reportType: ReportType) => void
+}
+
+// ── Derive visible options from liveStatus ────────────────────────
+const getVisibleOptions = (
+  liveStatus: ReportSheetProps['liveStatus'],
+): ReportType[] => {
+  if (liveStatus === null) return ['sold-out', 'postponed', 'cancelled']
+  if (liveStatus === 'sold-out') return ['available', 'postponed', 'cancelled']
+  if (liveStatus === 'postponed') return ['available', 'cancelled']
+  if (liveStatus === 'cancelled') return ['available']
+  return ['sold-out', 'postponed', 'cancelled']
+}
+
+// ── Main component ────────────────────────────────────────────────
+export const ReportSheet = ({
+  open,
+  onClose,
+  liveStatus,
+  eventDate: _eventDate,
+  onSelect,
+}: ReportSheetProps) => {
+  const [selectedType, setSelectedType] = useState<ReportType | null>(null)
+
+  if (!open) return null
+
+  const visibleOptions = getVisibleOptions(liveStatus)
+  const sheetHeight = visibleOptions.length === 1 ? '600px' : '760px'
+
+  const handleContinue = () => {
+    if (selectedType !== null) {
+      onSelect(selectedType)
+    }
+  }
+
+  return (
+    <>
+      {/* Scrim */}
+      <div
+        className="fixed inset-0 bg-black/60 z-40"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      {/* Sheet */}
+      <div
+        className="fixed bottom-0 left-0 right-0 z-50 flex flex-col overflow-hidden"
+        style={{
+          maxWidth: '393px',
+          margin: '0 auto',
+          borderRadius: '18px 18px 0 0',
+          border: '1px solid var(--border)',
+          background: 'var(--bg)',
+          maxHeight: sheetHeight,
+        }}
+      >
+        {/* Drag handle */}
+        <div
+          style={{ position: 'relative', height: '20px', flexShrink: 0 }}
+          aria-hidden="true"
+        >
+          <div
+            style={{
+              position: 'absolute',
+              top: '8px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '36px',
+              height: '4px',
+              borderRadius: '999px',
+              background: 'var(--border-strong)',
+            }}
+          />
+        </div>
+
+        {/* Eyebrow / cancel row */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '10px 20px 0',
+          }}
+        >
+          <span
+            style={{
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: '9px',
+              color: 'var(--fg-subtle)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+            }}
+          >
+            {copy.eyebrow}
+          </span>
+          <button
+            onClick={onClose}
+            style={{
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: '9px',
+              color: 'var(--fg-subtle)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              background: 'none',
+              border: 'none',
+              padding: '4px 0',
+              cursor: 'pointer',
+            }}
+          >
+            {copy.cancelButton}
+          </button>
+        </div>
+
+        {/* Scrollable body */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '12px 20px 0',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+          }}
+        >
+          {/* Heading */}
+          <h2
+            style={{
+              fontFamily: 'Inter, sans-serif',
+              fontWeight: 900,
+              fontSize: '24px',
+              letterSpacing: '-0.025em',
+              color: 'var(--fg)',
+              margin: 0,
+              lineHeight: 1.1,
+            }}
+          >
+            {copy.heading}
+          </h2>
+
+          {/* Currently live section */}
+          {liveStatus !== null && (
+            <div
+              style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}
+            >
+              <span
+                style={{
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: '9px',
+                  color: 'var(--fg-subtle)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                }}
+              >
+                {copy.currentlyShowingAs}
+              </span>
+              <ReportTypeMark kind={liveStatus} />
+            </div>
+          )}
+
+          {/* Report options */}
+          <div
+            role="radiogroup"
+            aria-label="Report type"
+            style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
+          >
+            {visibleOptions.map((optionType) => (
+              <ReportOptionRow
+                key={optionType}
+                option={OPTION_DATA[optionType]}
+                isSelected={selectedType === optionType}
+                onSelect={setSelectedType}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div
+          style={{
+            padding: '16px 20px 28px',
+            flexShrink: 0,
+          }}
+        >
+          <button
+            onClick={handleContinue}
+            disabled={selectedType === null}
+            style={{
+              background: 'var(--signal)',
+              height: '48px',
+              borderRadius: '10px',
+              fontFamily: 'Inter, sans-serif',
+              fontWeight: 800,
+              fontSize: '14.5px',
+              color: 'var(--fg-on-accent)',
+              border: 'none',
+              cursor: selectedType !== null ? 'pointer' : 'not-allowed',
+              opacity: selectedType !== null ? 1 : 0.45,
+              width: '100%',
+              transition: 'opacity 0.12s',
+            }}
+          >
+            {copy.continueButton}
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
