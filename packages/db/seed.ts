@@ -1,4 +1,4 @@
-import { desc, eq, sql } from 'drizzle-orm'
+import { and, count, desc, eq, isNull, sql } from 'drizzle-orm'
 import { db } from './src/client.js'
 import {
   venues,
@@ -2004,6 +2004,10 @@ async function seed() {
     const larimer = allVenues.find((vn) => vn.slug === 'larimer-lounge')
     const fillmore = allVenues.find((vn) => vn.slug === 'fillmore-auditorium')
 
+    const redRocks = allVenues.find(
+      (vn) => vn.slug === 'red-rocks-amphitheatre',
+    )
+
     const venueA = ogden ?? allVenues[0]
     const venueB = mission ?? allVenues[0]
     const venueC = bluebird ?? allVenues[0]
@@ -2013,6 +2017,7 @@ async function seed() {
     const venueG = hiDive ?? allVenues[0]
     const venueH = larimer ?? allVenues[0]
     const venueI = fillmore ?? allVenues[0]
+    const venueJ = redRocks ?? allVenues[0]
 
     if (
       !venueA ||
@@ -2023,7 +2028,8 @@ async function seed() {
       !venueF ||
       !venueG ||
       !venueH ||
-      !venueI
+      !venueI ||
+      !venueJ
     ) {
       console.warn('Phase 8.5: no venues found — skipping.')
     } else {
@@ -2047,6 +2053,9 @@ async function seed() {
           showTime: '20:00',
           status: 'upcoming' as const,
           verified: false,
+          ticketPriceMin: '45.00',
+          ticketPriceMax: '55.00',
+          priceSource: 'community' as const,
         },
         // C — Gold card: pending box-office VIP submission
         {
@@ -2067,6 +2076,8 @@ async function seed() {
           showTime: '20:00',
           status: 'upcoming' as const,
           verified: false,
+          ticketPriceMin: '40.00',
+          priceSource: 'community' as const,
         },
         // E — Pending cancelled report (price should be hidden)
         {
@@ -2077,6 +2088,9 @@ async function seed() {
           showTime: '20:00',
           status: 'upcoming' as const,
           verified: false,
+          ticketPriceMin: '30.00',
+          ticketPriceMax: '45.00',
+          priceSource: 'community' as const,
         },
         // F — Pending postponed report (price visible)
         {
@@ -2087,8 +2101,10 @@ async function seed() {
           showTime: '20:00',
           status: 'upcoming' as const,
           verified: false,
+          ticketPriceMin: '35.00',
+          priceSource: 'community' as const,
         },
-        // G — Live sold-out (promoted report)
+        // G — Live sold-out (promoted report + corroborated price)
         {
           venueId: venueG.id,
           title: '[P8.5] Sold Out Live',
@@ -2097,6 +2113,9 @@ async function seed() {
           showTime: '20:00',
           status: 'upcoming' as const,
           verified: false,
+          ticketPriceMin: '50.00',
+          ticketPriceMax: '65.00',
+          priceSource: 'community' as const,
         },
         // H — Live cancelled (promoted report)
         {
@@ -2117,6 +2136,19 @@ async function seed() {
           showTime: '20:00',
           status: 'upcoming' as const,
           verified: false,
+        },
+        // J — Already-postponed live event (tests LiveReportBanner with postponed status)
+        {
+          venueId: venueJ.id,
+          title: '[P8.5] Postponed Live',
+          artist: '[P8.5] Postponed Live Artist',
+          date: '2026-08-26',
+          showTime: '20:00',
+          status: 'postponed' as const,
+          verified: false,
+          ticketPriceMin: '30.00',
+          ticketPriceMax: '45.00',
+          priceSource: 'ticketmaster' as const,
         },
       ]
 
@@ -2141,6 +2173,7 @@ async function seed() {
       const eventG = p85Event('Sold Out Live')
       const eventH = p85Event('Cancelled Live')
       const eventI = p85Event('Imminent Cancelled')
+      const eventJ = p85Event('Postponed Live')
 
       // -----------------------------------------------------------------------
       // Price submissions for Phase 8.5 events
@@ -2211,6 +2244,42 @@ async function seed() {
             },
           ])
           .onConflictDoNothing()
+      }
+
+      // Event B — second corroborated submission (AXS, different price) to enable MultiTierLiveCard
+      if (eventB) {
+        const phase85SubmissionBAlt = await db
+          .insert(priceSubmissions)
+          .values({
+            eventId: eventB.id,
+            userId: FAKE_USER_IDS.kai,
+            priceMin: '48.00',
+            priceMax: '60.00',
+            tier: 'GA' as const,
+            vendor: 'AXS' as const,
+            howFound: 'saw_listing' as const,
+            status: 'corroborated' as const,
+            corroborationCount: 2,
+          })
+          .returning()
+
+        if (phase85SubmissionBAlt.length > 0) {
+          await db
+            .insert(submissionConfirms)
+            .values([
+              {
+                submissionId: phase85SubmissionBAlt[0]!.id,
+                userId: FAKE_USER_IDS.marco,
+                method: 'same-vendor' as const,
+              },
+              {
+                submissionId: phase85SubmissionBAlt[0]!.id,
+                userId: FAKE_USER_IDS.jess,
+                method: 'same-vendor' as const,
+              },
+            ])
+            .onConflictDoNothing()
+        }
       }
 
       // Counter-submission for Event B
@@ -2421,6 +2490,470 @@ async function seed() {
     }
   } else {
     console.warn('Phase 8.5 test events already seeded, skipping.')
+  }
+
+  // ─── Phase 8.5 full data patch (idempotent — runs every seed) ──────────────
+  // Backfills ticketPriceMin/priceSource on event rows, inserts missing price
+  // submissions, event reports, and report confirms for already-seeded DBs.
+  {
+    // --- Step 1: fetch all P8.5 events ---
+    const p85Events = await db
+      .select({ id: eventsTable.id, title: eventsTable.title })
+      .from(eventsTable)
+      .where(sql`title LIKE '[P8.5]%'`)
+
+    const p85 = (suffix: string) =>
+      p85Events.find((ev) => ev.title === `[P8.5] ${suffix}`)
+
+    const ev = {
+      A: p85('Two Tiers Pending'),
+      B: p85('Counter Submission'),
+      C: p85('Gold Pending'),
+      D: p85('Sold Out Report'),
+      E: p85('Cancelled Report'),
+      F: p85('Postponed Report'),
+      G: p85('Sold Out Live'),
+      H: p85('Cancelled Live'),
+      I: p85('Imminent Cancelled'),
+    }
+
+    // --- Step 2: patch event price fields ---
+    const pricePatch: Array<{
+      id: string | undefined
+      priceMin: string
+      priceMax?: string
+      src: 'community' | 'ticketmaster'
+    }> = [
+      { id: ev.B?.id, priceMin: '45.00', priceMax: '55.00', src: 'community' },
+      { id: ev.D?.id, priceMin: '40.00', src: 'community' },
+      {
+        id: ev.E?.id,
+        priceMin: '30.00',
+        priceMax: '45.00',
+        src: 'community',
+      },
+      { id: ev.F?.id, priceMin: '35.00', src: 'community' },
+      {
+        id: ev.G?.id,
+        priceMin: '50.00',
+        priceMax: '65.00',
+        src: 'community',
+      },
+    ]
+
+    for (const patch of pricePatch) {
+      if (!patch.id) continue
+      await db
+        .update(eventsTable)
+        .set({
+          ticketPriceMin: patch.priceMin,
+          ticketPriceMax: patch.priceMax ?? null,
+          priceSource: patch.src,
+        })
+        .where(
+          and(eq(eventsTable.id, patch.id), isNull(eventsTable.ticketPriceMin)),
+        )
+    }
+
+    // --- Step 3: ensure price submissions exist ---
+
+    // Helper: returns true if ≥ 1 submission with given status exists for eventId
+    const hasSubmission = async (
+      eventId: string,
+      status: 'pending' | 'corroborated',
+    ) => {
+      const [row] = await db
+        .select({ total: count() })
+        .from(priceSubmissions)
+        .where(
+          and(
+            eq(priceSubmissions.eventId, eventId),
+            eq(priceSubmissions.status, status),
+          ),
+        )
+      return (row?.total ?? 0) > 0
+    }
+
+    // Event A — two pending community submissions
+    if (ev.A && !(await hasSubmission(ev.A.id, 'pending'))) {
+      await db
+        .insert(priceSubmissions)
+        .values([
+          {
+            eventId: ev.A.id,
+            userId: FAKE_USER_IDS.jess,
+            priceMin: '25.00',
+            priceMax: '35.00',
+            tier: 'GA' as const,
+            vendor: 'Ticketmaster' as const,
+            howFound: 'saw_listing' as const,
+            status: 'pending' as const,
+            corroborationCount: 0,
+          },
+          {
+            eventId: ev.A.id,
+            userId: FAKE_USER_IDS.marco,
+            priceMin: '55.00',
+            priceMax: '75.00',
+            tier: 'Reserved' as const,
+            vendor: 'AXS' as const,
+            howFound: 'bought_myself' as const,
+            status: 'pending' as const,
+            corroborationCount: 0,
+          },
+        ])
+        .onConflictDoNothing()
+      console.warn('Patched Event A: inserted 2 pending submissions.')
+    }
+
+    // Event B — primary corroborated (Ticketmaster) + counter-submission
+    if (ev.B && !(await hasSubmission(ev.B.id, 'corroborated'))) {
+      const primarySub = await db
+        .insert(priceSubmissions)
+        .values({
+          eventId: ev.B.id,
+          userId: FAKE_USER_IDS.riley,
+          priceMin: '45.00',
+          priceMax: '55.00',
+          tier: 'GA' as const,
+          vendor: 'Ticketmaster' as const,
+          howFound: 'bought_myself' as const,
+          status: 'corroborated' as const,
+          corroborationCount: 2,
+        })
+        .returning()
+
+      if (primarySub[0]) {
+        await db
+          .insert(submissionConfirms)
+          .values([
+            {
+              submissionId: primarySub[0].id,
+              userId: FAKE_USER_IDS.amy,
+              method: 'same-vendor' as const,
+            },
+            {
+              submissionId: primarySub[0].id,
+              userId: FAKE_USER_IDS.taylor,
+              method: 'same-vendor' as const,
+            },
+          ])
+          .onConflictDoNothing()
+
+        // Counter-submission disputing the primary
+        await db
+          .insert(priceSubmissions)
+          .values({
+            eventId: ev.B.id,
+            userId: FAKE_USER_IDS.sam,
+            priceMin: '60.00',
+            priceMax: '70.00',
+            tier: 'GA' as const,
+            vendor: 'Ticketmaster' as const,
+            howFound: 'saw_listing' as const,
+            status: 'pending' as const,
+            corroborationCount: 0,
+            disputedSubmissionId: primarySub[0].id,
+          })
+          .onConflictDoNothing()
+
+        console.warn(
+          'Patched Event B: inserted Ticketmaster primary + counter-submission.',
+        )
+      }
+    }
+
+    // Event B — second corroborated (AXS alternate) for MultiTierLiveCard
+    const [bCorrobCount] = ev.B
+      ? await db
+          .select({ total: count() })
+          .from(priceSubmissions)
+          .where(
+            and(
+              eq(priceSubmissions.eventId, ev.B.id),
+              eq(priceSubmissions.status, 'corroborated'),
+            ),
+          )
+      : [{ total: 2 }]
+
+    if (ev.B && (bCorrobCount?.total ?? 0) < 2) {
+      const altSub = await db
+        .insert(priceSubmissions)
+        .values({
+          eventId: ev.B.id,
+          userId: FAKE_USER_IDS.kai,
+          priceMin: '48.00',
+          priceMax: '60.00',
+          tier: 'GA' as const,
+          vendor: 'AXS' as const,
+          howFound: 'saw_listing' as const,
+          status: 'corroborated' as const,
+          corroborationCount: 2,
+        })
+        .returning()
+
+      if (altSub[0]) {
+        await db
+          .insert(submissionConfirms)
+          .values([
+            {
+              submissionId: altSub[0].id,
+              userId: FAKE_USER_IDS.marco,
+              method: 'same-vendor' as const,
+            },
+            {
+              submissionId: altSub[0].id,
+              userId: FAKE_USER_IDS.jess,
+              method: 'same-vendor' as const,
+            },
+          ])
+          .onConflictDoNothing()
+        console.warn('Patched Event B: inserted AXS alternate submission.')
+      }
+    }
+
+    // Event B — ensure a pending counter-submission exists (for dispute UI)
+    if (ev.B && !(await hasSubmission(ev.B.id, 'pending'))) {
+      // Get any corroborated submission to dispute against
+      const [targetSub] = await db
+        .select({ id: priceSubmissions.id })
+        .from(priceSubmissions)
+        .where(
+          and(
+            eq(priceSubmissions.eventId, ev.B.id),
+            eq(priceSubmissions.status, 'corroborated'),
+          ),
+        )
+        .limit(1)
+
+      if (targetSub) {
+        await db
+          .insert(priceSubmissions)
+          .values({
+            eventId: ev.B.id,
+            userId: FAKE_USER_IDS.sam,
+            priceMin: '60.00',
+            priceMax: '70.00',
+            tier: 'GA' as const,
+            vendor: 'Ticketmaster' as const,
+            howFound: 'saw_listing' as const,
+            status: 'pending' as const,
+            corroborationCount: 0,
+            disputedSubmissionId: targetSub.id,
+          })
+          .onConflictDoNothing()
+        console.warn(
+          'Patched Event B: inserted counter-submission (pending dispute).',
+        )
+      }
+    }
+
+    // Event C — pending VIP submission with 1 confirm
+    if (ev.C && !(await hasSubmission(ev.C.id, 'pending'))) {
+      const cSub = await db
+        .insert(priceSubmissions)
+        .values({
+          eventId: ev.C.id,
+          userId: FAKE_USER_IDS.riley,
+          priceMin: '85.00',
+          priceMax: '110.00',
+          tier: 'VIP' as const,
+          vendor: 'AXS' as const,
+          howFound: 'bought_myself' as const,
+          status: 'pending' as const,
+          corroborationCount: 1,
+        })
+        .returning()
+
+      if (cSub[0]) {
+        await db
+          .insert(submissionConfirms)
+          .values({
+            submissionId: cSub[0].id,
+            userId: FAKE_USER_IDS.marco,
+            method: 'box-office' as const,
+          })
+          .onConflictDoNothing()
+        console.warn('Patched Event C: inserted VIP pending submission.')
+      }
+    }
+
+    // Events D, E, F, G — each need 1 corroborated submission
+    const defgPatches: Array<{
+      event: (typeof ev)[keyof typeof ev]
+      userId: string
+      priceMin: string
+      priceMax?: string
+      vendor: 'AXS' | 'Ticketmaster'
+      howFound: 'bought_myself' | 'saw_listing'
+      label: string
+    }> = [
+      {
+        event: ev.D,
+        userId: FAKE_USER_IDS.jess,
+        priceMin: '40.00',
+        vendor: 'AXS',
+        howFound: 'bought_myself',
+        label: 'D',
+      },
+      {
+        event: ev.E,
+        userId: FAKE_USER_IDS.marco,
+        priceMin: '30.00',
+        priceMax: '45.00',
+        vendor: 'Ticketmaster',
+        howFound: 'saw_listing',
+        label: 'E',
+      },
+      {
+        event: ev.F,
+        userId: FAKE_USER_IDS.taylor,
+        priceMin: '35.00',
+        vendor: 'AXS',
+        howFound: 'bought_myself',
+        label: 'F',
+      },
+      {
+        event: ev.G,
+        userId: FAKE_USER_IDS.amy,
+        priceMin: '50.00',
+        priceMax: '65.00',
+        vendor: 'Ticketmaster',
+        howFound: 'saw_listing',
+        label: 'G',
+      },
+    ]
+
+    for (const patch of defgPatches) {
+      if (!patch.event) continue
+      if (await hasSubmission(patch.event.id, 'corroborated')) continue
+
+      await db
+        .insert(priceSubmissions)
+        .values({
+          eventId: patch.event.id,
+          userId: patch.userId,
+          priceMin: patch.priceMin,
+          priceMax: patch.priceMax ?? null,
+          tier: 'GA' as const,
+          vendor: patch.vendor as 'AXS' | 'Ticketmaster',
+          howFound: patch.howFound as 'bought_myself' | 'saw_listing',
+          status: 'corroborated' as const,
+          corroborationCount: 1,
+        })
+        .onConflictDoNothing()
+      console.warn(
+        `Patched Event ${patch.label}: inserted corroborated submission.`,
+      )
+    }
+
+    // --- Step 4: ensure event reports and confirms exist ---
+
+    const hasReport = async (eventId: string) => {
+      const [row] = await db
+        .select({ total: count() })
+        .from(eventReports)
+        .where(eq(eventReports.eventId, eventId))
+      return (row?.total ?? 0) > 0
+    }
+
+    const pastDate = new Date(Date.now() - 2 * 86_400_000)
+
+    // D — pending sold-out report
+    if (ev.D && !(await hasReport(ev.D.id))) {
+      await db.insert(eventReports).values({
+        eventId: ev.D.id,
+        reporterId: FAKE_USER_IDS.riley,
+        status: 'sold-out' as const,
+        evidenceMethod: 'venue_site' as const,
+        resolvedAt: null,
+        resolution: null,
+      })
+      console.warn('Patched Event D: inserted sold-out report.')
+    }
+
+    // E — pending cancelled report
+    if (ev.E && !(await hasReport(ev.E.id))) {
+      await db.insert(eventReports).values({
+        eventId: ev.E.id,
+        reporterId: FAKE_USER_IDS.sam,
+        status: 'cancelled' as const,
+        evidenceMethod: 'saw_listing' as const,
+        resolvedAt: null,
+        resolution: null,
+      })
+      console.warn('Patched Event E: inserted cancelled report.')
+    }
+
+    // F — pending postponed report
+    if (ev.F && !(await hasReport(ev.F.id))) {
+      await db.insert(eventReports).values({
+        eventId: ev.F.id,
+        reporterId: FAKE_USER_IDS.jess,
+        status: 'postponed' as const,
+        evidenceMethod: 'other' as const,
+        resolvedAt: null,
+        resolution: null,
+      })
+      console.warn('Patched Event F: inserted postponed report.')
+    }
+
+    // G — promoted sold-out report (resolved)
+    if (ev.G && !(await hasReport(ev.G.id))) {
+      const reportG = await db
+        .insert(eventReports)
+        .values({
+          eventId: ev.G.id,
+          reporterId: FAKE_USER_IDS.marco,
+          status: 'sold-out' as const,
+          evidenceMethod: 'bought_myself' as const,
+          resolvedAt: pastDate,
+          resolution: 'promoted' as const,
+        })
+        .returning()
+
+      if (reportG[0]) {
+        await db
+          .insert(eventReportConfirms)
+          .values([
+            { reportId: reportG[0].id, userId: FAKE_USER_IDS.amy },
+            { reportId: reportG[0].id, userId: FAKE_USER_IDS.riley },
+            { reportId: reportG[0].id, userId: FAKE_USER_IDS.jess },
+          ])
+          .onConflictDoNothing()
+        console.warn(
+          'Patched Event G: inserted promoted sold-out report + 3 confirms.',
+        )
+      }
+    }
+
+    // H — promoted cancelled report (resolved); event.status already 'cancelled'
+    if (ev.H && !(await hasReport(ev.H.id))) {
+      await db.insert(eventReports).values({
+        eventId: ev.H.id,
+        reporterId: FAKE_USER_IDS.taylor,
+        status: 'cancelled' as const,
+        evidenceMethod: 'saw_listing' as const,
+        resolvedAt: pastDate,
+        resolution: 'promoted' as const,
+      })
+      console.warn('Patched Event H: inserted promoted cancelled report.')
+    }
+
+    // I — pending cancelled report (imminent show, tests 3-confirm threshold)
+    if (ev.I && !(await hasReport(ev.I.id))) {
+      await db.insert(eventReports).values({
+        eventId: ev.I.id,
+        reporterId: FAKE_USER_IDS.kai,
+        status: 'cancelled' as const,
+        evidenceMethod: 'venue_site' as const,
+        resolvedAt: null,
+        resolution: null,
+      })
+      console.warn('Patched Event I: inserted imminent cancelled report.')
+    }
+
+    console.warn('Phase 8.5 full data patch complete.')
   }
 
   process.exit(0)
