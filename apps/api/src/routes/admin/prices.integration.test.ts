@@ -278,3 +278,98 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
     expect(res.status).toBe(404)
   })
 })
+
+describe('GET /v1/admin/prices/events', () => {
+  beforeEach(() => {
+    setAdminAuth()
+    return clearTables()
+  })
+
+  it('returns only missing-price events by default', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      date: '2026-07-01',
+      status: 'upcoming',
+      ticketPriceMin: null,
+    })
+    await seedEvent(venue.id, {
+      date: '2026-07-02',
+      status: 'upcoming',
+      ticketPriceMin: '25.00',
+    })
+
+    const res = await app.request('/v1/admin/prices/events', {
+      headers: ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.success).toBe(true)
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0].priceMin).toBeNull()
+  })
+
+  it('returns all upcoming events when missingOnly=false', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      date: '2026-07-01',
+      status: 'upcoming',
+      ticketPriceMin: null,
+    })
+    await seedEvent(venue.id, {
+      date: '2026-07-02',
+      status: 'upcoming',
+      ticketPriceMin: '25.00',
+    })
+
+    const res = await app.request('/v1/admin/prices/events?missingOnly=false', {
+      headers: ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.success).toBe(true)
+    expect(body.data).toHaveLength(2)
+  })
+
+  it('respects limit and offset', async () => {
+    const venue = await seedVenue()
+    for (let idx = 1; idx <= 5; idx++) {
+      await seedEvent(venue.id, {
+        date: `2026-07-0${idx}`,
+        status: 'upcoming',
+        ticketPriceMin: null,
+      })
+    }
+
+    const res = await app.request(
+      '/v1/admin/prices/events?missingOnly=true&limit=2&offset=2',
+      { headers: ADMIN_HEADERS },
+    )
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.success).toBe(true)
+    expect(body.data).toHaveLength(2)
+    expect(body.data[0].date).toBe('2026-07-03')
+    expect(body.data[1].date).toBe('2026-07-04')
+  })
+
+  it('excludes past events', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      date: '2020-01-01',
+      status: 'upcoming',
+      ticketPriceMin: null,
+    })
+    await seedEvent(venue.id, {
+      date: '2026-07-01',
+      status: 'upcoming',
+      ticketPriceMin: null,
+    })
+
+    const res = await app.request('/v1/admin/prices/events', {
+      headers: ADMIN_HEADERS,
+    })
+    const body = await res.json()
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0].date).toBe('2026-07-01')
+  })
+})

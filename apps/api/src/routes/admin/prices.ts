@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { and, asc, count, desc, eq, max, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, gte, isNull, max, sql } from 'drizzle-orm'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import {
@@ -19,47 +19,76 @@ const logger = createLogger('admin:prices')
 
 export const pricesAdminRouter = new Hono<AdminVariables>()
 
-// GET /v1/admin/prices/events — upcoming events with current price data + last retrieval info
-pricesAdminRouter.get('/events', async (ctx) => {
-  // Use a single aggregating join instead of two correlated subqueries per row.
-  // The subquery groups price_retrieval_log by event_id once, then LEFT JOINs in.
-  const latestLog = db
-    .select({
-      eventId: priceRetrievalLog.eventId,
-      lastRetrievedAt: max(priceRetrievalLog.attemptedAt).as(
-        'last_retrieved_at',
-      ),
-      lastOutcome: sql<string | null>`(
-        array_agg(${priceRetrievalLog.outcome} ORDER BY ${priceRetrievalLog.attemptedAt} DESC)
-      )[1]`.as('last_outcome'),
-    })
-    .from(priceRetrievalLog)
-    .groupBy(priceRetrievalLog.eventId)
-    .as('latest_log')
-
-  const rows = await db
-    .select({
-      eventId: events.id,
-      eventTitle: events.title,
-      artist: events.artist,
-      venueName: venues.name,
-      date: events.date,
-      ticketUrl: events.ticketUrl,
-      priceMin: events.ticketPriceMin,
-      priceMax: events.ticketPriceMax,
-      priceSource: events.priceSource,
-      lastRetrievedAt: latestLog.lastRetrievedAt,
-      lastOutcome: latestLog.lastOutcome,
-    })
-    .from(events)
-    .leftJoin(venues, eq(events.venueId, venues.id))
-    .leftJoin(latestLog, eq(latestLog.eventId, events.id))
-    .where(eq(events.status, 'upcoming'))
-    .orderBy(asc(events.date))
-    .limit(500)
-
-  return ctx.json({ success: true, data: rows } as const)
+const eventsQuerySchema = z.object({
+  missingOnly: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((val) => val === 'true'),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
 })
+
+// GET /v1/admin/prices/events — upcoming events with current price data + last retrieval info
+pricesAdminRouter.get(
+  '/events',
+  zValidator('query', eventsQuerySchema, (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid query params' }, 422)
+    }
+  }),
+  async (ctx) => {
+    const { missingOnly, limit, offset } = ctx.req.valid('query')
+    const today = new Date().toLocaleDateString('en-CA', {
+      timeZone: 'America/Denver',
+    })
+
+    const conditions = [
+      eq(events.status, 'upcoming'),
+      gte(events.date, today),
+      ...(missingOnly ? [isNull(events.ticketPriceMin)] : []),
+    ]
+
+    // Use a single aggregating join instead of two correlated subqueries per row.
+    // The subquery groups price_retrieval_log by event_id once, then LEFT JOINs in.
+    const latestLog = db
+      .select({
+        eventId: priceRetrievalLog.eventId,
+        lastRetrievedAt: max(priceRetrievalLog.attemptedAt).as(
+          'last_retrieved_at',
+        ),
+        lastOutcome: sql<string | null>`(
+          array_agg(${priceRetrievalLog.outcome} ORDER BY ${priceRetrievalLog.attemptedAt} DESC)
+        )[1]`.as('last_outcome'),
+      })
+      .from(priceRetrievalLog)
+      .groupBy(priceRetrievalLog.eventId)
+      .as('latest_log')
+
+    const rows = await db
+      .select({
+        eventId: events.id,
+        eventTitle: events.title,
+        artist: events.artist,
+        venueName: venues.name,
+        date: events.date,
+        ticketUrl: events.ticketUrl,
+        priceMin: events.ticketPriceMin,
+        priceMax: events.ticketPriceMax,
+        priceSource: events.priceSource,
+        lastRetrievedAt: latestLog.lastRetrievedAt,
+        lastOutcome: latestLog.lastOutcome,
+      })
+      .from(events)
+      .leftJoin(venues, eq(events.venueId, venues.id))
+      .leftJoin(latestLog, eq(latestLog.eventId, events.id))
+      .where(and(...conditions))
+      .orderBy(asc(events.date))
+      .limit(limit)
+      .offset(offset)
+
+    return ctx.json({ success: true, data: rows } as const)
+  },
+)
 
 // GET /v1/admin/prices/health — per-source × per-venue success rates
 pricesAdminRouter.get('/health', async (ctx) => {
