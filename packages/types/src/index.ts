@@ -107,6 +107,13 @@ export const SP_POLICY = {
   outlierHighFactor: 2.5,
 } as const
 
+// Event report policy — server enforces, client mirrors for UX
+export const ER_POLICY = {
+  confirmsRequired: 2,
+  confirmsRequiredImminentCancelled: 3,
+  imminentThresholdDays: 7,
+} as const
+
 // Notification types
 export type NotificationType = 'admin_alert' | 'user_notification'
 
