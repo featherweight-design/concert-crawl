@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { REPORTING_COPY } from './definitions/copy'
-// ReportTypeMark will exist in this folder — forward-reference OK
+import { REPORT_TOKENS } from './reportTokens'
 import { ReportTypeMark } from './ReportTypeMark'
 
 const copy = REPORTING_COPY.reportSheet
@@ -10,43 +10,8 @@ const copy = REPORTING_COPY.reportSheet
 // ── Report type ───────────────────────────────────────────────────
 type ReportType = 'sold-out' | 'cancelled' | 'postponed' | 'available'
 
-// ── Color tokens ──────────────────────────────────────────────────
-interface ReportTokens {
-  color: string
-  bg: string
-  bgStrong: string
-  border: string
-}
-
-const REPORT_TOKENS: Record<ReportType, ReportTokens> = {
-  cancelled: {
-    color: 'var(--danger)',
-    bg: 'color-mix(in oklab, var(--danger) 8%, transparent)',
-    bgStrong: 'color-mix(in oklab, var(--danger) 14%, transparent)',
-    border: 'color-mix(in oklab, var(--danger) 36%, transparent)',
-  },
-  postponed: {
-    color: 'var(--warning)',
-    bg: 'color-mix(in oklab, var(--warning) 8%, transparent)',
-    bgStrong: 'color-mix(in oklab, var(--warning) 14%, transparent)',
-    border: 'color-mix(in oklab, var(--warning) 36%, transparent)',
-  },
-  'sold-out': {
-    color: 'var(--warning)',
-    bg: 'color-mix(in oklab, var(--warning) 8%, transparent)',
-    bgStrong: 'color-mix(in oklab, var(--warning) 14%, transparent)',
-    border: 'color-mix(in oklab, var(--warning) 36%, transparent)',
-  },
-  available: {
-    color: 'var(--success)',
-    bg: 'color-mix(in oklab, var(--success) 8%, transparent)',
-    bgStrong: 'color-mix(in oklab, var(--success) 14%, transparent)',
-    border: 'color-mix(in oklab, var(--success) 36%, transparent)',
-  },
-}
-
-export const reportTokens = (kind: ReportType): ReportTokens =>
-  REPORT_TOKENS[kind]
+// ── Token accessor ────────────────────────────────────────────────
+export const reportTokens = (kind: ReportType) => REPORT_TOKENS[kind]
 
 // ── Option data ───────────────────────────────────────────────────
 interface ReportOptionData {
