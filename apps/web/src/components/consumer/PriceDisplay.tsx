@@ -75,6 +75,9 @@ interface PriceDisplayProps {
     priceMin: string
     priceMax: string | null
   }> | null
+  // When provided, the "Submit a price" button in the no-price state calls this
+  // instead of opening an internal modal (lets parent own the submission flow)
+  onSubmitPrice?: () => void
 }
 
 // ── Color constants ───────────────────────────────────────────────
@@ -844,11 +847,13 @@ function CommunityHandoffCard({
   artist,
   venueName: venueNameProp,
   date,
+  onSubmitPrice,
 }: {
   eventId: string
   artist: string
   venueName: string
   date: string
+  onSubmitPrice?: () => void
 }) {
   const [isSubmitOpen, setIsSubmitOpen] = useState(false)
   return (
@@ -946,7 +951,9 @@ function CommunityHandoffCard({
 
       <button
         type="button"
-        onClick={() => setIsSubmitOpen(true)}
+        onClick={() =>
+          onSubmitPrice ? onSubmitPrice() : setIsSubmitOpen(true)
+        }
         style={{
           all: 'unset',
           marginTop: 14,
@@ -978,14 +985,16 @@ function CommunityHandoffCard({
           />
         </svg>
       </button>
-      <SubmitPriceModal
-        open={isSubmitOpen}
-        onClose={() => setIsSubmitOpen(false)}
-        eventId={eventId}
-        artist={artist}
-        venueName={venueNameProp}
-        date={date}
-      />
+      {!onSubmitPrice && (
+        <SubmitPriceModal
+          open={isSubmitOpen}
+          onClose={() => setIsSubmitOpen(false)}
+          eventId={eventId}
+          artist={artist}
+          venueName={venueNameProp}
+          date={date}
+        />
+      )}
 
       <div
         style={{
@@ -1057,6 +1066,7 @@ export function PriceDisplay({
   priceApprovalKind,
   priceApprovedAt,
   priceAlternates,
+  onSubmitPrice,
 }: PriceDisplayProps) {
   const parsedMin = priceMin ? parseFloat(priceMin) : null
   const parsedMax = priceMax ? parseFloat(priceMax) : null
@@ -1075,6 +1085,7 @@ export function PriceDisplay({
         artist={artist}
         venueName={venueName}
         date={date}
+        {...(onSubmitPrice ? { onSubmitPrice } : {})}
       />
     )
   }

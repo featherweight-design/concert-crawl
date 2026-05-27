@@ -644,8 +644,13 @@ export function EventDetailPriceBlock({
     )
   }
 
-  // ── 4a. Pending submissions from API — no corroborated price yet ─
-  if (event.pendingSubmissions != null && event.pendingSubmissions.length > 0) {
+  // ── 4a. Pending submissions — no corroborated price yet ──────────
+  // Guard enters on server submissions OR client-tracked ones (e.g. user just
+  // submitted and localSubmissions was updated without a page refresh).
+  if (
+    (event.pendingSubmissions != null && event.pendingSubmissions.length > 0) ||
+    localSubmissions.length > 0
+  ) {
     // Use localSubmissions as the source of truth — it starts from server data
     // and is updated optimistically on submit, edit, and withdraw.
     if (localSubmissions.length === 0) {
@@ -976,6 +981,9 @@ export function EventDetailPriceBlock({
 
   // ── 5. Standard PriceDisplay ────────────────────────────────────
   // No Phase 8.5 override applies — render the existing price card.
+  // When price is null (community-handoff card), own the submit modal so
+  // onSuccess can update localSubmissions and transition into section 4a.
+  const noPriceState = event.ticketPriceMin === null
   return (
     <>
       <PriceDisplay
@@ -996,9 +1004,12 @@ export function EventDetailPriceBlock({
         priceApprovalKind={event.priceApprovalKind ?? null}
         priceApprovedAt={event.priceApprovedAt ?? null}
         priceAlternates={event.priceAlternates ?? null}
+        {...(noPriceState
+          ? { onSubmitPrice: () => setSubmitPriceOpen(true) }
+          : {})}
       />
       {/* Fix 14: hide SubmitPriceCardCta for cancelled events */}
-      {event.ticketPriceMin !== null && event.status !== 'cancelled' && (
+      {!noPriceState && event.status !== 'cancelled' && (
         <div className="mt-3">
           <SubmitPriceCardCta
             eventId={event.id}
@@ -1007,6 +1018,69 @@ export function EventDetailPriceBlock({
             date={event.date}
           />
         </div>
+      )}
+      {noPriceState && (
+        <SubmitPriceModal
+          open={submitPriceOpen}
+          onClose={() => {
+            setSubmitPriceOpen(false)
+            setSubmitPriceEditMode(false)
+          }}
+          openInEditMode={submitPriceEditMode}
+          eventId={event.id}
+          artist={event.artist}
+          venueName={event.venue.name}
+          date={event.date}
+          onSuccess={(result) => {
+            if (result.isEdit) {
+              setLocalSubmissions((prev) =>
+                prev.map((sub) =>
+                  sub.id === result.id
+                    ? {
+                        ...sub,
+                        priceMin: result.priceMin,
+                        priceMax: result.priceMax,
+                        tier: result.tier,
+                        vendor: result.vendor,
+                        howFound: result.howFound,
+                      }
+                    : sub,
+                ),
+              )
+            } else {
+              const diffDays = Math.floor(
+                (new Date(event.date).getTime() - Date.now()) /
+                  (1000 * 60 * 60 * 24),
+              )
+              const isImminent =
+                diffDays >= 0 && diffDays <= SP_POLICY.imminentThresholdDays
+              setLocalSubmissions((prev) => [
+                ...prev,
+                {
+                  id: result.id,
+                  priceMin: result.priceMin,
+                  priceMax: result.priceMax,
+                  tier: result.tier,
+                  vendor: result.vendor,
+                  howFound: result.howFound,
+                  note: null,
+                  submitterHandle: null,
+                  submittedAt: new Date().toISOString(),
+                  confirmsCount: 0,
+                  confirmsNeeded: isImminent
+                    ? SP_POLICY.confirmsRequiredImminent
+                    : SP_POLICY.confirmsRequired,
+                  isSubmitter: true,
+                },
+              ])
+            }
+          }}
+          onWithdrawSuccess={(submissionId) => {
+            setLocalSubmissions((prev) =>
+              prev.filter((sub) => sub.id !== submissionId),
+            )
+          }}
+        />
       )}
     </>
   )
