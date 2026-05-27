@@ -1,3 +1,14 @@
+## [1.43.1](https://github.com/HartiganHM/concert-crawl/compare/v1.43.0...v1.43.1) (2026-05-27)
+
+
+### Bug Fixes
+
+* address Copilot review — prevent event fetch loop on all-duplicate batches ([8dc16ee](https://github.com/HartiganHM/concert-crawl/commit/8dc16ee0a408ee11bca475647e69dd6459eb1fa0))
+* **admin:** absolutely position stat card icon; auto-fetch review queue ([d6ba565](https://github.com/HartiganHM/concert-crawl/commit/d6ba565d0b43860ec412d38316cdba92ab02942c))
+* **admin:** clip stat card icon within card boundary on mobile ([c5899cb](https://github.com/HartiganHM/concert-crawl/commit/c5899cb14a8d887b6d5431b85de0e7e3b6ec9cca))
+* **admin:** show event title in mobile community submissions fallback ([03c4d0c](https://github.com/HartiganHM/concert-crawl/commit/03c4d0c10a06d2b4c478ff11ce16cfe288c6471b))
+* **web:** guard fetchMoreEvents against infinite retry on token/network failure ([b0ca62d](https://github.com/HartiganHM/concert-crawl/commit/b0ca62dd201fe16a4c7254ebba2fb3a4dc245833))
+
 # [1.43.0](https://github.com/HartiganHM/concert-crawl/compare/v1.42.0...v1.43.0) (2026-05-27)
 
 
