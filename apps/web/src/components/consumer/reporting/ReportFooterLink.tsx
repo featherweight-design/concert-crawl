@@ -106,6 +106,7 @@ export const ReportFooterLink = ({
           margin: '10px 0 0',
           lineHeight: 1.5,
           letterSpacing: '0.04em',
+          textTransform: 'uppercase',
         }}
       >
         {copy.bottomNote}

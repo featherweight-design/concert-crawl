@@ -105,7 +105,9 @@ export function ModalShell({
               }}
             />
           </div>
-          <div style={{ flexShrink: 0, padding: '0 18px 12px' }}>{header}</div>
+          <div style={{ flexShrink: 0, padding: '10px 16px 8px' }}>
+            {header}
+          </div>
           <div
             style={{
               flex: 1,
@@ -155,7 +157,7 @@ export function ModalShell({
           <div
             style={{
               flexShrink: 0,
-              padding: '18px 22px 12px',
+              padding: '10px 16px 8px',
               borderBottom: '1px solid var(--border)',
             }}
           >

@@ -501,7 +501,7 @@ export const CorroborationSheet = ({
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
-              gap: 12,
+              gap: 10,
             }}
           >
             <button
@@ -635,24 +635,43 @@ export const CorroborationSheet = ({
             </span>
           </div>
         ) : (
-          /* Verify options (fresh state) */
-          <div
-            role="radiogroup"
-            aria-label="Verification method"
-            style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
-          >
-            {verifyOptions.map((opt) => (
-              <VerifyOption
-                key={opt.method}
-                method={opt.method}
-                label={opt.label}
-                description={opt.description}
-                isSelected={selectedMethod === opt.method}
-                accentColor={accentColor}
-                onSelect={setSelectedMethod}
-              />
-            ))}
-          </div>
+          <>
+            {/* Verify options (fresh state) */}
+            <div
+              role="radiogroup"
+              aria-label="Verification method"
+              style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+            >
+              {verifyOptions.map((opt) => (
+                <VerifyOption
+                  key={opt.method}
+                  method={opt.method}
+                  label={opt.label}
+                  description={opt.description}
+                  isSelected={selectedMethod === opt.method}
+                  accentColor={accentColor}
+                  onSelect={setSelectedMethod}
+                />
+              ))}
+            </div>
+
+            {/* Honesty disclaimer */}
+            <div
+              style={{
+                padding: '10px 12px',
+                background: 'color-mix(in oklab, var(--fg) 3%, transparent)',
+                border: '1px solid var(--border)',
+                borderRadius: 10,
+                fontFamily: 'Inter, system-ui',
+                fontSize: 12,
+                color: 'var(--fg-subtle)',
+                letterSpacing: '-0.005em',
+                lineHeight: 1.45,
+              }}
+            >
+              {copy.honestyDisclaimer}
+            </div>
+          </>
         )}
       </div>
     </ModalShell>

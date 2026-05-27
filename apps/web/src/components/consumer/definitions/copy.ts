@@ -904,8 +904,7 @@ export const CONSUMER_COPY = {
       },
       otherVendor: {
         label: 'A different vendor / site',
-        description:
-          'I checked another ticketing site and the number matches.',
+        description: 'I checked another ticketing site and the number matches.',
       },
       sawListing: {
         label: 'Saw the price at the box office',
@@ -925,6 +924,10 @@ export const CONSUMER_COPY = {
     // Escape link
     escapeLink:
       'Saw a different tier or a different price? Submit an update instead.',
+
+    // Honesty disclaimer shown at bottom of verify options
+    honestyDisclaimer:
+      'Confirming is a community action — only confirm if you actually checked the price.',
 
     // Self-locked state
     selfLocked: {

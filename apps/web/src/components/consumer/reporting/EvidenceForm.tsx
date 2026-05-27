@@ -384,8 +384,7 @@ export const EvidenceForm = ({
           <div
             style={{
               background: 'color-mix(in oklab, var(--warning) 8%, transparent)',
-              border:
-                '1px solid color-mix(in oklab, var(--warning) 36%, var(--border))',
+              border: '1px solid var(--border)',
               borderRadius: 10,
               padding: '10px 12px',
               display: 'flex',
