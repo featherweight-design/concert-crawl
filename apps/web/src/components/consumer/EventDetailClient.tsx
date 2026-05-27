@@ -18,7 +18,8 @@ import type { EventReport, EventDetailResponse } from '@concert-crawl/types'
 import { confirmEventReport, withdrawEventReport } from '@/lib/events'
 import { PendingCardB } from '@/components/consumer/PendingCardB'
 import { CorroborationSheet } from '@/components/consumer/CorroborationSheet'
-import { MultiTierLiveCard } from '@/components/consumer/multi-tier/MultiTierLiveCard'
+import { MixedTierCard } from '@/components/consumer/multi-tier/MixedTierCard'
+import { TwoPendingStack } from '@/components/consumer/multi-tier/TwoPendingStack'
 import { PendingReportBanner } from '@/components/consumer/reporting/PendingReportBanner'
 import { PendingSoldOutCard } from '@/components/consumer/reporting/PendingSoldOutCard'
 import { LiveReportBanner } from '@/components/consumer/reporting/LiveReportBanner'
@@ -171,7 +172,11 @@ export function EventDetailBanners({
             reportedAt={activePendingReport.createdAt}
             evidenceMethod={activePendingReport.evidenceMethod}
             evidenceUrl={activePendingReport.evidenceUrl}
-            reporter={null}
+            reporter={
+              activePendingReport.reporterHandle
+                ? { handle: activePendingReport.reporterHandle, url: '' }
+                : null
+            }
             onConfirm={() => setConfirmSheetOpen(true)}
             onWithdraw={() => handleWithdrawReport(activePendingReport.id)}
             onEdit={() => {
@@ -197,10 +202,14 @@ export function EventDetailBanners({
                 ? 'postponed'
                 : 'sold-out'
           }
-          reporter={null}
           reportedAt={activePendingReport.createdAt}
           eventId={event.id}
           reportId={activePendingReport.id}
+          reporter={
+            activePendingReport.reporterHandle
+              ? { handle: activePendingReport.reporterHandle, url: '' }
+              : null
+          }
           onSuccess={handleConfirmSuccess}
           onFileCounter={() => {
             setConfirmSheetOpen(false)
@@ -538,7 +547,7 @@ export function EventDetailPriceBlock({
 
     return (
       <>
-        <MultiTierLiveCard headline={headline} alternates={alternateRows} />
+        <MixedTierCard headline={headline} alternates={alternateRows} />
         <div className="mt-3">
           <SubmitPriceCardCta
             eventId={event.id}
@@ -602,45 +611,47 @@ export function EventDetailPriceBlock({
         ? (subs.find((sub) => sub.id === activeCorroborationId) ?? null)
         : null
 
+    const pendingCardProps = subs.map((sub) => {
+      const displayConfirms =
+        sub.confirmsCount + 1 + (localConfirms[sub.id] ?? 0)
+      const isBoxOffice = sub.vendor === 'VenueBoxOffice'
+      const viewKind: 'other' | 'submitter' | 'self-locked' = sub.isSubmitter
+        ? 'submitter'
+        : 'other'
+      const props: React.ComponentProps<typeof PendingCardB> = {
+        floor: parseFloat(sub.priceMin),
+        ...(sub.priceMax !== null ? { ceiling: parseFloat(sub.priceMax) } : {}),
+        tier: sub.tier,
+        vendor: sub.vendor,
+        kind: isBoxOffice ? 'boxoffice' : 'community',
+        submitter: sub.submitterHandle
+          ? { handle: sub.submitterHandle, url: '' }
+          : null,
+        submittedAt: sub.submittedAt,
+        confirms: displayConfirms,
+        needed: sub.confirmsNeeded,
+        view: viewKind,
+        note: sub.note,
+        onConfirm: () => setActiveCorroborationId(sub.id),
+        onWithdraw: () => {
+          /* withdraw flow — future */
+        },
+        onEdit: () => setSubmitPriceOpen(true),
+      }
+      return { id: sub.id, props }
+    })
+
     return (
       <>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {subs.map((sub) => {
-            const displayConfirms =
-              sub.confirmsCount + 1 + (localConfirms[sub.id] ?? 0)
-            const isBoxOffice = sub.vendor === 'VenueBoxOffice'
-            const viewKind: 'other' | 'submitter' | 'self-locked' =
-              sub.isSubmitter ? 'submitter' : 'other'
-
-            return (
-              <PendingCardB
-                key={sub.id}
-                floor={parseFloat(sub.priceMin)}
-                {...(sub.priceMax !== null
-                  ? { ceiling: parseFloat(sub.priceMax) }
-                  : {})}
-                tier={sub.tier}
-                vendor={sub.vendor}
-                kind={isBoxOffice ? 'boxoffice' : 'community'}
-                submitter={
-                  sub.submitterHandle
-                    ? { handle: sub.submitterHandle, url: '' }
-                    : null
-                }
-                submittedAt={sub.submittedAt}
-                confirms={displayConfirms}
-                needed={sub.confirmsNeeded}
-                view={viewKind}
-                note={sub.note}
-                onConfirm={() => setActiveCorroborationId(sub.id)}
-                onWithdraw={() => {
-                  /* withdraw flow — future */
-                }}
-                onEdit={() => setSubmitPriceOpen(true)}
-              />
-            )
-          })}
-        </div>
+        {subs.length === 2 ? (
+          <TwoPendingStack cards={pendingCardProps.map((item) => item.props)} />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {pendingCardProps.map(({ id, props }) => (
+              <PendingCardB key={id} {...props} />
+            ))}
+          </div>
+        )}
 
         {activeCorroboration !== null && (
           <CorroborationSheet
@@ -830,7 +841,12 @@ export function EventDetailFooter({
   event,
   reports,
 }: Omit<EventDetailSharedProps, 'currentUserId'>) {
+  const router = useRouter()
   const [isReportSheetOpen, setIsReportSheetOpen] = useState(false)
+  const [evidenceFormOpen, setEvidenceFormOpen] = useState(false)
+  const [evidenceFormReportType, setEvidenceFormReportType] = useState<
+    'sold-out' | 'cancelled' | 'postponed'
+  >('cancelled')
 
   const pendingSoldOut = findPendingReport(reports, 'sold-out')
 
@@ -858,9 +874,27 @@ export function EventDetailFooter({
         onClose={() => setIsReportSheetOpen(false)}
         liveStatus={footerLiveStatus}
         eventDate={event.date}
-        onSelect={() => {
+        onSelect={(reportType) => {
           setIsReportSheetOpen(false)
-          // Full report flow (EvidenceForm, etc.) is wired in a follow-up
+          if (
+            reportType === 'sold-out' ||
+            reportType === 'cancelled' ||
+            reportType === 'postponed'
+          ) {
+            setEvidenceFormReportType(reportType)
+            setEvidenceFormOpen(true)
+          }
+        }}
+      />
+      <EvidenceForm
+        open={evidenceFormOpen}
+        onClose={() => setEvidenceFormOpen(false)}
+        reportType={evidenceFormReportType}
+        eventId={event.id}
+        eventDate={event.date}
+        onSuccess={() => {
+          setEvidenceFormOpen(false)
+          router.refresh()
         }}
       />
     </>

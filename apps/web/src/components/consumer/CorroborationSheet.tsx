@@ -112,14 +112,29 @@ const SubmissionDetailCard = ({
   const byNode = (() => {
     if (submitter === null) {
       return (
-        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: 'var(--fg-muted)' }}>
-          {copy.vendorLabel === 'VENDOR' ? copy.viaAnonymous : copy.viaAnonymous}
+        <span
+          style={{
+            fontFamily: 'JetBrains Mono, monospace',
+            fontSize: '10px',
+            color: 'var(--fg-muted)',
+          }}
+        >
+          {copy.vendorLabel === 'VENDOR'
+            ? copy.viaAnonymous
+            : copy.viaAnonymous}
         </span>
       )
     }
     return (
-      <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: 'var(--fg-muted)' }}>
-        {copy.viaHandlePrefix}{submitter.handle}
+      <span
+        style={{
+          fontFamily: 'JetBrains Mono, monospace',
+          fontSize: '10px',
+          color: 'var(--fg-muted)',
+        }}
+      >
+        {copy.viaHandlePrefix}
+        {submitter.handle}
       </span>
     )
   })()
@@ -134,7 +149,7 @@ const SubmissionDetailCard = ({
   const valueStyle = {
     fontFamily: 'JetBrains Mono, monospace',
     fontSize: '10px',
-    color: 'var(--fg-muted)',
+    color: 'var(--fg)',
   }
 
   return (
@@ -146,9 +161,23 @@ const SubmissionDetailCard = ({
         overflow: 'hidden',
       }}
     >
-      <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div
+        style={{
+          padding: '12px 14px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+        }}
+      >
         {/* Price + tier + chip */}
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', flexWrap: 'wrap' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: '10px',
+            flexWrap: 'wrap',
+          }}
+        >
           <span
             style={{
               fontFamily: 'Inter, sans-serif',
@@ -159,7 +188,9 @@ const SubmissionDetailCard = ({
               lineHeight: 1.05,
             }}
           >
-            {ceiling !== undefined && ceiling > floor ? `$${floor}–$${ceiling}` : `$${floor}`}
+            {ceiling !== undefined && ceiling > floor
+              ? `$${floor}–$${ceiling}`
+              : `$${floor}`}
           </span>
           <span
             style={{
@@ -177,7 +208,13 @@ const SubmissionDetailCard = ({
         </div>
 
         {/* VENDOR / BY / WHEN rows */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 12px' }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'auto 1fr',
+            gap: '4px 12px',
+          }}
+        >
           <span style={labelStyle}>{copy.vendorLabel}</span>
           <span style={valueStyle}>{vendor}</span>
           <span style={labelStyle}>{copy.byLabel}</span>
@@ -188,7 +225,14 @@ const SubmissionDetailCard = ({
 
         {/* Box-office face-value note */}
         {kind === 'boxoffice' && (
-          <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '12px', color: accentColor }}>
+          <span
+            style={{
+              fontFamily: 'Inter, sans-serif',
+              fontWeight: 600,
+              fontSize: '12px',
+              color: accentColor,
+            }}
+          >
             face value · no fees
           </span>
         )}
@@ -213,7 +257,7 @@ const SubmissionDetailCard = ({
                 margin: 0,
               }}
             >
-              "{note}"
+              &ldquo;{note}&rdquo;
             </p>
           </div>
         )}
@@ -451,7 +495,15 @@ export const CorroborationSheet = ({
       footer={
         isSelfLocked ? (
           /* Self-locked footer: Edit + Withdraw */
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+            }}
+          >
             <button
               onClick={onSubmitUpdate}
               style={{
@@ -524,7 +576,8 @@ export const CorroborationSheet = ({
               style={{
                 background: 'none',
                 border: 'none',
-                padding: 0,
+                padding: '8px 0',
+                width: '100%',
                 fontFamily: 'Inter, sans-serif',
                 fontWeight: 600,
                 fontSize: 13,
@@ -569,7 +622,7 @@ export const CorroborationSheet = ({
               gap: 10,
             }}
           >
-            <LockGlyph size={10} />
+            <LockGlyph size={14} />
             <span
               style={{
                 fontFamily: 'JetBrains Mono, monospace',

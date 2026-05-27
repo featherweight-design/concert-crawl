@@ -170,7 +170,7 @@ export const LiveReportBanner = ({
         </span>
         <span
           style={{
-            fontFamily: 'JetBrains Mono, monospace',
+            fontFamily: 'var(--font-mono)',
             fontSize: '9px',
             color: 'var(--fg-muted)',
             letterSpacing: '0.04em',

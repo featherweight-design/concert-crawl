@@ -2,6 +2,7 @@
 
 import { REPORTING_COPY } from './definitions/copy'
 import { REPORT_TOKENS } from './reportTokens'
+import { Eyebrow } from '@/components/consumer/glyphs'
 
 const copy = REPORTING_COPY.pendingSoldOutCard
 const tokens = REPORT_TOKENS['sold-out']
@@ -111,6 +112,9 @@ export const PendingSoldOutCard = ({
         {/* Pending badge */}
         <span
           style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
             background: tokens.bg,
             border: `1px solid color-mix(in oklab, ${tokens.color} 50%, transparent)`,
             borderRadius: 4,
@@ -125,6 +129,30 @@ export const PendingSoldOutCard = ({
             lineHeight: 1,
           }}
         >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 10 10"
+            fill="none"
+            aria-hidden="true"
+          >
+            <rect
+              x="1"
+              y="2.5"
+              width="8"
+              height="5"
+              rx="1"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              fill="none"
+            />
+            <path
+              d="M3.5 3.5 L6.5 6.5 M6.5 3.5 L3.5 6.5"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+            />
+          </svg>
           {copy.stripBadge}
         </span>
 
@@ -143,12 +171,15 @@ export const PendingSoldOutCard = ({
 
       {/* Card body */}
       <div style={{ padding: '14px 14px 12px' }}>
+        {/* Tickets eyebrow */}
+        <Eyebrow>Tickets</Eyebrow>
+
         {/* Price row */}
         <div
           style={{
             display: 'flex',
             flexDirection: 'row',
-            alignItems: 'center',
+            alignItems: 'baseline',
             gap: 8,
             flexWrap: 'wrap',
           }}

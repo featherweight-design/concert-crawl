@@ -9,6 +9,7 @@ const { mockDb } = vi.hoisted(() => {
     innerJoin: vi.fn(),
     limit: vi.fn(),
     offset: vi.fn(),
+    groupBy: vi.fn(),
   }
   return { mockDb }
 })
@@ -23,11 +24,20 @@ vi.mock('drizzle-orm', () => ({
   eq: vi.fn((_a, _b) => ({ type: 'eq' })),
   and: vi.fn((...args: unknown[]) => ({ type: 'and', args })),
   asc: vi.fn((col: unknown) => ({ type: 'asc', col })),
+  desc: vi.fn((col: unknown) => ({ type: 'desc', col })),
   count: vi.fn(() => ({ type: 'count' })),
   gte: vi.fn((_a, _b) => ({ type: 'gte' })),
   lte: vi.fn((_a, _b) => ({ type: 'lte' })),
+  lt: vi.fn((_a, _b) => ({ type: 'lt' })),
   ilike: vi.fn((_a, _b) => ({ type: 'ilike' })),
   or: vi.fn((...args: unknown[]) => ({ type: 'or', args })),
+  inArray: vi.fn((_a, _b) => ({ type: 'inArray' })),
+  isNull: vi.fn((_a) => ({ type: 'isNull' })),
+  isNotNull: vi.fn((_a) => ({ type: 'isNotNull' })),
+  sql: Object.assign(
+    vi.fn(() => ({ type: 'sql' })),
+    { placeholder: vi.fn() },
+  ),
 }))
 
 vi.mock('@concert-crawl/db', () => ({
@@ -39,6 +49,8 @@ vi.mock('@concert-crawl/db', () => ({
     venueId: 'venueId',
     title: 'title',
     artist: 'artist',
+    priceSource: 'priceSource',
+    ticketPriceMin: 'ticketPriceMin',
   },
   venues: {
     id: 'id',
@@ -53,6 +65,39 @@ vi.mock('@concert-crawl/db', () => ({
     userId: 'userId',
     eventId: 'eventId',
     status: 'status',
+  },
+  userProfiles: {
+    userId: 'userId',
+    handle: 'handle',
+  },
+  priceSubmissions: {
+    id: 'id',
+    eventId: 'eventId',
+    vendor: 'vendor',
+    userId: 'userId',
+    priceMin: 'priceMin',
+    priceMax: 'priceMax',
+    status: 'status',
+    tier: 'tier',
+    howFound: 'howFound',
+    note: 'note',
+    disputedSubmissionId: 'disputedSubmissionId',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt',
+  },
+  submissionConfirms: {
+    submissionId: 'submissionId',
+  },
+  eventReports: {
+    id: 'id',
+    eventId: 'eventId',
+    reporterId: 'reporterId',
+    status: 'status',
+    resolution: 'resolution',
+    createdAt: 'createdAt',
+  },
+  eventReportConfirms: {
+    reportId: 'reportId',
   },
   auditLog: {},
   inviteCodes: {},
@@ -71,6 +116,7 @@ const mockEvent = {
   ticketUrl: null,
   ticketPriceMin: null,
   ticketPriceMax: null,
+  priceSource: 'structured_data',
   description: null,
   imageUrl: null,
   genre: ['rock'],
@@ -98,6 +144,7 @@ function resetChain() {
   mockDb.orderBy.mockReturnValue(mockDb)
   mockDb.limit.mockReturnValue(mockDb)
   mockDb.where.mockReturnValue(mockDb)
+  mockDb.groupBy.mockReturnValue(mockDb)
   mockDb.offset.mockResolvedValue([])
 }
 
@@ -186,6 +233,8 @@ describe('GET /v1/events/:id', () => {
     mockDb.where.mockResolvedValueOnce([mockEvent])
     // watch count query: select().from().where() → terminal
     mockDb.where.mockResolvedValueOnce([{ total: 0 }])
+    // sold-out report query: ...where().orderBy().limit(1) → terminal
+    mockDb.limit.mockResolvedValueOnce([])
 
     const res = await createApp().request(
       '/v1/events/00000000-0000-0000-0000-000000000001',

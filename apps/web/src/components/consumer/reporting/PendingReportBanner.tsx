@@ -165,7 +165,7 @@ export const PendingReportBanner = ({
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: 8,
+          gap: 10,
           flexWrap: 'wrap',
         }}
       >
@@ -267,6 +267,39 @@ export const PendingReportBanner = ({
             >
               {evidenceLabel}
             </span>
+            {evidenceUrl ? (
+              <a
+                href={evidenceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: 9,
+                  fontWeight: 700,
+                  color: 'var(--fg-subtle)',
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  textDecoration: 'none',
+                  flexShrink: 0,
+                }}
+              >
+                VIEW
+              </a>
+            ) : (
+              <span
+                style={{
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: 9,
+                  color: 'var(--fg-subtle)',
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  opacity: 0.4,
+                  flexShrink: 0,
+                }}
+              >
+                VIEW
+              </span>
+            )}
           </div>
         )}
 
@@ -287,7 +320,16 @@ export const PendingReportBanner = ({
           {isReporter ? (
             <span style={{ color: tokens.color, fontWeight: 700 }}>you</span>
           ) : reporter !== null ? (
-            <span>{reporter.handle}</span>
+            <a
+              href={reporter.url ?? '#'}
+              style={{
+                textDecoration: 'underline',
+                textDecorationColor: 'var(--border-strong)',
+                color: 'inherit',
+              }}
+            >
+              {reporter.handle}
+            </a>
           ) : (
             <span>{copy.reportedAnonymously}</span>
           )}

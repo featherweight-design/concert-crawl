@@ -287,6 +287,7 @@ export interface EventReport {
   confirmsNeeded: number
   isReporter: boolean
   userHasConfirmed: boolean
+  reporterHandle: string | null
 }
 
 // Setlist — likely setlist for an event, sourced from Setlist.fm

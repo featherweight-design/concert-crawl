@@ -9,23 +9,12 @@ import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
 
 const copy = REPORTING_COPY.confirmReportSheet
 
-// ── Helper ────────────────────────────────────────────────────────
-
-const formatTimeAgo = (isoDate: string): string => {
-  const diffMs = Date.now() - new Date(isoDate).getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  if (diffMins < 60) return `${diffMins}m ago`
-  const diffHours = Math.floor(diffMins / 60)
-  if (diffHours < 24) return `${diffHours}h ago`
-  return `${Math.floor(diffHours / 24)}d ago`
-}
-
 // ── Glyphs (16×16) ────────────────────────────────────────────────
 
 const CancelledGlyph16 = () => (
   <svg
-    width="16"
-    height="16"
+    width="15"
+    height="15"
     viewBox="0 0 10 10"
     fill="none"
     aria-hidden="true"
@@ -49,8 +38,8 @@ const CancelledGlyph16 = () => (
 
 const PostponedGlyph16 = () => (
   <svg
-    width="16"
-    height="16"
+    width="15"
+    height="15"
     viewBox="0 0 10 10"
     fill="none"
     aria-hidden="true"
@@ -75,8 +64,8 @@ const PostponedGlyph16 = () => (
 
 const SoldOutGlyph16 = () => (
   <svg
-    width="16"
-    height="16"
+    width="15"
+    height="15"
     viewBox="0 0 10 10"
     fill="none"
     aria-hidden="true"
@@ -102,8 +91,8 @@ const SoldOutGlyph16 = () => (
 
 const AvailableGlyph16 = () => (
   <svg
-    width="16"
-    height="16"
+    width="15"
+    height="15"
     viewBox="0 0 10 10"
     fill="none"
     aria-hidden="true"
@@ -287,10 +276,9 @@ export const ConfirmReportSheet = ({
 
   const token = REPORT_TOKENS[reportType]
   const Glyph = GLYPHS_16[reportType]
-  const timeAgo = formatTimeAgo(reportedAt)
 
   const attributionText =
-    reporter !== null ? `@${reporter.handle}` : copy.recapCard.anonymousLabel
+    reporter !== null ? `by ${reporter.handle}` : copy.recapCard.anonymousLabel
 
   const verifyOptions: Array<{
     method: VerifyMethod
@@ -389,7 +377,14 @@ export const ConfirmReportSheet = ({
             >
               {copy.heading}
             </h2>
-            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 13.5, color: 'var(--fg-muted)', margin: 0 }}>
+            <p
+              style={{
+                fontFamily: 'Inter, sans-serif',
+                fontSize: 13.5,
+                color: 'var(--fg-muted)',
+                margin: 0,
+              }}
+            >
               {copy.subtitle}
             </p>
           </div>
@@ -398,7 +393,9 @@ export const ConfirmReportSheet = ({
       footer={
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <button
-            onClick={() => { void handleConfirm() }}
+            onClick={() => {
+              void handleConfirm()
+            }}
             disabled={selectedMethod === null || isSubmitting}
             style={{
               background: token.color,
@@ -409,7 +406,10 @@ export const ConfirmReportSheet = ({
               fontSize: 14.5,
               color: 'var(--fg-on-accent)',
               border: 'none',
-              cursor: selectedMethod !== null && !isSubmitting ? 'pointer' : 'not-allowed',
+              cursor:
+                selectedMethod !== null && !isSubmitting
+                  ? 'pointer'
+                  : 'not-allowed',
               opacity: selectedMethod !== null && !isSubmitting ? 1 : 0.45,
               width: '100%',
               transition: 'opacity 0.12s',
@@ -422,7 +422,7 @@ export const ConfirmReportSheet = ({
             style={{
               background: 'none',
               border: 'none',
-              padding: 0,
+              padding: '8px 0',
               fontFamily: 'Inter, sans-serif',
               fontWeight: 600,
               fontSize: 13,
@@ -446,8 +446,8 @@ export const ConfirmReportSheet = ({
             border: `1px solid ${token.border}`,
             padding: '12px 14px',
             display: 'flex',
-            alignItems: 'flex-start',
-            gap: 12,
+            alignItems: 'center',
+            gap: 8,
           }}
         >
           <div
@@ -466,17 +466,36 @@ export const ConfirmReportSheet = ({
             <Glyph />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 800, fontSize: 16, color: 'var(--fg)', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
+            <span
+              style={{
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: 800,
+                fontSize: 16,
+                color: 'var(--fg)',
+                letterSpacing: '-0.01em',
+                lineHeight: 1.2,
+              }}
+            >
               {token.label}
             </span>
-            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, color: 'var(--fg-muted)' }}>
-              {attributionText} · {timeAgo}
+            <span
+              style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: 9,
+                color: 'var(--fg-muted)',
+              }}
+            >
+              {attributionText} · {reportedAt}
             </span>
           </div>
         </div>
 
         {/* Verify options */}
-        <div role="radiogroup" aria-label="Confirmation method" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div
+          role="radiogroup"
+          aria-label="Confirmation method"
+          style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+        >
           {verifyOptions.map((opt) => (
             <VerifyOption
               key={opt.method}
@@ -495,11 +514,18 @@ export const ConfirmReportSheet = ({
           style={{
             background: 'color-mix(in oklab, var(--fg) 3%, transparent)',
             border: '1px solid var(--border)',
-            borderRadius: 8,
-            padding: '10px 14px',
+            borderRadius: 10,
+            padding: '10px 12px',
           }}
         >
-          <span style={{ fontFamily: 'Inter, system-ui', fontSize: 12, color: 'var(--fg-subtle)', lineHeight: 1.5 }}>
+          <span
+            style={{
+              fontFamily: 'Inter, system-ui',
+              fontSize: 12,
+              color: 'var(--fg-subtle)',
+              lineHeight: 1.5,
+            }}
+          >
             {copy.cautionNote}
           </span>
         </div>

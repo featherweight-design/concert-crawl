@@ -79,18 +79,22 @@ export const ReportFooterLink = ({
         </div>
 
         {/* Arrow icon */}
-        <span
-          style={{
-            fontFamily: 'Inter, sans-serif',
-            fontSize: '16px',
-            color: 'var(--fg-muted)',
-            marginLeft: '8px',
-            flexShrink: 0,
-          }}
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="none"
           aria-hidden="true"
+          style={{ marginLeft: '8px', flexShrink: 0, color: 'var(--fg-muted)' }}
         >
-          →
-        </span>
+          <path
+            d="M6 4L10 8L6 12"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       </button>
 
       {/* Bottom note */}
@@ -102,7 +106,6 @@ export const ReportFooterLink = ({
           margin: '10px 0 0',
           lineHeight: 1.5,
           letterSpacing: '0.04em',
-          textTransform: 'uppercase',
         }}
       >
         {copy.bottomNote}

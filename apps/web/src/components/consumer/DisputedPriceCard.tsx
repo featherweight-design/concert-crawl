@@ -2,7 +2,11 @@
 
 import { useState, useCallback } from 'react'
 import { CounterSubmitSheet } from './CounterSubmitSheet'
-import { ArrowGlyph, Eyebrow, PendingTrustPill } from '@/components/consumer/glyphs'
+import {
+  ArrowGlyph,
+  Eyebrow,
+  PendingTrustPill,
+} from '@/components/consumer/glyphs'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
 const copy = CONSUMER_COPY.disputedPriceCard
@@ -150,7 +154,13 @@ export const DisputedPriceCard = ({
                 gap: 4,
               }}
             >
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+              <svg
+                width="9"
+                height="9"
+                viewBox="0 0 10 10"
+                fill="none"
+                aria-hidden="true"
+              >
                 <path
                   d="M1 7.5 C2.5 7.5 2.5 4 4 4 C5.5 4 5.5 6 7 6 L9 2.5"
                   stroke="currentColor"
@@ -244,11 +254,11 @@ export const DisputedPriceCard = ({
           {/* Attribution line */}
           <div
             style={{
-              marginTop: 6,
-              fontFamily: 'var(--font-mono)',
-              fontSize: 9,
+              marginTop: 8,
+              fontFamily: 'Inter, system-ui',
+              fontSize: 12,
               color: 'var(--fg-muted)',
-              letterSpacing: '0.04em',
+              letterSpacing: '-0.005em',
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,

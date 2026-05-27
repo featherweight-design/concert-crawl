@@ -7,6 +7,7 @@ import {
   eventReportConfirms,
   eventReports,
   events,
+  userProfiles,
 } from '@concert-crawl/db'
 import { ER_POLICY } from '@concert-crawl/types'
 import {
@@ -203,12 +204,28 @@ eventReportsRouter.get('/:id/reports', clerkAuth, async (ctx) => {
     }
   }
 
+  // Batch-lookup reporter handles for attribution display
+  const reporterIds = [...new Set(reportRows.map((rpt) => rpt.reporterId))]
+  const handleMap = new Map<string, string>()
+  if (reporterIds.length > 0) {
+    const profiles = await db
+      .select({ userId: userProfiles.userId, handle: userProfiles.handle })
+      .from(userProfiles)
+      .where(inArray(userProfiles.userId, reporterIds))
+    for (const profile of profiles) {
+      if (profile.handle != null) {
+        handleMap.set(profile.userId, profile.handle)
+      }
+    }
+  }
+
   const enrichedReports = reportRows.map((report) => ({
     ...report,
     confirmsCount: confirmCountMap.get(report.id) ?? 0,
     confirmsNeeded,
     isReporter: report.reporterId === userId,
     userHasConfirmed: confirmedByUser.has(report.id),
+    reporterHandle: handleMap.get(report.reporterId) ?? null,
   }))
 
   return ctx.json({ success: true, data: enrichedReports })
@@ -285,7 +302,7 @@ eventReportsRouter.post(
       : ER_POLICY.confirmsRequired
 
     let resolved = false
-    if (confirmsCount >= threshold - 1) {
+    if (confirmsCount >= threshold) {
       await db
         .update(eventReports)
         .set({

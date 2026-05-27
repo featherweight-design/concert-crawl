@@ -17,6 +17,8 @@ const TIER_OPTIONS: { value: string; label: string }[] = [
   { value: 'GA', label: 'GA' },
   { value: 'Reserved', label: 'Reserved' },
   { value: 'VIP', label: 'VIP' },
+  { value: 'Pit', label: 'Pit' },
+  { value: 'Lawn', label: 'Lawn' },
 ]
 
 const VENDOR_OPTIONS: { value: string; label: string }[] = [
@@ -24,7 +26,8 @@ const VENDOR_OPTIONS: { value: string; label: string }[] = [
   { value: 'AXS', label: 'AXS' },
   { value: 'SeatGeek', label: 'SeatGeek' },
   { value: 'DICE', label: 'DICE' },
-  { value: 'VenueBoxOffice', label: 'Venue' },
+  { value: 'Eventbrite', label: 'Eventbrite' },
+  { value: 'VenueBoxOffice', label: 'Venue box office' },
 ]
 
 type SheetState = 'form' | 'submitting' | 'success' | 'error'
@@ -369,6 +372,26 @@ export function CounterSubmitSheet({
             onChange={setVendor}
             error={fieldErrors.vendor}
           />
+
+          {/* Honesty disclaimer */}
+          <div
+            style={{
+              borderRadius: 10,
+              border: '1px solid var(--border)',
+              background: 'color-mix(in oklab, var(--fg) 4%, transparent)',
+              padding: '10px 12px',
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: 9,
+              color: 'var(--fg-subtle)',
+              letterSpacing: '0.04em',
+              lineHeight: 1.6,
+              textTransform: 'uppercase' as const,
+            }}
+          >
+            By submitting you confirm this is accurate to the best of your
+            knowledge. Intentionally false reports may result in account
+            suspension.
+          </div>
         </div>
       )}
     </ModalShell>

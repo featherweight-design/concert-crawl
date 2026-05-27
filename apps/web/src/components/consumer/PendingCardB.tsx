@@ -177,7 +177,7 @@ export const PendingCardB = ({
       </div>
 
       {/* ── Body ── */}
-      <div style={{ padding: '14px 14px 12px' }}>
+      <div style={{ padding: '16px 16px 14px' }}>
         {/* Top row (eyebrow row) */}
         <div
           style={{
@@ -190,6 +190,23 @@ export const PendingCardB = ({
             {isBox ? copy.boxOfficeLabel : copy.ticketsLabel}
           </Eyebrow>
         </div>
+
+        {/* Box-office sub-tier line */}
+        {isBox && (
+          <div
+            style={{
+              marginTop: '4px',
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: '9px',
+              color: tok.color,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase' as const,
+              fontWeight: 700,
+            }}
+          >
+            {vendor}
+          </div>
+        )}
 
         {/* Headline row */}
         <div
@@ -399,7 +416,7 @@ export const PendingCardB = ({
                   letterSpacing: '-0.005em',
                 }}
               >
-                <LockGlyph size={10} />
+                <LockGlyph size={14} />
                 {copy.waitingOnOneFan}
               </span>
             </>

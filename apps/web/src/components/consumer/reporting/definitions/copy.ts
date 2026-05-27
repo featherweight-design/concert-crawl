@@ -88,7 +88,7 @@ export const REPORTING_COPY = {
     imminentWarning: (daysUntil: number) =>
       `This show is in ${daysUntil} days — reports need 3 confirms instead of 2.`,
 
-    submitButton: 'Submit report',
+    submitButton: 'File report — pending confirmation',
   },
 
   // ── ReportTypeMark ───────────────────────────────────────────────
@@ -146,7 +146,7 @@ export const REPORTING_COPY = {
     footerQuestion: 'Tickets still available?',
     confirmButton: 'Confirm sold out',
     yourReportLabel: 'Your report',
-    addEvidenceButton: 'Add evidence',
+    addEvidenceButton: 'Edit',
     withdrawButton: 'Withdraw',
     viewLink: 'View',
   },

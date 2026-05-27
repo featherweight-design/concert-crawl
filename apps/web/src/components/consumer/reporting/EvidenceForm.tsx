@@ -150,7 +150,7 @@ const EvidenceOption = ({
         <span
           style={{
             fontFamily: 'Inter, sans-serif',
-            fontWeight: 600,
+            fontWeight: 700,
             fontSize: '13.5px',
             color: 'var(--fg)',
             lineHeight: 1.3,
@@ -314,7 +314,9 @@ export const EvidenceForm = ({
       footer={
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <button
-            onClick={() => { void handleSubmit() }}
+            onClick={() => {
+              void handleSubmit()
+            }}
             disabled={selectedMethod === null || submitting}
             style={{
               background: tokens.color,
@@ -325,7 +327,10 @@ export const EvidenceForm = ({
               fontSize: 14.5,
               color: 'var(--fg-on-accent)',
               border: 'none',
-              cursor: selectedMethod !== null && !submitting ? 'pointer' : 'not-allowed',
+              cursor:
+                selectedMethod !== null && !submitting
+                  ? 'pointer'
+                  : 'not-allowed',
               opacity: selectedMethod !== null && !submitting ? 1 : 0.45,
               width: '100%',
               transition: 'opacity 0.12s',
@@ -344,36 +349,91 @@ export const EvidenceForm = ({
               margin: 0,
             }}
           >
-            Community reports need 2–3 confirms to take effect.
+            Live after 2 fan confirms · or admin promotion
           </p>
         </div>
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* Report type recap */}
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '6px 12px',
+            borderRadius: 8,
+            background: 'color-mix(in oklab, var(--fg) 5%, transparent)',
+            border: '1px solid var(--border)',
+            fontFamily: 'JetBrains Mono, monospace',
+            fontSize: 10,
+            fontWeight: 700,
+            color: tokens.color,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase' as const,
+          }}
+        >
+          {reportType === 'sold-out'
+            ? 'Sold out'
+            : reportType === 'cancelled'
+              ? 'Cancelled'
+              : 'Postponed'}
+        </div>
+
         {isImminent && (
           <div
             style={{
               background: 'color-mix(in oklab, var(--warning) 8%, transparent)',
-              border: '1px solid color-mix(in oklab, var(--warning) 36%, var(--border))',
+              border:
+                '1px solid color-mix(in oklab, var(--warning) 36%, var(--border))',
               borderRadius: 10,
-              padding: '10px 14px',
+              padding: '10px 12px',
               display: 'flex',
               alignItems: 'flex-start',
               gap: 8,
             }}
           >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ flexShrink: 0, marginTop: 1 }}>
-              <path d="M8 2L14 13H2L8 2z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" fill="none" />
-              <path d="M8 6.5V9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden="true"
+              style={{ flexShrink: 0, marginTop: 1 }}
+            >
+              <path
+                d="M8 2L14 13H2L8 2z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinejoin="round"
+                fill="none"
+              />
+              <path
+                d="M8 6.5V9"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
               <circle cx="8" cy="10.8" r="0.7" fill="currentColor" />
             </svg>
-            <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'var(--fg-muted)', lineHeight: 1.5 }}>
+            <span
+              style={{
+                fontFamily: 'Inter, sans-serif',
+                fontSize: 12,
+                color: 'var(--fg-muted)',
+                lineHeight: 1.5,
+              }}
+            >
               {copy.imminentWarning(daysUntil)}
             </span>
           </div>
         )}
 
-        <div role="radiogroup" aria-label="Evidence method" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div
+          role="radiogroup"
+          aria-label="Evidence method"
+          style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+        >
           {EVIDENCE_OPTIONS.map((opt) => (
             <EvidenceOption
               key={opt.method}
@@ -385,7 +445,14 @@ export const EvidenceForm = ({
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <label style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 12, color: 'var(--fg-muted)' }}>
+          <label
+            style={{
+              fontFamily: 'Inter, sans-serif',
+              fontWeight: 600,
+              fontSize: 12,
+              color: 'var(--fg-muted)',
+            }}
+          >
             {copy.sourceLinkLabel}
           </label>
           <input
@@ -409,11 +476,30 @@ export const EvidenceForm = ({
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 12, color: 'var(--fg-muted)' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <label
+              style={{
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: 600,
+                fontSize: 12,
+                color: 'var(--fg-muted)',
+              }}
+            >
               {copy.notesLabel}
             </label>
-            <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 11, color: 'var(--fg-subtle)' }}>
+            <span
+              style={{
+                fontFamily: 'Inter, sans-serif',
+                fontSize: 11,
+                color: 'var(--fg-subtle)',
+              }}
+            >
               {copy.charCountSuffix(notes.length, NOTES_MAX_CHARS)}
             </span>
           </div>
@@ -444,7 +530,14 @@ export const EvidenceForm = ({
         </div>
 
         {errorMsg && (
-          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'var(--danger)', margin: 0 }}>
+          <p
+            style={{
+              fontFamily: 'Inter, sans-serif',
+              fontSize: 12,
+              color: 'var(--danger)',
+              margin: 0,
+            }}
+          >
             {errorMsg}
           </p>
         )}

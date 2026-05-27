@@ -83,8 +83,7 @@ priceSubmissionConfirmsRouter.post(
       .where(eq(submissionConfirms.submissionId, submissionId))
 
     const confirmsCount = countResult?.total ?? 0
-    // +1 accounts for the submitter's implicit first confirm
-    const promoted = confirmsCount + 1 >= SP_POLICY.confirmsRequired
+    const promoted = confirmsCount >= SP_POLICY.confirmsRequired
 
     await db
       .update(priceSubmissions)
