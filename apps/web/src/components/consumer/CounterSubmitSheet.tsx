@@ -211,7 +211,7 @@ export function CounterSubmitSheet({
 
       {/* Sheet */}
       <div
-        style={{ height: 820 }}
+        style={{ maxHeight: '85vh' }}
         className="fixed bottom-0 left-0 right-0 z-50 flex flex-col rounded-t-[20px] bg-bg overflow-hidden"
       >
         {/* Grabber */}
