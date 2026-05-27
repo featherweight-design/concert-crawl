@@ -34,6 +34,15 @@ interface SubmitPriceModalProps {
   venueName: string
   date: string
   openInEditMode?: boolean
+  onSuccess?: (result: {
+    isEdit: boolean
+    id: string
+    priceMin: string
+    priceMax: string | null
+    tier: string
+    vendor: string
+    howFound: string
+  }) => void
 }
 
 const TIER_OPTIONS = [
@@ -69,6 +78,7 @@ export function SubmitPriceModal({
   venueName,
   date,
   openInEditMode = false,
+  onSuccess,
 }: SubmitPriceModalProps) {
   const router = useRouter()
   const { getToken } = useAuth()
@@ -186,6 +196,15 @@ export function SubmitPriceModal({
           const data = (await res.json()) as { error?: string }
           throw new Error(data.error ?? 'Edit failed')
         }
+        onSuccess?.({
+          isEdit: true,
+          id: existingSubmission.id,
+          priceMin: String(formState.floor),
+          priceMax: formState.ceiling ? String(formState.ceiling) : null,
+          tier: formState.tier!,
+          vendor: formState.vendor!,
+          howFound: formState.howFound!,
+        })
         setModalState('success')
         return
       }
@@ -221,12 +240,31 @@ export function SubmitPriceModal({
         }
         throw new Error(data.error ?? 'Submission failed')
       }
+      if (data.submission) {
+        onSuccess?.({
+          isEdit: false,
+          id: data.submission.id,
+          priceMin: data.submission.priceMin,
+          priceMax: data.submission.priceMax,
+          tier: data.submission.tier,
+          vendor: data.submission.vendor,
+          howFound: data.submission.howFound,
+        })
+      }
       setModalState('success')
     } catch (err) {
       console.error('Price submission failed', err)
       setModalState('error')
     }
-  }, [formState, isEditMode, existingSubmission, getToken, eventId, router])
+  }, [
+    formState,
+    isEditMode,
+    existingSubmission,
+    getToken,
+    eventId,
+    router,
+    onSuccess,
+  ])
 
   const handleWithdraw = useCallback(async () => {
     if (!existingSubmission) return

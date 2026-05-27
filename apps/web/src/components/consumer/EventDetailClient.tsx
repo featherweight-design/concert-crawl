@@ -15,6 +15,7 @@ import { useState, useCallback } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import type { EventReport, EventDetailResponse } from '@concert-crawl/types'
+import { SP_POLICY } from '@concert-crawl/types'
 import { confirmEventReport, withdrawEventReport } from '@/lib/events'
 import { PendingCardB } from '@/components/consumer/PendingCardB'
 import { CorroborationSheet } from '@/components/consumer/CorroborationSheet'
@@ -311,10 +312,13 @@ export function EventDetailPriceBlock({
   >('sold-out')
   // Local confirm counts — incremented optimistically on successful API confirm
   const [localConfirms, setLocalConfirms] = useState<Record<string, number>>({})
-  // Local withdrawn submission IDs — removed optimistically after DELETE
-  const [withdrawnSubmissionIds, setWithdrawnSubmissionIds] = useState<
-    Set<string>
-  >(new Set())
+  // Local copy of pending submissions — mutated optimistically without a page refresh
+  type PendingSubItem = NonNullable<
+    EventDetailResponse['pendingSubmissions']
+  >[number]
+  const [localSubmissions, setLocalSubmissions] = useState<PendingSubItem[]>(
+    event.pendingSubmissions ?? [],
+  )
 
   const pendingSoldOutReport = findPendingReport(reports, 'sold-out')
   const pendingCancelledReport = findPendingReport(reports, 'cancelled')
@@ -642,11 +646,20 @@ export function EventDetailPriceBlock({
 
   // ── 4a. Pending submissions from API — no corroborated price yet ─
   if (event.pendingSubmissions != null && event.pendingSubmissions.length > 0) {
-    const subs = event.pendingSubmissions
-    const visibleSubs = subs.filter(
-      (sub) => !withdrawnSubmissionIds.has(sub.id),
-    )
-    if (visibleSubs.length === 0) return null
+    // Use localSubmissions as the source of truth — it starts from server data
+    // and is updated optimistically on submit, edit, and withdraw.
+    if (localSubmissions.length === 0) {
+      return (
+        <SubmitPriceCardCta
+          eventId={event.id}
+          artist={event.artist}
+          venueName={event.venue.name}
+          date={event.date}
+        />
+      )
+    }
+
+    const visibleSubs = localSubmissions
 
     // If any submission has already met the confirm threshold (displayConfirms >= needed),
     // treat it as effectively corroborated and render via PriceDisplay + submit CTA.
@@ -733,7 +746,9 @@ export function EventDetailPriceBlock({
                 },
               )
               if (res.ok) {
-                setWithdrawnSubmissionIds((prev) => new Set([...prev, sub.id]))
+                setLocalSubmissions((prev) =>
+                  prev.filter((item) => item.id !== sub.id),
+                )
               } else {
                 console.error('Withdraw failed', res.status)
               }
@@ -836,6 +851,50 @@ export function EventDetailPriceBlock({
           artist={event.artist}
           venueName={event.venue.name}
           date={event.date}
+          onSuccess={(result) => {
+            if (result.isEdit) {
+              setLocalSubmissions((prev) =>
+                prev.map((sub) =>
+                  sub.id === result.id
+                    ? {
+                        ...sub,
+                        priceMin: result.priceMin,
+                        priceMax: result.priceMax,
+                        tier: result.tier,
+                        vendor: result.vendor,
+                        howFound: result.howFound,
+                      }
+                    : sub,
+                ),
+              )
+            } else {
+              const diffDays = Math.floor(
+                (new Date(event.date).getTime() - Date.now()) /
+                  (1000 * 60 * 60 * 24),
+              )
+              const isImminent =
+                diffDays >= 0 && diffDays <= SP_POLICY.imminentThresholdDays
+              setLocalSubmissions((prev) => [
+                ...prev,
+                {
+                  id: result.id,
+                  priceMin: result.priceMin,
+                  priceMax: result.priceMax,
+                  tier: result.tier,
+                  vendor: result.vendor,
+                  howFound: result.howFound,
+                  note: null,
+                  submitterHandle: null,
+                  submittedAt: new Date().toISOString(),
+                  confirmsCount: 0,
+                  confirmsNeeded: isImminent
+                    ? SP_POLICY.confirmsRequiredImminent
+                    : SP_POLICY.confirmsRequired,
+                  isSubmitter: true,
+                },
+              ])
+            }
+          }}
         />
       </>
     )
