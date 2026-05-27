@@ -951,6 +951,8 @@ export function EventDetailFooter({
     pendingCancelled !== null && event.status !== 'cancelled'
   const hasPendingPostponement =
     pendingPostponed !== null && event.status !== 'postponed'
+  const hasPendingSoldOut =
+    pendingSoldOut !== null && event.priceStatus !== 'soldout'
 
   // The liveStatus passed to the ReportSheet controls which options are shown.
   // For pending-but-not-promoted states, pass the pending type so the counter-report
@@ -962,17 +964,22 @@ export function EventDetailFooter({
         ? 'postponed'
         : footerLiveStatus
 
+  // The "CURRENTLY LIVE" chip in ReportSheet shows pending state when the report
+  // is pending (not yet promoted by admin).
+  const reportSheetIsPending =
+    hasPendingCancellation || hasPendingPostponement || hasPendingSoldOut
+
   return (
     <>
       <ReportFooterLink
         liveStatus={footerLiveStatus}
         onOpen={() => setIsReportSheetOpen(true)}
-        pendingCancellation={hasPendingCancellation}
       />
       <ReportSheet
         open={isReportSheetOpen}
         onClose={() => setIsReportSheetOpen(false)}
         liveStatus={reportSheetLiveStatus}
+        isPending={reportSheetIsPending}
         eventDate={event.date}
         onSelect={(reportType) => {
           setIsReportSheetOpen(false)

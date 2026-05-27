@@ -4,20 +4,25 @@ import { REPORTING_COPY } from './definitions/copy'
 
 const copy = REPORTING_COPY.reportFooterLink
 
+const STATUS_LABELS: Record<'sold-out' | 'cancelled' | 'postponed', string> = {
+  'sold-out': 'sold out',
+  cancelled: 'cancelled',
+  postponed: 'postponed',
+}
+
 export interface ReportFooterLinkProps {
   liveStatus: null | 'sold-out' | 'cancelled' | 'postponed'
   onOpen: () => void
-  pendingCancellation?: boolean
 }
 
 export const ReportFooterLink = ({
-  liveStatus: _liveStatus,
+  liveStatus,
   onOpen,
-  pendingCancellation = false,
 }: ReportFooterLinkProps) => {
-  const title = pendingCancellation ? copy.titlePendingCancellation : copy.title
-  const subtitle = pendingCancellation
-    ? copy.subtitlePendingCancellation
+  const hasStatus = liveStatus !== null
+  const title = hasStatus ? copy.titleHasStatus : copy.title
+  const subtitle = hasStatus
+    ? copy.subtitleHasStatus(STATUS_LABELS[liveStatus])
     : copy.subtitle
 
   return (

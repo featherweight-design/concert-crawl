@@ -245,6 +245,7 @@ export interface ReportSheetProps {
   open: boolean
   onClose: () => void
   liveStatus: null | 'sold-out' | 'cancelled' | 'postponed'
+  isPending?: boolean
   eventDate: string
   onSelect: (reportType: ReportType) => void
 }
@@ -265,6 +266,7 @@ export const ReportSheet = ({
   open,
   onClose,
   liveStatus,
+  isPending = false,
   eventDate: _eventDate,
   onSelect,
 }: ReportSheetProps) => {
@@ -397,7 +399,7 @@ export const ReportSheet = ({
             >
               {copy.currentlyLive}
             </span>
-            <ReportTypeMark kind={liveStatus} />
+            <ReportTypeMark kind={liveStatus} pending={isPending} />
           </div>
         )}
         <div

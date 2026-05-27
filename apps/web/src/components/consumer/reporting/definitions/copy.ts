@@ -3,10 +3,10 @@ export const REPORTING_COPY = {
   reportFooterLink: {
     eyebrow: 'Spot something off?',
     title: 'Report a status change',
-    titlePendingCancellation: 'Tickets still available?',
-    subtitle: 'Sold out, cancelled, postponed — or back on.',
-    subtitlePendingCancellation:
-      'A fan reported this show as cancelled — file a counter-report if you know otherwise.',
+    titleHasStatus: 'Tickets still available?',
+    subtitle: 'Is the show sold out, cancelled, or postponed? Let fans know!',
+    subtitleHasStatus: (statusLabel: string) =>
+      `A fan reported this show as ${statusLabel} — if there's new information, let the people know!`,
     bottomNote:
       'Reports are reviewed by the community. Good-faith reports help everyone.',
   },
