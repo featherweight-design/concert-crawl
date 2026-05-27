@@ -1,4 +1,6 @@
 if docker exec concert-crawl-db pg_isready -q 2>/dev/null; then
+  echo "Building packages for integration tests..."
+  pnpm turbo build --filter=@concert-crawl/db --filter=@concert-crawl/types --filter=@concert-crawl/price-pipeline --no-daemon 2>/dev/null
   echo "Running integration tests before push..."
   pnpm --filter @concert-crawl/api test:integration
 else
