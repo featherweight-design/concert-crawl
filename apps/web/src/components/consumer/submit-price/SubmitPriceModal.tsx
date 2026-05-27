@@ -33,6 +33,7 @@ interface SubmitPriceModalProps {
   artist: string
   venueName: string
   date: string
+  openInEditMode?: boolean
 }
 
 const TIER_OPTIONS = [
@@ -67,11 +68,13 @@ export function SubmitPriceModal({
   artist,
   venueName,
   date,
+  openInEditMode = false,
 }: SubmitPriceModalProps) {
   const router = useRouter()
   const { getToken } = useAuth()
 
   const [modalState, setModalState] = useState<ModalState>('loading-check')
+  const [isEditMode, setIsEditMode] = useState(false)
   const [formState, setFormState] = useState<SubmissionInput>({
     floor: '',
     ceiling: '',
@@ -94,6 +97,7 @@ export function SubmitPriceModal({
   useEffect(() => {
     if (!open) return
     setModalState('loading-check')
+    setIsEditMode(false)
     setFieldErrors({})
     setFieldWarnings({})
 
@@ -118,7 +122,20 @@ export function SubmitPriceModal({
           }
           if (body.data.alreadySubmitted && body.data.userSubmission) {
             setExistingSubmission(body.data.userSubmission)
-            setModalState('alreadySubmitted')
+            if (openInEditMode) {
+              // Skip the "Already in." screen — go straight to the edit form
+              setFormState({
+                floor: body.data.userSubmission.priceMin,
+                ceiling: body.data.userSubmission.priceMax ?? '',
+                tier: body.data.userSubmission.tier,
+                vendor: body.data.userSubmission.vendor,
+                howFound: body.data.userSubmission.howFound,
+              })
+              setIsEditMode(true)
+              setModalState('form')
+            } else {
+              setModalState('alreadySubmitted')
+            }
             return
           }
         }
@@ -128,7 +145,7 @@ export function SubmitPriceModal({
       setModalState('form')
     }
     void checkExisting()
-  }, [open, eventId, getToken])
+  }, [open, eventId, getToken, openInEditMode])
 
   const handleSubmit = useCallback(async () => {
     const validation = validateSubmission(formState)
@@ -143,6 +160,37 @@ export function SubmitPriceModal({
         setModalState('error')
         return
       }
+
+      // Edit mode → PATCH the existing submission instead of POST a new one
+      if (isEditMode && existingSubmission) {
+        const res = await fetch(
+          `${API_URL}/v1/submissions/${existingSubmission.id}`,
+          {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              floor: Number(formState.floor),
+              ...(formState.ceiling
+                ? { ceiling: Number(formState.ceiling) }
+                : {}),
+              tier: formState.tier as Tier,
+              vendor: formState.vendor as Vendor,
+              howFound: formState.howFound as HowFound,
+            }),
+          },
+        )
+        if (!res.ok) {
+          const data = (await res.json()) as { error?: string }
+          throw new Error(data.error ?? 'Edit failed')
+        }
+        router.refresh()
+        setModalState('success')
+        return
+      }
+
       const res = await fetch(
         `${API_URL}/v1/events/${eventId}/price-submissions`,
         {
@@ -170,17 +218,17 @@ export function SubmitPriceModal({
             setExistingSubmission(data.submission)
           }
           setModalState('alreadySubmitted')
-          router.refresh()
           return
         }
         throw new Error(data.error ?? 'Submission failed')
       }
+      router.refresh()
       setModalState('success')
     } catch (err) {
       console.error('Price submission failed', err)
       setModalState('error')
     }
-  }, [formState, getToken, eventId, router])
+  }, [formState, isEditMode, existingSubmission, getToken, eventId, router])
 
   const handleWithdraw = useCallback(async () => {
     if (!existingSubmission) return
@@ -308,6 +356,7 @@ export function SubmitPriceModal({
             }
             setFieldErrors({})
             setFieldWarnings({})
+            setIsEditMode(true)
             setModalState('form')
           }}
           onWithdraw={handleWithdraw}

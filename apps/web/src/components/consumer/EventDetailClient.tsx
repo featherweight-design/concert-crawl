@@ -302,6 +302,7 @@ export function EventDetailPriceBlock({
     string | null
   >(null)
   const [submitPriceOpen, setSubmitPriceOpen] = useState(false)
+  const [submitPriceEditMode, setSubmitPriceEditMode] = useState(false)
   const [legacyCorroborationOpen, setLegacyCorroborationOpen] = useState(false)
   const [soldOutSawDifferentOpen, setSoldOutSawDifferentOpen] = useState(false)
   const [soldOutEvidenceFormOpen, setSoldOutEvidenceFormOpen] = useState(false)
@@ -712,9 +713,31 @@ export function EventDetailPriceBlock({
         note: sub.note,
         onConfirm: () => setActiveCorroborationId(sub.id),
         onWithdraw: () => {
-          /* withdraw flow — future */
+          void (async () => {
+            const token = await getToken()
+            if (!token) return
+            try {
+              const res = await fetch(
+                `${process.env['NEXT_PUBLIC_API_URL']}/v1/submissions/${sub.id}`,
+                {
+                  method: 'DELETE',
+                  headers: { Authorization: `Bearer ${token}` },
+                },
+              )
+              if (res.ok) {
+                router.refresh()
+              } else {
+                console.error('Withdraw failed', res.status)
+              }
+            } catch (err) {
+              console.error('Withdraw failed', err)
+            }
+          })()
         },
-        onEdit: () => setSubmitPriceOpen(true),
+        onEdit: () => {
+          setSubmitPriceEditMode(true)
+          setSubmitPriceOpen(true)
+        },
       }
       return { id: sub.id, props }
     })
@@ -796,7 +819,11 @@ export function EventDetailPriceBlock({
 
         <SubmitPriceModal
           open={submitPriceOpen}
-          onClose={() => setSubmitPriceOpen(false)}
+          onClose={() => {
+            setSubmitPriceOpen(false)
+            setSubmitPriceEditMode(false)
+          }}
+          openInEditMode={submitPriceEditMode}
           eventId={event.id}
           artist={event.artist}
           venueName={event.venue.name}
