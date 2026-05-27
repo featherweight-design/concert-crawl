@@ -1,3 +1,25 @@
+# [1.43.0](https://github.com/HartiganHM/concert-crawl/compare/v1.42.0...v1.43.0) (2026-05-27)
+
+
+### Bug Fixes
+
+* **api:** add auth header to userHasConfirmed GET test, far-future date ([1748041](https://github.com/HartiganHM/concert-crawl/commit/1748041bed141a89b085c7679cb2b8304c6ed459))
+* **api:** address Copilot review — 12 issues on Phase 8.5 routes ([21525b5](https://github.com/HartiganHM/concert-crawl/commit/21525b5342f54fb7df26147a4f987b78041c4503))
+* **api:** integration test auth headers, fileParallelism, userHasConfirmed ([ee8856c](https://github.com/HartiganHM/concert-crawl/commit/ee8856c0c082824a682b2bbf4eabaab06f17143e))
+* **api:** replace correlated subqueries with batch queries in GET reports ([011d0fa](https://github.com/HartiganHM/concert-crawl/commit/011d0fa30ae6842ed537317390c2a7642b0fbc2e))
+* **api:** use named Filter import from bad-words ESM; mark all tasks complete ([2c83845](https://github.com/HartiganHM/concert-crawl/commit/2c8384513f8547e89c57d695a1dfdd4571887d3a))
+* **db:** register migration 0029 in Drizzle journal ([c5931b3](https://github.com/HartiganHM/concert-crawl/commit/c5931b3069a0c8fd242443b3f3ae533dd05381d2))
+* **lint:** remove unused and import from price-submission-confirms ([f8743c6](https://github.com/HartiganHM/concert-crawl/commit/f8743c65cf3f5d0cf750d626b4ad34615edbe004))
+
+
+### Features
+
+* **api:** event reports endpoints — POST, GET, confirm, withdraw, admin resolve ([#565](https://github.com/HartiganHM/concert-crawl/issues/565)) ([7e6b4b8](https://github.com/HartiganHM/concert-crawl/commit/7e6b4b839028dd70c693fa9e09c2c574078a33fe))
+* **api:** note field + content moderation on price submissions ([#564](https://github.com/HartiganHM/concert-crawl/issues/564)) ([0131c0c](https://github.com/HartiganHM/concert-crawl/commit/0131c0ce8fac155ecd1df64a5ea829f0d5cb913e))
+* **api:** POST corroboration confirm endpoint ([#564](https://github.com/HartiganHM/concert-crawl/issues/564)) ([d11fb03](https://github.com/HartiganHM/concert-crawl/commit/d11fb034d2a9297a89f70151d3d9af59d08045be))
+* **db:** Phase 8.5 migration — corroboration method, notes, event reports ([#563](https://github.com/HartiganHM/concert-crawl/issues/563)) ([11c6262](https://github.com/HartiganHM/concert-crawl/commit/11c626202c61e010bdfd16f9b29a7b2a4abddd28))
+* **types:** add ER_POLICY constants ([#563](https://github.com/HartiganHM/concert-crawl/issues/563)) ([90bcf1f](https://github.com/HartiganHM/concert-crawl/commit/90bcf1f6468bf4d4b6ca3a4bdfb097a534b66556))
+
 # [1.42.0](https://github.com/HartiganHM/concert-crawl/compare/v1.41.0...v1.42.0) (2026-05-26)
 
 
