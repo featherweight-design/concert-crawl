@@ -1,3 +1,17 @@
+# [1.44.0](https://github.com/HartiganHM/concert-crawl/compare/v1.43.1...v1.44.0) (2026-05-27)
+
+
+### Bug Fixes
+
+* address Copilot review on needs-price-pagination ([ebb3bb4](https://github.com/HartiganHM/concert-crawl/commit/ebb3bb497a54e8488cf3e8752798f6c7823cb7c7))
+* **hooks:** probe concert_crawl_test DB, fail loudly on build error ([7820304](https://github.com/HartiganHM/concert-crawl/commit/7820304509d77bc2237ff48f1abf556181f81bd0))
+
+
+### Features
+
+* **api:** add missingOnly filter + limit/offset pagination to /admin/prices/events ([2725313](https://github.com/HartiganHM/concert-crawl/commit/2725313d08e11b5ec478c44ea082f1875b716449))
+* **web:** server-driven filter + pagination for Needs Price table ([0b6a361](https://github.com/HartiganHM/concert-crawl/commit/0b6a361e8cc0e1b6d3a1844cce75f702b113ca01))
+
 ## [1.43.1](https://github.com/HartiganHM/concert-crawl/compare/v1.43.0...v1.43.1) (2026-05-27)
 
 
