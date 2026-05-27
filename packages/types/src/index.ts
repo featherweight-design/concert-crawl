@@ -340,6 +340,12 @@ export interface EventDetailResponse extends EventWithVenue {
     submitter: { handle: string } | null
     submittedAt: string
   } | null
+  // Promoted sold-out report — present when a community sold-out report was confirmed
+  soldOutReport?: {
+    reporterHandle: string | null
+    confirmsCount: number
+    reportedAt: string
+  } | null
   // All pending submissions when no corroborated price exists yet
   pendingSubmissions?: Array<{
     id: string

@@ -29,12 +29,37 @@ export interface PendingSoldOutCardProps {
   needed: number
   view: 'other' | 'reporter' // NO self-locked for sold-out per design
   userHasConfirmed?: boolean
+  evidenceMethod?: string | null
+  evidenceUrl?: string | null
+  note?: string | null
   onConfirm: () => void
   onWithdraw: () => void
   onEdit: () => void
 }
 
 // ── Component ─────────────────────────────────────────────────────
+
+const evidenceLabel = (
+  method: string | null | undefined,
+  vendor: string,
+  note: string | null | undefined,
+): string => {
+  let base: string
+  switch (method) {
+    case 'saw_listing':
+      base = `${vendor} listing`
+      break
+    case 'venue_site':
+      base = 'Venue website'
+      break
+    case 'bought_myself':
+      base = 'Bought personally'
+      break
+    default:
+      base = 'Community evidence'
+  }
+  return note ? `${base} · '${note}'` : base
+}
 
 export const PendingSoldOutCard = ({
   floor,
@@ -46,6 +71,9 @@ export const PendingSoldOutCard = ({
   needed,
   view,
   userHasConfirmed = false,
+  evidenceMethod,
+  evidenceUrl,
+  note,
   onConfirm,
   onWithdraw,
   onEdit,
@@ -161,18 +189,57 @@ export const PendingSoldOutCard = ({
           </span>
         </div>
 
-        {/* Vendor */}
-        <div
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 10,
-            color: 'var(--fg-muted)',
-            letterSpacing: '0.04em',
-            marginTop: 4,
-          }}
-        >
-          {vendor}
-        </div>
+        {/* Evidence row */}
+        {(evidenceMethod || evidenceUrl) && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 8,
+              marginTop: 10,
+              padding: '7px 10px',
+              background: 'color-mix(in oklab, var(--fg) 4%, transparent)',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+            }}
+          >
+            <span
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 10,
+                color: 'var(--fg-muted)',
+                letterSpacing: '0.04em',
+                flex: 1,
+                minWidth: 0,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {evidenceLabel(evidenceMethod, vendor, note)}
+            </span>
+            {evidenceUrl && (
+              <a
+                href={evidenceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 9,
+                  fontWeight: 700,
+                  color: 'var(--fg-subtle)',
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  textDecoration: 'none',
+                  flexShrink: 0,
+                }}
+              >
+                {copy.viewLink}
+              </a>
+            )}
+          </div>
+        )}
 
         {/* Reporter attribution */}
         <div

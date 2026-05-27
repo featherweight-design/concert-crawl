@@ -268,9 +268,13 @@ export function EventDetailPriceBlock({
 }: EventDetailSharedProps) {
   const { getToken } = useAuth()
   const router = useRouter()
-  const [activeCorroborationId, setActiveCorroborationId] = useState<string | null>(null)
+  const [activeCorroborationId, setActiveCorroborationId] = useState<
+    string | null
+  >(null)
   const [submitPriceOpen, setSubmitPriceOpen] = useState(false)
   const [legacyCorroborationOpen, setLegacyCorroborationOpen] = useState(false)
+  // Local confirm counts — incremented optimistically on successful API confirm
+  const [localConfirms, setLocalConfirms] = useState<Record<string, number>>({})
 
   const pendingSoldOutReport = findPendingReport(reports, 'sold-out')
   const pendingCancelledReport = findPendingReport(reports, 'cancelled')
@@ -310,6 +314,132 @@ export function EventDetailPriceBlock({
     [event.id, getToken, router],
   )
 
+  // ── 0. Promoted sold-out (confirmed by community) ──────────────
+  if (event.priceStatus === 'soldout' && event.soldOutReport != null) {
+    const soldOut = event.soldOutReport
+    const timeAgo = (() => {
+      const diffMs = Date.now() - new Date(soldOut.reportedAt).getTime()
+      const diffMins = Math.floor(diffMs / 60000)
+      if (diffMins < 60) return `${diffMins}m ago`
+      const diffHours = Math.floor(diffMins / 60)
+      if (diffHours < 24) return `${diffHours}h ago`
+      return `${Math.floor(diffHours / 24)}d ago`
+    })()
+    const AMBER = 'oklch(0.73 0.13 78)'
+    return (
+      <div
+        style={{
+          borderRadius: 12,
+          background: 'var(--surface-1)',
+          border: '1px solid var(--border)',
+          overflow: 'hidden',
+        }}
+      >
+        <div style={{ padding: '14px 14px 0' }}>
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 9,
+              fontWeight: 700,
+              color: 'var(--fg-subtle)',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+            }}
+          >
+            Tickets
+          </span>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              marginTop: 6,
+              flexWrap: 'wrap',
+            }}
+          >
+            <span
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontWeight: 800,
+                fontSize: 28,
+                color: 'var(--fg-subtle)',
+                textDecoration: 'line-through',
+                letterSpacing: '-0.025em',
+                lineHeight: 1.05,
+              }}
+            >
+              {priceMax != null
+                ? `$${priceMin}–$${priceMax}`
+                : priceMin != null
+                  ? `$${priceMin}`
+                  : '—'}
+            </span>
+            <span
+              style={{
+                background: AMBER,
+                borderRadius: 6,
+                padding: '3px 9px',
+                fontFamily: 'var(--font-mono)',
+                fontSize: 10,
+                fontWeight: 700,
+                color: 'var(--fg-on-accent)',
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+              }}
+            >
+              Sold out
+            </span>
+          </div>
+          <div
+            style={{
+              marginTop: 8,
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              color: 'var(--fg-muted)',
+              letterSpacing: '0.04em',
+            }}
+          >
+            {soldOut.reporterHandle
+              ? `Reported sold out by @${soldOut.reporterHandle} · ${soldOut.confirmsCount} fan${soldOut.confirmsCount !== 1 ? 's' : ''} confirmed`
+              : `Reported sold out · ${soldOut.confirmsCount} fan${soldOut.confirmsCount !== 1 ? 's' : ''} confirmed`}
+          </div>
+        </div>
+        <div
+          style={{
+            margin: '12px 14px 0',
+            borderTop: '1px solid var(--border)',
+            padding: '10px 0 12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <span
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: AMBER,
+              flexShrink: 0,
+              display: 'inline-block',
+            }}
+          />
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 9,
+              color: `color-mix(in oklab, ${AMBER} 80%, var(--fg-subtle))`,
+              letterSpacing: '0.04em',
+            }}
+          >
+            {`as of ${timeAgo} — could be stale`}
+            {soldOut.reporterHandle && ` · @${soldOut.reporterHandle}`}
+          </span>
+        </div>
+      </div>
+    )
+  }
+
   // ── 1. Pending sold-out report ──────────────────────────────────
   if (pendingSoldOutReport !== null) {
     const soldOutView = pendingSoldOutReport.isReporter ? 'reporter' : 'other'
@@ -326,6 +456,9 @@ export function EventDetailPriceBlock({
         confirms={pendingSoldOutReport.confirmsCount + 1}
         needed={pendingSoldOutReport.confirmsNeeded}
         view={soldOutView}
+        evidenceMethod={pendingSoldOutReport.evidenceMethod}
+        evidenceUrl={pendingSoldOutReport.evidenceUrl}
+        note={pendingSoldOutReport.note}
         onConfirm={() => handleConfirmReport(pendingSoldOutReport.id)}
         onWithdraw={() => handleWithdrawReport(pendingSoldOutReport.id)}
         onEdit={() => {
@@ -367,7 +500,9 @@ export function EventDetailPriceBlock({
         confirmsCount={event.priceConfirmsCount ?? 0}
         disputer={counter.submitter}
         disputeFloor={counter.floor}
-        {...(counter.ceiling !== undefined ? { disputeCeiling: counter.ceiling } : {})}
+        {...(counter.ceiling !== undefined
+          ? { disputeCeiling: counter.ceiling }
+          : {})}
         disputedAt={counter.submittedAt}
         eventId={event.id}
         disputedSubmissionId={counter.id}
@@ -419,25 +554,71 @@ export function EventDetailPriceBlock({
   // ── 4a. Pending submissions from API — no corroborated price yet ─
   if (event.pendingSubmissions != null && event.pendingSubmissions.length > 0) {
     const subs = event.pendingSubmissions
-    const activeCorroboration = activeCorroborationId !== null
-      ? subs.find((sub) => sub.id === activeCorroborationId) ?? null
-      : null
+
+    // If any submission has already met the confirm threshold (displayConfirms >= needed),
+    // treat it as effectively corroborated and render via PriceDisplay + submit CTA.
+    // localConfirms tracks confirms added in this session without a page refresh.
+    const confirmedSub = subs.find(
+      (sub) =>
+        sub.confirmsCount + 1 + (localConfirms[sub.id] ?? 0) >=
+        sub.confirmsNeeded,
+    )
+    if (confirmedSub != null) {
+      const approvalKind =
+        confirmedSub.vendor === 'VenueBoxOffice' ? 'admin' : 'fan'
+      return (
+        <>
+          <PriceDisplay
+            priceMin={confirmedSub.priceMin}
+            priceMax={confirmedSub.priceMax}
+            priceSource="community"
+            venueName={event.venue.name}
+            ticketUrl={event.ticketUrl}
+            eventId={event.id}
+            artist={event.artist}
+            date={event.date}
+            priceStatus="live"
+            priceVendor={confirmedSub.vendor}
+            priceSubmitterHandle={confirmedSub.submitterHandle}
+            priceObservedAt={confirmedSub.submittedAt}
+            priceApprovalKind={approvalKind}
+            priceApprovedAt={confirmedSub.submittedAt}
+            priceAlternates={null}
+          />
+          <div className="mt-3">
+            <SubmitPriceCardCta
+              eventId={event.id}
+              artist={event.artist}
+              venueName={event.venue.name}
+              date={event.date}
+            />
+          </div>
+        </>
+      )
+    }
+
+    const activeCorroboration =
+      activeCorroborationId !== null
+        ? (subs.find((sub) => sub.id === activeCorroborationId) ?? null)
+        : null
 
     return (
       <>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {subs.map((sub) => {
-            const displayConfirms = sub.confirmsCount + 1
+            const displayConfirms =
+              sub.confirmsCount + 1 + (localConfirms[sub.id] ?? 0)
             const isBoxOffice = sub.vendor === 'VenueBoxOffice'
-            const viewKind: 'other' | 'submitter' | 'self-locked' = sub.isSubmitter
-              ? 'submitter'
-              : 'other'
+            const viewKind: 'other' | 'submitter' | 'self-locked' =
+              sub.isSubmitter ? 'submitter' : 'other'
 
             return (
               <PendingCardB
                 key={sub.id}
                 floor={parseFloat(sub.priceMin)}
-                {...(sub.priceMax !== null ? { ceiling: parseFloat(sub.priceMax) } : {})}
+                {...(sub.priceMax !== null
+                  ? { ceiling: parseFloat(sub.priceMax) }
+                  : {})}
                 tier={sub.tier}
                 vendor={sub.vendor}
                 kind={isBoxOffice ? 'boxoffice' : 'community'}
@@ -470,7 +651,10 @@ export function EventDetailPriceBlock({
                 : {}),
               tier: activeCorroboration.tier,
               vendor: activeCorroboration.vendor,
-              kind: activeCorroboration.vendor === 'VenueBoxOffice' ? 'boxoffice' : 'community',
+              kind:
+                activeCorroboration.vendor === 'VenueBoxOffice'
+                  ? 'boxoffice'
+                  : 'community',
               submitter: activeCorroboration.submitterHandle
                 ? { handle: activeCorroboration.submitterHandle, url: '' }
                 : null,
@@ -482,9 +666,37 @@ export function EventDetailPriceBlock({
             }}
             open={activeCorroborationId !== null}
             onClose={() => setActiveCorroborationId(null)}
-            onConfirm={(_method) => {
+            onConfirm={(method) => {
+              const confirmedId = activeCorroboration.id
               setActiveCorroborationId(null)
-              router.refresh()
+              void (async () => {
+                const token = await getToken()
+                if (!token) return
+                try {
+                  const res = await fetch(
+                    `${process.env['NEXT_PUBLIC_API_URL']}/v1/events/${event.id}/price-submissions/${confirmedId}/confirm`,
+                    {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                      },
+                      body: JSON.stringify({ method }),
+                    },
+                  )
+                  if (res.ok) {
+                    setLocalConfirms((prev) => ({
+                      ...prev,
+                      [confirmedId]: (prev[confirmedId] ?? 0) + 1,
+                    }))
+                  }
+                } catch (err) {
+                  console.error(
+                    'EventDetailPriceBlock: price confirm failed',
+                    err,
+                  )
+                }
+              })()
             }}
             onSubmitUpdate={() => {
               setActiveCorroborationId(null)

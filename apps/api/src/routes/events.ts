@@ -10,6 +10,8 @@ import {
   userProfiles,
   priceSubmissions,
   submissionConfirms,
+  eventReports,
+  eventReportConfirms,
 } from '@concert-crawl/db'
 import {
   type SQL,
@@ -304,13 +306,53 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     isWatching = Boolean(watchRow)
   }
 
-  // Derive priceStatus from user_events sold-out submissions.
-  // A show is considered sold out when any corroborated community submission
-  // carries tier === 'soldout'. This is a lightweight heuristic until a
-  // dedicated sold_out flag lands on the events table.
-  // For now we surface null — the field exists on the type so the web layer
-  // can consume it without a breaking change once real data arrives.
-  const priceStatus: 'live' | 'soldout' | null = null
+  // Detect a promoted sold-out report — drives the confirmed sold-out UI.
+  const [soldOutReportRow] = await db
+    .select({
+      id: eventReports.id,
+      reporterId: eventReports.reporterId,
+      createdAt: eventReports.createdAt,
+    })
+    .from(eventReports)
+    .where(
+      and(
+        eq(eventReports.eventId, id),
+        eq(eventReports.status, 'sold-out'),
+        eq(eventReports.resolution, 'promoted'),
+      ),
+    )
+    .orderBy(desc(eventReports.createdAt))
+    .limit(1)
+
+  let priceStatus: 'live' | 'soldout' | null = null
+  let soldOutReport: {
+    reporterHandle: string | null
+    confirmsCount: number
+    reportedAt: string
+  } | null = null
+
+  if (soldOutReportRow) {
+    priceStatus = 'soldout'
+
+    const [confirmCountRow] = await db
+      .select({ total: count() })
+      .from(eventReportConfirms)
+      .where(eq(eventReportConfirms.reportId, soldOutReportRow.id))
+
+    const confirmsCount = confirmCountRow?.total ?? 0
+
+    const [reporterProfile] = await db
+      .select({ handle: userProfiles.handle })
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, soldOutReportRow.reporterId))
+      .limit(1)
+
+    soldOutReport = {
+      reporterHandle: reporterProfile?.handle ?? null,
+      confirmsCount: confirmsCount + 1,
+      reportedAt: soldOutReportRow.createdAt.toISOString(),
+    }
+  }
 
   // For community-priced events, surface the vendor and submitter handle so the
   // price card can show the correct trust tier (box office vs. community) and
@@ -408,7 +450,9 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         counterSubmission = {
           id: counterRow.id,
           floor: parseFloat(counterRow.priceMin),
-          ...(counterRow.priceMax !== null ? { ceiling: parseFloat(counterRow.priceMax) } : {}),
+          ...(counterRow.priceMax !== null
+            ? { ceiling: parseFloat(counterRow.priceMax) }
+            : {}),
           submitter: counterHandle !== null ? { handle: counterHandle } : null,
           submittedAt: counterRow.createdAt.toISOString(),
         }
@@ -523,7 +567,9 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         vendor: sub.vendor ?? 'Unknown',
         howFound: sub.howFound,
         note: sub.note ?? null,
-        submitterHandle: sub.userId ? (handleMap.get(sub.userId) ?? null) : null,
+        submitterHandle: sub.userId
+          ? (handleMap.get(sub.userId) ?? null)
+          : null,
         submittedAt: sub.createdAt.toISOString(),
         confirmsCount: confirmCountMap.get(sub.id) ?? 0,
         confirmsNeeded,
@@ -548,6 +594,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       priceConfirmsCount,
       counterSubmission,
       pendingSubmissions,
+      soldOutReport,
     },
   })
 })

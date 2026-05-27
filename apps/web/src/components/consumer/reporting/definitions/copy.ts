@@ -11,8 +11,18 @@ export const REPORTING_COPY = {
   // ── ReportSheet ──────────────────────────────────────────────────
   reportSheet: {
     eyebrow: 'Report',
+    eyebrowContext: 'Status report',
     cancelButton: 'Cancel',
     heading: 'What happened?',
+    headingContext: 'What changed?',
+    subtitleByStatus: {
+      'sold-out':
+        "This show is currently marked as sold out. Tell us what you saw — we'll route it to other fans to confirm.",
+      cancelled:
+        "This show is currently marked as cancelled. Tell us what you saw — we'll route it to other fans to confirm.",
+      postponed:
+        "This show is currently marked as postponed. Tell us what you saw — we'll route it to other fans to confirm.",
+    } as Record<string, string>,
     currentlyShowingAs: 'Currently showing as:',
 
     options: {
@@ -135,6 +145,7 @@ export const REPORTING_COPY = {
     yourReportLabel: 'Your report',
     addEvidenceButton: 'Add evidence',
     withdrawButton: 'Withdraw',
+    viewLink: 'View',
   },
 
   // ── PendingReportBanner ──────────────────────────────────────────

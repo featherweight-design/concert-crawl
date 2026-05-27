@@ -271,7 +271,8 @@ export const ReportSheet = ({
   const [selectedType, setSelectedType] = useState<ReportType | null>(null)
 
   const visibleOptions = getVisibleOptions(liveStatus)
-  const sheetHeight: 'tall' | 'short' = visibleOptions.length === 1 ? 'short' : 'tall'
+  const sheetHeight: 'tall' | 'short' =
+    visibleOptions.length === 1 ? 'short' : 'tall'
 
   const handleContinue = () => {
     if (selectedType !== null) {
@@ -304,7 +305,7 @@ export const ReportSheet = ({
                 letterSpacing: '0.08em',
               }}
             >
-              {copy.eyebrow}
+              {liveStatus !== null ? copy.eyebrowContext : copy.eyebrow}
             </span>
             <button
               onClick={onClose}
@@ -334,8 +335,21 @@ export const ReportSheet = ({
               lineHeight: 1.1,
             }}
           >
-            {copy.heading}
+            {liveStatus !== null ? copy.headingContext : copy.heading}
           </h2>
+          {liveStatus !== null && copy.subtitleByStatus[liveStatus] && (
+            <p
+              style={{
+                fontFamily: 'Inter, sans-serif',
+                fontSize: 13.5,
+                color: 'var(--fg-muted)',
+                lineHeight: 1.5,
+                margin: '8px 0 0',
+              }}
+            >
+              {copy.subtitleByStatus[liveStatus]}
+            </p>
+          )}
         </>
       }
       footer={
