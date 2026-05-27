@@ -102,6 +102,8 @@ export const SP_POLICY = {
   floorMax: 2000,
   ceilingMax: 2000,
   confirmsRequired: 2,
+  confirmsRequiredImminent: 3,
+  imminentThresholdDays: 6,
   rateLimitHours: 24,
   outlierLowFactor: 0.4,
   outlierHighFactor: 2.5,

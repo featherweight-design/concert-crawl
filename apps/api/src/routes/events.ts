@@ -553,7 +553,15 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         }
       }
 
-      const confirmsNeeded = SP_POLICY.confirmsRequired
+      const eventDate = row.date ?? ''
+      const diffDays = Math.floor(
+        (new Date(eventDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+      )
+      const isEventImminent =
+        diffDays >= 0 && diffDays <= SP_POLICY.imminentThresholdDays
+      const confirmsNeeded = isEventImminent
+        ? SP_POLICY.confirmsRequiredImminent
+        : SP_POLICY.confirmsRequired
 
       pendingSubmissions = pendingRows.map((sub) => ({
         id: sub.id,
