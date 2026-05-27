@@ -1,8 +1,8 @@
 # Gap Report — Phase 8.5 Consumer UI
 
-## IMPLEMENTED (82)
+## IMPLEMENTED (88)
 
-All 82 gaps identified by Agent 2 have been fixed:
+All 82 gaps identified by Agent 2, plus 6 additional gaps identified by Agent 3, have been fixed:
 
 **PendingCardB** (18 gaps fixed)
 
@@ -74,6 +74,15 @@ All 82 gaps identified by Agent 2 have been fixed:
 **LiveReportBanner** (2 gaps fixed)
 
 - align-items center, gap 10px, sub-label letter-spacing 0.04em
+
+**Agent 3 corrections** (6 gaps fixed)
+
+- CorroborationSheet self-locked footer: gap 12→10
+- CorroborationSheet fresh-state: added honesty disclaimer box (Inter, 12px, border var(--border), bg color-mix fg 3%)
+- ModalShell mobile header padding: 0 18px 12px → 10px 16px 8px
+- ModalShell desktop header padding: 18px 22px 12px → 10px 16px 8px
+- ReportFooterLink bottom note: added textTransform uppercase
+- EvidenceForm imminent warning border: color-mix → var(--border)
 
 ## GAPS (0)
 
