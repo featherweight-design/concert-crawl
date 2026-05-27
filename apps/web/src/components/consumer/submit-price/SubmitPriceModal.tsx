@@ -186,7 +186,6 @@ export function SubmitPriceModal({
           const data = (await res.json()) as { error?: string }
           throw new Error(data.error ?? 'Edit failed')
         }
-        router.refresh()
         setModalState('success')
         return
       }
@@ -222,7 +221,6 @@ export function SubmitPriceModal({
         }
         throw new Error(data.error ?? 'Submission failed')
       }
-      router.refresh()
       setModalState('success')
     } catch (err) {
       console.error('Price submission failed', err)

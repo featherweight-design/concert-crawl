@@ -311,6 +311,10 @@ export function EventDetailPriceBlock({
   >('sold-out')
   // Local confirm counts — incremented optimistically on successful API confirm
   const [localConfirms, setLocalConfirms] = useState<Record<string, number>>({})
+  // Local withdrawn submission IDs — removed optimistically after DELETE
+  const [withdrawnSubmissionIds, setWithdrawnSubmissionIds] = useState<
+    Set<string>
+  >(new Set())
 
   const pendingSoldOutReport = findPendingReport(reports, 'sold-out')
   const pendingCancelledReport = findPendingReport(reports, 'cancelled')
@@ -639,11 +643,15 @@ export function EventDetailPriceBlock({
   // ── 4a. Pending submissions from API — no corroborated price yet ─
   if (event.pendingSubmissions != null && event.pendingSubmissions.length > 0) {
     const subs = event.pendingSubmissions
+    const visibleSubs = subs.filter(
+      (sub) => !withdrawnSubmissionIds.has(sub.id),
+    )
+    if (visibleSubs.length === 0) return null
 
     // If any submission has already met the confirm threshold (displayConfirms >= needed),
     // treat it as effectively corroborated and render via PriceDisplay + submit CTA.
     // localConfirms tracks confirms added in this session without a page refresh.
-    const confirmedSub = subs.find(
+    const confirmedSub = visibleSubs.find(
       (sub) =>
         sub.confirmsCount + 1 + (localConfirms[sub.id] ?? 0) >=
         sub.confirmsNeeded,
@@ -687,10 +695,10 @@ export function EventDetailPriceBlock({
 
     const activeCorroboration =
       activeCorroborationId !== null
-        ? (subs.find((sub) => sub.id === activeCorroborationId) ?? null)
+        ? (visibleSubs.find((sub) => sub.id === activeCorroborationId) ?? null)
         : null
 
-    const pendingCardProps = subs.map((sub) => {
+    const pendingCardProps = visibleSubs.map((sub) => {
       const displayConfirms =
         sub.confirmsCount + 1 + (localConfirms[sub.id] ?? 0)
       const isBoxOffice = sub.vendor === 'VenueBoxOffice'
@@ -725,7 +733,7 @@ export function EventDetailPriceBlock({
                 },
               )
               if (res.ok) {
-                router.refresh()
+                setWithdrawnSubmissionIds((prev) => new Set([...prev, sub.id]))
               } else {
                 console.error('Withdraw failed', res.status)
               }
@@ -744,7 +752,7 @@ export function EventDetailPriceBlock({
 
     return (
       <>
-        {subs.length === 2 ? (
+        {visibleSubs.length === 2 ? (
           <TwoPendingStack cards={pendingCardProps.map((item) => item.props)} />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
