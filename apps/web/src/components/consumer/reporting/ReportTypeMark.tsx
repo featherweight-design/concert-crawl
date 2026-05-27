@@ -120,11 +120,7 @@ export const ReportTypeMark = ({
     >
       <Glyph />
       {token.label}
-      {pending && (
-        <span aria-hidden="true" style={{ opacity: 0.4 }}>
-          {copy.pendingDot} pending
-        </span>
-      )}
+      {pending && <span aria-hidden="true">{copy.pendingDot} pending</span>}
     </span>
   )
 }
