@@ -2,7 +2,7 @@
 
 import { REPORTING_COPY } from './definitions/copy'
 import { REPORT_TOKENS } from './reportTokens'
-import { Eyebrow } from '@/components/consumer/glyphs'
+import { CheckGlyph, Eyebrow, PendingDot } from '@/components/consumer/glyphs'
 
 const copy = REPORTING_COPY.pendingSoldOutCard
 const tokens = REPORT_TOKENS['sold-out']
@@ -36,6 +36,7 @@ export interface PendingSoldOutCardProps {
   onConfirm: () => void
   onWithdraw: () => void
   onEdit: () => void
+  onSawDifferent?: () => void
 }
 
 // ── Component ─────────────────────────────────────────────────────
@@ -78,6 +79,7 @@ export const PendingSoldOutCard = ({
   onConfirm,
   onWithdraw,
   onEdit,
+  onSawDifferent,
 }: PendingSoldOutCardProps) => {
   const timeAgo = formatTimeAgo(reportedAt)
 
@@ -109,29 +111,24 @@ export const PendingSoldOutCard = ({
           gap: 8,
         }}
       >
-        {/* Pending badge */}
+        {/* Left: kind label (icon + text, borderless like PendingReportBanner) */}
         <span
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: 5,
-            background: tokens.bg,
-            border: `1px solid color-mix(in oklab, ${tokens.color} 50%, transparent)`,
-            borderRadius: 4,
-            padding: '2px 7px',
-            fontFamily: 'var(--font-mono)',
-            fontSize: 9,
+            gap: 8,
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 10,
             fontWeight: 700,
             color: tokens.color,
-            letterSpacing: '0.06em',
+            letterSpacing: '0.08em',
             textTransform: 'uppercase',
             whiteSpace: 'nowrap',
-            lineHeight: 1,
           }}
         >
           <svg
-            width="12"
-            height="12"
+            width="14"
+            height="14"
             viewBox="0 0 10 10"
             fill="none"
             aria-hidden="true"
@@ -156,16 +153,31 @@ export const PendingSoldOutCard = ({
           {copy.stripBadge}
         </span>
 
-        {/* Confirms progress */}
+        {/* Right: dot tracker + "N of M" (matching PendingCardB / PendingReportBanner) */}
         <span
           style={{
-            fontFamily: 'var(--font-mono)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 3,
+            fontFamily: "'JetBrains Mono', monospace",
             fontSize: 9,
-            color: 'var(--fg-subtle)',
-            whiteSpace: 'nowrap',
+            color: tokens.color,
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
+            fontWeight: 700,
           }}
         >
-          {copy.confirmsProgress(confirms, needed)}
+          {Array.from({ length: needed }).map((_, idx) => (
+            <PendingDot
+              key={idx}
+              size={7}
+              filled={idx < confirms}
+              color={tokens.color}
+            />
+          ))}
+          <span style={{ marginLeft: 4 }}>
+            {copy.confirmsProgress(confirms, needed)}
+          </span>
         </span>
       </div>
 
@@ -199,7 +211,7 @@ export const PendingSoldOutCard = ({
             {priceStr}
           </span>
 
-          {/* Sold out pill */}
+          {/* Sold out pill — bottom-aligned in the price row */}
           <span
             style={{
               background: tokens.color,
@@ -213,7 +225,7 @@ export const PendingSoldOutCard = ({
               textTransform: 'uppercase',
               whiteSpace: 'nowrap',
               lineHeight: 1,
-              alignSelf: 'center',
+              alignSelf: 'flex-end',
             }}
           >
             {copy.soldOutPill}
@@ -303,19 +315,23 @@ export const PendingSoldOutCard = ({
               gap: 8,
             }}
           >
-            <span
+            <button
+              type="button"
+              onClick={onSawDifferent}
               style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 9,
+                all: 'unset',
+                cursor: onSawDifferent ? 'pointer' : 'default',
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 10,
                 color: 'var(--fg-subtle)',
                 letterSpacing: '0.04em',
+                textTransform: 'uppercase',
                 flexShrink: 1,
                 minWidth: 0,
-                textTransform: 'uppercase',
               }}
             >
               {copy.footerQuestion}
-            </span>
+            </button>
 
             <button
               type="button"
@@ -323,6 +339,9 @@ export const PendingSoldOutCard = ({
               style={{
                 all: 'unset',
                 cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
                 background: tokens.color,
                 color: 'var(--fg-on-accent)',
                 fontFamily: 'var(--font-ui)',
@@ -335,6 +354,7 @@ export const PendingSoldOutCard = ({
                 lineHeight: 1,
               }}
             >
+              <CheckGlyph size={11} color="var(--fg-on-accent)" />
               {copy.confirmButton}
             </button>
           </div>

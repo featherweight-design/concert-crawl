@@ -110,6 +110,7 @@ export interface LiveReportBannerProps {
   status: LiveReportStatus
   promotedAt: string // ISO
   confirmCount?: number
+  reporter?: { handle: string; url: string } | null
 }
 
 // ── Component ─────────────────────────────────────────────────────
@@ -118,12 +119,21 @@ export const LiveReportBanner = ({
   status,
   promotedAt,
   confirmCount,
+  reporter,
 }: LiveReportBannerProps) => {
   const token = REPORT_TOKENS[status]
   const Glyph = GLYPHS_16[status]
   const timeAgo = formatTimeAgo(promotedAt)
 
   const headline = copy.headlines[status]
+
+  const subLabel = (() => {
+    const confirms = confirmCount ?? 0
+    if (reporter != null) {
+      return copy.reportedBy(reporter.handle, confirms, timeAgo)
+    }
+    return copy.reportedAnonymous(confirms, timeAgo)
+  })()
 
   return (
     <div
@@ -176,9 +186,7 @@ export const LiveReportBanner = ({
             letterSpacing: '0.04em',
           }}
         >
-          {confirmCount !== undefined
-            ? copy.confirmsAndTime(confirmCount, timeAgo)
-            : timeAgo}
+          {subLabel}
         </span>
       </div>
     </div>

@@ -3,7 +3,10 @@ export const REPORTING_COPY = {
   reportFooterLink: {
     eyebrow: 'Spot something off?',
     title: 'Report a status change',
+    titlePendingCancellation: 'Tickets still available?',
     subtitle: 'Sold out, cancelled, postponed — or back on.',
+    subtitlePendingCancellation:
+      'A fan reported this show as cancelled — file a counter-report if you know otherwise.',
     bottomNote:
       'Reports are reviewed by the community. Good-faith reports help everyone.',
   },
@@ -133,13 +136,17 @@ export const REPORTING_COPY = {
     },
     confirmsAndTime: (confirmCount: number, timeAgo: string) =>
       `${confirmCount} confirms · ${timeAgo}`,
+    reportedBy: (handle: string, confirmCount: number, timeAgo: string) =>
+      `Reported by @${handle} · ${confirmCount} confirms · ${timeAgo}`,
+    reportedAnonymous: (confirmCount: number, timeAgo: string) =>
+      `${confirmCount} confirms · ${timeAgo}`,
   },
 
   // ── PendingSoldOutCard ───────────────────────────────────────────
   pendingSoldOutCard: {
     stripBadge: 'Sold out · pending',
     confirmsProgress: (confirms: number, needed: number) =>
-      `${confirms}/${needed} confirms`,
+      `${confirms} of ${needed}`,
     soldOutPill: 'Sold out',
     reportedBy: (handle: string) => `Reported by @${handle}`,
     reportedAnonymously: 'Reported anonymously',

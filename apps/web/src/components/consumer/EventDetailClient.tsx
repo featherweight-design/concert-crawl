@@ -141,14 +141,35 @@ export function EventDetailBanners({
         ? 'postponed'
         : null
 
+  // Derive reporter info from the promoted sold-out report when present
+  const liveReporter = (() => {
+    if (liveReportStatus === 'sold-out' && event.soldOutReport != null) {
+      const handle = event.soldOutReport.reporterHandle
+      return handle != null ? { handle, url: '' } : null
+    }
+    return null
+  })()
+
+  const liveConfirmCount = (() => {
+    if (liveReportStatus === 'sold-out' && event.soldOutReport != null) {
+      return event.soldOutReport.confirmsCount
+    }
+    return undefined
+  })()
+
   return (
     <>
-      <div className="mb-3">
+      {/* Fix 1: mt-3 gap between info block and status cards */}
+      <div className="mb-3 mt-3">
         {/* Live (promoted) report banner */}
         {liveReportStatus !== null && (
           <LiveReportBanner
             status={liveReportStatus}
             promotedAt={event.updatedAt}
+            {...(liveConfirmCount !== undefined
+              ? { confirmCount: liveConfirmCount }
+              : {})}
+            reporter={liveReporter}
           />
         )}
 
@@ -282,6 +303,11 @@ export function EventDetailPriceBlock({
   >(null)
   const [submitPriceOpen, setSubmitPriceOpen] = useState(false)
   const [legacyCorroborationOpen, setLegacyCorroborationOpen] = useState(false)
+  const [soldOutSawDifferentOpen, setSoldOutSawDifferentOpen] = useState(false)
+  const [soldOutEvidenceFormOpen, setSoldOutEvidenceFormOpen] = useState(false)
+  const [soldOutEvidenceReportType, setSoldOutEvidenceReportType] = useState<
+    'sold-out' | 'cancelled' | 'postponed'
+  >('sold-out')
   // Local confirm counts — incremented optimistically on successful API confirm
   const [localConfirms, setLocalConfirms] = useState<Record<string, number>>({})
 
@@ -290,6 +316,12 @@ export function EventDetailPriceBlock({
 
   const priceMin = parseCents(event.ticketPriceMin)
   const priceMax = parseCents(event.ticketPriceMax)
+
+  // Fix 15: postponed confirmed → hide price section entirely
+  // Exception: if there's a pending counter-submission we still show it,
+  // but in practice postponed + active dispute is unlikely so we keep it simple.
+  const isPostponedConfirmed =
+    event.status === 'postponed' && event.counterSubmission == null
 
   const handleConfirmReport = useCallback(
     (reportId: string) => {
@@ -322,6 +354,11 @@ export function EventDetailPriceBlock({
     },
     [event.id, getToken, router],
   )
+
+  // ── Fix 15: postponed confirmed → hide price section ───────────
+  if (isPostponedConfirmed) {
+    return null
+  }
 
   // ── 0. Promoted sold-out (confirmed by community) ──────────────
   if (event.priceStatus === 'soldout' && event.soldOutReport != null) {
@@ -360,7 +397,7 @@ export function EventDetailPriceBlock({
           <div
             style={{
               display: 'flex',
-              alignItems: 'center',
+              alignItems: 'baseline',
               gap: 10,
               marginTop: 6,
               flexWrap: 'wrap',
@@ -383,6 +420,7 @@ export function EventDetailPriceBlock({
                   ? `$${priceMin}`
                   : '—'}
             </span>
+            {/* Fix 13: bottom-aligned chip via alignSelf flex-end */}
             <span
               style={{
                 background: AMBER,
@@ -394,6 +432,7 @@ export function EventDetailPriceBlock({
                 color: 'var(--fg-on-accent)',
                 letterSpacing: '0.06em',
                 textTransform: 'uppercase',
+                alignSelf: 'flex-end',
               }}
             >
               Sold out
@@ -454,26 +493,59 @@ export function EventDetailPriceBlock({
     const soldOutView = pendingSoldOutReport.isReporter ? 'reporter' : 'other'
 
     return (
-      <PendingSoldOutCard
-        floor={priceMin ?? 0}
-        {...(priceMax !== null && priceMax !== undefined
-          ? { ceiling: priceMax }
-          : {})}
-        vendor={event.priceVendor ?? event.venue.name}
-        reporter={null}
-        reportedAt={pendingSoldOutReport.createdAt}
-        confirms={pendingSoldOutReport.confirmsCount + 1}
-        needed={pendingSoldOutReport.confirmsNeeded}
-        view={soldOutView}
-        evidenceMethod={pendingSoldOutReport.evidenceMethod}
-        evidenceUrl={pendingSoldOutReport.evidenceUrl}
-        note={pendingSoldOutReport.note}
-        onConfirm={() => handleConfirmReport(pendingSoldOutReport.id)}
-        onWithdraw={() => handleWithdrawReport(pendingSoldOutReport.id)}
-        onEdit={() => {
-          // Placeholder — edit sold-out report evidence
-        }}
-      />
+      <>
+        <PendingSoldOutCard
+          floor={priceMin ?? 0}
+          {...(priceMax !== null && priceMax !== undefined
+            ? { ceiling: priceMax }
+            : {})}
+          vendor={event.priceVendor ?? event.venue.name}
+          reporter={null}
+          reportedAt={pendingSoldOutReport.createdAt}
+          confirms={pendingSoldOutReport.confirmsCount + 1}
+          needed={pendingSoldOutReport.confirmsNeeded}
+          view={soldOutView}
+          evidenceMethod={pendingSoldOutReport.evidenceMethod}
+          evidenceUrl={pendingSoldOutReport.evidenceUrl}
+          note={pendingSoldOutReport.note}
+          onConfirm={() => handleConfirmReport(pendingSoldOutReport.id)}
+          onWithdraw={() => handleWithdrawReport(pendingSoldOutReport.id)}
+          onEdit={() => {
+            // Placeholder — edit sold-out report evidence
+          }}
+          onSawDifferent={() => setSoldOutSawDifferentOpen(true)}
+        />
+
+        {/* Fix 8: "Tickets still available?" → opens a ReportSheet → EvidenceForm */}
+        <ReportSheet
+          open={soldOutSawDifferentOpen}
+          onClose={() => setSoldOutSawDifferentOpen(false)}
+          liveStatus="sold-out"
+          eventDate={event.date}
+          onSelect={(reportType) => {
+            setSoldOutSawDifferentOpen(false)
+            if (
+              reportType === 'sold-out' ||
+              reportType === 'cancelled' ||
+              reportType === 'postponed'
+            ) {
+              setSoldOutEvidenceReportType(reportType)
+              setSoldOutEvidenceFormOpen(true)
+            }
+          }}
+        />
+        <EvidenceForm
+          open={soldOutEvidenceFormOpen}
+          onClose={() => setSoldOutEvidenceFormOpen(false)}
+          reportType={soldOutEvidenceReportType}
+          eventId={event.id}
+          eventDate={event.date}
+          onSuccess={() => {
+            setSoldOutEvidenceFormOpen(false)
+            router.refresh()
+          }}
+        />
+      </>
     )
   }
 
@@ -548,14 +620,17 @@ export function EventDetailPriceBlock({
     return (
       <>
         <MixedTierCard headline={headline} alternates={alternateRows} />
-        <div className="mt-3">
-          <SubmitPriceCardCta
-            eventId={event.id}
-            artist={event.artist}
-            venueName={event.venue.name}
-            date={event.date}
-          />
-        </div>
+        {/* Fix 14: hide SubmitPriceCardCta for cancelled events */}
+        {event.status !== 'cancelled' && (
+          <div className="mt-3">
+            <SubmitPriceCardCta
+              eventId={event.id}
+              artist={event.artist}
+              venueName={event.venue.name}
+              date={event.date}
+            />
+          </div>
+        )}
       </>
     )
   }
@@ -594,14 +669,17 @@ export function EventDetailPriceBlock({
             priceApprovedAt={confirmedSub.submittedAt}
             priceAlternates={null}
           />
-          <div className="mt-3">
-            <SubmitPriceCardCta
-              eventId={event.id}
-              artist={event.artist}
-              venueName={event.venue.name}
-              date={event.date}
-            />
-          </div>
+          {/* Fix 14: hide SubmitPriceCardCta for cancelled events */}
+          {event.status !== 'cancelled' && (
+            <div className="mt-3">
+              <SubmitPriceCardCta
+                eventId={event.id}
+                artist={event.artist}
+                venueName={event.venue.name}
+                date={event.date}
+              />
+            </div>
+          )}
         </>
       )
     }
@@ -820,7 +898,8 @@ export function EventDetailPriceBlock({
         priceApprovedAt={event.priceApprovedAt ?? null}
         priceAlternates={event.priceAlternates ?? null}
       />
-      {event.ticketPriceMin !== null && (
+      {/* Fix 14: hide SubmitPriceCardCta for cancelled events */}
+      {event.ticketPriceMin !== null && event.status !== 'cancelled' && (
         <div className="mt-3">
           <SubmitPriceCardCta
             eventId={event.id}
@@ -849,6 +928,7 @@ export function EventDetailFooter({
   >('cancelled')
 
   const pendingSoldOut = findPendingReport(reports, 'sold-out')
+  const pendingCancelled = findPendingReport(reports, 'cancelled')
 
   // Derive the footer live status:
   // 1. Promoted report → event.status or priceStatus
@@ -863,11 +943,17 @@ export function EventDetailFooter({
           ? 'sold-out'
           : null
 
+  // Fix 16: when there's a pending cancellation report (not yet confirmed),
+  // change the footer CTA to "Tickets still available?"
+  const hasPendingCancellation =
+    pendingCancelled !== null && event.status !== 'cancelled'
+
   return (
     <>
       <ReportFooterLink
         liveStatus={footerLiveStatus}
         onOpen={() => setIsReportSheetOpen(true)}
+        pendingCancellation={hasPendingCancellation}
       />
       <ReportSheet
         open={isReportSheetOpen}

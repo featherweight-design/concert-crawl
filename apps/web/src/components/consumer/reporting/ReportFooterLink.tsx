@@ -7,12 +7,19 @@ const copy = REPORTING_COPY.reportFooterLink
 export interface ReportFooterLinkProps {
   liveStatus: null | 'sold-out' | 'cancelled' | 'postponed'
   onOpen: () => void
+  pendingCancellation?: boolean
 }
 
 export const ReportFooterLink = ({
   liveStatus: _liveStatus,
   onOpen,
+  pendingCancellation = false,
 }: ReportFooterLinkProps) => {
+  const title = pendingCancellation ? copy.titlePendingCancellation : copy.title
+  const subtitle = pendingCancellation
+    ? copy.subtitlePendingCancellation
+    : copy.subtitle
+
   return (
     <div
       style={{
@@ -64,7 +71,7 @@ export const ReportFooterLink = ({
               letterSpacing: '-0.005em',
             }}
           >
-            {copy.title}
+            {title}
           </span>
           <span
             style={{
@@ -74,7 +81,7 @@ export const ReportFooterLink = ({
               letterSpacing: '-0.005em',
             }}
           >
-            {copy.subtitle}
+            {subtitle}
           </span>
         </div>
 
