@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { CounterSubmitSheet } from './CounterSubmitSheet'
-import { ArrowGlyph } from '@/components/consumer/glyphs'
+import { ArrowGlyph, Eyebrow, PendingTrustPill } from '@/components/consumer/glyphs'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
 const copy = CONSUMER_COPY.disputedPriceCard
@@ -26,9 +26,13 @@ export interface DisputedPriceCardProps {
   ceiling?: number
   tier: string
   vendor: string
+  kind: 'community' | 'boxoffice'
+  submitter: { handle: string } | null
+  liveSubmittedAt: string
+  confirmsCount: number
 
   // The pending counter-submission
-  disputer: { handle: string; url: string } | null
+  disputer: { handle: string } | null
   disputeFloor: number
   disputeCeiling?: number
   disputedAt: string // ISO date
@@ -47,6 +51,10 @@ export const DisputedPriceCard = ({
   ceiling,
   tier,
   vendor,
+  kind,
+  submitter,
+  liveSubmittedAt,
+  confirmsCount,
   disputer,
   disputeFloor,
   disputeCeiling,
@@ -161,34 +169,44 @@ export const DisputedPriceCard = ({
 
         {/* Main price area */}
         <div style={{ padding: '14px 14px 12px' }}>
-          {/* Headline price */}
-          <div
-            style={{
-              fontFamily: 'var(--font-ui)',
-              fontWeight: 800,
-              fontSize: 28,
-              color: 'var(--fg)',
-              letterSpacing: '-0.025em',
-              lineHeight: 1.05,
-              marginTop: 4,
-            }}
-          >
-            {headlineStr}
-          </div>
+          {/* Eyebrow */}
+          <Eyebrow>{copy.body.ticketsLabel}</Eyebrow>
 
-          {/* Tier chip */}
+          {/* Headline row: price + tier + chip */}
           <div
             style={{
-              fontFamily: 'var(--font-mono)',
-              fontWeight: 700,
-              fontSize: 11,
-              color: 'var(--fg-muted)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
               marginTop: 6,
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: 10,
+              flexWrap: 'wrap',
             }}
           >
-            {tier}
+            <span
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontWeight: 800,
+                fontSize: 28,
+                color: 'var(--fg)',
+                letterSpacing: '-0.025em',
+                lineHeight: 1.05,
+              }}
+            >
+              {headlineStr}
+            </span>
+            <span
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 700,
+                fontSize: 11,
+                color: 'var(--fg-muted)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+              }}
+            >
+              {tier}
+            </span>
+            <PendingTrustPill kind={kind} />
           </div>
 
           {/* Vendor line */}
@@ -201,7 +219,35 @@ export const DisputedPriceCard = ({
               marginTop: 6,
             }}
           >
-            {vendor}
+            {copy.body.seenOnPrefix} {vendor}
+          </div>
+
+          {/* Attribution line */}
+          <div
+            style={{
+              marginTop: 6,
+              fontFamily: 'var(--font-mono)',
+              fontSize: 9,
+              color: 'var(--fg-muted)',
+              letterSpacing: '0.04em',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              flexWrap: 'wrap',
+            }}
+          >
+            <span>{copy.body.submittedByPrefix}</span>
+            {submitter !== null ? (
+              <span style={{ fontWeight: 700 }}>@{submitter.handle}</span>
+            ) : (
+              <span style={{ fontStyle: 'italic', opacity: 0.85 }}>
+                {copy.strip.anonymousLabel}
+              </span>
+            )}
+            <span style={{ opacity: 0.5 }}>·</span>
+            <span>{formatTimeAgo(liveSubmittedAt)}</span>
+            <span style={{ opacity: 0.5 }}>·</span>
+            <span>{copy.body.fansConfirmed(confirmsCount)}</span>
           </div>
         </div>
 

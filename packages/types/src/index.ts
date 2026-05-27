@@ -330,6 +330,16 @@ export interface EventDetailResponse extends EventWithVenue {
     priceMin: string
     priceMax: string | null
   }> | null
+  // Confirms count for the primary live community price
+  priceConfirmsCount?: number | null
+  // Pending counter-submission against the primary live price (if any)
+  counterSubmission?: {
+    id: string
+    floor: number
+    ceiling?: number
+    submitter: { handle: string } | null
+    submittedAt: string
+  } | null
   // All pending submissions when no corroborated price exists yet
   pendingSubmissions?: Array<{
     id: string

@@ -946,21 +946,18 @@ export const CONSUMER_COPY = {
   // Card showing a live price with a pending counter-submission against it
   disputedPriceCard: {
     strip: {
-      // The "update pending" badge label
       badgeLabel: 'update pending',
-      // Verb used in attribution: "@handle saw $X" / "anonymous saw $X"
       sawVerb: 'saw',
-      // Label when disputer is null
       anonymousLabel: 'anonymous',
     },
-    priceArea: {
-      // Label above the headline price
-      fromLabel: 'from',
+    body: {
+      ticketsLabel: 'Tickets',
+      seenOnPrefix: 'seen on',
+      submittedByPrefix: 'Submitted by',
+      fansConfirmed: (count: number) => `${count} fans confirmed`,
     },
     footer: {
-      // Copy appearing before the submit button
       preButtonCopy: 'Got a different number?',
-      // The submit button label
       buttonLabel: 'Submit an update →',
     },
   },

@@ -27,6 +27,7 @@ import { ReportSheet } from '@/components/consumer/reporting/ReportSheet'
 import { EvidenceForm } from '@/components/consumer/reporting/EvidenceForm'
 import { ConfirmReportSheet } from '@/components/consumer/reporting/ConfirmReportSheet'
 import { PriceDisplay } from '@/components/consumer/PriceDisplay'
+import { DisputedPriceCard } from '@/components/consumer/DisputedPriceCard'
 import { SubmitPriceCardCta } from '@/components/consumer/SubmitPriceCardCta'
 import { SubmitPriceModal } from '@/components/consumer/submit-price/SubmitPriceModal'
 
@@ -339,6 +340,40 @@ export function EventDetailPriceBlock({
     // The PriceDisplay is suppressed server-side too (event.status check in page.tsx).
     // Return null here as a belt-and-suspenders measure.
     return null
+  }
+
+  // ── 3a. Live price + pending counter-submission → DisputedPriceCard ─
+  if (
+    event.counterSubmission != null &&
+    priceMin !== null &&
+    event.priceStatus !== 'soldout'
+  ) {
+    const counter = event.counterSubmission
+    const liveKind: 'community' | 'boxoffice' =
+      event.priceApprovalKind === 'admin' ? 'boxoffice' : 'community'
+    return (
+      <DisputedPriceCard
+        floor={priceMin}
+        {...(priceMax !== null ? { ceiling: priceMax } : {})}
+        tier={event.priceVendor ?? 'GA'}
+        vendor={event.priceVendor ?? event.venue.name}
+        kind={liveKind}
+        submitter={
+          event.priceSubmitterHandle
+            ? { handle: event.priceSubmitterHandle }
+            : null
+        }
+        liveSubmittedAt={event.priceObservedAt ?? new Date().toISOString()}
+        confirmsCount={event.priceConfirmsCount ?? 0}
+        disputer={counter.submitter}
+        disputeFloor={counter.floor}
+        {...(counter.ceiling !== undefined ? { disputeCeiling: counter.ceiling } : {})}
+        disputedAt={counter.submittedAt}
+        eventId={event.id}
+        disputedSubmissionId={counter.id}
+        onUpdateSuccess={() => router.refresh()}
+      />
+    )
   }
 
   // ── 3. Live price with alternates → MultiTierLiveCard ───────────

@@ -326,6 +326,14 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     priceMin: string
     priceMax: string | null
   }> = []
+  let priceConfirmsCount: number = 0
+  let counterSubmission: {
+    id: string
+    floor: number
+    ceiling?: number
+    submitter: { handle: string } | null
+    submittedAt: string
+  } | null = null
 
   if (row.priceSource === 'community') {
     const allSubs = await db
@@ -363,7 +371,47 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         .select({ total: count() })
         .from(submissionConfirms)
         .where(eq(submissionConfirms.submissionId, latestSub.id))
-      priceApprovalKind = (confirmCount?.total ?? 0) > 0 ? 'fan' : 'admin'
+      priceConfirmsCount = confirmCount?.total ?? 0
+      priceApprovalKind = priceConfirmsCount > 0 ? 'fan' : 'admin'
+
+      const [counterRow] = await db
+        .select({
+          id: priceSubmissions.id,
+          priceMin: priceSubmissions.priceMin,
+          priceMax: priceSubmissions.priceMax,
+          userId: priceSubmissions.userId,
+          createdAt: priceSubmissions.createdAt,
+        })
+        .from(priceSubmissions)
+        .where(
+          and(
+            eq(priceSubmissions.eventId, id),
+            eq(priceSubmissions.status, 'pending'),
+            eq(priceSubmissions.disputedSubmissionId, latestSub.id),
+          ),
+        )
+        .orderBy(desc(priceSubmissions.createdAt))
+        .limit(1)
+
+      if (counterRow) {
+        let counterHandle: string | null = null
+        if (counterRow.userId) {
+          const [counterProfile] = await db
+            .select({ handle: userProfiles.handle })
+            .from(userProfiles)
+            .where(eq(userProfiles.userId, counterRow.userId))
+            .limit(1)
+          counterHandle = counterProfile?.handle ?? null
+        }
+        counterSubmission = {
+          id: counterRow.id,
+          floor: parseFloat(counterRow.priceMin),
+          ...(counterRow.priceMax !== null ? { ceiling: parseFloat(counterRow.priceMax) } : {}),
+          submitter: counterHandle !== null ? { handle: counterHandle } : null,
+          submittedAt: counterRow.createdAt.toISOString(),
+        }
+      }
+
       if (latestSub.userId) {
         const [profile] = await db
           .select({ handle: userProfiles.handle })
@@ -495,6 +543,8 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       priceApprovalKind,
       priceApprovedAt,
       priceAlternates,
+      priceConfirmsCount,
+      counterSubmission,
       pendingSubmissions,
     },
   })
