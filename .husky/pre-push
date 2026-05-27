@@ -1,0 +1,6 @@
+if docker exec concert-crawl-db pg_isready -q 2>/dev/null; then
+  echo "Running integration tests before push..."
+  pnpm --filter @concert-crawl/api test:integration
+else
+  echo "⚠ Test DB not running — skipping integration tests. Start with: docker compose up -d"
+fi
