@@ -929,6 +929,7 @@ export function EventDetailFooter({
 
   const pendingSoldOut = findPendingReport(reports, 'sold-out')
   const pendingCancelled = findPendingReport(reports, 'cancelled')
+  const pendingPostponed = findPendingReport(reports, 'postponed')
 
   // Derive the footer live status:
   // 1. Promoted report → event.status or priceStatus
@@ -943,10 +944,23 @@ export function EventDetailFooter({
           ? 'sold-out'
           : null
 
-  // Fix 16: when there's a pending cancellation report (not yet confirmed),
-  // change the footer CTA to "Tickets still available?"
+  // When there's a pending cancellation/postponement (not yet promoted), the footer
+  // CTA becomes "Tickets still available?" and the ReportSheet must show the counter-
+  // report options (liveStatus='cancelled' → only 'available' is shown).
   const hasPendingCancellation =
     pendingCancelled !== null && event.status !== 'cancelled'
+  const hasPendingPostponement =
+    pendingPostponed !== null && event.status !== 'postponed'
+
+  // The liveStatus passed to the ReportSheet controls which options are shown.
+  // For pending-but-not-promoted states, pass the pending type so the counter-report
+  // path (Tickets available) is the only visible option.
+  const reportSheetLiveStatus: 'sold-out' | 'cancelled' | 'postponed' | null =
+    hasPendingCancellation
+      ? 'cancelled'
+      : hasPendingPostponement
+        ? 'postponed'
+        : footerLiveStatus
 
   return (
     <>
@@ -958,10 +972,12 @@ export function EventDetailFooter({
       <ReportSheet
         open={isReportSheetOpen}
         onClose={() => setIsReportSheetOpen(false)}
-        liveStatus={footerLiveStatus}
+        liveStatus={reportSheetLiveStatus}
         eventDate={event.date}
         onSelect={(reportType) => {
           setIsReportSheetOpen(false)
+          // 'available' is a counter-report — the API does not yet support this status.
+          // The modal closes cleanly; backend support is a follow-up item.
           if (
             reportType === 'sold-out' ||
             reportType === 'cancelled' ||
