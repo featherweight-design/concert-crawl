@@ -1,8 +1,12 @@
-if docker exec concert-crawl-db pg_isready -q 2>/dev/null; then
+if docker exec concert-crawl-db psql -U postgres -lqt 2>/dev/null | grep -q concert_crawl_test; then
   echo "Building packages for integration tests..."
-  pnpm turbo build --filter=@concert-crawl/db --filter=@concert-crawl/types --filter=@concert-crawl/logger --filter=@concert-crawl/price-pipeline --no-daemon 2>/dev/null
+  pnpm turbo build --filter=@concert-crawl/db --filter=@concert-crawl/types --filter=@concert-crawl/logger --filter=@concert-crawl/price-pipeline --no-daemon
+  if [ $? -ne 0 ]; then
+    echo "✗ Package build failed — aborting push"
+    exit 1
+  fi
   echo "Running integration tests before push..."
   pnpm --filter @concert-crawl/api test:integration
 else
-  echo "⚠ Test DB not running — skipping integration tests. Start with: docker compose up -d"
+  echo "⚠ Test DB not running or concert_crawl_test not found — skipping integration tests. Start with: docker compose up -d"
 fi
