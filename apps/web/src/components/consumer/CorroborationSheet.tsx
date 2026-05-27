@@ -2,10 +2,20 @@
 
 import { useState } from 'react'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { LockGlyph } from './glyphs'
+import { LockGlyph, PendingTrustPill } from './glyphs'
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
 
 const copy = CONSUMER_COPY.corroborationSheet
+
+// ── Helpers ──────────────────────────────────────────────────────
+const formatTimeAgo = (isoDate: string): string => {
+  const diffMs = Date.now() - new Date(isoDate).getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  if (diffMins < 60) return `${diffMins}m ago`
+  const diffHours = Math.floor(diffMins / 60)
+  if (diffHours < 24) return `${diffHours}h ago`
+  return `${Math.floor(diffHours / 24)}d ago`
+}
 
 // ── Color constants ──────────────────────────────────────────────
 const AZURE = 'oklch(0.62 0.12 240)'
@@ -62,7 +72,7 @@ export interface CorroborationSheetProps {
     submittedAt: string
     confirms: number
     needed: number
-    note?: string
+    note?: string | null
     submissionId: string
   }
   open: boolean
@@ -81,6 +91,8 @@ interface SubmissionDetailCardProps {
   vendor: string
   kind: 'community' | 'boxoffice'
   submitter: { handle: string; url: string } | null
+  submittedAt: string
+  note?: string | null | undefined
   accentColor: string
 }
 
@@ -91,43 +103,39 @@ const SubmissionDetailCard = ({
   vendor,
   kind,
   submitter,
+  submittedAt,
+  note,
   accentColor,
 }: SubmissionDetailCardProps) => {
   const tokens = pendingTokens(kind)
 
-  const attributionNode = (() => {
+  const byNode = (() => {
     if (submitter === null) {
       return (
-        <span
-          style={{
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: '9.5px',
-            color: 'var(--fg-subtle)',
-          }}
-        >
-          {copy.viaAnonymous}
+        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: 'var(--fg-muted)' }}>
+          {copy.vendorLabel === 'VENDOR' ? copy.viaAnonymous : copy.viaAnonymous}
         </span>
       )
     }
-
     return (
-      <span
-        style={{
-          fontFamily: 'JetBrains Mono, monospace',
-          fontSize: '9.5px',
-          color: 'var(--fg-subtle)',
-        }}
-      >
-        {copy.viaHandlePrefix}
-        <a
-          href={submitter.url}
-          style={{ color: 'var(--fg-subtle)', textDecoration: 'underline' }}
-        >
-          {submitter.handle}
-        </a>
+      <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: 'var(--fg-muted)' }}>
+        {copy.viaHandlePrefix}{submitter.handle}
       </span>
     )
   })()
+
+  const labelStyle = {
+    fontFamily: 'JetBrains Mono, monospace',
+    fontSize: '9px',
+    color: 'var(--fg-subtle)',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.06em',
+  }
+  const valueStyle = {
+    fontFamily: 'JetBrains Mono, monospace',
+    fontSize: '10px',
+    color: 'var(--fg-muted)',
+  }
 
   return (
     <div
@@ -138,74 +146,76 @@ const SubmissionDetailCard = ({
         overflow: 'hidden',
       }}
     >
-      <div
-        style={{
-          padding: '12px 14px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '4px',
-        }}
-      >
-        {/* Price */}
-        <p
-          style={{
-            fontFamily: 'Inter, sans-serif',
-            fontWeight: 800,
-            fontSize: '30px',
-            color: 'var(--fg)',
-            letterSpacing: '-0.025em',
-            lineHeight: 1.05,
-            margin: 0,
-          }}
-        >
-          {ceiling !== undefined ? `$${floor}–${ceiling}` : `$${floor}`}
-        </p>
-
-        {/* Metadata grid */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'auto 1fr',
-            gap: '4px 12px',
-            marginTop: '4px',
-          }}
-        >
+      <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {/* Price + tier + chip */}
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', flexWrap: 'wrap' }}>
+          <span
+            style={{
+              fontFamily: 'Inter, sans-serif',
+              fontWeight: 800,
+              fontSize: '30px',
+              color: 'var(--fg)',
+              letterSpacing: '-0.025em',
+              lineHeight: 1.05,
+            }}
+          >
+            {ceiling !== undefined && ceiling > floor ? `$${floor}–$${ceiling}` : `$${floor}`}
+          </span>
           <span
             style={{
               fontFamily: 'JetBrains Mono, monospace',
-              fontSize: '9.5px',
-              color: 'var(--fg-subtle)',
-              textTransform: 'uppercase',
+              fontSize: '11px',
+              color: 'var(--fg-muted)',
               letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              fontWeight: 700,
             }}
           >
             {tier}
           </span>
-          <span
-            style={{
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: '9.5px',
-              color: 'var(--fg-subtle)',
-            }}
-          >
-            {vendor}
-          </span>
-          <div style={{ gridColumn: '1 / -1' }}>{attributionNode}</div>
+          <PendingTrustPill kind={kind} />
         </div>
 
-        {/* Box-office badge */}
+        {/* VENDOR / BY / WHEN rows */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 12px' }}>
+          <span style={labelStyle}>{copy.vendorLabel}</span>
+          <span style={valueStyle}>{vendor}</span>
+          <span style={labelStyle}>{copy.byLabel}</span>
+          <span style={valueStyle}>{byNode}</span>
+          <span style={labelStyle}>{copy.whenLabel}</span>
+          <span style={valueStyle}>{formatTimeAgo(submittedAt)}</span>
+        </div>
+
+        {/* Box-office face-value note */}
         {kind === 'boxoffice' && (
-          <p
+          <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '12px', color: accentColor }}>
+            face value · no fees
+          </span>
+        )}
+
+        {/* Submission note */}
+        {note != null && note !== '' && (
+          <div
             style={{
-              fontFamily: 'Inter, sans-serif',
-              fontWeight: 600,
-              fontSize: '12px',
-              color: accentColor,
-              margin: '2px 0 0',
+              padding: '8px 10px',
+              background: 'color-mix(in oklab, var(--fg) 4%, transparent)',
+              border: '1px solid var(--border)',
+              borderRadius: '8px',
             }}
           >
-            face value · no fees
-          </p>
+            <p
+              style={{
+                fontFamily: 'Inter, sans-serif',
+                fontStyle: 'italic',
+                fontSize: '13px',
+                color: 'var(--fg-muted)',
+                lineHeight: 1.5,
+                margin: 0,
+              }}
+            >
+              "{note}"
+            </p>
+          </div>
         )}
       </div>
     </div>
@@ -421,7 +431,7 @@ export const CorroborationSheet = ({
                 lineHeight: 1.1,
               }}
             >
-              {copy.heading}
+              {copy.heading(submission.floor, submission.ceiling)}
             </h2>
             {!isSelfLocked && (
               <p
@@ -555,6 +565,8 @@ export const CorroborationSheet = ({
           vendor={submission.vendor}
           kind={submission.kind}
           submitter={submission.submitter}
+          submittedAt={submission.submittedAt}
+          note={submission.note}
           accentColor={accentColor}
         />
 

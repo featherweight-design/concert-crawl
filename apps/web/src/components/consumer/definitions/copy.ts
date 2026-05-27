@@ -888,32 +888,39 @@ export const CONSUMER_COPY = {
   corroborationSheet: {
     eyebrow: 'Confirm price',
     cancelButton: 'Cancel',
-    heading: 'Is this right?',
-    subtitle: 'Pick how you know this price is correct.',
+    heading: (floor: number, ceiling?: number) =>
+      ceiling != null && ceiling > floor
+        ? `Did you also see $${floor}–$${ceiling}?`
+        : `Did you also see $${floor}?`,
+    subtitle:
+      "Two fan confirms moves a price from pending to live. Pick how you checked — we're trying to keep this honest, not fast.",
 
     // VerifyOption labels and descriptions
     options: {
       sameVendor: {
-        label: (vendor: string) => `I saw it on ${vendor}`,
+        label: (vendor: string) => `Same vendor (${vendor})`,
         description: (vendor: string) =>
-          `I checked ${vendor}'s site and saw this price`,
+          `I just checked ${vendor} and saw the same number.`,
       },
       otherVendor: {
-        label: 'I saw it elsewhere',
-        description: 'Found the same price on a different listing',
+        label: 'A different vendor / site',
+        description:
+          'I checked another ticketing site and the number matches.',
       },
       sawListing: {
-        label: 'I saw a box-office listing',
-        description: 'I saw this at a box-office price on a verified source',
+        label: 'Saw the price at the box office',
+        description:
+          'In person or by phone. Counts as a community confirm with box-office origin.',
       },
       boughtMyself: {
-        label: 'I bought tickets at this price',
-        description: 'I personally purchased at this price',
+        label: 'Bought a ticket at the box office',
+        description:
+          'Confirms this submission AND opens a separate gold-tier box-office submission for your purchase.',
       },
     },
 
     // Confirm CTA
-    confirmButton: 'Confirm price',
+    confirmButton: 'Confirm — same number',
 
     // Escape link
     escapeLink:
@@ -931,10 +938,12 @@ export const CONSUMER_COPY = {
       withdrawButton: 'Withdraw',
     },
 
-    // SubmissionDetailCard attribution (reuses pendingCardB patterns)
-    viaAnonymous: 'via anonymous',
-    yourSubmissionAttribution: 'your submission',
-    viaHandlePrefix: 'via @',
+    // SubmissionDetailCard labels
+    vendorLabel: 'VENDOR',
+    byLabel: 'BY',
+    whenLabel: 'WHEN',
+    viaAnonymous: 'anonymous',
+    viaHandlePrefix: '@',
   },
 
   // ── DisputedPriceCard ───────────────────────────────────────────

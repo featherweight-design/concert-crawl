@@ -215,11 +215,13 @@ export default async function EventDetailPage({
           {/* Phase 8.5 — price slot. Renders the appropriate card based on event
               and community report state. Falls back to the standard PriceDisplay
               when no Phase 8.5 override applies. */}
+          <div className="mt-4">
           <EventDetailPriceBlock
             event={event}
             reports={reports}
             currentUserId={userId ?? null}
           />
+          </div>
 
           {/* Setlist preview — owns its own card surface (bg, border, radius) */}
           {event.setlist && (

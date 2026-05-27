@@ -330,8 +330,8 @@ export interface EventDetailResponse extends EventWithVenue {
     priceMin: string
     priceMax: string | null
   }> | null
-  // Top pending submission when no corroborated price exists yet
-  pendingSubmission?: {
+  // All pending submissions when no corroborated price exists yet
+  pendingSubmissions?: Array<{
     id: string
     priceMin: string
     priceMax: string | null
@@ -344,7 +344,7 @@ export interface EventDetailResponse extends EventWithVenue {
     confirmsCount: number
     confirmsNeeded: number
     isSubmitter: boolean
-  } | null
+  }> | null
 }
 
 // Public events list query params

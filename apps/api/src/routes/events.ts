@@ -380,8 +380,8 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     }
   }
 
-  // Surface top pending submission when no corroborated price exists yet
-  let pendingSubmission: {
+  // Surface all pending submissions when no corroborated price exists yet
+  let pendingSubmissions: Array<{
     id: string
     priceMin: string
     priceMax: string | null
@@ -394,10 +394,10 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     confirmsCount: number
     confirmsNeeded: number
     isSubmitter: boolean
-  } | null = null
+  }> | null = null
 
   if (row.ticketPriceMin === null && priceApprovalKind === null) {
-    const [topPending] = await db
+    const pendingRows = await db
       .select({
         id: priceSubmissions.id,
         priceMin: priceSubmissions.priceMin,
@@ -420,24 +420,42 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         sql`CASE WHEN ${priceSubmissions.vendor} = 'VenueBoxOffice' THEN 0 ELSE 1 END ASC`,
         desc(priceSubmissions.createdAt),
       )
-      .limit(1)
 
-    if (topPending) {
-      const [confirmCountRow] = await db
-        .select({ total: count() })
+    if (pendingRows.length > 0) {
+      // Batch confirm counts for all pending submissions
+      const confirmCountRows = await db
+        .select({
+          submissionId: submissionConfirms.submissionId,
+          total: count(),
+        })
         .from(submissionConfirms)
-        .where(eq(submissionConfirms.submissionId, topPending.id))
+        .where(
+          inArray(
+            submissionConfirms.submissionId,
+            pendingRows.map((rpt) => rpt.id),
+          ),
+        )
+        .groupBy(submissionConfirms.submissionId)
 
-      const confirmsCount = confirmCountRow?.total ?? 0
+      const confirmCountMap = new Map(
+        confirmCountRows.map((rpt) => [rpt.submissionId, rpt.total]),
+      )
 
-      let submitterHandle: string | null = null
-      if (topPending.userId) {
-        const [profile] = await db
-          .select({ handle: userProfiles.handle })
+      // Batch submitter handles
+      const userIds = pendingRows
+        .map((rpt) => rpt.userId)
+        .filter((uid): uid is string => uid !== null)
+      const handleMap = new Map<string, string>()
+      if (userIds.length > 0) {
+        const profiles = await db
+          .select({ userId: userProfiles.userId, handle: userProfiles.handle })
           .from(userProfiles)
-          .where(eq(userProfiles.userId, topPending.userId))
-          .limit(1)
-        submitterHandle = profile?.handle ?? null
+          .where(inArray(userProfiles.userId, userIds))
+        for (const profile of profiles) {
+          if (profile.handle != null) {
+            handleMap.set(profile.userId, profile.handle)
+          }
+        }
       }
 
       const eventDate = row.date ?? ''
@@ -447,20 +465,20 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       const isEventImminent = diffDays >= 0 && diffDays <= 6
       const confirmsNeeded = isEventImminent ? 3 : 2
 
-      pendingSubmission = {
-        id: topPending.id,
-        priceMin: topPending.priceMin,
-        priceMax: topPending.priceMax,
-        tier: topPending.tier,
-        vendor: topPending.vendor ?? 'Unknown',
-        howFound: topPending.howFound,
-        note: topPending.note ?? null,
-        submitterHandle,
-        submittedAt: topPending.createdAt.toISOString(),
-        confirmsCount,
+      pendingSubmissions = pendingRows.map((sub) => ({
+        id: sub.id,
+        priceMin: sub.priceMin,
+        priceMax: sub.priceMax,
+        tier: sub.tier,
+        vendor: sub.vendor ?? 'Unknown',
+        howFound: sub.howFound,
+        note: sub.note ?? null,
+        submitterHandle: sub.userId ? (handleMap.get(sub.userId) ?? null) : null,
+        submittedAt: sub.createdAt.toISOString(),
+        confirmsCount: confirmCountMap.get(sub.id) ?? 0,
         confirmsNeeded,
-        isSubmitter: topPending.userId === authInfo?.userId,
-      }
+        isSubmitter: sub.userId === authInfo?.userId,
+      }))
     }
   }
 
@@ -477,7 +495,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       priceApprovalKind,
       priceApprovedAt,
       priceAlternates,
-      pendingSubmission,
+      pendingSubmissions,
     },
   })
 })

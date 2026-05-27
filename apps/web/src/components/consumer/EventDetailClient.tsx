@@ -28,6 +28,7 @@ import { EvidenceForm } from '@/components/consumer/reporting/EvidenceForm'
 import { ConfirmReportSheet } from '@/components/consumer/reporting/ConfirmReportSheet'
 import { PriceDisplay } from '@/components/consumer/PriceDisplay'
 import { SubmitPriceCardCta } from '@/components/consumer/SubmitPriceCardCta'
+import { SubmitPriceModal } from '@/components/consumer/submit-price/SubmitPriceModal'
 
 // ── Shared types ─────────────────────────────────────────────────────
 
@@ -266,7 +267,9 @@ export function EventDetailPriceBlock({
 }: EventDetailSharedProps) {
   const { getToken } = useAuth()
   const router = useRouter()
-  const [corroborationOpen, setCorroborationOpen] = useState(false)
+  const [activeCorroborationId, setActiveCorroborationId] = useState<string | null>(null)
+  const [submitPriceOpen, setSubmitPriceOpen] = useState(false)
+  const [legacyCorroborationOpen, setLegacyCorroborationOpen] = useState(false)
 
   const pendingSoldOutReport = findPendingReport(reports, 'sold-out')
   const pendingCancelledReport = findPendingReport(reports, 'cancelled')
@@ -378,68 +381,91 @@ export function EventDetailPriceBlock({
     )
   }
 
-  // ── 4a. Pending submission from API — no corroborated price yet ──
-  if (event.pendingSubmission != null) {
-    const sub = event.pendingSubmission
-    const displayConfirms = sub.confirmsCount + 1
-    const isBoxOffice = sub.vendor === 'VenueBoxOffice'
-    const viewKind: 'other' | 'submitter' | 'self-locked' = sub.isSubmitter
-      ? 'submitter'
-      : 'other'
+  // ── 4a. Pending submissions from API — no corroborated price yet ─
+  if (event.pendingSubmissions != null && event.pendingSubmissions.length > 0) {
+    const subs = event.pendingSubmissions
+    const activeCorroboration = activeCorroborationId !== null
+      ? subs.find((sub) => sub.id === activeCorroborationId) ?? null
+      : null
 
     return (
       <>
-        <PendingCardB
-          floor={parseFloat(sub.priceMin)}
-          {...(sub.priceMax !== null ? { ceiling: parseFloat(sub.priceMax) } : {})}
-          tier={sub.tier}
-          vendor={sub.vendor}
-          kind={isBoxOffice ? 'boxoffice' : 'community'}
-          submitter={
-            sub.submitterHandle
-              ? { handle: sub.submitterHandle, url: '' }
-              : null
-          }
-          submittedAt={sub.submittedAt}
-          confirms={displayConfirms}
-          needed={sub.confirmsNeeded}
-          view={viewKind}
-          note={sub.note}
-          onConfirm={() => setCorroborationOpen(true)}
-          onWithdraw={() => {
-            /* requires withdraw flow — future */
-          }}
-          onEdit={() => {
-            /* requires edit flow — future */
-          }}
-        />
-        {corroborationOpen && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {subs.map((sub) => {
+            const displayConfirms = sub.confirmsCount + 1
+            const isBoxOffice = sub.vendor === 'VenueBoxOffice'
+            const viewKind: 'other' | 'submitter' | 'self-locked' = sub.isSubmitter
+              ? 'submitter'
+              : 'other'
+
+            return (
+              <PendingCardB
+                key={sub.id}
+                floor={parseFloat(sub.priceMin)}
+                {...(sub.priceMax !== null ? { ceiling: parseFloat(sub.priceMax) } : {})}
+                tier={sub.tier}
+                vendor={sub.vendor}
+                kind={isBoxOffice ? 'boxoffice' : 'community'}
+                submitter={
+                  sub.submitterHandle
+                    ? { handle: sub.submitterHandle, url: '' }
+                    : null
+                }
+                submittedAt={sub.submittedAt}
+                confirms={displayConfirms}
+                needed={sub.confirmsNeeded}
+                view={viewKind}
+                note={sub.note}
+                onConfirm={() => setActiveCorroborationId(sub.id)}
+                onWithdraw={() => {
+                  /* withdraw flow — future */
+                }}
+                onEdit={() => setSubmitPriceOpen(true)}
+              />
+            )
+          })}
+        </div>
+
+        {activeCorroboration !== null && (
           <CorroborationSheet
             submission={{
-              floor: parseFloat(sub.priceMin),
-              ...(sub.priceMax !== null
-                ? { ceiling: parseFloat(sub.priceMax) }
+              floor: parseFloat(activeCorroboration.priceMin),
+              ...(activeCorroboration.priceMax !== null
+                ? { ceiling: parseFloat(activeCorroboration.priceMax) }
                 : {}),
-              tier: sub.tier,
-              vendor: sub.vendor,
-              kind: isBoxOffice ? 'boxoffice' : 'community',
-              submitter: sub.submitterHandle
-                ? { handle: sub.submitterHandle, url: '' }
+              tier: activeCorroboration.tier,
+              vendor: activeCorroboration.vendor,
+              kind: activeCorroboration.vendor === 'VenueBoxOffice' ? 'boxoffice' : 'community',
+              submitter: activeCorroboration.submitterHandle
+                ? { handle: activeCorroboration.submitterHandle, url: '' }
                 : null,
-              submittedAt: sub.submittedAt,
-              confirms: displayConfirms,
-              needed: sub.confirmsNeeded,
-              submissionId: sub.id,
+              submittedAt: activeCorroboration.submittedAt,
+              confirms: activeCorroboration.confirmsCount + 1,
+              needed: activeCorroboration.confirmsNeeded,
+              note: activeCorroboration.note,
+              submissionId: activeCorroboration.id,
             }}
-            open={corroborationOpen}
-            onClose={() => setCorroborationOpen(false)}
+            open={activeCorroborationId !== null}
+            onClose={() => setActiveCorroborationId(null)}
             onConfirm={(_method) => {
-              setCorroborationOpen(false)
+              setActiveCorroborationId(null)
               router.refresh()
             }}
-            onSubmitUpdate={() => setCorroborationOpen(false)}
+            onSubmitUpdate={() => {
+              setActiveCorroborationId(null)
+              setSubmitPriceOpen(true)
+            }}
           />
         )}
+
+        <SubmitPriceModal
+          open={submitPriceOpen}
+          onClose={() => setSubmitPriceOpen(false)}
+          eventId={event.id}
+          artist={event.artist}
+          venueName={event.venue.name}
+          date={event.date}
+        />
       </>
     )
   }
@@ -473,7 +499,7 @@ export function EventDetailPriceBlock({
           confirms={0}
           needed={2}
           view="other"
-          onConfirm={() => setCorroborationOpen(true)}
+          onConfirm={() => setLegacyCorroborationOpen(true)}
           onWithdraw={() => {
             // Requires submissionId from API — future work
           }}
@@ -481,7 +507,7 @@ export function EventDetailPriceBlock({
             // Requires submissionId from API — future work
           }}
         />
-        {corroborationOpen && (
+        {legacyCorroborationOpen && (
           <CorroborationSheet
             submission={{
               floor: priceMin,
@@ -499,14 +525,14 @@ export function EventDetailPriceBlock({
               // This is a placeholder until the API exposes it.
               submissionId: '',
             }}
-            open={corroborationOpen}
-            onClose={() => setCorroborationOpen(false)}
+            open={legacyCorroborationOpen}
+            onClose={() => setLegacyCorroborationOpen(false)}
             onConfirm={(_method) => {
               // submissionId not yet in EventDetailResponse; confirm is a no-op
               // until the API exposes it. Sheet will close without confirming.
-              setCorroborationOpen(false)
+              setLegacyCorroborationOpen(false)
             }}
-            onSubmitUpdate={() => setCorroborationOpen(false)}
+            onSubmitUpdate={() => setLegacyCorroborationOpen(false)}
           />
         )}
       </>

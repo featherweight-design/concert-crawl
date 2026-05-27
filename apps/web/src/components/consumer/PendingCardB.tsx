@@ -11,6 +11,16 @@ import {
 
 const copy = CONSUMER_COPY.pendingCardB
 
+// ── Helpers ──────────────────────────────────────────────────────
+const formatTimeAgo = (isoDate: string): string => {
+  const diffMs = Date.now() - new Date(isoDate).getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  if (diffMins < 60) return `${diffMins}m ago`
+  const diffHours = Math.floor(diffMins / 60)
+  if (diffHours < 24) return `${diffHours}h ago`
+  return `${Math.floor(diffHours / 24)}d ago`
+}
+
 // ── Color constants ──────────────────────────────────────────────
 const AZURE = 'oklch(0.62 0.12 240)' // community tier
 const GOLD = 'oklch(0.66 0.14 78)' // box-office tier
@@ -283,7 +293,7 @@ export const PendingCardB = ({
             </span>
           )}
           <span style={{ opacity: 0.5 }}>·</span>
-          <span>{submittedAt}</span>
+          <span>{formatTimeAgo(submittedAt)}</span>
         </div>
 
         {/* Optional note */}
