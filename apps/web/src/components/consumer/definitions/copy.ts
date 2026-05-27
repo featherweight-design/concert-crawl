@@ -926,10 +926,6 @@ export const CONSUMER_COPY = {
     escapeLink:
       'Saw a different tier or a different price? Submit an update instead.',
 
-    // Honesty disclaimer
-    honestyDisclaimer:
-      "By confirming, you're vouching this is accurate. Repeated bad-faith confirms can affect your account.",
-
     // Self-locked state
     selfLocked: {
       waitingNotice:

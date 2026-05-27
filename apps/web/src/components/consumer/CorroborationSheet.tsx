@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { LockGlyph, PendingTrustPill } from './glyphs'
+import { CheckGlyph, LockGlyph, PendingTrustPill } from './glyphs'
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
 
 const copy = CONSUMER_COPY.corroborationSheet
@@ -510,8 +510,13 @@ export const CorroborationSheet = ({
                 opacity: selectedMethod !== null ? 1 : 0.45,
                 width: '100%',
                 transition: 'opacity 0.12s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
               }}
             >
+              <CheckGlyph size={13} color="var(--fg-on-accent)" />
               {copy.confirmButton}
             </button>
             <button
@@ -531,25 +536,6 @@ export const CorroborationSheet = ({
             >
               {copy.escapeLink}
             </button>
-            <div
-              style={{
-                background: 'color-mix(in oklab, var(--fg) 3%, transparent)',
-                border: '1px solid var(--border)',
-                borderRadius: 10,
-                padding: '10px 14px',
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: 'Inter, system-ui',
-                  fontSize: 12,
-                  color: 'var(--fg-subtle)',
-                  lineHeight: 1.5,
-                }}
-              >
-                {copy.honestyDisclaimer}
-              </span>
-            </div>
           </div>
         )
       }
