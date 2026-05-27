@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { and, count, eq, isNull, sql } from 'drizzle-orm'
+import { and, count, eq, inArray, isNull } from 'drizzle-orm'
 import {
   db,
   eventReportConfirms,
@@ -162,22 +162,53 @@ eventReportsRouter.get('/:id/reports', clerkAuth, async (ctx) => {
       evidenceUrl: eventReports.evidenceUrl,
       note: eventReports.note,
       createdAt: eventReports.createdAt,
-      confirmsCount: sql<number>`(SELECT COUNT(*)::int FROM event_report_confirms WHERE event_report_confirms.report_id = ${eventReports.id})`,
-      userHasConfirmed: userId
-        ? sql<number>`(SELECT COUNT(*)::int FROM event_report_confirms WHERE event_report_confirms.report_id = ${eventReports.id} AND event_report_confirms.user_id = ${userId})`
-        : sql<number>`0`,
     })
     .from(eventReports)
     .where(
       and(eq(eventReports.eventId, eventId), isNull(eventReports.resolvedAt)),
     )
 
+  if (reportRows.length === 0) {
+    return ctx.json({ success: true, data: [] })
+  }
+
+  const reportIds = reportRows.map((rpt) => rpt.id)
+
+  // Fetch confirm counts for all reports in one batch query — avoids correlated
+  // subqueries in Drizzle sql<> which have parameterization edge cases in tests.
+  const confirmCountRows = await db
+    .select({ reportId: eventReportConfirms.reportId, total: count() })
+    .from(eventReportConfirms)
+    .where(inArray(eventReportConfirms.reportId, reportIds))
+    .groupBy(eventReportConfirms.reportId)
+
+  const confirmCountMap = new Map(
+    confirmCountRows.map((row) => [row.reportId, row.total]),
+  )
+
+  // Fetch which reports the current user has confirmed
+  const confirmedByUser = new Set<string>()
+  if (userId !== null) {
+    const confirmRows = await db
+      .select({ reportId: eventReportConfirms.reportId })
+      .from(eventReportConfirms)
+      .where(
+        and(
+          eq(eventReportConfirms.userId, userId),
+          inArray(eventReportConfirms.reportId, reportIds),
+        ),
+      )
+    for (const row of confirmRows) {
+      confirmedByUser.add(row.reportId)
+    }
+  }
+
   const enrichedReports = reportRows.map((report) => ({
     ...report,
-    confirmsCount: Number(report.confirmsCount),
+    confirmsCount: confirmCountMap.get(report.id) ?? 0,
     confirmsNeeded,
     isReporter: report.reporterId === userId,
-    userHasConfirmed: Number(report.userHasConfirmed) > 0,
+    userHasConfirmed: confirmedByUser.has(report.id),
   }))
 
   return ctx.json({ success: true, data: enrichedReports })
