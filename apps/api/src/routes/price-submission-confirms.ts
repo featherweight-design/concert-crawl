@@ -2,7 +2,12 @@ import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { count, eq } from 'drizzle-orm'
-import { db, priceSubmissions, submissionConfirms } from '@concert-crawl/db'
+import {
+  db,
+  events,
+  priceSubmissions,
+  submissionConfirms,
+} from '@concert-crawl/db'
 import { SP_POLICY } from '@concert-crawl/types'
 import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js'
 
@@ -41,6 +46,8 @@ priceSubmissionConfirmsRouter.post(
         eventId: priceSubmissions.eventId,
         userId: priceSubmissions.userId,
         status: priceSubmissions.status,
+        priceMin: priceSubmissions.priceMin,
+        priceMax: priceSubmissions.priceMax,
       })
       .from(priceSubmissions)
       .where(eq(priceSubmissions.id, submissionId))
@@ -94,6 +101,18 @@ priceSubmissionConfirmsRouter.post(
         ...(promoted ? { status: 'corroborated', updatedAt: new Date() } : {}),
       })
       .where(eq(priceSubmissions.id, submissionId))
+
+    if (promoted) {
+      await db
+        .update(events)
+        .set({
+          ticketPriceMin: submission.priceMin,
+          ticketPriceMax: submission.priceMax,
+          priceSource: 'community',
+          updatedAt: new Date(),
+        })
+        .where(eq(events.id, eventId))
+    }
 
     const submissionStatus = promoted ? 'corroborated' : submission.status
 
