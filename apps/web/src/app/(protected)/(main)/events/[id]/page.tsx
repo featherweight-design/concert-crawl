@@ -15,7 +15,6 @@ import { EventCard } from '@/components/consumer/event-card/EventCard'
 import { SectionHeader } from '@/components/consumer/section-header'
 import { WatchShowButton } from '@/components/consumer/watch-show-button'
 import { SetlistPreview } from '@/components/consumer/setlist-preview'
-import { SoldOutCta } from '@/components/consumer/SoldOutCta'
 import { GenreChips } from '@/components/consumer/GenreChips'
 import {
   EventDetailBanners,
@@ -91,10 +90,6 @@ export default async function EventDetailPage({
   const showTime = formatShowTime(event.showTime)
   const doorsTime = formatShowTime(event.doorsTime)
   const dateLabel = formatEventDate(event.date, event.venue.timezone)
-  // Sold-out is a community claim surfaced via the API priceStatus field.
-  // The field is null until a corroborated sold-out submission exists.
-  const isSoldOut = event.priceStatus === 'soldout'
-
   const doorsShow =
     doorsTime && showTime
       ? `${doorsTime} / ${showTime}`
@@ -216,11 +211,11 @@ export default async function EventDetailPage({
               and community report state. Falls back to the standard PriceDisplay
               when no Phase 8.5 override applies. */}
           <div className="mt-4">
-          <EventDetailPriceBlock
-            event={event}
-            reports={reports}
-            currentUserId={userId ?? null}
-          />
+            <EventDetailPriceBlock
+              event={event}
+              reports={reports}
+              currentUserId={userId ?? null}
+            />
           </div>
 
           {/* Setlist preview — owns its own card surface (bg, border, radius) */}
@@ -236,9 +231,7 @@ export default async function EventDetailPage({
               Sold out → disabled button. ticketUrl → "Get Tickets ↗".
               Fallback → venue website. No URL → disabled "No tickets available". */}
           <div className="mt-5">
-            {isSoldOut ? (
-              <SoldOutCta />
-            ) : event.ticketUrl || event.venue.websiteUrl ? (
+            {event.ticketUrl || event.venue.websiteUrl ? (
               <a
                 href={event.ticketUrl ?? event.venue.websiteUrl ?? '#'}
                 target="_blank"
