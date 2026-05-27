@@ -129,24 +129,22 @@ export const PendingSoldOutCard = ({
           <svg
             width="14"
             height="14"
-            viewBox="0 0 10 10"
+            viewBox="0 0 12 12"
             fill="none"
             aria-hidden="true"
           >
-            <rect
-              x="1"
-              y="2.5"
-              width="8"
-              height="5"
-              rx="1"
+            <circle
+              cx="6"
+              cy="6"
+              r="4.5"
               stroke="currentColor"
-              strokeWidth="1.2"
+              strokeWidth="1.4"
               fill="none"
             />
             <path
-              d="M3.5 3.5 L6.5 6.5 M6.5 3.5 L3.5 6.5"
+              d="M3.5 8.5L8.5 3.5"
               stroke="currentColor"
-              strokeWidth="1.2"
+              strokeWidth="1.4"
               strokeLinecap="round"
             />
           </svg>

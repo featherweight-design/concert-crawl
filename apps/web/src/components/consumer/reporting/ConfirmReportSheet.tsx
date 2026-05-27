@@ -15,22 +15,14 @@ const CancelledGlyph16 = () => (
   <svg
     width="15"
     height="15"
-    viewBox="0 0 10 10"
+    viewBox="0 0 12 12"
     fill="none"
     aria-hidden="true"
   >
-    <circle
-      cx="5"
-      cy="5"
-      r="4"
-      stroke="currentColor"
-      strokeWidth="1.2"
-      fill="none"
-    />
     <path
-      d="M3 3 L7 7 M7 3 L3 7"
+      d="M3 3l6 6M9 3L3 9"
       stroke="currentColor"
-      strokeWidth="1.2"
+      strokeWidth="1.6"
       strokeLinecap="round"
     />
   </svg>
@@ -40,22 +32,22 @@ const PostponedGlyph16 = () => (
   <svg
     width="15"
     height="15"
-    viewBox="0 0 10 10"
+    viewBox="0 0 12 12"
     fill="none"
     aria-hidden="true"
   >
     <circle
-      cx="5"
-      cy="5"
-      r="4"
+      cx="6"
+      cy="6"
+      r="4.5"
       stroke="currentColor"
-      strokeWidth="1.2"
+      strokeWidth="1.3"
       fill="none"
     />
     <path
-      d="M5 3 L5 5 L6.5 6.5"
+      d="M6 3.5V6l2 1.4"
       stroke="currentColor"
-      strokeWidth="1.2"
+      strokeWidth="1.4"
       strokeLinecap="round"
       strokeLinejoin="round"
     />
@@ -66,24 +58,22 @@ const SoldOutGlyph16 = () => (
   <svg
     width="15"
     height="15"
-    viewBox="0 0 10 10"
+    viewBox="0 0 12 12"
     fill="none"
     aria-hidden="true"
   >
-    <rect
-      x="1"
-      y="2.5"
-      width="8"
-      height="5"
-      rx="1"
+    <circle
+      cx="6"
+      cy="6"
+      r="4.5"
       stroke="currentColor"
-      strokeWidth="1.2"
+      strokeWidth="1.4"
       fill="none"
     />
     <path
-      d="M3.5 3.5 L6.5 6.5 M6.5 3.5 L3.5 6.5"
+      d="M3.5 8.5L8.5 3.5"
       stroke="currentColor"
-      strokeWidth="1.2"
+      strokeWidth="1.4"
       strokeLinecap="round"
     />
   </svg>
@@ -93,26 +83,22 @@ const AvailableGlyph16 = () => (
   <svg
     width="15"
     height="15"
-    viewBox="0 0 10 10"
+    viewBox="0 0 12 12"
     fill="none"
     aria-hidden="true"
   >
-    <rect
-      x="1"
-      y="2.5"
-      width="8"
-      height="5"
-      rx="1"
+    <path
+      d="M2 5a1.5 1.5 0 010 3v2h8V8a1.5 1.5 0 010-3V3H2v2z"
       stroke="currentColor"
-      strokeWidth="1.2"
-      fill="none"
+      strokeWidth="1.3"
+      strokeLinejoin="round"
     />
     <path
-      d="M3.5 5 L4.5 6 L6.5 4"
+      d="M5 5v3"
       stroke="currentColor"
-      strokeWidth="1.2"
+      strokeWidth="1.3"
       strokeLinecap="round"
-      strokeLinejoin="round"
+      strokeDasharray="1.2 1.6"
     />
   </svg>
 )
