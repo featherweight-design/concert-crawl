@@ -145,8 +145,27 @@ export const DisputedPriceCard = ({
                 whiteSpace: 'nowrap',
                 flexShrink: 0,
                 lineHeight: 1,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
               }}
             >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                <path
+                  d="M1 7.5 C2.5 7.5 2.5 4 4 4 C5.5 4 5.5 6 7 6 L9 2.5"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M7 2.5 L9 2.5 L9 4.5"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
               {copy.strip.badgeLabel}
             </span>
 
@@ -300,8 +319,8 @@ export const DisputedPriceCard = ({
               gap: 6,
             }}
           >
-            <ArrowGlyph size={11} />
             {copy.footer.buttonLabel}
+            <ArrowGlyph size={11} />
           </button>
         </div>
       </div>

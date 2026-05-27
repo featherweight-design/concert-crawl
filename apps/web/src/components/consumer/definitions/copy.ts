@@ -958,7 +958,7 @@ export const CONSUMER_COPY = {
     },
     footer: {
       preButtonCopy: 'Got a different number?',
-      buttonLabel: 'Submit an update →',
+      buttonLabel: 'Submit an update',
     },
   },
 
