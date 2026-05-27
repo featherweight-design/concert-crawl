@@ -895,6 +895,11 @@ export function EventDetailPriceBlock({
               ])
             }
           }}
+          onWithdrawSuccess={(submissionId) => {
+            setLocalSubmissions((prev) =>
+              prev.filter((sub) => sub.id !== submissionId),
+            )
+          }}
         />
       </>
     )

@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { ShieldCheck } from 'lucide-react'
 import { ModalShell } from '@/components/consumer/modal-shell'
@@ -43,6 +42,7 @@ interface SubmitPriceModalProps {
     vendor: string
     howFound: string
   }) => void
+  onWithdrawSuccess?: (submissionId: string) => void
 }
 
 const TIER_OPTIONS = [
@@ -79,8 +79,8 @@ export function SubmitPriceModal({
   date,
   openInEditMode = false,
   onSuccess,
+  onWithdrawSuccess,
 }: SubmitPriceModalProps) {
-  const router = useRouter()
   const { getToken } = useAuth()
 
   const [modalState, setModalState] = useState<ModalState>('loading-check')
@@ -226,29 +226,30 @@ export function SubmitPriceModal({
           }),
         },
       )
-      const data = (await res.json()) as {
-        error?: string
-        submission?: PriceSubmission
-      }
+      const responseData = (await res.json()) as
+        | { success: true; data: PriceSubmission }
+        | { success: false; error?: string; submission?: PriceSubmission }
       if (!res.ok) {
         if (res.status === 409) {
-          if (data.submission) {
-            setExistingSubmission(data.submission)
+          if (!responseData.success && responseData.submission) {
+            setExistingSubmission(responseData.submission)
           }
           setModalState('alreadySubmitted')
           return
         }
-        throw new Error(data.error ?? 'Submission failed')
+        throw new Error(
+          (!responseData.success && responseData.error) || 'Submission failed',
+        )
       }
-      if (data.submission) {
+      if (responseData.success) {
         onSuccess?.({
           isEdit: false,
-          id: data.submission.id,
-          priceMin: data.submission.priceMin,
-          priceMax: data.submission.priceMax,
-          tier: data.submission.tier,
-          vendor: data.submission.vendor,
-          howFound: data.submission.howFound,
+          id: responseData.data.id,
+          priceMin: responseData.data.priceMin,
+          priceMax: responseData.data.priceMax,
+          tier: responseData.data.tier,
+          vendor: responseData.data.vendor,
+          howFound: responseData.data.howFound,
         })
       }
       setModalState('success')
@@ -256,15 +257,7 @@ export function SubmitPriceModal({
       console.error('Price submission failed', err)
       setModalState('error')
     }
-  }, [
-    formState,
-    isEditMode,
-    existingSubmission,
-    getToken,
-    eventId,
-    router,
-    onSuccess,
-  ])
+  }, [formState, isEditMode, existingSubmission, getToken, eventId, onSuccess])
 
   const handleWithdraw = useCallback(async () => {
     if (!existingSubmission) return
@@ -282,14 +275,14 @@ export function SubmitPriceModal({
         setModalState('error')
         return
       }
-      router.refresh()
+      onWithdrawSuccess?.(existingSubmission.id)
       onClose()
     } catch (err) {
       console.error('Withdraw failed', err)
       setWithdrawError('network')
       setModalState('error')
     }
-  }, [existingSubmission, getToken, router, onClose])
+  }, [existingSubmission, getToken, onWithdrawSuccess, onClose])
 
   const dateStr = new Date(date).toLocaleDateString('en-US', {
     month: 'short',
