@@ -339,19 +339,19 @@ export const ReportSheet = ({
           >
             {liveStatus !== null ? copy.headingContext : copy.heading}
           </h2>
-          {liveStatus !== null && copy.subtitleByStatus[liveStatus] && (
-            <p
-              style={{
-                fontFamily: 'Inter, sans-serif',
-                fontSize: 13.5,
-                color: 'var(--fg-muted)',
-                lineHeight: 1.5,
-                margin: '8px 0 0',
-              }}
-            >
-              {copy.subtitleByStatus[liveStatus]}
-            </p>
-          )}
+          <p
+            style={{
+              fontFamily: 'Inter, sans-serif',
+              fontSize: 13.5,
+              color: 'var(--fg-muted)',
+              lineHeight: 1.5,
+              margin: '8px 0 0',
+            }}
+          >
+            {liveStatus !== null
+              ? copy.subtitleByStatus[liveStatus]
+              : copy.subtitle}
+          </p>
         </>
       }
       footer={
@@ -416,29 +416,27 @@ export const ReportSheet = ({
             />
           ))}
         </div>
-        {liveStatus !== null && (
-          <div
+        <div
+          style={{
+            padding: '12px 14px',
+            borderRadius: 10,
+            background: 'color-mix(in oklab, var(--fg) 5%, transparent)',
+            border: '1px solid var(--border)',
+          }}
+        >
+          <p
             style={{
-              padding: '12px 14px',
-              borderRadius: 10,
-              background: 'color-mix(in oklab, var(--fg) 5%, transparent)',
-              border: '1px solid var(--border)',
+              margin: 0,
+              fontFamily: 'Inter, sans-serif',
+              fontSize: 13,
+              color: 'var(--fg-subtle)',
+              lineHeight: 1.5,
+              letterSpacing: '-0.005em',
             }}
           >
-            <p
-              style={{
-                margin: 0,
-                fontFamily: 'Inter, sans-serif',
-                fontSize: 13,
-                color: 'var(--fg-subtle)',
-                lineHeight: 1.5,
-                letterSpacing: '-0.005em',
-              }}
-            >
-              {copy.footnote}
-            </p>
-          </div>
-        )}
+            {copy.footnote}
+          </p>
+        </div>
       </div>
     </ModalShell>
   )

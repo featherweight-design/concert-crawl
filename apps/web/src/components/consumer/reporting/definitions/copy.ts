@@ -13,11 +13,13 @@ export const REPORTING_COPY = {
 
   // ── ReportSheet ──────────────────────────────────────────────────
   reportSheet: {
-    eyebrow: 'Report',
+    eyebrow: 'Status report',
     eyebrowContext: 'Status report',
     cancelButton: 'Cancel',
     heading: 'What happened?',
     headingContext: 'What changed?',
+    subtitle:
+      'We surface this to other fans so they can confirm. Pick the closest match — you can add detail on the next step.',
     subtitleByStatus: {
       'sold-out':
         "This show is currently marked as sold out. Tell us what you saw — we'll route it to other fans to confirm.",
@@ -31,11 +33,12 @@ export const REPORTING_COPY = {
     options: {
       soldOut: {
         title: 'Sold out',
-        subtitle: 'Tickets are no longer available',
+        subtitle: 'Tickets are no longer available from the primary vendor.',
       },
       postponed: {
         title: 'Postponed',
-        subtitle: 'Show is rescheduled to a later date.',
+        subtitle:
+          "Show is rescheduled to a later date. We'll keep the page up.",
       },
       cancelled: {
         title: 'Cancelled',

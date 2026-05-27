@@ -30,6 +30,7 @@ import {
   or,
   sql,
 } from 'drizzle-orm'
+import { SP_POLICY } from '@concert-crawl/types'
 import { todayInTimezone } from '../lib/time.js'
 import { apiLogger } from '../lib/logger.js'
 import { serviceOrClerkAuth } from '../middleware/auth.js'
@@ -552,12 +553,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         }
       }
 
-      const eventDate = row.date ?? ''
-      const diffDays = Math.floor(
-        (new Date(eventDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
-      )
-      const isEventImminent = diffDays >= 0 && diffDays <= 6
-      const confirmsNeeded = isEventImminent ? 3 : 2
+      const confirmsNeeded = SP_POLICY.confirmsRequired
 
       pendingSubmissions = pendingRows.map((sub) => ({
         id: sub.id,
