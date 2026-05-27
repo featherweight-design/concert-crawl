@@ -184,7 +184,9 @@ describe('GET /v1/events/:id/reports', () => {
     const report = await seedEventReport(eventId, REPORTER)
     await seedEventReportConfirm(report.id, OTHER_USER)
     setAuth(OTHER_USER)
-    const res = await app.request(`/v1/events/${eventId}/reports`)
+    const res = await app.request(`/v1/events/${eventId}/reports`, {
+      headers: { Authorization: 'Bearer test-token' },
+    })
     const body = (await res.json()) as {
       data: Array<{ userHasConfirmed: boolean; confirmsCount: number }>
     }
@@ -201,8 +203,8 @@ describe('POST /v1/events/:id/reports/:reportId/confirm', () => {
     clearAuth()
     await clearTables()
     const venue = await seedVenue()
-    // Use a non-imminent date so threshold = confirmsRequired (2), not confirmsRequiredImminent (3)
-    const event = await seedEvent(venue.id, { date: '2026-09-01' })
+    // Far-future date keeps threshold = confirmsRequired (2), never confirmsRequiredImminent (3)
+    const event = await seedEvent(venue.id, { date: '2099-09-01' })
     eventId = event.id
     const report = await seedEventReport(eventId, REPORTER)
     reportId = report.id
