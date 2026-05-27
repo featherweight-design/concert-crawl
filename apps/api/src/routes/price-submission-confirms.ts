@@ -90,9 +90,9 @@ priceSubmissionConfirmsRouter.post(
       .where(eq(submissionConfirms.submissionId, submissionId))
 
     const confirmsCount = countResult?.total ?? 0
-    // +1 counts the original submitter alongside the additional confirmers,
-    // matching submissions.ts which uses `corroborationCount + 1 >= confirmsRequired`.
-    const promoted = confirmsCount + 1 >= SP_POLICY.confirmsRequired
+    // Matches submissions.ts: corroborationCount is incremented then checked
+    // against the threshold, so confirmsRequired additional confirmers are needed.
+    const promoted = confirmsCount >= SP_POLICY.confirmsRequired
 
     await db
       .update(priceSubmissions)
