@@ -164,12 +164,8 @@ eventReportsRouter.get('/:id/reports', clerkAuth, async (ctx) => {
       createdAt: eventReports.createdAt,
       confirmsCount: sql<number>`(SELECT COUNT(*)::int FROM event_report_confirms WHERE event_report_confirms.report_id = ${eventReports.id})`,
       userHasConfirmed: userId
-        ? sql<boolean>`EXISTS (
-            SELECT 1 FROM event_report_confirms
-            WHERE event_report_confirms.report_id = ${eventReports.id}
-            AND event_report_confirms.user_id = ${userId}
-          )`
-        : sql<boolean>`false`,
+        ? sql<number>`(SELECT COUNT(*)::int FROM event_report_confirms WHERE event_report_confirms.report_id = ${eventReports.id} AND event_report_confirms.user_id = ${userId})`
+        : sql<number>`0`,
     })
     .from(eventReports)
     .where(
@@ -181,7 +177,7 @@ eventReportsRouter.get('/:id/reports', clerkAuth, async (ctx) => {
     confirmsCount: Number(report.confirmsCount),
     confirmsNeeded,
     isReporter: report.reporterId === userId,
-    userHasConfirmed: Boolean(report.userHasConfirmed),
+    userHasConfirmed: Number(report.userHasConfirmed) > 0,
   }))
 
   return ctx.json({ success: true, data: enrichedReports })

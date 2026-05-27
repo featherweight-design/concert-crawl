@@ -70,7 +70,10 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
     setAuth(CONFIRMER)
     const res = await app.request(confirmUrl(), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
       body: JSON.stringify({ method: 'invalid-method' }),
     })
     expect(res.status).toBe(422)
@@ -83,7 +86,10 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
     const wrongUrl = `/v1/events/${event2.id}/price-submissions/${submissionId}/confirm`
     const res = await app.request(wrongUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
       body: JSON.stringify(confirmBody),
     })
     expect(res.status).toBe(404)
@@ -93,7 +99,10 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
     setAuth(SUBMITTER)
     const res = await app.request(confirmUrl(), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
       body: JSON.stringify(confirmBody),
     })
     expect(res.status).toBe(403)
@@ -103,7 +112,10 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
     setAuth(CONFIRMER)
     const res = await app.request(confirmUrl(), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
       body: JSON.stringify(confirmBody),
     })
     expect(res.status).toBe(200)
@@ -125,12 +137,18 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
     setAuth(CONFIRMER)
     await app.request(confirmUrl(), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
       body: JSON.stringify(confirmBody),
     })
     const res = await app.request(confirmUrl(), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
       body: JSON.stringify(confirmBody),
     })
     expect(res.status).toBe(409)
@@ -143,7 +161,10 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
       setAuth(`user_confirmer_${idx}`)
       const res = await app.request(confirmUrl(), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-token',
+        },
         body: JSON.stringify(confirmBody),
       })
       if (idx < SP_POLICY.confirmsRequired - 1) {

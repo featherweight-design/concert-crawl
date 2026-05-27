@@ -70,7 +70,10 @@ describe('POST /v1/events/:id/reports', () => {
     setAuth(REPORTER)
     const res = await app.request(reportUrl(), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
       body: JSON.stringify({ ...reportBody, status: 'wrong' }),
     })
     expect(res.status).toBe(422)
@@ -80,7 +83,10 @@ describe('POST /v1/events/:id/reports', () => {
     setAuth(REPORTER)
     const res = await app.request(reportUrl(), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
       body: JSON.stringify(reportBody),
     })
     expect(res.status).toBe(201)
@@ -98,7 +104,10 @@ describe('POST /v1/events/:id/reports', () => {
     await seedEventReport(eventId, REPORTER)
     const res = await app.request(reportUrl(), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
       body: JSON.stringify(reportBody),
     })
     expect(res.status).toBe(409)
@@ -108,7 +117,10 @@ describe('POST /v1/events/:id/reports', () => {
     setAuth(REPORTER)
     const res = await app.request(reportUrl(), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
       body: JSON.stringify({ ...reportBody, note: 'this is ass content' }),
     })
     expect(res.status).toBe(422)
@@ -189,7 +201,8 @@ describe('POST /v1/events/:id/reports/:reportId/confirm', () => {
     clearAuth()
     await clearTables()
     const venue = await seedVenue()
-    const event = await seedEvent(venue.id)
+    // Use a non-imminent date so threshold = confirmsRequired (2), not confirmsRequiredImminent (3)
+    const event = await seedEvent(venue.id, { date: '2026-09-01' })
     eventId = event.id
     const report = await seedEventReport(eventId, REPORTER)
     reportId = report.id
@@ -204,13 +217,19 @@ describe('POST /v1/events/:id/reports/:reportId/confirm', () => {
 
   it('returns 403 when reporter tries to confirm their own report', async () => {
     setAuth(REPORTER)
-    const res = await app.request(confirmUrl(), { method: 'POST' })
+    const res = await app.request(confirmUrl(), {
+      method: 'POST',
+      headers: { Authorization: 'Bearer test-token' },
+    })
     expect(res.status).toBe(403)
   })
 
   it('confirms successfully', async () => {
     setAuth(OTHER_USER)
-    const res = await app.request(confirmUrl(), { method: 'POST' })
+    const res = await app.request(confirmUrl(), {
+      method: 'POST',
+      headers: { Authorization: 'Bearer test-token' },
+    })
     expect(res.status).toBe(200)
     const body = (await res.json()) as {
       success: boolean
@@ -224,8 +243,14 @@ describe('POST /v1/events/:id/reports/:reportId/confirm', () => {
 
   it('returns 409 on duplicate confirm', async () => {
     setAuth(OTHER_USER)
-    await app.request(confirmUrl(), { method: 'POST' })
-    const res = await app.request(confirmUrl(), { method: 'POST' })
+    await app.request(confirmUrl(), {
+      method: 'POST',
+      headers: { Authorization: 'Bearer test-token' },
+    })
+    const res = await app.request(confirmUrl(), {
+      method: 'POST',
+      headers: { Authorization: 'Bearer test-token' },
+    })
     expect(res.status).toBe(409)
   })
 
@@ -234,7 +259,10 @@ describe('POST /v1/events/:id/reports/:reportId/confirm', () => {
 
     for (let idx = 0; idx < ER_POLICY.confirmsRequired; idx++) {
       setAuth(`user_confirmer_${idx}`)
-      const res = await app.request(confirmUrl(), { method: 'POST' })
+      const res = await app.request(confirmUrl(), {
+        method: 'POST',
+        headers: { Authorization: 'Bearer test-token' },
+      })
       expect(res.status).toBe(200)
       if (idx === ER_POLICY.confirmsRequired - 1) {
         const body = (await res.json()) as {
@@ -270,13 +298,19 @@ describe('DELETE /v1/events/:id/reports/:reportId', () => {
 
   it('returns 403 when a different user tries to withdraw', async () => {
     setAuth(OTHER_USER)
-    const res = await app.request(withdrawUrl(), { method: 'DELETE' })
+    const res = await app.request(withdrawUrl(), {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer test-token' },
+    })
     expect(res.status).toBe(403)
   })
 
   it('withdraws successfully', async () => {
     setAuth(REPORTER)
-    const res = await app.request(withdrawUrl(), { method: 'DELETE' })
+    const res = await app.request(withdrawUrl(), {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer test-token' },
+    })
     expect(res.status).toBe(204)
   })
 })

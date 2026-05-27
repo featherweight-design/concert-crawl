@@ -6,6 +6,7 @@ export default defineConfig({
     environment: 'node',
     globalSetup: './src/test/setup/global-setup.ts',
     include: ['**/*.integration.test.ts'],
+    fileParallelism: false,
     poolOptions: {
       forks: {
         singleFork: true,
