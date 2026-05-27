@@ -374,6 +374,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       priceConfirmsCount = confirmCount?.total ?? 0
       priceApprovalKind = priceConfirmsCount > 0 ? 'fan' : 'admin'
 
+      const allSubIds = allSubs.map((sub) => sub.id)
       const [counterRow] = await db
         .select({
           id: priceSubmissions.id,
@@ -387,7 +388,8 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
           and(
             eq(priceSubmissions.eventId, id),
             eq(priceSubmissions.status, 'pending'),
-            eq(priceSubmissions.disputedSubmissionId, latestSub.id),
+            isNotNull(priceSubmissions.disputedSubmissionId),
+            inArray(priceSubmissions.disputedSubmissionId, allSubIds),
           ),
         )
         .orderBy(desc(priceSubmissions.createdAt))
