@@ -23,7 +23,7 @@ export const REPORTING_COPY = {
       postponed:
         "This show is currently marked as postponed. Tell us what you saw — we'll route it to other fans to confirm.",
     } as Record<string, string>,
-    currentlyShowingAs: 'Currently showing as:',
+    currentlyLive: 'Currently live',
 
     options: {
       soldOut: {
@@ -32,19 +32,22 @@ export const REPORTING_COPY = {
       },
       postponed: {
         title: 'Postponed',
-        subtitle: 'Show date has been pushed back',
+        subtitle: 'Show is rescheduled to a later date.',
       },
       cancelled: {
         title: 'Cancelled',
-        subtitle: 'Show has been called off',
+        subtitle: 'Show is off entirely. Removes it from upcoming.',
       },
       available: {
         title: 'Tickets available',
-        subtitle: 'Tickets are back on sale',
+        subtitle: 'Tickets are back — the sold-out flag is wrong or stale.',
       },
     },
 
-    continueButton: 'Continue',
+    footnote:
+      "We'll ask how you know on the next step. An email from the venue, an artist's social post, or a venue announcement all count — anything we can point other fans at.",
+
+    continueButton: 'Continue →',
   },
 
   // ── EvidenceForm ─────────────────────────────────────────────────

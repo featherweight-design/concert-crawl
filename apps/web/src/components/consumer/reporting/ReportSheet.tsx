@@ -381,6 +381,7 @@ export const ReportSheet = ({
             style={{
               display: 'flex',
               flexDirection: 'column',
+              alignItems: 'flex-start',
               gap: 6,
               marginBottom: 14,
             }}
@@ -394,7 +395,7 @@ export const ReportSheet = ({
                 letterSpacing: '0.06em',
               }}
             >
-              {copy.currentlyShowingAs}
+              {copy.currentlyLive}
             </span>
             <ReportTypeMark kind={liveStatus} />
           </div>
@@ -413,6 +414,29 @@ export const ReportSheet = ({
             />
           ))}
         </div>
+        {liveStatus !== null && (
+          <div
+            style={{
+              padding: '12px 14px',
+              borderRadius: 10,
+              background: 'color-mix(in oklab, var(--fg) 5%, transparent)',
+              border: '1px solid var(--border)',
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                fontFamily: 'Inter, sans-serif',
+                fontSize: 13,
+                color: 'var(--fg-subtle)',
+                lineHeight: 1.5,
+                letterSpacing: '-0.005em',
+              }}
+            >
+              {copy.footnote}
+            </p>
+          </div>
+        )}
       </div>
     </ModalShell>
   )
