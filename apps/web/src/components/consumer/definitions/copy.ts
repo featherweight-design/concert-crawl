@@ -141,6 +141,7 @@ export const CONSUMER_COPY = {
     // Box office attribution verbs
     boughtVerb: 'Bought',
     sawVerb: 'Saw',
+    submittedByPrefix: 'Submitted by',
     anonymousFan: 'an anonymous fan',
     byPhoneSuffix: '· by phone',
 
@@ -901,6 +902,9 @@ export const CONSUMER_COPY = {
         label: (vendor: string) => `Same vendor (${vendor})`,
         description: (vendor: string) =>
           `I just checked ${vendor} and saw the same number.`,
+        boxOfficeLabel: 'Venue box office',
+        boxOfficeDescription:
+          'I also checked the venue box office and saw the same price.',
       },
       otherVendor: {
         label: 'A different vendor / site',

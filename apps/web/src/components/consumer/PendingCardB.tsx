@@ -12,6 +12,9 @@ import {
 const copy = CONSUMER_COPY.pendingCardB
 
 // ── Helpers ──────────────────────────────────────────────────────
+const vendorDisplayName = (vendor: string): string =>
+  vendor === 'VenueBoxOffice' ? 'Venue box office' : vendor
+
 const formatTimeAgo = (isoDate: string): string => {
   const diffMs = Date.now() - new Date(isoDate).getTime()
   const diffMins = Math.floor(diffMs / 60000)
@@ -191,23 +194,6 @@ export const PendingCardB = ({
           </Eyebrow>
         </div>
 
-        {/* Box-office sub-tier line */}
-        {isBox && (
-          <div
-            style={{
-              marginTop: '4px',
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: '9px',
-              color: tok.color,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase' as const,
-              fontWeight: 700,
-            }}
-          >
-            {vendor}
-          </div>
-        )}
-
         {/* Headline row */}
         <div
           style={{
@@ -270,7 +256,7 @@ export const PendingCardB = ({
             letterSpacing: '0.04em',
           }}
         >
-          {copy.seenOnPrefix} {vendor}
+          {copy.seenOnPrefix} {vendorDisplayName(vendor)}
         </div>
 
         {/* Attribution line */}

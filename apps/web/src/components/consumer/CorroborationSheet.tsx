@@ -8,6 +8,9 @@ import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
 const copy = CONSUMER_COPY.corroborationSheet
 
 // ── Helpers ──────────────────────────────────────────────────────
+const vendorDisplayName = (vendor: string): string =>
+  vendor === 'VenueBoxOffice' ? 'Venue box office' : vendor
+
 const formatTimeAgo = (isoDate: string): string => {
   const diffMs = Date.now() - new Date(isoDate).getTime()
   const diffMins = Math.floor(diffMs / 60000)
@@ -216,7 +219,7 @@ const SubmissionDetailCard = ({
           }}
         >
           <span style={labelStyle}>{copy.vendorLabel}</span>
-          <span style={valueStyle}>{vendor}</span>
+          <span style={valueStyle}>{vendorDisplayName(vendor)}</span>
           <span style={labelStyle}>{copy.byLabel}</span>
           <span style={valueStyle}>{byNode}</span>
           <span style={labelStyle}>{copy.whenLabel}</span>
@@ -392,6 +395,8 @@ export const CorroborationSheet = ({
 
   const accentColor = submission.kind === 'boxoffice' ? GOLD : AZURE
 
+  const isBoxOfficeSubmission = submission.kind === 'boxoffice'
+
   const verifyOptions: Array<{
     method: VerifyMethod
     label: string
@@ -399,8 +404,12 @@ export const CorroborationSheet = ({
   }> = [
     {
       method: 'same_vendor',
-      label: copy.options.sameVendor.label(submission.vendor),
-      description: copy.options.sameVendor.description(submission.vendor),
+      label: isBoxOfficeSubmission
+        ? copy.options.sameVendor.boxOfficeLabel
+        : copy.options.sameVendor.label(submission.vendor),
+      description: isBoxOfficeSubmission
+        ? copy.options.sameVendor.boxOfficeDescription
+        : copy.options.sameVendor.description(submission.vendor),
     },
     {
       method: 'other_vendor',
@@ -412,11 +421,15 @@ export const CorroborationSheet = ({
       label: copy.options.sawListing.label,
       description: copy.options.sawListing.description,
     },
-    {
-      method: 'bought_myself',
-      label: copy.options.boughtMyself.label,
-      description: copy.options.boughtMyself.description,
-    },
+    ...(!isBoxOfficeSubmission
+      ? [
+          {
+            method: 'bought_myself' as VerifyMethod,
+            label: copy.options.boughtMyself.label,
+            description: copy.options.boughtMyself.description,
+          },
+        ]
+      : []),
   ]
 
   return (

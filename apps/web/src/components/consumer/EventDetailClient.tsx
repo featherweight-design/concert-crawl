@@ -675,8 +675,8 @@ export function EventDetailPriceBlock({
         sub.confirmsNeeded,
     )
     if (confirmedSub != null) {
-      const approvalKind =
-        confirmedSub.vendor === 'VenueBoxOffice' ? 'admin' : 'fan'
+      const confirmsDisplay =
+        confirmedSub.confirmsCount + (localConfirms[confirmedSub.id] ?? 0)
       return (
         <>
           <PriceDisplay
@@ -692,9 +692,10 @@ export function EventDetailPriceBlock({
             priceVendor={confirmedSub.vendor}
             priceSubmitterHandle={confirmedSub.submitterHandle}
             priceObservedAt={confirmedSub.submittedAt}
-            priceApprovalKind={approvalKind}
+            priceApprovalKind="fan"
             priceApprovedAt={confirmedSub.submittedAt}
             priceAlternates={null}
+            priceConfirmsCount={confirmsDisplay}
           />
           {/* Fix 14: hide SubmitPriceCardCta for cancelled events */}
           {event.status !== 'cancelled' && (

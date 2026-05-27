@@ -43,6 +43,8 @@ export interface PriceBlockPrice {
   }>
   soldOutBy?: { handle: string; url: string } | null
   soldOutConfirms?: number | null
+  // Fan confirms count — shown for community/boxoffice prices confirmed by the community
+  confirmsCount?: number | null
   // Box-office meta
   boxOfficeAction?: 'bought' | 'saw'
   boxOfficeMethod?: 'in-person' | 'phone'
@@ -75,6 +77,8 @@ interface PriceDisplayProps {
     priceMin: string
     priceMax: string | null
   }> | null
+  // Fan confirms count — passed from optimistic section 4a to show "N fans confirmed"
+  priceConfirmsCount?: number | null
   // When provided, the "Submit a price" button in the no-price state calls this
   // instead of opening an internal modal (lets parent own the submission flow)
   onSubmitPrice?: () => void
@@ -731,9 +735,59 @@ function DeltaPill({
 
 // ── BoxOfficeAttribution — in-person or phone purchase line ──────
 function BoxOfficeAttribution({ price }: { price: PriceBlockPrice }) {
-  const { boxOfficeAction, boxOfficeMethod, venueName, submitter } = price
+  const {
+    boxOfficeAction,
+    boxOfficeMethod,
+    venueName,
+    submitter,
+    confirmsCount,
+  } = price
   // Render nothing unless we have at least the venue name
   if (!venueName) return null
+
+  // Fan-corroborated box office price — no purchase/observation metadata recorded.
+  // Show simple "Submitted by @handle · N fans confirmed" attribution instead.
+  if (!boxOfficeAction) {
+    const confirmsText =
+      confirmsCount != null && confirmsCount > 0
+        ? ` · ${confirmsCount} ${confirmsCount !== 1 ? copy.priceDisplay.fansConfirmedSuffix : copy.priceDisplay.fanConfirmedSuffix}`
+        : ''
+    return (
+      <div style={{ marginTop: 6 }}>
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 9,
+            color: 'var(--fg-muted)',
+            letterSpacing: '0.03em',
+          }}
+        >
+          {copy.priceDisplay.submittedByPrefix}{' '}
+          {submitter ? (
+            submitter.url ? (
+              <a
+                href={submitter.url}
+                style={{
+                  color: 'inherit',
+                  textDecoration: 'underline',
+                  textDecorationColor: 'var(--border-strong)',
+                  textUnderlineOffset: 2,
+                }}
+              >
+                @{submitter.handle}
+              </a>
+            ) : (
+              `@${submitter.handle}`
+            )
+          ) : (
+            <em>{copy.priceDisplay.anonymousFan}</em>
+          )}
+          {confirmsText}
+        </span>
+      </div>
+    )
+  }
+
   const actionWord =
     boxOfficeAction === 'saw'
       ? copy.priceDisplay.sawVerb
@@ -1066,6 +1120,7 @@ export function PriceDisplay({
   priceApprovalKind,
   priceApprovedAt,
   priceAlternates,
+  priceConfirmsCount,
   onSubmitPrice,
 }: PriceDisplayProps) {
   const parsedMin = priceMin ? parseFloat(priceMin) : null
@@ -1128,6 +1183,7 @@ export function PriceDisplay({
     venueName: venueName,
     soldOutBy: null,
     soldOutConfirms: null,
+    confirmsCount: priceConfirmsCount ?? null,
   }
 
   const soldOut = priceStatus === 'soldout'
