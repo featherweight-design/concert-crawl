@@ -1,0 +1,40 @@
+name: Mirror Playwright image to GHCR
+
+# Why this exists:
+# Render's build pool gets rate-limited by Microsoft's container registry
+# (mcr.microsoft.com) when pulling the Playwright base image. Symptom is
+# 401 Unauthorized errors on `docker pull mcr.microsoft.com/playwright`.
+# This workflow mirrors the image to GitHub Container Registry (no rate
+# limit for our org). The crawler Dockerfile then pulls from GHCR.
+#
+# Trigger this manually any time Playwright is bumped in apps/crawler/Dockerfile
+# and the new tag isn't yet in GHCR.
+
+on:
+  workflow_dispatch:
+    inputs:
+      playwright_tag:
+        description: 'Playwright base image tag (e.g. v1.60.0-jammy)'
+        required: true
+        default: 'v1.60.0-jammy'
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull from MCR, tag, push to GHCR
+        env:
+          TAG: ${{ inputs.playwright_tag }}
+        run: |
+          docker pull "mcr.microsoft.com/playwright:${TAG}"
+          docker tag "mcr.microsoft.com/playwright:${TAG}" "ghcr.io/hartiganhm/playwright-base:${TAG}"
+          docker push "ghcr.io/hartiganhm/playwright-base:${TAG}"
