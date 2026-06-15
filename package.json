@@ -39,6 +39,7 @@
   },
   "pnpm": {
     "overrides": {
+      "esbuild": ">=0.28.1",
       "fast-uri": "^3.1.2",
       "ip-address": "^10.2.0",
       "js-cookie": "^3.0.7",
