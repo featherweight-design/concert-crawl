@@ -1,3 +1,62 @@
+# [1.45.0](https://github.com/HartiganHM/concert-crawl/compare/v1.44.0...v1.45.0) (2026-06-15)
+
+
+### Bug Fixes
+
+* address Copilot review + integration test failures on Phase 8.5 consumer UI ([6bce7f4](https://github.com/HartiganHM/concert-crawl/commit/6bce7f422b58d16438b48bee01e7d2682325e88f))
+* **api:** match counter-submission against any corroborated sub, not just headline ([32cfe75](https://github.com/HartiganHM/concert-crawl/commit/32cfe75b7221166452bbd9f702e26da6ce5b2eb2))
+* **api:** remove off-by-one in submission confirm promotion threshold ([d286583](https://github.com/HartiganHM/concert-crawl/commit/d286583117f92103ce3da587d86adf821a7142aa))
+* **api:** utc imminent-event math, raw soldOutReport count, test mock ([23c5e9f](https://github.com/HartiganHM/concert-crawl/commit/23c5e9fb701317ff9e7f7d81c655df7fec2fd08b))
+* **api:** write event price fields when community submission is promoted ([c5d6ee8](https://github.com/HartiganHM/concert-crawl/commit/c5d6ee8eecf93374f166f674d593497be65dc02f))
+* **consumer:** address pending report banner UI gaps from phase 8.5 feedback ([97fa9fd](https://github.com/HartiganHM/concert-crawl/commit/97fa9fd8050feaa4675f2772368f2d7a4d0c9906))
+* **consumer:** apply Agent 3 design gap corrections ([07b8772](https://github.com/HartiganHM/concert-crawl/commit/07b87727d129516cd4afc29a70f5ed4e59e08d9c))
+* **consumer:** clean up Box Office Confirmed display issues ([09087e5](https://github.com/HartiganHM/concert-crawl/commit/09087e56dee159c3f56c6908f65fce0fbb1d9692))
+* **consumer:** correct reporting icon SVG paths — cancelled X-only, sold-out circle+slash ([d38e16e](https://github.com/HartiganHM/concert-crawl/commit/d38e16edb5be11c29eadb5aa07025ed93efc5940))
+* **consumer:** fix pending state + withdraw CTA for no-price events ([b8dc222](https://github.com/HartiganHM/concert-crawl/commit/b8dc2224d2f1b1bf7a04f2db4cf4830061a322d4))
+* **consumer:** remove redundant SoldOut CTA button on sold-out event pages ([fcb1c1a](https://github.com/HartiganHM/concert-crawl/commit/fcb1c1a8c84ce6d33771b88cd0f5e14202342a34))
+* **consumer:** show all pending submission tiers, fix timestamp, corroboration copy and recap card ([6ead752](https://github.com/HartiganHM/concert-crawl/commit/6ead752a6a661feeab4ec3eeb19fa0fbe8e1953e))
+* **consumer:** ui audit fixes for status cards, banners, and layout ([f8b078c](https://github.com/HartiganHM/concert-crawl/commit/f8b078ca9965f5019f115126dfde146edeb6a1a6))
+* **consumer:** update pending submission state without page refresh ([9fecf11](https://github.com/HartiganHM/concert-crawl/commit/9fecf1190162008e664373703898f25fb05b97d1))
+* **corroboration:** add check glyph to confirm CTA, remove honesty disclaimer ([85d55d7](https://github.com/HartiganHM/concert-crawl/commit/85d55d70bcec027171f6e9782315cddc2d94f375))
+* **counter-submit-sheet:** match ModalShell tall height (85vh) ([8b640cf](https://github.com/HartiganHM/concert-crawl/commit/8b640cfb9ba1fdf487604c52c51d47cade503e75))
+* **disputed-price-card:** add trend glyph to badge, move arrow to right of CTA ([fa1e544](https://github.com/HartiganHM/concert-crawl/commit/fa1e544ccca3214eca640f377b52c2202abf07ee))
+* optimistic local state for submit/edit/withdraw on pending submissions ([daec063](https://github.com/HartiganHM/concert-crawl/commit/daec063631fccc2bb2d1abc7ef2f643d4bfbb906))
+* **phase-8-5:** address Copilot review on [#571](https://github.com/HartiganHM/concert-crawl/issues/571) and supersede [#577](https://github.com/HartiganHM/concert-crawl/issues/577) ([623eedc](https://github.com/HartiganHM/concert-crawl/commit/623eedc28706c704d42feb254a16dfc6d43ebdf1))
+* **phase-8-5:** apply design-review gap fixes, CI failures, and API contract corrections ([7420980](https://github.com/HartiganHM/concert-crawl/commit/7420980a592e77cac1fd09614a9b1a0b47c60944))
+* **phase-8-5:** sold-out confirmation flow, evidence row, report sheet ([f3777b1](https://github.com/HartiganHM/concert-crawl/commit/f3777b15b75cd2129c274808fb5051d0c18df775))
+* **price-submission:** edit/withdraw flow for Community Self state ([8937807](https://github.com/HartiganHM/concert-crawl/commit/89378071fcc6cf90307cea5534e26a0b65c918d7))
+* replace router.refresh() anti-pattern with local state updates ([d400eca](https://github.com/HartiganHM/concert-crawl/commit/d400ecabca91318c7e827539ea61f6718133cc22))
+* **report-sheet:** align to design — label, chip width, copy, footnote, arrow ([7d49379](https://github.com/HartiganHM/concert-crawl/commit/7d49379fdceb8f37d61045ec01b30627c149743a))
+* **reporting:** counter-report modal shows correct options for pending cancellation/postponement ([8db0c97](https://github.com/HartiganHM/concert-crawl/commit/8db0c9718979836fd2ecc23a4ff84904a86a5c83))
+* **reporting:** remove opacity reduction from pending chip text to match design weight ([bee69c7](https://github.com/HartiganHM/concert-crawl/commit/bee69c734db9c3b3849bb492e396ce63907807f9))
+* **reporting:** status-aware footer copy and pending chips in ReportSheet modal ([45b470f](https://github.com/HartiganHM/concert-crawl/commit/45b470f3481fccb646accfd0593d3522f6b39c9d))
+* restore imminent confirms rule via SP_POLICY ([741c826](https://github.com/HartiganHM/concert-crawl/commit/741c82691f5c4e84cba787d91bbfdadc93b4fd80))
+* single source of truth for confirms + ReportSheet copy gaps ([d39eb2c](https://github.com/HartiganHM/concert-crawl/commit/d39eb2cd3ec2907f6cbe36d10ab9cd61fa24ca35))
+* **web:** address design gaps in all reporting components ([82779bc](https://github.com/HartiganHM/concert-crawl/commit/82779bcec71173f9f0ac6317ba55e9b18ca0be61))
+* **web:** address design gaps in CorroborationSheet and CounterSubmitSheet ([f32662f](https://github.com/HartiganHM/concert-crawl/commit/f32662f6845f29d5503e5ceb6741ed773a4d1210))
+* **web:** address design gaps in price card components ([7ae299b](https://github.com/HartiganHM/concert-crawl/commit/7ae299b8177b78b6f0b007d3cab1d1eb124b6323))
+* **web:** remove unused eslint-disable directive in ConfirmReportSheet ([ef7f5dc](https://github.com/HartiganHM/concert-crawl/commit/ef7f5dcbe617313799e6681f32e7530d5860bc31))
+
+
+### Features
+
+* **api:** surface pending price submissions and fix confirm threshold ([639f772](https://github.com/HartiganHM/concert-crawl/commit/639f772370be20320a5374c60f4066c355636350)), closes [#1](https://github.com/HartiganHM/concert-crawl/issues/1)
+* **consumer:** fix confirms display, pending price cards, and migrate sheets to ModalShell ([25c13f4](https://github.com/HartiganHM/concert-crawl/commit/25c13f4aac427c434d700a456e9514fa04428da9))
+* **db:** add notes to P8.5 submissions and seed K–P confirmation test events ([42155bb](https://github.com/HartiganHM/concert-crawl/commit/42155bb6240b4df603d7e2bade6282a0c74fc020))
+* **db:** add Phase 8.5 seed data for all user flows ([9b614e3](https://github.com/HartiganHM/concert-crawl/commit/9b614e3e349502b8ab7ffe7b300d97eede66ec5d))
+* **disputed-price-card:** add eyebrow, chip, attribution, and counter-submission API field ([1769495](https://github.com/HartiganHM/concert-crawl/commit/1769495930d0933775b2ac29f4d0389d75958c60))
+* **seed:** backfill Phase 8.5 price data and event reports for all user flows ([de8caae](https://github.com/HartiganHM/concert-crawl/commit/de8caae8cabccf3f83a62d21e25f5db6054faeb5))
+* **web:** add API client functions for price corroboration and event reporting ([ad3f913](https://github.com/HartiganHM/concert-crawl/commit/ad3f91364b5b5799fcfed0340c155ba754e3a3d3))
+* **web:** add CorroborationSheet component ([59f1a7f](https://github.com/HartiganHM/concert-crawl/commit/59f1a7f7d2d16aab9eacc72ce6e7d215c3cbd0f9))
+* **web:** add DisputedPriceCard component ([83cd8c8](https://github.com/HartiganHM/concert-crawl/commit/83cd8c8d38a1cbb68c3147f1a2ee5d245e4f3dbd))
+* **web:** add multi-tier price display components ([1d7314c](https://github.com/HartiganHM/concert-crawl/commit/1d7314cbfa95409c8dcafa046727db1c250a6619))
+* **web:** add PendingCardB component ([fd63413](https://github.com/HartiganHM/concert-crawl/commit/fd6341331af1879dfeb204a88008812cdab0350e))
+* **web:** add PendingSoldOutCard and PendingReportBanner components ([b7a4cb1](https://github.com/HartiganHM/concert-crawl/commit/b7a4cb1e08e9a069b9e177e883b07b19e40dea05))
+* **web:** add ReportFooterLink, ReportSheet, and EvidenceForm components ([8cc2460](https://github.com/HartiganHM/concert-crawl/commit/8cc24603c090f71599da7d05771e0bceaf47a794))
+* **web:** add ReportTypeMark, ConfirmReportSheet, and LiveReportBanner ([e9e9fef](https://github.com/HartiganHM/concert-crawl/commit/e9e9fefb3985cf4402c185b1026535aa4d268a63))
+* **web:** create shared glyphs and rewrite PendingCardB to match design spec ([810995f](https://github.com/HartiganHM/concert-crawl/commit/810995f2958715ce5f2fb63a3203ce614a9d45fd))
+* **web:** integrate Phase 8.5 components into event detail page ([47def1e](https://github.com/HartiganHM/concert-crawl/commit/47def1e5be29f2a0ec865eef5d4b46051ca0af67))
+
 # [1.44.0](https://github.com/HartiganHM/concert-crawl/compare/v1.43.1...v1.44.0) (2026-05-27)
 
 
