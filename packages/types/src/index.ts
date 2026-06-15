@@ -335,9 +335,12 @@ export interface EventDetailResponse extends EventWithVenue {
   }> | null
   // Confirms count for the primary live community price
   priceConfirmsCount?: number | null
-  // Pending counter-submission against the primary live price (if any)
+  // Pending counter-submission against the primary live price (if any).
+  // parentSubmissionId is the corroborated submission being disputed — it
+  // must be the value passed as disputedSubmissionId when filing a new dispute.
   counterSubmission?: {
     id: string
+    parentSubmissionId: string
     floor: number
     ceiling?: number
     submitter: { handle: string } | null

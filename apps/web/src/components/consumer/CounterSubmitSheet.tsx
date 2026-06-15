@@ -30,6 +30,17 @@ const VENDOR_OPTIONS: { value: string; label: string }[] = [
   { value: 'VenueBoxOffice', label: 'Venue box office' },
 ]
 
+type HowFound = 'bought_myself' | 'saw_listing' | 'at_the_venue'
+
+const HOW_FOUND_OPTIONS: { value: HowFound; label: string }[] = [
+  { value: 'bought_myself', label: 'Bought it myself' },
+  { value: 'saw_listing', label: 'Saw the listing' },
+  { value: 'at_the_venue', label: 'At the venue' },
+]
+
+const isValidHowFound = (value: string): value is HowFound =>
+  HOW_FOUND_OPTIONS.some((opt) => opt.value === value)
+
 type SheetState = 'form' | 'submitting' | 'success' | 'error'
 
 export interface CounterSubmitSheetProps {
@@ -50,6 +61,7 @@ interface FormErrors {
   ceiling?: string
   tier?: string
   vendor?: string
+  howFound?: string
 }
 
 const validateForm = (
@@ -57,6 +69,7 @@ const validateForm = (
   ceiling: string,
   tier: string | null,
   vendor: string | null,
+  howFound: string | null,
 ): FormErrors => {
   const errors: FormErrors = {}
   const floorNum = Number(floor)
@@ -78,6 +91,7 @@ const validateForm = (
 
   if (!tier) errors.tier = 'Pick a tier.'
   if (!vendor) errors.vendor = "Pick where it's listed."
+  if (!howFound) errors.howFound = 'Tell us how you found out.'
 
   return errors
 }
@@ -117,6 +131,7 @@ export function CounterSubmitSheet({
   const [ceiling, setCeiling] = useState('')
   const [tier, setTier] = useState<string | null>(null)
   const [vendor, setVendor] = useState<string | null>(null)
+  const [howFound, setHowFound] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<FormErrors>({})
 
   const subtitle =
@@ -125,14 +140,17 @@ export function CounterSubmitSheet({
       : copy.subtitleFloorOnly(currentFloor, currentVendor)
 
   const handleSubmit = useCallback(async () => {
-    const errors = validateForm(floor, ceiling, tier, vendor)
+    const errors = validateForm(floor, ceiling, tier, vendor, howFound)
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
 
-    if (!tier || !vendor) return
+    if (!tier || !vendor || !howFound) return
 
     const resolvedTier = isValidTier(tier) ? tier : 'GA'
     const resolvedVendor = isValidVendor(vendor) ? vendor : 'Ticketmaster'
+    const resolvedHowFound: HowFound = isValidHowFound(howFound)
+      ? howFound
+      : 'saw_listing'
 
     setSheetState('submitting')
     try {
@@ -154,6 +172,7 @@ export function CounterSubmitSheet({
             priceMax: ceiling ? Number(ceiling) : undefined,
             tier: resolvedTier,
             vendor: resolvedVendor,
+            howFound: resolvedHowFound,
             disputedSubmissionId,
           }),
         },
@@ -173,6 +192,7 @@ export function CounterSubmitSheet({
     ceiling,
     tier,
     vendor,
+    howFound,
     getToken,
     eventId,
     disputedSubmissionId,
@@ -195,6 +215,7 @@ export function CounterSubmitSheet({
     setCeiling('')
     setTier(null)
     setVendor(null)
+    setHowFound(null)
     setFieldErrors({})
     onClose()
   }, [onClose])
@@ -371,6 +392,15 @@ export function CounterSubmitSheet({
             value={vendor}
             onChange={setVendor}
             error={fieldErrors.vendor}
+          />
+
+          {/* How found chips */}
+          <ChipGroup
+            label={copy.howFoundLabel}
+            options={HOW_FOUND_OPTIONS}
+            value={howFound}
+            onChange={setHowFound}
+            error={fieldErrors.howFound}
           />
 
           {/* Honesty disclaimer */}

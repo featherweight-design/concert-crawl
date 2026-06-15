@@ -10,16 +10,19 @@ import {
 const copy = CONSUMER_COPY.multiTier
 
 // ── Types ────────────────────────────────────────────────────────
-interface AlternateTier {
+interface AlternateTierBase {
   tier: string
   vendor: string
   floor: number
   ceiling?: number
   kind: 'community' | 'boxoffice' | null
-  pending?: boolean
-  confirms?: number
-  needed?: number
 }
+
+type AlternateTier = AlternateTierBase &
+  (
+    | { pending: true; confirms: number; needed: number }
+    | { pending?: false; confirms?: never; needed?: never }
+  )
 
 // ── Props ────────────────────────────────────────────────────────
 export interface MixedTierCardProps {
@@ -117,16 +120,21 @@ export const MixedTierCard = ({ headline, alternates }: MixedTierCardProps) => {
       <div style={{ marginTop: '12px' }}>
         <Eyebrow>{copy.otherTiersEyebrow}</Eyebrow>
         {alternates.map((alt, idx) => {
-          const rowProps: TierAlternateRowProps = {
+          const base = {
             tier: alt.tier,
             vendor: alt.vendor,
             floor: alt.floor,
             kind: alt.kind,
             ...(alt.ceiling !== undefined ? { ceiling: alt.ceiling } : {}),
-            ...(alt.pending !== undefined ? { pending: alt.pending } : {}),
-            ...(alt.confirms !== undefined ? { confirms: alt.confirms } : {}),
-            ...(alt.needed !== undefined ? { needed: alt.needed } : {}),
           }
+          const rowProps: TierAlternateRowProps = alt.pending
+            ? {
+                ...base,
+                pending: true,
+                confirms: alt.confirms,
+                needed: alt.needed,
+              }
+            : base
           return <TierAlternateRow key={`${alt.tier}-${idx}`} {...rowProps} />
         })}
       </div>

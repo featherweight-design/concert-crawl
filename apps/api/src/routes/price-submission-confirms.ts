@@ -90,9 +90,27 @@ priceSubmissionConfirmsRouter.post(
       .where(eq(submissionConfirms.submissionId, submissionId))
 
     const confirmsCount = countResult?.total ?? 0
-    // Matches submissions.ts: corroborationCount is incremented then checked
-    // against the threshold, so confirmsRequired additional confirmers are needed.
-    const promoted = confirmsCount >= SP_POLICY.confirmsRequired
+
+    // Use the imminent threshold when the event is within
+    // SP_POLICY.imminentThresholdDays — matches events.ts confirmsNeeded so
+    // the UI's promotion expectation and the server's promotion behaviour agree.
+    const [eventRow] = await db
+      .select({ date: events.date })
+      .from(events)
+      .where(eq(events.id, eventId))
+      .limit(1)
+
+    const eventDate = eventRow?.date ?? ''
+    const diffDays = Math.floor(
+      (new Date(eventDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+    )
+    const isEventImminent =
+      diffDays >= 0 && diffDays <= SP_POLICY.imminentThresholdDays
+    const confirmsRequired = isEventImminent
+      ? SP_POLICY.confirmsRequiredImminent
+      : SP_POLICY.confirmsRequired
+
+    const promoted = confirmsCount >= confirmsRequired
 
     await db
       .update(priceSubmissions)

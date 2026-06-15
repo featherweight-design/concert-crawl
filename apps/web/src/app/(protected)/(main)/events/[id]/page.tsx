@@ -231,7 +231,33 @@ export default async function EventDetailPage({
               Sold out → disabled button. ticketUrl → "Get Tickets ↗".
               Fallback → venue website. No URL → disabled "No tickets available". */}
           <div className="mt-5">
-            {event.ticketUrl || event.venue.websiteUrl ? (
+            {event.priceStatus === 'soldout' ? (
+              <button
+                type="button"
+                disabled
+                aria-label={copy.soldOutAriaLabel}
+                style={{
+                  all: 'unset',
+                  boxSizing: 'border-box',
+                  cursor: 'not-allowed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '100%',
+                  height: 48,
+                  borderRadius: 10,
+                  background: 'var(--surface-1)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--fg-subtle)',
+                  fontFamily: 'var(--font-ui)',
+                  fontWeight: 700,
+                  fontSize: 14,
+                  letterSpacing: '-0.005em',
+                }}
+              >
+                {copy.soldOut}
+              </button>
+            ) : event.ticketUrl || event.venue.websiteUrl ? (
               <a
                 href={event.ticketUrl ?? event.venue.websiteUrl ?? '#'}
                 target="_blank"

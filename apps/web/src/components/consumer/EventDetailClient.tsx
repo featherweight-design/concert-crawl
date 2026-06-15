@@ -511,9 +511,10 @@ export function EventDetailPriceBlock({
           vendor={event.priceVendor ?? event.venue.name}
           reporter={null}
           reportedAt={pendingSoldOutReport.createdAt}
-          confirms={pendingSoldOutReport.confirmsCount + 1}
+          confirms={pendingSoldOutReport.confirmsCount}
           needed={pendingSoldOutReport.confirmsNeeded}
           view={soldOutView}
+          userHasConfirmed={pendingSoldOutReport.userHasConfirmed}
           evidenceMethod={pendingSoldOutReport.evidenceMethod}
           evidenceUrl={pendingSoldOutReport.evidenceUrl}
           note={pendingSoldOutReport.note}
@@ -595,7 +596,7 @@ export function EventDetailPriceBlock({
           : {})}
         disputedAt={counter.submittedAt}
         eventId={event.id}
-        disputedSubmissionId={counter.id}
+        disputedSubmissionId={counter.parentSubmissionId}
         onUpdateSuccess={() => router.refresh()}
       />
     )
@@ -666,13 +667,13 @@ export function EventDetailPriceBlock({
 
     const visibleSubs = localSubmissions
 
-    // If any submission has already met the confirm threshold (displayConfirms >= needed),
-    // treat it as effectively corroborated and render via PriceDisplay + submit CTA.
-    // localConfirms tracks confirms added in this session without a page refresh.
+    // If any submission has met the API's promotion threshold, render as live.
+    // Compare actual confirm rows (server confirmsCount + this session's
+    // localConfirms) against confirmsNeeded — matches price-submission-confirms.ts
+    // promotion logic so the UI never flips to live while the server is still pending.
     const confirmedSub = visibleSubs.find(
       (sub) =>
-        sub.confirmsCount + 1 + (localConfirms[sub.id] ?? 0) >=
-        sub.confirmsNeeded,
+        sub.confirmsCount + (localConfirms[sub.id] ?? 0) >= sub.confirmsNeeded,
     )
     if (confirmedSub != null) {
       const confirmsDisplay =
@@ -718,8 +719,7 @@ export function EventDetailPriceBlock({
         : null
 
     const pendingCardProps = visibleSubs.map((sub) => {
-      const displayConfirms =
-        sub.confirmsCount + 1 + (localConfirms[sub.id] ?? 0)
+      const displayConfirms = sub.confirmsCount + (localConfirms[sub.id] ?? 0)
       const isBoxOffice = sub.vendor === 'VenueBoxOffice'
       const viewKind: 'other' | 'submitter' | 'self-locked' = sub.isSubmitter
         ? 'submitter'

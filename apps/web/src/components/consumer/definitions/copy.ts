@@ -730,6 +730,8 @@ export const CONSUMER_COPY = {
     visitVenueWebsite: 'Visit Venue Website',
     noTicketsAvailable: 'No tickets available',
     noTicketsAriaLabel: 'No tickets available',
+    soldOut: 'Sold out',
+    soldOutAriaLabel: 'Sold out',
 
     // About section
     aboutLabel: 'About',
@@ -984,6 +986,7 @@ export const CONSUMER_COPY = {
     ceilingPlaceholder: '75',
     tierLabel: 'Tier *',
     vendorLabel: "Where it's listed *",
+    howFoundLabel: 'How you found out *',
     ceilingHint: 'Optional. Helps fans know the full price range.',
     honestyDisclaimer: 'By submitting, you confirm this is accurate.',
     footerDisclaimer: 'Your update goes pending until another fan confirms.',

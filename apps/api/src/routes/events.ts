@@ -372,6 +372,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   let priceConfirmsCount: number = 0
   let counterSubmission: {
     id: string
+    parentSubmissionId: string
     floor: number
     ceiling?: number
     submitter: { handle: string } | null
@@ -450,6 +451,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         }
         counterSubmission = {
           id: counterRow.id,
+          parentSubmissionId: latestSub.id,
           floor: parseFloat(counterRow.priceMin),
           ...(counterRow.priceMax !== null
             ? { ceiling: parseFloat(counterRow.priceMax) }

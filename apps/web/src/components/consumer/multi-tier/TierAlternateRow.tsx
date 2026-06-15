@@ -22,28 +22,28 @@ const formatPrice = (floor: number, ceiling?: number): string => {
 }
 
 // ── Props ────────────────────────────────────────────────────────
-export interface TierAlternateRowProps {
+// `confirms` and `needed` are required only when `pending` is true so the
+// pending strip never renders as `pending · X/0`.
+interface TierAlternateRowBase {
   tier: string
   vendor: string
   floor: number
   ceiling?: number
   kind: 'community' | 'boxoffice' | null
-  pending?: boolean
-  confirms?: number
-  needed?: number
 }
 
+export type TierAlternateRowProps = TierAlternateRowBase &
+  (
+    | { pending: true; confirms: number; needed: number }
+    | { pending?: false; confirms?: never; needed?: never }
+  )
+
 // ── Component ────────────────────────────────────────────────────
-export const TierAlternateRow = ({
-  tier,
-  vendor,
-  floor,
-  ceiling,
-  kind,
-  pending = false,
-  confirms = 0,
-  needed = 0,
-}: TierAlternateRowProps) => {
+export const TierAlternateRow = (props: TierAlternateRowProps) => {
+  const { tier, vendor, floor, ceiling, kind } = props
+  const pending = props.pending === true
+  const confirms = pending ? props.confirms : 0
+  const needed = pending ? props.needed : 0
   return (
     <div
       style={{
