@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.98.0",
+    "@anthropic-ai/sdk": "^0.104.2",
     "@clerk/backend": "^2.33.5",
     "@concert-crawl/db": "workspace:*",
     "@concert-crawl/logger": "workspace:*",
@@ -23,7 +23,7 @@
     "@hono/clerk-auth": "^2.0.0",
     "@hono/node-server": "^2.0.5",
     "@hono/zod-validator": "^0.8.0",
-    "@sentry/hono": "^10.53.1",
+    "@sentry/hono": "^10.58.0",
     "bad-words": "^4.0.0",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
@@ -35,7 +35,7 @@
     "@concert-crawl/config": "workspace:*",
     "@types/bad-words": "^3.0.3",
     "@types/node": "^25.9.3",
-    "@typescript-eslint/eslint-plugin": "^8.60.0",
+    "@typescript-eslint/eslint-plugin": "^8.61.0",
     "@typescript-eslint/parser": "^8.60.0",
     "eslint": "^9.39.4",
     "postgres": "^3.4.9",

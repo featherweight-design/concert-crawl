@@ -19,10 +19,10 @@
   "dependencies": {
     "@concert-crawl/crawler-core": "workspace:*",
     "@concert-crawl/price-pipeline": "workspace:*",
-    "playwright": "^1.60.0",
+    "playwright": "^1.61.0",
     "@concert-crawl/db": "workspace:*",
     "@concert-crawl/logger": "workspace:*",
-    "@sentry/node": "^10.53.1",
+    "@sentry/node": "^10.58.0",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2"
   }
