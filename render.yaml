@@ -1,3 +1,13 @@
+# Render blueprint — post-migration (Jun 2026)
+#
+# Render hosts API + crawler cron jobs only:
+#   - Web (apps/web) → Vercel (concertcrawl.app)
+#   - Postgres → Neon (staging branch + prod branch)
+#
+# DATABASE_URL is set manually in the Render dashboard for each service
+# (sync: false). Connection strings point at Neon — see Neon project
+# "concert-crawl" → Branches.
+
 services:
   # --- Production ---
 
@@ -13,38 +23,11 @@ services:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        fromDatabase:
-          name: concert-crawl-db
-          property: connectionString
+        sync: false # Neon prod branch connection string — enter manually
       - key: CLERK_SECRET_KEY
         sync: false # Enter manually in Render dashboard
       - key: ALLOWED_ORIGIN
-        sync: false # Set to https://concert-crawl-web.onrender.com
-
-  - type: web
-    name: concert-crawl-web
-    runtime: node
-    region: oregon
-    plan: starter
-    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/web
-    startCommand: cd apps/web && pnpm start
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-        sync: false
-      - key: CLERK_SECRET_KEY
-        sync: false
-      - key: NEXT_PUBLIC_API_URL
-        sync: false # Set to https://concert-crawl-api.onrender.com
-      - key: NEXT_PUBLIC_CLERK_SIGN_IN_URL
-        value: /sign-in
-      - key: NEXT_PUBLIC_CLERK_SIGN_UP_URL
-        value: /sign-up
-      - key: NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL
-        value: /events
-      - key: NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL
-        value: /auth/complete
+        sync: false # Set to https://concertcrawl.app
 
   - type: cron
     name: concert-crawl-crawler-triggers
@@ -59,9 +42,7 @@ services:
       - key: CRAWL_MODE
         value: triggers
       - key: DATABASE_URL
-        fromDatabase:
-          name: concert-crawl-db
-          property: connectionString
+        sync: false # Neon prod branch connection string — enter manually
       - key: ANTHROPIC_API_KEY
         sync: false # Enter manually in Render dashboard
       - key: RESEND_API_KEY
@@ -90,9 +71,7 @@ services:
       - key: CRAWL_MODE
         value: daily
       - key: DATABASE_URL
-        fromDatabase:
-          name: concert-crawl-db
-          property: connectionString
+        sync: false # Neon prod branch connection string — enter manually
       - key: ANTHROPIC_API_KEY
         sync: false # Enter manually in Render dashboard
       - key: RESEND_API_KEY
@@ -122,38 +101,11 @@ services:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        fromDatabase:
-          name: concert-crawl-db-staging
-          property: connectionString
+        sync: false # Neon staging branch connection string — enter manually
       - key: CLERK_SECRET_KEY
         sync: false # Staging Clerk secret — enter manually
       - key: ALLOWED_ORIGIN
-        sync: false # Set to https://concert-crawl-web-staging.onrender.com
-
-  - type: web
-    name: concert-crawl-web-staging
-    runtime: node
-    region: oregon
-    plan: starter
-    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/web
-    startCommand: cd apps/web && pnpm start
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-        sync: false # Staging Clerk publishable key
-      - key: CLERK_SECRET_KEY
-        sync: false
-      - key: NEXT_PUBLIC_API_URL
-        sync: false # Set to https://concert-crawl-api-staging.onrender.com
-      - key: NEXT_PUBLIC_CLERK_SIGN_IN_URL
-        value: /sign-in
-      - key: NEXT_PUBLIC_CLERK_SIGN_UP_URL
-        value: /sign-up
-      - key: NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL
-        value: /events
-      - key: NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL
-        value: /auth/complete
+        sync: false # Set to the Vercel preview URL (e.g. https://concert-crawl-git-main-<team>.vercel.app)
 
   - type: cron
     name: concert-crawl-crawler-triggers-staging
@@ -168,9 +120,7 @@ services:
       - key: CRAWL_MODE
         value: triggers
       - key: DATABASE_URL
-        fromDatabase:
-          name: concert-crawl-db-staging
-          property: connectionString
+        sync: false # Neon staging branch connection string — enter manually
       - key: ANTHROPIC_API_KEY
         sync: false # Enter manually in Render dashboard
       - key: RESEND_API_KEY
@@ -199,9 +149,7 @@ services:
       - key: CRAWL_MODE
         value: daily
       - key: DATABASE_URL
-        fromDatabase:
-          name: concert-crawl-db-staging
-          property: connectionString
+        sync: false # Neon staging branch connection string — enter manually
       - key: ANTHROPIC_API_KEY
         sync: false # Enter manually in Render dashboard
       - key: RESEND_API_KEY
@@ -216,14 +164,3 @@ services:
         value: staging
       - key: LOG_LEVEL
         value: info
-
-databases:
-  - name: concert-crawl-db
-    databaseName: concert_crawl
-    plan: basic-256mb
-    region: oregon
-
-  - name: concert-crawl-db-staging
-    databaseName: concert_crawl
-    plan: basic-256mb
-    region: oregon
