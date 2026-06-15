@@ -7,8 +7,8 @@ const connectionString =
   process.env['DATABASE_URL'] ??
   'postgresql://postgres:postgres@localhost:5433/concert_crawl_db'
 
-// Disable prefetch for compatibility with serverless connection poolers
-// (Neon's pooler, Render's pgbouncer). Require SSL for non-local connections.
+// Disable prepared statements for compatibility with serverless connection
+// poolers (Neon's pooler, Render's pgbouncer). Require SSL for non-local connections.
 const queryClient = postgres(connectionString, {
   prepare: false,
   ssl: isLocalConnectionString(connectionString) ? false : 'require',
