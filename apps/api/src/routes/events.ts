@@ -31,7 +31,7 @@ import {
   sql,
 } from 'drizzle-orm'
 import { SP_POLICY } from '@concert-crawl/types'
-import { todayInTimezone } from '../lib/time.js'
+import { isImminentEvent, todayInTimezone } from '../lib/time.js'
 import { apiLogger } from '../lib/logger.js'
 import { serviceOrClerkAuth } from '../middleware/auth.js'
 
@@ -350,7 +350,9 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
 
     soldOutReport = {
       reporterHandle: reporterProfile?.handle ?? null,
-      confirmsCount: confirmsCount + 1,
+      // Raw confirm-row count — matches GET /v1/events/:id/reports so the
+      // promoted soldOutReport surface stays consistent across endpoints.
+      confirmsCount,
       reportedAt: soldOutReportRow.createdAt.toISOString(),
     }
   }
@@ -555,13 +557,10 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         }
       }
 
-      const eventDate = row.date ?? ''
-      const diffDays = Math.floor(
-        (new Date(eventDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+      const confirmsNeeded = isImminentEvent(
+        row.date ?? null,
+        SP_POLICY.imminentThresholdDays,
       )
-      const isEventImminent =
-        diffDays >= 0 && diffDays <= SP_POLICY.imminentThresholdDays
-      const confirmsNeeded = isEventImminent
         ? SP_POLICY.confirmsRequiredImminent
         : SP_POLICY.confirmsRequired
 

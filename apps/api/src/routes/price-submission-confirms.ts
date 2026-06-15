@@ -10,6 +10,7 @@ import {
 } from '@concert-crawl/db'
 import { SP_POLICY } from '@concert-crawl/types'
 import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js'
+import { isImminentEvent } from '../lib/time.js'
 
 const confirmBodySchema = z.object({
   method: z.enum(['same-vendor', 'other-vendor', 'box-office']),
@@ -100,13 +101,10 @@ priceSubmissionConfirmsRouter.post(
       .where(eq(events.id, eventId))
       .limit(1)
 
-    const eventDate = eventRow?.date ?? ''
-    const diffDays = Math.floor(
-      (new Date(eventDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+    const confirmsRequired = isImminentEvent(
+      eventRow?.date ?? null,
+      SP_POLICY.imminentThresholdDays,
     )
-    const isEventImminent =
-      diffDays >= 0 && diffDays <= SP_POLICY.imminentThresholdDays
-    const confirmsRequired = isEventImminent
       ? SP_POLICY.confirmsRequiredImminent
       : SP_POLICY.confirmsRequired
 

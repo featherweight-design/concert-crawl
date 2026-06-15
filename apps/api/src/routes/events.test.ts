@@ -233,8 +233,13 @@ describe('GET /v1/events/:id', () => {
     mockDb.where.mockResolvedValueOnce([mockEvent])
     // watch count query: select().from().where() → terminal
     mockDb.where.mockResolvedValueOnce([{ total: 0 }])
-    // sold-out report query: ...where().orderBy().limit(1) → terminal
+    // sold-out report query: ...where().orderBy().limit(1) → terminal via limit;
+    //   the explicit orderBy chain keeps it queued ahead of the next consumer.
+    mockDb.orderBy.mockReturnValueOnce(mockDb)
     mockDb.limit.mockResolvedValueOnce([])
+    // pending-submissions query (entered when ticketPriceMin is null and no
+    // priceApprovalKind): select().from().where().orderBy() → terminal, empty
+    mockDb.orderBy.mockResolvedValueOnce([])
 
     const res = await createApp().request(
       '/v1/events/00000000-0000-0000-0000-000000000001',

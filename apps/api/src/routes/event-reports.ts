@@ -17,6 +17,7 @@ import {
   getAuthOptional,
 } from '../middleware/auth.js'
 import { moderateNote } from '../lib/moderate-note.js'
+import { isImminentEvent } from '../lib/time.js'
 
 const REPORT_STATUSES = ['sold-out', 'cancelled', 'postponed'] as const
 const EVIDENCE_METHODS = [
@@ -27,16 +28,7 @@ const EVIDENCE_METHODS = [
 ] as const
 
 function isImminent(eventDate: string | null): boolean {
-  if (!eventDate) return false
-  const [year, month, day] = eventDate.split('-').map(Number)
-  const eventMs = Date.UTC(year!, month! - 1, day!)
-  const todayMs = Date.UTC(
-    new Date().getUTCFullYear(),
-    new Date().getUTCMonth(),
-    new Date().getUTCDate(),
-  )
-  const diffDays = (eventMs - todayMs) / (1000 * 60 * 60 * 24)
-  return diffDays >= 0 && diffDays <= ER_POLICY.imminentThresholdDays
+  return isImminentEvent(eventDate, ER_POLICY.imminentThresholdDays)
 }
 
 const reportBodySchema = z.object({
