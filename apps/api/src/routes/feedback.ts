@@ -15,7 +15,7 @@ const feedbackSchema = z.object({
       theme: z.string().optional(),
       build: z.string().optional(),
       device: z.string().optional(),
-      screenshot: z.string().optional(),
+      screenshot: z.string().nullish(),
     })
     .optional(),
 })
@@ -30,6 +30,20 @@ feedbackRouter.post('/', async (ctx) => {
     return ctx.json({ success: false, error: 'Unauthorized' }, 401)
   }
 
+  const body: unknown = await ctx.req.json().catch(() => null)
+  const parsed = feedbackSchema.safeParse(body)
+  if (!parsed.success) {
+    return ctx.json(
+      {
+        success: false,
+        error: 'Invalid input',
+        details: parsed.error.flatten(),
+      },
+      422,
+    )
+  }
+
+  // Rate-limit only valid submissions so a malformed body doesn't burn the user's hourly token.
   const { allowed, retryAfterMs } = checkRateLimit(
     `feedback:${authInfo.userId}`,
     1,
@@ -41,19 +55,6 @@ feedbackRouter.post('/', async (ctx) => {
     return ctx.json(
       { success: false, error: 'Rate limit exceeded. Try again later.' },
       429,
-    )
-  }
-
-  const body: unknown = await ctx.req.json().catch(() => null)
-  const parsed = feedbackSchema.safeParse(body)
-  if (!parsed.success) {
-    return ctx.json(
-      {
-        success: false,
-        error: 'Invalid input',
-        details: parsed.error.flatten(),
-      },
-      422,
     )
   }
 

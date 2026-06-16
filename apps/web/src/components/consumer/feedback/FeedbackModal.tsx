@@ -105,7 +105,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
             theme,
             build: APP_VERSION,
             device,
-            screenshot: screenshot?.dataUrl ?? null,
+            screenshot: screenshot?.dataUrl,
           },
         }),
       })

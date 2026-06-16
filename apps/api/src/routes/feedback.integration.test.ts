@@ -116,6 +116,52 @@ describe('POST /v1/feedback', () => {
     })
   })
 
+  it('accepts metadata.screenshot: null (modal omits the attachment)', async () => {
+    const userId = `screenshot-null-user-${Date.now()}`
+    setAuth(userId)
+    const res = await app.request('/v1/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        category: 'idea',
+        message: 'No screenshot attached.',
+        pageUrl: '/events',
+        metadata: {
+          theme: 'electric',
+          build: 'dev',
+          device: 'Mac',
+          screenshot: null,
+        },
+      }),
+    })
+    expect(res.status).toBe(201)
+  })
+
+  it('does not consume rate-limit token on 422 (malformed body)', async () => {
+    const userId = `rate-limit-after-422-${Date.now()}`
+    setAuth(userId)
+
+    // First request is malformed → 422
+    const badRes = await app.request('/v1/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'no category', pageUrl: '/events' }),
+    })
+    expect(badRes.status).toBe(422)
+
+    // Second request is valid and should succeed, not 429
+    const goodRes = await app.request('/v1/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        category: 'bug',
+        message: 'now valid',
+        pageUrl: '/events',
+      }),
+    })
+    expect(goodRes.status).toBe(201)
+  })
+
   it('returns 429 on second submission within the hour', async () => {
     // Use a unique userId per test run to avoid in-memory rate-limit store pollution
     const userId = `rate-limit-user-${Date.now()}`
