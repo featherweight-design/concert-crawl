@@ -153,6 +153,11 @@ interface VDFieldProps {
   labelRight?: React.ReactNode
   error?: string
   children: React.ReactNode
+  // For composite controls (e.g. a segmented toggle) where `htmlFor` points
+  // at a `role="group"` container rather than a single focusable input.
+  // Renders the label as a non-interactive `<span id={`${htmlFor}-label`}>`
+  // so the group can reference it via aria-labelledby.
+  labelAs?: 'label' | 'group'
 }
 
 function VDField({
@@ -163,7 +168,15 @@ function VDField({
   labelRight,
   error,
   children,
+  labelAs = 'label',
 }: VDFieldProps) {
+  const labelStyle: React.CSSProperties = {
+    fontFamily: "'Inter', sans-serif",
+    fontSize: 12,
+    fontWeight: 700,
+    letterSpacing: '-0.005em',
+    color: 'var(--fg)',
+  }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <div
@@ -173,18 +186,15 @@ function VDField({
           justifyContent: 'space-between',
         }}
       >
-        <label
-          htmlFor={htmlFor}
-          style={{
-            fontFamily: "'Inter', sans-serif",
-            fontSize: 12,
-            fontWeight: 700,
-            letterSpacing: '-0.005em',
-            color: 'var(--fg)',
-          }}
-        >
-          {label}
-        </label>
+        {labelAs === 'group' ? (
+          <span id={`${htmlFor}-label`} style={labelStyle}>
+            {label}
+          </span>
+        ) : (
+          <label htmlFor={htmlFor} style={labelStyle}>
+            {label}
+          </label>
+        )}
         {labelRight}
       </div>
       {description && (
@@ -371,12 +381,23 @@ interface VDSegToggleProps {
   value: string
   onChange: (val: string) => void
   disabled?: boolean
+  id?: string
+  ariaLabelledBy?: string
 }
 
-function VDSegToggle({ options, value, onChange, disabled }: VDSegToggleProps) {
+function VDSegToggle({
+  options,
+  value,
+  onChange,
+  disabled,
+  id,
+  ariaLabelledBy,
+}: VDSegToggleProps) {
   return (
     <div
       role="group"
+      id={id}
+      aria-labelledby={ariaLabelledBy}
       style={{
         display: 'inline-flex',
         padding: 2,
@@ -1423,9 +1444,12 @@ export function VenueDetailsClient({ venue }: Props) {
               <VDField
                 label={ADMIN_COPY.venueDetailsClient.fields.fetchMode.label}
                 htmlFor="edit-venue-crawl-mode"
+                labelAs="group"
               >
                 <div style={{ alignSelf: 'flex-start' }}>
                   <VDSegToggle
+                    id="edit-venue-crawl-mode"
+                    ariaLabelledBy="edit-venue-crawl-mode-label"
                     options={[
                       {
                         value: 'auto',
@@ -1575,6 +1599,7 @@ export function VenueDetailsClient({ venue }: Props) {
                   ADMIN_COPY.venueDetailsClient.fields.debugCaptureHtml.label
                 }
                 htmlFor="edit-venue-debug-capture-html"
+                labelAs="group"
                 hint={
                   ADMIN_COPY.venueDetailsClient.fields.debugCaptureHtml.hint
                 }
@@ -1598,6 +1623,8 @@ export function VenueDetailsClient({ venue }: Props) {
               >
                 <div style={{ alignSelf: 'flex-start' }}>
                   <VDSegToggle
+                    id="edit-venue-debug-capture-html"
+                    ariaLabelledBy="edit-venue-debug-capture-html-label"
                     options={[
                       {
                         value: 'off',

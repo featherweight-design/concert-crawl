@@ -28,10 +28,12 @@ const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
 const AUTO_APPROVE_THRESHOLD = 0.7
 
 // Cap the captured HTML so a single log line stays well under typical
-// log-aggregator line limits (~64KB). Head + tail gives both the page
-// structure and any late-rendered content.
-const DEBUG_CAPTURE_HEAD_BYTES = 40_000
-const DEBUG_CAPTURE_TAIL_BYTES = 5_000
+// log-aggregator line limits (~64KB). Limits are in UTF-16 code units
+// (what String.length / .slice operate on), not bytes — for the mostly-ASCII
+// HTML we crawl these are equivalent, and the headroom against 64KB
+// covers the worst case for non-ASCII content.
+const DEBUG_CAPTURE_HEAD_CHARS = 40_000
+const DEBUG_CAPTURE_TAIL_CHARS = 5_000
 
 interface DebugCaptureContext {
   venueId: string
@@ -44,9 +46,9 @@ interface DebugCaptureContext {
 
 function logDebugHtmlCapture(html: string, ctx: DebugCaptureContext): void {
   const truncated =
-    html.length > DEBUG_CAPTURE_HEAD_BYTES + DEBUG_CAPTURE_TAIL_BYTES
-  const htmlHead = html.slice(0, DEBUG_CAPTURE_HEAD_BYTES)
-  const htmlTail = truncated ? html.slice(-DEBUG_CAPTURE_TAIL_BYTES) : ''
+    html.length > DEBUG_CAPTURE_HEAD_CHARS + DEBUG_CAPTURE_TAIL_CHARS
+  const htmlHead = html.slice(0, DEBUG_CAPTURE_HEAD_CHARS)
+  const htmlTail = truncated ? html.slice(-DEBUG_CAPTURE_TAIL_CHARS) : ''
   console.log(
     JSON.stringify({
       event: 'debug.html_capture',

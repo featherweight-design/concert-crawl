@@ -838,6 +838,7 @@ describe('crawlVenue — debug HTML capture', () => {
       const captureEntry = JSON.parse(captureLine!)
       expect(captureEntry.truncated).toBe(true)
       expect(captureEntry.totalLength).toBe(bigHtml.length)
+      // Matches DEBUG_CAPTURE_HEAD_CHARS / DEBUG_CAPTURE_TAIL_CHARS in crawl.ts
       expect(captureEntry.htmlHead.length).toBe(40_000)
       expect(captureEntry.htmlTail.length).toBe(5_000)
     } finally {
