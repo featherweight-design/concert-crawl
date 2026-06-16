@@ -292,8 +292,7 @@ GitHub → repository → **Settings** → **Environments**.
 | --- | --- |
 | `DATABASE_URL` | `NEON_STAGING_POOLED` from Step 2 — for future crawler/migration GHA jobs |
 | `SENTRY_DSN` | Staging Sentry project DSN |
-| `RENDER_DEPLOY_HOOK_API` | Render → `concert-crawl-api-staging` → **Settings → Deploy Hook** → generate and copy. Required by `deploy-staging.yml`'s `deploy-api` job to trigger the staging API redeploy on merge to `main`. |
-| `RENDER_DEPLOY_HOOK_WEB` | Render → `concert-crawl-web-staging` → **Settings → Deploy Hook** → generate and copy. Still consumed by `deploy-staging.yml`'s `deploy-web` job even though Vercel now handles the staging web deploys via GitHub integration — the workflow file hasn't been cleaned up yet. Tracked in #602: once the workflow drops `deploy-web` and the Render staging web service is deleted, this secret can be removed. |
+| `RENDER_DEPLOY_HOOK_API` | Render → `concert-crawl-api-staging` → **Settings → Deploy Hook** → generate and copy. Required by `deploy-staging.yml`'s `deploy-api` job to trigger the staging API redeploy on merge to `main`. (Staging web is deployed by Vercel's GitHub integration directly — no deploy hook needed.) |
 
 ### `staging` environment — Variables
 

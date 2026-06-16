@@ -26,13 +26,7 @@ jobs:
         run: |
           curl --fail -X POST "${{ secrets.RENDER_DEPLOY_HOOK_API }}"
 
-  deploy-web:
-    name: Deploy Web (staging)
-    environment: staging
-    needs: deploy-api
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Trigger Render deploy
-        run: |
-          curl --fail -X POST "${{ secrets.RENDER_DEPLOY_HOOK_WEB }}"
+  # Web deploys are handled by Vercel's GitHub integration directly —
+  # Vercel watches main for the `concert-crawl-staging` project and deploys
+  # automatically. No deploy hook needed. The previous `deploy-web` job
+  # (Render) was removed when staging web migrated to Vercel (2026-06-15).
