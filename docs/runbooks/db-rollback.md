@@ -21,7 +21,7 @@ docker exec -it concert-crawl-db psql -U postgres -d concert_crawl_db \
   -c "SELECT id, hash FROM drizzle.__drizzle_migrations ORDER BY created_at DESC LIMIT 5;"
 ```
 
-On staging/prod (which run on Neon, not Render Postgres), use the Neon dashboard's SQL editor for read-only confirmation, or `docker run --rm postgres:16 psql "<neon URL>"` from your laptop using the **direct** (non-pooled) connection string. The Render MCP `query_render_postgres` tool no longer applies — Render Postgres is not the prod/staging DB.
+On staging/prod (which run on Neon, not Render Postgres), use the Neon dashboard's SQL editor to run read-only queries for confirmation, or `docker run --rm postgres:16 psql "<neon URL>"` from your laptop using the **direct** (non-pooled) connection string. (Neon's SQL editor can also execute writes and DDL — treat it as a general-purpose console, not a read-only safety harness; stick to `SELECT` while diagnosing.) The Render MCP `query_render_postgres` tool no longer applies — Render Postgres is not the prod/staging DB.
 
 The migration filename to roll back is in `packages/db/migrations/` — match the hash from the query above to the file on disk.
 

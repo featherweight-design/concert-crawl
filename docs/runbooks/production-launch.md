@@ -62,8 +62,8 @@ Concert Crawl uses **two separate Clerk apps** for isolation between staging and
 3. The default branch is `production` (or rename to match if Neon defaults differ)
 4. **Create the staging branch:** sidebar **Branches** → **Create branch** → name `staging`, parent = `production`, "Branch data and schema"
 5. For each branch, grab **both** connection strings from **Connection Details**:
-   - **Pooled** (hostname contains `-pooler`) — used by API + crawler crons at runtime; `postgres-js` requires `prepare: false` which is incompatible with direct in some setups
-   - **Direct** (no `-pooler`) — used for `pg_dump`/`pg_restore` and `pnpm db:migrate`
+   - **Pooled** (hostname contains `-pooler`) — used by API + crawler crons at runtime, for connection multiplexing under load. The DB client sets `prepare: false` for pooler compatibility (poolers don't speak prepared-statement protocol); that setting works against the direct URL too, so the choice between pooled/direct is about runtime scaling, not protocol correctness.
+   - **Direct** (no `-pooler`) — used for `pg_dump`/`pg_restore` and `pnpm db:migrate` (DDL transactions can choke on pgbouncer-style pooling)
 6. Save all four URLs locally (not in repo, not in chat) — they're needed in Steps 4, 6, and 7.
 
 > Neon's `channel_binding=require` query param is present in default URLs and is honored by `postgres-js` — leave it in.
@@ -191,7 +191,7 @@ Add under **Production + Preview** scope. **All `NEXT_PUBLIC_*` keys must have S
 | `INVITE_COOKIE_SECRET` | Generate fresh: `openssl rand -hex 32` | ON |
 | `INTERNAL_API_SECRET` | Generate fresh: `openssl rand -hex 32` — **must match** the same key in the Render API's env vars (Step 8) | ON |
 
-`NEXT_PUBLIC_APP_VERSION` is unset — Next.js reads the version from `package.json` + commit SHA at build time.
+`NEXT_PUBLIC_APP_VERSION` is hard-set at build time by `apps/web/next.config.ts` from `package.json#version` plus the deploy's commit SHA. **Current limitation:** the SHA fallback chain only reads `RENDER_GIT_COMMIT`, so on Vercel deploys the version banner reads `vX.Y.Z · dev` instead of `vX.Y.Z · abc1234`. Tracked in #595 (one-line fix to add `VERCEL_GIT_COMMIT_SHA` to the fallback chain).
 
 ### Add the custom domain
 
@@ -208,8 +208,8 @@ Vercel will show the DNS records needed in Step 7.
 ## Step 7 — Cloudflare DNS Swap
 
 1. Cloudflare → `concertcrawl.app` zone → **DNS → Records**
-2. For the apex: replace the existing `A`/`CNAME` records with the Vercel-provided records. Typically:
-   - **A record** for `@` → Vercel's anycast IP (e.g. `216.198.79.1`) — exact IP comes from Vercel's domain settings
+2. For the apex: replace the existing `A`/`CNAME` records with the **exact records Vercel shows you** in the prod project's Domains settings (Vercel rotates anycast IPs over time, so don't copy from this runbook). Typically that's:
+   - **A record** for `@` → the Vercel anycast IP Vercel provides at setup time
    - OR **CNAME** for `@` if your DNS provider supports CNAME at apex (Cloudflare does via CNAME flattening)
 3. For `www`: CNAME → `cname.vercel-dns.com`
 4. **Proxy status:** **DNS only (grey cloud)** on both records. Cloudflare proxy ↔ Vercel CDN creates double-CDN issues and breaks Vercel's SSL provisioning.
@@ -240,13 +240,15 @@ In the Render dashboard for this service → **Environment** tab. The service ma
 | `REQUIRE_BETA_AUTH` | `true` — gates `/v1/events`, `/v1/venues`, `/v1/search` behind Clerk during private beta. Remove or set `false` at public launch (Step 12) |
 | `INTERNAL_API_SECRET` | **Same value** as set in the Vercel prod project (Step 6) |
 
-> **Build command sanity check.** Render's Node 24 base images pre-install pnpm at a read-only location. The default Render-generated build command `npm install -g pnpm && pnpm install --frozen-lockfile && ...` will fail with `EROFS: read-only file system`. Verify the Build Command starts with `corepack enable &&` instead, or matches what's in `render.yaml` exactly. The current pattern:
+> **Build command — Node-version-dependent.** The current `render.yaml` and the deployed services use:
 >
 > ```
 > npm install -g pnpm && pnpm install --frozen-lockfile && pnpm db:migrate && pnpm turbo build --filter=@concert-crawl/api
 > ```
 >
-> works for the `concert-crawl-api-staging` service on its current base image — confirm before reusing.
+> This works on Render's older Node base images (Node 22-era), which is what the existing services run on. **It will break on newer Node 24+ images** with `EROFS: read-only file system` because Node 24 ships with pnpm pre-installed at `/usr/lib/node_modules/pnpm` and `npm install -g pnpm` cannot overwrite it.
+>
+> If a Render service rebuilds onto a Node 24+ image (which can happen silently when Render refreshes their base images) and the build fails with EROFS, the durable fix is to replace `npm install -g pnpm &&` with `corepack enable &&` in the service's Build Command (Render dashboard → service → Settings). The current prod API was rebuilt this way on 2026-06-15.
 
 ### concert-crawl-crawler-triggers + concert-crawl-crawler-daily (prod)
 
@@ -279,7 +281,7 @@ Use the same variable set on `concert-crawl-api-staging`, `concert-crawl-crawler
 
 ## Step 9 — GitHub Environment Secrets and Variables
 
-The GitHub Actions workflows use environment-scoped secrets and variables for E2E and smoke test runs.
+GitHub Actions workflows use a mix of **environment-scoped** secrets (e.g. `deploy-staging.yml` reads from the `staging` GH environment) and **repository-level** secrets/vars (e.g. `staging-e2e.yml`, `smoke.yml`). The split below reflects that — don't drop env-scoped secrets thinking they're duplicates of repo-level ones.
 
 GitHub → repository → **Settings** → **Environments**.
 
@@ -287,8 +289,9 @@ GitHub → repository → **Settings** → **Environments**.
 
 | Secret | Value |
 | --- | --- |
-| `DATABASE_URL` | `NEON_STAGING_POOLED` from Step 2 |
+| `DATABASE_URL` | `NEON_STAGING_POOLED` from Step 2 — for future crawler/migration GHA jobs |
 | `SENTRY_DSN` | Staging Sentry project DSN |
+| `RENDER_DEPLOY_HOOK_API` | Render → `concert-crawl-api-staging` → **Settings → Deploy Hook** → generate and copy. Required by `deploy-staging.yml` to trigger the API redeploy on merge to `main`. No equivalent web hook exists since web is on Vercel (auto-deploys via GitHub integration). |
 
 ### `staging` environment — Variables
 
@@ -303,6 +306,7 @@ GitHub → repository → **Settings** → **Environments**.
 | --- | --- |
 | `DATABASE_URL` | `NEON_PROD_POOLED` from Step 2 |
 | `SENTRY_DSN` | Crawler project DSN from Step 5 |
+| `RENDER_DEPLOY_HOOK_API` | Render → `concert-crawl-api` → **Settings → Deploy Hook** → generate and copy. Pre-provisioned for the eventual `deploy-production.yml` workflow; no current workflow consumes it. |
 
 ### `production` environment — Variables
 
