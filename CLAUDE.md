@@ -244,6 +244,6 @@ Do not build upvoting, threading, status tracking, or public roadmaps. The list 
 
 ## Current Status
 
-Phase: **Beta opens this week (Jun 16, 2026) — prod migration + launch pending**
+Phase: **Prod stack live on Vercel + Neon + Render — beta open Jun 16, 2026**
 
 Phase sequence and recent PR history: `docs/superpowers/progress.md` — update it whenever a PR merges or a new phase begins. At the start of every session run `gh pr list --state merged --limit 10` and sync it before doing any other work.
