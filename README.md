@@ -10,12 +10,18 @@ flowchart TD
         Browser["Browser / PWA"]
     end
 
+    subgraph Vercel
+        Web["apps/web\nNext.js 15 (App Router)\nVercel"]
+    end
+
     subgraph Render
-        Web["apps/web\nNext.js 15 (App Router)\nRender Web Service"]
         API["apps/api\nHono REST\nRender Web Service"]
         CrawlerTrigger["apps/crawler (trigger)\nRender Cron Job (*/10 min)"]
         CrawlerDaily["apps/crawler (daily)\nRender Cron Job (3 AM MT)"]
-        DB[("Render Postgres\nDrizzle ORM")]
+    end
+
+    subgraph Neon
+        DB[("Neon Postgres\nbranches: production, staging\nDrizzle ORM")]
     end
 
     subgraph Packages
@@ -152,14 +158,16 @@ pnpm db:seed      # Seed local database with Denver venues
 | Monorepo      | Turborepo + pnpm workspaces                 |
 | API           | Hono 4                                      |
 | Web           | Next.js 15 (App Router)                     |
-| Auth          | Clerk                                       |
-| Database      | PostgreSQL 16 + Drizzle ORM                 |
+| Auth          | Clerk (separate Production + Staging apps)  |
+| Database      | Neon Postgres 16 + Drizzle ORM              |
 | Crawler       | Playwright + Claude Haiku (LLM fallback)    |
 | Styling       | Tailwind CSS + shadcn/ui                    |
 | Testing       | Vitest (unit/integration), Playwright (E2E) |
 | Observability | Sentry (errors, uptime, crons)              |
 | CI            | GitHub Actions                              |
-| Hosting       | Render (API + Web + Cron Jobs + Postgres)   |
+| Web hosting   | Vercel (`concertcrawl.app`, preview deploys per PR) |
+| API + crons   | Render (web service + Docker cron jobs)     |
+| DNS           | Cloudflare (DNS only, no proxy)             |
 
 ## API Client (Bruno)
 
@@ -181,13 +189,15 @@ Run `pnpm dev` before sending requests.
 
 Third-party services this app depends on:
 
-- [Render](https://render.com): Hosting for the API, web app, and managed Postgres database
-- [Clerk](https://clerk.com): Authentication and user management (supports Spotify OAuth)
+- [Vercel](https://vercel.com): Hosting for `apps/web` (production at `concertcrawl.app`, staging at `staging.concertcrawl.app`)
+- [Render](https://render.com): Hosting for `apps/api` and the two Docker-based crawler cron jobs
+- [Neon](https://neon.tech): Managed Postgres — single project with `production` and `staging` branches
+- [Clerk](https://clerk.com): Authentication — two apps (Concert Crawl Production for prod, Concert Crawl Staging for staging) with separate `pk_live_*` / `sk_live_*` keys per environment
 - [Anthropic](https://anthropic.com): Claude Haiku LLM used as fallback for crawl data extraction
 - [Stripe](https://stripe.com): Payments and subscription billing
 - [Resend](https://resend.com): Transactional email delivery
 - [Sentry](https://sentry.io): Error tracking, uptime monitoring, and cron monitoring across all three apps
-- [Cloudflare](https://cloudflare.com): Domain registrar for `concertcrawl.app`
+- [Cloudflare](https://cloudflare.com): Domain registrar and DNS for `concertcrawl.app` (DNS-only, no proxy — Vercel handles its own SSL + CDN)
 - [GitHub Actions](https://github.com/features/actions): CI/CD pipelines, integration tests, E2E tests, and smoke test cron
 
 ## Contributing

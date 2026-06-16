@@ -8,8 +8,8 @@
 
 Before touching the database, reduce inbound pressure:
 
-1. **Suspend the daily crawl** — In the Render dashboard, pause the `concert-crawl-crawler-prod` cron job so no new data is written during rollback.
-2. **Take the API offline (if necessary)** — If the broken schema is actively causing 500s, suspend the `concert-crawl-api-prod` web service. Users will see the Next.js error boundary; that's preferable to corrupt data.
+1. **Suspend the crawler crons** — In the Render dashboard, pause both `concert-crawl-crawler-triggers` and `concert-crawl-crawler-daily` so no new data is written during rollback.
+2. **Take the API offline (if necessary)** — If the broken schema is actively causing 500s, suspend the `concert-crawl-api` web service on Render. Users will see the Next.js error boundary served from Vercel; that's preferable to corrupt data.
 
 ---
 
@@ -21,7 +21,7 @@ docker exec -it concert-crawl-db psql -U postgres -d concert_crawl_db \
   -c "SELECT id, hash FROM drizzle.__drizzle_migrations ORDER BY created_at DESC LIMIT 5;"
 ```
 
-On staging/prod, use the Render MCP tool (`mcp__render__query_render_postgres`) — it is read-only, so you can query but cannot roll back via it. Use it only to confirm state.
+On staging/prod (which run on Neon, not Render Postgres), use the Neon dashboard's SQL editor for read-only confirmation, or `docker run --rm postgres:16 psql "<neon URL>"` from your laptop using the **direct** (non-pooled) connection string. The Render MCP `query_render_postgres` tool no longer applies — Render Postgres is not the prod/staging DB.
 
 The migration filename to roll back is in `packages/db/migrations/` — match the hash from the query above to the file on disk.
 
@@ -50,8 +50,8 @@ Save it as a raw `.sql` file (do NOT create a new Drizzle migration file — tha
 Never roll back production without validating on staging.
 
 ```bash
-# Connect to staging DB (get connection string from Render dashboard or env)
-psql "$STAGING_DATABASE_URL" -f path/to/down_migration.sql
+# Connect to staging DB — use Neon staging branch DIRECT URL (not pooled) for DDL
+docker run --rm -i postgres:16 psql "$NEON_STAGING_DIRECT" -f path/to/down_migration.sql
 ```
 
 Confirm:
@@ -70,13 +70,13 @@ pnpm --filter @concert-crawl/e2e test:staging
 Only after staging passes.
 
 ```bash
-psql "$PROD_DATABASE_URL" -f path/to/down_migration.sql
+docker run --rm -i postgres:16 psql "$NEON_PROD_DIRECT" -f path/to/down_migration.sql
 ```
 
 Then remove the rolled-back entry from the Drizzle migrations log (the `drizzle.__drizzle_migrations` table — distinct from the `meta/_journal.json` file, which you do not need to edit):
 
 ```bash
-psql "$PROD_DATABASE_URL" \
+docker run --rm postgres:16 psql "$NEON_PROD_DIRECT" \
   -c "DELETE FROM drizzle.__drizzle_migrations WHERE id = '<id-from-step-1>';"
 ```
 
@@ -84,20 +84,24 @@ psql "$PROD_DATABASE_URL" \
 
 ## 5 — Deploy the matching code rollback
 
-The schema rollback is useless if the application code still expects the new shape. Deploy the previous release from Render:
+The schema rollback is useless if the application code still expects the new shape. Deploy the previous release:
 
-1. Render dashboard → Service → **Deploys**
+**API or crawler crons (Render):**
+1. Render dashboard → service → **Builds** tab
+2. Find the last green build before the bad migration
+3. Click **Rollback** → Render redeploys that image without rebuilding from `main`
+
+**Web (Vercel):**
+1. Vercel dashboard → `concert-crawl` project → **Deployments**
 2. Find the last green deploy before the bad migration
-3. Click **Rollback to this deploy**
-
-Render will redeploy from that commit SHA without rebuilding from `main`.
+3. Click the **⋯** menu → **Promote to Production** — instant cutover, no rebuild
 
 ---
 
 ## 6 — Restore normal operations
 
-1. Re-enable the crawler cron job in Render
-2. Re-enable the API service if it was suspended
+1. Re-enable both crawler cron jobs in Render (`concert-crawl-crawler-triggers`, `concert-crawl-crawler-daily`)
+2. Re-enable the API service if it was suspended (`concert-crawl-api`)
 3. Verify a clean crawl run completes in the Render logs
 4. File a post-incident note in `docs/runbooks/` capturing what happened and what the permanent fix is
 

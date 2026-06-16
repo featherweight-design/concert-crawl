@@ -218,7 +218,7 @@ Issues live in GitHub Issues (repo: `HartiganHM/concert-crawl`). The board is a 
 
 ## Environment Variables
 
-Each app has a `.env.example` at its root — see those for local dev vars. Full production variable tables (including Render + GitHub Actions secrets) are in `docs/runbooks/production-launch.md` Step 4–5.
+Each app has a `.env.example` at its root — see those for local dev vars. Full production variable tables — Vercel web project (Step 6), Render API + crawler crons (Step 8), and GitHub Actions secrets (Step 9) — are in `docs/runbooks/production-launch.md`.
 
 ---
 
