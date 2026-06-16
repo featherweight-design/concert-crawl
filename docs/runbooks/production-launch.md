@@ -162,7 +162,11 @@ Create the **prod** Vercel project. (The staging project should already exist as
 
 ### Environment variables
 
-Add under **Production + Preview** scope. **All `NEXT_PUBLIC_*` keys must have Sensitive OFF** — Sensitive blocks `NEXT_PUBLIC_` inlining at build time, which breaks Clerk + Sentry at runtime.
+Add under **Production-only** scope on the prod Vercel project. **Do NOT** apply them to the Preview environment until issue #592 is resolved — preview deploys on the prod project can't yet be reliably disabled, and scoping these to Preview would cause accidental preview deploys to run against real prod Clerk sessions, the prod Sentry environment, and the prod `INTERNAL_API_SECRET`. Leave Preview unset on the prod project so any preview deploy fails closed (missing required env vars) rather than failing open (running with prod credentials).
+
+The staging Vercel project is the inverse: scope its env vars to **Production + Preview** so per-PR previews exercise the staging stack.
+
+**All `NEXT_PUBLIC_*` keys must have Sensitive OFF** — Sensitive blocks `NEXT_PUBLIC_` inlining at build time, which breaks Clerk + Sentry at runtime.
 
 | Key | Value | Sensitive |
 | --- | --- | --- |
