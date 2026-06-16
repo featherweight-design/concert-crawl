@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { filterWhenToDateRange } from './lib'
+import {
+  filterWhenToDateRange,
+  formatEventDate,
+  dateGroupLabel,
+  isToday,
+} from './lib'
 
 vi.mock('@/lib/time', () => ({
   localDateString: vi.fn(),
@@ -105,5 +110,53 @@ describe('filterWhenToDateRange', () => {
       mockLocalDate.mockReturnValue('2026-05-20')
       expect(filterWhenToDateRange('all-time')).toBeNull()
     })
+  })
+})
+
+// These tests pin the venue-local day name and group label so the
+// output stays correct regardless of the host machine's timezone. Previously the
+// formatEventDate helper parsed YYYY-MM-DD as host-local time, which gave the
+// wrong day on a UTC server (Render/Vercel) while looking correct on MT laptops.
+describe('formatEventDate', () => {
+  it('returns the venue-local weekday for a YYYY-MM-DD string regardless of host timezone', () => {
+    // June 15, 2026 is a Monday in America/Denver.
+    expect(formatEventDate('2026-06-15', 'America/Denver')).toBe(
+      'Monday, June 15',
+    )
+  })
+
+  it('defaults to America/Denver when no timezone passed', () => {
+    expect(formatEventDate('2026-06-15')).toBe('Monday, June 15')
+  })
+
+  it('handles DST-active and DST-inactive months identically', () => {
+    expect(formatEventDate('2026-01-15', 'America/Denver')).toBe(
+      'Thursday, January 15',
+    )
+    expect(formatEventDate('2026-07-15', 'America/Denver')).toBe(
+      'Wednesday, July 15',
+    )
+  })
+})
+
+describe('isToday / dateGroupLabel timezone defaults', () => {
+  afterEach(() => vi.clearAllMocks())
+
+  it('isToday defaults to America/Denver', () => {
+    mockLocalDate.mockReturnValue('2026-06-15')
+    expect(isToday('2026-06-15')).toBe(true)
+    expect(mockLocalDate).toHaveBeenCalledWith('America/Denver')
+  })
+
+  it('dateGroupLabel labels today as Tonight using America/Denver default', () => {
+    mockLocalDate.mockReturnValue('2026-06-15')
+    expect(dateGroupLabel('2026-06-15')).toBe('Tonight')
+  })
+
+  it('dateGroupLabel formats non-today dates with venue-local weekday', () => {
+    mockLocalDate.mockReturnValue('2026-06-15')
+    // Real Date.now is used inside isTomorrow; mock localDateString won't matter for
+    // arbitrary future dates, so we pick something clearly neither today nor tomorrow.
+    expect(dateGroupLabel('2026-08-15')).toBe('Sat, August 15')
   })
 })

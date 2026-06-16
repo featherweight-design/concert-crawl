@@ -133,4 +133,94 @@ describe('extractJsonLd', () => {
     const events = extractJsonLd(html, SOURCE_URL)
     expect(events).toHaveLength(2)
   })
+
+  describe('venue-timezone-aware date extraction', () => {
+    it('shifts UTC-suffixed late-night startDate back to venue-local previous day', () => {
+      // Mon June 15 22:00 MDT (UTC-6) = Tue June 16 04:00 UTC.
+      // Without timezone conversion the show appears on Tuesday — the original Bug #596 symptom.
+      const html = makeHtml({
+        '@context': 'https://schema.org',
+        '@type': 'Event',
+        name: 'Swing Nights',
+        startDate: '2026-06-16T04:00:00Z',
+        performer: { name: 'Swing Nights Band' },
+      })
+      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver')
+      expect(events).toHaveLength(1)
+      expect(events[0]?.date).toBe('2026-06-15')
+      expect(events[0]?.showTime).toBe('22:00:00')
+    })
+
+    it('preserves an explicit local-offset startDate as-is', () => {
+      // Same instant, expressed with venue-local offset — no shift needed.
+      const html = makeHtml({
+        '@context': 'https://schema.org',
+        '@type': 'Event',
+        name: 'Local Offset Show',
+        startDate: '2026-06-15T22:00:00-06:00',
+        performer: { name: 'Local Band' },
+      })
+      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver')
+      expect(events).toHaveLength(1)
+      expect(events[0]?.date).toBe('2026-06-15')
+      expect(events[0]?.showTime).toBe('22:00:00')
+    })
+
+    it('handles standard-time DST boundary (MST = UTC-7)', () => {
+      // Sat Jan 10 22:00 MST (UTC-7) = Sun Jan 11 05:00 UTC.
+      const html = makeHtml({
+        '@context': 'https://schema.org',
+        '@type': 'Event',
+        name: 'January Show',
+        startDate: '2026-01-11T05:00:00Z',
+        performer: { name: 'Winter Band' },
+      })
+      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver')
+      expect(events).toHaveLength(1)
+      expect(events[0]?.date).toBe('2026-01-10')
+      expect(events[0]?.showTime).toBe('22:00:00')
+    })
+
+    it('leaves naive (no-timezone) datetimes interpreted in venue zone', () => {
+      // No Z, no offset — treat as already venue-local (existing behavior).
+      const html = makeHtml({
+        '@context': 'https://schema.org',
+        '@type': 'Event',
+        name: 'Naive Show',
+        startDate: '2026-06-15T22:00:00',
+        performer: { name: 'Naive Band' },
+      })
+      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver')
+      expect(events).toHaveLength(1)
+      expect(events[0]?.date).toBe('2026-06-15')
+      expect(events[0]?.showTime).toBe('22:00:00')
+    })
+
+    it('leaves date-only startDate untouched regardless of timezone', () => {
+      const html = makeHtml({
+        '@context': 'https://schema.org',
+        '@type': 'Event',
+        name: 'Date Only',
+        startDate: '2026-08-15',
+        performer: { name: 'Date Band' },
+      })
+      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver')
+      expect(events).toHaveLength(1)
+      expect(events[0]?.date).toBe('2026-08-15')
+      expect(events[0]?.showTime).toBeUndefined()
+    })
+
+    it('also converts doorTime to venue-local time', () => {
+      const html = makeHtml({
+        '@context': 'https://schema.org',
+        '@type': 'Event',
+        name: 'Doors Show',
+        startDate: '2026-06-16T04:00:00Z',
+        doorTime: '2026-06-16T03:00:00Z',
+        performer: { name: 'Doors Band' },
+      })
+      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver')
+      expect(events[0]?.doorsTime).toBe('21:00:00')
+    })
+  })
 })

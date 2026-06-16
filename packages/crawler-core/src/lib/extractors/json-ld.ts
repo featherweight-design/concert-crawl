@@ -2,6 +2,11 @@ import type { NormalizedEvent } from '../../types.js'
 
 const EVENT_TYPES = new Set(['Event', 'MusicEvent'])
 
+// Matches ISO datetimes with an explicit timezone designator (Z, +HH:MM, or -HH:MM after the time portion).
+// Naive datetimes like "2026-06-15T22:00:00" are intentionally excluded — they're interpreted as already venue-local.
+const HAS_EXPLICIT_TZ =
+  /T\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})$/
+
 function isEvent(obj: Record<string, unknown>): boolean {
   const type = obj['@type']
   if (typeof type === 'string') return EVENT_TYPES.has(type)
@@ -10,15 +15,52 @@ function isEvent(obj: Record<string, unknown>): boolean {
   return false
 }
 
-function extractDateOnly(dateStr: string): string {
-  // ISO datetime → date-only (YYYY-MM-DD)
+function partsInTimezone(
+  date: Date,
+  timeZone: string,
+): { date: string; time: string } {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(date)
+
+  const pick = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((part) => part.type === type)?.value ?? ''
+
+  // Intl returns "24" for midnight in hour12: false — normalize to "00".
+  const hour = pick('hour') === '24' ? '00' : pick('hour')
+
+  return {
+    date: `${pick('year')}-${pick('month')}-${pick('day')}`,
+    time: `${hour}:${pick('minute')}:${pick('second')}`,
+  }
+}
+
+function extractDateOnly(dateStr: string, timeZone: string): string {
+  if (HAS_EXPLICIT_TZ.test(dateStr)) {
+    return partsInTimezone(new Date(dateStr), timeZone).date
+  }
+  // Naive datetimes and date-only strings → take the date portion as-is.
   return dateStr.split('T')[0] ?? dateStr
 }
 
-function extractTimeOnly(dateStr: string): string | undefined {
+function extractTimeOnly(
+  dateStr: string,
+  timeZone: string,
+): string | undefined {
+  if (HAS_EXPLICIT_TZ.test(dateStr)) {
+    return partsInTimezone(new Date(dateStr), timeZone).time
+  }
   const parts = dateStr.split('T')
   if (parts.length < 2) return undefined
-  return parts[1]?.split(/[+Z]/)[0]
+  // Strip any malformed trailing timezone fragment defensively.
+  return parts[1]?.split(/[+\-Z]/)[0]
 }
 
 function getArtistName(performer: unknown): string {
@@ -39,6 +81,7 @@ function getArtistName(performer: unknown): string {
 function mapToNormalizedEvent(
   obj: Record<string, unknown>,
   sourceUrl: string,
+  timeZone: string,
 ): NormalizedEvent | null {
   const name = obj['name']
   const startDate = obj['startDate']
@@ -46,11 +89,11 @@ function mapToNormalizedEvent(
   if (typeof name !== 'string' || typeof startDate !== 'string') return null
 
   const artist = getArtistName(obj['performer'])
-  const date = extractDateOnly(startDate)
-  const showTime = extractTimeOnly(startDate)
+  const date = extractDateOnly(startDate, timeZone)
+  const showTime = extractTimeOnly(startDate, timeZone)
   const doorsTime =
     typeof obj['doorTime'] === 'string'
-      ? extractTimeOnly(obj['doorTime'])
+      ? extractTimeOnly(obj['doorTime'], timeZone)
       : undefined
   const ticketUrl = typeof obj['url'] === 'string' ? obj['url'] : undefined
   const description =
@@ -73,6 +116,7 @@ function mapToNormalizedEvent(
 function extractEventsFromParsed(
   parsed: unknown,
   sourceUrl: string,
+  timeZone: string,
 ): NormalizedEvent[] {
   const events: NormalizedEvent[] = []
 
@@ -80,7 +124,7 @@ function extractEventsFromParsed(
 
   if (Array.isArray(parsed)) {
     for (const item of parsed) {
-      events.push(...extractEventsFromParsed(item, sourceUrl))
+      events.push(...extractEventsFromParsed(item, sourceUrl, timeZone))
     }
     return events
   }
@@ -90,22 +134,27 @@ function extractEventsFromParsed(
   // Handle @graph
   if ('@graph' in obj && Array.isArray(obj['@graph'])) {
     for (const item of obj['@graph']) {
-      events.push(...extractEventsFromParsed(item, sourceUrl))
+      events.push(...extractEventsFromParsed(item, sourceUrl, timeZone))
     }
     return events
   }
 
   if (isEvent(obj)) {
-    const event = mapToNormalizedEvent(obj, sourceUrl)
+    const event = mapToNormalizedEvent(obj, sourceUrl, timeZone)
     if (event) events.push(event)
   }
 
   return events
 }
 
+// Default fallback for callers that haven't yet been updated to pass venue.timezone.
+// Production callers should always pass the venue's IANA zone — the default is for backward compat / tests only.
+const DEFAULT_TIME_ZONE = 'America/Denver'
+
 export function extractJsonLd(
   html: string,
   sourceUrl: string,
+  timeZone: string = DEFAULT_TIME_ZONE,
 ): NormalizedEvent[] {
   const events: NormalizedEvent[] = []
   const scriptRegex =
@@ -118,7 +167,7 @@ export function extractJsonLd(
 
     try {
       const parsed: unknown = JSON.parse(content)
-      events.push(...extractEventsFromParsed(parsed, sourceUrl))
+      events.push(...extractEventsFromParsed(parsed, sourceUrl, timeZone))
     } catch {
       console.log(JSON.stringify({ event: 'json-ld.parse_error', sourceUrl }))
     }

@@ -1,16 +1,23 @@
 import { localDateString } from '@/lib/time'
 
+// Concert Crawl is a Denver-only app — Mountain Time is the user's reference frame
+// for "Today/Tonight" grouping labels and date display. The detail page passes
+// event.venue.timezone explicitly for the rare cross-zone case.
+const DEFAULT_DISPLAY_TIMEZONE = 'America/Denver'
+
 export function formatEventDate(
   dateStr: string,
-  timezone = 'UTC',
+  timezone = DEFAULT_DISPLAY_TIMEZONE,
   options: Intl.DateTimeFormatOptions = {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
   },
 ): string {
-  // dateStr is YYYY-MM-DD — append T00:00 so Date parses in local context
-  const date = new Date(`${dateStr}T00:00:00`)
+  // dateStr is YYYY-MM-DD. Anchor to UTC noon so the parsed instant lands safely
+  // mid-day in any IANA zone (T00:00 without timezone slips back a day in MT on a
+  // UTC host, which was the original display-layer half of issue #596).
+  const date = new Date(`${dateStr}T12:00:00Z`)
   return new Intl.DateTimeFormat('en-US', {
     timeZone: timezone,
     ...options,
@@ -47,11 +54,17 @@ export function formatPrice(
   return null
 }
 
-export function isToday(dateStr: string, timezone = 'UTC'): boolean {
+export function isToday(
+  dateStr: string,
+  timezone = DEFAULT_DISPLAY_TIMEZONE,
+): boolean {
   return dateStr === localDateString(timezone)
 }
 
-export function isTomorrow(dateStr: string, timezone = 'UTC'): boolean {
+export function isTomorrow(
+  dateStr: string,
+  timezone = DEFAULT_DISPLAY_TIMEZONE,
+): boolean {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: timezone,
     year: 'numeric',
@@ -67,7 +80,10 @@ export function isTomorrow(dateStr: string, timezone = 'UTC'): boolean {
   return dateStr === `${year}-${month}-${day}`
 }
 
-export function dateGroupLabel(dateStr: string, timezone = 'UTC'): string {
+export function dateGroupLabel(
+  dateStr: string,
+  timezone = DEFAULT_DISPLAY_TIMEZONE,
+): string {
   if (isToday(dateStr, timezone)) return 'Tonight'
   if (isTomorrow(dateStr, timezone)) return 'Tomorrow'
   return formatEventDate(dateStr, timezone, {
@@ -87,8 +103,12 @@ export function venueShort(name: string): string {
 }
 
 export function formatShortDate(dateStr: string): string {
-  const date = new Date(dateStr + 'T12:00:00')
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const date = new Date(`${dateStr}T12:00:00Z`)
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: DEFAULT_DISPLAY_TIMEZONE,
+    month: 'short',
+    day: 'numeric',
+  }).format(date)
 }
 
 export function googleMapsUrl(address: string): string {

@@ -30,12 +30,17 @@ const AUTO_APPROVE_THRESHOLD = 0.7
 async function runExtraction(
   html: string,
   finalUrl: string,
+  timeZone: string,
 ): Promise<{
   normalizedEvents: NormalizedEvent[]
   strategy: 'structured_data' | 'llm'
   tokenUsage: TokenUsage | undefined
 }> {
-  let normalizedEvents: NormalizedEvent[] = extractJsonLd(html, finalUrl)
+  let normalizedEvents: NormalizedEvent[] = extractJsonLd(
+    html,
+    finalUrl,
+    timeZone,
+  )
   let strategy: 'structured_data' | 'llm' = 'structured_data'
   let tokenUsage: TokenUsage | undefined
   if (normalizedEvents.length === 0) {
@@ -210,7 +215,7 @@ export async function crawlVenue(
     let extraction: Awaited<ReturnType<typeof runExtraction>>
 
     if (venue.crawlMode === null && resolvedMode === 'http') {
-      const httpJsonLdEvents = extractJsonLd(html, finalUrl)
+      const httpJsonLdEvents = extractJsonLd(html, finalUrl, venue.timezone)
       if (httpJsonLdEvents.length > 0) {
         extraction = {
           normalizedEvents: httpJsonLdEvents,
@@ -231,11 +236,12 @@ export async function crawlVenue(
         extraction = await runExtraction(
           browserResult.html,
           browserResult.finalUrl,
+          venue.timezone,
         )
         resolvedMode = 'browser'
       }
     } else {
-      extraction = await runExtraction(html, finalUrl)
+      extraction = await runExtraction(html, finalUrl, venue.timezone)
     }
 
     const { normalizedEvents, strategy, tokenUsage } = extraction
