@@ -1,3 +1,11 @@
+## [1.45.1](https://github.com/HartiganHM/concert-crawl/compare/v1.45.0...v1.45.1) (2026-06-16)
+
+
+### Bug Fixes
+
+* **crawler+web:** address Copilot review on [#600](https://github.com/HartiganHM/concert-crawl/issues/600) ([f2287b0](https://github.com/HartiganHM/concert-crawl/commit/f2287b01c315b11a9c21da72d799ba21bc40ecbf)), closes [#4](https://github.com/HartiganHM/concert-crawl/issues/4) [#3](https://github.com/HartiganHM/concert-crawl/issues/3) [#6](https://github.com/HartiganHM/concert-crawl/issues/6) [#7](https://github.com/HartiganHM/concert-crawl/issues/7) [#8](https://github.com/HartiganHM/concert-crawl/issues/8) [#1](https://github.com/HartiganHM/concert-crawl/issues/1) [#5](https://github.com/HartiganHM/concert-crawl/issues/5) [#2](https://github.com/HartiganHM/concert-crawl/issues/2) [#9](https://github.com/HartiganHM/concert-crawl/issues/9)
+* **crawler+web:** convert venue event dates to local timezone ([#596](https://github.com/HartiganHM/concert-crawl/issues/596)) ([2ec0e0a](https://github.com/HartiganHM/concert-crawl/commit/2ec0e0ac498905f8bd47469564351d4790b33efc))
+
 # [1.45.0](https://github.com/HartiganHM/concert-crawl/compare/v1.44.0...v1.45.0) (2026-06-15)
 
 
