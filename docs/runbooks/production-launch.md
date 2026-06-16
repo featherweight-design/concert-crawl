@@ -292,7 +292,7 @@ GitHub → repository → **Settings** → **Environments**.
 | --- | --- |
 | `DATABASE_URL` | `NEON_STAGING_POOLED` from Step 2 — for future crawler/migration GHA jobs |
 | `SENTRY_DSN` | Staging Sentry project DSN |
-| `RENDER_DEPLOY_HOOK_API` | Render → `concert-crawl-api-staging` → **Settings → Deploy Hook** → generate and copy. Required by `deploy-staging.yml`'s `deploy-api` job to trigger the staging API redeploy on merge to `main`. (Staging web is deployed by Vercel's GitHub integration directly — no deploy hook needed.) |
+| `RENDER_DEPLOY_HOOK_API` | Render → `concert-crawl-api-staging` → **Settings → Deploy Hook** → generate and copy. Required by `deploy-staging.yml`'s `deploy-api` job — the workflow fires on every successful CI run targeting `main` (typically a merge, but any push that passes CI qualifies) and POSTs to this hook to redeploy the staging API. (Staging web is deployed by Vercel's GitHub integration directly — no deploy hook needed.) |
 
 ### `staging` environment — Variables
 
