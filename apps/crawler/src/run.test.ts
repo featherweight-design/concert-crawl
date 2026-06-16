@@ -132,10 +132,30 @@ describe('runDailyCrawl', () => {
     await runDailyCrawl()
     const browser = await vi.mocked(chromium.launch).mock.results[0]?.value
     expect(mockCrawlVenue).toHaveBeenCalledTimes(4)
-    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-1', browser)
-    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-2', browser)
-    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-3', browser)
-    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-4', browser)
+    expect(mockCrawlVenue).toHaveBeenCalledWith(
+      'venue-1',
+      browser,
+      undefined,
+      expect.any(Array),
+    )
+    expect(mockCrawlVenue).toHaveBeenCalledWith(
+      'venue-2',
+      browser,
+      undefined,
+      expect.any(Array),
+    )
+    expect(mockCrawlVenue).toHaveBeenCalledWith(
+      'venue-3',
+      browser,
+      undefined,
+      expect.any(Array),
+    )
+    expect(mockCrawlVenue).toHaveBeenCalledWith(
+      'venue-4',
+      browser,
+      undefined,
+      expect.any(Array),
+    )
   })
 
   it('closes the browser after all crawls complete', async () => {
@@ -421,8 +441,18 @@ describe('runTriggeredCrawls', () => {
     await runTriggeredCrawls()
     const browser = await vi.mocked(chromium.launch).mock.results[0]?.value
     expect(mockCrawlVenue).toHaveBeenCalledTimes(2)
-    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-a', browser)
-    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-b', browser)
+    expect(mockCrawlVenue).toHaveBeenCalledWith(
+      'venue-a',
+      browser,
+      undefined,
+      expect.any(Array),
+    )
+    expect(mockCrawlVenue).toHaveBeenCalledWith(
+      'venue-b',
+      browser,
+      undefined,
+      expect.any(Array),
+    )
   })
 
   it('closes the browser after all triggers are processed', async () => {

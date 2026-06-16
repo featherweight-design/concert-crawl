@@ -20,6 +20,10 @@ import {
 import { extractJsonLd } from './lib/extractors/json-ld.js'
 import { extractWithLlm } from './lib/extractors/llm.js'
 import { calculateCost } from './lib/cost.js'
+import {
+  detectCrossVenuePresale,
+  type CrossVenueCandidate,
+} from './lib/cross-venue-filter.js'
 import { hashPage, hashEvent } from './lib/hash.js'
 import type { NormalizedEvent, TokenUsage } from './types.js'
 
@@ -125,6 +129,7 @@ export async function crawlVenue(
   venueId: string,
   browser: Browser,
   crawlRunId?: string,
+  crossVenueCandidates: CrossVenueCandidate[] = [],
 ): Promise<CrawlRun> {
   const id = crawlRunId ?? crypto.randomUUID()
   const startedAt = Date.now()
@@ -334,7 +339,29 @@ export async function crawlVenue(
       extraction = await runExtraction(html, finalUrl, venue.timezone)
     }
 
-    const { normalizedEvents, strategy, tokenUsage } = extraction
+    const { strategy, tokenUsage } = extraction
+
+    // Cross-venue presale filter — drop "Artist AT OTHER VENUE" rows so the
+    // host venue's crawl owns the canonical row (see issue #605). Emits a
+    // structured log per skip for auditability.
+    const normalizedEvents = extraction.normalizedEvents.filter((evt) => {
+      const match = detectCrossVenuePresale({
+        title: evt.title,
+        sourceVenueId: venueId,
+        candidates: crossVenueCandidates,
+      })
+      if (!match) return true
+      console.log(
+        JSON.stringify({
+          event: 'crawler.skip_cross_venue',
+          sourceUrl: evt.sourceUrl,
+          sourceVenueSlug: venue.slug,
+          matchedVenueSlug: match.matchedVenueSlug,
+          title: evt.title,
+        }),
+      )
+      return false
+    })
 
     // Upsert events — insert on first crawl, update mutable fields on re-crawl
     let eventsInserted = 0
