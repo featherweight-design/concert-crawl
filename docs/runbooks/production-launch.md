@@ -9,7 +9,7 @@ This runbook reflects the post-2026-06-15 architecture: **web on Vercel, Postgre
 ## Prerequisites
 
 - Staging environment is healthy and all pre-beta checklist items are validated there
-- Access to dashboards: Vercel, Neon, Render, Cloudflare, Clerk (both Production and Staging apps), Stripe, Resend, Sentry, GitHub repository settings
+- Access to dashboards: Vercel, Neon, Render, Cloudflare, Clerk (both Production and Staging apps), Resend, Sentry, GitHub repository settings. (Stripe is not yet wired — see Step 5.)
 - Local tools: Docker (for `pg_dump`/`psql` via `postgres:16` image), `pnpm`, `gh` CLI
 
 ### Service inventory
@@ -126,16 +126,7 @@ docker run --rm postgres:16 psql "$NEON_PROD_DIRECT" -c "
 
 ## Step 5 — Third-Party Services
 
-### Stripe
-
-1. Switch Stripe account to **Live** mode → copy live **Secret Key** (`sk_live_*`)
-2. Set up a **production** webhook endpoint:
-   - URL: `https://concert-crawl-api.onrender.com/v1/webhooks/stripe`
-   - Events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
-   - Copy the **Webhook Signing Secret**
-3. Staging webhook (if not already set up):
-   - URL: `https://concert-crawl-api-staging.onrender.com/v1/webhooks/stripe`
-   - Same events; copy the staging webhook secret separately
+> **Stripe is deferred.** The API has no Stripe routes or `STRIPE_*` env vars at this time. Payment / subscription billing is monetization work scheduled for after the public launch. When Stripe is wired, the PR that adds it will re-introduce a Stripe sub-section here with the live mode switch, webhook endpoints, and required env vars (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`). Don't configure Stripe webhooks now — they'd point at a non-existent route.
 
 ### Resend
 
@@ -230,8 +221,6 @@ In the Render dashboard for this service → **Environment** tab. The service ma
 | `CLERK_PUBLISHABLE_KEY` | prod `pk_live_*` from Step 1 |
 | `ALLOWED_ORIGIN` | `https://concertcrawl.app` |
 | `ANTHROPIC_API_KEY` | From Anthropic console |
-| `STRIPE_SECRET_KEY` | `sk_live_*` from Step 5 |
-| `STRIPE_WEBHOOK_SECRET` | Production webhook signing secret from Step 5 |
 | `RESEND_API_KEY` | From Step 5 |
 | `SENTRY_DSN` | API project DSN from Step 5 |
 | `SENTRY_ENVIRONMENT` | `production` |
@@ -240,13 +229,21 @@ In the Render dashboard for this service → **Environment** tab. The service ma
 | `REQUIRE_BETA_AUTH` | `true` — gates `/v1/events`, `/v1/venues`, `/v1/search` behind Clerk during private beta. Remove or set `false` at public launch (Step 12) |
 | `INTERNAL_API_SECRET` | **Same value** as set in the Vercel prod project (Step 6) |
 
-> **Build command — Node-version-dependent.** The current `render.yaml` and the deployed services use:
+> **Build commands — Node-version-dependent + differ between prod and staging.** The current `render.yaml` uses two different build commands:
 >
+> **Prod (`concert-crawl-api`):**
+> ```
+> npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/api
+> ```
+>
+> **Staging (`concert-crawl-api-staging`):**
 > ```
 > npm install -g pnpm && pnpm install --frozen-lockfile && pnpm db:migrate && pnpm turbo build --filter=@concert-crawl/api
 > ```
 >
-> This works on Render's older Node base images (Node 22-era), which is what the existing services run on. **It will break on newer Node 24+ images** with `EROFS: read-only file system` because Node 24 ships with pnpm pre-installed at `/usr/lib/node_modules/pnpm` and `npm install -g pnpm` cannot overwrite it.
+> Staging auto-runs migrations on every deploy; prod does not — production migrations run manually per Step 3 to keep schema changes paired with deliberate code releases.
+>
+> Both commands work on Render's older Node base images (Node 22-era), which is what the staging services still run on. **They will break on newer Node 24+ images** with `EROFS: read-only file system` because Node 24 ships with pnpm pre-installed at `/usr/lib/node_modules/pnpm` and `npm install -g pnpm` cannot overwrite it.
 >
 > If a Render service rebuilds onto a Node 24+ image (which can happen silently when Render refreshes their base images) and the build fails with EROFS, the durable fix is to replace `npm install -g pnpm &&` with `corepack enable &&` in the service's Build Command (Render dashboard → service → Settings). The current prod API was rebuilt this way on 2026-06-15.
 
@@ -291,7 +288,8 @@ GitHub → repository → **Settings** → **Environments**.
 | --- | --- |
 | `DATABASE_URL` | `NEON_STAGING_POOLED` from Step 2 — for future crawler/migration GHA jobs |
 | `SENTRY_DSN` | Staging Sentry project DSN |
-| `RENDER_DEPLOY_HOOK_API` | Render → `concert-crawl-api-staging` → **Settings → Deploy Hook** → generate and copy. Required by `deploy-staging.yml` to trigger the API redeploy on merge to `main`. No equivalent web hook exists since web is on Vercel (auto-deploys via GitHub integration). |
+| `RENDER_DEPLOY_HOOK_API` | Render → `concert-crawl-api-staging` → **Settings → Deploy Hook** → generate and copy. Required by `deploy-staging.yml`'s `deploy-api` job to trigger the staging API redeploy on merge to `main`. |
+| `RENDER_DEPLOY_HOOK_WEB` | Render → `concert-crawl-web-staging` → **Settings → Deploy Hook** → generate and copy. Still consumed by `deploy-staging.yml`'s `deploy-web` job even though Vercel now handles the staging web deploys via GitHub integration — the workflow file hasn't been cleaned up yet. Tracked in #602: once the workflow drops `deploy-web` and the Render staging web service is deleted, this secret can be removed. |
 
 ### `staging` environment — Variables
 
@@ -503,6 +501,6 @@ Not Settings, not Events. For services where `autoDeploy: no`, the **Builds tab 
 ## Notes
 
 - Keep all `sk_live_*` keys out of git — dashboards and GitHub secrets only
-- `NEXT_PUBLIC_APP_VERSION` is unset at runtime; Next.js reads version from `package.json` (auto-bumped by `semantic-release`)
+- `NEXT_PUBLIC_APP_VERSION` is set at build time by `apps/web/next.config.ts` from `package.json#version` plus the deploy's commit SHA. The version prefix bumps automatically via `semantic-release`. SHA fallback chain is Render-only today — see Step 6's note and issue #595
 - After a Clerk role change, the user must sign out and back in before the API sees the new role (JWT reissue)
 - The four crawler cron jobs (2 prod + 2 staging) all share the same Dockerfile (`apps/crawler/Dockerfile`); changes apply to all when the image is rebuilt
