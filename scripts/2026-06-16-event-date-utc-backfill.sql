@@ -21,9 +21,12 @@
 ------------------------------------------------------------------------
 -- 1. DIAGNOSE
 ------------------------------------------------------------------------
--- Heuristic: pre-noon stored show_time is suspect. Extra guard: the venue-tz
--- rotation must land in afternoon/evening. If the rotated time is still
--- pre-noon, it's probably a legitimate morning/matinee event, not a UTC bug.
+-- Heuristic: pre-noon stored show_time is suspect. Two extra guards:
+--   (1) the venue-tz rotation must land in afternoon/evening. If the rotated time
+--       is still pre-noon, it's probably a legitimate morning/matinee event.
+--   (2) skip show_time = '00:00:01' — Fillmore (and likely others) use this exact
+--       value as a sentinel for multi-day festival passes that have no specific
+--       start time. Rotating these would shift them to the wrong calendar day.
 SELECT
   v.slug,
   v.name,
@@ -35,6 +38,7 @@ FROM events e
 JOIN venues v ON v.id = e.venue_id
 WHERE e.show_time IS NOT NULL
   AND e.show_time < '12:00:00'
+  AND e.show_time <> '00:00:01'
   AND e.date >= CURRENT_DATE
   AND ((e.date::timestamp + e.show_time::interval) AT TIME ZONE 'UTC' AT TIME ZONE v.timezone)::time >= '12:00:00'
 GROUP BY v.slug, v.name, v.timezone
@@ -62,6 +66,7 @@ FROM events e
 JOIN venues v ON v.id = e.venue_id
 WHERE e.show_time IS NOT NULL
   AND e.show_time < '12:00:00'
+  AND e.show_time <> '00:00:01'
   AND e.date >= CURRENT_DATE
   AND ((e.date::timestamp + e.show_time::interval) AT TIME ZONE 'UTC' AT TIME ZONE v.timezone)::time >= '12:00:00';
 
@@ -81,6 +86,7 @@ FROM venues v
 WHERE e.venue_id = v.id
   AND e.show_time IS NOT NULL
   AND e.show_time < '12:00:00'
+  AND e.show_time <> '00:00:01'
   AND e.date >= CURRENT_DATE
   AND e.verified = true
   AND ((e.date::timestamp + e.show_time::interval) AT TIME ZONE 'UTC' AT TIME ZONE v.timezone)::time >= '12:00:00';
@@ -97,6 +103,7 @@ USING venues v
 WHERE e.venue_id = v.id
   AND e.show_time IS NOT NULL
   AND e.show_time < '12:00:00'
+  AND e.show_time <> '00:00:01'
   AND e.date >= CURRENT_DATE
   AND e.verified = false
   AND ((e.date::timestamp + e.show_time::interval) AT TIME ZONE 'UTC' AT TIME ZONE v.timezone)::time >= '12:00:00';
@@ -106,8 +113,12 @@ WHERE e.venue_id = v.id
 ------------------------------------------------------------------------
 -- a) Re-run the diagnostic. Verified count should be 0 (we just updated them);
 --    unverified count should be 0 (we just deleted them).
--- b) Spot-check the user-reported event (Swing Nights, Cervantes, originally
---    bucketed on Tue 2026-06-16 instead of Mon 2026-06-15):
+-- b) Spot-check a known-good row in the affected venue. Substitute an event id
+--    you saw flagged in step 1; the row below is an Earl Sweatshirt show at
+--    Ogden Theatre that surfaced during the original #596 investigation but was
+--    NOT a UTC-bug victim (regular 19:00 evening MT time, not a UTC artifact) —
+--    use it as a neutral example of "what an unaffected row looks like" or
+--    swap in an actual flagged id from your run.
 SELECT id, title, artist, date, show_time, verified
 FROM events
 WHERE id = '34c67a78-57b4-4e82-8538-4c476b654a25';
