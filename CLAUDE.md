@@ -130,7 +130,7 @@ Claude Code sessions are finite. To preserve continuity across sessions:
 - Leave a `## Next` section in `docs/superpowers/plans/` or update the relevant memory file with the immediate next step
 - After significant changes, update `CLAUDE.md` (architecture decisions, new conventions) and memory files (`~/.claude/projects/*/memory/`) with anything non-obvious
 - Optimize for cost-effectiveness: prefer smaller focused sessions over sprawling ones; use `/compact` when context grows large
-- **When opening a PR** — add a 🔄 row to `docs/superpowers/progress.md` and commit the change as part of the branch
+- **When opening a PR** — add a ✅ Complete row to `docs/superpowers/progress.md` with today's date as the merge date, and commit the change as part of the branch. Open-then-merge is the assumed flow; the optimistic mark avoids a follow-up commit after merge. If a PR ends up being closed without merging, the row is removed as part of the cleanup.
 - **When starting a new session** — run `gh pr list --state merged --limit 10` and update `docs/superpowers/progress.md` before doing anything else
 
 ### Code
