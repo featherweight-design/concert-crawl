@@ -21,8 +21,9 @@
 ------------------------------------------------------------------------
 -- 1. DIAGNOSE
 ------------------------------------------------------------------------
--- Heuristic: a concert show starting before noon is almost always actually
--- evening-prior-day stored as UTC. Run this first to scope the work.
+-- Heuristic: pre-noon stored show_time is suspect. Extra guard: the venue-tz
+-- rotation must land in afternoon/evening. If the rotated time is still
+-- pre-noon, it's probably a legitimate morning/matinee event, not a UTC bug.
 SELECT
   v.slug,
   v.name,
@@ -35,6 +36,7 @@ JOIN venues v ON v.id = e.venue_id
 WHERE e.show_time IS NOT NULL
   AND e.show_time < '12:00:00'
   AND e.date >= CURRENT_DATE
+  AND ((e.date::timestamp + e.show_time::interval) AT TIME ZONE 'UTC' AT TIME ZONE v.timezone)::time >= '12:00:00'
 GROUP BY v.slug, v.name, v.timezone
 ORDER BY total_suspect DESC;
 
@@ -48,19 +50,28 @@ SELECT *, NOW() AS snapshot_at
 FROM events
 WHERE FALSE;  -- structure only, no rows yet
 
+-- Re-runs would otherwise append a second copy of every suspect row; the
+-- restore (INSERT INTO events SELECT * FROM events_backfill_596) then fails
+-- on events.id PK conflicts. TRUNCATE keeps the snapshot a single canonical
+-- pre-backfill view.
+TRUNCATE events_backfill_596;
+
 INSERT INTO events_backfill_596
 SELECT e.*, NOW()
 FROM events e
+JOIN venues v ON v.id = e.venue_id
 WHERE e.show_time IS NOT NULL
   AND e.show_time < '12:00:00'
-  AND e.date >= CURRENT_DATE;
+  AND e.date >= CURRENT_DATE
+  AND ((e.date::timestamp + e.show_time::interval) AT TIME ZONE 'UTC' AT TIME ZONE v.timezone)::time >= '12:00:00';
 
 ------------------------------------------------------------------------
 -- 3. UPDATE verified events in place
 ------------------------------------------------------------------------
 -- Postgres handles DST automatically via AT TIME ZONE with an IANA name.
 -- (date + show_time) interpreted as UTC → projected to venue.timezone →
--- split back into (new_date, new_show_time).
+-- split back into (new_date, new_show_time). The rotated-time-is-afternoon
+-- guard prevents corrupting legitimate morning/matinee rows.
 UPDATE events e
 SET
   date      = ((e.date::timestamp + e.show_time::interval) AT TIME ZONE 'UTC' AT TIME ZONE v.timezone)::date,
@@ -71,19 +82,24 @@ WHERE e.venue_id = v.id
   AND e.show_time IS NOT NULL
   AND e.show_time < '12:00:00'
   AND e.date >= CURRENT_DATE
-  AND e.verified = true;
+  AND e.verified = true
+  AND ((e.date::timestamp + e.show_time::interval) AT TIME ZONE 'UTC' AT TIME ZONE v.timezone)::time >= '12:00:00';
 
 ------------------------------------------------------------------------
 -- 4. DELETE unverified events (will be replaced by recrawl)
 ------------------------------------------------------------------------
 -- The (venue_id, date, artist) unique index prevents recrawl from overwriting
 -- the wrong-date row in place — it would create a duplicate instead. Cleaning
--- up unverified suspects first lets the recrawl produce canonical rows.
-DELETE FROM events
-WHERE show_time IS NOT NULL
-  AND show_time < '12:00:00'
-  AND date >= CURRENT_DATE
-  AND verified = false;
+-- up unverified suspects first lets the recrawl produce canonical rows. Same
+-- rotation guard as the UPDATE so we don't delete legitimate morning rows.
+DELETE FROM events e
+USING venues v
+WHERE e.venue_id = v.id
+  AND e.show_time IS NOT NULL
+  AND e.show_time < '12:00:00'
+  AND e.date >= CURRENT_DATE
+  AND e.verified = false
+  AND ((e.date::timestamp + e.show_time::interval) AT TIME ZONE 'UTC' AT TIME ZONE v.timezone)::time >= '12:00:00';
 
 ------------------------------------------------------------------------
 -- 5. VALIDATE before committing

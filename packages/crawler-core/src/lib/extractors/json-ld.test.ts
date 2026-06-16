@@ -222,5 +222,21 @@ describe('extractJsonLd', () => {
       const events = extractJsonLd(html, SOURCE_URL, 'America/Denver')
       expect(events[0]?.doorsTime).toBe('21:00:00')
     })
+
+    it('falls back to UTC and keeps extracting when venue timezone is invalid', () => {
+      // venues.timezone is plain text — a typo would otherwise crash via RangeError.
+      const html = makeHtml({
+        '@context': 'https://schema.org',
+        '@type': 'Event',
+        name: 'Bad TZ Show',
+        startDate: '2026-06-16T04:00:00Z',
+        performer: { name: 'Bad TZ Band' },
+      })
+      const events = extractJsonLd(html, SOURCE_URL, 'America/Denvr')
+      expect(events).toHaveLength(1)
+      // Falls back to UTC, so the UTC startDate is preserved as-is.
+      expect(events[0]?.date).toBe('2026-06-16')
+      expect(events[0]?.showTime).toBe('04:00:00')
+    })
   })
 })

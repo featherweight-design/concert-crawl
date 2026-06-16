@@ -151,11 +151,32 @@ function extractEventsFromParsed(
 // Production callers should always pass the venue's IANA zone — the default is for backward compat / tests only.
 const DEFAULT_TIME_ZONE = 'America/Denver'
 
+// venues.timezone is a plain text column with no IANA validation. A typo would crash
+// Intl.DateTimeFormat in partsInTimezone and take down the whole venue's crawl. Validate
+// once at the entry point and fall back to UTC so the crawl keeps producing rows.
+function validateTimeZone(timeZone: string, sourceUrl: string): string {
+  try {
+    new Intl.DateTimeFormat('en-CA', { timeZone })
+    return timeZone
+  } catch {
+    console.log(
+      JSON.stringify({
+        event: 'json-ld.invalid_timezone',
+        sourceUrl,
+        timeZone,
+        fallback: 'UTC',
+      }),
+    )
+    return 'UTC'
+  }
+}
+
 export function extractJsonLd(
   html: string,
   sourceUrl: string,
   timeZone: string = DEFAULT_TIME_ZONE,
 ): NormalizedEvent[] {
+  const effectiveTimeZone = validateTimeZone(timeZone, sourceUrl)
   const events: NormalizedEvent[] = []
   const scriptRegex =
     /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi
@@ -167,7 +188,9 @@ export function extractJsonLd(
 
     try {
       const parsed: unknown = JSON.parse(content)
-      events.push(...extractEventsFromParsed(parsed, sourceUrl, timeZone))
+      events.push(
+        ...extractEventsFromParsed(parsed, sourceUrl, effectiveTimeZone),
+      )
     } catch {
       console.log(JSON.stringify({ event: 'json-ld.parse_error', sourceUrl }))
     }

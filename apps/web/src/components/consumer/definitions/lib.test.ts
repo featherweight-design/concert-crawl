@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import {
   filterWhenToDateRange,
   formatEventDate,
@@ -140,7 +140,16 @@ describe('formatEventDate', () => {
 })
 
 describe('isToday / dateGroupLabel timezone defaults', () => {
-  afterEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    // Pin Date.now so isTomorrow's real-clock branch is deterministic.
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-15T18:00:00Z'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.clearAllMocks()
+  })
 
   it('isToday defaults to America/Denver', () => {
     mockLocalDate.mockReturnValue('2026-06-15')
@@ -155,8 +164,6 @@ describe('isToday / dateGroupLabel timezone defaults', () => {
 
   it('dateGroupLabel formats non-today dates with venue-local weekday', () => {
     mockLocalDate.mockReturnValue('2026-06-15')
-    // Real Date.now is used inside isTomorrow; mock localDateString won't matter for
-    // arbitrary future dates, so we pick something clearly neither today nor tomorrow.
     expect(dateGroupLabel('2026-08-15')).toBe('Sat, August 15')
   })
 })
