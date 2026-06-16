@@ -151,6 +151,7 @@ export interface Venue {
   contactEmail: string | null
   priceUrl: string | null
   ticketVendor: TicketVendor | null
+  debugCaptureHtml: boolean
   crawlMode: 'http' | 'browser' | null
   address: string | null
   capacity: number | null

@@ -27,6 +27,7 @@ function makeVenue(
     contactEmail: null,
     priceUrl: null,
     ticketVendor: null,
+    debugCaptureHtml: false,
     crawlMode: null,
     address: null,
     capacity: null,

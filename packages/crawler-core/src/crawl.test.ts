@@ -741,3 +741,107 @@ describe('crawlVenue — crawlMode orchestration', () => {
     expect(savedVenue?.blockedAt).toBeNull()
   })
 })
+
+describe('crawlVenue — debug HTML capture', () => {
+  it('logs the fetched HTML to stdout when debugCaptureHtml is true', async () => {
+    const venue = seedVenue({ debugCaptureHtml: true })
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [METALLICA_EVENT],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    try {
+      await crawlVenue(venue.id, mockBrowser)
+
+      const captureLine = consoleSpy.mock.calls
+        .map((args) => String(args[0]))
+        .find((line) => line.includes('"event":"debug.html_capture"'))
+
+      expect(captureLine).toBeDefined()
+      const captureEntry = JSON.parse(captureLine!)
+      expect(captureEntry).toMatchObject({
+        event: 'debug.html_capture',
+        venueId: venue.id,
+        venueSlug: venue.slug,
+        mode: 'browser',
+        httpStatus: 200,
+        totalLength: HTML_V1.length,
+        truncated: false,
+        htmlHead: HTML_V1,
+      })
+      expect(captureEntry.crawlRunId).toMatch(
+        /^[0-9a-f-]{36}$/, // uuid
+      )
+    } finally {
+      consoleSpy.mockRestore()
+    }
+  })
+
+  it('does not log capture when debugCaptureHtml is false', async () => {
+    const venue = seedVenue({ debugCaptureHtml: false })
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [METALLICA_EVENT],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    try {
+      await crawlVenue(venue.id, mockBrowser)
+
+      const captureLine = consoleSpy.mock.calls
+        .map((args) => String(args[0]))
+        .find((line) => line.includes('"event":"debug.html_capture"'))
+
+      expect(captureLine).toBeUndefined()
+    } finally {
+      consoleSpy.mockRestore()
+    }
+  })
+
+  it('truncates HTML and includes a tail when over the cap', async () => {
+    const venue = seedVenue({ debugCaptureHtml: true })
+    // 50KB of repeated content — exceeds the 45KB head+tail cap
+    const bigHtml = '<html><body>' + 'A'.repeat(50_000) + '</body></html>'
+    mockFetchPage.mockResolvedValue({
+      html: bigHtml,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [METALLICA_EVENT],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    try {
+      await crawlVenue(venue.id, mockBrowser)
+
+      const captureLine = consoleSpy.mock.calls
+        .map((args) => String(args[0]))
+        .find((line) => line.includes('"event":"debug.html_capture"'))
+
+      expect(captureLine).toBeDefined()
+      const captureEntry = JSON.parse(captureLine!)
+      expect(captureEntry.truncated).toBe(true)
+      expect(captureEntry.totalLength).toBe(bigHtml.length)
+      expect(captureEntry.htmlHead.length).toBe(40_000)
+      expect(captureEntry.htmlTail.length).toBe(5_000)
+    } finally {
+      consoleSpy.mockRestore()
+    }
+  })
+})

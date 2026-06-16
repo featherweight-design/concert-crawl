@@ -187,6 +187,10 @@ export async function updateVenue(
         ? String(priceUrlRaw).trim()
         : null
 
+    const debugCaptureHtmlRaw = formData.get('debugCaptureHtml')
+    const debugCaptureHtml =
+      debugCaptureHtmlRaw !== null ? debugCaptureHtmlRaw === 'true' : undefined
+
     await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
       name: formData.get('name'),
       slug: formData.get('slug'),
@@ -206,6 +210,7 @@ export async function updateVenue(
       featured,
       priceUrl,
       extractionStrategy,
+      debugCaptureHtml,
     })
     revalidatePath('/admin/venues')
     revalidatePath(`/admin/venues/${id}`)

@@ -27,6 +27,43 @@ const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
 
 const AUTO_APPROVE_THRESHOLD = 0.7
 
+// Cap the captured HTML so a single log line stays well under typical
+// log-aggregator line limits (~64KB). Head + tail gives both the page
+// structure and any late-rendered content.
+const DEBUG_CAPTURE_HEAD_BYTES = 40_000
+const DEBUG_CAPTURE_TAIL_BYTES = 5_000
+
+interface DebugCaptureContext {
+  venueId: string
+  venueSlug: string
+  crawlRunId: string
+  mode: 'http' | 'browser'
+  finalUrl: string
+  httpStatus: number
+}
+
+function logDebugHtmlCapture(html: string, ctx: DebugCaptureContext): void {
+  const truncated =
+    html.length > DEBUG_CAPTURE_HEAD_BYTES + DEBUG_CAPTURE_TAIL_BYTES
+  const htmlHead = html.slice(0, DEBUG_CAPTURE_HEAD_BYTES)
+  const htmlTail = truncated ? html.slice(-DEBUG_CAPTURE_TAIL_BYTES) : ''
+  console.log(
+    JSON.stringify({
+      event: 'debug.html_capture',
+      venueId: ctx.venueId,
+      venueSlug: ctx.venueSlug,
+      crawlRunId: ctx.crawlRunId,
+      mode: ctx.mode,
+      finalUrl: ctx.finalUrl,
+      httpStatus: ctx.httpStatus,
+      totalLength: html.length,
+      truncated,
+      htmlHead,
+      ...(htmlTail ? { htmlTail } : {}),
+    }),
+  )
+}
+
 async function runExtraction(
   html: string,
   finalUrl: string,
@@ -157,6 +194,17 @@ export async function crawlVenue(
 
     const { html, httpStatus, finalUrl } = fetchResult
 
+    if (venue.debugCaptureHtml) {
+      logDebugHtmlCapture(html, {
+        venueId,
+        venueSlug: venue.slug,
+        crawlRunId: id,
+        mode: resolvedMode,
+        finalUrl,
+        httpStatus,
+      })
+    }
+
     const pageHash = hashPage(html)
 
     const [lastRun] = await db
@@ -233,6 +281,16 @@ export async function crawlVenue(
           venue.crawlWaitUntil,
           venue.crawlWaitForSelector ?? undefined,
         )
+        if (venue.debugCaptureHtml) {
+          logDebugHtmlCapture(browserResult.html, {
+            venueId,
+            venueSlug: venue.slug,
+            crawlRunId: id,
+            mode: 'browser',
+            finalUrl: browserResult.finalUrl,
+            httpStatus: browserResult.httpStatus,
+          })
+        }
         extraction = await runExtraction(
           browserResult.html,
           browserResult.finalUrl,

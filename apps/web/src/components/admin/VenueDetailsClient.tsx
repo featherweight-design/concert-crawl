@@ -482,6 +482,9 @@ export function VenueDetailsClient({ venue }: Props) {
   const [extractionStrategyVal, setExtractionStrategyVal] = useState<
     'structured_data' | 'llm' | 'manual' | null
   >(venue.extractionStrategy ?? null)
+  const [debugCaptureHtmlVal, setDebugCaptureHtmlVal] = useState(
+    venue.debugCaptureHtml,
+  )
   const [capacityVal, setCapacityVal] = useState<string>(
     venue.capacity != null ? String(venue.capacity) : '',
   )
@@ -510,6 +513,9 @@ export function VenueDetailsClient({ venue }: Props) {
     ...(crawlModeVal !== (venue.crawlMode ?? null) ? ['Fetch mode'] : []),
     ...(extractionStrategyVal !== (venue.extractionStrategy ?? null)
       ? ['Strategy']
+      : []),
+    ...(debugCaptureHtmlVal !== venue.debugCaptureHtml
+      ? ['Debug capture']
       : []),
     ...(capacityVal !== (venue.capacity != null ? String(venue.capacity) : '')
       ? ['Capacity']
@@ -607,6 +613,7 @@ export function VenueDetailsClient({ venue }: Props) {
     setPriceUrlVal(venue.priceUrl ?? '')
     setCrawlModeVal(venue.crawlMode ?? null)
     setExtractionStrategyVal(venue.extractionStrategy ?? null)
+    setDebugCaptureHtmlVal(venue.debugCaptureHtml)
     setCapacityVal(venue.capacity != null ? String(venue.capacity) : '')
     setVenueTypeVal(venue.venueType ?? '')
     setAboutVal(venue.about ?? '')
@@ -643,6 +650,7 @@ export function VenueDetailsClient({ venue }: Props) {
     }
     formData.set('crawlMode', crawlModeVal ?? '')
     formData.set('extractionStrategy', extractionStrategyVal ?? '')
+    formData.set('debugCaptureHtml', String(debugCaptureHtmlVal))
     formData.set('capacity', capacityVal.trim())
     formData.set('venueType', venueTypeVal.trim())
     formData.set('about', aboutVal.trim())
@@ -1559,6 +1567,56 @@ export function VenueDetailsClient({ venue }: Props) {
                   onChange={(evt) => setWaitForSelectorVal(evt.target.value)}
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}
                 />
+              </VDField>
+
+              {/* Debug · capture HTML */}
+              <VDField
+                label={
+                  ADMIN_COPY.venueDetailsClient.fields.debugCaptureHtml.label
+                }
+                htmlFor="edit-venue-debug-capture-html"
+                hint={
+                  ADMIN_COPY.venueDetailsClient.fields.debugCaptureHtml.hint
+                }
+                labelRight={
+                  <span
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                      color: 'var(--warning)',
+                    }}
+                  >
+                    {
+                      ADMIN_COPY.venueDetailsClient.fields.debugCaptureHtml
+                        .badge
+                    }
+                  </span>
+                }
+              >
+                <div style={{ alignSelf: 'flex-start' }}>
+                  <VDSegToggle
+                    options={[
+                      {
+                        value: 'off',
+                        label:
+                          ADMIN_COPY.venueDetailsClient.fields.debugCaptureHtml
+                            .off,
+                      },
+                      {
+                        value: 'on',
+                        label:
+                          ADMIN_COPY.venueDetailsClient.fields.debugCaptureHtml
+                            .on,
+                      },
+                    ]}
+                    value={debugCaptureHtmlVal ? 'on' : 'off'}
+                    onChange={(val) => setDebugCaptureHtmlVal(val === 'on')}
+                    disabled={isDisabled}
+                  />
+                </div>
               </VDField>
             </div>
           </div>

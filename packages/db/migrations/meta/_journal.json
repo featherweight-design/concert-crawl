@@ -211,6 +211,13 @@
       "when": 1779824551465,
       "tag": "0029_phase_8_5_corroboration",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1781568000000,
+      "tag": "0030_venue_debug_capture_html",
+      "breakpoints": true
     }
   ]
 }

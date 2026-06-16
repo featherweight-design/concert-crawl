@@ -69,6 +69,7 @@ export const venues = pgTable('venues', {
   contactEmail: text('contact_email'),
   priceUrl: text('price_url'),
   ticketVendor: ticketVendorEnum('ticket_vendor'),
+  debugCaptureHtml: boolean('debug_capture_html').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),

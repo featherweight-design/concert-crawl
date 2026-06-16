@@ -695,6 +695,13 @@ export const ADMIN_COPY = {
         hint: 'If set, Playwright waits for this selector before parsing.',
         placeholder: 'e.g. .event-card, [data-event]',
       },
+      debugCaptureHtml: {
+        label: 'Debug · capture HTML',
+        badge: 'Diagnostic',
+        hint: 'Logs the raw fetched HTML to crawler stdout on each run. Use when a venue serves a sparse or empty page — capture once, then disable.',
+        off: 'Off',
+        on: 'On',
+      },
       about: {
         label: 'About',
         description:

@@ -264,6 +264,44 @@ describe('Admin venue routes', () => {
     expect(body.data.verifiedAt).toBeTruthy()
   })
 
+  it('PATCH /v1/admin/venues/:id accepts debugCaptureHtml: true', async () => {
+    adminAuth()
+    mockDb.select.mockReturnValue(
+      mockDb._makeQueryBuilder([mockDb._mockVenueRow]),
+    )
+    mockDb.returning.mockResolvedValue([
+      { ...mockDb._mockVenueRow, debugCaptureHtml: true },
+    ])
+    mockDb.set.mockClear()
+    const res = await createApp().request('/v1/admin/venues/venue-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ debugCaptureHtml: true }),
+    })
+    expect(res.status).toBe(200)
+    expect(mockDb.set).toHaveBeenCalledWith(
+      expect.objectContaining({ debugCaptureHtml: true }),
+    )
+    const body = (await res.json()) as {
+      success: boolean
+      data: { debugCaptureHtml: boolean }
+    }
+    expect(body.data.debugCaptureHtml).toBe(true)
+  })
+
+  it('PATCH /v1/admin/venues/:id rejects non-boolean debugCaptureHtml', async () => {
+    adminAuth()
+    mockDb.select.mockReturnValue(
+      mockDb._makeQueryBuilder([mockDb._mockVenueRow]),
+    )
+    const res = await createApp().request('/v1/admin/venues/venue-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ debugCaptureHtml: 'yes' }),
+    })
+    expect(res.status).toBe(400)
+  })
+
   it('PATCH /v1/admin/venues/:id nulls verifiedBy and verifiedAt when verified: false', async () => {
     adminAuth()
     mockDb.select.mockReturnValue(

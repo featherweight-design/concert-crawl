@@ -103,6 +103,7 @@ const updateVenueSchema = createVenueSchema.partial().extend({
     .enum(['structured_data', 'llm', 'manual'])
     .nullable()
     .optional(),
+  debugCaptureHtml: z.boolean().optional(),
 })
 
 export const venuesAdminRouter = new Hono<AdminVariables>()
