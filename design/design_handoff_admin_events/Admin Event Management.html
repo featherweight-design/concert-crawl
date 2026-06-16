@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Admin · Event Management</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; }
+  * { box-sizing: border-box; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="admin-primitives.jsx"></script>
+<script type="text/babel" src="admin-shell-v2.jsx"></script>
+<script type="text/babel" src="admin-review.jsx"></script>
+<script type="text/babel" src="admin-events-mgmt.jsx"></script>
+<script type="text/babel" src="admin-missing.jsx"></script>
+<script type="text/babel" src="admin-event-editor.jsx"></script>
+<script type="text/babel" src="admin-events-mobile.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+
+<script type="text/babel">
+const { useState } = React;
+const SHIM = { "--ink": "#0A0D18", "--paper": "#FFFFFF" };
+const UIFONT = "Inter, system-ui, -apple-system, sans-serif";
+
+// Themed surface (page-content artboards). position:relative so modals scrim inside.
+function Themed({ theme = "electric", w, h, pad = 28, children, style }) {
+  return (
+    <ThemeProvider theme={theme} style={{
+      ...SHIM, width: w, height: h, boxSizing: "border-box",
+      background: "var(--bg)", color: "var(--fg)", fontFamily: UIFONT,
+      padding: pad, position: "relative", overflow: "hidden", ...style,
+    }}>{children}</ThemeProvider>
+  );
+}
+
+// Full desktop shell (sidebar + topbar + scrolling main).
+function Frame({ theme = "electric", w = 1380, h = 920, active = "review", breadcrumb = ["Admin", "Review"], children }) {
+  return (
+    <ThemeProvider theme={theme} style={{
+      ...SHIM, width: w, height: h, boxSizing: "border-box",
+      background: "var(--bg)", color: "var(--fg)", fontFamily: UIFONT,
+      display: "flex", overflow: "hidden",
+    }}>
+      <SidebarV2 active={active} mode="full" />
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+        <AdminTopbarV2 breadcrumb={breadcrumb} appContext="admin" />
+        <main style={{ flex: 1, overflow: "auto", padding: "24px 28px", background: "var(--bg)" }}>{children}</main>
+      </div>
+    </ThemeProvider>
+  );
+}
+
+const sel = (...ids) => new Set(ids);
+const bulkSel = sel("evt-3002", "evt-3004", "evt-3008", "evt-3010");
+
+// Bulk-dock composition (filter bar + table w/ selection + dock).
+function DockDemo() {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 18, minHeight: "100%" }}>
+      <EventsFilterBar shown={ALL_EVENTS.length} />
+      <EventsTable rows={ALL_EVENTS} selected={bulkSel} />
+      <BulkDock count={4} />
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <DesignCanvas>
+
+      {/* ───────── Placement ───────── */}
+      <DCSection id="placement" title="Review, restructured into tabs" subtitle="Event flags · Prices · Missing · All events — one tab model on desktop & mobile (Option B). Existing tab content is unchanged; Missing + All events are new.">
+        <DCArtboard id="hero-all" label="Review · All events tab (the new surface)" width={1380} height={920}>
+          <Frame><ReviewEventsPage active="all" /></Frame>
+        </DCArtboard>
+        <DCArtboard id="hero-flags" label="Review · Event flags tab (existing)" width={1380} height={920}>
+          <Frame><ReviewEventsPage active="flags" /></Frame>
+        </DCArtboard>
+        <DCArtboard id="hero-prices" label="Review · Prices tab (existing)" width={1380} height={920}>
+          <Frame><ReviewEventsPage active="prices" /></Frame>
+        </DCArtboard>
+        <DCArtboard id="hero-missing" label="Review · Missing tab (new)" width={1380} height={920}>
+          <Frame><ReviewEventsPage active="missing" /></Frame>
+        </DCArtboard>
+        <DCPostIt top={-8} left={1400} width={220} rotate={2}>
+          Option B: desktop adopts the same tab pill mobile already uses, now 4-wide. Flags + Prices render from the real Review components — <b>Missing</b> and <b>All events</b> are the new surfaces.
+        </DCPostIt>
+      </DCSection>
+
+      {/* ───────── List & filters ───────── */}
+      <DCSection id="list" title="List & filters (desktop)" subtitle="Inline filter bar: search · status · venue · date · genre · missing-data · sort. Table spans verified + unverified.">
+        <DCArtboard id="list-full" label="All events · populated" width={1200} height={980}>
+          <Themed w={1200} h={980}><ReviewEventsPage active="all" /></Themed>
+        </DCArtboard>
+        <DCArtboard id="filter-missing" label="Filter · missing-data (multi-select open)" width={1200} height={560}>
+          <Themed w={1200} h={560}><AllEventsContent openFilter="missing" rows={ALL_EVENTS} /></Themed>
+        </DCArtboard>
+        <DCArtboard id="filter-venue" label="Filter · venue dropdown open" width={1200} height={620}>
+          <Themed w={1200} h={620}><AllEventsContent openFilter="venue" rows={ALL_EVENTS} /></Themed>
+        </DCArtboard>
+        <DCArtboard id="filter-sort" label="Sort menu open" width={1200} height={520}>
+          <Themed w={1200} h={520}><AllEventsContent openFilter="sort" rows={ALL_EVENTS} /></Themed>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ───────── Row actions ───────── */}
+      <DCSection id="rowactions" title="Row & bulk actions" subtitle="Per-row ⋯ overflow menu. Mark-non-concert confirm. Bulk selection dock.">
+        <DCArtboard id="row-menu" label="Row ⋯ overflow menu" width={1200} height={620}>
+          <Themed w={1200} h={620}><AllEventsContent openMenuId="evt-3003" rows={ALL_EVENTS} /></Themed>
+        </DCArtboard>
+        <DCArtboard id="mark-nc" label="Mark non-concert confirm" width={1200} height={720}>
+          <Themed w={1200} h={720}>
+            <AllEventsContent rows={ALL_EVENTS} selected={sel("evt-3002")} />
+            <MarkNonConcertConfirm ev={ALL_EVENTS[1]} />
+          </Themed>
+        </DCArtboard>
+        <DCArtboard id="bulk-dock" label="Bulk selection dock" width={1200} height={820}>
+          <Themed w={1200} h={820} pad={0}>
+            <div style={{ padding: 28, height: "100%", overflow: "hidden", display: "flex", flexDirection: "column" }}><DockDemo /></div>
+          </Themed>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ───────── Delete ───────── */}
+      <DCSection id="delete" title="Delete confirmation" subtitle="Single delete = simple confirm. Bulk delete = typed-DELETE gate (mirrors Delete-venue). Audit-logged.">
+        <DCArtboard id="del-single" label="Delete event · single (simple confirm)" width={1200} height={720}>
+          <Themed w={1200} h={720}>
+            <AllEventsContent rows={ALL_EVENTS} openMenuId={null} />
+            <DeleteEventConfirm ev={ALL_EVENTS[3]} />
+          </Themed>
+        </DCArtboard>
+        <DCArtboard id="del-bulk-type" label="Bulk delete · type DELETE" width={1200} height={820}>
+          <Themed w={1200} h={820}>
+            <AllEventsContent rows={ALL_EVENTS} selected={bulkSel} />
+            <BulkDeleteConfirm count={4} items={ALL_EVENTS.filter(e => bulkSel.has(e.id))} phase="type" />
+          </Themed>
+        </DCArtboard>
+        <DCArtboard id="del-bulk-armed" label="Bulk delete · armed (DELETE typed)" width={1200} height={820}>
+          <Themed w={1200} h={820}>
+            <AllEventsContent rows={ALL_EVENTS} selected={bulkSel} />
+            <BulkDeleteConfirm count={4} items={ALL_EVENTS.filter(e => bulkSel.has(e.id))} phase="armed" />
+          </Themed>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ───────── States ───────── */}
+      <DCSection id="states" title="Empty & loading" subtitle="No-results empty (playful + clear voice) and the table loading skeleton.">
+        <DCArtboard id="empty" label="Empty · no results" width={1200} height={640}>
+          <Themed w={1200} h={640}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+              <EventsFilterBar shown={0} search={"swing nights cervantes verified"} missing="No price" />
+              <EventsEmptyState />
+            </div>
+          </Themed>
+        </DCArtboard>
+        <DCArtboard id="loading" label="Loading skeleton" width={1200} height={640}>
+          <Themed w={1200} h={640}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+              <EventsFilterBar shown={ALL_EVENTS.length} />
+              <EventsLoading />
+            </div>
+          </Themed>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ───────── Themes ───────── */}
+      <DCSection id="themes" title="Themes" subtitle="Same consumer tokens as the user app — Electric (default), Jade, Light.">
+        <DCArtboard id="t-electric" label="Electric" width={980} height={560}>
+          <Themed theme="electric" w={980} h={560}><AllEventsContent rows={ALL_EVENTS.slice(0, 6)} /></Themed>
+        </DCArtboard>
+        <DCArtboard id="t-jade" label="Jade" width={980} height={560}>
+          <Themed theme="jade" w={980} h={560}><AllEventsContent rows={ALL_EVENTS.slice(0, 6)} /></Themed>
+        </DCArtboard>
+        <DCArtboard id="t-light" label="Light" width={980} height={560}>
+          <Themed theme="light" w={980} h={560}><AllEventsContent rows={ALL_EVENTS.slice(0, 6)} /></Themed>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ───────── Edit event ───────── */}
+      <DCSection id="editor" title="Edit event (/admin/events/:id/edit)" subtitle="Canonical editor — reached from the All events row menu, View detail, and the queue inspector's 'Open full editor' link. Mirrors VenueDetailPageV2: numbered sections + sticky save bar + danger zone.">
+        <DCArtboard id="ed-shell" label="Editor · in shell (idle)" width={1380} height={1800}>
+          <Frame h={1800} breadcrumb={["Admin", "Events", "Wednesday + MJ Lenderman"]}>
+            <EventEditorPage ev={ALL_EVENTS[2]} />
+          </Frame>
+        </DCArtboard>
+        <DCArtboard id="ed-dirty" label="Editor · dirty + unsaved bar" width={1040} height={1760}>
+          <Themed w={1040} h={1760}>
+            <EventEditorPage ev={ALL_EVENTS[2]} changeCount={3} changed={{ title: true, priceHigh: true, genres: true }} />
+          </Themed>
+        </DCArtboard>
+        <DCArtboard id="ed-validation" label="Editor · validation errors" width={1040} height={1800}>
+          <Themed w={1040} h={1800}>
+            <EventEditorPage ev={ALL_EVENTS[2]} changeCount={2} changed={{ title: true, priceHigh: true }} errors={{ title: "Title is required.", priceHigh: "High must be ≥ low." }} />
+          </Themed>
+        </DCArtboard>
+        <DCArtboard id="ed-postponed" label="Editor · Status = Postponed" width={1040} height={1850}>
+          <Themed w={1040} h={1850}>
+            <EventEditorPage ev={ALL_EVENTS[2]} lifecycle="postponed" changeCount={1} changed={{ lifecycle: true }} />
+          </Themed>
+        </DCArtboard>
+        <DCArtboard id="ed-soldout" label="Editor · Sold out (report + provenance)" width={1040} height={1980}>
+          <Themed w={1040} h={1980}>
+            <EventEditorPage ev={ALL_EVENTS[2]} soldOut changeCount={1} changed={{ soldOut: true }} />
+          </Themed>
+        </DCArtboard>
+        <DCArtboard id="ed-delete" label="Editor · delete confirm (danger)" width={1040} height={1760}>
+          <Themed w={1040} h={1760}>
+            <EventEditorPage ev={ALL_EVENTS[2]} dangerOpen />
+          </Themed>
+        </DCArtboard>
+        <DCPostIt top={-8} left={1060} width={220} rotate={-2}>
+          Shares the FieldRow primitive + validation + save semantics with the queue inspector. Status (events.status) and Verification are two separate axes. Postponed/cancelled stay published.
+        </DCPostIt>
+      </DCSection>
+
+      {/* ───────── Missing from crawl ───────── */}
+      <DCSection id="missing" title="Missing-from-crawl tab" subtitle="Crawler flags rows it expected in a venue's daily sweep but didn't find (last_seen_at). Triage: Mark postponed · Mark cancelled · Dismiss.">
+        <DCArtboard id="miss-tab" label="Review · Missing tab" width={1380} height={920}>
+          <Frame><ReviewEventsPage active="missing" /></Frame>
+        </DCArtboard>
+        <DCArtboard id="miss-empty" label="Missing · all accounted for" width={1040} height={320}>
+          <Themed w={1040} h={320}><MissingSection items={[]} /></Themed>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ───────── Mobile ───────── */}
+      <DCSection id="mobile" title="Mobile (fully responsive)" subtitle="Same tab pill (compact: Flags · Prices · Missing · All). All events list + sheets, Missing tab, and the full editor stacked with a sticky save bar.">
+        <DCArtboard id="m-list" label="All events tab · list" width={390} height={840}>
+          <Themed theme="electric" w={390} h={840} pad={0}>
+            <MobilePhone><MobileAllEventsBody rows={ALL_EVENTS} /></MobilePhone>
+          </Themed>
+        </DCArtboard>
+        <DCArtboard id="m-prices" label="Prices tab (existing content)" width={390} height={840}>
+          <Themed theme="electric" w={390} h={840} pad={0}>
+            <MobilePhone>
+              <ReviewHeaderMobile />
+              <ReviewTabs active="prices" fullWidth compact flagsCount={0} pricesCount={61} missingCount={4} />
+              <div style={{ height: 16 }} />
+              <AdminReviewMobilePrices />
+            </MobilePhone>
+          </Themed>
+        </DCArtboard>
+        <DCArtboard id="m-missing" label="Missing tab" width={390} height={840}>
+          <Themed theme="electric" w={390} h={840} pad={0}>
+            <MobilePhone>
+              <ReviewHeaderMobile />
+              <ReviewTabs active="missing" fullWidth compact flagsCount={0} pricesCount={61} missingCount={4} />
+              <div style={{ height: 16 }} />
+              <MissingMobile />
+            </MobilePhone>
+          </Themed>
+        </DCArtboard>
+        <DCArtboard id="m-editor" label="Edit event (mobile)" width={390} height={1180}>
+          <Themed theme="electric" w={390} h={1180} pad={0}>
+            <MobilePhone title="Edit event" h={1180}>
+              <EventEditorMobile ev={ALL_EVENTS[2]} changeCount={2} changed={{ title: true, priceHigh: true }} />
+            </MobilePhone>
+          </Themed>
+        </DCArtboard>
+        <DCArtboard id="m-select" label="All events · select mode + bulk bar" width={390} height={840}>
+          <Themed theme="electric" w={390} h={840} pad={0}>
+            <MobilePhone overlay={<MobileBulkBar count={3} />}>
+              <MobileAllEventsBody rows={ALL_EVENTS} selectMode selectedIds={sel("evt-3002", "evt-3004", "evt-3008")} />
+            </MobilePhone>
+          </Themed>
+        </DCArtboard>
+        <DCArtboard id="m-filters" label="Filters sheet" width={390} height={840}>
+          <Themed theme="electric" w={390} h={840} pad={0}>
+            <MobilePhone sheet={<MobileFiltersSheet />}>
+              <MobileAllEventsBody rows={ALL_EVENTS.slice(0, 3)} />
+            </MobilePhone>
+          </Themed>
+        </DCArtboard>
+        <DCArtboard id="m-action" label="Row action sheet" width={390} height={840}>
+          <Themed theme="electric" w={390} h={840} pad={0}>
+            <MobilePhone sheet={<MobileActionSheet ev={ALL_EVENTS[1]} />}>
+              <MobileAllEventsBody rows={ALL_EVENTS.slice(0, 3)} />
+            </MobilePhone>
+          </Themed>
+        </DCArtboard>
+        <DCArtboard id="m-delete" label="Delete sheet (single)" width={390} height={840}>
+          <Themed theme="electric" w={390} h={840} pad={0}>
+            <MobilePhone sheet={<MobileDeleteSheet ev={ALL_EVENTS[1]} />}>
+              <MobileAllEventsBody rows={ALL_EVENTS.slice(0, 3)} />
+            </MobilePhone>
+          </Themed>
+        </DCArtboard>
+        <DCArtboard id="m-empty" label="Empty" width={390} height={840}>
+          <Themed theme="electric" w={390} h={840} pad={0}>
+            <MobilePhone>
+              <ReviewHeaderMobile />
+              <ReviewTabs active="all" fullWidth compact flagsCount={0} pricesCount={61} missingCount={4} />
+              <div style={{ height: 16 }} />
+              <MobileFilterStrip shown={0} />
+              <MobileEmpty />
+            </MobilePhone>
+          </Themed>
+        </DCArtboard>
+        <DCArtboard id="m-light" label="All events tab · Light theme" width={390} height={840}>
+          <Themed theme="light" w={390} h={840} pad={0}>
+            <MobilePhone><MobileAllEventsBody rows={ALL_EVENTS} /></MobilePhone>
+          </Themed>
+        </DCArtboard>
+      </DCSection>
+
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
