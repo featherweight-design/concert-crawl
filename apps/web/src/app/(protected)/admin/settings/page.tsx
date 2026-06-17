@@ -1,6 +1,7 @@
 // apps/web/src/app/(protected)/admin/settings/page.tsx
 import { requireAdminUser } from '@/lib/auth'
 import { AppearanceSection } from '@/components/admin/settings/AppearanceSection'
+import { OpsToolsSection } from '@/components/admin/settings/OpsToolsSection'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 export default async function SettingsPage() {
@@ -13,6 +14,7 @@ export default async function SettingsPage() {
       </h1>
       <div className="flex flex-col gap-0">
         <AppearanceSection />
+        <OpsToolsSection />
       </div>
     </div>
   )

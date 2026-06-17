@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { eq, desc, and, isNull } from 'drizzle-orm'
 import { db, notifications } from '@concert-crawl/db'
 import { getAuthUser } from '../../middleware/auth.js'
+import { sendAdminAlertEmail } from '../../lib/email.js'
 import type { AdminVariables } from './index.js'
 
 const notifIdSchema = z.object({ id: z.string().uuid() })
@@ -30,6 +31,42 @@ notificationsAdminRouter.get(
     return ctx.json({ success: true, data: rows })
   },
 )
+
+// POST /v1/admin/notifications/test-email — send a test alert email to ADMIN_EMAIL
+// to validate the Resend pipeline (env vars, domain verification, deliverability)
+// without waiting for a real alert condition to fire. Audited.
+notificationsAdminRouter.post('/test-email', async (ctx) => {
+  const { userId } = getAuthUser(ctx)
+  const triggeredAt = new Date().toISOString()
+  const adminUrl = process.env['ADMIN_URL'] ?? 'https://concertcrawl.app'
+
+  const result = await sendAdminAlertEmail({
+    subject: 'Concert Crawl — test alert',
+    html: `
+      <p>This is a test email from the Concert Crawl admin notifications pipeline.</p>
+      <ul>
+        <li><strong>Triggered at:</strong> ${triggeredAt}</li>
+        <li><strong>Triggered by:</strong> admin user ${userId}</li>
+      </ul>
+      <p>If you received this, the alert pipeline is working end-to-end: Resend API key, sender domain, and delivery to ADMIN_EMAIL are all healthy.</p>
+      <p><a href="${adminUrl}/admin/settings">Admin settings</a></p>
+    `,
+    text: [
+      'This is a test email from the Concert Crawl admin notifications pipeline.',
+      '',
+      `Triggered at: ${triggeredAt}`,
+      `Triggered by: admin user ${userId}`,
+      '',
+      'If you received this, the alert pipeline is working end-to-end.',
+    ].join('\n'),
+  })
+
+  ctx.set('auditAction', 'notification.test_email')
+  ctx.set('auditActorId', userId)
+  ctx.set('auditMeta', { result })
+
+  return ctx.json({ success: true, data: result })
+})
 
 // POST /v1/admin/notifications/read-all — mark all unread admin alerts as read
 // NOTE: registered before /:id/read to prevent Hono matching "read-all" as an :id param

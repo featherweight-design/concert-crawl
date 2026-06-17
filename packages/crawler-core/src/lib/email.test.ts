@@ -38,19 +38,39 @@ describe('sendCrawlFailureEmail', () => {
     expect(call.html).toContain('3')
   })
 
-  it('skips sending when RESEND_API_KEY is not set', async () => {
+  it('skips sending + logs warning when RESEND_API_KEY is not set', async () => {
     delete process.env.RESEND_API_KEY
-    const { sendCrawlFailureEmail } = await import('./email.js')
-    await sendCrawlFailureEmail('Ogden Theatre', 3)
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const { sendCrawlFailureEmail } = await import('./email.js')
+      await sendCrawlFailureEmail('Ogden Theatre', 3)
 
-    expect(mockSend).not.toHaveBeenCalled()
+      expect(mockSend).not.toHaveBeenCalled()
+      const warning = warnSpy.mock.calls
+        .map((args) => String(args[0]))
+        .find((line) => line.includes('email.skipped'))
+      expect(warning).toBeDefined()
+      expect(warning).toContain('RESEND_API_KEY')
+    } finally {
+      warnSpy.mockRestore()
+    }
   })
 
-  it('skips sending when ADMIN_EMAIL is not set', async () => {
+  it('skips sending + logs warning when ADMIN_EMAIL is not set', async () => {
     delete process.env.ADMIN_EMAIL
-    const { sendCrawlFailureEmail } = await import('./email.js')
-    await sendCrawlFailureEmail('Ogden Theatre', 3)
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const { sendCrawlFailureEmail } = await import('./email.js')
+      await sendCrawlFailureEmail('Ogden Theatre', 3)
 
-    expect(mockSend).not.toHaveBeenCalled()
+      expect(mockSend).not.toHaveBeenCalled()
+      const warning = warnSpy.mock.calls
+        .map((args) => String(args[0]))
+        .find((line) => line.includes('email.skipped'))
+      expect(warning).toBeDefined()
+      expect(warning).toContain('ADMIN_EMAIL')
+    } finally {
+      warnSpy.mockRestore()
+    }
   })
 })

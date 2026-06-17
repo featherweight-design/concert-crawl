@@ -9,6 +9,18 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#39;')
 }
 
+// Log a missing-env-var warning so misconfigurations surface in Render
+// logs / Sentry instead of silently dropping admin alerts.
+function warnMissingEnv(varName: string, context: string): void {
+  console.warn(
+    JSON.stringify({
+      event: 'email.skipped',
+      reason: `${varName} not set`,
+      context,
+    }),
+  )
+}
+
 export async function sendCrawlFailureEmail(
   venueName: string,
   consecutiveFailures: number,
@@ -16,7 +28,14 @@ export async function sendCrawlFailureEmail(
   const apiKey = process.env.RESEND_API_KEY
   const adminEmail = process.env.ADMIN_EMAIL
 
-  if (!apiKey || !adminEmail) return
+  if (!apiKey) {
+    warnMissingEnv('RESEND_API_KEY', 'sendCrawlFailureEmail')
+    return
+  }
+  if (!adminEmail) {
+    warnMissingEnv('ADMIN_EMAIL', 'sendCrawlFailureEmail')
+    return
+  }
 
   const resend = new Resend(apiKey)
 

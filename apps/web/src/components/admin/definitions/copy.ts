@@ -1306,6 +1306,27 @@ export const ADMIN_COPY = {
       description:
         'Choose the theme for your admin interface. Your selection is saved locally.',
     },
+    opsTools: {
+      heading: 'Ops tools',
+      description:
+        'Operational diagnostics for admins. Use these to verify integrations are healthy outside of incident response.',
+      testEmail: {
+        button: 'Send test alert email',
+        buttonPending: 'Sending…',
+        successPrefix: 'Test email sent.',
+        notSentPrefix: 'Email not sent —',
+        requestFailed: 'Request failed',
+        notAuthenticated: 'Not authenticated',
+        reasons: {
+          missingApiKey:
+            'RESEND_API_KEY is not set on the API. Configure it in Render and redeploy.',
+          missingAdminEmail:
+            'ADMIN_EMAIL is not set on the API. Configure it in Render and redeploy.',
+          sendFailed:
+            'Resend rejected the send. Inspect the error below + check that the sender domain is verified.',
+        },
+      },
+    },
   },
 
   feedback: {

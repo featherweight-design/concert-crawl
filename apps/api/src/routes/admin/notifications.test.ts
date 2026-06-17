@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createApp } from '../../app.js'
 
+const mockSendAdminAlertEmail = vi.fn()
+vi.mock('../../lib/email.js', () => ({
+  sendAdminAlertEmail: (...args: unknown[]) => mockSendAdminAlertEmail(...args),
+}))
+
 const mockGetAuth = vi.fn()
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>
@@ -182,6 +187,77 @@ describe('PATCH /v1/admin/notifications/:id/read', () => {
       },
     )
     expect(res.status).toBe(404)
+  })
+})
+
+describe('POST /v1/admin/notifications/test-email', () => {
+  beforeEach(() => {
+    mockGetAuth.mockReset()
+    mockSendAdminAlertEmail.mockReset()
+  })
+
+  it('returns 401 for unauthenticated requests', async () => {
+    mockGetAuth.mockReturnValue(null)
+    const res = await createApp().request(
+      '/v1/admin/notifications/test-email',
+      { method: 'POST' },
+    )
+    expect(res.status).toBe(401)
+    expect(mockSendAdminAlertEmail).not.toHaveBeenCalled()
+  })
+
+  it('returns 403 for non-admin users', async () => {
+    mockGetAuth.mockReturnValue({
+      userId: 'user_123',
+      sessionClaims: { metadata: { role: 'user' } },
+    })
+    const res = await createApp().request(
+      '/v1/admin/notifications/test-email',
+      { method: 'POST' },
+    )
+    expect(res.status).toBe(403)
+    expect(mockSendAdminAlertEmail).not.toHaveBeenCalled()
+  })
+
+  it('returns 200 with sent:true when email helper succeeds', async () => {
+    adminAuth()
+    mockSendAdminAlertEmail.mockResolvedValueOnce({
+      sent: true,
+      resendId: 'resend_abc123',
+    })
+
+    const res = await createApp().request(
+      '/v1/admin/notifications/test-email',
+      { method: 'POST' },
+    )
+
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.success).toBe(true)
+    expect(body.data).toEqual({ sent: true, resendId: 'resend_abc123' })
+    expect(mockSendAdminAlertEmail).toHaveBeenCalledTimes(1)
+    const [payload] = mockSendAdminAlertEmail.mock.calls[0]
+    expect(payload.subject).toBe('Concert Crawl — test alert')
+    expect(payload.html).toContain('admin user admin_123')
+    expect(payload.text).toContain('admin user admin_123')
+  })
+
+  it('returns 200 with sent:false reason when helper signals missing config', async () => {
+    adminAuth()
+    mockSendAdminAlertEmail.mockResolvedValueOnce({
+      sent: false,
+      reason: 'missing_api_key',
+    })
+
+    const res = await createApp().request(
+      '/v1/admin/notifications/test-email',
+      { method: 'POST' },
+    )
+
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.success).toBe(true)
+    expect(body.data).toEqual({ sent: false, reason: 'missing_api_key' })
   })
 })
 
