@@ -11,6 +11,7 @@ import {
 import type { CrawlRun } from '@concert-crawl/db'
 import { isAllowed } from './lib/robots.js'
 import { sendCrawlFailureEmail } from './lib/email.js'
+import { checkEventCountDrop } from './lib/event-count-alert.js'
 import {
   fetchPage,
   fetchPageHttp,
@@ -715,6 +716,21 @@ export async function crawlVenue(
         durationMs,
       }),
     )
+
+    // #624 — Surface "successful crawl, suspiciously few events" before it
+    // hides in the dashboard. Bluebird was the canary: status 'success'
+    // with eventsFound 0 looked healthy because no failure counter ticked
+    // up, but the venue was effectively offline. This check runs after
+    // the crawl_runs row + venue updates above, so the call into the
+    // checker sees the row it's measuring against and a fresh
+    // lastEventCountAlertAt would never include the in-flight run.
+    await checkEventCountDrop({
+      venueId,
+      venueName: venue.name,
+      crawlRunId: id,
+      eventsFound: normalizedEvents.length,
+      lastEventCountAlertAt: venue.lastEventCountAlertAt,
+    })
 
     return crawlRun
   } catch (err) {

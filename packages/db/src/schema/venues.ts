@@ -52,6 +52,9 @@ export const venues = pgTable('venues', {
   }),
   consecutiveFailures: integer('consecutive_failures').notNull().default(0),
   blockedAt: timestamp('blocked_at', { withTimezone: true }),
+  lastEventCountAlertAt: timestamp('last_event_count_alert_at', {
+    withTimezone: true,
+  }),
   extractionStrategy: extractionStrategyEnum('extraction_strategy'),
   crawlWaitUntil: crawlWaitUntilEnum('crawl_wait_until')
     .notNull()

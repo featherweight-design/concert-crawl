@@ -253,6 +253,13 @@
       "when": 1782086400000,
       "tag": "0035_event_canonical_artist_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1782172800000,
+      "tag": "0036_venue_event_count_alert_cooldown",
+      "breakpoints": true
     }
   ]
 }
