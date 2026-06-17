@@ -1,3 +1,16 @@
+# [1.50.0](https://github.com/HartiganHM/concert-crawl/compare/v1.49.0...v1.50.0) (2026-06-17)
+
+
+### Bug Fixes
+
+* **api:** seed canonical_artist in test helper to avoid index collisions ([582bb19](https://github.com/HartiganHM/concert-crawl/commit/582bb190ba6cfbbdbb837257214e7eda274f1e9e))
+* **crawler+db:** address Copilot review on [#632](https://github.com/HartiganHM/concert-crawl/issues/632) ([70414fd](https://github.com/HartiganHM/concert-crawl/commit/70414fd65a6d95952dfec73947eefd77804ad30c))
+
+
+### Features
+
+* **crawler+db:** swap upsert key to canonical_artist ([#608](https://github.com/HartiganHM/concert-crawl/issues/608) Track A) ([99d70eb](https://github.com/HartiganHM/concert-crawl/commit/99d70eb4525800c35aaea03de53d306ba57d87fd)), closes [#630](https://github.com/HartiganHM/concert-crawl/issues/630) [#630](https://github.com/HartiganHM/concert-crawl/issues/630) [#630](https://github.com/HartiganHM/concert-crawl/issues/630)
+
 # [1.49.0](https://github.com/HartiganHM/concert-crawl/compare/v1.48.0...v1.49.0) (2026-06-17)
 
 
