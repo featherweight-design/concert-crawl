@@ -22,13 +22,16 @@
  *
  * Rules (in order):
  *   1. NFD normalize + strip combining marks (diacritics).
- *   2. Lowercase.
- *   3. Collapse runs of whitespace to a single space.
- *   4. Split on the first occurrence of any of: " & ", " w/ ", " ft. ",
+ *   2. Map Latin Extended characters that don't decompose into base +
+ *      combining mark — e.g. Ø is a single precomposed letter with a built-in
+ *      stroke, not O + a combining stroke. See LATIN_EXTENDED_MAP.
+ *   3. Lowercase.
+ *   4. Collapse runs of whitespace to a single space.
+ *   5. Split on the first occurrence of any of: " & ", " w/ ", " ft. ",
  *      " feat. ", " featuring ", " with ", " + ", " x ", " — " (em-dash with
  *      spaces), " - " (hyphen with spaces). Hyphens without surrounding
  *      spaces are preserved so "blink-182" stays intact.
- *   5. Take the first segment and trim.
+ *   6. Take the first segment and trim.
  *
  * Punctuation that appears in legitimate band names — "/", "!", "." — is
  * preserved. So "AC/DC" → "ac/dc", "P!nk" → "p!nk", "M.I.A." → "m.i.a.".
@@ -38,6 +41,26 @@
  * curated allowlist of exceptions can be layered on later if real-data
  * conflicts justify it.
  */
+
+// Latin Extended characters that don't decompose into base + combining mark
+// under NFD. Mirrors the SQL translate() char map in
+// 0031_event_canonical_artist.sql so canonical values computed by this
+// function match the canonical values the migration wrote for existing rows.
+// Without this step, e.g. "Eivør" canonicalizes to "eivør" here but the
+// existing DB row has canonical "eivor" — the crawler's ON CONFLICT
+// (canonical_artist) target misses on re-crawl, and the legacy partial
+// unique index on (venue_id, date, artist) fires with a duplicate-key
+// violation, failing the entire batch INSERT.
+//
+// Scope is intentionally narrow (just Ø/ø) — those are the only chars in
+// the migration's translate() set that are NOT decomposable via NFD. Wider
+// Latin Extended coverage (Ł, Æ, ß, Þ, etc.) is tracked separately so any
+// expansion can update both this map and the migration's char map together.
+const LATIN_EXTENDED_MAP: Record<string, string> = {
+  Ø: 'O',
+  ø: 'o',
+}
+
 const SEPARATORS = [
   ' & ',
   ' w/ ',
@@ -57,7 +80,15 @@ export function canonicalizeArtist(artist: string): string {
   }
 
   // NFD normalize + strip combining marks (Unicode property: M = Mark).
-  const stripped = artist.normalize('NFD').replace(/\p{M}/gu, '')
+  // Handles diacritics that are stored as base + combining mark.
+  const decomposed = artist.normalize('NFD').replace(/\p{M}/gu, '')
+
+  // Handle the Latin Extended characters that don't decompose via NFD
+  // (currently just Ø/ø — see LATIN_EXTENDED_MAP).
+  const stripped = decomposed.replace(
+    /[Øø]/g,
+    (char) => LATIN_EXTENDED_MAP[char] ?? char,
+  )
 
   // Lowercase + collapse whitespace.
   const compact = stripped.toLowerCase().replace(/\s+/g, ' ')

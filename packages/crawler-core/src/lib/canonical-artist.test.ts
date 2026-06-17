@@ -44,6 +44,26 @@ describe('canonicalizeArtist', () => {
     })
   })
 
+  describe('non-decomposable Latin Extended chars', () => {
+    // Regression for 2026-06-17 staging incident: 4 of 12 venues failed the
+    // post-#608 daily crawl because Ø/ø are precomposed letters that NFD
+    // doesn't decompose into base + combining mark. The PR #617 migration
+    // had mapped them via SQL translate() (Ø→O / ø→o), so existing rows
+    // had canonical "eivor" / "lolo" / "roz" — but the crawler's JS
+    // canonicalize was producing "eivør" / "lølø" / "røz". ON CONFLICT
+    // (canonical_artist) missed → legacy artist index fired → batch failed.
+    it('maps Ø → O / ø → o (real failing rows from prod 2026-06-17)', () => {
+      expect(canonicalizeArtist('Eivør')).toBe('eivor')
+      expect(canonicalizeArtist('LØLØ')).toBe('lolo')
+      expect(canonicalizeArtist('RØZ')).toBe('roz')
+    })
+
+    it('preserves the rest of the artist name around Ø/ø', () => {
+      expect(canonicalizeArtist('Ørken Bør')).toBe('orken bor')
+      expect(canonicalizeArtist('Bjørn & His Band')).toBe('bjorn')
+    })
+  })
+
   describe('separator splitting', () => {
     it('splits on " & "', () => {
       expect(canonicalizeArtist('Earl Sweatshirt & MIKE')).toBe(
