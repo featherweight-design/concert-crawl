@@ -1,3 +1,10 @@
+# [1.51.0](https://github.com/HartiganHM/concert-crawl/compare/v1.50.0...v1.51.0) (2026-06-17)
+
+
+### Features
+
+* **api+web:** admin test-email endpoint + ops tools settings ([668196b](https://github.com/HartiganHM/concert-crawl/commit/668196b5cf52a62bac200b9fc5be40dd03682a4a))
+
 # [1.50.0](https://github.com/HartiganHM/concert-crawl/compare/v1.49.0...v1.50.0) (2026-06-17)
 
 
