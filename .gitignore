@@ -49,3 +49,6 @@ pnpm-debug.log*
 
 # Claude Code auto-memory (session-local, not project state)
 .claude/projects/
+
+# Claude Code scheduled-tasks runtime artifact (regenerated each session)
+.claude/scheduled_tasks.lock

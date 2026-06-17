@@ -9,7 +9,11 @@
       "Bash(mkdir *)",
       "Bash(cat *)",
       "Bash(ls *)",
-      "Bash(docker *)"
+      "Bash(docker *)",
+      "mcp__render__list_logs",
+      "mcp__render__select_workspace",
+      "mcp__render__list_deploys",
+      "mcp__render__list_services"
     ]
   }
 }
