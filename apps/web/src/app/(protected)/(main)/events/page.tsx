@@ -16,6 +16,7 @@ import {
   currentWeekDays,
   filterWhenToDateRange,
   isToday,
+  pickCalendarSelectedDate,
   type WeekDayInfo,
 } from '@/components/consumer/definitions/lib'
 import { localDateString } from '@/lib/time'
@@ -137,21 +138,6 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
         }
       }
     }
-
-    // Default to today (if today is in the visible week), otherwise the first
-    // visible day of the week. Never fall back to Monday unconditionally.
-    const todayInWeek = weekDays.some((day) => day.date === today)
-    const fallbackDate = todayInWeek ? today : weekDays[0]?.date
-
-    const validSelectedDate =
-      typeof selectedDate === 'string' &&
-      weekDays.some((day) => day.date === selectedDate)
-        ? selectedDate
-        : (weekDays.find((day) => day.date === fromParam)?.date ??
-          weekDays.find((day) => day.date === toParam)?.date ??
-          fallbackDate)
-
-    if (validSelectedDate) selectedDate = validSelectedDate
   }
 
   const { getToken } = await auth()
@@ -184,6 +170,15 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
       ...day,
       hasEvents: events.some((event) => event.date === day.date),
     }))
+    // Pick selectedDate after weekDays.hasEvents is populated so the fallback
+    // can prefer the first day with shows on week-arrow nav (#636).
+    selectedDate = pickCalendarSelectedDate({
+      weekDays,
+      userProvidedSelectedDate: selectedDate,
+      fromParam,
+      toParam,
+      today,
+    })
   }
 
   const firstEventIsToday =

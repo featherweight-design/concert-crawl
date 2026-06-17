@@ -4,6 +4,8 @@ import {
   formatEventDate,
   dateGroupLabel,
   isToday,
+  pickCalendarSelectedDate,
+  type CalendarWeekDayLite,
 } from './lib'
 
 vi.mock('@/lib/time', () => ({
@@ -165,5 +167,130 @@ describe('isToday / dateGroupLabel timezone defaults', () => {
   it('dateGroupLabel formats non-today dates with venue-local weekday', () => {
     mockLocalDate.mockReturnValue('2026-06-15')
     expect(dateGroupLabel('2026-08-15')).toBe('Sat, August 15')
+  })
+})
+
+describe('pickCalendarSelectedDate', () => {
+  // Mon 2026-06-15 → Sun 2026-06-21
+  const weekDays: CalendarWeekDayLite[] = [
+    { date: '2026-06-15', hasEvents: false },
+    { date: '2026-06-16', hasEvents: false },
+    { date: '2026-06-17', hasEvents: true },
+    { date: '2026-06-18', hasEvents: false },
+    { date: '2026-06-19', hasEvents: true },
+    { date: '2026-06-20', hasEvents: false },
+    { date: '2026-06-21', hasEvents: false },
+  ]
+
+  it('returns user-provided date when it falls in the visible week', () => {
+    expect(
+      pickCalendarSelectedDate({
+        weekDays,
+        userProvidedSelectedDate: '2026-06-18',
+        fromParam: undefined,
+        toParam: undefined,
+        today: '2026-06-15',
+      }),
+    ).toBe('2026-06-18')
+  })
+
+  it('ignores user-provided date when it falls outside the visible week', () => {
+    expect(
+      pickCalendarSelectedDate({
+        weekDays,
+        userProvidedSelectedDate: '2099-01-01',
+        fromParam: undefined,
+        toParam: undefined,
+        today: '2026-06-15',
+      }),
+    ).toBe('2026-06-15') // today, since today is in the week
+  })
+
+  it('returns fromParam when it falls in the visible week', () => {
+    expect(
+      pickCalendarSelectedDate({
+        weekDays,
+        userProvidedSelectedDate: undefined,
+        fromParam: '2026-06-19',
+        toParam: undefined,
+        today: '2026-06-01', // not in week
+      }),
+    ).toBe('2026-06-19')
+  })
+
+  it('returns toParam when fromParam does not match but toParam does', () => {
+    expect(
+      pickCalendarSelectedDate({
+        weekDays,
+        userProvidedSelectedDate: undefined,
+        fromParam: '2099-01-01',
+        toParam: '2026-06-20',
+        today: '2026-06-01',
+      }),
+    ).toBe('2026-06-20')
+  })
+
+  it('returns today when today is in the visible week (no other input)', () => {
+    expect(
+      pickCalendarSelectedDate({
+        weekDays,
+        userProvidedSelectedDate: undefined,
+        fromParam: undefined,
+        toParam: undefined,
+        today: '2026-06-18',
+      }),
+    ).toBe('2026-06-18')
+  })
+
+  it('returns today even when today has no events (preserves "land on today" UX)', () => {
+    expect(
+      pickCalendarSelectedDate({
+        weekDays,
+        userProvidedSelectedDate: undefined,
+        fromParam: undefined,
+        toParam: undefined,
+        today: '2026-06-15', // first day, hasEvents: false
+      }),
+    ).toBe('2026-06-15')
+  })
+
+  it('returns first day with events when today is not in the visible week (#636)', () => {
+    expect(
+      pickCalendarSelectedDate({
+        weekDays,
+        userProvidedSelectedDate: undefined,
+        fromParam: undefined,
+        toParam: undefined,
+        today: '2026-06-01', // not in week
+      }),
+    ).toBe('2026-06-17') // first day in week with hasEvents
+  })
+
+  it('falls back to first day of week when today is not in week and no day has events', () => {
+    const emptyWeek: CalendarWeekDayLite[] = weekDays.map((day) => ({
+      ...day,
+      hasEvents: false,
+    }))
+    expect(
+      pickCalendarSelectedDate({
+        weekDays: emptyWeek,
+        userProvidedSelectedDate: undefined,
+        fromParam: undefined,
+        toParam: undefined,
+        today: '2026-06-01',
+      }),
+    ).toBe('2026-06-15')
+  })
+
+  it('returns undefined when weekDays is empty', () => {
+    expect(
+      pickCalendarSelectedDate({
+        weekDays: [],
+        userProvidedSelectedDate: undefined,
+        fromParam: undefined,
+        toParam: undefined,
+        today: '2026-06-15',
+      }),
+    ).toBeUndefined()
   })
 })

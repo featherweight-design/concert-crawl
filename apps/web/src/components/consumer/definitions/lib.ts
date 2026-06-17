@@ -156,6 +156,45 @@ export function currentWeekDays(
   })
 }
 
+export interface CalendarWeekDayLite {
+  date: string
+  hasEvents: boolean
+}
+
+// Picks the calendar view's selected date when none is explicitly chosen.
+// today-in-week is preferred over a non-today first-day-with-events because
+// today is meaningful even when empty ("nothing tonight"); first-day-with-events
+// only kicks in after week-arrow nav, where today isn't visible (#636).
+export function pickCalendarSelectedDate(args: {
+  weekDays: CalendarWeekDayLite[]
+  userProvidedSelectedDate: string | undefined
+  fromParam: string | undefined
+  toParam: string | undefined
+  today: string
+}): string | undefined {
+  const { weekDays, userProvidedSelectedDate, fromParam, toParam, today } = args
+
+  if (
+    typeof userProvidedSelectedDate === 'string' &&
+    weekDays.some((day) => day.date === userProvidedSelectedDate)
+  ) {
+    return userProvidedSelectedDate
+  }
+
+  const fromMatch = weekDays.find((day) => day.date === fromParam)?.date
+  if (fromMatch) return fromMatch
+
+  const toMatch = weekDays.find((day) => day.date === toParam)?.date
+  if (toMatch) return toMatch
+
+  if (weekDays.some((day) => day.date === today)) return today
+
+  const firstWithEvents = weekDays.find((day) => day.hasEvents)?.date
+  if (firstWithEvents) return firstWithEvents
+
+  return weekDays[0]?.date
+}
+
 export function filterWhenToDateRange(
   value: string,
   timezone = 'America/Denver',
