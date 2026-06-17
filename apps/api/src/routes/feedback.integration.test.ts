@@ -116,7 +116,7 @@ describe('POST /v1/feedback', () => {
     })
   })
 
-  it('accepts metadata.screenshot: null (modal omits the attachment)', async () => {
+  it('accepts metadata.screenshot: null (backwards-compat for stale clients)', async () => {
     const userId = `screenshot-null-user-${Date.now()}`
     setAuth(userId)
     const res = await app.request('/v1/feedback', {
