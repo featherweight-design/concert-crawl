@@ -432,6 +432,157 @@ describe('crawlVenue — intra-batch deduplication', () => {
   })
 })
 
+describe('crawlVenue — cross-venue presale filter (#605)', () => {
+  it('skips events whose title names another known venue and emits a structured log', async () => {
+    const sourceVenue = seedVenue({
+      name: "Cervantes' Masterpiece Ballroom",
+      slug: 'cervantes-masterpiece-ballroom',
+    })
+    const targetVenueId = crypto.randomUUID()
+    const candidates = [
+      {
+        id: targetVenueId,
+        slug: 'ogden-theatre',
+        name: 'Ogden Theatre',
+      },
+    ]
+
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: sourceVenue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        {
+          title: 'Earl Sweatshirt & MIKE AT OGDEN THEATRE',
+          artist: 'Earl Sweatshirt',
+          date: '2026-08-15',
+          doorsTime: undefined,
+          showTime: undefined,
+          ticketUrl: 'https://cervantes.example.com/tickets',
+          sourceUrl: sourceVenue.websiteUrl,
+          confidence: 0.9,
+        },
+      ],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    const run = await crawlVenue(
+      sourceVenue.id,
+      mockBrowser,
+      undefined,
+      candidates,
+    )
+
+    expect(run.status).toBe('success')
+    expect(run.eventsInserted).toBe(0)
+
+    const sourceRows = await db
+      .select()
+      .from(events)
+      .where(eq(events.venueId, sourceVenue.id))
+    expect(sourceRows).toHaveLength(0)
+
+    // Structured log was emitted with the expected payload shape.
+    const skipLogs = logSpy.mock.calls
+      .map((args) => args[0])
+      .filter(
+        (line): line is string =>
+          typeof line === 'string' && line.includes('crawler.skip_cross_venue'),
+      )
+      .map((line) => JSON.parse(line) as Record<string, unknown>)
+
+    expect(skipLogs).toHaveLength(1)
+    expect(skipLogs[0]).toMatchObject({
+      event: 'crawler.skip_cross_venue',
+      sourceVenueSlug: sourceVenue.slug,
+      matchedVenueSlug: 'ogden-theatre',
+      title: 'Earl Sweatshirt & MIKE AT OGDEN THEATRE',
+    })
+
+    logSpy.mockRestore()
+  })
+
+  it('does NOT skip when the title names the source venue itself (self-venue)', async () => {
+    const sourceVenue = seedVenue({
+      name: "Cervantes' Masterpiece Ballroom",
+      slug: 'cervantes-masterpiece-ballroom',
+    })
+    const candidates = [
+      {
+        id: sourceVenue.id,
+        slug: sourceVenue.slug,
+        name: sourceVenue.name,
+      },
+    ]
+
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: sourceVenue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        {
+          title: "Some Band AT CERVANTES' MASTERPIECE BALLROOM",
+          artist: 'Some Band',
+          date: '2026-09-01',
+          doorsTime: undefined,
+          showTime: undefined,
+          ticketUrl: 'https://cervantes.example.com/tickets',
+          sourceUrl: sourceVenue.websiteUrl,
+          confidence: 0.9,
+        },
+      ],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    const run = await crawlVenue(
+      sourceVenue.id,
+      mockBrowser,
+      undefined,
+      candidates,
+    )
+
+    expect(run.status).toBe('success')
+    expect(run.eventsInserted).toBe(1)
+  })
+
+  it('does NOT skip when no candidates are provided (default empty list)', async () => {
+    const sourceVenue = seedVenue()
+
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: sourceVenue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        {
+          title: 'Earl Sweatshirt AT OGDEN THEATRE',
+          artist: 'Earl Sweatshirt',
+          date: '2026-08-15',
+          doorsTime: undefined,
+          showTime: undefined,
+          ticketUrl: 'https://cervantes.example.com/tickets',
+          sourceUrl: sourceVenue.websiteUrl,
+          confidence: 0.9,
+        },
+      ],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    // Don't pass candidates → defaults to [] → filter is a no-op.
+    const run = await crawlVenue(sourceVenue.id, mockBrowser)
+
+    expect(run.status).toBe('success')
+    expect(run.eventsInserted).toBe(1)
+  })
+})
+
 describe('crawlVenue — fetch options', () => {
   it('passes venue crawlWaitUntil and crawlDelayMs to fetchPage', async () => {
     const venue = seedVenue({ crawlWaitUntil: 'load' as const })
