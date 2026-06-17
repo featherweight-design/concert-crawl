@@ -1,3 +1,15 @@
+# [1.48.0](https://github.com/HartiganHM/concert-crawl/compare/v1.47.0...v1.48.0) (2026-06-17)
+
+
+### Bug Fixes
+
+* **crawler+db:** address Copilot review on [#627](https://github.com/HartiganHM/concert-crawl/issues/627) ([f7f41e8](https://github.com/HartiganHM/concert-crawl/commit/f7f41e8175d9cf02fe99128f61dd1be25da04f29))
+
+
+### Features
+
+* **crawler+db+api:** stale-event detection ([#607](https://github.com/HartiganHM/concert-crawl/issues/607)) ([a8f32cb](https://github.com/HartiganHM/concert-crawl/commit/a8f32cb79f4492454b3cbe579bea0d67d2db354a))
+
 # [1.47.0](https://github.com/HartiganHM/concert-crawl/compare/v1.46.0...v1.47.0) (2026-06-17)
 
 
