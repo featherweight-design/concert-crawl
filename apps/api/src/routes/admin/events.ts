@@ -341,37 +341,82 @@ eventsAdminRouter.post(
     // Idempotency check: if an active promoted sold-out report already exists,
     // return it instead of inserting a duplicate. "Active" here means resolved
     // with resolution='promoted' (i.e. the event is currently marked sold out).
-    const [existing] = await db
-      .select()
-      .from(eventReports)
-      .where(
-        and(
-          eq(eventReports.eventId, id),
-          eq(eventReports.status, 'sold-out'),
-          isNotNull(eventReports.resolvedAt),
-          eq(eventReports.resolution, 'promoted'),
-        ),
-      )
-      .limit(1)
+    //
+    // Race-safety: the SELECT-then-INSERT pattern below would race under
+    // concurrent admin POSTs. Migration 0032 enforces this invariant at the
+    // DB layer with a partial unique index on event_reports
+    // (event_id) WHERE status='sold-out' AND resolved_at IS NOT NULL
+    // AND resolution='promoted'. The INSERT below catches the resulting
+    // unique-violation, re-queries for the now-existing row, and returns it
+    // (so the API behavior stays consistent regardless of which caller won).
+    const fetchExisting = () =>
+      db
+        .select()
+        .from(eventReports)
+        .where(
+          and(
+            eq(eventReports.eventId, id),
+            eq(eventReports.status, 'sold-out'),
+            isNotNull(eventReports.resolvedAt),
+            eq(eventReports.resolution, 'promoted'),
+          ),
+        )
+        .limit(1)
+
+    const [existing] = await fetchExisting()
 
     if (existing) {
+      // Audit even on the idempotent path so admin actions are always traceable.
+      ctx.set('auditAction', 'event.sold_out.mark')
+      ctx.set('auditTargetId', id)
+      ctx.set('auditActorId', actor.userId)
+      ctx.set('auditMeta', {
+        reportId: existing.id,
+        idempotent: true,
+      })
       return ctx.json({ success: true, data: existing }, 200)
     }
 
-    const [created] = await db
-      .insert(eventReports)
-      .values({
-        eventId: id,
-        reporterId: actor.userId,
-        status: 'sold-out',
-        evidenceMethod,
-        evidenceUrl: evidenceUrl ?? null,
-        note: note ?? null,
-        resolvedAt: new Date(),
-        resolution: 'promoted',
-        adminNote: 'admin-authored — auto-promoted on creation',
-      })
-      .returning()
+    let created: typeof eventReports.$inferSelect | undefined
+    try {
+      const inserted = await db
+        .insert(eventReports)
+        .values({
+          eventId: id,
+          reporterId: actor.userId,
+          status: 'sold-out',
+          evidenceMethod,
+          evidenceUrl: evidenceUrl ?? null,
+          note: note ?? null,
+          resolvedAt: new Date(),
+          resolution: 'promoted',
+          adminNote: 'admin-authored — auto-promoted on creation',
+        })
+        .returning()
+      created = inserted[0]
+    } catch (err) {
+      // Unique-violation from the partial index = another concurrent POST won
+      // the race. Treat as idempotent: re-query and return that row at 200.
+      if (
+        err instanceof Error &&
+        'code' in err &&
+        (err as { code?: string }).code === '23505'
+      ) {
+        const [winner] = await fetchExisting()
+        if (winner) {
+          ctx.set('auditAction', 'event.sold_out.mark')
+          ctx.set('auditTargetId', id)
+          ctx.set('auditActorId', actor.userId)
+          ctx.set('auditMeta', {
+            reportId: winner.id,
+            idempotent: true,
+            raceLost: true,
+          })
+          return ctx.json({ success: true, data: winner }, 200)
+        }
+      }
+      throw err
+    }
 
     ctx.set('auditAction', 'event.sold_out.mark')
     ctx.set('auditTargetId', id)
@@ -407,9 +452,30 @@ eventsAdminRouter.post(
     const { note } = ctx.req.valid('json')
     const actor = getAuthUser(ctx)
 
-    const [active] = await db
-      .select({ id: eventReports.id })
-      .from(eventReports)
+    // Verify the event exists — return 404 for unknown IDs so this endpoint
+    // doesn't masquerade a bogus call as a successful no-op (matches the
+    // sold-out endpoint and the rest of admin/events).
+    const [eventRow] = await db
+      .select({ id: events.id })
+      .from(events)
+      .where(eq(events.id, id))
+      .limit(1)
+
+    if (!eventRow) {
+      return ctx.json({ success: false, error: 'Event not found' }, 404)
+    }
+
+    // Clear ALL active promoted sold-out reports for this event. Migration 0032
+    // enforces "at most one" via partial unique index, so in practice this
+    // affects at most one row — but using the predicate (not a single id) is
+    // robust against any historical data anomaly + against the brief race
+    // window between SELECT and UPDATE.
+    const cleared = await db
+      .update(eventReports)
+      .set({
+        resolution: 'rejected',
+        adminNote: note ?? 'admin marked available',
+      })
       .where(
         and(
           eq(eventReports.eventId, id),
@@ -418,25 +484,17 @@ eventsAdminRouter.post(
           eq(eventReports.resolution, 'promoted'),
         ),
       )
-      .limit(1)
+      .returning({ id: eventReports.id })
 
-    if (!active) {
-      // No active sold-out report — nothing to do. 204 keeps the call idempotent.
-      return ctx.body(null, 204)
+    // 204 either way (idempotent no-op when nothing was active). Audit only
+    // when we actually cleared something — admin action with no DB effect
+    // doesn't earn an audit row.
+    if (cleared.length > 0) {
+      ctx.set('auditAction', 'event.sold_out.clear')
+      ctx.set('auditTargetId', id)
+      ctx.set('auditActorId', actor.userId)
+      ctx.set('auditMeta', { reportIds: cleared.map((row) => row.id) })
     }
-
-    await db
-      .update(eventReports)
-      .set({
-        resolution: 'rejected',
-        adminNote: note ?? 'admin marked available',
-      })
-      .where(eq(eventReports.id, active.id))
-
-    ctx.set('auditAction', 'event.sold_out.clear')
-    ctx.set('auditTargetId', id)
-    ctx.set('auditActorId', actor.userId)
-    ctx.set('auditMeta', { reportId: active.id })
 
     return ctx.body(null, 204)
   },

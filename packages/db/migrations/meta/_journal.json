@@ -225,6 +225,13 @@
       "when": 1781654400000,
       "tag": "0031_event_canonical_artist",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1781827200000,
+      "tag": "0032_event_reports_sold_out_index",
+      "breakpoints": true
     }
   ]
 }
