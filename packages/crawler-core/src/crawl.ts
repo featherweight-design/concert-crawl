@@ -196,6 +196,21 @@ export async function crawlVenue(
 
     const { html, httpStatus, finalUrl } = fetchResult
 
+    // Diagnostic: log how the runtime sees venue.debugCaptureHtml. Confirmed
+    // via UI + PATCH that the DB row has it set to true, but the if-check
+    // below never fires in either staging or prod — so we want the actual
+    // value, type, and key list at runtime. Remove once diagnosed.
+    console.log(
+      JSON.stringify({
+        event: 'debug.venue_state',
+        venueId,
+        debugCaptureHtmlValue: venue.debugCaptureHtml,
+        debugCaptureHtmlType: typeof venue.debugCaptureHtml,
+        hasKey: 'debugCaptureHtml' in venue,
+        venueKeys: Object.keys(venue).sort(),
+      }),
+    )
+
     if (venue.debugCaptureHtml) {
       logDebugHtmlCapture(html, {
         venueId,
