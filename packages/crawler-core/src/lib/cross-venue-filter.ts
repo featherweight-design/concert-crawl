@@ -48,16 +48,55 @@ export interface CrossVenueMatch {
 // which keeps incidental "at" inside other words from matching.
 const AT_MARKER = /\s(?:at|@)\s+(.+?)\s*$/i
 
+// Common Denver venue suffixes. Stripped from BOTH the candidate name and
+// the marker text so "AT RED ROCKS" matches the seed value
+// "Red Rocks Amphitheatre". The suffix list mirrors the actual seed shapes
+// (Amphitheatre/Amphitheater, Theatre/Theater, Ballroom, Hall, Auditorium,
+// Arena, Lounge). Keep this conservative — wider stripping risks
+// false positives.
+const VENUE_SUFFIX =
+  /\s+(amphitheatre|amphitheater|theatre|theater|ballroom|hall|auditorium|arena|lounge)$/i
+
+// Leading "The " is also dropped because some venues are seeded with it
+// ("The Fillmore Auditorium") and some event titles drop it ("AT FILLMORE").
+const THE_PREFIX = /^the\s+/i
+
+/**
+ * Returns a lowercase, trimmed form of a venue name with the leading "The "
+ * and any trailing common-venue suffix removed. Pure helper, exported for
+ * tests + callers that want to surface the canonical short form.
+ *
+ * Examples:
+ *   "Red Rocks Amphitheatre" → "red rocks"
+ *   "The Fillmore Auditorium" → "fillmore"
+ *   "Ogden Theatre"           → "ogden"
+ *   "Summit Music Hall"       → "summit music"
+ *   "Hi-Dive"                 → "hi-dive"     (no suffix)
+ */
+export function normalizeVenueName(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(THE_PREFIX, '')
+    .replace(VENUE_SUFFIX, '')
+    .trim()
+}
+
 /**
  * Returns the matched cross-venue candidate when the title contains a
  * "AT <other-venue>" or "@ <other-venue>" marker, where <other-venue> is a
  * venue in `candidates` *other than* the one identified by `sourceVenueId`.
  *
+ * Matching is permissive: each candidate is compared in both its full and
+ * normalized (suffix-stripped, "The"-stripped) form, against both the full
+ * and normalized form of the marker text. This catches the common shortened
+ * title pattern ("AT RED ROCKS" against seed "Red Rocks Amphitheatre") while
+ * still flagging unambiguous full-name matches.
+ *
  * Returns `null` when:
  *   - the title contains no AT/@ marker
- *   - the marker text doesn't match any known venue
- *   - the marker text matches the *same* venue the crawl is currently scoped to
- *     (a venue can legitimately put its own name in an event title)
+ *   - no candidate venue matches the marker text (full or normalized)
+ *   - the matching candidate IS the source venue (legitimate self-naming)
  */
 export function detectCrossVenuePresale(args: {
   title: string
@@ -72,17 +111,24 @@ export function detectCrossVenuePresale(args: {
   const markerText = markerMatch[1]?.trim()
   if (!markerText) return null
 
-  const markerLower = markerText.toLowerCase()
+  const markerFull = markerText.toLowerCase()
+  const markerShort = normalizeVenueName(markerText)
 
-  // Find any candidate venue whose name appears in the marker text. We allow
-  // the marker to *equal* the venue name or *contain* the venue name (handles
-  // trailing punctuation, room qualifiers, etc.). Matching is case-insensitive.
   for (const candidate of candidates) {
-    const candidateName = candidate.name.trim().toLowerCase()
-    if (candidateName.length === 0) continue
+    const candidateFull = candidate.name.trim().toLowerCase()
+    const candidateShort = normalizeVenueName(candidate.name)
+    if (candidateFull.length === 0) continue
+    // Don't fall through to substring matching on an empty short form —
+    // "" is a substring of every string, which would match every venue.
+    if (candidateShort.length === 0) continue
 
     const matchesName =
-      markerLower === candidateName || markerLower.includes(candidateName)
+      markerFull === candidateFull ||
+      markerFull.includes(candidateFull) ||
+      markerShort === candidateShort ||
+      markerShort.includes(candidateShort) ||
+      markerFull.includes(candidateShort) ||
+      markerShort.includes(candidateFull)
 
     if (!matchesName) continue
 
