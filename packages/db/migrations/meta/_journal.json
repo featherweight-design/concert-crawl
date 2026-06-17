@@ -260,6 +260,13 @@
       "when": 1782172800000,
       "tag": "0036_venue_event_count_alert_cooldown",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1782259200000,
+      "tag": "0037_crawl_runs_venue_status_created_idx",
+      "breakpoints": true
     }
   ]
 }

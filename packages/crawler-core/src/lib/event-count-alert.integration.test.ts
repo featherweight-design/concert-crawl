@@ -38,8 +38,14 @@ async function seedSuccessfulRuns(
   venueId: string,
   eventsFoundList: number[],
 ): Promise<string[]> {
+  // Use an explicit baseline createdAt so each row is ordered deterministically
+  // by created_at without sleeping between inserts — earlier list entries get
+  // older timestamps. This keeps the test fast and avoids timing flakiness
+  // under load.
+  const baseTime = Date.now() - eventsFoundList.length * 60_000
   const ids: string[] = []
-  for (const eventsFound of eventsFoundList) {
+  for (let idx = 0; idx < eventsFoundList.length; idx += 1) {
+    const eventsFound = eventsFoundList[idx]!
     const [row] = await db
       .insert(crawlRuns)
       .values({
@@ -49,12 +55,11 @@ async function seedSuccessfulRuns(
         eventsInserted: eventsFound,
         eventsUpdated: 0,
         robotsTxtBlocked: 'no',
+        createdAt: new Date(baseTime + idx * 60_000),
       })
       .returning({ id: crawlRuns.id })
     if (!row) throw new Error('seedSuccessfulRuns: no row')
     ids.push(row.id)
-    // Stagger created_at slightly so desc(createdAt) is deterministic
-    await new Promise((resolve) => setTimeout(resolve, 5))
   }
   return ids
 }

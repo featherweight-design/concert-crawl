@@ -23,8 +23,17 @@ function warnMissingEnv(varName: string, context: string): void {
 
 const ALERT_FROM = 'Concert Crawl Alerts <alerts@concertcrawl.app>'
 
-// Shared sender for all crawl-side admin alerts. Returns void; logs and swallows
-// missing-env / send errors so the caller (crawler) is never blocked on email.
+// Shared sender for all crawl-side admin alerts. Returns void.
+//
+// Missing-env-var failures (no RESEND_API_KEY or no ADMIN_EMAIL) are
+// swallowed with a structured warning log, since those are configuration
+// states that shouldn't block the crawler from completing.
+//
+// Transport errors (network, Resend API rejection) from resend.emails.send
+// DO propagate to the caller — every caller is expected to .catch() and
+// log them so a Resend outage can't crash the crawl. The fire-and-forget
+// invocation pattern at the call sites (e.g. event-count-alert.ts and the
+// crawl.failed branch in crawl.ts) handles this.
 async function sendAdminAlert(
   context: string,
   input: { subject: string; html: string },

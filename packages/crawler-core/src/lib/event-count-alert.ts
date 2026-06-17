@@ -129,30 +129,36 @@ async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
       ? ((baselineCount - input.eventsFound) / baselineCount) * 100
       : 0
 
-  await db.insert(notifications).values({
-    type: 'admin_alert',
-    category: 'crawl.event_count_dropped',
-    title:
-      severity === 'went_dark'
-        ? `Event count went dark: ${input.venueName}`
-        : `Event count dropped sharply: ${input.venueName}`,
-    body:
-      severity === 'went_dark'
-        ? `${input.venueName} returned 0 events on a successful crawl (baseline ~${baselineCount.toFixed(1)}).`
-        : `${input.venueName} returned ${input.eventsFound} events (baseline ~${baselineCount.toFixed(1)}, ${dropPercent.toFixed(0)}% drop).`,
-    metadata: JSON.stringify({
-      venueId: input.venueId,
-      crawlRunId: input.crawlRunId,
-      eventsFound: input.eventsFound,
-      baselineCount,
-      dropPercent,
-    }),
-  })
+  // Insert notification + bump cooldown atomically. If the cooldown update
+  // were a separate statement and failed transiently, the next crawl would
+  // re-alert immediately because last_event_count_alert_at didn't get
+  // written — duplicate notification + email for the same regression.
+  await db.transaction(async (tx) => {
+    await tx.insert(notifications).values({
+      type: 'admin_alert',
+      category: 'crawl.event_count_dropped',
+      title:
+        severity === 'went_dark'
+          ? `Event count went dark: ${input.venueName}`
+          : `Event count dropped sharply: ${input.venueName}`,
+      body:
+        severity === 'went_dark'
+          ? `${input.venueName} returned 0 events on a successful crawl (baseline ~${baselineCount.toFixed(1)}).`
+          : `${input.venueName} returned ${input.eventsFound} events (baseline ~${baselineCount.toFixed(1)}, ${dropPercent.toFixed(0)}% drop).`,
+      metadata: JSON.stringify({
+        venueId: input.venueId,
+        crawlRunId: input.crawlRunId,
+        eventsFound: input.eventsFound,
+        baselineCount,
+        dropPercent,
+      }),
+    })
 
-  await db
-    .update(venues)
-    .set({ lastEventCountAlertAt: now, updatedAt: now })
-    .where(eq(venues.id, input.venueId))
+    await tx
+      .update(venues)
+      .set({ lastEventCountAlertAt: now, updatedAt: now })
+      .where(eq(venues.id, input.venueId))
+  })
 
   // Fire-and-forget — same pattern as the crawl.failed path. Email failures
   // don't roll back the notification row (admin still sees it in the inbox).
