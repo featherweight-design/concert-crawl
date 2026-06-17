@@ -1,3 +1,10 @@
+# [1.46.0](https://github.com/HartiganHM/concert-crawl/compare/v1.45.3...v1.46.0) (2026-06-17)
+
+
+### Features
+
+* **crawler+db:** canonical_artist column + crawler population ([7f9cf39](https://github.com/HartiganHM/concert-crawl/commit/7f9cf39a333ddbefed193f24c25050a1d69d5f85)), closes [#608](https://github.com/HartiganHM/concert-crawl/issues/608) [#608](https://github.com/HartiganHM/concert-crawl/issues/608) [#608](https://github.com/HartiganHM/concert-crawl/issues/608) [#606](https://github.com/HartiganHM/concert-crawl/issues/606)
+
 ## [1.45.3](https://github.com/HartiganHM/concert-crawl/compare/v1.45.2...v1.45.3) (2026-06-17)
 
 
