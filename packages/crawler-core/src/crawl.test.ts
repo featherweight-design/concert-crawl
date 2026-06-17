@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { eq, and, desc } from 'drizzle-orm'
 import type { Browser } from 'playwright'
-import { crawlVenue } from './crawl.js'
+import {
+  crawlVenue,
+  DEBUG_CAPTURE_CHUNK_CHARS,
+  DEBUG_CAPTURE_MAX_CHARS,
+} from './crawl.js'
 
 const mockBrowser = {} as Browser
 
@@ -743,6 +747,29 @@ describe('crawlVenue — crawlMode orchestration', () => {
 })
 
 describe('crawlVenue — debug HTML capture', () => {
+  function parseCaptureLogs(
+    consoleSpy: ReturnType<typeof vi.spyOn<typeof console, 'log'>>,
+  ): {
+    header: Record<string, unknown> | undefined
+    chunks: Record<string, unknown>[]
+  } {
+    const parsed = consoleSpy.mock.calls
+      .map((args) => {
+        try {
+          return JSON.parse(String(args[0])) as Record<string, unknown>
+        } catch {
+          return null
+        }
+      })
+      .filter((entry): entry is Record<string, unknown> => entry !== null)
+    return {
+      header: parsed.find((entry) => entry['event'] === 'debug.html_capture'),
+      chunks: parsed.filter(
+        (entry) => entry['event'] === 'debug.html_capture.chunk',
+      ),
+    }
+  }
+
   it('logs a header + chunked HTML to stdout when debugCaptureHtml is true', async () => {
     const venue = seedVenue({ debugCaptureHtml: true })
     mockFetchPage.mockResolvedValue({
@@ -760,16 +787,12 @@ describe('crawlVenue — debug HTML capture', () => {
     try {
       await crawlVenue(venue.id, mockBrowser)
 
-      const allLines = consoleSpy.mock.calls.map((args) => String(args[0]))
-      const headerLine = allLines.find((line) =>
-        line.includes('"event":"debug.html_capture"'),
-      )
-      const chunkLines = allLines.filter((line) =>
-        line.includes('"event":"debug.html_capture.chunk"'),
+      const { header, chunks } = parseCaptureLogs(consoleSpy)
+      const expectedChunks = Math.ceil(
+        HTML_V1.length / DEBUG_CAPTURE_CHUNK_CHARS,
       )
 
-      expect(headerLine).toBeDefined()
-      const header = JSON.parse(headerLine!)
+      expect(header).toBeDefined()
       expect(header).toMatchObject({
         event: 'debug.html_capture',
         venueId: venue.id,
@@ -778,21 +801,28 @@ describe('crawlVenue — debug HTML capture', () => {
         httpStatus: 200,
         totalLength: HTML_V1.length,
         capturedLength: HTML_V1.length,
-        totalChunks: 1,
+        totalChunks: expectedChunks,
         truncated: false,
       })
-      expect(header.captureId).toMatch(/^[0-9a-f-]{36}$/)
-      expect(header.crawlRunId).toMatch(/^[0-9a-f-]{36}$/)
+      expect(header!['captureId']).toMatch(/^[0-9a-f-]{36}$/)
+      expect(header!['crawlRunId']).toMatch(/^[0-9a-f-]{36}$/)
 
-      expect(chunkLines).toHaveLength(1)
-      const chunk = JSON.parse(chunkLines[0]!)
-      expect(chunk).toMatchObject({
-        event: 'debug.html_capture.chunk',
-        captureId: header.captureId,
-        chunkIdx: 0,
-        totalChunks: 1,
-        chunk: HTML_V1,
-      })
+      expect(chunks).toHaveLength(expectedChunks)
+      const reassembled = chunks
+        .slice()
+        .sort(
+          (aa, bb) => (aa['chunkIdx'] as number) - (bb['chunkIdx'] as number),
+        )
+        .map((entry) => {
+          expect(entry['captureId']).toBe(header!['captureId'])
+          expect(entry['totalChunks']).toBe(expectedChunks)
+          expect((entry['chunk'] as string).length).toBeLessThanOrEqual(
+            DEBUG_CAPTURE_CHUNK_CHARS,
+          )
+          return entry['chunk'] as string
+        })
+        .join('')
+      expect(reassembled).toBe(HTML_V1)
     } finally {
       consoleSpy.mockRestore()
     }
@@ -815,11 +845,9 @@ describe('crawlVenue — debug HTML capture', () => {
     try {
       await crawlVenue(venue.id, mockBrowser)
 
-      const headerLine = consoleSpy.mock.calls
-        .map((args) => String(args[0]))
-        .find((line) => line.includes('"event":"debug.html_capture"'))
-
-      expect(headerLine).toBeUndefined()
+      const { header, chunks } = parseCaptureLogs(consoleSpy)
+      expect(header).toBeUndefined()
+      expect(chunks).toHaveLength(0)
     } finally {
       consoleSpy.mockRestore()
     }
@@ -827,9 +855,12 @@ describe('crawlVenue — debug HTML capture', () => {
 
   it('chunks HTML and marks truncated when over the cap', async () => {
     const venue = seedVenue({ debugCaptureHtml: true })
-    // 100K chars — exceeds the 80K cap, so should be truncated to 80K
-    // and split into 20 chunks of 4000 chars each.
-    const bigHtml = '<html><body>' + 'A'.repeat(100_000) + '</body></html>'
+    // Exceed the cap so we hit the truncated path; exact size doesn't
+    // matter beyond > MAX_CHARS.
+    const bigHtml =
+      '<html><body>' +
+      'A'.repeat(DEBUG_CAPTURE_MAX_CHARS + 20_000) +
+      '</body></html>'
     mockFetchPage.mockResolvedValue({
       html: bigHtml,
       httpStatus: 200,
@@ -845,35 +876,33 @@ describe('crawlVenue — debug HTML capture', () => {
     try {
       await crawlVenue(venue.id, mockBrowser)
 
-      const allLines = consoleSpy.mock.calls.map((args) => String(args[0]))
-      const headerLine = allLines.find((line) =>
-        line.includes('"event":"debug.html_capture"'),
-      )
-      const chunkLines = allLines.filter((line) =>
-        line.includes('"event":"debug.html_capture.chunk"'),
+      const { header, chunks } = parseCaptureLogs(consoleSpy)
+      const expectedChunks = Math.ceil(
+        DEBUG_CAPTURE_MAX_CHARS / DEBUG_CAPTURE_CHUNK_CHARS,
       )
 
-      expect(headerLine).toBeDefined()
-      const header = JSON.parse(headerLine!)
-      expect(header.truncated).toBe(true)
-      expect(header.totalLength).toBe(bigHtml.length)
-      expect(header.capturedLength).toBe(80_000)
-      expect(header.totalChunks).toBe(20)
+      expect(header).toBeDefined()
+      expect(header!['truncated']).toBe(true)
+      expect(header!['totalLength']).toBe(bigHtml.length)
+      expect(header!['capturedLength']).toBe(DEBUG_CAPTURE_MAX_CHARS)
+      expect(header!['totalChunks']).toBe(expectedChunks)
 
-      expect(chunkLines).toHaveLength(20)
-      // Each chunk is 4000 chars, all share the same captureId, sequential
-      // chunkIdx, and concatenate to the first 80K of the source HTML.
-      const reassembled = chunkLines
-        .map((line) => JSON.parse(line))
-        .sort((aa, bb) => aa.chunkIdx - bb.chunkIdx)
+      expect(chunks).toHaveLength(expectedChunks)
+      const reassembled = chunks
+        .slice()
+        .sort(
+          (aa, bb) => (aa['chunkIdx'] as number) - (bb['chunkIdx'] as number),
+        )
         .map((entry) => {
-          expect(entry.captureId).toBe(header.captureId)
-          expect(entry.totalChunks).toBe(20)
-          expect(entry.chunk.length).toBe(4000)
-          return entry.chunk
+          expect(entry['captureId']).toBe(header!['captureId'])
+          expect(entry['totalChunks']).toBe(expectedChunks)
+          expect((entry['chunk'] as string).length).toBeLessThanOrEqual(
+            DEBUG_CAPTURE_CHUNK_CHARS,
+          )
+          return entry['chunk'] as string
         })
         .join('')
-      expect(reassembled).toBe(bigHtml.slice(0, 80_000))
+      expect(reassembled).toBe(bigHtml.slice(0, DEBUG_CAPTURE_MAX_CHARS))
     } finally {
       consoleSpy.mockRestore()
     }

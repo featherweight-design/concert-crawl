@@ -28,16 +28,20 @@ const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
 const AUTO_APPROVE_THRESHOLD = 0.7
 
 // Chunk size for HTML capture. Render's log pipeline silently drops stdout
-// lines beyond ~16KB, so each chunk needs to fit comfortably under that —
-// 4000 chars + JSON envelope (~200 bytes) keeps us well under the limit
-// even with worst-case JSON escaping of non-ASCII content.
-const DEBUG_CAPTURE_CHUNK_CHARS = 4000
+// lines beyond ~16KB *bytes*. JS String.length is UTF-16 code units, but
+// when a code unit encodes to UTF-8 it can take up to 4 bytes (emoji,
+// supplementary plane chars). Capping at 2000 chars gives a worst-case
+// line size of ~8KB even with all-4-byte content — comfortable headroom
+// under Render's limit without needing TextEncoder-based byte arithmetic.
+// Exported so tests can derive their expectations from this constant
+// rather than hardcoding chunk counts.
+export const DEBUG_CAPTURE_CHUNK_CHARS = 2000
 
 // Total chars to capture (head only — Squarespace and similar SPAs render
 // the calendar markup near the top; the bot-served sparse page is
 // usually small anyway). 80K covers most full pages we'd realistically
 // want to inspect.
-const DEBUG_CAPTURE_MAX_CHARS = 80_000
+export const DEBUG_CAPTURE_MAX_CHARS = 80_000
 
 interface DebugCaptureContext {
   venueId: string
