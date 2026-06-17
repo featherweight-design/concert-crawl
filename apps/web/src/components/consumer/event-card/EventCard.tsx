@@ -189,7 +189,7 @@ export function EventCard({
           className="mt-0.5 flex items-center gap-1.5 text-fg-muted"
           style={{
             fontFamily: 'var(--font-mono)',
-            fontSize: '9.5px',
+            fontSize: '11px',
             letterSpacing: '0.02em',
           }}
         >
