@@ -769,17 +769,21 @@ export async function crawlVenue(
       })
 
       if (newFailureCount === 3) {
-        void sendCrawlFailureEmail(venue.name, newFailureCount).catch(
-          (emailErr) => {
-            console.log(
-              JSON.stringify({
-                event: 'crawl.email_error',
-                venueId,
-                error: String(emailErr),
-              }),
-            )
-          },
-        )
+        // Await the email send. The crawler hard-exits via process.exit(0)
+        // when main() resolves; a detached Promise here gets severed before
+        // the HTTP request to Resend completes, which is why no crawl.failed
+        // email has ever arrived since PR #51 (#649).
+        try {
+          await sendCrawlFailureEmail(venue.name, newFailureCount)
+        } catch (emailErr) {
+          console.log(
+            JSON.stringify({
+              event: 'crawl.email_error',
+              venueId,
+              error: String(emailErr),
+            }),
+          )
+        }
       }
     }
 

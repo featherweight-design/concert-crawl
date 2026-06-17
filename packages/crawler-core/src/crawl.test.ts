@@ -1,6 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { eq, and, desc } from 'drizzle-orm'
 import type { Browser } from 'playwright'
+
+// Mock the email module so we can control timing + assert await behavior
+// (regression coverage for #649). The real implementation reads env vars +
+// calls Resend; for unit tests we only care about call sequencing. Both
+// helpers are stubbed because event-count-alert.ts (called by the success
+// path) imports sendEventCountDropEmail through the same module.
+const mockSendCrawlFailureEmail = vi.hoisted(() => vi.fn())
+const mockSendEventCountDropEmail = vi.hoisted(() => vi.fn())
+vi.mock('./lib/email.js', () => ({
+  sendCrawlFailureEmail: mockSendCrawlFailureEmail,
+  sendEventCountDropEmail: mockSendEventCountDropEmail,
+}))
+
 import {
   crawlVenue,
   DEBUG_CAPTURE_CHUNK_CHARS,

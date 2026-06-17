@@ -31,6 +31,7 @@ vi.mock('./lib/extractors/llm.js', () => ({
 }))
 vi.mock('./lib/email.js', () => ({
   sendCrawlFailureEmail: vi.fn().mockResolvedValue(undefined),
+  sendEventCountDropEmail: vi.fn().mockResolvedValue(undefined),
 }))
 
 import { fetchPage, fetchPageHttp } from './lib/fetcher.js'
@@ -379,5 +380,95 @@ describe('crawlVenue — canonical-artist upsert key (#608 Track A)', () => {
     // Etheridge" form — the ON CONFLICT SET clause doesn't update artist
     // so it doesn't flip between extractions.
     expect(wynonnaRows[0]!.artist).toBe('Wynonna Judd & Melissa Etheridge')
+  })
+})
+
+describe('crawlVenue — email await regression (#649)', () => {
+  it('awaits sendCrawlFailureEmail before returning on the 3rd consecutive failure', async () => {
+    // Locks in #649: the crawler runs as a Render cron that hard-exits via
+    // process.exit(0); a fire-and-forget email Promise gets severed before
+    // completion. This installs a deferred mock and asserts crawlVenue does
+    // not resolve while the email Promise is pending.
+    const { sendCrawlFailureEmail } = await import('./lib/email.js')
+    const mockSendEmail = vi.mocked(sendCrawlFailureEmail)
+    mockSendEmail.mockReset()
+
+    // Seed venue at consecutiveFailures: 2 so the next failure makes it 3.
+    // crawlMode: 'browser' forces fetchPage (the mock we control) instead
+    // of the HTTP-first auto-detect path that would use fetchPageHttp.
+    const [venue] = await db
+      .insert(venues)
+      .values({
+        name: `Email Await Test ${crypto.randomUUID()}`,
+        slug: `email-await-${crypto.randomUUID()}`,
+        websiteUrl: 'https://email-await-test.example.com',
+        consecutiveFailures: 2,
+        crawlMode: 'browser',
+      })
+      .returning()
+    if (!venue) throw new Error('venue insert returned no row')
+
+    mockFetchPage.mockRejectedValue(new Error('boom'))
+
+    let resolveEmail: () => void = () => {}
+    const emailPromise = new Promise<void>((resolve) => {
+      resolveEmail = resolve
+    })
+    mockSendEmail.mockImplementationOnce(() => emailPromise)
+
+    const crawlPromise = crawlVenue(venue.id, mockBrowser)
+    let settled = false
+    void crawlPromise.then(() => {
+      settled = true
+    })
+
+    // Yield with setTimeout (not just setImmediate) so the in-flight async
+    // DB work has time to settle. After this drains, the only thing keeping
+    // crawlPromise pending should be the deferred email Promise.
+    for (let idx = 0; idx < 20; idx += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    }
+
+    expect(mockSendEmail).toHaveBeenCalledOnce()
+    expect(settled).toBe(false)
+
+    resolveEmail()
+    const result = await crawlPromise
+    expect(result.status).toBe('failed')
+  })
+
+  it('catches sendCrawlFailureEmail rejection without flipping the crawl_run status', async () => {
+    const { sendCrawlFailureEmail } = await import('./lib/email.js')
+    const mockSendEmail = vi.mocked(sendCrawlFailureEmail)
+    mockSendEmail.mockReset()
+
+    const [venue] = await db
+      .insert(venues)
+      .values({
+        name: `Email Reject Test ${crypto.randomUUID()}`,
+        slug: `email-reject-${crypto.randomUUID()}`,
+        websiteUrl: 'https://email-reject-test.example.com',
+        consecutiveFailures: 2,
+        crawlMode: 'browser',
+      })
+      .returning()
+    if (!venue) throw new Error('venue insert returned no row')
+
+    mockFetchPage.mockRejectedValue(new Error('boom'))
+    mockSendEmail.mockRejectedValueOnce(new Error('resend 500'))
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    try {
+      const result = await crawlVenue(venue.id, mockBrowser)
+      expect(result.status).toBe('failed')
+
+      const errorLog = logSpy.mock.calls
+        .map((args) => String(args[0]))
+        .find((line) => line.includes('crawl.email_error'))
+      expect(errorLog).toBeDefined()
+      expect(errorLog).toContain('resend 500')
+    } finally {
+      logSpy.mockRestore()
+    }
   })
 })

@@ -218,6 +218,92 @@ describe('checkEventCountDrop', () => {
     expect(outcome.fired).toBe(true)
   })
 
+  it('awaits the email send before returning (regression for #649)', async () => {
+    // Locks in the fix for #649: the crawler runs as a Render cron that
+    // hard-exits via process.exit(0) when main() resolves. If the email
+    // call were fire-and-forget, the Resend HTTP request would get severed
+    // before completion. This test installs a deferred Promise as the
+    // email mock and asserts that checkEventCountDrop has NOT yet resolved
+    // while that Promise is pending — i.e., it actually awaits.
+    const venue = await seedVenue()
+    const ids = await seedSuccessfulRuns(
+      venue.id,
+      [70, 65, 72, 68, 71, 69, 75, 0],
+    )
+    const currentRunId = ids[ids.length - 1]!
+
+    let resolveEmail: () => void = () => {}
+    const emailPromise = new Promise<void>((resolve) => {
+      resolveEmail = resolve
+    })
+    mockSendEmail.mockImplementationOnce(() => emailPromise)
+
+    const checkPromise = checkEventCountDrop({
+      venueId: venue.id,
+      venueName: venue.name,
+      crawlRunId: currentRunId,
+      eventsFound: 0,
+      lastEventCountAlertAt: null,
+    })
+
+    // Yield to the microtask queue so all already-resolvable work runs.
+    // After this, the only thing keeping checkEventCountDrop pending should
+    // be the deferred email Promise.
+    await new Promise((resolve) => setImmediate(resolve))
+
+    let settled = false
+    void checkPromise.then(() => {
+      settled = true
+    })
+    await new Promise((resolve) => setImmediate(resolve))
+    expect(settled).toBe(false)
+
+    resolveEmail()
+    const outcome = await checkPromise
+    expect(outcome.fired).toBe(true)
+    expect(mockSendEmail).toHaveBeenCalledOnce()
+  })
+
+  it('logs email failure + still returns fired:true when sendEventCountDropEmail rejects', async () => {
+    // The email is a secondary delivery channel — its failure must not
+    // change the function's return value, and the notification row above
+    // must still be committed.
+    const venue = await seedVenue()
+    const ids = await seedSuccessfulRuns(
+      venue.id,
+      [70, 65, 72, 68, 71, 69, 75, 0],
+    )
+    const currentRunId = ids[ids.length - 1]!
+
+    mockSendEmail.mockRejectedValueOnce(new Error('resend down'))
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    try {
+      const outcome = await checkEventCountDrop({
+        venueId: venue.id,
+        venueName: venue.name,
+        crawlRunId: currentRunId,
+        eventsFound: 0,
+        lastEventCountAlertAt: null,
+      })
+
+      expect(outcome.fired).toBe(true)
+      const errorLog = logSpy.mock.calls
+        .map((args) => String(args[0]))
+        .find((line) => line.includes('crawl.event_count_alert.email_error'))
+      expect(errorLog).toBeDefined()
+      expect(errorLog).toContain('resend down')
+
+      const notifs = await db
+        .select()
+        .from(notifications)
+        .where(eq(notifications.category, 'crawl.event_count_dropped'))
+      expect(notifs).toHaveLength(1)
+    } finally {
+      logSpy.mockRestore()
+    }
+  })
+
   it('excludes the current run from baseline calculation', async () => {
     // If we did NOT exclude the current run, a regression to 0 would pull
     // its own baseline down. Seed exactly the cold-start minimum of prior

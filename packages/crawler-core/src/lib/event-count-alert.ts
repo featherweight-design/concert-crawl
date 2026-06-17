@@ -160,16 +160,23 @@ async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
       .where(eq(venues.id, input.venueId))
   })
 
-  // Fire-and-forget — same pattern as the crawl.failed path. Email failures
-  // don't roll back the notification row (admin still sees it in the inbox).
-  void sendEventCountDropEmail({
-    venueName: input.venueName,
-    venueId: input.venueId,
-    crawlRunId: input.crawlRunId,
-    eventsFound: input.eventsFound,
-    baselineCount,
-    dropPercent,
-  }).catch((emailErr) => {
+  // Await the email send. The crawler runs as a Render cron that hard-exits
+  // via process.exit(0) the moment main() resolves; a fire-and-forget Promise
+  // here gets severed mid-flight before the HTTP request to Resend completes,
+  // so every alert email since PR #51 was silently dropped (#649). Email
+  // failures still don't roll back the notification row above — the admin
+  // notification inbox remains the authoritative signal, the email is the
+  // secondary delivery channel.
+  try {
+    await sendEventCountDropEmail({
+      venueName: input.venueName,
+      venueId: input.venueId,
+      crawlRunId: input.crawlRunId,
+      eventsFound: input.eventsFound,
+      baselineCount,
+      dropPercent,
+    })
+  } catch (emailErr) {
     console.log(
       JSON.stringify({
         event: 'crawl.event_count_alert.email_error',
@@ -177,7 +184,7 @@ async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
         error: String(emailErr),
       }),
     )
-  })
+  }
 
   return {
     fired: true,
