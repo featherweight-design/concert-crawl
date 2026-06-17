@@ -1,12 +1,26 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { and, eq, desc, asc, gte, sql } from 'drizzle-orm'
+import { and, eq, desc, asc, gte, isNotNull, sql } from 'drizzle-orm'
 import { db, eventReports, events, venues } from '@concert-crawl/db'
 import { getAuthUser } from '../../middleware/auth.js'
 import type { AdminVariables } from './index.js'
 
 const eventIdSchema = z.object({ id: z.string().uuid() })
+
+// Returns the SQL fragment that derives `isSoldOut`: true when an event has a
+// promoted+resolved sold-out event_report. Built lazily inside handlers so the
+// table reference isn't evaluated at module-load time (keeps the unit-test
+// mocks simple — they don't need to export every column accessor).
+function isSoldOutExpr() {
+  return sql<boolean>`EXISTS (
+    SELECT 1 FROM ${eventReports} r
+    WHERE r.event_id = ${events.id}
+      AND r.status = 'sold-out'
+      AND r.resolved_at IS NOT NULL
+      AND r.resolution = 'promoted'
+  )`
+}
 
 const listQuerySchema = z.object({
   verified: z
@@ -140,6 +154,7 @@ eventsAdminRouter.get(
         createdAt: events.createdAt,
         venueId: events.venueId,
         venueName: venues.name,
+        isSoldOut: isSoldOutExpr(),
       })
       .from(events)
       .leftJoin(venues, eq(events.venueId, venues.id))
@@ -284,5 +299,145 @@ eventsAdminRouter.delete(
     ctx.set('auditActorId', actor.userId)
 
     return ctx.json({ success: true })
+  },
+)
+
+// POST /v1/admin/events/:id/sold-out — admin-authored sold-out event_report,
+// auto-promoted on creation. Idempotent: if an active promoted sold-out report
+// already exists, returns 200 with that row instead of creating a duplicate.
+const markSoldOutSchema = z.object({
+  evidenceMethod: z
+    .enum(['venue_site', 'saw_listing', 'bought_myself', 'other'])
+    .optional()
+    .default('other'),
+  evidenceUrl: z.string().url().max(500).optional(),
+  note: z.string().max(280).optional(),
+})
+
+eventsAdminRouter.post(
+  '/:id/sold-out',
+  zValidator('param', eventIdSchema),
+  zValidator('json', markSoldOutSchema, (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid input' }, 422)
+    }
+  }),
+  async (ctx) => {
+    const { id } = ctx.req.valid('param')
+    const { evidenceMethod, evidenceUrl, note } = ctx.req.valid('json')
+    const actor = getAuthUser(ctx)
+
+    // Verify the event exists before authoring a report against it.
+    const [eventRow] = await db
+      .select({ id: events.id })
+      .from(events)
+      .where(eq(events.id, id))
+      .limit(1)
+
+    if (!eventRow) {
+      return ctx.json({ success: false, error: 'Event not found' }, 404)
+    }
+
+    // Idempotency check: if an active promoted sold-out report already exists,
+    // return it instead of inserting a duplicate. "Active" here means resolved
+    // with resolution='promoted' (i.e. the event is currently marked sold out).
+    const [existing] = await db
+      .select()
+      .from(eventReports)
+      .where(
+        and(
+          eq(eventReports.eventId, id),
+          eq(eventReports.status, 'sold-out'),
+          isNotNull(eventReports.resolvedAt),
+          eq(eventReports.resolution, 'promoted'),
+        ),
+      )
+      .limit(1)
+
+    if (existing) {
+      return ctx.json({ success: true, data: existing }, 200)
+    }
+
+    const [created] = await db
+      .insert(eventReports)
+      .values({
+        eventId: id,
+        reporterId: actor.userId,
+        status: 'sold-out',
+        evidenceMethod,
+        evidenceUrl: evidenceUrl ?? null,
+        note: note ?? null,
+        resolvedAt: new Date(),
+        resolution: 'promoted',
+        adminNote: 'admin-authored — auto-promoted on creation',
+      })
+      .returning()
+
+    ctx.set('auditAction', 'event.sold_out.mark')
+    ctx.set('auditTargetId', id)
+    ctx.set('auditActorId', actor.userId)
+    ctx.set('auditMeta', {
+      reportId: created?.id ?? null,
+      evidenceMethod,
+      evidenceUrl: evidenceUrl ?? null,
+    })
+
+    return ctx.json({ success: true, data: created }, 201)
+  },
+)
+
+// POST /v1/admin/events/:id/available — inverse of Mark Sold Out. Dismisses
+// the active promoted sold-out report. The row is preserved (resolution flipped
+// to 'rejected') because its history is meaningful. Idempotent no-op when no
+// active sold-out report exists.
+const markAvailableSchema = z.object({
+  note: z.string().max(500).optional(),
+})
+
+eventsAdminRouter.post(
+  '/:id/available',
+  zValidator('param', eventIdSchema),
+  zValidator('json', markAvailableSchema, (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid input' }, 422)
+    }
+  }),
+  async (ctx) => {
+    const { id } = ctx.req.valid('param')
+    const { note } = ctx.req.valid('json')
+    const actor = getAuthUser(ctx)
+
+    const [active] = await db
+      .select({ id: eventReports.id })
+      .from(eventReports)
+      .where(
+        and(
+          eq(eventReports.eventId, id),
+          eq(eventReports.status, 'sold-out'),
+          isNotNull(eventReports.resolvedAt),
+          eq(eventReports.resolution, 'promoted'),
+        ),
+      )
+      .limit(1)
+
+    if (!active) {
+      // No active sold-out report — nothing to do. 204 keeps the call idempotent.
+      return ctx.body(null, 204)
+    }
+
+    await db
+      .update(eventReports)
+      .set({
+        resolution: 'rejected',
+        adminNote: note ?? 'admin marked available',
+      })
+      .where(eq(eventReports.id, active.id))
+
+    ctx.set('auditAction', 'event.sold_out.clear')
+    ctx.set('auditTargetId', id)
+    ctx.set('auditActorId', actor.userId)
+    ctx.set('auditMeta', { reportId: active.id })
+
+    return ctx.body(null, 204)
   },
 )

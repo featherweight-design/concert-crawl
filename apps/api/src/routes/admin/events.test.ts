@@ -14,6 +14,7 @@ vi.mock('drizzle-orm', () => ({
   and: vi.fn((...args) => ({ args, op: 'and' })),
   asc: vi.fn((col) => ({ col, dir: 'asc' })),
   gte: vi.fn((col, val) => ({ col, val, op: 'gte' })),
+  isNotNull: vi.fn((col) => ({ col, op: 'isNotNull' })),
   sql: vi.fn((parts, ...vals) => ({ parts, vals })),
 }))
 
@@ -53,6 +54,19 @@ vi.mock('@concert-crawl/db', () => ({
   venues: {
     id: 'id',
     name: 'name',
+  },
+  eventReports: {
+    id: 'id',
+    eventId: 'eventId',
+    reporterId: 'reporterId',
+    status: 'status',
+    evidenceMethod: 'evidenceMethod',
+    evidenceUrl: 'evidenceUrl',
+    note: 'note',
+    createdAt: 'createdAt',
+    resolvedAt: 'resolvedAt',
+    resolution: 'resolution',
+    adminNote: 'adminNote',
   },
   auditLog: {},
   inviteCodes: {},
@@ -385,6 +399,76 @@ describe('DELETE /v1/admin/events/:id', () => {
       method: 'DELETE',
     })
     expect(res.status).toBe(404)
+  })
+})
+
+describe('POST /v1/admin/events/:id/sold-out', () => {
+  beforeEach(() => {
+    mockGetAuth.mockReset()
+  })
+
+  it('returns 401 for unauthenticated requests', async () => {
+    mockGetAuth.mockReturnValue(null)
+    const res = await createApp().request(
+      `/v1/admin/events/${EVENT_ID}/sold-out`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      },
+    )
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 403 for non-admin users', async () => {
+    mockGetAuth.mockReturnValue({
+      userId: 'user_123',
+      sessionClaims: { metadata: { role: 'user' } },
+    })
+    const res = await createApp().request(
+      `/v1/admin/events/${EVENT_ID}/sold-out`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      },
+    )
+    expect(res.status).toBe(403)
+  })
+})
+
+describe('POST /v1/admin/events/:id/available', () => {
+  beforeEach(() => {
+    mockGetAuth.mockReset()
+  })
+
+  it('returns 401 for unauthenticated requests', async () => {
+    mockGetAuth.mockReturnValue(null)
+    const res = await createApp().request(
+      `/v1/admin/events/${EVENT_ID}/available`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      },
+    )
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 403 for non-admin users', async () => {
+    mockGetAuth.mockReturnValue({
+      userId: 'user_123',
+      sessionClaims: { metadata: { role: 'user' } },
+    })
+    const res = await createApp().request(
+      `/v1/admin/events/${EVENT_ID}/available`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      },
+    )
+    expect(res.status).toBe(403)
   })
 })
 
