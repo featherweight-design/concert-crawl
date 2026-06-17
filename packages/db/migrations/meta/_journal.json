@@ -239,6 +239,13 @@
       "when": 1781913600000,
       "tag": "0033_event_stale_detection",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1782000000000,
+      "tag": "0034_crawl_status_skipped",
+      "breakpoints": true
     }
   ]
 }

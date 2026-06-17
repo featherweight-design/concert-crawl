@@ -232,7 +232,7 @@ describe('crawlVenue — page-level skip', () => {
 
     expect(run.eventsFound).toBe(0)
     expect(run.eventsInserted).toBe(0)
-    expect(run.status).toBe('success')
+    expect(run.status).toBe('skipped')
 
     // The most-recent crawl run (slice(-1)) should carry the pageHash
     const [skippedRun] = await db
@@ -242,6 +242,7 @@ describe('crawlVenue — page-level skip', () => {
       .orderBy(desc(crawlRuns.createdAt))
       .limit(1)
     expect(skippedRun?.pageHash).toMatch(/^[0-9a-f]{64}$/)
+    expect(skippedRun?.status).toBe('skipped')
   })
 
   it('proceeds to extraction when page hash differs', async () => {

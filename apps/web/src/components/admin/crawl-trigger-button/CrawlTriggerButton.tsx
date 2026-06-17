@@ -155,7 +155,13 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {statusBadgeConfig && (
               <StatusBadge
-                kind={result.status === 'success' ? 'success' : 'danger'}
+                kind={
+                  result.status === 'success'
+                    ? 'success'
+                    : result.status === 'skipped'
+                      ? 'signal'
+                      : 'danger'
+                }
                 dot
               >
                 {statusBadgeConfig.label}

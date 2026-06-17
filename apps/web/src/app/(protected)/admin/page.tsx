@@ -156,7 +156,9 @@ export default async function AdminDashboardPage() {
   const { status, venues, runs, pendingEventCount, pendingPriceCount } =
     await fetchDashboardData(token)
 
-  const greenCount = status.filter((row) => row.status === 'success').length
+  const greenCount = status.filter(
+    (row) => row.status === 'success' || row.status === 'skipped',
+  ).length
   const totalEventsFound = status.reduce((sum, row) => sum + row.eventsFound, 0)
   const blockedCount = status.filter(
     (row) => row.blockedAt !== null || row.status === 'failed',

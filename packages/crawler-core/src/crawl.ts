@@ -306,7 +306,7 @@ export async function crawlVenue(
         .values({
           id,
           venueId,
-          status: 'success',
+          status: 'skipped',
           httpStatusCode: httpStatus,
           robotsTxtBlocked: 'no',
           pageHash,

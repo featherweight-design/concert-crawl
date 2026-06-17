@@ -233,12 +233,14 @@ venuesAdminRouter.get('/:id', async (ctx) => {
     )
     .orderBy(desc(crawlRuns.createdAt))
 
-  // Build sparkline: one entry per calendar day over the past 7 days
+  // Build sparkline: one entry per calendar day over the past 7 days.
+  // 'skipped' is healthy alongside 'success' (page-hash dedup), so days
+  // ending in either status render green.
   const dayMap = new Map<string, boolean>()
   for (const run of recentRuns) {
     const dayKey = run.createdAt.toISOString().slice(0, 10)
     if (!dayMap.has(dayKey)) {
-      dayMap.set(dayKey, run.status === 'success')
+      dayMap.set(dayKey, run.status === 'success' || run.status === 'skipped')
     }
   }
 

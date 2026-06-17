@@ -13,6 +13,7 @@ export const crawlStatusEnum = pgEnum('crawl_status', [
   'success',
   'failed',
   'partial',
+  'skipped',
 ])
 
 export const crawlRuns = pgTable('crawl_runs', {

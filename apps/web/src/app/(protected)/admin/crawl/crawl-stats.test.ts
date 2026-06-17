@@ -44,10 +44,13 @@ describe('formatRunsBreakdown', () => {
     const runs = [
       { status: 'success' },
       { status: 'success' },
+      { status: 'skipped' },
       { status: 'partial' },
       { status: 'failed' },
     ] as { status: string }[]
-    expect(formatRunsBreakdown(runs)).toBe('2 ok · 1 partial · 1 failed')
+    expect(formatRunsBreakdown(runs)).toBe(
+      '2 ok · 1 skipped · 1 partial · 1 failed',
+    )
   })
 
   it('omits zero-count statuses', () => {

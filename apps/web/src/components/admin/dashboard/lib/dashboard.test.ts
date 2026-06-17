@@ -362,6 +362,16 @@ describe('buildSparklineData', () => {
     expect(buildSparklineData(runs)).toEqual([0, 0, 1])
   })
 
+  it('counts skipped as healthy alongside success', () => {
+    const runs = [
+      makeCrawlRun({ status: 'skipped' }), // newest — page-hash dedup, healthy
+      makeCrawlRun({ status: 'success' }),
+      makeCrawlRun({ status: 'failed' }), // oldest
+    ]
+    // After slice(0,8).reverse(): oldest first → [failed(0), success(1), skipped(1)]
+    expect(buildSparklineData(runs)).toEqual([0, 1, 1])
+  })
+
   it('caps at 8 runs', () => {
     const runs = Array.from({ length: 12 }, () => makeCrawlRun())
     expect(buildSparklineData(runs)).toHaveLength(8)

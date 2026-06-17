@@ -22,6 +22,10 @@ const STATUS_KIND: Record<string, StatusKind> = {
   blocked: 'danger',
   partial: 'warning',
   paused: 'warning',
+  // Page-hash dedup hit — healthy, but visually distinct from a real
+  // extraction. Signal blue reads as "informational, intentional" and
+  // separates skipped rows from the gray 'never' (no history) chip.
+  skipped: 'signal',
   never: 'neutral',
 }
 

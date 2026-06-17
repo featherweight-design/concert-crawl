@@ -147,11 +147,15 @@ export function buildActiveVenuesHint(venues: Venue[]): string {
   return parts.join(' · ')
 }
 
-// Returns array of 1 (success) or 0 (failure) for last 8 runs, oldest→newest order
+// Returns array of 1 (healthy) or 0 (failure) for last 8 runs, oldest→newest order.
+// 'skipped' counts as healthy alongside 'success' — it's a page-hash dedup
+// outcome, not a failure.
 // Input is already sorted descending — take first 8 then reverse so sparkline reads left→right
 export function buildSparklineData(runs: CrawlRun[]): number[] {
   return runs
     .slice(0, 8)
     .reverse()
-    .map((run) => (run.status === 'success' ? 1 : 0))
+    .map((run) =>
+      run.status === 'success' || run.status === 'skipped' ? 1 : 0,
+    )
 }

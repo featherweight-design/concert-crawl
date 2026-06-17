@@ -54,8 +54,11 @@ export interface AuthUser {
 // Extraction strategies used by the crawler
 export type ExtractionStrategy = 'structured_data' | 'llm' | 'manual'
 
-// Crawl run status
-export type CrawlStatus = 'success' | 'failed' | 'partial'
+// Crawl run status. 'skipped' = page-hash dedup matched the last successful
+// run, so extraction was bypassed (cost-saving). Treat as healthy alongside
+// 'success' in dashboards; surface visually distinct so it doesn't conflate
+// with 'success + eventsFound: 0' (which would indicate a real failure).
+export type CrawlStatus = 'success' | 'failed' | 'partial' | 'skipped'
 
 // Event status
 export type EventStatus = 'upcoming' | 'cancelled' | 'postponed'
