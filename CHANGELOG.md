@@ -1,3 +1,10 @@
+## [1.52.1](https://github.com/HartiganHM/concert-crawl/compare/v1.52.0...v1.52.1) (2026-06-17)
+
+
+### Bug Fixes
+
+* **crawler:** canonicalize Ø/ø to O/o to match migration's translate() ([425f837](https://github.com/HartiganHM/concert-crawl/commit/425f8378ee5050a88cc2a435e9886807a9be6f73)), closes [#632](https://github.com/HartiganHM/concert-crawl/issues/632)
+
 # [1.52.0](https://github.com/HartiganHM/concert-crawl/compare/v1.51.0...v1.52.0) (2026-06-17)
 
 
