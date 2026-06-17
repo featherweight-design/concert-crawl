@@ -1,3 +1,10 @@
+# [1.49.0](https://github.com/HartiganHM/concert-crawl/compare/v1.48.0...v1.49.0) (2026-06-17)
+
+
+### Features
+
+* **crawler:** distinguish 'skipped' from 'success' in crawl_runs status ([6c6ced6](https://github.com/HartiganHM/concert-crawl/commit/6c6ced677decb2d8452368add2e499e4a88f5052)), closes [#629](https://github.com/HartiganHM/concert-crawl/issues/629) [#624](https://github.com/HartiganHM/concert-crawl/issues/624)
+
 # [1.48.0](https://github.com/HartiganHM/concert-crawl/compare/v1.47.0...v1.48.0) (2026-06-17)
 
 
