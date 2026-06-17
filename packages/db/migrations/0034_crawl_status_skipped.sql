@@ -3,11 +3,25 @@
 -- status: 'success' with eventsFound: 0, which made cost-saving skips
 -- visually indistinguishable from real zero-event failures.
 --
--- The historical backfill (relabel old skip rows as 'skipped') is a
--- separate manual ops step — see docs/runbooks/db-rollback.md
--- ("crawl_status 'skipped' backfill" section). Postgres refuses to use
--- new enum values inside the same transaction that added them, and
--- Drizzle's migrator wraps each migration in a single transaction, so
--- we can't ship the UPDATE in the migration itself.
+-- ┌─────────────────────────────────────────────────────────────────────┐
+-- │ POST-MIGRATION OPS STEP — run once per environment AFTER this       │
+-- │ migration has fully deployed and the API has restarted. Idempotent. │
+-- │                                                                     │
+-- │   UPDATE crawl_runs                                                 │
+-- │   SET status = 'skipped'                                            │
+-- │   WHERE status = 'success'                                          │
+-- │     AND extraction_strategy_used IS NULL                            │
+-- │     AND events_found = 0;                                           │
+-- │                                                                     │
+-- │ The skip path never writes extraction_strategy_used (extraction is  │
+-- │ bypassed); the success path always does. Combined with              │
+-- │ events_found = 0, that's the clean discriminator for historical     │
+-- │ skip rows that need relabeling.                                     │
+-- │                                                                     │
+-- │ Why this isn't in the migration: Postgres refuses to USE a new      │
+-- │ enum value inside the same transaction that ADDed it, and Drizzle   │
+-- │ wraps each migration in a single transaction. Execute via Neon SQL  │
+-- │ editor (or psql with the direct, non-pooled connection string).    │
+-- └─────────────────────────────────────────────────────────────────────┘
 
 ALTER TYPE "public"."crawl_status" ADD VALUE IF NOT EXISTS 'skipped';
