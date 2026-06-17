@@ -27,13 +27,17 @@ const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
 
 const AUTO_APPROVE_THRESHOLD = 0.7
 
-// Cap the captured HTML so a single log line stays well under typical
-// log-aggregator line limits (~64KB). Limits are in UTF-16 code units
-// (what String.length / .slice operate on), not bytes — for the mostly-ASCII
-// HTML we crawl these are equivalent, and the headroom against 64KB
-// covers the worst case for non-ASCII content.
-const DEBUG_CAPTURE_HEAD_CHARS = 40_000
-const DEBUG_CAPTURE_TAIL_CHARS = 5_000
+// Chunk size for HTML capture. Render's log pipeline silently drops stdout
+// lines beyond ~16KB, so each chunk needs to fit comfortably under that —
+// 4000 chars + JSON envelope (~200 bytes) keeps us well under the limit
+// even with worst-case JSON escaping of non-ASCII content.
+const DEBUG_CAPTURE_CHUNK_CHARS = 4000
+
+// Total chars to capture (head only — Squarespace and similar SPAs render
+// the calendar markup near the top; the bot-served sparse page is
+// usually small anyway). 80K covers most full pages we'd realistically
+// want to inspect.
+const DEBUG_CAPTURE_MAX_CHARS = 80_000
 
 interface DebugCaptureContext {
   venueId: string
@@ -44,14 +48,22 @@ interface DebugCaptureContext {
   httpStatus: number
 }
 
+// Logs the fetched HTML to stdout, split into multiple lines so each line
+// stays under the host log-aggregator's per-line limit (Render drops lines
+// >~16KB). Caller reassembles by filtering on captureId and sorting by
+// chunkIdx. A header line (debug.html_capture) precedes the chunk lines
+// (debug.html_capture.chunk) so the metadata is preserved even if a chunk
+// is dropped.
 function logDebugHtmlCapture(html: string, ctx: DebugCaptureContext): void {
-  const truncated =
-    html.length > DEBUG_CAPTURE_HEAD_CHARS + DEBUG_CAPTURE_TAIL_CHARS
-  const htmlHead = html.slice(0, DEBUG_CAPTURE_HEAD_CHARS)
-  const htmlTail = truncated ? html.slice(-DEBUG_CAPTURE_TAIL_CHARS) : ''
+  const captured = html.slice(0, DEBUG_CAPTURE_MAX_CHARS)
+  const truncated = html.length > DEBUG_CAPTURE_MAX_CHARS
+  const totalChunks = Math.ceil(captured.length / DEBUG_CAPTURE_CHUNK_CHARS)
+  const captureId = crypto.randomUUID()
+
   console.log(
     JSON.stringify({
       event: 'debug.html_capture',
+      captureId,
       venueId: ctx.venueId,
       venueSlug: ctx.venueSlug,
       crawlRunId: ctx.crawlRunId,
@@ -59,11 +71,25 @@ function logDebugHtmlCapture(html: string, ctx: DebugCaptureContext): void {
       finalUrl: ctx.finalUrl,
       httpStatus: ctx.httpStatus,
       totalLength: html.length,
+      capturedLength: captured.length,
+      totalChunks,
       truncated,
-      htmlHead,
-      ...(htmlTail ? { htmlTail } : {}),
     }),
   )
+
+  for (let chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
+    const start = chunkIdx * DEBUG_CAPTURE_CHUNK_CHARS
+    const chunk = captured.slice(start, start + DEBUG_CAPTURE_CHUNK_CHARS)
+    console.log(
+      JSON.stringify({
+        event: 'debug.html_capture.chunk',
+        captureId,
+        chunkIdx,
+        totalChunks,
+        chunk,
+      }),
+    )
+  }
 }
 
 async function runExtraction(
@@ -195,21 +221,6 @@ export async function crawlVenue(
     }
 
     const { html, httpStatus, finalUrl } = fetchResult
-
-    // Diagnostic: log how the runtime sees venue.debugCaptureHtml. Confirmed
-    // via UI + PATCH that the DB row has it set to true, but the if-check
-    // below never fires in either staging or prod — so we want the actual
-    // value, type, and key list at runtime. Remove once diagnosed.
-    console.log(
-      JSON.stringify({
-        event: 'debug.venue_state',
-        venueId,
-        debugCaptureHtmlValue: venue.debugCaptureHtml,
-        debugCaptureHtmlType: typeof venue.debugCaptureHtml,
-        hasKey: 'debugCaptureHtml' in venue,
-        venueKeys: Object.keys(venue).sort(),
-      }),
-    )
 
     if (venue.debugCaptureHtml) {
       logDebugHtmlCapture(html, {
