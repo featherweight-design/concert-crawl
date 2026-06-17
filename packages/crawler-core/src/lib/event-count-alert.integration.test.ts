@@ -34,6 +34,21 @@ async function seedVenue(
   return venue
 }
 
+// Yield via setImmediate up to maxIterations times waiting for `predicate`
+// to become true. Returns true if reached, false on exhaustion. Used by the
+// #649 await-regression tests to wait for execution to reach the email call
+// site without using real-time sleeps (which were both slow and fragile).
+async function pollUntil(
+  predicate: () => boolean,
+  maxIterations = 1000,
+): Promise<boolean> {
+  for (let idx = 0; idx < maxIterations; idx += 1) {
+    if (predicate()) return true
+    await new Promise((resolve) => setImmediate(resolve))
+  }
+  return predicate()
+}
+
 async function seedSuccessfulRuns(
   venueId: string,
   eventsFoundList: number[],
@@ -246,22 +261,28 @@ describe('checkEventCountDrop', () => {
       lastEventCountAlertAt: null,
     })
 
-    // Yield to the microtask queue so all already-resolvable work runs.
-    // After this, the only thing keeping checkEventCountDrop pending should
-    // be the deferred email Promise.
-    await new Promise((resolve) => setImmediate(resolve))
-
     let settled = false
     void checkPromise.then(() => {
       settled = true
     })
+
+    // Poll until execution has actually reached the email call site (mock
+    // invoked). This isolates the await as what's blocking the outer
+    // Promise — without this, the test could pass on slow upstream DB work
+    // alone, even if the email weren't actually awaited.
+    const reached = await pollUntil(() => mockSendEmail.mock.calls.length === 1)
+    expect(reached).toBe(true)
+
+    // Yield once more so any synchronous continuation past the email call
+    // (if the await were missing) would have had a chance to settle the
+    // outer Promise. settled MUST still be false because the email Promise
+    // is still pending.
     await new Promise((resolve) => setImmediate(resolve))
     expect(settled).toBe(false)
 
     resolveEmail()
     const outcome = await checkPromise
     expect(outcome.fired).toBe(true)
-    expect(mockSendEmail).toHaveBeenCalledOnce()
   })
 
   it('logs email failure + still returns fired:true when sendEventCountDropEmail rejects', async () => {

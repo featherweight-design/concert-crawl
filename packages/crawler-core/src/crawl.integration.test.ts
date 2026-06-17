@@ -103,6 +103,21 @@ function futureDate(daysFromNow: number): string {
   return now.toISOString().slice(0, 10)
 }
 
+// Yield via setImmediate up to maxIterations times waiting for `predicate`
+// to become true. Used by the #649 await-regression tests to wait for
+// execution to actually reach the email call site without using real-time
+// sleeps (which were both slow and fragile under load).
+async function pollUntil(
+  predicate: () => boolean,
+  maxIterations = 1000,
+): Promise<boolean> {
+  for (let idx = 0; idx < maxIterations; idx += 1) {
+    if (predicate()) return true
+    await new Promise((resolve) => setImmediate(resolve))
+  }
+  return predicate()
+}
+
 beforeEach(async () => {
   await clearCrawlState()
   mockFetchPage.mockClear()
@@ -422,14 +437,18 @@ describe('crawlVenue — email await regression (#649)', () => {
       settled = true
     })
 
-    // Yield with setTimeout (not just setImmediate) so the in-flight async
-    // DB work has time to settle. After this drains, the only thing keeping
-    // crawlPromise pending should be the deferred email Promise.
-    for (let idx = 0; idx < 20; idx += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 10))
-    }
+    // Poll until execution has actually reached the email call site (mock
+    // invoked). This isolates the await as what's blocking the outer
+    // Promise — without this gate, the test could pass on slow upstream DB
+    // work alone, even if the email weren't actually awaited.
+    const reached = await pollUntil(() => mockSendEmail.mock.calls.length === 1)
+    expect(reached).toBe(true)
 
-    expect(mockSendEmail).toHaveBeenCalledOnce()
+    // Yield once more so any synchronous continuation past the email call
+    // (if the await were missing) would have had a chance to settle the
+    // outer Promise. settled MUST still be false because the email Promise
+    // is still pending.
+    await new Promise((resolve) => setImmediate(resolve))
     expect(settled).toBe(false)
 
     resolveEmail()
