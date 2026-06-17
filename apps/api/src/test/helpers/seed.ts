@@ -69,12 +69,23 @@ export async function seedEvent(
   venueId: string,
   overrides: Partial<typeof events.$inferInsert> = {},
 ): Promise<typeof events.$inferSelect> {
+  const artist = overrides.artist ?? 'Test Artist'
+  // Derive canonical_artist from artist when not explicitly provided. Without
+  // this, multiple seedEvent calls inside one test would all collide on the
+  // partial UNIQUE index `events_venue_date_canonical_artist_idx` because the
+  // schema default for canonical_artist is '' — every (venue_id, date, '')
+  // tuple repeats. Production code does the canonicalization in the crawler;
+  // here a simple lowercase suffices for test isolation since the tests only
+  // care that distinct artist strings produce distinct canonical values.
+  const canonicalArtist =
+    overrides.canonicalArtist ?? artist.toLowerCase().trim()
   const [event] = await testDb
     .insert(events)
     .values({
       venueId,
       title: 'Test Show',
-      artist: 'Test Artist',
+      artist,
+      canonicalArtist,
       date: '2026-06-01',
       status: 'upcoming',
       ...overrides,
