@@ -1,3 +1,10 @@
+## [1.52.3](https://github.com/HartiganHM/concert-crawl/compare/v1.52.2...v1.52.3) (2026-06-17)
+
+
+### Bug Fixes
+
+* **crawler:** await admin alert email sends so process.exit doesn't drop them ([#649](https://github.com/HartiganHM/concert-crawl/issues/649)) ([9b06e29](https://github.com/HartiganHM/concert-crawl/commit/9b06e294ee5c428febebed9b89f34683d5a39fed)), closes [#51](https://github.com/HartiganHM/concert-crawl/issues/51) [#635](https://github.com/HartiganHM/concert-crawl/issues/635) [#635](https://github.com/HartiganHM/concert-crawl/issues/635)
+
 ## [1.52.2](https://github.com/HartiganHM/concert-crawl/compare/v1.52.1...v1.52.2) (2026-06-17)
 
 
