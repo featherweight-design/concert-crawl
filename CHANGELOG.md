@@ -1,3 +1,10 @@
+## [1.52.2](https://github.com/HartiganHM/concert-crawl/compare/v1.52.1...v1.52.2) (2026-06-17)
+
+
+### Bug Fixes
+
+* **web:** bump venue/time row from 9.5px to 11px on event cards ([51ff403](https://github.com/HartiganHM/concert-crawl/commit/51ff403d38f688236b6ea367ad2b3558a8d259b3))
+
 ## [1.52.1](https://github.com/HartiganHM/concert-crawl/compare/v1.52.0...v1.52.1) (2026-06-17)
 
 
