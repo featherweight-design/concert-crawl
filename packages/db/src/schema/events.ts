@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm'
 import {
   boolean,
   date,
@@ -63,10 +64,9 @@ export const events = pgTable(
     // Normalized artist identifier used to collapse artist-string variants of
     // the same show (e.g. "Earl Sweatshirt" vs "Earl Sweatshirt & MIKE"). See
     // packages/crawler-core/src/lib/canonical-artist.ts for the canonicalization
-    // rules. Populated by the crawler on every upsert. The unique index swap
-    // from (venue_id, date, artist) to (venue_id, date, canonical_artist) is
-    // intentionally deferred — see issue #608 — because existing duplicate
-    // rows would cause the unique index creation to fail.
+    // rules. Populated by the crawler on every upsert. The partial UNIQUE
+    // index on (venue_id, date, canonical_artist) WHERE status = 'upcoming'
+    // backs the crawler's ON CONFLICT target (see migration 0035).
     canonicalArtist: text('canonical_artist').notNull().default(''),
     // Stale-event detection (issue #607). lastSeenAt is bumped to NOW() on
     // every successful crawl run that returns this event row. firstMissingAt
@@ -104,6 +104,15 @@ export const events = pgTable(
       table.date,
       table.artist,
     ),
+    // Partial UNIQUE index — backs the crawler's ON CONFLICT target. Scoped
+    // to status='upcoming' so admin status overrides (cancelled, postponed)
+    // and historical rows don't collide with newly-extracted upcoming rows
+    // sharing the same canonical_artist + date at the same venue.
+    venueDateCanonicalArtistIdx: uniqueIndex(
+      'events_venue_date_canonical_artist_idx',
+    )
+      .on(table.venueId, table.date, table.canonicalArtist)
+      .where(sql`status = 'upcoming'`),
   }),
 )
 

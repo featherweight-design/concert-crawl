@@ -408,23 +408,29 @@ export async function crawlVenue(
     // Upsert events — insert on first crawl, update mutable fields on re-crawl
     let eventsInserted = 0
     let eventsUpdated = 0
-    // Track (artist, date) pairs we've actually upserted this run so the
-    // stale-event detection below can refresh last_seen_at for them. Includes
-    // both the freshly-inserted and the already-existed-with-unchanged-hash
+    // Track (canonical_artist, date) pairs we've actually upserted this run so
+    // the stale-event detection below can refresh last_seen_at for them.
+    // Includes both the freshly-inserted and the already-existed-with-unchanged-hash
     // cases — "seen" means "the venue's page still advertised this show",
-    // independent of whether we touched the DB row.
-    const seenEventCoords: { artist: string; date: string }[] = []
+    // independent of whether we touched the DB row. Keyed by canonical_artist
+    // (not raw artist) so an extraction of "Wynonna Judd" matches a DB row
+    // stored as "Wynonna Judd & Melissa Etheridge" — without that, Pass 2
+    // below would stamp the row missing on every crawl that produced a
+    // different artist-string variant.
+    const seenEventCoords: { canonicalArtist: string; date: string }[] = []
     if (normalizedEvents.length > 0) {
       // Compute sourceHash for each extracted event, then deduplicate by
-      // (artist, date) — LLM extraction can return the same show twice.
-      // Deduping here (rather than later) keeps changedVerified and
-      // eventsToUpsert both clean, avoiding duplicate admin alerts and
-      // the Postgres "ON CONFLICT DO UPDATE cannot affect row a second time"
-      // error that otherwise kills the entire batch insert.
+      // (canonical_artist, date) — LLM extraction can return the same show
+      // twice under slightly different artist strings ("Ziggy Marley" and
+      // "Ziggy Marley & Stephen Marley"). Deduping by raw artist here would
+      // let both variants through, then the ON CONFLICT against the partial
+      // UNIQUE index on canonical_artist would fail with "cannot affect row
+      // a second time."
       const seenEventKeys = new Set<string>()
       const eventsWithHashes = normalizedEvents
         .map((event) => ({
           ...event,
+          canonicalArtist: canonicalizeArtist(event.artist),
           sourceHash: hashEvent({
             title: event.title,
             artist: event.artist,
@@ -434,16 +440,19 @@ export async function crawlVenue(
           }),
         }))
         .filter((evt) => {
-          const key = `${evt.artist}|${evt.date}`
+          const key = `${evt.canonicalArtist}|${evt.date}`
           if (seenEventKeys.has(key)) return false
           seenEventKeys.add(key)
           return true
         })
 
-      // Load existing events for this venue to compare hashes
+      // Load existing events for this venue to compare hashes. Keyed by
+      // canonical_artist so a re-extraction of "Wynonna Judd" hits the row
+      // stored as "Wynonna Judd & Melissa Etheridge" — same canonical, same
+      // show.
       const existingRows = await db
         .select({
-          artist: events.artist,
+          canonicalArtist: events.canonicalArtist,
           date: events.date,
           title: events.title,
           sourceHash: events.sourceHash,
@@ -453,17 +462,19 @@ export async function crawlVenue(
         .where(eq(events.venueId, venueId))
 
       const existingMap = new Map(
-        existingRows.map((e) => [`${e.artist}|${e.date}`, e]),
+        existingRows.map(
+          (row) => [`${row.canonicalArtist}|${row.date}`, row] as const,
+        ),
       )
 
       // Notify admin when a verified event's source data has changed
-      const changedVerified = eventsWithHashes.filter((e) => {
-        const existing = existingMap.get(`${e.artist}|${e.date}`)
+      const changedVerified = eventsWithHashes.filter((evt) => {
+        const existing = existingMap.get(`${evt.canonicalArtist}|${evt.date}`)
         return (
           existing &&
           existing.verified === true &&
           existing.sourceHash !== null &&
-          existing.sourceHash !== e.sourceHash
+          existing.sourceHash !== evt.sourceHash
         )
       })
 
@@ -484,15 +495,18 @@ export async function crawlVenue(
       // Populating before the upsert filter keeps the keys correct even when
       // the upsert path is skipped because every hash matched.
       for (const evt of eventsWithHashes) {
-        seenEventCoords.push({ artist: evt.artist, date: evt.date })
+        seenEventCoords.push({
+          canonicalArtist: evt.canonicalArtist,
+          date: evt.date,
+        })
       }
 
       // Only upsert events that are new or have changed content
-      const eventsToUpsert = eventsWithHashes.filter((e) => {
-        const existing = existingMap.get(`${e.artist}|${e.date}`)
+      const eventsToUpsert = eventsWithHashes.filter((evt) => {
+        const existing = existingMap.get(`${evt.canonicalArtist}|${evt.date}`)
         if (!existing) return true // new event
         return (
-          existing.sourceHash === null || existing.sourceHash !== e.sourceHash
+          existing.sourceHash === null || existing.sourceHash !== evt.sourceHash
         ) // null hash backfill or content changed
       })
 
@@ -501,7 +515,7 @@ export async function crawlVenue(
           venueId,
           title: event.title,
           artist: event.artist,
-          canonicalArtist: canonicalizeArtist(event.artist),
+          canonicalArtist: event.canonicalArtist,
           date: event.date,
           doorsTime:
             event.doorsTime && event.doorsTime !== '' ? event.doorsTime : null,
@@ -519,7 +533,7 @@ export async function crawlVenue(
         }))
 
         for (const evt of eventsToUpsert) {
-          if (existingMap.has(`${evt.artist}|${evt.date}`)) {
+          if (existingMap.has(`${evt.canonicalArtist}|${evt.date}`)) {
             eventsUpdated++
           } else {
             eventsInserted++
@@ -530,10 +544,21 @@ export async function crawlVenue(
           .insert(events)
           .values(eventValues)
           .onConflictDoUpdate({
-            target: [events.venueId, events.date, events.artist],
+            // Conflict target is the partial UNIQUE index added in 0034 —
+            // (venue_id, date, canonical_artist) WHERE status='upcoming'.
+            // targetWhere mirrors the partial index predicate so Postgres
+            // can identify the index for ON CONFLICT resolution. Status
+            // overrides (cancelled, postponed) sit outside this index and
+            // won't be touched by future crawls.
+            target: [events.venueId, events.date, events.canonicalArtist],
+            targetWhere: eq(events.status, 'upcoming'),
             set: {
               title: sql`excluded.title`,
-              canonicalArtist: sql`excluded.canonical_artist`,
+              // artist intentionally NOT updated — once the winner row is
+              // established (either via the consolidation backfill or the
+              // first crawl after this PR ships), its artist string stays.
+              // Otherwise the field flips between extractions ("Wynonna
+              // Judd" one day, "Wynonna Judd & Melissa Etheridge" the next).
               doorsTime: sql`excluded.doors_time`,
               showTime: sql`excluded.show_time`,
               ticketUrl: sql`excluded.ticket_url`,
@@ -557,9 +582,10 @@ export async function crawlVenue(
     // when we never got a clean read of the venue's page.
     //
     // Pass 1: for every event the crawl actually saw, refresh last_seen_at
-    // and clear first_missing_at. Matched by (venue_id, date, artist) which
-    // is the existing unique key — the same composite ON CONFLICT target
-    // used by the upsert above.
+    // and clear first_missing_at. Matched by (venue_id, date, canonical_artist)
+    // to mirror the upsert's ON CONFLICT target — without that, a "Wynonna
+    // Judd" extraction wouldn't match a "Wynonna Judd & Melissa Etheridge"
+    // DB row and Pass 2 below would stamp it missing.
     //
     // Pass 2: for every venue event that should have shown up (upcoming,
     // date >= today) but didn't (last_seen_at < this run's start), stamp
@@ -581,7 +607,7 @@ export async function crawlVenue(
               ...seenEventCoords.map((coord) =>
                 and(
                   eq(events.date, coord.date),
-                  eq(events.artist, coord.artist),
+                  eq(events.canonicalArtist, coord.canonicalArtist),
                 ),
               ),
             ),

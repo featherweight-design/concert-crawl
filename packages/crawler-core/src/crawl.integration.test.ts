@@ -124,6 +124,7 @@ describe('crawlVenue — stale-event detection (#607)', () => {
         venueId: venue.id,
         title: 'Artist A Live',
         artist: 'Artist A',
+        canonicalArtist: 'artist a',
         date: dateA,
         status: 'upcoming',
         lastSeenAt: oldSeenAt,
@@ -133,6 +134,7 @@ describe('crawlVenue — stale-event detection (#607)', () => {
         venueId: venue.id,
         title: 'Artist B Live',
         artist: 'Artist B',
+        canonicalArtist: 'artist b',
         date: dateB,
         status: 'upcoming',
         lastSeenAt: oldSeenAt,
@@ -190,6 +192,7 @@ describe('crawlVenue — stale-event detection (#607)', () => {
         venueId: venue.id,
         title: 'Artist A Live',
         artist: 'Artist A',
+        canonicalArtist: 'artist a',
         date: dateA,
         status: 'upcoming',
         lastSeenAt: oldSeenAt,
@@ -199,6 +202,7 @@ describe('crawlVenue — stale-event detection (#607)', () => {
         venueId: venue.id,
         title: 'Artist B Live',
         artist: 'Artist B',
+        canonicalArtist: 'artist b',
         date: dateB,
         status: 'upcoming',
         lastSeenAt: oldSeenAt,
@@ -263,6 +267,7 @@ describe('crawlVenue — stale-event detection (#607)', () => {
         venueId: venue.id,
         title: 'Artist A Live',
         artist: 'Artist A',
+        canonicalArtist: 'artist a',
         date: dateA,
         status: 'upcoming',
         lastSeenAt: oldSeenAt,
@@ -272,6 +277,7 @@ describe('crawlVenue — stale-event detection (#607)', () => {
         venueId: venue.id,
         title: 'Artist B Live',
         artist: 'Artist B',
+        canonicalArtist: 'artist b',
         date: dateB,
         status: 'upcoming',
         lastSeenAt: oldSeenAt,
@@ -302,5 +308,76 @@ describe('crawlVenue — stale-event detection (#607)', () => {
     expect(rowB?.firstMissingAt).toBeNull()
     expect(rowA?.lastSeenAt.getTime()).toBe(oldSeenAt.getTime())
     expect(rowB?.lastSeenAt.getTime()).toBe(oldSeenAt.getTime())
+  })
+})
+
+describe('crawlVenue — canonical-artist upsert key (#608 Track A)', () => {
+  it('matches existing rows by canonical_artist so artist-string drift across crawls collapses to one row', async () => {
+    // Regression test for the prod incident on 2026-06-17: Red Rocks crawl
+    // stamped 265 false-positive first_missing_at because the LLM extracted
+    // "Wynonna Judd" but the DB row was stored as "Wynonna Judd & Melissa
+    // Etheridge". Same canonical, different artist string → upsert missed
+    // → last_seen_at stayed stale → Pass 2 flagged it missing.
+    //
+    // Post-Track-A: the canonical_artist key on the upsert + the partial
+    // UNIQUE index in 0034 collapse both extractions to a single row.
+    const venue = await seedTestVenue()
+    const showDate = futureDate(14)
+
+    const oldSeenAt = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    await db.insert(events).values({
+      venueId: venue.id,
+      title: 'Wynonna Judd & Melissa Etheridge with the Colorado Symphony',
+      artist: 'Wynonna Judd & Melissa Etheridge',
+      canonicalArtist: 'wynonna judd',
+      date: showDate,
+      status: 'upcoming',
+      lastSeenAt: oldSeenAt,
+      firstMissingAt: null,
+    })
+
+    // Crawl extracts the show under a shorter artist string — what tripped
+    // the prod incident.
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE,
+      httpStatus: 200,
+      finalUrl: venue.url,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [makeEvent('Wynonna Judd', showDate, venue.url)],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    const beforeCrawl = Date.now()
+    const run = await crawlVenue(venue.id, mockBrowser)
+    expect(run.status).toBe('success')
+
+    const wynonnaRows = await db
+      .select()
+      .from(events)
+      .where(
+        and(
+          eq(events.venueId, venue.id),
+          eq(events.canonicalArtist, 'wynonna judd'),
+        ),
+      )
+
+    // ONE row, not two — the partial UNIQUE index and the canonical-artist
+    // upsert key collapse "Wynonna Judd" → existing "Wynonna Judd & Melissa
+    // Etheridge" row.
+    expect(wynonnaRows).toHaveLength(1)
+
+    // Pass 1 found the row by canonical_artist — last_seen_at advanced and
+    // first_missing_at stayed NULL. Without the canonical-artist match this
+    // would be the 265-false-positive scenario.
+    expect(wynonnaRows[0]!.lastSeenAt.getTime()).toBeGreaterThanOrEqual(
+      beforeCrawl,
+    )
+    expect(wynonnaRows[0]!.firstMissingAt).toBeNull()
+
+    // The artist field intentionally stays at the original "& Melissa
+    // Etheridge" form — the ON CONFLICT SET clause doesn't update artist
+    // so it doesn't flip between extractions.
+    expect(wynonnaRows[0]!.artist).toBe('Wynonna Judd & Melissa Etheridge')
   })
 })

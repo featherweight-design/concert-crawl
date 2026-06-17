@@ -373,6 +373,7 @@ describe('crawlVenue — event-level sourceHash', () => {
       venueId: venue.id,
       title: METALLICA_EVENT.title,
       artist: METALLICA_EVENT.artist,
+      canonicalArtist: 'metallica',
       date: METALLICA_EVENT.date,
       sourceHash: null,
       verified: true,
