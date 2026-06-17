@@ -446,10 +446,18 @@ export async function crawlVenue(
           return true
         })
 
-      // Load existing events for this venue to compare hashes. Keyed by
-      // canonical_artist so a re-extraction of "Wynonna Judd" hits the row
-      // stored as "Wynonna Judd & Melissa Etheridge" — same canonical, same
-      // show.
+      // Load existing UPCOMING events for this venue to compare hashes.
+      // Keyed by canonical_artist so a re-extraction of "Wynonna Judd"
+      // hits the row stored as "Wynonna Judd & Melissa Etheridge" — same
+      // canonical, same show.
+      //
+      // status='upcoming' filter mirrors the ON CONFLICT target's predicate
+      // (the partial UNIQUE index in 0034). Without it, an admin-cancelled
+      // row would still appear in existingMap — and a fresh extraction of
+      // the same show would be incorrectly classified as an update (when
+      // it should INSERT a new upcoming row alongside the cancelled one),
+      // and changedVerified would fire spurious alerts for source-data
+      // changes on rows the admin has already cancelled.
       const existingRows = await db
         .select({
           canonicalArtist: events.canonicalArtist,
@@ -459,7 +467,7 @@ export async function crawlVenue(
           verified: events.verified,
         })
         .from(events)
-        .where(eq(events.venueId, venueId))
+        .where(and(eq(events.venueId, venueId), eq(events.status, 'upcoming')))
 
       const existingMap = new Map(
         existingRows.map(
@@ -603,6 +611,13 @@ export async function crawlVenue(
         .where(
           and(
             eq(events.venueId, venueId),
+            // status='upcoming' mirrors the ON CONFLICT target's predicate
+            // and the partial UNIQUE index in 0034. Without it, a cancelled
+            // row sharing (venue, date, canonical_artist) with a freshly-
+            // upserted upcoming row would also get last_seen_at refreshed
+            // and first_missing_at cleared — but cancelled rows are by
+            // definition outside the crawler's seen-state upkeep.
+            eq(events.status, 'upcoming'),
             or(
               ...seenEventCoords.map((coord) =>
                 and(

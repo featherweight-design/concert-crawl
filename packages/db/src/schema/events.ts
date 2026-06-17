@@ -99,15 +99,16 @@ export const events = pgTable(
     canonicalArtistIdx: index('events_canonical_artist_idx').on(
       table.canonicalArtist,
     ),
-    venueDateArtistIdx: uniqueIndex('events_venue_date_artist_idx').on(
-      table.venueId,
-      table.date,
-      table.artist,
-    ),
-    // Partial UNIQUE index — backs the crawler's ON CONFLICT target. Scoped
-    // to status='upcoming' so admin status overrides (cancelled, postponed)
-    // and historical rows don't collide with newly-extracted upcoming rows
-    // sharing the same canonical_artist + date at the same venue.
+    // Both unique indexes are partial WHERE status='upcoming' so admin
+    // status overrides (cancelled, postponed) sit outside the constraint
+    // and relists produce a new upcoming row alongside the cancelled one.
+    // The canonical_artist index backs the crawler's ON CONFLICT target;
+    // the artist index is kept for historical query patterns but no longer
+    // enforces global uniqueness. Migration 0035 dropped + recreated the
+    // legacy artist index as partial on the same predicate.
+    venueDateArtistIdx: uniqueIndex('events_venue_date_artist_idx')
+      .on(table.venueId, table.date, table.artist)
+      .where(sql`status = 'upcoming'`),
     venueDateCanonicalArtistIdx: uniqueIndex(
       'events_venue_date_canonical_artist_idx',
     )
