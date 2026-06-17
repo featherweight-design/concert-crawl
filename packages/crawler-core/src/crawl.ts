@@ -1,5 +1,5 @@
 import type { Browser } from 'playwright'
-import { and, desc, eq, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, inArray, isNull, lt, or, sql } from 'drizzle-orm'
 import {
   db,
   venues,
@@ -126,6 +126,28 @@ async function runExtraction(
   return { normalizedEvents, strategy, tokenUsage }
 }
 
+// Refreshes last_seen_at + clears first_missing_at for every upcoming event
+// at this venue (date >= today). Used by the page-hash skip path in
+// crawlVenue: when the venue's page is byte-identical to the prior successful
+// run, every event we'd have extracted is identical too — so by definition
+// nothing is missing. Past events are intentionally excluded because the
+// stale-detection surface only queries date >= CURRENT_DATE.
+async function markEventsSeenForVenue(
+  venueId: string,
+  seenAt: Date,
+): Promise<void> {
+  await db
+    .update(events)
+    .set({ lastSeenAt: seenAt, firstMissingAt: null })
+    .where(
+      and(
+        eq(events.venueId, venueId),
+        eq(events.status, 'upcoming'),
+        gte(events.date, sql`CURRENT_DATE`),
+      ),
+    )
+}
+
 export async function crawlVenue(
   venueId: string,
   browser: Browser,
@@ -134,6 +156,12 @@ export async function crawlVenue(
 ): Promise<CrawlRun> {
   const id = crawlRunId ?? crypto.randomUUID()
   const startedAt = Date.now()
+  // Date snapshot captured up-front so the stale-event detection update can
+  // compare it against events.last_seen_at after the per-venue upsert pass
+  // runs. Using a single value across both update statements guarantees the
+  // "events I just saw" set is exactly the complement of the "events that
+  // should have appeared but didn't" set.
+  const startedAtDate = new Date(startedAt)
 
   const [venue] = await db
     .select()
@@ -292,6 +320,12 @@ export async function crawlVenue(
           updatedAt: new Date(),
         })
         .where(eq(venues.id, venueId))
+      // Page-hash skip path (#607): the page is byte-identical to the last
+      // successful crawl, so by definition every event present then is still
+      // present now. Refresh last_seen_at + clear any stale first_missing_at
+      // on all upcoming events for this venue. Filtering by date >= today
+      // matches the API surface — past events never go stale.
+      await markEventsSeenForVenue(venueId, startedAtDate)
       return crawlRun
     }
 
@@ -367,6 +401,12 @@ export async function crawlVenue(
     // Upsert events — insert on first crawl, update mutable fields on re-crawl
     let eventsInserted = 0
     let eventsUpdated = 0
+    // Track (artist, date) pairs we've actually upserted this run so the
+    // stale-event detection below can refresh last_seen_at for them. Includes
+    // both the freshly-inserted and the already-existed-with-unchanged-hash
+    // cases — "seen" means "the venue's page still advertised this show",
+    // independent of whether we touched the DB row.
+    const seenEventCoords: { artist: string; date: string }[] = []
     if (normalizedEvents.length > 0) {
       // Compute sourceHash for each extracted event, then deduplicate by
       // (artist, date) — LLM extraction can return the same show twice.
@@ -430,6 +470,14 @@ export async function crawlVenue(
             metadata: JSON.stringify({ venueId, crawlRunId: id }),
           })),
         )
+      }
+
+      // Every event the venue still advertises this run — both newly inserted
+      // and unchanged-and-skipped — counts as "seen" for stale detection.
+      // Populating before the upsert filter keeps the keys correct even when
+      // the upsert path is skipped because every hash matched.
+      for (const evt of eventsWithHashes) {
+        seenEventCoords.push({ artist: evt.artist, date: evt.date })
       }
 
       // Only upsert events that are new or have changed content
@@ -496,6 +544,55 @@ export async function crawlVenue(
           })
       }
     }
+
+    // Stale-event detection (#607) — two-pass update on a successful crawl.
+    // Skipped on the error path because we don't want to mark events stale
+    // when we never got a clean read of the venue's page.
+    //
+    // Pass 1: for every event the crawl actually saw, refresh last_seen_at
+    // and clear first_missing_at. Matched by (venue_id, date, artist) which
+    // is the existing unique key — the same composite ON CONFLICT target
+    // used by the upsert above.
+    //
+    // Pass 2: for every venue event that should have shown up (upcoming,
+    // date >= today) but didn't (last_seen_at < this run's start), stamp
+    // first_missing_at — but only on the FIRST miss. The `isNull` predicate
+    // is what guarantees that: subsequent missing sweeps won't overwrite the
+    // original disappearance timestamp, so the admin sees the actual moment
+    // the show disappeared rather than the most recent crawl.
+    if (seenEventCoords.length > 0) {
+      await db
+        .update(events)
+        .set({
+          lastSeenAt: startedAtDate,
+          firstMissingAt: null,
+        })
+        .where(
+          and(
+            eq(events.venueId, venueId),
+            or(
+              ...seenEventCoords.map((coord) =>
+                and(
+                  eq(events.date, coord.date),
+                  eq(events.artist, coord.artist),
+                ),
+              ),
+            ),
+          ),
+        )
+    }
+    await db
+      .update(events)
+      .set({ firstMissingAt: startedAtDate })
+      .where(
+        and(
+          eq(events.venueId, venueId),
+          eq(events.status, 'upcoming'),
+          gte(events.date, sql`CURRENT_DATE`),
+          lt(events.lastSeenAt, startedAtDate),
+          isNull(events.firstMissingAt),
+        ),
+      )
 
     // Notify admin on low-confidence LLM extractions (structured data is always confidence=1.0)
     const lowConfidence =

@@ -381,3 +381,121 @@ describe('GET /v1/admin/events — isSoldOut derivation', () => {
     expect(rowAfter?.isSoldOut).toBe(false)
   })
 })
+
+function futureDate(daysFromNow: number): string {
+  const now = new Date()
+  now.setUTCDate(now.getUTCDate() + daysFromNow)
+  return now.toISOString().slice(0, 10)
+}
+
+describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
+  beforeEach(async () => {
+    setAdminAuth()
+    await clearTables()
+  })
+
+  it('returns only rows with first_missing_at NOT NULL, ordered DESC', async () => {
+    const venue = await seedVenue({
+      name: 'Stale Test Venue',
+      slug: 'stale-test-venue',
+    })
+
+    // Three rows: one currently-seen, two missing at different timestamps.
+    // The missing pair lets us verify ordering (most recent first).
+    const earlier = new Date(Date.now() - 48 * 60 * 60 * 1000)
+    const later = new Date(Date.now() - 1 * 60 * 60 * 1000)
+
+    await seedEvent(venue.id, {
+      title: 'Currently Seen Show',
+      artist: 'Artist Seen',
+      date: futureDate(14),
+      status: 'upcoming',
+      firstMissingAt: null,
+    })
+    await seedEvent(venue.id, {
+      title: 'Older Disappearance',
+      artist: 'Artist Older',
+      date: futureDate(21),
+      status: 'upcoming',
+      firstMissingAt: earlier,
+    })
+    await seedEvent(venue.id, {
+      title: 'Newer Disappearance',
+      artist: 'Artist Newer',
+      date: futureDate(28),
+      status: 'upcoming',
+      firstMissingAt: later,
+    })
+
+    const res = await app.request('/v1/admin/events?missing=true')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { title: string; firstMissingAt: string | null }[]
+    }
+    expect(body.success).toBe(true)
+    expect(body.data).toHaveLength(2)
+    expect(body.data[0]?.title).toBe('Newer Disappearance')
+    expect(body.data[1]?.title).toBe('Older Disappearance')
+    expect(body.data.every((row) => row.firstMissingAt !== null)).toBe(true)
+  })
+
+  it('excludes past-date events even when first_missing_at is set', async () => {
+    // Belt-and-braces against accidental surfacing of historical shows.
+    // The crawler's stale-detection pass only writes first_missing_at on
+    // upcoming events, but the admin filter must independently enforce the
+    // date >= today guarantee so backfilled or legacy rows can't leak in.
+    const venue = await seedVenue({
+      name: 'Past Event Venue',
+      slug: 'past-event-venue',
+    })
+    await seedEvent(venue.id, {
+      title: 'Old Disappeared Show',
+      artist: 'Artist Past',
+      date: futureDate(-30),
+      status: 'upcoming',
+      firstMissingAt: new Date(),
+    })
+
+    const res = await app.request('/v1/admin/events?missing=true')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: unknown[]
+    }
+    expect(body.data).toHaveLength(0)
+  })
+
+  it('exposes lastSeenAt and firstMissingAt on the standard list response', async () => {
+    // Regression test for the admin Review UI: the missing tab renders
+    // relative timestamps inline, so the GET /v1/admin/events response
+    // must include both columns regardless of which filter is active.
+    const venue = await seedVenue({
+      name: 'Field Exposure Venue',
+      slug: 'field-exposure-venue',
+    })
+    await seedEvent(venue.id, {
+      title: 'Verified Show',
+      artist: 'Artist Verified',
+      date: futureDate(14),
+      status: 'upcoming',
+      verified: true,
+    })
+
+    const res = await app.request('/v1/admin/events?verified=true')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: {
+        title: string
+        lastSeenAt: string
+        firstMissingAt: string | null
+      }[]
+    }
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0]).toHaveProperty('lastSeenAt')
+    expect(body.data[0]).toHaveProperty('firstMissingAt')
+    expect(typeof body.data[0]?.lastSeenAt).toBe('string')
+    expect(body.data[0]?.firstMissingAt).toBeNull()
+  })
+})

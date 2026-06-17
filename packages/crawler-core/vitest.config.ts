@@ -21,5 +21,6 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     testTimeout: 30000,
+    exclude: ['**/node_modules/**', '**/*.integration.test.ts'],
   },
 })

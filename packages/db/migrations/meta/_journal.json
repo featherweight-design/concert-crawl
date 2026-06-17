@@ -232,6 +232,13 @@
       "when": 1781827200000,
       "tag": "0032_event_reports_sold_out_index",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1781913600000,
+      "tag": "0033_event_stale_detection",
+      "breakpoints": true
     }
   ]
 }

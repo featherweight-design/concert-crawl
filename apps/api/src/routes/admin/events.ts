@@ -27,6 +27,16 @@ const listQuerySchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((val) => val === 'true'),
+  // Stale-event detection filter (#607). When `missing=true`, scope the list
+  // to events the crawler stopped seeing — first_missing_at IS NOT NULL,
+  // status = upcoming, date >= today — ordered most-recently-disappeared
+  // first so the Admin > Review tab can surface them for triage. The
+  // `verified` filter is intentionally ignored in this mode: a verified show
+  // that vanishes is the most important case to surface.
+  missing: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((val) => val === 'true'),
   limit: z.coerce.number().int().min(1).max(500).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 })
@@ -126,17 +136,24 @@ eventsAdminRouter.patch(
 )
 
 // GET /v1/admin/events?verified=false&limit=50&offset=0
+// GET /v1/admin/events?missing=true — filter to events the crawler stopped
+// returning (stale-event detection, see issue #607). When `missing=true`,
+// the `verified` filter is ignored and rows are ordered by first_missing_at
+// DESC so the most recent disappearances surface first.
 eventsAdminRouter.get(
   '/',
   zValidator('query', listQuerySchema),
   async (ctx) => {
-    const { verified, limit, offset } = ctx.req.valid('query')
+    const { verified, missing, limit, offset } = ctx.req.valid('query')
 
     const today = new Date().toLocaleDateString('en-CA', {
       timeZone: 'America/Denver',
     })
 
-    const rows = await db
+    // Build query as two separate branches because the order-by and where
+    // shape differ — keeping them inline (rather than mutating a builder)
+    // keeps Drizzle's type inference happy.
+    const baseSelect = db
       .select({
         id: events.id,
         title: events.title,
@@ -148,20 +165,37 @@ eventsAdminRouter.get(
         ticketPriceMax: events.ticketPriceMax,
         confidenceScore: sql<number | null>`(${events.confidenceScore})::float`,
         verified: events.verified,
+        status: events.status,
         extractionStrategy: events.extractionStrategy,
         sourceUrl: events.sourceUrl,
         genre: events.genre,
         createdAt: events.createdAt,
+        lastSeenAt: events.lastSeenAt,
+        firstMissingAt: events.firstMissingAt,
         venueId: events.venueId,
         venueName: venues.name,
         isSoldOut: isSoldOutExpr(),
       })
       .from(events)
       .leftJoin(venues, eq(events.venueId, venues.id))
-      .where(and(eq(events.verified, verified), gte(events.date, today)))
-      .orderBy(asc(events.date), desc(events.createdAt))
-      .limit(limit)
-      .offset(offset)
+
+    const rows = missing
+      ? await baseSelect
+          .where(
+            and(
+              isNotNull(events.firstMissingAt),
+              eq(events.status, 'upcoming'),
+              gte(events.date, today),
+            ),
+          )
+          .orderBy(desc(events.firstMissingAt))
+          .limit(limit)
+          .offset(offset)
+      : await baseSelect
+          .where(and(eq(events.verified, verified), gte(events.date, today)))
+          .orderBy(asc(events.date), desc(events.createdAt))
+          .limit(limit)
+          .offset(offset)
 
     return ctx.json({ success: true, data: rows })
   },

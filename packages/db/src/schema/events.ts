@@ -68,6 +68,18 @@ export const events = pgTable(
     // intentionally deferred — see issue #608 — because existing duplicate
     // rows would cause the unique index creation to fail.
     canonicalArtist: text('canonical_artist').notNull().default(''),
+    // Stale-event detection (issue #607). lastSeenAt is bumped to NOW() on
+    // every successful crawl run that returns this event row. firstMissingAt
+    // is set to NOW() on the first successful crawl that *should* have
+    // returned this event (venue crawled, date >= today, status = upcoming)
+    // but didn't — and cleared back to NULL on any subsequent crawl that
+    // surfaces the event again. NULL means "currently being seen, or
+    // admin-dismissed". See packages/crawler-core/src/crawl.ts for the
+    // post-upsert update passes that maintain these columns.
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    firstMissingAt: timestamp('first_missing_at', { withTimezone: true }),
     // search_vector is a generated column managed via raw SQL in migration
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()

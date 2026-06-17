@@ -14,7 +14,9 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.ts",
+    "test:all": "vitest run && vitest run --config vitest.integration.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.2",
@@ -29,6 +31,7 @@
   "devDependencies": {
     "@concert-crawl/config": "workspace:*",
     "@types/node": "^25.9.3",
+    "postgres": "^3.4.9",
     "typescript": "^5.0.0",
     "vitest": "^4.1.9",
     "vite": "^6.0.0"
