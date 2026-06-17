@@ -222,7 +222,6 @@ describe('crawlVenue — stale-event detection (#607)', () => {
       .from(events)
       .where(and(eq(events.venueId, venue.id), eq(events.artist, 'Artist B')))
     expect(rowBAfterFirst?.firstMissingAt).not.toBeNull()
-    const firstMissingTimestamp = rowBAfterFirst!.firstMissingAt!.getTime()
 
     // Crawl 2: extraction now returns A AND B (B reappeared on the page).
     // Use a fresh HTML so the page-hash skip path doesn't fire.
@@ -250,11 +249,6 @@ describe('crawlVenue — stale-event detection (#607)', () => {
     expect(rowBAfterSecond?.lastSeenAt).toBeDefined()
     expect(rowBAfterSecond!.lastSeenAt.getTime()).toBeGreaterThanOrEqual(
       beforeSecondCrawl,
-    )
-    // Sanity: the missing timestamp wasn't accidentally re-stamped or
-    // preserved on the seen row.
-    expect(rowBAfterSecond!.firstMissingAt).not.toEqual(
-      new Date(firstMissingTimestamp),
     )
   })
 

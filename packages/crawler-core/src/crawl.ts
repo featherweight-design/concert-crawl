@@ -1,5 +1,5 @@
 import type { Browser } from 'playwright'
-import { and, desc, eq, gte, inArray, isNull, lt, or, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, isNull, lt, or, sql } from 'drizzle-orm'
 import {
   db,
   venues,
@@ -126,12 +126,19 @@ async function runExtraction(
   return { normalizedEvents, strategy, tokenUsage }
 }
 
+// "Today" in the venue's reference timezone (Mountain Time). The admin
+// stale-event surface filters with the same Denver-tz date — using Postgres
+// CURRENT_DATE here would silently diverge around midnight (Render's UTC
+// "today" can be ahead of Denver's, marking rows missing that the admin
+// surface still considers upcoming, or vice versa).
+const DENVER_TODAY = sql`(NOW() AT TIME ZONE 'America/Denver')::date`
+
 // Refreshes last_seen_at + clears first_missing_at for every upcoming event
 // at this venue (date >= today). Used by the page-hash skip path in
 // crawlVenue: when the venue's page is byte-identical to the prior successful
 // run, every event we'd have extracted is identical too — so by definition
 // nothing is missing. Past events are intentionally excluded because the
-// stale-detection surface only queries date >= CURRENT_DATE.
+// stale-detection surface only queries date >= today (Denver tz).
 async function markEventsSeenForVenue(
   venueId: string,
   seenAt: Date,
@@ -143,7 +150,7 @@ async function markEventsSeenForVenue(
       and(
         eq(events.venueId, venueId),
         eq(events.status, 'upcoming'),
-        gte(events.date, sql`CURRENT_DATE`),
+        gte(events.date, DENVER_TODAY),
       ),
     )
 }
@@ -588,7 +595,7 @@ export async function crawlVenue(
         and(
           eq(events.venueId, venueId),
           eq(events.status, 'upcoming'),
-          gte(events.date, sql`CURRENT_DATE`),
+          gte(events.date, DENVER_TODAY),
           lt(events.lastSeenAt, startedAtDate),
           isNull(events.firstMissingAt),
         ),
