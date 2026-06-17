@@ -1,3 +1,10 @@
+## [1.45.2](https://github.com/HartiganHM/concert-crawl/compare/v1.45.1...v1.45.2) (2026-06-17)
+
+
+### Bug Fixes
+
+* **feedback:** accept null screenshot + don't burn rate-limit on validation failure ([27adf5c](https://github.com/HartiganHM/concert-crawl/commit/27adf5cc4d27da577d506bd0064e16c0bb327229)), closes [#614](https://github.com/HartiganHM/concert-crawl/issues/614)
+
 ## [1.45.1](https://github.com/HartiganHM/concert-crawl/compare/v1.45.0...v1.45.1) (2026-06-16)
 
 
