@@ -60,6 +60,14 @@ export const events = pgTable(
     sourceUrl: text('source_url'),
     sourceHash: text('source_hash'),
     extractionStrategy: text('extraction_strategy'),
+    // Normalized artist identifier used to collapse artist-string variants of
+    // the same show (e.g. "Earl Sweatshirt" vs "Earl Sweatshirt & MIKE"). See
+    // packages/crawler-core/src/lib/canonical-artist.ts for the canonicalization
+    // rules. Populated by the crawler on every upsert. The unique index swap
+    // from (venue_id, date, artist) to (venue_id, date, canonical_artist) is
+    // intentionally deferred — see issue #608 — because existing duplicate
+    // rows would cause the unique index creation to fail.
+    canonicalArtist: text('canonical_artist').notNull().default(''),
     // search_vector is a generated column managed via raw SQL in migration
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
@@ -76,6 +84,9 @@ export const events = pgTable(
     ),
     venueIdx: index('events_venue_id_idx').on(table.venueId),
     artistIdx: index('events_artist_idx').on(table.artist),
+    canonicalArtistIdx: index('events_canonical_artist_idx').on(
+      table.canonicalArtist,
+    ),
     venueDateArtistIdx: uniqueIndex('events_venue_date_artist_idx').on(
       table.venueId,
       table.date,

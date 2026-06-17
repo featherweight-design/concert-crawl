@@ -24,6 +24,7 @@ import {
   detectCrossVenuePresale,
   type CrossVenueCandidate,
 } from './lib/cross-venue-filter.js'
+import { canonicalizeArtist } from './lib/canonical-artist.js'
 import { hashPage, hashEvent } from './lib/hash.js'
 import type { NormalizedEvent, TokenUsage } from './types.js'
 
@@ -445,6 +446,7 @@ export async function crawlVenue(
           venueId,
           title: event.title,
           artist: event.artist,
+          canonicalArtist: canonicalizeArtist(event.artist),
           date: event.date,
           doorsTime:
             event.doorsTime && event.doorsTime !== '' ? event.doorsTime : null,
@@ -476,6 +478,7 @@ export async function crawlVenue(
             target: [events.venueId, events.date, events.artist],
             set: {
               title: sql`excluded.title`,
+              canonicalArtist: sql`excluded.canonical_artist`,
               doorsTime: sql`excluded.doors_time`,
               showTime: sql`excluded.show_time`,
               ticketUrl: sql`excluded.ticket_url`,
