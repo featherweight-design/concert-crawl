@@ -1,3 +1,12 @@
+## [1.45.3](https://github.com/HartiganHM/concert-crawl/compare/v1.45.2...v1.45.3) (2026-06-17)
+
+
+### Bug Fixes
+
+* **crawler:** address Copilot review on [#615](https://github.com/HartiganHM/concert-crawl/issues/615) ([5e17a3b](https://github.com/HartiganHM/concert-crawl/commit/5e17a3bff3ae8b70ade70289dc42a0072c0b3302)), closes [#605](https://github.com/HartiganHM/concert-crawl/issues/605)
+* **crawler:** address Copilot review on [#615](https://github.com/HartiganHM/concert-crawl/issues/615) (round 2) ([380e954](https://github.com/HartiganHM/concert-crawl/commit/380e954dda7fe0f21929746a2f55e468aa6e8bc0)), closes [#605](https://github.com/HartiganHM/concert-crawl/issues/605)
+* **crawler:** skip cross-venue presale listings ("AT [OTHER VENUE]") ([247642c](https://github.com/HartiganHM/concert-crawl/commit/247642c1fff1304e764085f113f223ef0609e428)), closes [#605](https://github.com/HartiganHM/concert-crawl/issues/605)
+
 ## [1.45.2](https://github.com/HartiganHM/concert-crawl/compare/v1.45.1...v1.45.2) (2026-06-17)
 
 
