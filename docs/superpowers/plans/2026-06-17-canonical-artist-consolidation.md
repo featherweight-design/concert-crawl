@@ -293,7 +293,7 @@ The 24h soak in the prior draft was overkill — VALIDATE inside the transaction
 | FK table we didn't enumerate                  | Runtime info_schema query + RAISE EXCEPTION on unknown table  |
 | Re-running script double-consolidates         | Already-canonical clusters have `cluster_size = 1`, no-op    |
 | Track A migration fails mid-deploy            | Track B runs to completion first — index applies cleanly      |
-| User-reported issue post-COMMIT               | 24h snapshot table + rollback runbook                         |
+| User-reported issue post-COMMIT               | 7-day snapshot table (`events_consolidate_608`) + rollback runbook |
 
 ## Acceptance
 

@@ -23,8 +23,13 @@
 --   1. DIAGNOSE   — count + sample clusters before touching anything.
 --   2. SNAPSHOT   — copy loser rows into sidecar table for rollback (7-day window).
 --   3. DRY-RUN    — emit per-cluster projection of winner + losers + FK counts.
---   4. PAUSE      — operator reviews the dry-run output. To execute: change the
---                   trailing ROLLBACK to COMMIT and re-run.
+--   4. PAUSE      — operator reviews the dry-run output. By default the script
+--                   ONLY runs DIAGNOSE + SNAPSHOT + DRY-RUN and then ROLLBACKs.
+--                   To actually mutate, the operator re-runs with:
+--                       psql -v DO_EXECUTE=1 ...
+--                   That flag gates the REASSIGN / DELETE / WINNER blocks via
+--                   psql `\if`, so a default-mode dry-run never takes the
+--                   row-level locks the mutation phases would.
 --   5. REASSIGN   — UPDATE FK rows to point at the winner (race-handled for
 --                   user_events; idempotent UPDATE for the rest).
 --   6. DELETE     — remove loser rows (CASCADE doesn't fire because FKs are
@@ -32,6 +37,12 @@
 --   7. WINNER     — clear first_missing_at + bump last_seen_at on each winner
 --                   so #627's stale-detection noise resets cleanly.
 --   8. VALIDATE   — assert no surviving duplicates, no orphan FK rows.
+--
+-- Set DO_EXECUTE default = 0 unless operator already passed it.
+\if :{?DO_EXECUTE}
+\else
+\set DO_EXECUTE 0
+\endif
 
 ------------------------------------------------------------------------
 -- 1. DIAGNOSE
@@ -70,15 +81,28 @@ BEGIN;
 -- user_events). If a new table is added without updating this script,
 -- its rows would CASCADE-delete when losers are removed — silently
 -- losing data. RAISE EXCEPTION forces an explicit script update.
+--
+-- Joins include constraint_schema (not just constraint_name) so the check
+-- stays correct in multi-schema DBs where the same constraint_name can
+-- appear in different schemas — without the schema match, the cross-join
+-- can either miss a real FK (false negative) or trip on the wrong table
+-- (false positive). Restricted to public schema since that's where all
+-- Concert Crawl tables live.
 DO $check_fks$
 DECLARE
   unexpected_table text;
 BEGIN
   SELECT tc.table_name INTO unexpected_table
   FROM information_schema.table_constraints tc
-  JOIN information_schema.key_column_usage kcu USING (constraint_name)
-  JOIN information_schema.constraint_column_usage ccu USING (constraint_name)
+  JOIN information_schema.key_column_usage kcu
+    ON kcu.constraint_schema = tc.constraint_schema
+   AND kcu.constraint_name   = tc.constraint_name
+  JOIN information_schema.constraint_column_usage ccu
+    ON ccu.constraint_schema = tc.constraint_schema
+   AND ccu.constraint_name   = tc.constraint_name
   WHERE tc.constraint_type = 'FOREIGN KEY'
+    AND tc.constraint_schema = 'public'
+    AND ccu.table_schema = 'public'
     AND ccu.table_name = 'events'
     AND ccu.column_name = 'id'
     AND tc.table_name NOT IN (
@@ -190,48 +214,56 @@ JOIN venues  v     ON v.id = w.venue_id
 ORDER BY v.name, w.date, w.canonical_artist;
 
 ------------------------------------------------------------------------
--- 4. PAUSE — operator reviews dry-run output above.
+-- 4. PAUSE — gate the mutation phases behind DO_EXECUTE
 ------------------------------------------------------------------------
--- To execute: change the trailing ROLLBACK at the bottom of this file to
--- COMMIT and re-run. The transaction below mutates only the rows projected
--- in the DRY-RUN output. Re-running with ROLLBACK (default) is safe and
--- idempotent — the sidecar TRUNCATE/INSERT and temp-table CREATE both reset
--- cleanly each time.
+-- Default mode: dry-run only. The script committed everything through
+-- DIAGNOSE + SNAPSHOT + DRY-RUN above; the transaction will ROLLBACK at
+-- the end without holding row locks on shared tables. The operator
+-- inspects the DRY-RUN projection, spot-checks 5–10 clusters, then
+-- re-runs with `psql -v DO_EXECUTE=1 ...` to actually mutate.
+\if :DO_EXECUTE
+\echo 'DO_EXECUTE=1 — running REASSIGN, DELETE, WINNER, VALIDATE'
 
 ------------------------------------------------------------------------
 -- 5. REASSIGN — FK rows from losers → winners
 ------------------------------------------------------------------------
 
--- 5a. user_events: race-handle (user_id, event_id) unique index conflicts.
--- If user U watched both winner W and loser L, keep whichever user_events
--- row has the more recent created_at (preserves the user's most recent
--- expression of intent).
-WITH conflicting AS (
+-- 5a. user_events: per (user_id, cluster), there may be multiple rows —
+-- e.g. cluster with rows W, L1, L2 where user U watched all three. After
+-- consolidation only ONE row per (user_id, winner_id) can exist because of
+-- the user_events_user_event_idx UNIQUE index.
+--
+-- Strategy: for each (user_id, cluster), keep the user_events row with
+-- the most recent created_at (preserves the user's most recent expression
+-- of intent) and delete the rest. Then any surviving loser-pointing rows
+-- get UPDATEd to point at the winner.
+--
+-- The window function is keyed by (user_id, venue_id, date, canonical_artist)
+-- so the dedup composes correctly for clusters of any size — pairwise
+-- dedup against the winner row alone breaks when there are 3+ rows in
+-- the cluster and the user has watched multiple losers.
+WITH cluster_user_rows AS (
   SELECT
-    ue_loser.id          AS loser_row_id,
-    ue_loser.created_at  AS loser_created_at,
-    ue_winner.id         AS winner_row_id,
-    ue_winner.created_at AS winner_created_at
-  FROM user_events ue_loser
-  JOIN consolidate_clusters cc_loser  ON cc_loser.id  = ue_loser.event_id
-                                     AND cc_loser.is_winner = false
-  JOIN consolidate_clusters cc_winner ON cc_winner.is_winner = true
-                                     AND cc_winner.venue_id = cc_loser.venue_id
-                                     AND cc_winner.date     = cc_loser.date
-                                     AND cc_winner.canonical_artist = cc_loser.canonical_artist
-  JOIN user_events ue_winner          ON ue_winner.event_id = cc_winner.id
-                                     AND ue_winner.user_id  = ue_loser.user_id
+    ue.id AS ue_id,
+    ROW_NUMBER() OVER (
+      PARTITION BY ue.user_id, cc.venue_id, cc.date, cc.canonical_artist
+      ORDER BY ue.created_at DESC, ue.id DESC
+    ) AS rn,
+    COUNT(*) OVER (
+      PARTITION BY ue.user_id, cc.venue_id, cc.date, cc.canonical_artist
+    ) AS group_size
+  FROM user_events ue
+  JOIN consolidate_clusters cc ON cc.id = ue.event_id
 )
 DELETE FROM user_events ue
-USING conflicting c
-WHERE
-  -- Loser row is newer → drop the winner row; the loser row is reassigned next.
-  (c.loser_created_at >  c.winner_created_at AND ue.id = c.winner_row_id)
-  OR
-  -- Winner row is newer (or tied) → drop the loser row; the winner row stays.
-  (c.loser_created_at <= c.winner_created_at AND ue.id = c.loser_row_id);
+USING cluster_user_rows cur
+WHERE ue.id = cur.ue_id
+  AND cur.group_size > 1
+  AND cur.rn > 1;
 
--- Now reassign any surviving loser-pointing rows to the winner.
+-- Now route any surviving loser-pointing rows to the winner. After the
+-- dedup above, at most one user_events row per (user_id, cluster) remains;
+-- if it points at a loser, redirect it to the winner.
 UPDATE user_events ue
 SET event_id = cc_winner.id
 FROM consolidate_clusters cc_loser
@@ -354,8 +386,16 @@ BEGIN
 END;
 $validate$;
 
+\else
+\echo 'DO_EXECUTE not set (or 0) — dry-run mode. No row locks held on shared tables.'
+\echo 'To execute: re-run with `psql -v DO_EXECUTE=1 ...`'
+\endif
+
 ------------------------------------------------------------------------
--- Final commit gate. ROLLBACK by default; flip to COMMIT to execute.
+-- Final commit gate. COMMIT only when DO_EXECUTE=1; otherwise ROLLBACK.
 ------------------------------------------------------------------------
+\if :DO_EXECUTE
+COMMIT;
+\else
 ROLLBACK;
--- COMMIT;
+\endif
