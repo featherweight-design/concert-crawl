@@ -259,6 +259,26 @@ describe('POST /v1/admin/notifications/test-email', () => {
     expect(body.success).toBe(true)
     expect(body.data).toEqual({ sent: false, reason: 'missing_api_key' })
   })
+
+  it('returns 200 with send_failed when helper returns an Error in result.error', async () => {
+    adminAuth()
+    mockSendAdminAlertEmail.mockResolvedValueOnce({
+      sent: false,
+      reason: 'send_failed',
+      error: new Error('network timeout'),
+    })
+
+    const res = await createApp().request(
+      '/v1/admin/notifications/test-email',
+      { method: 'POST' },
+    )
+
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.success).toBe(true)
+    expect(body.data.sent).toBe(false)
+    expect(body.data.reason).toBe('send_failed')
+  })
 })
 
 describe('POST /v1/admin/notifications/read-all', () => {

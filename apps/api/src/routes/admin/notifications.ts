@@ -63,10 +63,31 @@ notificationsAdminRouter.post('/test-email', async (ctx) => {
 
   ctx.set('auditAction', 'notification.test_email')
   ctx.set('auditActorId', userId)
-  ctx.set('auditMeta', { result })
+  ctx.set('auditMeta', { result: serializeResultForAudit(result) })
 
   return ctx.json({ success: true, data: result })
 })
+
+// audit_log.metadata is jsonb, and JSON.stringify(new Error('msg')) returns
+// '{}' — message + stack are non-enumerable. Flatten Error-like shapes into
+// { name, message } so the audit row keeps useful context after a send_failed.
+function serializeResultForAudit(
+  result: Awaited<ReturnType<typeof sendAdminAlertEmail>>,
+): Record<string, unknown> {
+  if (result.sent) return { sent: true, resendId: result.resendId }
+  const base: Record<string, unknown> = { sent: false, reason: result.reason }
+  if (result.error !== undefined)
+    base.error = serializeErrorForAudit(result.error)
+  return base
+}
+
+function serializeErrorForAudit(err: unknown): unknown {
+  if (err instanceof Error) {
+    return { name: err.name, message: err.message }
+  }
+  if (err && typeof err === 'object') return err
+  return String(err)
+}
 
 // POST /v1/admin/notifications/read-all — mark all unread admin alerts as read
 // NOTE: registered before /:id/read to prevent Hono matching "read-all" as an :id param
