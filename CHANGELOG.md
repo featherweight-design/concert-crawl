@@ -1,3 +1,10 @@
+# [1.52.0](https://github.com/HartiganHM/concert-crawl/compare/v1.51.0...v1.52.0) (2026-06-17)
+
+
+### Features
+
+* **crawler:** alert on suspicious event-count drops ([#624](https://github.com/HartiganHM/concert-crawl/issues/624)) ([f717269](https://github.com/HartiganHM/concert-crawl/commit/f7172692039165edfacda0d3e2e10f13f7315d45))
+
 # [1.51.0](https://github.com/HartiganHM/concert-crawl/compare/v1.50.0...v1.51.0) (2026-06-17)
 
 
