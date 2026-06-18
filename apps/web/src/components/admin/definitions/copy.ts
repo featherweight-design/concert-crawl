@@ -1099,6 +1099,75 @@ export const ADMIN_COPY = {
     },
   },
 
+  editor: {
+    monoLabelPrefix: 'edit event ·',
+    viewDetailButton: 'View detail',
+    sections: {
+      identityNumber: '01',
+      identityTitle: 'Identity',
+      pricingNumber: '02',
+      pricingTitle: 'Pricing',
+      classificationNumber: '03',
+      classificationTitle: 'Classification',
+      statusNumber: '04',
+      statusTitle: 'Status',
+      artNumber: '05',
+      artTitle: 'Identity art',
+    },
+    fields: {
+      title: 'Title',
+      titlePlaceholder: 'Event title',
+      artist: 'Artist / lineup',
+      artistPlaceholder: 'Headliner + support',
+      venue: 'Venue',
+      date: 'Date',
+      doors: 'Doors',
+      show: 'Show',
+      priceLow: 'Price low',
+      priceLowPlaceholder: '35',
+      priceHigh: 'Price high',
+      priceHighPlaceholder: '65',
+      priceSource: 'Source',
+      priceUpdated: 'Updated',
+      genreTags: 'Genre tags',
+      genreEmptyHelp:
+        "No genre yet — this event won't surface in genre browse.",
+      lifecycleLabel: 'status · events.status',
+      availabilityLabel: 'availability',
+      verificationLabel: 'verification',
+      confidenceLabel: 'confidence',
+      sourceLabel: 'source',
+      noSource: 'no source',
+    },
+    status: {
+      upcoming: 'Upcoming',
+      postponed: 'Postponed',
+      cancelled: 'Cancelled',
+      available: 'Available',
+      soldOut: 'Sold out',
+      unverified: 'Unverified',
+      verified: 'Verified',
+    },
+    art: {
+      regenerate: 'Regenerate',
+      placeholderLabel: 'identity art',
+      bodyPrefix: 'Generated from ',
+      bodyArtistPrefix: 'artist · ',
+      bodySuffix:
+        '. Regenerate rerolls the seed. Swaps to a real press photo automatically when one lands (Phase 8).',
+    },
+    upcomingHint:
+      'Postponed, cancelled, and sold-out events all stay published with a fan-facing banner — none are hidden.',
+    classification: {
+      markNonConcertTitle: 'Mark as non-concert',
+      markNonConcertBodyBefore: 'Adds the ',
+      markNonConcertTag: 'non-concert',
+      markNonConcertBodyAfter:
+        ' tag and unpublishes from the consumer app. Stays in the system.',
+      markNonConcertButton: 'Mark non-concert',
+    },
+  },
+
   review: {
     tabs: {
       eventFlags: 'Event flags',
