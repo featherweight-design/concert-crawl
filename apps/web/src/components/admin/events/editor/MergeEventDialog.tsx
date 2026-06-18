@@ -57,8 +57,11 @@ export const MergeEventDialog = ({
         try {
           const token = await getToken()
           if (!token || myGen !== generationRef.current) return
+          // `dateFrom=1970-01-01` overrides the list endpoint's "today"
+          // default so historical duplicates are findable too — merging an
+          // old reposted show into its canonical entry is the common case.
           const rows = await apiClient.get<SearchHit[]>(
-            `/v1/admin/events?query=${encodeURIComponent(trimmed)}&limit=10&offset=0`,
+            `/v1/admin/events?query=${encodeURIComponent(trimmed)}&dateFrom=1970-01-01&limit=10&offset=0`,
             token,
           )
           if (myGen !== generationRef.current) return

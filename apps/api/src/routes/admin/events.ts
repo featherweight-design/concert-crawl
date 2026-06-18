@@ -945,7 +945,19 @@ eventsAdminRouter.post(
       // With every reference moved, deleting the source row is safe — there's
       // nothing left to cascade. Doing this last means a failure earlier in
       // the transaction never reaches the destructive step.
-      await tx.delete(events).where(eq(events.id, sourceId))
+      //
+      // The DELETE returns the affected rows so we can detect a concurrent
+      // race: if a parallel merge (or delete) cleared the source between the
+      // pre-flight existence check and now, we'd otherwise commit a no-op
+      // with a misleading "success" + audit row. Throwing rolls the whole
+      // transaction back.
+      const deletedSource = await tx
+        .delete(events)
+        .where(eq(events.id, sourceId))
+        .returning({ id: events.id })
+      if (deletedSource.length === 0) {
+        throw new Error('Source event disappeared mid-merge')
+      }
 
       const counts = {
         userEventsMoved: movedUserEvents.length,

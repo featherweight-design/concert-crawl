@@ -59,7 +59,9 @@ describe('MergeEventDialog', () => {
       expect(mockApiGet).toHaveBeenCalled()
     })
     const [url] = mockApiGet.mock.calls[0] ?? []
-    expect(url).toBe('/v1/admin/events?query=Spoon&limit=10&offset=0')
+    expect(url).toBe(
+      '/v1/admin/events?query=Spoon&dateFrom=1970-01-01&limit=10&offset=0',
+    )
   })
 
   it('shows search results and lets the admin pick a target', async () => {
