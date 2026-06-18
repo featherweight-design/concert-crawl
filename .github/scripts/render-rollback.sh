@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # render-rollback.sh — roll a Render service back to its most recent prior
-# successful ("live") deploy.
+# successful deploy (status `live` or `deactivated`).
 #
 # Usage: render-rollback.sh <service-id> <human-name>
 #
@@ -61,7 +61,12 @@ deploys_json=$(curl --fail --silent --show-error \
 # `(.deploy // .)` accepts both.
 target_deploy_id=$(echo "${deploys_json}" | jq -r '
   . as $all
-  | ([$all[] | (.deploy // .) | select(.status == "live")][0]) as $live
+  # Default $live to {} so the property accessors below do not crash
+  # with "Cannot index null" if Render returns no live deploy (e.g.,
+  # newly created service, paused service, or API shape change). With
+  # an empty $live, the *_id, *_commit, *_finished vars are all "",
+  # which makes $anchor empty and we bail cleanly via the empty branch.
+  | (([$all[] | (.deploy // .) | select(.status == "live")][0]) // {}) as $live
   | ($live.id // "")        as $live_id
   | ($live.commit // "")    as $live_commit
   | ($live.finishedAt // "") as $live_finished
