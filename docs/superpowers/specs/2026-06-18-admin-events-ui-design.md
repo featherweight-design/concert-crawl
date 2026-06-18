@@ -13,7 +13,7 @@
 
 Implement the Admin · Events Management surface per the design handoff: the "find any event in the system — verified or not — and act on it" surface, plus a canonical full-page event editor.
 
-### In scope (11 PRs)
+### In scope
 
 1. Desktop tab pill shell on `/admin/review` (replaces stacked layout; mobile is already tabbed)
 2. New "Missing" tab — events the crawler stopped seeing (uses `?missing=true` from #627)
@@ -22,6 +22,8 @@ Implement the Admin · Events Management surface per the design handoff: the "fi
 5. Mobile pass for every new surface (parity gate per PR)
 6. Backend additions: `hidden_from_consumer` column, dismiss-missing PATCH support, filter additions (genre / date range / multi-select missing-data), per-action bulk endpoints, unrestricted DELETE
 7. Merge-events affordance (#633) as the final PR
+
+See the **PR-by-PR Breakdown** table below for the 11-slice rollout.
 
 ### Out of scope
 
@@ -52,7 +54,7 @@ apps/web/src/app/(protected)/admin/
 │       ├── EventFlagsTabContent.tsx       # wraps existing EventFlagsSection
 │       ├── PricesTabContent.tsx           # wraps PendingSubmissionsPanel + PriceCoverageTable
 │       ├── MissingTabContent.tsx          # PR 2
-│       └── AllEventsTabContent.tsx        # PRs 4–6
+│       └── AllEventsTabContent.tsx        # stub in PR 1; content in PRs 4–6
 └── events/
     ├── page.tsx                     # existing 5-line stub — leave alone
     └── [id]/
