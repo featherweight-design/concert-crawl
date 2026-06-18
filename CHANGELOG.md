@@ -1,3 +1,15 @@
+# [1.61.0](https://github.com/HartiganHM/concert-crawl/compare/v1.60.0...v1.61.0) (2026-06-18)
+
+
+### Bug Fixes
+
+* **admin:** address Copilot review on PR [#680](https://github.com/HartiganHM/concert-crawl/issues/680) ([4a01982](https://github.com/HartiganHM/concert-crawl/commit/4a019826b72c85faa55644d8755988977722f5b8))
+
+
+### Features
+
+* **admin:** editor sold-out availability control (PR 8/11) ([000304e](https://github.com/HartiganHM/concert-crawl/commit/000304edc0587b0d85aed9e158315e5f66eaadff))
+
 # [1.60.0](https://github.com/HartiganHM/concert-crawl/compare/v1.59.0...v1.60.0) (2026-06-18)
 
 
