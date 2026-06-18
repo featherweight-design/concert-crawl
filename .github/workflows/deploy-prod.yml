@@ -34,24 +34,41 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production
-    # Gate logic:
-    #   - AUTO_DEPLOY_PROD_ENABLED must be on (kill switch).
-    #   - workflow_dispatch is allowed only from `main` so an
-    #     unmerged feature branch cannot trigger a prod deploy with
-    #     prod-environment secrets via the Actions UI's branch picker.
-    #   - workflow_run path additionally requires the upstream
-    #     staging-smoke workflow to have actually run (not just been
-    #     skipped because STAGING_SMOKE_ENABLED was off). A skipped-job
-    #     workflow_run completes with conclusion `success`, which would
-    #     otherwise let prod deploy fire without staging actually being
-    #     smoked.
-    if: |
-      vars.AUTO_DEPLOY_PROD_ENABLED == 'true' &&
-      ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
-       (github.event_name == 'workflow_run' &&
-        github.event.workflow_run.conclusion == 'success' &&
-        vars.STAGING_SMOKE_ENABLED == 'true'))
+    # Kill switch ONLY at the job level — when off, the job skips and
+    # the workflow concludes `success`. Downstream prod-post-deploy-smoke
+    # gates separately on AUTO_DEPLOY_PROD_ENABLED so a skipped deploy
+    # does not trigger a post-deploy smoke run.
+    if: vars.AUTO_DEPLOY_PROD_ENABLED == 'true'
     steps:
+      # Restrict manual dispatch to main so an unmerged feature branch
+      # cannot drive a prod deploy with prod-environment secrets via
+      # the Actions UI's branch picker.
+      - name: Refuse workflow_dispatch from non-main
+        if: |
+          github.event_name == 'workflow_dispatch' &&
+          github.ref != 'refs/heads/main'
+        run: |
+          echo "workflow_dispatch must be run from main; got ${{ github.ref }}"
+          exit 1
+
+      # Propagate upstream gate failure as job failure (not silent skip).
+      # On the workflow_run path the upstream Staging Smoke Tests
+      # workflow could have concluded `success` even though all its jobs
+      # were SKIPPED (kill switch off, or the gate step it inherited
+      # from this same pattern fired). Require both the staging-smoke
+      # kill switch AND a real upstream success so a skipped staging
+      # smoke does not trigger a prod deploy. Exiting non-zero here
+      # makes the workflow actually FAIL so prod-post-deploy-smoke does
+      # not fire either.
+      - name: Verify staging-smoke gate
+        if: |
+          github.event_name == 'workflow_run' &&
+          (github.event.workflow_run.conclusion != 'success' ||
+           vars.STAGING_SMOKE_ENABLED != 'true')
+        run: |
+          echo "Refusing to deploy prod. Upstream Staging Smoke Tests conclusion: ${{ github.event.workflow_run.conclusion }}, STAGING_SMOKE_ENABLED: ${{ vars.STAGING_SMOKE_ENABLED }}"
+          exit 1
+
       - name: Trigger Render deploy — API
         run: curl --fail -X POST "${{ secrets.RENDER_DEPLOY_HOOK_API }}"
 

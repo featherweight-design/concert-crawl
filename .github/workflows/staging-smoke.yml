@@ -26,11 +26,28 @@ jobs:
     name: Playwright smoke (staging)
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: |
-      vars.STAGING_SMOKE_ENABLED == 'true' &&
-      (github.event_name == 'workflow_dispatch' ||
-       github.event.workflow_run.conclusion == 'success')
+    # Kill switch ONLY — when off, the job skips and the workflow
+    # concludes `success`. That is fine: deploy-prod.yml gates separately
+    # on STAGING_SMOKE_ENABLED, so a skipped staging-smoke does not
+    # trigger prod deploys.
+    if: vars.STAGING_SMOKE_ENABLED == 'true'
     steps:
+      # Propagate upstream failure as job failure (not silent skip).
+      # A workflow_run-triggered workflow whose only job is gated `if:
+      # false` ends with conclusion `success`, which would let downstream
+      # `deploy-prod.yml` trigger even though the upstream Deploy to
+      # Staging failed. Exiting non-zero here makes this workflow
+      # actually FAIL when the upstream did, so downstream gates on
+      # `workflow_run.conclusion == 'success'` short-circuit correctly.
+      - name: Propagate upstream Deploy to Staging conclusion
+        if: |
+          github.event_name == 'workflow_run' &&
+          github.event.workflow_run.conclusion != 'success'
+        run: |
+          echo "Upstream Deploy to Staging concluded: ${{ github.event.workflow_run.conclusion }}"
+          echo "Refusing to smoke a staging build that didn't deploy."
+          exit 1
+
       # Pin the checkout to the SHA that triggered the upstream
       # deploy-staging run. Without this, actions/checkout fetches default
       # branch HEAD, which can drift if a new commit lands while this
