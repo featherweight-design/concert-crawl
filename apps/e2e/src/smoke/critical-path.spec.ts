@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { apiGet, healthCheck } from '../helpers/api.js'
+import { healthCheck } from '../helpers/api.js'
 
 test.describe('smoke: app availability', () => {
   test('homepage renders with content', async ({ page }) => {
@@ -75,17 +75,22 @@ test.describe('smoke: event data', () => {
 })
 
 test.describe('smoke: search', () => {
-  test('events list returns 200 with results when filtered by search', async ({
-    request,
+  // Exercise search through the SSR page rather than calling the API
+  // directly. The events API is gated by serviceOrClerkAuth when
+  // REQUIRE_BETA_AUTH=true, which a raw Playwright request would 401 on;
+  // SSR uses the service key and is what real users hit anyway.
+  test('events page renders without error when filtered by search', async ({
+    page,
   }) => {
-    const { status, body } = await apiGet<{
-      success?: boolean
-      data?: { data?: unknown[]; total?: number }
-    }>(request, '/v1/events?search=a&limit=1')
-    expect(status).toBe(200)
-    expect(body.success).toBe(true)
-    expect(Array.isArray(body.data?.data)).toBe(true)
-    expect(typeof body.data?.total).toBe('number')
+    await page.goto('/events?search=concert')
+    await page.waitForLoadState('networkidle')
+
+    await expect(page).not.toHaveTitle(/404|not found/i)
+    const heading = page.getByRole('heading').first()
+    await expect(heading).toBeVisible()
+    await expect(page.locator('body')).not.toContainText(
+      /error|500|unexpected/i,
+    )
   })
 })
 

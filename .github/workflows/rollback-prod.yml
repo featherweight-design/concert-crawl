@@ -45,27 +45,33 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      # Invoke via `bash` rather than `./script.sh` so we don't depend on
+      # the executable bit surviving git checkout (which depends on
+      # core.filemode and platform).
       - name: Roll back API service
-        run: ./.github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_API }}" "concert-crawl-api"
+        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_API }}" "concert-crawl-api"
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
 
       - name: Roll back crawler triggers cron
-        run: ./.github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" "concert-crawl-crawler-triggers"
+        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" "concert-crawl-crawler-triggers"
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
 
       - name: Roll back crawler daily cron
-        run: ./.github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" "concert-crawl-crawler-daily"
+        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" "concert-crawl-crawler-daily"
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
 
+      # `inputs.*` is only defined for `workflow_dispatch`. Using
+      # `github.event.inputs.reason` is safe on `workflow_run` too — it
+      # evaluates to empty rather than breaking expression evaluation.
       - name: Log rollback context
         run: |
           echo "Rollback complete for prod Render services"
           echo "Triggered by: ${{ github.event_name }}"
-          if [ -n "${{ inputs.reason }}" ]; then
-            echo "Manual reason: ${{ inputs.reason }}"
+          if [ -n "${{ github.event.inputs.reason }}" ]; then
+            echo "Manual reason: ${{ github.event.inputs.reason }}"
           fi
           if [ -n "${{ github.event.workflow_run.id }}" ]; then
             echo "Failing smoke run: ${{ github.event.workflow_run.html_url }}"

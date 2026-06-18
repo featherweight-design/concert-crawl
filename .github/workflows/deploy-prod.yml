@@ -48,9 +48,12 @@ jobs:
       - name: Trigger Render deploy — crawler daily cron
         run: curl --fail -X POST "${{ secrets.RENDER_DEPLOY_HOOK_CRAWLER_DAILY }}"
 
+      # `inputs.*` is only defined for `workflow_dispatch`. Using
+      # `github.event.inputs.reason` is safe on `workflow_run` too — it
+      # evaluates to empty rather than breaking expression evaluation.
       - name: Log deploy context
         run: |
           echo "Triggered prod deploys for commit ${{ github.event.workflow_run.head_sha || github.sha }}"
-          if [ -n "${{ inputs.reason }}" ]; then
-            echo "Manual reason: ${{ inputs.reason }}"
+          if [ -n "${{ github.event.inputs.reason }}" ]; then
+            echo "Manual reason: ${{ github.event.inputs.reason }}"
           fi

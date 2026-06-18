@@ -28,19 +28,30 @@ deploys_json=$(curl --fail --silent --show-error \
   -H "Accept: application/json" \
   "${API}/services/${SERVICE_ID}/deploys?limit=20")
 
-# Find the most recent live deploy that is NOT the current one. "live" is
-# Render's term for the deploy currently serving traffic. We want the one
-# before that.
+# Render typically marks exactly ONE deploy as "live" at a time — the one
+# currently serving traffic. Previously-live deploys get marked
+# "deactivated" when a newer deploy goes live. The rollback target is the
+# most recently finished `live`-or-`deactivated` deploy whose ID is NOT
+# the current live deploy.
+#
+# Item shape varies across Render API versions: some endpoints wrap
+# entries as `{deploy: {...}}`, others return the deploy object flat.
+# `(.deploy // .)` accepts both.
 #
 # jq strategy:
-#   1. unwrap the {deploy:{...}} wrapper
-#   2. keep only successful deploys (status == "live")
-#   3. sort by finishedAt descending (newest first)
-#   4. take the second entry — index 0 is current, index 1 is prior
+#   1. Identify the current live deploy ID (status == "live")
+#   2. Keep deploys with status in {live, deactivated} — both are "succeeded
+#      and served traffic" so either is a safe rollback target
+#   3. Sort by finishedAt descending (newest first)
+#   4. Drop the current live deploy and pick the next one
 target_deploy_id=$(echo "${deploys_json}" | jq -r '
-  [.[] | .deploy | select(.status == "live")]
+  . as $all
+  | ([$all[] | (.deploy // .) | select(.status == "live")][0].id // "") as $live_id
+  | [$all[] | (.deploy // .)
+     | select(.status == "live" or .status == "deactivated")]
   | sort_by(.finishedAt) | reverse
-  | .[1].id // empty
+  | map(select(.id != $live_id))
+  | .[0].id // empty
 ')
 
 if [ -z "${target_deploy_id}" ]; then
