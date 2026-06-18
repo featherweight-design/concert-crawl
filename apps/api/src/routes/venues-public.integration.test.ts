@@ -7,7 +7,7 @@ vi.mock('@hono/clerk-auth', () => ({
 }))
 
 import { createApp } from '../app.js'
-import { clearTables, seedVenue } from '../test/helpers/seed.js'
+import { clearTables, seedEvent, seedVenue } from '../test/helpers/seed.js'
 
 const app = createApp()
 
@@ -55,6 +55,36 @@ describe('GET /v1/venues — integration', () => {
     const body = (await res.json()) as { success: boolean; data: unknown[] }
     expect(body.data).toHaveLength(2)
   })
+
+  it('upcomingCount excludes first_missing_at rows so dupes do not inflate the venue chips', async () => {
+    const venue = await seedVenue({
+      name: 'Count Missing Venue',
+      slug: 'count-missing-venue',
+    })
+    await seedEvent(venue.id, {
+      title: 'Active',
+      artist: 'A',
+      date: '2027-06-05',
+      status: 'upcoming',
+      firstMissingAt: null,
+    })
+    await seedEvent(venue.id, {
+      title: 'Stale',
+      artist: 'B',
+      date: '2027-06-06',
+      status: 'upcoming',
+      firstMissingAt: new Date('2026-06-17T09:00:00Z'),
+    })
+
+    const res = await app.request('/v1/venues')
+    const body = (await res.json()) as {
+      data: { slug: string; upcomingCount: number }[]
+    }
+    const row = body.data.find(
+      (venueRow) => venueRow.slug === 'count-missing-venue',
+    )
+    expect(row?.upcomingCount).toBe(1)
+  })
 })
 
 describe('GET /v1/venues/:slug — integration', () => {
@@ -74,6 +104,38 @@ describe('GET /v1/venues/:slug — integration', () => {
     expect(body.success).toBe(true)
     expect(body.data.venue.name).toBe('Red Rocks')
     expect(body.data.venue.slug).toBe('red-rocks')
+  })
+
+  it('upcomingEvents and upcomingCount exclude first_missing_at rows so detail surface matches list surface', async () => {
+    const venue = await seedVenue({
+      name: 'Detail Missing Venue',
+      slug: 'detail-missing-venue-vp',
+    })
+    await seedEvent(venue.id, {
+      title: 'Active',
+      artist: 'A',
+      date: '2027-06-05',
+      status: 'upcoming',
+      firstMissingAt: null,
+    })
+    await seedEvent(venue.id, {
+      title: 'Stale',
+      artist: 'B',
+      date: '2027-06-06',
+      status: 'upcoming',
+      firstMissingAt: new Date('2026-06-17T09:00:00Z'),
+    })
+
+    const res = await app.request('/v1/venues/detail-missing-venue-vp')
+    const body = (await res.json()) as {
+      data: {
+        venue: { upcomingCount: number }
+        upcomingEvents: { title: string }[]
+      }
+    }
+    expect(body.data.venue.upcomingCount).toBe(1)
+    expect(body.data.upcomingEvents).toHaveLength(1)
+    expect(body.data.upcomingEvents[0]?.title).toBe('Active')
   })
 
   it('returns 404 for unknown slug', async () => {
