@@ -203,7 +203,10 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
         router.refresh()
       } else {
         await apiClient.delete(`/v1/admin/events/${event.id}`, token)
-        // Redirect — the event is gone, the editor URL would 404.
+        // Clear the pending state BEFORE redirecting so the modal can't be
+        // re-armed if navigation is delayed (would otherwise allow a second
+        // DELETE on the now-deleted row).
+        setPendingDanger(null)
         router.push('/admin/review?tab=all-events')
       }
     } catch (dangerErr) {

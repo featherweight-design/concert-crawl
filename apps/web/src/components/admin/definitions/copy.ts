@@ -1114,6 +1114,7 @@ export const ADMIN_COPY = {
       statusTitle: 'Status',
       artNumber: '05',
       artTitle: 'Identity art',
+      dangerNumber: '06',
     },
     fields: {
       title: 'Title',

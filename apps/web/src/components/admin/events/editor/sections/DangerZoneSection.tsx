@@ -18,7 +18,10 @@ export const DangerZoneSection = ({
   onDelete,
   disabled = false,
 }: DangerZoneSectionProps) => (
-  <EditSection number="06" title={COPY.title}>
+  <EditSection
+    number={ADMIN_COPY.editor.sections.dangerNumber}
+    title={COPY.title}
+  >
     <div
       style={{
         display: 'flex',
