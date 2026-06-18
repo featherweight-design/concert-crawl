@@ -164,7 +164,7 @@ Create the **prod** Vercel project. (The staging project should already exist as
 
 Add under **Production-only** scope on the prod Vercel project. **Do NOT** apply them to the Preview environment — scoping these to Preview would cause accidental preview deploys to run against real prod Clerk sessions, the prod Sentry environment, and the prod `INTERNAL_API_SECRET`. Leave Preview unset on the prod project so any preview deploy fails closed (missing required env vars) rather than failing open (running with prod credentials).
 
-Note: PR-branch deploys are disabled repo-wide via `vercel.json` (`git.deploymentEnabled` allows only `main`), so the Preview environment shouldn't trigger in practice. The Production-only scope is defense in depth.
+Note: PR-branch deploys are disabled repo-wide via `vercel.json`'s `ignoreCommand` (returns exit 0 — skip — on any branch other than `main`), so the Preview environment shouldn't trigger in practice. The Production-only scope is defense in depth.
 
 The staging Vercel project would normally invert this (Production + Preview so per-PR previews exercise the staging stack), but staging previews are also disabled by the repo `vercel.json` for now — keep its env vars Production-only as well until the rate-limit-driven `vercel.json` is reverted or scoped per-project.
 
@@ -198,7 +198,7 @@ The staging Vercel project would normally invert this (Production + Preview so p
 
 Vercel will show the DNS records needed in Step 7.
 
-> **Preview deployments** (both projects) are disabled via the root `vercel.json` — `git.deploymentEnabled` allows only the `main` branch. The Vercel UI toggle for the same setting was buggy at migration time; the `vercel.json` is the source of truth.
+> **Preview deployments** (both projects) are disabled via the root `vercel.json`'s `ignoreCommand` — a bash one-liner that returns exit 0 (skip) on any branch other than `main`. The Vercel UI toggle for the same setting was buggy at migration time; the `vercel.json` is the source of truth.
 
 ---
 
@@ -485,7 +485,11 @@ Cloudflare's orange-cloud proxy interferes with Vercel's SSL provisioning and cr
 
 ### Vercel "preview deploys" can't be toggled in the UI
 
-The Vercel dashboard toggle for disabling preview deploys didn't persist as of 2026-06-15. The repo-level `vercel.json` (`git.deploymentEnabled: { main: true, "*": false }`) is the workaround and is now the source of truth for both projects. If you ever need to re-enable previews per-project, prefer a per-project "Ignored Build Step" conditioned on `$VERCEL_PROJECT_ID` over re-trying the broken UI toggle.
+The Vercel dashboard toggle for disabling preview deploys didn't persist as of 2026-06-15. The repo-level `vercel.json` `ignoreCommand` (a bash one-liner that returns exit 0 — skip — on any branch other than `main`) is the workaround and is now the source of truth for both projects.
+
+Note: an earlier attempt used `git.deploymentEnabled: { main: true, "*": false }` (PR #656). That looked clean but the `*` wildcard isn't documented for `deploymentEnabled` — Vercel silently ignored it and previews kept firing. `ignoreCommand` is the working form and is explicitly documented (https://vercel.com/docs/git/git-deployment#ignored-build-step).
+
+If you ever need to re-enable previews per-project (e.g. keep staging previews on, prod off), extend the `ignoreCommand` to also check `$VERCEL_PROJECT_ID` and gate accordingly.
 
 ### Render manual deploy is under the Builds tab
 
