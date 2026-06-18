@@ -61,7 +61,11 @@ rollback_response=$(curl --fail --silent --show-error \
   -d "{\"deployId\":\"${target_deploy_id}\"}" \
   "${API}/services/${SERVICE_ID}/rollback")
 
-new_deploy_id=$(echo "${rollback_response}" | jq -r '.id // empty')
+# Render returns the new deploy as the response body. Some endpoints in
+# their API wrap deploy objects under a `deploy` key, others return them
+# at the root; accept either shape so a non-fatal response wrapper doesn't
+# falsely fail the rollback after the API has already committed it.
+new_deploy_id=$(echo "${rollback_response}" | jq -r '.id // .deploy.id // empty')
 
 if [ -z "${new_deploy_id}" ]; then
   echo "✗ Rollback request did not return a new deploy ID. Response:"

@@ -94,17 +94,24 @@ on the next workflow_run trigger.
 
 ### Repository variables (Settings → Variables → Actions)
 
-| Variable                             | Required by                                        | Notes                                                                              |
-| ------------------------------------ | -------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `STAGING_URL`                        | staging-smoke                                      | already present — `https://staging.concertcrawl.app`                               |
-| `STAGING_API_URL`                    | staging-smoke                                      | **new** — `https://concert-crawl-api-staging.onrender.com`                         |
-| `PROD_URL`                           | prod-post-deploy-smoke                             | already present                                                                    |
-| `PROD_API_URL`                       | prod-post-deploy-smoke                             | already present                                                                    |
-| `STAGING_SMOKE_ENABLED`              | staging-smoke                                      | **new** — default `false`; set to `true` in Stage 1                                |
-| `AUTO_DEPLOY_PROD_ENABLED`           | deploy-prod, prod-post-deploy-smoke, rollback-prod | **new** — default `false`; set to `true` in Stage 2                                |
-| `RENDER_SERVICE_ID_API`              | rollback-prod                                      | **new** — prod API service ID (visible in Render dashboard URL, e.g. `srv-abc123`) |
-| `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | rollback-prod                                      | **new** — prod crawler triggers cron service ID                                    |
-| `RENDER_SERVICE_ID_CRAWLER_DAILY`    | rollback-prod                                      | **new** — prod crawler daily cron service ID                                       |
+| Variable                   | Required by                                        | Notes                                                      |
+| -------------------------- | -------------------------------------------------- | ---------------------------------------------------------- |
+| `STAGING_URL`              | staging-smoke                                      | already present — `https://staging.concertcrawl.app`       |
+| `STAGING_API_URL`          | staging-smoke                                      | **new** — `https://concert-crawl-api-staging.onrender.com` |
+| `PROD_URL`                 | prod-post-deploy-smoke                             | already present                                            |
+| `PROD_API_URL`             | prod-post-deploy-smoke                             | already present                                            |
+| `STAGING_SMOKE_ENABLED`    | staging-smoke                                      | **new** — default `false`; set to `true` in Stage 1        |
+| `AUTO_DEPLOY_PROD_ENABLED` | deploy-prod, prod-post-deploy-smoke, rollback-prod | **new** — default `false`; set to `true` in Stage 2        |
+
+### `production` environment — Variables (Settings → Environments → production)
+
+| Variable                             | Required by   | Notes                                                                              |
+| ------------------------------------ | ------------- | ---------------------------------------------------------------------------------- |
+| `RENDER_SERVICE_ID_API`              | rollback-prod | **new** — prod API service ID (visible in Render dashboard URL, e.g. `srv-abc123`) |
+| `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | rollback-prod | **new** — prod crawler triggers cron service ID                                    |
+| `RENDER_SERVICE_ID_CRAWLER_DAILY`    | rollback-prod | **new** — prod crawler daily cron service ID                                       |
+
+Service IDs live in the `production` environment (not at the repo level) so they are scoped to prod-only workflow runs and stay aligned with `production-launch.md`. The `rollback-prod.yml` job uses `environment: production` and reads them as `vars.RENDER_SERVICE_ID_*`.
 
 ### `production` environment — Secrets (Settings → Environments → production)
 
