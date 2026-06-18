@@ -22,6 +22,8 @@ Subsequent reflection: **most Denver venues run on a small handful of shared thi
 
 Conducted 2026-06-17 via direct HTML inspection (`WebFetch` + grep for platform markers like `aegwebprod`, `etix.com`, `_next/`, `axs.com`, etc.).
 
+> **Note on the 13th venue.** Prod's `venues` table also contains **Levitt Pavilion** (slug `levitt-pavilion`), but `active = false`, so the daily/triggered crawls don't touch it. It's intentionally excluded from this audit. When/if Levitt is reactivated, an audit pass needs to identify its platform and onboard it through the same flow described in the AEG section below.
+
 | Venue | Platform | Evidence | Has direct API |
 |---|---|---|---|
 | Bluebird Theater | **AEG `template12`** | `.c-axs-event-card__wrapper`, AEG blob ref, venue ID **449** | Yes — `aegwebprod` JSON |
@@ -92,7 +94,15 @@ import type { Venue } from '@concert-crawl/db'
 
 export interface PlatformFetchResult {
   events: NormalizedEvent[]
-  /** Source URL we ended up fetching, for crawl_runs.source_url */
+  /**
+   * The platform endpoint the adapter actually hit (e.g. the AEG blob
+   * URL). Used in the crawler's structured logs only — gives an admin a
+   * direct breadcrumb to the failing endpoint during incident triage.
+   *
+   * NOT written to `events.source_url`. Per-event `sourceUrl` continues
+   * to be the venue's human-visitable calendar URL (set by the adapter
+   * when normalizing each event — see the AEG mapping table below).
+   */
   sourceUrl: string
   /** Platform-specific metadata we want logged (e.g. JSON page count, fetch latency) */
   meta?: Record<string, unknown>
@@ -100,7 +110,7 @@ export interface PlatformFetchResult {
 
 export interface PlatformFetcher {
   readonly platform: VenuePlatform
-  /** Returns null if this fetcher can't handle the venue (e.g. missing platformVenueId) */
+  /** Returns false if this fetcher can't handle the venue (e.g. missing platformVenueId) */
   canHandle(venue: Venue): boolean
   fetch(venue: Venue, opts: { crawlDelayMs: number }): Promise<PlatformFetchResult>
 }
@@ -143,10 +153,15 @@ if (platformFetcher) {
   })
   // Run the same normalize → dedupe → upsert pipeline that the LLM path uses
   // (existing code), but skip the HTML retrieval + extraction stages.
-  // crawl_runs row records:
+  // The crawl_runs row records:
   //   - extractionStrategyUsed: 'platform:aeg' (new value, see migration)
-  //   - sourceUrl, eventsFound, etc.
+  //   - eventsFound (count of normalized events)
   //   - duration_ms reflects only the platform fetch, not Chromium
+  // The per-event sourceUrl from the result is written into each row's
+  // events.source_url (existing column), preserving compatibility with
+  // hashEvent change-detection (#607). The crawler also emits sourceUrl
+  // in its structured logs so admins can trace regressions to the exact
+  // endpoint that served the data.
   return runSuccessPath({ events, sourceUrl, strategy: 'platform:aeg', meta, ... })
 }
 // Fall through to existing HTML → JSON-LD → LLM cascade
@@ -198,6 +213,7 @@ No auth required (it's a CDN blob). Response is a JSON object with a top-level `
 | `doorsTime` (when present) | `doorsTime` | Parse to `HH:MM:SS` |
 | `eventUrl` | `ticketUrl` | Direct |
 | `imageUrl` (when present) | `imageUrl` | Direct |
+| (n/a) | `sourceUrl` | The venue's canonical calendar URL (`venue.websiteUrl`), matching the existing LLM path so `events.source_url` continues to point at the human-visitable page. The actual JSON endpoint we hit is recorded separately in the crawler's structured logs and in `PlatformFetchResult.sourceUrl`, not on the event row. |
 
 `confidence` is set to `1.0` for platform fetches (no LLM uncertainty).
 
