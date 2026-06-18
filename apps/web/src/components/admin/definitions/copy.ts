@@ -1100,6 +1100,16 @@ export const ADMIN_COPY = {
   },
 
   review: {
+    tabs: {
+      eventFlags: 'Event flags',
+      prices: 'Prices',
+      allEvents: 'All events',
+      ariaLabel: 'Review sections',
+      allEventsPlaceholderHeading: 'Coming soon',
+      allEventsPlaceholderBody:
+        'The full events browser lands in PR 4. For now, use Event flags for unverified items.',
+    },
+
     eventFlags: {
       panelTitle: 'Event flags',
       queueClearBadge: 'queue clear',
