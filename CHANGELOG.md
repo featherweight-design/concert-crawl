@@ -1,3 +1,25 @@
+# [1.55.0](https://github.com/HartiganHM/concert-crawl/compare/v1.54.0...v1.55.0) (2026-06-18)
+
+
+### Bug Fixes
+
+* **admin:** address Copilot review on PR [#664](https://github.com/HartiganHM/concert-crawl/issues/664) ([13aaf31](https://github.com/HartiganHM/concert-crawl/commit/13aaf31157523cc2333969a56dcca4b85e8fb174))
+* **admin:** align Missing tab with design-review property table ([84cba76](https://github.com/HartiganHM/concert-crawl/commit/84cba76fe41b162e41b11ba9d02d239ffe785ece))
+
+
+### Features
+
+* **admin:** add Missing tab + missing-from-crawl copy strings ([a4007ac](https://github.com/HartiganHM/concert-crawl/commit/a4007acd4b11ea1176b44292d9192880fbd38230))
+* **admin:** add missing-tab helpers (computeMissedSweeps, formatLastSeen) ([9cb1fc0](https://github.com/HartiganHM/concert-crawl/commit/9cb1fc0721291c75968919675f454ac7436f07f3))
+* **admin:** add MissingChips primitive (missed-sweep + cadence chips) ([1cb950a](https://github.com/HartiganHM/concert-crawl/commit/1cb950aa0f2b0bcd158c95e2d50332f0df4273b0))
+* **admin:** add MissingMobile card list for /admin/review mobile ([c73baea](https://github.com/HartiganHM/concert-crawl/commit/c73baea6f7edfea9a964c1d4b1c6147e1acabfb8))
+* **admin:** add MissingRow desktop composition ([42b08b9](https://github.com/HartiganHM/concert-crawl/commit/42b08b9794b14da6ce65f74b98c7ea5b14dee367))
+* **admin:** add MissingRowMenu (Postponed/Cancelled/Dismiss buttons) ([6df668a](https://github.com/HartiganHM/concert-crawl/commit/6df668aa6aac8f6f0cca5f32a3305d1df1acfce9))
+* **admin:** add MissingTabContent orchestrator with pending-action state ([6863dae](https://github.com/HartiganHM/concert-crawl/commit/6863daed4de688ca295052c3155dfef5fd1afbab))
+* **admin:** add MissingTable desktop list (banner + rows + empty) ([265c64f](https://github.com/HartiganHM/concert-crawl/commit/265c64f2826e094eb73698d577754c261ac2d5e0))
+* **admin:** wire Missing tab into ReviewPageClient + AdminReviewMobile ([a08f7df](https://github.com/HartiganHM/concert-crawl/commit/a08f7df6ed29054c9ce77ee5e71ff489dcce8096))
+* **api:** accept firstMissingAt:null on PATCH /v1/admin/events/:id ([87d7407](https://github.com/HartiganHM/concert-crawl/commit/87d7407e48ec3c88799d2f965319de3c89caa67d))
+
 # [1.54.0](https://github.com/HartiganHM/concert-crawl/compare/v1.53.0...v1.54.0) (2026-06-18)
 
 
