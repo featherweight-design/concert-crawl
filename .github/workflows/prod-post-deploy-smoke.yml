@@ -90,6 +90,11 @@ jobs:
       - name: Wait for prod API to be reachable
         run: |
           base="${{ vars.PROD_API_URL }}"
+          if [ -z "${base}" ]; then
+            echo "PROD_API_URL repo variable is empty or unset."
+            echo "Set it via Settings → Variables → Actions before enabling auto-deploy-prod."
+            exit 1
+          fi
           timeout=240
           elapsed=0
           # Bounded per-probe timeouts so a stalled DNS/TLS connect or a
