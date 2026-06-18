@@ -1,3 +1,47 @@
+# [1.64.0](https://github.com/HartiganHM/concert-crawl/compare/v1.63.0...v1.64.0) (2026-06-18)
+
+
+### Bug Fixes
+
+* **ci:** add bounded timeouts + --silent --show-error to deploy hook curls ([47a38ea](https://github.com/HartiganHM/concert-crawl/commit/47a38ea6423d91e9631f81fe7ee36863d8eb0794))
+* **ci:** address Copilot review on PR [#678](https://github.com/HartiganHM/concert-crawl/issues/678) ([f5e68ea](https://github.com/HartiganHM/concert-crawl/commit/f5e68ea59d1e2e4ce480d9d69bd17b2574ed297c))
+* **ci:** address Copilot review on PR [#678](https://github.com/HartiganHM/concert-crawl/issues/678) ([89d6a72](https://github.com/HartiganHM/concert-crawl/commit/89d6a72aa7b75ad785f84c9f19d889257329ae77))
+* **ci:** address Copilot review on PR [#678](https://github.com/HartiganHM/concert-crawl/issues/678) ([0d4587f](https://github.com/HartiganHM/concert-crawl/commit/0d4587f6cd6499978773dbf7b0ecca6e4941fdf9))
+* **ci:** address Copilot review on PR [#678](https://github.com/HartiganHM/concert-crawl/issues/678) ([72c0e73](https://github.com/HartiganHM/concert-crawl/commit/72c0e735dc0878eb6f2884076adc5778b84623d4))
+* **ci:** bound curl timeouts in render-rollback.sh ([e2c79dc](https://github.com/HartiganHM/concert-crawl/commit/e2c79dcb0af7f443d90e77c27c3ca0236063130c))
+* **ci:** bound per-probe curl timeouts in health-poll loops ([149bc5e](https://github.com/HartiganHM/concert-crawl/commit/149bc5e790e5a45937fbfa58e24e4c7c55c71217))
+* **ci:** drop timed_out rollback trigger; ungate manual rollback ([471ad06](https://github.com/HartiganHM/concert-crawl/commit/471ad067622577995fd96100226ffb8a58eaf5a4))
+* **ci:** gate prod deploy on upstream SHA still matching main HEAD ([201b2e4](https://github.com/HartiganHM/concert-crawl/commit/201b2e46b29f4cf46f7ef1ad9e10ed22b8ca1cc6))
+* **ci:** guard render-rollback against missing live deploy ([fd7ff15](https://github.com/HartiganHM/concert-crawl/commit/fd7ff1517db1e7c2da78b125c8ba21ad1a7983df))
+* **ci:** guard render-wait-for-live against null live + missing service ID ([16a3683](https://github.com/HartiganHM/concert-crawl/commit/16a3683fc86f20fe810ea49394112276e405ae18))
+* **ci:** guard rollback against rolling forward onto bad deploy ([bb1ac3f](https://github.com/HartiganHM/concert-crawl/commit/bb1ac3f4f4c08bc129e81c8cb92b5e984bf558a3))
+* **ci:** move workflow_dispatch branch check to job-level if ([3c0b2a9](https://github.com/HartiganHM/concert-crawl/commit/3c0b2a9d1d908e05d5530345af0f05d6c0fa47e0))
+* **ci:** pin actions/checkout to workflow_run.head_sha ([f17c284](https://github.com/HartiganHM/concert-crawl/commit/f17c284d05b24b1e95b530d7e35dbf91cc6fee3d))
+* **ci:** preflight check for Render deploy hook secrets ([c353e9b](https://github.com/HartiganHM/concert-crawl/commit/c353e9bd208fff78f80c8c664fb85402eaf17a63))
+* **ci:** preflight env-var checks; correct deploy-prod gate comment ([22eb5bc](https://github.com/HartiganHM/concert-crawl/commit/22eb5bcc9c60bd635f6b363c6323deaff5a2d6e8))
+* **ci:** propagate workflow_run failures via fail-loud gate steps ([f92e750](https://github.com/HartiganHM/concert-crawl/commit/f92e750fcb5d04b540a36b82514e31c2cb31ea9d))
+* **ci:** re-verify SHA in deploy job, not just the gate job ([67a73b9](https://github.com/HartiganHM/concert-crawl/commit/67a73b9e14f7f3199ef654f5cb3e67186c2ded5a))
+* **ci:** refuse prod deploy when upstream staging-smoke was workflow_dispatch ([431da94](https://github.com/HartiganHM/concert-crawl/commit/431da94143de993c6174215b4e8583a0a70c3373))
+* **ci:** require STAGING_SMOKE_ENABLED for auto-deploy-prod workflow_run ([1534d9b](https://github.com/HartiganHM/concert-crawl/commit/1534d9b7d5bb80a2498eca80e54060a4cedb97ac))
+* **ci:** restrict workflow_dispatch on smoke workflows to main ([35a07aa](https://github.com/HartiganHM/concert-crawl/commit/35a07aa9b805ec8c4c6ecae37f3a187b2d0e1624))
+* **ci:** scope GITHUB_TOKEN to contents:read; poll /v1/health instead of fixed sleep ([94eb6bc](https://github.com/HartiganHM/concert-crawl/commit/94eb6bc851cc52f3ee129b80624d561aa4134faf))
+* **ci:** silent-skip post-deploy-smoke on upstream non-success ([0c40cc5](https://github.com/HartiganHM/concert-crawl/commit/0c40cc55d1c40d5edf53c216c836e88396f68749))
+* **ci:** split deploy-prod + rollback into gate + deploy jobs ([327efe3](https://github.com/HartiganHM/concert-crawl/commit/327efe35438e623167ac12615c02e4e7f1792ec8))
+* **ci:** tighten workflow_dispatch gate; widen rollback lookback ([e737322](https://github.com/HartiganHM/concert-crawl/commit/e7373226edc9fbda8221dabd9b6103d795c24b09))
+* **ci:** treat smoke timeout as rollback signal; fail fast on missing URLs ([264d001](https://github.com/HartiganHM/concert-crawl/commit/264d001d06bcba59d9320fcb447cd71df5f25dc9))
+* **ci:** unify prod-pipeline concurrency group ([d44ab75](https://github.com/HartiganHM/concert-crawl/commit/d44ab7524fc0dd64f4314b1a2f14c9e03b6b7181))
+* **ci:** unify staging-pipeline concurrency + SHA-drift guard ([5ed11cc](https://github.com/HartiganHM/concert-crawl/commit/5ed11ccde187aa6e46e8c6bf140a572b6326ed51))
+* **ci:** wait for new SHA to be live on Render before smoking ([f30f485](https://github.com/HartiganHM/concert-crawl/commit/f30f485221a38ea78255902c17352fea90dd35fd))
+* **ci:** widen job timeouts to cover render-wait-for-live worst case ([6d36c5a](https://github.com/HartiganHM/concert-crawl/commit/6d36c5a852ec097c7c2d7cf43800bf480f41d399))
+* **e2e:** reuse apiGet helper in smoke search test for consistent API URL fallback ([729842e](https://github.com/HartiganHM/concert-crawl/commit/729842ee2361238c224ef328238ed014ee45055e))
+* **e2e:** strengthen smoke search assertion to require results or empty state ([d694c6d](https://github.com/HartiganHM/concert-crawl/commit/d694c6dad7d8321833c52ee9d4501e4c07cc79d8))
+* **security:** scope undici override to @semantic-release/github ([d4c1673](https://github.com/HartiganHM/concert-crawl/commit/d4c1673344e339fd4a81fd84d7ec7cf9075dd4da))
+
+
+### Features
+
+* **ci:** auto-deploy prod gated by staging smoke, with rollback ([1de49c1](https://github.com/HartiganHM/concert-crawl/commit/1de49c1cca99a3a7540a74e7d213af89e0452f06)), closes [#613](https://github.com/HartiganHM/concert-crawl/issues/613) [#613](https://github.com/HartiganHM/concert-crawl/issues/613)
+
 # [1.63.0](https://github.com/HartiganHM/concert-crawl/compare/v1.62.0...v1.63.0) (2026-06-18)
 
 
