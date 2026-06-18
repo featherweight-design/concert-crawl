@@ -89,6 +89,28 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
+      # Preflight check that all three deploy-hook secrets are
+      # configured. Without it, a missing secret would surface as a
+      # generic curl error ("URL using bad/illegal format") and the
+      # operator would have to dig to find out which one. We only
+      # check for empty strings — the values themselves are not
+      # echoed, and GitHub Actions masks secret values in logs anyway.
+      - name: Verify Render deploy hook secrets are configured
+        env:
+          HOOK_API: ${{ secrets.RENDER_DEPLOY_HOOK_API }}
+          HOOK_CRAWLER_TRIGGERS: ${{ secrets.RENDER_DEPLOY_HOOK_CRAWLER_TRIGGERS }}
+          HOOK_CRAWLER_DAILY: ${{ secrets.RENDER_DEPLOY_HOOK_CRAWLER_DAILY }}
+        run: |
+          missing=()
+          [ -z "$HOOK_API" ] && missing+=("RENDER_DEPLOY_HOOK_API")
+          [ -z "$HOOK_CRAWLER_TRIGGERS" ] && missing+=("RENDER_DEPLOY_HOOK_CRAWLER_TRIGGERS")
+          [ -z "$HOOK_CRAWLER_DAILY" ] && missing+=("RENDER_DEPLOY_HOOK_CRAWLER_DAILY")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "Missing production-env secrets: ${missing[*]}"
+            echo "Set them via Settings → Environments → production → Secrets."
+            exit 1
+          fi
+
       # Bounded curl timeouts + --silent --show-error so a stalled Render
       # endpoint cannot hang the workflow indefinitely, and logs stay
       # clean (only errors print).
