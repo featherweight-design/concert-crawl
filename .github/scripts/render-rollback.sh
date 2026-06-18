@@ -65,15 +65,28 @@ target_deploy_id=$(echo "${deploys_json}" | jq -r '
   | ($live.id // "")        as $live_id
   | ($live.commit // "")    as $live_commit
   | ($live.finishedAt // "") as $live_finished
+  # prior_match: only consider deploys that actually succeeded — a
+  # `build_failed` deploy of the same commit should not act as an anchor.
+  # Require finishedAt to be present so a comparison against $anchor below
+  # is well-defined.
   | ([$all[] | (.deploy // .)
-       | select(.id != $live_id and .commit == $live_commit)]
+       | select(.id != $live_id
+                and .commit == $live_commit
+                and (.status == "live" or .status == "deactivated")
+                and (.finishedAt // "") != "")]
      | sort_by(.finishedAt) | .[0]) as $prior_match
   | (if $prior_match then $prior_match.finishedAt else $live_finished end) as $anchor
-  | [$all[] | (.deploy // .)
-     | select(.status == "live" or .status == "deactivated")
-     | select(.id != $live_id and .finishedAt < $anchor)]
-  | sort_by(.finishedAt) | reverse
-  | .[0].id // empty
+  # If we have no anchor at all (no live deploy yet, or live deploy lacks
+  # a finishedAt for some reason), bail rather than emit a malformed
+  # comparison.
+  | if $anchor == "" then empty else
+      [$all[] | (.deploy // .)
+       | select(.status == "live" or .status == "deactivated")
+       | select((.finishedAt // "") != "")
+       | select(.id != $live_id and .finishedAt < $anchor)]
+      | sort_by(.finishedAt) | reverse
+      | .[0].id // empty
+    end
 ')
 
 if [ -z "${target_deploy_id}" ]; then

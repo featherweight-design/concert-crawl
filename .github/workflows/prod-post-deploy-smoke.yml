@@ -67,6 +67,7 @@ jobs:
           PLAYWRIGHT_SMOKE_BASE_URL: ${{ vars.PROD_URL }}
           PLAYWRIGHT_API_URL: ${{ vars.PROD_API_URL }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN_SMOKE }}
+          SENTRY_ENVIRONMENT: production
 
       - name: Upload failure artifacts
         uses: actions/upload-artifact@v7

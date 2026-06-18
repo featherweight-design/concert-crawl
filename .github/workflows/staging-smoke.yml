@@ -67,6 +67,9 @@ jobs:
           PLAYWRIGHT_SMOKE_BASE_URL: ${{ vars.STAGING_URL }}
           PLAYWRIGHT_API_URL: ${{ vars.STAGING_API_URL }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN_SMOKE }}
+          # Tag Sentry events as `staging` so they don't pollute the
+          # production environment in dashboards or alert rules.
+          SENTRY_ENVIRONMENT: staging
 
       - name: Upload failure artifacts
         uses: actions/upload-artifact@v7
