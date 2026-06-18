@@ -3,7 +3,11 @@
 import { AlertTriangle, Check } from 'lucide-react'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { StatusBadge } from '@/components/admin/primitives'
-import { computeMissedSweeps, formatLastSeen } from '@/lib/admin/missing'
+import {
+  computeMissedSweeps,
+  formatEventDate,
+  formatLastSeen,
+} from '@/lib/admin/missing'
 import { MissingChips } from './MissingChips'
 import { MissingRowMenu } from './MissingRowMenu'
 import { type MissingRowEvent } from './MissingRow'
@@ -15,15 +19,6 @@ export interface MissingMobileProps {
   onMarkCancelled: (id: string) => void
   onDismiss: (id: string) => void
   pendingIds: ReadonlySet<string>
-}
-
-const formatDate = (date: string): string => {
-  const parsed = new Date(date + 'T12:00:00')
-  return parsed.toLocaleDateString('en-US', {
-    timeZone: 'America/Denver',
-    month: 'short',
-    day: 'numeric',
-  })
 }
 
 export const MissingMobile = ({
@@ -217,7 +212,7 @@ export const MissingMobile = ({
                 marginTop: 3,
               }}
             >
-              {event.venueName ?? '—'} · {formatDate(event.date)}
+              {event.venueName ?? '—'} · {formatEventDate(event.date)}
             </div>
             <div style={{ margin: '12px 0' }}>
               <MissingChips missedCount={missed} />

@@ -1,7 +1,11 @@
 'use client'
 
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { computeMissedSweeps, formatLastSeen } from '@/lib/admin/missing'
+import {
+  computeMissedSweeps,
+  formatEventDate,
+  formatLastSeen,
+} from '@/lib/admin/missing'
 import { MissingChips } from './MissingChips'
 import { MissingRowMenu } from './MissingRowMenu'
 
@@ -22,15 +26,6 @@ export interface MissingRowProps {
   onMarkCancelled: (id: string) => void
   onDismiss: (id: string) => void
   pending?: boolean
-}
-
-const formatDate = (date: string): string => {
-  const parsed = new Date(date + 'T12:00:00')
-  return parsed.toLocaleDateString('en-US', {
-    timeZone: 'America/Denver',
-    month: 'short',
-    day: 'numeric',
-  })
 }
 
 const formatTime = (showTime: string | null): string => {
@@ -110,7 +105,7 @@ export const MissingRow = ({
               color: 'var(--fg-subtle)',
             }}
           >
-            {formatDate(event.date)}
+            {formatEventDate(event.date)}
             {formatTime(event.showTime)}
           </span>
         </div>

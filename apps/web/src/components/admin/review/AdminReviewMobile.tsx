@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Check } from 'lucide-react'
 import {
   ConfidenceBar,
@@ -73,7 +73,7 @@ interface AdminReviewMobileProps {
     vendor: string,
     howFound: string,
   ) => Promise<void>
-  initialTab?: 'flags' | 'prices'
+  initialTab?: 'flags' | 'prices' | 'missing'
   pricesMissingOnly: boolean
   hasMorePriceEvents: boolean
   priceLoadingMore?: boolean
@@ -582,6 +582,15 @@ export function AdminReviewMobile({
   const [activeTab, setActiveTab] = useState<'flags' | 'prices' | 'missing'>(
     initialTab,
   )
+
+  // If the mobile surface mounts already on the Missing tab (deep-link via
+  // ?tab=missing), trigger the lazy fetch — the tab-click handler only
+  // fires on subsequent user clicks.
+  useEffect(() => {
+    if (initialTab === 'missing' && onEnterMissingTab) onEnterMissingTab()
+    // initialTab + onEnterMissingTab are stable for the lifetime of this mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleTabClick = (key: 'flags' | 'prices' | 'missing') => {
     setActiveTab(key)

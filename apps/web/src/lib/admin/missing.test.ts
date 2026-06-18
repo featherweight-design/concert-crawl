@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeMissedSweeps, formatLastSeen } from './missing'
+import { computeMissedSweeps, formatEventDate, formatLastSeen } from './missing'
 
 describe('computeMissedSweeps', () => {
   it('returns the count of full days between firstMissingAt and now', () => {
@@ -18,6 +18,17 @@ describe('computeMissedSweeps', () => {
     expect(
       computeMissedSweeps('2026-06-20T03:00:00Z', '2026-06-16T03:00:00Z'),
     ).toBe(1)
+  })
+
+  it('falls back to 1 (not NaN) when either ISO string is invalid', () => {
+    expect(computeMissedSweeps('not-a-date', '2026-06-16T03:00:00Z')).toBe(1)
+    expect(computeMissedSweeps('2026-06-12T03:00:00Z', 'not-a-date')).toBe(1)
+  })
+})
+
+describe('formatEventDate', () => {
+  it('formats a YYYY-MM-DD date as MMM D in Denver-local', () => {
+    expect(formatEventDate('2026-06-19')).toBe('Jun 19')
   })
 })
 

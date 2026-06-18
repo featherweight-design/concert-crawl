@@ -124,9 +124,6 @@ export const ReviewPageClient = ({
     initialEvents.length >= 100,
   )
   const [isDesktop, setIsDesktop] = useState(true)
-  const [mobileInitialTab, setMobileInitialTab] = useState<'flags' | 'prices'>(
-    'flags',
-  )
   const [missingEvents, setMissingEvents] = useState<MissingRowEvent[]>([])
   const [missingLoaded, setMissingLoaded] = useState(false)
 
@@ -135,12 +132,6 @@ export const ReviewPageClient = ({
     setIsDesktop(mq.matches)
     const handler = (evt: MediaQueryListEvent) => setIsDesktop(evt.matches)
     mq.addEventListener('change', handler)
-
-    const params = new URLSearchParams(window.location.search)
-    if (params.get('section') === 'submissions') {
-      setMobileInitialTab('prices')
-    }
-
     return () => mq.removeEventListener('change', handler)
   }, [])
 
@@ -535,7 +526,13 @@ export const ReviewPageClient = ({
             onApproveSubmission={approveSubmission}
             onDenySubmission={denySubmission}
             onAddPrice={addPrice}
-            initialTab={mobileInitialTab}
+            initialTab={
+              activeTab === 'missing'
+                ? 'missing'
+                : activeTab === 'prices'
+                  ? 'prices'
+                  : 'flags'
+            }
             pricesMissingOnly={priceFilter === 'missing'}
             hasMorePriceEvents={hasMorePriceEvents}
             priceLoadingMore={priceLoadingMore}
