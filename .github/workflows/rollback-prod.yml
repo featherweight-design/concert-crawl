@@ -29,7 +29,12 @@ concurrency:
   group: rollback-prod
   cancel-in-progress: false
 
-permissions: read-all
+# Scope GITHUB_TOKEN to least privilege. This workflow only checks out
+# the repo and calls the Render API — it does not need any GitHub
+# write surface. Especially important here given the workflow uses the
+# `production` environment.
+permissions:
+  contents: read
 
 jobs:
   rollback:

@@ -26,7 +26,10 @@ concurrency:
   group: deploy-prod
   cancel-in-progress: false
 
-permissions: read-all
+# Scope GITHUB_TOKEN to least privilege. This workflow only POSTs to
+# Render's deploy hooks — it does not need any GitHub write surface.
+permissions:
+  contents: read
 
 jobs:
   deploy:
