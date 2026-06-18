@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, type KeyboardEvent } from 'react'
+import { useCallback, useRef, type KeyboardEvent } from 'react'
 
 export type ReviewTabKind = 'warning' | 'signal' | 'danger'
 
@@ -10,8 +10,8 @@ export interface ReviewTabDescriptor {
   count?: number
   /**
    * Drives the active-badge background colour. Maps to a CSS token via
-   * `var(--{kind})`. Optional — tabs without a kind get no coloured badge
-   * (the count chip still renders for inactive state).
+   * `var(--{kind})`. Optional — when omitted, the active badge falls back
+   * to `var(--signal)`.
    */
   kind?: ReviewTabKind
 }
@@ -29,6 +29,15 @@ export const ReviewTabs = ({
   onChange,
   'aria-label': ariaLabel,
 }: ReviewTabsProps) => {
+  // Refs keyed by tab key so arrow navigation can move both selection AND DOM
+  // focus — required by WAI-ARIA tabs pattern. Without this, focus stays on
+  // the original tab even after it loses tabIndex=0.
+  const tabRefs = useRef(new Map<string, HTMLButtonElement>())
+
+  const focusTab = useCallback((key: string) => {
+    tabRefs.current.get(key)?.focus()
+  }, [])
+
   const handleKeyDown = useCallback(
     (evt: KeyboardEvent<HTMLButtonElement>, focusedKey: string) => {
       const idx = tabs.findIndex((tab) => tab.key === focusedKey)
@@ -36,17 +45,23 @@ export const ReviewTabs = ({
       if (evt.key === 'ArrowRight') {
         evt.preventDefault()
         const next = tabs[(idx + 1) % tabs.length]
-        if (next) onChange(next.key)
+        if (next) {
+          onChange(next.key)
+          focusTab(next.key)
+        }
       } else if (evt.key === 'ArrowLeft') {
         evt.preventDefault()
         const next = tabs[(idx - 1 + tabs.length) % tabs.length]
-        if (next) onChange(next.key)
+        if (next) {
+          onChange(next.key)
+          focusTab(next.key)
+        }
       } else if (evt.key === 'Enter' || evt.key === ' ') {
         evt.preventDefault()
         onChange(focusedKey)
       }
     },
-    [tabs, onChange],
+    [tabs, onChange, focusTab],
   )
 
   return (
@@ -69,6 +84,10 @@ export const ReviewTabs = ({
         return (
           <button
             key={key}
+            ref={(el) => {
+              if (el) tabRefs.current.set(key, el)
+              else tabRefs.current.delete(key)
+            }}
             type="button"
             role="tab"
             aria-selected={isActive}

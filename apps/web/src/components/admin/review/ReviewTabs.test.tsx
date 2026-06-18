@@ -65,6 +65,20 @@ describe('ReviewTabs', () => {
     expect(onChange).toHaveBeenCalledWith('all-events')
   })
 
+  it('moves DOM focus to the newly selected tab on arrow nav', () => {
+    const onChange = vi.fn()
+    render(
+      <ReviewTabs tabs={TABS} activeTab="event-flags" onChange={onChange} />,
+    )
+    const flagsTab = screen.getByRole('tab', { name: /Event flags/ })
+    const pricesTab = screen.getByRole('tab', { name: /Prices/ })
+    flagsTab.focus()
+    expect(document.activeElement).toBe(flagsTab)
+    fireEvent.keyDown(flagsTab, { key: 'ArrowRight' })
+    expect(onChange).toHaveBeenCalledWith('prices')
+    expect(document.activeElement).toBe(pricesTab)
+  })
+
   it('activates the focused tab on Enter and Space', () => {
     const onChange = vi.fn()
     render(
