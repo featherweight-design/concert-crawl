@@ -61,7 +61,9 @@ The pipeline ships with two kill switches so we can roll out in two stages.
 ### Stage 1 — enable staging-smoke only
 
 Use this for at least a few merges to confirm the smoke suite is stable
-and the staging deploy timing (`sleep 180`) is sufficient.
+and the staging deploy timing (240s `/v1/health` poll + 60s grace) is
+sufficient for Render's deploy swap. If polling times out before Render
+finishes deploying, raise the timeout in `staging-smoke.yml`.
 
 1. GitHub repo → **Settings** → **Secrets and variables** → **Actions** → **Variables** tab → **New repository variable**
    - **Name:** `STAGING_API_URL`
