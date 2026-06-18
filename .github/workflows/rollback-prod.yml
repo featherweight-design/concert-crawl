@@ -37,10 +37,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production
+    # Gate logic mirrors deploy-prod.yml:
+    #   - AUTO_DEPLOY_PROD_ENABLED must be on.
+    #   - workflow_dispatch is allowed only from `main` so a feature
+    #     branch cannot drive a rollback using prod secrets via the
+    #     Actions UI's branch picker.
+    #   - workflow_run fires when prod-post-deploy-smoke fails.
     if: |
       vars.AUTO_DEPLOY_PROD_ENABLED == 'true' &&
-      (github.event_name == 'workflow_dispatch' ||
-       github.event.workflow_run.conclusion == 'failure')
+      ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+       (github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'failure'))
     steps:
       # Pin the checkout to the SHA that triggered the upstream
       # prod-post-deploy-smoke run so the rollback script we execute

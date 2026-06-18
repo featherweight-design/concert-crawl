@@ -29,12 +29,15 @@ AUTH="Authorization: Bearer ${RENDER_API_TOKEN}"
 
 echo "→ Looking up recent deploys for ${NAME} (${SERVICE_ID})"
 
-# Pull the 20 most recent deploys, newest first. Render returns an array of
+# Pull the 50 most recent deploys, newest first. 50 is enough to absorb
+# a realistic streak of failed deploys while still finding the last
+# good one; 20 felt tight given we also walk past the current live
+# deploy and any same-commit anchor. Render returns an array of
 # { deploy: { id, status, commit, createdAt, finishedAt } } objects.
 deploys_json=$(curl --fail --silent --show-error \
   -H "${AUTH}" \
   -H "Accept: application/json" \
-  "${API}/services/${SERVICE_ID}/deploys?limit=20")
+  "${API}/services/${SERVICE_ID}/deploys?limit=50")
 
 # Render typically marks exactly ONE deploy as "live" at a time — the one
 # currently serving traffic. Previously-live deploys get marked
