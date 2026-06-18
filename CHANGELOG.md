@@ -1,3 +1,10 @@
+# [1.54.0](https://github.com/HartiganHM/concert-crawl/compare/v1.53.0...v1.54.0) (2026-06-18)
+
+
+### Features
+
+* **crawler:** aeg template12 platform fetcher dispatch ([#623](https://github.com/HartiganHM/concert-crawl/issues/623)) ([395ebaa](https://github.com/HartiganHM/concert-crawl/commit/395ebaa70ece245585d12bea129eec9b2186dc11)), closes [#659](https://github.com/HartiganHM/concert-crawl/issues/659) [#624](https://github.com/HartiganHM/concert-crawl/issues/624) [#651](https://github.com/HartiganHM/concert-crawl/issues/651) [616/#622](https://github.com/HartiganHM/concert-crawl/issues/622)
+
 # [1.53.0](https://github.com/HartiganHM/concert-crawl/compare/v1.52.7...v1.53.0) (2026-06-18)
 
 
