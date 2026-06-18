@@ -53,8 +53,9 @@ test.describe('smoke: event data', () => {
 
     const detailLink = firstCard.locator('a[href*="/events/"]').first()
     const href = await detailLink.getAttribute('href')
-    expect(href).toBeTruthy()
-    if (!href) return
+    if (!href) {
+      throw new Error('First event card has no detail link href')
+    }
 
     await page.goto(href)
     await page.waitForLoadState('networkidle')

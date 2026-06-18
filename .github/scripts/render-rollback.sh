@@ -11,6 +11,14 @@
 
 set -euo pipefail
 
+# Fail fast with a clear message if jq is missing — easier to diagnose
+# than a `jq: command not found` mid-script. GitHub-hosted runners ship
+# with jq, but a self-hosted runner might not.
+command -v jq >/dev/null 2>&1 || {
+  echo "✗ jq is required but not installed on this runner"
+  exit 1
+}
+
 SERVICE_ID="${1:?service id required}"
 NAME="${2:?human name required}"
 
@@ -38,11 +46,15 @@ deploys_json=$(curl --fail --silent --show-error \
 # prior rollback (i.e., there's an earlier deploy with the SAME commit
 # SHA), naively picking "most-recent prior deactivated" would land on the
 # deploy we already rolled away from — rolling FORWARD onto the bad
-# commit. To prevent that, anchor on the original deploy of the current
-# live's commit (when present) and only consider targets strictly OLDER
-# than that anchor. For a normal first-time rollback there is no earlier
-# matching commit, and we fall back to the current live's finishedAt as
-# the anchor — preserving the simple "pick the prior one" behavior.
+# commit. To prevent that, anchor on the *oldest* (= the original) deploy
+# of the current live's commit (when present) and only consider targets
+# strictly OLDER than that anchor. Picking the oldest matters when the
+# same commit has been redeployed multiple times (rollback → rollback);
+# anchoring on a later redeploy could still let through an intermediate
+# bad deploy between the original and the redeploy. For a normal
+# first-time rollback there is no earlier matching commit, and we fall
+# back to the current live's finishedAt as the anchor — preserving the
+# simple "pick the prior one" behavior.
 #
 # Item shape varies across Render API versions: some endpoints wrap
 # entries as `{deploy: {...}}`, others return the deploy object flat.
@@ -55,7 +67,7 @@ target_deploy_id=$(echo "${deploys_json}" | jq -r '
   | ($live.finishedAt // "") as $live_finished
   | ([$all[] | (.deploy // .)
        | select(.id != $live_id and .commit == $live_commit)]
-     | sort_by(.finishedAt) | reverse | .[0]) as $prior_match
+     | sort_by(.finishedAt) | .[0]) as $prior_match
   | (if $prior_match then $prior_match.finishedAt else $live_finished end) as $anchor
   | [$all[] | (.deploy // .)
      | select(.status == "live" or .status == "deactivated")
