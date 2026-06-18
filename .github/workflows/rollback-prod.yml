@@ -1,0 +1,76 @@
+name: Rollback Production
+
+# Rolls back the three production Render services (API + 2 crawler crons)
+# to the most recent prior successful deploy. Triggers automatically when
+# `prod-post-deploy-smoke.yml` fails, and can be invoked manually via
+# `workflow_dispatch` for any incident response.
+#
+# Vercel web rollback is NOT automated here — it is a one-click promote in
+# the Vercel dashboard. See docs/runbooks/auto-deploy-prod.md for the
+# manual procedure if the web prod build is the one at fault.
+#
+# Disabled by default — same kill switch as `deploy-prod.yml`.
+
+on:
+  workflow_run:
+    workflows: [Production Post-Deploy Smoke]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Why are you rolling back?'
+        required: true
+        type: string
+
+# Serialize rollbacks. A rollback running concurrently with anything else
+# touching the same service is a recipe for inconsistent state.
+concurrency:
+  group: rollback-prod
+  cancel-in-progress: false
+
+permissions: read-all
+
+jobs:
+  rollback:
+    name: Roll back Render prod services
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    if: |
+      vars.AUTO_DEPLOY_PROD_ENABLED == 'true' &&
+      (github.event_name == 'workflow_dispatch' ||
+       github.event.workflow_run.conclusion == 'failure')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Roll back API service
+        run: ./.github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_API }}" "concert-crawl-api"
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+
+      - name: Roll back crawler triggers cron
+        run: ./.github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" "concert-crawl-crawler-triggers"
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+
+      - name: Roll back crawler daily cron
+        run: ./.github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" "concert-crawl-crawler-daily"
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+
+      - name: Log rollback context
+        run: |
+          echo "Rollback complete for prod Render services"
+          echo "Triggered by: ${{ github.event_name }}"
+          if [ -n "${{ inputs.reason }}" ]; then
+            echo "Manual reason: ${{ inputs.reason }}"
+          fi
+          if [ -n "${{ github.event.workflow_run.id }}" ]; then
+            echo "Failing smoke run: ${{ github.event.workflow_run.html_url }}"
+          fi
+          echo ""
+          echo "Vercel web prod is NOT automatically rolled back."
+          echo "If the failure is web-related, run the manual rollback procedure"
+          echo "in docs/runbooks/auto-deploy-prod.md."

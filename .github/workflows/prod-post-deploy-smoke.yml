@@ -1,0 +1,77 @@
+name: Production Post-Deploy Smoke
+
+# Runs the smoke suite against production immediately after a prod deploy
+# completes. This is the rollback trigger: a failure here causes
+# `rollback-prod.yml` to fire via its workflow_run dependency.
+#
+# Distinct from `smoke.yml`, which is a scheduled (every 6h) health check.
+# Disabled by default — gated on the same kill switch as `deploy-prod.yml`.
+
+on:
+  workflow_run:
+    workflows: [Deploy to Production]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+# Serialize so we never have overlapping prod smoke runs.
+concurrency:
+  group: prod-post-deploy-smoke
+  cancel-in-progress: false
+
+permissions: read-all
+
+jobs:
+  smoke:
+    name: Playwright smoke (production, post-deploy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: |
+      vars.AUTO_DEPLOY_PROD_ENABLED == 'true' &&
+      (github.event_name == 'workflow_dispatch' ||
+       github.event.workflow_run.conclusion == 'success')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('apps/e2e/package.json') }}
+          restore-keys: playwright-${{ runner.os }}-
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @concert-crawl/e2e install-browsers
+
+      # Render prod API typically takes 1-3 minutes to deploy after the
+      # hook fires. Wait so we don't smoke an old build.
+      - name: Wait for Render prod deploy
+        run: sleep 180
+
+      - name: Run smoke tests against production
+        run: pnpm --filter @concert-crawl/e2e test:smoke
+        env:
+          PLAYWRIGHT_SMOKE_BASE_URL: ${{ vars.PROD_URL }}
+          PLAYWRIGHT_API_URL: ${{ vars.PROD_API_URL }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN_SMOKE }}
+
+      - name: Upload failure artifacts
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: prod-post-deploy-smoke-failure-${{ github.run_id }}
+          path: apps/e2e/test-results/
+          retention-days: 14

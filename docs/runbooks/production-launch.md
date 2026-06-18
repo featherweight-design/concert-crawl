@@ -14,19 +14,19 @@ This runbook reflects the post-2026-06-15 architecture: **web on Vercel, Postgre
 
 ### Service inventory
 
-| Concern | Provider | Resource |
-| --- | --- | --- |
-| Web (prod) | Vercel | project `concert-crawl`, custom domain `concertcrawl.app` |
-| Web (staging) | Vercel | project `concert-crawl-staging`, custom domain `staging.concertcrawl.app` |
-| API (prod) | Render | web service `concert-crawl-api` |
-| API (staging) | Render | web service `concert-crawl-api-staging` |
-| Crawler triggers (prod) | Render | cron job `concert-crawl-crawler-triggers` (`*/10 * * * *`) |
-| Crawler daily (prod) | Render | cron job `concert-crawl-crawler-daily` (`0 9 * * *` = 3 AM MT) |
-| Crawler triggers (staging) | Render | cron job `concert-crawl-crawler-triggers-staging` |
-| Crawler daily (staging) | Render | cron job `concert-crawl-crawler-daily-staging` |
-| Database | Neon | project `concert-crawl`, branches `production` + `staging` (PG 16, AWS us-west-2 Oregon) |
-| Auth | Clerk | two apps: **Concert Crawl** (prod, Production instance) and **Concert Crawl Staging** (staging, Production instance) |
-| DNS | Cloudflare | zone `concertcrawl.app` — DNS only, no proxy |
+| Concern                    | Provider   | Resource                                                                                                             |
+| -------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------- |
+| Web (prod)                 | Vercel     | project `concert-crawl`, custom domain `concertcrawl.app`                                                            |
+| Web (staging)              | Vercel     | project `concert-crawl-staging`, custom domain `staging.concertcrawl.app`                                            |
+| API (prod)                 | Render     | web service `concert-crawl-api`                                                                                      |
+| API (staging)              | Render     | web service `concert-crawl-api-staging`                                                                              |
+| Crawler triggers (prod)    | Render     | cron job `concert-crawl-crawler-triggers` (`*/10 * * * *`)                                                           |
+| Crawler daily (prod)       | Render     | cron job `concert-crawl-crawler-daily` (`0 9 * * *` = 3 AM MT)                                                       |
+| Crawler triggers (staging) | Render     | cron job `concert-crawl-crawler-triggers-staging`                                                                    |
+| Crawler daily (staging)    | Render     | cron job `concert-crawl-crawler-daily-staging`                                                                       |
+| Database                   | Neon       | project `concert-crawl`, branches `production` + `staging` (PG 16, AWS us-west-2 Oregon)                             |
+| Auth                       | Clerk      | two apps: **Concert Crawl** (prod, Production instance) and **Concert Crawl Staging** (staging, Production instance) |
+| DNS                        | Cloudflare | zone `concertcrawl.app` — DNS only, no proxy                                                                         |
 
 ---
 
@@ -120,7 +120,7 @@ docker run --rm postgres:16 psql "$NEON_PROD_DIRECT" -c "
   UNION ALL SELECT 'events', COUNT(*) FROM public.events;"
 ```
 
-**Do NOT** copy user-tied tables (`users`, `user_profiles`, `user_events`, `user_artist_follows`, `price_submissions`, `feedback`, `invite_codes`, `audit_log`, `crawl_runs`, `crawl_triggers`, `price_retrieval_log`) — they reference users from the *staging* Clerk instance and would break FK constraints + leak staging-only operational data.
+**Do NOT** copy user-tied tables (`users`, `user_profiles`, `user_events`, `user_artist_follows`, `price_submissions`, `feedback`, `invite_codes`, `audit_log`, `crawl_runs`, `crawl_triggers`, `price_retrieval_log`) — they reference users from the _staging_ Clerk instance and would break FK constraints + leak staging-only operational data.
 
 ---
 
@@ -170,23 +170,23 @@ The staging Vercel project would normally invert this (Production + Preview so p
 
 **All `NEXT_PUBLIC_*` keys must have Sensitive OFF** — Sensitive blocks `NEXT_PUBLIC_` inlining at build time, which breaks Clerk + Sentry at runtime.
 
-| Key | Value | Sensitive |
-| --- | --- | --- |
-| `NEXT_PUBLIC_API_URL` | `https://concert-crawl-api.onrender.com` | OFF |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | prod `pk_live_*` from Step 1 (encodes `clerk.concertcrawl.app`) | OFF |
-| `CLERK_SECRET_KEY` | prod `sk_live_*` from Step 1 | ON |
-| `NEXT_PUBLIC_CLERK_DOMAIN` | `concertcrawl.app` — **required** to disable Vercel's auto-proxy logic in `@clerk/nextjs` that would otherwise inject a broken `/__clerk` script src | OFF |
-| `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | `/sign-in` | OFF |
-| `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | `/sign-up` | OFF |
-| `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` | `/events` | OFF |
-| `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL` | `/auth/complete` | OFF |
-| `NEXT_PUBLIC_SENTRY_DSN` | Web project DSN from Step 5 | OFF |
-| `SENTRY_DSN` | Same | ON |
-| `NEXT_PUBLIC_SENTRY_ENVIRONMENT` | `production` | OFF |
-| `SENTRY_ENVIRONMENT` | `production` | OFF |
-| `SENTRY_AUTH_TOKEN` | From Step 5 | ON |
-| `INVITE_COOKIE_SECRET` | Generate fresh: `openssl rand -hex 32` | ON |
-| `INTERNAL_API_SECRET` | Generate fresh: `openssl rand -hex 32` — **must match** the same key in the Render API's env vars (Step 8) | ON |
+| Key                                   | Value                                                                                                                                                | Sensitive |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| `NEXT_PUBLIC_API_URL`                 | `https://concert-crawl-api.onrender.com`                                                                                                             | OFF       |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`   | prod `pk_live_*` from Step 1 (encodes `clerk.concertcrawl.app`)                                                                                      | OFF       |
+| `CLERK_SECRET_KEY`                    | prod `sk_live_*` from Step 1                                                                                                                         | ON        |
+| `NEXT_PUBLIC_CLERK_DOMAIN`            | `concertcrawl.app` — **required** to disable Vercel's auto-proxy logic in `@clerk/nextjs` that would otherwise inject a broken `/__clerk` script src | OFF       |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_URL`       | `/sign-in`                                                                                                                                           | OFF       |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_URL`       | `/sign-up`                                                                                                                                           | OFF       |
+| `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` | `/events`                                                                                                                                            | OFF       |
+| `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL` | `/auth/complete`                                                                                                                                     | OFF       |
+| `NEXT_PUBLIC_SENTRY_DSN`              | Web project DSN from Step 5                                                                                                                          | OFF       |
+| `SENTRY_DSN`                          | Same                                                                                                                                                 | ON        |
+| `NEXT_PUBLIC_SENTRY_ENVIRONMENT`      | `production`                                                                                                                                         | OFF       |
+| `SENTRY_ENVIRONMENT`                  | `production`                                                                                                                                         | OFF       |
+| `SENTRY_AUTH_TOKEN`                   | From Step 5                                                                                                                                          | ON        |
+| `INVITE_COOKIE_SECRET`                | Generate fresh: `openssl rand -hex 32`                                                                                                               | ON        |
+| `INTERNAL_API_SECRET`                 | Generate fresh: `openssl rand -hex 32` — **must match** the same key in the Render API's env vars (Step 8)                                           | ON        |
 
 `NEXT_PUBLIC_APP_VERSION` is hard-set at build time by `apps/web/next.config.ts` from `package.json#version` plus the deploy's commit SHA. **Current limitation:** the SHA fallback chain only reads `RENDER_GIT_COMMIT`, so on Vercel deploys the version banner reads `vX.Y.Z · dev` instead of `vX.Y.Z · abc1234`. Tracked in #595 (one-line fix to add `VERCEL_GIT_COMMIT_SHA` to the fallback chain).
 
@@ -220,29 +220,31 @@ Vercel will show the DNS records needed in Step 7.
 
 In the Render dashboard for this service → **Environment** tab. The service may already exist suspended from the migration; un-suspend after env vars are correct.
 
-| Variable | Value |
-| --- | --- |
-| `DATABASE_URL` | `<NEON_PROD_POOLED>` URL from Step 2 (pooled) |
-| `CLERK_SECRET_KEY` | prod `sk_live_*` from Step 1 (must match Vercel's `CLERK_SECRET_KEY`) |
-| `CLERK_PUBLISHABLE_KEY` | prod `pk_live_*` from Step 1 |
-| `ALLOWED_ORIGIN` | `https://concertcrawl.app` |
-| `ANTHROPIC_API_KEY` | From Anthropic console |
-| `RESEND_API_KEY` | From Step 5 |
-| `SENTRY_DSN` | API project DSN from Step 5 |
-| `SENTRY_ENVIRONMENT` | `production` |
-| `LOG_LEVEL` | `info` |
-| `NODE_ENV` | `production` |
-| `REQUIRE_BETA_AUTH` | `true` — gates `/v1/events`, `/v1/venues`, `/v1/search` behind Clerk during private beta. Remove or set `false` at public launch (Step 12) |
-| `INTERNAL_API_SECRET` | **Same value** as set in the Vercel prod project (Step 6) |
+| Variable                | Value                                                                                                                                      |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `DATABASE_URL`          | `<NEON_PROD_POOLED>` URL from Step 2 (pooled)                                                                                              |
+| `CLERK_SECRET_KEY`      | prod `sk_live_*` from Step 1 (must match Vercel's `CLERK_SECRET_KEY`)                                                                      |
+| `CLERK_PUBLISHABLE_KEY` | prod `pk_live_*` from Step 1                                                                                                               |
+| `ALLOWED_ORIGIN`        | `https://concertcrawl.app`                                                                                                                 |
+| `ANTHROPIC_API_KEY`     | From Anthropic console                                                                                                                     |
+| `RESEND_API_KEY`        | From Step 5                                                                                                                                |
+| `SENTRY_DSN`            | API project DSN from Step 5                                                                                                                |
+| `SENTRY_ENVIRONMENT`    | `production`                                                                                                                               |
+| `LOG_LEVEL`             | `info`                                                                                                                                     |
+| `NODE_ENV`              | `production`                                                                                                                               |
+| `REQUIRE_BETA_AUTH`     | `true` — gates `/v1/events`, `/v1/venues`, `/v1/search` behind Clerk during private beta. Remove or set `false` at public launch (Step 12) |
+| `INTERNAL_API_SECRET`   | **Same value** as set in the Vercel prod project (Step 6)                                                                                  |
 
 > **Build commands — Node-version-dependent + differ between prod and staging.** The current `render.yaml` uses two different build commands:
 >
 > **Prod (`concert-crawl-api`):**
+>
 > ```
 > npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/api
 > ```
 >
 > **Staging (`concert-crawl-api-staging`):**
+>
 > ```
 > npm install -g pnpm && pnpm install --frozen-lockfile && pnpm db:migrate && pnpm turbo build --filter=@concert-crawl/api
 > ```
@@ -257,24 +259,25 @@ In the Render dashboard for this service → **Environment** tab. The service ma
 
 Both crawler cron jobs need the same env var set. The Dockerfile (`apps/crawler/Dockerfile`) is `node:22-bookworm` + `playwright install --with-deps chromium` (no MCR dependency — see issue #547 / PR #591 for context).
 
-| Variable | Value |
-| --- | --- |
-| `NODE_ENV` | `production` |
-| `CRAWL_MODE` | `triggers` (triggers cron) / `daily` (daily cron) |
-| `DATABASE_URL` | `<NEON_PROD_POOLED>` from Step 2 |
-| `ANTHROPIC_API_KEY` | From Anthropic console |
-| `RESEND_API_KEY` | From Step 5 |
-| `ADMIN_EMAIL` | Your email for crawl failure notifications |
-| `ADMIN_URL` | `https://concertcrawl.app` |
-| `SENTRY_DSN` | Crawler project DSN from Step 5 |
-| `SENTRY_ENVIRONMENT` | `production` |
-| `LOG_LEVEL` | `info` |
+| Variable             | Value                                             |
+| -------------------- | ------------------------------------------------- |
+| `NODE_ENV`           | `production`                                      |
+| `CRAWL_MODE`         | `triggers` (triggers cron) / `daily` (daily cron) |
+| `DATABASE_URL`       | `<NEON_PROD_POOLED>` from Step 2                  |
+| `ANTHROPIC_API_KEY`  | From Anthropic console                            |
+| `RESEND_API_KEY`     | From Step 5                                       |
+| `ADMIN_EMAIL`        | Your email for crawl failure notifications        |
+| `ADMIN_URL`          | `https://concertcrawl.app`                        |
+| `SENTRY_DSN`         | Crawler project DSN from Step 5                   |
+| `SENTRY_ENVIRONMENT` | `production`                                      |
+| `LOG_LEVEL`          | `info`                                            |
 
 > **MCR rate-limit gotcha.** The crawler base image was previously `mcr.microsoft.com/playwright`, which Microsoft anonymously rate-limits at 200 req/6h per IP. This regularly throttled Render's build pool and broke all-cron rebuilds. The current Dockerfile sidesteps MCR entirely (PR #591). If a future Playwright bump tempts you back to MCR, don't — chase down a non-MCR mirror first.
 
 ### Staging API + crawler crons
 
 Use the same variable set on `concert-crawl-api-staging`, `concert-crawl-crawler-triggers-staging`, `concert-crawl-crawler-daily-staging`, but with:
+
 - **Staging Clerk keys** (`pk_live_*` / `sk_live_*` from the Concert Crawl Staging app — different app, different keys)
 - `NEON_STAGING_POOLED` as the `DATABASE_URL`
 - `SENTRY_ENVIRONMENT=staging`
@@ -290,55 +293,64 @@ GitHub → repository → **Settings** → **Environments**.
 
 ### `staging` environment — Secrets
 
-| Secret | Value |
-| --- | --- |
-| `DATABASE_URL` | `NEON_STAGING_POOLED` from Step 2 — for future crawler/migration GHA jobs |
-| `SENTRY_DSN` | Staging Sentry project DSN |
+| Secret                   | Value                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`           | `NEON_STAGING_POOLED` from Step 2 — for future crawler/migration GHA jobs                                                                                                                                                                                                                                                                                                                                             |
+| `SENTRY_DSN`             | Staging Sentry project DSN                                                                                                                                                                                                                                                                                                                                                                                            |
 | `RENDER_DEPLOY_HOOK_API` | Render → `concert-crawl-api-staging` → **Settings → Deploy Hook** → generate and copy. Required by `deploy-staging.yml`'s `deploy-api` job — the workflow fires on every successful CI run targeting `main` (typically a merge, but any push that passes CI qualifies) and POSTs to this hook to redeploy the staging API. (Staging web is deployed by Vercel's GitHub integration directly — no deploy hook needed.) |
 
 ### `staging` environment — Variables
 
-| Variable | Value |
-| --- | --- |
+| Variable             | Value     |
+| -------------------- | --------- |
 | `SENTRY_ENVIRONMENT` | `staging` |
-| `LOG_LEVEL` | `info` |
+| `LOG_LEVEL`          | `info`    |
 
 ### `production` environment — Secrets
 
-| Secret | Value |
-| --- | --- |
-| `DATABASE_URL` | `NEON_PROD_POOLED` from Step 2 |
-| `SENTRY_DSN` | Crawler project DSN from Step 5 |
-| `RENDER_DEPLOY_HOOK_API` | Render → `concert-crawl-api` → **Settings → Deploy Hook** → generate and copy. Pre-provisioned for the eventual `deploy-production.yml` workflow; no current workflow consumes it. |
+| Secret                                | Value                                                                                                                                                                                                               |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                        | `NEON_PROD_POOLED` from Step 2                                                                                                                                                                                      |
+| `SENTRY_DSN`                          | Crawler project DSN from Step 5                                                                                                                                                                                     |
+| `RENDER_DEPLOY_HOOK_API`              | Render → `concert-crawl-api` → **Settings → Deploy Hook** → generate and copy. Consumed by `deploy-prod.yml` (auto-deploy pipeline — gated by `AUTO_DEPLOY_PROD_ENABLED`). See `docs/runbooks/auto-deploy-prod.md`. |
+| `RENDER_DEPLOY_HOOK_CRAWLER_TRIGGERS` | Render → `concert-crawl-crawler-triggers` → **Settings → Deploy Hook**. Consumed by `deploy-prod.yml`.                                                                                                              |
+| `RENDER_DEPLOY_HOOK_CRAWLER_DAILY`    | Render → `concert-crawl-crawler-daily` → **Settings → Deploy Hook**. Consumed by `deploy-prod.yml`.                                                                                                                 |
+| `RENDER_API_TOKEN`                    | Render → Account Settings → **API Keys** → generate token with deploy permissions. Consumed by `rollback-prod.yml` to list deploys and POST `/rollback`.                                                            |
 
 ### `production` environment — Variables
 
-| Variable | Value |
-| --- | --- |
-| `SENTRY_ENVIRONMENT` | `production` |
-| `LOG_LEVEL` | `info` |
-| `ADMIN_EMAIL` | Pre-provisioned |
+| Variable                             | Value                                                                                                          |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| `SENTRY_ENVIRONMENT`                 | `production`                                                                                                   |
+| `LOG_LEVEL`                          | `info`                                                                                                         |
+| `ADMIN_EMAIL`                        | Pre-provisioned                                                                                                |
+| `RENDER_SERVICE_ID_API`              | Render → `concert-crawl-api` → service ID from the dashboard URL (`srv-...`). Consumed by `rollback-prod.yml`. |
+| `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | Service ID for `concert-crawl-crawler-triggers`. Consumed by `rollback-prod.yml`.                              |
+| `RENDER_SERVICE_ID_CRAWLER_DAILY`    | Service ID for `concert-crawl-crawler-daily`. Consumed by `rollback-prod.yml`.                                 |
 
 ### Repository-level secrets (Settings → Secrets → Actions)
 
-| Secret | Value |
-| --- | --- |
-| `GH_TOKEN` | Personal access token with `repo` scope — used by `release.yml` (semantic-release) to push the release commit back to `main` |
-| `SENTRY_DSN_SMOKE` | Sentry DSN for smoke test error reporting |
-| `E2E_TEST_USER_EMAIL` | Email of the test Clerk user (staging instance) for staging E2E runs |
-| `E2E_TEST_USER_PASSWORD` | Password of the test Clerk user for staging E2E runs |
-| `ANTHROPIC_API_KEY` | Pre-provisioned for future crawler GHA jobs |
-| `RESEND_API_KEY` | Pre-provisioned |
+| Secret                   | Value                                                                                                                        |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| `GH_TOKEN`               | Personal access token with `repo` scope — used by `release.yml` (semantic-release) to push the release commit back to `main` |
+| `SENTRY_DSN_SMOKE`       | Sentry DSN for smoke test error reporting                                                                                    |
+| `E2E_TEST_USER_EMAIL`    | Email of the test Clerk user (staging instance) for staging E2E runs                                                         |
+| `E2E_TEST_USER_PASSWORD` | Password of the test Clerk user for staging E2E runs                                                                         |
+| `ANTHROPIC_API_KEY`      | Pre-provisioned for future crawler GHA jobs                                                                                  |
+| `RESEND_API_KEY`         | Pre-provisioned                                                                                                              |
 
 ### Repository-level variables (Settings → Variables → Actions)
 
-| Variable | Value |
-| --- | --- |
-| `SMOKE_ENABLED` | `false` during private beta; flip to `true` at public launch |
-| `PROD_URL` | `https://concertcrawl.app` |
-| `PROD_API_URL` | `https://concert-crawl-api.onrender.com` |
-| `STAGING_URL` | `https://staging.concertcrawl.app` |
-| `ADMIN_EMAIL` | Pre-provisioned |
+| Variable                   | Value                                                                                                                                                               |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SMOKE_ENABLED`            | `false` during private beta; flip to `true` at public launch. Gates the scheduled 6-hourly `smoke.yml` only — the auto-deploy pipeline uses separate kill switches. |
+| `STAGING_SMOKE_ENABLED`    | `false` by default. Set to `true` to enable `staging-smoke.yml` (gate before `deploy-prod.yml`). See `docs/runbooks/auto-deploy-prod.md`.                           |
+| `AUTO_DEPLOY_PROD_ENABLED` | `false` by default. Set to `true` to enable `deploy-prod.yml` + `prod-post-deploy-smoke.yml` + `rollback-prod.yml` chain.                                           |
+| `PROD_URL`                 | `https://concertcrawl.app`                                                                                                                                          |
+| `PROD_API_URL`             | `https://concert-crawl-api.onrender.com`                                                                                                                            |
+| `STAGING_URL`              | `https://staging.concertcrawl.app`                                                                                                                                  |
+| `STAGING_API_URL`          | `https://concert-crawl-api-staging.onrender.com`. Consumed by `staging-smoke.yml`.                                                                                  |
+| `ADMIN_EMAIL`              | Pre-provisioned                                                                                                                                                     |
 
 ---
 

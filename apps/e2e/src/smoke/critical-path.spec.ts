@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { healthCheck } from '../helpers/api.js'
 
-test.describe('production smoke: app availability', () => {
+test.describe('smoke: app availability', () => {
   test('homepage renders with content', async ({ page }) => {
     await page.goto('/')
     await expect(page).toHaveTitle(/concert crawl/i)
@@ -15,7 +15,7 @@ test.describe('production smoke: app availability', () => {
   })
 })
 
-test.describe('production smoke: event data', () => {
+test.describe('smoke: event data', () => {
   test('browse page loads with at least one event', async ({ page }) => {
     await page.goto('/events')
     await page.waitForLoadState('networkidle')
@@ -41,9 +41,57 @@ test.describe('production smoke: event data', () => {
       )
     }
   })
+
+  test('event detail page renders for the first browse event', async ({
+    page,
+  }) => {
+    await page.goto('/events')
+    await page.waitForLoadState('networkidle')
+
+    const firstCard = page.locator('[data-testid="event-card"]').first()
+    await expect(firstCard).toBeVisible({ timeout: 10_000 })
+
+    const detailLink = firstCard.locator('a[href*="/events/"]').first()
+    const href = await detailLink.getAttribute('href')
+    expect(href).toBeTruthy()
+    if (!href) return
+
+    await page.goto(href)
+    await page.waitForLoadState('networkidle')
+    await expect(page).not.toHaveTitle(/404|not found/i)
+    const heading = page.getByRole('heading', { level: 1 })
+    await expect(heading).toBeVisible()
+  })
+
+  test('venues index page lists venues', async ({ page }) => {
+    await page.goto('/venues')
+    await page.waitForLoadState('networkidle')
+
+    await expect(page).not.toHaveTitle(/404|not found/i)
+    const venueLinks = page.locator('a[href^="/venues/"]')
+    const count = await venueLinks.count()
+    expect(count).toBeGreaterThan(0)
+  })
 })
 
-test.describe('production smoke: auth protection', () => {
+test.describe('smoke: search', () => {
+  test('events list returns 200 with results when filtered by search', async ({
+    request,
+  }) => {
+    const apiUrl = process.env['PLAYWRIGHT_API_URL'] ?? 'http://localhost:3001'
+    const res = await request.get(`${apiUrl}/v1/events?search=a&limit=1`)
+    expect(res.status()).toBe(200)
+    const body = (await res.json()) as {
+      success?: boolean
+      data?: { data?: unknown[]; total?: number }
+    }
+    expect(body.success).toBe(true)
+    expect(Array.isArray(body.data?.data)).toBe(true)
+    expect(typeof body.data?.total).toBe('number')
+  })
+})
+
+test.describe('smoke: auth protection', () => {
   test('admin route redirects unauthenticated users', async ({ page }) => {
     await page.goto('/admin')
     await page.waitForLoadState('networkidle')
@@ -52,13 +100,13 @@ test.describe('production smoke: auth protection', () => {
   })
 })
 
-test.describe('production smoke: known venue', () => {
+test.describe('smoke: known venue', () => {
   test('a seeded venue page loads', async ({ page }) => {
     await page.goto('/venues/larimer-lounge')
     await page.waitForLoadState('networkidle')
 
     await expect(page).not.toHaveTitle(/404|not found/i)
-    const h1 = page.getByRole('heading', { level: 1 })
-    await expect(h1).toBeVisible()
+    const heading = page.getByRole('heading', { level: 1 })
+    await expect(heading).toBeVisible()
   })
 })

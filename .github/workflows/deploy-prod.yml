@@ -1,0 +1,56 @@
+name: Deploy to Production
+
+# Triggers automatically when the staging smoke suite passes. POSTs Render
+# deploy hooks for the three production Render services (API + 2 crawler
+# crons). Vercel auto-deploys the prod web project on push to `main`, so
+# there is no Vercel job here — that path is already wired up.
+#
+# Disabled by default. Flip `AUTO_DEPLOY_PROD_ENABLED` repo variable to
+# `true` to turn on. See docs/runbooks/auto-deploy-prod.md.
+
+on:
+  workflow_run:
+    workflows: [Staging Smoke Tests]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Why are you manually deploying prod?'
+        required: true
+        type: string
+
+# Serialize prod deploys. cancel-in-progress: false means a queued deploy
+# waits for the running one rather than being replaced.
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+permissions: read-all
+
+jobs:
+  deploy:
+    name: Trigger Render prod deploys
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    if: |
+      vars.AUTO_DEPLOY_PROD_ENABLED == 'true' &&
+      (github.event_name == 'workflow_dispatch' ||
+       github.event.workflow_run.conclusion == 'success')
+    steps:
+      - name: Trigger Render deploy — API
+        run: curl --fail -X POST "${{ secrets.RENDER_DEPLOY_HOOK_API }}"
+
+      - name: Trigger Render deploy — crawler triggers cron
+        run: curl --fail -X POST "${{ secrets.RENDER_DEPLOY_HOOK_CRAWLER_TRIGGERS }}"
+
+      - name: Trigger Render deploy — crawler daily cron
+        run: curl --fail -X POST "${{ secrets.RENDER_DEPLOY_HOOK_CRAWLER_DAILY }}"
+
+      - name: Log deploy context
+        run: |
+          echo "Triggered prod deploys for commit ${{ github.event.workflow_run.head_sha || github.sha }}"
+          if [ -n "${{ inputs.reason }}" ]; then
+            echo "Manual reason: ${{ inputs.reason }}"
+          fi
