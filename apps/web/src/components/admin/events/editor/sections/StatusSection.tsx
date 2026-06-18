@@ -388,7 +388,7 @@ export const StatusSection = ({
             </div>
           </div>
         )}
-        {isUpcoming && !event.isSoldOut && (
+        {isUpcoming && !currentIsSoldOut && (
           <div
             style={{
               fontFamily: "'Inter', sans-serif",

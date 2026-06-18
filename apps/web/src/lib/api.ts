@@ -35,6 +35,13 @@ async function request<T>(
     },
   })
 
+  // 204 No Content — no body to parse; return undefined as T. The admin
+  // mark-available endpoint uses this status; callers that care receive
+  // `undefined`, callers that don't (the common case) ignore it.
+  if (res.status === 204) {
+    return undefined as T
+  }
+
   // Guard against non-JSON responses (e.g. plain-text 500 from the server)
   const contentType = res.headers.get('content-type') ?? ''
   if (!contentType.includes('application/json')) {
