@@ -39,11 +39,16 @@ elapsed=0
 echo "→ Waiting for service ${SERVICE_ID} to be live on ${EXPECTED_SHA} (up to ${timeout}s)"
 
 while [ "${elapsed}" -lt "${timeout}" ]; do
+  # Use limit=50 (matching render-rollback.sh) so a streak of failed or
+  # in-progress deploys after the last successful one cannot push the
+  # currently-`live` deploy off the end of the page — that would cause
+  # `live_sha` to be empty and the script to falsely time out even
+  # though the service is actually live on the right commit.
   deploys_json=$(curl --fail --silent --show-error \
     --connect-timeout 5 --max-time 15 \
     -H "${AUTH}" \
     -H "Accept: application/json" \
-    "${API}/services/${SERVICE_ID}/deploys?limit=5")
+    "${API}/services/${SERVICE_ID}/deploys?limit=50")
 
   # Item shape varies across Render API versions: some endpoints wrap
   # entries as `{deploy: {...}}`, others return the deploy object flat.
