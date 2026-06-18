@@ -14,7 +14,7 @@
 - User-curated surfaces are out of scope: `/v1/watching` (saved-events list), `/v1/events/:id/price-submissions`, `/v1/events/:id/reports`. The user explicitly opted in to those; silently hiding their saved item is worse UX than a stale row.
 - The filter applies only to rows where `status = 'upcoming'`. Cancelled / postponed rows do not have `first_missing_at` set (the crawler's stale-detection update has a `status='upcoming'` predicate at `packages/crawler-core/src/crawl.ts:689`), so adding `isNull(events.firstMissingAt)` is a no-op for those statuses — safe to apply unconditionally.
 - Every existing test in this surface must still pass. New tests verify the new exclusion behavior using the integration test harness (real Postgres).
-- Use Drizzle's `isNull(events.firstMissingAt)`. Do not write raw SQL.
+- Use Drizzle's `isNull(events.firstMissingAt)` wherever the existing query is already in the Drizzle builder. The one exception is `GET /v1/events/genres`, which already uses raw `sql\`SELECT DISTINCT unnest(genre) ... \``via`db.execute()`because`unnest()`aggregation through Drizzle's builder is awkward — there, append`AND first_missing_at IS NULL` to the existing raw SQL rather than rewriting the query.
 - Inline the predicate alongside the existing `status` / `date` filters with a single-line comment pointing to this PR. Do not extract a `excludeMissingEvents()` helper — only 5 call sites and the surrounding code already inlines its filters with comments.
 
 ---
@@ -450,8 +450,10 @@ git commit -m "fix(api): hide first_missing_at rows from search/popular endpoint
 
 - [ ] **Step 1: Run typecheck across all affected packages**
 
+Run from the repo root (or worktree root):
+
 ```bash
-cd /Users/huey/Projects/concert-crawl/.worktrees/fix-hide-missing-events && pnpm --filter=@concert-crawl/api typecheck
+pnpm --filter=@concert-crawl/api typecheck
 ```
 
 Expected: zero errors.
@@ -459,7 +461,7 @@ Expected: zero errors.
 - [ ] **Step 2: Run lint on the API package**
 
 ```bash
-cd /Users/huey/Projects/concert-crawl/.worktrees/fix-hide-missing-events && pnpm --filter=@concert-crawl/api lint
+pnpm --filter=@concert-crawl/api lint
 ```
 
 Expected: zero errors.
@@ -467,7 +469,7 @@ Expected: zero errors.
 - [ ] **Step 3: Run the FULL API test suite (unit + integration)**
 
 ```bash
-cd /Users/huey/Projects/concert-crawl/.worktrees/fix-hide-missing-events/apps/api && pnpm test:all
+cd apps/api && pnpm test:all
 ```
 
 Expected: all pass.
@@ -487,8 +489,9 @@ Confirm `would_be_hidden > 0` on staging so the change is exercising real data o
 
 - [ ] **Step 5: Rebase + push**
 
+Run from the repo root (or worktree root):
+
 ```bash
-cd /Users/huey/Projects/concert-crawl/.worktrees/fix-hide-missing-events
 git fetch origin
 git rebase origin/main
 git push -u origin fix/hide-missing-events-from-consumer-api

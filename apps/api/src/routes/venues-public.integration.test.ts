@@ -77,9 +77,12 @@ describe('GET /v1/venues — integration', () => {
     })
 
     const res = await app.request('/v1/venues')
+    expect(res.status).toBe(200)
     const body = (await res.json()) as {
+      success: boolean
       data: { slug: string; upcomingCount: number }[]
     }
+    expect(body.success).toBe(true)
     const row = body.data.find(
       (venueRow) => venueRow.slug === 'count-missing-venue',
     )
@@ -127,12 +130,15 @@ describe('GET /v1/venues/:slug — integration', () => {
     })
 
     const res = await app.request('/v1/venues/detail-missing-venue-vp')
+    expect(res.status).toBe(200)
     const body = (await res.json()) as {
+      success: boolean
       data: {
         venue: { upcomingCount: number }
         upcomingEvents: { title: string }[]
       }
     }
+    expect(body.success).toBe(true)
     expect(body.data.venue.upcomingCount).toBe(1)
     expect(body.data.upcomingEvents).toHaveLength(1)
     expect(body.data.upcomingEvents[0]?.title).toBe('Active')
