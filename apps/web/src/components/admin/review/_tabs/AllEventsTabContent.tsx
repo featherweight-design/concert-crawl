@@ -7,11 +7,19 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { AdminButton } from '@/components/admin/primitives'
 import { EventsTable } from '../all/EventsTable'
 import { EventsMobileList } from '../all/EventsMobileList'
+import { EventsFilterBar } from '../all/EventsFilterBar'
+import {
+  EMPTY_FILTERS,
+  filtersToFetchQuery,
+  type AllEventsFilters,
+} from '../all/filters'
 import { type AllEvent } from '../all/types'
 
 export interface AllEventsTabContentProps {
   isDesktop: boolean
   onRowClick: (id: string) => void
+  filters?: AllEventsFilters
+  onFiltersChange?: (next: AllEventsFilters) => void
 }
 
 const PAGE_SIZE = 50
@@ -78,9 +86,13 @@ const EmptyState = () => (
   </div>
 )
 
+const noopFiltersChange = (_next: AllEventsFilters): void => undefined
+
 export const AllEventsTabContent = ({
   isDesktop,
   onRowClick,
+  filters = EMPTY_FILTERS,
+  onFiltersChange = noopFiltersChange,
 }: AllEventsTabContentProps) => {
   const { getToken } = useAuth()
   const [events, setEvents] = useState<AllEvent[]>([])
@@ -88,6 +100,11 @@ export const AllEventsTabContent = ({
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Serialise filters into a string key — using this as the effect dep means
+  // a refetch fires when the filter content changes, not just when the prop
+  // identity changes (so parents can pass a fresh object every render).
+  const filterQuery = filtersToFetchQuery(filters)
 
   const fetchPage = useCallback(
     async (offset: number, append: boolean): Promise<void> => {
@@ -98,8 +115,9 @@ export const AllEventsTabContent = ({
           setHasMore(false)
           return
         }
+        const suffix = filterQuery ? `&${filterQuery}` : ''
         const rows = await apiClient.get<AllEvent[]>(
-          `/v1/admin/events?limit=${PAGE_SIZE}&offset=${offset}`,
+          `/v1/admin/events?limit=${PAGE_SIZE}&offset=${offset}${suffix}`,
           token,
         )
         setEvents((prev) => (append ? [...prev, ...rows] : rows))
@@ -116,10 +134,13 @@ export const AllEventsTabContent = ({
         setLoadingMore(false)
       }
     },
-    [getToken],
+    [getToken, filterQuery],
   )
 
   useEffect(() => {
+    setLoading(true)
+    setEvents([])
+    setHasMore(false)
     void fetchPage(0, false)
   }, [fetchPage])
 
@@ -129,7 +150,17 @@ export const AllEventsTabContent = ({
     void fetchPage(events.length, true)
   }, [events.length, fetchPage, hasMore, loadingMore])
 
-  if (loading) return <Skeleton />
+  const filterBar = (
+    <EventsFilterBar filters={filters} onChange={onFiltersChange} />
+  )
+
+  if (loading)
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {filterBar}
+        <Skeleton />
+      </div>
+    )
 
   const errorBanner = error && (
     <div
@@ -149,10 +180,17 @@ export const AllEventsTabContent = ({
   // Only the absence-of-error empty case is a true "no events" state — a
   // failed fetch leaves events=[] too, but the admin needs to see the error
   // banner, not an empty state that hides the failure.
-  if (!error && events.length === 0) return <EmptyState />
+  if (!error && events.length === 0)
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {filterBar}
+        <EmptyState />
+      </div>
+    )
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {filterBar}
       {errorBanner}
       {events.length > 0 &&
         (isDesktop ? (

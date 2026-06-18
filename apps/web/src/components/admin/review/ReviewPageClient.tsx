@@ -12,6 +12,7 @@ import { EventFlagsTabContent } from './_tabs/EventFlagsTabContent'
 import { editEventHref } from '@/lib/admin/edit-event-link'
 import { PricesTabContent } from './_tabs/PricesTabContent'
 import { AllEventsTabContent } from './_tabs/AllEventsTabContent'
+import { parseFiltersFromParams, serializeFiltersToParams } from './all/filters'
 import { MissingTabContent } from './_tabs/MissingTabContent'
 import { type MissingRowEvent } from './missing/MissingRow'
 
@@ -549,6 +550,15 @@ export const ReviewPageClient = ({
               if (!missingLoaded) void fetchMissingEvents()
             }}
             onAllEventsRowClick={(id) => router.push(editEventHref(id))}
+            allEventsFilters={parseFiltersFromParams(
+              new URLSearchParams(searchParams?.toString() ?? ''),
+            )}
+            onAllEventsFiltersChange={(next) => {
+              const base = new URLSearchParams(searchParams?.toString() ?? '')
+              const merged = serializeFiltersToParams(next, base)
+              merged.set('tab', 'all-events')
+              router.push(`?${merged.toString()}`, { scroll: false })
+            }}
           />
         </div>
       </div>
@@ -629,6 +639,15 @@ export const ReviewPageClient = ({
         <AllEventsTabContent
           isDesktop
           onRowClick={(id) => router.push(editEventHref(id))}
+          filters={parseFiltersFromParams(
+            new URLSearchParams(searchParams?.toString() ?? ''),
+          )}
+          onFiltersChange={(next) => {
+            const base = new URLSearchParams(searchParams?.toString() ?? '')
+            const merged = serializeFiltersToParams(next, base)
+            merged.set('tab', 'all-events')
+            router.push(`?${merged.toString()}`, { scroll: false })
+          }}
         />
       )}
     </div>

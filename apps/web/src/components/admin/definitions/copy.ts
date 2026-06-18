@@ -1196,6 +1196,32 @@ export const ADMIN_COPY = {
         body: 'Nothing has been verified or pulled in yet.',
       },
       skeletonAriaLabel: 'Loading events',
+      filters: {
+        searchPlaceholder: 'Search title, artist, or venue',
+        searchAriaLabel: 'Search events',
+        verification: {
+          label: 'Verification',
+          all: 'All',
+          verified: 'Verified',
+          unverified: 'Unverified',
+        },
+        dateFromLabel: 'From',
+        dateToLabel: 'Until',
+        genreLabel: 'Genres',
+        genreInputPlaceholder: 'Add genre…',
+        addGenre: 'Add',
+        removeGenre: (tag: string) => `Remove ${tag}`,
+        missingDataLabel: 'Missing data',
+        missingFlag: {
+          'no-price': 'No price',
+          'no-show-time': 'No show time',
+          'no-genre': 'No genre',
+          'no-doors-time': 'No doors time',
+        },
+        activeCount: (count: number) =>
+          `${count} active filter${count === 1 ? '' : 's'}`,
+        clearAll: 'Clear all',
+      },
     },
 
     missing: {

@@ -692,7 +692,7 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
     return clearTables()
   })
 
-  it('filters by q matching title (case-insensitive)', async () => {
+  it('filters by query matching title (case-insensitive)', async () => {
     const venue = await seedVenue()
     await seedEvent(venue.id, {
       title: 'Lord Huron Live',
@@ -705,7 +705,7 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
       date: futureDate(15),
     })
 
-    const res = await app.request('/v1/admin/events?q=lord+huron', {
+    const res = await app.request('/v1/admin/events?query=lord+huron', {
       headers: ADMIN_HEADERS,
     })
     expect(res.status).toBe(200)
@@ -714,7 +714,7 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
     expect(body.data[0]?.title).toBe('Lord Huron Live')
   })
 
-  it('filters by q matching artist', async () => {
+  it('filters by query matching artist', async () => {
     const venue = await seedVenue()
     await seedEvent(venue.id, {
       title: 'Set A',
@@ -727,7 +727,7 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
       date: futureDate(15),
     })
 
-    const res = await app.request('/v1/admin/events?q=Bon', {
+    const res = await app.request('/v1/admin/events?query=Bon', {
       headers: ADMIN_HEADERS,
     })
     const body = (await res.json()) as { data: Array<{ title: string }> }
@@ -735,7 +735,7 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
     expect(body.data[0]?.title).toBe('Set A')
   })
 
-  it('filters by q matching venue name', async () => {
+  it('filters by query matching venue name', async () => {
     const targetVenue = await seedVenue({
       name: 'Mission Ballroom',
       slug: 'mission-ballroom',
@@ -755,7 +755,7 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
       date: futureDate(15),
     })
 
-    const res = await app.request('/v1/admin/events?q=mission', {
+    const res = await app.request('/v1/admin/events?query=mission', {
       headers: ADMIN_HEADERS,
     })
     const body = (await res.json()) as { data: Array<{ title: string }> }
@@ -920,7 +920,7 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
     expect(body.data[0]?.title).toBe('Missing Both')
   })
 
-  it('combines q + genre + verified across params', async () => {
+  it('combines query + genre + verified across params', async () => {
     const venue = await seedVenue()
     await seedEvent(venue.id, {
       title: 'Lord Huron Indie',
@@ -945,7 +945,7 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
     })
 
     const res = await app.request(
-      '/v1/admin/events?q=lord+huron&genre=indie&verified=true',
+      '/v1/admin/events?query=lord+huron&genre=indie&verified=true',
       { headers: ADMIN_HEADERS },
     )
     const body = (await res.json()) as { data: Array<{ title: string }> }

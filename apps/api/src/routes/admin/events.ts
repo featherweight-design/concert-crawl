@@ -102,7 +102,7 @@ const listQuerySchema = z.object({
     .optional()
     .transform((val) => val === 'true'),
   // PR 5 — search + range + multi-tag filters. Comma-separated lists.
-  q: z.string().trim().min(1).max(200).optional(),
+  query: z.string().trim().min(1).max(200).optional(),
   dateFrom: z.string().regex(dateOnlyRegex).optional(),
   dateTo: z.string().regex(dateOnlyRegex).optional(),
   genre: csvStrings,
@@ -217,7 +217,7 @@ eventsAdminRouter.get(
     const {
       verified,
       missing,
-      q,
+      query,
       dateFrom,
       dateTo,
       genre,
@@ -261,12 +261,12 @@ eventsAdminRouter.get(
 
     // PR 5 filter clauses. Each is undefined when its param is omitted, which
     // drizzle's `and()` treats as a no-op — so callers compose freely.
-    const qLike = q ? `%${q}%` : null
-    const searchClause = qLike
+    const queryLike = query ? `%${query}%` : null
+    const searchClause = queryLike
       ? or(
-          ilike(events.title, qLike),
-          ilike(events.artist, qLike),
-          ilike(venues.name, qLike),
+          ilike(events.title, queryLike),
+          ilike(events.artist, queryLike),
+          ilike(venues.name, queryLike),
         )
       : undefined
 
