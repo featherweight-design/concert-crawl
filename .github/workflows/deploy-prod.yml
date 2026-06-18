@@ -87,14 +87,26 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
+      # Bounded curl timeouts + --silent --show-error so a stalled Render
+      # endpoint cannot hang the workflow indefinitely, and logs stay
+      # clean (only errors print).
       - name: Trigger Render deploy — API
-        run: curl --fail -X POST "${{ secrets.RENDER_DEPLOY_HOOK_API }}"
+        run: |
+          curl --fail --silent --show-error \
+            --connect-timeout 10 --max-time 30 \
+            -X POST "${{ secrets.RENDER_DEPLOY_HOOK_API }}"
 
       - name: Trigger Render deploy — crawler triggers cron
-        run: curl --fail -X POST "${{ secrets.RENDER_DEPLOY_HOOK_CRAWLER_TRIGGERS }}"
+        run: |
+          curl --fail --silent --show-error \
+            --connect-timeout 10 --max-time 30 \
+            -X POST "${{ secrets.RENDER_DEPLOY_HOOK_CRAWLER_TRIGGERS }}"
 
       - name: Trigger Render deploy — crawler daily cron
-        run: curl --fail -X POST "${{ secrets.RENDER_DEPLOY_HOOK_CRAWLER_DAILY }}"
+        run: |
+          curl --fail --silent --show-error \
+            --connect-timeout 10 --max-time 30 \
+            -X POST "${{ secrets.RENDER_DEPLOY_HOOK_CRAWLER_DAILY }}"
 
       # Wait for the prod API to actually be live on the new commit
       # before this workflow completes. Render's deploy hooks return
