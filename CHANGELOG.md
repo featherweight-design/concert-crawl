@@ -1,3 +1,11 @@
+## [1.65.1](https://github.com/HartiganHM/concert-crawl/compare/v1.65.0...v1.65.1) (2026-06-18)
+
+
+### Bug Fixes
+
+* **admin:** address Copilot review on PR [#690](https://github.com/HartiganHM/concert-crawl/issues/690) ([a22414a](https://github.com/HartiganHM/concert-crawl/commit/a22414ad10653df60010b916d8a327f589420083))
+* **admin:** debounced search input + Missing loading skeleton ([04e30fc](https://github.com/HartiganHM/concert-crawl/commit/04e30fc2939ce8b79ce1c838787252096bfa8af2)), closes [#686](https://github.com/HartiganHM/concert-crawl/issues/686) [#687](https://github.com/HartiganHM/concert-crawl/issues/687)
+
 # [1.65.0](https://github.com/HartiganHM/concert-crawl/compare/v1.64.0...v1.65.0) (2026-06-18)
 
 
