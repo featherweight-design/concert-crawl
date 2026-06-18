@@ -15,7 +15,16 @@ import {
   or,
   sql,
 } from 'drizzle-orm'
-import { auditLog, db, eventReports, events, venues } from '@concert-crawl/db'
+import {
+  auditLog,
+  db,
+  eventReports,
+  events,
+  priceRetrievalLog,
+  priceSubmissions,
+  userEvents,
+  venues,
+} from '@concert-crawl/db'
 import { getAuthUser } from '../../middleware/auth.js'
 import type { AdminVariables } from './index.js'
 
@@ -840,5 +849,125 @@ eventsAdminRouter.post(
     })
 
     return ctx.json({ success: true, data: { count } })
+  },
+)
+
+const mergeSchema = z.object({ targetId: z.string().uuid() })
+
+// POST /v1/admin/events/:id/merge — fold a source event into a target event,
+// moving every user-side reference (watchlist rows, sold-out/cancelled reports,
+// price submissions, price retrieval logs) onto the target, then deleting the
+// source event row. The whole thing runs inside one transaction: if any move
+// fails, nothing is persisted (so the FK cascade on DELETE can't orphan moved
+// rows). The audit log captures the source id, target id, and per-table move
+// counts so we can reconstruct what happened from the audit row alone.
+//
+// `user_events` has a UNIQUE (user_id, event_id). If the same user already has
+// the target event on their list, we can't move the source row — it would
+// duplicate the key. Those rows are dropped from the source side; the target
+// wins and the count is reported separately as `userEventsDropped`.
+eventsAdminRouter.post(
+  '/:id/merge',
+  zValidator('param', eventIdSchema),
+  zValidator('json', mergeSchema, (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid input' }, 422)
+    }
+  }),
+  async (ctx) => {
+    const { id: sourceId } = ctx.req.valid('param')
+    const { targetId } = ctx.req.valid('json')
+    const actor = getAuthUser(ctx)
+
+    if (sourceId === targetId) {
+      return ctx.json(
+        { success: false, error: 'Source and target must differ' },
+        422,
+      )
+    }
+
+    // Pre-flight existence checks return 404 with a clear message before we
+    // open a transaction — cheaper than rolling back inside.
+    const both = await db
+      .select({ id: events.id })
+      .from(events)
+      .where(or(eq(events.id, sourceId), eq(events.id, targetId)))
+    const foundIds = new Set(both.map((row) => row.id))
+    if (!foundIds.has(sourceId)) {
+      return ctx.json({ success: false, error: 'Source event not found' }, 404)
+    }
+    if (!foundIds.has(targetId)) {
+      return ctx.json({ success: false, error: 'Target event not found' }, 404)
+    }
+
+    const referencesMoved = await db.transaction(async (tx) => {
+      // user_events: drop conflicting source rows (target wins) before moving
+      // the rest. Doing the delete inside the same transaction means a partial
+      // failure rolls the drops back too.
+      const droppedUserEvents = await tx
+        .delete(userEvents)
+        .where(
+          and(
+            eq(userEvents.eventId, sourceId),
+            sql`EXISTS (
+              SELECT 1 FROM ${userEvents} t
+              WHERE t.event_id = ${targetId}
+                AND t.user_id = ${userEvents.userId}
+            )`,
+          ),
+        )
+        .returning({ id: userEvents.id })
+
+      const movedUserEvents = await tx
+        .update(userEvents)
+        .set({ eventId: targetId })
+        .where(eq(userEvents.eventId, sourceId))
+        .returning({ id: userEvents.id })
+
+      const movedReports = await tx
+        .update(eventReports)
+        .set({ eventId: targetId })
+        .where(eq(eventReports.eventId, sourceId))
+        .returning({ id: eventReports.id })
+
+      const movedSubmissions = await tx
+        .update(priceSubmissions)
+        .set({ eventId: targetId, updatedAt: new Date() })
+        .where(eq(priceSubmissions.eventId, sourceId))
+        .returning({ id: priceSubmissions.id })
+
+      const movedLogs = await tx
+        .update(priceRetrievalLog)
+        .set({ eventId: targetId })
+        .where(eq(priceRetrievalLog.eventId, sourceId))
+        .returning({ id: priceRetrievalLog.id })
+
+      // With every reference moved, deleting the source row is safe — there's
+      // nothing left to cascade. Doing this last means a failure earlier in
+      // the transaction never reaches the destructive step.
+      await tx.delete(events).where(eq(events.id, sourceId))
+
+      const counts = {
+        userEventsMoved: movedUserEvents.length,
+        userEventsDropped: droppedUserEvents.length,
+        reportsMoved: movedReports.length,
+        submissionsMoved: movedSubmissions.length,
+        priceLogsMoved: movedLogs.length,
+      }
+
+      await tx.insert(auditLog).values({
+        actorId: actor.userId,
+        action: 'event.merge',
+        targetId,
+        metadata: { sourceId, referencesMoved: counts },
+      })
+
+      return counts
+    })
+
+    return ctx.json({
+      success: true,
+      data: { mergedInto: targetId, referencesMoved },
+    })
   },
 )

@@ -16,6 +16,8 @@ import { DangerZoneSection } from './sections/DangerZoneSection'
 import { type SoldOutProvenance } from './sections/StatusSection'
 import { SaveBar } from './SaveBar'
 import { EventConfirmModal } from '@/components/admin/review/all/EventConfirmModal'
+import { MergeEventDialog } from './MergeEventDialog'
+import { editEventHref } from '@/lib/admin/edit-event-link'
 
 export interface EditorEvent {
   id: string
@@ -102,6 +104,7 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
     'non-concert' | 'delete' | null
   >(null)
   const [dangerPending, setDangerPending] = useState(false)
+  const [mergeOpen, setMergeOpen] = useState(false)
 
   // Reset the draft whenever the event prop identity changes (post-save
   // router.refresh() yields a fresh server-fetched event). The trade-off:
@@ -266,6 +269,7 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
       <ArtSection artist={event.artist} />
       <DangerZoneSection
         onMarkNonConcert={() => setPendingDanger('non-concert')}
+        onMerge={() => setMergeOpen(true)}
         onDelete={() => setPendingDanger('delete')}
         disabled={saving || dangerPending}
       />
@@ -288,6 +292,18 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
           pending={dangerPending}
           onCancel={() => setPendingDanger(null)}
           onConfirm={onConfirmDanger}
+        />
+      )}
+      {mergeOpen && (
+        <MergeEventDialog
+          sourceId={event.id}
+          sourceTitle={event.title}
+          onCancel={() => setMergeOpen(false)}
+          onMerged={(targetId) => {
+            // Source is gone — point the admin at the canonical target's editor.
+            setMergeOpen(false)
+            router.push(editEventHref(targetId))
+          }}
         />
       )}
     </div>

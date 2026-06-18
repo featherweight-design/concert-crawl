@@ -1159,9 +1159,30 @@ export const ADMIN_COPY = {
     },
     dangerZone: {
       title: 'Danger zone',
-      body: 'Reclassify or remove this event. Both actions are reflected in the audit log.',
+      body: 'Reclassify, merge, or remove this event. Every action is reflected in the audit log.',
       markNonConcert: 'Mark non-concert',
+      mergeIntoAnother: 'Merge with another event…',
       deleteEvent: 'Delete event…',
+    },
+    mergeDialog: {
+      eyebrow: 'merge events',
+      heading: 'Merge this event into another',
+      body: 'Pick the canonical event. Watchlist rows, sold-out/cancelled reports, fan price submissions, and the price log will all be moved to it. This event will then be deleted.',
+      searchLabel: 'Search by title, artist, or venue',
+      searchPlaceholder: 'e.g. Lord Huron, Mission Ballroom…',
+      searchingHint: 'Searching…',
+      noResults: 'No matches.',
+      resultsHint: (count: number) =>
+        `${count} match${count === 1 ? '' : 'es'} — pick one.`,
+      sameEventDisallowed: "That's this event — pick a different one.",
+      previewHeading: (sourceTitle: string, targetTitle: string) =>
+        `Merge "${sourceTitle}" → "${targetTitle}"`,
+      previewBody:
+        "All user-side data moves to the target, then this event is deleted. This can't be undone.",
+      cancel: 'Cancel',
+      confirm: 'Merge',
+      pickAnother: 'Pick another',
+      mergeFailed: 'Failed to merge.',
     },
     statusControls: {
       newDateLabel: 'New date',

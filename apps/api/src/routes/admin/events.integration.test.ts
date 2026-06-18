@@ -1,6 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { and, eq, inArray } from 'drizzle-orm'
-import { auditLog, eventReports, events } from '@concert-crawl/db'
+import {
+  auditLog,
+  eventReports,
+  events,
+  priceRetrievalLog,
+  priceSubmissions,
+  userEvents,
+} from '@concert-crawl/db'
 
 const { authState } = vi.hoisted(() => ({
   authState: {
@@ -18,7 +25,15 @@ vi.mock('@hono/clerk-auth', () => ({
 }))
 
 import { createApp } from '../../app.js'
-import { clearTables, seedEvent, seedVenue } from '../../test/helpers/seed.js'
+import {
+  clearTables,
+  seedEvent,
+  seedEventReport,
+  seedPriceRetrievalLog,
+  seedPriceSubmission,
+  seedUserEvent,
+  seedVenue,
+} from '../../test/helpers/seed.js'
 import { testDb } from '../../test/helpers/db.js'
 
 const app = createApp()
@@ -1267,6 +1282,240 @@ describe('GET /v1/admin/events/:id — single-event editor payload', () => {
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'GET',
       headers: NON_ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(403)
+  })
+})
+
+describe('POST /v1/admin/events/:id/merge', () => {
+  beforeEach(() => {
+    setAdminAuth()
+    return clearTables()
+  })
+
+  it('moves user_events, reports, submissions, and price logs to target then deletes source', async () => {
+    const venue = await seedVenue()
+    const source = await seedEvent(venue.id, {
+      title: 'Source Show',
+      artist: 'Source Artist',
+      date: '2026-09-01',
+    })
+    const target = await seedEvent(venue.id, {
+      title: 'Target Show',
+      artist: 'Target Artist',
+      date: '2026-09-02',
+    })
+
+    await seedUserEvent('user-a', source.id)
+    await seedUserEvent('user-b', source.id, { status: 'going' })
+    await seedEventReport(source.id, 'reporter-a', { status: 'cancelled' })
+    await seedPriceSubmission(source.id, 'price-user-a')
+    await seedPriceRetrievalLog(source.id, venue.id)
+
+    const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ targetId: target.id }),
+    })
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: {
+        mergedInto: string
+        referencesMoved: {
+          userEventsMoved: number
+          userEventsDropped: number
+          reportsMoved: number
+          submissionsMoved: number
+          priceLogsMoved: number
+        }
+      }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.mergedInto).toBe(target.id)
+    expect(body.data.referencesMoved.userEventsMoved).toBe(2)
+    expect(body.data.referencesMoved.userEventsDropped).toBe(0)
+    expect(body.data.referencesMoved.reportsMoved).toBe(1)
+    expect(body.data.referencesMoved.submissionsMoved).toBe(1)
+    expect(body.data.referencesMoved.priceLogsMoved).toBe(1)
+
+    // Source row is gone.
+    const sourceRows = await testDb
+      .select()
+      .from(events)
+      .where(eq(events.id, source.id))
+    expect(sourceRows).toHaveLength(0)
+
+    // References point at the target.
+    const movedUserEvents = await testDb
+      .select()
+      .from(userEvents)
+      .where(eq(userEvents.eventId, target.id))
+    expect(movedUserEvents).toHaveLength(2)
+    const movedReports = await testDb
+      .select()
+      .from(eventReports)
+      .where(eq(eventReports.eventId, target.id))
+    expect(movedReports).toHaveLength(1)
+    const movedSubmissions = await testDb
+      .select()
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.eventId, target.id))
+    expect(movedSubmissions).toHaveLength(1)
+    const movedLogs = await testDb
+      .select()
+      .from(priceRetrievalLog)
+      .where(eq(priceRetrievalLog.eventId, target.id))
+    expect(movedLogs).toHaveLength(1)
+  })
+
+  it('drops the source user_events row when the same user already has the target on their list', async () => {
+    const venue = await seedVenue()
+    const source = await seedEvent(venue.id, { artist: 'Source' })
+    const target = await seedEvent(venue.id, {
+      artist: 'Target',
+      date: '2026-10-01',
+    })
+
+    // user-a has both, user-b has only source.
+    await seedUserEvent('user-a', source.id, { status: 'watching' })
+    await seedUserEvent('user-a', target.id, { status: 'going' })
+    await seedUserEvent('user-b', source.id, { status: 'interested' })
+
+    const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ targetId: target.id }),
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: {
+        referencesMoved: { userEventsMoved: number; userEventsDropped: number }
+      }
+    }
+    expect(body.data.referencesMoved.userEventsMoved).toBe(1)
+    expect(body.data.referencesMoved.userEventsDropped).toBe(1)
+
+    // Target ends up with 2 user_events: user-a's original 'going' (preserved)
+    // and user-b's moved row.
+    const targetRows = await testDb
+      .select()
+      .from(userEvents)
+      .where(eq(userEvents.eventId, target.id))
+    expect(targetRows).toHaveLength(2)
+    const userAStatus = targetRows.find(
+      (row) => row.userId === 'user-a',
+    )?.status
+    // The conflict-winner is user-a's pre-existing target row, so the
+    // surviving status is 'going', not the source's 'watching'.
+    expect(userAStatus).toBe('going')
+  })
+
+  it('writes one audit-log row with source + counts metadata', async () => {
+    const venue = await seedVenue()
+    const source = await seedEvent(venue.id, { artist: 'Src' })
+    const target = await seedEvent(venue.id, {
+      artist: 'Tgt',
+      date: '2026-11-01',
+    })
+    await seedUserEvent('user-a', source.id)
+
+    const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ targetId: target.id }),
+    })
+    expect(res.status).toBe(200)
+
+    const auditRows = await testDb
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.action, 'event.merge'))
+    expect(auditRows).toHaveLength(1)
+    const row = auditRows[0]!
+    expect(row.targetId).toBe(target.id)
+    const metadata = row.metadata as {
+      sourceId: string
+      referencesMoved: { userEventsMoved: number }
+    }
+    expect(metadata.sourceId).toBe(source.id)
+    expect(metadata.referencesMoved.userEventsMoved).toBe(1)
+  })
+
+  it('rejects merging an event with itself (422)', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id)
+
+    const res = await app.request(`/v1/admin/events/${event.id}/merge`, {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ targetId: event.id }),
+    })
+    expect(res.status).toBe(422)
+  })
+
+  it('returns 404 when the source event does not exist', async () => {
+    const venue = await seedVenue()
+    const target = await seedEvent(venue.id, { artist: 'Target' })
+
+    const res = await app.request(
+      `/v1/admin/events/00000000-0000-0000-0000-000000000000/merge`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({ targetId: target.id }),
+      },
+    )
+    expect(res.status).toBe(404)
+  })
+
+  it('returns 404 when the target event does not exist', async () => {
+    const venue = await seedVenue()
+    const source = await seedEvent(venue.id)
+
+    const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({
+        targetId: '00000000-0000-0000-0000-000000000000',
+      }),
+    })
+    expect(res.status).toBe(404)
+
+    // Source must still exist — the failed validation must not have deleted it.
+    const remaining = await testDb
+      .select()
+      .from(events)
+      .where(eq(events.id, source.id))
+    expect(remaining).toHaveLength(1)
+  })
+
+  it('rejects an invalid targetId payload (422)', async () => {
+    const venue = await seedVenue()
+    const source = await seedEvent(venue.id)
+
+    const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ targetId: 'not-a-uuid' }),
+    })
+    expect(res.status).toBe(422)
+  })
+
+  it('rejects non-admin callers with 403', async () => {
+    const venue = await seedVenue()
+    const source = await seedEvent(venue.id)
+    const target = await seedEvent(venue.id, {
+      artist: 'Target',
+      date: '2026-12-01',
+    })
+    setNonAdminAuth()
+    const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
+      method: 'POST',
+      headers: NON_ADMIN_HEADERS,
+      body: JSON.stringify({ targetId: target.id }),
     })
     expect(res.status).toBe(403)
   })

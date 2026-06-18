@@ -1,12 +1,13 @@
 'use client'
 
-import { Flag, Trash2 } from 'lucide-react'
+import { Flag, GitMerge, Trash2 } from 'lucide-react'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { AdminButton } from '@/components/admin/primitives'
 import { EditSection } from '../EditSection'
 
 export interface DangerZoneSectionProps {
   onMarkNonConcert: () => void
+  onMerge: () => void
   onDelete: () => void
   disabled?: boolean
 }
@@ -15,6 +16,7 @@ const COPY = ADMIN_COPY.editor.dangerZone
 
 export const DangerZoneSection = ({
   onMarkNonConcert,
+  onMerge,
   onDelete,
   disabled = false,
 }: DangerZoneSectionProps) => (
@@ -52,6 +54,15 @@ export const DangerZoneSection = ({
           disabled={disabled}
         >
           {COPY.markNonConcert}
+        </AdminButton>
+        <AdminButton
+          type="button"
+          variant="outline"
+          icon={GitMerge}
+          onClick={onMerge}
+          disabled={disabled}
+        >
+          {COPY.mergeIntoAnother}
         </AdminButton>
         <AdminButton
           type="button"
