@@ -263,6 +263,52 @@ eventsAdminRouter.patch(
   },
 )
 
+// GET /v1/admin/events/:id — single event for the admin editor surface.
+// Same projection as the list endpoint so the editor can hydrate every
+// section from a single payload.
+eventsAdminRouter.get(
+  '/:id',
+  zValidator('param', eventIdSchema),
+  async (ctx) => {
+    const { id } = ctx.req.valid('param')
+
+    const [row] = await db
+      .select({
+        id: events.id,
+        title: events.title,
+        artist: events.artist,
+        date: events.date,
+        doorsTime: events.doorsTime,
+        showTime: events.showTime,
+        ticketPriceMin: events.ticketPriceMin,
+        ticketPriceMax: events.ticketPriceMax,
+        confidenceScore: sql<number | null>`(${events.confidenceScore})::float`,
+        verified: events.verified,
+        status: events.status,
+        extractionStrategy: events.extractionStrategy,
+        sourceUrl: events.sourceUrl,
+        genre: events.genre,
+        createdAt: events.createdAt,
+        updatedAt: events.updatedAt,
+        lastSeenAt: events.lastSeenAt,
+        firstMissingAt: events.firstMissingAt,
+        venueId: events.venueId,
+        venueName: venues.name,
+        isSoldOut: isSoldOutExpr(),
+      })
+      .from(events)
+      .leftJoin(venues, eq(events.venueId, venues.id))
+      .where(eq(events.id, id))
+      .limit(1)
+
+    if (!row) {
+      return ctx.json({ success: false, error: 'Not found' } as const, 404)
+    }
+
+    return ctx.json({ success: true, data: row } as const)
+  },
+)
+
 // PATCH /v1/admin/events/:id — partial update (verified, status, content fields)
 eventsAdminRouter.patch(
   '/:id',

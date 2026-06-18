@@ -591,3 +591,69 @@ describe('PATCH /v1/admin/events/:id — Missing-tab actions', () => {
     expect(res.status).toBe(400)
   })
 })
+
+describe('GET /v1/admin/events/:id — single-event editor payload', () => {
+  beforeEach(() => {
+    setAdminAuth()
+    return clearTables()
+  })
+
+  it('returns the full event projection with venue joined', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2026-08-10',
+      verified: true,
+      status: 'upcoming',
+    })
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      method: 'GET',
+      headers: ADMIN_HEADERS,
+    })
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: {
+        id: string
+        title: string
+        artist: string | null
+        date: string
+        verified: boolean
+        status: string
+        venueId: string
+        venueName: string | null
+        firstMissingAt: string | null
+        isSoldOut: boolean
+      }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.id).toBe(event.id)
+    expect(body.data.venueId).toBe(venue.id)
+    expect(body.data.venueName).toBe(venue.name)
+    expect(body.data.verified).toBe(true)
+    expect(body.data.status).toBe('upcoming')
+    expect(body.data.isSoldOut).toBe(false)
+  })
+
+  it('returns 404 for a non-existent event id', async () => {
+    const res = await app.request(
+      `/v1/admin/events/00000000-0000-0000-0000-000000000000`,
+      { method: 'GET', headers: ADMIN_HEADERS },
+    )
+    expect(res.status).toBe(404)
+  })
+
+  it('rejects non-admin callers with 403', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, { date: '2026-08-11' })
+
+    setNonAdminAuth()
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      method: 'GET',
+      headers: NON_ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(403)
+  })
+})
