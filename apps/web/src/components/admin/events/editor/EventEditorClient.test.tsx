@@ -14,8 +14,12 @@ vi.mock('next/navigation', () => ({
 }))
 
 const mockApiPatch = vi.fn().mockResolvedValue({ success: true })
+const mockApiPost = vi.fn().mockResolvedValue({ success: true })
 vi.mock('@/lib/api', () => ({
-  apiClient: { patch: (...args: unknown[]) => mockApiPatch(...args) },
+  apiClient: {
+    patch: (...args: unknown[]) => mockApiPatch(...args),
+    post: (...args: unknown[]) => mockApiPost(...args),
+  },
   ApiError: class ApiError extends Error {
     constructor(
       public readonly status: number,
@@ -51,6 +55,8 @@ const SAMPLE: EditorEvent = {
 beforeEach(() => {
   mockApiPatch.mockClear()
   mockApiPatch.mockResolvedValue({ success: true })
+  mockApiPost.mockClear()
+  mockApiPost.mockResolvedValue({ success: true })
   mockRouterRefresh.mockClear()
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
@@ -141,5 +147,66 @@ describe('EventEditorClient', () => {
     expect(screen.getByText('You have unsaved changes')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Discard' }))
     expect(screen.queryByText('You have unsaved changes')).toBeNull()
+  })
+
+  it('reveals provenance fields when toggling availability to Sold out', () => {
+    render(<EventEditorClient event={SAMPLE} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Sold out' }))
+    expect(screen.getByLabelText('How did you confirm?')).toBeTruthy()
+    expect(screen.getByLabelText('Source URL (optional)')).toBeTruthy()
+    expect(screen.getByLabelText('Note (optional, 280 chars max)')).toBeTruthy()
+  })
+
+  it('POSTs /sold-out with provenance when availability toggles to Sold out', async () => {
+    render(<EventEditorClient event={SAMPLE} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Sold out' }))
+    fireEvent.change(screen.getByLabelText('How did you confirm?'), {
+      target: { value: 'venue_site' },
+    })
+    fireEvent.change(screen.getByLabelText('Source URL (optional)'), {
+      target: { value: 'https://example.com/show' },
+    })
+    fireEvent.change(screen.getByLabelText('Note (optional, 280 chars max)'), {
+      target: { value: 'GA gone' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => {
+      expect(mockApiPost).toHaveBeenCalledTimes(1)
+    })
+    const [url, , body] = mockApiPost.mock.calls[0] ?? []
+    expect(url).toBe('/v1/admin/events/evt-1/sold-out')
+    expect(body).toEqual({
+      evidenceMethod: 'venue_site',
+      evidenceUrl: 'https://example.com/show',
+      note: 'GA gone',
+    })
+    expect(mockApiPatch).not.toHaveBeenCalled()
+  })
+
+  it('POSTs /available when availability toggles back to Available', async () => {
+    render(<EventEditorClient event={{ ...SAMPLE, isSoldOut: true }} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Available' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => {
+      expect(mockApiPost).toHaveBeenCalledTimes(1)
+    })
+    const [url] = mockApiPost.mock.calls[0] ?? []
+    expect(url).toBe('/v1/admin/events/evt-1/available')
+  })
+
+  it('combines a status PATCH with a sold-out POST in one save', async () => {
+    render(<EventEditorClient event={SAMPLE} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelled' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Sold out' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => {
+      expect(mockApiPatch).toHaveBeenCalledTimes(1)
+      expect(mockApiPost).toHaveBeenCalledTimes(1)
+    })
+    const [patchUrl, , patchBody] = mockApiPatch.mock.calls[0] ?? []
+    expect(patchUrl).toBe('/v1/admin/events/evt-1')
+    expect(patchBody).toEqual({ status: 'cancelled' })
+    const [postUrl] = mockApiPost.mock.calls[0] ?? []
+    expect(postUrl).toBe('/v1/admin/events/evt-1/sold-out')
   })
 })

@@ -1167,6 +1167,23 @@ export const ADMIN_COPY = {
       verifyToggleLabel: 'Verified',
       verifyHint:
         'Verifying confirms this event is publishable. Send back to review unsets it.',
+      availabilityLabel: 'availability',
+      available: 'Available',
+      soldOut: 'Sold out',
+      provenance: {
+        title: 'Sold-out provenance',
+        methodLabel: 'How did you confirm?',
+        methodOptions: {
+          saw_listing: 'Saw it listed',
+          venue_site: 'Venue website',
+          bought_myself: 'Tried to buy it',
+          other: 'Other',
+        },
+        urlLabel: 'Source URL (optional)',
+        urlPlaceholder: 'https://…',
+        noteLabel: 'Note (optional, 280 chars max)',
+        notePlaceholder: 'e.g. "Friday GA gone; pit waitlist still open."',
+      },
     },
     art: {
       regenerate: 'Regenerate',

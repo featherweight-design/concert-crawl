@@ -12,6 +12,7 @@ import { PricingSection } from './sections/PricingSection'
 import { ClassificationSection } from './sections/ClassificationSection'
 import { StatusSection } from './sections/StatusSection'
 import { ArtSection } from './sections/ArtSection'
+import { type SoldOutProvenance } from './sections/StatusSection'
 import { SaveBar } from './SaveBar'
 
 export interface EditorEvent {
@@ -38,12 +39,22 @@ interface DraftState {
   status: LifecycleStatus
   verified: boolean
   date: string
+  isSoldOut: boolean
+  provenance: SoldOutProvenance
 }
+
+const emptyProvenance = (): SoldOutProvenance => ({
+  method: 'other',
+  url: '',
+  note: '',
+})
 
 const toDraft = (event: EditorEvent): DraftState => ({
   status: event.status,
   verified: event.verified,
   date: event.date,
+  isSoldOut: event.isSoldOut,
+  provenance: emptyProvenance(),
 })
 
 interface PatchBody {
@@ -52,11 +63,25 @@ interface PatchBody {
   date?: string
 }
 
-const computeDiff = (draft: DraftState, original: EditorEvent): PatchBody => {
+const computePatchDiff = (
+  draft: DraftState,
+  original: EditorEvent,
+): PatchBody => {
   const body: PatchBody = {}
   if (draft.status !== original.status) body.status = draft.status
   if (draft.verified !== original.verified) body.verified = draft.verified
   if (draft.date !== original.date) body.date = draft.date
+  return body
+}
+
+const provenanceToBody = (provenance: SoldOutProvenance) => {
+  const body: {
+    evidenceMethod: SoldOutProvenance['method']
+    evidenceUrl?: string
+    note?: string
+  } = { evidenceMethod: provenance.method }
+  if (provenance.url.trim()) body.evidenceUrl = provenance.url.trim()
+  if (provenance.note.trim()) body.note = provenance.note.trim()
   return body
 }
 
@@ -100,8 +125,9 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
     verified: event.verified,
   }
 
-  const diff = computeDiff(draft, event)
-  const dirty = Object.keys(diff).length > 0
+  const patchDiff = computePatchDiff(draft, event)
+  const soldOutChanged = draft.isSoldOut !== event.isSoldOut
+  const dirty = Object.keys(patchDiff).length > 0 || soldOutChanged
 
   const onSave = useCallback(async () => {
     if (!dirty || saving) return
@@ -110,7 +136,24 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
     try {
       const token = await getToken()
       if (!token) throw new ApiError(401, 'Unauthorized')
-      await apiClient.patch(`/v1/admin/events/${event.id}`, token, diff)
+      if (Object.keys(patchDiff).length > 0) {
+        await apiClient.patch(`/v1/admin/events/${event.id}`, token, patchDiff)
+      }
+      if (soldOutChanged) {
+        if (draft.isSoldOut) {
+          await apiClient.post(
+            `/v1/admin/events/${event.id}/sold-out`,
+            token,
+            provenanceToBody(draft.provenance),
+          )
+        } else {
+          await apiClient.post(
+            `/v1/admin/events/${event.id}/available`,
+            token,
+            {},
+          )
+        }
+      }
       router.refresh()
     } catch (saveErr) {
       const message =
@@ -122,7 +165,17 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
     } finally {
       setSaving(false)
     }
-  }, [diff, dirty, event.id, getToken, router, saving])
+  }, [
+    draft.isSoldOut,
+    draft.provenance,
+    dirty,
+    event.id,
+    getToken,
+    patchDiff,
+    router,
+    saving,
+    soldOutChanged,
+  ])
 
   const onDiscard = useCallback(() => {
     setDraft(toDraft(event))
@@ -155,6 +208,8 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
         editedStatus={draft.status}
         editedVerified={draft.verified}
         editedDate={draft.date}
+        editedIsSoldOut={draft.isSoldOut}
+        editedProvenance={draft.provenance}
         onStatusChange={(next) =>
           setDraft((prev) => ({ ...prev, status: next }))
         }
@@ -162,6 +217,12 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
           setDraft((prev) => ({ ...prev, verified: next }))
         }
         onDateChange={(next) => setDraft((prev) => ({ ...prev, date: next }))}
+        onSoldOutChange={(next) =>
+          setDraft((prev) => ({ ...prev, isSoldOut: next }))
+        }
+        onProvenanceChange={(next) =>
+          setDraft((prev) => ({ ...prev, provenance: next }))
+        }
       />
       <ArtSection artist={event.artist} />
       <SaveBar
