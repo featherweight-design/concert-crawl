@@ -104,6 +104,21 @@ describe('filtersToFetchQuery', () => {
     })
     expect(new URLSearchParams(query).get('verified')).toBe('false')
   })
+
+  it('drops single-character query so deep-links cannot bypass the 2-char minimum', () => {
+    const query = filtersToFetchQuery({ ...EMPTY_FILTERS, query: 'a' })
+    expect(new URLSearchParams(query).get('query')).toBeNull()
+  })
+
+  it('drops a query that trims down to a single character', () => {
+    const query = filtersToFetchQuery({ ...EMPTY_FILTERS, query: '  a  ' })
+    expect(new URLSearchParams(query).get('query')).toBeNull()
+  })
+
+  it('keeps a 2-character query', () => {
+    const query = filtersToFetchQuery({ ...EMPTY_FILTERS, query: 'ab' })
+    expect(new URLSearchParams(query).get('query')).toBe('ab')
+  })
 })
 
 describe('countActiveFilters', () => {
@@ -122,5 +137,9 @@ describe('countActiveFilters', () => {
         missingData: ['no-price'],
       }),
     ).toBe(5)
+  })
+
+  it('does not count a single-character query as an active filter', () => {
+    expect(countActiveFilters({ ...EMPTY_FILTERS, query: 'a' })).toBe(0)
   })
 })

@@ -6,6 +6,7 @@ import { StatusBadge } from '@/components/admin/primitives'
 import {
   EMPTY_FILTERS,
   MISSING_DATA_FLAGS,
+  SEARCH_MIN_CHARS,
   countActiveFilters,
   type AllEventsFilters,
   type MissingDataFlag,
@@ -17,14 +18,13 @@ export interface EventsFilterBarProps {
   onChange: (next: AllEventsFilters) => void
 }
 
-// Debounce + threshold for the search input. The input is locally controlled
-// so typing is never lost to a slow parent (the bug was: parent pushed every
+// Local debounce for the search input. The input is locally controlled so
+// typing is never lost to a slow parent (the bug was: parent pushed every
 // keystroke to the URL, and the round-trip clobbered the in-flight input).
 // 300ms is short enough to feel live but long enough to skip the 1-letter
-// states of multi-character words. The 2-char minimum avoids querying for
-// every single letter typed and lines up with the merge-dialog search policy.
+// states of multi-character words. The 2-char minimum lives in filters.ts
+// so both the input and `filtersToFetchQuery` share the same rule.
 const SEARCH_DEBOUNCE_MS = 300
-const SEARCH_MIN_CHARS = 2
 
 const COPY = ADMIN_COPY.review.allEvents.filters
 
@@ -119,14 +119,22 @@ export const EventsFilterBar = ({
     }
   }, [filters.query])
 
-  // Debounce search-draft → parent. Empty string is always allowed (so
-  // clearing the input always resets the result set); 1-char drafts are
-  // suppressed; ≥2-char drafts emit after 300ms.
+  // Sync search-draft → parent. Empty string bypasses the debounce so
+  // clearing the input resets the result set immediately. 1-char drafts are
+  // suppressed (the threshold is also enforced in `filtersToFetchQuery` so
+  // URL deep-links can't slip a single character through). ≥2-char drafts
+  // emit after 300ms.
   useEffect(() => {
     const trimmed = searchDraft.trim()
-    const wouldEmit = trimmed.length === 0 || trimmed.length >= SEARCH_MIN_CHARS
-    if (!wouldEmit) return
+    // Below threshold but not empty: hold (typing in progress). Empty falls
+    // through to the immediate-emit branch.
+    if (trimmed.length > 0 && trimmed.length < SEARCH_MIN_CHARS) return
     if (trimmed === filters.query.trim()) return
+    if (trimmed.length === 0) {
+      lastSyncedQuery.current = trimmed
+      onChange({ ...filters, query: trimmed })
+      return
+    }
     const handle = window.setTimeout(() => {
       lastSyncedQuery.current = trimmed
       onChange({ ...filters, query: trimmed })

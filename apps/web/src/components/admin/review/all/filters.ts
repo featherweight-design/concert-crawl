@@ -87,7 +87,7 @@ export const serializeFiltersToParams = (
   ]) {
     next.delete(key)
   }
-  if (filters.query.trim()) next.set('query', filters.query.trim())
+  if (effectiveQuery(filters)) next.set('query', effectiveQuery(filters))
   if (filters.verified !== 'all') next.set('verified', filters.verified)
   if (filters.dateFrom) next.set('dateFrom', filters.dateFrom)
   if (filters.dateTo) next.set('dateTo', filters.dateTo)
@@ -98,9 +98,25 @@ export const serializeFiltersToParams = (
   return next
 }
 
+// Minimum query length that triggers an actual filter. 1-char searches were
+// too noisy in beta — they fired a backend search for every single keystroke
+// at the start of a word. The input debounces above this threshold so users
+// rarely notice; URL deep-links with a 1-char query are silently ignored.
+export const SEARCH_MIN_CHARS = 2
+
+// Returns the query that should actually be sent to the backend / written to
+// the URL. Trims whitespace and drops drafts below SEARCH_MIN_CHARS so a
+// single-letter `query` (typed or deep-linked) never reaches the API. Empty
+// string is also returned as empty — callers decide what to do with that.
+export const effectiveQuery = (filters: AllEventsFilters): string => {
+  const trimmed = filters.query.trim()
+  return trimmed.length >= SEARCH_MIN_CHARS ? trimmed : ''
+}
+
 export const filtersToFetchQuery = (filters: AllEventsFilters): string => {
   const params = new URLSearchParams()
-  if (filters.query.trim()) params.set('query', filters.query.trim())
+  const query = effectiveQuery(filters)
+  if (query) params.set('query', query)
   if (filters.verified === 'verified') params.set('verified', 'true')
   if (filters.verified === 'unverified') params.set('verified', 'false')
   if (filters.dateFrom) params.set('dateFrom', filters.dateFrom)
@@ -114,7 +130,7 @@ export const filtersToFetchQuery = (filters: AllEventsFilters): string => {
 
 export const countActiveFilters = (filters: AllEventsFilters): number => {
   let count = 0
-  if (filters.query.trim()) count++
+  if (effectiveQuery(filters)) count++
   if (filters.verified !== 'all') count++
   if (filters.dateFrom) count++
   if (filters.dateTo) count++

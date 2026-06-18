@@ -75,14 +75,13 @@ describe('EventsFilterBar', () => {
       expect(onChange).not.toHaveBeenCalled()
     })
 
-    it('emits onChange when clearing the field to empty (so results reset)', () => {
+    it('emits onChange immediately when clearing the field (bypasses debounce)', () => {
       const { onChange } = setup({ ...EMPTY_FILTERS, query: 'yoga' })
       fireEvent.change(screen.getByLabelText('Search events'), {
         target: { value: '' },
       })
-      act(() => {
-        vi.advanceTimersByTime(300)
-      })
+      // No timer advance — empty-string clear bypasses the debounce so the
+      // result set resets right away.
       expect(onChange).toHaveBeenCalledWith(
         expect.objectContaining({ query: '' }),
       )
