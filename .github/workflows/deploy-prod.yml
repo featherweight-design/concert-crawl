@@ -22,8 +22,12 @@ on:
 
 # Serialize prod deploys. cancel-in-progress: false means a queued deploy
 # waits for the running one rather than being replaced.
+# Shared with prod-post-deploy-smoke.yml and rollback-prod.yml so all
+# prod-touching workflows serialize through a single queue. GitHub
+# Actions concurrency is keyed by group name across the repo — using
+# different group names would let these workflows run concurrently.
 concurrency:
-  group: deploy-prod
+  group: prod-pipeline
   cancel-in-progress: false
 
 # Scope GITHUB_TOKEN to least privilege. This workflow only POSTs to

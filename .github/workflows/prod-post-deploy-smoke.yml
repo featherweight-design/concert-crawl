@@ -15,8 +15,10 @@ on:
   workflow_dispatch:
 
 # Serialize so we never have overlapping prod smoke runs.
+# Shared with deploy-prod.yml and rollback-prod.yml so all
+# prod-touching workflows serialize through a single queue.
 concurrency:
-  group: prod-post-deploy-smoke
+  group: prod-pipeline
   cancel-in-progress: false
 
 # Scope GITHUB_TOKEN to least privilege — this workflow only checks out

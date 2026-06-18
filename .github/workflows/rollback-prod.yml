@@ -25,8 +25,10 @@ on:
 
 # Serialize rollbacks. A rollback running concurrently with anything else
 # touching the same service is a recipe for inconsistent state.
+# Shared with deploy-prod.yml and prod-post-deploy-smoke.yml so all
+# prod-touching workflows serialize through a single queue.
 concurrency:
-  group: rollback-prod
+  group: prod-pipeline
   cancel-in-progress: false
 
 # Scope GITHUB_TOKEN to least privilege. This workflow only checks out
