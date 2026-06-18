@@ -120,26 +120,33 @@ describe('AllEventsTabContent', () => {
     expect(onRowClick).toHaveBeenCalledWith('evt-77')
   })
 
-  it('paginates: Load more fetches with the next offset and appends', async () => {
-    const pageOne = Array.from({ length: 50 }, (_, idx) =>
-      buildEvent({ id: `evt-${idx}`, title: `Show ${idx}` }),
-    )
-    const pageTwo = [buildEvent({ id: 'evt-late', title: 'Late Show' })]
-    mockApiGet.mockResolvedValueOnce(pageOne).mockResolvedValueOnce(pageTwo)
-    render(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
-    await waitFor(() => {
-      expect(screen.getByText('Show 0')).toBeTruthy()
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Load more' }))
-    await waitFor(() => {
-      expect(mockApiGet).toHaveBeenCalledTimes(2)
-    })
-    const secondCallUrl = mockApiGet.mock.calls[1]?.[0]
-    expect(secondCallUrl).toBe('/v1/admin/events?limit=50&offset=50')
-    await waitFor(() => {
-      expect(screen.getByText('Late Show')).toBeTruthy()
-    })
-  })
+  // 15s timeout: rendering 50 mock rows + interactions can exceed the
+  // default 5s ceiling on slower CI runners. The local run finishes in
+  // ~900ms so the extra budget is purely a flake-suppressant.
+  it(
+    'paginates: Load more fetches with the next offset and appends',
+    { timeout: 15000 },
+    async () => {
+      const pageOne = Array.from({ length: 50 }, (_, idx) =>
+        buildEvent({ id: `evt-${idx}`, title: `Show ${idx}` }),
+      )
+      const pageTwo = [buildEvent({ id: 'evt-late', title: 'Late Show' })]
+      mockApiGet.mockResolvedValueOnce(pageOne).mockResolvedValueOnce(pageTwo)
+      render(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
+      await waitFor(() => {
+        expect(screen.getByText('Show 0')).toBeTruthy()
+      })
+      fireEvent.click(screen.getByRole('button', { name: 'Load more' }))
+      await waitFor(() => {
+        expect(mockApiGet).toHaveBeenCalledTimes(2)
+      })
+      const secondCallUrl = mockApiGet.mock.calls[1]?.[0]
+      expect(secondCallUrl).toBe('/v1/admin/events?limit=50&offset=50')
+      await waitFor(() => {
+        expect(screen.getByText('Late Show')).toBeTruthy()
+      })
+    },
+  )
 
   it('shows the error banner (not empty state) when the initial fetch fails', async () => {
     mockApiGet.mockRejectedValue(new Error('boom'))
@@ -150,24 +157,28 @@ describe('AllEventsTabContent', () => {
     expect(screen.queryByText('No events to show.')).toBeNull()
   })
 
-  it('keeps Load more visible after a transient pagination failure', async () => {
-    const pageOne = Array.from({ length: 50 }, (_, idx) =>
-      buildEvent({ id: `evt-${idx}`, title: `Show ${idx}` }),
-    )
-    mockApiGet
-      .mockResolvedValueOnce(pageOne)
-      .mockRejectedValueOnce(new Error('transient'))
-    render(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
-    await waitFor(() => {
-      expect(screen.getByText('Show 0')).toBeTruthy()
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Load more' }))
-    await waitFor(() => {
-      expect(screen.getByText('Failed to load events.')).toBeTruthy()
-    })
-    // The Load-more button must remain so the admin can retry.
-    expect(screen.getByRole('button', { name: 'Load more' })).toBeTruthy()
-  })
+  it(
+    'keeps Load more visible after a transient pagination failure',
+    { timeout: 15000 },
+    async () => {
+      const pageOne = Array.from({ length: 50 }, (_, idx) =>
+        buildEvent({ id: `evt-${idx}`, title: `Show ${idx}` }),
+      )
+      mockApiGet
+        .mockResolvedValueOnce(pageOne)
+        .mockRejectedValueOnce(new Error('transient'))
+      render(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
+      await waitFor(() => {
+        expect(screen.getByText('Show 0')).toBeTruthy()
+      })
+      fireEvent.click(screen.getByRole('button', { name: 'Load more' }))
+      await waitFor(() => {
+        expect(screen.getByText('Failed to load events.')).toBeTruthy()
+      })
+      // The Load-more button must remain so the admin can retry.
+      expect(screen.getByRole('button', { name: 'Load more' })).toBeTruthy()
+    },
+  )
 
   it('hides Load more when the last fetch returned fewer than the page size', async () => {
     mockApiGet.mockResolvedValue([buildEvent()])
