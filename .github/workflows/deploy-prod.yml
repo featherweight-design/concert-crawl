@@ -107,7 +107,15 @@ jobs:
       # independently and their failure modes surface via Sentry, not
       # via the smoke gate.
       - name: Wait for prod API to be live on new SHA
-        run: bash .github/scripts/render-wait-for-live.sh "${{ vars.RENDER_SERVICE_ID_API }}" "${{ github.event.workflow_run.head_sha || github.sha }}"
+        run: |
+          if [ -z "${{ vars.RENDER_SERVICE_ID_API }}" ]; then
+            echo "RENDER_SERVICE_ID_API production-env variable is empty or unset."
+            echo "Set it via Settings → Environments → production → Variables before enabling auto-deploy-prod."
+            exit 1
+          fi
+          bash .github/scripts/render-wait-for-live.sh \
+            "${{ vars.RENDER_SERVICE_ID_API }}" \
+            "${{ github.event.workflow_run.head_sha || github.sha }}"
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
 

@@ -52,9 +52,13 @@ while [ "${elapsed}" -lt "${timeout}" ]; do
 
   # Item shape varies across Render API versions: some endpoints wrap
   # entries as `{deploy: {...}}`, others return the deploy object flat.
-  # `(.deploy // .)` accepts both.
+  # `(.deploy // .)` accepts both. Default the indexed entry to {} so
+  # the subsequent `.commit` access does not crash with
+  # "Cannot index null" when no deploy currently has `status: live`
+  # (new/paused service, or API shape change). With an empty entry,
+  # live_sha falls through to "" and we keep polling until timeout.
   live_sha=$(echo "${deploys_json}" | jq -r '
-    [.[] | (.deploy // .) | select(.status == "live")][0].commit // ""
+    (([.[] | (.deploy // .) | select(.status == "live")][0]) // {}).commit // ""
   ')
 
   if [ "${live_sha}" = "${EXPECTED_SHA}" ]; then
