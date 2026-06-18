@@ -5,7 +5,7 @@ import { EventEditorClient } from '@/components/admin/events/editor/EventEditorC
 import type { EditorEvent } from '@/components/admin/events/editor/EventEditorClient'
 
 interface PageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 interface ApiResponse {
@@ -20,8 +20,10 @@ export default async function EventEditorPage({ params }: PageProps) {
   const token = await getToken()
   if (!token) return null
 
+  const { id } = await params
+
   const response = await apiClient
-    .get<ApiResponse>(`/v1/admin/events/${params.id}`, token)
+    .get<ApiResponse>(`/v1/admin/events/${id}`, token)
     .catch(() => null)
 
   if (!response || !response.success || !response.data) {
