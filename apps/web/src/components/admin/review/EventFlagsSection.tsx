@@ -301,22 +301,13 @@ export const EventFlagsSection = ({
         </div>
 
         {/* Right: inspector */}
-        {onEdit ? (
-          <EventFlagInspector
-            event={visibleEvents.find((ev) => ev.id === activeId) ?? null}
-            onApprove={handleApprove}
-            onReject={handleReject}
-            onClose={() => setActiveId(null)}
-            onEdit={onEdit}
-          />
-        ) : (
-          <EventFlagInspector
-            event={visibleEvents.find((ev) => ev.id === activeId) ?? null}
-            onApprove={handleApprove}
-            onReject={handleReject}
-            onClose={() => setActiveId(null)}
-          />
-        )}
+        <EventFlagInspector
+          event={visibleEvents.find((ev) => ev.id === activeId) ?? null}
+          onApprove={handleApprove}
+          onReject={handleReject}
+          onClose={() => setActiveId(null)}
+          onEdit={onEdit}
+        />
       </div>
 
       {/* Bulk action dock */}

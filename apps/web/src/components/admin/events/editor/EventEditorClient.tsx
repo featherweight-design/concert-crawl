@@ -24,7 +24,7 @@ export interface EditorEvent {
   extractionStrategy: string | null
   genre: string[] | null
   updatedAt: string | null
-  venueId: string
+  venueId: string | null
   venueName: string | null
   isSoldOut: boolean
 }

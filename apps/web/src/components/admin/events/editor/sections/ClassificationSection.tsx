@@ -20,16 +20,12 @@ export const ClassificationSection = ({
       title={sections.classificationTitle}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {tags.length === 0 ? (
-          <EditField
-            label={fields.genreTags}
-            type="tags"
-            tags={tags}
-            help={fields.genreEmptyHelp}
-          />
-        ) : (
-          <EditField label={fields.genreTags} type="tags" tags={tags} />
-        )}
+        <EditField
+          label={fields.genreTags}
+          type="tags"
+          tags={tags}
+          help={tags.length === 0 ? fields.genreEmptyHelp : undefined}
+        />
         {/* Mark non-concert hint panel — the action button itself lands in
             PR 9; PR 3 ships the informational scaffolding only. */}
         <div

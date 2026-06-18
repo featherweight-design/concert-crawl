@@ -1,6 +1,7 @@
 'use client'
 
 import { type ReactNode } from 'react'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 export interface EditLabelProps {
   children: ReactNode
@@ -30,7 +31,7 @@ export const EditLabel = ({ children, changed = false }: EditLabelProps) => (
     </span>
     {changed && (
       <span
-        title="Unsaved change"
+        title={ADMIN_COPY.editor.unsavedChangeTooltip}
         style={{
           width: 6,
           height: 6,

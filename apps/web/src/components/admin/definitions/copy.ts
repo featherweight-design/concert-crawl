@@ -1102,6 +1102,7 @@ export const ADMIN_COPY = {
   editor: {
     monoLabelPrefix: 'edit event ·',
     viewDetailButton: 'View detail',
+    unsavedChangeTooltip: 'Unsaved change',
     sections: {
       identityNumber: '01',
       identityTitle: 'Identity',

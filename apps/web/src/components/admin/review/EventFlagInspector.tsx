@@ -37,8 +37,11 @@ interface EventFlagInspectorProps {
   event: EventFlag | null
   onApprove: (id: string) => void
   onReject: (id: string) => void
-  onClose?: () => void
-  onEdit?: (id: string) => void
+  // Explicit `| undefined` keeps these compatible with callers that pass
+  // `onClose={maybeUndefined}` or `onEdit={maybeUndefined}` under
+  // exactOptionalPropertyTypes.
+  onClose?: (() => void) | undefined
+  onEdit?: ((id: string) => void) | undefined
 }
 
 function formatDateTime(date: string, showTime: string | null): string {

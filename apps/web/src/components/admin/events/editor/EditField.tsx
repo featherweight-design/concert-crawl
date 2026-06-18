@@ -15,18 +15,18 @@ export type EditFieldType =
 
 export interface EditFieldProps {
   label: string
-  type?: EditFieldType
+  type?: EditFieldType | undefined
   /** String value for text/number/time/select/textarea; ReactNode for readonly. */
-  value?: string | ReactNode
-  placeholder?: string
-  prefix?: string
-  changed?: boolean
-  error?: string
-  help?: string
+  value?: string | ReactNode | undefined
+  placeholder?: string | undefined
+  prefix?: string | undefined
+  changed?: boolean | undefined
+  error?: string | undefined
+  help?: string | undefined
   /** Tag list for type='tags'. */
-  tags?: string[]
+  tags?: string[] | undefined
   /** When true, spans the full grid row. */
-  full?: boolean
+  full?: boolean | undefined
 }
 
 const boxStyle = (error: boolean, surface1: boolean): React.CSSProperties => ({
@@ -61,7 +61,7 @@ export const EditField = ({
     control = (
       <div
         style={{
-          ...boxStyle(false, true),
+          ...boxStyle(hasError, true),
           fontFamily:
             type === 'mono'
               ? "'JetBrains Mono', monospace"
@@ -84,7 +84,7 @@ export const EditField = ({
           lineHeight: 1.5,
         }}
       >
-        {value || placeholder}
+        {value || placeholder || '—'}
       </div>
     )
   } else if (type === 'tags') {
@@ -144,7 +144,7 @@ export const EditField = ({
         <span
           style={{ flex: 1, color: value ? 'var(--fg)' : 'var(--fg-subtle)' }}
         >
-          {value || placeholder}
+          {value || placeholder || '—'}
         </span>
       </div>
     )
@@ -180,7 +180,7 @@ export const EditField = ({
             fontWeight: monoLike ? 600 : 500,
           }}
         >
-          {value || placeholder}
+          {value || placeholder || '—'}
         </span>
       </div>
     )
