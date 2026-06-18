@@ -25,6 +25,7 @@ vi.mock('drizzle-orm', () => ({
   gte: vi.fn((_a, _b) => ({ type: 'gte' })),
   count: vi.fn((col: unknown) => ({ type: 'count', col })),
   isNotNull: vi.fn((col: unknown) => ({ type: 'isNotNull', col })),
+  isNull: vi.fn((col: unknown) => ({ type: 'isNull', col })),
 }))
 
 vi.mock('@concert-crawl/db', () => ({
