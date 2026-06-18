@@ -592,6 +592,100 @@ describe('PATCH /v1/admin/events/:id — Missing-tab actions', () => {
   })
 })
 
+describe('GET /v1/admin/events — verified filter optional (PR 4 all-events)', () => {
+  beforeEach(() => {
+    setAdminAuth()
+    return clearTables()
+  })
+
+  it('returns both verified and unverified events when verified is omitted', async () => {
+    // PR 4's All-events tab needs to surface every event regardless of
+    // verification state. The legacy default of `verified=false` masked
+    // verified rows from this endpoint, blocking the new view.
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      title: 'Verified Show',
+      artist: 'Artist V',
+      date: futureDate(14),
+      verified: true,
+    })
+    await seedEvent(venue.id, {
+      title: 'Unverified Show',
+      artist: 'Artist U',
+      date: futureDate(15),
+      verified: false,
+    })
+
+    const res = await app.request('/v1/admin/events', {
+      headers: ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: Array<{ title: string; verified: boolean }>
+    }
+    expect(body.success).toBe(true)
+    const titles = body.data.map((row) => row.title).sort()
+    expect(titles).toEqual(['Unverified Show', 'Verified Show'])
+  })
+
+  it('still filters when verified=true is provided explicitly', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      title: 'Verified Show',
+      artist: 'Artist V',
+      date: futureDate(14),
+      verified: true,
+    })
+    await seedEvent(venue.id, {
+      title: 'Unverified Show',
+      artist: 'Artist U',
+      date: futureDate(15),
+      verified: false,
+    })
+
+    const res = await app.request('/v1/admin/events?verified=true', {
+      headers: ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: Array<{ title: string; verified: boolean }>
+    }
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0]?.title).toBe('Verified Show')
+    expect(body.data[0]?.verified).toBe(true)
+  })
+
+  it('still filters when verified=false is provided explicitly', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      title: 'Verified Show',
+      artist: 'Artist V',
+      date: futureDate(14),
+      verified: true,
+    })
+    await seedEvent(venue.id, {
+      title: 'Unverified Show',
+      artist: 'Artist U',
+      date: futureDate(15),
+      verified: false,
+    })
+
+    const res = await app.request('/v1/admin/events?verified=false', {
+      headers: ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: Array<{ title: string; verified: boolean }>
+    }
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0]?.title).toBe('Unverified Show')
+    expect(body.data[0]?.verified).toBe(false)
+  })
+})
+
 describe('GET /v1/admin/events/:id — single-event editor payload', () => {
   beforeEach(() => {
     setAdminAuth()

@@ -532,7 +532,9 @@ export const ReviewPageClient = ({
                 ? 'missing'
                 : activeTab === 'prices'
                   ? 'prices'
-                  : 'flags'
+                  : activeTab === 'all-events'
+                    ? 'all-events'
+                    : 'flags'
             }
             pricesMissingOnly={priceFilter === 'missing'}
             hasMorePriceEvents={hasMorePriceEvents}
@@ -546,6 +548,7 @@ export const ReviewPageClient = ({
             onEnterMissingTab={() => {
               if (!missingLoaded) void fetchMissingEvents()
             }}
+            onAllEventsRowClick={(id) => router.push(editEventHref(id))}
           />
         </div>
       </div>
@@ -622,7 +625,12 @@ export const ReviewPageClient = ({
         />
       )}
 
-      {activeTab === 'all-events' && <AllEventsTabContent />}
+      {activeTab === 'all-events' && (
+        <AllEventsTabContent
+          isDesktop
+          onRowClick={(id) => router.push(editEventHref(id))}
+        />
+      )}
     </div>
   )
 }

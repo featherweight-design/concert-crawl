@@ -9,6 +9,7 @@ import {
 } from '@/components/admin/primitives'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { MissingTabContent } from './_tabs/MissingTabContent'
+import { AllEventsTabContent } from './_tabs/AllEventsTabContent'
 import { type MissingRowEvent } from './missing/MissingRow'
 
 interface EventFlag {
@@ -73,7 +74,7 @@ interface AdminReviewMobileProps {
     vendor: string,
     howFound: string,
   ) => Promise<void>
-  initialTab?: 'flags' | 'prices' | 'missing'
+  initialTab?: 'flags' | 'prices' | 'missing' | 'all-events'
   pricesMissingOnly: boolean
   hasMorePriceEvents: boolean
   priceLoadingMore?: boolean
@@ -84,6 +85,7 @@ interface AdminReviewMobileProps {
   onMarkMissingCancelled: (id: string) => Promise<void>
   onDismissMissing: (id: string) => Promise<void>
   onEnterMissingTab?: () => void
+  onAllEventsRowClick?: (id: string) => void
 }
 
 function getEventFlagChips(
@@ -578,10 +580,11 @@ export function AdminReviewMobile({
   onMarkMissingCancelled,
   onDismissMissing,
   onEnterMissingTab,
+  onAllEventsRowClick,
 }: AdminReviewMobileProps) {
-  const [activeTab, setActiveTab] = useState<'flags' | 'prices' | 'missing'>(
-    initialTab,
-  )
+  const [activeTab, setActiveTab] = useState<
+    'flags' | 'prices' | 'missing' | 'all-events'
+  >(initialTab)
 
   // If the mobile surface mounts already on the Missing tab (deep-link via
   // ?tab=missing), trigger the lazy fetch — the tab-click handler only
@@ -592,10 +595,14 @@ export function AdminReviewMobile({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const handleTabClick = (key: 'flags' | 'prices' | 'missing') => {
+  const handleTabClick = (
+    key: 'flags' | 'prices' | 'missing' | 'all-events',
+  ) => {
     setActiveTab(key)
     if (key === 'missing' && onEnterMissingTab) onEnterMissingTab()
   }
+
+  const noopRowClick = (_id: string): void => undefined
 
   const missingCount = priceEvents.filter((ev) => ev.priceMin === null).length
   const priceCount = submissions.length + missingCount
@@ -644,6 +651,11 @@ export function AdminReviewMobile({
               key: 'missing',
               label: ADMIN_COPY.review.tabs.missing,
               count: missingEvents.length,
+            },
+            {
+              key: 'all-events',
+              label: ADMIN_COPY.review.tabs.allEvents,
+              count: 0,
             },
           ] as const
         ).map(({ key, label, count }) => {
@@ -1094,6 +1106,15 @@ export function AdminReviewMobile({
             onMarkPostponed={onMarkMissingPostponed}
             onMarkCancelled={onMarkMissingCancelled}
             onDismiss={onDismissMissing}
+          />
+        </div>
+      )}
+
+      {activeTab === 'all-events' && (
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+          <AllEventsTabContent
+            isDesktop={false}
+            onRowClick={onAllEventsRowClick ?? noopRowClick}
           />
         </div>
       )}

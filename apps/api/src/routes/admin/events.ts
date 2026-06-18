@@ -23,10 +23,13 @@ function isSoldOutExpr() {
 }
 
 const listQuerySchema = z.object({
+  // When omitted, no verification filter is applied — used by PR 4's
+  // All-events tab to surface both verified and unverified events.
+  // The legacy callers (Review tab + missing fetch) pass it explicitly.
   verified: z
     .enum(['true', 'false'])
-    .default('false')
-    .transform((val) => val === 'true'),
+    .optional()
+    .transform((val) => (val === undefined ? undefined : val === 'true')),
   // Stale-event detection filter (#607). When `missing=true`, scope the list
   // to events the crawler stopped seeing — first_missing_at IS NOT NULL,
   // status = upcoming, date >= today — ordered most-recently-disappeared
@@ -192,7 +195,14 @@ eventsAdminRouter.get(
           .limit(limit)
           .offset(offset)
       : await baseSelect
-          .where(and(eq(events.verified, verified), gte(events.date, today)))
+          .where(
+            and(
+              verified === undefined
+                ? undefined
+                : eq(events.verified, verified),
+              gte(events.date, today),
+            ),
+          )
           .orderBy(asc(events.date), desc(events.createdAt))
           .limit(limit)
           .offset(offset)

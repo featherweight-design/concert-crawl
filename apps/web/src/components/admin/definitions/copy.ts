@@ -1176,9 +1176,26 @@ export const ADMIN_COPY = {
       missing: 'Missing',
       allEvents: 'All events',
       ariaLabel: 'Review sections',
-      allEventsPlaceholderHeading: 'Coming soon',
-      allEventsPlaceholderBody:
-        'The full events browser lands in PR 4. For now, use Event flags for unverified items.',
+    },
+
+    allEvents: {
+      columns: {
+        event: 'Event',
+        venueDate: 'Venue / date',
+        status: 'Status',
+        genre: 'Genre',
+        confidence: 'Confidence',
+        created: 'Created',
+      },
+      noGenre: 'no genre',
+      noShowTime: 'no time',
+      loadMore: 'Load more',
+      loadingMore: 'Loading…',
+      empty: {
+        heading: 'No events to show.',
+        body: 'Nothing has been verified or pulled in yet.',
+      },
+      skeletonAriaLabel: 'Loading events',
     },
 
     missing: {
