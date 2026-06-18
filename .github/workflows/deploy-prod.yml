@@ -76,6 +76,40 @@ jobs:
           echo "'reason' input for the audit trail), not through staging-smoke."
           exit 1
 
+      # SHA-drift guard: Render deploy hooks pull whatever is at HEAD of
+      # the configured branch (main) at deploy time, NOT a specific
+      # commit. If main has advanced between staging-smoke completion
+      # and this run, Render would deploy the newer (un-smoked) commit
+      # while render-wait-for-live waits for the old (smoked) commit's
+      # SHA to be live — the wait would time out, deploy-prod would
+      # fail, prod-post-deploy-smoke would be skipped, and rollback
+      # would not fire (gated on smoke failure, not deploy failure).
+      # Prod would be left on un-smoked code with no automatic recovery.
+      #
+      # Refuse to deploy if the upstream SHA isn't current main HEAD;
+      # the next merge's pipeline will pick up the latest code instead.
+      - name: Verify upstream SHA is still main HEAD
+        if: github.event_name == 'workflow_run'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPSTREAM_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          main_sha=$(curl --fail --silent --show-error \
+            --connect-timeout 5 --max-time 15 \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/branches/main" \
+            | jq -r .commit.sha)
+          if [ "$UPSTREAM_SHA" != "$main_sha" ]; then
+            echo "Refusing to deploy prod — main advanced after staging-smoke succeeded."
+            echo "  Upstream staging-smoke ran against: $UPSTREAM_SHA"
+            echo "  Current main HEAD:                  $main_sha"
+            echo ""
+            echo "The next merge's pipeline will deploy the latest code instead."
+            exit 1
+          fi
+          echo "Upstream SHA $UPSTREAM_SHA matches current main HEAD; proceeding."
+
       - name: Gate passed
         run: echo "All deploy gates satisfied; proceeding to deploy job."
 
