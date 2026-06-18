@@ -5,7 +5,7 @@
 // extraction nominally succeed; only the count of extracted rows reveals
 // the regression.
 
-import { and, desc, eq, ne } from 'drizzle-orm'
+import { and, desc, eq, gt, ne } from 'drizzle-orm'
 import { db, crawlRuns, notifications, venues } from '@concert-crawl/db'
 import { sendEventCountDropEmail } from './email.js'
 
@@ -90,14 +90,22 @@ async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
     }
   }
 
-  // Pull the last N successful (not skipped, not failed) runs to form
-  // the baseline. Two filter notes:
+  // Pull the last N successful runs that actually returned events, to form
+  // the baseline. Three filter notes:
   //   - Excluding 'skipped' matters because a page-hash dedup skip writes
   //     eventsFound: 0 by convention; counting those drags the baseline
   //     toward zero and masks real regressions.
   //   - Excluding the current run matters because the crawler inserts the
   //     crawl_runs row before calling this check, so without the filter
   //     a regression would partially shrink its own baseline.
+  //   - Excluding zero-event successful runs (#645) so the baseline reflects
+  //     the venue's healthy throughput, not an average that's already been
+  //     dragged down by prior silent failures. Before this filter a venue
+  //     in the Bluebird-style "intermittently returns 0" mode would have a
+  //     misleadingly low baseline (e.g. 3.4 instead of the real ~25), and
+  //     the alert email would understate the regression. The alert still
+  //     fires correctly in either case — the threshold ratios held — but
+  //     the operator-facing copy was wrong.
   const recent = await db
     .select({ eventsFound: crawlRuns.eventsFound })
     .from(crawlRuns)
@@ -106,6 +114,7 @@ async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
         eq(crawlRuns.venueId, input.venueId),
         eq(crawlRuns.status, 'success'),
         ne(crawlRuns.id, input.crawlRunId),
+        gt(crawlRuns.eventsFound, 0),
       ),
     )
     .orderBy(desc(crawlRuns.createdAt))

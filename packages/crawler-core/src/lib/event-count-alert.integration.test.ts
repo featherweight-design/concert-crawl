@@ -348,4 +348,50 @@ describe('checkEventCountDrop', () => {
     expect(outcome.baselineCount).toBe(100)
     expect(baselineRuns).toHaveLength(3) // sanity
   })
+
+  it('excludes zero-event prior runs from baseline (#645)', async () => {
+    // Reproduces the Bluebird-style "intermittently silently fails" pattern:
+    // ~half the prior successful runs returned 0 events. Without the
+    // zero-event filter, the baseline averages [25, 0, 25, 0, 25, 0, 25] =
+    // 14.3, which understates the venue's real healthy throughput by ~45%.
+    // With the filter, baseline averages only the four non-zero runs: 25.
+    const venue = await seedVenue()
+    await seedSuccessfulRuns(venue.id, [25, 0, 25, 0, 25, 0, 25])
+    const [currentId] = await seedSuccessfulRuns(venue.id, [0])
+
+    const outcome = await checkEventCountDrop({
+      venueId: venue.id,
+      venueName: venue.name,
+      crawlRunId: currentId!,
+      eventsFound: 0,
+      lastEventCountAlertAt: null,
+    })
+
+    expect(outcome.fired).toBe(true)
+    if (!outcome.fired) throw new Error('expected outcome.fired')
+    expect(outcome.baselineCount).toBe(25)
+    expect(outcome.dropPercent).toBe(100)
+  })
+
+  it('stays in cold_start when fewer than 3 non-zero prior runs exist (#645)', async () => {
+    // After the zero-event filter, a venue that has only ever returned 0
+    // events has no baseline to compare against; the cold-start gate
+    // should hold the alert until enough non-zero runs accumulate. Without
+    // this behavior we'd page on the very first crawl of a stubbornly
+    // dark venue.
+    const venue = await seedVenue()
+    // 5 prior successful runs but only 2 with events > 0
+    await seedSuccessfulRuns(venue.id, [10, 0, 0, 0, 12])
+    const [currentId] = await seedSuccessfulRuns(venue.id, [0])
+
+    const outcome = await checkEventCountDrop({
+      venueId: venue.id,
+      venueName: venue.name,
+      crawlRunId: currentId!,
+      eventsFound: 0,
+      lastEventCountAlertAt: null,
+    })
+
+    expect(outcome).toEqual({ fired: false, reason: 'cold_start' })
+  })
 })
