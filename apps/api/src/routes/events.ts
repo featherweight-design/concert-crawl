@@ -78,6 +78,14 @@ eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
     gte(events.date, from ?? todayInTimezone('UTC')),
     // PR 6 — hide events flagged "non-concert" from every consumer query.
     eq(events.hiddenFromConsumer, false),
+    // Hide rows the crawler flagged as no longer visible on the venue page
+    // (#607). The crawler clears firstMissingAt on the next successful
+    // re-extraction (packages/crawler-core/src/crawl.ts:673-700), so any row
+    // that genuinely re-appears becomes visible again automatically — no
+    // manual intervention needed. Without this filter, every LLM artist-string
+    // drift produces a visible dupe (BASS BINGO – Wooli Edition showed 3 rows
+    // for one show on 2026-06-18).
+    isNull(events.firstMissingAt),
   ]
 
   if (to) {
@@ -228,8 +236,11 @@ eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
 
 // GET /v1/events/genres — distinct genres across all upcoming events
 eventsRouter.get('/genres', async (ctx) => {
+  // first_missing_at IS NULL mirrors the list/detail filter — a genre tag
+  // that only exists on stale rows should not appear in the filter chip
+  // surface, otherwise users would pick a vibe and get zero results.
   const rows = await db.execute(
-    sql`SELECT DISTINCT unnest(genre) AS genre FROM ${events} WHERE status = 'upcoming' AND genre IS NOT NULL ORDER BY genre`,
+    sql`SELECT DISTINCT unnest(genre) AS genre FROM ${events} WHERE status = 'upcoming' AND first_missing_at IS NULL AND genre IS NOT NULL ORDER BY genre`,
   )
   const genres = Array.from(rows)
     .map((row) => (row as Record<string, unknown>)['genre'])
@@ -279,7 +290,19 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     })
     .from(events)
     .innerJoin(venues, eq(events.venueId, venues.id))
-    .where(and(eq(events.id, id), eq(events.hiddenFromConsumer, false)))
+    // isNull(firstMissingAt) mirrors the list-filter intent: if the crawler
+    // stopped seeing this event, direct-link traffic from old emails / search
+    // results should 404 rather than render a stale detail page. The crawler
+    // clears the flag on re-extraction, so the row becomes reachable again
+    // automatically if it returns to the venue's calendar. hiddenFromConsumer
+    // is the parallel "non-concert" filter from PR 6.
+    .where(
+      and(
+        eq(events.id, id),
+        eq(events.hiddenFromConsumer, false),
+        isNull(events.firstMissingAt),
+      ),
+    )
 
   if (!row) {
     return ctx.json({ success: false, error: 'Event not found' }, 404)

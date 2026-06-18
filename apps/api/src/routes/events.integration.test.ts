@@ -121,6 +121,44 @@ describe('GET /v1/events — integration', () => {
     expect(body.data.total).toBeGreaterThanOrEqual(3)
     expect(body.data.limit).toBe(2)
   })
+
+  it('excludes rows with first_missing_at set so stale dupes do not leak to consumers', async () => {
+    // Regression for the BASS BINGO / Olivia Rodrigo duplicate-display issue
+    // observed 2026-06-18. The crawler's stale-detection pass flags rows the
+    // LLM no longer extracts (firstMissingAt set) but the consumer list used
+    // to ignore that flag, producing N visible rows for one physical show
+    // whenever the LLM extracted a different "primary artist" string across
+    // crawls. See PR for hide-missing-events-from-consumer-api.
+    const venue = await seedVenue({
+      name: 'Hide Missing Venue',
+      slug: 'hide-missing-venue',
+    })
+    await seedEvent(venue.id, {
+      title: 'Active Show',
+      artist: 'Active Artist',
+      date: '2027-06-01',
+      status: 'upcoming',
+      firstMissingAt: null,
+    })
+    await seedEvent(venue.id, {
+      title: 'Stale Show',
+      artist: 'Stale Artist',
+      date: '2027-06-01',
+      status: 'upcoming',
+      firstMissingAt: new Date('2026-06-17T09:00:00Z'),
+    })
+
+    const res = await app.request('/v1/events?venueSlug=hide-missing-venue')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { data: { title: string }[]; total: number }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.total).toBe(1)
+    expect(body.data.data).toHaveLength(1)
+    expect(body.data.data[0]?.title).toBe('Active Show')
+  })
 })
 
 describe('GET /v1/events/:id — integration', () => {
@@ -191,6 +229,26 @@ describe('GET /v1/events/:id — integration', () => {
     const res = await app.request(
       '/v1/events/00000000-0000-0000-0000-000000000000',
     )
+    expect(res.status).toBe(404)
+    const body = (await res.json()) as { success: boolean; error: string }
+    expect(body.success).toBe(false)
+    expect(body.error).toBe('Event not found')
+  })
+
+  it('returns 404 when the event is flagged first_missing_at so direct-link traffic does not see stale data', async () => {
+    const venue = await seedVenue({
+      name: 'Detail Missing Venue',
+      slug: 'detail-missing-venue',
+    })
+    const evt = await seedEvent(venue.id, {
+      title: 'Stale Detail',
+      artist: 'Stale Detail Artist',
+      date: '2027-06-01',
+      status: 'upcoming',
+      firstMissingAt: new Date('2026-06-17T09:00:00Z'),
+    })
+
+    const res = await app.request(`/v1/events/${evt.id}`)
     expect(res.status).toBe(404)
     const body = (await res.json()) as { success: boolean; error: string }
     expect(body.success).toBe(false)
@@ -572,5 +630,26 @@ describe('GET /v1/events/genres', () => {
     expect(res.status).toBe(200)
     const body = (await res.json()) as { success: boolean; data: string[] }
     expect(body.data).toEqual(['rock'])
+  })
+
+  it('omits genres that only appear on first_missing_at rows', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      artist: 'Stale Genre Artist',
+      genre: ['ghost-genre-do-not-show'],
+      status: 'upcoming',
+      firstMissingAt: new Date('2026-06-17T09:00:00Z'),
+    })
+    await seedEvent(venue.id, {
+      artist: 'Active Genre Artist',
+      genre: ['rock'],
+      status: 'upcoming',
+    })
+
+    const res = await app.request('/v1/events/genres')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { success: boolean; data: string[] }
+    expect(body.data).not.toContain('ghost-genre-do-not-show')
+    expect(body.data).toContain('rock')
   })
 })
