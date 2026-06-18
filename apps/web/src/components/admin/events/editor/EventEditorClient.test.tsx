@@ -1,7 +1,31 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+
+const mockGetToken = vi.fn().mockResolvedValue('test-token')
+vi.mock('@clerk/nextjs', () => ({
+  useAuth: () => ({ getToken: mockGetToken }),
+}))
+
+const mockRouterRefresh = vi.fn()
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh: mockRouterRefresh, push: vi.fn() }),
+}))
+
+const mockApiPatch = vi.fn().mockResolvedValue({ success: true })
+vi.mock('@/lib/api', () => ({
+  apiClient: { patch: (...args: unknown[]) => mockApiPatch(...args) },
+  ApiError: class ApiError extends Error {
+    constructor(
+      public readonly status: number,
+      message: string,
+    ) {
+      super(message)
+    }
+  },
+}))
+
 import { EventEditorClient, type EditorEvent } from './EventEditorClient'
 
 const SAMPLE: EditorEvent = {
@@ -25,6 +49,9 @@ const SAMPLE: EditorEvent = {
 }
 
 beforeEach(() => {
+  mockApiPatch.mockClear()
+  mockApiPatch.mockResolvedValue({ success: true })
+  mockRouterRefresh.mockClear()
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: vi.fn().mockImplementation((query: string) => ({
@@ -72,5 +99,47 @@ describe('EventEditorClient', () => {
   it('renders Sold out when isSoldOut=true', () => {
     render(<EventEditorClient event={{ ...SAMPLE, isSoldOut: true }} />)
     expect(screen.getByText('Sold out')).toBeTruthy()
+  })
+
+  it('does not surface SaveBar when the form is clean', () => {
+    render(<EventEditorClient event={SAMPLE} />)
+    expect(screen.queryByText('You have unsaved changes')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Save' })).toBeNull()
+  })
+
+  it('shows SaveBar after the user toggles the lifecycle status', () => {
+    render(<EventEditorClient event={SAMPLE} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Postponed' }))
+    expect(screen.getByText('You have unsaved changes')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy()
+  })
+
+  it('reveals the New date field when postponed is chosen', () => {
+    render(<EventEditorClient event={SAMPLE} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Postponed' }))
+    expect(screen.getByLabelText('New date')).toBeTruthy()
+  })
+
+  it('PATCHes only the changed fields and refreshes on save', async () => {
+    render(<EventEditorClient event={SAMPLE} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelled' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => {
+      expect(mockApiPatch).toHaveBeenCalledTimes(1)
+    })
+    const [url, , body] = mockApiPatch.mock.calls[0] ?? []
+    expect(url).toBe('/v1/admin/events/evt-1')
+    expect(body).toEqual({ status: 'cancelled' })
+    await waitFor(() => {
+      expect(mockRouterRefresh).toHaveBeenCalled()
+    })
+  })
+
+  it('Discard restores the original draft and clears the SaveBar', () => {
+    render(<EventEditorClient event={SAMPLE} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Postponed' }))
+    expect(screen.getByText('You have unsaved changes')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Discard' }))
+    expect(screen.queryByText('You have unsaved changes')).toBeNull()
   })
 })

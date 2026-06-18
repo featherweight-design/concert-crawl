@@ -1149,6 +1149,21 @@ export const ADMIN_COPY = {
       unverified: 'Unverified',
       verified: 'Verified',
     },
+    saveBar: {
+      dirty: 'You have unsaved changes',
+      save: 'Save',
+      discard: 'Discard',
+      saving: 'Saving…',
+      saveFailed: 'Failed to save.',
+    },
+    statusControls: {
+      newDateLabel: 'New date',
+      newDateTbd: 'TBD',
+      newDateHint: 'Pick the rescheduled date or leave as TBD.',
+      verifyToggleLabel: 'Verified',
+      verifyHint:
+        'Verifying confirms this event is publishable. Send back to review unsets it.',
+    },
     art: {
       regenerate: 'Regenerate',
       placeholderLabel: 'identity art',
