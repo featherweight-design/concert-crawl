@@ -70,6 +70,8 @@ watchingRouter.get('/', async (ctx) => {
         eq(userEvents.userId, authInfo.userId),
         eq(userEvents.status, 'watching'),
         gte(events.date, today),
+        // PR 6 — hide non-concert events from the watching list too.
+        eq(events.hiddenFromConsumer, false),
       ),
     )
     .orderBy(asc(events.date), asc(events.showTime))

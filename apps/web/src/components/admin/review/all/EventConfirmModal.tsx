@@ -42,6 +42,9 @@ export const EventConfirmModal = ({
         padding: 24,
       }}
       onClick={(evt) => {
+        // Block scrim dismissal while a mutation is in flight so the modal
+        // can't disappear mid-request, leaving the action running silently.
+        if (pending) return
         if (evt.target === evt.currentTarget) onCancel()
       }}
     >

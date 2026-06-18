@@ -146,6 +146,29 @@ describe('GET /v1/watching', () => {
     expect(body.data[1]?.artist).toBe('Late Show')
     expect(body.data[2]?.artist).toBe('Next Day')
   })
+
+  it('excludes events flagged hiddenFromConsumer=true (PR 6)', async () => {
+    setAuth('user_hidden')
+    const venue = await seedVenue()
+    const visibleEvent = await seedEvent(venue.id, {
+      artist: 'Visible Show',
+      date: '2099-09-01',
+    })
+    const hiddenEvent = await seedEvent(venue.id, {
+      artist: 'Hidden Show',
+      date: '2099-09-02',
+      hiddenFromConsumer: true,
+    })
+    await seedUserEvent('user_hidden', visibleEvent.id, { status: 'watching' })
+    await seedUserEvent('user_hidden', hiddenEvent.id, { status: 'watching' })
+
+    const res = await app.request('/v1/watching')
+    const body = (await res.json()) as {
+      data: { artist: string }[]
+    }
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0]?.artist).toBe('Visible Show')
+  })
 })
 
 describe('PUT /v1/watching/:eventId', () => {
