@@ -1,7 +1,19 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { and, eq, desc, asc, gte, isNotNull, sql } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  ilike,
+  isNotNull,
+  isNull,
+  lte,
+  or,
+  sql,
+} from 'drizzle-orm'
 import { db, eventReports, events, venues } from '@concert-crawl/db'
 import { getAuthUser } from '../../middleware/auth.js'
 import type { AdminVariables } from './index.js'
@@ -22,6 +34,55 @@ function isSoldOutExpr() {
   )`
 }
 
+const MISSING_DATA_FLAGS = [
+  'no-price',
+  'no-show-time',
+  'no-genre',
+  'no-doors-time',
+] as const
+type MissingDataFlag = (typeof MISSING_DATA_FLAGS)[number]
+const MISSING_DATA_FLAG_SET = new Set<MissingDataFlag>(MISSING_DATA_FLAGS)
+
+const isMissingDataFlag = (val: string): val is MissingDataFlag =>
+  MISSING_DATA_FLAG_SET.has(val as MissingDataFlag)
+
+const dateOnlyRegex = /^\d{4}-\d{2}-\d{2}$/
+
+const csvStrings = z
+  .string()
+  .optional()
+  .transform((val) =>
+    val === undefined || val === ''
+      ? []
+      : val
+          .split(',')
+          .map((tag) => tag.trim())
+          .filter((tag) => tag.length > 0),
+  )
+
+const csvMissingFlags = z
+  .string()
+  .optional()
+  .transform((val, ctx) => {
+    if (val === undefined || val === '') return [] as MissingDataFlag[]
+    const items = val
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter((tag) => tag.length > 0)
+    const valid: MissingDataFlag[] = []
+    for (const item of items) {
+      if (!isMissingDataFlag(item)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Invalid missingData flag: ${item}`,
+        })
+        return z.NEVER
+      }
+      valid.push(item)
+    }
+    return valid
+  })
+
 const listQuerySchema = z.object({
   // When omitted, no verification filter is applied — used by PR 4's
   // All-events tab to surface both verified and unverified events.
@@ -40,6 +101,12 @@ const listQuerySchema = z.object({
     .enum(['true', 'false'])
     .optional()
     .transform((val) => val === 'true'),
+  // PR 5 — search + range + multi-tag filters. Comma-separated lists.
+  q: z.string().trim().min(1).max(200).optional(),
+  dateFrom: z.string().regex(dateOnlyRegex).optional(),
+  dateTo: z.string().regex(dateOnlyRegex).optional(),
+  genre: csvStrings,
+  missingData: csvMissingFlags,
   limit: z.coerce.number().int().min(1).max(500).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 })
@@ -147,7 +214,17 @@ eventsAdminRouter.get(
   '/',
   zValidator('query', listQuerySchema),
   async (ctx) => {
-    const { verified, missing, limit, offset } = ctx.req.valid('query')
+    const {
+      verified,
+      missing,
+      q,
+      dateFrom,
+      dateTo,
+      genre,
+      missingData,
+      limit,
+      offset,
+    } = ctx.req.valid('query')
 
     const today = new Date().toLocaleDateString('en-CA', {
       timeZone: 'America/Denver',
@@ -182,6 +259,48 @@ eventsAdminRouter.get(
       .from(events)
       .leftJoin(venues, eq(events.venueId, venues.id))
 
+    // PR 5 filter clauses. Each is undefined when its param is omitted, which
+    // drizzle's `and()` treats as a no-op — so callers compose freely.
+    const qLike = q ? `%${q}%` : null
+    const searchClause = qLike
+      ? or(
+          ilike(events.title, qLike),
+          ilike(events.artist, qLike),
+          ilike(venues.name, qLike),
+        )
+      : undefined
+
+    const genreClause =
+      genre.length > 0
+        ? sql`${events.genre} && ARRAY[${sql.join(
+            genre.map((tag) => sql`${tag}`),
+            sql`, `,
+          )}]::text[]`
+        : undefined
+
+    const missingDataClauses = missingData.map((flag) => {
+      switch (flag) {
+        case 'no-price':
+          return isNull(events.ticketPriceMin)
+        case 'no-show-time':
+          return isNull(events.showTime)
+        case 'no-genre':
+          return or(
+            isNull(events.genre),
+            sql`coalesce(cardinality(${events.genre}), 0) = 0`,
+          )
+        case 'no-doors-time':
+          return isNull(events.doorsTime)
+      }
+    })
+
+    // dateFrom defaults to today when not provided — preserves the legacy
+    // "show upcoming only" behavior for callers that don't opt in to past
+    // events. dateTo is open-ended unless caller supplies it.
+    const effectiveDateFrom = dateFrom ?? today
+    const dateFromClause = gte(events.date, effectiveDateFrom)
+    const dateToClause = dateTo ? lte(events.date, dateTo) : undefined
+
     const rows = missing
       ? await baseSelect
           .where(
@@ -200,7 +319,11 @@ eventsAdminRouter.get(
               verified === undefined
                 ? undefined
                 : eq(events.verified, verified),
-              gte(events.date, today),
+              dateFromClause,
+              dateToClause,
+              searchClause,
+              genreClause,
+              ...missingDataClauses,
             ),
           )
           .orderBy(asc(events.date), desc(events.createdAt))

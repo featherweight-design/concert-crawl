@@ -686,6 +686,274 @@ describe('GET /v1/admin/events — verified filter optional (PR 4 all-events)', 
   })
 })
 
+describe('GET /v1/admin/events — PR 5 filters', () => {
+  beforeEach(() => {
+    setAdminAuth()
+    return clearTables()
+  })
+
+  it('filters by q matching title (case-insensitive)', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      title: 'Lord Huron Live',
+      artist: 'Lord Huron',
+      date: futureDate(14),
+    })
+    await seedEvent(venue.id, {
+      title: 'Other Show',
+      artist: 'Some Band',
+      date: futureDate(15),
+    })
+
+    const res = await app.request('/v1/admin/events?q=lord+huron', {
+      headers: ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { data: Array<{ title: string }> }
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0]?.title).toBe('Lord Huron Live')
+  })
+
+  it('filters by q matching artist', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      title: 'Set A',
+      artist: 'Bon Iver',
+      date: futureDate(14),
+    })
+    await seedEvent(venue.id, {
+      title: 'Set B',
+      artist: 'King Krule',
+      date: futureDate(15),
+    })
+
+    const res = await app.request('/v1/admin/events?q=Bon', {
+      headers: ADMIN_HEADERS,
+    })
+    const body = (await res.json()) as { data: Array<{ title: string }> }
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0]?.title).toBe('Set A')
+  })
+
+  it('filters by q matching venue name', async () => {
+    const targetVenue = await seedVenue({
+      name: 'Mission Ballroom',
+      slug: 'mission-ballroom',
+    })
+    const otherVenue = await seedVenue({
+      name: 'Bluebird Theater',
+      slug: 'bluebird-theater',
+    })
+    await seedEvent(targetVenue.id, {
+      title: 'At Mission',
+      artist: 'Artist X',
+      date: futureDate(14),
+    })
+    await seedEvent(otherVenue.id, {
+      title: 'At Bluebird',
+      artist: 'Artist Y',
+      date: futureDate(15),
+    })
+
+    const res = await app.request('/v1/admin/events?q=mission', {
+      headers: ADMIN_HEADERS,
+    })
+    const body = (await res.json()) as { data: Array<{ title: string }> }
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0]?.title).toBe('At Mission')
+  })
+
+  it('filters by dateFrom (inclusive) overriding the today default', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      title: 'Past Show',
+      artist: 'Artist A',
+      date: futureDate(-30),
+    })
+    await seedEvent(venue.id, {
+      title: 'Recent Show',
+      artist: 'Artist B',
+      date: futureDate(-5),
+    })
+    await seedEvent(venue.id, {
+      title: 'Upcoming Show',
+      artist: 'Artist C',
+      date: futureDate(7),
+    })
+
+    const dateFrom = futureDate(-10)
+    const res = await app.request(`/v1/admin/events?dateFrom=${dateFrom}`, {
+      headers: ADMIN_HEADERS,
+    })
+    const body = (await res.json()) as { data: Array<{ title: string }> }
+    const titles = body.data.map((row) => row.title).sort()
+    expect(titles).toEqual(['Recent Show', 'Upcoming Show'])
+  })
+
+  it('filters by dateTo (inclusive)', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      title: 'Near Show',
+      artist: 'Artist A',
+      date: futureDate(5),
+    })
+    await seedEvent(venue.id, {
+      title: 'Far Show',
+      artist: 'Artist B',
+      date: futureDate(30),
+    })
+
+    const dateTo = futureDate(10)
+    const res = await app.request(`/v1/admin/events?dateTo=${dateTo}`, {
+      headers: ADMIN_HEADERS,
+    })
+    const body = (await res.json()) as { data: Array<{ title: string }> }
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0]?.title).toBe('Near Show')
+  })
+
+  it('filters by genre (single tag, array overlap)', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      title: 'Indie Show',
+      artist: 'Artist A',
+      date: futureDate(7),
+      genre: ['indie', 'folk'],
+    })
+    await seedEvent(venue.id, {
+      title: 'Metal Show',
+      artist: 'Artist B',
+      date: futureDate(8),
+      genre: ['metal'],
+    })
+
+    const res = await app.request('/v1/admin/events?genre=indie', {
+      headers: ADMIN_HEADERS,
+    })
+    const body = (await res.json()) as { data: Array<{ title: string }> }
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0]?.title).toBe('Indie Show')
+  })
+
+  it('filters by genre (multiple tags, OR)', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      title: 'Indie Show',
+      artist: 'Artist A',
+      date: futureDate(7),
+      genre: ['indie'],
+    })
+    await seedEvent(venue.id, {
+      title: 'Metal Show',
+      artist: 'Artist B',
+      date: futureDate(8),
+      genre: ['metal'],
+    })
+    await seedEvent(venue.id, {
+      title: 'Jazz Show',
+      artist: 'Artist C',
+      date: futureDate(9),
+      genre: ['jazz'],
+    })
+
+    const res = await app.request('/v1/admin/events?genre=indie,metal', {
+      headers: ADMIN_HEADERS,
+    })
+    const body = (await res.json()) as { data: Array<{ title: string }> }
+    const titles = body.data.map((row) => row.title).sort()
+    expect(titles).toEqual(['Indie Show', 'Metal Show'])
+  })
+
+  it('filters by missingData=no-price', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      title: 'Priced Show',
+      artist: 'Artist A',
+      date: futureDate(7),
+      ticketPriceMin: '25',
+    })
+    await seedEvent(venue.id, {
+      title: 'No Price Show',
+      artist: 'Artist B',
+      date: futureDate(8),
+      ticketPriceMin: null,
+    })
+
+    const res = await app.request('/v1/admin/events?missingData=no-price', {
+      headers: ADMIN_HEADERS,
+    })
+    const body = (await res.json()) as { data: Array<{ title: string }> }
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0]?.title).toBe('No Price Show')
+  })
+
+  it('filters by missingData=no-show-time + no-genre combined (AND)', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      title: 'Full Show',
+      artist: 'Artist A',
+      date: futureDate(7),
+      showTime: '20:00',
+      genre: ['indie'],
+    })
+    await seedEvent(venue.id, {
+      title: 'Missing Both',
+      artist: 'Artist B',
+      date: futureDate(8),
+      showTime: null,
+      genre: null,
+    })
+    await seedEvent(venue.id, {
+      title: 'Missing Genre Only',
+      artist: 'Artist C',
+      date: futureDate(9),
+      showTime: '21:00',
+      genre: null,
+    })
+
+    const res = await app.request(
+      '/v1/admin/events?missingData=no-show-time,no-genre',
+      { headers: ADMIN_HEADERS },
+    )
+    const body = (await res.json()) as { data: Array<{ title: string }> }
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0]?.title).toBe('Missing Both')
+  })
+
+  it('combines q + genre + verified across params', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      title: 'Lord Huron Indie',
+      artist: 'Lord Huron',
+      date: futureDate(7),
+      genre: ['indie'],
+      verified: true,
+    })
+    await seedEvent(venue.id, {
+      title: 'Lord Huron Folk',
+      artist: 'Lord Huron',
+      date: futureDate(8),
+      genre: ['folk'],
+      verified: true,
+    })
+    await seedEvent(venue.id, {
+      title: 'Other Indie',
+      artist: 'Some Band',
+      date: futureDate(9),
+      genre: ['indie'],
+      verified: true,
+    })
+
+    const res = await app.request(
+      '/v1/admin/events?q=lord+huron&genre=indie&verified=true',
+      { headers: ADMIN_HEADERS },
+    )
+    const body = (await res.json()) as { data: Array<{ title: string }> }
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0]?.title).toBe('Lord Huron Indie')
+  })
+})
+
 describe('GET /v1/admin/events/:id — single-event editor payload', () => {
   beforeEach(() => {
     setAdminAuth()
