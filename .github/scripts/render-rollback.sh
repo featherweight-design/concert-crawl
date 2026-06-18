@@ -35,6 +35,7 @@ echo "→ Looking up recent deploys for ${NAME} (${SERVICE_ID})"
 # deploy and any same-commit anchor. Render returns an array of
 # { deploy: { id, status, commit, createdAt, finishedAt } } objects.
 deploys_json=$(curl --fail --silent --show-error \
+  --connect-timeout 5 --max-time 15 \
   -H "${AUTH}" \
   -H "Accept: application/json" \
   "${API}/services/${SERVICE_ID}/deploys?limit=50")
@@ -108,6 +109,7 @@ echo "→ Rolling ${NAME} back to deploy ${target_deploy_id}"
 # POST the rollback. Render returns 201 with the new deploy object on
 # success, 4xx on validation error.
 rollback_response=$(curl --fail --silent --show-error \
+  --connect-timeout 5 --max-time 30 \
   -X POST \
   -H "${AUTH}" \
   -H "Content-Type: application/json" \
