@@ -157,6 +157,7 @@ ALTER TABLE events ADD COLUMN hidden_from_consumer BOOLEAN NOT NULL DEFAULT FALS
 - Branch flow: worktree at `.worktrees/feat-admin-events-ui-<slice>` (per `feedback_worktree_always.md`); `.env.local` files copied into the worktree (per `feedback_worktree_env_files.md`); rebase on `origin/main` before push (per `feedback_rebase_before_push.md`)
 - No `as` casts — Zod `safeParse`, type guards, or interface augmentation only (per `feedback_no_type_casting.md`)
 - Component-scoped design-review enumeration: Agent 1 split per-file in parallel (per `feedback_design_review_component_scoped.md`); Agent 2 runs both visual properties + state reachability passes (per `feedback_state_reachability_in_design_review.md`); deferrals require explicit user approval (per `feedback_no_unilateral_deferrals.md`)
+- **User manual-validation gate before merge.** After `/complete-and-ship` finishes (tests pass, design-review clean, PR open, Copilot feedback triaged), the PR is paused for the user to pull the branch, run it locally, and exercise the new surface in a browser. No PR is merged until the user confirms local validation. `/complete-and-ship` reports "ready for your local validation — pull `feat/admin-events-ui-<slice>` and try X, Y, Z" and waits.
 
 ---
 
@@ -214,5 +215,6 @@ It's the first one that:
    - User approves the plan
    - Hand off to `/complete-and-ship`, which runs `/design-review` as a hard gate before `gh pr create`
    - Copilot review requested; receiving-code-review skill applied to feedback
+   - **PR pauses for user manual local validation before merge** — the branch is pulled, run locally, and exercised in a browser by the user; merge happens only after explicit user confirmation
 4. PR 6 introduces the schema migration — its plan will explicitly list every consumer-facing event-listing query that gains the `WHERE NOT hidden_from_consumer` filter.
 5. PR 11 is the merge affordance; lands only after all other PRs are stable.
