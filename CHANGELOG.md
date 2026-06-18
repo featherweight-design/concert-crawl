@@ -1,3 +1,15 @@
+# [1.65.0](https://github.com/HartiganHM/concert-crawl/compare/v1.64.0...v1.65.0) (2026-06-18)
+
+
+### Bug Fixes
+
+* **admin:** address Copilot review on PR [#683](https://github.com/HartiganHM/concert-crawl/issues/683) ([dccb2b3](https://github.com/HartiganHM/concert-crawl/commit/dccb2b3d2f212479ea3643da2bf869011fe0deab))
+
+
+### Features
+
+* **admin:** merge-events affordance (PR 11/11) ([9cc2171](https://github.com/HartiganHM/concert-crawl/commit/9cc217193eac03f622d4d3fa5c63bfca1a2f9051))
+
 # [1.64.0](https://github.com/HartiganHM/concert-crawl/compare/v1.63.0...v1.64.0) (2026-06-18)
 
 
