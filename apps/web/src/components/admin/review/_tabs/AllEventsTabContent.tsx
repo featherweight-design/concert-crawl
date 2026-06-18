@@ -9,6 +9,9 @@ import { EventsTable } from '../all/EventsTable'
 import { EventsMobileList } from '../all/EventsMobileList'
 import { EventsFilterBar } from '../all/EventsFilterBar'
 import { EventConfirmModal } from '../all/EventConfirmModal'
+import { BulkDock } from '../all/BulkDock'
+import { BulkDeleteConfirm } from '../all/BulkDeleteConfirm'
+import { BulkConfirmModal } from '../all/BulkConfirmModal'
 import { type EventRowActions } from '../all/EventRowMenu'
 import {
   EMPTY_FILTERS,
@@ -28,7 +31,14 @@ export interface AllEventsApi {
   markAvailable: (event: AllEvent) => Promise<void>
   markNonConcert: (event: AllEvent) => Promise<void>
   deleteEvent: (event: AllEvent) => Promise<void>
+  bulkUnverify: (ids: string[]) => Promise<void>
+  bulkMarkNonConcert: (ids: string[]) => Promise<void>
+  bulkDelete: (ids: string[]) => Promise<void>
 }
+
+type BulkKind = 'unverify' | 'non-concert' | 'delete'
+
+const BULK_COPY = ADMIN_COPY.review.allEvents
 
 export interface AllEventsTabContentProps {
   isDesktop: boolean
@@ -126,6 +136,9 @@ export const AllEventsTabContent = ({
     event: AllEvent
   } | null>(null)
   const [confirmPending, setConfirmPending] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkConfirm, setBulkConfirm] = useState<BulkKind | null>(null)
+  const [bulkPending, setBulkPending] = useState(false)
 
   // Serialise filters into a string key — using this as the effect dep means
   // a refetch fires when the filter content changes, not just when the prop
@@ -182,6 +195,9 @@ export const AllEventsTabContent = ({
     setLoading(true)
     setEvents([])
     setHasMore(false)
+    // Filter changes reset the rendered list, so the selection set —
+    // anchored to ids in that list — is no longer meaningful.
+    setSelectedIds(new Set())
     void runFetch(0, false)
   }, [runFetch])
 
@@ -198,8 +214,28 @@ export const AllEventsTabContent = ({
     setLoading(true)
     setEvents([])
     setHasMore(false)
+    setSelectedIds(new Set())
     void runFetch(0, false)
   }, [runFetch])
+
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+
+  const toggleAll = useCallback(
+    (nextAll: boolean) => {
+      if (nextAll) setSelectedIds(new Set(events.map((event) => event.id)))
+      else setSelectedIds(new Set())
+    },
+    [events],
+  )
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), [])
 
   const runApi = useCallback(
     async (fn: () => Promise<void>): Promise<void> => {
@@ -273,6 +309,35 @@ export const AllEventsTabContent = ({
     }
   }, [api, pendingConfirm, refresh])
 
+  const handleBulkConfirm = useCallback(async () => {
+    if (!bulkConfirm || !api) {
+      setBulkConfirm(null)
+      return
+    }
+    const ids = Array.from(selectedIds)
+    if (ids.length === 0) {
+      setBulkConfirm(null)
+      return
+    }
+    setBulkPending(true)
+    try {
+      if (bulkConfirm === 'delete') await api.bulkDelete(ids)
+      else if (bulkConfirm === 'non-concert') await api.bulkMarkNonConcert(ids)
+      else await api.bulkUnverify(ids)
+      setBulkConfirm(null)
+      refresh()
+    } catch (bulkErr) {
+      const message =
+        bulkErr instanceof ApiError
+          ? bulkErr.message
+          : 'Failed to apply the change.'
+      console.error('AllEventsTabContent bulk error:', bulkErr)
+      setError(message)
+    } finally {
+      setBulkPending(false)
+    }
+  }, [api, bulkConfirm, refresh, selectedIds])
+
   const filterBar = (
     <EventsFilterBar filters={filters} onChange={onFiltersChange} />
   )
@@ -286,6 +351,50 @@ export const AllEventsTabContent = ({
       onConfirm={handleConfirm}
     />
   )
+
+  const selectionCount = selectedIds.size
+  const bulkEnabled = Boolean(api)
+
+  const bulkDock = bulkEnabled && (
+    <BulkDock
+      count={selectionCount}
+      pending={bulkPending}
+      onUnverify={() => setBulkConfirm('unverify')}
+      onMarkNonConcert={() => setBulkConfirm('non-concert')}
+      onDelete={() => setBulkConfirm('delete')}
+      onClear={clearSelection}
+    />
+  )
+
+  const bulkModal =
+    bulkConfirm === 'delete' ? (
+      <BulkDeleteConfirm
+        count={selectionCount}
+        pending={bulkPending}
+        onCancel={() => setBulkConfirm(null)}
+        onConfirm={handleBulkConfirm}
+      />
+    ) : bulkConfirm === 'non-concert' ? (
+      <BulkConfirmModal
+        copy={BULK_COPY.bulkNonConcertConfirm}
+        count={selectionCount}
+        accent="var(--warning)"
+        confirmVariant="outline"
+        pending={bulkPending}
+        onCancel={() => setBulkConfirm(null)}
+        onConfirm={handleBulkConfirm}
+      />
+    ) : bulkConfirm === 'unverify' ? (
+      <BulkConfirmModal
+        copy={BULK_COPY.bulkUnverifyConfirm}
+        count={selectionCount}
+        accent="var(--signal)"
+        confirmVariant="outline"
+        pending={bulkPending}
+        onCancel={() => setBulkConfirm(null)}
+        onConfirm={handleBulkConfirm}
+      />
+    ) : null
 
   if (loading)
     return (
@@ -331,12 +440,27 @@ export const AllEventsTabContent = ({
             events={events}
             onRowClick={onRowClick}
             {...(api ? { rowActions } : {})}
+            {...(bulkEnabled
+              ? {
+                  selectable: true,
+                  selectedIds,
+                  onToggleSelected: toggleSelected,
+                  onToggleAll: toggleAll,
+                }
+              : {})}
           />
         ) : (
           <EventsMobileList
             events={events}
             onRowClick={onRowClick}
             {...(api ? { rowActions } : {})}
+            {...(bulkEnabled
+              ? {
+                  selectable: true,
+                  selectedIds,
+                  onToggleSelected: toggleSelected,
+                }
+              : {})}
           />
         ))}
       {hasMore && (
@@ -353,7 +477,9 @@ export const AllEventsTabContent = ({
           </AdminButton>
         </div>
       )}
+      {bulkDock}
       {confirmModal}
+      {bulkModal}
     </div>
   )
 }

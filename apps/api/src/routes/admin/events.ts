@@ -8,13 +8,14 @@ import {
   eq,
   gte,
   ilike,
+  inArray,
   isNotNull,
   isNull,
   lte,
   or,
   sql,
 } from 'drizzle-orm'
-import { db, eventReports, events, venues } from '@concert-crawl/db'
+import { auditLog, db, eventReports, events, venues } from '@concert-crawl/db'
 import { getAuthUser } from '../../middleware/auth.js'
 import type { AdminVariables } from './index.js'
 
@@ -720,5 +721,126 @@ eventsAdminRouter.post(
     }
 
     return ctx.body(null, 204)
+  },
+)
+
+// PR 10 — bulk endpoints. Each action audit-logs once per affected event so
+// the audit log mirrors per-row admin actions (lets compliance reconstruct
+// who touched which event without parsing a single batched meta blob).
+const BULK_MAX = 100
+
+const bulkIdsSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(BULK_MAX),
+})
+
+const bulkDeleteSchema = bulkIdsSchema.extend({
+  confirmation: z.literal('DELETE'),
+})
+
+async function writePerEventAudit(
+  actorId: string,
+  action: string,
+  ids: ReadonlyArray<string>,
+): Promise<void> {
+  if (ids.length === 0) return
+  await db.insert(auditLog).values(
+    ids.map((eventId) => ({
+      actorId,
+      action,
+      targetId: eventId,
+      metadata: null,
+    })),
+  )
+}
+
+// POST /v1/admin/events/bulk/unverify — send a list of events back to review.
+eventsAdminRouter.post(
+  '/bulk/unverify',
+  zValidator('json', bulkIdsSchema, (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid input' }, 422)
+    }
+  }),
+  async (ctx) => {
+    const { ids } = ctx.req.valid('json')
+    const actor = getAuthUser(ctx)
+
+    const updated = await db
+      .update(events)
+      .set({ verified: false, updatedAt: new Date() })
+      .where(inArray(events.id, ids))
+      .returning({ id: events.id })
+
+    await writePerEventAudit(
+      actor.userId,
+      'event.bulk_unverify',
+      updated.map((row) => row.id),
+    )
+
+    return ctx.json({
+      success: true,
+      data: { count: updated.length },
+    })
+  },
+)
+
+// POST /v1/admin/events/bulk/mark-non-concert — set hiddenFromConsumer=true.
+eventsAdminRouter.post(
+  '/bulk/mark-non-concert',
+  zValidator('json', bulkIdsSchema, (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid input' }, 422)
+    }
+  }),
+  async (ctx) => {
+    const { ids } = ctx.req.valid('json')
+    const actor = getAuthUser(ctx)
+
+    const updated = await db
+      .update(events)
+      .set({ hiddenFromConsumer: true, updatedAt: new Date() })
+      .where(inArray(events.id, ids))
+      .returning({ id: events.id })
+
+    await writePerEventAudit(
+      actor.userId,
+      'event.bulk_mark_non_concert',
+      updated.map((row) => row.id),
+    )
+
+    return ctx.json({
+      success: true,
+      data: { count: updated.length },
+    })
+  },
+)
+
+// POST /v1/admin/events/bulk/delete — permanent removal with typed-DELETE gate.
+eventsAdminRouter.post(
+  '/bulk/delete',
+  zValidator('json', bulkDeleteSchema, (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid input' }, 422)
+    }
+  }),
+  async (ctx) => {
+    const { ids } = ctx.req.valid('json')
+    const actor = getAuthUser(ctx)
+
+    const deleted = await db
+      .delete(events)
+      .where(inArray(events.id, ids))
+      .returning({ id: events.id })
+
+    await writePerEventAudit(
+      actor.userId,
+      'event.bulk_delete',
+      deleted.map((row) => row.id),
+    )
+
+    return ctx.json({
+      success: true,
+      data: { count: deleted.length },
+    })
   },
 )

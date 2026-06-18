@@ -21,6 +21,10 @@ export interface EventsTableProps {
   events: ReadonlyArray<AllEvent>
   onRowClick: (id: string) => void
   rowActions?: EventRowActions
+  selectable?: boolean
+  selectedIds?: ReadonlySet<string>
+  onToggleSelected?: (id: string) => void
+  onToggleAll?: (next: boolean) => void
 }
 
 const VENUE_FALLBACK = '—'
@@ -69,12 +73,33 @@ export const EventsTable = ({
   events,
   onRowClick,
   rowActions,
+  selectable = false,
+  selectedIds,
+  onToggleSelected,
+  onToggleAll,
 }: EventsTableProps) => {
+  const allSelected =
+    selectable &&
+    events.length > 0 &&
+    selectedIds !== undefined &&
+    events.every((event) => selectedIds.has(event.id))
   return (
     <Panel padding={0}>
       <AdminTable>
         <THead>
           <tr>
+            {selectable && (
+              <TH width={44}>
+                <input
+                  type="checkbox"
+                  aria-label={
+                    ADMIN_COPY.review.allEvents.bulkDock.selectAllAriaLabel
+                  }
+                  checked={allSelected}
+                  onChange={(evt) => onToggleAll?.(evt.target.checked)}
+                />
+              </TH>
+            )}
             <TH>{ADMIN_COPY.review.allEvents.columns.event}</TH>
             <TH>{ADMIN_COPY.review.allEvents.columns.venueDate}</TH>
             <TH>{ADMIN_COPY.review.allEvents.columns.status}</TH>
@@ -91,8 +116,22 @@ export const EventsTable = ({
             const timeLabel = formatTime(event.showTime)
             const artist =
               event.artist && event.artist !== event.title ? event.artist : null
+            const isSelected = selectedIds?.has(event.id) ?? false
             return (
               <TR key={event.id} onClick={() => onRowClick(event.id)}>
+                {selectable && (
+                  <TD>
+                    <input
+                      type="checkbox"
+                      aria-label={
+                        ADMIN_COPY.review.allEvents.bulkDock.rowAriaLabel
+                      }
+                      checked={isSelected}
+                      onChange={() => onToggleSelected?.(event.id)}
+                      onClick={(evt) => evt.stopPropagation()}
+                    />
+                  </TD>
+                )}
                 <TD>
                   <div
                     style={{

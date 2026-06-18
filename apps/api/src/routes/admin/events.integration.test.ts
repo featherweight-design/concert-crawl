@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { and, eq } from 'drizzle-orm'
-import { eventReports } from '@concert-crawl/db'
+import { and, eq, inArray } from 'drizzle-orm'
+import { auditLog, eventReports, events } from '@concert-crawl/db'
 
 const { authState } = vi.hoisted(() => ({
   authState: {
@@ -1052,6 +1052,157 @@ describe('PR 6 — DELETE loosened + PATCH hiddenFromConsumer', () => {
     }
     const titles = body.data.map((row) => row.title).sort()
     expect(titles).toEqual(['Hidden Show', 'Visible Show'])
+  })
+})
+
+describe('PR 10 — bulk endpoints', () => {
+  beforeEach(() => {
+    setAdminAuth()
+    return clearTables()
+  })
+
+  it('POST /bulk/unverify flips verified=false and writes per-event audit', async () => {
+    const venue = await seedVenue()
+    const evt1 = await seedEvent(venue.id, {
+      title: 'Show 1',
+      artist: 'Artist 1',
+      date: futureDate(7),
+      verified: true,
+    })
+    const evt2 = await seedEvent(venue.id, {
+      title: 'Show 2',
+      artist: 'Artist 2',
+      date: futureDate(8),
+      verified: true,
+    })
+
+    const res = await app.request('/v1/admin/events/bulk/unverify', {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ ids: [evt1.id, evt2.id] }),
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      data: { count: number }
+    }
+    expect(body.data.count).toBe(2)
+
+    const rows = await testDb
+      .select({ id: events.id, verified: events.verified })
+      .from(events)
+      .where(inArray(events.id, [evt1.id, evt2.id]))
+    expect(rows.every((row) => row.verified === false)).toBe(true)
+
+    const audits = await testDb
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.action, 'event.bulk_unverify'))
+    expect(audits).toHaveLength(2)
+    expect(audits.map((row) => row.targetId).sort()).toEqual(
+      [evt1.id, evt2.id].sort(),
+    )
+  })
+
+  it('POST /bulk/mark-non-concert sets hiddenFromConsumer=true', async () => {
+    const venue = await seedVenue()
+    const evt1 = await seedEvent(venue.id, {
+      title: 'A',
+      artist: 'A',
+      date: futureDate(7),
+    })
+    const evt2 = await seedEvent(venue.id, {
+      title: 'B',
+      artist: 'B',
+      date: futureDate(8),
+    })
+
+    const res = await app.request('/v1/admin/events/bulk/mark-non-concert', {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ ids: [evt1.id, evt2.id] }),
+    })
+    expect(res.status).toBe(200)
+
+    const rows = await testDb
+      .select({
+        id: events.id,
+        hiddenFromConsumer: events.hiddenFromConsumer,
+      })
+      .from(events)
+      .where(inArray(events.id, [evt1.id, evt2.id]))
+    expect(rows.every((row) => row.hiddenFromConsumer === true)).toBe(true)
+  })
+
+  it('POST /bulk/delete requires confirmation=DELETE', async () => {
+    const venue = await seedVenue()
+    const evt = await seedEvent(venue.id, {
+      title: 'D',
+      artist: 'D',
+      date: futureDate(7),
+    })
+
+    const noConfirm = await app.request('/v1/admin/events/bulk/delete', {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ ids: [evt.id] }),
+    })
+    expect(noConfirm.status).toBe(422)
+
+    const wrongConfirm = await app.request('/v1/admin/events/bulk/delete', {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ ids: [evt.id], confirmation: 'delete' }),
+    })
+    expect(wrongConfirm.status).toBe(422)
+
+    const ok = await app.request('/v1/admin/events/bulk/delete', {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ ids: [evt.id], confirmation: 'DELETE' }),
+    })
+    expect(ok.status).toBe(200)
+
+    const remaining = await testDb
+      .select({ id: events.id })
+      .from(events)
+      .where(eq(events.id, evt.id))
+    expect(remaining).toHaveLength(0)
+  })
+
+  it('rejects bulk payloads with more than 100 ids', async () => {
+    const ids = Array.from(
+      { length: 101 },
+      (_, idx) => `00000000-0000-0000-0000-${String(idx).padStart(12, '0')}`,
+    )
+
+    const res = await app.request('/v1/admin/events/bulk/unverify', {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ ids }),
+    })
+    expect(res.status).toBe(422)
+  })
+
+  it('rejects bulk payloads with an empty ids array', async () => {
+    const res = await app.request('/v1/admin/events/bulk/mark-non-concert', {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ ids: [] }),
+    })
+    expect(res.status).toBe(422)
+  })
+
+  it('rejects non-admin callers with 403', async () => {
+    const venue = await seedVenue()
+    const evt = await seedEvent(venue.id, { date: futureDate(7) })
+    setNonAdminAuth()
+
+    const res = await app.request('/v1/admin/events/bulk/unverify', {
+      method: 'POST',
+      headers: NON_ADMIN_HEADERS,
+      body: JSON.stringify({ ids: [evt.id] }),
+    })
+    expect(res.status).toBe(403)
   })
 })
 

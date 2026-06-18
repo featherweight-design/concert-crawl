@@ -15,6 +15,9 @@ export interface EventsMobileListProps {
   events: ReadonlyArray<AllEvent>
   onRowClick: (id: string) => void
   rowActions?: EventRowActions
+  selectable?: boolean
+  selectedIds?: ReadonlySet<string>
+  onToggleSelected?: (id: string) => void
 }
 
 const formatTime = (time: string | null): string | null => {
@@ -33,10 +36,16 @@ const EventCard = ({
   event,
   onClick,
   rowActions,
+  selectable,
+  isSelected,
+  onToggleSelected,
 }: {
   event: AllEvent
   onClick: (id: string) => void
   rowActions?: EventRowActions
+  selectable?: boolean
+  isSelected?: boolean
+  onToggleSelected?: (id: string) => void
 }) => {
   const timeLabel = formatTime(event.showTime)
   const artist =
@@ -50,6 +59,17 @@ const EventCard = ({
         borderRadius: 13,
       }}
     >
+      {selectable && (
+        <div style={{ position: 'absolute', top: 12, left: 12, zIndex: 1 }}>
+          <input
+            type="checkbox"
+            aria-label={ADMIN_COPY.review.allEvents.bulkDock.rowAriaLabel}
+            checked={isSelected ?? false}
+            onChange={() => onToggleSelected?.(event.id)}
+            onClick={(evt) => evt.stopPropagation()}
+          />
+        </div>
+      )}
       {rowActions && (
         <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}>
           <EventRowMenu event={event} actions={rowActions} />
@@ -166,6 +186,9 @@ export const EventsMobileList = ({
   events,
   onRowClick,
   rowActions,
+  selectable,
+  selectedIds,
+  onToggleSelected,
 }: EventsMobileListProps) => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
     {events.map((event) => (
@@ -174,6 +197,9 @@ export const EventsMobileList = ({
         event={event}
         onClick={onRowClick}
         {...(rowActions ? { rowActions } : {})}
+        {...(selectable ? { selectable: true } : {})}
+        {...(selectedIds ? { isSelected: selectedIds.has(event.id) } : {})}
+        {...(onToggleSelected ? { onToggleSelected } : {})}
       />
     ))}
   </div>

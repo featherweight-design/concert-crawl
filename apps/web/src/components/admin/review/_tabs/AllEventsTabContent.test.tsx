@@ -7,8 +7,10 @@ import {
   fireEvent,
   waitFor,
   cleanup,
+  within,
 } from '@testing-library/react'
 import { type AllEvent } from '../all/types'
+import { type AllEventsApi } from './AllEventsTabContent'
 
 const mockGetToken = vi.fn().mockResolvedValue('test-token')
 vi.mock('@clerk/nextjs', () => ({
@@ -22,6 +24,20 @@ vi.mock('@/lib/api', () => ({
 }))
 
 import { AllEventsTabContent } from './AllEventsTabContent'
+
+const buildApiMock = (overrides: Partial<AllEventsApi> = {}): AllEventsApi => ({
+  verify: vi.fn().mockResolvedValue(undefined),
+  unverify: vi.fn().mockResolvedValue(undefined),
+  setStatus: vi.fn().mockResolvedValue(undefined),
+  markSoldOut: vi.fn().mockResolvedValue(undefined),
+  markAvailable: vi.fn().mockResolvedValue(undefined),
+  markNonConcert: vi.fn().mockResolvedValue(undefined),
+  deleteEvent: vi.fn().mockResolvedValue(undefined),
+  bulkUnverify: vi.fn().mockResolvedValue(undefined),
+  bulkMarkNonConcert: vi.fn().mockResolvedValue(undefined),
+  bulkDelete: vi.fn().mockResolvedValue(undefined),
+  ...overrides,
+})
 
 const buildEvent = (overrides: Partial<AllEvent> = {}): AllEvent => ({
   id: 'evt-1',
@@ -160,5 +176,160 @@ describe('AllEventsTabContent', () => {
       expect(screen.getByText('Lord Huron')).toBeTruthy()
     })
     expect(screen.queryByRole('button', { name: 'Load more' })).toBeNull()
+  })
+
+  describe('bulk selection', () => {
+    it('does not render row checkboxes when no api prop is supplied', async () => {
+      mockApiGet.mockResolvedValue([buildEvent()])
+      render(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
+      await waitFor(() => {
+        expect(screen.getByText('Lord Huron')).toBeTruthy()
+      })
+      expect(screen.queryByLabelText('Select event')).toBeNull()
+    })
+
+    it('shows the bulk dock when at least one row is selected', async () => {
+      mockApiGet.mockResolvedValue([
+        buildEvent({ id: 'evt-a', title: 'Spoon' }),
+        buildEvent({ id: 'evt-b', title: 'Phoebe' }),
+      ])
+      const api = buildApiMock()
+      render(<AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />)
+      await waitFor(() => {
+        expect(screen.getByText('Spoon')).toBeTruthy()
+      })
+      const rowCheckboxes = screen.getAllByLabelText('Select event')
+      const firstCheckbox = rowCheckboxes[0]!
+      fireEvent.click(firstCheckbox)
+      expect(screen.getByRole('region', { name: 'Bulk actions' })).toBeTruthy()
+      expect(screen.getByText('1')).toBeTruthy()
+    })
+
+    it('select-all toggles every rendered row', async () => {
+      mockApiGet.mockResolvedValue([
+        buildEvent({ id: 'evt-a', title: 'Spoon' }),
+        buildEvent({ id: 'evt-b', title: 'Phoebe' }),
+      ])
+      const api = buildApiMock()
+      render(<AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />)
+      await waitFor(() => {
+        expect(screen.getByText('Spoon')).toBeTruthy()
+      })
+      const selectAll = screen.getByLabelText('Select all events on the page')
+      fireEvent.click(selectAll)
+      expect(screen.getByText('2')).toBeTruthy()
+      // Toggle off — selection clears and dock disappears.
+      fireEvent.click(selectAll)
+      expect(screen.queryByRole('region', { name: 'Bulk actions' })).toBeNull()
+    })
+
+    it('clear button empties the selection', async () => {
+      mockApiGet.mockResolvedValue([buildEvent({ id: 'evt-a' })])
+      const api = buildApiMock()
+      render(<AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />)
+      await waitFor(() => {
+        expect(screen.getByText('Lord Huron')).toBeTruthy()
+      })
+      fireEvent.click(screen.getByLabelText('Select event'))
+      const dock = screen.getByRole('region', { name: 'Bulk actions' })
+      fireEvent.click(within(dock).getByLabelText('Clear'))
+      expect(screen.queryByRole('region', { name: 'Bulk actions' })).toBeNull()
+    })
+
+    it('Send back to review confirm calls api.bulkUnverify with selected ids', async () => {
+      mockApiGet
+        .mockResolvedValueOnce([
+          buildEvent({ id: 'evt-a', title: 'Spoon' }),
+          buildEvent({ id: 'evt-b', title: 'Phoebe' }),
+        ])
+        .mockResolvedValueOnce([])
+      const api = buildApiMock()
+      render(<AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />)
+      await waitFor(() => {
+        expect(screen.getByText('Spoon')).toBeTruthy()
+      })
+      fireEvent.click(screen.getByLabelText('Select all events on the page'))
+      const dock = screen.getByRole('region', { name: 'Bulk actions' })
+      fireEvent.click(within(dock).getByText('Send back to review'))
+      const dialog = await screen.findByRole('dialog')
+      fireEvent.click(within(dialog).getByText('Send 2 back'))
+      await waitFor(() => {
+        expect(api.bulkUnverify).toHaveBeenCalledWith(['evt-a', 'evt-b'])
+      })
+    })
+
+    it('Mark non-concert confirm calls api.bulkMarkNonConcert with selected ids', async () => {
+      mockApiGet
+        .mockResolvedValueOnce([
+          buildEvent({ id: 'evt-a', title: 'Spoon', artist: 'Spoon' }),
+          buildEvent({ id: 'evt-b', title: 'Phoebe', artist: 'Phoebe' }),
+        ])
+        .mockResolvedValueOnce([])
+      const api = buildApiMock()
+      render(<AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />)
+      await waitFor(() => {
+        expect(screen.getByText('Spoon')).toBeTruthy()
+      })
+      fireEvent.click(screen.getByLabelText('Select all events on the page'))
+      const dock = screen.getByRole('region', { name: 'Bulk actions' })
+      fireEvent.click(within(dock).getByText('Mark non-concert'))
+      const dialog = await screen.findByRole('dialog')
+      fireEvent.click(within(dialog).getByText('Mark 2 non-concert'))
+      await waitFor(() => {
+        expect(api.bulkMarkNonConcert).toHaveBeenCalledWith(['evt-a', 'evt-b'])
+      })
+    })
+
+    it('Delete confirm requires typing DELETE before calling api.bulkDelete', async () => {
+      mockApiGet
+        .mockResolvedValueOnce([
+          buildEvent({ id: 'evt-a', title: 'Spoon', artist: 'Spoon' }),
+          buildEvent({ id: 'evt-b', title: 'Phoebe', artist: 'Phoebe' }),
+        ])
+        .mockResolvedValueOnce([])
+      const api = buildApiMock()
+      render(<AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />)
+      await waitFor(() => {
+        expect(screen.getByText('Spoon')).toBeTruthy()
+      })
+      fireEvent.click(screen.getByLabelText('Select all events on the page'))
+      const dock = screen.getByRole('region', { name: 'Bulk actions' })
+      fireEvent.click(within(dock).getByText('Delete 2'))
+      const dialog = await screen.findByRole('dialog')
+      const confirmBtn = within(dialog).getAllByText('Delete 2').slice(-1)[0]!
+      expect((confirmBtn as HTMLButtonElement).disabled).toBe(true)
+      const input = within(dialog).getByLabelText('Type DELETE to confirm')
+      fireEvent.change(input, { target: { value: 'DELETE' } })
+      expect((confirmBtn as HTMLButtonElement).disabled).toBe(false)
+      fireEvent.click(confirmBtn)
+      await waitFor(() => {
+        expect(api.bulkDelete).toHaveBeenCalledWith(['evt-a', 'evt-b'])
+      })
+    })
+
+    it('clears the selection after a successful bulk action (refetch fires)', async () => {
+      mockApiGet
+        .mockResolvedValueOnce([buildEvent({ id: 'evt-a' })])
+        .mockResolvedValueOnce([buildEvent({ id: 'evt-a' })])
+      const api = buildApiMock()
+      render(<AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />)
+      await waitFor(() => {
+        expect(screen.getByText('Lord Huron')).toBeTruthy()
+      })
+      fireEvent.click(screen.getByLabelText('Select event'))
+      const dock = screen.getByRole('region', { name: 'Bulk actions' })
+      fireEvent.click(within(dock).getByText('Send back to review'))
+      const dialog = await screen.findByRole('dialog')
+      fireEvent.click(within(dialog).getByText('Send 1 back'))
+      await waitFor(() => {
+        expect(api.bulkUnverify).toHaveBeenCalled()
+      })
+      // After a successful bulk action, refresh() clears selection — dock gone.
+      await waitFor(() => {
+        expect(
+          screen.queryByRole('region', { name: 'Bulk actions' }),
+        ).toBeNull()
+      })
+    })
   })
 })

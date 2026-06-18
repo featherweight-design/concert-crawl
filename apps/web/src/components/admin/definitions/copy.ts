@@ -1293,6 +1293,38 @@ export const ADMIN_COPY = {
         cancel: 'Cancel',
         eyebrow: 'classification',
       },
+      bulkDock: {
+        selectedCount: (count: number) => `${count} selected`,
+        sendBackToReview: 'Send back to review',
+        markNonConcert: 'Mark non-concert',
+        delete: (count: number) => `Delete ${count}`,
+        clear: 'Clear',
+        rowAriaLabel: 'Select event',
+        selectAllAriaLabel: 'Select all events on the page',
+      },
+      bulkDeleteConfirm: {
+        eyebrow: 'destructive action · bulk',
+        heading: (count: number) => `Delete ${count} events?`,
+        body: "This can't be undone. Every deletion is recorded in the audit log.",
+        typedPrompt: 'Type DELETE to confirm:',
+        typedInputAriaLabel: 'Type DELETE to confirm',
+        confirm: (count: number) => `Delete ${count}`,
+        cancel: 'Cancel',
+      },
+      bulkUnverifyConfirm: {
+        heading: (count: number) => `Send ${count} events back to review?`,
+        body: 'They will reappear in the review queue and disappear from the consumer surface until verified again.',
+        confirm: (count: number) => `Send ${count} back`,
+        cancel: 'Cancel',
+        eyebrow: 'workflow',
+      },
+      bulkNonConcertConfirm: {
+        heading: (count: number) => `Mark ${count} events as non-concert?`,
+        body: 'All selected events are hidden from every consumer-facing surface. You can flip individual events back from the editor.',
+        confirm: (count: number) => `Mark ${count} non-concert`,
+        cancel: 'Cancel',
+        eyebrow: 'classification · bulk',
+      },
     },
 
     missing: {

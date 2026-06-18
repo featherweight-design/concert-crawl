@@ -497,6 +497,26 @@ export const ReviewPageClient = ({
       if (!token) throw new ApiError(401, 'Unauthorized')
       await apiClient.delete(`/v1/admin/events/${event.id}`, token)
     },
+    bulkUnverify: async (ids: string[]) => {
+      const token = await getToken()
+      if (!token) throw new ApiError(401, 'Unauthorized')
+      await apiClient.post('/v1/admin/events/bulk/unverify', token, { ids })
+    },
+    bulkMarkNonConcert: async (ids: string[]) => {
+      const token = await getToken()
+      if (!token) throw new ApiError(401, 'Unauthorized')
+      await apiClient.post('/v1/admin/events/bulk/mark-non-concert', token, {
+        ids,
+      })
+    },
+    bulkDelete: async (ids: string[]) => {
+      const token = await getToken()
+      if (!token) throw new ApiError(401, 'Unauthorized')
+      await apiClient.post('/v1/admin/events/bulk/delete', token, {
+        ids,
+        confirmation: 'DELETE',
+      })
+    },
   }
 
   const onAllEventsEdit = (event: AllEvent) =>
