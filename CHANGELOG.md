@@ -1,3 +1,10 @@
+## [1.52.7](https://github.com/HartiganHM/concert-crawl/compare/v1.52.6...v1.52.7) (2026-06-18)
+
+
+### Bug Fixes
+
+* **vercel:** use ignoreCommand to disable preview deploys ([#656](https://github.com/HartiganHM/concert-crawl/issues/656) follow-up) ([cbec399](https://github.com/HartiganHM/concert-crawl/commit/cbec399bd3beb38c873e8052ff4b05d30f5c9bfe)), closes [#592](https://github.com/HartiganHM/concert-crawl/issues/592) [#592](https://github.com/HartiganHM/concert-crawl/issues/592)
+
 ## [1.52.6](https://github.com/HartiganHM/concert-crawl/compare/v1.52.5...v1.52.6) (2026-06-18)
 
 
