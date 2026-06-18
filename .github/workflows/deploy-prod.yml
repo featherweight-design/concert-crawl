@@ -32,34 +32,30 @@ permissions:
   contents: read
 
 jobs:
-  deploy:
-    name: Trigger Render prod deploys
+  # Validate all gates BEFORE the deploy job requests the production
+  # environment. Splitting this out means a wrong-branch dispatch, a
+  # failed staging-smoke, or any other gate failure does not engage
+  # the `production` environment's approval/notification flow — the
+  # `deploy` job below simply never starts because its `needs: gate`
+  # is not satisfied.
+  gate:
+    name: Validate deploy gates
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    environment: production
-    # Job-level gate:
-    #   - AUTO_DEPLOY_PROD_ENABLED kill switch.
-    #   - workflow_dispatch is allowed only from `main` so an unmerged
-    #     feature branch cannot drive a prod deploy with prod-environment
-    #     secrets via the Actions UI's branch picker. This lives in the
-    #     job-level `if` (not a step) so a wrong-branch dispatch SKIPS
-    #     the job entirely — otherwise the job would have already
-    #     requested the `production` environment and tripped any
-    #     approval gates configured on it before failing.
+    timeout-minutes: 5
     if: |
       vars.AUTO_DEPLOY_PROD_ENABLED == 'true' &&
       (github.event_name != 'workflow_dispatch' ||
        github.ref == 'refs/heads/main')
     steps:
-      # Propagate upstream gate failure as job failure (not silent skip).
       # On the workflow_run path the upstream Staging Smoke Tests
-      # workflow could have concluded `success` even though all its jobs
-      # were SKIPPED (kill switch off, or the gate step it inherited
-      # from this same pattern fired). Require both the staging-smoke
-      # kill switch AND a real upstream success so a skipped staging
-      # smoke does not trigger a prod deploy. Exiting non-zero here
-      # makes the workflow actually FAIL so prod-post-deploy-smoke does
-      # not fire either.
+      # workflow could have concluded `success` even though all its
+      # jobs were SKIPPED (kill switch off, or the gate step it
+      # inherited from this same pattern fired). Require both the
+      # staging-smoke kill switch AND a real upstream success so a
+      # skipped staging smoke does not trigger a prod deploy. Exiting
+      # non-zero here fails this gate job → the deploy job never
+      # runs → workflow conclusion is `failure` → prod-post-deploy-
+      # smoke does not fire either.
       - name: Verify staging-smoke gate
         if: |
           github.event_name == 'workflow_run' &&
@@ -69,6 +65,20 @@ jobs:
           echo "Refusing to deploy prod. Upstream Staging Smoke Tests conclusion: ${{ github.event.workflow_run.conclusion }}, STAGING_SMOKE_ENABLED: ${{ vars.STAGING_SMOKE_ENABLED }}"
           exit 1
 
+      - name: Gate passed
+        run: echo "All deploy gates satisfied; proceeding to deploy job."
+
+  deploy:
+    name: Trigger Render prod deploys
+    needs: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # `environment: production` is requested ONLY here, after the
+    # gate job has validated all conditions. This avoids tripping
+    # the production environment's approval/notification flow on
+    # workflow runs that were never going to deploy anyway.
+    environment: production
+    steps:
       # Checkout so the render-wait-for-live.sh script below is available.
       # Pinned to the upstream-deploying SHA so the wait logic we run
       # matches the version associated with this deploy.

@@ -70,11 +70,17 @@ against the old code.
    - **Name:** `STAGING_API_URL`
    - **Value:** `https://concert-crawl-api-staging.onrender.com` (confirm in Render dashboard if the hostname has changed)
 2. Same screen, add **New repository variable**
+   - **Name:** `RENDER_SERVICE_ID_API_STAGING`
+   - **Value:** the staging API service ID from the Render dashboard URL (`srv-...`)
+3. Same screen, add **New repository variable**
    - **Name:** `STAGING_SMOKE_ENABLED`
    - **Value:** `true`
-3. Trigger a no-op merge to `main` (any tiny PR works) and watch the
+4. **Secrets** tab → **New repository secret**
+   - **Name:** `RENDER_API_TOKEN`
+   - **Value:** Render → Account Settings → API Keys → generate a token with deploy + read permissions (same value can be reused in the `production` environment secret)
+5. Trigger a no-op merge to `main` (any tiny PR works) and watch the
    "Staging Smoke Tests" workflow run end-to-end against staging
-4. Iterate on the smoke suite if any test flakes
+6. Iterate on the smoke suite if any test flakes
 
 ### Stage 2 — enable auto-deploy-prod + rollback
 

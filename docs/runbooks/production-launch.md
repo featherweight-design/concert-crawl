@@ -330,27 +330,29 @@ GitHub → repository → **Settings** → **Environments**.
 
 ### Repository-level secrets (Settings → Secrets → Actions)
 
-| Secret                   | Value                                                                                                                        |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| `GH_TOKEN`               | Personal access token with `repo` scope — used by `release.yml` (semantic-release) to push the release commit back to `main` |
-| `SENTRY_DSN_SMOKE`       | Sentry DSN for smoke test error reporting                                                                                    |
-| `E2E_TEST_USER_EMAIL`    | Email of the test Clerk user (staging instance) for staging E2E runs                                                         |
-| `E2E_TEST_USER_PASSWORD` | Password of the test Clerk user for staging E2E runs                                                                         |
-| `ANTHROPIC_API_KEY`      | Pre-provisioned for future crawler GHA jobs                                                                                  |
-| `RESEND_API_KEY`         | Pre-provisioned                                                                                                              |
+| Secret                   | Value                                                                                                                                                                                                                        |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GH_TOKEN`               | Personal access token with `repo` scope — used by `release.yml` (semantic-release) to push the release commit back to `main`                                                                                                 |
+| `SENTRY_DSN_SMOKE`       | Sentry DSN for smoke test error reporting                                                                                                                                                                                    |
+| `E2E_TEST_USER_EMAIL`    | Email of the test Clerk user (staging instance) for staging E2E runs                                                                                                                                                         |
+| `E2E_TEST_USER_PASSWORD` | Password of the test Clerk user for staging E2E runs                                                                                                                                                                         |
+| `ANTHROPIC_API_KEY`      | Pre-provisioned for future crawler GHA jobs                                                                                                                                                                                  |
+| `RESEND_API_KEY`         | Pre-provisioned                                                                                                                                                                                                              |
+| `RENDER_API_TOKEN`       | Render → Account Settings → **API Keys** → same token as the production-env one (re-stored at repo level so `staging-smoke.yml` — which is not scoped to the `production` environment — can call `render-wait-for-live.sh`). |
 
 ### Repository-level variables (Settings → Variables → Actions)
 
-| Variable                   | Value                                                                                                                                                               |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SMOKE_ENABLED`            | `false` during private beta; flip to `true` at public launch. Gates the scheduled 6-hourly `smoke.yml` only — the auto-deploy pipeline uses separate kill switches. |
-| `STAGING_SMOKE_ENABLED`    | `false` by default. Set to `true` to enable `staging-smoke.yml` (gate before `deploy-prod.yml`). See `docs/runbooks/auto-deploy-prod.md`.                           |
-| `AUTO_DEPLOY_PROD_ENABLED` | `false` by default. Set to `true` to enable `deploy-prod.yml` + `prod-post-deploy-smoke.yml` + `rollback-prod.yml` chain.                                           |
-| `PROD_URL`                 | `https://concertcrawl.app`                                                                                                                                          |
-| `PROD_API_URL`             | `https://concert-crawl-api.onrender.com`                                                                                                                            |
-| `STAGING_URL`              | `https://staging.concertcrawl.app`                                                                                                                                  |
-| `STAGING_API_URL`          | `https://concert-crawl-api-staging.onrender.com`. Consumed by `staging-smoke.yml`.                                                                                  |
-| `ADMIN_EMAIL`              | Pre-provisioned                                                                                                                                                     |
+| Variable                        | Value                                                                                                                                                               |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SMOKE_ENABLED`                 | `false` during private beta; flip to `true` at public launch. Gates the scheduled 6-hourly `smoke.yml` only — the auto-deploy pipeline uses separate kill switches. |
+| `STAGING_SMOKE_ENABLED`         | `false` by default. Set to `true` to enable `staging-smoke.yml` (gate before `deploy-prod.yml`). See `docs/runbooks/auto-deploy-prod.md`.                           |
+| `AUTO_DEPLOY_PROD_ENABLED`      | `false` by default. Set to `true` to enable `deploy-prod.yml` + `prod-post-deploy-smoke.yml` + `rollback-prod.yml` chain.                                           |
+| `PROD_URL`                      | `https://concertcrawl.app`                                                                                                                                          |
+| `PROD_API_URL`                  | `https://concert-crawl-api.onrender.com`                                                                                                                            |
+| `STAGING_URL`                   | `https://staging.concertcrawl.app`                                                                                                                                  |
+| `STAGING_API_URL`               | `https://concert-crawl-api-staging.onrender.com`. Consumed by `staging-smoke.yml`.                                                                                  |
+| `RENDER_SERVICE_ID_API_STAGING` | Render → `concert-crawl-api-staging` → service ID from the dashboard URL (`srv-...`). Consumed by `staging-smoke.yml` via `render-wait-for-live.sh`.                |
+| `ADMIN_EMAIL`                   | Pre-provisioned                                                                                                                                                     |
 
 ---
 
