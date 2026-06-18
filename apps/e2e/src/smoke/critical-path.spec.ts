@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { healthCheck } from '../helpers/api.js'
+import { apiGet, healthCheck } from '../helpers/api.js'
 
 test.describe('smoke: app availability', () => {
   test('homepage renders with content', async ({ page }) => {
@@ -78,13 +78,11 @@ test.describe('smoke: search', () => {
   test('events list returns 200 with results when filtered by search', async ({
     request,
   }) => {
-    const apiUrl = process.env['PLAYWRIGHT_API_URL'] ?? 'http://localhost:3001'
-    const res = await request.get(`${apiUrl}/v1/events?search=a&limit=1`)
-    expect(res.status()).toBe(200)
-    const body = (await res.json()) as {
+    const { status, body } = await apiGet<{
       success?: boolean
       data?: { data?: unknown[]; total?: number }
-    }
+    }>(request, '/v1/events?search=a&limit=1')
+    expect(status).toBe(200)
     expect(body.success).toBe(true)
     expect(Array.isArray(body.data?.data)).toBe(true)
     expect(typeof body.data?.total).toBe('number')
