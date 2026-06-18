@@ -615,6 +615,7 @@ export const ReviewPageClient = ({
             onTogglePriceFilter={togglePriceFilter}
             onLoadMorePriceEvents={loadMorePriceEvents}
             missingEvents={missingEvents}
+            missingLoading={!missingLoaded}
             onMarkMissingPostponed={markMissingPostponed}
             onMarkMissingCancelled={markMissingCancelled}
             onDismissMissing={dismissMissing}
@@ -704,6 +705,7 @@ export const ReviewPageClient = ({
           events={missingEvents}
           isDesktop
           nowIso={new Date().toISOString()}
+          loading={!missingLoaded}
           onMarkPostponed={markMissingPostponed}
           onMarkCancelled={markMissingCancelled}
           onDismiss={dismissMissing}

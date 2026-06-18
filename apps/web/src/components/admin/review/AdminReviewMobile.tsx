@@ -86,6 +86,7 @@ interface AdminReviewMobileProps {
   onTogglePriceFilter: () => void
   onLoadMorePriceEvents: () => void
   missingEvents: MissingRowEvent[]
+  missingLoading?: boolean
   onMarkMissingPostponed: (id: string) => Promise<void>
   onMarkMissingCancelled: (id: string) => Promise<void>
   onDismissMissing: (id: string) => Promise<void>
@@ -586,6 +587,7 @@ export function AdminReviewMobile({
   onTogglePriceFilter,
   onLoadMorePriceEvents,
   missingEvents,
+  missingLoading = false,
   onMarkMissingPostponed,
   onMarkMissingCancelled,
   onDismissMissing,
@@ -1118,6 +1120,7 @@ export function AdminReviewMobile({
             events={missingEvents}
             isDesktop={false}
             nowIso={new Date().toISOString()}
+            loading={missingLoading}
             onMarkPostponed={onMarkMissingPostponed}
             onMarkCancelled={onMarkMissingCancelled}
             onDismiss={onDismissMissing}

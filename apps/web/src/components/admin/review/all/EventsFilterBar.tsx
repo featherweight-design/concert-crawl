@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { StatusBadge } from '@/components/admin/primitives'
 import {
@@ -16,6 +16,15 @@ export interface EventsFilterBarProps {
   filters: AllEventsFilters
   onChange: (next: AllEventsFilters) => void
 }
+
+// Debounce + threshold for the search input. The input is locally controlled
+// so typing is never lost to a slow parent (the bug was: parent pushed every
+// keystroke to the URL, and the round-trip clobbered the in-flight input).
+// 300ms is short enough to feel live but long enough to skip the 1-letter
+// states of multi-character words. The 2-char minimum avoids querying for
+// every single letter typed and lines up with the merge-dialog search policy.
+const SEARCH_DEBOUNCE_MS = 300
+const SEARCH_MIN_CHARS = 2
 
 const COPY = ADMIN_COPY.review.allEvents.filters
 
@@ -92,11 +101,38 @@ export const EventsFilterBar = ({
   onChange,
 }: EventsFilterBarProps) => {
   const [genreDraft, setGenreDraft] = useState('')
+  const [searchDraft, setSearchDraft] = useState(filters.query)
   const activeCount = countActiveFilters(filters)
 
   const update = (patch: Partial<AllEventsFilters>) => {
     onChange({ ...filters, ...patch })
   }
+
+  // Sync the local draft when filters.query changes from outside (deep link,
+  // Clear all, etc). Compared as strings so an externally-applied trim still
+  // reseeds the input correctly.
+  const lastSyncedQuery = useRef(filters.query)
+  useEffect(() => {
+    if (filters.query !== lastSyncedQuery.current) {
+      lastSyncedQuery.current = filters.query
+      setSearchDraft(filters.query)
+    }
+  }, [filters.query])
+
+  // Debounce search-draft → parent. Empty string is always allowed (so
+  // clearing the input always resets the result set); 1-char drafts are
+  // suppressed; ≥2-char drafts emit after 300ms.
+  useEffect(() => {
+    const trimmed = searchDraft.trim()
+    const wouldEmit = trimmed.length === 0 || trimmed.length >= SEARCH_MIN_CHARS
+    if (!wouldEmit) return
+    if (trimmed === filters.query.trim()) return
+    const handle = window.setTimeout(() => {
+      lastSyncedQuery.current = trimmed
+      onChange({ ...filters, query: trimmed })
+    }, SEARCH_DEBOUNCE_MS)
+    return () => window.clearTimeout(handle)
+  }, [searchDraft, filters, onChange])
 
   const addGenre = () => {
     const tag = genreDraft.trim().toLowerCase()
@@ -141,8 +177,8 @@ export const EventsFilterBar = ({
       >
         <input
           type="search"
-          value={filters.query}
-          onChange={(evt) => update({ query: evt.target.value })}
+          value={searchDraft}
+          onChange={(evt) => setSearchDraft(evt.target.value)}
           placeholder={COPY.searchPlaceholder}
           aria-label={COPY.searchAriaLabel}
           style={{

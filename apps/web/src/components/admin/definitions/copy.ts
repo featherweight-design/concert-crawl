@@ -1371,6 +1371,7 @@ export const ADMIN_COPY = {
       chipMissed: (count: number) =>
         `missed ${count} sweep${count === 1 ? '' : 's'}`,
       chipCadence: 'expected daily',
+      skeletonAriaLabel: 'Loading missing events',
     },
 
     eventFlags: {

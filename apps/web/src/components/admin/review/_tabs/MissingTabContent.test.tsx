@@ -80,4 +80,37 @@ describe('MissingTabContent', () => {
     ).toBe(true)
     resolveDismiss()
   })
+
+  it('renders a loading skeleton — not the empty state — when loading=true', () => {
+    render(
+      <MissingTabContent
+        events={[]}
+        isDesktop
+        nowIso={NOW}
+        loading
+        onMarkPostponed={async () => {}}
+        onMarkCancelled={async () => {}}
+        onDismiss={async () => {}}
+      />,
+    )
+    expect(screen.getByLabelText('Loading missing events')).toBeTruthy()
+    // The empty heading must NOT render during loading — that's the flash bug.
+    expect(screen.queryByText("Nothing's gone missing.")).toBeNull()
+  })
+
+  it('renders the empty state when loading=false and events is empty', () => {
+    render(
+      <MissingTabContent
+        events={[]}
+        isDesktop
+        nowIso={NOW}
+        loading={false}
+        onMarkPostponed={async () => {}}
+        onMarkCancelled={async () => {}}
+        onDismiss={async () => {}}
+      />,
+    )
+    expect(screen.getByText("Nothing's gone missing.")).toBeTruthy()
+    expect(screen.queryByLabelText('Loading missing events')).toBeNull()
+  })
 })
