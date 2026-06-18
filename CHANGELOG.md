@@ -1,3 +1,10 @@
+## [1.52.5](https://github.com/HartiganHM/concert-crawl/compare/v1.52.4...v1.52.5) (2026-06-18)
+
+
+### Bug Fixes
+
+* **web:** preserve previous-page state via history-aware back button ([73b78e9](https://github.com/HartiganHM/concert-crawl/commit/73b78e9dcd97f2944da309074d78d98d8f1574ba))
+
 ## [1.52.4](https://github.com/HartiganHM/concert-crawl/compare/v1.52.3...v1.52.4) (2026-06-18)
 
 
