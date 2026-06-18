@@ -54,7 +54,7 @@ describe('MissingTabContent', () => {
   })
 
   it('disables the action buttons while a dismiss is pending', async () => {
-    let resolveDismiss: (() => void) | null = null
+    let resolveDismiss: () => void = () => {}
     const onDismiss = vi.fn(
       () =>
         new Promise<void>((resolve) => {
@@ -78,6 +78,6 @@ describe('MissingTabContent', () => {
     expect(
       screen.getByRole('button', { name: /Dismiss/ }).hasAttribute('disabled'),
     ).toBe(true)
-    resolveDismiss?.()
+    resolveDismiss()
   })
 })

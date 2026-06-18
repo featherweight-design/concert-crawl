@@ -8,6 +8,8 @@ import {
   StatusBadge,
 } from '@/components/admin/primitives'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { MissingTabContent } from './_tabs/MissingTabContent'
+import { type MissingRowEvent } from './missing/MissingRow'
 
 interface EventFlag {
   id: string
@@ -77,6 +79,11 @@ interface AdminReviewMobileProps {
   priceLoadingMore?: boolean
   onTogglePriceFilter: () => void
   onLoadMorePriceEvents: () => void
+  missingEvents: MissingRowEvent[]
+  onMarkMissingPostponed: (id: string) => Promise<void>
+  onMarkMissingCancelled: (id: string) => Promise<void>
+  onDismissMissing: (id: string) => Promise<void>
+  onEnterMissingTab?: () => void
 }
 
 function getEventFlagChips(
@@ -566,8 +573,20 @@ export function AdminReviewMobile({
   priceLoadingMore = false,
   onTogglePriceFilter,
   onLoadMorePriceEvents,
+  missingEvents,
+  onMarkMissingPostponed,
+  onMarkMissingCancelled,
+  onDismissMissing,
+  onEnterMissingTab,
 }: AdminReviewMobileProps) {
-  const [activeTab, setActiveTab] = useState<'flags' | 'prices'>(initialTab)
+  const [activeTab, setActiveTab] = useState<'flags' | 'prices' | 'missing'>(
+    initialTab,
+  )
+
+  const handleTabClick = (key: 'flags' | 'prices' | 'missing') => {
+    setActiveTab(key)
+    if (key === 'missing' && onEnterMissingTab) onEnterMissingTab()
+  }
 
   const missingCount = priceEvents.filter((ev) => ev.priceMin === null).length
   const priceCount = submissions.length + missingCount
@@ -612,6 +631,11 @@ export function AdminReviewMobile({
               label: ADMIN_COPY.review.adminReviewMobile.tabPrices,
               count: priceCount,
             },
+            {
+              key: 'missing',
+              label: ADMIN_COPY.review.tabs.missing,
+              count: missingEvents.length,
+            },
           ] as const
         ).map(({ key, label, count }) => {
           const isActive = activeTab === key
@@ -619,7 +643,7 @@ export function AdminReviewMobile({
             <button
               key={key}
               type="button"
-              onClick={() => setActiveTab(key)}
+              onClick={() => handleTabClick(key)}
               style={{
                 flex: 1,
                 display: 'inline-flex',
@@ -1045,6 +1069,23 @@ export function AdminReviewMobile({
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Missing tab — fills remaining height, scrolls internally. Routes
+          through the same MissingTabContent orchestrator the desktop uses
+          (with isDesktop={false}) so pending-action disable + optimistic
+          remove behaviour is identical across surfaces. */}
+      {activeTab === 'missing' && (
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+          <MissingTabContent
+            events={missingEvents}
+            isDesktop={false}
+            nowIso={new Date().toISOString()}
+            onMarkPostponed={onMarkMissingPostponed}
+            onMarkCancelled={onMarkMissingCancelled}
+            onDismiss={onDismissMissing}
+          />
         </div>
       )}
     </div>

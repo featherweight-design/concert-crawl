@@ -11,6 +11,8 @@ import { ReviewTabs, type ReviewTabDescriptor } from './ReviewTabs'
 import { EventFlagsTabContent } from './_tabs/EventFlagsTabContent'
 import { PricesTabContent } from './_tabs/PricesTabContent'
 import { AllEventsTabContent } from './_tabs/AllEventsTabContent'
+import { MissingTabContent } from './_tabs/MissingTabContent'
+import { type MissingRowEvent } from './missing/MissingRow'
 
 interface EventFlag {
   id: string
@@ -64,11 +66,12 @@ interface ReviewPageClientProps {
   initialSubmissions: PriceSubmission[]
 }
 
-type ReviewTabKey = 'event-flags' | 'prices' | 'all-events'
+type ReviewTabKey = 'event-flags' | 'prices' | 'missing' | 'all-events'
 
 const VALID_TAB_KEYS: ReadonlySet<string> = new Set([
   'event-flags',
   'prices',
+  'missing',
   'all-events',
 ])
 
@@ -124,6 +127,8 @@ export const ReviewPageClient = ({
   const [mobileInitialTab, setMobileInitialTab] = useState<'flags' | 'prices'>(
     'flags',
   )
+  const [missingEvents, setMissingEvents] = useState<MissingRowEvent[]>([])
+  const [missingLoaded, setMissingLoaded] = useState(false)
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 1280px)')
@@ -205,6 +210,66 @@ export const ReviewPageClient = ({
     setHasMorePriceEvents(true)
     void fetchPriceEvents(newFilter, 0, false)
   }, [fetchPriceEvents, priceFilter])
+
+  // Lazy-fetch missing events on first activation of the Missing tab.
+  const fetchMissingEvents = useCallback(async () => {
+    try {
+      const token = await getToken()
+      if (!token) return
+      const rows = await apiClient.get<MissingRowEvent[]>(
+        '/v1/admin/events?missing=true&limit=200',
+        token,
+      )
+      setMissingEvents(rows)
+    } catch (fetchErr) {
+      console.error('Failed to load missing events', fetchErr)
+    } finally {
+      setMissingLoaded(true)
+    }
+  }, [getToken])
+
+  useEffect(() => {
+    if (activeTab === 'missing' && !missingLoaded) {
+      void fetchMissingEvents()
+    }
+  }, [activeTab, missingLoaded, fetchMissingEvents])
+
+  // PATCH dispatcher for the three Missing-tab actions; on success removes
+  // the row from local state (optimistic-remove is fine — any successful
+  // PATCH takes the row out of the ?missing=true result set).
+  const patchMissingEvent = useCallback(
+    async (id: string, body: Record<string, unknown>): Promise<void> => {
+      setError(null)
+      try {
+        const token = await getToken()
+        if (!token) return
+        await apiClient.patch(`/v1/admin/events/${id}`, token, body)
+        setMissingEvents((prev) => prev.filter((evt) => evt.id !== id))
+        router.refresh()
+      } catch (patchErr) {
+        const message =
+          patchErr instanceof ApiError
+            ? patchErr.message
+            : 'Failed to update event.'
+        console.error('patchMissingEvent error:', patchErr)
+        setError(message)
+      }
+    },
+    [getToken, router],
+  )
+
+  const markMissingPostponed = useCallback(
+    (id: string) => patchMissingEvent(id, { status: 'postponed' }),
+    [patchMissingEvent],
+  )
+  const markMissingCancelled = useCallback(
+    (id: string) => patchMissingEvent(id, { status: 'cancelled' }),
+    [patchMissingEvent],
+  )
+  const dismissMissing = useCallback(
+    (id: string) => patchMissingEvent(id, { firstMissingAt: null }),
+    [patchMissingEvent],
+  )
 
   const fetchMoreEvents = useCallback(async () => {
     if (isFetchingMoreEvents || !hasMoreEvents) return
@@ -476,6 +541,13 @@ export const ReviewPageClient = ({
             priceLoadingMore={priceLoadingMore}
             onTogglePriceFilter={togglePriceFilter}
             onLoadMorePriceEvents={loadMorePriceEvents}
+            missingEvents={missingEvents}
+            onMarkMissingPostponed={markMissingPostponed}
+            onMarkMissingCancelled={markMissingCancelled}
+            onDismissMissing={dismissMissing}
+            onEnterMissingTab={() => {
+              if (!missingLoaded) void fetchMissingEvents()
+            }}
           />
         </div>
       </div>
@@ -494,6 +566,12 @@ export const ReviewPageClient = ({
       label: ADMIN_COPY.review.tabs.prices,
       count: submissions.length,
       kind: 'signal',
+    },
+    {
+      key: 'missing',
+      label: ADMIN_COPY.review.tabs.missing,
+      count: missingEvents.length,
+      kind: 'danger',
     },
     { key: 'all-events', label: ADMIN_COPY.review.tabs.allEvents },
   ]
@@ -531,6 +609,17 @@ export const ReviewPageClient = ({
           onTogglePriceFilter={togglePriceFilter}
           onLoadMorePriceEvents={loadMorePriceEvents}
           onAddPrice={addPrice}
+        />
+      )}
+
+      {activeTab === 'missing' && (
+        <MissingTabContent
+          events={missingEvents}
+          isDesktop
+          nowIso={new Date().toISOString()}
+          onMarkPostponed={markMissingPostponed}
+          onMarkCancelled={markMissingCancelled}
+          onDismiss={dismissMissing}
         />
       )}
 
