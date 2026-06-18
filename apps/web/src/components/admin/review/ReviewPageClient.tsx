@@ -487,11 +487,13 @@ export const ReviewPageClient = ({
       key: 'event-flags',
       label: ADMIN_COPY.review.tabs.eventFlags,
       count: events.length,
+      kind: 'warning',
     },
     {
       key: 'prices',
       label: ADMIN_COPY.review.tabs.prices,
       count: submissions.length,
+      kind: 'signal',
     },
     { key: 'all-events', label: ADMIN_COPY.review.tabs.allEvents },
   ]

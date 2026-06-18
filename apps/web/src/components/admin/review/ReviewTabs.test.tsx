@@ -79,6 +79,30 @@ describe('ReviewTabs', () => {
     expect(onChange).toHaveBeenCalledWith('prices')
   })
 
+  it('paints the active count badge background using the tab kind', () => {
+    const tabs: ReadonlyArray<ReviewTabDescriptor> = [
+      {
+        key: 'event-flags',
+        label: 'Event flags',
+        count: 3,
+        kind: 'warning',
+      },
+      { key: 'prices', label: 'Prices', count: 5, kind: 'signal' },
+    ]
+    render(
+      <ReviewTabs tabs={tabs} activeTab="event-flags" onChange={() => {}} />,
+    )
+    const activeBadge = screen.getByText('3')
+    const inactiveBadge = screen.getByText('5')
+    // Active tab's badge uses the kind variable; inactive stays on surface-2.
+    expect((activeBadge as HTMLSpanElement).style.background).toBe(
+      'var(--warning)',
+    )
+    expect((inactiveBadge as HTMLSpanElement).style.background).toBe(
+      'var(--surface-2)',
+    )
+  })
+
   it('exposes role="tablist" on the container with the provided aria-label', () => {
     render(
       <ReviewTabs

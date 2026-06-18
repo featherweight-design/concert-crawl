@@ -2,10 +2,18 @@
 
 import { useCallback, type KeyboardEvent } from 'react'
 
+export type ReviewTabKind = 'warning' | 'signal' | 'danger'
+
 export interface ReviewTabDescriptor {
   key: string
   label: string
   count?: number
+  /**
+   * Drives the active-badge background colour. Maps to a CSS token via
+   * `var(--{kind})`. Optional — tabs without a kind get no coloured badge
+   * (the count chip still renders for inactive state).
+   */
+  kind?: ReviewTabKind
 }
 
 export interface ReviewTabsProps {
@@ -46,16 +54,18 @@ export const ReviewTabs = ({
       role="tablist"
       aria-label={ariaLabel}
       style={{
-        display: 'flex',
+        display: 'inline-flex',
         padding: 4,
         background: 'var(--surface-1)',
-        borderRadius: 10,
+        borderRadius: 11,
         border: '1px solid var(--border)',
         gap: 6,
       }}
     >
-      {tabs.map(({ key, label, count }) => {
+      {tabs.map(({ key, label, count, kind }) => {
         const isActive = key === activeTab
+        const activeBadgeBg =
+          kind !== undefined ? `var(--${kind})` : 'var(--signal)'
         return (
           <button
             key={key}
@@ -66,19 +76,21 @@ export const ReviewTabs = ({
             onClick={() => onChange(key)}
             onKeyDown={(evt) => handleKeyDown(evt, key)}
             style={{
-              flex: 1,
+              flex: '0 0 auto',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: 6,
-              padding: '8px 0',
+              padding: '9px 16px',
               border: 'none',
-              borderRadius: 7,
+              borderRadius: 8,
               background: isActive ? 'var(--bg-elevated)' : 'transparent',
-              boxShadow: isActive ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+              boxShadow: isActive
+                ? '0 1px 2px rgba(0,0,0,0.18), 0 0 0 1px var(--border)'
+                : 'none',
               fontFamily: "'Inter', sans-serif",
-              fontSize: 13,
-              fontWeight: 700,
+              fontSize: 13.5,
+              fontWeight: isActive ? 700 : 600,
               color: isActive ? 'var(--fg)' : 'var(--fg-muted)',
               cursor: 'pointer',
             }}
@@ -88,13 +100,14 @@ export const ReviewTabs = ({
               <span
                 style={{
                   fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 11,
+                  fontSize: 10,
                   fontWeight: 700,
+                  fontVariantNumeric: 'tabular-nums',
                   minWidth: 18,
                   height: 18,
-                  padding: '0 5px',
+                  padding: '0 6px',
                   borderRadius: 9,
-                  background: isActive ? 'var(--signal)' : 'var(--surface-2)',
+                  background: isActive ? activeBadgeBg : 'var(--surface-2)',
                   color: isActive ? 'var(--fg-on-accent)' : 'var(--fg-muted)',
                   display: 'inline-flex',
                   alignItems: 'center',
