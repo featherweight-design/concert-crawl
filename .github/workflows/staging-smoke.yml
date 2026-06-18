@@ -115,6 +115,22 @@ jobs:
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
 
+      # Preflight check on the Playwright env vars. STAGING_URL goes to
+      # the Playwright base URL; STAGING_API_URL goes to the smoke
+      # spec's API helper. If either is empty, Playwright would treat
+      # the empty string as a value and Playwright would try to fetch
+      # malformed URLs — fail fast with a clear message instead.
+      - name: Verify Playwright env vars are configured
+        run: |
+          missing=()
+          [ -z "${{ vars.STAGING_URL }}" ] && missing+=("STAGING_URL")
+          [ -z "${{ vars.STAGING_API_URL }}" ] && missing+=("STAGING_API_URL")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "Missing repo variables: ${missing[*]}"
+            echo "Set them via Settings → Variables → Actions."
+            exit 1
+          fi
+
       - name: Run smoke tests against staging
         run: pnpm --filter @concert-crawl/e2e test:smoke
         env:

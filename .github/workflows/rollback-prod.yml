@@ -88,6 +88,22 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
+      # Preflight check — fail fast with a clear message if any of the
+      # three service IDs is missing. Without this, the rollback script
+      # would exit with a generic bash "service id required" error
+      # that's harder to diagnose during an incident.
+      - name: Verify Render service ID variables are configured
+        run: |
+          missing=()
+          [ -z "${{ vars.RENDER_SERVICE_ID_API }}" ] && missing+=("RENDER_SERVICE_ID_API")
+          [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_TRIGGERS")
+          [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_DAILY")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "Missing production-env variables: ${missing[*]}"
+            echo "Set them via Settings → Environments → production → Variables."
+            exit 1
+          fi
+
       # Invoke via `bash` rather than `./script.sh` so we don't depend on
       # the executable bit surviving git checkout (which depends on
       # core.filemode and platform).

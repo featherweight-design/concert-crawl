@@ -54,8 +54,10 @@ jobs:
       # staging-smoke kill switch AND a real upstream success so a
       # skipped staging smoke does not trigger a prod deploy. Exiting
       # non-zero here fails this gate job → the deploy job never
-      # runs → workflow conclusion is `failure` → prod-post-deploy-
-      # smoke does not fire either.
+      # runs → workflow conclusion is `failure`. prod-post-deploy-
+      # smoke's workflow_run trigger DOES still fire on `completed`
+      # regardless of conclusion, but its own `if:` gate then refuses
+      # to run because the upstream conclusion is not `success`.
       - name: Verify staging-smoke gate
         if: |
           github.event_name == 'workflow_run' &&
