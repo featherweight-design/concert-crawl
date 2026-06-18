@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { count, eq } from 'drizzle-orm'
+import { and, count, eq } from 'drizzle-orm'
 import {
   db,
   events,
@@ -98,7 +98,7 @@ priceSubmissionConfirmsRouter.post(
     const [eventRow] = await db
       .select({ date: events.date })
       .from(events)
-      .where(eq(events.id, eventId))
+      .where(and(eq(events.id, eventId), eq(events.hiddenFromConsumer, false)))
       .limit(1)
 
     const confirmsRequired = isImminentEvent(

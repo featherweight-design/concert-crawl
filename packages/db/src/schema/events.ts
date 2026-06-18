@@ -57,6 +57,13 @@ export const events = pgTable(
     status: eventStatusEnum('status').notNull().default('upcoming'),
     confidenceScore: numeric('confidence_score', { precision: 3, scale: 2 }),
     verified: boolean('verified').notNull().default(false),
+    // Admin "Mark non-concert" hides an event from every consumer-facing
+    // listing query without deleting it. See migration 0039 + the consumer
+    // route audit in PR 6 — every public events query must filter
+    // `WHERE NOT hidden_from_consumer`.
+    hiddenFromConsumer: boolean('hidden_from_consumer')
+      .notNull()
+      .default(false),
     setlist: jsonb('setlist'),
     sourceUrl: text('source_url'),
     sourceHash: text('source_hash'),

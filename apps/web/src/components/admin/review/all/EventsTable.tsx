@@ -14,11 +14,13 @@ import {
 import { LifecycleBadge } from '@/components/admin/events/editor/LifecycleBadge'
 import { VerifyMark } from '@/components/admin/events/editor/VerifyMark'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { EventRowMenu, type EventRowActions } from './EventRowMenu'
 import { type AllEvent } from './types'
 
 export interface EventsTableProps {
   events: ReadonlyArray<AllEvent>
   onRowClick: (id: string) => void
+  rowActions?: EventRowActions
 }
 
 const VENUE_FALLBACK = '—'
@@ -63,7 +65,11 @@ const GenreCell = ({ genres }: { genres: string[] | null }) => {
   )
 }
 
-export const EventsTable = ({ events, onRowClick }: EventsTableProps) => {
+export const EventsTable = ({
+  events,
+  onRowClick,
+  rowActions,
+}: EventsTableProps) => {
   return (
     <Panel padding={0}>
       <AdminTable>
@@ -77,6 +83,7 @@ export const EventsTable = ({ events, onRowClick }: EventsTableProps) => {
               {ADMIN_COPY.review.allEvents.columns.confidence}
             </TH>
             <TH align="right">{ADMIN_COPY.review.allEvents.columns.created}</TH>
+            {rowActions && <TH width={44}> </TH>}
           </tr>
         </THead>
         <tbody>
@@ -149,6 +156,11 @@ export const EventsTable = ({ events, onRowClick }: EventsTableProps) => {
                 <TD align="right">
                   <RelTime iso={event.createdAt} />
                 </TD>
+                {rowActions && (
+                  <TD align="right">
+                    <EventRowMenu event={event} actions={rowActions} />
+                  </TD>
+                )}
               </TR>
             )
           })}

@@ -130,11 +130,12 @@ watchingRouter.put('/:eventId', async (ctx) => {
     return ctx.json({ success: true, data: response })
   }
 
-  // Not watching — fetch current price and upsert to watching
+  // Not watching — fetch current price and upsert to watching.
+  // PR 6 — non-concert events are 404 for consumers, including the watch flow.
   const [eventRow] = await db
     .select({ ticketPriceMin: events.ticketPriceMin })
     .from(events)
-    .where(eq(events.id, eventId))
+    .where(and(eq(events.id, eventId), eq(events.hiddenFromConsumer, false)))
     .limit(1)
 
   if (!eventRow) {

@@ -154,7 +154,7 @@ priceSubmissionsRouter.post(
     const [event] = await db
       .select({ id: events.id })
       .from(events)
-      .where(eq(events.id, eventId))
+      .where(and(eq(events.id, eventId), eq(events.hiddenFromConsumer, false)))
       .limit(1)
     if (!event)
       return ctx.json({ success: false, error: 'Event not found' }, 404)

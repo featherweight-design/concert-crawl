@@ -34,7 +34,14 @@ searchRouter.get('/popular', async (ctx) => {
       userEvents,
       and(eq(userEvents.eventId, events.id), eq(userEvents.status, 'watching')),
     )
-    .where(and(eq(events.status, 'upcoming'), gte(events.date, today)))
+    .where(
+      and(
+        eq(events.status, 'upcoming'),
+        gte(events.date, today),
+        // PR 6 — exclude non-concert events from search.
+        eq(events.hiddenFromConsumer, false),
+      ),
+    )
     .groupBy(events.id, venues.name, venues.slug)
     .orderBy(desc(watcherCount), asc(events.date))
     .limit(5)

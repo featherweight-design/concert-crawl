@@ -954,6 +954,107 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
   })
 })
 
+describe('PR 6 — DELETE loosened + PATCH hiddenFromConsumer', () => {
+  beforeEach(() => {
+    setAdminAuth()
+    return clearTables()
+  })
+
+  it('DELETE /:id now removes a verified event (legacy guard dropped)', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: futureDate(7),
+      verified: true,
+    })
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      method: 'DELETE',
+      headers: ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { success: boolean }
+    expect(body.success).toBe(true)
+  })
+
+  it('PATCH /:id sets hiddenFromConsumer=true', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, { date: futureDate(7) })
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ hiddenFromConsumer: true }),
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      data: { hiddenFromConsumer: boolean }
+    }
+    expect(body.data.hiddenFromConsumer).toBe(true)
+  })
+
+  it('PATCH /:id can flip hiddenFromConsumer back to false', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: futureDate(7),
+      hiddenFromConsumer: true,
+    })
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ hiddenFromConsumer: false }),
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      data: { hiddenFromConsumer: boolean }
+    }
+    expect(body.data.hiddenFromConsumer).toBe(false)
+  })
+
+  it('GET /:id projection includes hiddenFromConsumer', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: futureDate(7),
+      hiddenFromConsumer: true,
+    })
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      method: 'GET',
+      headers: ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      data: { hiddenFromConsumer: boolean }
+    }
+    expect(body.data.hiddenFromConsumer).toBe(true)
+  })
+
+  it('admin GET / surfaces hidden events (no consumer filter)', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      title: 'Hidden Show',
+      artist: 'Artist Hidden',
+      date: futureDate(7),
+      hiddenFromConsumer: true,
+    })
+    await seedEvent(venue.id, {
+      title: 'Visible Show',
+      artist: 'Artist Visible',
+      date: futureDate(8),
+      hiddenFromConsumer: false,
+    })
+
+    const res = await app.request('/v1/admin/events', {
+      headers: ADMIN_HEADERS,
+    })
+    const body = (await res.json()) as {
+      data: Array<{ title: string; hiddenFromConsumer: boolean }>
+    }
+    const titles = body.data.map((row) => row.title).sort()
+    expect(titles).toEqual(['Hidden Show', 'Visible Show'])
+  })
+})
+
 describe('GET /v1/admin/events/:id — single-event editor payload', () => {
   beforeEach(() => {
     setAdminAuth()

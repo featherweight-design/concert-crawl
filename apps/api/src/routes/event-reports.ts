@@ -62,11 +62,11 @@ eventReportsRouter.post(
     const { userId } = getAuthUser(ctx)
     const body = ctx.req.valid('json')
 
-    // Check event exists
+    // Check event exists + isn't hidden from consumers (PR 6).
     const [event] = await db
       .select({ id: events.id })
       .from(events)
-      .where(eq(events.id, eventId))
+      .where(and(eq(events.id, eventId), eq(events.hiddenFromConsumer, false)))
       .limit(1)
 
     if (!event) {
@@ -129,11 +129,11 @@ eventReportsRouter.get('/:id/reports', clerkAuth, async (ctx) => {
   const authUser = getAuthOptional(ctx)
   const userId = authUser?.userId ?? null
 
-  // Fetch the event date for imminence check
+  // Fetch the event date for imminence check (hidden events 404 here too).
   const [event] = await db
     .select({ id: events.id, date: events.date })
     .from(events)
-    .where(eq(events.id, eventId))
+    .where(and(eq(events.id, eventId), eq(events.hiddenFromConsumer, false)))
     .limit(1)
 
   if (!event) {
@@ -281,11 +281,12 @@ eventReportsRouter.post(
 
     const confirmsCount = countResult?.total ?? 0
 
-    // Get event date for imminence check
+    // Get event date for imminence check (hidden events skip — the consumer
+    // can't read them anyway, so confirm flow shouldn't operate on them).
     const [eventRow] = await db
       .select({ date: events.date })
       .from(events)
-      .where(eq(events.id, eventId))
+      .where(and(eq(events.id, eventId), eq(events.hiddenFromConsumer, false)))
       .limit(1)
 
     const imminent = isImminent(eventRow?.date ?? null)

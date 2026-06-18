@@ -56,6 +56,8 @@ venuesPublicRouter.get('/', async (ctx) => {
         eq(events.status, 'upcoming'),
         gte(events.date, today),
         isNotNull(events.venueId),
+        // PR 6 — exclude non-concert events from venue counts.
+        eq(events.hiddenFromConsumer, false),
       ),
     )
     .groupBy(events.venueId)
@@ -108,6 +110,8 @@ venuesPublicRouter.get('/:slug', async (ctx) => {
     eq(events.venueId, venue.id),
     eq(events.status, 'upcoming'),
     gte(events.date, today),
+    // PR 6 — exclude non-concert events from the venue detail listing.
+    eq(events.hiddenFromConsumer, false),
   ]
 
   const [countRow] = await db

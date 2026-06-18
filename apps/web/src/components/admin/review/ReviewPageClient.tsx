@@ -13,6 +13,7 @@ import { editEventHref } from '@/lib/admin/edit-event-link'
 import { PricesTabContent } from './_tabs/PricesTabContent'
 import { AllEventsTabContent } from './_tabs/AllEventsTabContent'
 import { parseFiltersFromParams, serializeFiltersToParams } from './all/filters'
+import { type AllEvent } from './all/types'
 import { MissingTabContent } from './_tabs/MissingTabContent'
 import { type MissingRowEvent } from './missing/MissingRow'
 
@@ -453,6 +454,57 @@ export const ReviewPageClient = ({
     />
   )
 
+  const allEventsApi = {
+    verify: async (event: AllEvent) => {
+      const token = await getToken()
+      if (!token) throw new ApiError(401, 'Unauthorized')
+      await apiClient.patch(`/v1/admin/events/${event.id}/verify`, token, {})
+    },
+    unverify: async (event: AllEvent) => {
+      const token = await getToken()
+      if (!token) throw new ApiError(401, 'Unauthorized')
+      await apiClient.patch(`/v1/admin/events/${event.id}`, token, {
+        verified: false,
+      })
+    },
+    setStatus: async (
+      event: AllEvent,
+      status: 'upcoming' | 'cancelled' | 'postponed',
+    ) => {
+      const token = await getToken()
+      if (!token) throw new ApiError(401, 'Unauthorized')
+      await apiClient.patch(`/v1/admin/events/${event.id}`, token, { status })
+    },
+    markSoldOut: async (event: AllEvent) => {
+      const token = await getToken()
+      if (!token) throw new ApiError(401, 'Unauthorized')
+      await apiClient.post(`/v1/admin/events/${event.id}/sold-out`, token, {})
+    },
+    markAvailable: async (event: AllEvent) => {
+      const token = await getToken()
+      if (!token) throw new ApiError(401, 'Unauthorized')
+      await apiClient.post(`/v1/admin/events/${event.id}/available`, token, {})
+    },
+    markNonConcert: async (event: AllEvent) => {
+      const token = await getToken()
+      if (!token) throw new ApiError(401, 'Unauthorized')
+      await apiClient.patch(`/v1/admin/events/${event.id}`, token, {
+        hiddenFromConsumer: true,
+      })
+    },
+    deleteEvent: async (event: AllEvent) => {
+      const token = await getToken()
+      if (!token) throw new ApiError(401, 'Unauthorized')
+      await apiClient.delete(`/v1/admin/events/${event.id}`, token)
+    },
+  }
+
+  const onAllEventsEdit = (event: AllEvent) =>
+    router.push(editEventHref(event.id))
+  const onAllEventsViewDetail = (event: AllEvent) => {
+    window.open(`/events/${event.id}`, '_blank', 'noopener,noreferrer')
+  }
+
   const errorBanner = error && (
     <div
       style={{
@@ -559,6 +611,9 @@ export const ReviewPageClient = ({
               merged.set('tab', 'all-events')
               router.push(`?${merged.toString()}`, { scroll: false })
             }}
+            allEventsApi={allEventsApi}
+            onAllEventsEdit={onAllEventsEdit}
+            onAllEventsViewDetail={onAllEventsViewDetail}
           />
         </div>
       </div>
@@ -639,6 +694,9 @@ export const ReviewPageClient = ({
         <AllEventsTabContent
           isDesktop
           onRowClick={(id) => router.push(editEventHref(id))}
+          onEdit={onAllEventsEdit}
+          onViewDetail={onAllEventsViewDetail}
+          api={allEventsApi}
           filters={parseFiltersFromParams(
             new URLSearchParams(searchParams?.toString() ?? ''),
           )}

@@ -9,8 +9,12 @@ import {
 } from '@/components/admin/primitives'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { MissingTabContent } from './_tabs/MissingTabContent'
-import { AllEventsTabContent } from './_tabs/AllEventsTabContent'
+import {
+  AllEventsTabContent,
+  type AllEventsApi,
+} from './_tabs/AllEventsTabContent'
 import { EMPTY_FILTERS, type AllEventsFilters } from './all/filters'
+import { type AllEvent } from './all/types'
 import { type MissingRowEvent } from './missing/MissingRow'
 
 interface EventFlag {
@@ -89,6 +93,9 @@ interface AdminReviewMobileProps {
   onAllEventsRowClick?: (id: string) => void
   allEventsFilters?: AllEventsFilters
   onAllEventsFiltersChange?: (next: AllEventsFilters) => void
+  allEventsApi?: AllEventsApi
+  onAllEventsEdit?: (event: AllEvent) => void
+  onAllEventsViewDetail?: (event: AllEvent) => void
 }
 
 function getEventFlagChips(
@@ -586,6 +593,9 @@ export function AdminReviewMobile({
   onAllEventsRowClick,
   allEventsFilters,
   onAllEventsFiltersChange,
+  allEventsApi,
+  onAllEventsEdit,
+  onAllEventsViewDetail,
 }: AdminReviewMobileProps) {
   const [activeTab, setActiveTab] = useState<
     'flags' | 'prices' | 'missing' | 'all-events'
@@ -1122,6 +1132,11 @@ export function AdminReviewMobile({
             onRowClick={onAllEventsRowClick ?? noopRowClick}
             filters={allEventsFilters ?? EMPTY_FILTERS}
             onFiltersChange={onAllEventsFiltersChange ?? (() => undefined)}
+            {...(allEventsApi ? { api: allEventsApi } : {})}
+            {...(onAllEventsEdit ? { onEdit: onAllEventsEdit } : {})}
+            {...(onAllEventsViewDetail
+              ? { onViewDetail: onAllEventsViewDetail }
+              : {})}
           />
         </div>
       )}

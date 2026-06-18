@@ -245,6 +245,7 @@ eventsAdminRouter.get(
         ticketPriceMax: events.ticketPriceMax,
         confidenceScore: sql<number | null>`(${events.confidenceScore})::float`,
         verified: events.verified,
+        hiddenFromConsumer: events.hiddenFromConsumer,
         status: events.status,
         extractionStrategy: events.extractionStrategy,
         sourceUrl: events.sourceUrl,
@@ -417,6 +418,7 @@ eventsAdminRouter.get(
         ticketPriceMax: events.ticketPriceMax,
         confidenceScore: sql<number | null>`(${events.confidenceScore})::float`,
         verified: events.verified,
+        hiddenFromConsumer: events.hiddenFromConsumer,
         status: events.status,
         extractionStrategy: events.extractionStrategy,
         sourceUrl: events.sourceUrl,
@@ -466,6 +468,10 @@ eventsAdminRouter.patch(
       // so the row falls out of the ?missing=true filter. The crawler
       // re-stamps it if the event genuinely re-disappears on a future sweep.
       firstMissingAt: z.null().optional(),
+      // PR 6 — admin "Mark non-concert" hides the event from every
+      // consumer-facing listing query. See migration 0039 + the consumer
+      // route audit.
+      hiddenFromConsumer: z.boolean().optional(),
     }),
   ),
   async (ctx) => {
@@ -491,7 +497,9 @@ eventsAdminRouter.patch(
   },
 )
 
-// DELETE /v1/admin/events/:id — reject and remove an unverified event
+// DELETE /v1/admin/events/:id — remove an event from the catalog.
+// PR 6 loosened the original "unverified-only" guard: admins can delete
+// verified events too (every delete is audit-logged).
 eventsAdminRouter.delete(
   '/:id',
   zValidator('param', eventIdSchema),
@@ -500,20 +508,18 @@ eventsAdminRouter.delete(
 
     const [deleted] = await db
       .delete(events)
-      .where(and(eq(events.id, id), eq(events.verified, false)))
+      .where(eq(events.id, id))
       .returning()
 
     if (!deleted) {
-      return ctx.json(
-        { success: false, error: 'Event not found or already verified' },
-        404,
-      )
+      return ctx.json({ success: false, error: 'Event not found' }, 404)
     }
 
     const actor = getAuthUser(ctx)
     ctx.set('auditAction', 'event.delete')
     ctx.set('auditTargetId', id)
     ctx.set('auditActorId', actor.userId)
+    ctx.set('auditMeta', { wasVerified: deleted.verified })
 
     return ctx.json({ success: true })
   },

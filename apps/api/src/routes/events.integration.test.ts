@@ -80,6 +80,28 @@ describe('GET /v1/events — integration', () => {
     expect(body.data.data[0]?.title).toBe('Late Show')
   })
 
+  it('excludes events with hiddenFromConsumer=true (PR 6)', async () => {
+    const venue = await seedVenue({ name: 'Test', slug: 'test-pr6' })
+    await seedEvent(venue.id, {
+      title: 'Visible Concert',
+      date: '2027-06-01',
+    })
+    await seedEvent(venue.id, {
+      title: 'Hidden Non-Concert',
+      artist: 'Other Artist',
+      date: '2027-06-02',
+      hiddenFromConsumer: true,
+    })
+
+    const res = await app.request('/v1/events')
+    const body = (await res.json()) as {
+      data: { data: { title: string }[] }
+    }
+    const titles = body.data.data.map((row) => row.title)
+    expect(titles).toContain('Visible Concert')
+    expect(titles).not.toContain('Hidden Non-Concert')
+  })
+
   it('respects limit parameter', async () => {
     const venue = await seedVenue({
       name: 'Ogden Theatre',
@@ -104,6 +126,18 @@ describe('GET /v1/events — integration', () => {
 describe('GET /v1/events/:id — integration', () => {
   beforeEach(async () => {
     await clearTables()
+  })
+
+  it('404s when the event is hidden from consumers (PR 6)', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      title: 'Hidden Detail',
+      date: '2027-06-01',
+      hiddenFromConsumer: true,
+    })
+
+    const res = await app.request(`/v1/events/${event.id}`)
+    expect(res.status).toBe(404)
   })
 
   it('includes priceSource in event detail response', async () => {

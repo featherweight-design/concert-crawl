@@ -8,6 +8,8 @@ import { AdminButton } from '@/components/admin/primitives'
 import { EventsTable } from '../all/EventsTable'
 import { EventsMobileList } from '../all/EventsMobileList'
 import { EventsFilterBar } from '../all/EventsFilterBar'
+import { EventConfirmModal } from '../all/EventConfirmModal'
+import { type EventRowActions } from '../all/EventRowMenu'
 import {
   EMPTY_FILTERS,
   filtersToFetchQuery,
@@ -15,9 +17,25 @@ import {
 } from '../all/filters'
 import { type AllEvent } from '../all/types'
 
+export interface AllEventsApi {
+  verify: (event: AllEvent) => Promise<void>
+  unverify: (event: AllEvent) => Promise<void>
+  setStatus: (
+    event: AllEvent,
+    status: 'upcoming' | 'cancelled' | 'postponed',
+  ) => Promise<void>
+  markSoldOut: (event: AllEvent) => Promise<void>
+  markAvailable: (event: AllEvent) => Promise<void>
+  markNonConcert: (event: AllEvent) => Promise<void>
+  deleteEvent: (event: AllEvent) => Promise<void>
+}
+
 export interface AllEventsTabContentProps {
   isDesktop: boolean
   onRowClick: (id: string) => void
+  onEdit?: (event: AllEvent) => void
+  onViewDetail?: (event: AllEvent) => void
+  api?: AllEventsApi
   filters?: AllEventsFilters
   onFiltersChange?: (next: AllEventsFilters) => void
 }
@@ -91,6 +109,9 @@ const noopFiltersChange = (_next: AllEventsFilters): void => undefined
 export const AllEventsTabContent = ({
   isDesktop,
   onRowClick,
+  onEdit,
+  onViewDetail,
+  api,
   filters = EMPTY_FILTERS,
   onFiltersChange = noopFiltersChange,
 }: AllEventsTabContentProps) => {
@@ -100,6 +121,11 @@ export const AllEventsTabContent = ({
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [pendingConfirm, setPendingConfirm] = useState<{
+    kind: 'delete' | 'non-concert'
+    event: AllEvent
+  } | null>(null)
+  const [confirmPending, setConfirmPending] = useState(false)
 
   // Serialise filters into a string key — using this as the effect dep means
   // a refetch fires when the filter content changes, not just when the prop
@@ -165,8 +191,100 @@ export const AllEventsTabContent = ({
     void runFetch(events.length, true)
   }, [events.length, runFetch, hasMore, loadingMore])
 
+  // Re-pull page 0 after a successful mutation so the table mirrors server
+  // state. Cheap: page size is 50, filter set is local.
+  const refresh = useCallback(() => {
+    generationRef.current += 1
+    setLoading(true)
+    setEvents([])
+    setHasMore(false)
+    void runFetch(0, false)
+  }, [runFetch])
+
+  const runApi = useCallback(
+    async (fn: () => Promise<void>): Promise<void> => {
+      try {
+        await fn()
+        refresh()
+      } catch (apiErr) {
+        const message =
+          apiErr instanceof ApiError
+            ? apiErr.message
+            : 'Failed to apply the change.'
+        console.error('AllEventsTabContent action error:', apiErr)
+        setError(message)
+      }
+    },
+    [refresh],
+  )
+
+  const rowActions: EventRowActions = {
+    onViewDetail: (event) => onViewDetail?.(event),
+    onEdit: (event) => onEdit?.(event),
+    onVerify: (event) => {
+      if (api) void runApi(() => api.verify(event))
+    },
+    onSendBackToReview: (event) => {
+      if (api) void runApi(() => api.unverify(event))
+    },
+    onMarkPostponed: (event) => {
+      if (api) void runApi(() => api.setStatus(event, 'postponed'))
+    },
+    onMarkCancelled: (event) => {
+      if (api) void runApi(() => api.setStatus(event, 'cancelled'))
+    },
+    onMarkUpcoming: (event) => {
+      if (api) void runApi(() => api.setStatus(event, 'upcoming'))
+    },
+    onMarkSoldOut: (event) => {
+      if (api) void runApi(() => api.markSoldOut(event))
+    },
+    onMarkAvailable: (event) => {
+      if (api) void runApi(() => api.markAvailable(event))
+    },
+    onRequestMarkNonConcert: (event) =>
+      setPendingConfirm({ kind: 'non-concert', event }),
+    onRequestDelete: (event) => setPendingConfirm({ kind: 'delete', event }),
+  }
+
+  const handleConfirm = useCallback(async () => {
+    if (!pendingConfirm || !api) {
+      setPendingConfirm(null)
+      return
+    }
+    setConfirmPending(true)
+    try {
+      if (pendingConfirm.kind === 'delete') {
+        await api.deleteEvent(pendingConfirm.event)
+      } else {
+        await api.markNonConcert(pendingConfirm.event)
+      }
+      setPendingConfirm(null)
+      refresh()
+    } catch (confirmErr) {
+      const message =
+        confirmErr instanceof ApiError
+          ? confirmErr.message
+          : 'Failed to apply the change.'
+      console.error('AllEventsTabContent confirm error:', confirmErr)
+      setError(message)
+    } finally {
+      setConfirmPending(false)
+    }
+  }, [api, pendingConfirm, refresh])
+
   const filterBar = (
     <EventsFilterBar filters={filters} onChange={onFiltersChange} />
+  )
+
+  const confirmModal = pendingConfirm && (
+    <EventConfirmModal
+      kind={pendingConfirm.kind}
+      event={pendingConfirm.event}
+      pending={confirmPending}
+      onCancel={() => setPendingConfirm(null)}
+      onConfirm={handleConfirm}
+    />
   )
 
   if (loading)
@@ -209,9 +327,17 @@ export const AllEventsTabContent = ({
       {errorBanner}
       {events.length > 0 &&
         (isDesktop ? (
-          <EventsTable events={events} onRowClick={onRowClick} />
+          <EventsTable
+            events={events}
+            onRowClick={onRowClick}
+            {...(api ? { rowActions } : {})}
+          />
         ) : (
-          <EventsMobileList events={events} onRowClick={onRowClick} />
+          <EventsMobileList
+            events={events}
+            onRowClick={onRowClick}
+            {...(api ? { rowActions } : {})}
+          />
         ))}
       {hasMore && (
         <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -227,6 +353,7 @@ export const AllEventsTabContent = ({
           </AdminButton>
         </div>
       )}
+      {confirmModal}
     </div>
   )
 }

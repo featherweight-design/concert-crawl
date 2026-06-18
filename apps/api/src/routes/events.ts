@@ -76,6 +76,8 @@ eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
   const conditions: SQL[] = [
     inArray(events.status, ['upcoming', 'cancelled', 'postponed']),
     gte(events.date, from ?? todayInTimezone('UTC')),
+    // PR 6 — hide events flagged "non-concert" from every consumer query.
+    eq(events.hiddenFromConsumer, false),
   ]
 
   if (to) {
@@ -277,7 +279,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     })
     .from(events)
     .innerJoin(venues, eq(events.venueId, venues.id))
-    .where(eq(events.id, id))
+    .where(and(eq(events.id, id), eq(events.hiddenFromConsumer, false)))
 
   if (!row) {
     return ctx.json({ success: false, error: 'Event not found' }, 404)
@@ -620,7 +622,7 @@ eventsRouter.post('/:id/watch', clerkMiddleware(), async (ctx) => {
   const [eventRow] = await db
     .select({ ticketPriceMin: events.ticketPriceMin })
     .from(events)
-    .where(eq(events.id, eventId))
+    .where(and(eq(events.id, eventId), eq(events.hiddenFromConsumer, false)))
     .limit(1)
 
   if (!eventRow)
