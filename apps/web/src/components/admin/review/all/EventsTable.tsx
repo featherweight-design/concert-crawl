@@ -17,15 +17,28 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { EventRowMenu, type EventRowActions } from './EventRowMenu'
 import { type AllEvent } from './types'
 
-export interface EventsTableProps {
+// Selection is all-or-nothing: enabling `selectable` without the toggle
+// handlers used to render no-op checkboxes. The union below makes that
+// configuration unrepresentable.
+type SelectionProps =
+  | {
+      selectable: true
+      selectedIds: ReadonlySet<string>
+      onToggleSelected: (id: string) => void
+      onToggleAll: (next: boolean) => void
+    }
+  | {
+      selectable?: false
+      selectedIds?: undefined
+      onToggleSelected?: undefined
+      onToggleAll?: undefined
+    }
+
+export type EventsTableProps = {
   events: ReadonlyArray<AllEvent>
   onRowClick: (id: string) => void
   rowActions?: EventRowActions
-  selectable?: boolean
-  selectedIds?: ReadonlySet<string>
-  onToggleSelected?: (id: string) => void
-  onToggleAll?: (next: boolean) => void
-}
+} & SelectionProps
 
 const VENUE_FALLBACK = '—'
 
@@ -69,26 +82,19 @@ const GenreCell = ({ genres }: { genres: string[] | null }) => {
   )
 }
 
-export const EventsTable = ({
-  events,
-  onRowClick,
-  rowActions,
-  selectable = false,
-  selectedIds,
-  onToggleSelected,
-  onToggleAll,
-}: EventsTableProps) => {
+export const EventsTable = (props: EventsTableProps) => {
+  const { events, onRowClick, rowActions } = props
+  const selectable = props.selectable === true
   const allSelected =
     selectable &&
     events.length > 0 &&
-    selectedIds !== undefined &&
-    events.every((event) => selectedIds.has(event.id))
+    events.every((event) => props.selectedIds.has(event.id))
   return (
     <Panel padding={0}>
       <AdminTable>
         <THead>
           <tr>
-            {selectable && (
+            {props.selectable && (
               <TH width={44}>
                 <input
                   type="checkbox"
@@ -96,7 +102,7 @@ export const EventsTable = ({
                     ADMIN_COPY.review.allEvents.bulkDock.selectAllAriaLabel
                   }
                   checked={allSelected}
-                  onChange={(evt) => onToggleAll?.(evt.target.checked)}
+                  onChange={(evt) => props.onToggleAll(evt.target.checked)}
                 />
               </TH>
             )}
@@ -116,10 +122,10 @@ export const EventsTable = ({
             const timeLabel = formatTime(event.showTime)
             const artist =
               event.artist && event.artist !== event.title ? event.artist : null
-            const isSelected = selectedIds?.has(event.id) ?? false
+            const isSelected = selectable && props.selectedIds.has(event.id)
             return (
               <TR key={event.id} onClick={() => onRowClick(event.id)}>
-                {selectable && (
+                {props.selectable && (
                   <TD>
                     <input
                       type="checkbox"
@@ -127,7 +133,7 @@ export const EventsTable = ({
                         ADMIN_COPY.review.allEvents.bulkDock.rowAriaLabel
                       }
                       checked={isSelected}
-                      onChange={() => onToggleSelected?.(event.id)}
+                      onChange={() => props.onToggleSelected(event.id)}
                       onClick={(evt) => evt.stopPropagation()}
                     />
                   </TD>

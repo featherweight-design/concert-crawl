@@ -11,14 +11,25 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { EventRowMenu, type EventRowActions } from './EventRowMenu'
 import { type AllEvent } from './types'
 
-export interface EventsMobileListProps {
+// Discriminated union so `selectable` can't be enabled without the toggle
+// handler — that combination used to render checkboxes that were no-ops.
+type SelectionProps =
+  | {
+      selectable: true
+      selectedIds: ReadonlySet<string>
+      onToggleSelected: (id: string) => void
+    }
+  | {
+      selectable?: false
+      selectedIds?: undefined
+      onToggleSelected?: undefined
+    }
+
+export type EventsMobileListProps = {
   events: ReadonlyArray<AllEvent>
   onRowClick: (id: string) => void
   rowActions?: EventRowActions
-  selectable?: boolean
-  selectedIds?: ReadonlySet<string>
-  onToggleSelected?: (id: string) => void
-}
+} & SelectionProps
 
 const formatTime = (time: string | null): string | null => {
   if (!time) return null
@@ -182,25 +193,25 @@ const EventCard = ({
   )
 }
 
-export const EventsMobileList = ({
-  events,
-  onRowClick,
-  rowActions,
-  selectable,
-  selectedIds,
-  onToggleSelected,
-}: EventsMobileListProps) => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-    {events.map((event) => (
-      <EventCard
-        key={event.id}
-        event={event}
-        onClick={onRowClick}
-        {...(rowActions ? { rowActions } : {})}
-        {...(selectable ? { selectable: true } : {})}
-        {...(selectedIds ? { isSelected: selectedIds.has(event.id) } : {})}
-        {...(onToggleSelected ? { onToggleSelected } : {})}
-      />
-    ))}
-  </div>
-)
+export const EventsMobileList = (props: EventsMobileListProps) => {
+  const { events, onRowClick, rowActions } = props
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {events.map((event) => (
+        <EventCard
+          key={event.id}
+          event={event}
+          onClick={onRowClick}
+          {...(rowActions ? { rowActions } : {})}
+          {...(props.selectable
+            ? {
+                selectable: true,
+                isSelected: props.selectedIds.has(event.id),
+                onToggleSelected: props.onToggleSelected,
+              }
+            : {})}
+        />
+      ))}
+    </div>
+  )
+}

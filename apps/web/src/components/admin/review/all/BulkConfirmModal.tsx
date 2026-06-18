@@ -105,10 +105,16 @@ export const BulkConfirmModal = ({
           background: 'var(--surface-1)',
         }}
       >
-        <AdminButton variant="ghost" onClick={onCancel} disabled={pending}>
+        <AdminButton
+          type="button"
+          variant="ghost"
+          onClick={onCancel}
+          disabled={pending}
+        >
           {copy.cancel}
         </AdminButton>
         <AdminButton
+          type="button"
           variant={confirmVariant}
           onClick={onConfirm}
           disabled={pending}

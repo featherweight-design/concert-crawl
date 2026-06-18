@@ -333,6 +333,9 @@ export const AllEventsTabContent = ({
           : 'Failed to apply the change.'
       console.error('AllEventsTabContent bulk error:', bulkErr)
       setError(message)
+      // Close the modal on failure — the page-level banner sits behind the
+      // scrim, so leaving the modal up hides the failure from the admin.
+      setBulkConfirm(null)
     } finally {
       setBulkPending(false)
     }

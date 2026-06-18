@@ -737,23 +737,9 @@ const bulkDeleteSchema = bulkIdsSchema.extend({
   confirmation: z.literal('DELETE'),
 })
 
-async function writePerEventAudit(
-  actorId: string,
-  action: string,
-  ids: ReadonlyArray<string>,
-): Promise<void> {
-  if (ids.length === 0) return
-  await db.insert(auditLog).values(
-    ids.map((eventId) => ({
-      actorId,
-      action,
-      targetId: eventId,
-      metadata: null,
-    })),
-  )
-}
-
 // POST /v1/admin/events/bulk/unverify — send a list of events back to review.
+// Mutation + per-event audit inserts run inside a single transaction so the
+// audit log can't drift out of sync with the row state on a transient DB error.
 eventsAdminRouter.post(
   '/bulk/unverify',
   zValidator('json', bulkIdsSchema, (result, ctx) => {
@@ -765,22 +751,26 @@ eventsAdminRouter.post(
     const { ids } = ctx.req.valid('json')
     const actor = getAuthUser(ctx)
 
-    const updated = await db
-      .update(events)
-      .set({ verified: false, updatedAt: new Date() })
-      .where(inArray(events.id, ids))
-      .returning({ id: events.id })
-
-    await writePerEventAudit(
-      actor.userId,
-      'event.bulk_unverify',
-      updated.map((row) => row.id),
-    )
-
-    return ctx.json({
-      success: true,
-      data: { count: updated.length },
+    const count = await db.transaction(async (tx) => {
+      const updated = await tx
+        .update(events)
+        .set({ verified: false, updatedAt: new Date() })
+        .where(inArray(events.id, ids))
+        .returning({ id: events.id })
+      if (updated.length > 0) {
+        await tx.insert(auditLog).values(
+          updated.map((row) => ({
+            actorId: actor.userId,
+            action: 'event.bulk_unverify',
+            targetId: row.id,
+            metadata: null,
+          })),
+        )
+      }
+      return updated.length
     })
+
+    return ctx.json({ success: true, data: { count } })
   },
 )
 
@@ -796,22 +786,26 @@ eventsAdminRouter.post(
     const { ids } = ctx.req.valid('json')
     const actor = getAuthUser(ctx)
 
-    const updated = await db
-      .update(events)
-      .set({ hiddenFromConsumer: true, updatedAt: new Date() })
-      .where(inArray(events.id, ids))
-      .returning({ id: events.id })
-
-    await writePerEventAudit(
-      actor.userId,
-      'event.bulk_mark_non_concert',
-      updated.map((row) => row.id),
-    )
-
-    return ctx.json({
-      success: true,
-      data: { count: updated.length },
+    const count = await db.transaction(async (tx) => {
+      const updated = await tx
+        .update(events)
+        .set({ hiddenFromConsumer: true, updatedAt: new Date() })
+        .where(inArray(events.id, ids))
+        .returning({ id: events.id })
+      if (updated.length > 0) {
+        await tx.insert(auditLog).values(
+          updated.map((row) => ({
+            actorId: actor.userId,
+            action: 'event.bulk_mark_non_concert',
+            targetId: row.id,
+            metadata: null,
+          })),
+        )
+      }
+      return updated.length
     })
+
+    return ctx.json({ success: true, data: { count } })
   },
 )
 
@@ -827,20 +821,24 @@ eventsAdminRouter.post(
     const { ids } = ctx.req.valid('json')
     const actor = getAuthUser(ctx)
 
-    const deleted = await db
-      .delete(events)
-      .where(inArray(events.id, ids))
-      .returning({ id: events.id })
-
-    await writePerEventAudit(
-      actor.userId,
-      'event.bulk_delete',
-      deleted.map((row) => row.id),
-    )
-
-    return ctx.json({
-      success: true,
-      data: { count: deleted.length },
+    const count = await db.transaction(async (tx) => {
+      const deleted = await tx
+        .delete(events)
+        .where(inArray(events.id, ids))
+        .returning({ id: events.id })
+      if (deleted.length > 0) {
+        await tx.insert(auditLog).values(
+          deleted.map((row) => ({
+            actorId: actor.userId,
+            action: 'event.bulk_delete',
+            targetId: row.id,
+            metadata: null,
+          })),
+        )
+      }
+      return deleted.length
     })
+
+    return ctx.json({ success: true, data: { count } })
   },
 )
