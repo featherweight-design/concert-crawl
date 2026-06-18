@@ -154,11 +154,15 @@ on each service. Use this exact path for any incident response.
 - **No Sentry-based rollback trigger.** v1 uses the post-deploy smoke as
   the only rollback signal. A future iteration could add a Sentry error
   rate spike check on top of the smoke gate.
-- **Rollback script picks the second-most-recent successful deploy.** If
-  prod has already been rolled back once and the current "live" deploy
-  is itself the rollback target, the script will pick the next prior one.
-  Usually fine, but worth knowing if you're chasing a regression that
-  rolled back multiple times.
+- **Rollback target selection is one level deep.** The script picks the
+  most recently finished `live`-or-`deactivated` deploy that is older
+  than the current live's "original deploy" (the prior deploy with the
+  same commit SHA, if any). This prevents a second consecutive rollback
+  from rolling forward onto the bad deploy we just rolled away from —
+  but it also means a second consecutive auto-rollback will refuse and
+  exit non-zero. If you need to walk further back through history (e.g.,
+  multiple bad releases in a row), do it via the Render dashboard rather
+  than re-running this workflow.
 - **Manual `workflow_dispatch` of `deploy-prod` requires a `reason`.** This
   is intentional — it shows up in the workflow log so the audit trail of
   manual deploys is preserved.

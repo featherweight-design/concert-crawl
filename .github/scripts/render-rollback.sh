@@ -32,25 +32,35 @@ deploys_json=$(curl --fail --silent --show-error \
 # currently serving traffic. Previously-live deploys get marked
 # "deactivated" when a newer deploy goes live. The rollback target is the
 # most recently finished `live`-or-`deactivated` deploy whose ID is NOT
-# the current live deploy.
+# the current live one — with one important guard.
+#
+# Re-rollback guard: if the current live deploy is itself the result of a
+# prior rollback (i.e., there's an earlier deploy with the SAME commit
+# SHA), naively picking "most-recent prior deactivated" would land on the
+# deploy we already rolled away from — rolling FORWARD onto the bad
+# commit. To prevent that, anchor on the original deploy of the current
+# live's commit (when present) and only consider targets strictly OLDER
+# than that anchor. For a normal first-time rollback there is no earlier
+# matching commit, and we fall back to the current live's finishedAt as
+# the anchor — preserving the simple "pick the prior one" behavior.
 #
 # Item shape varies across Render API versions: some endpoints wrap
 # entries as `{deploy: {...}}`, others return the deploy object flat.
 # `(.deploy // .)` accepts both.
-#
-# jq strategy:
-#   1. Identify the current live deploy ID (status == "live")
-#   2. Keep deploys with status in {live, deactivated} — both are "succeeded
-#      and served traffic" so either is a safe rollback target
-#   3. Sort by finishedAt descending (newest first)
-#   4. Drop the current live deploy and pick the next one
 target_deploy_id=$(echo "${deploys_json}" | jq -r '
   . as $all
-  | ([$all[] | (.deploy // .) | select(.status == "live")][0].id // "") as $live_id
+  | ([$all[] | (.deploy // .) | select(.status == "live")][0]) as $live
+  | ($live.id // "")        as $live_id
+  | ($live.commit // "")    as $live_commit
+  | ($live.finishedAt // "") as $live_finished
+  | ([$all[] | (.deploy // .)
+       | select(.id != $live_id and .commit == $live_commit)]
+     | sort_by(.finishedAt) | reverse | .[0]) as $prior_match
+  | (if $prior_match then $prior_match.finishedAt else $live_finished end) as $anchor
   | [$all[] | (.deploy // .)
-     | select(.status == "live" or .status == "deactivated")]
+     | select(.status == "live" or .status == "deactivated")
+     | select(.id != $live_id and .finishedAt < $anchor)]
   | sort_by(.finishedAt) | reverse
-  | map(select(.id != $live_id))
   | .[0].id // empty
 ')
 
