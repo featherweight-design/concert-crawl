@@ -1,3 +1,20 @@
+# [1.56.0](https://github.com/HartiganHM/concert-crawl/compare/v1.55.0...v1.56.0) (2026-06-18)
+
+
+### Bug Fixes
+
+* **admin:** address Copilot review on PR [#669](https://github.com/HartiganHM/concert-crawl/issues/669) ([2fc04ce](https://github.com/HartiganHM/concert-crawl/commit/2fc04cee26f605681355cd5ef052d6b6de351b8d))
+* **admin:** align editor with design (View detail, non-concert hint) ([64ebed3](https://github.com/HartiganHM/concert-crawl/commit/64ebed36beb6bf031583d9e2c690598b97074204))
+* **admin:** await async params for editor page (Next.js 15) ([dc9b9fe](https://github.com/HartiganHM/concert-crawl/commit/dc9b9fee60ac6c1b90107537f80ae9ae58452308))
+
+
+### Features
+
+* **admin:** add editor copy block (sections, fields, status, art, classification) ([eb320dd](https://github.com/HartiganHM/concert-crawl/commit/eb320ddf8ed661fc634b3b94a0c44da507c928a9))
+* **admin:** add editor primitives for read-only event editor ([e6a2084](https://github.com/HartiganHM/concert-crawl/commit/e6a2084804bc61593204408e61c436f1744bdcf7))
+* **admin:** add read-only event editor page ([24862be](https://github.com/HartiganHM/concert-crawl/commit/24862be8c0cb455dbaf859c6041d3d61da492a2b))
+* **api:** add GET /v1/admin/events/:id for editor surface ([ba79c6c](https://github.com/HartiganHM/concert-crawl/commit/ba79c6c4d627a496d982bac9ccb4435ebf118769))
+
 # [1.55.0](https://github.com/HartiganHM/concert-crawl/compare/v1.54.0...v1.55.0) (2026-06-18)
 
 
