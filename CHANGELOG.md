@@ -1,3 +1,10 @@
+## [1.52.4](https://github.com/HartiganHM/concert-crawl/compare/v1.52.3...v1.52.4) (2026-06-18)
+
+
+### Bug Fixes
+
+* **web:** prefer first day with shows on calendar week-arrow nav ([1b36af3](https://github.com/HartiganHM/concert-crawl/commit/1b36af3792e7f6d2720a1dc74b7f2f06a0185f85))
+
 ## [1.52.3](https://github.com/HartiganHM/concert-crawl/compare/v1.52.2...v1.52.3) (2026-06-17)
 
 
