@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from '@testing-library/react'
 
 const mockGetToken = vi.fn().mockResolvedValue('test-token')
 vi.mock('@clerk/nextjs', () => ({
@@ -9,16 +15,19 @@ vi.mock('@clerk/nextjs', () => ({
 }))
 
 const mockRouterRefresh = vi.fn()
+const mockRouterPush = vi.fn()
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ refresh: mockRouterRefresh, push: vi.fn() }),
+  useRouter: () => ({ refresh: mockRouterRefresh, push: mockRouterPush }),
 }))
 
 const mockApiPatch = vi.fn().mockResolvedValue({ success: true })
 const mockApiPost = vi.fn().mockResolvedValue({ success: true })
+const mockApiDelete = vi.fn().mockResolvedValue({ success: true })
 vi.mock('@/lib/api', () => ({
   apiClient: {
     patch: (...args: unknown[]) => mockApiPatch(...args),
     post: (...args: unknown[]) => mockApiPost(...args),
+    delete: (...args: unknown[]) => mockApiDelete(...args),
   },
   ApiError: class ApiError extends Error {
     constructor(
@@ -57,7 +66,10 @@ beforeEach(() => {
   mockApiPatch.mockResolvedValue({ success: true })
   mockApiPost.mockClear()
   mockApiPost.mockResolvedValue({ success: true })
+  mockApiDelete.mockClear()
+  mockApiDelete.mockResolvedValue({ success: true })
   mockRouterRefresh.mockClear()
+  mockRouterPush.mockClear()
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: vi.fn().mockImplementation((query: string) => ({
@@ -208,5 +220,59 @@ describe('EventEditorClient', () => {
     expect(patchBody).toEqual({ status: 'cancelled' })
     const [postUrl] = mockApiPost.mock.calls[0] ?? []
     expect(postUrl).toBe('/v1/admin/events/evt-1/sold-out')
+  })
+
+  it('renders the Danger zone section', () => {
+    render(<EventEditorClient event={SAMPLE} />)
+    expect(screen.getByText('Danger zone')).toBeTruthy()
+    expect(
+      screen.getByRole('button', { name: 'Mark non-concert' }),
+    ).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Delete event…' })).toBeTruthy()
+  })
+
+  it('PATCHes hiddenFromConsumer when confirming Mark non-concert', async () => {
+    render(<EventEditorClient event={SAMPLE} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Mark non-concert' }))
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Mark non-concert' }),
+    )
+    await waitFor(() => {
+      expect(mockApiPatch).toHaveBeenCalledTimes(1)
+    })
+    const [url, , body] = mockApiPatch.mock.calls[0] ?? []
+    expect(url).toBe('/v1/admin/events/evt-1')
+    expect(body).toEqual({ hiddenFromConsumer: true })
+    await waitFor(() => {
+      expect(mockRouterRefresh).toHaveBeenCalled()
+    })
+  })
+
+  it('DELETEs and redirects when confirming Delete event', async () => {
+    render(<EventEditorClient event={SAMPLE} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Delete event…' }))
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Delete event' }),
+    )
+    await waitFor(() => {
+      expect(mockApiDelete).toHaveBeenCalledTimes(1)
+    })
+    const [url] = mockApiDelete.mock.calls[0] ?? []
+    expect(url).toBe('/v1/admin/events/evt-1')
+    await waitFor(() => {
+      expect(mockRouterPush).toHaveBeenCalledWith(
+        '/admin/review?tab=all-events',
+      )
+    })
+  })
+
+  it('Cancel on the danger confirm closes the modal without an API call', async () => {
+    render(<EventEditorClient event={SAMPLE} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Delete event…' }))
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+    expect(mockApiDelete).not.toHaveBeenCalled()
   })
 })

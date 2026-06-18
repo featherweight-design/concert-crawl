@@ -12,8 +12,10 @@ import { PricingSection } from './sections/PricingSection'
 import { ClassificationSection } from './sections/ClassificationSection'
 import { StatusSection } from './sections/StatusSection'
 import { ArtSection } from './sections/ArtSection'
+import { DangerZoneSection } from './sections/DangerZoneSection'
 import { type SoldOutProvenance } from './sections/StatusSection'
 import { SaveBar } from './SaveBar'
+import { EventConfirmModal } from '@/components/admin/review/all/EventConfirmModal'
 
 export interface EditorEvent {
   id: string
@@ -96,6 +98,10 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
   const [draft, setDraft] = useState<DraftState>(() => toDraft(event))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [pendingDanger, setPendingDanger] = useState<
+    'non-concert' | 'delete' | null
+  >(null)
+  const [dangerPending, setDangerPending] = useState(false)
 
   // Reset the draft whenever the event prop identity changes (post-save
   // router.refresh() yields a fresh server-fetched event). The trade-off:
@@ -182,6 +188,36 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
     setError(null)
   }, [event])
 
+  const onConfirmDanger = useCallback(async () => {
+    if (!pendingDanger) return
+    setDangerPending(true)
+    setError(null)
+    try {
+      const token = await getToken()
+      if (!token) throw new ApiError(401, 'Unauthorized')
+      if (pendingDanger === 'non-concert') {
+        await apiClient.patch(`/v1/admin/events/${event.id}`, token, {
+          hiddenFromConsumer: true,
+        })
+        setPendingDanger(null)
+        router.refresh()
+      } else {
+        await apiClient.delete(`/v1/admin/events/${event.id}`, token)
+        // Redirect — the event is gone, the editor URL would 404.
+        router.push('/admin/review?tab=all-events')
+      }
+    } catch (dangerErr) {
+      const message =
+        dangerErr instanceof ApiError
+          ? dangerErr.message
+          : ADMIN_COPY.editor.saveBar.saveFailed
+      console.error('EventEditorClient danger action error:', dangerErr)
+      setError(message)
+    } finally {
+      setDangerPending(false)
+    }
+  }, [event.id, getToken, pendingDanger, router])
+
   return (
     <div
       style={{
@@ -225,6 +261,11 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
         }
       />
       <ArtSection artist={event.artist} />
+      <DangerZoneSection
+        onMarkNonConcert={() => setPendingDanger('non-concert')}
+        onDelete={() => setPendingDanger('delete')}
+        disabled={saving || dangerPending}
+      />
       <SaveBar
         dirty={dirty}
         saving={saving}
@@ -232,6 +273,20 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
         onSave={onSave}
         onDiscard={onDiscard}
       />
+      {pendingDanger && (
+        <EventConfirmModal
+          kind={pendingDanger}
+          event={{
+            title: event.title,
+            venueName: event.venueName,
+            date: event.date,
+            showTime: event.showTime,
+          }}
+          pending={dangerPending}
+          onCancel={() => setPendingDanger(null)}
+          onConfirm={onConfirmDanger}
+        />
+      )}
     </div>
   )
 }

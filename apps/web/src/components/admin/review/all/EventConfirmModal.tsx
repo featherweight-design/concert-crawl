@@ -2,13 +2,22 @@
 
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { AdminButton } from '@/components/admin/primitives'
-import { type AllEvent } from './types'
 
 type ConfirmKind = 'delete' | 'non-concert'
 
+// Only the four identity fields are read for rendering — keeping the prop
+// structural lets non-AllEvent callers (the editor's DangerZone) reuse
+// this modal without round-tripping through the table row shape.
+export interface EventConfirmEvent {
+  title: string
+  venueName: string | null
+  date: string
+  showTime: string | null
+}
+
 export interface EventConfirmModalProps {
   kind: ConfirmKind
-  event: AllEvent
+  event: EventConfirmEvent
   onCancel: () => void
   onConfirm: () => void
   pending?: boolean

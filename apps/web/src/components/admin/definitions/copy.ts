@@ -1156,6 +1156,12 @@ export const ADMIN_COPY = {
       saving: 'Saving…',
       saveFailed: 'Failed to save.',
     },
+    dangerZone: {
+      title: 'Danger zone',
+      body: 'Reclassify or remove this event. Both actions are reflected in the audit log.',
+      markNonConcert: 'Mark non-concert',
+      deleteEvent: 'Delete event…',
+    },
     statusControls: {
       newDateLabel: 'New date',
       // Pre-fills with the event's current date; admin picks the rescheduled
