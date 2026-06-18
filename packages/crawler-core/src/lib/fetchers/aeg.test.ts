@@ -189,11 +189,31 @@ describe('aegFetcher.fetch', () => {
     expect(elapsed).toBeGreaterThanOrEqual(40)
   })
 
-  it('sends Origin header so AEG blob does not 404', async () => {
+  it('derives the Origin header from the venue website per-venue', async () => {
+    // AEG's CORS layer may enforce origin per-venue; sending the venue's
+    // own origin means a future allowlist change doesn't silently 404
+    // a single venue. Verify two different venues produce two different
+    // Origin headers.
     mockFetchOk(BLUEBIRD_FIXTURE)
-    await aegFetcher.fetch(makeVenue(), { crawlDelayMs: 0 })
-    const callInit = fetchSpy.mock.calls[0]![1] as RequestInit
-    const headers = callInit.headers as Record<string, string>
-    expect(headers.Origin).toMatch(/^https?:\/\//)
+    await aegFetcher.fetch(
+      makeVenue({ websiteUrl: 'https://www.bluebirdtheater.net/calendar/' }),
+      { crawlDelayMs: 0 },
+    )
+    const bluebirdHeaders = (fetchSpy.mock.calls[0]![1] as RequestInit)
+      .headers as Record<string, string>
+    expect(bluebirdHeaders.Origin).toBe('https://www.bluebirdtheater.net')
+
+    fetchSpy.mockClear()
+    mockFetchOk(BLUEBIRD_FIXTURE)
+    await aegFetcher.fetch(
+      makeVenue({
+        websiteUrl: 'https://www.gothictheatre.com/calendar/',
+        platformVenueId: '37',
+      }),
+      { crawlDelayMs: 0 },
+    )
+    const gothicHeaders = (fetchSpy.mock.calls[0]![1] as RequestInit)
+      .headers as Record<string, string>
+    expect(gothicHeaders.Origin).toBe('https://www.gothictheatre.com')
   })
 })

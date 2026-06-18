@@ -222,14 +222,25 @@ function normalize(
   }
 }
 
-async function fetchAegBlob(url: string): Promise<unknown> {
+/**
+ * Pull `https://host` out of an absolute URL. The AEG blob uses the
+ * Origin header to authorize the request; deriving it from each venue's
+ * own website URL means a per-venue branded subdomain check (if AEG ever
+ * adds one) won't break us — and an audit log of who initiated the
+ * fetch always points at the right venue.
+ */
+function originFromVenueUrl(websiteUrl: string): string {
+  const parsed = new URL(websiteUrl)
+  return `${parsed.protocol}//${parsed.host}`
+}
+
+async function fetchAegBlob(url: string, origin: string): Promise<unknown> {
   const response = await fetch(url, {
     headers: {
-      // AEG's blob is publicly readable but verifies Origin matches an
-      // AEG-owned domain. Without this header the blob returns 404. Set
-      // to a generic AEG site to keep the request shape consistent
-      // across the 5 onboarded venues.
-      Origin: 'https://www.bluebirdtheater.net',
+      // AEG's blob CORS layer checks Origin. We pass each venue's own
+      // origin so a per-venue allowlist (if AEG adds one) keeps working,
+      // and so any AEG-side telemetry attributes the request correctly.
+      Origin: origin,
       'User-Agent': USER_AGENT,
       Accept: 'application/json',
     },
@@ -265,7 +276,7 @@ async function aegFetch(
   if (opts.crawlDelayMs > 0) {
     await new Promise((resolve) => setTimeout(resolve, opts.crawlDelayMs))
   }
-  const raw = await fetchAegBlob(url)
+  const raw = await fetchAegBlob(url, originFromVenueUrl(venue.websiteUrl))
   const parseResult = AegResponseSchema.safeParse(raw)
   if (!parseResult.success) {
     throw new AegSchemaError(
@@ -280,9 +291,12 @@ async function aegFetch(
   // Filter to events at THIS venue. AEG's per-shard JSON usually only
   // contains the venue's own events, but the meta.total + an explicit
   // venue filter make us robust against AEG ever consolidating shards.
+  // Note: AEG's `venue.title` is a display name, not an id — that's why
+  // we compare it against `venue.name` (our DB display-name column).
   const filtered = data.events.filter((event) => {
-    const venueId = (event as { venue?: { title?: string } }).venue?.title
-    return !venueId || venueId === venue.name
+    const eventVenueName = (event as { venue?: { title?: string } }).venue
+      ?.title
+    return !eventVenueName || eventVenueName === venue.name
   })
 
   const events: NormalizedEvent[] = []

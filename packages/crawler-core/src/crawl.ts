@@ -767,7 +767,14 @@ export async function crawlVenue(
         blockedAt: null,
         robotsTxtAllowed: true,
         robotsTxtCheckedAt: new Date(),
-        ...(venue.crawlMode === null ? { crawlMode: resolvedMode } : {}),
+        // Auto-detect crawlMode write is HTML-path-only. On the platform
+        // path we didn't actually probe HTTP vs browser, so persisting
+        // resolvedMode here would silently flip a null crawlMode to
+        // 'browser' — losing the auto-detect behavior if the operator
+        // later clears venue.platform to revert to the LLM cascade.
+        ...(!platformFetcher && venue.crawlMode === null
+          ? { crawlMode: resolvedMode }
+          : {}),
         updatedAt: new Date(),
       })
       .where(eq(venues.id, venueId))

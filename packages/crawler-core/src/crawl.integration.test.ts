@@ -578,6 +578,48 @@ describe('crawlVenue — per-platform fetcher dispatch (#623)', () => {
     }
   })
 
+  it('does not auto-set crawlMode for a null-crawlMode venue on the platform path', async () => {
+    // Regression for Copilot review on #662: the auto-detect crawlMode
+    // write (which flips null → 'browser' on the first crawl) is intended
+    // for the HTML path only. On the platform path we didn't actually
+    // probe HTTP vs browser, so writing 'browser' here would silently
+    // lose auto-detect if the operator later clears venue.platform.
+    const [venue] = await db
+      .insert(venues)
+      .values({
+        name: `Platform CrawlMode Test ${crypto.randomUUID()}`,
+        slug: `platform-crawlmode-${crypto.randomUUID()}`,
+        websiteUrl: 'https://platform-crawlmode-test.example.com',
+        platform: 'aeg',
+        platformVenueId: '2',
+        crawlMode: null, // intentionally null
+        crawlDelayMs: 0,
+      })
+      .returning()
+    if (!venue) throw new Error('venue insert returned no row')
+
+    const aegPayload = {
+      meta: { total: 0 },
+      events: [],
+    }
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(
+        new Response(JSON.stringify(aegPayload), { status: 200 }) as Response,
+      )
+
+    try {
+      await crawlVenue(venue.id, mockBrowser)
+      const [updatedVenue] = await db
+        .select({ crawlMode: venues.crawlMode })
+        .from(venues)
+        .where(eq(venues.id, venue.id))
+      expect(updatedVenue!.crawlMode).toBeNull()
+    } finally {
+      fetchSpy.mockRestore()
+    }
+  })
+
   it('falls through to the existing HTML path when venue.platform is null', async () => {
     // Sanity check that non-platform venues still hit fetchPage.
     const [venue] = await db
