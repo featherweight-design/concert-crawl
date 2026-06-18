@@ -13,8 +13,11 @@ export function BackButton() {
       type="button"
       onClick={() => {
         // Prefer history-aware back so query state (filters, scroll position)
-        // on the previous page is restored. Fall back to /events only when
-        // the user opened a direct event link as their first navigation (#637).
+        // on the previous page is restored. Falls back to /events only when
+        // this tab has no prior history (e.g., direct event link opened in
+        // a fresh tab). For all other entries — including external referrers
+        // — `router.back()` returns the user to wherever they came from,
+        // which matches the browser's own back affordance. (#637)
         if (window.history.length <= 1) {
           router.push('/events')
         } else {
