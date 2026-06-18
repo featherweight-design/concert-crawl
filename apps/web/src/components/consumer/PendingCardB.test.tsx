@@ -91,9 +91,11 @@ describe('PendingCardB', () => {
 
     it('box-office shows "Box office" eyebrow and "face value · no fees" line', () => {
       render(<PendingCardB {...buildProps({ kind: 'boxoffice' })} />)
-      // The PendingTrustPill also renders 'Box office' on the boxoffice tier,
-      // so anchor the eyebrow assertion with getAllByText and assert ≥ 1 match.
-      expect(screen.getAllByText('Box office').length).toBeGreaterThan(0)
+      // Two 'Box office' renderings on the box-office tier — the Eyebrow at the
+      // top of the body and the PendingTrustPill on the headline row. The
+      // community variant (separate test above) asserts neither appears, so
+      // requiring ≥ 2 here catches removal of either element.
+      expect(screen.getAllByText('Box office').length).toBeGreaterThanOrEqual(2)
       expect(screen.getByText(/face value/i)).toBeTruthy()
     })
   })
