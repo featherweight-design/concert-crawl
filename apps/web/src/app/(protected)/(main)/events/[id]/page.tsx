@@ -11,6 +11,7 @@ import type {
 import { publicApiClient, apiClient } from '@/lib/api'
 import { fetchEventReports } from '@/lib/events'
 import { EventImage } from '@/components/consumer/event-image'
+import { BackButton } from '@/components/consumer/event-detail/BackButton'
 import { EventCard } from '@/components/consumer/event-card/EventCard'
 import { SectionHeader } from '@/components/consumer/section-header'
 import { WatchShowButton } from '@/components/consumer/watch-show-button'
@@ -114,29 +115,10 @@ export default async function EventDetailPage({
           style={{ background: 'linear-gradient(transparent, var(--bg))' }}
           aria-hidden
         />
-        {/* Floating back button */}
-        <Link
-          href="/events"
-          aria-label={copy.backAriaLabel}
-          className="absolute left-3.5 top-14 z-10 flex h-9 w-9 items-center justify-center rounded-full"
-          style={{ background: 'var(--scrim)' }}
-        >
-          <svg
-            width="10"
-            height="16"
-            viewBox="0 0 10 16"
-            fill="none"
-            aria-hidden
-          >
-            <path
-              d="M8 2L2 8l6 6"
-              stroke="var(--fg)"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </Link>
+        {/* Floating back button — history-aware so filters/scroll on the
+            previous page are restored when the user navigated here from
+            within the app (#637). */}
+        <BackButton />
       </div>
 
       {/* Scrollable content — 880px max-width centered column, -60px hero overlap on desktop */}
