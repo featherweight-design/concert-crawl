@@ -60,10 +60,11 @@ The pipeline ships with two kill switches so we can roll out in two stages.
 
 ### Stage 1 — enable staging-smoke only
 
-Use this for at least a few merges to confirm the smoke suite is stable
-and the staging deploy timing (240s `/v1/health` poll + 60s grace) is
-sufficient for Render's deploy swap. If polling times out before Render
-finishes deploying, raise the timeout in `staging-smoke.yml`.
+Use this for at least a few merges to confirm the smoke suite is stable.
+`staging-smoke` waits for the Render staging API service to report
+`status=live` on the triggering commit's SHA (up to 10 min) before
+running the suite, so a slow Render build won't make the smoke pass
+against the old code.
 
 1. GitHub repo → **Settings** → **Secrets and variables** → **Actions** → **Variables** tab → **New repository variable**
    - **Name:** `STAGING_API_URL`
@@ -108,11 +109,11 @@ on the next workflow_run trigger.
 
 ### `production` environment — Variables (Settings → Environments → production)
 
-| Variable                             | Required by   | Notes                                                                              |
-| ------------------------------------ | ------------- | ---------------------------------------------------------------------------------- |
-| `RENDER_SERVICE_ID_API`              | rollback-prod | **new** — prod API service ID (visible in Render dashboard URL, e.g. `srv-abc123`) |
-| `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | rollback-prod | **new** — prod crawler triggers cron service ID                                    |
-| `RENDER_SERVICE_ID_CRAWLER_DAILY`    | rollback-prod | **new** — prod crawler daily cron service ID                                       |
+| Variable                             | Required by                | Notes                                                                                                                                          |
+| ------------------------------------ | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RENDER_SERVICE_ID_API`              | deploy-prod, rollback-prod | **new** — prod API service ID (visible in Render dashboard URL, e.g. `srv-abc123`). Used by `render-wait-for-live.sh` and `render-rollback.sh` |
+| `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | rollback-prod              | **new** — prod crawler triggers cron service ID                                                                                                |
+| `RENDER_SERVICE_ID_CRAWLER_DAILY`    | rollback-prod              | **new** — prod crawler daily cron service ID                                                                                                   |
 
 Service IDs live in the `production` environment (not at the repo level) so they are scoped to prod-only workflow runs and stay aligned with `production-launch.md`. The `rollback-prod.yml` job uses `environment: production` and reads them as `vars.RENDER_SERVICE_ID_*`.
 
