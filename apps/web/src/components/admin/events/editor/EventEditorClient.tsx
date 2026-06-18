@@ -72,9 +72,11 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // If the parent re-renders with a new event (post-router.refresh()), the
-  // draft mirrors it. Falls back to keeping the user's edits when the same
-  // event reloads (id unchanged) but data didn't shift on the server.
+  // Reset the draft whenever the event prop identity changes (post-save
+  // router.refresh() yields a fresh server-fetched event). The trade-off:
+  // unsaved local edits are discarded on every parent re-render, which is
+  // acceptable here because the parent (server component) only re-renders
+  // after a successful save or a true navigation.
   useEffect(() => {
     setDraft(toDraft(event))
     setError(null)

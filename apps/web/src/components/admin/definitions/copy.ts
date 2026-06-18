@@ -1158,8 +1158,12 @@ export const ADMIN_COPY = {
     },
     statusControls: {
       newDateLabel: 'New date',
-      newDateTbd: 'TBD',
-      newDateHint: 'Pick the rescheduled date or leave as TBD.',
+      // Pre-fills with the event's current date; admin picks the rescheduled
+      // date when known. The PATCH endpoint takes a YYYY-MM-DD string, so no
+      // TBD sentinel — admins can save without changing the date if the
+      // reschedule is still being worked out, then come back to set it.
+      newDateHint:
+        'Pre-filled with the current date. Pick the rescheduled date when you know it.',
       verifyToggleLabel: 'Verified',
       verifyHint:
         'Verifying confirms this event is publishable. Send back to review unsets it.',

@@ -51,10 +51,16 @@ export const SaveBar = ({
       >
         {error ?? COPY.dirty}
       </div>
-      <AdminButton variant="ghost" onClick={onDiscard} disabled={saving}>
+      <AdminButton
+        type="button"
+        variant="ghost"
+        onClick={onDiscard}
+        disabled={saving}
+      >
         {COPY.discard}
       </AdminButton>
       <AdminButton
+        type="button"
         variant="primary"
         onClick={onSave}
         disabled={saving || !dirty}
