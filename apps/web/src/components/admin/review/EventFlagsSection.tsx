@@ -32,12 +32,14 @@ interface EventFlagsSectionProps {
   events: EventFlag[]
   onApprove: (id: string) => void
   onReject: (id: string) => void
+  onEdit?: (id: string) => void
 }
 
 export const EventFlagsSection = ({
   events,
   onApprove,
   onReject,
+  onEdit,
 }: EventFlagsSectionProps) => {
   const [activeId, setActiveId] = useState<string | null>(events[0]?.id ?? null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -299,12 +301,22 @@ export const EventFlagsSection = ({
         </div>
 
         {/* Right: inspector */}
-        <EventFlagInspector
-          event={visibleEvents.find((ev) => ev.id === activeId) ?? null}
-          onApprove={handleApprove}
-          onReject={handleReject}
-          onClose={() => setActiveId(null)}
-        />
+        {onEdit ? (
+          <EventFlagInspector
+            event={visibleEvents.find((ev) => ev.id === activeId) ?? null}
+            onApprove={handleApprove}
+            onReject={handleReject}
+            onClose={() => setActiveId(null)}
+            onEdit={onEdit}
+          />
+        ) : (
+          <EventFlagInspector
+            event={visibleEvents.find((ev) => ev.id === activeId) ?? null}
+            onApprove={handleApprove}
+            onReject={handleReject}
+            onClose={() => setActiveId(null)}
+          />
+        )}
       </div>
 
       {/* Bulk action dock */}

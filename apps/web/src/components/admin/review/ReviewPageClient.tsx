@@ -9,6 +9,7 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { AdminReviewMobile } from './AdminReviewMobile'
 import { ReviewTabs, type ReviewTabDescriptor } from './ReviewTabs'
 import { EventFlagsTabContent } from './_tabs/EventFlagsTabContent'
+import { editEventHref } from '@/lib/admin/edit-event-link'
 import { PricesTabContent } from './_tabs/PricesTabContent'
 import { AllEventsTabContent } from './_tabs/AllEventsTabContent'
 import { MissingTabContent } from './_tabs/MissingTabContent'
@@ -590,6 +591,7 @@ export const ReviewPageClient = ({
           events={events}
           onApprove={approveEvent}
           onReject={rejectEvent}
+          onEdit={(id) => router.push(editEventHref(id))}
         />
       )}
 
