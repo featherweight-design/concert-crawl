@@ -28,17 +28,25 @@ Each arrow is a GitHub Actions `workflow_run` trigger. Each downstream
 workflow gates on the upstream one's `conclusion`, so a failure short-
 circuits the chain.
 
-| Workflow                     | Path                                           | Trigger                      | Kill switch                |
-| ---------------------------- | ---------------------------------------------- | ---------------------------- | -------------------------- |
-| CI                           | `.github/workflows/ci.yml`                     | push to `main`               | (always on)                |
-| Deploy to Staging            | `.github/workflows/deploy-staging.yml`         | CI success                   | (always on)                |
-| Staging Smoke Tests          | `.github/workflows/staging-smoke.yml`          | Deploy to Staging success    | `STAGING_SMOKE_ENABLED`    |
-| Deploy to Production         | `.github/workflows/deploy-prod.yml`            | Staging Smoke success        | `AUTO_DEPLOY_PROD_ENABLED` |
-| Production Post-Deploy Smoke | `.github/workflows/prod-post-deploy-smoke.yml` | Deploy to Production success | `AUTO_DEPLOY_PROD_ENABLED` |
-| Rollback Production          | `.github/workflows/rollback-prod.yml`          | Post-deploy smoke failure    | `AUTO_DEPLOY_PROD_ENABLED` |
+| Workflow                     | Path                                           | Trigger                      | Kill switch                                 |
+| ---------------------------- | ---------------------------------------------- | ---------------------------- | ------------------------------------------- |
+| CI                           | `.github/workflows/ci.yml`                     | push to `main`               | (always on)                                 |
+| Deploy to Staging            | `.github/workflows/deploy-staging.yml`         | CI success                   | (always on)                                 |
+| Staging Smoke Tests          | `.github/workflows/staging-smoke.yml`          | Deploy to Staging success    | `STAGING_SMOKE_ENABLED`                     |
+| Deploy to Production         | `.github/workflows/deploy-prod.yml`            | Staging Smoke success        | `AUTO_DEPLOY_PROD_ENABLED`                  |
+| Production Post-Deploy Smoke | `.github/workflows/prod-post-deploy-smoke.yml` | Deploy to Production success | `AUTO_DEPLOY_PROD_ENABLED`                  |
+| Rollback Production          | `.github/workflows/rollback-prod.yml`          | Post-deploy smoke failure    | `AUTO_DEPLOY_PROD_ENABLED` (automatic only) |
 
 The scheduled `smoke.yml` (every 6 hours against prod) is independent and
 remains gated by the separate `SMOKE_ENABLED` variable.
+
+**Note on the rollback kill switch:** `AUTO_DEPLOY_PROD_ENABLED` gates
+only the `workflow_run` (automatic) path of `rollback-prod.yml`. Manual
+`workflow_dispatch` of the rollback is intentionally **NOT** gated by
+the kill switch — the kill switch exists to pause the auto-pipeline;
+an operator explicitly invoking incident response must still be able
+to roll back even when the auto-pipeline is disabled. Manual
+dispatches are still restricted to `main`.
 
 ## Vercel rollback is manual
 
