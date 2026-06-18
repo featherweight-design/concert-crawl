@@ -62,9 +62,18 @@ jobs:
         if: |
           github.event_name == 'workflow_run' &&
           (github.event.workflow_run.conclusion != 'success' ||
-           vars.STAGING_SMOKE_ENABLED != 'true')
+           vars.STAGING_SMOKE_ENABLED != 'true' ||
+           github.event.workflow_run.event == 'workflow_dispatch')
         run: |
-          echo "Refusing to deploy prod. Upstream Staging Smoke Tests conclusion: ${{ github.event.workflow_run.conclusion }}, STAGING_SMOKE_ENABLED: ${{ vars.STAGING_SMOKE_ENABLED }}"
+          echo "Refusing to deploy prod."
+          echo "  Upstream Staging Smoke Tests conclusion: ${{ github.event.workflow_run.conclusion }}"
+          echo "  STAGING_SMOKE_ENABLED: ${{ vars.STAGING_SMOKE_ENABLED }}"
+          echo "  Upstream trigger event:  ${{ github.event.workflow_run.event }}"
+          echo ""
+          echo "If the upstream was workflow_dispatch (manual), auto-deploy is"
+          echo "intentionally refused — manual prod deploys must go through"
+          echo "deploy-prod.yml workflow_dispatch directly (which requires a"
+          echo "'reason' input for the audit trail), not through staging-smoke."
           exit 1
 
       - name: Gate passed
