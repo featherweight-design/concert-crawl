@@ -1,3 +1,18 @@
+# [1.62.0](https://github.com/HartiganHM/concert-crawl/compare/v1.61.0...v1.62.0) (2026-06-18)
+
+
+### Bug Fixes
+
+* **api:** hide first_missing_at rows from public events endpoints ([57ba1ac](https://github.com/HartiganHM/concert-crawl/commit/57ba1ac1495c19bad6e60f945081e63c9d563920)), closes [#607](https://github.com/HartiganHM/concert-crawl/issues/607)
+* **api:** hide first_missing_at rows from public venues endpoints ([6670fbe](https://github.com/HartiganHM/concert-crawl/commit/6670fbe2ee9b51a2cec2b4ace000a58999ea9735))
+* **api:** hide first_missing_at rows from search/popular endpoint ([05f08e5](https://github.com/HartiganHM/concert-crawl/commit/05f08e53024ab36cd52c0a0b8f69a0874a03358b))
+* **deps:** constrain undici override to ^7.28.0 to keep jsdom working ([7bc4ef8](https://github.com/HartiganHM/concert-crawl/commit/7bc4ef8011deac2ec9ba47f75ef7a4ece729cf77))
+
+
+### Features
+
+* **admin:** editor mark non-concert + danger zone (PR 9/11) ([f8a87bd](https://github.com/HartiganHM/concert-crawl/commit/f8a87bdd28bfe5353ee103c7df069ff8576e5b40))
+
 # [1.61.0](https://github.com/HartiganHM/concert-crawl/compare/v1.60.0...v1.61.0) (2026-06-18)
 
 
