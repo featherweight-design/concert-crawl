@@ -25,6 +25,7 @@
     --warning: #ffd27a;
     --danger: #ff7a8a;
     --trust-community: oklch(0.62 0.12 240);
+    --trust-resale: oklch(0.65 0.20 25);
     --focus: #7ae6ff;
     --overlay-hover: rgba(122, 230, 255, 0.08);
     --overlay-press: rgba(122, 230, 255, 0.16);

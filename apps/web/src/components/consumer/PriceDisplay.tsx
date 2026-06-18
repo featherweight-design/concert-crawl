@@ -85,7 +85,7 @@ interface PriceDisplayProps {
 }
 
 // ── Color constants ───────────────────────────────────────────────
-const CORAL = 'oklch(0.65 0.20 25)'
+const RESALE = 'var(--trust-resale)'
 const GOLD = 'oklch(0.66 0.14 78)'
 // Community color token — consumed from CSS variable so it responds to theme.
 const COMMUNITY = 'var(--trust-community)'
@@ -242,7 +242,7 @@ export function TrustMark({
 
   const tint =
     kind === 'resale'
-      ? CORAL
+      ? RESALE
       : kind === 'community'
         ? COMMUNITY
         : kind === 'boxoffice'
@@ -251,7 +251,7 @@ export function TrustMark({
 
   const bg =
     kind === 'resale'
-      ? `color-mix(in oklab, ${CORAL} 16%, transparent)`
+      ? `color-mix(in oklab, ${RESALE} 16%, transparent)`
       : kind === 'community'
         ? `color-mix(in oklab, ${COMMUNITY} 16%, transparent)`
         : kind === 'boxoffice'
@@ -572,7 +572,7 @@ function AlternateSourceRow({
   const showAllIn = (alt.fees ?? 0) > 0
   const dotColor =
     alt.sourceKind === 'resale'
-      ? CORAL
+      ? RESALE
       : alt.sourceKind === 'community'
         ? COMMUNITY
         : alt.sourceKind === 'boxoffice'

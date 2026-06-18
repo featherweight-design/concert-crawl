@@ -49,6 +49,7 @@ const electric: Record<string, string> = {
   warning: '#FFD27A',
   danger: '#FF7A8A',
   'trust-community': 'oklch(0.62 0.12 240)',
+  'trust-resale': 'oklch(0.65 0.20 25)',
   focus: '#7AE6FF',
   'overlay-hover': 'rgba(122,230,255,0.08)',
   'overlay-press': 'rgba(122,230,255,0.16)',
@@ -78,6 +79,7 @@ const jade: Record<string, string> = {
   warning: '#FFD27A',
   danger: '#FF7A8A',
   'trust-community': 'oklch(0.62 0.12 240)',
+  'trust-resale': 'oklch(0.65 0.20 25)',
   focus: '#1FFFC2',
   'overlay-hover': 'rgba(31,255,194,0.08)',
   'overlay-press': 'rgba(31,255,194,0.16)',
@@ -107,6 +109,7 @@ const light: Record<string, string> = {
   warning: '#B86E00',
   danger: '#C42940',
   'trust-community': 'oklch(0.62 0.12 240)',
+  'trust-resale': 'oklch(0.65 0.20 25)',
   focus: '#0080A0',
   'overlay-hover': 'rgba(7,10,26,0.04)',
   'overlay-press': 'rgba(7,10,26,0.08)',
@@ -141,6 +144,7 @@ const pulse: Record<string, string> = {
   scrim: 'rgba(5,0,8,0.72)',
   'image-tint': 'rgba(5,0,8,0.20)',
   'trust-community': 'oklch(0.62 0.12 240)',
+  'trust-resale': 'oklch(0.65 0.20 25)',
 }
 
 const forge: Record<string, string> = {
@@ -170,6 +174,7 @@ const forge: Record<string, string> = {
   scrim: 'rgba(6,4,3,0.72)',
   'image-tint': 'rgba(6,4,3,0.20)',
   'trust-community': 'oklch(0.62 0.12 240)',
+  'trust-resale': 'oklch(0.65 0.20 25)',
 }
 
 const bluenote: Record<string, string> = {
@@ -199,6 +204,7 @@ const bluenote: Record<string, string> = {
   scrim: 'rgba(14,10,31,0.72)',
   'image-tint': 'rgba(14,10,31,0.20)',
   'trust-community': 'oklch(0.62 0.12 240)',
+  'trust-resale': 'oklch(0.65 0.20 25)',
 }
 
 const drip: Record<string, string> = {
@@ -228,6 +234,7 @@ const drip: Record<string, string> = {
   scrim: 'rgba(0,0,0,0.72)',
   'image-tint': 'rgba(0,0,0,0.20)',
   'trust-community': 'oklch(0.62 0.12 240)',
+  'trust-resale': 'oklch(0.65 0.20 25)',
 }
 
 const cedar: Record<string, string> = {
@@ -257,6 +264,7 @@ const cedar: Record<string, string> = {
   scrim: 'rgba(16,32,26,0.72)',
   'image-tint': 'rgba(16,32,26,0.20)',
   'trust-community': 'oklch(0.62 0.12 240)',
+  'trust-resale': 'oklch(0.65 0.20 25)',
 }
 
 const gloss: Record<string, string> = {
@@ -286,6 +294,7 @@ const gloss: Record<string, string> = {
   scrim: 'rgba(15,8,16,0.72)',
   'image-tint': 'rgba(15,8,16,0.20)',
   'trust-community': 'oklch(0.62 0.12 240)',
+  'trust-resale': 'oklch(0.65 0.20 25)',
 }
 
 export const THEMES: Record<ThemeName, Record<string, string>> = {

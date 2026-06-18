@@ -19,7 +19,7 @@ interface EventCardProps {
 type SourceKind = 'primary' | 'resale' | 'community' | 'boxoffice'
 
 const GOLD = 'oklch(0.66 0.14 78)'
-const CORAL = 'oklch(0.65 0.20 25)'
+const RESALE = 'var(--trust-resale)'
 const COMMUNITY = 'var(--trust-community)'
 
 function resolveKind(
@@ -53,8 +53,8 @@ function PriceChip({
       : kind === 'resale'
         ? {
             letter: 'R',
-            color: CORAL,
-            bg: `color-mix(in oklab, ${CORAL} 16%, transparent)`,
+            color: RESALE,
+            bg: `color-mix(in oklab, ${RESALE} 16%, transparent)`,
           }
         : kind === 'community'
           ? {
