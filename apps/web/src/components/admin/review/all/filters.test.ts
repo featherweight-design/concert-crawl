@@ -34,6 +34,15 @@ describe('parseFiltersFromParams', () => {
     expect(parsed.missingData).toEqual(['no-price', 'no-genre'])
   })
 
+  it('dedupes repeated genre and missingData tags from the URL', () => {
+    const params = new URLSearchParams(
+      'genre=indie,indie,folk&missingData=no-price,no-price',
+    )
+    const parsed = parseFiltersFromParams(params)
+    expect(parsed.genre).toEqual(['indie', 'folk'])
+    expect(parsed.missingData).toEqual(['no-price'])
+  })
+
   it('falls back to verified=all when the param is invalid', () => {
     const params = new URLSearchParams('verified=garbage')
     expect(parseFiltersFromParams(params).verified).toBe('all')

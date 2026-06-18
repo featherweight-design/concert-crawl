@@ -61,6 +61,7 @@ const VerificationSegmented = ({
           <button
             key={key}
             type="button"
+            aria-pressed={active}
             onClick={() => onChange(key)}
             style={{
               border: 'none',

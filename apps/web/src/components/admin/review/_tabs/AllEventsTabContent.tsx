@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { ApiError, apiClient } from '@/lib/api'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
@@ -106,13 +106,21 @@ export const AllEventsTabContent = ({
   // identity changes (so parents can pass a fresh object every render).
   const filterQuery = filtersToFetchQuery(filters)
 
-  const fetchPage = useCallback(
+  // A generation counter bumps every time `filterQuery` changes; in-flight
+  // fetches capture their generation up front and skip state updates when
+  // the current generation has moved on. This prevents stale fetches from
+  // overwriting fresh state when the admin types quickly across filters.
+  const generationRef = useRef(0)
+
+  const runFetch = useCallback(
     async (offset: number, append: boolean): Promise<void> => {
+      const generation = generationRef.current
+      const isStale = () => generation !== generationRef.current
       setError(null)
       try {
         const token = await getToken()
         if (!token) {
-          setHasMore(false)
+          if (!isStale()) setHasMore(false)
           return
         }
         const suffix = filterQuery ? `&${filterQuery}` : ''
@@ -120,9 +128,11 @@ export const AllEventsTabContent = ({
           `/v1/admin/events?limit=${PAGE_SIZE}&offset=${offset}${suffix}`,
           token,
         )
+        if (isStale()) return
         setEvents((prev) => (append ? [...prev, ...rows] : rows))
         setHasMore(rows.length === PAGE_SIZE)
       } catch (err) {
+        if (isStale()) return
         const message =
           err instanceof ApiError ? err.message : 'Failed to load events.'
         console.error('AllEventsTabContent fetch error:', err)
@@ -130,25 +140,30 @@ export const AllEventsTabContent = ({
         // Leave hasMore as-is so a transient failure on Load more doesn't
         // permanently hide the button — the admin can retry.
       } finally {
-        setLoading(false)
-        setLoadingMore(false)
+        if (!isStale()) {
+          setLoading(false)
+          setLoadingMore(false)
+        }
       }
     },
     [getToken, filterQuery],
   )
 
   useEffect(() => {
+    // Bump first so any in-flight call from the previous filter immediately
+    // sees itself as stale.
+    generationRef.current += 1
     setLoading(true)
     setEvents([])
     setHasMore(false)
-    void fetchPage(0, false)
-  }, [fetchPage])
+    void runFetch(0, false)
+  }, [runFetch])
 
   const onLoadMore = useCallback(() => {
     if (loadingMore || !hasMore) return
     setLoadingMore(true)
-    void fetchPage(events.length, true)
-  }, [events.length, fetchPage, hasMore, loadingMore])
+    void runFetch(events.length, true)
+  }, [events.length, runFetch, hasMore, loadingMore])
 
   const filterBar = (
     <EventsFilterBar filters={filters} onChange={onFiltersChange} />

@@ -41,15 +41,25 @@ export const parseFiltersFromParams = (
     ? verifiedRaw
     : 'all'
 
-  const genre = (params.get('genre') ?? '')
-    .split(',')
-    .map((tag) => tag.trim())
-    .filter((tag) => tag.length > 0)
+  // Dedupe parsed lists so `?genre=indie,indie` doesn't yield duplicate chips
+  // (React key collisions). Preserve insertion order via Set.
+  const genre = Array.from(
+    new Set(
+      (params.get('genre') ?? '')
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter((tag) => tag.length > 0),
+    ),
+  )
 
-  const missingData = (params.get('missingData') ?? '')
-    .split(',')
-    .map((tag) => tag.trim())
-    .filter(isMissingDataFlag)
+  const missingData = Array.from(
+    new Set(
+      (params.get('missingData') ?? '')
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter(isMissingDataFlag),
+    ),
+  )
 
   return {
     query: params.get('query') ?? '',
