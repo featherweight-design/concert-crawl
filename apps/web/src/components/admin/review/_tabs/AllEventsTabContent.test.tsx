@@ -125,6 +125,34 @@ describe('AllEventsTabContent', () => {
     })
   })
 
+  it('shows the error banner (not empty state) when the initial fetch fails', async () => {
+    mockApiGet.mockRejectedValue(new Error('boom'))
+    render(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
+    await waitFor(() => {
+      expect(screen.getByText('Failed to load events.')).toBeTruthy()
+    })
+    expect(screen.queryByText('No events to show.')).toBeNull()
+  })
+
+  it('keeps Load more visible after a transient pagination failure', async () => {
+    const pageOne = Array.from({ length: 50 }, (_, idx) =>
+      buildEvent({ id: `evt-${idx}`, title: `Show ${idx}` }),
+    )
+    mockApiGet
+      .mockResolvedValueOnce(pageOne)
+      .mockRejectedValueOnce(new Error('transient'))
+    render(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
+    await waitFor(() => {
+      expect(screen.getByText('Show 0')).toBeTruthy()
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Load more' }))
+    await waitFor(() => {
+      expect(screen.getByText('Failed to load events.')).toBeTruthy()
+    })
+    // The Load-more button must remain so the admin can retry.
+    expect(screen.getByRole('button', { name: 'Load more' })).toBeTruthy()
+  })
+
   it('hides Load more when the last fetch returned fewer than the page size', async () => {
     mockApiGet.mockResolvedValue([buildEvent()])
     render(<AllEventsTabContent isDesktop onRowClick={() => {}} />)

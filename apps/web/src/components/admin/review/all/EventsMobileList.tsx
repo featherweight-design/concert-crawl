@@ -41,14 +41,18 @@ const EventCard = ({
     <button
       type="button"
       onClick={() => onClick(event.id)}
+      className="cc-event-card"
       style={{
-        all: 'unset',
         cursor: 'pointer',
         display: 'block',
+        textAlign: 'left',
+        width: '100%',
         padding: 14,
         borderRadius: 13,
         background: 'var(--bg-elevated)',
         border: '1px solid var(--border)',
+        font: 'inherit',
+        color: 'inherit',
       }}
     >
       <div

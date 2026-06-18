@@ -109,7 +109,8 @@ export const AllEventsTabContent = ({
           err instanceof ApiError ? err.message : 'Failed to load events.'
         console.error('AllEventsTabContent fetch error:', err)
         setError(message)
-        setHasMore(false)
+        // Leave hasMore as-is so a transient failure on Load more doesn't
+        // permanently hide the button — the admin can retry.
       } finally {
         setLoading(false)
         setLoadingMore(false)
@@ -129,30 +130,36 @@ export const AllEventsTabContent = ({
   }, [events.length, fetchPage, hasMore, loadingMore])
 
   if (loading) return <Skeleton />
-  if (!loading && events.length === 0) return <EmptyState />
+
+  const errorBanner = error && (
+    <div
+      style={{
+        padding: '10px 14px',
+        borderRadius: 8,
+        border: '1px solid color-mix(in oklab, var(--danger) 30%, transparent)',
+        background: 'color-mix(in oklab, var(--danger) 8%, transparent)',
+        fontSize: 13,
+        color: 'var(--danger)',
+      }}
+    >
+      {error}
+    </div>
+  )
+
+  // Only the absence-of-error empty case is a true "no events" state — a
+  // failed fetch leaves events=[] too, but the admin needs to see the error
+  // banner, not an empty state that hides the failure.
+  if (!error && events.length === 0) return <EmptyState />
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {error && (
-        <div
-          style={{
-            padding: '10px 14px',
-            borderRadius: 8,
-            border:
-              '1px solid color-mix(in oklab, var(--danger) 30%, transparent)',
-            background: 'color-mix(in oklab, var(--danger) 8%, transparent)',
-            fontSize: 13,
-            color: 'var(--danger)',
-          }}
-        >
-          {error}
-        </div>
-      )}
-      {isDesktop ? (
-        <EventsTable events={events} onRowClick={onRowClick} />
-      ) : (
-        <EventsMobileList events={events} onRowClick={onRowClick} />
-      )}
+      {errorBanner}
+      {events.length > 0 &&
+        (isDesktop ? (
+          <EventsTable events={events} onRowClick={onRowClick} />
+        ) : (
+          <EventsMobileList events={events} onRowClick={onRowClick} />
+        ))}
       {hasMore && (
         <div style={{ display: 'flex', justifyContent: 'center' }}>
           <AdminButton

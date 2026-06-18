@@ -1,4 +1,4 @@
-export type AllEventLifecycle = 'upcoming' | 'postponed' | 'cancelled'
+import { type LifecycleStatus } from '@/components/admin/events/editor/LifecycleBadge'
 
 export interface AllEvent {
   id: string
@@ -13,7 +13,7 @@ export interface AllEvent {
   ticketPriceMax: string | null
   confidenceScore: number | null
   verified: boolean
-  status: AllEventLifecycle
+  status: LifecycleStatus
   extractionStrategy: string | null
   sourceUrl: string | null
   genre: string[] | null
