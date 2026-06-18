@@ -2,14 +2,15 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { useAuth } from '@clerk/nextjs'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { apiClient, ApiError } from '@/lib/api'
 import { SectionHead } from '@/components/admin/primitives'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { EventFlagsSection } from './EventFlagsSection'
-import { PendingSubmissionsPanel } from './PendingSubmissionsPanel'
-import { PriceCoverageTable } from './PriceCoverageTable'
 import { AdminReviewMobile } from './AdminReviewMobile'
+import { ReviewTabs, type ReviewTabDescriptor } from './ReviewTabs'
+import { EventFlagsTabContent } from './_tabs/EventFlagsTabContent'
+import { PricesTabContent } from './_tabs/PricesTabContent'
+import { AllEventsTabContent } from './_tabs/AllEventsTabContent'
 
 interface EventFlag {
   id: string
@@ -63,12 +64,46 @@ interface ReviewPageClientProps {
   initialSubmissions: PriceSubmission[]
 }
 
+type ReviewTabKey = 'event-flags' | 'prices' | 'all-events'
+
+const VALID_TAB_KEYS: ReadonlySet<string> = new Set([
+  'event-flags',
+  'prices',
+  'all-events',
+])
+
+const isValidTabKey = (value: string | null): value is ReviewTabKey =>
+  value !== null && VALID_TAB_KEYS.has(value)
+
+const resolveTabFromSearchParams = (params: URLSearchParams): ReviewTabKey => {
+  const tab = params.get('tab')
+  if (isValidTabKey(tab)) return tab
+  // Back-compat: legacy `?section=submissions` → prices tab
+  if (params.get('section') === 'submissions') return 'prices'
+  return 'event-flags'
+}
+
 export const ReviewPageClient = ({
   initialEvents,
   initialSubmissions,
 }: ReviewPageClientProps) => {
   const { getToken } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const activeTab: ReviewTabKey = resolveTabFromSearchParams(
+    new URLSearchParams(searchParams?.toString() ?? ''),
+  )
+
+  const setActiveTab = useCallback(
+    (next: string) => {
+      if (!isValidTabKey(next)) return
+      const params = new URLSearchParams(searchParams?.toString() ?? '')
+      params.set('tab', next)
+      params.delete('section') // retire legacy key once user navigates
+      router.push(`?${params.toString()}`, { scroll: false })
+    },
+    [router, searchParams],
+  )
 
   const [events, setEvents] = useState<EventFlag[]>(initialEvents)
   const [submissions, setSubmissions] =
@@ -447,37 +482,57 @@ export const ReviewPageClient = ({
     )
   }
 
+  const tabs: ReadonlyArray<ReviewTabDescriptor> = [
+    {
+      key: 'event-flags',
+      label: ADMIN_COPY.review.tabs.eventFlags,
+      count: events.length,
+    },
+    {
+      key: 'prices',
+      label: ADMIN_COPY.review.tabs.prices,
+      count: submissions.length,
+    },
+    { key: 'all-events', label: ADMIN_COPY.review.tabs.allEvents },
+  ]
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {sectionHead}
       {errorBanner}
 
-      <EventFlagsSection
-        events={events}
-        onApprove={approveEvent}
-        onReject={rejectEvent}
+      <ReviewTabs
+        tabs={tabs}
+        activeTab={activeTab}
+        onChange={setActiveTab}
+        aria-label={ADMIN_COPY.review.tabs.ariaLabel}
       />
 
-      <div
-        id="submissions-section"
-        style={{ display: 'flex', flexDirection: 'column', gap: 20 }}
-      >
-        <PendingSubmissionsPanel
+      {activeTab === 'event-flags' && (
+        <EventFlagsTabContent
+          events={events}
+          onApprove={approveEvent}
+          onReject={rejectEvent}
+        />
+      )}
+
+      {activeTab === 'prices' && (
+        <PricesTabContent
           submissions={submissions}
-          onApprove={approveSubmission}
-          onDeny={denySubmission}
-        />
-        <PriceCoverageTable
-          events={priceEvents}
-          loading={priceEventsLoading}
+          onApproveSubmission={approveSubmission}
+          onDenySubmission={denySubmission}
+          priceEvents={priceEvents}
+          priceEventsLoading={priceEventsLoading}
+          hasMorePriceEvents={hasMorePriceEvents}
+          priceLoadingMore={priceLoadingMore}
+          pricesMissingOnly={priceFilter === 'missing'}
+          onTogglePriceFilter={togglePriceFilter}
+          onLoadMorePriceEvents={loadMorePriceEvents}
           onAddPrice={addPrice}
-          missingOnly={priceFilter === 'missing'}
-          hasMore={hasMorePriceEvents}
-          loadingMore={priceLoadingMore}
-          onToggleFilter={togglePriceFilter}
-          onLoadMore={loadMorePriceEvents}
         />
-      </div>
+      )}
+
+      {activeTab === 'all-events' && <AllEventsTabContent />}
     </div>
   )
 }
