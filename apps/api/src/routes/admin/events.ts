@@ -283,6 +283,10 @@ eventsAdminRouter.patch(
       ticketPriceMin: z.string().nullable().optional(),
       ticketPriceMax: z.string().nullable().optional(),
       genre: z.array(z.string()).nullable().optional(),
+      // Admin "Dismiss" on the Missing tab — clears the stale-event flag
+      // so the row falls out of the ?missing=true filter. The crawler
+      // re-stamps it if the event genuinely re-disappears on a future sweep.
+      firstMissingAt: z.null().optional(),
     }),
   ),
   async (ctx) => {

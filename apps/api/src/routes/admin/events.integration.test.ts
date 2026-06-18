@@ -499,3 +499,95 @@ describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
     expect(body.data[0]?.firstMissingAt).toBeNull()
   })
 })
+
+describe('PATCH /v1/admin/events/:id — Missing-tab actions', () => {
+  beforeEach(() => {
+    setAdminAuth()
+    return clearTables()
+  })
+
+  it('clears firstMissingAt when given { firstMissingAt: null } (Dismiss)', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2026-08-01',
+      firstMissingAt: new Date('2026-06-15T03:00:00Z'),
+      lastSeenAt: new Date('2026-06-14T03:00:00Z'),
+      verified: true,
+    })
+    expect(event.firstMissingAt).not.toBeNull()
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ firstMissingAt: null }),
+    })
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { firstMissingAt: string | null }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.firstMissingAt).toBeNull()
+  })
+
+  it('transitions status from upcoming to postponed (Mark postponed)', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2026-08-02',
+      verified: true,
+      status: 'upcoming',
+    })
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ status: 'postponed' }),
+    })
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { status: string }
+    }
+    expect(body.data.status).toBe('postponed')
+  })
+
+  it('transitions status to cancelled (Mark cancelled)', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2026-08-03',
+      verified: true,
+      status: 'upcoming',
+    })
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ status: 'cancelled' }),
+    })
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { status: string }
+    }
+    expect(body.data.status).toBe('cancelled')
+  })
+
+  it('rejects non-null values for firstMissingAt', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2026-08-04',
+      firstMissingAt: new Date('2026-06-15T03:00:00Z'),
+    })
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ firstMissingAt: '2026-06-15T03:00:00Z' }),
+    })
+
+    expect(res.status).toBe(400)
+  })
+})
