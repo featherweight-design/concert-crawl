@@ -34,10 +34,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production
+    # Also require STAGING_SMOKE_ENABLED on the workflow_run path. A
+    # staging-smoke workflow whose only job is gated `false` ends with
+    # conclusion `success` (no failed jobs), which would otherwise let
+    # this deploy fire without staging actually being smoked. Manual
+    # workflow_dispatch is intentionally still allowed for incident use.
     if: |
       vars.AUTO_DEPLOY_PROD_ENABLED == 'true' &&
       (github.event_name == 'workflow_dispatch' ||
-       github.event.workflow_run.conclusion == 'success')
+       (github.event.workflow_run.conclusion == 'success' &&
+        vars.STAGING_SMOKE_ENABLED == 'true'))
     steps:
       - name: Trigger Render deploy — API
         run: curl --fail -X POST "${{ secrets.RENDER_DEPLOY_HOOK_API }}"
