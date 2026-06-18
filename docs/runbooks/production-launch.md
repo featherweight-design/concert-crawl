@@ -162,9 +162,11 @@ Create the **prod** Vercel project. (The staging project should already exist as
 
 ### Environment variables
 
-Add under **Production-only** scope on the prod Vercel project. **Do NOT** apply them to the Preview environment until issue #592 is resolved — preview deploys on the prod project can't yet be reliably disabled, and scoping these to Preview would cause accidental preview deploys to run against real prod Clerk sessions, the prod Sentry environment, and the prod `INTERNAL_API_SECRET`. Leave Preview unset on the prod project so any preview deploy fails closed (missing required env vars) rather than failing open (running with prod credentials).
+Add under **Production-only** scope on the prod Vercel project. **Do NOT** apply them to the Preview environment — scoping these to Preview would cause accidental preview deploys to run against real prod Clerk sessions, the prod Sentry environment, and the prod `INTERNAL_API_SECRET`. Leave Preview unset on the prod project so any preview deploy fails closed (missing required env vars) rather than failing open (running with prod credentials).
 
-The staging Vercel project is the inverse: scope its env vars to **Production + Preview** so per-PR previews exercise the staging stack.
+Note: PR-branch deploys are disabled repo-wide via `vercel.json` (`git.deploymentEnabled` allows only `main`), so the Preview environment shouldn't trigger in practice. The Production-only scope is defense in depth.
+
+The staging Vercel project would normally invert this (Production + Preview so per-PR previews exercise the staging stack), but staging previews are also disabled by the repo `vercel.json` for now — keep its env vars Production-only as well until the rate-limit-driven `vercel.json` is reverted or scoped per-project.
 
 **All `NEXT_PUBLIC_*` keys must have Sensitive OFF** — Sensitive blocks `NEXT_PUBLIC_` inlining at build time, which breaks Clerk + Sentry at runtime.
 
@@ -196,7 +198,7 @@ The staging Vercel project is the inverse: scope its env vars to **Production + 
 
 Vercel will show the DNS records needed in Step 7.
 
-> **Preview deployments on prod project** are currently *not* configurable to "off" via the Vercel UI toggle. See issue #592 for the planned `vercel.json` fix.
+> **Preview deployments** (both projects) are disabled via the root `vercel.json` — `git.deploymentEnabled` allows only the `main` branch. The Vercel UI toggle for the same setting was buggy at migration time; the `vercel.json` is the source of truth.
 
 ---
 
@@ -481,9 +483,9 @@ Without a matching app-side rewrite to forward `/__clerk/*` to Clerk's CDN, all 
 
 Cloudflare's orange-cloud proxy interferes with Vercel's SSL provisioning and creates double-CDN issues. Always **DNS only** (grey cloud) for any record pointing at Vercel.
 
-### Vercel "preview deploys on prod project" can't be toggled in the UI
+### Vercel "preview deploys" can't be toggled in the UI
 
-The Vercel dashboard toggle for disabling preview deploys on the prod project doesn't persist as of 2026-06-15. Tracked in issue #592 — workaround is a `vercel.json` config-file approach.
+The Vercel dashboard toggle for disabling preview deploys didn't persist as of 2026-06-15. The repo-level `vercel.json` (`git.deploymentEnabled: { main: true, "*": false }`) is the workaround and is now the source of truth for both projects. If you ever need to re-enable previews per-project, prefer a per-project "Ignored Build Step" conditioned on `$VERCEL_PROJECT_ID` over re-trying the broken UI toggle.
 
 ### Render manual deploy is under the Builds tab
 
@@ -496,7 +498,6 @@ Not Settings, not Events. For services where `autoDeploy: no`, the **Builds tab 
 ### Pre-existing follow-up issues from the migration
 
 - #589 — Separate Google OAuth client for production (currently shared with staging)
-- #592 — Vercel preview-on-prod toggle via `vercel.json`
 - #547 — already closed by the migration; kept for the historical record
 
 ---
