@@ -6,10 +6,14 @@ on:
     types: [completed]
     branches: [main]
 
-# Serialize all staging deploys. cancel-in-progress: false means a queued
-# deploy waits for the running one to finish rather than being replaced.
+# Shared with staging-smoke.yml so a new staging deploy cannot start
+# while the previous deploy's smoke suite is still running — without
+# this the smoke job could end up pointed at a different Render build
+# than the one it expected to validate. cancel-in-progress: false
+# means a queued deploy waits for the running one to finish rather
+# than being replaced.
 concurrency:
-  group: deploy-staging
+  group: staging-pipeline
   cancel-in-progress: false
 
 permissions: read-all

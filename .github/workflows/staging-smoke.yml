@@ -14,9 +14,13 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Serialize staging smoke runs so we don't race overlapping deploys.
+# Shared with deploy-staging.yml so the smoke suite cannot run against
+# a moving staging target — a new staging deploy from a later merge
+# would otherwise be able to start while this smoke job is still
+# executing, leaving Playwright pointed at a different commit than the
+# one we checked out locally.
 concurrency:
-  group: staging-smoke
+  group: staging-pipeline
   cancel-in-progress: false
 
 # Scope GITHUB_TOKEN to least privilege — this workflow only checks out
@@ -64,6 +68,37 @@ jobs:
           echo "Upstream Deploy to Staging concluded: ${{ github.event.workflow_run.conclusion }}"
           echo "Refusing to smoke a staging build that didn't deploy."
           exit 1
+
+      # SHA-drift guard: Render deploy hooks pull HEAD of `main` at
+      # deploy time, not a specific commit. If the deploy-staging
+      # workflow_run was queued (runner backlog) and `main` advanced
+      # before it actually executed, Render would have deployed the
+      # newer commit while this workflow_run carries the older SHA.
+      # We'd then check out the older code and wait for the older SHA
+      # to be live on staging — which will never happen because Render
+      # is on the newer code. Refuse cleanly rather than burning the
+      # render-wait-for-live timeout. Same gate exists in deploy-prod.
+      - name: Verify upstream SHA is still main HEAD
+        if: github.event_name == 'workflow_run'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPSTREAM_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          main_sha=$(curl --fail --silent --show-error \
+            --connect-timeout 5 --max-time 15 \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/branches/main" \
+            | jq -r .commit.sha)
+          if [ "$UPSTREAM_SHA" != "$main_sha" ]; then
+            echo "Refusing to smoke staging — main advanced after deploy-staging started."
+            echo "  Upstream deploy-staging ran against: $UPSTREAM_SHA"
+            echo "  Current main HEAD:                   $main_sha"
+            echo ""
+            echo "The next merge's pipeline will deploy and smoke the latest code."
+            exit 1
+          fi
+          echo "Upstream SHA $UPSTREAM_SHA matches current main HEAD; proceeding."
 
       # Pin the checkout to the SHA that triggered the upstream
       # deploy-staging run. Without this, actions/checkout fetches default
