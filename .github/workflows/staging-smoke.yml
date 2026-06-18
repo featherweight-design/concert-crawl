@@ -96,7 +96,11 @@ jobs:
           base="${{ vars.STAGING_API_URL }}"
           timeout=240
           elapsed=0
-          until curl --silent --fail -o /dev/null "${base}/v1/health"; do
+          # Bounded per-probe timeouts so a stalled DNS/TLS connect or a
+          # server that accepts the connection but never responds cannot
+          # hang inside curl past the loop's own timeout budget.
+          until curl --silent --fail --connect-timeout 5 --max-time 10 \
+            -o /dev/null "${base}/v1/health"; do
             if [ "${elapsed}" -ge "${timeout}" ]; then
               echo "Staging API ${base}/v1/health did not respond within ${timeout}s"
               exit 1
