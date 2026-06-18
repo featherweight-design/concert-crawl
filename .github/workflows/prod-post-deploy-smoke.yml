@@ -29,26 +29,24 @@ jobs:
     name: Playwright smoke (production, post-deploy)
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # Kill switch ONLY — when off, the job skips and the workflow
-    # concludes `success`. rollback-prod.yml gates on `conclusion ==
-    # 'failure'` so a skipped post-deploy-smoke does not trigger an
-    # unwanted rollback.
-    if: vars.AUTO_DEPLOY_PROD_ENABLED == 'true'
+    # Gate logic is intentionally SILENT-SKIP (job-level if) rather than
+    # the fail-loud step-level gate used by staging-smoke and
+    # deploy-prod, because this workflow's downstream is destructive:
+    # rollback-prod.yml fires on `workflow_run.conclusion == 'failure'`.
+    # If we propagated an upstream failure as a job failure here, every
+    # failed/skipped deploy-prod would cascade into an unintended prod
+    # rollback even though nothing was deployed.
+    #
+    # Instead, skip the job when upstream did not succeed. The skipped
+    # job leaves the workflow run concluding `success` (no jobs failed),
+    # so rollback-prod does not fire. A failed deploy-prod is itself the
+    # signal a human should look at; we just refuse to compound it with
+    # a destructive rollback for a deploy that never happened.
+    if: |
+      vars.AUTO_DEPLOY_PROD_ENABLED == 'true' &&
+      (github.event_name == 'workflow_dispatch' ||
+       github.event.workflow_run.conclusion == 'success')
     steps:
-      # Propagate upstream failure as job failure (not silent skip).
-      # If deploy-prod did not actually deploy (was skipped or failed),
-      # we should NOT smoke against prod — otherwise an unrelated smoke
-      # failure could trigger a rollback for a deploy that never
-      # happened.
-      - name: Propagate upstream Deploy to Production conclusion
-        if: |
-          github.event_name == 'workflow_run' &&
-          github.event.workflow_run.conclusion != 'success'
-        run: |
-          echo "Upstream Deploy to Production concluded: ${{ github.event.workflow_run.conclusion }}"
-          echo "Refusing to smoke a prod build that didn't deploy."
-          exit 1
-
       # Pin the checkout to the SHA that triggered the upstream
       # deploy-prod run. Without this, actions/checkout fetches default
       # branch HEAD, which can drift if a new commit lands while this
