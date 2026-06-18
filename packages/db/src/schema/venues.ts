@@ -55,6 +55,14 @@ export const venues = pgTable('venues', {
   lastEventCountAlertAt: timestamp('last_event_count_alert_at', {
     withTimezone: true,
   }),
+  // Per-platform fetcher dispatch (#623). When set, the crawler routes
+  // this venue to a platform-specific fetcher (e.g. AEG's JSON blob)
+  // instead of the HTML → JSON-LD → LLM cascade. The platform value is
+  // validated by Zod at the application layer (intentionally not a
+  // Postgres enum, to avoid the ALTER TYPE pain when we add more
+  // platforms in follow-up PRs).
+  platform: text('platform').$type<'aeg' | null>(),
+  platformVenueId: text('platform_venue_id'),
   extractionStrategy: extractionStrategyEnum('extraction_strategy'),
   crawlWaitUntil: crawlWaitUntilEnum('crawl_wait_until')
     .notNull()

@@ -491,3 +491,121 @@ describe('crawlVenue — email await regression (#649)', () => {
     }
   })
 })
+
+describe('crawlVenue — per-platform fetcher dispatch (#623)', () => {
+  it('routes AEG-configured venues to the platform fetcher and writes a platform:aeg crawl_run', async () => {
+    // Seed a venue marked platform='aeg'. Then stub global fetch (which the
+    // AEG adapter uses) to return a minimal valid AEG response. crawlVenue
+    // should skip the fetchPage/LLM path entirely and record the result
+    // with extraction_strategy_used = 'platform:aeg'.
+    const [venue] = await db
+      .insert(venues)
+      .values({
+        name: `AEG Platform Test ${crypto.randomUUID()}`,
+        slug: `aeg-platform-${crypto.randomUUID()}`,
+        websiteUrl: 'https://aeg-platform-test.example.com',
+        platform: 'aeg',
+        platformVenueId: '2',
+        crawlMode: 'browser',
+        crawlDelayMs: 0,
+      })
+      .returning()
+    if (!venue) throw new Error('venue insert returned no row')
+
+    // Minimal AEG payload — one valid event matching the adapter's schema.
+    const aegPayload = {
+      meta: { total: 1 },
+      events: [
+        {
+          eventId: 'evt-001',
+          active: true,
+          publishStatus: 1,
+          title: {
+            headlinersText: 'Test Headliner',
+            supportingText: null,
+            tour: null,
+            eventTitleText: 'Test Show',
+          },
+          eventDateTimeISO: '2027-08-15T20:00:00-06:00',
+          doorDateTime: '2027-08-15T19:00:00',
+          ticketing: {
+            url: 'https://example.com/buy',
+            ticketURL: 'https://example.com/buy',
+          },
+        },
+      ],
+    }
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(aegPayload), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }) as Response,
+    )
+
+    try {
+      const run = await crawlVenue(venue.id, mockBrowser)
+      expect(run.status).toBe('success')
+      expect(run.extractionStrategyUsed).toBe('platform:aeg')
+      expect(run.eventsFound).toBe(1)
+      expect(run.httpStatusCode).toBeNull() // platform path doesn't record HTTP status
+      expect(run.pageHash).toBeNull() // platform path doesn't compute pageHash
+
+      // fetchPage / fetchPageHttp must NOT have been called — the platform
+      // path skips the entire HTML retrieval stage.
+      expect(mockFetchPage).not.toHaveBeenCalled()
+      expect(mockFetchPageHttp).not.toHaveBeenCalled()
+
+      // The AEG blob URL was hit instead.
+      expect(fetchSpy).toHaveBeenCalledOnce()
+      const calledUrl = String(fetchSpy.mock.calls[0]![0])
+      expect(calledUrl).toContain('aegwebprod.blob.core.windows.net')
+      expect(calledUrl).toContain('/json/events/2/events.json')
+
+      // The event landed in the events table with platform-fetched data.
+      const [eventRow] = await db
+        .select()
+        .from(events)
+        .where(eq(events.venueId, venue.id))
+      expect(eventRow).toBeDefined()
+      expect(eventRow!.artist).toBe('Test Headliner')
+      expect(eventRow!.date).toBe('2027-08-15')
+      expect(eventRow!.confidenceScore).toBe('1.00')
+      // sourceUrl is the venue's website (matches the LLM path's convention)
+      expect(eventRow!.sourceUrl).toBe(venue.websiteUrl)
+    } finally {
+      fetchSpy.mockRestore()
+    }
+  })
+
+  it('falls through to the existing HTML path when venue.platform is null', async () => {
+    // Sanity check that non-platform venues still hit fetchPage.
+    const [venue] = await db
+      .insert(venues)
+      .values({
+        name: `Non-Platform Test ${crypto.randomUUID()}`,
+        slug: `non-platform-${crypto.randomUUID()}`,
+        websiteUrl: 'https://non-platform-test.example.com',
+        platform: null,
+        crawlMode: 'browser',
+        crawlDelayMs: 0,
+      })
+      .returning()
+    if (!venue) throw new Error('venue insert returned no row')
+
+    mockFetchPage.mockResolvedValue({
+      html: '<html><body></body></html>',
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [],
+      usage: { inputTokens: 0, outputTokens: 0 },
+    })
+
+    const run = await crawlVenue(venue.id, mockBrowser)
+    expect(run.status).toBe('success')
+    expect(run.extractionStrategyUsed).toBe('llm')
+    expect(mockFetchPage).toHaveBeenCalled()
+  })
+})

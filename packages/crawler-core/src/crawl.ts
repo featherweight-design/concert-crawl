@@ -21,6 +21,7 @@ import {
 import { extractJsonLd } from './lib/extractors/json-ld.js'
 import { extractWithLlm } from './lib/extractors/llm.js'
 import { calculateCost } from './lib/cost.js'
+import { dispatch, type VenuePlatform } from './lib/fetchers/index.js'
 import {
   detectCrossVenuePresale,
   type CrossVenueCandidate,
@@ -225,36 +226,78 @@ export async function crawlVenue(
   }
 
   try {
-    // Determine fetch strategy and execute
-    let fetchResult: FetchResult
+    // Platform fetcher dispatch (#623). If the venue is on a known
+    // platform (AEG today; Etix / Ticketmaster / AXS in follow-up PRs),
+    // hit the platform's JSON endpoint directly and skip the HTML
+    // retrieval + extraction stages entirely. The dispatcher returns
+    // null when no fetcher applies, falling through to the existing
+    // HTML → JSON-LD → LLM cascade.
+    //
+    // Failure semantics: if the platform fetcher throws (network,
+    // schema drift, missing config), we let the error bubble into the
+    // outer catch, which treats it the same as any other crawl failure
+    // (consecutive_failures++, crawl_runs.status='failed'). We do NOT
+    // silently fall back to the LLM path on platform errors — the
+    // failure mode would be too easy to hide. The crawl.failed alert
+    // makes it audible; the operator can manually clear the platform
+    // column to revert to LLM if needed.
+    const platformFetcher = dispatch(venue)
+
+    // Local widening of the runExtraction return type to also accept the
+    // platform path's strategy values. crawl_runs.extraction_strategy_used
+    // is plain text, so the database happily stores 'platform:aeg' alongside
+    // 'structured_data' / 'llm'; this type just lets the TS compiler
+    // recognize both branches as compatible.
+    type ExtractionResult = {
+      normalizedEvents: NormalizedEvent[]
+      strategy: 'structured_data' | 'llm' | `platform:${VenuePlatform}`
+      tokenUsage: TokenUsage | undefined
+    }
+    let extraction: ExtractionResult
+    let httpStatus: number | null
+    let pageHash: string | null
     let resolvedMode: 'http' | 'browser'
 
-    if (venue.crawlMode === 'browser') {
-      fetchResult = await fetchPage(
-        venue.websiteUrl,
-        browser,
-        venue.crawlDelayMs,
-        venue.crawlWaitUntil,
-        venue.crawlWaitForSelector ?? undefined,
-      )
-      resolvedMode = 'browser'
-    } else {
-      // crawlMode is 'http' or null (auto-detect: HTTP first)
-      let httpResult: FetchResult | null = null
-      try {
-        httpResult = await fetchPageHttp(venue.websiteUrl, venue.crawlDelayMs)
-      } catch (httpErr) {
-        if (venue.crawlMode === 'http') {
-          throw httpErr // forced HTTP — no browser fallback
-        }
-        // auto-detect: HTTP failed, will fall through to browser below
+    if (platformFetcher) {
+      const platformResult = await platformFetcher.fetch(venue, {
+        crawlDelayMs: venue.crawlDelayMs,
+      })
+      extraction = {
+        normalizedEvents: platformResult.events,
+        strategy: `platform:${platformFetcher.platform}`,
+        tokenUsage: undefined,
       }
+      // Platform path has no HTML byte stream to hash + no upstream HTTP
+      // status to record. The crawl_runs columns are nullable so we leave
+      // them empty for these rows — the extraction_strategy_used column
+      // ('platform:aeg') is the discriminator that tells operators the
+      // row came from a platform fetcher.
+      httpStatus = null
+      pageHash = null
+      // resolvedMode is only used by the existing crawlMode auto-detect
+      // venue-update at line ~702; for platform venues we don't want to
+      // touch crawlMode, so the value here is functionally a no-op as
+      // long as the venue already has a crawlMode set (it does — all
+      // onboarded AEG venues were 'browser' before this PR).
+      resolvedMode = venue.crawlMode ?? 'browser'
+      console.log(
+        JSON.stringify({
+          event: 'crawl.platform_fetch',
+          venueId,
+          platform: platformFetcher.platform,
+          endpoint: platformResult.sourceUrl,
+          eventsFound: platformResult.events.length,
+          meta: platformResult.meta,
+        }),
+      )
+    } else {
+      // Existing HTML → JSON-LD → LLM cascade. Branches by venue.crawlMode:
+      //   'browser' → Playwright direct
+      //   'http'    → HTTP-only (no browser fallback on error)
+      //   null      → auto-detect: HTTP first, fall back to browser
+      let fetchResult: FetchResult
 
-      if (httpResult !== null) {
-        fetchResult = httpResult
-        resolvedMode = 'http'
-      } else {
-        // auto-detect: HTTP threw — fall back to browser
+      if (venue.crawlMode === 'browser') {
         fetchResult = await fetchPage(
           venue.websiteUrl,
           browser,
@@ -263,123 +306,148 @@ export async function crawlVenue(
           venue.crawlWaitForSelector ?? undefined,
         )
         resolvedMode = 'browser'
+      } else {
+        // crawlMode is 'http' or null (auto-detect: HTTP first)
+        let httpResult: FetchResult | null = null
+        try {
+          httpResult = await fetchPageHttp(venue.websiteUrl, venue.crawlDelayMs)
+        } catch (httpErr) {
+          if (venue.crawlMode === 'http') {
+            throw httpErr // forced HTTP — no browser fallback
+          }
+          // auto-detect: HTTP failed, will fall through to browser below
+        }
+
+        if (httpResult !== null) {
+          fetchResult = httpResult
+          resolvedMode = 'http'
+        } else {
+          // auto-detect: HTTP threw — fall back to browser
+          fetchResult = await fetchPage(
+            venue.websiteUrl,
+            browser,
+            venue.crawlDelayMs,
+            venue.crawlWaitUntil,
+            venue.crawlWaitForSelector ?? undefined,
+          )
+          resolvedMode = 'browser'
+        }
       }
-    }
 
-    const { html, httpStatus, finalUrl } = fetchResult
+      const { html, finalUrl } = fetchResult
+      httpStatus = fetchResult.httpStatus
 
-    if (venue.debugCaptureHtml) {
-      logDebugHtmlCapture(html, {
-        venueId,
-        venueSlug: venue.slug,
-        crawlRunId: id,
-        mode: resolvedMode,
-        finalUrl,
-        httpStatus,
-      })
-    }
-
-    const pageHash = hashPage(html)
-
-    const [lastRun] = await db
-      .select({ pageHash: crawlRuns.pageHash })
-      .from(crawlRuns)
-      .where(
-        and(eq(crawlRuns.venueId, venueId), eq(crawlRuns.status, 'success')),
-      )
-      .orderBy(desc(crawlRuns.createdAt))
-      .limit(1)
-
-    if (
-      lastRun?.pageHash !== undefined &&
-      lastRun.pageHash !== null &&
-      lastRun.pageHash === pageHash
-    ) {
-      console.log(
-        JSON.stringify({
-          event: 'crawl.skipped',
+      if (venue.debugCaptureHtml) {
+        logDebugHtmlCapture(html, {
           venueId,
-          url: venue.websiteUrl,
-        }),
-      )
-      const [crawlRun] = await db
-        .insert(crawlRuns)
-        .values({
-          id,
-          venueId,
-          status: 'skipped',
-          httpStatusCode: httpStatus,
-          robotsTxtBlocked: 'no',
-          pageHash,
-          eventsFound: 0,
-          eventsInserted: 0,
-          durationMs: Date.now() - startedAt,
+          venueSlug: venue.slug,
+          crawlRunId: id,
+          mode: resolvedMode,
+          finalUrl,
+          httpStatus,
         })
-        .returning()
-      if (!crawlRun) throw new Error('crawl_runs insert returned no row')
-      await db
-        .update(venues)
-        .set({
-          lastCrawledAt: new Date(),
-          consecutiveFailures: 0,
-          robotsTxtAllowed: true,
-          robotsTxtCheckedAt: new Date(),
-          ...(venue.crawlMode === null ? { crawlMode: resolvedMode } : {}),
-          updatedAt: new Date(),
-        })
-        .where(eq(venues.id, venueId))
-      // Page-hash skip path (#607): the page is byte-identical to the last
-      // successful crawl, so by definition every event present then is still
-      // present now. Refresh last_seen_at + clear any stale first_missing_at
-      // on all upcoming events for this venue. Filtering by date >= today
-      // matches the API surface — past events never go stale.
-      await markEventsSeenForVenue(venueId, startedAtDate)
-      return crawlRun
-    }
+      }
 
-    // Extract events. In auto-detect mode, only check JSON-LD on the HTTP HTML
-    // before deciding to fall back — avoids paying an LLM call on HTTP markup
-    // that a JS-rendered venue won't populate anyway.
-    let extraction: Awaited<ReturnType<typeof runExtraction>>
+      pageHash = hashPage(html)
 
-    if (venue.crawlMode === null && resolvedMode === 'http') {
-      const httpJsonLdEvents = extractJsonLd(html, finalUrl, venue.timezone)
-      if (httpJsonLdEvents.length > 0) {
-        extraction = {
-          normalizedEvents: httpJsonLdEvents,
-          strategy: 'structured_data' as const,
-          tokenUsage: undefined,
+      const [lastRun] = await db
+        .select({ pageHash: crawlRuns.pageHash })
+        .from(crawlRuns)
+        .where(
+          and(eq(crawlRuns.venueId, venueId), eq(crawlRuns.status, 'success')),
+        )
+        .orderBy(desc(crawlRuns.createdAt))
+        .limit(1)
+
+      if (
+        lastRun?.pageHash !== undefined &&
+        lastRun.pageHash !== null &&
+        lastRun.pageHash === pageHash
+      ) {
+        console.log(
+          JSON.stringify({
+            event: 'crawl.skipped',
+            venueId,
+            url: venue.websiteUrl,
+          }),
+        )
+        const [crawlRun] = await db
+          .insert(crawlRuns)
+          .values({
+            id,
+            venueId,
+            status: 'skipped',
+            httpStatusCode: httpStatus,
+            robotsTxtBlocked: 'no',
+            pageHash,
+            eventsFound: 0,
+            eventsInserted: 0,
+            durationMs: Date.now() - startedAt,
+          })
+          .returning()
+        if (!crawlRun) throw new Error('crawl_runs insert returned no row')
+        await db
+          .update(venues)
+          .set({
+            lastCrawledAt: new Date(),
+            consecutiveFailures: 0,
+            robotsTxtAllowed: true,
+            robotsTxtCheckedAt: new Date(),
+            ...(venue.crawlMode === null ? { crawlMode: resolvedMode } : {}),
+            updatedAt: new Date(),
+          })
+          .where(eq(venues.id, venueId))
+        // Page-hash skip path (#607): the page is byte-identical to the last
+        // successful crawl, so by definition every event present then is still
+        // present now. Refresh last_seen_at + clear any stale first_missing_at
+        // on all upcoming events for this venue. Filtering by date >= today
+        // matches the API surface — past events never go stale.
+        await markEventsSeenForVenue(venueId, startedAtDate)
+        return crawlRun
+      }
+
+      // Extract events. In auto-detect mode, only check JSON-LD on the HTTP HTML
+      // before deciding to fall back — avoids paying an LLM call on HTTP markup
+      // that a JS-rendered venue won't populate anyway.
+      if (venue.crawlMode === null && resolvedMode === 'http') {
+        const httpJsonLdEvents = extractJsonLd(html, finalUrl, venue.timezone)
+        if (httpJsonLdEvents.length > 0) {
+          extraction = {
+            normalizedEvents: httpJsonLdEvents,
+            strategy: 'structured_data' as const,
+            tokenUsage: undefined,
+          }
+        } else {
+          // No structured data on HTTP HTML — fall back to browser before invoking LLM.
+          // The crawlDelayMs fires inside both fetchPageHttp (above) and fetchPage (here),
+          // which is intentional: each request to the venue's origin deserves its own delay.
+          const browserResult = await fetchPage(
+            venue.websiteUrl,
+            browser,
+            venue.crawlDelayMs,
+            venue.crawlWaitUntil,
+            venue.crawlWaitForSelector ?? undefined,
+          )
+          if (venue.debugCaptureHtml) {
+            logDebugHtmlCapture(browserResult.html, {
+              venueId,
+              venueSlug: venue.slug,
+              crawlRunId: id,
+              mode: 'browser',
+              finalUrl: browserResult.finalUrl,
+              httpStatus: browserResult.httpStatus,
+            })
+          }
+          extraction = await runExtraction(
+            browserResult.html,
+            browserResult.finalUrl,
+            venue.timezone,
+          )
+          resolvedMode = 'browser'
         }
       } else {
-        // No structured data on HTTP HTML — fall back to browser before invoking LLM.
-        // The crawlDelayMs fires inside both fetchPageHttp (above) and fetchPage (here),
-        // which is intentional: each request to the venue's origin deserves its own delay.
-        const browserResult = await fetchPage(
-          venue.websiteUrl,
-          browser,
-          venue.crawlDelayMs,
-          venue.crawlWaitUntil,
-          venue.crawlWaitForSelector ?? undefined,
-        )
-        if (venue.debugCaptureHtml) {
-          logDebugHtmlCapture(browserResult.html, {
-            venueId,
-            venueSlug: venue.slug,
-            crawlRunId: id,
-            mode: 'browser',
-            finalUrl: browserResult.finalUrl,
-            httpStatus: browserResult.httpStatus,
-          })
-        }
-        extraction = await runExtraction(
-          browserResult.html,
-          browserResult.finalUrl,
-          venue.timezone,
-        )
-        resolvedMode = 'browser'
+        extraction = await runExtraction(html, finalUrl, venue.timezone)
       }
-    } else {
-      extraction = await runExtraction(html, finalUrl, venue.timezone)
     }
 
     const { strategy, tokenUsage } = extraction

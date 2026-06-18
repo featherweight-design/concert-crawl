@@ -267,6 +267,13 @@
       "when": 1782259200000,
       "tag": "0037_crawl_runs_venue_status_created_idx",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1782345600000,
+      "tag": "0038_venue_platform",
+      "breakpoints": true
     }
   ]
 }
