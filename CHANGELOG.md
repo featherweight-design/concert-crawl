@@ -1,3 +1,16 @@
+# [1.58.0](https://github.com/HartiganHM/concert-crawl/compare/v1.57.0...v1.58.0) (2026-06-18)
+
+
+### Bug Fixes
+
+* **admin:** address Copilot review on PR [#673](https://github.com/HartiganHM/concert-crawl/issues/673) ([ea4d465](https://github.com/HartiganHM/concert-crawl/commit/ea4d4654f2743f7018756c142b8917952d1b2def))
+
+
+### Features
+
+* **admin:** all-events filter bar + URL sync (PR 5 frontend) ([736b0b8](https://github.com/HartiganHM/concert-crawl/commit/736b0b86132c3543ba98f50ac35124eeabb6816f))
+* **api:** all-events filters + search (PR 5 backend) ([000c6f4](https://github.com/HartiganHM/concert-crawl/commit/000c6f449c232504447de3881e047b5455aadad5))
+
 # [1.57.0](https://github.com/HartiganHM/concert-crawl/compare/v1.56.1...v1.57.0) (2026-06-18)
 
 
