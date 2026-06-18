@@ -1,3 +1,10 @@
+## [1.52.6](https://github.com/HartiganHM/concert-crawl/compare/v1.52.5...v1.52.6) (2026-06-18)
+
+
+### Bug Fixes
+
+* **crawler:** exclude zero-event runs from event-count-drop baseline ([#645](https://github.com/HartiganHM/concert-crawl/issues/645)) ([f2c1628](https://github.com/HartiganHM/concert-crawl/commit/f2c1628d889b669178ddf18c44fba0defe1e46e9))
+
 ## [1.52.5](https://github.com/HartiganHM/concert-crawl/compare/v1.52.4...v1.52.5) (2026-06-18)
 
 
