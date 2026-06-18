@@ -1,3 +1,16 @@
+# [1.63.0](https://github.com/HartiganHM/concert-crawl/compare/v1.62.0...v1.63.0) (2026-06-18)
+
+
+### Bug Fixes
+
+* **admin:** address Copilot review on PR [#681](https://github.com/HartiganHM/concert-crawl/issues/681) ([9af5279](https://github.com/HartiganHM/concert-crawl/commit/9af527970c64bfef81c0dcfc0199a37b8c956bcb))
+* **admin:** address Copilot review on PR [#682](https://github.com/HartiganHM/concert-crawl/issues/682) ([c538d7c](https://github.com/HartiganHM/concert-crawl/commit/c538d7c5ef77b0b468a585776f529b14328b841d))
+
+
+### Features
+
+* **admin:** bulk select + bulk dock (PR 10/11) ([31a17c7](https://github.com/HartiganHM/concert-crawl/commit/31a17c780abf01b072182f3ef960b2f747e4ff80))
+
 # [1.62.0](https://github.com/HartiganHM/concert-crawl/compare/v1.61.0...v1.62.0) (2026-06-18)
 
 
