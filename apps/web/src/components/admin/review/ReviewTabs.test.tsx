@@ -95,12 +95,8 @@ describe('ReviewTabs', () => {
     const activeBadge = screen.getByText('3')
     const inactiveBadge = screen.getByText('5')
     // Active tab's badge uses the kind variable; inactive stays on surface-2.
-    expect((activeBadge as HTMLSpanElement).style.background).toBe(
-      'var(--warning)',
-    )
-    expect((inactiveBadge as HTMLSpanElement).style.background).toBe(
-      'var(--surface-2)',
-    )
+    expect(activeBadge.style.background).toBe('var(--warning)')
+    expect(inactiveBadge.style.background).toBe('var(--surface-2)')
   })
 
   it('exposes role="tablist" on the container with the provided aria-label', () => {
