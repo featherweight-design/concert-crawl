@@ -48,6 +48,8 @@ export function VenueEventList({
     }
   }, [highlightId])
 
+  if (groups.size === 0) return null
+
   return (
     <div className="flex flex-col gap-6">
       {Array.from(groups.entries()).map(([date, dateEvents]) => {
@@ -56,7 +58,7 @@ export function VenueEventList({
         return (
           <section key={date} aria-label={label}>
             <div
-              className="mb-1 flex items-baseline gap-2.5 pb-2"
+              className="mb-1 flex items-baseline gap-2.5 px-4 pb-2"
               style={{ borderBottom: '1px solid var(--border)' }}
             >
               <h2
@@ -89,7 +91,7 @@ export function VenueEventList({
                   {idx > 0 && (
                     <div
                       className="h-px bg-border"
-                      style={{ marginLeft: 60 }}
+                      style={{ marginLeft: 58 }}
                     />
                   )}
                   <div
