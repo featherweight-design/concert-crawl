@@ -28,7 +28,12 @@ jobs:
   smoke:
     name: Playwright smoke (staging)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 25 min: render-wait-for-live polls for up to 10 min, plus pnpm
+    # install + Playwright browser install (cold cache can take a few
+    # minutes), plus the smoke run itself. 15 min was tight — a
+    # legitimately slow staging deploy could time the job out and
+    # spuriously block prod promotion.
+    timeout-minutes: 25
     # Kill switch + branch guard:
     #   - STAGING_SMOKE_ENABLED kill switch.
     #   - workflow_dispatch is allowed only from `main` so a feature

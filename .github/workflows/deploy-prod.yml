@@ -83,7 +83,12 @@ jobs:
     name: Trigger Render prod deploys
     needs: gate
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # 20 min: render-wait-for-live polls for up to 10 min for the prod
+    # API to reach `live` on the new SHA, plus checkout, secret/ID
+    # preflights, and the three deploy-hook POSTs. 10 min was tight
+    # enough that a legitimately slow Render build could time the job
+    # out before the wait completed.
+    timeout-minutes: 20
     # `environment: production` is requested ONLY here, after the
     # gate job has validated all conditions. This avoids tripping
     # the production environment's approval/notification flow on
