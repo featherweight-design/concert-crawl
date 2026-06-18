@@ -80,18 +80,25 @@ test.describe('smoke: search', () => {
   // directly. The events API is gated by serviceOrClerkAuth when
   // REQUIRE_BETA_AUTH=true, which a raw Playwright request would 401 on;
   // SSR uses the service key and is what real users hit anyway.
-  test('events page renders without error when filtered by search', async ({
+  test('events page renders results or empty state when filtered by search', async ({
     page,
   }) => {
     await page.goto('/events?search=concert')
     await page.waitForLoadState('networkidle')
 
     await expect(page).not.toHaveTitle(/404|not found/i)
-    const heading = page.getByRole('heading').first()
-    await expect(heading).toBeVisible()
     await expect(page.locator('body')).not.toContainText(
       /error|500|unexpected/i,
     )
+
+    // The search rendered SOMETHING meaningful: either at least one
+    // event card matched, or the filtered empty-state title ("Crickets.")
+    // is shown. Both confirm the search actually executed and the page
+    // reached its data-rendering path — a "page didn't crash" check
+    // alone would pass even if the search filter silently broke.
+    const eventCard = page.locator('[data-testid="event-card"]').first()
+    const emptyState = page.getByText(/crickets\./i).first()
+    await expect(eventCard.or(emptyState)).toBeVisible({ timeout: 10_000 })
   })
 })
 
