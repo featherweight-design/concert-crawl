@@ -83,39 +83,28 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm --filter @concert-crawl/e2e install-browsers
 
-      # Wait for the staging API to respond at /v1/health rather than a
-      # fixed sleep. Render deploys typically take 1-3 minutes but can
-      # spike higher; polling lets us proceed as soon as the API is up
-      # and surfaces a clear timeout if Render is wedged.
+      # Wait for the staging API to be live on the new commit before
+      # smoking. Render's deploy hooks return immediately and Render
+      # keeps the prior build serving traffic until the new one is
+      # healthy — a naive /v1/health probe returns 200 against the OLD
+      # build during that window, so smoking right after the hook
+      # could pass against unchanged code and silently defeat the
+      # staging gate.
       #
-      # Note: this only confirms the API is reachable, not that the new
-      # build is live (Render keeps the prior build serving until the
-      # new one is healthy). An additional 60s grace covers the swap.
-      - name: Wait for staging API to be reachable
+      # render-wait-for-live.sh polls the Render API for the deploy of
+      # the specific commit SHA to reach `live` status (up to 10 min).
+      - name: Wait for staging API deploy to be live on new SHA
         run: |
-          base="${{ vars.STAGING_API_URL }}"
-          if [ -z "${base}" ]; then
-            echo "STAGING_API_URL repo variable is empty or unset."
+          if [ -z "${{ vars.RENDER_SERVICE_ID_API_STAGING }}" ]; then
+            echo "RENDER_SERVICE_ID_API_STAGING repo variable is empty or unset."
             echo "Set it via Settings → Variables → Actions before enabling staging-smoke."
             exit 1
           fi
-          timeout=240
-          elapsed=0
-          # Bounded per-probe timeouts so a stalled DNS/TLS connect or a
-          # server that accepts the connection but never responds cannot
-          # hang inside curl past the loop's own timeout budget.
-          until curl --silent --fail --connect-timeout 5 --max-time 10 \
-            -o /dev/null "${base}/v1/health"; do
-            if [ "${elapsed}" -ge "${timeout}" ]; then
-              echo "Staging API ${base}/v1/health did not respond within ${timeout}s"
-              exit 1
-            fi
-            echo "Staging API not yet reachable (${elapsed}s elapsed), retrying in 10s..."
-            sleep 10
-            elapsed=$((elapsed + 10))
-          done
-          echo "Staging API reachable after ${elapsed}s; allowing 60s grace for deploy swap"
-          sleep 60
+          bash .github/scripts/render-wait-for-live.sh \
+            "${{ vars.RENDER_SERVICE_ID_API_STAGING }}" \
+            "${{ github.event.workflow_run.head_sha || github.sha }}"
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
 
       - name: Run smoke tests against staging
         run: pnpm --filter @concert-crawl/e2e test:smoke

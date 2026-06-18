@@ -96,14 +96,15 @@ on the next workflow_run trigger.
 
 ### Repository variables (Settings → Variables → Actions)
 
-| Variable                   | Required by                                        | Notes                                                      |
-| -------------------------- | -------------------------------------------------- | ---------------------------------------------------------- |
-| `STAGING_URL`              | staging-smoke                                      | already present — `https://staging.concertcrawl.app`       |
-| `STAGING_API_URL`          | staging-smoke                                      | **new** — `https://concert-crawl-api-staging.onrender.com` |
-| `PROD_URL`                 | prod-post-deploy-smoke                             | already present                                            |
-| `PROD_API_URL`             | prod-post-deploy-smoke                             | already present                                            |
-| `STAGING_SMOKE_ENABLED`    | staging-smoke                                      | **new** — default `false`; set to `true` in Stage 1        |
-| `AUTO_DEPLOY_PROD_ENABLED` | deploy-prod, prod-post-deploy-smoke, rollback-prod | **new** — default `false`; set to `true` in Stage 2        |
+| Variable                        | Required by                                        | Notes                                                                                                              |
+| ------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `STAGING_URL`                   | staging-smoke                                      | already present — `https://staging.concertcrawl.app`                                                               |
+| `STAGING_API_URL`               | staging-smoke                                      | **new** — `https://concert-crawl-api-staging.onrender.com`                                                         |
+| `RENDER_SERVICE_ID_API_STAGING` | staging-smoke                                      | **new** — staging API service ID (e.g. `srv-abc123`). Used by `render-wait-for-live.sh` to wait for the new deploy |
+| `PROD_URL`                      | prod-post-deploy-smoke                             | already present                                                                                                    |
+| `PROD_API_URL`                  | prod-post-deploy-smoke                             | already present                                                                                                    |
+| `STAGING_SMOKE_ENABLED`         | staging-smoke                                      | **new** — default `false`; set to `true` in Stage 1                                                                |
+| `AUTO_DEPLOY_PROD_ENABLED`      | deploy-prod, prod-post-deploy-smoke, rollback-prod | **new** — default `false`; set to `true` in Stage 2                                                                |
 
 ### `production` environment — Variables (Settings → Environments → production)
 
@@ -117,16 +118,22 @@ Service IDs live in the `production` environment (not at the repo level) so they
 
 ### `production` environment — Secrets (Settings → Environments → production)
 
-| Secret                                | Required by   | Notes                                                                                     |
-| ------------------------------------- | ------------- | ----------------------------------------------------------------------------------------- |
-| `RENDER_DEPLOY_HOOK_API`              | deploy-prod   | already present per `production-launch.md`                                                |
-| `RENDER_DEPLOY_HOOK_CRAWLER_TRIGGERS` | deploy-prod   | **new** — Render → `concert-crawl-crawler-triggers` → Settings → Deploy Hook              |
-| `RENDER_DEPLOY_HOOK_CRAWLER_DAILY`    | deploy-prod   | **new** — Render → `concert-crawl-crawler-daily` → Settings → Deploy Hook                 |
-| `RENDER_API_TOKEN`                    | rollback-prod | **new** — Render → Account Settings → API Keys → generate a token with deploy permissions |
+| Secret                                | Required by                | Notes                                                                                                                                                             |
+| ------------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RENDER_DEPLOY_HOOK_API`              | deploy-prod                | already present per `production-launch.md`                                                                                                                        |
+| `RENDER_DEPLOY_HOOK_CRAWLER_TRIGGERS` | deploy-prod                | **new** — Render → `concert-crawl-crawler-triggers` → Settings → Deploy Hook                                                                                      |
+| `RENDER_DEPLOY_HOOK_CRAWLER_DAILY`    | deploy-prod                | **new** — Render → `concert-crawl-crawler-daily` → Settings → Deploy Hook                                                                                         |
+| `RENDER_API_TOKEN`                    | deploy-prod, rollback-prod | **new** — Render → Account Settings → API Keys → generate a token with deploy + read permissions. Consumed by `render-wait-for-live.sh` and `render-rollback.sh`. |
 
-`RENDER_API_TOKEN` is the only credential the rollback script needs.
-Scope it to the deploy permission only — the script just reads recent
-deploys and POSTs `/rollback`, nothing else.
+### Repository-level secrets (Settings → Secrets and variables → Actions)
+
+| Secret             | Required by   | Notes                                                                                                                                                                                                                                 |
+| ------------------ | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RENDER_API_TOKEN` | staging-smoke | **new** — same Render API token as above, but stored at repo level so the staging-smoke workflow (which is not scoped to the `production` environment) can call `render-wait-for-live.sh`. Use the same value as the prod-env secret. |
+
+`RENDER_API_TOKEN` is the only credential the wait-for-live and rollback
+scripts need. Scope it to deploy + read permissions only — the scripts
+just list recent deploys and POST `/rollback`, nothing else.
 
 ## Testing the rollback path
 

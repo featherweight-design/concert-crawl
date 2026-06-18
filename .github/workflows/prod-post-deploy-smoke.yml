@@ -79,39 +79,25 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm --filter @concert-crawl/e2e install-browsers
 
-      # Wait for the prod API to respond at /v1/health rather than a
-      # fixed sleep. Render deploys typically take 1-3 minutes but can
-      # spike higher; polling lets us proceed as soon as the API is up
-      # and surfaces a clear timeout if Render is wedged.
+      # deploy-prod.yml already waits for the prod API service to be
+      # live on the triggering commit's SHA (via render-wait-for-live.sh)
+      # before its workflow completes. By the time this smoke job runs,
+      # we're already guaranteed to be on the new build, so no
+      # additional wait is needed.
       #
-      # Note: this only confirms the API is reachable, not that the new
-      # build is live (Render keeps the prior build serving until the
-      # new one is healthy). An additional 60s grace covers the swap.
-      - name: Wait for prod API to be reachable
+      # Sanity-check the URL is configured though, so we don't run
+      # Playwright against an empty base.
+      - name: Check PROD_API_URL is configured
         run: |
-          base="${{ vars.PROD_API_URL }}"
-          if [ -z "${base}" ]; then
+          if [ -z "${{ vars.PROD_API_URL }}" ]; then
             echo "PROD_API_URL repo variable is empty or unset."
             echo "Set it via Settings → Variables → Actions before enabling auto-deploy-prod."
             exit 1
           fi
-          timeout=240
-          elapsed=0
-          # Bounded per-probe timeouts so a stalled DNS/TLS connect or a
-          # server that accepts the connection but never responds cannot
-          # hang inside curl past the loop's own timeout budget.
-          until curl --silent --fail --connect-timeout 5 --max-time 10 \
-            -o /dev/null "${base}/v1/health"; do
-            if [ "${elapsed}" -ge "${timeout}" ]; then
-              echo "Prod API ${base}/v1/health did not respond within ${timeout}s"
-              exit 1
-            fi
-            echo "Prod API not yet reachable (${elapsed}s elapsed), retrying in 10s..."
-            sleep 10
-            elapsed=$((elapsed + 10))
-          done
-          echo "Prod API reachable after ${elapsed}s; allowing 60s grace for deploy swap"
-          sleep 60
+          if [ -z "${{ vars.PROD_URL }}" ]; then
+            echo "PROD_URL repo variable is empty or unset."
+            exit 1
+          fi
 
       - name: Run smoke tests against production
         run: pnpm --filter @concert-crawl/e2e test:smoke

@@ -69,6 +69,14 @@ jobs:
           echo "Refusing to deploy prod. Upstream Staging Smoke Tests conclusion: ${{ github.event.workflow_run.conclusion }}, STAGING_SMOKE_ENABLED: ${{ vars.STAGING_SMOKE_ENABLED }}"
           exit 1
 
+      # Checkout so the render-wait-for-live.sh script below is available.
+      # Pinned to the upstream-deploying SHA so the wait logic we run
+      # matches the version associated with this deploy.
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
       - name: Trigger Render deploy — API
         run: curl --fail -X POST "${{ secrets.RENDER_DEPLOY_HOOK_API }}"
 
@@ -77,6 +85,21 @@ jobs:
 
       - name: Trigger Render deploy — crawler daily cron
         run: curl --fail -X POST "${{ secrets.RENDER_DEPLOY_HOOK_CRAWLER_DAILY }}"
+
+      # Wait for the prod API to actually be live on the new commit
+      # before this workflow completes. Render's deploy hooks return
+      # immediately and Render keeps the prior build serving until the
+      # new one is healthy — without this wait, prod-post-deploy-smoke
+      # would fire on a workflow_run conclusion of `success` while the
+      # OLD build was still serving, and could pass against the
+      # unchanged code. We only wait on the API (it serves HTTP traffic
+      # and is the one smoke probes); the crawler crons deploy
+      # independently and their failure modes surface via Sentry, not
+      # via the smoke gate.
+      - name: Wait for prod API to be live on new SHA
+        run: bash .github/scripts/render-wait-for-live.sh "${{ vars.RENDER_SERVICE_ID_API }}" "${{ github.event.workflow_run.head_sha || github.sha }}"
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
 
       # `inputs.*` is only defined for `workflow_dispatch`. Using
       # `github.event.inputs.reason` is safe on `workflow_run` too — it
