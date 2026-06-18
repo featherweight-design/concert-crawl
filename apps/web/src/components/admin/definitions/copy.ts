@@ -1103,11 +1103,31 @@ export const ADMIN_COPY = {
     tabs: {
       eventFlags: 'Event flags',
       prices: 'Prices',
+      missing: 'Missing',
       allEvents: 'All events',
       ariaLabel: 'Review sections',
       allEventsPlaceholderHeading: 'Coming soon',
       allEventsPlaceholderBody:
         'The full events browser lands in PR 4. For now, use Event flags for unverified items.',
+    },
+
+    missing: {
+      headerTitle: 'Missing from crawl',
+      flaggedCount: (count: number) => `${count} flagged`,
+      bannerBody:
+        "The crawler expected these in a venue's daily sweep but didn't find them. Usually a cancellation, postponement, or silent lineup change — sometimes just a crawl miss. They stay Upcoming until you act.",
+      mobileBannerBody:
+        'Expected in a daily sweep but not found. They stay Upcoming until you act.',
+      lastSeenLabel: 'last seen',
+      actionPostponed: 'Postponed',
+      actionCancelled: 'Cancelled',
+      actionDismiss: 'Dismiss',
+      emptyHeading: "Nothing's gone missing.",
+      emptyBody:
+        'Every event the crawler expected showed up in the last sweep.',
+      chipMissed: (count: number) =>
+        `missed ${count} sweep${count === 1 ? '' : 's'}`,
+      chipCadence: 'expected daily',
     },
 
     eventFlags: {
