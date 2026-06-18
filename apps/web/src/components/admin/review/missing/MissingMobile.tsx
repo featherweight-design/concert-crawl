@@ -2,6 +2,7 @@
 
 import { AlertTriangle, Check } from 'lucide-react'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { StatusBadge } from '@/components/admin/primitives'
 import { computeMissedSweeps, formatLastSeen } from '@/lib/admin/missing'
 import { MissingChips } from './MissingChips'
 import { MissingRowMenu } from './MissingRowMenu'
@@ -37,33 +38,23 @@ export const MissingMobile = ({
     return (
       <div
         style={{
-          padding: '24px 16px',
           borderRadius: 13,
           background: 'var(--bg-elevated)',
           border: '1px solid var(--border)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 12,
-          textAlign: 'center',
+          overflow: 'hidden',
         }}
       >
         <div
           style={{
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            background: 'color-mix(in oklab, var(--success) 14%, transparent)',
-            color: 'var(--success)',
+            padding: '12px 14px',
+            borderBottom: '1px solid var(--border)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
+            justifyContent: 'space-between',
+            gap: 10,
           }}
         >
-          <Check size={20} />
-        </div>
-        <div>
-          <div
+          <span
             style={{
               fontFamily: "'Inter', sans-serif",
               fontSize: 14,
@@ -71,17 +62,58 @@ export const MissingMobile = ({
               color: 'var(--fg)',
             }}
           >
-            {ADMIN_COPY.review.missing.emptyHeading}
-          </div>
+            {ADMIN_COPY.review.missing.headerTitle}
+          </span>
+          <StatusBadge kind="success" mono>
+            {ADMIN_COPY.review.missing.allAccountedFor}
+          </StatusBadge>
+        </div>
+        <div
+          style={{
+            padding: '20px 16px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 12,
+            textAlign: 'center',
+          }}
+        >
           <div
             style={{
-              fontFamily: "'Inter', sans-serif",
-              fontSize: 12,
-              color: 'var(--fg-muted)',
-              marginTop: 4,
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              background:
+                'color-mix(in oklab, var(--success) 14%, transparent)',
+              color: 'var(--success)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            {ADMIN_COPY.review.missing.emptyBody}
+            <Check size={20} />
+          </div>
+          <div>
+            <div
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 14,
+                fontWeight: 700,
+                color: 'var(--fg)',
+              }}
+            >
+              {ADMIN_COPY.review.missing.emptyHeading}
+            </div>
+            <div
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 12,
+                color: 'var(--fg-muted)',
+                marginTop: 4,
+              }}
+            >
+              {ADMIN_COPY.review.missing.emptyBody}
+            </div>
           </div>
         </div>
       </div>
@@ -111,7 +143,11 @@ export const MissingMobile = ({
             lineHeight: 1.5,
           }}
         >
-          {ADMIN_COPY.review.missing.mobileBannerBody}
+          {ADMIN_COPY.review.missing.mobileBannerBodyBefore}
+          <strong style={{ fontWeight: 700 }}>
+            {ADMIN_COPY.review.missing.bannerBodyHighlight}
+          </strong>
+          {ADMIN_COPY.review.missing.mobileBannerBodyAfter}
         </span>
       </div>
       {events.map((event) => {

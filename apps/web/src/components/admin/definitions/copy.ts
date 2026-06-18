@@ -1114,10 +1114,16 @@ export const ADMIN_COPY = {
     missing: {
       headerTitle: 'Missing from crawl',
       flaggedCount: (count: number) => `${count} flagged`,
-      bannerBody:
-        "The crawler expected these in a venue's daily sweep but didn't find them. Usually a cancellation, postponement, or silent lineup change — sometimes just a crawl miss. They stay Upcoming until you act.",
-      mobileBannerBody:
-        'Expected in a daily sweep but not found. They stay Upcoming until you act.',
+      allAccountedFor: 'all accounted for',
+      // bannerBody is rendered in two parts so the JSX layer can emphasise
+      // "Upcoming" without embedding HTML in copy strings.
+      bannerBodyBefore:
+        "The crawler expected these in a venue's daily sweep but didn't find them. Usually a cancellation, postponement, or silent lineup change — sometimes just a crawl miss. They stay ",
+      bannerBodyHighlight: 'Upcoming',
+      bannerBodyAfter: ' until you act.',
+      mobileBannerBodyBefore:
+        'Expected in a daily sweep but not found. They stay ',
+      mobileBannerBodyAfter: ' until you act.',
       lastSeenLabel: 'last seen',
       actionPostponed: 'Postponed',
       actionCancelled: 'Cancelled',

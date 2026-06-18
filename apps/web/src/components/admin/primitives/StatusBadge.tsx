@@ -3,6 +3,12 @@ import { KIND_COLORS, type StatusKind } from './utils'
 interface StatusBadgeProps {
   kind?: StatusKind
   variant?: 'soft' | 'outline' | 'mono'
+  /**
+   * Orthogonal mono-font flag. When true, applies mono-font sizing
+   * regardless of variant — this lets a caller combine `variant="outline"`
+   * with mono typography (e.g. the Missing tab's "missed N sweeps" chip).
+   */
+  mono?: boolean
   dot?: boolean
   children: React.ReactNode
 }
@@ -10,11 +16,12 @@ interface StatusBadgeProps {
 export const StatusBadge = ({
   kind = 'neutral',
   variant = 'soft',
+  mono = false,
   dot = false,
   children,
 }: StatusBadgeProps) => {
   const colors = KIND_COLORS[kind]
-  const isMono = variant === 'mono'
+  const isMono = variant === 'mono' || mono
   const isOutline = variant === 'outline'
 
   return (

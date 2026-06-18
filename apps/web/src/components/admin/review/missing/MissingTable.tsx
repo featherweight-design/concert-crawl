@@ -22,6 +22,40 @@ export const MissingTable = ({
   onDismiss,
   pendingIds,
 }: MissingTableProps) => {
+  const headerBar = (
+    <div
+      style={{
+        padding: '12px 18px',
+        borderBottom: '1px solid var(--border)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span
+          style={{
+            fontFamily: "'Inter', sans-serif",
+            fontSize: 14,
+            fontWeight: 700,
+            color: 'var(--fg)',
+          }}
+        >
+          {ADMIN_COPY.review.missing.headerTitle}
+        </span>
+        {events.length === 0 ? (
+          <StatusBadge kind="success" mono>
+            {ADMIN_COPY.review.missing.allAccountedFor}
+          </StatusBadge>
+        ) : (
+          <StatusBadge kind="danger" mono>
+            {ADMIN_COPY.review.missing.flaggedCount(events.length)}
+          </StatusBadge>
+        )}
+      </div>
+    </div>
+  )
+
   if (events.length === 0) {
     return (
       <div
@@ -29,46 +63,54 @@ export const MissingTable = ({
           background: 'var(--bg-elevated)',
           border: '1px solid var(--border)',
           borderRadius: 12,
-          padding: 20,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 14,
+          overflow: 'hidden',
         }}
       >
+        {headerBar}
         <div
           style={{
-            width: 36,
-            height: 36,
-            borderRadius: 18,
-            background: 'color-mix(in oklab, var(--success) 14%, transparent)',
-            color: 'var(--success)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
+            gap: 14,
+            padding: '18px 22px',
           }}
         >
-          <Check size={18} />
-        </div>
-        <div>
           <div
             style={{
-              fontFamily: "'Inter', sans-serif",
-              fontSize: 14,
-              fontWeight: 700,
-              color: 'var(--fg)',
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              background:
+                'color-mix(in oklab, var(--success) 14%, transparent)',
+              color: 'var(--success)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            {ADMIN_COPY.review.missing.emptyHeading}
+            <Check size={18} />
           </div>
-          <div
-            style={{
-              fontFamily: "'Inter', sans-serif",
-              fontSize: 12,
-              color: 'var(--fg-muted)',
-              marginTop: 2,
-            }}
-          >
-            {ADMIN_COPY.review.missing.emptyBody}
+          <div>
+            <div
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 14,
+                fontWeight: 700,
+                color: 'var(--fg)',
+              }}
+            >
+              {ADMIN_COPY.review.missing.emptyHeading}
+            </div>
+            <div
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 12,
+                color: 'var(--fg-muted)',
+                marginTop: 2,
+              }}
+            >
+              {ADMIN_COPY.review.missing.emptyBody}
+            </div>
           </div>
         </div>
       </div>
@@ -84,31 +126,7 @@ export const MissingTable = ({
         overflow: 'hidden',
       }}
     >
-      <div
-        style={{
-          padding: '12px 18px',
-          borderBottom: '1px solid var(--border)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span
-            style={{
-              fontFamily: "'Inter', sans-serif",
-              fontSize: 14,
-              fontWeight: 700,
-              color: 'var(--fg)',
-            }}
-          >
-            {ADMIN_COPY.review.missing.headerTitle}
-          </span>
-          <StatusBadge kind="danger">
-            {ADMIN_COPY.review.missing.flaggedCount(events.length)}
-          </StatusBadge>
-        </div>
-      </div>
+      {headerBar}
       <div
         style={{
           padding: '11px 18px',
@@ -128,7 +146,11 @@ export const MissingTable = ({
             lineHeight: 1.5,
           }}
         >
-          {ADMIN_COPY.review.missing.bannerBody}
+          {ADMIN_COPY.review.missing.bannerBodyBefore}
+          <strong style={{ fontWeight: 700 }}>
+            {ADMIN_COPY.review.missing.bannerBodyHighlight}
+          </strong>
+          {ADMIN_COPY.review.missing.bannerBodyAfter}
         </span>
       </div>
       {events.map((event) => (
