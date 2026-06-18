@@ -1,55 +1,24 @@
 'use client'
 
+import { type ComponentProps } from 'react'
 import { PendingSubmissionsPanel } from '../PendingSubmissionsPanel'
 import { PriceCoverageTable } from '../PriceCoverageTable'
 
-interface PriceSubmission {
-  id: string
-  eventId: string
-  userId: string
-  priceMin: string | null
-  priceMax: string | null
-  note?: string | null
-  status: string
-  createdAt: string
-  eventTitle: string | null
-  eventDate: string | null
-  ticketUrl: string | null
-  venueName: string | null
-}
-
-interface PriceEvent {
-  eventId: string
-  eventTitle: string
-  artist: string | null
-  venueName: string | null
-  date: string
-  ticketUrl: string | null
-  priceMin: string | null
-  priceMax: string | null
-  priceSource: string | null
-  lastRetrievedAt: string | null
-  lastOutcome: string | null
-}
+type PendingProps = ComponentProps<typeof PendingSubmissionsPanel>
+type CoverageProps = ComponentProps<typeof PriceCoverageTable>
 
 export interface PricesTabContentProps {
-  submissions: PriceSubmission[]
-  onApproveSubmission: (id: string) => void
-  onDenySubmission: (id: string) => void
-  priceEvents: PriceEvent[]
-  priceEventsLoading: boolean
-  hasMorePriceEvents: boolean
-  priceLoadingMore: boolean
-  pricesMissingOnly: boolean
-  onTogglePriceFilter: () => void
-  onLoadMorePriceEvents: () => void
-  onAddPrice: (
-    eventId: string,
-    priceMin: string,
-    priceMax: string | null,
-    vendor: string,
-    howFound: string,
-  ) => Promise<void>
+  submissions: PendingProps['submissions']
+  onApproveSubmission: PendingProps['onApprove']
+  onDenySubmission: PendingProps['onDeny']
+  priceEvents: CoverageProps['events']
+  priceEventsLoading: NonNullable<CoverageProps['loading']>
+  hasMorePriceEvents: CoverageProps['hasMore']
+  priceLoadingMore: NonNullable<CoverageProps['loadingMore']>
+  pricesMissingOnly: CoverageProps['missingOnly']
+  onTogglePriceFilter: CoverageProps['onToggleFilter']
+  onLoadMorePriceEvents: CoverageProps['onLoadMore']
+  onAddPrice: NonNullable<CoverageProps['onAddPrice']>
 }
 
 export const PricesTabContent = ({
