@@ -100,6 +100,37 @@ describe('GET /v1/search/popular', () => {
     const body = (await res.json()) as { success: boolean; data: unknown[] }
     expect(body.data).toHaveLength(5)
   })
+
+  it('excludes first_missing_at rows so the popular surface only shows live shows', async () => {
+    const venue = await seedVenue({
+      name: 'Popular Missing Venue',
+      slug: 'popular-missing-venue',
+    })
+    await seedEvent(venue.id, {
+      title: 'Active Popular',
+      artist: 'Pop A',
+      date: '2027-06-05',
+      status: 'upcoming',
+      firstMissingAt: null,
+    })
+    await seedEvent(venue.id, {
+      title: 'Stale Popular',
+      artist: 'Pop B',
+      date: '2027-06-06',
+      status: 'upcoming',
+      firstMissingAt: new Date('2026-06-17T09:00:00Z'),
+    })
+
+    const res = await app.request('/v1/search/popular')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { title: string }[]
+    }
+    const titles = body.data.map((row) => row.title)
+    expect(titles).toContain('Active Popular')
+    expect(titles).not.toContain('Stale Popular')
+  })
 })
 
 describe('GET /v1/search/popular — beta auth gate', () => {

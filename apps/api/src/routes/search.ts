@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { clerkMiddleware } from '@hono/clerk-auth'
 import { db, events, userEvents, venues } from '@concert-crawl/db'
-import { and, asc, desc, eq, gte, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, isNull, sql } from 'drizzle-orm'
 import { todayInTimezone } from '../lib/time.js'
 import { requireAuth } from '../middleware/auth.js'
 
@@ -40,6 +40,11 @@ searchRouter.get('/popular', async (ctx) => {
         gte(events.date, today),
         // PR 6 — exclude non-concert events from search.
         eq(events.hiddenFromConsumer, false),
+        // Hide crawler-flagged stale rows from the popular surface (#607).
+        // Same intent as the events router list filter: a row the crawler
+        // stopped seeing should not be presented as "popular" even if it
+        // accumulated watchers before it disappeared.
+        isNull(events.firstMissingAt),
       ),
     )
     .groupBy(events.id, venues.name, venues.slug)
