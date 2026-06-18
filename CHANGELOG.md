@@ -1,3 +1,21 @@
+# [1.53.0](https://github.com/HartiganHM/concert-crawl/compare/v1.52.7...v1.53.0) (2026-06-18)
+
+
+### Bug Fixes
+
+* **admin:** align ReviewTabs with design handoff property table ([6884334](https://github.com/HartiganHM/concert-crawl/commit/6884334b477d2980e4fd70572848bbc500a41834))
+* **admin:** move DOM focus on tab arrow nav + correct kind JSDoc ([8c82c35](https://github.com/HartiganHM/concert-crawl/commit/8c82c3524b50e464f24b72cebcc893e94773a891)), closes [#661](https://github.com/HartiganHM/concert-crawl/issues/661)
+
+
+### Features
+
+* **admin:** add AllEventsTabContent stub for tab shell ([5799404](https://github.com/HartiganHM/concert-crawl/commit/579940441ae7444c9c5305625b2c6089daaf9c09))
+* **admin:** add EventFlagsTabContent wrapper for tab shell ([8227d07](https://github.com/HartiganHM/concert-crawl/commit/8227d072fc90b298bea8e9f789d890f809b67029))
+* **admin:** add PricesTabContent wrapper for tab shell ([12b194f](https://github.com/HartiganHM/concert-crawl/commit/12b194f8380157d9ed04f3ba43333801ea3e9c6e))
+* **admin:** add review tab labels and All-events placeholder copy ([c1d6d5e](https://github.com/HartiganHM/concert-crawl/commit/c1d6d5edc1428561ef25b82706efd018359bc80b))
+* **admin:** add ReviewTabs primitive with keyboard nav ([2348932](https://github.com/HartiganHM/concert-crawl/commit/2348932893e535aebac00e14c3199aaeaa241c81))
+* **admin:** wire desktop tab pill on /admin/review with URL state ([16fa032](https://github.com/HartiganHM/concert-crawl/commit/16fa0325fd794ac95040031315c36eef3ec595b2))
+
 ## [1.52.7](https://github.com/HartiganHM/concert-crawl/compare/v1.52.6...v1.52.7) (2026-06-18)
 
 
