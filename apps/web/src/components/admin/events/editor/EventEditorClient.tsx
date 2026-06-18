@@ -64,7 +64,14 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
         maxWidth: isDesktop ? 920 : '100%',
       }}
     >
-      <EditorHeader event={headerEvent} />
+      {isDesktop ? (
+        <EditorHeader
+          event={headerEvent}
+          viewDetailHref={`/events/${event.id}`}
+        />
+      ) : (
+        <EditorHeader event={headerEvent} />
+      )}
       <IdentitySection event={event} />
       <PricingSection event={event} />
       <ClassificationSection genre={event.genre} />
