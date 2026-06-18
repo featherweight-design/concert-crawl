@@ -1,3 +1,11 @@
+## [1.56.1](https://github.com/HartiganHM/concert-crawl/compare/v1.56.0...v1.56.1) (2026-06-18)
+
+
+### Bug Fixes
+
+* **web:** address Copilot review on PR [#671](https://github.com/HartiganHM/concert-crawl/issues/671) ([f51c52d](https://github.com/HartiganHM/concert-crawl/commit/f51c52da6269da53519960b2e2277bbe3f2df896))
+* **web:** group events by date on venue detail page ([e3019a3](https://github.com/HartiganHM/concert-crawl/commit/e3019a3f95810c4044b6357f0f16ef269af7b121)), closes [#670](https://github.com/HartiganHM/concert-crawl/issues/670)
+
 # [1.56.0](https://github.com/HartiganHM/concert-crawl/compare/v1.55.0...v1.56.0) (2026-06-18)
 
 
