@@ -42,8 +42,16 @@ jobs:
       (github.event_name == 'workflow_dispatch' ||
        github.event.workflow_run.conclusion == 'failure')
     steps:
+      # Pin the checkout to the SHA that triggered the upstream
+      # prod-post-deploy-smoke run so the rollback script we execute
+      # matches the version associated with the failing deploy. Without
+      # this, actions/checkout fetches default branch HEAD, which can
+      # drift if a new commit lands while this incident-response
+      # workflow is queued.
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       # Invoke via `bash` rather than `./script.sh` so we don't depend on
       # the executable bit surviving git checkout (which depends on
