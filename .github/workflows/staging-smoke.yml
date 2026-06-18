@@ -29,11 +29,20 @@ jobs:
     name: Playwright smoke (staging)
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # Kill switch ONLY — when off, the job skips and the workflow
-    # concludes `success`. That is fine: deploy-prod.yml gates separately
-    # on STAGING_SMOKE_ENABLED, so a skipped staging-smoke does not
+    # Kill switch + branch guard:
+    #   - STAGING_SMOKE_ENABLED kill switch.
+    #   - workflow_dispatch is allowed only from `main` so a feature
+    #     branch cannot run a modified workflow with repo secrets
+    #     (RENDER_API_TOKEN, SENTRY_DSN_SMOKE) via the Actions UI's
+    #     branch picker.
+    # When off, the job skips and the workflow concludes `success`.
+    # That is fine: deploy-prod.yml gates separately on
+    # STAGING_SMOKE_ENABLED, so a skipped staging-smoke does not
     # trigger prod deploys.
-    if: vars.STAGING_SMOKE_ENABLED == 'true'
+    if: |
+      vars.STAGING_SMOKE_ENABLED == 'true' &&
+      (github.event_name != 'workflow_dispatch' ||
+       github.ref == 'refs/heads/main')
     steps:
       # Propagate upstream failure as job failure (not silent skip).
       # A workflow_run-triggered workflow whose only job is gated `if:

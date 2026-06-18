@@ -42,10 +42,19 @@ jobs:
     # so rollback-prod does not fire. A failed deploy-prod is itself the
     # signal a human should look at; we just refuse to compound it with
     # a destructive rollback for a deploy that never happened.
+    # Gate:
+    #   - AUTO_DEPLOY_PROD_ENABLED kill switch.
+    #   - workflow_run path: only fire when upstream deploy-prod
+    #     actually succeeded (silent-skip pattern — see "Gate logic"
+    #     block above).
+    #   - workflow_dispatch path: allowed only from `main` so a feature
+    #     branch cannot run a modified workflow with repo secrets
+    #     (SENTRY_DSN_SMOKE) via the Actions UI's branch picker.
     if: |
       vars.AUTO_DEPLOY_PROD_ENABLED == 'true' &&
-      (github.event_name == 'workflow_dispatch' ||
-       github.event.workflow_run.conclusion == 'success')
+      ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+       (github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'success'))
     steps:
       # Pin the checkout to the SHA that triggered the upstream
       # deploy-prod run. Without this, actions/checkout fetches default
