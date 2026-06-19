@@ -9,6 +9,7 @@ export interface NormalizedEvent {
   imageUrl?: string
   sourceUrl: string
   confidence: number
+  isConcert?: boolean
 }
 
 export interface TokenUsage {

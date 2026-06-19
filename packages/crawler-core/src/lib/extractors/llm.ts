@@ -19,6 +19,7 @@ const NormalizedEventSchema = z.object({
   ticketUrl: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   confidence: z.number().min(0).max(1),
+  isConcert: z.boolean().optional(),
 })
 
 const ToolInputSchema = z.object({
@@ -27,19 +28,24 @@ const ToolInputSchema = z.object({
 
 const MODEL = 'claude-haiku-4-5-20251001'
 
-const SYSTEM_PROMPT = `You are a concert event data extractor. Given HTML from a venue website, call the save_events tool with all upcoming concert events you find.
+const SYSTEM_PROMPT = `You are a concert event data extractor. Given HTML from a venue website, call the save_events tool with all upcoming events you find — including non-concert events. Downstream tooling uses isConcert to decide what reaches consumers.
 
 Rules:
 - date must be ISO format YYYY-MM-DD
 - confidence reflects how certain you are the extraction is accurate (0.0-1.0)
 - Only include actual upcoming events, not past events
 - If artist is unclear, use the event title as the artist
-- Pass an empty events array if no concert events are found
-- When a date has no year, infer it using today's date (provided in the user message): if the month/day is today or in the future within the current year, use the current year; if the month/day has already passed this year, use next year`
+- Pass an empty events array if no events are found
+- When a date has no year, infer it using today's date (provided in the user message): if the month/day is today or in the future within the current year, use the current year; if the month/day has already passed this year, use next year
+
+isConcert rules (for every event):
+- true: named musician(s) performing live music. Includes bands, solo artists, DJ sets, orchestras, jazz performances, tribute bands when they are themselves performing
+- false: non-performance events that happen at music venues — themed dance parties (e.g. "Liv, Laugh, Love: Olivia Rodrigo Dance Party"), bingo nights (e.g. "BASS BINGO – Wooli Edition!"), trivia, comedy, film/movie screenings (e.g. "Film on the Rocks: Sinners"), karaoke, listening parties, private events`
 
 const SAVE_EVENTS_TOOL: Anthropic.Tool = {
   name: 'save_events',
-  description: 'Save all extracted upcoming concert events from the venue page',
+  description:
+    'Save all extracted upcoming events from the venue page. Includes non-concert events; the isConcert field on each event distinguishes them.',
   input_schema: {
     type: 'object' as const,
     properties: {
@@ -74,8 +80,13 @@ const SAVE_EVENTS_TOOL: Anthropic.Tool = {
               type: 'number',
               description: 'Extraction confidence 0.0 to 1.0',
             },
+            isConcert: {
+              type: 'boolean',
+              description:
+                'true if a concert (named musicians performing live music). false for non-concert events like themed parties, bingo, trivia, movies, comedy, listening parties, karaoke.',
+            },
           },
-          required: ['title', 'artist', 'date', 'confidence'],
+          required: ['title', 'artist', 'date', 'confidence', 'isConcert'],
         },
       },
     },
@@ -148,17 +159,19 @@ export async function extractWithLlm(
     return { events: [], usage: tokenUsage }
   }
 
-  const events = parsed.data.events.map((e) => ({
-    title: e.title,
-    artist: e.artist,
-    date: e.date,
-    confidence: e.confidence,
+  const events = parsed.data.events.map((evt) => ({
+    title: evt.title,
+    artist: evt.artist,
+    date: evt.date,
+    confidence: evt.confidence,
     sourceUrl,
-    ...(e.doorsTime != null &&
-      e.doorsTime !== '' && { doorsTime: e.doorsTime }),
-    ...(e.showTime != null && e.showTime !== '' && { showTime: e.showTime }),
-    ...(e.ticketUrl != null && { ticketUrl: e.ticketUrl }),
-    ...(e.description != null && { description: e.description }),
+    ...(evt.doorsTime != null &&
+      evt.doorsTime !== '' && { doorsTime: evt.doorsTime }),
+    ...(evt.showTime != null &&
+      evt.showTime !== '' && { showTime: evt.showTime }),
+    ...(evt.ticketUrl != null && { ticketUrl: evt.ticketUrl }),
+    ...(evt.description != null && { description: evt.description }),
+    ...(evt.isConcert != null && { isConcert: evt.isConcert }),
   }))
 
   console.log(

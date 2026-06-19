@@ -161,4 +161,56 @@ describe('extractWithLlm', () => {
     expect(result.events[0]).not.toHaveProperty('doorsTime')
     expect(result.events[0]).not.toHaveProperty('showTime')
   })
+
+  it('returns isConcert=true when the LLM emits it as true', async () => {
+    const mockEvents = [
+      {
+        title: 'Miles Davis Tribute',
+        artist: 'Miles Davis Tribute',
+        date: '2026-08-15',
+        confidence: 0.95,
+        isConcert: true,
+      },
+    ]
+    mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents))
+    const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
+    expect(result.events).toHaveLength(1)
+    expect(result.events[0]?.isConcert).toBe(true)
+  })
+
+  it('returns isConcert=false when the LLM emits it as false (non-concert event)', async () => {
+    const mockEvents = [
+      {
+        title: 'BASS BINGO – Wooli Edition!',
+        artist: 'Wooli',
+        date: '2026-06-18',
+        confidence: 0.9,
+        isConcert: false,
+      },
+    ]
+    mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents))
+    const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
+    expect(result.events).toHaveLength(1)
+    expect(result.events[0]?.isConcert).toBe(false)
+  })
+
+  it('defaults isConcert to undefined when the LLM omits the field (defensive parsing)', async () => {
+    // Anthropic enforces required tool schema fields, but defending Zod
+    // against the rare omission prevents one missing field from rejecting
+    // the whole batch. Defaulting omission to "not set" lets the crawler
+    // INSERT path treat it as concert (fail-open).
+    const mockEvents = [
+      {
+        title: 'Open Mic Night',
+        artist: 'Various',
+        date: '2026-08-15',
+        confidence: 0.7,
+        // isConcert intentionally omitted
+      },
+    ]
+    mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents))
+    const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
+    expect(result.events).toHaveLength(1)
+    expect(result.events[0]?.isConcert).toBeUndefined()
+  })
 })
