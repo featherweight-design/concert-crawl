@@ -28,7 +28,7 @@ const ToolInputSchema = z.object({
 
 const MODEL = 'claude-haiku-4-5-20251001'
 
-const SYSTEM_PROMPT = `You are a concert event data extractor. Given HTML from a venue website, call the save_events tool with all upcoming events you find — including non-concert events. Downstream tooling uses isConcert to decide what reaches consumers.
+const SYSTEM_PROMPT = `You are an event data extractor for a music-venue concert calendar. Given HTML from a venue website, call the save_events tool with EVERY upcoming event you find, including non-concert events (themed parties, bingo, comedy, movies, etc.). Do not omit non-concert events — downstream tooling uses the isConcert field on each event to decide what reaches consumers.
 
 Rules:
 - date must be ISO format YYYY-MM-DD
@@ -128,7 +128,7 @@ export async function extractWithLlm(
     messages: [
       {
         role: 'user',
-        content: `Today's date: ${new Date().toISOString().slice(0, 10)}\n\nExtract all concert events from this venue page HTML:\n\nURL: ${sourceUrl}\n\n${cleanedHtml}`,
+        content: `Today's date: ${new Date().toISOString().slice(0, 10)}\n\nExtract every upcoming event from this venue page HTML — concerts AND non-concerts (themed parties, bingo, comedy, movies, etc.). Set isConcert on each one.\n\nURL: ${sourceUrl}\n\n${cleanedHtml}`,
       },
     ],
   })
