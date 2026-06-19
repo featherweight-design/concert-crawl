@@ -19,7 +19,7 @@ import { type MissingRowEvent } from '@/components/admin/review/missing/MissingR
 // migrating these from the historical defaults (50–200) as part of #688.
 export const REVIEW_ALL_EVENTS_PAGE_SIZE = 20
 export const REVIEW_PRICE_EVENTS_PAGE_SIZE = 20
-export const REVIEW_EVENT_FLAGS_PAGE_SIZE = 10
+export const REVIEW_EVENT_FLAGS_PAGE_SIZE = 20
 export const REVIEW_MISSING_PAGE_SIZE = 50
 
 // Re-exported types so consumers can import everything review-related from

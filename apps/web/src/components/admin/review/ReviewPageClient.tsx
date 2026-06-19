@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useQueryClient } from '@tanstack/react-query'
 import { apiClient, ApiError } from '@/lib/api'
 import { SectionHead } from '@/components/admin/primitives'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
@@ -16,6 +15,7 @@ import {
   type EventFlag,
   type PriceEvent,
 } from '@/lib/queries/use-admin-review'
+import { useQueryClient } from '@tanstack/react-query'
 import { AdminReviewMobile } from './AdminReviewMobile'
 import { ReviewTabs, type ReviewTabDescriptor } from './ReviewTabs'
 import { EventFlagsTabContent } from './_tabs/EventFlagsTabContent'
@@ -96,15 +96,29 @@ export const ReviewPageClient = ({
   const [priceFilter, setPriceFilter] = useState<'missing' | 'all'>('missing')
   const [error, setError] = useState<string | null>(null)
   const [isDesktop, setIsDesktop] = useState(true)
+  // Pending-remove IDs let mutations feel instant without touching the cached
+  // page arrays. Mutating the cache (filter() on each page) was shrinking
+  // page lengths, which `getNextPageParam` then summed for the next offset —
+  // pagination would silently re-fetch earlier rows. Filter at render time
+  // instead; invalidate the cache; clear the pending id on settle.
+  const [pendingRemoveFlagIds, setPendingRemoveFlagIds] = useState<Set<string>>(
+    new Set(),
+  )
+  const [pendingRemoveMissingIds, setPendingRemoveMissingIds] = useState<
+    Set<string>
+  >(new Set())
 
   // Event Flags: SSR-seeded infinite query. The cache key is stable across
   // tab changes so returning to the tab is instant. fetchMoreEvents now
   // becomes fetchNextPage on the query handle.
   const eventFlagsQuery = useReviewEventFlags(initialEvents)
-  const events = useMemo<EventFlag[]>(
-    () => eventFlagsQuery.data?.pages.flatMap((page) => page) ?? initialEvents,
-    [eventFlagsQuery.data, initialEvents],
-  )
+  const events = useMemo<EventFlag[]>(() => {
+    const all =
+      eventFlagsQuery.data?.pages.flatMap((page) => page) ?? initialEvents
+    return pendingRemoveFlagIds.size === 0
+      ? all
+      : all.filter((event) => !pendingRemoveFlagIds.has(event.id))
+  }, [eventFlagsQuery.data, initialEvents, pendingRemoveFlagIds])
 
   // Missing: gated by tab activation so we don't fetch until the admin
   // looks. The mobile shell also nudges the gate via onEnterMissingTab.
@@ -115,7 +129,12 @@ export const ReviewPageClient = ({
     if (activeTab === 'missing') setMissingActivated(true)
   }, [activeTab])
   const missingQuery = useReviewMissingEvents(missingActivated)
-  const missingEvents = missingQuery.data ?? []
+  const missingEvents = useMemo<MissingRowEvent[]>(() => {
+    const all = missingQuery.data ?? []
+    return pendingRemoveMissingIds.size === 0
+      ? all
+      : all.filter((event) => !pendingRemoveMissingIds.has(event.id))
+  }, [missingQuery.data, pendingRemoveMissingIds])
   const missingLoading = missingActivated && !missingQuery.isFetched
 
   // Price coverage: infinite query keyed by the filter toggle so flipping
@@ -157,46 +176,39 @@ export const ReviewPageClient = ({
     void priceEventsQuery.fetchNextPage()
   }, [priceEventsQuery])
 
-  // Optimistic-remove helper for the event-flags cache. Filters the row out
-  // of every loaded page so the table updates instantly, then schedules a
-  // background invalidation so the server's view of the world wins.
-  const removeFlagFromCache = useCallback(
-    (id: string) => {
-      queryClient.setQueryData<{
-        pages: EventFlag[][]
-        pageParams: number[]
-      }>(reviewQueryKeys.eventFlags, (prev) => {
-        if (!prev) return prev
-        return {
-          ...prev,
-          pages: prev.pages.map((page) =>
-            page.filter((event) => event.id !== id),
-          ),
-        }
-      })
-    },
-    [queryClient],
-  )
-
-  const removeMissingFromCache = useCallback(
-    (id: string) => {
-      queryClient.setQueryData<MissingRowEvent[]>(
-        reviewQueryKeys.missing,
-        (prev) => prev?.filter((evt) => evt.id !== id),
-      )
-    },
-    [queryClient],
-  )
+  // Mark/unmark helpers for the render-time pending-remove filters. The
+  // mutation flow is: addPending → fire request → on settle, remove pending.
+  // Invalidation runs in parallel so the cache refetches without the row.
+  const addPendingFlag = useCallback((id: string) => {
+    setPendingRemoveFlagIds((prev) => new Set(prev).add(id))
+  }, [])
+  const clearPendingFlag = useCallback((id: string) => {
+    setPendingRemoveFlagIds((prev) => {
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
+  }, [])
+  const addPendingMissing = useCallback((id: string) => {
+    setPendingRemoveMissingIds((prev) => new Set(prev).add(id))
+  }, [])
+  const clearPendingMissing = useCallback((id: string) => {
+    setPendingRemoveMissingIds((prev) => {
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
+  }, [])
 
   const patchMissingEvent = useCallback(
     async (id: string, body: Record<string, unknown>): Promise<void> => {
       setError(null)
+      addPendingMissing(id)
       try {
         const token = await getToken()
         if (!token) return
         await apiClient.patch(`/v1/admin/events/${id}`, token, body)
-        removeMissingFromCache(id)
-        void invalidate.missing()
+        await invalidate.missing()
         router.refresh()
       } catch (patchErr) {
         const message =
@@ -205,9 +217,11 @@ export const ReviewPageClient = ({
             : 'Failed to update event.'
         console.error('patchMissingEvent error:', patchErr)
         setError(message)
+      } finally {
+        clearPendingMissing(id)
       }
     },
-    [getToken, invalidate, removeMissingFromCache, router],
+    [addPendingMissing, clearPendingMissing, getToken, invalidate, router],
   )
 
   const markMissingPostponed = useCallback(
@@ -243,43 +257,45 @@ export const ReviewPageClient = ({
   const approveEvent = useCallback(
     async (id: string) => {
       setError(null)
+      addPendingFlag(id)
       try {
         const token = await getToken()
         if (!token) return
         await apiClient.patch(`/v1/admin/events/${id}/verify`, token, {})
-        removeFlagFromCache(id)
-        void invalidate.eventFlags()
-        void invalidate.allEvents()
+        await Promise.all([invalidate.eventFlags(), invalidate.allEvents()])
         router.refresh()
       } catch (err) {
         const message =
           err instanceof ApiError ? err.message : 'Failed to approve event.'
         console.error('approveEvent error:', err)
         setError(message)
+      } finally {
+        clearPendingFlag(id)
       }
     },
-    [getToken, invalidate, removeFlagFromCache, router],
+    [addPendingFlag, clearPendingFlag, getToken, invalidate, router],
   )
 
   const rejectEvent = useCallback(
     async (id: string) => {
       setError(null)
+      addPendingFlag(id)
       try {
         const token = await getToken()
         if (!token) return
         await apiClient.delete(`/v1/admin/events/${id}`, token)
-        removeFlagFromCache(id)
-        void invalidate.eventFlags()
-        void invalidate.allEvents()
+        await Promise.all([invalidate.eventFlags(), invalidate.allEvents()])
         router.refresh()
       } catch (err) {
         const message =
           err instanceof ApiError ? err.message : 'Failed to reject event.'
         console.error('rejectEvent error:', err)
         setError(message)
+      } finally {
+        clearPendingFlag(id)
       }
     },
-    [getToken, invalidate, removeFlagFromCache, router],
+    [addPendingFlag, clearPendingFlag, getToken, invalidate, router],
   )
 
   const approveSubmission = useCallback(

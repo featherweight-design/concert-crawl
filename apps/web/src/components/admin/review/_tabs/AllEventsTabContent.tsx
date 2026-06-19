@@ -154,6 +154,10 @@ export const AllEventsTabContent = ({
   const filterQuery = filtersToFetchQuery(filters)
   useEffect(() => {
     setSelectedIds(new Set())
+    // Stale mutation errors from the previous filter set don't apply to the
+    // new dataset — clear them so a successful filter change doesn't leave
+    // an unrelated banner up.
+    setActionError(null)
   }, [filterQuery])
 
   const refresh = useCallback(() => {

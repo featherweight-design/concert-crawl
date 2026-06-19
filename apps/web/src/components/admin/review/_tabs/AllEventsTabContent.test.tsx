@@ -33,7 +33,10 @@ const renderWithClient = (ui: ReactElement) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>)
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  )
+  return render(ui, { wrapper: Wrapper })
 }
 
 const buildApiMock = (overrides: Partial<AllEventsApi> = {}): AllEventsApi => ({
@@ -200,6 +203,55 @@ describe('AllEventsTabContent', () => {
       expect(screen.getByText('Lord Huron')).toBeTruthy()
     })
     expect(screen.queryByRole('button', { name: 'Load more' })).toBeNull()
+  })
+
+  it('clears the action-error banner when filters change', async () => {
+    // First render: fetch succeeds, but a row mutation fails → banner shows.
+    // Use verified:false so the menu shows "Verify" (the verified=true variant
+    // shows "Send back to review" instead).
+    mockApiGet.mockResolvedValue([buildEvent({ id: 'evt-a', verified: false })])
+    const api = buildApiMock({
+      verify: vi.fn().mockRejectedValue(new Error('mutation boom')),
+    })
+    const onFiltersChange = vi.fn()
+    const { rerender } = renderWithClient(
+      <AllEventsTabContent
+        isDesktop
+        onRowClick={() => {}}
+        api={api}
+        onFiltersChange={onFiltersChange}
+      />,
+    )
+    await waitFor(() => {
+      expect(screen.getByText('Lord Huron')).toBeTruthy()
+    })
+    // Open the row menu and trigger the failing verify.
+    fireEvent.click(screen.getByLabelText('Row actions'))
+    fireEvent.click(screen.getByText('Verify'))
+    await waitFor(() => {
+      expect(screen.getByText('Failed to apply the change.')).toBeTruthy()
+    })
+    // Now change the filter (re-render with a fresh filter object). The
+    // banner should clear on the filter-change effect.
+    rerender(
+      <AllEventsTabContent
+        isDesktop
+        onRowClick={() => {}}
+        api={api}
+        filters={{
+          query: 'spoon',
+          verified: 'all',
+          dateFrom: '',
+          dateTo: '',
+          genre: [],
+          missingData: [],
+        }}
+        onFiltersChange={onFiltersChange}
+      />,
+    )
+    await waitFor(() => {
+      expect(screen.queryByText('Failed to apply the change.')).toBeNull()
+    })
   })
 
   describe('bulk selection', () => {

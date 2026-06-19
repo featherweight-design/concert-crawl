@@ -44,7 +44,11 @@ export default async function ReviewPage() {
   // PriceCoverageTable (below the fold) fetches its own data client-side.
   const [events, submissions] = await Promise.all([
     apiClient
-      .get<EventFlag[]>('/v1/admin/events?verified=false&limit=100', token)
+      // limit must match REVIEW_EVENT_FLAGS_PAGE_SIZE so the client's
+      // useInfiniteQuery can tell the SSR page is a full page (=> hasNextPage)
+      // vs a final short page. A mismatch left hasNextPage=false and broke
+      // pagination on mount.
+      .get<EventFlag[]>('/v1/admin/events?verified=false&limit=20', token)
       .catch(() => [] as EventFlag[]),
     apiClient
       .get<PriceSubmission[]>('/v1/admin/prices/submissions', token)
