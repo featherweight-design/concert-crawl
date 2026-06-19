@@ -1,14 +1,6 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import {
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-  Check,
-  ChevronDown,
-} from 'lucide-react'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import {
   PAGINATION_PAGE_SIZE_OPTIONS,
@@ -16,8 +8,92 @@ import {
   pageWindow,
 } from './pagination-logic'
 
-const ADMIN_MONO = "'JetBrains Mono', monospace"
+// Match design tokens exactly — the JetBrains-first stack falls back to the
+// platform-native monos when JetBrains isn't loaded yet.
+const ADMIN_MONO =
+  "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace"
 const ADMIN_FONT = "'Inter', sans-serif"
+
+// Hand-rolled icons match the design's stroke geometry (stroke-width 1.6,
+// rounded caps). Inline SVG keeps us free of an icon dependency for this
+// admin-only surface; the paths are copied from the design handoff.
+type IconName = 'chevL' | 'chevR' | 'chevsL' | 'chevsR' | 'chevD' | 'check'
+
+interface AdminIconProps {
+  name: IconName
+  size?: number
+  color?: string
+}
+
+const ICON_PATHS: Record<IconName, React.ReactNode> = {
+  chevL: <path d="M15 6l-9 6 9 6" />,
+  chevR: <path d="M9 6l6 6-6 6" />,
+  chevsL: (
+    <>
+      <path d="M11 6l-6 6 6 6" />
+      <path d="M19 6l-6 6 6 6" />
+    </>
+  ),
+  chevsR: (
+    <>
+      <path d="M13 6l6 6-6 6" />
+      <path d="M5 6l6 6-6 6" />
+    </>
+  ),
+  chevD: <path d="M6 9l6 6 6-6" />,
+  check: <path d="M5 12l5 5L20 6" />,
+}
+
+const AdminIcon = ({ name, size = 14, color }: AdminIconProps) => (
+  <svg
+    aria-hidden="true"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color ?? 'currentColor'}
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    {ICON_PATHS[name]}
+  </svg>
+)
+
+// Loading spinner shown in the RangeReadout. The keyframes are injected
+// once via a sibling <style> tag so the spinning works without an external
+// CSS file.
+const SPINNER_STYLE = `@keyframes ccSpin { to { transform: rotate(360deg); } }`
+
+const Spinner = ({ size = 12, color = 'var(--signal)' }) => (
+  <>
+    <style>{SPINNER_STYLE}</style>
+    <svg
+      aria-hidden="true"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      style={{ animation: 'ccSpin 0.9s linear infinite' }}
+    >
+      <circle
+        cx={12}
+        cy={12}
+        r={9}
+        stroke={color}
+        strokeWidth={2.5}
+        fill="none"
+        opacity={0.2}
+      />
+      <path
+        d="M21 12a9 9 0 00-9-9"
+        stroke={color}
+        strokeWidth={2.5}
+        fill="none"
+        strokeLinecap="round"
+      />
+    </svg>
+  </>
+)
 
 const COPY = ADMIN_COPY.pagination
 
@@ -86,45 +162,62 @@ const PagerBtn = ({
   size = 32,
   mono = true,
   grow = false,
-}: PagerBtnProps) => (
-  <button
-    type="button"
-    aria-label={ariaLabel}
-    aria-current={active ? 'page' : undefined}
-    onClick={disabled ? undefined : onClick}
-    disabled={disabled}
-    style={{
-      all: 'unset',
-      boxSizing: 'border-box',
-      cursor: disabled ? 'not-allowed' : 'pointer',
-      minWidth: size,
-      height: size,
-      padding: '0 9px',
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      borderRadius: 8,
-      fontFamily: mono ? ADMIN_MONO : ADMIN_FONT,
-      fontSize: mono ? 12 : 13,
-      fontWeight: 700,
-      fontVariantNumeric: 'tabular-nums',
-      letterSpacing: '0.02em',
-      flex: grow ? 1 : '0 0 auto',
-      color: active
-        ? 'var(--fg-on-accent)'
-        : disabled
-          ? 'var(--fg-subtle)'
-          : 'var(--fg)',
-      background: active ? 'var(--signal)' : 'transparent',
-      border: `1px solid ${active ? 'var(--signal)' : 'var(--border-strong)'}`,
-      opacity: disabled && !active ? 0.45 : 1,
-      transition: 'background .12s, border-color .12s, color .12s',
-    }}
-  >
-    {children}
-  </button>
-)
+}: PagerBtnProps) => {
+  const [hover, setHover] = useState(false)
+  const interactive = !disabled && !active
+  const hovered = interactive && hover
+  return (
+    <button
+      type="button"
+      aria-label={ariaLabel}
+      aria-current={active ? 'page' : undefined}
+      onClick={disabled ? undefined : onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      disabled={disabled}
+      style={{
+        all: 'unset',
+        boxSizing: 'border-box',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        minWidth: size,
+        height: size,
+        padding: '0 9px',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        borderRadius: 8,
+        fontFamily: mono ? ADMIN_MONO : ADMIN_FONT,
+        fontSize: mono ? 12 : 13,
+        fontWeight: 700,
+        fontVariantNumeric: 'tabular-nums',
+        letterSpacing: '0.02em',
+        flex: grow ? 1 : '0 0 auto',
+        color: active
+          ? 'var(--fg-on-accent)'
+          : disabled
+            ? 'var(--fg-subtle)'
+            : 'var(--fg)',
+        background: active
+          ? 'var(--signal)'
+          : hovered
+            ? 'var(--surface-2)'
+            : 'transparent',
+        border: `1px solid ${
+          active
+            ? 'var(--signal)'
+            : hovered
+              ? 'var(--fg-subtle)'
+              : 'var(--border-strong)'
+        }`,
+        opacity: disabled && !active ? 0.45 : 1,
+        transition: 'background .12s, border-color .12s, color .12s',
+      }}
+    >
+      {children}
+    </button>
+  )
+}
 
 interface SizeSelectProps {
   value: number
@@ -166,7 +259,7 @@ const SizeSelect = ({
           fontFamily: ADMIN_MONO,
           fontSize: 10,
           fontWeight: 700,
-          letterSpacing: '0.08em',
+          letterSpacing: '0.1em',
           textTransform: 'uppercase',
           color: 'var(--fg-subtle)',
         }}
@@ -199,7 +292,7 @@ const SizeSelect = ({
         }}
       >
         {value}
-        <ChevronDown size={13} color="var(--fg-subtle)" />
+        <AdminIcon name="chevD" size={13} color="var(--fg-subtle)" />
       </button>
       {open && (
         <div
@@ -249,7 +342,7 @@ const SizeSelect = ({
                 }}
               >
                 {opt}
-                {selected && <Check size={13} />}
+                {selected && <AdminIcon name="check" size={13} />}
               </button>
             )
           })}
@@ -264,9 +357,16 @@ interface RangeReadoutProps {
   end: number
   total: number
   itemLabel: string
+  loading?: boolean
 }
 
-const RangeReadout = ({ start, end, total, itemLabel }: RangeReadoutProps) => (
+const RangeReadout = ({
+  start,
+  end,
+  total,
+  itemLabel,
+  loading,
+}: RangeReadoutProps) => (
   <div
     style={{
       display: 'flex',
@@ -275,6 +375,7 @@ const RangeReadout = ({ start, end, total, itemLabel }: RangeReadoutProps) => (
       minWidth: 0,
     }}
   >
+    {loading && <Spinner />}
     <span
       style={{
         fontFamily: ADMIN_MONO,
@@ -358,6 +459,7 @@ export const Pagination = ({
             end={state.end}
             total={state.total}
             itemLabel={itemLabel}
+            loading={loading}
           />
           {showSizeSelector && (
             <SizeSelect
@@ -384,7 +486,7 @@ export const Pagination = ({
             grow
             ariaLabel={COPY.previousAriaLabel}
           >
-            <ChevronLeft size={16} /> {COPY.prev}
+            <AdminIcon name="chevL" size={16} /> {COPY.prev}
           </PagerBtn>
           <div
             style={{
@@ -419,7 +521,7 @@ export const Pagination = ({
             grow
             ariaLabel={COPY.nextAriaLabel}
           >
-            {COPY.next} <ChevronRight size={16} />
+            {COPY.next} <AdminIcon name="chevR" size={16} />
           </PagerBtn>
         </div>
       </nav>
@@ -443,6 +545,7 @@ export const Pagination = ({
           end={state.end}
           total={state.total}
           itemLabel={itemLabel}
+          loading={loading}
         />
         {showSizeSelector && (
           <>
@@ -478,14 +581,14 @@ export const Pagination = ({
             disabled={state.atFirst}
             ariaLabel={COPY.firstAriaLabel}
           >
-            <ChevronsLeft size={14} />
+            <AdminIcon name="chevsL" size={14} />
           </PagerBtn>
           <PagerBtn
             onClick={() => go(state.page - 1)}
             disabled={state.atFirst}
             ariaLabel={COPY.previousAriaLabel}
           >
-            <ChevronLeft size={14} />
+            <AdminIcon name="chevL" size={14} />
           </PagerBtn>
           {window.map((pageNumber, idx) =>
             pageNumber === '…' ? (
@@ -518,14 +621,14 @@ export const Pagination = ({
             disabled={state.atLast}
             ariaLabel={COPY.nextAriaLabel}
           >
-            <ChevronRight size={14} />
+            <AdminIcon name="chevR" size={14} />
           </PagerBtn>
           <PagerBtn
             onClick={() => go(state.totalPages)}
             disabled={state.atLast}
             ariaLabel={COPY.lastAriaLabel}
           >
-            <ChevronsRight size={14} />
+            <AdminIcon name="chevsR" size={14} />
           </PagerBtn>
         </div>
       </div>
