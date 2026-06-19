@@ -5,6 +5,7 @@ import { Check } from 'lucide-react'
 import {
   ConfidenceBar,
   AdminButton,
+  Pagination,
   StatusBadge,
 } from '@/components/admin/primitives'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
@@ -81,12 +82,19 @@ interface AdminReviewMobileProps {
   ) => Promise<void>
   initialTab?: 'flags' | 'prices' | 'missing' | 'all-events'
   pricesMissingOnly: boolean
-  hasMorePriceEvents: boolean
-  priceLoadingMore?: boolean
+  priceEventsPage: number
+  priceEventsPageSize: number
+  priceEventsTotal: number
   onTogglePriceFilter: () => void
-  onLoadMorePriceEvents: () => void
+  onPriceEventsPageChange: (next: number) => void
+  onPriceEventsPageSizeChange: (next: number) => void
   missingEvents: MissingRowEvent[]
   missingLoading?: boolean
+  missingPage?: number
+  missingPageSize?: number
+  missingTotal?: number
+  onMissingPageChange?: (next: number) => void
+  onMissingPageSizeChange?: (next: number) => void
   onMarkMissingPostponed: (id: string) => Promise<void>
   onMarkMissingCancelled: (id: string) => Promise<void>
   onDismissMissing: (id: string) => Promise<void>
@@ -94,6 +102,11 @@ interface AdminReviewMobileProps {
   onAllEventsRowClick?: (id: string) => void
   allEventsFilters?: AllEventsFilters
   onAllEventsFiltersChange?: (next: AllEventsFilters) => void
+  allEventsPagination?: { page: number; pageSize: number }
+  onAllEventsPaginationChange?: (next: {
+    page: number
+    pageSize: number
+  }) => void
   allEventsApi?: AllEventsApi
   onAllEventsEdit?: (event: AllEvent) => void
   onAllEventsViewDetail?: (event: AllEvent) => void
@@ -582,12 +595,19 @@ export function AdminReviewMobile({
   onAddPrice,
   initialTab = 'flags',
   pricesMissingOnly,
-  hasMorePriceEvents,
-  priceLoadingMore = false,
+  priceEventsPage,
+  priceEventsPageSize,
+  priceEventsTotal,
   onTogglePriceFilter,
-  onLoadMorePriceEvents,
+  onPriceEventsPageChange,
+  onPriceEventsPageSizeChange,
   missingEvents,
   missingLoading = false,
+  missingPage,
+  missingPageSize,
+  missingTotal,
+  onMissingPageChange,
+  onMissingPageSizeChange,
   onMarkMissingPostponed,
   onMarkMissingCancelled,
   onDismissMissing,
@@ -595,6 +615,8 @@ export function AdminReviewMobile({
   onAllEventsRowClick,
   allEventsFilters,
   onAllEventsFiltersChange,
+  allEventsPagination,
+  onAllEventsPaginationChange,
   allEventsApi,
   onAllEventsEdit,
   onAllEventsViewDetail,
@@ -1082,26 +1104,15 @@ export function AdminReviewMobile({
                       onAddPrice={onAddPrice}
                     />
                   ))}
-                  {(hasMorePriceEvents || priceLoadingMore) && (
-                    <div
-                      style={{
-                        padding: '10px 16px',
-                        borderTop: '1px solid var(--border)',
-                        display: 'flex',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <AdminButton
-                        variant="ghost"
-                        size="sm"
-                        onClick={onLoadMorePriceEvents}
-                        disabled={priceLoadingMore}
-                      >
-                        {priceLoadingMore
-                          ? ADMIN_COPY.review.adminReviewMobile.loadingMore
-                          : ADMIN_COPY.review.adminReviewMobile.loadMore}
-                      </AdminButton>
-                    </div>
+                  {priceEvents.length > 0 && (
+                    <Pagination
+                      page={priceEventsPage}
+                      pageSize={priceEventsPageSize}
+                      total={priceEventsTotal}
+                      onPageChange={onPriceEventsPageChange}
+                      onPageSizeChange={onPriceEventsPageSizeChange}
+                      itemLabel="events"
+                    />
                   )}
                 </>
               )}
@@ -1121,6 +1132,17 @@ export function AdminReviewMobile({
             isDesktop={false}
             nowIso={new Date().toISOString()}
             loading={missingLoading}
+            {...(missingPage !== undefined ? { page: missingPage } : {})}
+            {...(missingPageSize !== undefined
+              ? { pageSize: missingPageSize }
+              : {})}
+            {...(missingTotal !== undefined ? { total: missingTotal } : {})}
+            {...(onMissingPageChange
+              ? { onPageChange: onMissingPageChange }
+              : {})}
+            {...(onMissingPageSizeChange
+              ? { onPageSizeChange: onMissingPageSizeChange }
+              : {})}
             onMarkPostponed={onMarkMissingPostponed}
             onMarkCancelled={onMarkMissingCancelled}
             onDismiss={onDismissMissing}
@@ -1135,6 +1157,12 @@ export function AdminReviewMobile({
             onRowClick={onAllEventsRowClick ?? noopRowClick}
             filters={allEventsFilters ?? EMPTY_FILTERS}
             onFiltersChange={onAllEventsFiltersChange ?? (() => undefined)}
+            {...(allEventsPagination
+              ? { pagination: allEventsPagination }
+              : {})}
+            {...(onAllEventsPaginationChange
+              ? { onPaginationChange: onAllEventsPaginationChange }
+              : {})}
             {...(allEventsApi ? { api: allEventsApi } : {})}
             {...(onAllEventsEdit ? { onEdit: onAllEventsEdit } : {})}
             {...(onAllEventsViewDetail

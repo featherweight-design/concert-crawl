@@ -12,5 +12,13 @@ export { Sparkline } from './Sparkline'
 export { ConfidenceBar } from './ConfidenceBar'
 export { SectionHead } from './SectionHead'
 export { MetaCard } from './MetaCard'
+export { Pagination } from './Pagination'
+export type { PaginationProps } from './Pagination'
+export {
+  PAGINATION_DEFAULT_PAGE_SIZE,
+  PAGINATION_PAGE_SIZE_OPTIONS,
+  derivePagination,
+  pageWindow,
+} from './pagination-logic'
 export type { StatusKind } from './utils'
 export { formatCost, confidenceColor } from './utils'

@@ -128,6 +128,64 @@ export const filtersToFetchQuery = (filters: AllEventsFilters): string => {
   return params.toString()
 }
 
+// Pagination state lives in the URL alongside filters but is tracked
+// separately so changing `page` doesn't churn the filter-fingerprint that
+// useQuery keys off of. Defaults match the new pagination component:
+// page 1, 20 rows per page (matches PAGINATION_DEFAULT_PAGE_SIZE).
+export const PAGINATION_DEFAULT_PAGE = 1
+export const PAGINATION_URL_DEFAULT_PAGE_SIZE = 20
+export const PAGINATION_PAGE_SIZE_OPTIONS = [20, 50, 100] as const
+
+export interface PaginationState {
+  page: number
+  pageSize: number
+}
+
+export const EMPTY_PAGINATION: PaginationState = {
+  page: PAGINATION_DEFAULT_PAGE,
+  pageSize: PAGINATION_URL_DEFAULT_PAGE_SIZE,
+}
+
+const clampPage = (raw: number): number =>
+  Number.isFinite(raw) && raw >= 1 ? Math.floor(raw) : PAGINATION_DEFAULT_PAGE
+
+const clampPageSize = (raw: number): number => {
+  if (!Number.isFinite(raw)) return PAGINATION_URL_DEFAULT_PAGE_SIZE
+  // Snap to the nearest allowed option — URL deep-links with garbage values
+  // (e.g. ?pageSize=37) fall back to a known good one.
+  return (
+    PAGINATION_PAGE_SIZE_OPTIONS.find((opt) => opt === Math.floor(raw)) ??
+    PAGINATION_URL_DEFAULT_PAGE_SIZE
+  )
+}
+
+export const parsePaginationFromParams = (
+  params: URLSearchParams,
+): PaginationState => ({
+  page: clampPage(Number(params.get('page') ?? PAGINATION_DEFAULT_PAGE)),
+  pageSize: clampPageSize(
+    Number(params.get('pageSize') ?? PAGINATION_URL_DEFAULT_PAGE_SIZE),
+  ),
+})
+
+export const serializePaginationToParams = (
+  pagination: PaginationState,
+  base?: URLSearchParams,
+): URLSearchParams => {
+  const next = new URLSearchParams(base?.toString() ?? '')
+  // Always strip first so unsetting (back to defaults) actually removes
+  // the keys from the URL.
+  next.delete('page')
+  next.delete('pageSize')
+  if (pagination.page !== PAGINATION_DEFAULT_PAGE) {
+    next.set('page', String(pagination.page))
+  }
+  if (pagination.pageSize !== PAGINATION_URL_DEFAULT_PAGE_SIZE) {
+    next.set('pageSize', String(pagination.pageSize))
+  }
+  return next
+}
+
 export const countActiveFilters = (filters: AllEventsFilters): number => {
   let count = 0
   if (effectiveQuery(filters)) count++

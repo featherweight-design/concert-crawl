@@ -143,3 +143,62 @@ describe('countActiveFilters', () => {
     expect(countActiveFilters({ ...EMPTY_FILTERS, query: 'a' })).toBe(0)
   })
 })
+
+import {
+  EMPTY_PAGINATION,
+  PAGINATION_DEFAULT_PAGE,
+  PAGINATION_URL_DEFAULT_PAGE_SIZE,
+  parsePaginationFromParams,
+  serializePaginationToParams,
+} from './filters'
+
+describe('parsePaginationFromParams', () => {
+  it('returns defaults when the URL is empty', () => {
+    expect(parsePaginationFromParams(new URLSearchParams())).toEqual(
+      EMPTY_PAGINATION,
+    )
+  })
+
+  it('parses page + pageSize from the URL', () => {
+    const params = new URLSearchParams('page=3&pageSize=50')
+    expect(parsePaginationFromParams(params)).toEqual({ page: 3, pageSize: 50 })
+  })
+
+  it('snaps a garbage pageSize to the default rather than passing it through', () => {
+    const params = new URLSearchParams('pageSize=37')
+    expect(parsePaginationFromParams(params).pageSize).toBe(
+      PAGINATION_URL_DEFAULT_PAGE_SIZE,
+    )
+  })
+
+  it('clamps page<=0 up to 1', () => {
+    expect(parsePaginationFromParams(new URLSearchParams('page=0')).page).toBe(
+      PAGINATION_DEFAULT_PAGE,
+    )
+    expect(parsePaginationFromParams(new URLSearchParams('page=-5')).page).toBe(
+      PAGINATION_DEFAULT_PAGE,
+    )
+  })
+})
+
+describe('serializePaginationToParams', () => {
+  it('omits page + pageSize when they match the defaults', () => {
+    const next = serializePaginationToParams(EMPTY_PAGINATION)
+    expect(next.toString()).toBe('')
+  })
+
+  it('writes only the non-default keys and preserves unrelated params', () => {
+    const base = new URLSearchParams('tab=all-events')
+    const next = serializePaginationToParams({ page: 3, pageSize: 50 }, base)
+    expect(next.get('tab')).toBe('all-events')
+    expect(next.get('page')).toBe('3')
+    expect(next.get('pageSize')).toBe('50')
+  })
+
+  it('strips previously-set keys when state returns to defaults', () => {
+    const base = new URLSearchParams('page=3&pageSize=50')
+    const next = serializePaginationToParams(EMPTY_PAGINATION, base)
+    expect(next.get('page')).toBeNull()
+    expect(next.get('pageSize')).toBeNull()
+  })
+})

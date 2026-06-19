@@ -29,6 +29,13 @@ import { AllEventsTabContent } from './AllEventsTabContent'
 
 // Tests get their own QueryClient with retries off so a single failure
 // surfaces immediately (TanStack's default retries would mask the assertion).
+// The endpoint now returns { rows, total } when count=true. Tests still write
+// row arrays inline for readability; this helper wraps them into the new shape.
+const counted = <TRow,>(rows: TRow[], total?: number) => ({
+  rows,
+  total: total ?? rows.length,
+})
+
 const renderWithClient = (ui: ReactElement) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -90,17 +97,17 @@ describe('AllEventsTabContent', () => {
   })
 
   it('fetches /v1/admin/events with no verified param on mount', async () => {
-    mockApiGet.mockResolvedValue([])
+    mockApiGet.mockResolvedValue(counted([]))
     renderWithClient(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
     await waitFor(() => {
       expect(mockApiGet).toHaveBeenCalledTimes(1)
     })
     const [url] = mockApiGet.mock.calls[0] ?? []
-    expect(url).toBe('/v1/admin/events?limit=20&offset=0')
+    expect(url).toBe('/v1/admin/events?count=true&limit=20&offset=0')
   })
 
   it('renders the desktop table when events arrive', async () => {
-    mockApiGet.mockResolvedValue([buildEvent()])
+    mockApiGet.mockResolvedValue(counted([buildEvent()]))
     renderWithClient(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
     await waitFor(() => {
       expect(screen.getByText('Lord Huron')).toBeTruthy()
@@ -108,7 +115,9 @@ describe('AllEventsTabContent', () => {
   })
 
   it('renders mobile cards when isDesktop=false', async () => {
-    mockApiGet.mockResolvedValue([buildEvent({ id: 'evt-7', title: 'Spoon' })])
+    mockApiGet.mockResolvedValue(
+      counted([buildEvent({ id: 'evt-7', title: 'Spoon' })]),
+    )
     renderWithClient(
       <AllEventsTabContent isDesktop={false} onRowClick={() => {}} />,
     )
@@ -118,7 +127,7 @@ describe('AllEventsTabContent', () => {
   })
 
   it('renders the empty state when no events come back', async () => {
-    mockApiGet.mockResolvedValue([])
+    mockApiGet.mockResolvedValue(counted([]))
     renderWithClient(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
     await waitFor(() => {
       expect(screen.getByText('No events to show.')).toBeTruthy()
@@ -126,7 +135,7 @@ describe('AllEventsTabContent', () => {
   })
 
   it('calls onRowClick with the clicked event id', async () => {
-    mockApiGet.mockResolvedValue([buildEvent({ id: 'evt-77' })])
+    mockApiGet.mockResolvedValue(counted([buildEvent({ id: 'evt-77' })]))
     const onRowClick = vi.fn()
     renderWithClient(<AllEventsTabContent isDesktop onRowClick={onRowClick} />)
     await waitFor(() => {
@@ -136,33 +145,40 @@ describe('AllEventsTabContent', () => {
     expect(onRowClick).toHaveBeenCalledWith('evt-77')
   })
 
-  // 15s timeout: rendering 50 mock rows + interactions can exceed the
-  // default 5s ceiling on slower CI runners. The local run finishes in
-  // ~900ms so the extra budget is purely a flake-suppressant.
-  it(
-    'paginates: Load more fetches with the next offset and appends',
-    { timeout: 15000 },
-    async () => {
-      const pageOne = Array.from({ length: 20 }, (_, idx) =>
-        buildEvent({ id: `evt-${idx}`, title: `Show ${idx}` }),
-      )
-      const pageTwo = [buildEvent({ id: 'evt-late', title: 'Late Show' })]
-      mockApiGet.mockResolvedValueOnce(pageOne).mockResolvedValueOnce(pageTwo)
-      renderWithClient(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
-      await waitFor(() => {
-        expect(screen.getByText('Show 0')).toBeTruthy()
-      })
-      fireEvent.click(screen.getByRole('button', { name: 'Load more' }))
-      await waitFor(() => {
-        expect(mockApiGet).toHaveBeenCalledTimes(2)
-      })
-      const secondCallUrl = mockApiGet.mock.calls[1]?.[0]
-      expect(secondCallUrl).toBe('/v1/admin/events?limit=20&offset=20')
-      await waitFor(() => {
-        expect(screen.getByText('Late Show')).toBeTruthy()
-      })
-    },
-  )
+  it('renders the Pagination footer when results paginate, with the total readout', async () => {
+    const rows = Array.from({ length: 20 }, (_, idx) =>
+      buildEvent({ id: `evt-${idx}`, title: `Show ${idx}` }),
+    )
+    mockApiGet.mockResolvedValue(counted(rows, 100))
+    renderWithClient(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
+    await waitFor(() => {
+      expect(screen.getByText('Show 0')).toBeTruthy()
+    })
+    expect(screen.getByLabelText('Pagination')).toBeTruthy()
+    expect(screen.getByLabelText('Page 5')).toBeTruthy()
+  })
+
+  it('clicking Next emits onPaginationChange with page 2 (driven by parent)', async () => {
+    const rows = Array.from({ length: 20 }, (_, idx) =>
+      buildEvent({ id: `evt-${idx}`, title: `Show ${idx}` }),
+    )
+    mockApiGet.mockResolvedValue(counted(rows, 100))
+    const onPaginationChange = vi.fn()
+    renderWithClient(
+      <AllEventsTabContent
+        isDesktop
+        onRowClick={() => {}}
+        onPaginationChange={onPaginationChange}
+      />,
+    )
+    await waitFor(() => {
+      expect(screen.getByText('Show 0')).toBeTruthy()
+    })
+    fireEvent.click(screen.getByLabelText('Next page'))
+    expect(onPaginationChange).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 2 }),
+    )
+  })
 
   it('shows the error banner (not empty state) when the initial fetch fails', async () => {
     mockApiGet.mockRejectedValue(new Error('boom'))
@@ -173,43 +189,23 @@ describe('AllEventsTabContent', () => {
     expect(screen.queryByText('No events to show.')).toBeNull()
   })
 
-  it(
-    'keeps Load more visible after a transient pagination failure',
-    { timeout: 15000 },
-    async () => {
-      const pageOne = Array.from({ length: 20 }, (_, idx) =>
-        buildEvent({ id: `evt-${idx}`, title: `Show ${idx}` }),
-      )
-      mockApiGet
-        .mockResolvedValueOnce(pageOne)
-        .mockRejectedValueOnce(new Error('transient'))
-      renderWithClient(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
-      await waitFor(() => {
-        expect(screen.getByText('Show 0')).toBeTruthy()
-      })
-      fireEvent.click(screen.getByRole('button', { name: 'Load more' }))
-      await waitFor(() => {
-        expect(screen.getByText('Failed to load events.')).toBeTruthy()
-      })
-      // The Load-more button must remain so the admin can retry.
-      expect(screen.getByRole('button', { name: 'Load more' })).toBeTruthy()
-    },
-  )
-
-  it('hides Load more when the last fetch returned fewer than the page size', async () => {
-    mockApiGet.mockResolvedValue([buildEvent()])
+  it('hides the Pagination footer when there is a single page of results', async () => {
+    mockApiGet.mockResolvedValue(counted([buildEvent()], 1))
     renderWithClient(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
     await waitFor(() => {
       expect(screen.getByText('Lord Huron')).toBeTruthy()
     })
-    expect(screen.queryByRole('button', { name: 'Load more' })).toBeNull()
+    // The footer renders but only as the range readout; no page-2 button.
+    expect(screen.queryByLabelText('Page 2')).toBeNull()
   })
 
   it('clears the action-error banner when filters change', async () => {
     // First render: fetch succeeds, but a row mutation fails → banner shows.
     // Use verified:false so the menu shows "Verify" (the verified=true variant
     // shows "Send back to review" instead).
-    mockApiGet.mockResolvedValue([buildEvent({ id: 'evt-a', verified: false })])
+    mockApiGet.mockResolvedValue(
+      counted([buildEvent({ id: 'evt-a', verified: false })]),
+    )
     const api = buildApiMock({
       verify: vi.fn().mockRejectedValue(new Error('mutation boom')),
     })
@@ -256,7 +252,7 @@ describe('AllEventsTabContent', () => {
 
   describe('bulk selection', () => {
     it('does not render row checkboxes when no api prop is supplied', async () => {
-      mockApiGet.mockResolvedValue([buildEvent()])
+      mockApiGet.mockResolvedValue(counted([buildEvent()]))
       renderWithClient(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
       await waitFor(() => {
         expect(screen.getByText('Lord Huron')).toBeTruthy()
@@ -265,10 +261,12 @@ describe('AllEventsTabContent', () => {
     })
 
     it('shows the bulk dock when at least one row is selected', async () => {
-      mockApiGet.mockResolvedValue([
-        buildEvent({ id: 'evt-a', title: 'Spoon' }),
-        buildEvent({ id: 'evt-b', title: 'Phoebe' }),
-      ])
+      mockApiGet.mockResolvedValue(
+        counted([
+          buildEvent({ id: 'evt-a', title: 'Spoon' }),
+          buildEvent({ id: 'evt-b', title: 'Phoebe' }),
+        ]),
+      )
       const api = buildApiMock()
       renderWithClient(
         <AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />,
@@ -279,15 +277,17 @@ describe('AllEventsTabContent', () => {
       const rowCheckboxes = screen.getAllByLabelText('Select event')
       const firstCheckbox = rowCheckboxes[0]!
       fireEvent.click(firstCheckbox)
-      expect(screen.getByRole('region', { name: 'Bulk actions' })).toBeTruthy()
-      expect(screen.getByText('1')).toBeTruthy()
+      const dock = screen.getByRole('region', { name: 'Bulk actions' })
+      expect(within(dock).getByText('1')).toBeTruthy()
     })
 
     it('select-all toggles every rendered row', async () => {
-      mockApiGet.mockResolvedValue([
-        buildEvent({ id: 'evt-a', title: 'Spoon' }),
-        buildEvent({ id: 'evt-b', title: 'Phoebe' }),
-      ])
+      mockApiGet.mockResolvedValue(
+        counted([
+          buildEvent({ id: 'evt-a', title: 'Spoon' }),
+          buildEvent({ id: 'evt-b', title: 'Phoebe' }),
+        ]),
+      )
       const api = buildApiMock()
       renderWithClient(
         <AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />,
@@ -297,14 +297,15 @@ describe('AllEventsTabContent', () => {
       })
       const selectAll = screen.getByLabelText('Select all events on the page')
       fireEvent.click(selectAll)
-      expect(screen.getByText('2')).toBeTruthy()
+      const dock = screen.getByRole('region', { name: 'Bulk actions' })
+      expect(within(dock).getByText('2')).toBeTruthy()
       // Toggle off — selection clears and dock disappears.
       fireEvent.click(selectAll)
       expect(screen.queryByRole('region', { name: 'Bulk actions' })).toBeNull()
     })
 
     it('clear button empties the selection', async () => {
-      mockApiGet.mockResolvedValue([buildEvent({ id: 'evt-a' })])
+      mockApiGet.mockResolvedValue(counted([buildEvent({ id: 'evt-a' })]))
       const api = buildApiMock()
       renderWithClient(
         <AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />,
@@ -320,11 +321,13 @@ describe('AllEventsTabContent', () => {
 
     it('Send back to review confirm calls api.bulkUnverify with selected ids', async () => {
       mockApiGet
-        .mockResolvedValueOnce([
-          buildEvent({ id: 'evt-a', title: 'Spoon' }),
-          buildEvent({ id: 'evt-b', title: 'Phoebe' }),
-        ])
-        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce(
+          counted([
+            buildEvent({ id: 'evt-a', title: 'Spoon' }),
+            buildEvent({ id: 'evt-b', title: 'Phoebe' }),
+          ]),
+        )
+        .mockResolvedValueOnce(counted([]))
       const api = buildApiMock()
       renderWithClient(
         <AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />,
@@ -344,11 +347,13 @@ describe('AllEventsTabContent', () => {
 
     it('Mark non-concert confirm calls api.bulkMarkNonConcert with selected ids', async () => {
       mockApiGet
-        .mockResolvedValueOnce([
-          buildEvent({ id: 'evt-a', title: 'Spoon', artist: 'Spoon' }),
-          buildEvent({ id: 'evt-b', title: 'Phoebe', artist: 'Phoebe' }),
-        ])
-        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce(
+          counted([
+            buildEvent({ id: 'evt-a', title: 'Spoon', artist: 'Spoon' }),
+            buildEvent({ id: 'evt-b', title: 'Phoebe', artist: 'Phoebe' }),
+          ]),
+        )
+        .mockResolvedValueOnce(counted([]))
       const api = buildApiMock()
       renderWithClient(
         <AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />,
@@ -368,11 +373,13 @@ describe('AllEventsTabContent', () => {
 
     it('Delete confirm requires typing DELETE before calling api.bulkDelete', async () => {
       mockApiGet
-        .mockResolvedValueOnce([
-          buildEvent({ id: 'evt-a', title: 'Spoon', artist: 'Spoon' }),
-          buildEvent({ id: 'evt-b', title: 'Phoebe', artist: 'Phoebe' }),
-        ])
-        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce(
+          counted([
+            buildEvent({ id: 'evt-a', title: 'Spoon', artist: 'Spoon' }),
+            buildEvent({ id: 'evt-b', title: 'Phoebe', artist: 'Phoebe' }),
+          ]),
+        )
+        .mockResolvedValueOnce(counted([]))
       const api = buildApiMock()
       renderWithClient(
         <AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />,
@@ -397,8 +404,8 @@ describe('AllEventsTabContent', () => {
 
     it('clears the selection after a successful bulk action (refetch fires)', async () => {
       mockApiGet
-        .mockResolvedValueOnce([buildEvent({ id: 'evt-a' })])
-        .mockResolvedValueOnce([buildEvent({ id: 'evt-a' })])
+        .mockResolvedValueOnce(counted([buildEvent({ id: 'evt-a' })]))
+        .mockResolvedValueOnce(counted([buildEvent({ id: 'evt-a' })]))
       const api = buildApiMock()
       renderWithClient(
         <AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />,

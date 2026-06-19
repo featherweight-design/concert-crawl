@@ -13,11 +13,13 @@ export interface PricesTabContentProps {
   onDenySubmission: PendingProps['onDeny']
   priceEvents: CoverageProps['events']
   priceEventsLoading: NonNullable<CoverageProps['loading']>
-  hasMorePriceEvents: CoverageProps['hasMore']
-  priceLoadingMore: NonNullable<CoverageProps['loadingMore']>
   pricesMissingOnly: CoverageProps['missingOnly']
   onTogglePriceFilter: CoverageProps['onToggleFilter']
-  onLoadMorePriceEvents: CoverageProps['onLoadMore']
+  priceEventsPage: CoverageProps['page']
+  priceEventsPageSize: CoverageProps['pageSize']
+  priceEventsTotal: CoverageProps['total']
+  onPriceEventsPageChange: CoverageProps['onPageChange']
+  onPriceEventsPageSizeChange: CoverageProps['onPageSizeChange']
   onAddPrice: NonNullable<CoverageProps['onAddPrice']>
 }
 
@@ -27,11 +29,13 @@ export const PricesTabContent = ({
   onDenySubmission,
   priceEvents,
   priceEventsLoading,
-  hasMorePriceEvents,
-  priceLoadingMore,
   pricesMissingOnly,
   onTogglePriceFilter,
-  onLoadMorePriceEvents,
+  priceEventsPage,
+  priceEventsPageSize,
+  priceEventsTotal,
+  onPriceEventsPageChange,
+  onPriceEventsPageSizeChange,
   onAddPrice,
 }: PricesTabContentProps) => (
   <div
@@ -48,10 +52,12 @@ export const PricesTabContent = ({
       loading={priceEventsLoading}
       onAddPrice={onAddPrice}
       missingOnly={pricesMissingOnly}
-      hasMore={hasMorePriceEvents}
-      loadingMore={priceLoadingMore}
       onToggleFilter={onTogglePriceFilter}
-      onLoadMore={onLoadMorePriceEvents}
+      page={priceEventsPage}
+      pageSize={priceEventsPageSize}
+      total={priceEventsTotal}
+      onPageChange={onPriceEventsPageChange}
+      onPageSizeChange={onPriceEventsPageSizeChange}
     />
   </div>
 )

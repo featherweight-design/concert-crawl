@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { Pagination } from '@/components/admin/primitives'
 import { MissingTable } from '../missing/MissingTable'
 import { MissingMobile } from '../missing/MissingMobile'
 import { type MissingRowEvent } from '../missing/MissingRow'
@@ -14,6 +15,13 @@ export interface MissingTabContentProps {
   // gate the empty state ("Nothing's gone missing.") flashes for one paint
   // before the first fetch resolves.
   loading?: boolean
+  // Pagination wiring — optional so the mobile shell can pass through the
+  // same total/handlers it gets from the parent.
+  page?: number
+  pageSize?: number
+  total?: number
+  onPageChange?: (next: number) => void
+  onPageSizeChange?: (next: number) => void
   onMarkPostponed: (id: string) => Promise<void>
   onMarkCancelled: (id: string) => Promise<void>
   onDismiss: (id: string) => Promise<void>
@@ -52,6 +60,11 @@ export const MissingTabContent = ({
   isDesktop,
   nowIso,
   loading = false,
+  page,
+  pageSize,
+  total,
+  onPageChange,
+  onPageSizeChange,
   onMarkPostponed,
   onMarkCancelled,
   onDismiss,
@@ -78,19 +91,24 @@ export const MissingTabContent = ({
 
   if (loading) return <Skeleton />
 
-  if (isDesktop) {
-    return (
-      <MissingTable
-        events={events}
-        nowIso={nowIso}
-        onMarkPostponed={wrappedPostponed}
-        onMarkCancelled={wrappedCancelled}
-        onDismiss={wrappedDismiss}
-        pendingIds={pendingIds}
-      />
-    )
-  }
-  return (
+  const showPager =
+    page !== undefined &&
+    pageSize !== undefined &&
+    total !== undefined &&
+    onPageChange !== undefined &&
+    onPageSizeChange !== undefined &&
+    events.length > 0
+
+  const table = isDesktop ? (
+    <MissingTable
+      events={events}
+      nowIso={nowIso}
+      onMarkPostponed={wrappedPostponed}
+      onMarkCancelled={wrappedCancelled}
+      onDismiss={wrappedDismiss}
+      pendingIds={pendingIds}
+    />
+  ) : (
     <MissingMobile
       events={events}
       nowIso={nowIso}
@@ -99,5 +117,21 @@ export const MissingTabContent = ({
       onDismiss={wrappedDismiss}
       pendingIds={pendingIds}
     />
+  )
+
+  if (!showPager) return table
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+      {table}
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+        itemLabel="events"
+      />
+    </div>
   )
 }

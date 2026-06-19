@@ -1,6 +1,7 @@
 import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
 import { ReviewPageClient } from '@/components/admin/review/ReviewPageClient'
+import { type ReviewCounts } from '@/lib/queries/use-admin-review'
 
 interface EventFlag {
   id: string
@@ -40,22 +41,29 @@ export default async function ReviewPage() {
   const token = await getToken()
   if (!token) return null
 
-  // Only fetch the two above-the-fold panels on the server.
-  // PriceCoverageTable (below the fold) fetches its own data client-side.
-  const [events, submissions] = await Promise.all([
+  // Above-the-fold SSR: event flags + price submissions for the first paint,
+  // plus aggregate counts so the tab pills render with their numbers without
+  // waiting on each tab to activate. PriceCoverageTable fetches client-side
+  // (below the fold).
+  const [events, submissions, counts] = await Promise.all([
     apiClient
-      // limit must match REVIEW_EVENT_FLAGS_PAGE_SIZE so the client's
-      // useInfiniteQuery can tell the SSR page is a full page (=> hasNextPage)
-      // vs a final short page. A mismatch left hasNextPage=false and broke
-      // pagination on mount.
+      // limit matches REVIEW_EVENT_FLAGS_PAGE_SIZE so the client's first
+      // useQuery call doesn't immediately invalidate-and-refetch.
       .get<EventFlag[]>('/v1/admin/events?verified=false&limit=20', token)
       .catch(() => [] as EventFlag[]),
     apiClient
       .get<PriceSubmission[]>('/v1/admin/prices/submissions', token)
       .catch(() => [] as PriceSubmission[]),
+    apiClient
+      .get<ReviewCounts>('/v1/admin/review/counts', token)
+      .catch(() => ({ eventFlags: 0, prices: 0, missing: 0 }) as ReviewCounts),
   ])
 
   return (
-    <ReviewPageClient initialEvents={events} initialSubmissions={submissions} />
+    <ReviewPageClient
+      initialEvents={events}
+      initialSubmissions={submissions}
+      initialCounts={counts}
+    />
   )
 }

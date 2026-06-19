@@ -1,10 +1,6 @@
 'use client'
 
-import {
-  useInfiniteQuery,
-  useQuery,
-  useQueryClient,
-} from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@clerk/nextjs'
 import { apiClient } from '@/lib/api'
 import {
@@ -14,9 +10,15 @@ import {
 import { type AllEvent } from '@/components/admin/review/all/types'
 import { type MissingRowEvent } from '@/components/admin/review/missing/MissingRow'
 
-// Default page sizes — small enough that returning to a tab feels instant,
-// large enough that admins rarely need a second page for routine work. We're
-// migrating these from the historical defaults (50–200) as part of #688.
+// Page-replacement model: each `useQuery` returns just the rows for the
+// current page plus the server-reported `total`. The new <Pagination/>
+// component drives `page` / `pageSize`; the query key includes both so
+// changing them produces fresh data (TanStack's cache holds adjacent pages
+// for the same filter, so flipping forward and back is instant).
+
+// Default page sizes per surface. These line up with the design handoff
+// default (20) for All Events; Missing keeps a larger default because the
+// dataset is naturally small and admins want it all at a glance.
 export const REVIEW_ALL_EVENTS_PAGE_SIZE = 20
 export const REVIEW_PRICE_EVENTS_PAGE_SIZE = 20
 export const REVIEW_EVENT_FLAGS_PAGE_SIZE = 20
@@ -56,130 +58,150 @@ export interface PriceEvent {
   lastOutcome: string | null
 }
 
-// Stable query key roots. Hooks combine these with the filter / page params
-// that affect server output. `queryClient.invalidateQueries({ queryKey: [...,
-// 'review'] })` blasts everything when a coarse refresh is needed.
+// Backend response shape when ?count=true is passed.
+interface CountedResponse<TRow> {
+  rows: TRow[]
+  total: number
+}
+
+// Aggregate counts for the Review tab pills — surfaced on initial mount via
+// the SSR fetch in /admin/review/page.tsx and refreshed client-side after
+// mutations.
+export interface ReviewCounts {
+  eventFlags: number
+  prices: number
+  missing: number
+}
+
+// Stable query key roots. Each `(page, pageSize)` pair gets its own cache
+// slot, so paging back is instant. Filter changes produce a fresh filterQuery
+// which moves to a new slot — selection clears in the parent on that signal.
 export const reviewQueryKeys = {
   root: ['admin', 'review'] as const,
-  allEvents: (filterQuery: string) =>
-    ['admin', 'review', 'all-events', filterQuery] as const,
-  eventFlags: ['admin', 'review', 'event-flags'] as const,
-  missing: ['admin', 'review', 'missing'] as const,
-  priceEvents: (filter: 'missing' | 'all') =>
-    ['admin', 'review', 'price-events', filter] as const,
+  counts: ['admin', 'review', 'counts'] as const,
+  allEvents: (filterQuery: string, page: number, pageSize: number) =>
+    ['admin', 'review', 'all-events', filterQuery, page, pageSize] as const,
+  eventFlags: (page: number, pageSize: number) =>
+    ['admin', 'review', 'event-flags', page, pageSize] as const,
+  missing: (page: number, pageSize: number) =>
+    ['admin', 'review', 'missing', page, pageSize] as const,
+  priceEvents: (filter: 'missing' | 'all', page: number, pageSize: number) =>
+    ['admin', 'review', 'price-events', filter, page, pageSize] as const,
+}
+
+export interface PaginatedQueryInput {
+  page: number
+  pageSize: number
+}
+
+// ───── Counts (Review tab pills + sidebar badge) ─────────────────────────────
+export function useReviewCounts(initialData?: ReviewCounts) {
+  const { getToken } = useAuth()
+  return useQuery({
+    queryKey: reviewQueryKeys.counts,
+    queryFn: async (): Promise<ReviewCounts> => {
+      const token = await getToken()
+      if (!token) return { eventFlags: 0, prices: 0, missing: 0 }
+      return apiClient.get<ReviewCounts>('/v1/admin/review/counts', token)
+    },
+    ...(initialData ? { initialData } : {}),
+  })
 }
 
 // ───── All Events tab ────────────────────────────────────────────────────────
-// `useInfiniteQuery` because the table grows page-by-page from a single
-// endpoint with `limit` + `offset`. Each filter change produces a fresh key,
-// so cache for the previous filter sticks around (cheap revisits) and stale
-// fetches can't write into the new filter's state.
 export function useReviewAllEvents(
   filters: AllEventsFilters,
-  pageSize: number = REVIEW_ALL_EVENTS_PAGE_SIZE,
+  pagination: PaginatedQueryInput,
 ) {
   const { getToken } = useAuth()
+  const { page, pageSize } = pagination
   const filterQuery = filtersToFetchQuery(filters)
-  return useInfiniteQuery({
-    queryKey: reviewQueryKeys.allEvents(filterQuery),
-    initialPageParam: 0,
-    queryFn: async ({ pageParam }): Promise<AllEvent[]> => {
+  return useQuery({
+    queryKey: reviewQueryKeys.allEvents(filterQuery, page, pageSize),
+    queryFn: async (): Promise<CountedResponse<AllEvent>> => {
       const token = await getToken()
-      if (!token) return []
+      if (!token) return { rows: [], total: 0 }
+      const offset = (page - 1) * pageSize
       const suffix = filterQuery ? `&${filterQuery}` : ''
-      return apiClient.get<AllEvent[]>(
-        `/v1/admin/events?limit=${pageSize}&offset=${pageParam}${suffix}`,
+      return apiClient.get<CountedResponse<AllEvent>>(
+        `/v1/admin/events?count=true&limit=${pageSize}&offset=${offset}${suffix}`,
         token,
       )
     },
-    getNextPageParam: (lastPage, allPages) =>
-      lastPage.length === pageSize
-        ? allPages.reduce((sum, page) => sum + page.length, 0)
-        : undefined,
+    placeholderData: (prev) => prev,
   })
 }
 
 // ───── Event Flags tab ───────────────────────────────────────────────────────
-// Initial page comes from SSR (`initialData`) so the first paint matches the
-// previous behavior. Additional pages flow through `useInfiniteQuery`.
-export function useReviewEventFlags(
-  initialEvents: EventFlag[],
-  pageSize: number = REVIEW_EVENT_FLAGS_PAGE_SIZE,
-) {
+export function useReviewEventFlags(pagination: PaginatedQueryInput) {
   const { getToken } = useAuth()
-  return useInfiniteQuery({
-    queryKey: reviewQueryKeys.eventFlags,
-    initialPageParam: 0,
-    initialData: { pages: [initialEvents], pageParams: [0] },
-    queryFn: async ({ pageParam }): Promise<EventFlag[]> => {
+  const { page, pageSize } = pagination
+  return useQuery({
+    queryKey: reviewQueryKeys.eventFlags(page, pageSize),
+    queryFn: async (): Promise<CountedResponse<EventFlag>> => {
       const token = await getToken()
-      if (!token) return []
-      return apiClient.get<EventFlag[]>(
-        `/v1/admin/events?verified=false&limit=${pageSize}&offset=${pageParam}`,
+      if (!token) return { rows: [], total: 0 }
+      const offset = (page - 1) * pageSize
+      return apiClient.get<CountedResponse<EventFlag>>(
+        `/v1/admin/events?count=true&verified=false&limit=${pageSize}&offset=${offset}`,
         token,
       )
     },
-    getNextPageParam: (lastPage, allPages) =>
-      lastPage.length === pageSize
-        ? allPages.reduce((sum, page) => sum + page.length, 0)
-        : undefined,
+    placeholderData: (prev) => prev,
   })
 }
 
 // ───── Missing tab ───────────────────────────────────────────────────────────
-// Single fetch, no pagination — the dataset is naturally small (events the
-// crawler stopped seeing). `enabled` gates the fetch until the tab is opened.
+// Paginated single-endpoint query gated on `enabled` until the tab is opened.
 export function useReviewMissingEvents(
   enabled: boolean,
-  pageSize: number = REVIEW_MISSING_PAGE_SIZE,
+  pagination: PaginatedQueryInput,
 ) {
   const { getToken } = useAuth()
+  const { page, pageSize } = pagination
   return useQuery({
-    queryKey: reviewQueryKeys.missing,
+    queryKey: reviewQueryKeys.missing(page, pageSize),
     enabled,
-    queryFn: async (): Promise<MissingRowEvent[]> => {
+    queryFn: async (): Promise<CountedResponse<MissingRowEvent>> => {
       const token = await getToken()
-      if (!token) return []
-      return apiClient.get<MissingRowEvent[]>(
-        `/v1/admin/events?missing=true&limit=${pageSize}`,
+      if (!token) return { rows: [], total: 0 }
+      const offset = (page - 1) * pageSize
+      return apiClient.get<CountedResponse<MissingRowEvent>>(
+        `/v1/admin/events?count=true&missing=true&limit=${pageSize}&offset=${offset}`,
         token,
       )
     },
+    placeholderData: (prev) => prev,
   })
 }
 
 // ───── Price Coverage tab ────────────────────────────────────────────────────
-// Toggle between "missing" and "all" splits into two cache slots so flipping
-// back and forth is instant. Pagination uses `useInfiniteQuery` like All Events.
 export function useReviewPriceEvents(
   filter: 'missing' | 'all',
-  pageSize: number = REVIEW_PRICE_EVENTS_PAGE_SIZE,
+  pagination: PaginatedQueryInput,
 ) {
   const { getToken } = useAuth()
-  return useInfiniteQuery({
-    queryKey: reviewQueryKeys.priceEvents(filter),
-    initialPageParam: 0,
-    queryFn: async ({ pageParam }): Promise<PriceEvent[]> => {
+  const { page, pageSize } = pagination
+  return useQuery({
+    queryKey: reviewQueryKeys.priceEvents(filter, page, pageSize),
+    queryFn: async (): Promise<CountedResponse<PriceEvent>> => {
       const token = await getToken()
-      if (!token) return []
+      if (!token) return { rows: [], total: 0 }
+      const offset = (page - 1) * pageSize
       const missingOnly = filter === 'missing'
-      return apiClient.get<PriceEvent[]>(
-        `/v1/admin/prices/events?missingOnly=${String(missingOnly)}&limit=${pageSize}&offset=${pageParam}`,
+      return apiClient.get<CountedResponse<PriceEvent>>(
+        `/v1/admin/prices/events?count=true&missingOnly=${String(missingOnly)}&limit=${pageSize}&offset=${offset}`,
         token,
       )
     },
-    getNextPageParam: (lastPage, allPages) =>
-      lastPage.length === pageSize
-        ? allPages.reduce((sum, page) => sum + page.length, 0)
-        : undefined,
+    placeholderData: (prev) => prev,
   })
 }
 
 // ───── Invalidation helpers ──────────────────────────────────────────────────
-// Mutations call these on success so the table mirrors server state. We
-// invalidate at the surface level because mutations can affect multiple
-// filter slots (e.g. verifying an event removes it from the unverified list
-// AND adds it to the All Events verified slot).
+// Mutations invalidate at the surface level: every (page, pageSize) slot for
+// a given surface goes stale at once. The active page refetches; the rest
+// refetch lazily on next render.
 
 export function useInvalidateReviewQueries() {
   const queryClient = useQueryClient()
@@ -189,13 +211,19 @@ export function useInvalidateReviewQueries() {
         queryKey: ['admin', 'review', 'all-events'],
       }),
     eventFlags: () =>
-      queryClient.invalidateQueries({ queryKey: reviewQueryKeys.eventFlags }),
+      queryClient.invalidateQueries({
+        queryKey: ['admin', 'review', 'event-flags'],
+      }),
     missing: () =>
-      queryClient.invalidateQueries({ queryKey: reviewQueryKeys.missing }),
+      queryClient.invalidateQueries({
+        queryKey: ['admin', 'review', 'missing'],
+      }),
     priceEvents: () =>
       queryClient.invalidateQueries({
         queryKey: ['admin', 'review', 'price-events'],
       }),
+    counts: () =>
+      queryClient.invalidateQueries({ queryKey: reviewQueryKeys.counts }),
     all: () =>
       queryClient.invalidateQueries({ queryKey: reviewQueryKeys.root }),
   }

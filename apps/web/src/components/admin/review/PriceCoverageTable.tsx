@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import {
   Panel,
+  Pagination,
   StatusBadge,
   AdminButton,
   AdminTable,
@@ -40,10 +41,14 @@ interface PriceCoverageTableProps {
   events: PriceEvent[]
   loading?: boolean
   missingOnly: boolean
-  hasMore: boolean
-  loadingMore?: boolean
+  // True pagination — the parent owns page/pageSize/total and feeds them in;
+  // the Pagination component handles the rest.
+  page: number
+  pageSize: number
+  total: number
+  onPageChange: (next: number) => void
+  onPageSizeChange: (next: number) => void
   onToggleFilter: () => void
-  onLoadMore: () => void
   onAddPrice?: (
     eventId: string,
     priceMin: string,
@@ -92,10 +97,12 @@ export const PriceCoverageTable = ({
   events,
   loading = false,
   missingOnly,
-  hasMore,
-  loadingMore = false,
+  page,
+  pageSize,
+  total,
+  onPageChange,
+  onPageSizeChange,
   onToggleFilter,
-  onLoadMore,
   onAddPrice,
 }: PriceCoverageTableProps) => {
   const [addingForEventId, setAddingForEventId] = useState<string | null>(null)
@@ -800,26 +807,16 @@ export const PriceCoverageTable = ({
                   })}
                 </tbody>
               </AdminTable>
-              {(hasMore || loadingMore) && (
-                <div
-                  style={{
-                    padding: '12px 16px',
-                    borderTop: '1px solid var(--border)',
-                    display: 'flex',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <AdminButton
-                    variant="ghost"
-                    size="sm"
-                    onClick={onLoadMore}
-                    disabled={loadingMore}
-                  >
-                    {loadingMore
-                      ? ADMIN_COPY.review.priceCoverage.loadingMore
-                      : ADMIN_COPY.review.priceCoverage.loadMore}
-                  </AdminButton>
-                </div>
+              {events.length > 0 && (
+                <Pagination
+                  page={page}
+                  pageSize={pageSize}
+                  total={total}
+                  onPageChange={onPageChange}
+                  onPageSizeChange={onPageSizeChange}
+                  loading={loading}
+                  itemLabel="events"
+                />
               )}
             </>
           )}

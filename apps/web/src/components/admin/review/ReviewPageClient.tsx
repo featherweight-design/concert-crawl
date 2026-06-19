@@ -9,11 +9,13 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import {
   reviewQueryKeys,
   useInvalidateReviewQueries,
+  useReviewCounts,
   useReviewEventFlags,
   useReviewMissingEvents,
   useReviewPriceEvents,
   type EventFlag,
   type PriceEvent,
+  type ReviewCounts,
 } from '@/lib/queries/use-admin-review'
 import { useQueryClient } from '@tanstack/react-query'
 import { AdminReviewMobile } from './AdminReviewMobile'
@@ -22,7 +24,14 @@ import { EventFlagsTabContent } from './_tabs/EventFlagsTabContent'
 import { editEventHref } from '@/lib/admin/edit-event-link'
 import { PricesTabContent } from './_tabs/PricesTabContent'
 import { AllEventsTabContent } from './_tabs/AllEventsTabContent'
-import { parseFiltersFromParams, serializeFiltersToParams } from './all/filters'
+import {
+  EMPTY_PAGINATION,
+  parseFiltersFromParams,
+  parsePaginationFromParams,
+  serializeFiltersToParams,
+  serializePaginationToParams,
+  type PaginationState,
+} from './all/filters'
 import { type AllEvent } from './all/types'
 import { MissingTabContent } from './_tabs/MissingTabContent'
 import { type MissingRowEvent } from './missing/MissingRow'
@@ -45,6 +54,7 @@ interface PriceSubmission {
 interface ReviewPageClientProps {
   initialEvents: EventFlag[]
   initialSubmissions: PriceSubmission[]
+  initialCounts: ReviewCounts
 }
 
 type ReviewTabKey = 'event-flags' | 'prices' | 'missing' | 'all-events'
@@ -70,6 +80,7 @@ const resolveTabFromSearchParams = (params: URLSearchParams): ReviewTabKey => {
 export const ReviewPageClient = ({
   initialEvents,
   initialSubmissions,
+  initialCounts,
 }: ReviewPageClientProps) => {
   const { getToken } = useAuth()
   const router = useRouter()
@@ -80,13 +91,32 @@ export const ReviewPageClient = ({
     new URLSearchParams(searchParams?.toString() ?? ''),
   )
 
+  // Pagination state is parsed straight out of the URL — one (page, pageSize)
+  // shared across whichever tab is active. Switching tabs strips the keys so
+  // each tab opens at page 1 (sitting on page 40 of the previous tab's data
+  // is never what the admin wants).
+  const pagination: PaginationState = parsePaginationFromParams(
+    new URLSearchParams(searchParams?.toString() ?? ''),
+  )
+
+  const onPaginationChange = useCallback(
+    (next: PaginationState) => {
+      const base = new URLSearchParams(searchParams?.toString() ?? '')
+      const merged = serializePaginationToParams(next, base)
+      router.push(`?${merged.toString()}`, { scroll: false })
+    },
+    [router, searchParams],
+  )
+
   const setActiveTab = useCallback(
     (next: string) => {
       if (!isValidTabKey(next)) return
       const params = new URLSearchParams(searchParams?.toString() ?? '')
       params.set('tab', next)
       params.delete('section') // retire legacy key once user navigates
-      router.push(`?${params.toString()}`, { scroll: false })
+      // Each tab opens at its own page 1 — strip pagination from the URL.
+      const stripped = serializePaginationToParams(EMPTY_PAGINATION, params)
+      router.push(`?${stripped.toString()}`, { scroll: false })
     },
     [router, searchParams],
   )
@@ -108,13 +138,16 @@ export const ReviewPageClient = ({
     Set<string>
   >(new Set())
 
-  // Event Flags: SSR-seeded infinite query. The cache key is stable across
-  // tab changes so returning to the tab is instant. fetchMoreEvents now
-  // becomes fetchNextPage on the query handle.
-  const eventFlagsQuery = useReviewEventFlags(initialEvents)
+  // Each data-bearing tab is its own paginated useQuery, keyed by
+  // (filterQuery, page, pageSize). Page-replacement model: changing page
+  // refetches just that page. SSR's `initialEvents` becomes the first-paint
+  // fallback before the client query lands.
+  // Event Flags total is unused here because the EF surface keeps its queue
+  // shape in this PR — the paginated split-list-with-inspector treatment is
+  // tracked in #694. Tab pill count comes from /admin/review/counts instead.
+  const eventFlagsQuery = useReviewEventFlags(pagination)
   const events = useMemo<EventFlag[]>(() => {
-    const all =
-      eventFlagsQuery.data?.pages.flatMap((page) => page) ?? initialEvents
+    const all = eventFlagsQuery.data?.rows ?? initialEvents
     return pendingRemoveFlagIds.size === 0
       ? all
       : all.filter((event) => !pendingRemoveFlagIds.has(event.id))
@@ -128,22 +161,21 @@ export const ReviewPageClient = ({
   useEffect(() => {
     if (activeTab === 'missing') setMissingActivated(true)
   }, [activeTab])
-  const missingQuery = useReviewMissingEvents(missingActivated)
+  const missingQuery = useReviewMissingEvents(missingActivated, pagination)
+  const missingTotal = missingQuery.data?.total ?? 0
   const missingEvents = useMemo<MissingRowEvent[]>(() => {
-    const all = missingQuery.data ?? []
+    const all = missingQuery.data?.rows ?? []
     return pendingRemoveMissingIds.size === 0
       ? all
       : all.filter((event) => !pendingRemoveMissingIds.has(event.id))
   }, [missingQuery.data, pendingRemoveMissingIds])
   const missingLoading = missingActivated && !missingQuery.isFetched
 
-  // Price coverage: infinite query keyed by the filter toggle so flipping
-  // back and forth is instant from cache.
-  const priceEventsQuery = useReviewPriceEvents(priceFilter)
-  const priceEvents = useMemo<PriceEvent[]>(
-    () => priceEventsQuery.data?.pages.flatMap((page) => page) ?? [],
-    [priceEventsQuery.data],
-  )
+  // Price coverage: keyed by both the filter toggle and the current page so
+  // flipping the toggle resets to page 1 cleanly (handled in togglePriceFilter).
+  const priceEventsQuery = useReviewPriceEvents(priceFilter, pagination)
+  const priceEventsTotal = priceEventsQuery.data?.total ?? 0
+  const priceEvents: PriceEvent[] = priceEventsQuery.data?.rows ?? []
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 1280px)')
@@ -168,13 +200,9 @@ export const ReviewPageClient = ({
 
   const togglePriceFilter = useCallback(() => {
     setPriceFilter((prev) => (prev === 'missing' ? 'all' : 'missing'))
-  }, [])
-
-  const loadMorePriceEvents = useCallback(() => {
-    if (priceEventsQuery.isFetchingNextPage || !priceEventsQuery.hasNextPage)
-      return
-    void priceEventsQuery.fetchNextPage()
-  }, [priceEventsQuery])
+    // Reset to page 1 — page 5 of "missing" rarely lines up with page 5 of "all".
+    onPaginationChange({ page: 1, pageSize: pagination.pageSize })
+  }, [onPaginationChange, pagination.pageSize])
 
   // Mark/unmark helpers for the render-time pending-remove filters. The
   // mutation flow is: addPending → fire request → on settle, remove pending.
@@ -209,6 +237,7 @@ export const ReviewPageClient = ({
         if (!token) return
         await apiClient.patch(`/v1/admin/events/${id}`, token, body)
         await invalidate.missing()
+        void invalidate.counts()
         router.refresh()
       } catch (patchErr) {
         const message =
@@ -237,22 +266,14 @@ export const ReviewPageClient = ({
     [patchMissingEvent],
   )
 
-  // Auto-fetch when the queue runs low — fires before the list empties so
-  // there's no gap between batches.
-  useEffect(() => {
-    if (
-      events.length <= 5 &&
-      eventFlagsQuery.hasNextPage &&
-      !eventFlagsQuery.isFetchingNextPage
-    ) {
-      void eventFlagsQuery.fetchNextPage()
-    }
-  }, [
-    events.length,
-    eventFlagsQuery.hasNextPage,
-    eventFlagsQuery.isFetchingNextPage,
-    eventFlagsQuery,
-  ])
+  // (Auto-fetch-when-low effect removed — the old infinite query needed it to
+  // keep the visible queue from emptying mid-scroll. With true pagination the
+  // admin advances pages explicitly via <Pagination/> on each tab.)
+
+  // Tab-pill counts. SSR seeds initial values so all three numbers paint on
+  // first render; subsequent mutations call `invalidate.counts()` to refresh.
+  const countsQuery = useReviewCounts(initialCounts)
+  const counts = countsQuery.data ?? initialCounts
 
   const approveEvent = useCallback(
     async (id: string) => {
@@ -263,6 +284,7 @@ export const ReviewPageClient = ({
         if (!token) return
         await apiClient.patch(`/v1/admin/events/${id}/verify`, token, {})
         await Promise.all([invalidate.eventFlags(), invalidate.allEvents()])
+        void invalidate.counts()
         router.refresh()
       } catch (err) {
         const message =
@@ -285,6 +307,7 @@ export const ReviewPageClient = ({
         if (!token) return
         await apiClient.delete(`/v1/admin/events/${id}`, token)
         await Promise.all([invalidate.eventFlags(), invalidate.allEvents()])
+        void invalidate.counts()
         router.refresh()
       } catch (err) {
         const message =
@@ -309,6 +332,7 @@ export const ReviewPageClient = ({
         })
         setSubmissions((prev) => prev.filter((sub) => sub.id !== id))
         void invalidate.priceEvents()
+        void invalidate.counts()
         router.refresh()
       } catch (err) {
         const message =
@@ -341,26 +365,34 @@ export const ReviewPageClient = ({
           vendor,
           howFound,
         })
-        // Optimistic patch on the price-events cache: the row that just got
-        // a price gets the new min/max + 'community' source so the admin
-        // sees the change without waiting on a refetch.
+        // Optimistic patch on the active price-events cache slot: the row
+        // that just got a price gets the new min/max + 'community' source so
+        // the admin sees the change without waiting on a refetch. The
+        // invalidate below sweeps every (page, pageSize) slot so the truth
+        // wins eventually.
         queryClient.setQueryData<{
-          pages: PriceEvent[][]
-          pageParams: number[]
-        }>(reviewQueryKeys.priceEvents(priceFilter), (prev) => {
-          if (!prev) return prev
-          return {
-            ...prev,
-            pages: prev.pages.map((page) =>
-              page.map((ev) =>
+          rows: PriceEvent[]
+          total: number
+        }>(
+          reviewQueryKeys.priceEvents(
+            priceFilter,
+            pagination.page,
+            pagination.pageSize,
+          ),
+          (prev) => {
+            if (!prev) return prev
+            return {
+              ...prev,
+              rows: prev.rows.map((ev) =>
                 ev.eventId === eventId
                   ? { ...ev, priceMin, priceMax, priceSource: 'community' }
                   : ev,
               ),
-            ),
-          }
-        })
+            }
+          },
+        )
         void invalidate.priceEvents()
+        void invalidate.counts()
       } catch (err) {
         const message =
           err instanceof ApiError ? err.message : 'Failed to save price.'
@@ -368,7 +400,14 @@ export const ReviewPageClient = ({
         setError(message)
       }
     },
-    [getToken, invalidate, priceFilter, queryClient],
+    [
+      getToken,
+      invalidate,
+      pagination.page,
+      pagination.pageSize,
+      priceFilter,
+      queryClient,
+    ],
   )
 
   const denySubmission = useCallback(
@@ -382,6 +421,7 @@ export const ReviewPageClient = ({
         })
         setSubmissions((prev) => prev.filter((sub) => sub.id !== id))
         void invalidate.priceEvents()
+        void invalidate.counts()
         router.refresh()
       } catch (err) {
         const message =
@@ -431,6 +471,7 @@ export const ReviewPageClient = ({
       if (!token) throw new ApiError(401, 'Unauthorized')
       await apiClient.patch(`/v1/admin/events/${event.id}/verify`, token, {})
       void invalidate.eventFlags()
+      void invalidate.counts()
     },
     unverify: async (event: AllEvent) => {
       const token = await getToken()
@@ -439,6 +480,7 @@ export const ReviewPageClient = ({
         verified: false,
       })
       void invalidate.eventFlags()
+      void invalidate.counts()
     },
     setStatus: async (
       event: AllEvent,
@@ -470,12 +512,14 @@ export const ReviewPageClient = ({
       if (!token) throw new ApiError(401, 'Unauthorized')
       await apiClient.delete(`/v1/admin/events/${event.id}`, token)
       void invalidate.eventFlags()
+      void invalidate.counts()
     },
     bulkUnverify: async (ids: string[]) => {
       const token = await getToken()
       if (!token) throw new ApiError(401, 'Unauthorized')
       await apiClient.post('/v1/admin/events/bulk/unverify', token, { ids })
       void invalidate.eventFlags()
+      void invalidate.counts()
     },
     bulkMarkNonConcert: async (ids: string[]) => {
       const token = await getToken()
@@ -492,6 +536,7 @@ export const ReviewPageClient = ({
         confirmation: 'DELETE',
       })
       void invalidate.eventFlags()
+      void invalidate.counts()
     },
   }
 
@@ -586,12 +631,27 @@ export const ReviewPageClient = ({
                     : 'flags'
             }
             pricesMissingOnly={priceFilter === 'missing'}
-            hasMorePriceEvents={priceEventsQuery.hasNextPage ?? false}
-            priceLoadingMore={priceEventsQuery.isFetchingNextPage}
+            priceEventsPage={pagination.page}
+            priceEventsPageSize={pagination.pageSize}
+            priceEventsTotal={priceEventsTotal}
             onTogglePriceFilter={togglePriceFilter}
-            onLoadMorePriceEvents={loadMorePriceEvents}
+            onPriceEventsPageChange={(next) =>
+              onPaginationChange({ page: next, pageSize: pagination.pageSize })
+            }
+            onPriceEventsPageSizeChange={(next) =>
+              onPaginationChange({ page: 1, pageSize: next })
+            }
             missingEvents={missingEvents}
             missingLoading={missingLoading}
+            missingPage={pagination.page}
+            missingPageSize={pagination.pageSize}
+            missingTotal={missingTotal}
+            onMissingPageChange={(next) =>
+              onPaginationChange({ page: next, pageSize: pagination.pageSize })
+            }
+            onMissingPageSizeChange={(next) =>
+              onPaginationChange({ page: 1, pageSize: next })
+            }
             onMarkMissingPostponed={markMissingPostponed}
             onMarkMissingCancelled={markMissingCancelled}
             onDismissMissing={dismissMissing}
@@ -606,6 +666,8 @@ export const ReviewPageClient = ({
               merged.set('tab', 'all-events')
               router.push(`?${merged.toString()}`, { scroll: false })
             }}
+            allEventsPagination={pagination}
+            onAllEventsPaginationChange={onPaginationChange}
             allEventsApi={allEventsApi}
             onAllEventsEdit={onAllEventsEdit}
             onAllEventsViewDetail={onAllEventsViewDetail}
@@ -619,19 +681,19 @@ export const ReviewPageClient = ({
     {
       key: 'event-flags',
       label: ADMIN_COPY.review.tabs.eventFlags,
-      count: events.length,
+      count: counts.eventFlags,
       kind: 'warning',
     },
     {
       key: 'prices',
       label: ADMIN_COPY.review.tabs.prices,
-      count: submissions.length,
+      count: counts.prices,
       kind: 'signal',
     },
     {
       key: 'missing',
       label: ADMIN_COPY.review.tabs.missing,
-      count: missingEvents.length,
+      count: counts.missing,
       kind: 'danger',
     },
     { key: 'all-events', label: ADMIN_COPY.review.tabs.allEvents },
@@ -665,11 +727,17 @@ export const ReviewPageClient = ({
           onDenySubmission={denySubmission}
           priceEvents={priceEvents}
           priceEventsLoading={priceEventsQuery.isPending}
-          hasMorePriceEvents={priceEventsQuery.hasNextPage ?? false}
-          priceLoadingMore={priceEventsQuery.isFetchingNextPage}
           pricesMissingOnly={priceFilter === 'missing'}
           onTogglePriceFilter={togglePriceFilter}
-          onLoadMorePriceEvents={loadMorePriceEvents}
+          priceEventsPage={pagination.page}
+          priceEventsPageSize={pagination.pageSize}
+          priceEventsTotal={priceEventsTotal}
+          onPriceEventsPageChange={(next) =>
+            onPaginationChange({ page: next, pageSize: pagination.pageSize })
+          }
+          onPriceEventsPageSizeChange={(next) =>
+            onPaginationChange({ page: 1, pageSize: next })
+          }
           onAddPrice={addPrice}
         />
       )}
@@ -680,6 +748,15 @@ export const ReviewPageClient = ({
           isDesktop
           nowIso={new Date().toISOString()}
           loading={missingLoading}
+          page={pagination.page}
+          pageSize={pagination.pageSize}
+          total={missingTotal}
+          onPageChange={(next) =>
+            onPaginationChange({ page: next, pageSize: pagination.pageSize })
+          }
+          onPageSizeChange={(next) =>
+            onPaginationChange({ page: 1, pageSize: next })
+          }
           onMarkPostponed={markMissingPostponed}
           onMarkCancelled={markMissingCancelled}
           onDismiss={dismissMissing}
@@ -702,6 +779,8 @@ export const ReviewPageClient = ({
             merged.set('tab', 'all-events')
             router.push(`?${merged.toString()}`, { scroll: false })
           }}
+          pagination={pagination}
+          onPaginationChange={onPaginationChange}
         />
       )}
     </div>

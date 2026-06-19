@@ -1,10 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ApiError } from '@/lib/api'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { AdminButton } from '@/components/admin/primitives'
+import { Pagination } from '@/components/admin/primitives'
 import {
+  REVIEW_ALL_EVENTS_PAGE_SIZE,
   useInvalidateReviewQueries,
   useReviewAllEvents,
 } from '@/lib/queries/use-admin-review'
@@ -20,6 +21,7 @@ import {
   EMPTY_FILTERS,
   filtersToFetchQuery,
   type AllEventsFilters,
+  type PaginationState,
 } from '../all/filters'
 import { type AllEvent } from '../all/types'
 
@@ -51,6 +53,8 @@ export interface AllEventsTabContentProps {
   api?: AllEventsApi
   filters?: AllEventsFilters
   onFiltersChange?: (next: AllEventsFilters) => void
+  pagination?: PaginationState
+  onPaginationChange?: (next: PaginationState) => void
 }
 
 const Skeleton = () => (
@@ -116,6 +120,11 @@ const EmptyState = () => (
 )
 
 const noopFiltersChange = (_next: AllEventsFilters): void => undefined
+const noopPaginationChange = (_next: PaginationState): void => undefined
+const DEFAULT_PAGINATION: PaginationState = {
+  page: 1,
+  pageSize: REVIEW_ALL_EVENTS_PAGE_SIZE,
+}
 
 export const AllEventsTabContent = ({
   isDesktop,
@@ -125,9 +134,11 @@ export const AllEventsTabContent = ({
   api,
   filters = EMPTY_FILTERS,
   onFiltersChange = noopFiltersChange,
+  pagination = DEFAULT_PAGINATION,
+  onPaginationChange = noopPaginationChange,
 }: AllEventsTabContentProps) => {
   // Local error state for mutation failures (network errors from the `api`
-  // prop). Fetch errors come straight out of `useInfiniteQuery` below.
+  // prop). Fetch errors come straight out of `useQuery` below.
   const [actionError, setActionError] = useState<string | null>(null)
   const [pendingConfirm, setPendingConfirm] = useState<{
     kind: 'delete' | 'non-concert'
@@ -138,19 +149,16 @@ export const AllEventsTabContent = ({
   const [bulkConfirm, setBulkConfirm] = useState<BulkKind | null>(null)
   const [bulkPending, setBulkPending] = useState(false)
 
-  const query = useReviewAllEvents(filters)
+  const query = useReviewAllEvents(filters, pagination)
   const invalidate = useInvalidateReviewQueries()
 
-  // Flatten paged data into the row list the table expects. Memoized so the
-  // identity is stable across renders that don't actually change the list.
-  const events = useMemo<AllEvent[]>(
-    () => query.data?.pages.flatMap((page) => page) ?? [],
-    [query.data],
-  )
+  const events: AllEvent[] = query.data?.rows ?? []
+  const total = query.data?.total ?? 0
 
-  // Filter changes invalidate the previous query key, which makes the
-  // selection set — anchored to ids in that list — meaningless. Track the
-  // filter string so we only clear when it actually changes.
+  // Filter changes (vs page changes) clear the selection — selections are
+  // keyed by id, so they survive paging but can't span a re-filtered set.
+  // The pagination component, by contrast, only changes `pagination.page` /
+  // `pagination.pageSize` and leaves the filter fingerprint untouched.
   const filterQuery = filtersToFetchQuery(filters)
   useEffect(() => {
     setSelectedIds(new Set())
@@ -159,6 +167,18 @@ export const AllEventsTabContent = ({
     // an unrelated banner up.
     setActionError(null)
   }, [filterQuery])
+
+  // Any filter change snaps the pager back to page 1 (sitting on page 40 of
+  // the previous filter set is almost never what the admin wants).
+  const onFilterUpdate = useCallback(
+    (next: AllEventsFilters) => {
+      onFiltersChange(next)
+      if (pagination.page !== 1) {
+        onPaginationChange({ page: 1, pageSize: pagination.pageSize })
+      }
+    },
+    [onFiltersChange, onPaginationChange, pagination.page, pagination.pageSize],
+  )
 
   const refresh = useCallback(() => {
     setSelectedIds(new Set())
@@ -290,7 +310,7 @@ export const AllEventsTabContent = ({
   }, [api, bulkConfirm, refresh, selectedIds])
 
   const filterBar = (
-    <EventsFilterBar filters={filters} onChange={onFiltersChange} />
+    <EventsFilterBar filters={filters} onChange={onFilterUpdate} />
   )
 
   const confirmModal = pendingConfirm && (
@@ -425,19 +445,20 @@ export const AllEventsTabContent = ({
               : {})}
           />
         ))}
-      {query.hasNextPage && (
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <AdminButton
-            variant="outline"
-            size="md"
-            onClick={() => void query.fetchNextPage()}
-            disabled={query.isFetchingNextPage}
-          >
-            {query.isFetchingNextPage
-              ? ADMIN_COPY.review.allEvents.loadingMore
-              : ADMIN_COPY.review.allEvents.loadMore}
-          </AdminButton>
-        </div>
+      {events.length > 0 && (
+        <Pagination
+          page={pagination.page}
+          pageSize={pagination.pageSize}
+          total={total}
+          onPageChange={(next) =>
+            onPaginationChange({ ...pagination, page: next })
+          }
+          onPageSizeChange={(next) =>
+            onPaginationChange({ page: 1, pageSize: next })
+          }
+          loading={query.isFetching}
+          itemLabel="events"
+        />
       )}
       {bulkDock}
       {confirmModal}

@@ -1794,4 +1794,19 @@ export const ADMIN_COPY = {
       navAriaLabel: 'Main navigation',
     },
   },
+
+  pagination: {
+    navAriaLabel: 'Pagination',
+    firstAriaLabel: 'First page',
+    previousAriaLabel: 'Previous page',
+    nextAriaLabel: 'Next page',
+    lastAriaLabel: 'Last page',
+    pageLabel: 'Page',
+    of: 'of',
+    rowsLabel: 'rows',
+    sizeSelectorAriaLabel: 'Rows per page',
+    prev: 'Prev',
+    next: 'Next',
+    noResults: (itemLabel: string) => `No ${itemLabel}`,
+  },
 } as const
