@@ -13,12 +13,12 @@
 ## Global Constraints
 
 - **TypeScript strict mode** across all packages (project-wide).
-- **No `as` casts.** Use Zod `safeParse` for data crossing system boundaries (LLM responses are a boundary). Per CLAUDE.md "Type safety is the first line of defence" memory.
+- **No `as` casts over the wire.** Use Zod `safeParse` for data crossing system boundaries (LLM responses are a boundary). Per CLAUDE.md "Type safety is the first line of defence": `as` casts are a last resort, not absolutely banned — narrow type-system assertions (`as const`, type-guard narrowing like `(value as { key: unknown }).key` after a structural `'key' in value` check) are acceptable where they don't bypass runtime validation.
 - **No single-character identifiers.** ESLint enforces min length 2. Use `err` not `e`, `idx` not `i`, `evt` not `e`, etc.
 - **No raw SQL outside migrations.** Backfill script uses Drizzle for all reads/writes.
-- **Every catch block must log the error.** Per `feedback_async_try_catch.md` memory — empty/silent catches will be rejected.
+- **Every catch block must log the error before re-throwing or swallowing.** Empty/silent catches will be rejected. For fire-and-forget background work, use `void async IIFE` so the error is captured.
 - **Conventional commits:** `feat:`, `fix:`, `chore:`, `docs:`, `test:`, `refactor:`. Per CLAUDE.md.
-- **`isConcert` is OPTIONAL in the Zod parser, REQUIRED in the Anthropic tool schema.** Anthropic enforces the tool-schema `required` array reliably for Haiku, so the LLM almost always emits it; but defending Zod against the rare omission prevents one missing field from rejecting the whole batch (50+ events). Default to `true` (treat as concert) when omitted — fail-open for visibility, fail-closed would silently hide events.
+- **`isConcert` is OPTIONAL in the Zod parser, REQUIRED in the Anthropic tool schema.** Anthropic enforces the tool-schema `required` array reliably for Haiku, so the LLM almost always emits it; defending Zod against the rare omission prevents one missing field from rejecting the whole batch (50+ events). When omitted, the parsed field stays `undefined` — the crawler INSERT mapping uses `event.isConcert === false` to map to `hiddenFromConsumer`, so anything other than explicit `false` (i.e. `true`, `undefined`, missing) is treated as concert (fail-open: show events, don't silently hide).
 - **The crawler writes `hidden_from_consumer` ONLY on INSERT.** On the `onConflictDoUpdate` `set` clause it must NOT appear. This mirrors the existing one-way-promotion pattern for `artist` (see `packages/crawler-core/src/crawl.ts:634-638` comment) and `verified` (see line 649-651).
 - **Backfill script defaults to dry-run.** Writing to DB requires `--commit` flag. Output CSV is sorted with `would_change=true` rows first.
 
