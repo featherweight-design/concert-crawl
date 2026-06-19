@@ -1,10 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { useAuth } from '@clerk/nextjs'
-import { ApiError, apiClient } from '@/lib/api'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ApiError } from '@/lib/api'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { AdminButton } from '@/components/admin/primitives'
+import {
+  useInvalidateReviewQueries,
+  useReviewAllEvents,
+} from '@/lib/queries/use-admin-review'
 import { EventsTable } from '../all/EventsTable'
 import { EventsMobileList } from '../all/EventsMobileList'
 import { EventsFilterBar } from '../all/EventsFilterBar'
@@ -49,8 +52,6 @@ export interface AllEventsTabContentProps {
   filters?: AllEventsFilters
   onFiltersChange?: (next: AllEventsFilters) => void
 }
-
-const PAGE_SIZE = 50
 
 const Skeleton = () => (
   <div
@@ -125,12 +126,9 @@ export const AllEventsTabContent = ({
   filters = EMPTY_FILTERS,
   onFiltersChange = noopFiltersChange,
 }: AllEventsTabContentProps) => {
-  const { getToken } = useAuth()
-  const [events, setEvents] = useState<AllEvent[]>([])
-  const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [hasMore, setHasMore] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  // Local error state for mutation failures (network errors from the `api`
+  // prop). Fetch errors come straight out of `useInfiniteQuery` below.
+  const [actionError, setActionError] = useState<string | null>(null)
   const [pendingConfirm, setPendingConfirm] = useState<{
     kind: 'delete' | 'non-concert'
     event: AllEvent
@@ -140,83 +138,28 @@ export const AllEventsTabContent = ({
   const [bulkConfirm, setBulkConfirm] = useState<BulkKind | null>(null)
   const [bulkPending, setBulkPending] = useState(false)
 
-  // Serialise filters into a string key — using this as the effect dep means
-  // a refetch fires when the filter content changes, not just when the prop
-  // identity changes (so parents can pass a fresh object every render).
-  const filterQuery = filtersToFetchQuery(filters)
+  const query = useReviewAllEvents(filters)
+  const invalidate = useInvalidateReviewQueries()
 
-  // A generation counter bumps every time `filterQuery` changes; in-flight
-  // fetches capture their generation up front and skip state updates when
-  // the current generation has moved on. This prevents stale fetches from
-  // overwriting fresh state when the admin types quickly across filters.
-  const generationRef = useRef(0)
-
-  const runFetch = useCallback(
-    async (offset: number, append: boolean): Promise<void> => {
-      const generation = generationRef.current
-      const isStale = () => generation !== generationRef.current
-      setError(null)
-      try {
-        const token = await getToken()
-        if (!token) {
-          if (!isStale()) setHasMore(false)
-          return
-        }
-        const suffix = filterQuery ? `&${filterQuery}` : ''
-        const rows = await apiClient.get<AllEvent[]>(
-          `/v1/admin/events?limit=${PAGE_SIZE}&offset=${offset}${suffix}`,
-          token,
-        )
-        if (isStale()) return
-        setEvents((prev) => (append ? [...prev, ...rows] : rows))
-        setHasMore(rows.length === PAGE_SIZE)
-      } catch (err) {
-        if (isStale()) return
-        const message =
-          err instanceof ApiError ? err.message : 'Failed to load events.'
-        console.error('AllEventsTabContent fetch error:', err)
-        setError(message)
-        // Leave hasMore as-is so a transient failure on Load more doesn't
-        // permanently hide the button — the admin can retry.
-      } finally {
-        if (!isStale()) {
-          setLoading(false)
-          setLoadingMore(false)
-        }
-      }
-    },
-    [getToken, filterQuery],
+  // Flatten paged data into the row list the table expects. Memoized so the
+  // identity is stable across renders that don't actually change the list.
+  const events = useMemo<AllEvent[]>(
+    () => query.data?.pages.flatMap((page) => page) ?? [],
+    [query.data],
   )
 
+  // Filter changes invalidate the previous query key, which makes the
+  // selection set — anchored to ids in that list — meaningless. Track the
+  // filter string so we only clear when it actually changes.
+  const filterQuery = filtersToFetchQuery(filters)
   useEffect(() => {
-    // Bump first so any in-flight call from the previous filter immediately
-    // sees itself as stale.
-    generationRef.current += 1
-    setLoading(true)
-    setEvents([])
-    setHasMore(false)
-    // Filter changes reset the rendered list, so the selection set —
-    // anchored to ids in that list — is no longer meaningful.
     setSelectedIds(new Set())
-    void runFetch(0, false)
-  }, [runFetch])
+  }, [filterQuery])
 
-  const onLoadMore = useCallback(() => {
-    if (loadingMore || !hasMore) return
-    setLoadingMore(true)
-    void runFetch(events.length, true)
-  }, [events.length, runFetch, hasMore, loadingMore])
-
-  // Re-pull page 0 after a successful mutation so the table mirrors server
-  // state. Cheap: page size is 50, filter set is local.
   const refresh = useCallback(() => {
-    generationRef.current += 1
-    setLoading(true)
-    setEvents([])
-    setHasMore(false)
     setSelectedIds(new Set())
-    void runFetch(0, false)
-  }, [runFetch])
+    void invalidate.allEvents()
+  }, [invalidate])
 
   const toggleSelected = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -239,6 +182,7 @@ export const AllEventsTabContent = ({
 
   const runApi = useCallback(
     async (fn: () => Promise<void>): Promise<void> => {
+      setActionError(null)
       try {
         await fn()
         refresh()
@@ -248,7 +192,7 @@ export const AllEventsTabContent = ({
             ? apiErr.message
             : 'Failed to apply the change.'
         console.error('AllEventsTabContent action error:', apiErr)
-        setError(message)
+        setActionError(message)
       }
     },
     [refresh],
@@ -303,7 +247,7 @@ export const AllEventsTabContent = ({
           ? confirmErr.message
           : 'Failed to apply the change.'
       console.error('AllEventsTabContent confirm error:', confirmErr)
-      setError(message)
+      setActionError(message)
     } finally {
       setConfirmPending(false)
     }
@@ -332,7 +276,7 @@ export const AllEventsTabContent = ({
           ? bulkErr.message
           : 'Failed to apply the change.'
       console.error('AllEventsTabContent bulk error:', bulkErr)
-      setError(message)
+      setActionError(message)
       // Close the modal on failure — the page-level banner sits behind the
       // scrim, so leaving the modal up hides the failure from the admin.
       setBulkConfirm(null)
@@ -399,7 +343,10 @@ export const AllEventsTabContent = ({
       />
     ) : null
 
-  if (loading)
+  // Show the skeleton on the very first load only. Subsequent filter changes
+  // re-use TanStack's cached pages and only show fresh data when it arrives,
+  // so the user never sees an empty flash mid-fetch.
+  if (query.isPending)
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {filterBar}
@@ -407,7 +354,15 @@ export const AllEventsTabContent = ({
       </div>
     )
 
-  const errorBanner = error && (
+  const fetchErrorMessage =
+    query.error instanceof ApiError
+      ? query.error.message
+      : query.error
+        ? 'Failed to load events.'
+        : null
+  const errorMessage = actionError ?? fetchErrorMessage
+
+  const errorBanner = errorMessage && (
     <div
       style={{
         padding: '10px 14px',
@@ -418,14 +373,14 @@ export const AllEventsTabContent = ({
         color: 'var(--danger)',
       }}
     >
-      {error}
+      {errorMessage}
     </div>
   )
 
   // Only the absence-of-error empty case is a true "no events" state — a
   // failed fetch leaves events=[] too, but the admin needs to see the error
   // banner, not an empty state that hides the failure.
-  if (!error && events.length === 0)
+  if (!errorMessage && events.length === 0)
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {filterBar}
@@ -466,15 +421,15 @@ export const AllEventsTabContent = ({
               : {})}
           />
         ))}
-      {hasMore && (
+      {query.hasNextPage && (
         <div style={{ display: 'flex', justifyContent: 'center' }}>
           <AdminButton
             variant="outline"
             size="md"
-            onClick={onLoadMore}
-            disabled={loadingMore}
+            onClick={() => void query.fetchNextPage()}
+            disabled={query.isFetchingNextPage}
           >
-            {loadingMore
+            {query.isFetchingNextPage
               ? ADMIN_COPY.review.allEvents.loadingMore
               : ADMIN_COPY.review.allEvents.loadMore}
           </AdminButton>

@@ -1,11 +1,21 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { apiClient, ApiError } from '@/lib/api'
 import { SectionHead } from '@/components/admin/primitives'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import {
+  reviewQueryKeys,
+  useInvalidateReviewQueries,
+  useReviewEventFlags,
+  useReviewMissingEvents,
+  useReviewPriceEvents,
+  type EventFlag,
+  type PriceEvent,
+} from '@/lib/queries/use-admin-review'
 import { AdminReviewMobile } from './AdminReviewMobile'
 import { ReviewTabs, type ReviewTabDescriptor } from './ReviewTabs'
 import { EventFlagsTabContent } from './_tabs/EventFlagsTabContent'
@@ -16,24 +26,6 @@ import { parseFiltersFromParams, serializeFiltersToParams } from './all/filters'
 import { type AllEvent } from './all/types'
 import { MissingTabContent } from './_tabs/MissingTabContent'
 import { type MissingRowEvent } from './missing/MissingRow'
-
-interface EventFlag {
-  id: string
-  title: string
-  artist: string | null
-  date: string
-  doorsTime: string | null
-  showTime: string | null
-  ticketPriceMin: string | null
-  ticketPriceMax: string | null
-  confidenceScore: number | null
-  extractionStrategy: string | null
-  sourceUrl: string | null
-  genre: string[] | null
-  createdAt: string
-  venueId: string
-  venueName: string | null
-}
 
 interface PriceSubmission {
   id: string
@@ -48,20 +40,6 @@ interface PriceSubmission {
   eventDate: string | null
   ticketUrl: string | null
   venueName: string | null
-}
-
-interface PriceEvent {
-  eventId: string
-  eventTitle: string
-  artist: string | null
-  venueName: string | null
-  date: string
-  ticketUrl: string | null
-  priceMin: string | null
-  priceMax: string | null
-  priceSource: string | null
-  lastRetrievedAt: string | null
-  lastOutcome: string | null
 }
 
 interface ReviewPageClientProps {
@@ -96,6 +74,8 @@ export const ReviewPageClient = ({
   const { getToken } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
+  const queryClient = useQueryClient()
+  const invalidate = useInvalidateReviewQueries()
   const activeTab: ReviewTabKey = resolveTabFromSearchParams(
     new URLSearchParams(searchParams?.toString() ?? ''),
   )
@@ -111,24 +91,40 @@ export const ReviewPageClient = ({
     [router, searchParams],
   )
 
-  const [events, setEvents] = useState<EventFlag[]>(initialEvents)
   const [submissions, setSubmissions] =
     useState<PriceSubmission[]>(initialSubmissions)
-  const [priceEvents, setPriceEvents] = useState<PriceEvent[]>([])
-  const [priceEventsLoading, setPriceEventsLoading] = useState(true)
   const [priceFilter, setPriceFilter] = useState<'missing' | 'all'>('missing')
-  const [hasMorePriceEvents, setHasMorePriceEvents] = useState(true)
-  const [priceLoadingMore, setPriceLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [isFetchingMoreEvents, setIsFetchingMoreEvents] = useState(false)
-  const [eventsOffset, setEventsOffset] = useState(initialEvents.length)
-  // If the server returned a full page, assume there are more unreviewed events.
-  const [hasMoreEvents, setHasMoreEvents] = useState(
-    initialEvents.length >= 100,
-  )
   const [isDesktop, setIsDesktop] = useState(true)
-  const [missingEvents, setMissingEvents] = useState<MissingRowEvent[]>([])
-  const [missingLoaded, setMissingLoaded] = useState(false)
+
+  // Event Flags: SSR-seeded infinite query. The cache key is stable across
+  // tab changes so returning to the tab is instant. fetchMoreEvents now
+  // becomes fetchNextPage on the query handle.
+  const eventFlagsQuery = useReviewEventFlags(initialEvents)
+  const events = useMemo<EventFlag[]>(
+    () => eventFlagsQuery.data?.pages.flatMap((page) => page) ?? initialEvents,
+    [eventFlagsQuery.data, initialEvents],
+  )
+
+  // Missing: gated by tab activation so we don't fetch until the admin
+  // looks. The mobile shell also nudges the gate via onEnterMissingTab.
+  const [missingActivated, setMissingActivated] = useState(
+    activeTab === 'missing',
+  )
+  useEffect(() => {
+    if (activeTab === 'missing') setMissingActivated(true)
+  }, [activeTab])
+  const missingQuery = useReviewMissingEvents(missingActivated)
+  const missingEvents = missingQuery.data ?? []
+  const missingLoading = missingActivated && !missingQuery.isFetched
+
+  // Price coverage: infinite query keyed by the filter toggle so flipping
+  // back and forth is instant from cache.
+  const priceEventsQuery = useReviewPriceEvents(priceFilter)
+  const priceEvents = useMemo<PriceEvent[]>(
+    () => priceEventsQuery.data?.pages.flatMap((page) => page) ?? [],
+    [priceEventsQuery.data],
+  )
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 1280px)')
@@ -151,86 +147,47 @@ export const ReviewPageClient = ({
     }
   }, [isDesktop])
 
-  // Lazy-load price coverage data client-side — it's below the fold and has
-  // a heavy aggregating query that shouldn't block the initial page render.
-  const fetchPriceEvents = useCallback(
-    async (filter: 'missing' | 'all', offset: number, append: boolean) => {
-      try {
-        const token = await getToken()
-        if (!token) return
-        const missingOnly = filter === 'missing'
-        const rows = await apiClient.get<PriceEvent[]>(
-          `/v1/admin/prices/events?missingOnly=${String(missingOnly)}&limit=50&offset=${offset}`,
-          token,
-        )
-        if (append) {
-          setPriceEvents((prev) => [...prev, ...rows])
-        } else {
-          setPriceEvents(rows)
-        }
-        setHasMorePriceEvents(rows.length === 50)
-      } catch (err) {
-        console.error('Failed to load price coverage data', err)
-        setHasMorePriceEvents(false)
-      } finally {
-        setPriceEventsLoading(false)
-        setPriceLoadingMore(false)
-      }
-    },
-    [getToken],
-  )
-
-  useEffect(() => {
-    void fetchPriceEvents('missing', 0, false)
-  }, [fetchPriceEvents])
+  const togglePriceFilter = useCallback(() => {
+    setPriceFilter((prev) => (prev === 'missing' ? 'all' : 'missing'))
+  }, [])
 
   const loadMorePriceEvents = useCallback(() => {
-    if (!hasMorePriceEvents || priceLoadingMore) return
-    setPriceLoadingMore(true)
-    void fetchPriceEvents(priceFilter, priceEvents.length, true)
-  }, [
-    fetchPriceEvents,
-    hasMorePriceEvents,
-    priceLoadingMore,
-    priceEvents.length,
-    priceFilter,
-  ])
+    if (priceEventsQuery.isFetchingNextPage || !priceEventsQuery.hasNextPage)
+      return
+    void priceEventsQuery.fetchNextPage()
+  }, [priceEventsQuery])
 
-  const togglePriceFilter = useCallback(() => {
-    const newFilter: 'missing' | 'all' =
-      priceFilter === 'missing' ? 'all' : 'missing'
-    setPriceFilter(newFilter)
-    setPriceEventsLoading(true)
-    setHasMorePriceEvents(true)
-    void fetchPriceEvents(newFilter, 0, false)
-  }, [fetchPriceEvents, priceFilter])
+  // Optimistic-remove helper for the event-flags cache. Filters the row out
+  // of every loaded page so the table updates instantly, then schedules a
+  // background invalidation so the server's view of the world wins.
+  const removeFlagFromCache = useCallback(
+    (id: string) => {
+      queryClient.setQueryData<{
+        pages: EventFlag[][]
+        pageParams: number[]
+      }>(reviewQueryKeys.eventFlags, (prev) => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          pages: prev.pages.map((page) =>
+            page.filter((event) => event.id !== id),
+          ),
+        }
+      })
+    },
+    [queryClient],
+  )
 
-  // Lazy-fetch missing events on first activation of the Missing tab.
-  const fetchMissingEvents = useCallback(async () => {
-    try {
-      const token = await getToken()
-      if (!token) return
-      const rows = await apiClient.get<MissingRowEvent[]>(
-        '/v1/admin/events?missing=true&limit=200',
-        token,
+  const removeMissingFromCache = useCallback(
+    (id: string) => {
+      queryClient.setQueryData<MissingRowEvent[]>(
+        reviewQueryKeys.missing,
+        (prev) => prev?.filter((evt) => evt.id !== id),
       )
-      setMissingEvents(rows)
-    } catch (fetchErr) {
-      console.error('Failed to load missing events', fetchErr)
-    } finally {
-      setMissingLoaded(true)
-    }
-  }, [getToken])
+    },
+    [queryClient],
+  )
 
-  useEffect(() => {
-    if (activeTab === 'missing' && !missingLoaded) {
-      void fetchMissingEvents()
-    }
-  }, [activeTab, missingLoaded, fetchMissingEvents])
-
-  // PATCH dispatcher for the three Missing-tab actions; on success removes
-  // the row from local state (optimistic-remove is fine — any successful
-  // PATCH takes the row out of the ?missing=true result set).
   const patchMissingEvent = useCallback(
     async (id: string, body: Record<string, unknown>): Promise<void> => {
       setError(null)
@@ -238,7 +195,8 @@ export const ReviewPageClient = ({
         const token = await getToken()
         if (!token) return
         await apiClient.patch(`/v1/admin/events/${id}`, token, body)
-        setMissingEvents((prev) => prev.filter((evt) => evt.id !== id))
+        removeMissingFromCache(id)
+        void invalidate.missing()
         router.refresh()
       } catch (patchErr) {
         const message =
@@ -249,7 +207,7 @@ export const ReviewPageClient = ({
         setError(message)
       }
     },
-    [getToken, router],
+    [getToken, invalidate, removeMissingFromCache, router],
   )
 
   const markMissingPostponed = useCallback(
@@ -265,44 +223,22 @@ export const ReviewPageClient = ({
     [patchMissingEvent],
   )
 
-  const fetchMoreEvents = useCallback(async () => {
-    if (isFetchingMoreEvents || !hasMoreEvents) return
-    setIsFetchingMoreEvents(true)
-    try {
-      const token = await getToken()
-      if (!token) {
-        setHasMoreEvents(false)
-        return
-      }
-      const batch = await apiClient.get<EventFlag[]>(
-        `/v1/admin/events?verified=false&limit=10&offset=${eventsOffset}`,
-        token,
-      )
-      if (batch.length === 0) {
-        setHasMoreEvents(false)
-      } else {
-        setEvents((prev) => {
-          const seen = new Set(prev.map((ev) => ev.id))
-          return [...prev, ...batch.filter((ev) => !seen.has(ev.id))]
-        })
-        setEventsOffset((prev) => prev + batch.length)
-        if (batch.length < 10) setHasMoreEvents(false)
-      }
-    } catch (fetchErr) {
-      console.error('Failed to fetch more events', fetchErr)
-      setHasMoreEvents(false)
-    } finally {
-      setIsFetchingMoreEvents(false)
-    }
-  }, [isFetchingMoreEvents, hasMoreEvents, getToken, eventsOffset])
-
   // Auto-fetch when the queue runs low — fires before the list empties so
   // there's no gap between batches.
   useEffect(() => {
-    if (events.length <= 5 && hasMoreEvents && !isFetchingMoreEvents) {
-      void fetchMoreEvents()
+    if (
+      events.length <= 5 &&
+      eventFlagsQuery.hasNextPage &&
+      !eventFlagsQuery.isFetchingNextPage
+    ) {
+      void eventFlagsQuery.fetchNextPage()
     }
-  }, [events.length, hasMoreEvents, isFetchingMoreEvents, fetchMoreEvents])
+  }, [
+    events.length,
+    eventFlagsQuery.hasNextPage,
+    eventFlagsQuery.isFetchingNextPage,
+    eventFlagsQuery,
+  ])
 
   const approveEvent = useCallback(
     async (id: string) => {
@@ -311,7 +247,9 @@ export const ReviewPageClient = ({
         const token = await getToken()
         if (!token) return
         await apiClient.patch(`/v1/admin/events/${id}/verify`, token, {})
-        setEvents((prev) => prev.filter((ev) => ev.id !== id))
+        removeFlagFromCache(id)
+        void invalidate.eventFlags()
+        void invalidate.allEvents()
         router.refresh()
       } catch (err) {
         const message =
@@ -320,7 +258,7 @@ export const ReviewPageClient = ({
         setError(message)
       }
     },
-    [getToken, router],
+    [getToken, invalidate, removeFlagFromCache, router],
   )
 
   const rejectEvent = useCallback(
@@ -330,7 +268,9 @@ export const ReviewPageClient = ({
         const token = await getToken()
         if (!token) return
         await apiClient.delete(`/v1/admin/events/${id}`, token)
-        setEvents((prev) => prev.filter((ev) => ev.id !== id))
+        removeFlagFromCache(id)
+        void invalidate.eventFlags()
+        void invalidate.allEvents()
         router.refresh()
       } catch (err) {
         const message =
@@ -339,7 +279,7 @@ export const ReviewPageClient = ({
         setError(message)
       }
     },
-    [getToken, router],
+    [getToken, invalidate, removeFlagFromCache, router],
   )
 
   const approveSubmission = useCallback(
@@ -352,6 +292,7 @@ export const ReviewPageClient = ({
           status: 'corroborated',
         })
         setSubmissions((prev) => prev.filter((sub) => sub.id !== id))
+        void invalidate.priceEvents()
         router.refresh()
       } catch (err) {
         const message =
@@ -362,7 +303,7 @@ export const ReviewPageClient = ({
         setError(message)
       }
     },
-    [getToken, router],
+    [getToken, invalidate, router],
   )
 
   const addPrice = useCallback(
@@ -384,13 +325,26 @@ export const ReviewPageClient = ({
           vendor,
           howFound,
         })
-        setPriceEvents((prev) =>
-          prev.map((ev) =>
-            ev.eventId === eventId
-              ? { ...ev, priceMin, priceMax, priceSource: 'community' }
-              : ev,
-          ),
-        )
+        // Optimistic patch on the price-events cache: the row that just got
+        // a price gets the new min/max + 'community' source so the admin
+        // sees the change without waiting on a refetch.
+        queryClient.setQueryData<{
+          pages: PriceEvent[][]
+          pageParams: number[]
+        }>(reviewQueryKeys.priceEvents(priceFilter), (prev) => {
+          if (!prev) return prev
+          return {
+            ...prev,
+            pages: prev.pages.map((page) =>
+              page.map((ev) =>
+                ev.eventId === eventId
+                  ? { ...ev, priceMin, priceMax, priceSource: 'community' }
+                  : ev,
+              ),
+            ),
+          }
+        })
+        void invalidate.priceEvents()
       } catch (err) {
         const message =
           err instanceof ApiError ? err.message : 'Failed to save price.'
@@ -398,7 +352,7 @@ export const ReviewPageClient = ({
         setError(message)
       }
     },
-    [getToken],
+    [getToken, invalidate, priceFilter, queryClient],
   )
 
   const denySubmission = useCallback(
@@ -411,6 +365,7 @@ export const ReviewPageClient = ({
           status: 'disputed',
         })
         setSubmissions((prev) => prev.filter((sub) => sub.id !== id))
+        void invalidate.priceEvents()
         router.refresh()
       } catch (err) {
         const message =
@@ -419,7 +374,7 @@ export const ReviewPageClient = ({
         setError(message)
       }
     },
-    [getToken, router],
+    [getToken, invalidate, router],
   )
 
   const pendingCount = events.length + submissions.length
@@ -459,6 +414,7 @@ export const ReviewPageClient = ({
       const token = await getToken()
       if (!token) throw new ApiError(401, 'Unauthorized')
       await apiClient.patch(`/v1/admin/events/${event.id}/verify`, token, {})
+      void invalidate.eventFlags()
     },
     unverify: async (event: AllEvent) => {
       const token = await getToken()
@@ -466,6 +422,7 @@ export const ReviewPageClient = ({
       await apiClient.patch(`/v1/admin/events/${event.id}`, token, {
         verified: false,
       })
+      void invalidate.eventFlags()
     },
     setStatus: async (
       event: AllEvent,
@@ -496,11 +453,13 @@ export const ReviewPageClient = ({
       const token = await getToken()
       if (!token) throw new ApiError(401, 'Unauthorized')
       await apiClient.delete(`/v1/admin/events/${event.id}`, token)
+      void invalidate.eventFlags()
     },
     bulkUnverify: async (ids: string[]) => {
       const token = await getToken()
       if (!token) throw new ApiError(401, 'Unauthorized')
       await apiClient.post('/v1/admin/events/bulk/unverify', token, { ids })
+      void invalidate.eventFlags()
     },
     bulkMarkNonConcert: async (ids: string[]) => {
       const token = await getToken()
@@ -516,6 +475,7 @@ export const ReviewPageClient = ({
         ids,
         confirmation: 'DELETE',
       })
+      void invalidate.eventFlags()
     },
   }
 
@@ -610,18 +570,16 @@ export const ReviewPageClient = ({
                     : 'flags'
             }
             pricesMissingOnly={priceFilter === 'missing'}
-            hasMorePriceEvents={hasMorePriceEvents}
-            priceLoadingMore={priceLoadingMore}
+            hasMorePriceEvents={priceEventsQuery.hasNextPage ?? false}
+            priceLoadingMore={priceEventsQuery.isFetchingNextPage}
             onTogglePriceFilter={togglePriceFilter}
             onLoadMorePriceEvents={loadMorePriceEvents}
             missingEvents={missingEvents}
-            missingLoading={!missingLoaded}
+            missingLoading={missingLoading}
             onMarkMissingPostponed={markMissingPostponed}
             onMarkMissingCancelled={markMissingCancelled}
             onDismissMissing={dismissMissing}
-            onEnterMissingTab={() => {
-              if (!missingLoaded) void fetchMissingEvents()
-            }}
+            onEnterMissingTab={() => setMissingActivated(true)}
             onAllEventsRowClick={(id) => router.push(editEventHref(id))}
             allEventsFilters={parseFiltersFromParams(
               new URLSearchParams(searchParams?.toString() ?? ''),
@@ -690,9 +648,9 @@ export const ReviewPageClient = ({
           onApproveSubmission={approveSubmission}
           onDenySubmission={denySubmission}
           priceEvents={priceEvents}
-          priceEventsLoading={priceEventsLoading}
-          hasMorePriceEvents={hasMorePriceEvents}
-          priceLoadingMore={priceLoadingMore}
+          priceEventsLoading={priceEventsQuery.isPending}
+          hasMorePriceEvents={priceEventsQuery.hasNextPage ?? false}
+          priceLoadingMore={priceEventsQuery.isFetchingNextPage}
           pricesMissingOnly={priceFilter === 'missing'}
           onTogglePriceFilter={togglePriceFilter}
           onLoadMorePriceEvents={loadMorePriceEvents}
@@ -705,7 +663,7 @@ export const ReviewPageClient = ({
           events={missingEvents}
           isDesktop
           nowIso={new Date().toISOString()}
-          loading={!missingLoaded}
+          loading={missingLoading}
           onMarkPostponed={markMissingPostponed}
           onMarkCancelled={markMissingCancelled}
           onDismiss={dismissMissing}

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { type ReactElement } from 'react'
 import {
   render,
   screen,
@@ -9,6 +10,7 @@ import {
   cleanup,
   within,
 } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { type AllEvent } from '../all/types'
 import { type AllEventsApi } from './AllEventsTabContent'
 
@@ -24,6 +26,15 @@ vi.mock('@/lib/api', () => ({
 }))
 
 import { AllEventsTabContent } from './AllEventsTabContent'
+
+// Tests get their own QueryClient with retries off so a single failure
+// surfaces immediately (TanStack's default retries would mask the assertion).
+const renderWithClient = (ui: ReactElement) => {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>)
+}
 
 const buildApiMock = (overrides: Partial<AllEventsApi> = {}): AllEventsApi => ({
   verify: vi.fn().mockResolvedValue(undefined),
@@ -71,23 +82,23 @@ beforeEach(() => {
 describe('AllEventsTabContent', () => {
   it('renders the loading skeleton on initial mount', () => {
     mockApiGet.mockReturnValue(new Promise(() => {}))
-    render(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
+    renderWithClient(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
     expect(screen.getByLabelText('Loading events')).toBeTruthy()
   })
 
   it('fetches /v1/admin/events with no verified param on mount', async () => {
     mockApiGet.mockResolvedValue([])
-    render(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
+    renderWithClient(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
     await waitFor(() => {
       expect(mockApiGet).toHaveBeenCalledTimes(1)
     })
     const [url] = mockApiGet.mock.calls[0] ?? []
-    expect(url).toBe('/v1/admin/events?limit=50&offset=0')
+    expect(url).toBe('/v1/admin/events?limit=20&offset=0')
   })
 
   it('renders the desktop table when events arrive', async () => {
     mockApiGet.mockResolvedValue([buildEvent()])
-    render(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
+    renderWithClient(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
     await waitFor(() => {
       expect(screen.getByText('Lord Huron')).toBeTruthy()
     })
@@ -95,7 +106,9 @@ describe('AllEventsTabContent', () => {
 
   it('renders mobile cards when isDesktop=false', async () => {
     mockApiGet.mockResolvedValue([buildEvent({ id: 'evt-7', title: 'Spoon' })])
-    render(<AllEventsTabContent isDesktop={false} onRowClick={() => {}} />)
+    renderWithClient(
+      <AllEventsTabContent isDesktop={false} onRowClick={() => {}} />,
+    )
     await waitFor(() => {
       expect(screen.getByText('Spoon')).toBeTruthy()
     })
@@ -103,7 +116,7 @@ describe('AllEventsTabContent', () => {
 
   it('renders the empty state when no events come back', async () => {
     mockApiGet.mockResolvedValue([])
-    render(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
+    renderWithClient(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
     await waitFor(() => {
       expect(screen.getByText('No events to show.')).toBeTruthy()
     })
@@ -112,7 +125,7 @@ describe('AllEventsTabContent', () => {
   it('calls onRowClick with the clicked event id', async () => {
     mockApiGet.mockResolvedValue([buildEvent({ id: 'evt-77' })])
     const onRowClick = vi.fn()
-    render(<AllEventsTabContent isDesktop onRowClick={onRowClick} />)
+    renderWithClient(<AllEventsTabContent isDesktop onRowClick={onRowClick} />)
     await waitFor(() => {
       expect(screen.getByText('Lord Huron')).toBeTruthy()
     })
@@ -127,12 +140,12 @@ describe('AllEventsTabContent', () => {
     'paginates: Load more fetches with the next offset and appends',
     { timeout: 15000 },
     async () => {
-      const pageOne = Array.from({ length: 50 }, (_, idx) =>
+      const pageOne = Array.from({ length: 20 }, (_, idx) =>
         buildEvent({ id: `evt-${idx}`, title: `Show ${idx}` }),
       )
       const pageTwo = [buildEvent({ id: 'evt-late', title: 'Late Show' })]
       mockApiGet.mockResolvedValueOnce(pageOne).mockResolvedValueOnce(pageTwo)
-      render(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
+      renderWithClient(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
       await waitFor(() => {
         expect(screen.getByText('Show 0')).toBeTruthy()
       })
@@ -141,7 +154,7 @@ describe('AllEventsTabContent', () => {
         expect(mockApiGet).toHaveBeenCalledTimes(2)
       })
       const secondCallUrl = mockApiGet.mock.calls[1]?.[0]
-      expect(secondCallUrl).toBe('/v1/admin/events?limit=50&offset=50')
+      expect(secondCallUrl).toBe('/v1/admin/events?limit=20&offset=20')
       await waitFor(() => {
         expect(screen.getByText('Late Show')).toBeTruthy()
       })
@@ -150,7 +163,7 @@ describe('AllEventsTabContent', () => {
 
   it('shows the error banner (not empty state) when the initial fetch fails', async () => {
     mockApiGet.mockRejectedValue(new Error('boom'))
-    render(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
+    renderWithClient(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
     await waitFor(() => {
       expect(screen.getByText('Failed to load events.')).toBeTruthy()
     })
@@ -161,13 +174,13 @@ describe('AllEventsTabContent', () => {
     'keeps Load more visible after a transient pagination failure',
     { timeout: 15000 },
     async () => {
-      const pageOne = Array.from({ length: 50 }, (_, idx) =>
+      const pageOne = Array.from({ length: 20 }, (_, idx) =>
         buildEvent({ id: `evt-${idx}`, title: `Show ${idx}` }),
       )
       mockApiGet
         .mockResolvedValueOnce(pageOne)
         .mockRejectedValueOnce(new Error('transient'))
-      render(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
+      renderWithClient(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
       await waitFor(() => {
         expect(screen.getByText('Show 0')).toBeTruthy()
       })
@@ -182,7 +195,7 @@ describe('AllEventsTabContent', () => {
 
   it('hides Load more when the last fetch returned fewer than the page size', async () => {
     mockApiGet.mockResolvedValue([buildEvent()])
-    render(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
+    renderWithClient(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
     await waitFor(() => {
       expect(screen.getByText('Lord Huron')).toBeTruthy()
     })
@@ -192,7 +205,7 @@ describe('AllEventsTabContent', () => {
   describe('bulk selection', () => {
     it('does not render row checkboxes when no api prop is supplied', async () => {
       mockApiGet.mockResolvedValue([buildEvent()])
-      render(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
+      renderWithClient(<AllEventsTabContent isDesktop onRowClick={() => {}} />)
       await waitFor(() => {
         expect(screen.getByText('Lord Huron')).toBeTruthy()
       })
@@ -205,7 +218,9 @@ describe('AllEventsTabContent', () => {
         buildEvent({ id: 'evt-b', title: 'Phoebe' }),
       ])
       const api = buildApiMock()
-      render(<AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />)
+      renderWithClient(
+        <AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />,
+      )
       await waitFor(() => {
         expect(screen.getByText('Spoon')).toBeTruthy()
       })
@@ -222,7 +237,9 @@ describe('AllEventsTabContent', () => {
         buildEvent({ id: 'evt-b', title: 'Phoebe' }),
       ])
       const api = buildApiMock()
-      render(<AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />)
+      renderWithClient(
+        <AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />,
+      )
       await waitFor(() => {
         expect(screen.getByText('Spoon')).toBeTruthy()
       })
@@ -237,7 +254,9 @@ describe('AllEventsTabContent', () => {
     it('clear button empties the selection', async () => {
       mockApiGet.mockResolvedValue([buildEvent({ id: 'evt-a' })])
       const api = buildApiMock()
-      render(<AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />)
+      renderWithClient(
+        <AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />,
+      )
       await waitFor(() => {
         expect(screen.getByText('Lord Huron')).toBeTruthy()
       })
@@ -255,7 +274,9 @@ describe('AllEventsTabContent', () => {
         ])
         .mockResolvedValueOnce([])
       const api = buildApiMock()
-      render(<AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />)
+      renderWithClient(
+        <AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />,
+      )
       await waitFor(() => {
         expect(screen.getByText('Spoon')).toBeTruthy()
       })
@@ -277,7 +298,9 @@ describe('AllEventsTabContent', () => {
         ])
         .mockResolvedValueOnce([])
       const api = buildApiMock()
-      render(<AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />)
+      renderWithClient(
+        <AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />,
+      )
       await waitFor(() => {
         expect(screen.getByText('Spoon')).toBeTruthy()
       })
@@ -299,7 +322,9 @@ describe('AllEventsTabContent', () => {
         ])
         .mockResolvedValueOnce([])
       const api = buildApiMock()
-      render(<AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />)
+      renderWithClient(
+        <AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />,
+      )
       await waitFor(() => {
         expect(screen.getByText('Spoon')).toBeTruthy()
       })
@@ -323,7 +348,9 @@ describe('AllEventsTabContent', () => {
         .mockResolvedValueOnce([buildEvent({ id: 'evt-a' })])
         .mockResolvedValueOnce([buildEvent({ id: 'evt-a' })])
       const api = buildApiMock()
-      render(<AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />)
+      renderWithClient(
+        <AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />,
+      )
       await waitFor(() => {
         expect(screen.getByText('Lord Huron')).toBeTruthy()
       })
