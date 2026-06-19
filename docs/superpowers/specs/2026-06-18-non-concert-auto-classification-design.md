@@ -1,8 +1,9 @@
 # Non-Concert Auto-Classification Design
 
 **Date:** 2026-06-18
-**Status:** Draft → user review
-**Companion to:** PR #674 (consumer-surface `first_missing_at` filter), issue #676 (within-crawl dedup follow-on)
+**Status:** Spec approved → plan drafting
+**Tracking:** issue #696
+**Companion to:** PR #674 (consumer-surface `first_missing_at` filter), issue #676 (within-crawl dedup follow-on, remains open for concert-dupe cases like Buffalo Traffic Jam)
 
 ## Goal
 
