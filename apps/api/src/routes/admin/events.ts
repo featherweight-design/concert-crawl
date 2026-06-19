@@ -94,6 +94,14 @@ const csvMissingFlags = z
   })
 
 const listQuerySchema = z.object({
+  // Opt-in count flag for the new pagination component. When true, the
+  // response wraps the array as `{ rows, total }` where `total` ignores
+  // limit/offset. Default returns the legacy array so existing callers
+  // (sidebar, watching, etc.) keep working unchanged.
+  count: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((val) => val === 'true'),
   // When omitted, no verification filter is applied — used by PR 4's
   // All-events tab to surface both verified and unverified events.
   // The legacy callers (Review tab + missing fetch) pass it explicitly.
@@ -225,6 +233,7 @@ eventsAdminRouter.get(
   zValidator('query', listQuerySchema),
   async (ctx) => {
     const {
+      count,
       verified,
       missing,
       query,
@@ -312,36 +321,54 @@ eventsAdminRouter.get(
     const dateFromClause = gte(events.date, effectiveDateFrom)
     const dateToClause = dateTo ? lte(events.date, dateTo) : undefined
 
-    const rows = missing
-      ? await baseSelect
-          .where(
-            and(
-              isNotNull(events.firstMissingAt),
-              eq(events.status, 'upcoming'),
-              gte(events.date, today),
-            ),
-          )
+    // Same WHERE shape used for both the row fetch and the count(*) query
+    // when count=true. Pulling it out as a single expression guarantees the
+    // count tracks the rows for any callers that opt in.
+    const whereClause = missing
+      ? and(
+          isNotNull(events.firstMissingAt),
+          eq(events.status, 'upcoming'),
+          gte(events.date, today),
+        )
+      : and(
+          verified === undefined ? undefined : eq(events.verified, verified),
+          dateFromClause,
+          dateToClause,
+          searchClause,
+          genreClause,
+          ...missingDataClauses,
+        )
+
+    const rowsPromise = missing
+      ? baseSelect
+          .where(whereClause)
           .orderBy(desc(events.firstMissingAt))
           .limit(limit)
           .offset(offset)
-      : await baseSelect
-          .where(
-            and(
-              verified === undefined
-                ? undefined
-                : eq(events.verified, verified),
-              dateFromClause,
-              dateToClause,
-              searchClause,
-              genreClause,
-              ...missingDataClauses,
-            ),
-          )
+      : baseSelect
+          .where(whereClause)
           .orderBy(asc(events.date), desc(events.createdAt))
           .limit(limit)
           .offset(offset)
 
-    return ctx.json({ success: true, data: rows })
+    if (!count) {
+      const rows = await rowsPromise
+      return ctx.json({ success: true, data: rows })
+    }
+
+    // count=true: parallelize the row fetch and the count so the extra query
+    // doesn't double the response time. The count needs the missing branch's
+    // venue join only if a future filter references venues.name — today it
+    // does (search), so we count off the same joined view.
+    const countQuery = db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(events)
+      .leftJoin(venues, eq(events.venueId, venues.id))
+      .where(whereClause)
+
+    const [rows, countResult] = await Promise.all([rowsPromise, countQuery])
+    const total = countResult[0]?.total ?? 0
+    return ctx.json({ success: true, data: { rows, total } })
   },
 )
 

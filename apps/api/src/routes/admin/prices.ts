@@ -24,6 +24,12 @@ const eventsQuerySchema = z.object({
     .enum(['true', 'false'])
     .default('true')
     .transform((val) => val === 'true'),
+  // Opt-in count flag for the new pagination component. See events.ts for
+  // the same pattern. Without count=true the response is the legacy array.
+  count: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((val) => val === 'true'),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 })
@@ -37,7 +43,7 @@ pricesAdminRouter.get(
     }
   }),
   async (ctx) => {
-    const { missingOnly, limit, offset } = ctx.req.valid('query')
+    const { missingOnly, count, limit, offset } = ctx.req.valid('query')
     const today = new Date().toLocaleDateString('en-CA', {
       timeZone: 'America/Denver',
     })
@@ -47,6 +53,7 @@ pricesAdminRouter.get(
       gte(events.date, today),
       ...(missingOnly ? [isNull(events.ticketPriceMin)] : []),
     ]
+    const whereClause = and(...conditions)
 
     // Use a single aggregating join instead of two correlated subqueries per row.
     // The subquery groups price_retrieval_log by event_id once, then LEFT JOINs in.
@@ -64,7 +71,7 @@ pricesAdminRouter.get(
       .groupBy(priceRetrievalLog.eventId)
       .as('latest_log')
 
-    const rows = await db
+    const rowsPromise = db
       .select({
         eventId: events.id,
         eventTitle: events.title,
@@ -81,12 +88,23 @@ pricesAdminRouter.get(
       .from(events)
       .leftJoin(venues, eq(events.venueId, venues.id))
       .leftJoin(latestLog, eq(latestLog.eventId, events.id))
-      .where(and(...conditions))
+      .where(whereClause)
       .orderBy(asc(events.date), asc(events.id))
       .limit(limit)
       .offset(offset)
 
-    return ctx.json({ success: true, data: rows } as const)
+    if (!count) {
+      const rows = await rowsPromise
+      return ctx.json({ success: true, data: rows } as const)
+    }
+
+    const countQuery = db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(events)
+      .where(whereClause)
+    const [rows, countResult] = await Promise.all([rowsPromise, countQuery])
+    const total = countResult[0]?.total ?? 0
+    return ctx.json({ success: true, data: { rows, total } } as const)
   },
 )
 
@@ -156,29 +174,60 @@ pricesAdminRouter.get('/coverage', async (ctx) => {
 })
 
 // GET /v1/admin/prices/submissions — community submission queue
-pricesAdminRouter.get('/submissions', async (ctx) => {
-  const rows = await db
-    .select({
-      id: priceSubmissions.id,
-      eventId: priceSubmissions.eventId,
-      userId: priceSubmissions.userId,
-      priceMin: priceSubmissions.priceMin,
-      priceMax: priceSubmissions.priceMax,
-      status: priceSubmissions.status,
-      createdAt: priceSubmissions.createdAt,
-      eventTitle: events.title,
-      eventDate: events.date,
-      ticketUrl: events.ticketUrl,
-      venueName: venues.name,
-    })
-    .from(priceSubmissions)
-    .leftJoin(events, eq(priceSubmissions.eventId, events.id))
-    .leftJoin(venues, eq(events.venueId, venues.id))
-    .orderBy(desc(priceSubmissions.createdAt))
-    .limit(50)
-
-  return ctx.json({ success: true, data: rows })
+// `count=true` switches to `{ rows, total }` for the new pagination component.
+const submissionsQuerySchema = z.object({
+  count: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((val) => val === 'true'),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
 })
+
+pricesAdminRouter.get(
+  '/submissions',
+  zValidator('query', submissionsQuerySchema, (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid query params' }, 422)
+    }
+  }),
+  async (ctx) => {
+    const { count, limit, offset } = ctx.req.valid('query')
+
+    const rowsPromise = db
+      .select({
+        id: priceSubmissions.id,
+        eventId: priceSubmissions.eventId,
+        userId: priceSubmissions.userId,
+        priceMin: priceSubmissions.priceMin,
+        priceMax: priceSubmissions.priceMax,
+        status: priceSubmissions.status,
+        createdAt: priceSubmissions.createdAt,
+        eventTitle: events.title,
+        eventDate: events.date,
+        ticketUrl: events.ticketUrl,
+        venueName: venues.name,
+      })
+      .from(priceSubmissions)
+      .leftJoin(events, eq(priceSubmissions.eventId, events.id))
+      .leftJoin(venues, eq(events.venueId, venues.id))
+      .orderBy(desc(priceSubmissions.createdAt))
+      .limit(limit)
+      .offset(offset)
+
+    if (!count) {
+      const rows = await rowsPromise
+      return ctx.json({ success: true, data: rows })
+    }
+
+    const countQuery = db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(priceSubmissions)
+    const [rows, countResult] = await Promise.all([rowsPromise, countQuery])
+    const total = countResult[0]?.total ?? 0
+    return ctx.json({ success: true, data: { rows, total } })
+  },
+)
 
 // GET /v1/admin/prices/submissions/count — pending submissions count for dashboard
 pricesAdminRouter.get('/submissions/count', async (ctx) => {

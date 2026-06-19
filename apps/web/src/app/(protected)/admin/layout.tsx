@@ -13,8 +13,9 @@ interface CrawlStatusVenue {
 }
 
 interface ReviewCounts {
-  pendingEvents: number
-  pendingPrices: number
+  eventFlags: number
+  prices: number
+  missing: number
 }
 
 interface FeedbackCounts {
@@ -55,7 +56,9 @@ export default async function AdminLayout({
 
     if (reviewRes.status === 'fulfilled') {
       pendingReview =
-        reviewRes.value.pendingEvents + reviewRes.value.pendingPrices
+        reviewRes.value.eventFlags +
+        reviewRes.value.prices +
+        reviewRes.value.missing
     } else {
       console.warn('[admin layout] review counts fetch failed', {
         reason: reviewRes.reason,

@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { requireRole } from '../../middleware/role.js'
 import { clerkAuth } from '../../middleware/auth.js'
 import { db, auditLog, events, priceSubmissions } from '@concert-crawl/db'
-import { eq, sql } from 'drizzle-orm'
+import { and, eq, gte, isNotNull, sql } from 'drizzle-orm'
 import { venuesAdminRouter } from './venues.js'
 import { inviteCodesAdminRouter } from './invite-codes.js'
 import { crawlAdminRouter } from './crawl.js'
@@ -58,23 +58,42 @@ adminRouter.use('*', async (ctx, next) => {
   }
 })
 
-// GET /v1/admin/review/counts — pending events + price submissions for sidebar badge
+// GET /v1/admin/review/counts — tab-pill counts for /admin/review and the
+// admin sidebar badge. The three numbers map 1:1 to the four data-bearing
+// Review tabs (the All Events tab has no pill count).
 adminRouter.get('/review/counts', async (ctx) => {
-  const [eventsResult, pricesResult] = await Promise.all([
+  // The missing branch needs today's Denver-local date so the count matches
+  // what the list endpoint shows (which filters past-date stale events out).
+  const today = new Date().toLocaleDateString('en-CA', {
+    timeZone: 'America/Denver',
+  })
+
+  const [eventFlagsResult, pricesResult, missingResult] = await Promise.all([
     db
-      .select({ pending: sql<number>`count(*)::int` })
+      .select({ total: sql<number>`count(*)::int` })
       .from(events)
       .where(eq(events.verified, false)),
     db
-      .select({ pending: sql<number>`count(*)::int` })
+      .select({ total: sql<number>`count(*)::int` })
       .from(priceSubmissions)
       .where(eq(priceSubmissions.status, 'pending')),
+    db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(events)
+      .where(
+        and(
+          isNotNull(events.firstMissingAt),
+          eq(events.status, 'upcoming'),
+          gte(events.date, today),
+        ),
+      ),
   ])
   return ctx.json({
     success: true,
     data: {
-      pendingEvents: eventsResult[0]?.pending ?? 0,
-      pendingPrices: pricesResult[0]?.pending ?? 0,
+      eventFlags: eventFlagsResult[0]?.total ?? 0,
+      prices: pricesResult[0]?.total ?? 0,
+      missing: missingResult[0]?.total ?? 0,
     },
   })
 })

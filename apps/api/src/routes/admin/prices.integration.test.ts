@@ -373,3 +373,124 @@ describe('GET /v1/admin/prices/events', () => {
     expect(body.data[0].date).toBe('2099-07-01')
   })
 })
+
+describe('GET /v1/admin/prices/events?count=true', () => {
+  beforeEach(() => {
+    setAdminAuth()
+    return clearTables()
+  })
+
+  it('returns { rows, total } with total ignoring limit/offset', async () => {
+    const venue = await seedVenue()
+    for (let idx = 0; idx < 4; idx++) {
+      await seedEvent(venue.id, {
+        artist: `Artist ${idx}`,
+        date: `2099-08-0${idx + 1}`,
+        status: 'upcoming',
+        ticketPriceMin: null,
+      })
+    }
+
+    const res = await app.request(
+      '/v1/admin/prices/events?count=true&limit=2&offset=0',
+      { headers: ADMIN_HEADERS },
+    )
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { rows: { eventId: string }[]; total: number }
+    }
+    expect(body.data.rows.length).toBe(2)
+    expect(body.data.total).toBe(4)
+  })
+
+  it('keeps legacy array shape when count is omitted', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      artist: 'Solo',
+      date: '2099-08-15',
+      status: 'upcoming',
+      ticketPriceMin: null,
+    })
+
+    const res = await app.request('/v1/admin/prices/events', {
+      headers: ADMIN_HEADERS,
+    })
+    const body = (await res.json()) as { success: boolean; data: unknown }
+    expect(Array.isArray(body.data)).toBe(true)
+  })
+
+  it('applies missingOnly to both rows and total', async () => {
+    const venue = await seedVenue()
+    // 2 with price, 1 without — missingOnly=true should count only 1.
+    await seedEvent(venue.id, {
+      artist: 'Priced 1',
+      date: '2099-09-01',
+      status: 'upcoming',
+      ticketPriceMin: '30',
+    })
+    await seedEvent(venue.id, {
+      artist: 'Priced 2',
+      date: '2099-09-02',
+      status: 'upcoming',
+      ticketPriceMin: '40',
+    })
+    await seedEvent(venue.id, {
+      artist: 'Missing',
+      date: '2099-09-03',
+      status: 'upcoming',
+      ticketPriceMin: null,
+    })
+
+    const res = await app.request(
+      '/v1/admin/prices/events?count=true&missingOnly=true&limit=10',
+      { headers: ADMIN_HEADERS },
+    )
+    const body = (await res.json()) as {
+      data: { rows: { eventId: string }[]; total: number }
+    }
+    expect(body.data.rows.length).toBe(1)
+    expect(body.data.total).toBe(1)
+  })
+})
+
+describe('GET /v1/admin/prices/submissions?count=true', () => {
+  beforeEach(() => {
+    setAdminAuth()
+    return clearTables()
+  })
+
+  it('returns { rows, total } with total ignoring limit/offset', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, { date: '2099-10-01' })
+    for (let idx = 0; idx < 3; idx++) {
+      await seedPriceSubmission(event.id, `user-${idx}`, {
+        priceMin: `${20 + idx}`,
+      })
+    }
+
+    const res = await app.request(
+      '/v1/admin/prices/submissions?count=true&limit=2&offset=0',
+      { headers: ADMIN_HEADERS },
+    )
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { rows: { id: string }[]; total: number }
+    }
+    expect(body.data.rows.length).toBe(2)
+    expect(body.data.total).toBe(3)
+  })
+
+  it('keeps legacy array shape when count is omitted', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, { date: '2099-11-01' })
+    await seedPriceSubmission(event.id, 'lone-user')
+
+    const res = await app.request('/v1/admin/prices/submissions', {
+      headers: ADMIN_HEADERS,
+    })
+    const body = (await res.json()) as { success: boolean; data: unknown }
+    expect(Array.isArray(body.data)).toBe(true)
+  })
+})

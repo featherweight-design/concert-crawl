@@ -1520,3 +1520,77 @@ describe('POST /v1/admin/events/:id/merge', () => {
     expect(res.status).toBe(403)
   })
 })
+
+describe('GET /v1/admin/events?count=true', () => {
+  beforeEach(() => {
+    setAdminAuth()
+    return clearTables()
+  })
+
+  it('returns { rows, total } with total ignoring limit/offset', async () => {
+    const venue = await seedVenue()
+    // Seed 5 events spread across distinct dates so the date-default doesn't
+    // hide any of them.
+    for (let idx = 0; idx < 5; idx++) {
+      await seedEvent(venue.id, {
+        artist: `Artist ${idx}`,
+        date: `2026-09-0${idx + 1}`,
+      })
+    }
+
+    const res = await app.request(
+      '/v1/admin/events?count=true&limit=2&offset=0',
+      { method: 'GET', headers: ADMIN_HEADERS },
+    )
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { rows: { id: string }[]; total: number }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.rows.length).toBe(2)
+    expect(body.data.total).toBe(5)
+  })
+
+  it('keeps legacy array response when count is omitted', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, { artist: 'Solo', date: '2026-10-01' })
+
+    const res = await app.request('/v1/admin/events?limit=10', {
+      method: 'GET',
+      headers: ADMIN_HEADERS,
+    })
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { success: boolean; data: unknown }
+    expect(Array.isArray(body.data)).toBe(true)
+  })
+
+  it('applies the same WHERE clauses to the count as to the rows', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      artist: 'Verified Artist',
+      date: '2026-11-01',
+      verified: true,
+    })
+    await seedEvent(venue.id, {
+      artist: 'Unverified Artist',
+      date: '2026-11-02',
+      verified: false,
+    })
+
+    const res = await app.request(
+      '/v1/admin/events?count=true&verified=false&limit=10',
+      { method: 'GET', headers: ADMIN_HEADERS },
+    )
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { rows: { id: string }[]; total: number }
+    }
+    expect(body.data.rows.length).toBe(1)
+    expect(body.data.total).toBe(1)
+  })
+})
