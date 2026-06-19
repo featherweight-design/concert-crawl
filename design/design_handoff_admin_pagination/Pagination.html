@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pagination · Admin Components</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
+  ::selection { background: color-mix(in oklab, var(--signal) 35%, transparent); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="admin-primitives.jsx"></script>
+<script type="text/babel" src="admin-pagination.jsx"></script>
+
+<script type="text/babel">
+const { useState } = React;
+
+// ── Fake dataset for the live demo (deterministic) ─────────────────────
+const DEMO_TITLES = [
+  "Khruangbin", "Cigarettes After Sex", "Bright Eyes", "Vampire Weekend", "boygenius",
+  "Wet Leg", "Father John Misty", "Japanese Breakfast", "Big Thief", "Mitski",
+  "The National", "Phoebe Bridgers", "Beach House", "Tame Impala", "King Gizzard",
+  "Fleet Foxes", "Bon Iver", "Sufjan Stevens", "Caroline Polachek", "Faye Webster",
+  "Alvvays", "Slowdive", "Hovvdy", "MJ Lenderman", "Wednesday", "Geese", "Jessica Pratt",
+  "Cass McCombs", "Yo La Tengo", "Destroyer",
+];
+const DEMO_VENUES = [
+  "Bluebird Theater", "Mission Ballroom", "Red Rocks", "Ogden Theatre",
+  "Gothic Theatre", "Larimer Lounge", "Globe Hall", "Cervantes",
+];
+const DEMO_TOTAL = 2438;
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function demoRow(i) {
+  const title = DEMO_TITLES[i % DEMO_TITLES.length];
+  const venue = DEMO_VENUES[(i * 5) % DEMO_VENUES.length];
+  const month = MONTHS[(i * 3) % 12];
+  const day = 1 + ((i * 7) % 27);
+  const verified = i % 4 !== 0;
+  const statusKind = i % 11 === 0 ? "postponed" : i % 17 === 0 ? "cancelled" : "upcoming";
+  return { id: "evt-" + (5200 + i), title, venue, date: `${month} ${day}`, verified, statusKind };
+}
+
+// ── Small shared spec helpers ──────────────────────────────────────────
+function Eyebrow({ children, color }) {
+  return <MonoLabel color={color || "var(--signal)"} size={10} style={{ display: "block" }}>{children}</MonoLabel>;
+}
+function Caption({ children, kind = "neutral" }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+      <span style={{ width: 6, height: 6, borderRadius: 3, background: kind === "neutral" ? "var(--fg-subtle)" : `var(--${kind})`, flex: "0 0 auto" }} />
+      <MonoLabel size={10} color="var(--fg-muted)">{children}</MonoLabel>
+    </div>
+  );
+}
+function SectionTitle({ n, title, sub }) {
+  return (
+    <div style={{ marginBottom: 22, maxWidth: 760 }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
+        <span style={{ fontFamily: ADMIN_MONO, fontSize: 12, fontWeight: 700, color: "var(--signal)", letterSpacing: "0.08em" }}>{n}</span>
+        <h2 style={{ margin: 0, fontFamily: ADMIN_FONT, fontSize: 21, fontWeight: 800, color: "var(--fg)", letterSpacing: "-0.02em" }}>{title}</h2>
+      </div>
+      {sub && <p style={{ margin: "8px 0 0 24px", fontFamily: ADMIN_FONT, fontSize: 13.5, lineHeight: 1.55, color: "var(--fg-muted)", maxWidth: 660 }}>{sub}</p>}
+    </div>
+  );
+}
+
+// ── A tiny table + pager wrapped in a real Panel (for state artboards) ──
+function MiniTablePanel({ title, badge, rows = [], pager, loading = false, empty = false, slim = false }) {
+  return (
+    <Panel
+      title={<>
+        <span style={{ fontFamily: ADMIN_FONT, fontSize: 14, fontWeight: 700 }}>{title}</span>
+        {badge}
+      </>}
+      action={<AdminButton variant="ghost" size="sm" icon="filter">Filters</AdminButton>}
+      padding={0}
+    >
+      <div style={{ position: "relative" }}>
+        <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, fontFamily: ADMIN_FONT, fontSize: 13 }}>
+          <thead style={{ background: "var(--surface-1)" }}>
+            <tr>
+              <TH>Event</TH>
+              {!slim && <TH>Venue</TH>}
+              <TH align="right">Date</TH>
+              <TH align="right" width={slim ? 104 : 120}>Status</TH>
+            </tr>
+          </thead>
+          <tbody>
+            {empty ? (
+              <tr><td colSpan={slim ? 3 : 4} style={{ padding: 0 }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "38px 18px" }}>
+                  <MonoLabel size={10} color="var(--fg-subtle)">0 results</MonoLabel>
+                  <div style={{ fontFamily: ADMIN_FONT, fontSize: 16, fontWeight: 800, color: "var(--fg)", letterSpacing: "-0.01em" }}>Crickets.</div>
+                  <div style={{ fontFamily: ADMIN_FONT, fontSize: 12.5, color: "var(--fg-muted)" }}>Loosen or clear your filters to see events.</div>
+                </div>
+              </td></tr>
+            ) : rows.map((r) => (
+              <tr key={r.id} style={{ opacity: loading ? 0.5 : 1, transition: "opacity .15s" }}>
+                <TD><span style={{ fontWeight: 600 }}>{r.title}</span></TD>
+                {!slim && <TD color="var(--fg-muted)">{r.venue}</TD>}
+                <TD align="right" mono color="var(--fg-muted)">{r.date}</TD>
+                <TD align="right">
+                  <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-end", gap: 3 }}>
+                    <StatusBadge kind={r.statusKind === "cancelled" ? "danger" : r.statusKind === "postponed" ? "warning" : "neutral"} mono>{r.statusKind}</StatusBadge>
+                    <StatusBadge kind={r.verified ? "success" : "warning"} dot mono>{r.verified ? "verified" : "unverified"}</StatusBadge>
+                  </div>
+                </TD>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {loading && (
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 999, background: "var(--bg-elevated)", border: "1px solid var(--border)", boxShadow: "0 4px 14px rgba(0,0,0,0.18)" }}>
+              <Spinner size={13} color="var(--signal)" />
+              <MonoLabel size={10} color="var(--fg-muted)">loading page…</MonoLabel>
+            </div>
+          </div>
+        )}
+        {pager}
+      </div>
+    </Panel>
+  );
+}
+
+// ── LIVE interactive demo ───────────────────────────────────────────────
+function LiveDemo() {
+  const p = usePagination(DEMO_TOTAL, { initialPage: 1, initialPageSize: 25 });
+  const [loading, setLoading] = useState(false);
+  const visible = [];
+  const shown = Math.min(8, p.end - p.start + 1);
+  for (let k = 0; k < shown; k++) visible.push(demoRow(p.offset + k));
+  const extra = (p.end - p.start + 1) - shown;
+
+  // simulate a request whenever page/size changes
+  const change = (fn) => { setLoading(true); fn(); setTimeout(() => setLoading(false), 360); };
+
+  return (
+    <div>
+      <Caption kind="signal">Live · backed by usePagination → offset {p.offset} · limit {p.limit}</Caption>
+      <Panel
+        title={<>
+          <span style={{ fontFamily: ADMIN_FONT, fontSize: 14, fontWeight: 700 }}>All events</span>
+          <StatusBadge kind="signal" mono>{DEMO_TOTAL.toLocaleString()} total</StatusBadge>
+        </>}
+        action={<AdminButton variant="ghost" size="sm" icon="filter">Filters</AdminButton>}
+        padding={0}
+      >
+        <div style={{ position: "relative" }}>
+          <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, fontFamily: ADMIN_FONT, fontSize: 13 }}>
+            <thead style={{ background: "var(--surface-1)" }}>
+              <tr>
+                <TH width={46}>#</TH>
+                <TH>Event</TH>
+                <TH>Venue</TH>
+                <TH align="right">Date</TH>
+                <TH align="right" width={130}>Status</TH>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((r, k) => (
+                <tr key={r.id} style={{ opacity: loading ? 0.45 : 1, transition: "opacity .15s" }}>
+                  <TD mono color="var(--fg-subtle)">{(p.offset + k + 1).toLocaleString()}</TD>
+                  <TD><span style={{ fontWeight: 600 }}>{r.title}</span> <span style={{ fontFamily: ADMIN_MONO, fontSize: 11, color: "var(--fg-subtle)" }}>{r.id}</span></TD>
+                  <TD color="var(--fg-muted)">{r.venue}</TD>
+                  <TD align="right" mono color="var(--fg-muted)">{r.date}</TD>
+                  <TD align="right">
+                    <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-end", gap: 3 }}>
+                      <StatusBadge kind={r.statusKind === "cancelled" ? "danger" : r.statusKind === "postponed" ? "warning" : "neutral"} mono>{r.statusKind}</StatusBadge>
+                      <StatusBadge kind={r.verified ? "success" : "warning"} dot mono>{r.verified ? "verified" : "unverified"}</StatusBadge>
+                    </div>
+                  </TD>
+                </tr>
+              ))}
+              {extra > 0 && (
+                <tr><td colSpan={5} style={{ textAlign: "center", padding: "10px 14px", borderBottom: "1px solid var(--border)", fontFamily: ADMIN_MONO, fontSize: 12, fontWeight: 500, color: "var(--fg-subtle)", background: "color-mix(in oklab, var(--surface-1) 50%, transparent)" }}>
+                  + {extra} more row{extra === 1 ? "" : "s"} on this page
+                </td></tr>
+              )}
+            </tbody>
+          </table>
+          {loading && (
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 999, background: "var(--bg-elevated)", border: "1px solid var(--border)", boxShadow: "0 4px 14px rgba(0,0,0,0.18)" }}>
+                <Spinner size={13} color="var(--signal)" />
+                <MonoLabel size={10} color="var(--fg-muted)">fetching…</MonoLabel>
+              </div>
+            </div>
+          )}
+          <Pagination
+            page={p.page} pageSize={p.pageSize} total={p.total} loading={loading}
+            onPageChange={(n) => change(() => p.setPage(n))}
+            onPageSizeChange={(s) => change(() => p.setPageSize(s))}
+            itemLabel="events"
+          />
+        </div>
+      </Panel>
+      <p style={{ margin: "12px 0 0", fontFamily: ADMIN_FONT, fontSize: 12.5, color: "var(--fg-subtle)", lineHeight: 1.5 }}>
+        Fully interactive — change rows-per-page or page through. Resize the window narrow (or view on a phone) to watch it collapse to the compact layout. The table previews the first 8 rows of each page so the demo stays compact.
+      </p>
+    </div>
+  );
+}
+
+// ── ANATOMY ──────────────────────────────────────────────────────────────
+function Anatomy() {
+  const parts = [
+    ["Range readout", "101–125 of 2,438. Tabular mono. Reads straight off offset/limit/total — the single 'where am I' signal."],
+    ["Rows-per-page", "25 / 50 / 100, default 25 — customizable per surface. Changing it resets to page 1 and re-fetches. Drops up (it sits at the panel bottom)."],
+    ["Numbered pages", "First + last always shown; current ±1 in the middle; '…' where collapsed. Active page = signal fill — tap any to go there."],
+    ["Prev / Next + First / Last", "Arrow buttons. First/Last (« ») disable on page 1 / final page; Prev/Next disable at the ends."],
+  ];
+  return (
+    <div>
+      <Caption>Anatomy · desktop</Caption>
+      <div style={{ border: "1px solid var(--border)", borderRadius: 12, background: "var(--bg-elevated)", overflow: "hidden" }}>
+        <div style={{ height: 16, background: "var(--surface-1)", borderBottom: "1px dashed var(--border)" }} />
+        <Pagination page={5} pageSize={25} total={2438} onPageChange={() => {}} onPageSizeChange={() => {}} itemLabel="events" />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginTop: 18 }}>
+        {parts.map(([t, d], i) => (
+          <div key={t} style={{ display: "flex", gap: 12 }}>
+            <span style={{ flex: "0 0 auto", width: 22, height: 22, borderRadius: 999, background: "color-mix(in oklab, var(--signal) 16%, transparent)", color: "var(--signal)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: ADMIN_MONO, fontSize: 11, fontWeight: 700 }}>{i + 1}</span>
+            <div>
+              <div style={{ fontFamily: ADMIN_FONT, fontSize: 13, fontWeight: 700, color: "var(--fg)", marginBottom: 3 }}>{t}</div>
+              <div style={{ fontFamily: ADMIN_FONT, fontSize: 12.5, color: "var(--fg-muted)", lineHeight: 1.5 }}>{d}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── DESKTOP STATES ─────────────────────────────────────────────────────
+function StateDefault() {
+  const p = usePagination(2438, { initialPage: 4, initialPageSize: 50 });
+  const rows = [0,1,2].map((k) => demoRow(p.offset + k));
+  return <MiniTablePanel title="All events" badge={<StatusBadge kind="signal" mono>2,438</StatusBadge>} rows={rows}
+    pager={<Pagination forceCompact={false} page={p.page} pageSize={p.pageSize} total={p.total} onPageChange={p.setPage} onPageSizeChange={p.setPageSize} itemLabel="events" />} />;
+}
+function StateFirst() {
+  const p = usePagination(2438, { initialPage: 1, initialPageSize: 50 });
+  const rows = [0,1,2].map((k) => demoRow(p.offset + k));
+  return <MiniTablePanel title="All events" badge={<StatusBadge kind="signal" mono>2,438</StatusBadge>} rows={rows}
+    pager={<Pagination forceCompact={false} page={p.page} pageSize={p.pageSize} total={p.total} onPageChange={p.setPage} onPageSizeChange={p.setPageSize} itemLabel="events" />} />;
+}
+function StateLast() {
+  const p = usePagination(2438, { initialPage: 49, initialPageSize: 50 });
+  const rows = [0,1].map((k) => demoRow(p.offset + k));
+  return <MiniTablePanel title="All events" badge={<StatusBadge kind="signal" mono>2,438</StatusBadge>} rows={rows}
+    pager={<Pagination forceCompact={false} page={p.page} pageSize={p.pageSize} total={p.total} onPageChange={p.setPage} onPageSizeChange={p.setPageSize} itemLabel="events" />} />;
+}
+function StateSingle() {
+  const p = usePagination(18, { initialPage: 1, initialPageSize: 50 });
+  const rows = [0,1,2].map((k) => demoRow(40 + k));
+  return <MiniTablePanel title="Community prices" badge={<StatusBadge kind="signal" mono>18</StatusBadge>} rows={rows}
+    pager={<Pagination forceCompact={false} page={p.page} pageSize={p.pageSize} total={p.total} onPageChange={p.setPage} onPageSizeChange={p.setPageSize} itemLabel="submissions" />} />;
+}
+function StateLoading() {
+  const rows = [0,1,2].map((k) => demoRow(150 + k));
+  return <MiniTablePanel title="All events" badge={<StatusBadge kind="signal" mono>2,438</StatusBadge>} rows={rows} loading
+    pager={<Pagination forceCompact={false} page={7} pageSize={50} total={2438} loading onPageChange={() => {}} onPageSizeChange={() => {}} itemLabel="events" />} />;
+}
+function StateEmpty() {
+  return <MiniTablePanel title="All events" badge={<StatusBadge kind="neutral" mono>0</StatusBadge>} empty
+    pager={<Pagination forceCompact={false} page={1} pageSize={50} total={0} onPageChange={() => {}} onPageSizeChange={() => {}} itemLabel="events" />} />;
+}
+
+function DesktopStates() {
+  const items = [
+    ["Default — mid-dataset", "neutral", <StateDefault />],
+    ["First page — « ‹ disabled", "neutral", <StateFirst />],
+    ["Last page — › » disabled", "neutral", <StateLast />],
+    ["Single page — pager inert, size selector stays", "neutral", <StateSingle />],
+    ["Loading — page change in flight, controls locked", "signal", <StateLoading />],
+    ["Empty — 0 results, 'Crickets.'", "warning", <StateEmpty />],
+  ];
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(420px, 1fr))", gap: 24 }}>
+      {items.map(([label, kind, node], i) => (
+        <div key={i} data-screen-label={`Desktop · ${label}`}>
+          <Caption kind={kind}>{label}</Caption>
+          {node}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── MOBILE STATES ──────────────────────────────────────────────────────
+function PhoneFrame({ children, label, kind = "neutral" }) {
+  return (
+    <div data-screen-label={`Mobile · ${label}`}>
+      <Caption kind={kind}>{label}</Caption>
+      <div style={{ width: 360, maxWidth: "100%", margin: "0 auto", border: "1px solid var(--border-strong)", borderRadius: 26, padding: 12, background: "var(--surface-1)" }}>
+        <div style={{ borderRadius: 16, overflow: "hidden", background: "var(--bg)" }}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+function MobileDefault() {
+  const p = usePagination(2438, { initialPage: 5, initialPageSize: 25 });
+  const rows = [0,1,2].map((k) => demoRow(p.offset + k));
+  return (
+    <MiniTablePanel slim title="All events" badge={<StatusBadge kind="signal" mono>2,438</StatusBadge>} rows={rows}
+      pager={<Pagination forceCompact page={p.page} pageSize={p.pageSize} total={p.total} pageSizeOptions={[25,50,100]} onPageChange={p.setPage} onPageSizeChange={p.setPageSize} itemLabel="events" />} />
+  );
+}
+function MobileFirst() {
+  const p = usePagination(2438, { initialPage: 1, initialPageSize: 25 });
+  const rows = [0,1,2].map((k) => demoRow(p.offset + k));
+  return (
+    <MiniTablePanel slim title="All events" badge={<StatusBadge kind="signal" mono>2,438</StatusBadge>} rows={rows}
+      pager={<Pagination forceCompact page={p.page} pageSize={p.pageSize} total={p.total} pageSizeOptions={[25,50,100]} onPageChange={p.setPage} onPageSizeChange={p.setPageSize} itemLabel="events" />} />
+  );
+}
+function MobileLoading() {
+  const rows = [0,1,2].map((k) => demoRow(80 + k));
+  return (
+    <MiniTablePanel slim title="All events" badge={<StatusBadge kind="signal" mono>2,438</StatusBadge>} rows={rows} loading
+      pager={<Pagination forceCompact loading page={9} pageSize={25} total={2438} onPageChange={() => {}} onPageSizeChange={() => {}} itemLabel="events" />} />
+  );
+}
+
+function MobileStates() {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 24, justifyItems: "center" }}>
+      <PhoneFrame label="Default — mid-dataset"><MobileDefault /></PhoneFrame>
+      <PhoneFrame label="First page — Prev disabled" kind="neutral"><MobileFirst /></PhoneFrame>
+      <PhoneFrame label="Loading" kind="signal"><MobileLoading /></PhoneFrame>
+    </div>
+  );
+}
+
+// ── BEHAVIOR NOTES ─────────────────────────────────────────────────────
+function NoteBlock({ title, children, icon, kind = "signal" }) {
+  return (
+    <div style={{ border: "1px solid var(--border)", borderRadius: 12, background: "var(--bg-elevated)", padding: 18 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+        <span style={{ width: 28, height: 28, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", color: `var(--${kind})`, background: `color-mix(in oklab, var(--${kind}) 13%, transparent)` }}>
+          <AdminIcon name={icon} size={15} />
+        </span>
+        <h3 style={{ margin: 0, fontFamily: ADMIN_FONT, fontSize: 14, fontWeight: 700, color: "var(--fg)" }}>{title}</h3>
+      </div>
+      <div style={{ fontFamily: ADMIN_FONT, fontSize: 13, color: "var(--fg-muted)", lineHeight: 1.65 }}>{children}</div>
+    </div>
+  );
+}
+function Code({ children }) {
+  return <code style={{ fontFamily: ADMIN_MONO, fontSize: 12, fontWeight: 600, color: "var(--signal)", background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: 5, padding: "1px 5px" }}>{children}</code>;
+}
+function BehaviorNotes() {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 18 }}>
+      <NoteBlock title="Server-side, always" icon="db">
+        The pager owns <Code>page</Code> + <Code>pageSize</Code> only. <Code>usePagination(total)</Code> derives <Code>offset</Code> and <Code>limit</Code> — pass them straight to <Code>GET /v1/admin/&#42;?limit=&amp;offset=</Code>. Each tab loads only its current page on mount, not the whole set. Changing page or size triggers one re-fetch.
+      </NoteBlock>
+      <NoteBlock title="Where it lives" icon="layout">
+        Last child inside the table's <Code>&lt;Panel padding=&#123;0&#125;&gt;</Code>, with a <Code>--border</Code> top rule and a <Code>--surface-1</Code> ground so it reads as a footer of the same card. Identical placement on all five Review tabs.
+      </NoteBlock>
+      <NoteBlock title="Page-size changes reset to 1" icon="refresh" kind="warning">
+        Bumping rows-per-page snaps back to page 1 (you can't be on page 40 of a freshly-resized set). The readout updates immediately; the table shows the loading veil until the page returns.
+      </NoteBlock>
+      <NoteBlock title="Edges & single page" icon="chevsR">
+        First/Prev disable on page 1; Next/Last disable on the final page. With one page of results the arrows + numbers go inert — but the rows-per-page selector stays so you can widen the window.
+      </NoteBlock>
+      <NoteBlock title="Compact under ~560px" icon="side">
+        A <Code>ResizeObserver</Code> swaps to the stacked layout: range + size on top, then a 44px <Code>Prev · Page X / Y · Next</Code> row. All hit targets ≥ 44px; works to 360px.
+      </NoteBlock>
+      <NoteBlock title="Per surface" icon="events" kind="accent">
+        <strong style={{ color: "var(--fg)" }}>All events · Community Prices · Price Coverage · Missing</strong> — plain table footer. <strong style={{ color: "var(--fg)" }}>Event Flags</strong> is a split list+inspector: the pager drives the left list; selecting a row loads it into the inspector, and paging clamps the selection to the new page's first row.
+      </NoteBlock>
+      <NoteBlock title="Selection across pages" icon="check">
+        Bulk-select is keyed by row id, not row index, so a selection survives paging. The bulk dock keeps showing the running count; a footnote notes how many selected rows live on other pages. Changing page size keeps the selection.
+      </NoteBlock>
+      <NoteBlock title="Accessibility" icon="shield">
+        Pager is a <Code>nav[aria-label="Pagination"]</Code>; the active page carries <Code>aria-current="page"</Code>; arrows have labels (First/Previous/Next/Last). Focus rings inherit <Code>--focus</Code>. Page buttons tab in order.
+      </NoteBlock>
+    </div>
+  );
+}
+
+// ── PAGE ────────────────────────────────────────────────────────────────
+function ThemeToggle({ theme, setTheme }) {
+  const opts = [["electric", "Electric"], ["light", "Light"]];
+  return (
+    <div style={{ display: "inline-flex", gap: 3, padding: 3, borderRadius: 999, background: "var(--surface-1)", border: "1px solid var(--border)" }}>
+      {opts.map(([k, label]) => {
+        const active = theme === k;
+        return (
+          <button key={k} type="button" onClick={() => setTheme(k)} style={{
+            all: "unset", cursor: "pointer", padding: "5px 12px", borderRadius: 999,
+            fontFamily: ADMIN_MONO, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase",
+            color: active ? "var(--fg-on-accent)" : "var(--fg-muted)",
+            background: active ? "var(--signal)" : "transparent",
+          }}>{label}</button>
+        );
+      })}
+    </div>
+  );
+}
+
+function Spec() {
+  const [theme, setTheme] = useThemeState("electric", "cc-admin-pagination-theme");
+  const sectionGap = 64;
+  return (
+    <ThemeProvider theme={theme} style={{ minHeight: "100vh", background: "var(--bg)" }}>
+      <div style={{ maxWidth: 1180, margin: "0 auto", padding: "44px 32px 96px" }}>
+        {/* Header */}
+        <header style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 24, marginBottom: 18, flexWrap: "wrap" }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ marginBottom: 10 }}><CCWordmarkAdmin size={15} declaration="ADMIN · COMPONENTS" /></div>
+            <h1 style={{ margin: 0, fontFamily: ADMIN_FONT, fontSize: 34, fontWeight: 900, letterSpacing: "-0.03em", color: "var(--fg)" }}>Pagination</h1>
+            <p style={{ margin: "10px 0 0", maxWidth: 640, fontFamily: ADMIN_FONT, fontSize: 14.5, lineHeight: 1.55, color: "var(--fg-muted)" }}>
+              One reusable pager for every <span style={{ fontFamily: ADMIN_MONO, fontSize: 13, color: "var(--fg)" }}>/admin/review</span> tab — Event Flags, Community Prices, Price Coverage, Missing, and All Events. Server-side <span style={{ fontFamily: ADMIN_MONO, fontSize: 13, color: "var(--fg)" }}>limit/offset</span>, lives in the table's Panel, works from desktop down to 360px.
+            </p>
+          </div>
+          <ThemeToggle theme={theme} setTheme={setTheme} />
+        </header>
+
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: sectionGap }}>
+          <StatusBadge kind="signal" mono>limit / offset</StatusBadge>
+          <StatusBadge kind="success" mono>25 · 50 · 100</StatusBadge>
+          <StatusBadge kind="accent" mono>responsive ≥360px</StatusBadge>
+          <StatusBadge kind="neutral" mono>inside Panel footer</StatusBadge>
+        </div>
+
+        <section style={{ marginBottom: sectionGap }}>
+          <SectionTitle n="01" title="Try it" sub="A real All Events table wired to the component. Page through or change rows-per-page — the rows, range readout, and request offset all update together." />
+          <LiveDemo />
+        </section>
+
+        <section style={{ marginBottom: sectionGap }}>
+          <SectionTitle n="02" title="Anatomy" sub="Five parts, left to right. Everything is mono + tabular so columns of numbers stay aligned, matching the rest of the admin surface." />
+          <Anatomy />
+        </section>
+
+        <section style={{ marginBottom: sectionGap }}>
+          <SectionTitle n="03" title="Desktop states" sub="Each shown inside its host Panel so placement and the surface-1 footer read correctly. The first four are interactive." />
+          <DesktopStates />
+        </section>
+
+        <section style={{ marginBottom: sectionGap }}>
+          <SectionTitle n="04" title="Mobile" sub="Under ~560px the pager stacks: range + rows-per-page on top, a 44px Prev · Page X / Y · Next row below. Tested to 360px." />
+          <MobileStates />
+        </section>
+
+        <section>
+          <SectionTitle n="05" title="Behavior & integration" sub="The contract for wiring this into the admin app." />
+          <BehaviorNotes />
+        </section>
+
+        <footer style={{ marginTop: 72, paddingTop: 22, borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+          <MonoLabel size={10} color="var(--fg-subtle)">concertcrawl · admin components · pagination</MonoLabel>
+          <MonoLabel size={10} color="var(--fg-subtle)">usePagination() · pageWindow() · &lt;Pagination/&gt;</MonoLabel>
+        </footer>
+      </div>
+    </ThemeProvider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<Spec />);
+</script>
+</body>
+</html>
