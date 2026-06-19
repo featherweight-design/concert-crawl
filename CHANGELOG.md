@@ -1,3 +1,15 @@
+# [1.67.0](https://github.com/HartiganHM/concert-crawl/compare/v1.66.0...v1.67.0) (2026-06-19)
+
+
+### Bug Fixes
+
+* **api:** address Copilot review on PR [#700](https://github.com/HartiganHM/concert-crawl/issues/700) ([22abb0c](https://github.com/HartiganHM/concert-crawl/commit/22abb0c9163626c793d0fb36b7d57d9880a4a4dd))
+
+
+### Features
+
+* **api:** opt-in count on admin list endpoints + review counts shape ([10c75a9](https://github.com/HartiganHM/concert-crawl/commit/10c75a9c1f00ba4f02cb067ad21f049a939af466))
+
 # [1.66.0](https://github.com/HartiganHM/concert-crawl/compare/v1.65.1...v1.66.0) (2026-06-19)
 
 
