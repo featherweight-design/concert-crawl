@@ -59,8 +59,9 @@ adminRouter.use('*', async (ctx, next) => {
 })
 
 // GET /v1/admin/review/counts — tab-pill counts for /admin/review and the
-// admin sidebar badge. The three numbers map 1:1 to the four data-bearing
-// Review tabs (the All Events tab has no pill count).
+// admin sidebar badge. Three of the four data-bearing Review tabs render
+// a pill count (All Events has none); this endpoint returns one number per
+// pill so the SSR initial paint shows them without activating each tab.
 adminRouter.get('/review/counts', async (ctx) => {
   // The missing branch needs today's Denver-local date so the count matches
   // what the list endpoint shows (which filters past-date stale events out).

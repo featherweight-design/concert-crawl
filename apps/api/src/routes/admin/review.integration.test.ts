@@ -49,6 +49,10 @@ const setNonAdminAuth = () => {
   }
 }
 
+const clearAuth = () => {
+  authState.current = null
+}
+
 describe('GET /v1/admin/review/counts', () => {
   beforeEach(() => {
     setAdminAuth()
@@ -128,5 +132,11 @@ describe('GET /v1/admin/review/counts', () => {
       headers: NON_ADMIN_HEADERS,
     })
     expect(res.status).toBe(403)
+  })
+
+  it('returns 401 when unauthenticated', async () => {
+    clearAuth()
+    const res = await app.request('/v1/admin/review/counts')
+    expect(res.status).toBe(401)
   })
 })
