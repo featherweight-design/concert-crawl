@@ -1,3 +1,15 @@
+# [1.66.0](https://github.com/HartiganHM/concert-crawl/compare/v1.65.1...v1.66.0) (2026-06-19)
+
+
+### Bug Fixes
+
+* **admin:** address Copilot review on PR [#691](https://github.com/HartiganHM/concert-crawl/issues/691) ([13fb0a1](https://github.com/HartiganHM/concert-crawl/commit/13fb0a1122d9a7a9dbcbb345a4c2449706718c2c))
+
+
+### Features
+
+* **admin:** tanstack query + smaller page sizes for review tabs ([af0af8f](https://github.com/HartiganHM/concert-crawl/commit/af0af8fd3a67c684c67729a978461d72fd8f1406))
+
 ## [1.65.1](https://github.com/HartiganHM/concert-crawl/compare/v1.65.0...v1.65.1) (2026-06-18)
 
 
