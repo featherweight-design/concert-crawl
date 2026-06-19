@@ -1,3 +1,16 @@
+# [1.68.0](https://github.com/HartiganHM/concert-crawl/compare/v1.67.0...v1.68.0) (2026-06-19)
+
+
+### Bug Fixes
+
+* **crawler:** remove "concert" bias from LLM prompt lead + user message ([057de78](https://github.com/HartiganHM/concert-crawl/commit/057de7839f082ce9523e3a220104b79f429f3e0b)), closes [#701](https://github.com/HartiganHM/concert-crawl/issues/701)
+
+
+### Features
+
+* **crawler:** llm extractor emits isConcert per event ([#696](https://github.com/HartiganHM/concert-crawl/issues/696)) ([0997d76](https://github.com/HartiganHM/concert-crawl/commit/0997d76aabe1bb96df1cd96cf884740535e43602))
+* **crawler:** set hidden_from_consumer on INSERT based on isConcert ([#696](https://github.com/HartiganHM/concert-crawl/issues/696)) ([ce55d07](https://github.com/HartiganHM/concert-crawl/commit/ce55d07585b6e73419f1f908dd5753e99075ded3))
+
 # [1.67.0](https://github.com/HartiganHM/concert-crawl/compare/v1.66.0...v1.67.0) (2026-06-19)
 
 
