@@ -651,3 +651,180 @@ describe('crawlVenue — per-platform fetcher dispatch (#623)', () => {
     expect(mockFetchPage).toHaveBeenCalled()
   })
 })
+
+describe('crawlVenue — non-concert auto-classification (#696)', () => {
+  it('INSERT path sets hidden_from_consumer=true when LLM returns isConcert=false', async () => {
+    const venue = await seedTestVenue()
+    const dateA = futureDate(7)
+
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE,
+      finalUrl: venue.url,
+      httpStatus: 200,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        {
+          title: 'BASS BINGO – Wooli Edition!',
+          artist: 'Wooli',
+          date: dateA,
+          confidence: 0.95,
+          sourceUrl: venue.url,
+          isConcert: false,
+        },
+      ],
+      usage: {
+        inputTokens: 100,
+        outputTokens: 50,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+      },
+    })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const [row] = await db
+      .select({
+        hiddenFromConsumer: events.hiddenFromConsumer,
+        artist: events.artist,
+      })
+      .from(events)
+      .where(eq(events.venueId, venue.id))
+
+    expect(row?.hiddenFromConsumer).toBe(true)
+    expect(row?.artist).toBe('Wooli')
+  })
+
+  it('INSERT path sets hidden_from_consumer=false when LLM returns isConcert=true', async () => {
+    const venue = await seedTestVenue()
+    const dateA = futureDate(7)
+
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE,
+      finalUrl: venue.url,
+      httpStatus: 200,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        {
+          title: 'Wynonna Judd Live',
+          artist: 'Wynonna Judd',
+          date: dateA,
+          confidence: 0.95,
+          sourceUrl: venue.url,
+          isConcert: true,
+        },
+      ],
+      usage: {
+        inputTokens: 100,
+        outputTokens: 50,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+      },
+    })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const [row] = await db
+      .select({ hiddenFromConsumer: events.hiddenFromConsumer })
+      .from(events)
+      .where(eq(events.venueId, venue.id))
+
+    expect(row?.hiddenFromConsumer).toBe(false)
+  })
+
+  it('INSERT path defaults to hidden_from_consumer=false when LLM omits isConcert (fail-open)', async () => {
+    const venue = await seedTestVenue()
+    const dateA = futureDate(7)
+
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE,
+      finalUrl: venue.url,
+      httpStatus: 200,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        {
+          title: 'Ambiguous Show',
+          artist: 'Ambiguous Artist',
+          date: dateA,
+          confidence: 0.8,
+          sourceUrl: venue.url,
+          // isConcert intentionally undefined
+        },
+      ],
+      usage: {
+        inputTokens: 100,
+        outputTokens: 50,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+      },
+    })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const [row] = await db
+      .select({ hiddenFromConsumer: events.hiddenFromConsumer })
+      .from(events)
+      .where(eq(events.venueId, venue.id))
+
+    expect(row?.hiddenFromConsumer).toBe(false)
+  })
+
+  it('UPDATE path does NOT overwrite admin-set hidden_from_consumer=true even when LLM says isConcert=true', async () => {
+    const venue = await seedTestVenue()
+    const dateA = futureDate(7)
+
+    // Seed an event with admin-overridden hidden_from_consumer=true.
+    // Crawler re-extracts the same event with isConcert=true; should leave
+    // the admin decision in place.
+    await db.insert(events).values({
+      venueId: venue.id,
+      title: 'Originally Misclassified Show',
+      artist: 'Test Artist',
+      canonicalArtist: 'test artist',
+      date: dateA,
+      status: 'upcoming',
+      hiddenFromConsumer: true,
+      sourceHash: 'old-hash',
+    })
+
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE_V2, // different from any prior to bypass page-hash skip
+      finalUrl: venue.url,
+      httpStatus: 200,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        {
+          title: 'Originally Misclassified Show — Updated',
+          artist: 'Test Artist',
+          date: dateA,
+          confidence: 0.95,
+          sourceUrl: venue.url,
+          isConcert: true, // LLM disagrees with admin
+        },
+      ],
+      usage: {
+        inputTokens: 100,
+        outputTokens: 50,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+      },
+    })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const [row] = await db
+      .select({
+        hiddenFromConsumer: events.hiddenFromConsumer,
+        title: events.title,
+      })
+      .from(events)
+      .where(eq(events.venueId, venue.id))
+
+    // Admin override sticks; title updates as normal mutable field
+    expect(row?.hiddenFromConsumer).toBe(true)
+    expect(row?.title).toBe('Originally Misclassified Show — Updated')
+  })
+})

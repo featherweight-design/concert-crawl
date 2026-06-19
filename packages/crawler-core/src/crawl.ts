@@ -607,6 +607,12 @@ export async function crawlVenue(
           confidenceScore: event.confidence.toFixed(2),
           verified: event.confidence >= AUTO_APPROVE_THRESHOLD,
           extractionStrategy: strategy,
+          // LLM-classified non-concert events get pre-hidden from the consumer
+          // surface (#696). Only takes effect on INSERT — admin owns the field
+          // once the row exists, so onConflictDoUpdate below does NOT include
+          // hiddenFromConsumer in its `set` clause. Mirrors the one-way
+          // promotion pattern for `artist` and `verified` already in this file.
+          hiddenFromConsumer: event.isConcert === false,
         }))
 
         for (const evt of eventsToUpsert) {
