@@ -16,13 +16,11 @@ import { type MissingRowEvent } from '@/components/admin/review/missing/MissingR
 // changing them produces fresh data (TanStack's cache holds adjacent pages
 // for the same filter, so flipping forward and back is instant).
 
-// Default page sizes per surface. These line up with the design handoff
-// default (20) for All Events; Missing keeps a larger default because the
-// dataset is naturally small and admins want it all at a glance.
+// Local default for AllEventsTabContent's standalone-prop fallback. The
+// URL is the source of truth in the wired-up parent (ReviewPageClient ↔
+// PAGINATION_URL_DEFAULT_PAGE_SIZE), so this only kicks in when the tab
+// is rendered without a parent-controlled pagination state.
 export const REVIEW_ALL_EVENTS_PAGE_SIZE = 20
-export const REVIEW_PRICE_EVENTS_PAGE_SIZE = 20
-export const REVIEW_EVENT_FLAGS_PAGE_SIZE = 20
-export const REVIEW_MISSING_PAGE_SIZE = 50
 
 // Re-exported types so consumers can import everything review-related from
 // one place. The shapes mirror the inline interfaces in ReviewPageClient.
@@ -101,7 +99,7 @@ export function useReviewCounts(initialData?: ReviewCounts) {
     queryKey: reviewQueryKeys.counts,
     queryFn: async (): Promise<ReviewCounts> => {
       const token = await getToken()
-      if (!token) return { eventFlags: 0, prices: 0, missing: 0 }
+      if (!token) throw new Error('Not authenticated')
       return apiClient.get<ReviewCounts>('/v1/admin/review/counts', token)
     },
     ...(initialData ? { initialData } : {}),
@@ -120,7 +118,7 @@ export function useReviewAllEvents(
     queryKey: reviewQueryKeys.allEvents(filterQuery, page, pageSize),
     queryFn: async (): Promise<CountedResponse<AllEvent>> => {
       const token = await getToken()
-      if (!token) return { rows: [], total: 0 }
+      if (!token) throw new Error('Not authenticated')
       const offset = (page - 1) * pageSize
       const suffix = filterQuery ? `&${filterQuery}` : ''
       return apiClient.get<CountedResponse<AllEvent>>(
@@ -146,7 +144,7 @@ export function useReviewEventFlags(
     enabled,
     queryFn: async (): Promise<CountedResponse<EventFlag>> => {
       const token = await getToken()
-      if (!token) return { rows: [], total: 0 }
+      if (!token) throw new Error('Not authenticated')
       const offset = (page - 1) * pageSize
       return apiClient.get<CountedResponse<EventFlag>>(
         `/v1/admin/events?count=true&verified=false&limit=${pageSize}&offset=${offset}`,
@@ -170,7 +168,7 @@ export function useReviewMissingEvents(
     enabled,
     queryFn: async (): Promise<CountedResponse<MissingRowEvent>> => {
       const token = await getToken()
-      if (!token) return { rows: [], total: 0 }
+      if (!token) throw new Error('Not authenticated')
       const offset = (page - 1) * pageSize
       return apiClient.get<CountedResponse<MissingRowEvent>>(
         `/v1/admin/events?count=true&missing=true&limit=${pageSize}&offset=${offset}`,
@@ -194,7 +192,7 @@ export function useReviewPriceEvents(
     enabled,
     queryFn: async (): Promise<CountedResponse<PriceEvent>> => {
       const token = await getToken()
-      if (!token) return { rows: [], total: 0 }
+      if (!token) throw new Error('Not authenticated')
       const offset = (page - 1) * pageSize
       const missingOnly = filter === 'missing'
       return apiClient.get<CountedResponse<PriceEvent>>(

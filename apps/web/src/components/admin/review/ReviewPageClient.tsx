@@ -691,7 +691,10 @@ export const ReviewPageClient = ({
               const base = new URLSearchParams(searchParams?.toString() ?? '')
               const merged = serializeFiltersToParams(next, base)
               merged.set('tab', 'all-events')
-              pushParams(merged)
+              // Reset pagination in the same push so changing filters
+              // doesn't briefly retain a stale ?page=N. See PR #702
+              // comment #28.
+              pushParams(serializePaginationToParams(EMPTY_PAGINATION, merged))
             }}
             allEventsPagination={pagination}
             onAllEventsPaginationChange={onPaginationChange}
@@ -804,7 +807,9 @@ export const ReviewPageClient = ({
             const base = new URLSearchParams(searchParams?.toString() ?? '')
             const merged = serializeFiltersToParams(next, base)
             merged.set('tab', 'all-events')
-            pushParams(merged)
+            // Filter changes reset pagination in the same push — see
+            // PR #702 comment #28.
+            pushParams(serializePaginationToParams(EMPTY_PAGINATION, merged))
           }}
           pagination={pagination}
           onPaginationChange={onPaginationChange}

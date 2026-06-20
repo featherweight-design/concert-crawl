@@ -243,13 +243,24 @@ const SizeSelect = ({
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!open) return
-    const handler = (evt: MouseEvent) => {
+    // Close on outside pointer-down (mouse + touch) and on Escape — the
+    // common dismiss expectations for popovers on desktop and mobile.
+    const outsideHandler = (evt: MouseEvent | TouchEvent) => {
       if (ref.current && !ref.current.contains(evt.target as Node)) {
         setOpen(false)
       }
     }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
+    const keyHandler = (evt: KeyboardEvent) => {
+      if (evt.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', outsideHandler)
+    document.addEventListener('touchstart', outsideHandler)
+    document.addEventListener('keydown', keyHandler)
+    return () => {
+      document.removeEventListener('mousedown', outsideHandler)
+      document.removeEventListener('touchstart', outsideHandler)
+      document.removeEventListener('keydown', keyHandler)
+    }
   }, [open])
   return (
     <div

@@ -168,16 +168,16 @@ export const AllEventsTabContent = ({
     setActionError(null)
   }, [filterQuery])
 
-  // Any filter change snaps the pager back to page 1 (sitting on page 40 of
-  // the previous filter set is almost never what the admin wants).
+  // Any filter change snaps the pager back to page 1. The wired-up parent
+  // (ReviewPageClient) strips pagination in its filter-change handler so
+  // both updates land in a single router.push; if a future caller forgets
+  // to do that, Pagination's clamp-sync effect catches it on the next
+  // render.
   const onFilterUpdate = useCallback(
     (next: AllEventsFilters) => {
       onFiltersChange(next)
-      if (pagination.page !== 1) {
-        onPaginationChange({ page: 1, pageSize: pagination.pageSize })
-      }
     },
-    [onFiltersChange, onPaginationChange, pagination.page, pagination.pageSize],
+    [onFiltersChange],
   )
 
   const refresh = useCallback(() => {
