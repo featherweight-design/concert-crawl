@@ -45,6 +45,7 @@ export function useWatchToggle() {
         date: todayIso,
         showTime: null,
         ticketUrl: null,
+        ticketLinks: null,
         savedAt: new Date().toISOString(),
         savedPrice: null,
         currentPrice: null,

@@ -99,6 +99,20 @@ export type TicketVendor =
 // How the submitter found the price
 export type HowFound = 'bought_myself' | 'saw_listing' | 'at_the_venue'
 
+// Source-category for community-submitted prices (issue #641). Distinct from
+// PriceSource (which identifies the upstream data origin for events.priceSource).
+// Captured directly from the submit form; legacy rows backfilled from
+// (vendor, how_found) heuristics in migration 0040.
+export type SourceCategory = 'boxoffice' | 'standard' | 'resale'
+
+// Typed entry in events.ticketLinks (issue #641). Populated by the crawler
+// (PR 2) and consumed by the Consumer UI (PR 4) for source-category disclosure.
+export interface TicketLink {
+  kind: 'boxoffice' | 'primary' | 'resale'
+  vendor: string | null
+  url: string
+}
+
 // Shared validation policy — server enforces, client mirrors for UX
 export const SP_POLICY = {
   floorMin: 1,
@@ -224,6 +238,7 @@ export interface Event {
   doorsTime: string | null
   showTime: string | null
   ticketUrl: string | null
+  ticketLinks: TicketLink[] | null
   ticketPriceMin: string | null
   ticketPriceMax: string | null
   priceSource: PriceSource | null
@@ -249,6 +264,7 @@ export interface PriceSubmission {
   tier: Tier
   vendor: Vendor
   howFound: HowFound
+  sourceCategory: SourceCategory | null
   disputedSubmissionId: string | null
   status: 'pending' | 'corroborated' | 'disputed' | 'stale'
   corroborationCount: number
@@ -364,6 +380,7 @@ export interface EventDetailResponse extends EventWithVenue {
     tier: string
     vendor: string
     howFound: string
+    sourceCategory: SourceCategory | null
     note: string | null
     submitterHandle: string | null
     submittedAt: string
@@ -503,6 +520,7 @@ export interface WatchingShow {
   date: string // ISO YYYY-MM-DD
   showTime: string | null
   ticketUrl: string | null
+  ticketLinks: TicketLink[] | null
   savedAt: string // ISO — when the user saved the show
   savedPrice: number | null // dollars (from ticket_price_min at save time)
   currentPrice: number | null // dollars, from events.ticketPriceMin at query time

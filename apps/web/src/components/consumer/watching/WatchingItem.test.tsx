@@ -45,6 +45,7 @@ const baseShow: WatchingShow = {
   date: '2099-07-15',
   showTime: '20:00',
   ticketUrl: null,
+  ticketLinks: null,
   savedAt: new Date().toISOString(),
   savedPrice: 45,
   currentPrice: 45,
