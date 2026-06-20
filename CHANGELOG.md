@@ -1,3 +1,11 @@
+## [1.70.2](https://github.com/HartiganHM/concert-crawl/compare/v1.70.1...v1.70.2) (2026-06-20)
+
+
+### Bug Fixes
+
+* **ci:** guard .commit-null in render scripts (Copilot review) ([adef44b](https://github.com/HartiganHM/concert-crawl/commit/adef44b9e8216a673e1c8e663cc7b9c116c029dd))
+* **ci:** read .commit.id, not .commit, from Render deploys API ([6f05534](https://github.com/HartiganHM/concert-crawl/commit/6f0553431087a057e5d208adc66ae7da64c75985))
+
 ## [1.70.1](https://github.com/HartiganHM/concert-crawl/compare/v1.70.0...v1.70.1) (2026-06-20)
 
 
