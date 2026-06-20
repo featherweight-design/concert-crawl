@@ -14,6 +14,7 @@ import type {
   Vendor,
   HowFound,
   PriceSubmission,
+  SourceCategory,
   SubmissionWithMeta,
 } from '@concert-crawl/types'
 
@@ -41,6 +42,7 @@ interface SubmitPriceModalProps {
     tier: string
     vendor: string
     howFound: string
+    sourceCategory: SourceCategory | null
   }) => void
   onWithdrawSuccess?: (submissionId: string) => void
 }
@@ -204,6 +206,8 @@ export function SubmitPriceModal({
           tier: formState.tier!,
           vendor: formState.vendor!,
           howFound: formState.howFound!,
+          // Edits don't change source_category; preserve the existing row's value.
+          sourceCategory: existingSubmission.sourceCategory,
         })
         setModalState('success')
         return
@@ -250,6 +254,9 @@ export function SubmitPriceModal({
           tier: responseData.data.tier,
           vendor: responseData.data.vendor,
           howFound: responseData.data.howFound,
+          // Server derives sourceCategory at insert time (boxoffice vs
+          // standard heuristic) — preserve it for the local optimistic state.
+          sourceCategory: responseData.data.sourceCategory,
         })
       }
       setModalState('success')

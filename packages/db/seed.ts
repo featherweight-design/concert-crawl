@@ -1594,7 +1594,7 @@ async function seed() {
         vendor: 'AXS',
         howFound: 'bought_myself',
         status: 'corroborated',
-        corroborationCount: 4,
+        corroborationCount: 5,
       },
       {
         idx: 0,
@@ -1605,7 +1605,7 @@ async function seed() {
         vendor: 'AXS',
         howFound: 'saw_listing',
         status: 'corroborated',
-        corroborationCount: 2,
+        corroborationCount: 3,
       },
       {
         idx: 0,
@@ -1616,7 +1616,7 @@ async function seed() {
         vendor: 'AXS',
         howFound: 'bought_myself',
         status: 'corroborated',
-        corroborationCount: 1,
+        corroborationCount: 2,
       },
       // Event 1 — Pit tier + disputed
       {
@@ -1628,7 +1628,7 @@ async function seed() {
         vendor: 'AXS',
         howFound: 'bought_myself',
         status: 'corroborated',
-        corroborationCount: 2,
+        corroborationCount: 3,
       },
       {
         idx: 1,
@@ -1638,7 +1638,7 @@ async function seed() {
         vendor: 'AXS',
         howFound: 'saw_listing',
         status: 'disputed',
-        corroborationCount: 0,
+        corroborationCount: 1,
       },
       // Event 2 — Lawn (outdoor) + VIP
       {
@@ -1650,7 +1650,7 @@ async function seed() {
         vendor: 'AXS',
         howFound: 'bought_myself',
         status: 'corroborated',
-        corroborationCount: 3,
+        corroborationCount: 4,
       },
       {
         idx: 2,
@@ -1661,7 +1661,7 @@ async function seed() {
         vendor: 'AXS',
         howFound: 'bought_myself',
         status: 'corroborated',
-        corroborationCount: 1,
+        corroborationCount: 2,
       },
       // Event 3 — pending, low cred submitter
       {
@@ -1673,7 +1673,7 @@ async function seed() {
         vendor: 'AXS',
         howFound: 'saw_listing',
         status: 'pending',
-        corroborationCount: 0,
+        corroborationCount: 1,
       },
       // Event 4 — SeatGeek + at_the_venue
       {
@@ -1685,7 +1685,7 @@ async function seed() {
         vendor: 'SeatGeek',
         howFound: 'at_the_venue',
         status: 'corroborated',
-        corroborationCount: 1,
+        corroborationCount: 2,
       },
       {
         idx: 4,
@@ -1695,7 +1695,7 @@ async function seed() {
         vendor: 'SeatGeek',
         howFound: 'saw_listing',
         status: 'pending',
-        corroborationCount: 0,
+        corroborationCount: 1,
       },
       // Event 5 — Ticketmaster + Reserved
       {
@@ -1707,7 +1707,7 @@ async function seed() {
         vendor: 'Ticketmaster',
         howFound: 'bought_myself',
         status: 'corroborated',
-        corroborationCount: 2,
+        corroborationCount: 3,
       },
       {
         idx: 5,
@@ -1718,7 +1718,7 @@ async function seed() {
         vendor: 'Ticketmaster',
         howFound: 'bought_myself',
         status: 'pending',
-        corroborationCount: 0,
+        corroborationCount: 1,
       },
       // Event 6 — DICE (small venue)
       {
@@ -1730,7 +1730,7 @@ async function seed() {
         vendor: 'DICE',
         howFound: 'saw_listing',
         status: 'corroborated',
-        corroborationCount: 1,
+        corroborationCount: 2,
       },
       {
         idx: 6,
@@ -1740,7 +1740,7 @@ async function seed() {
         vendor: 'DICE',
         howFound: 'at_the_venue',
         status: 'pending',
-        corroborationCount: 0,
+        corroborationCount: 1,
       },
       // Event 7 — Eventbrite
       {
@@ -1752,7 +1752,7 @@ async function seed() {
         vendor: 'Eventbrite',
         howFound: 'saw_listing',
         status: 'pending',
-        corroborationCount: 0,
+        corroborationCount: 1,
       },
       // Event 8 — VenueBoxOffice + at_the_venue
       {
@@ -1764,7 +1764,7 @@ async function seed() {
         vendor: 'VenueBoxOffice',
         howFound: 'at_the_venue',
         status: 'pending',
-        corroborationCount: 0,
+        corroborationCount: 1,
       },
       // Event 9 — stale (old price from before announcement)
       {
@@ -1775,7 +1775,7 @@ async function seed() {
         vendor: 'AXS',
         howFound: 'saw_listing',
         status: 'stale',
-        corroborationCount: 0,
+        corroborationCount: 1,
       },
       // Event 10 — Pit at large amphitheater
       {
@@ -1787,7 +1787,7 @@ async function seed() {
         vendor: 'Ticketmaster',
         howFound: 'bought_myself',
         status: 'corroborated',
-        corroborationCount: 2,
+        corroborationCount: 3,
       },
       // Event 11 — corroborated + disputed pair (same event)
       {
@@ -1799,7 +1799,7 @@ async function seed() {
         vendor: 'AXS',
         howFound: 'bought_myself',
         status: 'corroborated',
-        corroborationCount: 1,
+        corroborationCount: 2,
       },
       {
         idx: 11,
@@ -1809,7 +1809,7 @@ async function seed() {
         vendor: 'AXS',
         howFound: 'saw_listing',
         status: 'disputed',
-        corroborationCount: 0,
+        corroborationCount: 1,
       },
       // Event 12 — brand new, all pending
       {
@@ -1821,7 +1821,7 @@ async function seed() {
         vendor: 'DICE',
         howFound: 'saw_listing',
         status: 'pending',
-        corroborationCount: 0,
+        corroborationCount: 1,
       },
       // Event 13 — high cred, highly corroborated
       {
@@ -1833,7 +1833,7 @@ async function seed() {
         vendor: 'Ticketmaster',
         howFound: 'bought_myself',
         status: 'corroborated',
-        corroborationCount: 3,
+        corroborationCount: 4,
       },
       {
         idx: 13,
@@ -1844,7 +1844,7 @@ async function seed() {
         vendor: 'Ticketmaster',
         howFound: 'saw_listing',
         status: 'corroborated',
-        corroborationCount: 2,
+        corroborationCount: 3,
       },
       // Event 14 — stale old price + new pending (price changed)
       {
@@ -1855,7 +1855,7 @@ async function seed() {
         vendor: 'DICE',
         howFound: 'saw_listing',
         status: 'stale',
-        corroborationCount: 0,
+        corroborationCount: 1,
       },
       {
         idx: 14,
@@ -1865,20 +1865,22 @@ async function seed() {
         vendor: 'DICE',
         howFound: 'at_the_venue',
         status: 'pending',
-        corroborationCount: 0,
+        corroborationCount: 1,
       },
     ]
 
     // Derive source_category from existing (vendor, how_found) via the
-    // shared helper and bump corroborationCount by +1 so the seed mirrors
-    // the post-migration-0040 semantics (submitter counts as observation #1;
-    // corroborationCount is total observations including submitter).
+    // shared helper. corroborationCount values in submissionTemplates already
+    // reflect the post-migration-0040 semantics (submitter counts as
+    // observation #1; corroborationCount = total observations including
+    // submitter), so no extra +1 here — same convention as the Phase 8.5
+    // inserts below.
     //
     // Single flatMap keeps the type narrowing honest — when eventIds[idx] is
     // missing we emit nothing, otherwise we have a guaranteed string. Avoids
     // the `as string` cast (per CLAUDE.md's "casts are a last resort" rule).
     const submissionRows = submissionTemplates.flatMap(
-      ({ idx, corroborationCount, vendor, howFound, ...rest }) => {
+      ({ idx, vendor, howFound, ...rest }) => {
         const eventId = eventIds[idx]
         if (eventId === undefined) return []
         return [
@@ -1887,7 +1889,6 @@ async function seed() {
             vendor,
             howFound,
             sourceCategory: deriveSourceCategory(vendor, howFound),
-            corroborationCount: corroborationCount + 1,
             eventId,
           },
         ]
@@ -2226,7 +2227,7 @@ async function seed() {
               vendor: 'Ticketmaster' as const,
               howFound: 'saw_listing' as const,
               status: 'pending' as const,
-              corroborationCount: 0,
+              corroborationCount: 1,
             },
             {
               eventId: eventA.id,
@@ -2237,7 +2238,7 @@ async function seed() {
               vendor: 'Ticketmaster' as const,
               howFound: 'saw_listing' as const,
               status: 'pending' as const,
-              corroborationCount: 0,
+              corroborationCount: 1,
             },
           ]
         : []
@@ -2256,7 +2257,7 @@ async function seed() {
               vendor: 'Ticketmaster' as const,
               howFound: 'bought_myself' as const,
               status: 'corroborated' as const,
-              corroborationCount: 2,
+              corroborationCount: 3,
               note: 'Checked the AXS app day of sale. GA was $45 + $10 fees showed at checkout.',
             })
             .returning()
@@ -2295,7 +2296,7 @@ async function seed() {
             vendor: 'AXS' as const,
             howFound: 'saw_listing' as const,
             status: 'corroborated' as const,
-            corroborationCount: 2,
+            corroborationCount: 3,
           })
           .returning()
 
@@ -2331,7 +2332,7 @@ async function seed() {
                 vendor: 'Ticketmaster' as const,
                 howFound: 'saw_listing' as const,
                 status: 'pending' as const,
-                corroborationCount: 0,
+                corroborationCount: 1,
                 disputedSubmissionId: phase85SubmissionBLive[0]!.id,
                 note: 'Saw it listed at $65 on SeatGeek resale. Might be different tier.',
               },
@@ -2351,7 +2352,7 @@ async function seed() {
               vendor: 'AXS' as const,
               howFound: 'bought_myself' as const,
               status: 'pending' as const,
-              corroborationCount: 1,
+              corroborationCount: 2,
               note: 'Walked up to the Bluebird box office. GA face value, no fees.',
             })
             .returning()
@@ -2379,7 +2380,7 @@ async function seed() {
               vendor: 'AXS' as const,
               howFound: 'bought_myself' as const,
               status: 'corroborated' as const,
-              corroborationCount: 1,
+              corroborationCount: 2,
             }
           : null,
         eventE
@@ -2392,7 +2393,7 @@ async function seed() {
               vendor: 'Ticketmaster' as const,
               howFound: 'saw_listing' as const,
               status: 'corroborated' as const,
-              corroborationCount: 1,
+              corroborationCount: 2,
             }
           : null,
         eventF
@@ -2404,7 +2405,7 @@ async function seed() {
               vendor: 'AXS' as const,
               howFound: 'bought_myself' as const,
               status: 'corroborated' as const,
-              corroborationCount: 1,
+              corroborationCount: 2,
             }
           : null,
       ].filter((row): row is NonNullable<typeof row> => row !== null)
@@ -2626,7 +2627,7 @@ async function seed() {
             vendor: 'Ticketmaster' as const,
             howFound: 'saw_listing' as const,
             status: 'pending' as const,
-            corroborationCount: 0,
+            corroborationCount: 1,
           },
           {
             eventId: ev.A.id,
@@ -2637,7 +2638,7 @@ async function seed() {
             vendor: 'AXS' as const,
             howFound: 'bought_myself' as const,
             status: 'pending' as const,
-            corroborationCount: 0,
+            corroborationCount: 1,
           },
         ])
         .onConflictDoNothing()
@@ -2657,7 +2658,7 @@ async function seed() {
           vendor: 'Ticketmaster' as const,
           howFound: 'bought_myself' as const,
           status: 'corroborated' as const,
-          corroborationCount: 2,
+          corroborationCount: 3,
           note: 'Checked the AXS app day of sale. GA was $45 + $10 fees showed at checkout.',
         })
         .returning()
@@ -2691,7 +2692,7 @@ async function seed() {
             vendor: 'Ticketmaster' as const,
             howFound: 'saw_listing' as const,
             status: 'pending' as const,
-            corroborationCount: 0,
+            corroborationCount: 1,
             disputedSubmissionId: primarySub[0].id,
             note: 'Saw it listed at $65 on SeatGeek resale. Might be different tier.',
           })
@@ -2728,7 +2729,7 @@ async function seed() {
           vendor: 'AXS' as const,
           howFound: 'saw_listing' as const,
           status: 'corroborated' as const,
-          corroborationCount: 2,
+          corroborationCount: 3,
         })
         .returning()
 
@@ -2778,7 +2779,7 @@ async function seed() {
             vendor: 'Ticketmaster' as const,
             howFound: 'saw_listing' as const,
             status: 'pending' as const,
-            corroborationCount: 0,
+            corroborationCount: 1,
             disputedSubmissionId: targetSub.id,
             note: 'Saw it listed at $65 on SeatGeek resale. Might be different tier.',
           })
@@ -2802,7 +2803,7 @@ async function seed() {
           vendor: 'AXS' as const,
           howFound: 'bought_myself' as const,
           status: 'pending' as const,
-          corroborationCount: 1,
+          corroborationCount: 2,
           note: 'Walked up to the Bluebird box office. GA face value, no fees.',
         })
         .returning()
@@ -2881,7 +2882,7 @@ async function seed() {
           vendor: patch.vendor as 'AXS' | 'Ticketmaster',
           howFound: patch.howFound as 'bought_myself' | 'saw_listing',
           status: 'corroborated' as const,
-          corroborationCount: 1,
+          corroborationCount: 2,
         })
         .onConflictDoNothing()
       console.warn(
@@ -3128,7 +3129,7 @@ async function seed() {
                 vendor: 'AXS' as const,
                 howFound: 'saw_listing' as const,
                 status: 'pending' as const,
-                corroborationCount: 0,
+                corroborationCount: 1,
                 note: 'GA standing — checked the cart on AXS. Showed $48 face, $58 with fees.',
               },
             ]
@@ -3145,7 +3146,7 @@ async function seed() {
                 vendor: 'AXS' as const,
                 howFound: 'bought_myself' as const,
                 status: 'pending' as const,
-                corroborationCount: 0,
+                corroborationCount: 1,
                 note: 'GA standing — checked the cart on AXS. Showed $48 face, $58 with fees.',
               },
             ]
@@ -3162,7 +3163,7 @@ async function seed() {
                 vendor: 'VenueBoxOffice' as const,
                 howFound: 'at_the_venue' as const,
                 status: 'pending' as const,
-                corroborationCount: 0,
+                corroborationCount: 1,
                 note: 'Walked up to the Mission window, bought GA face. No fees.',
               },
             ]
@@ -3179,7 +3180,7 @@ async function seed() {
                 vendor: 'VenueBoxOffice' as const,
                 howFound: 'at_the_venue' as const,
                 status: 'pending' as const,
-                corroborationCount: 0,
+                corroborationCount: 1,
                 note: 'Walked up to the Mission window, bought GA face. No fees.',
               },
             ]
