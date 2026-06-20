@@ -86,19 +86,6 @@ priceSubmissionConfirmsRouter.post(
       )
     }
 
-    const [inserted] = await db
-      .insert(submissionConfirms)
-      .values({ submissionId, userId, method })
-      .onConflictDoNothing()
-      .returning()
-
-    if (!inserted) {
-      return ctx.json(
-        { success: false, error: 'Already confirmed this submission' },
-        409,
-      )
-    }
-
     const confirmsRequired = isImminentEvent(
       eventRow.date,
       SP_POLICY.imminentThresholdDays,
@@ -106,28 +93,87 @@ priceSubmissionConfirmsRouter.post(
       ? SP_POLICY.confirmsRequiredImminent
       : SP_POLICY.confirmsRequired
 
-    // Atomic increment + conditional promote — mirrors submissions.ts so
-    // concurrent confirms from different users can't both observe a stale
-    // count and write the same corroborationCount value, under-counting the
-    // row. corroboration_count already includes the submitter as observation
-    // #1 (1/2 model + DB default 1), so the same column-increment matches
-    // the formula `total observations + 1 >= confirmsRequired`.
-    const [updated] = await db
-      .update(priceSubmissions)
-      .set({
-        corroborationCount: sql`${priceSubmissions.corroborationCount} + 1`,
-        status: sql`CASE
-          WHEN ${priceSubmissions.corroborationCount} + 1 >= ${confirmsRequired}
-            THEN 'corroborated'::price_submission_status
-          ELSE ${priceSubmissions.status}
-        END`,
-        updatedAt: sql`now()`,
+    // Wrap the insert + atomic update + promote in a transaction so that:
+    //   1. If the partial unique index on (event_id, tier, source_category)
+    //      rejects the would-be promotion (e.g. an existing corroborated
+    //      box-office row for the same event+tier), the submission_confirms
+    //      row also rolls back instead of dangling.
+    //   2. Concurrent confirms from different users can't both observe a
+    //      stale count and write the same corroborationCount value —
+    //      corroboration_count already includes the submitter as observation
+    //      #1 (1/2 model + DB default 1), so the column-increment matches
+    //      `total observations + 1 >= confirmsRequired`.
+    let updated:
+      | {
+          corroborationCount: number
+          status: 'pending' | 'corroborated' | 'disputed' | 'stale'
+        }
+      | undefined
+    let alreadyConfirmed = false
+    let uniqueViolation = false
+    try {
+      updated = await db.transaction(async (tx) => {
+        const [insertedConfirm] = await tx
+          .insert(submissionConfirms)
+          .values({ submissionId, userId, method })
+          .onConflictDoNothing()
+          .returning()
+
+        if (!insertedConfirm) {
+          alreadyConfirmed = true
+          return undefined
+        }
+
+        const [updatedRow] = await tx
+          .update(priceSubmissions)
+          .set({
+            corroborationCount: sql`${priceSubmissions.corroborationCount} + 1`,
+            status: sql`CASE
+              WHEN ${priceSubmissions.corroborationCount} + 1 >= ${confirmsRequired}
+                THEN 'corroborated'::price_submission_status
+              ELSE ${priceSubmissions.status}
+            END`,
+            updatedAt: sql`now()`,
+          })
+          .where(eq(priceSubmissions.id, submissionId))
+          .returning({
+            corroborationCount: priceSubmissions.corroborationCount,
+            status: priceSubmissions.status,
+          })
+
+        return updatedRow
       })
-      .where(eq(priceSubmissions.id, submissionId))
-      .returning({
-        corroborationCount: priceSubmissions.corroborationCount,
-        status: priceSubmissions.status,
-      })
+    } catch (error) {
+      const causeMessage =
+        error instanceof Error && error.cause instanceof Error
+          ? error.cause.message
+          : ''
+      if (
+        causeMessage.includes('price_submissions_event_tier_boxoffice_uniq')
+      ) {
+        uniqueViolation = true
+      } else {
+        throw error
+      }
+    }
+
+    if (alreadyConfirmed) {
+      return ctx.json(
+        { success: false, error: 'Already confirmed this submission' },
+        409,
+      )
+    }
+
+    if (uniqueViolation) {
+      return ctx.json(
+        {
+          success: false,
+          error:
+            'A corroborated box-office price already exists for this tier — submit a counter-price instead of confirming this one.',
+        },
+        409,
+      )
+    }
 
     if (!updated) {
       return ctx.json({ success: false, error: 'Submission not found' }, 404)

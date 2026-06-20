@@ -116,8 +116,12 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
     })
 
     // Drizzle wraps the underlying Postgres error in "Failed query: ..."; the
-    // original error (with the constraint name) is on `.cause`. Inspect both
-    // so the assertion is specific to THIS constraint, not generic.
+    // original error (with the constraint name) is on `.cause`. Postgres
+    // populates the cause as an Error, and the constraint name lands in
+    // `.cause.message` — match against that for a specific assertion. (If
+    // Postgres/Drizzle ever stop populating `.cause`, the test will fail
+    // with "expected '' to match" rather than silently passing on a generic
+    // error.)
     let caught: unknown
     try {
       await testDb.insert(priceSubmissions).values({

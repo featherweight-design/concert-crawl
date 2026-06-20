@@ -2256,6 +2256,7 @@ async function seed() {
               tier: 'GA' as const,
               vendor: 'Ticketmaster' as const,
               howFound: 'bought_myself' as const,
+              sourceCategory: 'standard' as const,
               status: 'corroborated' as const,
               corroborationCount: 3,
               note: 'Checked the AXS app day of sale. GA was $45 + $10 fees showed at checkout.',
@@ -2295,6 +2296,7 @@ async function seed() {
             tier: 'GA' as const,
             vendor: 'AXS' as const,
             howFound: 'saw_listing' as const,
+            sourceCategory: 'standard' as const,
             status: 'corroborated' as const,
             corroborationCount: 3,
           })
@@ -2351,6 +2353,7 @@ async function seed() {
               tier: 'VIP' as const,
               vendor: 'AXS' as const,
               howFound: 'bought_myself' as const,
+              sourceCategory: 'standard' as const,
               status: 'pending' as const,
               corroborationCount: 2,
               note: 'Walked up to the Bluebird box office. GA face value, no fees.',
@@ -2411,11 +2414,17 @@ async function seed() {
       ].filter((row): row is NonNullable<typeof row> => row !== null)
 
       // Batch insert all remaining price submissions
+      // Derive sourceCategory at insert time via the shared helper so every
+      // batch row lands with a non-null source_category (matches the consumer
+      // route + dispute/admin insert behavior + the migration backfill).
       const remainingSubmissions = [
         ...phase85SubmissionsA,
         ...phase85SubmissionsB,
         ...phase85SubmissionsDEF,
-      ]
+      ].map((row) => ({
+        ...row,
+        sourceCategory: deriveSourceCategory(row.vendor, row.howFound),
+      }))
 
       if (remainingSubmissions.length > 0) {
         await db
@@ -2626,6 +2635,7 @@ async function seed() {
             tier: 'GA' as const,
             vendor: 'Ticketmaster' as const,
             howFound: 'saw_listing' as const,
+            sourceCategory: 'standard' as const,
             status: 'pending' as const,
             corroborationCount: 1,
           },
@@ -2637,6 +2647,7 @@ async function seed() {
             tier: 'Reserved' as const,
             vendor: 'AXS' as const,
             howFound: 'bought_myself' as const,
+            sourceCategory: 'standard' as const,
             status: 'pending' as const,
             corroborationCount: 1,
           },
@@ -2657,6 +2668,7 @@ async function seed() {
           tier: 'GA' as const,
           vendor: 'Ticketmaster' as const,
           howFound: 'bought_myself' as const,
+          sourceCategory: 'standard' as const,
           status: 'corroborated' as const,
           corroborationCount: 3,
           note: 'Checked the AXS app day of sale. GA was $45 + $10 fees showed at checkout.',
@@ -2691,6 +2703,7 @@ async function seed() {
             tier: 'GA' as const,
             vendor: 'Ticketmaster' as const,
             howFound: 'saw_listing' as const,
+            sourceCategory: 'standard' as const,
             status: 'pending' as const,
             corroborationCount: 1,
             disputedSubmissionId: primarySub[0].id,
@@ -2728,6 +2741,7 @@ async function seed() {
           tier: 'GA' as const,
           vendor: 'AXS' as const,
           howFound: 'saw_listing' as const,
+          sourceCategory: 'standard' as const,
           status: 'corroborated' as const,
           corroborationCount: 3,
         })
@@ -2778,6 +2792,7 @@ async function seed() {
             tier: 'GA' as const,
             vendor: 'Ticketmaster' as const,
             howFound: 'saw_listing' as const,
+            sourceCategory: 'standard' as const,
             status: 'pending' as const,
             corroborationCount: 1,
             disputedSubmissionId: targetSub.id,
@@ -2802,6 +2817,7 @@ async function seed() {
           tier: 'VIP' as const,
           vendor: 'AXS' as const,
           howFound: 'bought_myself' as const,
+          sourceCategory: 'standard' as const,
           status: 'pending' as const,
           corroborationCount: 2,
           note: 'Walked up to the Bluebird box office. GA face value, no fees.',
@@ -2881,6 +2897,7 @@ async function seed() {
           tier: 'GA' as const,
           vendor: patch.vendor as 'AXS' | 'Ticketmaster',
           howFound: patch.howFound as 'bought_myself' | 'saw_listing',
+          sourceCategory: deriveSourceCategory(patch.vendor, patch.howFound),
           status: 'corroborated' as const,
           corroborationCount: 2,
         })
@@ -3190,7 +3207,12 @@ async function seed() {
       if (kpSubmissions.length > 0) {
         await db
           .insert(priceSubmissions)
-          .values(kpSubmissions)
+          .values(
+            kpSubmissions.map((row) => ({
+              ...row,
+              sourceCategory: deriveSourceCategory(row.vendor, row.howFound),
+            })),
+          )
           .onConflictDoNothing()
         console.warn(`Inserted ${kpSubmissions.length} K–P price submissions.`)
       }
