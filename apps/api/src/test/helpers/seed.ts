@@ -12,6 +12,7 @@ import {
   userRoles,
   venues,
 } from '@concert-crawl/db'
+import { deriveSourceCategory } from '@concert-crawl/types'
 import { testDb } from './db.js'
 
 export async function clearTables(): Promise<void> {
@@ -123,10 +124,6 @@ export async function seedPriceSubmission(
   // Tests that explicitly need NULL (legacy backfill scenarios) can override.
   const vendor = overrides.vendor ?? 'Ticketmaster'
   const howFound = overrides.howFound ?? 'bought_myself'
-  const derivedSourceCategory: 'boxoffice' | 'standard' =
-    vendor === 'VenueBoxOffice' || howFound === 'at_the_venue'
-      ? 'boxoffice'
-      : 'standard'
 
   const [submission] = await testDb
     .insert(priceSubmissions)
@@ -137,7 +134,7 @@ export async function seedPriceSubmission(
       tier: 'GA',
       vendor,
       howFound,
-      sourceCategory: derivedSourceCategory,
+      sourceCategory: deriveSourceCategory(vendor, howFound),
       status: 'pending',
       // Submitter counts as observation #1 in the 1/2 confirmation model.
       // Matches the DB default (migration 0040) and the explicit insert in

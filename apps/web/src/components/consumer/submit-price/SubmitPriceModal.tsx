@@ -194,9 +194,13 @@ export function SubmitPriceModal({
             }),
           },
         )
-        if (!res.ok) {
-          const data = (await res.json()) as { error?: string }
-          throw new Error(data.error ?? 'Edit failed')
+        const patchResponse = (await res.json()) as
+          | { success: true; data: PriceSubmission }
+          | { success: false; error?: string }
+        if (!res.ok || !patchResponse.success) {
+          throw new Error(
+            (!patchResponse.success && patchResponse.error) || 'Edit failed',
+          )
         }
         onSuccess?.({
           isEdit: true,
@@ -206,8 +210,9 @@ export function SubmitPriceModal({
           tier: formState.tier!,
           vendor: formState.vendor!,
           howFound: formState.howFound!,
-          // Edits don't change source_category; preserve the existing row's value.
-          sourceCategory: existingSubmission.sourceCategory,
+          // Server re-derives sourceCategory when vendor/howFound change.
+          // Use the returned value so the local state mirrors the row.
+          sourceCategory: patchResponse.data.sourceCategory,
         })
         setModalState('success')
         return

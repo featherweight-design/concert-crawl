@@ -249,6 +249,17 @@ submissionsRouter.patch(
     if (body.vendor != null) updates['vendor'] = body.vendor
     if (body.howFound != null) updates['howFound'] = body.howFound
 
+    // Re-derive sourceCategory whenever vendor or howFound changes so the
+    // cached category can't drift from the (vendor, howFound) heuristic.
+    // Falls back to the existing values on the row when the patch leaves a
+    // field unchanged.
+    if (body.vendor != null || body.howFound != null) {
+      updates['sourceCategory'] = deriveSourceCategory(
+        body.vendor ?? submission.vendor,
+        body.howFound ?? submission.howFound,
+      )
+    }
+
     const [updated] = await db
       .update(priceSubmissions)
       .set(updates)
