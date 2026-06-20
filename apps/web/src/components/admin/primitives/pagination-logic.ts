@@ -45,10 +45,15 @@ export const derivePagination = (input: {
   atLast: boolean
   singlePage: boolean
 } => {
-  const total = Math.max(0, input.total | 0)
-  const pageSize = Math.max(1, input.pageSize | 0)
+  // `toInt` truncates safely without the 32-bit wrap that `| 0` would cause
+  // for very large counts. Non-finite values fall back to 0 so a stray NaN
+  // can't propagate into the math below.
+  const toInt = (raw: number): number =>
+    Number.isFinite(raw) ? Math.trunc(raw) : 0
+  const total = Math.max(0, toInt(input.total))
+  const pageSize = Math.max(1, toInt(input.pageSize))
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
-  const page = Math.min(Math.max(1, input.page | 0), totalPages)
+  const page = Math.min(Math.max(1, toInt(input.page)), totalPages)
   const start = total === 0 ? 0 : (page - 1) * pageSize + 1
   const end = Math.min(page * pageSize, total)
   return {

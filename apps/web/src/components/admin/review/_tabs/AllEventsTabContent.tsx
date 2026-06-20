@@ -404,7 +404,12 @@ export const AllEventsTabContent = ({
   // Only the absence-of-error empty case is a true "no events" state — a
   // failed fetch leaves events=[] too, but the admin needs to see the error
   // banner, not an empty state that hides the failure.
-  if (!errorMessage && events.length === 0)
+  //
+  // Gate on `total === 0` (not events.length === 0) so a deep-link to
+  // ?page=99 (rows:[], total:>0) still mounts the pager — its clamp-sync
+  // effect resets page to the last valid one. The brief intermediate frame
+  // with no rows is acceptable; the alternative is a stuck empty page.
+  if (!errorMessage && total === 0)
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {filterBar}
@@ -445,7 +450,7 @@ export const AllEventsTabContent = ({
               : {})}
           />
         ))}
-      {events.length > 0 && (
+      {total > 0 && (
         <Pagination
           page={pagination.page}
           pageSize={pagination.pageSize}

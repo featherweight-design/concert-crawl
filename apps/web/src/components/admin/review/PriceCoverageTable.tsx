@@ -807,7 +807,7 @@ export const PriceCoverageTable = ({
                   })}
                 </tbody>
               </AdminTable>
-              {events.length > 0 && (
+              {total > 0 && (
                 <Pagination
                   page={page}
                   pageSize={pageSize}

@@ -47,8 +47,11 @@ export default async function ReviewPage() {
   // (below the fold).
   const [events, submissions, counts] = await Promise.all([
     apiClient
-      // limit matches REVIEW_EVENT_FLAGS_PAGE_SIZE so the client's first
-      // useQuery call doesn't immediately invalidate-and-refetch.
+      // SSR fetch returns a raw row array (no count=true); the client
+      // useQuery hits a different URL shape (count=true&offset=...) and
+      // expects { rows, total }, so this is not hydration. It only seeds
+      // `initialEvents` as a first-paint fallback for the row list while
+      // the client query loads.
       .get<EventFlag[]>('/v1/admin/events?verified=false&limit=20', token)
       .catch(() => [] as EventFlag[]),
     apiClient
