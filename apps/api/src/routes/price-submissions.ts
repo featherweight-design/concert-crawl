@@ -240,6 +240,16 @@ priceSubmissionsRouter.post(
       )
     }
 
+    // During the expand phase, older clients omit sourceCategory. Derive it
+    // from (vendor, howFound) using the same heuristic as migration 0040's
+    // backfill, so boxoffice submissions get the correct source_category tag
+    // immediately (partial unique index + box-office staleness exemption both
+    // kick in without waiting for a later backfill).
+    const derivedSourceCategory: 'boxoffice' | 'standard' =
+      body.vendor === 'VenueBoxOffice' || body.howFound === 'at_the_venue'
+        ? 'boxoffice'
+        : 'standard'
+
     const [created] = await db
       .insert(priceSubmissions)
       .values({
@@ -250,7 +260,7 @@ priceSubmissionsRouter.post(
         tier: body.tier,
         vendor: body.vendor,
         howFound: body.howFound,
-        sourceCategory: body.sourceCategory ?? null,
+        sourceCategory: body.sourceCategory ?? derivedSourceCategory,
         // Submitter counts as observation #1 (1/2 confirmation model). The
         // DB default is also 1 — explicit value here is defensive against
         // default drift and easier to spot in code review.

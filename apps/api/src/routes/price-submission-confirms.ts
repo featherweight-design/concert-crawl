@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { and, count, eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import {
   db,
   events,
@@ -85,16 +85,8 @@ priceSubmissionConfirmsRouter.post(
       )
     }
 
-    const [countResult] = await db
-      .select({ total: count() })
-      .from(submissionConfirms)
-      .where(eq(submissionConfirms.submissionId, submissionId))
-
-    const confirmsCount = countResult?.total ?? 0
-
-    // Use the imminent threshold when the event is within
-    // SP_POLICY.imminentThresholdDays — matches events.ts confirmsNeeded so
-    // the UI's promotion expectation and the server's promotion behaviour agree.
+    // Look up the event date once — needed for the imminent-threshold branch
+    // both in the UPDATE's CASE and in the response.
     const [eventRow] = await db
       .select({ date: events.date })
       .from(events)
@@ -108,26 +100,34 @@ priceSubmissionConfirmsRouter.post(
       ? SP_POLICY.confirmsRequiredImminent
       : SP_POLICY.confirmsRequired
 
-    // 1/2 confirmation model: the submitter counts as observation #1, so the
-    // total observations on this submission are `confirmsCount + 1`. Promotion
-    // happens when total observations meets confirmsRequired. This brings the
-    // formula into alignment with submissions.ts (which uses
-    // `corroborationCount + 1 >= confirmsRequired`).
-    const totalObservations = confirmsCount + 1
-    const promoted = totalObservations >= confirmsRequired
-
-    // Always bump updatedAt on a successful confirm — even when the row stays
-    // pending — so consumers can use it as a freshness signal. Matches the
-    // behavior of /v1/submissions/:id/confirm, which updates updatedAt on
-    // every successful confirm (not just on promotion).
-    await db
+    // Atomic increment + conditional promote — mirrors submissions.ts so
+    // concurrent confirms from different users can't both observe a stale
+    // count and write the same corroborationCount value, under-counting the
+    // row. corroboration_count already includes the submitter as observation
+    // #1 (1/2 model + DB default 1), so the same column-increment matches
+    // the formula `total observations + 1 >= confirmsRequired`.
+    const [updated] = await db
       .update(priceSubmissions)
       .set({
-        corroborationCount: totalObservations,
+        corroborationCount: sql`${priceSubmissions.corroborationCount} + 1`,
+        status: sql`CASE
+          WHEN ${priceSubmissions.corroborationCount} + 1 >= ${confirmsRequired}
+            THEN 'corroborated'::price_submission_status
+          ELSE ${priceSubmissions.status}
+        END`,
         updatedAt: new Date(),
-        ...(promoted ? { status: 'corroborated' } : {}),
       })
       .where(eq(priceSubmissions.id, submissionId))
+      .returning({
+        corroborationCount: priceSubmissions.corroborationCount,
+        status: priceSubmissions.status,
+      })
+
+    if (!updated) {
+      return ctx.json({ success: false, error: 'Submission not found' }, 404)
+    }
+
+    const promoted = updated.status === 'corroborated'
 
     if (promoted) {
       await db
@@ -141,7 +141,11 @@ priceSubmissionConfirmsRouter.post(
         .where(eq(events.id, eventId))
     }
 
-    const submissionStatus = promoted ? 'corroborated' : submission.status
+    // `confirmsCount` in the response is the count of non-submitter confirms
+    // (excludes the submitter). corroborationCount = submitter + confirms, so
+    // confirms = corroborationCount - 1.
+    const confirmsCount = updated.corroborationCount - 1
+    const submissionStatus = updated.status
 
     return ctx.json({
       success: true,

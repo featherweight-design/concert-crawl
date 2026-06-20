@@ -90,8 +90,55 @@ describe('POST /v1/events/:id/price-submissions', () => {
     expect(body.data.tier).toBe('GA')
     // Submitter counts as observation #1 in the 1/2 model
     expect(body.data.corroborationCount).toBe(1)
-    // sourceCategory is optional during the expand phase — omitted in TEST_BODY
-    expect(body.data.sourceCategory).toBeNull()
+    // sourceCategory is optional, but the server derives it from
+    // (vendor, howFound) when omitted so the partial unique index + boxoffice
+    // staleness exemption fire immediately. TEST_BODY uses
+    // vendor=Ticketmaster + howFound=bought_myself → standard.
+    expect(body.data.sourceCategory).toBe('standard')
+  })
+
+  it('derives sourceCategory=boxoffice from VenueBoxOffice vendor when omitted', async () => {
+    setAuth()
+    const res = await app.request(`/v1/events/${eventId}/price-submissions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
+      body: JSON.stringify({
+        priceMin: 25,
+        tier: 'GA',
+        vendor: 'VenueBoxOffice',
+        howFound: 'bought_myself',
+      }),
+    })
+    expect(res.status).toBe(201)
+    const body = (await res.json()) as {
+      data: { sourceCategory: string | null }
+    }
+    expect(body.data.sourceCategory).toBe('boxoffice')
+  })
+
+  it('derives sourceCategory=boxoffice from at_the_venue howFound when omitted', async () => {
+    setAuth()
+    const res = await app.request(`/v1/events/${eventId}/price-submissions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
+      body: JSON.stringify({
+        priceMin: 25,
+        tier: 'GA',
+        vendor: 'Ticketmaster',
+        howFound: 'at_the_venue',
+      }),
+    })
+    expect(res.status).toBe(201)
+    const body = (await res.json()) as {
+      data: { sourceCategory: string | null }
+    }
+    expect(body.data.sourceCategory).toBe('boxoffice')
   })
 
   it('persists sourceCategory when provided and returns it on GET', async () => {
