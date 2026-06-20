@@ -1,3 +1,12 @@
+## [1.70.1](https://github.com/HartiganHM/concert-crawl/compare/v1.70.0...v1.70.1) (2026-06-20)
+
+
+### Bug Fixes
+
+* **crawler:** expand isConcert prompt rules for false-negative patterns ([bfbcdb9](https://github.com/HartiganHM/concert-crawl/commit/bfbcdb9c40a27752a7ea26a1f819ba165aa9cf82))
+* **scripts:** alias @concert-crawl/crawler-core in vitest scripts config ([b734507](https://github.com/HartiganHM/concert-crawl/commit/b73450705803eaa15f395c476c715489ed7405b2))
+* **scripts:** import IS_CONCERT_RULES from crawler-core source ([a5376d1](https://github.com/HartiganHM/concert-crawl/commit/a5376d199c10d7ed83b16414a4138b3a8e2701ea))
+
 # [1.70.0](https://github.com/HartiganHM/concert-crawl/compare/v1.69.0...v1.70.0) (2026-06-20)
 
 
