@@ -8,12 +8,6 @@ interface PageProps {
   params: Promise<{ id: string }>
 }
 
-interface ApiResponse {
-  success: boolean
-  data?: EditorEvent
-  error?: string
-}
-
 export default async function EventEditorPage({ params }: PageProps) {
   await requireAdminUser()
   const { getToken } = await auth()
@@ -22,17 +16,20 @@ export default async function EventEditorPage({ params }: PageProps) {
 
   const { id } = await params
 
-  const response = await apiClient
-    .get<ApiResponse>(`/v1/admin/events/${id}`, token)
+  // apiClient.get already unwraps the { success, data } envelope and returns
+  // body.data as T — so typing this as <EditorEvent> gives us the event directly.
+  // Typing it as the envelope shape will silently always look "not found".
+  const event = await apiClient
+    .get<EditorEvent>(`/v1/admin/events/${id}`, token)
     .catch(() => null)
 
-  if (!response || !response.success || !response.data) {
+  if (!event) {
     notFound()
   }
 
   return (
     <div style={{ padding: '24px 28px' }}>
-      <EventEditorClient event={response.data} />
+      <EventEditorClient event={event} />
     </div>
   )
 }
