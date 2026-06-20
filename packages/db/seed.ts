@@ -1225,6 +1225,12 @@ async function seed() {
           date: ev.date,
           showTime: ev.showTime ?? null,
           ticketUrl: ev.ticketUrl ?? null,
+          // Single-link ticketLinks mirror of ticketUrl during the expand
+          // phase. Crawler PR (#641 cycle, PR 2) replaces this with the
+          // host/vendor-derived array.
+          ticketLinks: ev.ticketUrl
+            ? [{ kind: 'primary' as const, vendor: null, url: ev.ticketUrl }]
+            : null,
           ticketPriceMin: ev.ticketPriceMin ?? null,
           ticketPriceMax: ev.ticketPriceMax ?? null,
           priceSource: ev.priceSource ?? null,
@@ -1862,10 +1868,27 @@ async function seed() {
       },
     ]
 
+    // Derive source_category from existing (vendor, how_found) and bump
+    // corroborationCount by +1 so the seed mirrors the post-migration-0040
+    // semantics (submitter counts as observation #1; corroborationCount is
+    // total observations including submitter). Heuristic matches the SQL
+    // backfill in packages/db/migrations/0040_price_source_category.sql.
+    const deriveSourceCategory = (
+      vendor: SubmissionTemplate['vendor'],
+      howFound: SubmissionTemplate['howFound'],
+    ): 'boxoffice' | 'standard' | 'resale' =>
+      vendor === 'VenueBoxOffice' || howFound === 'at_the_venue'
+        ? 'boxoffice'
+        : 'standard'
+
     const submissionRows = submissionTemplates
       .filter(({ idx }) => eventIds[idx] !== undefined)
-      .map(({ idx, ...rest }) => ({
+      .map(({ idx, corroborationCount, vendor, howFound, ...rest }) => ({
         ...rest,
+        vendor,
+        howFound,
+        sourceCategory: deriveSourceCategory(vendor, howFound),
+        corroborationCount: corroborationCount + 1,
         eventId: eventIds[idx] as string,
       }))
 
