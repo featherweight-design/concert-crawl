@@ -1,3 +1,20 @@
+# [1.70.0](https://github.com/HartiganHM/concert-crawl/compare/v1.69.0...v1.70.0) (2026-06-20)
+
+
+### Bug Fixes
+
+* **admin:** address Copilot fifth-pass review on PR [#702](https://github.com/HartiganHM/concert-crawl/issues/702) ([4136607](https://github.com/HartiganHM/concert-crawl/commit/4136607ee6c17f77efba674745cea4e7d8a7c3ff))
+* **admin:** address Copilot fourth-pass review on PR [#702](https://github.com/HartiganHM/concert-crawl/issues/702) ([ba0d873](https://github.com/HartiganHM/concert-crawl/commit/ba0d873f89bc3493b56fc9b597896ba36a1555c8))
+* **admin:** address Copilot review on PR [#702](https://github.com/HartiganHM/concert-crawl/issues/702) ([c504a22](https://github.com/HartiganHM/concert-crawl/commit/c504a225ecc5fadf2cecf6fce2c8e8ca15e6e1ac))
+* **admin:** address Copilot second-pass review on PR [#702](https://github.com/HartiganHM/concert-crawl/issues/702) ([805f93f](https://github.com/HartiganHM/concert-crawl/commit/805f93fdbe0943c3d6fde5cf163596aa023a9e0d))
+* **admin:** address Copilot third-pass review on PR [#702](https://github.com/HartiganHM/concert-crawl/issues/702) ([29c42ec](https://github.com/HartiganHM/concert-crawl/commit/29c42ec4ff26235c95784b34634b5fa4c9fb108f))
+* **admin:** align pagination component with design tokens ([306c233](https://github.com/HartiganHM/concert-crawl/commit/306c233f700b57bb1ac029f498440dd6c0145e71))
+
+
+### Features
+
+* **admin:** page-replacement pagination across review tabs ([6a17d0f](https://github.com/HartiganHM/concert-crawl/commit/6a17d0f7e8b646d3f6a7d13d1167aa9baa8f8b46)), closes [#693](https://github.com/HartiganHM/concert-crawl/issues/693)
+
 # [1.69.0](https://github.com/HartiganHM/concert-crawl/compare/v1.68.0...v1.69.0) (2026-06-20)
 
 
