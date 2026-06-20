@@ -98,7 +98,7 @@ describe('admin events [id] edit page', () => {
     expect(result).toBeTruthy()
   })
 
-  it('calls notFound only on ApiError with status 404', async () => {
+  it('calls notFound on ApiError with status 404', async () => {
     mockApiGet.mockRejectedValue(new MockApiError(404, 'Event not found'))
 
     const { default: EventEditorPage } = await import('./page.js')
@@ -108,9 +108,23 @@ describe('admin events [id] edit page', () => {
     expect(mockNotFound).toHaveBeenCalledOnce()
   })
 
-  // Non-404 errors must propagate so Next's error boundary / 500 handler
+  // The API's Zod param validator rejects non-UUID :id strings with 400.
+  // From the user's perspective that's "the page doesn't exist" — same UX
+  // as 404. Without this branch, /admin/events/<not-a-uuid>/edit would
+  // surface Next's error boundary instead of the 404 page.
+  it('calls notFound on ApiError 400 (invalid UUID rejected by API)', async () => {
+    mockApiGet.mockRejectedValue(new MockApiError(400, 'Invalid input'))
+
+    const { default: EventEditorPage } = await import('./page.js')
+    const params = Promise.resolve({ id: 'not-a-uuid' })
+
+    await expect(EventEditorPage({ params })).rejects.toThrow('NEXT_NOT_FOUND')
+    expect(mockNotFound).toHaveBeenCalledOnce()
+  })
+
+  // Non-missing errors must propagate so Next's error boundary / 500 handler
   // surfaces real operational failures instead of silently 404ing.
-  it('re-throws ApiError for non-404 statuses (e.g. 500)', async () => {
+  it('re-throws ApiError for non-missing statuses (e.g. 500)', async () => {
     mockApiGet.mockRejectedValue(new MockApiError(500, 'Internal Server Error'))
 
     const { default: EventEditorPage } = await import('./page.js')
@@ -119,6 +133,16 @@ describe('admin events [id] edit page', () => {
     await expect(EventEditorPage({ params })).rejects.toThrow(
       'Internal Server Error',
     )
+    expect(mockNotFound).not.toHaveBeenCalled()
+  })
+
+  it('re-throws ApiError for auth statuses (e.g. 403)', async () => {
+    mockApiGet.mockRejectedValue(new MockApiError(403, 'Forbidden'))
+
+    const { default: EventEditorPage } = await import('./page.js')
+    const params = Promise.resolve({ id: 'evt_403' })
+
+    await expect(EventEditorPage({ params })).rejects.toThrow('Forbidden')
     expect(mockNotFound).not.toHaveBeenCalled()
   })
 

@@ -19,13 +19,22 @@ export default async function EventEditorPage({ params }: PageProps) {
   // apiClient.get already unwraps the { success, data } envelope and returns
   // body.data as T — so typing this as <EditorEvent> gives us the event directly.
   // Typing it as the envelope shape will silently always look "not found".
-  // Only map 404 → notFound; let other errors propagate to Next's error
-  // boundary so 500s / network failures don't get swallowed as "not found".
+  //
+  // Map both "missing" cases to Next's notFound:
+  //   - 404: valid UUID but the row doesn't exist
+  //   - 400: the API's Zod param validator rejects non-UUID :id strings
+  //          (apps/api/src/routes/admin/events.ts — eventIdSchema), so
+  //          /admin/events/<garbage>/edit is "not found" from the user's
+  //          perspective, not a server error.
+  // Anything else (auth, 5xx, network) propagates to Next's error boundary.
   let event: EditorEvent
   try {
     event = await apiClient.get<EditorEvent>(`/v1/admin/events/${id}`, token)
   } catch (error) {
-    if (error instanceof ApiError && error.status === 404) {
+    if (
+      error instanceof ApiError &&
+      (error.status === 404 || error.status === 400)
+    ) {
       notFound()
     }
     throw error
