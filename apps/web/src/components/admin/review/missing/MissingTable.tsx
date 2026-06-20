@@ -62,7 +62,14 @@ export const MissingTable = ({
     </div>
   )
 
-  if (events.length === 0) {
+  // Gate the "all accounted for" empty state on the server total, not the
+  // current page's row count. With pagination, a deep-link to a page past
+  // the end (or a momentarily-stale page during clamp-sync) renders
+  // `events=[]` while `flaggedTotal > 0` — showing "Nothing's gone missing"
+  // alongside a "166 flagged" header badge would be contradictory. When
+  // total > 0 we always render the table chrome; the parent's Pagination
+  // component clamps the page back to a valid one on the next tick.
+  if (flaggedTotal === 0) {
     return (
       <div
         style={{

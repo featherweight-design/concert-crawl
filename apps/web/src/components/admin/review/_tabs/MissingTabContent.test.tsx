@@ -150,4 +150,30 @@ describe('MissingTabContent', () => {
     )
     expect(screen.getByText('1 flagged')).toBeTruthy()
   })
+
+  // Copilot follow-up on #710: when an admin deep-links to a page past the
+  // end (or the row fetch is briefly stale during clamp-sync), the current
+  // page is empty but the server total is not zero. The "all accounted for"
+  // empty state must not render in that case — it would contradict the
+  // header badge that's correctly showing the non-zero total.
+  it('does not show the "all accounted for" empty state when total > 0 but page is empty', () => {
+    render(
+      <MissingTabContent
+        events={[]}
+        isDesktop
+        nowIso={NOW}
+        total={166}
+        page={9}
+        pageSize={20}
+        onPageChange={() => {}}
+        onPageSizeChange={() => {}}
+        onMarkPostponed={async () => {}}
+        onMarkCancelled={async () => {}}
+        onDismiss={async () => {}}
+      />,
+    )
+    expect(screen.getByText('166 flagged')).toBeTruthy()
+    // Empty-state copy strings must NOT appear.
+    expect(screen.queryByText("Nothing's gone missing.")).toBeNull()
+  })
 })
