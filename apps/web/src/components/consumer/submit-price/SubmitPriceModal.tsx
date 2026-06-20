@@ -255,8 +255,10 @@ export function SubmitPriceModal({
           tier: formState.tier!,
           vendor: formState.vendor!,
           howFound: formState.howFound!,
-          // Server re-derives sourceCategory when vendor/howFound change.
-          // Use the returned value so the local state mirrors the row.
+          // Server preserves an explicit sourceCategory on PATCH and only
+          // re-derives it when the existing row has NULL (legacy backfill
+          // scenarios). Either way, surface whatever the server returns so
+          // the local state mirrors the row.
           sourceCategory: patchResponse.data.sourceCategory,
         })
         setModalState('success')
