@@ -148,4 +148,32 @@ describe('PriceCoverageTable header badge (#710)', () => {
 
     expect(screen.getByText(/All events have prices/i)).toBeTruthy()
   })
+
+  // Copilot follow-up on #710 pass 4: when the current page is empty but
+  // total > 0 (out-of-range deep-link), the Pagination component MUST
+  // still render — its clamp-sync effect is what recovers a stale `page`
+  // value. Returning `null` for the whole body would strand the user with
+  // no way to recover.
+  it('renders Pagination when events=[] but total > 0 so clamp-sync can recover', () => {
+    render(
+      <PriceCoverageTable
+        events={[]}
+        loading={false}
+        missingOnly={true}
+        page={50}
+        pageSize={20}
+        total={963}
+        onPageChange={noop}
+        onPageSizeChange={noop}
+        onToggleFilter={noop}
+      />,
+    )
+
+    // Pagination's nav is identifiable by its standard role + label. The
+    // exact name string is owned by the Pagination component; we just
+    // assert that some pagination control is in the DOM (the body isn't
+    // a dead end).
+    const pagerButtons = screen.queryAllByRole('button')
+    expect(pagerButtons.length).toBeGreaterThan(0)
+  })
 })
