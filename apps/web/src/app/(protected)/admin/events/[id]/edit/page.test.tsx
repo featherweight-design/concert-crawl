@@ -48,11 +48,14 @@ vi.mock('@/components/admin/events/editor/EventEditorClient', () => ({
   }),
 }))
 
+// `date` is stored as YYYY-MM-DD throughout the admin editor — the API
+// PATCH validator enforces `^\d{4}-\d{2}-\d{2}$` (apps/api/src/routes/
+// admin/events.ts). Keep fixtures aligned with the real payload shape.
 const buildEvent = (overrides: Partial<EditorEvent> = {}): EditorEvent => ({
   id: 'evt_1',
   title: 'Test Show',
   artist: 'Test Artist',
-  date: '2026-12-31T00:00:00.000Z',
+  date: '2026-12-31',
   doorsTime: null,
   showTime: null,
   ticketPriceMin: null,
