@@ -14,6 +14,7 @@
     "db:seed": "turbo run db:seed --filter=@concert-crawl/db",
     "db:sync-local": "docker exec -i concert-crawl-db psql -U postgres -d concert_crawl_db < scripts/staging-snapshot.sql && pnpm db:seed",
     "release:draft": "tsx scripts/draft-release.ts",
+    "test:scripts": "vitest run --config vitest.scripts.config.ts",
     "prepare": "husky"
   },
   "devDependencies": {
@@ -21,6 +22,7 @@
     "@concert-crawl/db": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "tsx": "^4.22.4",
+    "vitest": "^4.1.9",
     "turbo": "2.9.18",
     "prettier": "3.8.4",
     "@commitlint/cli": "21.0.2",
