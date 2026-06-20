@@ -281,6 +281,13 @@
       "when": 1782432000000,
       "tag": "0039_events_hidden_from_consumer",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1782518400000,
+      "tag": "0040_price_source_category",
+      "breakpoints": true
     }
   ]
 }
