@@ -27,7 +27,12 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import Anthropic from '@anthropic-ai/sdk'
 import { and, eq, gte, inArray } from 'drizzle-orm'
-import { IS_CONCERT_RULES } from '@concert-crawl/crawler-core'
+// Relative source import (not package barrel) so this one-shot script
+// runs against a clean checkout without requiring a prior
+// `pnpm build --filter=@concert-crawl/crawler-core`. tsx resolves the
+// `.js` suffix back to the `.ts` source. The package's `index.ts` still
+// re-exports IS_CONCERT_RULES for normal workspace consumers.
+import { IS_CONCERT_RULES } from '../packages/crawler-core/src/lib/extractors/llm.js'
 import { db, events, venues } from '@concert-crawl/db'
 import {
   buildBatches,

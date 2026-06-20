@@ -19,7 +19,6 @@
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.104.2",
-    "@concert-crawl/crawler-core": "workspace:*",
     "@concert-crawl/db": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "tsx": "^4.22.4",
