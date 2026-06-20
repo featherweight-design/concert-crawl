@@ -1,3 +1,16 @@
+# [1.69.0](https://github.com/HartiganHM/concert-crawl/compare/v1.68.0...v1.69.0) (2026-06-20)
+
+
+### Bug Fixes
+
+* **scripts:** address all 5 Copilot review comments on PR [#704](https://github.com/HartiganHM/concert-crawl/issues/704) ([5a91e57](https://github.com/HartiganHM/concert-crawl/commit/5a91e5771c2c6cae778436714571e155b21cc072))
+* **scripts:** rename vitest config so workspace packages don't inherit it ([fc71dc0](https://github.com/HartiganHM/concert-crawl/commit/fc71dc0060cce60cb92c4884bac23e9b24b50ce4)), closes [packages/types#test](https://github.com/packages/types/issues/test)
+
+
+### Features
+
+* **scripts:** non-concert auto-classification backfill — dry-run + --commit ([#696](https://github.com/HartiganHM/concert-crawl/issues/696)) ([0be2188](https://github.com/HartiganHM/concert-crawl/commit/0be21889406ee8ba92b4e970db1c9ea85d63b86f))
+
 # [1.68.0](https://github.com/HartiganHM/concert-crawl/compare/v1.67.0...v1.68.0) (2026-06-19)
 
 
