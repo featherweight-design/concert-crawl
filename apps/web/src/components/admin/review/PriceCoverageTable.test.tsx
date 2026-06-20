@@ -104,4 +104,48 @@ describe('PriceCoverageTable header badge (#710)', () => {
 
     expect(screen.queryByText(/missing/)).toBeNull()
   })
+
+  // Copilot follow-up on #710: when paging clamps invalid deep-links, the
+  // parent query briefly returns events=[] while total>0. Showing "All
+  // events have prices — nothing missing." next to a "963 missing" badge
+  // would contradict the badge. The empty-state copy must only render
+  // when the server total really is zero.
+  it('does not show the empty-state copy when total > 0 but page is empty', () => {
+    render(
+      <PriceCoverageTable
+        events={[]}
+        loading={false}
+        missingOnly={true}
+        page={9}
+        pageSize={20}
+        total={963}
+        onPageChange={noop}
+        onPageSizeChange={noop}
+        onToggleFilter={noop}
+      />,
+    )
+
+    expect(screen.getByText('963 missing')).toBeTruthy()
+    // Empty-state copy strings should not render.
+    expect(screen.queryByText(/All events have prices/i)).toBeNull()
+    expect(screen.queryByText(/No upcoming events/i)).toBeNull()
+  })
+
+  it('shows empty-state copy when total === 0 (truly nothing missing)', () => {
+    render(
+      <PriceCoverageTable
+        events={[]}
+        loading={false}
+        missingOnly={true}
+        page={1}
+        pageSize={20}
+        total={0}
+        onPageChange={noop}
+        onPageSizeChange={noop}
+        onToggleFilter={noop}
+      />,
+    )
+
+    expect(screen.getByText(/All events have prices/i)).toBeTruthy()
+  })
 })

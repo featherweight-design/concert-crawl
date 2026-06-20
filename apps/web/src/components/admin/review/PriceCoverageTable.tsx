@@ -203,7 +203,16 @@ export const PriceCoverageTable = ({
         </div>
       ) : (
         <div>
-          {events.length === 0 ? (
+          {/*
+            Gate the empty state on the server total, not the current page's
+            row count. With pagination, a deep-link to a page past the end
+            (or a momentarily-stale page during clamp-sync) renders
+            `events=[]` while `total > 0` — showing "All events have prices —
+            nothing missing." alongside a "963 missing" badge would be
+            contradictory. When total > 0 we render no body until the
+            parent's Pagination clamps to a valid page on the next tick.
+          */}
+          {total === 0 ? (
             <div
               style={{
                 padding: '24px 18px',
@@ -217,7 +226,7 @@ export const PriceCoverageTable = ({
                 ? ADMIN_COPY.review.priceCoverage.emptyAllPrices
                 : ADMIN_COPY.review.priceCoverage.emptyNoPrices}
             </div>
-          ) : (
+          ) : events.length === 0 ? null : (
             <>
               <AdminTable>
                 <THead>
