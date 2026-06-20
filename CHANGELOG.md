@@ -1,3 +1,30 @@
+# [1.71.0](https://github.com/HartiganHM/concert-crawl/compare/v1.70.2...v1.71.0) (2026-06-20)
+
+
+### Bug Fixes
+
+* address Copilot round 10 review on PR [#705](https://github.com/HartiganHM/concert-crawl/issues/705) ([b06eeb6](https://github.com/HartiganHM/concert-crawl/commit/b06eeb6a5c33477b4487ad9bcfb3a169cb632e9c))
+* address Copilot round 11 review on PR [#705](https://github.com/HartiganHM/concert-crawl/issues/705) ([c252f28](https://github.com/HartiganHM/concert-crawl/commit/c252f28f019788e25c8aacf0e5872a5580934cd9))
+* address Copilot round 12 review on PR [#705](https://github.com/HartiganHM/concert-crawl/issues/705) ([9a6ee6d](https://github.com/HartiganHM/concert-crawl/commit/9a6ee6d542f5bc8c147f82ba403dc420237ff2bd))
+* address Copilot round 2 review on PR [#705](https://github.com/HartiganHM/concert-crawl/issues/705) ([4ff64ab](https://github.com/HartiganHM/concert-crawl/commit/4ff64abaf4e0f6bfe3c96bc0e95ca5f0f506df7a))
+* address Copilot round 3 review on PR [#705](https://github.com/HartiganHM/concert-crawl/issues/705) ([e9d0ff1](https://github.com/HartiganHM/concert-crawl/commit/e9d0ff1c3efb81ebbd7cbfb4e9de0bda6e3804ed))
+* address Copilot round 4 review on PR [#705](https://github.com/HartiganHM/concert-crawl/issues/705) ([470efd7](https://github.com/HartiganHM/concert-crawl/commit/470efd75bb0a7dff55d33261cc9c93560af8fb6a))
+* address Copilot round 5 review on PR [#705](https://github.com/HartiganHM/concert-crawl/issues/705) ([609a383](https://github.com/HartiganHM/concert-crawl/commit/609a38370dc298881557067a620df0c5c5a390b0))
+* address Copilot round 6 review on PR [#705](https://github.com/HartiganHM/concert-crawl/issues/705) ([e3a6fd2](https://github.com/HartiganHM/concert-crawl/commit/e3a6fd2cf4346363576dfdd1306e1506511ca9c4))
+* address Copilot round 7 review on PR [#705](https://github.com/HartiganHM/concert-crawl/issues/705) ([841c441](https://github.com/HartiganHM/concert-crawl/commit/841c441488dca047da98f4153e16bc5c841b845f))
+* address Copilot round 8 review on PR [#705](https://github.com/HartiganHM/concert-crawl/issues/705) ([a83ad58](https://github.com/HartiganHM/concert-crawl/commit/a83ad580854e0bfc1d3e5eed7fae36c159829556))
+* address Copilot round 9 review on PR [#705](https://github.com/HartiganHM/concert-crawl/issues/705) ([105b242](https://github.com/HartiganHM/concert-crawl/commit/105b242d50c7b346b3a463e41101e117a45b28e8))
+* **api:** address Copilot review on PR [#705](https://github.com/HartiganHM/concert-crawl/issues/705) ([710c11e](https://github.com/HartiganHM/concert-crawl/commit/710c11ee8129aaa893f8f400488d2f8054726dc2))
+
+
+### Features
+
+* **api:** accept sourceCategory on submit; corroborationCount starts at 1 ([ddbe3cd](https://github.com/HartiganHM/concert-crawl/commit/ddbe3cd6247289b939cb9097d5aae288240c15fc)), closes [#1](https://github.com/HartiganHM/concert-crawl/issues/1)
+* **api:** bring price-submission-confirms promotion logic into alignment ([507765e](https://github.com/HartiganHM/concert-crawl/commit/507765e429cc91c1d198bd38fc388d91ff8ce648)), closes [#1](https://github.com/HartiganHM/concert-crawl/issues/1)
+* **db:** add source_category enum + ticket_links jsonb to schema ([1194f5f](https://github.com/HartiganHM/concert-crawl/commit/1194f5f59697aaf0454ae33232043f4711b6fca7)), closes [#641](https://github.com/HartiganHM/concert-crawl/issues/641) [#644](https://github.com/HartiganHM/concert-crawl/issues/644) [#1](https://github.com/HartiganHM/concert-crawl/issues/1)
+* **db:** migration 0040 — source_category + ticket_links + 1/2 corroboration ([0b239de](https://github.com/HartiganHM/concert-crawl/commit/0b239de849574bb74eac7b823bac98b8ebef7f89))
+* **types:** add source_category + ticket_links exports; extend price submission / event types ([9d340a3](https://github.com/HartiganHM/concert-crawl/commit/9d340a3307646d2e92fe369fab7e8c1fa6bff317))
+
 ## [1.70.2](https://github.com/HartiganHM/concert-crawl/compare/v1.70.1...v1.70.2) (2026-06-20)
 
 
