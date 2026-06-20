@@ -151,8 +151,9 @@ const clampPage = (raw: number): number =>
 
 const clampPageSize = (raw: number): number => {
   if (!Number.isFinite(raw)) return PAGINATION_URL_DEFAULT_PAGE_SIZE
-  // Snap to the nearest allowed option — URL deep-links with garbage values
-  // (e.g. ?pageSize=37) fall back to a known good one.
+  // Only the exact allowed options are honored; anything else (e.g.
+  // ?pageSize=37) falls back to the default. No nearest-match snapping —
+  // deep-links with garbage values reset rather than picking a near-fit.
   return (
     PAGINATION_PAGE_SIZE_OPTIONS.find((opt) => opt === Math.floor(raw)) ??
     PAGINATION_URL_DEFAULT_PAGE_SIZE

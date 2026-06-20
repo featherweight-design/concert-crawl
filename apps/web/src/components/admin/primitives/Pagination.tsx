@@ -60,39 +60,45 @@ const AdminIcon = ({ name, size = 14, color }: AdminIconProps) => (
   </svg>
 )
 
-// Loading spinner shown in the RangeReadout. The keyframes are injected
-// once via a sibling <style> tag so the spinning works without an external
-// CSS file.
-const SPINNER_STYLE = `@keyframes ccSpin { to { transform: rotate(360deg); } }`
+// Shared CSS for the pager: the spinner keyframes and the focus-visible
+// outline. We inject this once per Pagination instance (sibling of the
+// pager <nav>) so we can use pseudo-selectors without an external CSS
+// file. `all: unset` on the controls strips the browser's default focus
+// ring; the [data-pager-control] selector below restores it for keyboard
+// users.
+const PAGER_STYLE = `
+@keyframes ccSpin { to { transform: rotate(360deg); } }
+[data-pager-control]:focus-visible {
+  outline: 2px solid var(--focus, var(--signal));
+  outline-offset: 2px;
+}
+`
 
 const Spinner = ({ size = 12, color = 'var(--signal)' }) => (
-  <>
-    <style>{SPINNER_STYLE}</style>
-    <svg
-      aria-hidden="true"
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      style={{ animation: 'ccSpin 0.9s linear infinite' }}
-    >
-      <circle
-        cx={12}
-        cy={12}
-        r={9}
-        stroke={color}
-        strokeWidth={2.5}
-        fill="none"
-        opacity={0.2}
-      />
-      <path
-        d="M21 12a9 9 0 00-9-9"
-        stroke={color}
-        strokeWidth={2.5}
-        fill="none"
-        strokeLinecap="round"
-      />
-    </svg>
-  </>
+  <svg
+    aria-hidden="true"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    style={{ animation: 'ccSpin 0.9s linear infinite' }}
+  >
+    <circle
+      cx={12}
+      cy={12}
+      r={9}
+      stroke={color}
+      strokeWidth={2.5}
+      fill="none"
+      opacity={0.2}
+    />
+    <path
+      d="M21 12a9 9 0 00-9-9"
+      stroke={color}
+      strokeWidth={2.5}
+      fill="none"
+      strokeLinecap="round"
+    />
+  </svg>
 )
 
 const COPY = ADMIN_COPY.pagination
@@ -169,6 +175,7 @@ const PagerBtn = ({
   return (
     <button
       type="button"
+      data-pager-control
       aria-label={ariaLabel}
       aria-current={active ? 'page' : undefined}
       onClick={disabled ? undefined : onClick}
@@ -268,9 +275,12 @@ const SizeSelect = ({
       </span>
       <button
         type="button"
+        data-pager-control
         disabled={disabled}
         onClick={() => setOpen((prev) => !prev)}
         aria-label={COPY.sizeSelectorAriaLabel}
+        aria-haspopup="listbox"
+        aria-expanded={open}
         style={{
           all: 'unset',
           boxSizing: 'border-box',
@@ -317,6 +327,7 @@ const SizeSelect = ({
               <button
                 key={opt}
                 type="button"
+                data-pager-control
                 role="option"
                 aria-selected={selected}
                 onClick={() => {
@@ -421,6 +432,15 @@ export const Pagination = ({
   const compact = usePagerCompact(wrapRef, threshold, forceCompact)
   const state = derivePagination({ page, pageSize, total })
 
+  // Page-clamp sync: when the URL deep-links to ?page=99 but total only
+  // supports 3 pages, derivePagination clamps `state.page` to 3 for the
+  // UI — but the parent's query still fires with page=99 and returns
+  // empty rows. Push the clamped value back so the controlled state
+  // catches up and the query refetches against a real page.
+  useEffect(() => {
+    if (state.page !== page) onPageChange(state.page)
+  }, [state.page, page, onPageChange])
+
   const go = (next: number) =>
     onPageChange(Math.min(state.totalPages, Math.max(1, next)))
 
@@ -445,6 +465,7 @@ export const Pagination = ({
   if (compact) {
     return (
       <nav ref={wrapRef} aria-label={COPY.navAriaLabel} style={footerStyle}>
+        <style>{PAGER_STYLE}</style>
         <div
           style={{
             display: 'flex',
@@ -531,6 +552,7 @@ export const Pagination = ({
   const window = pageWindow(state.page, state.totalPages)
   return (
     <nav ref={wrapRef} aria-label={COPY.navAriaLabel} style={footerStyle}>
+      <style>{PAGER_STYLE}</style>
       <div
         style={{
           display: 'flex',

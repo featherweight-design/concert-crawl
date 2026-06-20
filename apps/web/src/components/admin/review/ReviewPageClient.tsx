@@ -142,10 +142,19 @@ export const ReviewPageClient = ({
   // (filterQuery, page, pageSize). Page-replacement model: changing page
   // refetches just that page. SSR's `initialEvents` becomes the first-paint
   // fallback before the client query lands.
+  //
+  // Desktop gates each query to the active tab so paging in one tab doesn't
+  // refetch its neighbours in the background. Mobile renders all surfaces
+  // through a single shell (AdminReviewMobile owns the visible tab), so
+  // queries stay enabled there.
+  //
   // Event Flags total is unused here because the EF surface keeps its queue
   // shape in this PR — the paginated split-list-with-inspector treatment is
   // tracked in #694. Tab pill count comes from /admin/review/counts instead.
-  const eventFlagsQuery = useReviewEventFlags(pagination)
+  const eventFlagsQuery = useReviewEventFlags(
+    pagination,
+    !isDesktop || activeTab === 'event-flags',
+  )
   const events = useMemo<EventFlag[]>(() => {
     const all = eventFlagsQuery.data?.rows ?? initialEvents
     return pendingRemoveFlagIds.size === 0
@@ -173,7 +182,13 @@ export const ReviewPageClient = ({
 
   // Price coverage: keyed by both the filter toggle and the current page so
   // flipping the toggle resets to page 1 cleanly (handled in togglePriceFilter).
-  const priceEventsQuery = useReviewPriceEvents(priceFilter, pagination)
+  // Same gate as event flags — desktop only fetches when the prices tab is
+  // active.
+  const priceEventsQuery = useReviewPriceEvents(
+    priceFilter,
+    pagination,
+    !isDesktop || activeTab === 'prices',
+  )
   const priceEventsTotal = priceEventsQuery.data?.total ?? 0
   const priceEvents: PriceEvent[] = priceEventsQuery.data?.rows ?? []
 
@@ -433,7 +448,10 @@ export const ReviewPageClient = ({
     [getToken, invalidate, router],
   )
 
-  const pendingCount = events.length + submissions.length
+  // Pending count drives the header pill ("X pending") and the mobile
+  // subtitle. Both use server-driven counts so they stay accurate beyond
+  // the first page of flagged events (`events.length` is page-N only).
+  const pendingCount = counts.eventFlags + counts.prices
 
   const sectionHead = (
     <SectionHead
@@ -586,8 +604,8 @@ export const ReviewPageClient = ({
           }}
         >
           {ADMIN_COPY.review.reviewPageClient.mobileSubtitle(
-            events.length,
-            submissions.length,
+            counts.eventFlags,
+            counts.prices,
           )}
         </div>
       </div>

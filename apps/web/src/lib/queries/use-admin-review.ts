@@ -133,11 +133,17 @@ export function useReviewAllEvents(
 }
 
 // ───── Event Flags tab ───────────────────────────────────────────────────────
-export function useReviewEventFlags(pagination: PaginatedQueryInput) {
+// `enabled` lets the caller gate the query on tab activity so paging in a
+// neighbour tab doesn't refetch this surface in the background.
+export function useReviewEventFlags(
+  pagination: PaginatedQueryInput,
+  enabled: boolean = true,
+) {
   const { getToken } = useAuth()
   const { page, pageSize } = pagination
   return useQuery({
     queryKey: reviewQueryKeys.eventFlags(page, pageSize),
+    enabled,
     queryFn: async (): Promise<CountedResponse<EventFlag>> => {
       const token = await getToken()
       if (!token) return { rows: [], total: 0 }
@@ -179,11 +185,13 @@ export function useReviewMissingEvents(
 export function useReviewPriceEvents(
   filter: 'missing' | 'all',
   pagination: PaginatedQueryInput,
+  enabled: boolean = true,
 ) {
   const { getToken } = useAuth()
   const { page, pageSize } = pagination
   return useQuery({
     queryKey: reviewQueryKeys.priceEvents(filter, page, pageSize),
+    enabled,
     queryFn: async (): Promise<CountedResponse<PriceEvent>> => {
       const token = await getToken()
       if (!token) return { rows: [], total: 0 }
