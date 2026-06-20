@@ -1,4 +1,5 @@
 import { and, count, desc, eq, isNull, sql } from 'drizzle-orm'
+import { deriveSourceCategory } from '@concert-crawl/types'
 import { db } from './src/client.js'
 import {
   venues,
@@ -1868,23 +1869,11 @@ async function seed() {
       },
     ]
 
-    // Derive source_category from existing (vendor, how_found) and bump
-    // corroborationCount by +1 so the seed mirrors the post-migration-0040
-    // semantics (submitter counts as observation #1; corroborationCount is
-    // total observations including submitter). Heuristic matches the SQL
-    // backfill in packages/db/migrations/0040_price_source_category.sql.
-    // Legacy resale rows can't be inferred from (vendor, howFound) — none of
-    // the captured fields signal it — so the heuristic only ever returns
-    // boxoffice or standard. New submissions (PR 4) write source_category
-    // directly from the submit form, which is where 'resale' enters the data.
-    const deriveSourceCategory = (
-      vendor: SubmissionTemplate['vendor'],
-      howFound: SubmissionTemplate['howFound'],
-    ): 'boxoffice' | 'standard' =>
-      vendor === 'VenueBoxOffice' || howFound === 'at_the_venue'
-        ? 'boxoffice'
-        : 'standard'
-
+    // Derive source_category from existing (vendor, how_found) via the
+    // shared helper and bump corroborationCount by +1 so the seed mirrors
+    // the post-migration-0040 semantics (submitter counts as observation #1;
+    // corroborationCount is total observations including submitter).
+    //
     // Single flatMap keeps the type narrowing honest — when eventIds[idx] is
     // missing we emit nothing, otherwise we have a guaranteed string. Avoids
     // the `as string` cast (per CLAUDE.md's "casts are a last resort" rule).
@@ -1952,10 +1941,16 @@ async function seed() {
         // corroborationCount stores total observations (submitter + non-
         // submitter confirms) under the 1/2 model. submission_confirms only
         // tracks non-submitter confirms, so insert (count - 1) rows.
+        // Filter the submitter out FIRST, then slice — otherwise a submitter
+        // who happens to land in the first N entries would shrink the
+        // resulting confirm count below desiredConfirms.
         const desiredConfirms = Math.max(0, sub.corroborationCount - 1)
-        const count = Math.min(desiredConfirms, CONFIRMING_USERS.length)
-        return CONFIRMING_USERS.slice(0, count)
-          .filter((uid) => uid !== sub.userId)
+        const eligibleConfirmers = CONFIRMING_USERS.filter(
+          (uid) => uid !== sub.userId,
+        )
+        const count = Math.min(desiredConfirms, eligibleConfirmers.length)
+        return eligibleConfirmers
+          .slice(0, count)
           .map((uid) => ({ submissionId: sub.id, userId: uid }))
       })
 

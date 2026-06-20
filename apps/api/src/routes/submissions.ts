@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { eq, sql } from 'drizzle-orm'
 import { db, priceSubmissions, submissionConfirms } from '@concert-crawl/db'
-import { SP_POLICY } from '@concert-crawl/types'
+import { SP_POLICY, deriveSourceCategory } from '@concert-crawl/types'
 import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js'
 
 export const submissionsRouter = new Hono()
@@ -146,6 +146,13 @@ submissionsRouter.post(
           tier: parent.tier,
           vendor,
           howFound: parent.howFound,
+          // Dispute creates a new (tier, source_category) row. Inherit the
+          // parent's sourceCategory when present; otherwise derive from the
+          // new (vendor, parent.howFound) so the dispute lands with a non-
+          // null source_category (matches the partial unique index semantics).
+          sourceCategory:
+            parent.sourceCategory ??
+            deriveSourceCategory(vendor, parent.howFound),
           disputedSubmissionId: submissionId,
           status: 'pending',
         })

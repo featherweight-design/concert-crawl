@@ -113,6 +113,22 @@ export interface TicketLink {
   url: string
 }
 
+// Shared heuristic for deriving source_category when a caller hasn't picked
+// one explicitly. Matches the SQL backfill in migration 0040 and the
+// derivation used at submit/dispute/admin-insert time so every price_submissions
+// row that lacks an explicit value still lands with a non-null source_category.
+// The handler-side derivation only emits boxoffice or standard — legacy resale
+// can't be inferred from existing fields; resale enters through the submit
+// form (PR 4) when the user picks it directly.
+export function deriveSourceCategory(
+  vendor: Vendor,
+  howFound: HowFound,
+): 'boxoffice' | 'standard' {
+  return vendor === 'VenueBoxOffice' || howFound === 'at_the_venue'
+    ? 'boxoffice'
+    : 'standard'
+}
+
 // Shared validation policy — server enforces, client mirrors for UX
 export const SP_POLICY = {
   floorMin: 1,

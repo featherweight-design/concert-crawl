@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { and, desc, eq, gt, ne, sql } from 'drizzle-orm'
 import { db, events, priceSubmissions } from '@concert-crawl/db'
-import { SP_POLICY } from '@concert-crawl/types'
+import { SP_POLICY, deriveSourceCategory } from '@concert-crawl/types'
 import {
   clerkAuth,
   requireAuth,
@@ -242,16 +242,6 @@ priceSubmissionsRouter.post(
       )
     }
 
-    // During the expand phase, older clients omit sourceCategory. Derive it
-    // from (vendor, howFound) using the same heuristic as migration 0040's
-    // backfill, so boxoffice submissions get the correct source_category tag
-    // immediately (partial unique index + box-office staleness exemption both
-    // kick in without waiting for a later backfill).
-    const derivedSourceCategory: 'boxoffice' | 'standard' =
-      body.vendor === 'VenueBoxOffice' || body.howFound === 'at_the_venue'
-        ? 'boxoffice'
-        : 'standard'
-
     const [created] = await db
       .insert(priceSubmissions)
       .values({
@@ -262,7 +252,13 @@ priceSubmissionsRouter.post(
         tier: body.tier,
         vendor: body.vendor,
         howFound: body.howFound,
-        sourceCategory: body.sourceCategory ?? derivedSourceCategory,
+        // During the expand phase older clients omit sourceCategory. Derive
+        // it from (vendor, howFound) via the shared helper so the partial
+        // unique index + boxoffice staleness exemption apply immediately
+        // instead of waiting for a later backfill.
+        sourceCategory:
+          body.sourceCategory ??
+          deriveSourceCategory(body.vendor, body.howFound),
         // Submitter counts as observation #1 (1/2 confirmation model). The
         // DB default is also 1 — explicit value here is defensive against
         // default drift and easier to spot in code review.

@@ -12,6 +12,7 @@ import {
 } from '@concert-crawl/db'
 import { runPricePipeline } from '@concert-crawl/price-pipeline'
 import { createLogger } from '@concert-crawl/logger'
+import { deriveSourceCategory } from '@concert-crawl/types'
 import { getAuthUser } from '../../middleware/auth.js'
 import type { AdminVariables } from './index.js'
 
@@ -382,6 +383,10 @@ pricesAdminRouter.post(
         tier: 'GA',
         vendor,
         howFound,
+        // Admin-inserted rows need a non-null source_category so the partial
+        // unique index covers them. Use the same (vendor, howFound) heuristic
+        // as the consumer submit path.
+        sourceCategory: deriveSourceCategory(vendor, howFound),
         priceMin,
         priceMax: priceMax ?? null,
         status: 'corroborated',
