@@ -14,8 +14,10 @@ export interface MissingTableProps {
   pendingIds: ReadonlySet<string>
   // Server-side total used for the header badge so paging doesn't shrink
   // the count to the current page size (#710). Optional for legacy callers
-  // that don't paginate; when omitted we fall back to events.length.
-  total?: number
+  // that don't paginate; when omitted (or passed explicitly as undefined,
+  // which is how MissingTabContent threads through its own optional prop)
+  // we fall back to events.length.
+  total?: number | undefined
 }
 
 export const MissingTable = ({

@@ -169,11 +169,10 @@ describe('PriceCoverageTable header badge (#710)', () => {
       />,
     )
 
-    // Pagination's nav is identifiable by its standard role + label. The
-    // exact name string is owned by the Pagination component; we just
-    // assert that some pagination control is in the DOM (the body isn't
-    // a dead end).
-    const pagerButtons = screen.queryAllByRole('button')
-    expect(pagerButtons.length).toBeGreaterThan(0)
+    // Assert on the Pagination <nav> itself — the panel action toggle is
+    // also a <button>, so `queryAllByRole('button')` would pass even if
+    // the Pagination component didn't mount (false positive). The nav's
+    // accessible name is owned by the Pagination primitive.
+    expect(screen.getByRole('navigation', { name: 'Pagination' })).toBeTruthy()
   })
 })
