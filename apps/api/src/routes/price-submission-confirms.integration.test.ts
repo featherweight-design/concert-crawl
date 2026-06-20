@@ -108,9 +108,26 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
     expect(res.status).toBe(403)
   })
 
-  it('confirms successfully and returns pending status below threshold', async () => {
+  it('confirms successfully and stays pending when below the imminent-event threshold', async () => {
+    // 1/2 confirmation model: the submitter is observation #1, so a single
+    // non-submitter confirm hits the non-imminent threshold (2) and promotes
+    // immediately. To exercise the below-threshold path we need an imminent
+    // event (threshold = 3, so submitter + 1 confirm = 2 < 3 = pending).
+    const imminentDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10)
+    const imminentEvent = await seedEvent(
+      (await seedVenue({ slug: `venue-imminent-${Date.now()}` })).id,
+      { date: imminentDate, artist: 'Imminent Artist' },
+    )
+    const imminentSubmission = await seedPriceSubmission(
+      imminentEvent.id,
+      'user_imminent_submitter',
+    )
+    const imminentUrl = `/v1/events/${imminentEvent.id}/price-submissions/${imminentSubmission.id}/confirm`
+
     setAuth(CONFIRMER)
-    const res = await app.request(confirmUrl(), {
+    const res = await app.request(imminentUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -133,9 +150,12 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
     expect(body.data.confirmsCount).toBe(1)
   })
 
-  it('returns 409 on duplicate confirm', async () => {
+  it('promotes after one non-submitter confirm on a non-imminent event', async () => {
+    // The default seedEvent date is far past, so confirmsRequired = 2. With
+    // the submitter as observation #1, a single non-submitter confirm meets
+    // the threshold and promotes the row to corroborated.
     setAuth(CONFIRMER)
-    await app.request(confirmUrl(), {
+    const res = await app.request(confirmUrl(), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -143,7 +163,48 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
       },
       body: JSON.stringify(confirmBody),
     })
-    const res = await app.request(confirmUrl(), {
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: {
+        confirmed: boolean
+        submissionStatus: string
+        confirmsCount: number
+      }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.confirmed).toBe(true)
+    expect(body.data.submissionStatus).toBe('corroborated')
+    expect(body.data.confirmsCount).toBe(1)
+  })
+
+  it('returns 409 on duplicate confirm (imminent event, still pending after one confirm)', async () => {
+    // Under the 1/2 model the default non-imminent event promotes on the first
+    // confirm, so the duplicate-confirm path is only reachable on imminent
+    // events (where one confirm leaves the row at 2/3 = pending).
+    const imminentDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10)
+    const imminentEvent = await seedEvent(
+      (await seedVenue({ slug: `venue-duplicate-${Date.now()}` })).id,
+      { date: imminentDate, artist: 'Duplicate-Confirm Artist' },
+    )
+    const imminentSubmission = await seedPriceSubmission(
+      imminentEvent.id,
+      'user_duplicate_submitter',
+    )
+    const imminentUrl = `/v1/events/${imminentEvent.id}/price-submissions/${imminentSubmission.id}/confirm`
+
+    setAuth(CONFIRMER)
+    await app.request(imminentUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
+      body: JSON.stringify(confirmBody),
+    })
+    const res = await app.request(imminentUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -154,12 +215,32 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
     expect(res.status).toBe(409)
   })
 
-  it('promotes to corroborated when threshold is reached', async () => {
+  it('promotes when total observations (submitter + confirms) meets the imminent threshold', async () => {
     const { SP_POLICY } = await import('@concert-crawl/types')
 
-    for (let idx = 0; idx < SP_POLICY.confirmsRequired; idx++) {
+    const imminentDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10)
+    const imminentVenue = await seedVenue({
+      slug: `venue-promote-${Date.now()}`,
+    })
+    const imminentEvent = await seedEvent(imminentVenue.id, {
+      date: imminentDate,
+      artist: 'Imminent Promotion Artist',
+    })
+    const imminentSubmission = await seedPriceSubmission(
+      imminentEvent.id,
+      'user_promote_submitter',
+    )
+    const imminentUrl = `/v1/events/${imminentEvent.id}/price-submissions/${imminentSubmission.id}/confirm`
+
+    // confirmsRequiredImminent counts total observations. Submitter = 1, so
+    // we need (confirmsRequiredImminent - 1) non-submitter confirms.
+    const confirmsNeeded = SP_POLICY.confirmsRequiredImminent - 1
+
+    for (let idx = 0; idx < confirmsNeeded; idx++) {
       setAuth(`user_confirmer_${idx}`)
-      const res = await app.request(confirmUrl(), {
+      const res = await app.request(imminentUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -167,16 +248,16 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
         },
         body: JSON.stringify(confirmBody),
       })
-      if (idx < SP_POLICY.confirmsRequired - 1) {
-        expect(res.status).toBe(200)
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as {
+        success: boolean
+        data: { submissionStatus: string; confirmsCount: number }
+      }
+      if (idx < confirmsNeeded - 1) {
+        expect(body.data.submissionStatus).toBe('pending')
       } else {
-        expect(res.status).toBe(200)
-        const body = (await res.json()) as {
-          success: boolean
-          data: { submissionStatus: string; confirmsCount: number }
-        }
         expect(body.data.submissionStatus).toBe('corroborated')
-        expect(body.data.confirmsCount).toBe(SP_POLICY.confirmsRequired)
+        expect(body.data.confirmsCount).toBe(confirmsNeeded)
       }
     }
   })

@@ -269,7 +269,9 @@ describe('GET /v1/users/me/submissions', () => {
     }
     expect(body.success).toBe(true)
     expect(body.data[0]?.tier).toBe('GA')
-    expect(body.data[0]?.corroborationCount).toBe(0)
+    // Submitter counts as observation #1 (1/2 corroboration model) — seed
+    // helper inserts with corroborationCount=1.
+    expect(body.data[0]?.corroborationCount).toBe(1)
     expect(typeof body.data[0]?.submittedAt).toBe('string')
     expect(new Date(body.data[0]?.submittedAt ?? '').getTime()).not.toBeNaN()
   })

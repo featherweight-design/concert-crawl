@@ -109,7 +109,10 @@ describe('POST /v1/submissions/:id/confirm', () => {
     expect(res.status).toBe(403)
   })
 
-  it('increments corroboration count', async () => {
+  it('increments corroboration count and promotes after one non-submitter confirm', async () => {
+    // 1/2 confirmation model: seed inserts with corroborationCount=1
+    // (submitter = observation #1). One non-submitter confirm brings the
+    // total to 2, which meets confirmsRequired=2 and promotes immediately.
     setAuth('user_confirmer')
     const res = await app.request(`/v1/submissions/${submissionId}/confirm`, {
       method: 'POST',
@@ -121,19 +124,20 @@ describe('POST /v1/submissions/:id/confirm', () => {
       data: { confirms: number; status: string }
     }
     expect(body.success).toBe(true)
-    expect(body.data.confirms).toBe(1)
-    expect(body.data.status).toBe('pending')
+    expect(body.data.confirms).toBe(2)
+    expect(body.data.status).toBe('corroborated')
   })
 
-  it('transitions to corroborated at confirmsRequired threshold', async () => {
-    // First confirm by user_2
+  it('keeps incrementing corroboration count after promotion (subsequent confirms)', async () => {
+    // First confirm by user_2 — promotes
     setAuth('user_2')
     await app.request(`/v1/submissions/${submissionId}/confirm`, {
       method: 'POST',
       headers: { Authorization: 'Bearer test-token' },
     })
 
-    // Second confirm by user_3 should trigger corroboration (confirmsRequired = 2)
+    // Second confirm by user_3 — still increments count; status stays
+    // corroborated (the CASE WHEN preserves it via ELSE branch).
     setAuth('user_3')
     const res = await app.request(`/v1/submissions/${submissionId}/confirm`, {
       method: 'POST',
@@ -143,7 +147,7 @@ describe('POST /v1/submissions/:id/confirm', () => {
       success: boolean
       data: { confirms: number; status: string }
     }
-    expect(body.data.confirms).toBe(2)
+    expect(body.data.confirms).toBe(3)
     expect(body.data.status).toBe('corroborated')
   })
 
@@ -162,7 +166,10 @@ describe('POST /v1/submissions/:id/confirm', () => {
       data: { confirms: number }
     }
     expect(res.status).toBe(200)
-    expect(body.data.confirms).toBe(1)
+    // Idempotent: the first confirm already bumped corroborationCount from 1
+    // to 2 (and promoted the row). The duplicate confirm hits onConflictDoNothing,
+    // skips the update, and reads back the existing count — still 2.
+    expect(body.data.confirms).toBe(2)
   })
 })
 

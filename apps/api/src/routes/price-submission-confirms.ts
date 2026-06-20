@@ -108,12 +108,18 @@ priceSubmissionConfirmsRouter.post(
       ? SP_POLICY.confirmsRequiredImminent
       : SP_POLICY.confirmsRequired
 
-    const promoted = confirmsCount >= confirmsRequired
+    // 1/2 confirmation model: the submitter counts as observation #1, so the
+    // total observations on this submission are `confirmsCount + 1`. Promotion
+    // happens when total observations meets confirmsRequired. This brings the
+    // formula into alignment with submissions.ts (which uses
+    // `corroborationCount + 1 >= confirmsRequired`).
+    const totalObservations = confirmsCount + 1
+    const promoted = totalObservations >= confirmsRequired
 
     await db
       .update(priceSubmissions)
       .set({
-        corroborationCount: confirmsCount,
+        corroborationCount: totalObservations,
         ...(promoted ? { status: 'corroborated', updatedAt: new Date() } : {}),
       })
       .where(eq(priceSubmissions.id, submissionId))

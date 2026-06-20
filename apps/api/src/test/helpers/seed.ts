@@ -128,7 +128,11 @@ export async function seedPriceSubmission(
       vendor: 'Ticketmaster',
       howFound: 'bought_myself',
       status: 'pending',
-      corroborationCount: 0,
+      // Submitter counts as observation #1 in the 1/2 confirmation model.
+      // Matches the DB default (migration 0040) and the explicit insert in
+      // price-submissions.ts. Tests that need 0 (e.g. legacy backfill
+      // scenarios) can override.
+      corroborationCount: 1,
       ...overrides,
     })
     .returning()

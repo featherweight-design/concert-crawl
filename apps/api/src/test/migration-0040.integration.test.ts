@@ -1,8 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { sql } from 'drizzle-orm'
-import { events, priceSubmissions, venues } from '@concert-crawl/db'
+import { events, priceSubmissions } from '@concert-crawl/db'
 import { testDb } from './helpers/db.js'
-import { clearTables } from './helpers/seed.js'
+import { clearTables, seedEvent, seedVenue } from './helpers/seed.js'
 
 // Migration 0040 — source_category enum + ticket_links jsonb + 1/2 corroboration.
 // These tests exercise the schema produced by the migration directly (rather
@@ -10,38 +10,23 @@ import { clearTables } from './helpers/seed.js'
 // surface area routes around the new columns.
 
 describe('migration 0040 — source_category + ticket_links + corroboration', () => {
-  let venueId: string
   let eventId: string
+  let testCounter = 0
 
   beforeEach(async () => {
+    testCounter += 1
     await clearTables()
-    const [venue] = await testDb
-      .insert(venues)
-      .values({
-        name: 'Mig 0040 Test Venue',
-        slug: `mig-0040-venue-${Date.now()}`,
-        websiteUrl: 'https://example.com',
-        city: 'Denver',
-        timezone: 'America/Denver',
-      })
-      .returning({ id: venues.id })
-    venueId = venue!.id
-
-    const [event] = await testDb
-      .insert(events)
-      .values({
-        venueId,
-        title: 'Mig 0040 Test Event',
-        artist: 'Test Artist',
-        date: '2030-01-01',
-        canonicalArtist: 'test artist',
-      })
-      .returning({ id: events.id })
-    eventId = event!.id
-  })
-
-  afterEach(async () => {
-    await clearTables()
+    // Unique slug per test — clearTables truncates between tests, but the
+    // unique constraint on venues.slug makes collisions easier to spot when
+    // anything goes sideways with isolation.
+    const venue = await seedVenue({
+      slug: `mig-0040-venue-${testCounter}`,
+      name: `Mig 0040 Venue ${testCounter}`,
+    })
+    const event = await seedEvent(venue.id, {
+      artist: `Mig 0040 Artist ${testCounter}`,
+    })
+    eventId = event.id
   })
 
   it('source_category column accepts boxoffice/standard/resale', async () => {
