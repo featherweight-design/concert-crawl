@@ -88,6 +88,10 @@ describe('admin events [id] edit page', () => {
   beforeEach(() => {
     mockNotFound.mockClear()
     mockApiGet.mockReset()
+    // `mockResolvedValueOnce(null)` in the no-token test only swallows the
+    // next call — reset + restore the default so test order can't bleed.
+    mockGetToken.mockReset()
+    mockGetToken.mockResolvedValue('test-token')
   })
 
   // Regression for #707 — apiClient.get unwraps `{success, data}` and returns
