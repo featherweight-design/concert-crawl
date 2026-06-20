@@ -160,6 +160,7 @@ eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
       doorsTime: events.doorsTime,
       showTime: events.showTime,
       ticketUrl: events.ticketUrl,
+      ticketLinks: events.ticketLinks,
       ticketPriceMin: events.ticketPriceMin,
       ticketPriceMax: events.ticketPriceMax,
       priceSource: events.priceSource,
@@ -266,6 +267,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       doorsTime: events.doorsTime,
       showTime: events.showTime,
       ticketUrl: events.ticketUrl,
+      ticketLinks: events.ticketLinks,
       ticketPriceMin: events.ticketPriceMin,
       ticketPriceMax: events.ticketPriceMax,
       priceSource: events.priceSource,
@@ -512,6 +514,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     tier: string
     vendor: string
     howFound: string
+    sourceCategory: 'boxoffice' | 'standard' | 'resale' | null
     note: string | null
     submitterHandle: string | null
     submittedAt: string
@@ -529,6 +532,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         tier: priceSubmissions.tier,
         vendor: priceSubmissions.vendor,
         howFound: priceSubmissions.howFound,
+        sourceCategory: priceSubmissions.sourceCategory,
         note: priceSubmissions.note,
         userId: priceSubmissions.userId,
         createdAt: priceSubmissions.createdAt,
@@ -596,6 +600,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         tier: sub.tier,
         vendor: sub.vendor ?? 'Unknown',
         howFound: sub.howFound,
+        sourceCategory: sub.sourceCategory,
         note: sub.note ?? null,
         submitterHandle: sub.userId
           ? (handleMap.get(sub.userId) ?? null)

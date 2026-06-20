@@ -89,7 +89,13 @@ UPDATE "events"
 -- 6. Flip corroboration_count default + backfill existing rows.
 --    Submitter counts as observation #1, so:
 --      - new inserts default to 1 (DB-level safety net for the insert)
---      - existing rows get +1 across the board so the data model is uniform
+--      - existing rows are reconciled to (submission_confirms count + 1)
+--        — i.e. submitter + every non-submitter confirm, which is the
+--        new "total observations" semantic.
+--    Backfill is computed from submission_confirms instead of "corroboration_count + 1"
+--    so it is idempotent (safe to re-run if the migration is partially
+--    applied or replayed) and self-correcting if any row's cached count
+--    has drifted from the actual confirm rows.
 --    Promotion threshold (SP_POLICY.confirmsRequired = 2) is unchanged — the
 --    code-side promotion checks now use a `+ 1` formula in submissions.ts AND
 --    price-submission-confirms.ts (the latter is brought into alignment in
@@ -98,8 +104,13 @@ ALTER TABLE "price_submissions"
   ALTER COLUMN "corroboration_count" SET DEFAULT 1;
 --> statement-breakpoint
 
-UPDATE "price_submissions"
-   SET "corroboration_count" = "corroboration_count" + 1;
+UPDATE "price_submissions" ps
+   SET "corroboration_count" = COALESCE(
+         (SELECT COUNT(*)::int
+            FROM "submission_confirms" sc
+           WHERE sc."submission_id" = ps."id"),
+         0
+       ) + 1;
 --> statement-breakpoint
 
 -- 7. De-dup before creating the partial unique index.

@@ -141,6 +141,7 @@ venuesPublicRouter.get('/:slug', async (ctx) => {
       doorsTime: events.doorsTime,
       showTime: events.showTime,
       ticketUrl: events.ticketUrl,
+      ticketLinks: events.ticketLinks,
       ticketPriceMin: events.ticketPriceMin,
       ticketPriceMax: events.ticketPriceMax,
       description: events.description,
