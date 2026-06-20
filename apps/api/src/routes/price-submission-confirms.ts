@@ -144,13 +144,21 @@ priceSubmissionConfirmsRouter.post(
         return updatedRow
       })
     } catch (error) {
-      const causeMessage =
-        error instanceof Error && error.cause instanceof Error
-          ? error.cause.message
-          : ''
-      if (
-        causeMessage.includes('price_submissions_event_tier_boxoffice_uniq')
-      ) {
+      // Match by Postgres error code (more reliable than string-matching the
+      // wrapped message — `.cause` isn't always populated, but `.code` is).
+      // 23505 is the unique-violation SQLSTATE; the only unique constraint
+      // this transaction can trip is the partial boxoffice index, so an
+      // additional constraint-name check would be redundant. See
+      // apps/api/src/routes/admin/events.ts for the same pattern.
+      const errorCode =
+        error instanceof Error && 'code' in error
+          ? (error as { code?: string }).code
+          : error instanceof Error &&
+              error.cause instanceof Error &&
+              'code' in error.cause
+            ? (error.cause as { code?: string }).code
+            : undefined
+      if (errorCode === '23505') {
         uniqueViolation = true
       } else {
         throw error

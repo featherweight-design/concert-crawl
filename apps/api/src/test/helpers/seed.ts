@@ -118,6 +118,16 @@ export async function seedPriceSubmission(
   userId: string,
   overrides: Partial<typeof priceSubmissions.$inferInsert> = {},
 ): Promise<typeof priceSubmissions.$inferSelect> {
+  // Default to the same (vendor, howFound) → sourceCategory derivation that
+  // the real submit handler does, so test rows match production shape.
+  // Tests that explicitly need NULL (legacy backfill scenarios) can override.
+  const vendor = overrides.vendor ?? 'Ticketmaster'
+  const howFound = overrides.howFound ?? 'bought_myself'
+  const derivedSourceCategory: 'boxoffice' | 'standard' =
+    vendor === 'VenueBoxOffice' || howFound === 'at_the_venue'
+      ? 'boxoffice'
+      : 'standard'
+
   const [submission] = await testDb
     .insert(priceSubmissions)
     .values({
@@ -125,8 +135,9 @@ export async function seedPriceSubmission(
       userId,
       priceMin: '35',
       tier: 'GA',
-      vendor: 'Ticketmaster',
-      howFound: 'bought_myself',
+      vendor,
+      howFound,
+      sourceCategory: derivedSourceCategory,
       status: 'pending',
       // Submitter counts as observation #1 in the 1/2 confirmation model.
       // Matches the DB default (migration 0040) and the explicit insert in
