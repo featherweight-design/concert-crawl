@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   buildBatches,
   formatCsvRow,
-} from './2026-06-19-non-concert-backfill.js'
+} from './2026-06-19-non-concert-backfill-helpers.js'
 
 describe('non-concert-backfill — buildBatches', () => {
   it('splits events into batches of the configured size', () => {

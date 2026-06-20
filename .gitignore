@@ -52,3 +52,6 @@ pnpm-debug.log*
 
 # Claude Code scheduled-tasks runtime artifact (regenerated each session)
 .claude/scheduled_tasks.lock
+
+# Non-concert backfill script — dry-run CSVs are operator scratch (#696)
+non-concert-backfill-dry-run-*.csv

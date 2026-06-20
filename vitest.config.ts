@@ -1,20 +1,19 @@
 import { defineConfig } from 'vitest/config'
+import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 
-// Scripts live at the repo root and are not inside any workspace package.
-// Resolve workspace deps via packages/crawler-core/node_modules which has
-// @anthropic-ai/sdk, drizzle-orm, and @concert-crawl/* already installed.
-const crawlerCoreModules = path.resolve(
-  import.meta.dirname,
-  'packages/crawler-core/node_modules',
-)
+// Vitest config for tests at the repo root (currently: scripts/**/*.test.ts).
+// Workspace packages need explicit aliases to their src entry since the
+// test file isn't inside any workspace. External deps (anthropic-sdk,
+// drizzle-orm, etc.) resolve via pnpm's hoisted root node_modules — no
+// alias required. Mirrors packages/crawler-core/vitest.config.ts pattern.
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   resolve: {
     alias: {
-      '@anthropic-ai/sdk': path.join(crawlerCoreModules, '@anthropic-ai/sdk'),
-      'drizzle-orm': path.join(crawlerCoreModules, 'drizzle-orm'),
-      '@concert-crawl/db': path.join(crawlerCoreModules, '@concert-crawl/db'),
+      '@concert-crawl/db': path.resolve(__dirname, 'packages/db/src/index.ts'),
     },
   },
   test: {
