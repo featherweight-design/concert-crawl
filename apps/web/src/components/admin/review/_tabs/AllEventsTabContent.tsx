@@ -450,7 +450,7 @@ export const AllEventsTabContent = ({
               : {})}
           />
         ))}
-      {total > 0 && (
+      {(total > pagination.pageSize || pagination.page > 1) && (
         <Pagination
           page={pagination.page}
           pageSize={pagination.pageSize}

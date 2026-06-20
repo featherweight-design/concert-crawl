@@ -807,7 +807,7 @@ export const PriceCoverageTable = ({
                   })}
                 </tbody>
               </AdminTable>
-              {total > 0 && (
+              {(total > pageSize || page > 1) && (
                 <Pagination
                   page={page}
                   pageSize={pageSize}

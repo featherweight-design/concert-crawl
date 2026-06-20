@@ -1082,7 +1082,7 @@ export function AdminReviewMobile({
             </div>
 
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-              {priceEvents.length === 0 ? (
+              {priceEventsTotal === 0 ? (
                 <div
                   style={{
                     padding: '12px 16px',
@@ -1104,7 +1104,8 @@ export function AdminReviewMobile({
                       onAddPrice={onAddPrice}
                     />
                   ))}
-                  {priceEvents.length > 0 && (
+                  {(priceEventsTotal > priceEventsPageSize ||
+                    priceEventsPage > 1) && (
                     <Pagination
                       page={priceEventsPage}
                       pageSize={priceEventsPageSize}

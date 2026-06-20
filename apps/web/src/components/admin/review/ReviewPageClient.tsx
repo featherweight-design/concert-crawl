@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { apiClient, ApiError } from '@/lib/api'
 import { SectionHead } from '@/components/admin/primitives'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
@@ -84,9 +84,20 @@ export const ReviewPageClient = ({
 }: ReviewPageClientProps) => {
   const { getToken } = useAuth()
   const router = useRouter()
+  const pathname = usePathname() ?? ''
   const searchParams = useSearchParams()
   const queryClient = useQueryClient()
   const invalidate = useInvalidateReviewQueries()
+
+  // Push helper — pushing an empty query string leaves a trailing "?" in
+  // the URL, so route through pathname when there are no params.
+  const pushParams = useCallback(
+    (params: URLSearchParams) => {
+      const query = params.toString()
+      router.push(query ? `${pathname}?${query}` : pathname, { scroll: false })
+    },
+    [pathname, router],
+  )
   const activeTab: ReviewTabKey = resolveTabFromSearchParams(
     new URLSearchParams(searchParams?.toString() ?? ''),
   )
@@ -102,10 +113,9 @@ export const ReviewPageClient = ({
   const onPaginationChange = useCallback(
     (next: PaginationState) => {
       const base = new URLSearchParams(searchParams?.toString() ?? '')
-      const merged = serializePaginationToParams(next, base)
-      router.push(`?${merged.toString()}`, { scroll: false })
+      pushParams(serializePaginationToParams(next, base))
     },
-    [router, searchParams],
+    [pushParams, searchParams],
   )
 
   const setActiveTab = useCallback(
@@ -115,10 +125,9 @@ export const ReviewPageClient = ({
       params.set('tab', next)
       params.delete('section') // retire legacy key once user navigates
       // Each tab opens at its own page 1 — strip pagination from the URL.
-      const stripped = serializePaginationToParams(EMPTY_PAGINATION, params)
-      router.push(`?${stripped.toString()}`, { scroll: false })
+      pushParams(serializePaginationToParams(EMPTY_PAGINATION, params))
     },
-    [router, searchParams],
+    [pushParams, searchParams],
   )
 
   const [submissions, setSubmissions] =
@@ -682,7 +691,7 @@ export const ReviewPageClient = ({
               const base = new URLSearchParams(searchParams?.toString() ?? '')
               const merged = serializeFiltersToParams(next, base)
               merged.set('tab', 'all-events')
-              router.push(`?${merged.toString()}`, { scroll: false })
+              pushParams(merged)
             }}
             allEventsPagination={pagination}
             onAllEventsPaginationChange={onPaginationChange}
@@ -795,7 +804,7 @@ export const ReviewPageClient = ({
             const base = new URLSearchParams(searchParams?.toString() ?? '')
             const merged = serializeFiltersToParams(next, base)
             merged.set('tab', 'all-events')
-            router.push(`?${merged.toString()}`, { scroll: false })
+            pushParams(merged)
           }}
           pagination={pagination}
           onPaginationChange={onPaginationChange}

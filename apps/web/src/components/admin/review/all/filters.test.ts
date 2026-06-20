@@ -2,9 +2,14 @@ import { describe, it, expect } from 'vitest'
 import {
   countActiveFilters,
   EMPTY_FILTERS,
+  EMPTY_PAGINATION,
   filtersToFetchQuery,
+  PAGINATION_DEFAULT_PAGE,
+  PAGINATION_URL_DEFAULT_PAGE_SIZE,
   parseFiltersFromParams,
+  parsePaginationFromParams,
   serializeFiltersToParams,
+  serializePaginationToParams,
 } from './filters'
 
 describe('parseFiltersFromParams', () => {
@@ -143,14 +148,6 @@ describe('countActiveFilters', () => {
     expect(countActiveFilters({ ...EMPTY_FILTERS, query: 'a' })).toBe(0)
   })
 })
-
-import {
-  EMPTY_PAGINATION,
-  PAGINATION_DEFAULT_PAGE,
-  PAGINATION_URL_DEFAULT_PAGE_SIZE,
-  parsePaginationFromParams,
-  serializePaginationToParams,
-} from './filters'
 
 describe('parsePaginationFromParams', () => {
   it('returns defaults when the URL is empty', () => {

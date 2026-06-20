@@ -91,16 +91,17 @@ export const MissingTabContent = ({
 
   if (loading) return <Skeleton />
 
-  // Gate on `total > 0` (not `events.length > 0`) so the pager still mounts
-  // when the active page returns no rows (e.g. deep-link to ?page=99). The
-  // Pagination component's clamp-sync effect can only fire while mounted.
+  // Hide the pager for single-page results (`total <= pageSize` AND
+  // `page === 1`). Mount it whenever the user is on `page > 1` so the
+  // Pagination component's clamp-sync effect can still fire on invalid
+  // deep-links (e.g. ?page=99 with rows:[], total:>0).
   const showPager =
     page !== undefined &&
     pageSize !== undefined &&
     total !== undefined &&
     onPageChange !== undefined &&
     onPageSizeChange !== undefined &&
-    total > 0
+    (total > pageSize || page > 1)
 
   const table = isDesktop ? (
     <MissingTable
