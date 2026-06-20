@@ -28,6 +28,19 @@ const ToolInputSchema = z.object({
 
 const MODEL = 'claude-haiku-4-5-20251001'
 
+// Shared canonical rule set for isConcert classification. Used by both
+// the live crawler SYSTEM_PROMPT below and the one-shot non-concert
+// backfill script's classifier prompt so the two stay in lockstep.
+export const IS_CONCERT_RULES = `isConcert=true: named musician(s) performing live music. Includes:
+- bands, solo artists, DJ sets, orchestras, jazz performances
+- tribute bands performing live (e.g. "Strangelove — The Depeche Mode Experience"); titles with "Tribute", "Experience", or "Reimagined" where a named act performs are concerts
+- music competitions or showcases where named musicians perform live (e.g. "NPR Presents Tiny Desk Contest On The Road")
+- symphonies/orchestras performing film, TV, or video-game scores live (e.g. "Stardew Valley: Symphony of Seasons", "World of Warcraft: 20 Years of Music")
+- "X Presents: Y" billings where X is the headlining artist (e.g. "Tape B Presents: Hallow Rocks")
+- dance nights backed by a live band (swing, jazz, salsa nights where musicians play)
+
+isConcert=false: non-performance events at music venues — themed dance parties driven by recorded music (e.g. "Liv, Laugh, Love: Olivia Rodrigo Dance Party"), bingo (e.g. "BASS BINGO – Wooli Edition!"), trivia, comedy, film/movie screenings (e.g. "Film on the Rocks: Sinners"), karaoke, listening parties, private events, transportation/logistics (e.g. "Bus To Show Pickup Spot")`
+
 const SYSTEM_PROMPT = `You are an event data extractor for a music-venue concert calendar. Given HTML from a venue website, call the save_events tool with EVERY upcoming event you find, including non-concert events (themed parties, bingo, comedy, movies, etc.). Do not omit non-concert events — downstream tooling uses the isConcert field on each event to decide what reaches consumers.
 
 Rules:
@@ -38,15 +51,9 @@ Rules:
 - Pass an empty events array if no events are found
 - When a date has no year, infer it using today's date (provided in the user message): if the month/day is today or in the future within the current year, use the current year; if the month/day has already passed this year, use next year
 
-isConcert rules (for every event):
-- true: named musician(s) performing live music. Includes:
-  - bands, solo artists, DJ sets, orchestras, jazz performances
-  - tribute bands performing live (e.g. "Strangelove — The Depeche Mode Experience"); titles with "Tribute", "Experience", or "Reimagined" where a named act performs are concerts
-  - music competitions or showcases where named musicians perform live (e.g. "NPR Presents Tiny Desk Contest On The Road")
-  - symphonies/orchestras performing film, TV, or video-game scores live (e.g. "Stardew Valley: Symphony of Seasons", "World of Warcraft: 20 Years of Music")
-  - "X Presents: Y" billings where X is the headlining artist (e.g. "Tape B Presents: Hallow Rocks")
-  - dance nights backed by a live band (swing, jazz, salsa nights where musicians play)
-- false: non-performance events at music venues — themed dance parties driven by recorded music (e.g. "Liv, Laugh, Love: Olivia Rodrigo Dance Party"), bingo (e.g. "BASS BINGO – Wooli Edition!"), trivia, comedy, film/movie screenings (e.g. "Film on the Rocks: Sinners"), karaoke, listening parties, private events, transportation/logistics (e.g. "Bus To Show Pickup Spot")`
+Set isConcert on every event using these rules:
+
+${IS_CONCERT_RULES}`
 
 const SAVE_EVENTS_TOOL: Anthropic.Tool = {
   name: 'save_events',

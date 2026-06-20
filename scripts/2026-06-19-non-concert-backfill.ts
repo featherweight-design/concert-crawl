@@ -27,6 +27,7 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import Anthropic from '@anthropic-ai/sdk'
 import { and, eq, gte, inArray } from 'drizzle-orm'
+import { IS_CONCERT_RULES } from '@concert-crawl/crawler-core'
 import { db, events, venues } from '@concert-crawl/db'
 import {
   buildBatches,
@@ -241,15 +242,7 @@ export async function classifyBatch(
         role: 'user',
         content: `Classify each event below as concert (true) or non-concert (false).
 
-isConcert=true: named musician(s) performing live music. Includes:
-- bands, solo artists, DJ sets, orchestras, jazz performances
-- tribute bands performing live (e.g. "Strangelove — The Depeche Mode Experience"); titles with "Tribute", "Experience", or "Reimagined" where a named act performs are concerts
-- music competitions or showcases where named musicians perform live (e.g. "NPR Presents Tiny Desk Contest On The Road")
-- symphonies/orchestras performing film, TV, or video-game scores live (e.g. "Stardew Valley: Symphony of Seasons", "World of Warcraft: 20 Years of Music")
-- "X Presents: Y" billings where X is the headlining artist (e.g. "Tape B Presents: Hallow Rocks")
-- dance nights backed by a live band (swing, jazz, salsa nights where musicians play)
-
-isConcert=false: non-performance events at music venues — themed dance parties driven by recorded music (e.g. "Liv, Laugh, Love: Olivia Rodrigo Dance Party"), bingo (e.g. "BASS BINGO – Wooli Edition!"), trivia, comedy, film/movie screenings (e.g. "Film on the Rocks: Sinners"), karaoke, listening parties, private events, transportation/logistics (e.g. "Bus To Show Pickup Spot")
+${IS_CONCERT_RULES}
 
 Return one entry per event id. Do not omit any.
 
