@@ -40,12 +40,12 @@ vi.mock('@/lib/api', () => ({
   ApiError: MockApiError,
 }))
 
-// Render the client component as a no-op so we don't drag in its dependency tree.
+// Render the client component as a no-op so we don't drag in its dependency
+// tree. Returning `null` is a valid React node ("render nothing"); a plain
+// object literal would not be — if any test ever rendered the page output
+// React would throw "Objects are not valid as a React child".
 vi.mock('@/components/admin/events/editor/EventEditorClient', () => ({
-  EventEditorClient: ({ event }: { event: EditorEvent }) => ({
-    type: 'div',
-    props: { 'data-testid': 'event-editor', 'data-event-id': event.id },
-  }),
+  EventEditorClient: (_props: { event: EditorEvent }) => null,
 }))
 
 // `date` is stored as YYYY-MM-DD throughout the admin editor — the API
