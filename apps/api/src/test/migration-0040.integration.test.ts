@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { sql } from 'drizzle-orm'
 import { events, priceSubmissions } from '@concert-crawl/db'
+import type { TicketLink } from '@concert-crawl/types'
 import { testDb } from './helpers/db.js'
 import { clearTables, seedEvent, seedVenue } from './helpers/seed.js'
 
@@ -218,14 +219,10 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
   })
 
   it('ticket_links column persists the typed TicketLink shape', async () => {
-    const links = [
+    const links: TicketLink[] = [
+      { kind: 'boxoffice', vendor: null, url: 'https://example.com/box' },
       {
-        kind: 'boxoffice' as const,
-        vendor: null,
-        url: 'https://example.com/box',
-      },
-      {
-        kind: 'primary' as const,
+        kind: 'primary',
         vendor: 'ticketmaster',
         url: 'https://example.com/tm',
       },

@@ -102,7 +102,33 @@ UPDATE "price_submissions"
    SET "corroboration_count" = "corroboration_count" + 1;
 --> statement-breakpoint
 
--- 7. Partial unique index — at most one corroborated box-office price per
+-- 7. De-dup before creating the partial unique index.
+--    There's no prior uniqueness constraint on (event_id, tier, source_category)
+--    for corroborated boxoffice rows, so existing data could already violate
+--    the new index. Keep the most-recently-updated row corroborated; demote
+--    older duplicates to 'stale' so the index can be created without aborting
+--    the migration. Prod currently has 4 submissions (all GA), so this is
+--    defensive scaffolding rather than data shaping in practice.
+UPDATE "price_submissions" ps
+   SET "status" = 'stale'
+  FROM (
+    SELECT "id"
+      FROM (
+        SELECT "id",
+               ROW_NUMBER() OVER (
+                 PARTITION BY "event_id", "tier"
+                 ORDER BY "updated_at" DESC, "id" DESC
+               ) AS rn
+          FROM "price_submissions"
+         WHERE "status" = 'corroborated'
+           AND "source_category" = 'boxoffice'
+      ) ranked
+     WHERE rn > 1
+  ) dups
+ WHERE ps."id" = dups."id";
+--> statement-breakpoint
+
+-- 8. Partial unique index — at most one corroborated box-office price per
 --    (event, tier). Box-office is exempt from staleness (per spec) and
 --    deserves a single canonical row; community/standard prices can still
 --    coexist as separate corroborated rows for the same (event, tier).

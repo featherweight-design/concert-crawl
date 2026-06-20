@@ -1885,16 +1885,25 @@ async function seed() {
         ? 'boxoffice'
         : 'standard'
 
-    const submissionRows = submissionTemplates
-      .filter(({ idx }) => eventIds[idx] !== undefined)
-      .map(({ idx, corroborationCount, vendor, howFound, ...rest }) => ({
-        ...rest,
-        vendor,
-        howFound,
-        sourceCategory: deriveSourceCategory(vendor, howFound),
-        corroborationCount: corroborationCount + 1,
-        eventId: eventIds[idx] as string,
-      }))
+    // Single flatMap keeps the type narrowing honest — when eventIds[idx] is
+    // missing we emit nothing, otherwise we have a guaranteed string. Avoids
+    // the `as string` cast (per CLAUDE.md's "casts are a last resort" rule).
+    const submissionRows = submissionTemplates.flatMap(
+      ({ idx, corroborationCount, vendor, howFound, ...rest }) => {
+        const eventId = eventIds[idx]
+        if (eventId === undefined) return []
+        return [
+          {
+            ...rest,
+            vendor,
+            howFound,
+            sourceCategory: deriveSourceCategory(vendor, howFound),
+            corroborationCount: corroborationCount + 1,
+            eventId,
+          },
+        ]
+      },
+    )
 
     const existingSubmissionsCount = await db
       .select({ count: sql<number>`count(*)::int` })
