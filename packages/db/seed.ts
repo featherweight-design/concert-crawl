@@ -1949,7 +1949,11 @@ async function seed() {
         (sub) => sub.status === 'corroborated',
       )
       const confirmRows = corroboratedSubmissions.flatMap((sub) => {
-        const count = Math.min(sub.corroborationCount, CONFIRMING_USERS.length)
+        // corroborationCount stores total observations (submitter + non-
+        // submitter confirms) under the 1/2 model. submission_confirms only
+        // tracks non-submitter confirms, so insert (count - 1) rows.
+        const desiredConfirms = Math.max(0, sub.corroborationCount - 1)
+        const count = Math.min(desiredConfirms, CONFIRMING_USERS.length)
         return CONFIRMING_USERS.slice(0, count)
           .filter((uid) => uid !== sub.userId)
           .map((uid) => ({ submissionId: sub.id, userId: uid }))

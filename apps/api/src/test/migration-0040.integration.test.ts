@@ -43,7 +43,8 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
         sourceCategory: 'boxoffice',
       })
       .returning()
-    expect(boxoffice!.sourceCategory).toBe('boxoffice')
+    expect(boxoffice).toBeDefined()
+    expect(boxoffice?.sourceCategory).toBe('boxoffice')
 
     const [standard] = await testDb
       .insert(priceSubmissions)
@@ -57,7 +58,8 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
         sourceCategory: 'standard',
       })
       .returning()
-    expect(standard!.sourceCategory).toBe('standard')
+    expect(standard).toBeDefined()
+    expect(standard?.sourceCategory).toBe('standard')
 
     const [resale] = await testDb
       .insert(priceSubmissions)
@@ -71,7 +73,8 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
         sourceCategory: 'resale',
       })
       .returning()
-    expect(resale!.sourceCategory).toBe('resale')
+    expect(resale).toBeDefined()
+    expect(resale?.sourceCategory).toBe('resale')
   })
 
   it('source_category rejects values outside the enum', async () => {
@@ -96,7 +99,8 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
         sourceCategory: 'standard',
       })
       .returning()
-    expect(inserted!.corroborationCount).toBe(1)
+    expect(inserted).toBeDefined()
+    expect(inserted?.corroborationCount).toBe(1)
   })
 
   it('partial unique index pins corroborated boxoffice to one row per (event, tier)', async () => {
@@ -237,6 +241,7 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
       .from(events)
       .where(sql`id = ${eventId}`)
 
-    expect(row!.ticketLinks).toEqual(links)
+    expect(row).toBeDefined()
+    expect(row?.ticketLinks).toEqual(links)
   })
 })

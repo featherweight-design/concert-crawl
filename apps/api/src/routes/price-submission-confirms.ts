@@ -121,7 +121,7 @@ priceSubmissionConfirmsRouter.post(
             THEN 'corroborated'::price_submission_status
           ELSE ${priceSubmissions.status}
         END`,
-        updatedAt: new Date(),
+        updatedAt: sql`now()`,
       })
       .where(eq(priceSubmissions.id, submissionId))
       .returning({
@@ -142,7 +142,7 @@ priceSubmissionConfirmsRouter.post(
           ticketPriceMin: submission.priceMin,
           ticketPriceMax: submission.priceMax,
           priceSource: 'community',
-          updatedAt: new Date(),
+          updatedAt: sql`now()`,
         })
         .where(eq(events.id, eventId))
     }

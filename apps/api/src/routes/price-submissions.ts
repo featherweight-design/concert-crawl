@@ -30,9 +30,9 @@ const submissionBodySchema = z
     // Optional during the expand phase — the submit form (PR 4) will start
     // sending it, but legacy submitters and old clients still post without
     // it. When absent, the handler derives a value from (vendor, howFound)
-    // using the same heuristic as migration 0040's backfill, so new boxoffice
-    // submissions tag immediately. Only legacy rows that pre-date this PR
-    // remain NULL until the contract PR's backfill sweeps them.
+    // using the same heuristic as migration 0040's backfill, so every new
+    // submission persists a non-null source_category (migration 0040 already
+    // backfilled all rows that existed before this PR).
     sourceCategory: z.enum(['boxoffice', 'standard', 'resale']).optional(),
     note: z.string().max(280).optional(),
     disputedSubmissionId: z.string().uuid().optional(),
