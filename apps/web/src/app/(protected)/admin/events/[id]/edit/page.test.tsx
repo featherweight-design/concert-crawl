@@ -25,9 +25,19 @@ vi.mock('@/lib/auth', () => ({
   auth: () => mockAuth(),
 }))
 
+class MockApiError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string,
+  ) {
+    super(message)
+    this.name = 'ApiError'
+  }
+}
 const mockApiGet = vi.fn()
 vi.mock('@/lib/api', () => ({
   apiClient: { get: (...args: unknown[]) => mockApiGet(...args) },
+  ApiError: MockApiError,
 }))
 
 // Render the client component as a no-op so we don't drag in its dependency tree.
@@ -88,14 +98,38 @@ describe('admin events [id] edit page', () => {
     expect(result).toBeTruthy()
   })
 
-  it('calls notFound when apiClient throws (e.g. 404 from API)', async () => {
-    mockApiGet.mockRejectedValue(new Error('Not Found'))
+  it('calls notFound only on ApiError with status 404', async () => {
+    mockApiGet.mockRejectedValue(new MockApiError(404, 'Event not found'))
 
     const { default: EventEditorPage } = await import('./page.js')
     const params = Promise.resolve({ id: 'evt_missing' })
 
     await expect(EventEditorPage({ params })).rejects.toThrow('NEXT_NOT_FOUND')
     expect(mockNotFound).toHaveBeenCalledOnce()
+  })
+
+  // Non-404 errors must propagate so Next's error boundary / 500 handler
+  // surfaces real operational failures instead of silently 404ing.
+  it('re-throws ApiError for non-404 statuses (e.g. 500)', async () => {
+    mockApiGet.mockRejectedValue(new MockApiError(500, 'Internal Server Error'))
+
+    const { default: EventEditorPage } = await import('./page.js')
+    const params = Promise.resolve({ id: 'evt_500' })
+
+    await expect(EventEditorPage({ params })).rejects.toThrow(
+      'Internal Server Error',
+    )
+    expect(mockNotFound).not.toHaveBeenCalled()
+  })
+
+  it('re-throws non-ApiError failures (network/parse)', async () => {
+    mockApiGet.mockRejectedValue(new TypeError('Failed to fetch'))
+
+    const { default: EventEditorPage } = await import('./page.js')
+    const params = Promise.resolve({ id: 'evt_network' })
+
+    await expect(EventEditorPage({ params })).rejects.toThrow('Failed to fetch')
+    expect(mockNotFound).not.toHaveBeenCalled()
   })
 
   it('returns null when no auth token is available', async () => {
