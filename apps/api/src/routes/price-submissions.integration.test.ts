@@ -76,12 +76,82 @@ describe('POST /v1/events/:id/price-submissions', () => {
     expect(res.status).toBe(201)
     const body = (await res.json()) as {
       success: boolean
-      data: { status: string; priceMin: string; tier: string }
+      data: {
+        status: string
+        priceMin: string
+        tier: string
+        corroborationCount: number
+        sourceCategory: string | null
+      }
     }
     expect(body.success).toBe(true)
     expect(body.data.status).toBe('pending')
     expect(parseFloat(body.data.priceMin)).toBe(35)
     expect(body.data.tier).toBe('GA')
+    // Submitter counts as observation #1 in the 1/2 model
+    expect(body.data.corroborationCount).toBe(1)
+    // sourceCategory is optional during the expand phase — omitted in TEST_BODY
+    expect(body.data.sourceCategory).toBeNull()
+  })
+
+  it('persists sourceCategory when provided and returns it on GET', async () => {
+    setAuth()
+    const postRes = await app.request(
+      `/v1/events/${eventId}/price-submissions`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-token',
+        },
+        body: JSON.stringify({
+          priceMin: 25,
+          tier: 'GA',
+          vendor: 'VenueBoxOffice',
+          howFound: 'at_the_venue',
+          sourceCategory: 'boxoffice',
+        }),
+      },
+    )
+    expect(postRes.status).toBe(201)
+    const postBody = (await postRes.json()) as {
+      success: boolean
+      data: { sourceCategory: string; corroborationCount: number }
+    }
+    expect(postBody.data.sourceCategory).toBe('boxoffice')
+    expect(postBody.data.corroborationCount).toBe(1)
+
+    const getRes = await app.request(
+      `/v1/events/${eventId}/price-submissions`,
+      { headers: { Authorization: 'Bearer test-token' } },
+    )
+    const getBody = (await getRes.json()) as {
+      data: {
+        submissions: Array<{
+          userId: string
+          sourceCategory: string | null
+          corroborationCount: number
+        }>
+      }
+    }
+    const ourRow = getBody.data.submissions.find(
+      (sub) => sub.userId === 'user_abc123',
+    )
+    expect(ourRow?.sourceCategory).toBe('boxoffice')
+    expect(ourRow?.corroborationCount).toBe(1)
+  })
+
+  it('returns 422 when sourceCategory is not one of the enum values', async () => {
+    setAuth()
+    const res = await app.request(`/v1/events/${eventId}/price-submissions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
+      body: JSON.stringify({ ...TEST_BODY, sourceCategory: 'invalid' }),
+    })
+    expect(res.status).toBe(422)
   })
 
   it('returns 422 when required fields are missing', async () => {

@@ -26,6 +26,12 @@ const submissionBodySchema = z
       'VenueBoxOffice',
     ]),
     howFound: z.enum(['bought_myself', 'saw_listing', 'at_the_venue']),
+    // sourceCategory is the new top-level provenance choice (issue #641).
+    // Optional during the expand phase — the submit form (PR 4) will start
+    // sending it, but legacy submitters and old clients still post without
+    // it. Server stores NULL when absent; legacy rows get the heuristic
+    // backfill from migration 0040.
+    sourceCategory: z.enum(['boxoffice', 'standard', 'resale']).optional(),
     note: z.string().max(280).optional(),
     disputedSubmissionId: z.string().uuid().optional(),
   })
@@ -56,6 +62,7 @@ priceSubmissionsRouter.get('/:id/price-submissions', clerkAuth, async (ctx) => {
       tier: priceSubmissions.tier,
       vendor: priceSubmissions.vendor,
       howFound: priceSubmissions.howFound,
+      sourceCategory: priceSubmissions.sourceCategory,
       disputedSubmissionId: priceSubmissions.disputedSubmissionId,
       status: priceSubmissions.status,
       corroborationCount: priceSubmissions.corroborationCount,
@@ -243,6 +250,11 @@ priceSubmissionsRouter.post(
         tier: body.tier,
         vendor: body.vendor,
         howFound: body.howFound,
+        sourceCategory: body.sourceCategory ?? null,
+        // Submitter counts as observation #1 (1/2 confirmation model). The
+        // DB default is also 1 — explicit value here is defensive against
+        // default drift and easier to spot in code review.
+        corroborationCount: 1,
         note: body.note ?? null,
         disputedSubmissionId: body.disputedSubmissionId ?? null,
       })
