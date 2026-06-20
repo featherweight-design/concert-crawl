@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Price Source Discoverability</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; background: #0a0c14; }
+  * { -webkit-font-smoothing: antialiased; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="pending-card.jsx"></script>
+<script type="text/babel" src="multi-tier.jsx"></script>
+<script type="text/babel" src="price-source-mocks.jsx"></script>
+<script type="text/babel" src="multi-tier-mocks.jsx"></script>
+
+<script type="text/babel">
+const { useThemeState, ThemeProvider, ThemeSwitcher, IOSDevice } = window;
+
+// Themed phone — wraps a composition in the device frame + theme tokens.
+function Phone({ theme, children, h = 880 }) {
+  return (
+    <ThemeProvider theme={theme} style={{ borderRadius: 48 }}>
+      <IOSDevice width={402} height={h} dark>
+        {children}
+      </IOSDevice>
+    </ThemeProvider>
+  );
+}
+
+// Themed flat card (non-device) for close-ups.
+function Flat({ theme, w = 402, children }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width: w, borderRadius: 16, overflow: "hidden", border: "1px solid var(--border)" }}>
+      {children}
+    </ThemeProvider>
+  );
+}
+
+function App() {
+  const [theme, setTheme] = useThemeState("electric");
+  return (
+    <>
+      <window.DesignCanvas>
+
+        <window.DCSection
+          id="problem"
+          title="The gap — sold-out, resale-only"
+          subtitle="Beta feedback: friend hit this exact screen. No source vocabulary, a dead button, and the only 'something's off' affordance is an event-status reporter that can't help.">
+          <window.DCArtboard id="before" label="Before · today's shipped state" width={402} height={880}>
+            <Phone theme={theme}><window.PSD_BeforeSoldOut /></Phone>
+          </window.DCArtboard>
+          <window.DCPostIt top={20} left={470} width={250} rotate={-1.5}>
+            <b>Where the friend got stuck.</b> Primary is sold out, but resale exists on TM — the page just shows a dead "Sold out" button and says nothing about source. Nothing teaches resale ≠ face value, and nothing invites the box-office number.
+          </window.DCPostIt>
+          <window.DCPostIt top={250} left={470} width={250} rotate={1.5}>
+            "Report a status change" is an <b>event-status</b> reporter (sold out / cancelled / postponed) — not a price-source control. A pricing complaint lands here and bounces.
+          </window.DCPostIt>
+        </window.DCSection>
+
+        <window.DCSection
+          id="fix-soldout"
+          title="The fix — source made legible (sold-out)"
+          subtitle="Q2: surface the distinction in the state where it's missing. Honest resale link replaces the dead button; the FaceValueCard teaches the distinction and turns the gap into a contribution.">
+          <window.DCArtboard id="after-so" label="After · sold-out with provenance" width={402} height={880}>
+            <Phone theme={theme}><window.PSD_AfterSoldOut /></Phone>
+          </window.DCArtboard>
+          <window.DCPostIt top={20} left={470} width={252} rotate={1.5}>
+            <b>FaceValueCard.</b> The two-row ladder shows resale (coral) vs box office (gold). The box-office row is an <b>empty slot</b> — the gap is visible, and the CTA fills it. Teaching + contribution in one move.
+          </window.DCPostIt>
+          <window.DCPostIt top={250} left={470} width={252} rotate={-1.5}>
+            <b>Honest outbound CTA.</b> The dead "Sold out" button becomes "See resale tickets ↗" with a coral caption naming the source. Resale never launders as official; the fan keeps agency.
+          </window.DCPostIt>
+        </window.DCSection>
+
+        <window.DCSection
+          id="fix-noprice"
+          title="The fix — no price yet"
+          subtitle="Same ladder, folded under the existing community-handoff card. The source distinction shows up before submission, where the comprehension gap lives.">
+          <window.DCArtboard id="after-np" label="After · no-price with primer" width={402} height={880}>
+            <Phone theme={theme}><window.PSD_AfterNoPrice /></Phone>
+          </window.DCArtboard>
+          <window.DCPostIt top={20} left={470} width={250} rotate={-1.5}>
+            Voice stays deadpan + clear ("All we can see is resale."). No new design language — gold/coral/azure tier vocabulary extended into the one state it was absent.
+          </window.DCPostIt>
+        </window.DCSection>
+
+        <window.DCSection
+          id="cta"
+          title="Q2(a) — provenance-aware Get Tickets"
+          subtitle="Same 48px button bounds as shipped; a mono caption row beneath names the source. Three variants by where the deep-link actually points.">
+          <window.DCArtboard id="cta-variants" label="Outbound CTA · 3 source variants" width={402} height={360}>
+            <Flat theme={theme}><window.PSD_CTAVariants /></Flat>
+          </window.DCArtboard>
+          <window.DCArtboard id="card-closeup" label="FaceValueCard · standalone" width={402} height={420}>
+            <Flat theme={theme}>
+              <div style={{ padding: 20 }}>
+                <window.PSD_FaceValueCard resaleRange="$95–140" resaleVendor="Ticketmaster" />
+              </div>
+            </Flat>
+          </window.DCArtboard>
+        </window.DCSection>
+
+        <window.DCSection
+          id="form"
+          title="Q1 — submit form, provenance-first"
+          subtitle="Supporting change. Tier is derived from source, so source should lead — not trail below the number. The number field inherits its framing (Face value vs Resale price).">
+          <window.DCArtboard id="form-before" label="Before · number-first, source buried" width={438} height={560}>
+            <Flat theme={theme} w={438}><window.PSD_FormBefore /></Flat>
+          </window.DCArtboard>
+          <window.DCArtboard id="form-after" label="After · source-first" width={438} height={620}>
+            <Flat theme={theme} w={438}><window.PSD_FormAfter /></Flat>
+          </window.DCArtboard>
+        </window.DCSection>
+
+        <window.DCSection
+          id="multitier"
+          title="#644 — Multi-tier pricing, on the SHIPPED card"
+          subtitle="This is the existing MultiTierLiveCard from design_handoff_phase8_5_corroboration/multi-tier.jsx — reused verbatim, not rebuilt. 'from $X · GA' headline, the shipped PendingTrustPill, 'Other tiers' alternate rows. The only fold-in: the headline tier is box-office (gold), per eng decision #5.">
+          <window.DCArtboard id="mt-detail" label="Event detail · shipped MultiTierLiveCard, box-office headline" width={402} height={560}>
+            <Phone theme={theme} h={560}><window.MT_DetailScreen /></Phone>
+          </window.DCArtboard>
+          <window.DCPostIt top={20} left={470} width={256} rotate={1.5}>
+            <b>Reused, not reinvented.</b> Same card, pill, rows, and tells already shipped in the corroboration work. The headline is the cheapest tier framed “from $25 · GA” with the gold box-office pill — the one change from the shipped default (community azure).
+          </window.DCPostIt>
+          <window.DCPostIt top={210} left={470} width={256} rotate={-1.5}>
+            <b>Source = the shipped trust pill + tier-dot.</b> Box office gold, community azure — the existing <code>PendingTrustPill</code> / <code>TierAlternateRow</code> tokens. No new per-row chrome. (v1 stays box-office + community, the submit-reachable kinds; per-tier resale is the noted v2.)
+          </window.DCPostIt>
+          <window.DCPostIt top={400} left={470} width={256} rotate={1}>
+            <b>Per-tier corroboration</b> is the shipped “pending · 1/2” tell on each alternate row — submitter is observation #1, one more confirm promotes it. Each tier resolves on its own. Renders against the current enum (GA / Reserved / VIP / Pit / Lawn); Other(label) deferred per eng #4.
+          </window.DCPostIt>
+        </window.DCSection>
+
+        <window.DCSection
+          id="mt-multisource"
+          title="#644 — multiple sources × multiple tiers (your question)"
+          subtitle="Box office GA+VIP AND resale GA+VIP — does it get busy? Not if tier stays the only surface axis. The entry tier leads at its box-office price; the cross-source resale price folds into the shipped 'Or pay for convenience' row. Other tiers are one row each. No tiers×sources grid.">
+          <window.DCArtboard id="mt-multisource" label="Multi-source × multi-tier · stays flat" width={402} height={520}>
+            <Phone theme={theme} h={520}><window.MT_MultiSourceScreen /></Phone>
+          </window.DCArtboard>
+          <window.DCPostIt top={20} left={470} width={262} rotate={1.5}>
+            <b>Tier is the only axis on the surface.</b> GA leads at its box-office price; GA's resale number folds into <b>“Or pay for convenience”</b> (the shipped <code>AlternateSourceRow</code> idiom). VIP is one row under “Other tiers.” So 2 sources × 2 tiers = a flat card, not a 4-cell grid.
+          </window.DCPostIt>
+          <window.DCPostIt top={230} left={470} width={262} rotate={-1.5}>
+            <b>Rejected: the grid.</b> Rendering every source×tier as a co-equal row is what gets busy and conflates the two axes. We keep cross-source alternates collapsed under their tier — the entry tier shows its alternate inline (where the box-office-vs-resale teaching matters most); deeper tiers expand on tap.
+          </window.DCPostIt>
+        </window.DCSection>
+
+        <window.DCSection
+          id="mt-variants"
+          title="#644 — shipped card variants + collapsed states"
+          subtitle="The shipped MixedTierCard (one tier live, one pending) and TierAlternateRow tell, the browse/search collapse, and the sequential submission fold-in.">
+          <window.DCArtboard id="mt-card-mixed" label="MixedTierCard · GA live + VIP pending · 1/2 (shipped)" width={402} height={300}>
+            <Flat theme={theme}>
+              <div style={{ padding: 20, background: "var(--bg)" }}>
+                <window.MixedTierCard />
+              </div>
+            </Flat>
+          </window.DCArtboard>
+          <window.DCArtboard id="mt-card-live" label="MultiTierLiveCard · box-office headline + 2 alternates (shipped)" width={402} height={300}>
+            <Flat theme={theme}>
+              <div style={{ padding: 20, background: "var(--bg)" }}>
+                <window.MultiTierLiveCard
+                  cheapestTier="GA" cheapestFloor={32} cheapestVendor="Venue"
+                  cheapestKind="boxoffice" observedAt="yesterday" reports={3}
+                  alternates={[
+                    { tier: "Reserved", floor: 55, vendor: "AXS", kind: "community", confirms: 2 },
+                  ]}
+                />
+              </div>
+            </Flat>
+          </window.DCArtboard>
+          <window.DCArtboard id="mt-list" label="Browse / search · collapses to 'from $X'" width={402} height={220}>
+            <Flat theme={theme}>
+              <div style={{ padding: 24, background: "var(--bg)", display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <window.MT_ListChip price={25} kind="boxoffice" />
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "var(--fg-subtle)" }}>box-office GA · full breakdown on detail</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <window.MT_ListChip price={48} kind="community" />
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "var(--fg-subtle)" }}>community · no tier breakdown in list</span>
+                </div>
+              </div>
+            </Flat>
+          </window.DCArtboard>
+          <window.DCArtboard id="mt-submit" label="Submission · single-tier + 'add another tier'" width={438} height={520}>
+            <Flat theme={theme} w={438}>
+              <div style={{ padding: 18, background: "var(--bg)" }}>
+                <window.MT_AddTierSuccess />
+              </div>
+            </Flat>
+          </window.DCArtboard>
+          <window.DCPostIt top={20} left={1700} width={250} rotate={-1.5}>
+            <b>Submission stays single-tier.</b> After GA posts, the success state offers a frictionless "add another tier" — sequential atomic submissions compose into the card above. No heavier multi-tier form; corroboration stays clean.
+          </window.DCPostIt>
+        </window.DCSection>
+
+        <window.DCSection
+          id="confirmations"
+          title="#644 — how confirmations work with multiple tiers (your question)"
+          subtitle="Does every source/tier get a confirm button? No — that's the busy-ness trap. Confirm is a property of a PENDING submission, on the shipped PendingCardB footer. Independent pending tiers stack as focused cards, each with ONE confirm. The live card has zero per-row confirms.">
+          <window.DCArtboard id="confirm-stack" label="Two independent pending tiers · shipped PendingCardB" width={524} height={600}>
+            <Flat theme={theme} w={524}>
+              <div style={{ padding: 16, background: "var(--bg)", display: "flex", flexDirection: "column", gap: 12 }}>
+                <window.PendingCardB
+                  floor={20} ceiling={30} tier="GA" vendor="Venue" kind="boxoffice"
+                  submitter={{ handle: "@amelia", url: "/u/amelia" }}
+                  submittedAt="2h ago" confirms={1} needed={2} view="other"
+                  note="GA at the box office window — $20 face, no fees."
+                />
+                <window.PendingCardB
+                  floor={85} tier="VIP" vendor="AXS" kind="community"
+                  submitter={{ handle: "@kel", url: "/u/kel" }}
+                  submittedAt="40m ago" confirms={1} needed={2} view="other"
+                />
+              </div>
+            </Flat>
+          </window.DCArtboard>
+          <window.DCPostIt top={20} left={470} width={262} rotate={1.5}>
+            <b>Confirm lives on the pending card, not the grid.</b> Each pending submission is the shipped <code>PendingCardB</code> with its own footer — “Saw a different number?” (escape hatch) + <b>Confirm price</b> (one button). Two pending tiers = two focused cards, never a wall of inline confirm buttons.
+          </window.DCPostIt>
+          <window.DCPostIt top={250} left={470} width={262} rotate={-1.5}>
+            <b>1/2 model.</b> Strip reads <b>“1 OF 2 · 1 TO GO”</b> — the submitter is observation #1, one more fan promotes it. Once live, the tier drops into the combined card above and the only affordance is the single “Saw a different price?” entry — no per-row confirm.
+          </window.DCPostIt>
+        </window.DCSection>
+
+      </window.DesignCanvas>
+      <ThemeSwitcher value={theme} onChange={setTheme} position="bottom-right" />
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
