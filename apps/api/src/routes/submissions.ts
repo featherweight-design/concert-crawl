@@ -249,11 +249,15 @@ submissionsRouter.patch(
     if (body.vendor != null) updates['vendor'] = body.vendor
     if (body.howFound != null) updates['howFound'] = body.howFound
 
-    // Re-derive sourceCategory whenever vendor or howFound changes so the
-    // cached category can't drift from the (vendor, howFound) heuristic.
-    // Falls back to the existing values on the row when the patch leaves a
-    // field unchanged.
-    if (body.vendor != null || body.howFound != null) {
+    // Re-derive sourceCategory only when the existing row has NULL (legacy)
+    // and vendor or howFound is changing. If the existing row already has an
+    // explicit value (e.g. 'resale' picked at submit time, or a future PATCH
+    // accepting sourceCategory directly), preserve it — PATCH should not
+    // silently flip provenance when the API has no way to set it explicitly.
+    if (
+      submission.sourceCategory == null &&
+      (body.vendor != null || body.howFound != null)
+    ) {
       updates['sourceCategory'] = deriveSourceCategory(
         body.vendor ?? submission.vendor,
         body.howFound ?? submission.howFound,

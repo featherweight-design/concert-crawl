@@ -18,6 +18,50 @@ import type {
   SubmissionWithMeta,
 } from '@concert-crawl/types'
 
+// Type guards for fetch() JSON responses. CLAUDE.md flags `as` casts as a
+// last resort; these read-only guards verify the discriminator + shape we
+// actually rely on without forcing every PriceSubmission field through a
+// runtime validator (preserves existing test mocks).
+type PriceSubmissionResponse =
+  | { success: true; data: PriceSubmission }
+  | { success?: false; error?: string; submission?: PriceSubmission }
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object'
+}
+
+function isPriceSubmissionResponse(
+  value: unknown,
+): value is PriceSubmissionResponse {
+  if (!isObject(value)) return false
+  // Permissive: a response missing `success` is treated as a failure shape so
+  // callers fall through to the error branch without crashing on undefined
+  // access. The `data` field is only required when `success === true`.
+  if (value['success'] === true) {
+    return isObject(value['data'])
+  }
+  return true
+}
+
+type SubmissionsListResponse = {
+  success: boolean
+  data: {
+    alreadySubmitted: boolean
+    userSubmission: SubmissionWithMeta | null
+  }
+}
+
+function isSubmissionsListResponse(
+  value: unknown,
+): value is SubmissionsListResponse {
+  if (!isObject(value)) return false
+  if (typeof value['success'] !== 'boolean') return false
+  const data = value['data']
+  if (!isObject(data)) return false
+  if (typeof data['alreadySubmitted'] !== 'boolean') return false
+  return true
+}
+
 type ModalState =
   | 'loading-check'
   | 'form'
@@ -125,13 +169,12 @@ export function SubmitPriceModal({
           { headers: { Authorization: `Bearer ${token}` } },
         )
         if (res.ok) {
-          const body = (await res.json()) as {
-            success: boolean
-            data: {
-              alreadySubmitted: boolean
-              userSubmission: SubmissionWithMeta | null
-            }
+          const raw: unknown = await res.json()
+          if (!isSubmissionsListResponse(raw)) {
+            setModalState('form')
+            return
           }
+          const body = raw
           if (body.data.alreadySubmitted && body.data.userSubmission) {
             setExistingSubmission(body.data.userSubmission)
             if (openInEditMode) {
@@ -194,9 +237,11 @@ export function SubmitPriceModal({
             }),
           },
         )
-        const patchResponse = (await res.json()) as
-          | { success: true; data: PriceSubmission }
-          | { success: false; error?: string }
+        const patchRaw: unknown = await res.json()
+        if (!isPriceSubmissionResponse(patchRaw)) {
+          throw new Error('Edit failed (invalid response shape)')
+        }
+        const patchResponse = patchRaw
         if (!res.ok || !patchResponse.success) {
           throw new Error(
             (!patchResponse.success && patchResponse.error) || 'Edit failed',
@@ -235,9 +280,11 @@ export function SubmitPriceModal({
           }),
         },
       )
-      const responseData = (await res.json()) as
-        | { success: true; data: PriceSubmission }
-        | { success: false; error?: string; submission?: PriceSubmission }
+      const rawResponse: unknown = await res.json()
+      if (!isPriceSubmissionResponse(rawResponse)) {
+        throw new Error('Submission failed (invalid response shape)')
+      }
+      const responseData = rawResponse
       if (!res.ok) {
         if (res.status === 409) {
           if (!responseData.success && responseData.submission) {
