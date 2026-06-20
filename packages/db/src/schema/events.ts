@@ -15,6 +15,17 @@ import {
 } from 'drizzle-orm/pg-core'
 import { venues } from './venues.js'
 
+// Typed entry in events.ticketLinks (issue #641). Populated by the crawler
+// (PR 2 of the price-source cycle) from URL host + venue.ticketVendor; consumed
+// by the Consumer UI (PR 4) for source-category disclosure. Replaces the
+// single ticketUrl during the expand phase; ticketUrl is dropped in a
+// follow-up contract PR once nothing reads it.
+export type TicketLink = {
+  kind: 'boxoffice' | 'primary' | 'resale'
+  vendor: string | null
+  url: string
+}
+
 export const eventStatusEnum = pgEnum('event_status', [
   'upcoming',
   'cancelled',
@@ -45,6 +56,7 @@ export const events = pgTable(
     doorsTime: time('doors_time'),
     showTime: time('show_time'),
     ticketUrl: text('ticket_url'),
+    ticketLinks: jsonb('ticket_links').$type<TicketLink[]>(),
     ticketPriceMin: numeric('ticket_price_min', { precision: 10, scale: 2 }),
     ticketPriceMax: numeric('ticket_price_max', { precision: 10, scale: 2 }),
     priceSource: priceSourceEnum('price_source'),

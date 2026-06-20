@@ -49,6 +49,16 @@ export const submissionHowFoundEnum = pgEnum('submission_how_found', [
   'at_the_venue',
 ])
 
+// source_category replaces how_found semantically — the submit form now asks
+// "Where's this price from?" directly (boxoffice / standard / resale) instead of
+// inferring from the submitter's action. how_found stays during the expand
+// phase; a follow-up contract PR drops it once nothing reads it.
+export const sourceCategoryEnum = pgEnum('source_category', [
+  'boxoffice',
+  'standard',
+  'resale',
+])
+
 export const priceRetrievalLog = pgTable(
   'price_retrieval_log',
   {
@@ -89,11 +99,16 @@ export const priceSubmissions = pgTable('price_submissions', {
   tier: submissionTierEnum('tier').notNull(),
   vendor: submissionVendorEnum('vendor').notNull(),
   howFound: submissionHowFoundEnum('how_found').notNull(),
+  sourceCategory: sourceCategoryEnum('source_category'),
   disputedSubmissionId: uuid('disputed_submission_id').references(
     (): AnyPgColumn => priceSubmissions.id,
   ),
   status: priceSubmissionStatusEnum('status').notNull().default('pending'),
-  corroborationCount: integer('corroboration_count').notNull().default(0),
+  // Submitter counts as observation #1 in the 1/2 confirmation model — one
+  // additional non-submitter confirm promotes a pending row to corroborated.
+  // Existing rows are backfilled by +1 in migration 0040 so the semantics are
+  // uniform across the table (corroborationCount = total observations).
+  corroborationCount: integer('corroboration_count').notNull().default(1),
   note: varchar('note', { length: 280 }),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
