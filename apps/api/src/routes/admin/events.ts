@@ -324,11 +324,17 @@ eventsAdminRouter.get(
     // Same WHERE shape used for both the row fetch and the count(*) query
     // when count=true. Pulling it out as a single expression guarantees the
     // count tracks the rows for any callers that opt in.
+    //
+    // The missing branch also excludes admin-hidden events (#712): an event
+    // that's been marked non-concert (hidden_from_consumer=true) and then
+    // stops appearing in crawls is not actionable — it should drop out of
+    // the missing queue and the review/counts pill in lock-step.
     const whereClause = missing
       ? and(
           isNotNull(events.firstMissingAt),
           eq(events.status, 'upcoming'),
           gte(events.date, today),
+          eq(events.hiddenFromConsumer, false),
         )
       : and(
           verified === undefined ? undefined : eq(events.verified, verified),

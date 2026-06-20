@@ -126,6 +126,88 @@ describe('GET /v1/admin/review/counts', () => {
     expect(body.data.missing).toBe(0)
   })
 
+  // Regression for #709: pill must align with the /v1/admin/events?verified=false
+  // list endpoint, which defaults to date >= today. Past-date unverified events
+  // are stale and don't belong in the queue — they were what produced the
+  // "257 pill / Queue clear UI" mismatch.
+  it('excludes past-dated unverified events from the eventFlags count', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      artist: 'Old Unverified',
+      date: '2020-01-01',
+      verified: false,
+    })
+    await seedEvent(venue.id, {
+      artist: 'Future Unverified',
+      date: '2099-09-01',
+      verified: false,
+    })
+
+    const res = await app.request('/v1/admin/review/counts', {
+      headers: ADMIN_HEADERS,
+    })
+    const body = (await res.json()) as {
+      data: { eventFlags: number }
+    }
+    expect(body.data.eventFlags).toBe(1)
+  })
+
+  // Regression for #712: a non-concert event (hidden_from_consumer=true) that
+  // also stops appearing in crawls would otherwise pollute the missing queue.
+  // The admin-hidden marker is a triage decision — counting it as "missing
+  // work" misrepresents the queue depth.
+  it('excludes hidden_from_consumer events from the missing count', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      artist: 'Hidden Missing',
+      date: '2099-09-01',
+      status: 'upcoming',
+      verified: true,
+      firstMissingAt: new Date('2099-08-01T00:00:00Z'),
+      hiddenFromConsumer: true,
+    })
+    await seedEvent(venue.id, {
+      artist: 'Visible Missing',
+      date: '2099-09-02',
+      status: 'upcoming',
+      verified: true,
+      firstMissingAt: new Date('2099-08-02T00:00:00Z'),
+      hiddenFromConsumer: false,
+    })
+
+    const res = await app.request('/v1/admin/review/counts', {
+      headers: ADMIN_HEADERS,
+    })
+    const body = (await res.json()) as {
+      data: { missing: number }
+    }
+    expect(body.data.missing).toBe(1)
+  })
+
+  // Regression for #708: the pill counts pending submissions only and the
+  // /v1/admin/prices/submissions list defaults to the same filter. Resolved
+  // statuses (corroborated/disputed/stale) belong to history, not the queue.
+  it('counts only pending price submissions toward the prices pill', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2099-09-01',
+      verified: true,
+    })
+    await seedPriceSubmission(event.id, 'user-pending', { status: 'pending' })
+    await seedPriceSubmission(event.id, 'user-corroborated', {
+      status: 'corroborated',
+    })
+    await seedPriceSubmission(event.id, 'user-disputed', { status: 'disputed' })
+
+    const res = await app.request('/v1/admin/review/counts', {
+      headers: ADMIN_HEADERS,
+    })
+    const body = (await res.json()) as {
+      data: { prices: number }
+    }
+    expect(body.data.prices).toBe(1)
+  })
+
   it('returns 403 for non-admin callers', async () => {
     setNonAdminAuth()
     const res = await app.request('/v1/admin/review/counts', {

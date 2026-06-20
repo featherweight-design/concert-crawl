@@ -494,3 +494,82 @@ describe('GET /v1/admin/prices/submissions?count=true', () => {
     expect(Array.isArray(body.data)).toBe(true)
   })
 })
+
+describe('GET /v1/admin/prices/submissions — status filter (#708)', () => {
+  beforeEach(() => {
+    setAdminAuth()
+    return clearTables()
+  })
+
+  // Regression for #708: the moderation queue must default to status='pending'
+  // so the panel badge and the /admin/review pill agree. The submissions
+  // endpoint historically returned every status — that's how 14 rows showed
+  // under a "pending" label when only 1 was actually pending.
+  it('defaults to status=pending and excludes corroborated/disputed/stale', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2099-10-01',
+      verified: true,
+    })
+    await seedPriceSubmission(event.id, 'user-pending', { status: 'pending' })
+    await seedPriceSubmission(event.id, 'user-corroborated', {
+      status: 'corroborated',
+    })
+    await seedPriceSubmission(event.id, 'user-disputed', { status: 'disputed' })
+    await seedPriceSubmission(event.id, 'user-stale', { status: 'stale' })
+
+    const res = await app.request('/v1/admin/prices/submissions', {
+      headers: ADMIN_HEADERS,
+    })
+    const body = (await res.json()) as {
+      success: boolean
+      data: { userId: string; status: string }[]
+    }
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0]?.userId).toBe('user-pending')
+    expect(body.data[0]?.status).toBe('pending')
+  })
+
+  it('applies the pending filter to the count when count=true', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2099-10-01',
+      verified: true,
+    })
+    await seedPriceSubmission(event.id, 'user-pending-1', { status: 'pending' })
+    await seedPriceSubmission(event.id, 'user-pending-2', { status: 'pending' })
+    await seedPriceSubmission(event.id, 'user-stale', { status: 'stale' })
+
+    const res = await app.request(
+      '/v1/admin/prices/submissions?count=true&limit=10&offset=0',
+      { headers: ADMIN_HEADERS },
+    )
+    const body = (await res.json()) as {
+      success: boolean
+      data: { rows: unknown[]; total: number }
+    }
+    expect(body.data.total).toBe(2)
+    expect(body.data.rows).toHaveLength(2)
+  })
+
+  it('returns all statuses when status=all is passed', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2099-10-01',
+      verified: true,
+    })
+    await seedPriceSubmission(event.id, 'user-pending', { status: 'pending' })
+    await seedPriceSubmission(event.id, 'user-corroborated', {
+      status: 'corroborated',
+    })
+
+    const res = await app.request('/v1/admin/prices/submissions?status=all', {
+      headers: ADMIN_HEADERS,
+    })
+    const body = (await res.json()) as {
+      success: boolean
+      data: { userId: string }[]
+    }
+    expect(body.data).toHaveLength(2)
+  })
+})

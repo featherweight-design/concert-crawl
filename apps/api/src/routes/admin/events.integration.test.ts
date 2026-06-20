@@ -481,6 +481,43 @@ describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
     expect(body.data).toHaveLength(0)
   })
 
+  // Regression for #712: events admins have marked non-concert
+  // (hidden_from_consumer=true) must not appear in the missing queue when
+  // crawls stop seeing them — they've already been triaged and are not
+  // actionable. The /v1/admin/review/counts pill applies the same filter.
+  it('excludes hidden_from_consumer events from the missing list', async () => {
+    const venue = await seedVenue({
+      name: 'Hidden Filter Venue',
+      slug: 'hidden-filter-venue',
+    })
+    await seedEvent(venue.id, {
+      title: 'Visible Missing Show',
+      artist: 'Visible Artist',
+      date: futureDate(14),
+      status: 'upcoming',
+      firstMissingAt: new Date(),
+      hiddenFromConsumer: false,
+    })
+    await seedEvent(venue.id, {
+      title: 'Hidden Missing Show',
+      artist: 'Hidden Artist',
+      date: futureDate(21),
+      status: 'upcoming',
+      firstMissingAt: new Date(),
+      hiddenFromConsumer: true,
+    })
+
+    const res = await app.request('/v1/admin/events?missing=true')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { title: string; hiddenFromConsumer: boolean }[]
+    }
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0]?.title).toBe('Visible Missing Show')
+    expect(body.data[0]?.hiddenFromConsumer).toBe(false)
+  })
+
   it('exposes lastSeenAt and firstMissingAt on the standard list response', async () => {
     // Regression test for the admin Review UI: the missing tab renders
     // relative timestamps inline, so the GET /v1/admin/events response

@@ -176,11 +176,18 @@ pricesAdminRouter.get('/coverage', async (ctx) => {
 
 // GET /v1/admin/prices/submissions — community submission queue
 // `count=true` switches to `{ rows, total }` for the new pagination component.
+//
+// Defaults to `status=pending` so the moderation queue contains only items
+// that still need an admin decision — corroborated/disputed/stale items have
+// already been processed and don't belong on this surface (#708). The pill
+// on /admin/review uses the same status='pending' filter, so the two surfaces
+// stay in lock-step. Pass `?status=all` to opt out (e.g. for audit views).
 const submissionsQuerySchema = z.object({
   count: z
     .enum(['true', 'false'])
     .optional()
     .transform((val) => val === 'true'),
+  status: z.enum(['pending', 'all']).optional().default('pending'),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 })
@@ -193,7 +200,10 @@ pricesAdminRouter.get(
     }
   }),
   async (ctx) => {
-    const { count, limit, offset } = ctx.req.valid('query')
+    const { count, status, limit, offset } = ctx.req.valid('query')
+
+    const statusClause =
+      status === 'pending' ? eq(priceSubmissions.status, 'pending') : undefined
 
     const rowsPromise = db
       .select({
@@ -212,6 +222,7 @@ pricesAdminRouter.get(
       .from(priceSubmissions)
       .leftJoin(events, eq(priceSubmissions.eventId, events.id))
       .leftJoin(venues, eq(events.venueId, venues.id))
+      .where(statusClause)
       .orderBy(desc(priceSubmissions.createdAt))
       .limit(limit)
       .offset(offset)
@@ -224,6 +235,7 @@ pricesAdminRouter.get(
     const countQuery = db
       .select({ total: sql<number>`count(*)::int` })
       .from(priceSubmissions)
+      .where(statusClause)
     const [rows, countResult] = await Promise.all([rowsPromise, countQuery])
     const total = countResult[0]?.total ?? 0
     return ctx.json({ success: true, data: { rows, total } })

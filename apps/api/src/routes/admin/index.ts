@@ -62,9 +62,15 @@ adminRouter.use('*', async (ctx, next) => {
 // admin sidebar badge. Three of the four data-bearing Review tabs render
 // a pill count (All Events has none); this endpoint returns one number per
 // pill so the SSR initial paint shows them without activating each tab.
+//
+// Each branch's WHERE clause MUST stay in lock-step with the corresponding
+// list endpoint's default filter — otherwise the pill says "X items" while
+// the tab renders "Queue clear" (issues #708, #709, #712). The semantics:
+//
+//   eventFlags → /v1/admin/events?verified=false   (defaults to date >= today)
+//   prices     → /v1/admin/prices/submissions      (defaults to status=pending)
+//   missing    → /v1/admin/events?missing=true     (excludes hidden_from_consumer)
 adminRouter.get('/review/counts', async (ctx) => {
-  // The missing branch needs today's Denver-local date so the count matches
-  // what the list endpoint shows (which filters past-date stale events out).
   const today = new Date().toLocaleDateString('en-CA', {
     timeZone: 'America/Denver',
   })
@@ -73,7 +79,7 @@ adminRouter.get('/review/counts', async (ctx) => {
     db
       .select({ total: sql<number>`count(*)::int` })
       .from(events)
-      .where(eq(events.verified, false)),
+      .where(and(eq(events.verified, false), gte(events.date, today))),
     db
       .select({ total: sql<number>`count(*)::int` })
       .from(priceSubmissions)
@@ -86,6 +92,7 @@ adminRouter.get('/review/counts', async (ctx) => {
           isNotNull(events.firstMissingAt),
           eq(events.status, 'upcoming'),
           gte(events.date, today),
+          eq(events.hiddenFromConsumer, false),
         ),
       ),
   ])
