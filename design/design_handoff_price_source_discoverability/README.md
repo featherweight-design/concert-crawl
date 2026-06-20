@@ -141,6 +141,7 @@ Reviewed against the codebase (Claude Code, 2026-06-17). **All 9 eng decisions a
 ### Review round 3 — beta-feedback follow-up
 
 1. **SeatGeek removed** everywhere — not an option we surface. Resale examples use Ticketmaster.
+   _Eng follow-up 2026-06-20: this was a miscommunication between Hugh and Design. **SeatGeek stays in the vendor enum and UI** — no enum or UI changes around SeatGeek. Resale examples can remain as Ticketmaster (illustrative only)._
 2. **Vendor shows "Venue"**, never the venue's name, anywhere it's a *vendor* value (submit form chip, card "seen on Venue"). The event header still shows the real venue + date ("Larimer Lounge · Fri, Jun 26") — that's the show's location, not a vendor.
 3. **Face Value card copy trimmed** — body is now "Only resale tickets left. Know the box-office price? Add it." (9 words, down from 33).
 4. **Multi-source × multi-tier** (`MT_MultiSourceScreen` / `MultiSourceMultiTierCard`): the answer to "Box office GA+VIP + Resale GA+VIP — too busy?" is **no grid**. Tier is the only surface axis. The entry tier leads at its box-office price; its cross-source resale price folds into the shipped **"Or pay for convenience"** row (mirrors `PriceBlockB`'s `AlternateSourceRow`). Other tiers are one row each; their own alternates stay collapsed until tapped. 2 sources × 2 tiers → a flat, scannable card.
