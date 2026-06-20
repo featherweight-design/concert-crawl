@@ -178,6 +178,13 @@ export const PriceCoverageTable = ({
 
   return (
     <Panel title={panelTitle} action={panelAction} padding={0}>
+      {/*
+        #713 — the legacy `maxHeight: 480, overflowY: 'auto'` wrapper that
+        used to surround the table body is gone now that server-driven
+        pagination (#693) caps the row count per page. The inner scroll
+        was hiding the pager footer behind a nested scroll on tall views;
+        letting the page scroll naturally is correct.
+      */}
       {loading ? (
         <div
           style={{
@@ -191,10 +198,6 @@ export const PriceCoverageTable = ({
           {ADMIN_COPY.review.priceCoverage.loading}
         </div>
       ) : (
-        // #713: server-driven pagination (#693) caps the row count per page,
-        // so the legacy maxHeight/overflowY wrapper is redundant — and worse,
-        // it hid the pager footer behind a nested scroll. Let the page scroll
-        // naturally instead.
         <div>
           {events.length === 0 ? (
             <div
