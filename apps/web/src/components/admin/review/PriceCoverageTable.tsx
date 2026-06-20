@@ -191,7 +191,11 @@ export const PriceCoverageTable = ({
           {ADMIN_COPY.review.priceCoverage.loading}
         </div>
       ) : (
-        <div style={{ maxHeight: 480, overflowY: 'auto' }}>
+        // #713: server-driven pagination (#693) caps the row count per page,
+        // so the legacy maxHeight/overflowY wrapper is redundant — and worse,
+        // it hid the pager footer behind a nested scroll. Let the page scroll
+        // naturally instead.
+        <div>
           {events.length === 0 ? (
             <div
               style={{
