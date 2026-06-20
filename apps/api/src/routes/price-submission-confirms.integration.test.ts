@@ -1,4 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { eq } from 'drizzle-orm'
+import { priceSubmissions } from '@concert-crawl/db'
+import { testDb } from '../test/helpers/db.js'
 
 const { authState } = vi.hoisted(() => ({
   authState: {
@@ -106,6 +109,58 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
       body: JSON.stringify(confirmBody),
     })
     expect(res.status).toBe(403)
+  })
+
+  it('bumps updatedAt even when the row stays pending (freshness signal)', async () => {
+    // Regression test for Copilot review on PR #705: updatedAt must move on
+    // every successful confirm, not just on promotion, so consumers can use
+    // it as a freshness signal and to match /v1/submissions/:id/confirm.
+    const imminentDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10)
+    const imminentEvent = await seedEvent(
+      (await seedVenue({ slug: `venue-updatedat-${Date.now()}` })).id,
+      { date: imminentDate, artist: 'UpdatedAt Artist' },
+    )
+    const imminentSubmission = await seedPriceSubmission(
+      imminentEvent.id,
+      'user_updatedat_submitter',
+    )
+    const beforeUpdatedAt = imminentSubmission.updatedAt
+
+    // Wait long enough that a now() bump is observable in the millisecond
+    // precision the tests use.
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 25)
+    })
+
+    setAuth(CONFIRMER)
+    const res = await app.request(
+      `/v1/events/${imminentEvent.id}/price-submissions/${imminentSubmission.id}/confirm`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-token',
+        },
+        body: JSON.stringify(confirmBody),
+      },
+    )
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { submissionStatus: string }
+    }
+    expect(body.data.submissionStatus).toBe('pending')
+
+    const reloaded = await testDb
+      .select({ updatedAt: priceSubmissions.updatedAt })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.id, imminentSubmission.id))
+      .limit(1)
+    expect(reloaded[0]!.updatedAt.getTime()).toBeGreaterThan(
+      beforeUpdatedAt.getTime(),
+    )
   })
 
   it('confirms successfully and stays pending when below the imminent-event threshold', async () => {

@@ -1873,10 +1873,14 @@ async function seed() {
     // semantics (submitter counts as observation #1; corroborationCount is
     // total observations including submitter). Heuristic matches the SQL
     // backfill in packages/db/migrations/0040_price_source_category.sql.
+    // Legacy resale rows can't be inferred from (vendor, howFound) — none of
+    // the captured fields signal it — so the heuristic only ever returns
+    // boxoffice or standard. New submissions (PR 4) write source_category
+    // directly from the submit form, which is where 'resale' enters the data.
     const deriveSourceCategory = (
       vendor: SubmissionTemplate['vendor'],
       howFound: SubmissionTemplate['howFound'],
-    ): 'boxoffice' | 'standard' | 'resale' =>
+    ): 'boxoffice' | 'standard' =>
       vendor === 'VenueBoxOffice' || howFound === 'at_the_venue'
         ? 'boxoffice'
         : 'standard'

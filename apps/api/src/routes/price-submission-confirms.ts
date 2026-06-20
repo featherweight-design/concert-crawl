@@ -116,11 +116,16 @@ priceSubmissionConfirmsRouter.post(
     const totalObservations = confirmsCount + 1
     const promoted = totalObservations >= confirmsRequired
 
+    // Always bump updatedAt on a successful confirm — even when the row stays
+    // pending — so consumers can use it as a freshness signal. Matches the
+    // behavior of /v1/submissions/:id/confirm, which updates updatedAt on
+    // every successful confirm (not just on promotion).
     await db
       .update(priceSubmissions)
       .set({
         corroborationCount: totalObservations,
-        ...(promoted ? { status: 'corroborated', updatedAt: new Date() } : {}),
+        updatedAt: new Date(),
+        ...(promoted ? { status: 'corroborated' } : {}),
       })
       .where(eq(priceSubmissions.id, submissionId))
 
