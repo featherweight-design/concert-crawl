@@ -63,7 +63,7 @@ while [ "${elapsed}" -lt "${timeout}" ]; do
   # initial implementation (which read `.commit` directly) printed the
   # whole object instead of the SHA and the comparison never matched.
   live_sha=$(echo "${deploys_json}" | jq -r '
-    (([.[] | (.deploy // .) | select(.status == "live")][0]) // {}).commit.id // ""
+    (([.[] | (.deploy // .) | select(.status == "live")][0]) // {} | .commit // {}).id // ""
   ')
 
   if [ "${live_sha}" = "${EXPECTED_SHA}" ]; then

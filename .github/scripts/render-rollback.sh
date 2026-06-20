@@ -73,17 +73,19 @@ target_deploy_id=$(echo "${deploys_json}" | jq -r '
   | (([$all[] | (.deploy // .) | select(.status == "live")][0]) // {}) as $live
   | ($live.id // "")        as $live_id
   # `.commit` is an OBJECT {id, message, createdAt}, not a string —
-  # confirmed live against the Render API on 2026-06-20. Compare by
-  # `.commit.id` here and below.
-  | ($live.commit.id // "")    as $live_commit
+  # confirmed live against the Render API on 2026-06-20. Read by
+  # `.commit.id` here and below. Default `.commit` to `{}` first so
+  # the `.id` access stays graceful even on jq versions that throw on
+  # null indexing.
+  | (($live.commit // {}).id // "")    as $live_commit
   | ($live.finishedAt // "") as $live_finished
   # prior_match: only consider deploys that actually succeeded — a
   # `build_failed` deploy of the same commit should not act as an anchor.
   # Require finishedAt to be present so a comparison against $anchor below
-  # is well-defined.
+  # is well-defined. Default `.commit` to `{}` for the same reason as above.
   | ([$all[] | (.deploy // .)
        | select(.id != $live_id
-                and .commit.id == $live_commit
+                and (.commit // {}).id == $live_commit
                 and (.status == "live" or .status == "deactivated")
                 and (.finishedAt // "") != "")]
      | sort_by(.finishedAt) | .[0]) as $prior_match
