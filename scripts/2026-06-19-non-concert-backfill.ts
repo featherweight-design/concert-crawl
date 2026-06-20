@@ -1,11 +1,15 @@
 /**
  * One-shot non-concert auto-classification backfill (#696).
  *
- * Reads upcoming events from the DB, sends them through Haiku in batches,
+ * Reads non-terminal events from the DB (status in {upcoming, cancelled,
+ * postponed} AND date >= today — the same statuses the consumer
+ * /v1/events endpoint serves), sends them through Haiku in batches,
  * compares the LLM's isConcert classification against the current
  * hidden_from_consumer value, and either:
  *   - Default: writes a dry-run CSV to ./non-concert-backfill-dry-run-<ts>.csv
  *   - With --commit: updates hidden_from_consumer in a transaction
+ *     (optimistic-locks each row on its previously-observed currentHidden
+ *     value so admin edits between SELECT and UPDATE aren't overwritten)
  *
  * Run:
  *   pnpm tsx scripts/2026-06-19-non-concert-backfill.ts            # dry-run
@@ -20,6 +24,7 @@
 
 import { writeFileSync } from 'node:fs'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import Anthropic from '@anthropic-ai/sdk'
 import { and, eq, gte, inArray } from 'drizzle-orm'
 import { db, events, venues } from '@concert-crawl/db'
@@ -34,11 +39,22 @@ import {
 const MODEL = 'claude-haiku-4-5-20251001'
 const BATCH_SIZE = 25
 
+export interface BackfillSummary {
+  totalEvents: number
+  wouldChange: number
+  committed: boolean
+  // Rows whose hidden_from_consumer changed between our SELECT and
+  // our UPDATE (admin or another operator). Only populated in --commit
+  // mode. The script does NOT overwrite these — they're surfaced for
+  // operator review.
+  raceSkipped: string[]
+}
+
 // Main function exported for testability; CLI invocation is at the bottom.
 export async function runBackfill(opts: {
   commit: boolean
   outputPath?: string
-}): Promise<{ totalEvents: number; wouldChange: number; committed: boolean }> {
+}): Promise<BackfillSummary> {
   const today = new Date().toISOString().slice(0, 10)
   const rows = await db
     .select({
@@ -131,34 +147,63 @@ export async function runBackfill(opts: {
       totalEvents: results.length,
       wouldChange: wouldChangeCount,
       committed: false,
+      raceSkipped: [],
     }
   }
 
-  // --commit path: transactionally update every row that would change
+  // --commit path: transactionally update every row that would change,
+  // optimistic-locking each UPDATE on the previously-observed
+  // currentHidden so an admin edit between our SELECT and UPDATE
+  // doesn't get silently overwritten. Race-skipped rows are surfaced
+  // in the summary for operator review.
   const toUpdate = results.filter((row) => row.wouldChange)
   console.log(`Committing ${toUpdate.length} updates...`)
+  const raceSkipped: string[] = []
   await db.transaction(async (tx) => {
     for (const row of toUpdate) {
-      await tx
+      const updated = await tx
         .update(events)
         .set({ hiddenFromConsumer: !row.llmIsConcert })
-        .where(eq(events.id, row.eventId))
+        .where(
+          and(
+            eq(events.id, row.eventId),
+            eq(events.hiddenFromConsumer, row.currentHidden),
+          ),
+        )
+        .returning({ id: events.id })
+      if (updated.length === 0) {
+        raceSkipped.push(row.eventId)
+      }
     }
   })
-  console.log(`Commit done. Updated ${toUpdate.length} rows.`)
+  const updatedCount = toUpdate.length - raceSkipped.length
+  console.log(`Commit done. Updated ${updatedCount} rows.`)
+  if (raceSkipped.length > 0) {
+    console.warn(
+      `Skipped ${raceSkipped.length} rows whose hidden_from_consumer changed between SELECT and UPDATE (admin edit / concurrent run). Event IDs:`,
+    )
+    for (const id of raceSkipped) {
+      console.warn(`  ${id}`)
+    }
+  }
   return {
     totalEvents: results.length,
     wouldChange: wouldChangeCount,
     committed: true,
+    raceSkipped,
   }
 }
 
-async function classifyBatch(
+const CLASSIFY_TOOL_NAME = 'classify_events'
+
+// Exported for test coverage (mocks @anthropic-ai/sdk; covers response
+// shape edge cases the dry-run CSV can't surface).
+export async function classifyBatch(
   client: Anthropic,
   batch: EventForClassification[],
 ): Promise<BatchClassification[]> {
   const tool: Anthropic.Tool = {
-    name: 'classify_events',
+    name: CLASSIFY_TOOL_NAME,
     description: 'Classify each event as concert (true) or non-concert (false)',
     input_schema: {
       type: 'object' as const,
@@ -190,7 +235,7 @@ async function classifyBatch(
     model: MODEL,
     max_tokens: 8192,
     tools: [tool],
-    tool_choice: { type: 'tool', name: 'classify_events' },
+    tool_choice: { type: 'tool', name: CLASSIFY_TOOL_NAME },
     messages: [
       {
         role: 'user',
@@ -207,9 +252,15 @@ ${eventList}`,
     ],
   })
 
-  const toolUseBlock = response.content.find((blk) => blk.type === 'tool_use')
+  // Find a tool_use block AND verify it's our classify_events tool.
+  // Forcing tool_choice constrains the response today, but a name check
+  // is cheap insurance against a future schema where additional tools
+  // could be invoked (or a Haiku regression that ignores tool_choice).
+  const toolUseBlock = response.content.find(
+    (blk) => blk.type === 'tool_use' && blk.name === CLASSIFY_TOOL_NAME,
+  )
   if (!toolUseBlock || toolUseBlock.type !== 'tool_use') {
-    throw new Error('LLM did not return tool_use block')
+    throw new Error(`LLM did not return a ${CLASSIFY_TOOL_NAME} tool_use block`)
   }
   const inputRaw = toolUseBlock.input
   if (typeof inputRaw !== 'object' || inputRaw === null) {
@@ -240,8 +291,14 @@ ${eventList}`,
   })
 }
 
-// CLI entry point — only runs when file is executed directly (not imported)
-const isCli = import.meta.url === `file://${process.argv[1]}`
+// CLI entry point — only runs when file is executed directly (not imported).
+// Use pathToFileURL to handle relative paths, special chars, and
+// platform-specific URL encoding correctly (process.argv[1] is not
+// guaranteed to be a clean absolute URL-safe path).
+const entryArg = process.argv[1]
+const isCli =
+  typeof entryArg === 'string' &&
+  import.meta.url === pathToFileURL(entryArg).href
 if (isCli) {
   const commit = process.argv.includes('--commit')
   runBackfill({ commit })
