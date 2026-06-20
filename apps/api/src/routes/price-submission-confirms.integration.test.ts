@@ -98,6 +98,37 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
     expect(res.status).toBe(404)
   })
 
+  it('returns 404 when the event is hidden from consumers', async () => {
+    // Regression test for Copilot review on PR #705: confirm flow must treat
+    // hidden_from_consumer events as not-found so the promotion path can't
+    // mutate a non-public event's prices.
+    const hiddenVenue = await seedVenue({
+      slug: `venue-hidden-${Date.now()}`,
+    })
+    const hiddenEvent = await seedEvent(hiddenVenue.id, {
+      artist: 'Hidden Artist',
+      hiddenFromConsumer: true,
+    })
+    const hiddenSubmission = await seedPriceSubmission(
+      hiddenEvent.id,
+      'user_hidden_submitter',
+    )
+
+    setAuth(CONFIRMER)
+    const res = await app.request(
+      `/v1/events/${hiddenEvent.id}/price-submissions/${hiddenSubmission.id}/confirm`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-token',
+        },
+        body: JSON.stringify(confirmBody),
+      },
+    )
+    expect(res.status).toBe(404)
+  })
+
   it('returns 403 when user tries to confirm their own submission', async () => {
     setAuth(SUBMITTER)
     const res = await app.request(confirmUrl(), {

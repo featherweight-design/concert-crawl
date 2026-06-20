@@ -40,6 +40,20 @@ priceSubmissionConfirmsRouter.post(
     const { userId } = getAuthUser(ctx)
     const { method } = ctx.req.valid('json')
 
+    // Up-front event visibility check. Hidden events are treated as not
+    // found everywhere else in the consumer API (see price-submissions.ts);
+    // we apply the same gate here so a confirm on a hidden event can't
+    // promote the row or update event prices.
+    const [eventRow] = await db
+      .select({ date: events.date })
+      .from(events)
+      .where(and(eq(events.id, eventId), eq(events.hiddenFromConsumer, false)))
+      .limit(1)
+
+    if (!eventRow) {
+      return ctx.json({ success: false, error: 'Event not found' }, 404)
+    }
+
     // Fetch the submission, verify it belongs to this event
     const [submission] = await db
       .select({
@@ -85,16 +99,8 @@ priceSubmissionConfirmsRouter.post(
       )
     }
 
-    // Look up the event date once — needed for the imminent-threshold branch
-    // both in the UPDATE's CASE and in the response.
-    const [eventRow] = await db
-      .select({ date: events.date })
-      .from(events)
-      .where(and(eq(events.id, eventId), eq(events.hiddenFromConsumer, false)))
-      .limit(1)
-
     const confirmsRequired = isImminentEvent(
-      eventRow?.date ?? null,
+      eventRow.date,
       SP_POLICY.imminentThresholdDays,
     )
       ? SP_POLICY.confirmsRequiredImminent

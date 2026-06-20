@@ -29,8 +29,10 @@ const submissionBodySchema = z
     // sourceCategory is the new top-level provenance choice (issue #641).
     // Optional during the expand phase — the submit form (PR 4) will start
     // sending it, but legacy submitters and old clients still post without
-    // it. Server stores NULL when absent; legacy rows get the heuristic
-    // backfill from migration 0040.
+    // it. When absent, the handler derives a value from (vendor, howFound)
+    // using the same heuristic as migration 0040's backfill, so new boxoffice
+    // submissions tag immediately. Only legacy rows that pre-date this PR
+    // remain NULL until the contract PR's backfill sweeps them.
     sourceCategory: z.enum(['boxoffice', 'standard', 'resale']).optional(),
     note: z.string().max(280).optional(),
     disputedSubmissionId: z.string().uuid().optional(),
