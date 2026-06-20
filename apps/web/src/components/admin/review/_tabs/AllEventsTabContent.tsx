@@ -168,11 +168,11 @@ export const AllEventsTabContent = ({
     setActionError(null)
   }, [filterQuery])
 
-  // Any filter change snaps the pager back to page 1. The wired-up parent
-  // (ReviewPageClient) strips pagination in its filter-change handler so
-  // both updates land in a single router.push; if a future caller forgets
-  // to do that, Pagination's clamp-sync effect catches it on the next
-  // render.
+  // Filter changes forward straight to `onFiltersChange`. Resetting the
+  // pager to page 1 is the parent's responsibility — ReviewPageClient
+  // strips pagination from the URL in its filter-change handler so both
+  // updates land in a single router.push. If a future caller forgets
+  // that, Pagination's clamp-sync effect catches it on the next render.
   const onFilterUpdate = useCallback(
     (next: AllEventsFilters) => {
       onFiltersChange(next)

@@ -434,7 +434,10 @@ export const Pagination = ({
   onPageSizeChange,
   pageSizeOptions = PAGINATION_PAGE_SIZE_OPTIONS,
   loading = false,
-  showSizeSelector = true,
+  // Default the size selector to whether the caller wired up
+  // `onPageSizeChange` — otherwise the dropdown opens but its options
+  // would silently no-op. Callers can still force it on/off explicitly.
+  showSizeSelector = onPageSizeChange !== undefined,
   itemLabel = 'results',
   forceCompact,
   threshold = 560,
