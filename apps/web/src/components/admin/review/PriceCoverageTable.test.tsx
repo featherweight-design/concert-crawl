@@ -67,6 +67,10 @@ describe('PriceCoverageTable header badge (#710)', () => {
   // missingOnly=true view. When the user toggles to "show all", `total`
   // includes events with prices — labelling that "X missing" would lie.
   // We hide the badge instead of fabricating a number with a wrong label.
+  //
+  // Assert on the exact badge format ("<N> missing") rather than the bare
+  // word — the page also renders a "Missing only" filter toggle that would
+  // false-match a broad regex.
   it('hides the missing badge when missingOnly=false', () => {
     const events = [buildEvent({ priceMin: null })]
 
@@ -84,7 +88,7 @@ describe('PriceCoverageTable header badge (#710)', () => {
       />,
     )
 
-    expect(screen.queryByText(/missing/)).toBeNull()
+    expect(screen.queryByText(/^\d+ missing$/)).toBeNull()
   })
 
   it('hides the missing badge while loading', () => {
@@ -102,7 +106,7 @@ describe('PriceCoverageTable header badge (#710)', () => {
       />,
     )
 
-    expect(screen.queryByText(/missing/)).toBeNull()
+    expect(screen.queryByText(/^\d+ missing$/)).toBeNull()
   })
 
   // Copilot follow-up on #710: when paging clamps invalid deep-links, the
