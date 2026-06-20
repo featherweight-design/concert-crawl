@@ -48,11 +48,23 @@ vi.mock('@/components/admin/events/editor/EventEditorClient', () => ({
   EventEditorClient: (_props: { event: EditorEvent }) => null,
 }))
 
+// Fixtures use realistic UUIDs because the API validates `:id` as a UUID
+// via `z.string().uuid()` (apps/api/src/routes/admin/events.ts) — anything
+// else would 400. The "400 invalid-UUID" test below is the one case where
+// a deliberately-bogus id is the point.
+//
 // `date` is stored as YYYY-MM-DD throughout the admin editor — the API
-// PATCH validator enforces `^\d{4}-\d{2}-\d{2}$` (apps/api/src/routes/
-// admin/events.ts). Keep fixtures aligned with the real payload shape.
+// PATCH validator enforces `^\d{4}-\d{2}-\d{2}$` (same file).
+const UUID_EVENT = '11111111-1111-4111-8111-111111111111'
+const UUID_VENUE = '22222222-2222-4222-8222-222222222222'
+const UUID_MISSING = '33333333-3333-4333-8333-333333333333'
+const UUID_500 = '44444444-4444-4444-8444-444444444444'
+const UUID_403 = '55555555-5555-4555-8555-555555555555'
+const UUID_NETWORK = '66666666-6666-4666-8666-666666666666'
+const UUID_NO_TOKEN = '77777777-7777-4777-8777-777777777777'
+
 const buildEvent = (overrides: Partial<EditorEvent> = {}): EditorEvent => ({
-  id: 'evt_1',
+  id: UUID_EVENT,
   title: 'Test Show',
   artist: 'Test Artist',
   date: '2026-12-31',
@@ -66,7 +78,7 @@ const buildEvent = (overrides: Partial<EditorEvent> = {}): EditorEvent => ({
   extractionStrategy: 'json-ld',
   genre: ['rock'],
   updatedAt: null,
-  venueId: 'venue_1',
+  venueId: UUID_VENUE,
   venueName: 'Test Venue',
   isSoldOut: false,
   ...overrides,
@@ -84,17 +96,17 @@ describe('admin events [id] edit page', () => {
   // contract: when the client returns an EditorEvent, the page must render
   // the editor, NOT call notFound.
   it('renders the editor with the unwrapped EditorEvent from apiClient', async () => {
-    const event = buildEvent({ id: 'evt_unwrap' })
+    const event = buildEvent({ id: UUID_EVENT })
     mockApiGet.mockResolvedValue(event)
 
     const { default: EventEditorPage } = await import('./page.js')
-    const params = Promise.resolve({ id: 'evt_unwrap' })
+    const params = Promise.resolve({ id: UUID_EVENT })
 
     const result = await EventEditorPage({ params })
 
     expect(mockNotFound).not.toHaveBeenCalled()
     expect(mockApiGet).toHaveBeenCalledWith(
-      '/v1/admin/events/evt_unwrap',
+      `/v1/admin/events/${UUID_EVENT}`,
       'test-token',
     )
     // Result is the outer <div> wrapper containing EventEditorClient.
@@ -105,7 +117,7 @@ describe('admin events [id] edit page', () => {
     mockApiGet.mockRejectedValue(new MockApiError(404, 'Event not found'))
 
     const { default: EventEditorPage } = await import('./page.js')
-    const params = Promise.resolve({ id: 'evt_missing' })
+    const params = Promise.resolve({ id: UUID_MISSING })
 
     await expect(EventEditorPage({ params })).rejects.toThrow('NEXT_NOT_FOUND')
     expect(mockNotFound).toHaveBeenCalledOnce()
@@ -114,7 +126,8 @@ describe('admin events [id] edit page', () => {
   // The API's Zod param validator rejects non-UUID :id strings with 400.
   // From the user's perspective that's "the page doesn't exist" — same UX
   // as 404. Without this branch, /admin/events/<not-a-uuid>/edit would
-  // surface Next's error boundary instead of the 404 page.
+  // surface Next's error boundary instead of the 404 page. The non-UUID
+  // here is intentional — this test is about the bogus-id case.
   it('calls notFound on ApiError 400 (invalid UUID rejected by API)', async () => {
     mockApiGet.mockRejectedValue(new MockApiError(400, 'Invalid input'))
 
@@ -131,7 +144,7 @@ describe('admin events [id] edit page', () => {
     mockApiGet.mockRejectedValue(new MockApiError(500, 'Internal Server Error'))
 
     const { default: EventEditorPage } = await import('./page.js')
-    const params = Promise.resolve({ id: 'evt_500' })
+    const params = Promise.resolve({ id: UUID_500 })
 
     await expect(EventEditorPage({ params })).rejects.toThrow(
       'Internal Server Error',
@@ -143,7 +156,7 @@ describe('admin events [id] edit page', () => {
     mockApiGet.mockRejectedValue(new MockApiError(403, 'Forbidden'))
 
     const { default: EventEditorPage } = await import('./page.js')
-    const params = Promise.resolve({ id: 'evt_403' })
+    const params = Promise.resolve({ id: UUID_403 })
 
     await expect(EventEditorPage({ params })).rejects.toThrow('Forbidden')
     expect(mockNotFound).not.toHaveBeenCalled()
@@ -153,7 +166,7 @@ describe('admin events [id] edit page', () => {
     mockApiGet.mockRejectedValue(new TypeError('Failed to fetch'))
 
     const { default: EventEditorPage } = await import('./page.js')
-    const params = Promise.resolve({ id: 'evt_network' })
+    const params = Promise.resolve({ id: UUID_NETWORK })
 
     await expect(EventEditorPage({ params })).rejects.toThrow('Failed to fetch')
     expect(mockNotFound).not.toHaveBeenCalled()
@@ -163,7 +176,7 @@ describe('admin events [id] edit page', () => {
     mockGetToken.mockResolvedValueOnce(null)
 
     const { default: EventEditorPage } = await import('./page.js')
-    const params = Promise.resolve({ id: 'evt_no_token' })
+    const params = Promise.resolve({ id: UUID_NO_TOKEN })
 
     const result = await EventEditorPage({ params })
 
