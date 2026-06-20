@@ -111,6 +111,7 @@ export const MissingTabContent = ({
       onMarkCancelled={wrappedCancelled}
       onDismiss={wrappedDismiss}
       pendingIds={pendingIds}
+      {...(total !== undefined ? { total } : {})}
     />
   ) : (
     <MissingMobile

@@ -113,4 +113,41 @@ describe('MissingTabContent', () => {
     expect(screen.getByText("Nothing's gone missing.")).toBeTruthy()
     expect(screen.queryByLabelText('Loading missing events')).toBeNull()
   })
+
+  // Regression for #710 — the header badge must reflect the server total,
+  // not the length of the current page. The user saw "20 flagged" while
+  // the pill said 166 because the badge was counting the paginated array.
+  it('shows the server total in the flagged badge, not events.length', () => {
+    render(
+      <MissingTabContent
+        events={SAMPLE}
+        isDesktop
+        nowIso={NOW}
+        total={166}
+        page={1}
+        pageSize={20}
+        onPageChange={() => {}}
+        onPageSizeChange={() => {}}
+        onMarkPostponed={async () => {}}
+        onMarkCancelled={async () => {}}
+        onDismiss={async () => {}}
+      />,
+    )
+    expect(screen.getByText('166 flagged')).toBeTruthy()
+    expect(screen.queryByText('1 flagged')).toBeNull()
+  })
+
+  it('falls back to events.length when total is not provided', () => {
+    render(
+      <MissingTabContent
+        events={SAMPLE}
+        isDesktop
+        nowIso={NOW}
+        onMarkPostponed={async () => {}}
+        onMarkCancelled={async () => {}}
+        onDismiss={async () => {}}
+      />,
+    )
+    expect(screen.getByText('1 flagged')).toBeTruthy()
+  })
 })

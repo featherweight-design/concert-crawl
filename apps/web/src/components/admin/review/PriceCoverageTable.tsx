@@ -137,10 +137,14 @@ export const PriceCoverageTable = ({
     }
   }
 
-  const missingCount = events.filter((ev) => ev.priceMin === null).length
-
+  // Badge reflects the server-side total of missing-price events (#710).
+  // Counting `events.length` only sees the current paginated page, which
+  // mis-reports "20 missing" when the pager footer says "1–20 of 963".
+  // The badge only makes sense when missingOnly=true — when showing all
+  // events the total is the whole upcoming-event count, not the missing
+  // subset, so we hide the badge in that mode.
   const missingBadge =
-    !loading && missingCount > 0 ? (
+    !loading && missingOnly && total > 0 ? (
       <span
         style={{
           display: 'inline-flex',
@@ -155,7 +159,7 @@ export const PriceCoverageTable = ({
           lineHeight: 1.4,
         }}
       >
-        {missingCount} missing
+        {total} missing
       </span>
     ) : null
 
