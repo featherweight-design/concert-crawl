@@ -1,3 +1,21 @@
+# [1.73.0](https://github.com/HartiganHM/concert-crawl/compare/v1.72.0...v1.73.0) (2026-06-22)
+
+
+### Bug Fixes
+
+* **api:** address Copilot round-2 review on PR 723 ([75c6517](https://github.com/HartiganHM/concert-crawl/commit/75c651713acea5774055aa87394b303e4e5ccc07))
+* **api:** address Copilot round-3 review on PR 723 ([af99155](https://github.com/HartiganHM/concert-crawl/commit/af99155a53300b02c317fcae0905c71233552180))
+
+
+### Features
+
+* **api:** add aggregateByTier composer for per-tier price blocks ([c9dc461](https://github.com/HartiganHM/concert-crawl/commit/c9dc461449b8011b63a4ea196e5f1679276b454c))
+* **api:** add pickTierHeadline helper for per-tier price aggregation ([739cd75](https://github.com/HartiganHM/concert-crawl/commit/739cd7540d4228a74f9cc12c0b63542f5ff594ad))
+* **api:** always include pendingSubmissions on event detail ([698f3ab](https://github.com/HartiganHM/concert-crawl/commit/698f3abb4bf152618fa77141953700954cd1c2a3))
+* **api:** dispute endpoint inherits vendor from parent (price-only contest scope) ([a498824](https://github.com/HartiganHM/concert-crawl/commit/a4988248ca7967d44cd38cbc637902b1f2271652))
+* **api:** emit priceByTier per-tier price aggregation on event detail ([a6a042f](https://github.com/HartiganHM/concert-crawl/commit/a6a042ff1f45c9e67ee64ec4020602ac46a18a34))
+* **types:** add TierPriceBlock + priceByTier to EventDetailResponse ([d1fa09a](https://github.com/HartiganHM/concert-crawl/commit/d1fa09aa85f88d4922bc8b87953b17ea65f726ac))
+
 # [1.72.0](https://github.com/HartiganHM/concert-crawl/compare/v1.71.3...v1.72.0) (2026-06-22)
 
 
