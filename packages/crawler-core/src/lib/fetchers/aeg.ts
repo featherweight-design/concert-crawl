@@ -212,6 +212,7 @@ function normalize(
         eventId: event.eventId,
         eventDateTimeISO: event.eventDateTimeISO,
         headliner,
+        venueCalendarUrl,
       },
       'aeg: skipping event with unparseable eventDateTimeISO',
     )
