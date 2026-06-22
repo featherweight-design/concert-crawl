@@ -1499,8 +1499,12 @@ export const ADMIN_COPY = {
       subtitle:
         'Most events auto-approve. This page is where flags and community price submissions land for triage.',
       mobileTitle: 'Review',
-      mobileSubtitle: (eventCount: number, submissionCount: number) =>
-        `${eventCount} event${eventCount !== 1 ? 's' : ''} · ${submissionCount} price${submissionCount !== 1 ? 's' : ''} waiting.`,
+      mobileSubtitle: (
+        eventCount: number,
+        submissionCount: number,
+        missingCount: number,
+      ) =>
+        `${eventCount} event${eventCount !== 1 ? 's' : ''} · ${submissionCount} price${submissionCount !== 1 ? 's' : ''} · ${missingCount} missing waiting.`,
     },
 
     adminReviewMobile: {

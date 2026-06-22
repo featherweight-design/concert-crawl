@@ -458,9 +458,13 @@ export const ReviewPageClient = ({
   )
 
   // Pending count drives the header pill ("X pending") and the mobile
-  // subtitle. Both use server-driven counts so they stay accurate beyond
-  // the first page of flagged events (`events.length` is page-N only).
-  const pendingCount = counts.eventFlags + counts.prices
+  // subtitle. Includes every triage tab — Event Flags (verified=false),
+  // Prices (community submissions awaiting moderation), and Missing
+  // (stale-crawl events needing a postpone/cancel/dismiss decision).
+  // All three are work items the admin needs to act on, so they share
+  // the "pending" semantic (#711). Counts are server-driven so they
+  // stay accurate beyond the first page of any individual tab.
+  const pendingCount = counts.eventFlags + counts.prices + counts.missing
 
   const sectionHead = (
     <SectionHead
@@ -615,6 +619,7 @@ export const ReviewPageClient = ({
           {ADMIN_COPY.review.reviewPageClient.mobileSubtitle(
             counts.eventFlags,
             counts.prices,
+            counts.missing,
           )}
         </div>
       </div>
