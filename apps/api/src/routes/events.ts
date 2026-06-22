@@ -30,10 +30,11 @@ import {
   or,
   sql,
 } from 'drizzle-orm'
-import { SP_POLICY } from '@concert-crawl/types'
+import { SP_POLICY, type Tier } from '@concert-crawl/types'
 import { isImminentEvent, todayInTimezone } from '../lib/time.js'
 import { apiLogger } from '../lib/logger.js'
 import { serviceOrClerkAuth } from '../middleware/auth.js'
+import { aggregateByTier } from '../lib/price-aggregation/index.js'
 
 const uuidSchema = z.string().uuid()
 
@@ -613,6 +614,170 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     }
   }
 
+  // Per-tier price aggregation (PR 3). Always runs, even when no submissions
+  // exist (emits []). Source-mix within tier, pending always surfaced per-tier
+  // alongside any corroborated headline. The flat priceVendor / priceAlternates
+  // / priceConfirmsCount / counterSubmission / pendingSubmissions fields above
+  // stay populated for PR 4 to migrate off; the Contract PR drops them.
+  const allCorroboratedRows = await db
+    .select({
+      id: priceSubmissions.id,
+      tier: priceSubmissions.tier,
+      priceMin: priceSubmissions.priceMin,
+      priceMax: priceSubmissions.priceMax,
+      vendor: priceSubmissions.vendor,
+      sourceCategory: priceSubmissions.sourceCategory,
+      userId: priceSubmissions.userId,
+      createdAt: priceSubmissions.createdAt,
+      updatedAt: priceSubmissions.updatedAt,
+    })
+    .from(priceSubmissions)
+    .where(
+      and(
+        eq(priceSubmissions.eventId, id),
+        eq(priceSubmissions.status, 'corroborated'),
+      ),
+    )
+
+  const allPendingRows = await db
+    .select({
+      id: priceSubmissions.id,
+      tier: priceSubmissions.tier,
+      priceMin: priceSubmissions.priceMin,
+      priceMax: priceSubmissions.priceMax,
+      vendor: priceSubmissions.vendor,
+      sourceCategory: priceSubmissions.sourceCategory,
+      howFound: priceSubmissions.howFound,
+      note: priceSubmissions.note,
+      userId: priceSubmissions.userId,
+      createdAt: priceSubmissions.createdAt,
+      disputedSubmissionId: priceSubmissions.disputedSubmissionId,
+    })
+    .from(priceSubmissions)
+    .where(
+      and(
+        eq(priceSubmissions.eventId, id),
+        eq(priceSubmissions.status, 'pending'),
+      ),
+    )
+
+  // Counter-submissions = pending rows that point at a corroborated parent.
+  // They land on the headline's counterSubmission field rather than the tier's
+  // pending list so the UI can show "Saw a different number?" against the
+  // corroborated price without double-counting the dispute as a fresh pending.
+  const corroboratedIdSet = new Set(allCorroboratedRows.map((sub) => sub.id))
+  const counterTierRows = allPendingRows
+    .filter(
+      (sub) =>
+        sub.disputedSubmissionId !== null &&
+        corroboratedIdSet.has(sub.disputedSubmissionId),
+    )
+    .map((sub) => ({
+      id: sub.id,
+      parentSubmissionId: sub.disputedSubmissionId ?? '',
+      tier: sub.tier,
+      priceMin: sub.priceMin,
+      priceMax: sub.priceMax,
+      userId: sub.userId,
+      createdAt: sub.createdAt,
+    }))
+
+  const truePendingRows = allPendingRows.filter(
+    (sub) =>
+      sub.disputedSubmissionId === null ||
+      !corroboratedIdSet.has(sub.disputedSubmissionId),
+  )
+
+  // Batch handle lookups across every userId surfaced in any block.
+  const aggregateUserIds = Array.from(
+    new Set(
+      [
+        ...allCorroboratedRows.map((sub) => sub.userId),
+        ...truePendingRows.map((sub) => sub.userId),
+        ...counterTierRows.map((sub) => sub.userId),
+      ].filter((uid): uid is string => uid !== null),
+    ),
+  )
+  const aggregateHandles = new Map<string, string>()
+  if (aggregateUserIds.length > 0) {
+    const profileRows = await db
+      .select({ userId: userProfiles.userId, handle: userProfiles.handle })
+      .from(userProfiles)
+      .where(inArray(userProfiles.userId, aggregateUserIds))
+    for (const profileRow of profileRows) {
+      if (profileRow.handle !== null) {
+        aggregateHandles.set(profileRow.userId, profileRow.handle)
+      }
+    }
+  }
+
+  const aggregateSubIds = [
+    ...allCorroboratedRows.map((sub) => sub.id),
+    ...truePendingRows.map((sub) => sub.id),
+  ]
+  const confirmsBySubmissionId = new Map<string, number>()
+  if (aggregateSubIds.length > 0) {
+    const confirmCounts = await db
+      .select({
+        submissionId: submissionConfirms.submissionId,
+        total: count(),
+      })
+      .from(submissionConfirms)
+      .where(inArray(submissionConfirms.submissionId, aggregateSubIds))
+      .groupBy(submissionConfirms.submissionId)
+    for (const confirmRow of confirmCounts) {
+      confirmsBySubmissionId.set(confirmRow.submissionId, confirmRow.total)
+    }
+  }
+
+  // reports-per-tier = COUNT(*) over all price_submissions for this event,
+  // grouped by tier. Includes corroborated + pending + counters + disputed
+  // because every row is a "report" of a price at that tier.
+  const reportRowsByTier = await db
+    .select({
+      tier: priceSubmissions.tier,
+      total: count(),
+    })
+    .from(priceSubmissions)
+    .where(eq(priceSubmissions.eventId, id))
+    .groupBy(priceSubmissions.tier)
+  const reportsByTier = new Map<Tier, number>()
+  for (const reportRow of reportRowsByTier) {
+    reportsByTier.set(reportRow.tier, reportRow.total)
+  }
+
+  const aggregateConfirmsNeeded = isImminentEvent(
+    row.date ?? null,
+    SP_POLICY.imminentThresholdDays,
+  )
+    ? SP_POLICY.confirmsRequiredImminent
+    : SP_POLICY.confirmsRequired
+
+  const priceByTier = aggregateByTier({
+    corroborated: allCorroboratedRows.map((sub) => ({
+      ...sub,
+      confirmsCount: confirmsBySubmissionId.get(sub.id) ?? 0,
+    })),
+    pending: truePendingRows.map((sub) => ({
+      id: sub.id,
+      tier: sub.tier,
+      priceMin: sub.priceMin,
+      priceMax: sub.priceMax,
+      vendor: sub.vendor,
+      sourceCategory: sub.sourceCategory,
+      howFound: sub.howFound,
+      note: sub.note,
+      userId: sub.userId,
+      createdAt: sub.createdAt,
+      confirmsCount: confirmsBySubmissionId.get(sub.id) ?? 0,
+    })),
+    counters: counterTierRows,
+    handles: aggregateHandles,
+    reportsByTier,
+    confirmsNeeded: aggregateConfirmsNeeded,
+    viewerUserId: authInfo?.userId ?? null,
+  })
+
   return ctx.json({
     success: true,
     data: {
@@ -629,6 +794,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       priceConfirmsCount,
       counterSubmission,
       pendingSubmissions,
+      priceByTier,
       soldOutReport,
     },
   })

@@ -7,7 +7,13 @@ vi.mock('@hono/clerk-auth', () => ({
 }))
 
 import { createApp } from '../app.js'
-import { clearTables, seedVenue, seedEvent } from '../test/helpers/seed.js'
+import {
+  clearTables,
+  seedVenue,
+  seedEvent,
+  seedUserProfile,
+  seedPriceSubmission,
+} from '../test/helpers/seed.js'
 
 const app = createApp()
 
@@ -253,6 +259,86 @@ describe('GET /v1/events/:id — integration', () => {
     const body = (await res.json()) as { success: boolean; error: string }
     expect(body.success).toBe(false)
     expect(body.error).toBe('Event not found')
+  })
+
+  it('includes priceByTier with per-tier headline + alternates + pending', async () => {
+    const venue = await seedVenue({
+      name: 'Globe Hall',
+      slug: 'globe-hall-pbt',
+    })
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-01',
+      priceSource: 'community',
+    })
+
+    const profileA = await seedUserProfile('user-a', {
+      handle: 'price-watcher',
+    })
+    const profileB = await seedUserProfile('user-b', { handle: 'fan-two' })
+
+    // Corroborated GA box-office at $40
+    await seedPriceSubmission(event.id, profileA.userId, {
+      tier: 'GA',
+      vendor: 'VenueBoxOffice',
+      howFound: 'at_the_venue',
+      sourceCategory: 'boxoffice',
+      priceMin: '40',
+      status: 'corroborated',
+    })
+    // Corroborated GA standard alternate at $50
+    await seedPriceSubmission(event.id, profileB.userId, {
+      tier: 'GA',
+      vendor: 'Ticketmaster',
+      sourceCategory: 'standard',
+      priceMin: '50',
+      status: 'corroborated',
+    })
+    // Pending VIP at $120
+    await seedPriceSubmission(event.id, profileA.userId, {
+      tier: 'VIP',
+      vendor: 'Ticketmaster',
+      sourceCategory: 'standard',
+      priceMin: '120',
+      status: 'pending',
+    })
+
+    const res = await app.request(`/v1/events/${event.id}`)
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      data: {
+        priceByTier: Array<{
+          tier: string
+          headline: { submissionId: string; priceMin: string } | null
+          alternates: Array<{ priceMin: string }>
+          pending: Array<{ priceMin: string }>
+          reports: number
+        }>
+      }
+    }
+
+    expect(body.data.priceByTier).toHaveLength(2)
+    const [gaBlock, vipBlock] = body.data.priceByTier
+    expect(gaBlock?.tier).toBe('GA')
+    expect(parseFloat(gaBlock?.headline?.priceMin ?? '0')).toBe(40)
+    expect(gaBlock?.alternates).toHaveLength(1)
+    expect(parseFloat(gaBlock?.alternates[0]?.priceMin ?? '0')).toBe(50)
+    expect(gaBlock?.reports).toBe(2)
+    expect(vipBlock?.tier).toBe('VIP')
+    expect(vipBlock?.headline).toBeNull()
+    expect(vipBlock?.pending).toHaveLength(1)
+    expect(parseFloat(vipBlock?.pending[0]?.priceMin ?? '0')).toBe(120)
+    expect(vipBlock?.reports).toBe(1)
+  })
+
+  it('priceByTier is empty array when event has no submissions', async () => {
+    const venue = await seedVenue({ name: 'Empty Venue', slug: 'empty-venue' })
+    const event = await seedEvent(venue.id, { date: '2027-06-01' })
+
+    const res = await app.request(`/v1/events/${event.id}`)
+    const body = (await res.json()) as {
+      data: { priceByTier: unknown[] }
+    }
+    expect(body.data.priceByTier).toEqual([])
   })
 })
 

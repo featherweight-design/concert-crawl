@@ -229,17 +229,29 @@ describe('GET /v1/events/:id', () => {
   })
 
   it('returns 200 with event data for a known id', async () => {
-    // event query: select().from().innerJoin().where() → terminal
-    mockDb.where.mockResolvedValueOnce([mockEvent])
-    // watch count query: select().from().where() → terminal
-    mockDb.where.mockResolvedValueOnce([{ total: 0 }])
-    // sold-out report query: ...where().orderBy().limit(1) → terminal via limit;
-    //   the explicit orderBy chain keeps it queued ahead of the next consumer.
+    // The handler runs queries in this order (each .where() call is numbered):
+    //   1. event detail   — select().from().innerJoin().where()            → terminal
+    //   2. watch count    — select().from().where()                        → terminal
+    //   3. sold-out report — select().from().where().orderBy().limit()      → chainable where
+    //   4. pending subs   — select().from().where().orderBy()               → chainable where
+    //   5. priceByTier corroborated — select().from().where()              → terminal
+    //   6. priceByTier pending      — select().from().where()              → terminal
+    //   7. reports-by-tier — select().from().where().groupBy()              → chainable where
+    // Queue mocks in call order so each .where() gets the right behavior.
+    mockDb.where.mockResolvedValueOnce([mockEvent]) // 1
+    mockDb.where.mockResolvedValueOnce([{ total: 0 }]) // 2
+    mockDb.where.mockReturnValueOnce(mockDb) // 3 (chain into orderBy)
+    mockDb.where.mockReturnValueOnce(mockDb) // 4 (chain into orderBy)
+    mockDb.where.mockResolvedValueOnce([]) // 5
+    mockDb.where.mockResolvedValueOnce([]) // 6
+    mockDb.where.mockReturnValueOnce(mockDb) // 7 (chain into groupBy)
+    // sold-out report orderBy → limit terminal
     mockDb.orderBy.mockReturnValueOnce(mockDb)
     mockDb.limit.mockResolvedValueOnce([])
-    // pending-submissions query (entered when ticketPriceMin is null and no
-    // priceApprovalKind): select().from().where().orderBy() → terminal, empty
+    // pending submissions orderBy terminal
     mockDb.orderBy.mockResolvedValueOnce([])
+    // reports-by-tier groupBy terminal
+    mockDb.groupBy.mockResolvedValueOnce([])
 
     const res = await createApp().request(
       '/v1/events/00000000-0000-0000-0000-000000000001',
