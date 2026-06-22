@@ -1,3 +1,10 @@
+# [1.74.0](https://github.com/HartiganHM/concert-crawl/compare/v1.73.0...v1.74.0) (2026-06-22)
+
+
+### Features
+
+* **admin:** include Missing in /admin/review pending header count ([9cc7547](https://github.com/HartiganHM/concert-crawl/commit/9cc75470f3d12375e7027fafb38838fec2f78ff2)), closes [#711](https://github.com/HartiganHM/concert-crawl/issues/711)
+
 # [1.73.0](https://github.com/HartiganHM/concert-crawl/compare/v1.72.0...v1.73.0) (2026-06-22)
 
 
