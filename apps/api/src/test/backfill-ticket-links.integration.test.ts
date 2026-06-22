@@ -23,13 +23,19 @@ async function runBackfill(): Promise<void> {
     .where(isNotNull(events.ticketUrl))
 
   for (const row of rows) {
-    const ticketLinks = deriveTicketLinks(row.ticketUrl, {
+    // Mirror the actual script: empty-string ticketUrl gets normalized to
+    // null and written back alongside ticketLinks so legacy rows from before
+    // the crawler's normalization shipped don't keep the inconsistent
+    // (ticketUrl='', ticketLinks=null) state.
+    const normalizedTicketUrl =
+      row.ticketUrl && row.ticketUrl !== '' ? row.ticketUrl : null
+    const ticketLinks = deriveTicketLinks(normalizedTicketUrl, {
       websiteUrl: row.venueWebsiteUrl,
       ticketVendor: row.venueTicketVendor,
     })
     await testDb
       .update(events)
-      .set({ ticketLinks })
+      .set({ ticketUrl: normalizedTicketUrl, ticketLinks })
       .where(eq(events.id, row.eventId))
   }
 }
@@ -160,5 +166,34 @@ describe('backfill-ticket-links integration', () => {
       .where(eq(events.id, event.id))
 
     expect(afterSecond?.ticketLinks).toEqual(afterFirst?.ticketLinks)
+  })
+
+  it('normalizes legacy empty-string ticketUrl to null and writes both columns', async () => {
+    // Legacy data could carry ticketUrl='' from before the crawler's
+    // normalization fix. Backfill should coerce it to null and keep
+    // ticketLinks null so the two columns agree, not leave the same
+    // inconsistent state crawl.ts now prevents on new writes.
+    const venue = await seedVenue({
+      slug: `empty-ticket-${Date.now()}`,
+      websiteUrl: 'https://www.larimerlounge.com/',
+      ticketVendor: null,
+    })
+    const event = await seedEvent(venue.id, {
+      ticketUrl: '',
+      artist: 'Empty TicketUrl Test',
+    })
+
+    await runBackfill()
+
+    const [reloaded] = await testDb
+      .select({
+        ticketUrl: events.ticketUrl,
+        ticketLinks: events.ticketLinks,
+      })
+      .from(events)
+      .where(eq(events.id, event.id))
+
+    expect(reloaded?.ticketUrl).toBeNull()
+    expect(reloaded?.ticketLinks).toBeNull()
   })
 })

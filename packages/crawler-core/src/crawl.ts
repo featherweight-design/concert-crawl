@@ -597,47 +597,52 @@ export async function crawlVenue(
       })
 
       if (eventsToUpsert.length > 0) {
-        const eventValues = eventsToUpsert.map((event) => ({
-          venueId,
-          title: event.title,
-          artist: event.artist,
-          canonicalArtist: event.canonicalArtist,
-          date: event.date,
-          doorsTime:
-            event.doorsTime && event.doorsTime !== '' ? event.doorsTime : null,
-          showTime:
-            event.showTime && event.showTime !== '' ? event.showTime : null,
+        const eventValues = eventsToUpsert.map((event) => {
           // Empty-string normalization matches doorsTime/showTime so an
           // extractor that yields '' (some LLM/JSON-LD paths do) doesn't
           // persist as a non-null empty URL. Without this, ticketUrl=''
           // ends up paired with ticketLinks=null (deriveTicketLinks treats
           // '' as missing) and downstream consumers can't tell the two
-          // states apart. Compute the normalized value once and pass it to
-          // deriveTicketLinks so both columns agree.
-          ticketUrl: normalizeTicketUrl(event.ticketUrl),
-          // Derived from (ticketUrl + venue context) at upsert time. Replaces
-          // the single-link first-pass backfill from migration 0040 with full
-          // host + vendor inference. See packages/crawler-core/src/lib/
-          // ticket-links/derive.ts for the kind/vendor resolution rules.
-          ticketLinks: deriveTicketLinks(normalizeTicketUrl(event.ticketUrl), {
-            websiteUrl: venue.websiteUrl,
-            ticketVendor: venue.ticketVendor,
-          }),
-          description: event.description ?? null,
-          imageUrl: event.imageUrl ?? null,
-          sourceUrl: event.sourceUrl,
-          sourceHash: event.sourceHash,
-          status: 'upcoming' as const,
-          confidenceScore: event.confidence.toFixed(2),
-          verified: event.confidence >= AUTO_APPROVE_THRESHOLD,
-          extractionStrategy: strategy,
-          // LLM-classified non-concert events get pre-hidden from the consumer
-          // surface (#696). Only takes effect on INSERT — admin owns the field
-          // once the row exists, so onConflictDoUpdate below does NOT include
-          // hiddenFromConsumer in its `set` clause. Mirrors the one-way
-          // promotion pattern for `artist` and `verified` already in this file.
-          hiddenFromConsumer: event.isConcert === false,
-        }))
+          // states apart. Compute once and reuse so both columns agree.
+          const normalizedTicketUrl = normalizeTicketUrl(event.ticketUrl)
+          return {
+            venueId,
+            title: event.title,
+            artist: event.artist,
+            canonicalArtist: event.canonicalArtist,
+            date: event.date,
+            doorsTime:
+              event.doorsTime && event.doorsTime !== ''
+                ? event.doorsTime
+                : null,
+            showTime:
+              event.showTime && event.showTime !== '' ? event.showTime : null,
+            ticketUrl: normalizedTicketUrl,
+            // Derived from (ticketUrl + venue context) at upsert time. Replaces
+            // the single-link first-pass backfill from migration 0040 with full
+            // host + vendor inference. See packages/crawler-core/src/lib/
+            // ticket-links/derive.ts for the kind/vendor resolution rules.
+            ticketLinks: deriveTicketLinks(normalizedTicketUrl, {
+              websiteUrl: venue.websiteUrl,
+              ticketVendor: venue.ticketVendor,
+            }),
+            description: event.description ?? null,
+            imageUrl: event.imageUrl ?? null,
+            sourceUrl: event.sourceUrl,
+            sourceHash: event.sourceHash,
+            status: 'upcoming' as const,
+            confidenceScore: event.confidence.toFixed(2),
+            verified: event.confidence >= AUTO_APPROVE_THRESHOLD,
+            extractionStrategy: strategy,
+            // LLM-classified non-concert events get pre-hidden from the
+            // consumer surface (#696). Only takes effect on INSERT — admin
+            // owns the field once the row exists, so onConflictDoUpdate below
+            // does NOT include hiddenFromConsumer in its `set` clause. Mirrors
+            // the one-way promotion pattern for `artist` and `verified`
+            // already in this file.
+            hiddenFromConsumer: event.isConcert === false,
+          }
+        })
 
         for (const evt of eventsToUpsert) {
           if (existingMap.has(`${evt.canonicalArtist}|${evt.date}`)) {

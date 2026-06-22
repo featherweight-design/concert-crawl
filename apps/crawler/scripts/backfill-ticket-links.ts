@@ -45,14 +45,27 @@ async function main(): Promise<void> {
     if (batch.length === 0) break
 
     for (const row of batch) {
-      const ticketLinks = deriveTicketLinks(row.ticketUrl, {
+      // Normalize empty-string ticketUrl to null and write it back alongside
+      // ticketLinks. The crawler now coerces empty → null on every upsert,
+      // but legacy rows could still have ticketUrl='' from before that fix
+      // shipped. Without this normalization the backfill would leave the
+      // same inconsistent state (ticketUrl='' + ticketLinks=null) that
+      // crawl.ts is preventing on new writes. Write both columns so they
+      // agree after the backfill runs.
+      const normalizedTicketUrl =
+        row.ticketUrl && row.ticketUrl !== '' ? row.ticketUrl : null
+      const ticketLinks = deriveTicketLinks(normalizedTicketUrl, {
         websiteUrl: row.venueWebsiteUrl,
         ticketVendor: row.venueTicketVendor,
       })
 
       await db
         .update(events)
-        .set({ ticketLinks, updatedAt: new Date() })
+        .set({
+          ticketUrl: normalizedTicketUrl,
+          ticketLinks,
+          updatedAt: new Date(),
+        })
         .where(eq(events.id, row.eventId))
       updated += 1
     }
