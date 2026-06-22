@@ -284,8 +284,11 @@ describe('aggregateByTier', () => {
       ]),
     })
 
-    // GA's min (150) is BELOW VIP's min (120) — wait, the other way: VIP min is 120, GA min is 150
-    // So VIP should come first.
+    // VIP's cheapest pending is $120; GA's only pending is $150. VIP should
+    // lead because its min is lower — even though the VIP pending list's
+    // pending[0] is the $200 VenueBoxOffice row (sorted VenueBoxOffice-first
+    // for display). compareBlocks has to scan all pending rows for the true
+    // min, not trust pending[0].
     expect(blocks.map((block) => block.tier)).toEqual(['VIP', 'GA'])
   })
 })

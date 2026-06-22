@@ -447,7 +447,12 @@ export interface EventDetailResponse extends EventWithVenue {
     confirmsCount: number
     reportedAt: string
   } | null
-  // All pending submissions when no corroborated price exists yet
+  // All pending submissions whenever any exist (PR 3 dropped the
+  // "only when no corroborated price" gate so multi-tier pending stays
+  // visible alongside corroborated tiers). Counter rows that surface via
+  // counterSubmission / priceByTier.counterSubmission are excluded so they
+  // don't double-appear here. Deprecated — PR 4 migrates consumers to
+  // priceByTier; the Contract PR drops this field.
   pendingSubmissions?: Array<{
     id: string
     priceMin: string

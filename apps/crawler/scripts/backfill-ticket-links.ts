@@ -1,4 +1,4 @@
-import { eq, isNotNull } from 'drizzle-orm'
+import { asc, eq, gt, isNotNull, and } from 'drizzle-orm'
 import { db, events, venues } from '@concert-crawl/db'
 import { deriveTicketLinks } from '@concert-crawl/crawler-core'
 
@@ -11,38 +11,66 @@ import { deriveTicketLinks } from '@concert-crawl/crawler-core'
 // Lives in apps/crawler (not packages/db) because the helper is in
 // @concert-crawl/crawler-core, which already depends on @concert-crawl/db —
 // putting the script in db would create a circular workspace dependency.
+//
+// Keyset-paginates over events.id ascending in BATCH_SIZE chunks so memory
+// stays bounded and progress is reportable. 500 keeps each round-trip small
+// enough to interleave with normal traffic without spiking active connections.
+
+const BATCH_SIZE = 500
 
 async function main(): Promise<void> {
   console.warn('[backfill-ticket-links] starting')
 
-  const rows = await db
-    .select({
-      eventId: events.id,
-      ticketUrl: events.ticketUrl,
-      venueWebsiteUrl: venues.websiteUrl,
-      venueTicketVendor: venues.ticketVendor,
-    })
-    .from(events)
-    .innerJoin(venues, eq(events.venueId, venues.id))
-    .where(isNotNull(events.ticketUrl))
-
-  console.warn(`[backfill-ticket-links] ${rows.length} rows to consider`)
-
+  let cursor: string | null = null
+  let scanned = 0
   let updated = 0
-  for (const row of rows) {
-    const ticketLinks = deriveTicketLinks(row.ticketUrl, {
-      websiteUrl: row.venueWebsiteUrl,
-      ticketVendor: row.venueTicketVendor,
-    })
 
-    await db
-      .update(events)
-      .set({ ticketLinks, updatedAt: new Date() })
-      .where(eq(events.id, row.eventId))
-    updated += 1
+  for (;;) {
+    const conditions = [isNotNull(events.ticketUrl)]
+    if (cursor !== null) conditions.push(gt(events.id, cursor))
+
+    const batch = await db
+      .select({
+        eventId: events.id,
+        ticketUrl: events.ticketUrl,
+        venueWebsiteUrl: venues.websiteUrl,
+        venueTicketVendor: venues.ticketVendor,
+      })
+      .from(events)
+      .innerJoin(venues, eq(events.venueId, venues.id))
+      .where(and(...conditions))
+      .orderBy(asc(events.id))
+      .limit(BATCH_SIZE)
+
+    if (batch.length === 0) break
+
+    for (const row of batch) {
+      const ticketLinks = deriveTicketLinks(row.ticketUrl, {
+        websiteUrl: row.venueWebsiteUrl,
+        ticketVendor: row.venueTicketVendor,
+      })
+
+      await db
+        .update(events)
+        .set({ ticketLinks, updatedAt: new Date() })
+        .where(eq(events.id, row.eventId))
+      updated += 1
+    }
+
+    scanned += batch.length
+    const lastRow = batch[batch.length - 1]
+    if (lastRow === undefined) break
+    cursor = lastRow.eventId
+    console.warn(
+      `[backfill-ticket-links] scanned=${scanned} updated=${updated} cursor=${cursor}`,
+    )
+
+    if (batch.length < BATCH_SIZE) break
   }
 
-  console.warn(`[backfill-ticket-links] updated ${updated} rows`)
+  console.warn(
+    `[backfill-ticket-links] done — scanned=${scanned} updated=${updated}`,
+  )
 }
 
 main()

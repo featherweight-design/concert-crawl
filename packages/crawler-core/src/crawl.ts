@@ -51,6 +51,14 @@ export const DEBUG_CAPTURE_CHUNK_CHARS = 2000
 // want to inspect.
 export const DEBUG_CAPTURE_MAX_CHARS = 80_000
 
+// Normalize an extractor-provided ticket URL. Empty strings become null so
+// events.ticket_url and events.ticket_links agree on "no URL available" —
+// deriveTicketLinks already treats '' as missing, but the column would
+// otherwise persist as a non-null empty string.
+function normalizeTicketUrl(url: string | null | undefined): string | null {
+  return url && url !== '' ? url : null
+}
+
 interface DebugCaptureContext {
   venueId: string
   venueSlug: string
@@ -599,12 +607,19 @@ export async function crawlVenue(
             event.doorsTime && event.doorsTime !== '' ? event.doorsTime : null,
           showTime:
             event.showTime && event.showTime !== '' ? event.showTime : null,
-          ticketUrl: event.ticketUrl ?? null,
+          // Empty-string normalization matches doorsTime/showTime so an
+          // extractor that yields '' (some LLM/JSON-LD paths do) doesn't
+          // persist as a non-null empty URL. Without this, ticketUrl=''
+          // ends up paired with ticketLinks=null (deriveTicketLinks treats
+          // '' as missing) and downstream consumers can't tell the two
+          // states apart. Compute the normalized value once and pass it to
+          // deriveTicketLinks so both columns agree.
+          ticketUrl: normalizeTicketUrl(event.ticketUrl),
           // Derived from (ticketUrl + venue context) at upsert time. Replaces
           // the single-link first-pass backfill from migration 0040 with full
           // host + vendor inference. See packages/crawler-core/src/lib/
           // ticket-links/derive.ts for the kind/vendor resolution rules.
-          ticketLinks: deriveTicketLinks(event.ticketUrl, {
+          ticketLinks: deriveTicketLinks(normalizeTicketUrl(event.ticketUrl), {
             websiteUrl: venue.websiteUrl,
             ticketVendor: venue.ticketVendor,
           }),

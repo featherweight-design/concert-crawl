@@ -1,5 +1,6 @@
 export {
   aggregateByTier,
+  pickHeadlinesByTier,
   type AggregateByTierInput,
   type CorroboratedTierRow,
   type CounterTierRow,

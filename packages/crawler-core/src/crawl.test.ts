@@ -364,6 +364,32 @@ describe('crawlVenue — ticketLinks derivation', () => {
     )
     expect(insertedEvent?.ticketLinks).toBeNull()
   })
+
+  it('normalizes an empty-string ticketUrl to null on both columns (no inconsistent state)', async () => {
+    // Regression for PR 722 audit: an LLM/JSON-LD path that yields ticketUrl=''
+    // would persist as the literal empty string while ticketLinks became null
+    // (deriveTicketLinks treats '' as missing). Downstream consumers couldn't
+    // tell that the URL is unavailable. The crawler now coerces empty → null
+    // for both columns so they agree.
+    const venue = seedVenue()
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [{ ...METALLICA_EVENT, ticketUrl: '' }],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const insertedEvent = stores.events.find(
+      (row: { venueId: string }) => row.venueId === venue.id,
+    )
+    expect(insertedEvent?.ticketUrl).toBeNull()
+    expect(insertedEvent?.ticketLinks).toBeNull()
+  })
 })
 
 describe('crawlVenue — event-level sourceHash', () => {

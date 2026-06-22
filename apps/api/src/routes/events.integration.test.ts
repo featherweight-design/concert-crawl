@@ -401,6 +401,94 @@ describe('GET /v1/events/:id — integration', () => {
     }
   })
 
+  it('surfaces multiple counters against the same headline (older ones in pending, newest in counterSubmission)', async () => {
+    // Regression for the PR 723 audit (events.ts:499): truePendingRows used
+    // to exclude ALL pending rows tagged as counters, even though only the
+    // newest one per headline actually attaches to counterSubmission. Older
+    // counters became invisible. After the fix, only the attached counter
+    // is hidden from pending — every other dispute row stays visible.
+    const venue = await seedVenue({
+      name: 'Multi Counter',
+      slug: 'multi-counter',
+    })
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-01',
+      priceSource: 'community',
+    })
+
+    const submitter = await seedUserProfile('mc-parent', { handle: 'parent' })
+    const oldChallenger = await seedUserProfile('mc-old', { handle: 'old' })
+    const newChallenger = await seedUserProfile('mc-new', { handle: 'new' })
+
+    const parent = await seedPriceSubmission(event.id, submitter.userId, {
+      tier: 'GA',
+      vendor: 'Ticketmaster',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      status: 'corroborated',
+    })
+
+    // Older counter — should remain visible in pendingSubmissions /
+    // priceByTier[].pending after the fix.
+    const olderCounter = await seedPriceSubmission(
+      event.id,
+      oldChallenger.userId,
+      {
+        tier: 'GA',
+        vendor: 'Ticketmaster',
+        sourceCategory: 'standard',
+        priceMin: '32',
+        status: 'pending',
+        disputedSubmissionId: parent.id,
+        createdAt: new Date('2026-06-10T00:00:00Z'),
+      },
+    )
+    // Newer counter — this is the one that attaches as counterSubmission.
+    const newerCounter = await seedPriceSubmission(
+      event.id,
+      newChallenger.userId,
+      {
+        tier: 'GA',
+        vendor: 'Ticketmaster',
+        sourceCategory: 'standard',
+        priceMin: '30',
+        status: 'pending',
+        disputedSubmissionId: parent.id,
+        createdAt: new Date('2026-06-20T00:00:00Z'),
+      },
+    )
+
+    const res = await app.request(`/v1/events/${event.id}`)
+    const body = (await res.json()) as {
+      data: {
+        pendingSubmissions: Array<{ id: string }> | null
+        counterSubmission: { id: string } | null
+        priceByTier: Array<{
+          counterSubmission: { id: string } | null
+          pending: Array<{ id: string }>
+        }>
+      }
+    }
+
+    // The newest counter is the attached one.
+    expect(body.data.counterSubmission?.id).toBe(newerCounter.id)
+    expect(body.data.priceByTier[0]?.counterSubmission?.id).toBe(
+      newerCounter.id,
+    )
+
+    // The OLDER counter must still appear in pendingSubmissions /
+    // priceByTier[].pending so the user can see every challenge.
+    const pendingIds = body.data.pendingSubmissions?.map((sub) => sub.id) ?? []
+    expect(pendingIds).toContain(olderCounter.id)
+    expect(pendingIds).not.toContain(newerCounter.id)
+
+    const tierPendingIds = body.data.priceByTier[0]?.pending.map(
+      (sub) => sub.id,
+    )
+    expect(tierPendingIds).toContain(olderCounter.id)
+    expect(tierPendingIds).not.toContain(newerCounter.id)
+  })
+
   it('pendingSubmissions is populated even when a corroborated price exists', async () => {
     const venue = await seedVenue({
       name: 'Pending Always',

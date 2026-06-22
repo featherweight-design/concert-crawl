@@ -1196,7 +1196,7 @@ const counterRows = pendingRows
 
 // True pending = pending rows that are NOT counters (counters are surfaced
 // via the headline's counterSubmission field, not the tier's pending list).
-const trueePendingRows = pendingRows.filter(
+const truePendingRows = pendingRows.filter(
   (row) =>
     row.disputedSubmissionId === null ||
     !corroboratedIds.has(row.disputedSubmissionId),
@@ -1207,7 +1207,7 @@ const allUserIds = Array.from(
   new Set(
     [
       ...corroboratedRows.map((row) => row.userId),
-      ...trueePendingRows.map((row) => row.userId),
+      ...truePendingRows.map((row) => row.userId),
       ...counterRows.map((row) => row.userId),
     ].filter((uid): uid is string => uid !== null),
   ),
@@ -1226,7 +1226,7 @@ if (allUserIds.length > 0) {
 // Batch confirm-count lookups for every corroborated + pending submission.
 const allSubIds = [
   ...corroboratedRows.map((row) => row.id),
-  ...trueePendingRows.map((row) => row.id),
+  ...truePendingRows.map((row) => row.id),
 ]
 const confirmsBySubmissionId = new Map<string, number>()
 if (allSubIds.length > 0) {
@@ -1271,7 +1271,7 @@ const priceByTier = aggregateByTier({
     ...row,
     confirmsCount: confirmsBySubmissionId.get(row.id) ?? 0,
   })),
-  pending: trueePendingRows.map((row) => ({
+  pending: truePendingRows.map((row) => ({
     id: row.id,
     tier: row.tier,
     priceMin: row.priceMin,
@@ -1292,7 +1292,7 @@ const priceByTier = aggregateByTier({
 })
 ```
 
-Then keep the existing flat-field derivation (`priceVendor`, `priceSubmitterHandle`, `priceObservedAt`, `priceApprovalKind`, `priceApprovedAt`, `priceAlternates`, `priceConfirmsCount`, `counterSubmission`) so PR 4 has the migration buffer. **The flat derivation must be left intact** — re-derive from `corroboratedRows`/`trueePendingRows` instead of running a second query, but the produced shape is unchanged.
+Then keep the existing flat-field derivation (`priceVendor`, `priceSubmitterHandle`, `priceObservedAt`, `priceApprovalKind`, `priceApprovedAt`, `priceAlternates`, `priceConfirmsCount`, `counterSubmission`) so PR 4 has the migration buffer. **The flat derivation must be left intact** — re-derive from `corroboratedRows`/`truePendingRows` instead of running a second query, but the produced shape is unchanged.
 
 Finally, in the `return ctx.json({ ... })` payload (~line 616), add `priceByTier` to the `data` object alongside the existing fields:
 
@@ -1431,7 +1431,7 @@ if (row.ticketPriceMin === null && priceApprovalKind === null) {
 }
 ```
 
-Replace with an unconditional pending-population block. The simplest path: now that Task 4 already loads `trueePendingRows` for `priceByTier`, derive `pendingSubmissions` directly from that dataset instead of re-querying:
+Replace with an unconditional pending-population block. The simplest path: now that Task 4 already loads `truePendingRows` for `priceByTier`, derive `pendingSubmissions` directly from that dataset instead of re-querying:
 
 ```typescript
 // Always surface pending submissions when any exist (PR 3 — was previously
@@ -1454,9 +1454,9 @@ let pendingSubmissions: Array<{
   isSubmitter: boolean
 }> | null = null
 
-if (trueePendingRows.length > 0) {
+if (truePendingRows.length > 0) {
   // Reuse the same VenueBoxOffice-first ordering as before.
-  const ordered = [...trueePendingRows].sort((left, right) => {
+  const ordered = [...truePendingRows].sort((left, right) => {
     const leftBox = left.vendor === 'VenueBoxOffice' ? 0 : 1
     const rightBox = right.vendor === 'VenueBoxOffice' ? 0 : 1
     if (leftBox !== rightBox) return leftBox - rightBox
@@ -1489,7 +1489,7 @@ This also removes the duplicate pending-query that the old gated block ran (the 
 pnpm --filter @concert-crawl/api test:integration -- events.integration
 ```
 
-Expected: PASS — new test green, no regression in the original gated tests (the old behavior of "suppress when no submissions exist" still holds because we only populate when `trueePendingRows.length > 0`).
+Expected: PASS — new test green, no regression in the original gated tests (the old behavior of "suppress when no submissions exist" still holds because we only populate when `truePendingRows.length > 0`).
 
 - [ ] **Step 5: Quality gate**
 

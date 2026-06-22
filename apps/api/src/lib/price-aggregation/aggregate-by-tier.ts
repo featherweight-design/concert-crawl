@@ -9,7 +9,11 @@ import type {
   TierPriceBlock,
   Vendor,
 } from '@concert-crawl/types'
-import { compareTierRows, type TierRow } from './pick-tier-headline.js'
+import {
+  compareTierRows,
+  pickTierHeadline,
+  type TierRow,
+} from './pick-tier-headline.js'
 
 export interface CorroboratedTierRow extends TierRow {
   tier: Tier
@@ -66,6 +70,27 @@ function groupByTier<RowType extends { tier: Tier }>(
     }
   }
   return map
+}
+
+// Pick the headline (top-trust row) for each tier present in the input.
+// Exported so callers that need to know which corroborated rows are the
+// per-tier headlines — e.g. to decide which pending counter actually
+// attaches as counterSubmission — can use the same selection rule the
+// composer uses internally. Keeps the headline pick canonical in one place.
+//
+// Generic over any row that carries `tier` plus the comparator's TierRow
+// fields so callers can pass either the bare DB row shape (pre-confirms
+// enrichment) or the full CorroboratedTierRow without an extra map step.
+export function pickHeadlinesByTier<RowType extends TierRow & { tier: Tier }>(
+  rows: readonly RowType[],
+): Map<Tier, RowType> {
+  const grouped = groupByTier(rows)
+  const headlines = new Map<Tier, RowType>()
+  for (const [tier, tierRows] of grouped) {
+    const head = pickTierHeadline(tierRows)
+    if (head !== null) headlines.set(tier, head)
+  }
+  return headlines
 }
 
 function buildHeadline(

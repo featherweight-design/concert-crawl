@@ -34,14 +34,14 @@
 - `packages/crawler-core/src/lib/ticket-links/derive.ts` — `deriveTicketLinks(ticketUrl, venue): TicketLink[] | null`. The composer that consumes host-rules + parse-host and returns the typed array.
 - `packages/crawler-core/src/lib/ticket-links/derive.test.ts`
 - `packages/crawler-core/src/lib/ticket-links/index.ts` — barrel re-export of `deriveTicketLinks` and the `TicketLinkVenueContext` interface.
-- `packages/db/backfill-ticket-links.ts` — one-shot CLI: iterate every event row, derive `ticketLinks` from current `ticketUrl` + venue, update in place. Idempotent.
-- `packages/db/scripts/backfill-ticket-links.test.ts` — integration test: seed events with `ticketUrl` only, run the script, assert resulting `ticketLinks`.
+- `apps/crawler/scripts/backfill-ticket-links.ts` — one-shot CLI: iterate every event row, derive `ticketLinks` from current `ticketUrl` + venue, update in place. Idempotent.
+- `apps/api/src/test/backfill-ticket-links.integration.test.ts` — integration test: seed events with `ticketUrl` only, run the script, assert resulting `ticketLinks`.
 
 **Modify:**
 
 - `packages/crawler-core/src/crawl.ts` — at the eventValues map (currently ~line 591–616), also populate `ticketLinks: deriveTicketLinks(event.ticketUrl, venueRecord)`. Add `ticketLinks: sql\`excluded.ticket_links\``to the`onConflictDoUpdate.set` clause (currently ~line 638–658) so re-crawls refresh the array.
 - `packages/crawler-core/src/crawl.test.ts` — extend the existing upsert-path test to assert `ticketLinks` lands on the row.
-- `packages/db/package.json` — add a `db:backfill-ticket-links` script that runs the new CLI.
+- `apps/crawler/package.json` — add a `backfill-ticket-links` script that runs the new CLI.
 
 **Not modified:**
 
@@ -791,25 +791,25 @@ git commit -m "feat(crawler-core): emit ticketLinks on every event upsert"
 
 **Files:**
 
-- Create: `packages/db/backfill-ticket-links.ts`
-- Modify: `packages/db/package.json` (add script entry)
+- Create: `apps/crawler/scripts/backfill-ticket-links.ts`
+- Modify: `apps/crawler/package.json` (add script entry)
 
 **Interfaces:**
 
 - Consumes: `deriveTicketLinks` from `@concert-crawl/crawler-core`; `db`, `events`, `venues` from `@concert-crawl/db`.
-- Produces: a CLI executable via `pnpm --filter @concert-crawl/db db:backfill-ticket-links` that re-derives every event's `ticket_links` from its current `(ticket_url, venue)`.
+- Produces: a CLI executable via `pnpm --filter @concert-crawl/crawler backfill-ticket-links` that re-derives every event's `ticket_links` from its current `(ticket_url, venue)`.
 
 - [ ] **Step 1: Add the package.json script entry**
 
-In `packages/db/package.json`, under `scripts`, add:
+In `apps/crawler/package.json`, under `scripts`, add:
 
 ```json
-"db:backfill-ticket-links": "tsx backfill-ticket-links.ts"
+"backfill-ticket-links": "tsx scripts/backfill-ticket-links.ts"
 ```
 
 - [ ] **Step 2: Implement the script**
 
-Create `packages/db/backfill-ticket-links.ts` (sibling to `seed.ts` — that's the established convention for one-shot CLIs in this package):
+Create `apps/crawler/scripts/backfill-ticket-links.ts` (sibling to `seed.ts` — that's the established convention for one-shot CLIs in this package):
 
 ```typescript
 import { eq, isNotNull } from 'drizzle-orm'
@@ -875,8 +875,8 @@ Expected: PASS.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add packages/db/backfill-ticket-links.ts \
-        packages/db/package.json
+git add apps/crawler/scripts/backfill-ticket-links.ts \
+        apps/crawler/package.json
 git commit -m "feat(db): add backfill-ticket-links CLI script"
 ```
 
@@ -1141,7 +1141,7 @@ PR 2 of 4 for the price-source-discoverability cycle (issues #641 + #644). Crawl
 - kind resolution: venue-host match → \`boxoffice\`; \`venue.ticket_vendor='venue_box_office'\` → \`boxoffice\`; resale host → \`resale\`; otherwise \`primary\`.
 - vendor resolution: URL-derived first, venue-fallback second, null otherwise.
 - Wired into \`crawl.ts\` INSERT + ON CONFLICT UPDATE paths.
-- One-shot \`packages/db/backfill-ticket-links.ts\` CLI re-derives every existing row so prod data reflects the heuristic immediately (idempotent).
+- One-shot \`apps/crawler/scripts/backfill-ticket-links.ts\` CLI re-derives every existing row so prod data reflects the heuristic immediately (idempotent).
 
 Extractors (JSON-LD, LLM, AEG fetcher) are unchanged — derivation happens at the single upsert site.
 
@@ -1149,7 +1149,7 @@ Extractors (JSON-LD, LLM, AEG fetcher) are unchanged — derivation happens at t
 
 1. \`pnpm -r typecheck && pnpm -r test\` — all green.
 2. \`pnpm --filter @concert-crawl/api test:integration\` — 5 new backfill integration tests + the existing 241 stay green.
-3. \`pnpm --filter @concert-crawl/db db:backfill-ticket-links\` against the local dev DB — should update every event row idempotently.
+3. \`pnpm --filter @concert-crawl/crawler backfill-ticket-links\` against the local dev DB — should update every event row idempotently.
 4. \`psql\` check: \`SELECT ticket_url, ticket_links FROM events WHERE ticket_url IS NOT NULL LIMIT 5;\` — every row's \`ticket_links\` should be a single-element array whose \`kind\` matches the derivation rules.
 
 ## What's next after merge

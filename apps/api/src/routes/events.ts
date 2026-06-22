@@ -34,7 +34,10 @@ import { SP_POLICY, type Tier } from '@concert-crawl/types'
 import { isImminentEvent, todayInTimezone } from '../lib/time.js'
 import { apiLogger } from '../lib/logger.js'
 import { serviceOrClerkAuth } from '../middleware/auth.js'
-import { aggregateByTier } from '../lib/price-aggregation/index.js'
+import {
+  aggregateByTier,
+  pickHeadlinesByTier,
+} from '../lib/price-aggregation/index.js'
 
 const uuidSchema = z.string().uuid()
 
@@ -490,12 +493,56 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     })
     .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
 
-  // truePendingRows excludes the counters we just split out. Disputes that
-  // point at a corroborated parent with a mismatched tier (or at a non-
-  // corroborated row) stay here so the user can still see them as pending.
-  const counterIds = new Set(counterTierRows.map((sub) => sub.id))
+  // Resolve the per-tier headlines AND the legacy flat-field primary so both
+  // the truePendingRows filter and the flat-field derivation below share a
+  // single source of truth for "which corroborated row leads".
+  const headlinesByTier = pickHeadlinesByTier(allCorroboratedRows)
+
+  // Legacy vendor-trust ordering preserved for the flat priceVendor /
+  // priceAlternates / counterSubmission shape during the PR 4 migration
+  // window. May pick a different "primary" than any per-tier headline does.
+  const isCommunityPriced =
+    row.priceSource === 'community' && allCorroboratedRows.length > 0
+  const legacySortedCorroborated = isCommunityPriced
+    ? [...allCorroboratedRows].sort((left, right) => {
+        const trust = (vendor: string): number => {
+          if (vendor === 'VenueBoxOffice') return 0
+          if (vendor === 'SeatGeek') return 2
+          return 1
+        }
+        const trustDelta = trust(left.vendor) - trust(right.vendor)
+        if (trustDelta !== 0) return trustDelta
+        return right.createdAt.getTime() - left.createdAt.getTime()
+      })
+    : []
+  const legacyPrimary = legacySortedCorroborated[0] ?? null
+
+  // truePendingRows excludes ONLY the counter rows that actually surface
+  // somewhere via counterSubmission — either as the flat-field counter
+  // (legacy primary's newest counter) or as a per-tier headline's counter
+  // inside priceByTier. Every other dispute row stays in pending so it
+  // remains visible to the user.
+  //
+  // Without this discipline, older counters against the same headline and
+  // counters against alternate (non-headline) corroborated rows would
+  // disappear from both pendingSubmissions and priceByTier[].pending — the
+  // PR 723 audit caught exactly this regression.
+  const attachedCounterIds = new Set<string>()
+  for (const [tier, head] of headlinesByTier) {
+    const newest = counterTierRows.find(
+      (sub) => sub.tier === tier && sub.parentSubmissionId === head.id,
+    )
+    if (newest) attachedCounterIds.add(newest.id)
+  }
+  if (legacyPrimary) {
+    const flatCounter = counterTierRows.find(
+      (sub) => sub.parentSubmissionId === legacyPrimary.id,
+    )
+    if (flatCounter) attachedCounterIds.add(flatCounter.id)
+  }
+
   const truePendingRows = allPendingRows.filter(
-    (sub) => !counterIds.has(sub.id),
+    (sub) => !attachedCounterIds.has(sub.id),
   )
 
   // Batch handle lookups across every userId surfaced in any block.
@@ -569,58 +616,42 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   // / counterSubmission shape during the PR 4 migration window. Reads from
   // the in-memory allCorroboratedRows + side-tables that priceByTier also
   // consumes, so the two payload shapes share a single source of truth.
-  if (row.priceSource === 'community' && allCorroboratedRows.length > 0) {
-    const legacyVendorTrust = (vendor: string): number => {
-      if (vendor === 'VenueBoxOffice') return 0
-      if (vendor === 'SeatGeek') return 2
-      return 1
-    }
-    const legacySorted = [...allCorroboratedRows].sort((left, right) => {
-      const trustDelta =
-        legacyVendorTrust(left.vendor) - legacyVendorTrust(right.vendor)
-      if (trustDelta !== 0) return trustDelta
-      return right.createdAt.getTime() - left.createdAt.getTime()
-    })
+  if (legacyPrimary) {
+    const otherSubs = legacySortedCorroborated.slice(1)
+    priceVendor = legacyPrimary.vendor
+    priceObservedAt = legacyPrimary.createdAt.toISOString()
+    priceApprovedAt = legacyPrimary.updatedAt.toISOString()
+    priceConfirmsCount = confirmsBySubmissionId.get(legacyPrimary.id) ?? 0
+    priceApprovalKind = priceConfirmsCount > 0 ? 'fan' : 'admin'
+    priceSubmitterHandle =
+      legacyPrimary.userId !== null
+        ? (aggregateHandles.get(legacyPrimary.userId) ?? null)
+        : null
+    priceAlternates = otherSubs.map((sub) => ({
+      vendor: sub.vendor,
+      priceMin: sub.priceMin,
+      priceMax: sub.priceMax,
+    }))
 
-    const [latestSub, ...otherSubs] = legacySorted
-
-    if (latestSub) {
-      priceVendor = latestSub.vendor
-      priceObservedAt = latestSub.createdAt.toISOString()
-      priceApprovedAt = latestSub.updatedAt.toISOString()
-      priceConfirmsCount = confirmsBySubmissionId.get(latestSub.id) ?? 0
-      priceApprovalKind = priceConfirmsCount > 0 ? 'fan' : 'admin'
-      priceSubmitterHandle =
-        latestSub.userId !== null
-          ? (aggregateHandles.get(latestSub.userId) ?? null)
+    // counterTierRows is sorted newest-first and filtered to tier-match
+    // counters. Pick the newest counter whose parent is the legacy primary.
+    const counter = counterTierRows.find(
+      (sub) => sub.parentSubmissionId === legacyPrimary.id,
+    )
+    if (counter) {
+      const counterHandle =
+        counter.userId !== null
+          ? (aggregateHandles.get(counter.userId) ?? null)
           : null
-      priceAlternates = otherSubs.map((sub) => ({
-        vendor: sub.vendor,
-        priceMin: sub.priceMin,
-        priceMax: sub.priceMax,
-      }))
-
-      // counterTierRows is sorted newest-first and filtered to tier-match
-      // counters. Pick the newest counter whose parent is the legacy
-      // "primary" submission.
-      const counter = counterTierRows.find(
-        (sub) => sub.parentSubmissionId === latestSub.id,
-      )
-      if (counter) {
-        const counterHandle =
-          counter.userId !== null
-            ? (aggregateHandles.get(counter.userId) ?? null)
-            : null
-        const counterCeiling =
-          counter.priceMax !== null ? parseFloat(counter.priceMax) : null
-        counterSubmission = {
-          id: counter.id,
-          parentSubmissionId: counter.parentSubmissionId,
-          floor: parseFloat(counter.priceMin),
-          ...(counterCeiling !== null ? { ceiling: counterCeiling } : {}),
-          submitter: counterHandle !== null ? { handle: counterHandle } : null,
-          submittedAt: counter.createdAt.toISOString(),
-        }
+      const counterCeiling =
+        counter.priceMax !== null ? parseFloat(counter.priceMax) : null
+      counterSubmission = {
+        id: counter.id,
+        parentSubmissionId: counter.parentSubmissionId,
+        floor: parseFloat(counter.priceMin),
+        ...(counterCeiling !== null ? { ceiling: counterCeiling } : {}),
+        submitter: counterHandle !== null ? { handle: counterHandle } : null,
+        submittedAt: counter.createdAt.toISOString(),
       }
     }
   }
