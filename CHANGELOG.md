@@ -1,3 +1,11 @@
+## [1.71.2](https://github.com/HartiganHM/concert-crawl/compare/v1.71.1...v1.71.2) (2026-06-22)
+
+
+### Bug Fixes
+
+* **admin:** drop redundant scroll container from Price coverage table ([7a47add](https://github.com/HartiganHM/concert-crawl/commit/7a47add07deef6a56c9faa37f9fecf87bb63c7ef)), closes [#713](https://github.com/HartiganHM/concert-crawl/issues/713) [#693](https://github.com/HartiganHM/concert-crawl/issues/693)
+* **admin:** use JSX-style comment in PriceCoverageTable ([1eaf0b7](https://github.com/HartiganHM/concert-crawl/commit/1eaf0b7ede50f63e206f3d748b717d6889b2ec3f))
+
 ## [1.71.1](https://github.com/HartiganHM/concert-crawl/compare/v1.71.0...v1.71.1) (2026-06-22)
 
 
