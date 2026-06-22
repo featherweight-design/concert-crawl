@@ -22,6 +22,7 @@ import { AdminReviewMobile } from './AdminReviewMobile'
 import { ReviewTabs, type ReviewTabDescriptor } from './ReviewTabs'
 import { EventFlagsTabContent } from './_tabs/EventFlagsTabContent'
 import { editEventHref } from '@/lib/admin/edit-event-link'
+import { computePendingCount } from '@/lib/admin/review-pending'
 import { PricesTabContent } from './_tabs/PricesTabContent'
 import { AllEventsTabContent } from './_tabs/AllEventsTabContent'
 import {
@@ -457,14 +458,10 @@ export const ReviewPageClient = ({
     [getToken, invalidate, router],
   )
 
-  // Pending count drives the header pill ("X pending") and the mobile
-  // subtitle. Includes every triage tab — Event Flags (verified=false),
-  // Prices (community submissions awaiting moderation), and Missing
-  // (stale-crawl events needing a postpone/cancel/dismiss decision).
-  // All three are work items the admin needs to act on, so they share
-  // the "pending" semantic (#711). Counts are server-driven so they
-  // stay accurate beyond the first page of any individual tab.
-  const pendingCount = counts.eventFlags + counts.prices + counts.missing
+  // Pending count formula is extracted so a unit test can pin it — see
+  // lib/admin/review-pending.ts. Server-driven counts so the number
+  // stays accurate beyond the first page of any individual tab.
+  const pendingCount = computePendingCount(counts)
 
   const sectionHead = (
     <SectionHead
