@@ -284,6 +284,88 @@ describe('crawlVenue — page-level skip', () => {
   })
 })
 
+describe('crawlVenue — ticketLinks derivation', () => {
+  it('emits a boxoffice TicketLink when the ticketUrl host matches the venue host', async () => {
+    // METALLICA_EVENT.ticketUrl is 'https://test-venue.example.com/tickets',
+    // which matches the seedVenue websiteUrl host (test-venue.example.com).
+    // The derived TicketLink should therefore mark kind='boxoffice'.
+    const venue = seedVenue()
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [METALLICA_EVENT],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const insertedEvent = stores.events.find(
+      (row: { venueId: string }) => row.venueId === venue.id,
+    )
+    expect(insertedEvent?.ticketLinks).toEqual([
+      {
+        kind: 'boxoffice',
+        vendor: null,
+        url: 'https://test-venue.example.com/tickets',
+      },
+    ])
+  })
+
+  it('emits a primary TicketLink with Ticketmaster vendor when the ticketUrl is on ticketmaster.com', async () => {
+    const venue = seedVenue()
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        {
+          ...METALLICA_EVENT,
+          ticketUrl: 'https://www.ticketmaster.com/event/foo',
+        },
+      ],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const insertedEvent = stores.events.find(
+      (row: { venueId: string }) => row.venueId === venue.id,
+    )
+    expect(insertedEvent?.ticketLinks).toEqual([
+      {
+        kind: 'primary',
+        vendor: 'Ticketmaster',
+        url: 'https://www.ticketmaster.com/event/foo',
+      },
+    ])
+  })
+
+  it('emits null ticketLinks when the extracted event has no ticketUrl', async () => {
+    const venue = seedVenue()
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [{ ...METALLICA_EVENT, ticketUrl: undefined }],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const insertedEvent = stores.events.find(
+      (row: { venueId: string }) => row.venueId === venue.id,
+    )
+    expect(insertedEvent?.ticketLinks).toBeNull()
+  })
+})
+
 describe('crawlVenue — event-level sourceHash', () => {
   it('skips DB write for unchanged non-verified events', async () => {
     const venue = seedVenue()

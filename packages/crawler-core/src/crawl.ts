@@ -28,6 +28,7 @@ import {
 } from './lib/cross-venue-filter.js'
 import { canonicalizeArtist } from './lib/canonical-artist.js'
 import { hashPage, hashEvent } from './lib/hash.js'
+import { deriveTicketLinks } from './lib/ticket-links/index.js'
 import type { NormalizedEvent, TokenUsage } from './types.js'
 
 const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
@@ -599,6 +600,14 @@ export async function crawlVenue(
           showTime:
             event.showTime && event.showTime !== '' ? event.showTime : null,
           ticketUrl: event.ticketUrl ?? null,
+          // Derived from (ticketUrl + venue context) at upsert time. Replaces
+          // the single-link first-pass backfill from migration 0040 with full
+          // host + vendor inference. See packages/crawler-core/src/lib/
+          // ticket-links/derive.ts for the kind/vendor resolution rules.
+          ticketLinks: deriveTicketLinks(event.ticketUrl, {
+            websiteUrl: venue.websiteUrl,
+            ticketVendor: venue.ticketVendor,
+          }),
           description: event.description ?? null,
           imageUrl: event.imageUrl ?? null,
           sourceUrl: event.sourceUrl,
@@ -645,6 +654,7 @@ export async function crawlVenue(
               doorsTime: sql`excluded.doors_time`,
               showTime: sql`excluded.show_time`,
               ticketUrl: sql`excluded.ticket_url`,
+              ticketLinks: sql`excluded.ticket_links`,
               description: sql`excluded.description`,
               imageUrl: sql`excluded.image_url`,
               status: sql`excluded.status`,
