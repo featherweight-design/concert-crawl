@@ -25,7 +25,9 @@ function trustRank(category: SourceCategory | null): number {
 //   1. Source-category trust (boxoffice → standard → resale)
 //   2. parseFloat(priceMin) ascending (cheapest face value wins ties within trust)
 //   3. updatedAt descending (newest corroboration wins ties on price)
-export function pickTierHeadline(rows: readonly TierRow[]): TierRow | null {
+export function pickTierHeadline<TRow extends TierRow>(
+  rows: readonly TRow[],
+): TRow | null {
   if (rows.length === 0) return null
   const sorted = [...rows].sort((left, right) => {
     const trustDelta =

@@ -1,0 +1,215 @@
+import type {
+  HowFound,
+  SourceCategory,
+  Tier,
+  TierAlternate,
+  TierCounter,
+  TierHeadline,
+  TierPending,
+  TierPriceBlock,
+  Vendor,
+} from '@concert-crawl/types'
+import { pickTierHeadline, type TierRow } from './pick-tier-headline.js'
+
+export interface CorroboratedTierRow extends TierRow {
+  tier: Tier
+  confirmsCount: number
+}
+
+export interface PendingTierRow {
+  id: string
+  priceMin: string
+  priceMax: string | null
+  vendor: Vendor
+  sourceCategory: SourceCategory | null
+  howFound: HowFound
+  note: string | null
+  userId: string | null
+  tier: Tier
+  createdAt: Date
+  confirmsCount: number
+}
+
+export interface CounterTierRow {
+  id: string
+  parentSubmissionId: string
+  tier: Tier
+  priceMin: string
+  priceMax: string | null
+  userId: string | null
+  createdAt: Date
+}
+
+export interface AggregateByTierInput {
+  corroborated: readonly CorroboratedTierRow[]
+  pending: readonly PendingTierRow[]
+  counters: readonly CounterTierRow[]
+  handles: ReadonlyMap<string, string>
+  reportsByTier: ReadonlyMap<Tier, number>
+  confirmsNeeded: number
+  viewerUserId: string | null
+}
+
+function groupByTier<RowType extends { tier: Tier }>(
+  rows: readonly RowType[],
+): Map<Tier, RowType[]> {
+  const map = new Map<Tier, RowType[]>()
+  for (const row of rows) {
+    const existing = map.get(row.tier)
+    if (existing) {
+      existing.push(row)
+    } else {
+      map.set(row.tier, [row])
+    }
+  }
+  return map
+}
+
+function buildHeadline(
+  row: CorroboratedTierRow,
+  handles: ReadonlyMap<string, string>,
+): TierHeadline {
+  return {
+    submissionId: row.id,
+    priceMin: row.priceMin,
+    priceMax: row.priceMax,
+    vendor: row.vendor,
+    sourceCategory: row.sourceCategory,
+    submitterHandle:
+      row.userId !== null ? (handles.get(row.userId) ?? null) : null,
+    observedAt: row.createdAt.toISOString(),
+    approvedAt: row.updatedAt.toISOString(),
+    approvalKind: row.confirmsCount > 0 ? 'fan' : 'admin',
+    confirmsCount: row.confirmsCount,
+  }
+}
+
+function buildAlternate(row: CorroboratedTierRow): TierAlternate {
+  return {
+    submissionId: row.id,
+    priceMin: row.priceMin,
+    priceMax: row.priceMax,
+    vendor: row.vendor,
+    sourceCategory: row.sourceCategory,
+  }
+}
+
+function buildPending(
+  row: PendingTierRow,
+  handles: ReadonlyMap<string, string>,
+  confirmsNeeded: number,
+  viewerUserId: string | null,
+): TierPending {
+  return {
+    id: row.id,
+    priceMin: row.priceMin,
+    priceMax: row.priceMax,
+    vendor: row.vendor,
+    howFound: row.howFound,
+    sourceCategory: row.sourceCategory,
+    note: row.note,
+    submitterHandle:
+      row.userId !== null ? (handles.get(row.userId) ?? null) : null,
+    submittedAt: row.createdAt.toISOString(),
+    confirmsCount: row.confirmsCount,
+    confirmsNeeded,
+    isSubmitter: row.userId !== null && row.userId === viewerUserId,
+  }
+}
+
+function buildCounter(
+  row: CounterTierRow,
+  handles: ReadonlyMap<string, string>,
+): TierCounter {
+  const handle = row.userId !== null ? (handles.get(row.userId) ?? null) : null
+  const ceiling = row.priceMax !== null ? parseFloat(row.priceMax) : null
+  return {
+    id: row.id,
+    parentSubmissionId: row.parentSubmissionId,
+    floor: parseFloat(row.priceMin),
+    ...(ceiling !== null ? { ceiling } : {}),
+    submitter: handle !== null ? { handle } : null,
+    submittedAt: row.createdAt.toISOString(),
+  }
+}
+
+// Pending order within a tier: VenueBoxOffice first, then newest first. Mirrors
+// the existing handler's order so the consumer surface stays stable while PR 4
+// migrates off the flat pendingSubmissions field.
+function sortPending(rows: readonly PendingTierRow[]): PendingTierRow[] {
+  return [...rows].sort((left, right) => {
+    const leftBoxOffice = left.vendor === 'VenueBoxOffice' ? 0 : 1
+    const rightBoxOffice = right.vendor === 'VenueBoxOffice' ? 0 : 1
+    if (leftBoxOffice !== rightBoxOffice) return leftBoxOffice - rightBoxOffice
+    return right.createdAt.getTime() - left.createdAt.getTime()
+  })
+}
+
+// Tier display order: tiers with a corroborated headline first (sorted by
+// cheapest headline), then pending-only tiers (sorted by cheapest pending).
+// Tiers with no submissions at all are omitted by construction (only tiers
+// surfaced in the union of corroborated + pending groups produce blocks).
+function compareBlocks(left: TierPriceBlock, right: TierPriceBlock): number {
+  const leftHead = left.headline
+  const rightHead = right.headline
+  if (leftHead !== null && rightHead !== null) {
+    return parseFloat(leftHead.priceMin) - parseFloat(rightHead.priceMin)
+  }
+  if (leftHead !== null) return -1
+  if (rightHead !== null) return 1
+  const leftCheapestPending = left.pending[0]?.priceMin ?? '0'
+  const rightCheapestPending = right.pending[0]?.priceMin ?? '0'
+  return parseFloat(leftCheapestPending) - parseFloat(rightCheapestPending)
+}
+
+export function aggregateByTier(input: AggregateByTierInput): TierPriceBlock[] {
+  const {
+    corroborated,
+    pending,
+    counters,
+    handles,
+    reportsByTier,
+    confirmsNeeded,
+    viewerUserId,
+  } = input
+
+  const corrobByTier = groupByTier(corroborated)
+  const pendingByTier = groupByTier(pending)
+
+  const allTiers = new Set<Tier>()
+  for (const tier of corrobByTier.keys()) allTiers.add(tier)
+  for (const tier of pendingByTier.keys()) allTiers.add(tier)
+
+  const blocks: TierPriceBlock[] = []
+  for (const tier of allTiers) {
+    const corrobRows = corrobByTier.get(tier) ?? []
+    const pendingRows = pendingByTier.get(tier) ?? []
+
+    const head = pickTierHeadline(corrobRows)
+    const headline = head !== null ? buildHeadline(head, handles) : null
+    const alternates = corrobRows
+      .filter((row) => head === null || row.id !== head.id)
+      .map(buildAlternate)
+
+    const counter =
+      head !== null
+        ? counters.find(
+            (row) => row.tier === tier && row.parentSubmissionId === head.id,
+          )
+        : undefined
+
+    blocks.push({
+      tier,
+      headline,
+      alternates,
+      pending: sortPending(pendingRows).map((row) =>
+        buildPending(row, handles, confirmsNeeded, viewerUserId),
+      ),
+      counterSubmission:
+        counter !== undefined ? buildCounter(counter, handles) : null,
+      reports: reportsByTier.get(tier) ?? 0,
+    })
+  }
+
+  return blocks.sort(compareBlocks)
+}
