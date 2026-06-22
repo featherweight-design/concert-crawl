@@ -204,4 +204,88 @@ describe('aggregateByTier', () => {
     })
     expect(blocks[0]?.reports).toBe(0)
   })
+
+  it('emits alternates in deterministic trust-then-price order regardless of input order', () => {
+    // Input order is intentionally scrambled — the composer should still emit
+    // alternates sorted by trust (boxoffice → standard → resale) then by price
+    // ascending so the API response is stable across runs.
+    const boxoffice = corrob({
+      id: 'bo',
+      tier: 'GA',
+      sourceCategory: 'boxoffice',
+      vendor: 'VenueBoxOffice',
+      priceMin: '40',
+    })
+    const resale = corrob({
+      id: 'resale',
+      tier: 'GA',
+      sourceCategory: 'resale',
+      priceMin: '80',
+    })
+    const standardCheap = corrob({
+      id: 'std-cheap',
+      tier: 'GA',
+      sourceCategory: 'standard',
+      priceMin: '45',
+    })
+    const standardPricey = corrob({
+      id: 'std-pricey',
+      tier: 'GA',
+      sourceCategory: 'standard',
+      priceMin: '60',
+    })
+
+    const blocks = aggregateByTier({
+      ...baseInput,
+      corroborated: [resale, standardPricey, boxoffice, standardCheap],
+      reportsByTier: new Map([['GA', 4]]),
+    })
+
+    expect(blocks[0]?.headline?.submissionId).toBe('bo')
+    expect(blocks[0]?.alternates.map((alt) => alt.submissionId)).toEqual([
+      'std-cheap',
+      'std-pricey',
+      'resale',
+    ])
+  })
+
+  it('sorts pending-only tiers by min pending price (not pending[0] which is VenueBoxOffice-first)', () => {
+    // pending[] sorts VenueBoxOffice-first + newest-first for display, so
+    // pending[0] is NOT guaranteed to be the cheapest. Tier ordering still has
+    // to use the actual minimum across the tier's pending rows.
+    const blocks = aggregateByTier({
+      ...baseInput,
+      pending: [
+        pendingRow({
+          id: 'vip-bo-expensive',
+          tier: 'VIP',
+          vendor: 'VenueBoxOffice',
+          sourceCategory: 'boxoffice',
+          priceMin: '200',
+        }),
+        pendingRow({
+          id: 'vip-std-cheap',
+          tier: 'VIP',
+          vendor: 'Ticketmaster',
+          sourceCategory: 'standard',
+          priceMin: '120',
+        }),
+        pendingRow({
+          id: 'ga-std',
+          tier: 'GA',
+          vendor: 'Ticketmaster',
+          sourceCategory: 'standard',
+          priceMin: '150',
+        }),
+      ],
+      reportsByTier: new Map([
+        ['GA', 1],
+        ['VIP', 2],
+      ]),
+    })
+
+    // GA's min (150) is BELOW VIP's min (120) — wait, the other way: VIP min is 120, GA min is 150
+    // So VIP should come first.
+    expect(blocks.map((block) => block.tier)).toEqual(['VIP', 'GA'])
+  })
 })

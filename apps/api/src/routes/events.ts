@@ -507,123 +507,10 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     }
   }
 
-  // Surface all pending submissions whenever any exist (PR 3 — was previously
-  // gated by no-corroborated-price-yet). Multi-tier events were hiding
-  // legitimately distinct pending tiers behind the gate because a corroborated
-  // GA price suppressed a pending VIP submission. The Consumer UI (PR 4)
-  // consumes priceByTier instead; pendingSubmissions stays for the migration
-  // buffer and gets dropped in the Contract PR.
-  let pendingSubmissions: Array<{
-    id: string
-    priceMin: string
-    priceMax: string | null
-    tier: string
-    vendor: string
-    howFound: string
-    sourceCategory: 'boxoffice' | 'standard' | 'resale' | null
-    note: string | null
-    submitterHandle: string | null
-    submittedAt: string
-    confirmsCount: number
-    confirmsNeeded: number
-    isSubmitter: boolean
-  }> | null = null
-
-  {
-    const pendingRows = await db
-      .select({
-        id: priceSubmissions.id,
-        priceMin: priceSubmissions.priceMin,
-        priceMax: priceSubmissions.priceMax,
-        tier: priceSubmissions.tier,
-        vendor: priceSubmissions.vendor,
-        howFound: priceSubmissions.howFound,
-        sourceCategory: priceSubmissions.sourceCategory,
-        note: priceSubmissions.note,
-        userId: priceSubmissions.userId,
-        createdAt: priceSubmissions.createdAt,
-      })
-      .from(priceSubmissions)
-      .where(
-        and(
-          eq(priceSubmissions.eventId, id),
-          eq(priceSubmissions.status, 'pending'),
-        ),
-      )
-      .orderBy(
-        sql`CASE WHEN ${priceSubmissions.vendor} = 'VenueBoxOffice' THEN 0 ELSE 1 END ASC`,
-        desc(priceSubmissions.createdAt),
-      )
-
-    if (pendingRows.length > 0) {
-      // Batch confirm counts for all pending submissions
-      const confirmCountRows = await db
-        .select({
-          submissionId: submissionConfirms.submissionId,
-          total: count(),
-        })
-        .from(submissionConfirms)
-        .where(
-          inArray(
-            submissionConfirms.submissionId,
-            pendingRows.map((rpt) => rpt.id),
-          ),
-        )
-        .groupBy(submissionConfirms.submissionId)
-
-      const confirmCountMap = new Map(
-        confirmCountRows.map((rpt) => [rpt.submissionId, rpt.total]),
-      )
-
-      // Batch submitter handles
-      const userIds = pendingRows
-        .map((rpt) => rpt.userId)
-        .filter((uid): uid is string => uid !== null)
-      const handleMap = new Map<string, string>()
-      if (userIds.length > 0) {
-        const profiles = await db
-          .select({ userId: userProfiles.userId, handle: userProfiles.handle })
-          .from(userProfiles)
-          .where(inArray(userProfiles.userId, userIds))
-        for (const profile of profiles) {
-          if (profile.handle != null) {
-            handleMap.set(profile.userId, profile.handle)
-          }
-        }
-      }
-
-      const confirmsNeeded = isImminentEvent(
-        row.date ?? null,
-        SP_POLICY.imminentThresholdDays,
-      )
-        ? SP_POLICY.confirmsRequiredImminent
-        : SP_POLICY.confirmsRequired
-
-      pendingSubmissions = pendingRows.map((sub) => ({
-        id: sub.id,
-        priceMin: sub.priceMin,
-        priceMax: sub.priceMax,
-        tier: sub.tier,
-        vendor: sub.vendor ?? 'Unknown',
-        howFound: sub.howFound,
-        sourceCategory: sub.sourceCategory,
-        note: sub.note ?? null,
-        submitterHandle: sub.userId
-          ? (handleMap.get(sub.userId) ?? null)
-          : null,
-        submittedAt: sub.createdAt.toISOString(),
-        confirmsCount: confirmCountMap.get(sub.id) ?? 0,
-        confirmsNeeded,
-        isSubmitter: sub.userId === authInfo?.userId,
-      }))
-    }
-  }
-
-  // Per-tier price aggregation (PR 3). Always runs, even when no submissions
-  // exist (emits []). Source-mix within tier, pending always surfaced per-tier
-  // alongside any corroborated headline. The flat priceVendor / priceAlternates
-  // / priceConfirmsCount / counterSubmission / pendingSubmissions fields above
-  // stay populated for PR 4 to migrate off; the Contract PR drops them.
+  // Per-tier price aggregation (PR 3) shares its corroborated + pending data
+  // sets with the flat pendingSubmissions field below. Running the queries
+  // once and deriving both shapes from the in-memory rows avoids double DB
+  // roundtrips and keeps the two payload shapes in lock-step.
   const allCorroboratedRows = await db
     .select({
       id: priceSubmissions.id,
@@ -670,23 +557,29 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   // They land on the headline's counterSubmission field rather than the tier's
   // pending list so the UI can show "Saw a different number?" against the
   // corroborated price without double-counting the dispute as a fresh pending.
+  // Collecting them via flatMap with explicit narrowing avoids the
+  // `disputedSubmissionId ?? ''` fallback that would have hidden type errors
+  // if the predicate ever changed.
   const corroboratedIdSet = new Set(allCorroboratedRows.map((sub) => sub.id))
-  const counterTierRows = allPendingRows
-    .filter(
-      (sub) =>
-        sub.disputedSubmissionId !== null &&
-        corroboratedIdSet.has(sub.disputedSubmissionId),
-    )
-    .map((sub) => ({
-      id: sub.id,
-      parentSubmissionId: sub.disputedSubmissionId ?? '',
-      tier: sub.tier,
-      priceMin: sub.priceMin,
-      priceMax: sub.priceMax,
-      userId: sub.userId,
-      createdAt: sub.createdAt,
-    }))
+  const counterTierRows = allPendingRows.flatMap((sub) => {
+    const parentId = sub.disputedSubmissionId
+    if (parentId === null || !corroboratedIdSet.has(parentId)) return []
+    return [
+      {
+        id: sub.id,
+        parentSubmissionId: parentId,
+        tier: sub.tier,
+        priceMin: sub.priceMin,
+        priceMax: sub.priceMax,
+        userId: sub.userId,
+        createdAt: sub.createdAt,
+      },
+    ]
+  })
 
+  // truePendingRows excludes counters so the flat pendingSubmissions field
+  // doesn't double-surface dispute rows already exposed via counterSubmission /
+  // priceByTier.counterSubmission.
   const truePendingRows = allPendingRows.filter(
     (sub) =>
       sub.disputedSubmissionId === null ||
@@ -782,6 +675,54 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     confirmsNeeded: aggregateConfirmsNeeded,
     viewerUserId: authInfo?.userId ?? null,
   })
+
+  // Flat pendingSubmissions field — derived from the same truePendingRows /
+  // handles / confirms side-tables as priceByTier so the two payload shapes
+  // can't drift, and counter rows surfaced via counterSubmission /
+  // priceByTier.counterSubmission don't double-appear here. Kept on the
+  // response for PR 4 to migrate consumers off; the Contract PR removes it.
+  let pendingSubmissions: Array<{
+    id: string
+    priceMin: string
+    priceMax: string | null
+    tier: string
+    vendor: string
+    howFound: string
+    sourceCategory: 'boxoffice' | 'standard' | 'resale' | null
+    note: string | null
+    submitterHandle: string | null
+    submittedAt: string
+    confirmsCount: number
+    confirmsNeeded: number
+    isSubmitter: boolean
+  }> | null = null
+
+  if (truePendingRows.length > 0) {
+    // VenueBoxOffice-first, then newest-first — mirrors the legacy ordering
+    // so the consumer surface is stable during PR 4's migration window.
+    const ordered = [...truePendingRows].sort((left, right) => {
+      const leftBox = left.vendor === 'VenueBoxOffice' ? 0 : 1
+      const rightBox = right.vendor === 'VenueBoxOffice' ? 0 : 1
+      if (leftBox !== rightBox) return leftBox - rightBox
+      return right.createdAt.getTime() - left.createdAt.getTime()
+    })
+    pendingSubmissions = ordered.map((sub) => ({
+      id: sub.id,
+      priceMin: sub.priceMin,
+      priceMax: sub.priceMax,
+      tier: sub.tier,
+      vendor: sub.vendor ?? 'Unknown',
+      howFound: sub.howFound,
+      sourceCategory: sub.sourceCategory,
+      note: sub.note ?? null,
+      submitterHandle:
+        sub.userId !== null ? (aggregateHandles.get(sub.userId) ?? null) : null,
+      submittedAt: sub.createdAt.toISOString(),
+      confirmsCount: confirmsBySubmissionId.get(sub.id) ?? 0,
+      confirmsNeeded: aggregateConfirmsNeeded,
+      isSubmitter: sub.userId === authInfo?.userId,
+    }))
+  }
 
   return ctx.json({
     success: true,

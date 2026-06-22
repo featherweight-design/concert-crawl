@@ -341,6 +341,66 @@ describe('GET /v1/events/:id — integration', () => {
     expect(body.data.priceByTier).toEqual([])
   })
 
+  it('pendingSubmissions excludes counter rows (counters surface only via counterSubmission / priceByTier.counterSubmission)', async () => {
+    const venue = await seedVenue({
+      name: 'Counter Test',
+      slug: 'counter-test',
+    })
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-01',
+      priceSource: 'community',
+    })
+
+    const submitter = await seedUserProfile('counter-parent', {
+      handle: 'parent-fan',
+    })
+    const challenger = await seedUserProfile('counter-challenger', {
+      handle: 'challenger-fan',
+    })
+
+    // Corroborated parent submission
+    const parent = await seedPriceSubmission(event.id, submitter.userId, {
+      tier: 'GA',
+      vendor: 'Ticketmaster',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      status: 'corroborated',
+    })
+
+    // Pending counter against the corroborated parent — should appear in
+    // counterSubmission only, NOT in pendingSubmissions.
+    await seedPriceSubmission(event.id, challenger.userId, {
+      tier: 'GA',
+      vendor: 'Ticketmaster',
+      sourceCategory: 'standard',
+      priceMin: '30',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+    })
+
+    const res = await app.request(`/v1/events/${event.id}`)
+    const body = (await res.json()) as {
+      data: {
+        pendingSubmissions: Array<{ id: string }> | null
+        counterSubmission: { id: string } | null
+        priceByTier: Array<{
+          counterSubmission: { id: string } | null
+        }>
+      }
+    }
+    // counterSubmission is set (via the flat path AND priceByTier)
+    expect(body.data.counterSubmission).not.toBeNull()
+    expect(body.data.priceByTier[0]?.counterSubmission).not.toBeNull()
+    // pendingSubmissions does NOT include the counter row — it should be null
+    // or omit the counter's id.
+    if (body.data.pendingSubmissions !== null) {
+      const counterId = body.data.counterSubmission?.id
+      expect(
+        body.data.pendingSubmissions.find((sub) => sub.id === counterId),
+      ).toBeUndefined()
+    }
+  })
+
   it('pendingSubmissions is populated even when a corroborated price exists', async () => {
     const venue = await seedVenue({
       name: 'Pending Always',

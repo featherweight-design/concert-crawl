@@ -229,27 +229,24 @@ describe('GET /v1/events/:id', () => {
   })
 
   it('returns 200 with event data for a known id', async () => {
-    // The handler runs queries in this order (each .where() call is numbered):
-    //   1. event detail   — select().from().innerJoin().where()            → terminal
-    //   2. watch count    — select().from().where()                        → terminal
-    //   3. sold-out report — select().from().where().orderBy().limit()      → chainable where
-    //   4. pending subs   — select().from().where().orderBy()               → chainable where
-    //   5. priceByTier corroborated — select().from().where()              → terminal
-    //   6. priceByTier pending      — select().from().where()              → terminal
-    //   7. reports-by-tier — select().from().where().groupBy()              → chainable where
+    // After PR 3's consolidation the handler runs queries in this order
+    // (each .where() call is numbered):
+    //   1. event detail            — select().from().innerJoin().where()      → terminal
+    //   2. watch count             — select().from().where()                  → terminal
+    //   3. sold-out report          — select().from().where().orderBy().limit() → chainable where
+    //   4. priceByTier corroborated — select().from().where()                  → terminal
+    //   5. priceByTier pending      — select().from().where()                  → terminal
+    //   6. reports-by-tier          — select().from().where().groupBy()        → chainable where
     // Queue mocks in call order so each .where() gets the right behavior.
     mockDb.where.mockResolvedValueOnce([mockEvent]) // 1
     mockDb.where.mockResolvedValueOnce([{ total: 0 }]) // 2
     mockDb.where.mockReturnValueOnce(mockDb) // 3 (chain into orderBy)
-    mockDb.where.mockReturnValueOnce(mockDb) // 4 (chain into orderBy)
+    mockDb.where.mockResolvedValueOnce([]) // 4
     mockDb.where.mockResolvedValueOnce([]) // 5
-    mockDb.where.mockResolvedValueOnce([]) // 6
-    mockDb.where.mockReturnValueOnce(mockDb) // 7 (chain into groupBy)
+    mockDb.where.mockReturnValueOnce(mockDb) // 6 (chain into groupBy)
     // sold-out report orderBy → limit terminal
     mockDb.orderBy.mockReturnValueOnce(mockDb)
     mockDb.limit.mockResolvedValueOnce([])
-    // pending submissions orderBy terminal
-    mockDb.orderBy.mockResolvedValueOnce([])
     // reports-by-tier groupBy terminal
     mockDb.groupBy.mockResolvedValueOnce([])
 

@@ -9,7 +9,7 @@ import type {
   TierPriceBlock,
   Vendor,
 } from '@concert-crawl/types'
-import { pickTierHeadline, type TierRow } from './pick-tier-headline.js'
+import { compareTierRows, type TierRow } from './pick-tier-headline.js'
 
 export interface CorroboratedTierRow extends TierRow {
   tier: Tier
@@ -145,6 +145,18 @@ function sortPending(rows: readonly PendingTierRow[]): PendingTierRow[] {
   })
 }
 
+// Min priceMin across a tier's pending rows. pending[] is sorted for display
+// (VenueBoxOffice-first, newest-first), so pending[0] is NOT guaranteed to be
+// the cheapest — we have to scan.
+function minPendingPrice(pending: readonly TierPending[]): number {
+  let min = Number.POSITIVE_INFINITY
+  for (const row of pending) {
+    const value = parseFloat(row.priceMin)
+    if (value < min) min = value
+  }
+  return min === Number.POSITIVE_INFINITY ? 0 : min
+}
+
 // Tier display order: tiers with a corroborated headline first (sorted by
 // cheapest headline), then pending-only tiers (sorted by cheapest pending).
 // Tiers with no submissions at all are omitted by construction (only tiers
@@ -157,9 +169,7 @@ function compareBlocks(left: TierPriceBlock, right: TierPriceBlock): number {
   }
   if (leftHead !== null) return -1
   if (rightHead !== null) return 1
-  const leftCheapestPending = left.pending[0]?.priceMin ?? '0'
-  const rightCheapestPending = right.pending[0]?.priceMin ?? '0'
-  return parseFloat(leftCheapestPending) - parseFloat(rightCheapestPending)
+  return minPendingPrice(left.pending) - minPendingPrice(right.pending)
 }
 
 export function aggregateByTier(input: AggregateByTierInput): TierPriceBlock[] {
@@ -185,11 +195,12 @@ export function aggregateByTier(input: AggregateByTierInput): TierPriceBlock[] {
     const corrobRows = corrobByTier.get(tier) ?? []
     const pendingRows = pendingByTier.get(tier) ?? []
 
-    const head = pickTierHeadline(corrobRows)
+    // Sort once and slice — the head and alternates share the same ordering
+    // so the API response is fully deterministic regardless of DB row order.
+    const sortedCorrob = [...corrobRows].sort(compareTierRows)
+    const head = sortedCorrob[0] ?? null
     const headline = head !== null ? buildHeadline(head, handles) : null
-    const alternates = corrobRows
-      .filter((row) => head === null || row.id !== head.id)
-      .map(buildAlternate)
+    const alternates = sortedCorrob.slice(1).map(buildAlternate)
 
     const counter =
       head !== null
