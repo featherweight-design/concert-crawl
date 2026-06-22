@@ -1,3 +1,11 @@
+## [1.74.1](https://github.com/HartiganHM/concert-crawl/compare/v1.74.0...v1.74.1) (2026-06-22)
+
+
+### Bug Fixes
+
+* address Copilot review 1 on PR 731 ([96de3e2](https://github.com/HartiganHM/concert-crawl/commit/96de3e26eaa754503eb105df6e7680bc558cc165))
+* **api,crawler:** post-merge audit fixes for price-source PR 722 + 723 ([d4d584c](https://github.com/HartiganHM/concert-crawl/commit/d4d584c98b156b7b627b0409ec1bd61437896a14))
+
 # [1.74.0](https://github.com/HartiganHM/concert-crawl/compare/v1.73.0...v1.74.0) (2026-06-22)
 
 
