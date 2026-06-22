@@ -154,27 +154,38 @@ pricesAdminRouter.get('/log', async (ctx) => {
 
 // GET /v1/admin/prices/coverage — % of upcoming events with price data
 //
-// Excludes admin-hidden non-concerts (#732) so the coverage % reflects only
-// events that actually need prices. Counting hidden non-concerts as
-// "uncovered" deflated the percentage without representing real work.
+// Mirrors the /v1/admin/prices/events filter set so the % is a faithful
+// summary of the queue admins actually work from:
+//   - status='upcoming'                 (lifecycle state)
+//   - date >= today                     (the /events surface also enforces
+//                                        this; status='upcoming' alone is
+//                                        insufficient since stale rows can
+//                                        keep the status)
+//   - hidden_from_consumer=false        (#732 — admin-triaged non-concerts
+//                                        don't need prices)
+//
+// `::int` cast matches the rest of this file's count(*) results so JSON
+// numbers are stable integers, not bigint strings via drizzle's `count()`.
 pricesAdminRouter.get('/coverage', async (ctx) => {
+  const today = new Date().toLocaleDateString('en-CA', {
+    timeZone: 'America/Denver',
+  })
+
+  const baseConditions = and(
+    eq(events.status, 'upcoming'),
+    gte(events.date, today),
+    eq(events.hiddenFromConsumer, false),
+  )
+
   const [total] = await db
-    .select({ count: count() })
+    .select({ count: sql<number>`count(*)::int` })
     .from(events)
-    .where(
-      and(eq(events.status, 'upcoming'), eq(events.hiddenFromConsumer, false)),
-    )
+    .where(baseConditions)
 
   const [withPrice] = await db
-    .select({ count: count() })
+    .select({ count: sql<number>`count(*)::int` })
     .from(events)
-    .where(
-      and(
-        eq(events.status, 'upcoming'),
-        eq(events.hiddenFromConsumer, false),
-        sql`${events.ticketPriceMin} IS NOT NULL`,
-      ),
-    )
+    .where(and(baseConditions, sql`${events.ticketPriceMin} IS NOT NULL`))
 
   const totalCount = total?.count ?? 0
   const pricedCount = withPrice?.count ?? 0

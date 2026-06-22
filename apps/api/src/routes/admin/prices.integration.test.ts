@@ -429,6 +429,50 @@ describe('GET /v1/admin/prices/events', () => {
     expect(body.data).toHaveLength(1)
     expect(body.data[0].artist).toBe('Visible')
   })
+
+  // The admin UI fetches this surface via ?count=true (see
+  // use-admin-review.ts). Pin the hidden filter on the counted shape
+  // too — a future regression that applied the filter to rows but not
+  // to the count(*) would otherwise slip past the array-shape test
+  // above.
+  it('excludes hidden_from_consumer from both rows AND total when count=true', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      artist: 'Visible Missing 1',
+      date: '2099-07-01',
+      status: 'upcoming',
+      ticketPriceMin: null,
+      hiddenFromConsumer: false,
+    })
+    await seedEvent(venue.id, {
+      artist: 'Visible Missing 2',
+      date: '2099-07-02',
+      status: 'upcoming',
+      ticketPriceMin: null,
+      hiddenFromConsumer: false,
+    })
+    await seedEvent(venue.id, {
+      artist: 'Hidden Missing',
+      date: '2099-07-03',
+      status: 'upcoming',
+      ticketPriceMin: null,
+      hiddenFromConsumer: true,
+    })
+
+    const res = await app.request(
+      '/v1/admin/prices/events?count=true&limit=10&offset=0',
+      { headers: ADMIN_HEADERS },
+    )
+    const body = (await res.json()) as {
+      success: boolean
+      data: { rows: { artist: string }[]; total: number }
+    }
+    expect(body.data.rows).toHaveLength(2)
+    expect(body.data.total).toBe(2)
+    expect(body.data.rows.map((row) => row.artist)).not.toContain(
+      'Hidden Missing',
+    )
+  })
 })
 
 describe('GET /v1/admin/prices/coverage', () => {
@@ -440,8 +484,9 @@ describe('GET /v1/admin/prices/coverage', () => {
   // Regression for #732: coverage % was deflated by admin-hidden
   // non-concerts (counted as upcoming events that "lack" prices). The
   // metric should reflect only the events that actually need price
-  // coverage.
-  it('excludes hidden_from_consumer from total and withPrice counts', async () => {
+  // coverage. Also enforces date >= today (parity with /prices/events)
+  // since status='upcoming' alone can persist on stale past rows.
+  it('excludes hidden_from_consumer and past dates from total and withPrice counts', async () => {
     const venue = await seedVenue()
     // 2 visible upcoming, 1 with price → coverage 1/2 = 50%
     await seedEvent(venue.id, {
@@ -465,6 +510,15 @@ describe('GET /v1/admin/prices/coverage', () => {
       status: 'upcoming',
       ticketPriceMin: '20.00',
       hiddenFromConsumer: true,
+    })
+    // 1 past-date row still marked upcoming (should NOT count — parity
+    // with /prices/events which enforces date >= today)
+    await seedEvent(venue.id, {
+      artist: 'Past Stale',
+      date: '2020-01-01',
+      status: 'upcoming',
+      ticketPriceMin: '15.00',
+      hiddenFromConsumer: false,
     })
 
     const res = await app.request('/v1/admin/prices/coverage', {
