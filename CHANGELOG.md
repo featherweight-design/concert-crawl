@@ -1,3 +1,11 @@
+## [1.74.2](https://github.com/HartiganHM/concert-crawl/compare/v1.74.1...v1.74.2) (2026-06-22)
+
+
+### Bug Fixes
+
+* **crawler:** address Copilot round-1 review on PR [#730](https://github.com/HartiganHM/concert-crawl/issues/730) ([95dc093](https://github.com/HartiganHM/concert-crawl/commit/95dc093264ab51da7950a7311b83e3221907902f))
+* **crawler:** teach isConcert to handle DJ-as-headliner billings ([2e44e7b](https://github.com/HartiganHM/concert-crawl/commit/2e44e7b974f2c6b6488c5ae8e54a27d40de1f563)), closes [#706](https://github.com/HartiganHM/concert-crawl/issues/706)
+
 ## [1.74.1](https://github.com/HartiganHM/concert-crawl/compare/v1.74.0...v1.74.1) (2026-06-22)
 
 
