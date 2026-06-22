@@ -1,3 +1,13 @@
+## [1.71.1](https://github.com/HartiganHM/concert-crawl/compare/v1.71.0...v1.71.1) (2026-06-22)
+
+
+### Bug Fixes
+
+* **admin:** align review tab pills with list-endpoint filters ([6a45bb4](https://github.com/HartiganHM/concert-crawl/commit/6a45bb4be6b1c7da7c28a73052907c23c83c3c2d)), closes [#708](https://github.com/HartiganHM/concert-crawl/issues/708) [#709](https://github.com/HartiganHM/concert-crawl/issues/709) [#712](https://github.com/HartiganHM/concert-crawl/issues/712)
+* **admin:** map 400 invalid-UUID to notFound, not error boundary ([bd028e7](https://github.com/HartiganHM/concert-crawl/commit/bd028e758caa2aa81003c697fc0053e843175279))
+* **admin:** only map 404 to notFound; let other errors propagate ([8e7fa28](https://github.com/HartiganHM/concert-crawl/commit/8e7fa2875ffe3eec3d293e1a765d433a560823b4))
+* **admin:** unwrap apiClient.get envelope in event editor page ([3dc3e73](https://github.com/HartiganHM/concert-crawl/commit/3dc3e73bda3c58b6dee7cd38ce7bdacf068e691a)), closes [#707](https://github.com/HartiganHM/concert-crawl/issues/707)
+
 # [1.71.0](https://github.com/HartiganHM/concert-crawl/compare/v1.70.2...v1.71.0) (2026-06-20)
 
 
