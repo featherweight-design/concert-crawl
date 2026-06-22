@@ -1,3 +1,14 @@
+## [1.71.3](https://github.com/HartiganHM/concert-crawl/compare/v1.71.2...v1.71.3) (2026-06-22)
+
+
+### Bug Fixes
+
+* **admin:** gate Missing empty state on server total, not page rows ([e8bac46](https://github.com/HartiganHM/concert-crawl/commit/e8bac461e35613a2b0eccee794772ae3d21a7c13))
+* **admin:** gate Price coverage empty state on server total ([6e4a528](https://github.com/HartiganHM/concert-crawl/commit/6e4a52855fd1a28f8d5a613b725dab4bdebba789))
+* **admin:** keep Pagination mounted when page is empty mid-clamp ([2979c4b](https://github.com/HartiganHM/concert-crawl/commit/2979c4b83c8c52dc0a165567788dd117458de6dc))
+* **admin:** section header badges use server total, not page-row count ([41915b8](https://github.com/HartiganHM/concert-crawl/commit/41915b857573a020ac61eeee47a2404769ade165)), closes [#710](https://github.com/HartiganHM/concert-crawl/issues/710)
+* **admin:** tighten Pagination test + simplify total prop pass-through ([d3be202](https://github.com/HartiganHM/concert-crawl/commit/d3be2020ea59085d69ca3b585464265dce6499c3))
+
 ## [1.71.2](https://github.com/HartiganHM/concert-crawl/compare/v1.71.1...v1.71.2) (2026-06-22)
 
 
