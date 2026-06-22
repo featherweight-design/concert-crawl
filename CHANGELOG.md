@@ -1,3 +1,11 @@
+## [1.74.3](https://github.com/HartiganHM/concert-crawl/compare/v1.74.2...v1.74.3) (2026-06-22)
+
+
+### Bug Fixes
+
+* **admin/prices:** /coverage matches /events filter set + add count=true regression ([b2dacc9](https://github.com/HartiganHM/concert-crawl/commit/b2dacc9bd97e16d7be38b24689f2f085ee417528))
+* **admin/prices:** exclude hidden_from_consumer from missing-price list + coverage ([466e859](https://github.com/HartiganHM/concert-crawl/commit/466e8599e80100dd0abd18590d6f6cc7e04aa041)), closes [#732](https://github.com/HartiganHM/concert-crawl/issues/732) [#712](https://github.com/HartiganHM/concert-crawl/issues/712)
+
 ## [1.74.2](https://github.com/HartiganHM/concert-crawl/compare/v1.74.1...v1.74.2) (2026-06-22)
 
 
