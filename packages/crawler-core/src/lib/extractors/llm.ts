@@ -38,7 +38,7 @@ export const IS_CONCERT_RULES = `isConcert=true: named musician(s) performing li
 - symphonies/orchestras performing film, TV, or video-game scores live (e.g. "Stardew Valley: Symphony of Seasons", "World of Warcraft: 20 Years of Music")
 - "X Presents: Y" billings where X is the headlining artist (e.g. "Tape B Presents: Hallow Rocks")
 - "Feat." / "Featuring" / "with" billings naming a real performer — the named act IS performing live (e.g. "Open House Feat. DJ Sliink")
-- pride parties, kick-off parties, after-parties, pre-parties when the headline name is a real touring DJ/musician — they are performing the event, not just being themed around (e.g. "Denver Pride Kick Off Party - Honey Dijon", "Ball Arena After Party - <real DJ>")
+- pride parties, kick-off parties, after-parties, pre-parties when the headline name is a real touring DJ/musician — they are performing the event, not just being themed around (e.g. "Denver Pride Kick Off Party - Honey Dijon", "Ball Arena After Party - Carl Cox")
 - multi-band tours and festival brands where bands play live (e.g. "Taste of Chaos", "Warped Tour")
 - dance nights backed by a live band (swing, jazz, salsa nights where musicians play)
 
@@ -48,7 +48,7 @@ isConcert=false: non-performance events at music venues. Includes:
 - trivia, comedy, film/movie screenings (e.g. "Film on the Rocks: Sinners"), karaoke, listening parties
 - private events, transportation/logistics (e.g. "Bus To Show Pickup Spot"), markets, fitness ("Yoga on the Rocks"), charity walks/runs ("9/11 Stair Climb"), spoken-word/poetry readings, wellness lectures, drag shows (lip-sync, not live singing)
 
-Disambiguation rule: when a title contains the name of a real touring artist/DJ AND a party/event framing word ("Party", "Kick Off", "After Party", "Pre-Party", "Feat.", "Presents"), default to TRUE (concert) — the artist is the headliner. Only treat as FALSE when the artist's name is clearly being used as a theme (their recordings being played back by unnamed DJs), as with "Olivia Rodrigo Dance Party" or "BASS BINGO – Wooli Edition".`
+Disambiguation rule: when a title contains the name of a real touring artist/DJ AND a specific billing/event framing phrase ("Kick Off Party", "After Party", "Pre-Party", "Feat.", "Featuring", "Presents", "with"), default to TRUE (concert) — the artist is the headliner. The standalone phrase "Dance Party" does NOT trigger this rule — it's the signature of a recorded-music theme night (e.g. "Olivia Rodrigo Dance Party"). Only treat as FALSE when the artist's name is clearly being used as a theme (their recordings being played back by unnamed DJs), as with "Olivia Rodrigo Dance Party" or "BASS BINGO – Wooli Edition".`
 
 const SYSTEM_PROMPT = `You are an event data extractor for a music-venue concert calendar. Given HTML from a venue website, call the save_events tool with EVERY upcoming event you find, including non-concert events (themed parties, bingo, comedy, movies, etc.). Do not omit non-concert events — downstream tooling uses the isConcert field on each event to decide what reaches consumers.
 
