@@ -340,6 +340,54 @@ describe('GET /v1/events/:id — integration', () => {
     }
     expect(body.data.priceByTier).toEqual([])
   })
+
+  it('pendingSubmissions is populated even when a corroborated price exists', async () => {
+    const venue = await seedVenue({
+      name: 'Pending Always',
+      slug: 'pending-always',
+    })
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-01',
+      ticketPriceMin: '30',
+      priceSource: 'community',
+    })
+
+    const profileA = await seedUserProfile('user-corrob', {
+      handle: 'corrob-fan',
+    })
+    const profileB = await seedUserProfile('user-pending', {
+      handle: 'pending-fan',
+    })
+
+    // Corroborated GA at $30 — historically suppressed pendingSubmissions when a
+    // corroborated price already existed for the event.
+    await seedPriceSubmission(event.id, profileA.userId, {
+      tier: 'GA',
+      vendor: 'Ticketmaster',
+      sourceCategory: 'standard',
+      priceMin: '30',
+      status: 'corroborated',
+    })
+    // Pending VIP at $90 — a different tier; the gate hid it because the event
+    // had any corroborated price. PR 3 always surfaces pending rows.
+    await seedPriceSubmission(event.id, profileB.userId, {
+      tier: 'VIP',
+      vendor: 'Ticketmaster',
+      sourceCategory: 'standard',
+      priceMin: '90',
+      status: 'pending',
+    })
+
+    const res = await app.request(`/v1/events/${event.id}`)
+    const body = (await res.json()) as {
+      data: {
+        pendingSubmissions: Array<{ tier: string; priceMin: string }> | null
+      }
+    }
+    expect(body.data.pendingSubmissions).not.toBeNull()
+    expect(body.data.pendingSubmissions).toHaveLength(1)
+    expect(body.data.pendingSubmissions?.[0]?.tier).toBe('VIP')
+  })
 })
 
 describe('GET /v1/events — filterPrice', () => {

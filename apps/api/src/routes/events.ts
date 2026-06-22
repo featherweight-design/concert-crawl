@@ -507,7 +507,12 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     }
   }
 
-  // Surface all pending submissions when no corroborated price exists yet
+  // Surface all pending submissions whenever any exist (PR 3 — was previously
+  // gated by no-corroborated-price-yet). Multi-tier events were hiding
+  // legitimately distinct pending tiers behind the gate because a corroborated
+  // GA price suppressed a pending VIP submission. The Consumer UI (PR 4)
+  // consumes priceByTier instead; pendingSubmissions stays for the migration
+  // buffer and gets dropped in the Contract PR.
   let pendingSubmissions: Array<{
     id: string
     priceMin: string
@@ -524,7 +529,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     isSubmitter: boolean
   }> | null = null
 
-  if (row.ticketPriceMin === null && priceApprovalKind === null) {
+  {
     const pendingRows = await db
       .select({
         id: priceSubmissions.id,
