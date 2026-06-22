@@ -126,6 +126,9 @@ importers:
       '@concert-crawl/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@concert-crawl/crawler-core':
+        specifier: workspace:*
+        version: link:../../packages/crawler-core
       '@types/bad-words':
         specifier: ^3.0.3
         version: 3.0.3

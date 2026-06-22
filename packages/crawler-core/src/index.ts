@@ -17,3 +17,7 @@ export type {
   CrossVenueCandidate,
   CrossVenueMatch,
 } from './lib/cross-venue-filter.js'
+export {
+  deriveTicketLinks,
+  type TicketLinkVenueContext,
+} from './lib/ticket-links/index.js'

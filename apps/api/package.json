@@ -33,6 +33,7 @@
   },
   "devDependencies": {
     "@concert-crawl/config": "workspace:*",
+    "@concert-crawl/crawler-core": "workspace:*",
     "@types/bad-words": "^3.0.3",
     "@types/node": "^25.9.3",
     "@typescript-eslint/eslint-plugin": "^8.61.0",
