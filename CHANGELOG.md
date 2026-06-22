@@ -1,3 +1,11 @@
+## [1.74.4](https://github.com/HartiganHM/concert-crawl/compare/v1.74.3...v1.74.4) (2026-06-22)
+
+
+### Bug Fixes
+
+* **crawler:** address Copilot review on PR [#729](https://github.com/HartiganHM/concert-crawl/issues/729) ([c36e58e](https://github.com/HartiganHM/concert-crawl/commit/c36e58ead47516cc30aaa1688333124840ddbb00))
+* **crawler:** aeg fetcher schema + TBD-date handling for Gothic and Ogden ([1dc7f72](https://github.com/HartiganHM/concert-crawl/commit/1dc7f728413e3e06e5b52c3036ac8eeb346c5506)), closes [#623](https://github.com/HartiganHM/concert-crawl/issues/623) [#720](https://github.com/HartiganHM/concert-crawl/issues/720)
+
 ## [1.74.3](https://github.com/HartiganHM/concert-crawl/compare/v1.74.2...v1.74.3) (2026-06-22)
 
 
