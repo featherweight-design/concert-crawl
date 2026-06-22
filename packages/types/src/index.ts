@@ -347,6 +347,65 @@ export interface EventWithVenue extends Event {
   priceVendor?: string | null
 }
 
+// Per-tier price-aggregation building blocks (issue #644). Surfaced inside
+// EventDetailResponse.priceByTier. PR 4 (Consumer UI) consumes these; the
+// existing flat priceVendor / priceAlternates / priceConfirmsCount fields
+// stay alongside for the migration buffer and get dropped in the Contract PR.
+
+export interface TierHeadline {
+  submissionId: string
+  priceMin: string
+  priceMax: string | null
+  vendor: Vendor
+  sourceCategory: SourceCategory | null
+  submitterHandle: string | null
+  observedAt: string
+  approvedAt: string
+  approvalKind: 'admin' | 'fan'
+  confirmsCount: number
+}
+
+export interface TierAlternate {
+  submissionId: string
+  priceMin: string
+  priceMax: string | null
+  vendor: Vendor
+  sourceCategory: SourceCategory | null
+}
+
+export interface TierPending {
+  id: string
+  priceMin: string
+  priceMax: string | null
+  vendor: Vendor
+  howFound: HowFound
+  sourceCategory: SourceCategory | null
+  note: string | null
+  submitterHandle: string | null
+  submittedAt: string
+  confirmsCount: number
+  confirmsNeeded: number
+  isSubmitter: boolean
+}
+
+export interface TierCounter {
+  id: string
+  parentSubmissionId: string
+  floor: number
+  ceiling?: number
+  submitter: { handle: string } | null
+  submittedAt: string
+}
+
+export interface TierPriceBlock {
+  tier: Tier
+  headline: TierHeadline | null
+  alternates: TierAlternate[]
+  pending: TierPending[]
+  counterSubmission: TierCounter | null
+  reports: number
+}
+
 // EventDetailResponse — single event detail with computed watch state and setlist
 export interface EventDetailResponse extends EventWithVenue {
   setlist: Setlist | null
@@ -404,6 +463,15 @@ export interface EventDetailResponse extends EventWithVenue {
     confirmsNeeded: number
     isSubmitter: boolean
   }> | null
+  // Per-tier price aggregation (issue #644). Each tier block contains a single
+  // corroborated headline (best-of by source-category trust + price), other
+  // corroborated rows in the same tier as alternates, every pending submission
+  // in the tier, the optional counter-submission against the headline, and a
+  // total reports count. Tiers sort by entry price (lowest headline first;
+  // pending-only tiers after). The flat priceVendor / priceAlternates / etc.
+  // fields above stay for PR 4 migration; the eventual Contract PR drops them
+  // once consumers have moved.
+  priceByTier?: TierPriceBlock[] | null
 }
 
 // Public events list query params
