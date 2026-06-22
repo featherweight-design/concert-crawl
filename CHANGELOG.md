@@ -1,3 +1,14 @@
+# [1.72.0](https://github.com/HartiganHM/concert-crawl/compare/v1.71.3...v1.72.0) (2026-06-22)
+
+
+### Features
+
+* **crawler-core:** add deriveTicketLinks composer ([c813547](https://github.com/HartiganHM/concert-crawl/commit/c81354732ba22ca9b8f455d479b26f8fd60c6192))
+* **crawler-core:** add host-rules vendor + resale lookup tables ([5dfb7a5](https://github.com/HartiganHM/concert-crawl/commit/5dfb7a5dae7b1ea4663fc4338daba89cc5765b0b))
+* **crawler-core:** add parseHost URL-to-hostname helper ([4f3368d](https://github.com/HartiganHM/concert-crawl/commit/4f3368db59f232a34379faa8f5ebf22f6ac97944)), closes [#641](https://github.com/HartiganHM/concert-crawl/issues/641)
+* **crawler-core:** emit ticketLinks on every event upsert ([9f2d3da](https://github.com/HartiganHM/concert-crawl/commit/9f2d3daa0eecea338f1ee77b0995ff2825d06013))
+* **crawler:** add backfill-ticket-links CLI script ([07c1167](https://github.com/HartiganHM/concert-crawl/commit/07c1167fb160fb5055fe8f13e078f77d3ff8c0f3))
+
 ## [1.71.3](https://github.com/HartiganHM/concert-crawl/compare/v1.71.2...v1.71.3) (2026-06-22)
 
 
