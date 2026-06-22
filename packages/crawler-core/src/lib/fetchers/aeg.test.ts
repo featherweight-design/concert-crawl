@@ -10,13 +10,19 @@ import {
 } from './aeg.js'
 import type { Venue } from '@concert-crawl/db'
 
-const FIXTURE_PATH = path.join(
+const FIXTURES_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   '__fixtures__',
-  'aeg-bluebird.json',
 )
-const BLUEBIRD_FIXTURE = readFileSync(FIXTURE_PATH, 'utf-8')
+function loadFixture(name: string): string {
+  return readFileSync(path.join(FIXTURES_DIR, name), 'utf-8')
+}
+const BLUEBIRD_FIXTURE = loadFixture('aeg-bluebird.json')
 const BLUEBIRD_EVENTS_COUNT = JSON.parse(BLUEBIRD_FIXTURE).events.length
+const GOTHIC_FIXTURE = loadFixture('aeg-gothic.json')
+const GOTHIC_EVENTS_COUNT = JSON.parse(GOTHIC_FIXTURE).events.length
+const OGDEN_FIXTURE = loadFixture('aeg-ogden.json')
+const OGDEN_EVENTS_COUNT = JSON.parse(OGDEN_FIXTURE).events.length
 
 function makeVenue(overrides: Partial<Venue> = {}): Venue {
   return {
@@ -175,6 +181,95 @@ describe('aegFetcher.fetch', () => {
     await expect(
       aegFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
     ).rejects.toBeInstanceOf(AegSchemaError)
+  })
+
+  // Regression: Gothic shard 37's events omit `ticketURL` from `ticketing`
+  // entirely (only `url` is present). The previous schema required
+  // `ticketURL` to exist (just nullable), which rejected every Gothic event
+  // = 56 issues per fetch and 0 events ingested for days. See #720.
+  it('parses Gothic fixture (ticketing omits ticketURL key)', async () => {
+    mockFetchOk(GOTHIC_FIXTURE)
+    const venue = makeVenue({
+      name: 'Gothic Theatre',
+      slug: 'gothic-theatre',
+      websiteUrl: 'https://www.gothictheatre.com/calendar/',
+      platformVenueId: '37',
+    })
+    const result = await aegFetcher.fetch(venue, { crawlDelayMs: 0 })
+    expect(result.events.length).toBe(GOTHIC_EVENTS_COUNT)
+    expect(result.events[0]!.sourceUrl).toBe(
+      'https://www.gothictheatre.com/calendar/',
+    )
+  })
+
+  it('accepts a ticketing object that omits ticketURL', async () => {
+    const parsed = JSON.parse(BLUEBIRD_FIXTURE) as {
+      meta: { total: number }
+      events: AegEvent[]
+    }
+    const event = { ...parsed.events[0]! }
+    const ticketingWithoutTicketURL = {
+      ...((event.ticketing ?? {}) as Record<string, unknown>),
+    }
+    delete ticketingWithoutTicketURL.ticketURL
+    const fallbackUrl = ticketingWithoutTicketURL.url
+    expect(typeof fallbackUrl).toBe('string')
+    const synthetic = JSON.stringify({
+      meta: { total: 1 },
+      events: [{ ...event, ticketing: ticketingWithoutTicketURL }],
+    })
+    mockFetchOk(synthetic)
+
+    const result = await aegFetcher.fetch(makeVenue(), { crawlDelayMs: 0 })
+    expect(result.events.length).toBe(1)
+    // Falls back to ticketing.url when ticketURL is absent.
+    expect(result.events[0]!.ticketUrl).toBe(fallbackUrl)
+  })
+
+  // Regression: Ogden shard 7 had an event with eventDateTimeISO: "TBD".
+  // The previous parser threw, killing the entire crawl run. Now we skip
+  // events with unparseable dates so the rest of the shard still ingests.
+  // See #720.
+  it('skips events with unparseable eventDateTimeISO (e.g. "TBD") instead of failing the run', async () => {
+    mockFetchOk(OGDEN_FIXTURE)
+    const venue = makeVenue({
+      name: 'Ogden Theatre',
+      slug: 'ogden-theatre',
+      websiteUrl: 'https://www.ogdentheatre.com/calendar/',
+      platformVenueId: '7',
+    })
+    const result = await aegFetcher.fetch(venue, { crawlDelayMs: 0 })
+    // Fixture has 57 events total; exactly one has eventDateTimeISO: "TBD".
+    // Skip that one, keep the other 56.
+    const tbdCount = (
+      JSON.parse(OGDEN_FIXTURE) as { events: AegEvent[] }
+    ).events.filter((evt) => evt.eventDateTimeISO === 'TBD').length
+    expect(tbdCount).toBe(1)
+    expect(result.events.length).toBe(OGDEN_EVENTS_COUNT - 1)
+    // Sanity: the TBD event's artist isn't in the result.
+    expect(
+      result.events.some((evt) => evt.artist === 'Earl Sweatshirt & MIKE'),
+    ).toBe(false)
+  })
+
+  it('skips a synthetic event with eventDateTimeISO === "TBD"', async () => {
+    const parsed = JSON.parse(BLUEBIRD_FIXTURE) as {
+      meta: { total: number }
+      events: AegEvent[]
+    }
+    const tbdEvent = {
+      ...parsed.events[0]!,
+      eventId: 'tbd-1',
+      eventDateTimeISO: 'TBD',
+    }
+    const synthetic = JSON.stringify({
+      meta: { total: 2 },
+      events: [parsed.events[0]!, tbdEvent],
+    })
+    mockFetchOk(synthetic)
+
+    const result = await aegFetcher.fetch(makeVenue(), { crawlDelayMs: 0 })
+    expect(result.events.length).toBe(1)
   })
 
   it('sets crawlDelayMs as a leading delay before the fetch', async () => {

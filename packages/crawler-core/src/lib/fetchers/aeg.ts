@@ -22,9 +22,11 @@
 
 import { z } from 'zod'
 import type { Venue } from '@concert-crawl/db'
+import { createLogger } from '@concert-crawl/logger'
 import type { NormalizedEvent } from '../../types.js'
 import type { PlatformFetcher, PlatformFetchResult } from './index.js'
 
+const logger = createLogger('aeg-fetcher')
 const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
 const BLOB_BASE = 'https://aegwebprod.blob.core.windows.net/json/events'
 
@@ -57,7 +59,9 @@ const AegEventSchema = z
     ticketing: z
       .object({
         url: z.string().nullable(),
-        ticketURL: z.string().nullable(),
+        // Some AEG shards (e.g. Gothic shard 37) omit `ticketURL` entirely
+        // and only ship `url`. Downstream falls back to `url`.
+        ticketURL: z.string().nullable().optional(),
       })
       .passthrough()
       .nullable(),
@@ -114,11 +118,16 @@ function endpointUrl(shardId: string): string {
  * (which would jump to the crawler's UTC tz and shift the day boundary
  * for late-night shows). AEG always emits the venue's local time + the
  * matching UTC offset, so the local portion IS the venue local date.
+ *
+ * Returns null for unparseable input (e.g. "TBD"). Callers should skip
+ * those events rather than failing the whole crawl.
  */
-function parseEventDate(iso: string): { date: string; showTime: string } {
+function parseEventDate(
+  iso: string,
+): { date: string; showTime: string } | null {
   const match = iso.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}(?::\d{2})?)/)
   if (!match) {
-    throw new Error(`AEG eventDateTimeISO unparseable: ${iso}`)
+    return null
   }
   const time = match[2]!.length === 5 ? `${match[2]}:00` : match[2]!
   return { date: match[1]!, showTime: time }
@@ -192,7 +201,23 @@ function normalize(
   const headliner = event.title.headlinersText
   if (!headliner) return null // can't normalize without an artist
 
-  const { date, showTime } = parseEventDate(event.eventDateTimeISO)
+  const parsedDate = parseEventDate(event.eventDateTimeISO)
+  if (!parsedDate) {
+    // AEG occasionally ships placeholder strings like "TBD" before a show
+    // is officially announced. Skip those rather than failing the whole
+    // crawl run — the next nightly crawl will pick them up once AEG sets a
+    // real date.
+    logger.warn(
+      {
+        eventId: event.eventId,
+        eventDateTimeISO: event.eventDateTimeISO,
+        headliner,
+      },
+      'aeg: skipping event with unparseable eventDateTimeISO',
+    )
+    return null
+  }
+  const { date, showTime } = parsedDate
   const doorsTime = parseDoorTime(event.doorDateTime)
   const ticketUrl =
     event.ticketing?.ticketURL ?? event.ticketing?.url ?? undefined
