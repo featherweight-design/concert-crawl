@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   aggregateByTier,
+  pickHeadlinesByTier,
   type AggregateByTierInput,
   type CorroboratedTierRow,
   type PendingTierRow,
@@ -290,5 +291,112 @@ describe('aggregateByTier', () => {
     // for display). compareBlocks has to scan all pending rows for the true
     // min, not trust pending[0].
     expect(blocks.map((block) => block.tier)).toEqual(['VIP', 'GA'])
+  })
+})
+
+describe('pickHeadlinesByTier', () => {
+  it('returns empty map for empty input', () => {
+    expect(pickHeadlinesByTier([])).toEqual(new Map())
+  })
+
+  it('returns one headline per tier present in the input', () => {
+    const heads = pickHeadlinesByTier([
+      corrob({ id: 'ga-row', tier: 'GA' }),
+      corrob({ id: 'vip-row', tier: 'VIP' }),
+    ])
+    expect(heads.size).toBe(2)
+    expect(heads.get('GA')?.id).toBe('ga-row')
+    expect(heads.get('VIP')?.id).toBe('vip-row')
+  })
+
+  it('within a tier picks the boxoffice row over a cheaper standard row (trust > price)', () => {
+    const heads = pickHeadlinesByTier([
+      corrob({
+        id: 'ga-std-cheap',
+        tier: 'GA',
+        sourceCategory: 'standard',
+        priceMin: '20',
+      }),
+      corrob({
+        id: 'ga-bo',
+        tier: 'GA',
+        sourceCategory: 'boxoffice',
+        vendor: 'VenueBoxOffice',
+        priceMin: '40',
+      }),
+    ])
+    expect(heads.get('GA')?.id).toBe('ga-bo')
+  })
+
+  it('within a tier picks the cheaper row when trust is equal (price tie-break)', () => {
+    const heads = pickHeadlinesByTier([
+      corrob({
+        id: 'ga-std-50',
+        tier: 'GA',
+        sourceCategory: 'standard',
+        priceMin: '50',
+      }),
+      corrob({
+        id: 'ga-std-30',
+        tier: 'GA',
+        sourceCategory: 'standard',
+        priceMin: '30',
+      }),
+    ])
+    expect(heads.get('GA')?.id).toBe('ga-std-30')
+  })
+
+  it('within a tier breaks a trust+price tie by newest updatedAt', () => {
+    const heads = pickHeadlinesByTier([
+      corrob({
+        id: 'ga-old',
+        tier: 'GA',
+        sourceCategory: 'standard',
+        priceMin: '30',
+        updatedAt: new Date('2026-06-01T00:00:00Z'),
+      }),
+      corrob({
+        id: 'ga-new',
+        tier: 'GA',
+        sourceCategory: 'standard',
+        priceMin: '30',
+        updatedAt: new Date('2026-06-15T00:00:00Z'),
+      }),
+    ])
+    expect(heads.get('GA')?.id).toBe('ga-new')
+  })
+
+  it('selects the right headline per tier independently when multiple tiers each have multiple rows', () => {
+    const heads = pickHeadlinesByTier([
+      corrob({
+        id: 'ga-std',
+        tier: 'GA',
+        sourceCategory: 'standard',
+        priceMin: '25',
+      }),
+      corrob({
+        id: 'ga-bo',
+        tier: 'GA',
+        sourceCategory: 'boxoffice',
+        vendor: 'VenueBoxOffice',
+        priceMin: '35',
+      }),
+      corrob({
+        id: 'vip-resale',
+        tier: 'VIP',
+        sourceCategory: 'resale',
+        priceMin: '100',
+      }),
+      corrob({
+        id: 'vip-std',
+        tier: 'VIP',
+        sourceCategory: 'standard',
+        priceMin: '180',
+      }),
+    ])
+    // GA boxoffice wins over cheaper standard
+    expect(heads.get('GA')?.id).toBe('ga-bo')
+    // VIP standard wins over cheaper resale
+    expect(heads.get('VIP')?.id).toBe('vip-std')
   })
 })
