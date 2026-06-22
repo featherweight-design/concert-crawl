@@ -286,6 +286,42 @@ describe('POST /v1/submissions/:id/dispute', () => {
     expect(body.data.tier).toBe('GA')
     expect(body.data.sourceCategory).toBe('standard')
   })
+
+  it('ignores vendor in dispute body — always inherits from parent (slot identity is fixed)', async () => {
+    // Even if a client tries to override vendor (e.g. legacy UI still sends
+    // it, or a malicious request hoping to flip the source bucket), the
+    // server unconditionally inherits from the parent. Otherwise the dispute
+    // mutates the (tier, source_category) slot the corroborated price lives
+    // in — exactly what the price-only contest scope is meant to prevent.
+    const corroborated = await seedPriceSubmission(eventId, 'user_owner', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      status: 'corroborated',
+    })
+
+    setAuth('user_disputer')
+    const res = await app.request(
+      `/v1/submissions/${corroborated.id}/dispute`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-token',
+        },
+        // Try to flip the vendor — server must ignore.
+        body: JSON.stringify({ floor: 35, vendor: 'Ticketmaster' }),
+      },
+    )
+    expect(res.status).toBe(201)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { vendor: string }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.vendor).toBe('AXS')
+  })
 })
 
 describe('PATCH /v1/submissions/:id', () => {

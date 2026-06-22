@@ -385,9 +385,10 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     }
   }
 
-  // For community-priced events, surface the vendor and submitter handle so the
-  // price card can show the correct trust tier (box office vs. community) and
-  // attribution line.
+  // Flat-field declarations — populated below from the same in-memory data
+  // that feeds priceByTier so the two payload shapes can't drift. The flat
+  // fields are deprecated; PR 4 migrates the consumer UI to priceByTier and
+  // the Contract PR drops them.
   let priceVendor: string | null = null
   let priceSubmitterHandle: string | null = null
   let priceObservedAt: string | null = null
@@ -409,108 +410,11 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     submittedAt: string
   } | null = null
 
-  if (row.priceSource === 'community') {
-    const allSubs = await db
-      .select({
-        id: priceSubmissions.id,
-        vendor: priceSubmissions.vendor,
-        userId: priceSubmissions.userId,
-        priceMin: priceSubmissions.priceMin,
-        priceMax: priceSubmissions.priceMax,
-        createdAt: priceSubmissions.createdAt,
-        updatedAt: priceSubmissions.updatedAt,
-      })
-      .from(priceSubmissions)
-      .where(
-        and(
-          eq(priceSubmissions.eventId, id),
-          eq(priceSubmissions.status, 'corroborated'),
-        ),
-      )
-      // Sort by trust priority: box office (0) > community (1) > resale (2), then newest first
-      .orderBy(
-        sql`CASE WHEN ${priceSubmissions.vendor} = 'VenueBoxOffice' THEN 0 WHEN ${priceSubmissions.vendor} = 'SeatGeek' THEN 2 ELSE 1 END ASC`,
-        desc(priceSubmissions.createdAt),
-      )
-
-    const [latestSub, ...otherSubs] = allSubs
-
-    if (latestSub) {
-      priceVendor = latestSub.vendor
-      priceObservedAt = latestSub.createdAt.toISOString()
-      // updatedAt reflects when status changed to corroborated (the approval timestamp)
-      priceApprovedAt = latestSub.updatedAt.toISOString()
-      // If submission_confirms has rows, at least one fan corroborated it; otherwise admin approved it
-      const [confirmCount] = await db
-        .select({ total: count() })
-        .from(submissionConfirms)
-        .where(eq(submissionConfirms.submissionId, latestSub.id))
-      priceConfirmsCount = confirmCount?.total ?? 0
-      priceApprovalKind = priceConfirmsCount > 0 ? 'fan' : 'admin'
-
-      const allSubIds = allSubs.map((sub) => sub.id)
-      const [counterRow] = await db
-        .select({
-          id: priceSubmissions.id,
-          priceMin: priceSubmissions.priceMin,
-          priceMax: priceSubmissions.priceMax,
-          userId: priceSubmissions.userId,
-          createdAt: priceSubmissions.createdAt,
-        })
-        .from(priceSubmissions)
-        .where(
-          and(
-            eq(priceSubmissions.eventId, id),
-            eq(priceSubmissions.status, 'pending'),
-            isNotNull(priceSubmissions.disputedSubmissionId),
-            inArray(priceSubmissions.disputedSubmissionId, allSubIds),
-          ),
-        )
-        .orderBy(desc(priceSubmissions.createdAt))
-        .limit(1)
-
-      if (counterRow) {
-        let counterHandle: string | null = null
-        if (counterRow.userId) {
-          const [counterProfile] = await db
-            .select({ handle: userProfiles.handle })
-            .from(userProfiles)
-            .where(eq(userProfiles.userId, counterRow.userId))
-            .limit(1)
-          counterHandle = counterProfile?.handle ?? null
-        }
-        counterSubmission = {
-          id: counterRow.id,
-          parentSubmissionId: latestSub.id,
-          floor: parseFloat(counterRow.priceMin),
-          ...(counterRow.priceMax !== null
-            ? { ceiling: parseFloat(counterRow.priceMax) }
-            : {}),
-          submitter: counterHandle !== null ? { handle: counterHandle } : null,
-          submittedAt: counterRow.createdAt.toISOString(),
-        }
-      }
-
-      if (latestSub.userId) {
-        const [profile] = await db
-          .select({ handle: userProfiles.handle })
-          .from(userProfiles)
-          .where(eq(userProfiles.userId, latestSub.userId))
-          .limit(1)
-        priceSubmitterHandle = profile?.handle ?? null
-      }
-      priceAlternates = otherSubs.map((sub) => ({
-        vendor: sub.vendor,
-        priceMin: sub.priceMin,
-        priceMax: sub.priceMax,
-      }))
-    }
-  }
-
-  // Per-tier price aggregation (PR 3) shares its corroborated + pending data
-  // sets with the flat pendingSubmissions field below. Running the queries
-  // once and deriving both shapes from the in-memory rows avoids double DB
-  // roundtrips and keeps the two payload shapes in lock-step.
+  // Per-tier price aggregation (PR 3) and the flat priceVendor/priceAlternates/
+  // priceConfirmsCount/counterSubmission/pendingSubmissions fields share the
+  // same corroborated + pending data. Running the queries once and deriving
+  // both shapes from the in-memory rows avoids duplicate DB work and keeps
+  // the two payloads from drifting (an issue Copilot flagged in PR 723 r3).
   const allCorroboratedRows = await db
     .select({
       id: priceSubmissions.id,
@@ -553,37 +457,45 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       ),
     )
 
-  // Counter-submissions = pending rows that point at a corroborated parent.
-  // They land on the headline's counterSubmission field rather than the tier's
-  // pending list so the UI can show "Saw a different number?" against the
-  // corroborated price without double-counting the dispute as a fresh pending.
-  // Collecting them via flatMap with explicit narrowing avoids the
-  // `disputedSubmissionId ?? ''` fallback that would have hidden type errors
-  // if the predicate ever changed.
-  const corroboratedIdSet = new Set(allCorroboratedRows.map((sub) => sub.id))
-  const counterTierRows = allPendingRows.flatMap((sub) => {
-    const parentId = sub.disputedSubmissionId
-    if (parentId === null || !corroboratedIdSet.has(parentId)) return []
-    return [
-      {
-        id: sub.id,
-        parentSubmissionId: parentId,
-        tier: sub.tier,
-        priceMin: sub.priceMin,
-        priceMax: sub.priceMax,
-        userId: sub.userId,
-        createdAt: sub.createdAt,
-      },
-    ]
-  })
+  // Counter-submissions = pending rows that point at a corroborated parent
+  // AT THE SAME TIER. Tier match is required so a dispute that landed under a
+  // different tier (legacy data, or future relaxation of the dispute schema)
+  // doesn't get hidden — it stays in pendingSubmissions where the user can
+  // see it. Counters surface on the headline's counterSubmission field
+  // instead of the tier's pending list so the UI shows "Saw a different
+  // number?" against the corroborated price without double-counting.
+  //
+  // Counters are sorted newest-first so when multiple disputes exist against
+  // the same headline, the most recent challenger wins deterministically.
+  const corroboratedById = new Map(
+    allCorroboratedRows.map((sub) => [sub.id, sub]),
+  )
+  const counterTierRows = allPendingRows
+    .flatMap((sub) => {
+      const parentId = sub.disputedSubmissionId
+      if (parentId === null) return []
+      const parent = corroboratedById.get(parentId)
+      if (!parent || parent.tier !== sub.tier) return []
+      return [
+        {
+          id: sub.id,
+          parentSubmissionId: parentId,
+          tier: sub.tier,
+          priceMin: sub.priceMin,
+          priceMax: sub.priceMax,
+          userId: sub.userId,
+          createdAt: sub.createdAt,
+        },
+      ]
+    })
+    .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
 
-  // truePendingRows excludes counters so the flat pendingSubmissions field
-  // doesn't double-surface dispute rows already exposed via counterSubmission /
-  // priceByTier.counterSubmission.
+  // truePendingRows excludes the counters we just split out. Disputes that
+  // point at a corroborated parent with a mismatched tier (or at a non-
+  // corroborated row) stay here so the user can still see them as pending.
+  const counterIds = new Set(counterTierRows.map((sub) => sub.id))
   const truePendingRows = allPendingRows.filter(
-    (sub) =>
-      sub.disputedSubmissionId === null ||
-      !corroboratedIdSet.has(sub.disputedSubmissionId),
+    (sub) => !counterIds.has(sub.id),
   )
 
   // Batch handle lookups across every userId surfaced in any block.
@@ -650,6 +562,68 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   )
     ? SP_POLICY.confirmsRequiredImminent
     : SP_POLICY.confirmsRequired
+
+  // Flat-field derivation for community-priced events — preserves the legacy
+  // vendor-trust ordering (boxoffice=0, SeatGeek=2, else=1, then createdAt
+  // desc) so existing consumers keep getting the same priceVendor / priceAlternates
+  // / counterSubmission shape during the PR 4 migration window. Reads from
+  // the in-memory allCorroboratedRows + side-tables that priceByTier also
+  // consumes, so the two payload shapes share a single source of truth.
+  if (row.priceSource === 'community' && allCorroboratedRows.length > 0) {
+    const legacyVendorTrust = (vendor: string): number => {
+      if (vendor === 'VenueBoxOffice') return 0
+      if (vendor === 'SeatGeek') return 2
+      return 1
+    }
+    const legacySorted = [...allCorroboratedRows].sort((left, right) => {
+      const trustDelta =
+        legacyVendorTrust(left.vendor) - legacyVendorTrust(right.vendor)
+      if (trustDelta !== 0) return trustDelta
+      return right.createdAt.getTime() - left.createdAt.getTime()
+    })
+
+    const [latestSub, ...otherSubs] = legacySorted
+
+    if (latestSub) {
+      priceVendor = latestSub.vendor
+      priceObservedAt = latestSub.createdAt.toISOString()
+      priceApprovedAt = latestSub.updatedAt.toISOString()
+      priceConfirmsCount = confirmsBySubmissionId.get(latestSub.id) ?? 0
+      priceApprovalKind = priceConfirmsCount > 0 ? 'fan' : 'admin'
+      priceSubmitterHandle =
+        latestSub.userId !== null
+          ? (aggregateHandles.get(latestSub.userId) ?? null)
+          : null
+      priceAlternates = otherSubs.map((sub) => ({
+        vendor: sub.vendor,
+        priceMin: sub.priceMin,
+        priceMax: sub.priceMax,
+      }))
+
+      // counterTierRows is sorted newest-first and filtered to tier-match
+      // counters. Pick the newest counter whose parent is the legacy
+      // "primary" submission.
+      const counter = counterTierRows.find(
+        (sub) => sub.parentSubmissionId === latestSub.id,
+      )
+      if (counter) {
+        const counterHandle =
+          counter.userId !== null
+            ? (aggregateHandles.get(counter.userId) ?? null)
+            : null
+        const counterCeiling =
+          counter.priceMax !== null ? parseFloat(counter.priceMax) : null
+        counterSubmission = {
+          id: counter.id,
+          parentSubmissionId: counter.parentSubmissionId,
+          floor: parseFloat(counter.priceMin),
+          ...(counterCeiling !== null ? { ceiling: counterCeiling } : {}),
+          submitter: counterHandle !== null ? { handle: counterHandle } : null,
+          submittedAt: counter.createdAt.toISOString(),
+        }
+      }
+    }
+  }
 
   const priceByTier = aggregateByTier({
     corroborated: allCorroboratedRows.map((sub) => ({

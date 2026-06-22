@@ -43,6 +43,9 @@ export interface CounterTierRow {
 export interface AggregateByTierInput {
   corroborated: readonly CorroboratedTierRow[]
   pending: readonly PendingTierRow[]
+  // Sorted newest-first (createdAt descending). The composer's find() picks
+  // the first matching counter for each headline, so the caller's ordering
+  // determines which dispute wins when multiple challenge the same row.
   counters: readonly CounterTierRow[]
   handles: ReadonlyMap<string, string>
   reportsByTier: ReadonlyMap<Tier, number>
@@ -202,6 +205,10 @@ export function aggregateByTier(input: AggregateByTierInput): TierPriceBlock[] {
     const headline = head !== null ? buildHeadline(head, handles) : null
     const alternates = sortedCorrob.slice(1).map(buildAlternate)
 
+    // Counters input is contract-required to be sorted newest-first by the
+    // caller so find() returns the most recent challenger deterministically
+    // when multiple disputes exist against the same headline. See the
+    // AggregateByTierInput.counters doc comment.
     const counter =
       head !== null
         ? counters.find(
