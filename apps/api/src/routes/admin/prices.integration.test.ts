@@ -372,6 +372,110 @@ describe('GET /v1/admin/prices/events', () => {
     expect(body.data).toHaveLength(1)
     expect(body.data[0].date).toBe('2099-07-01')
   })
+
+  // Regression for #732: an event marked non-concert
+  // (hidden_from_consumer=true) without a ticket price would otherwise
+  // appear in the missing-price queue forever — the admin already
+  // triaged it, it's not actionable. Same fix pattern as #712 applied
+  // to the Missing tab.
+  it('excludes hidden_from_consumer events from missing-price list', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      artist: 'Visible Concert',
+      date: '2099-07-01',
+      status: 'upcoming',
+      ticketPriceMin: null,
+      hiddenFromConsumer: false,
+    })
+    await seedEvent(venue.id, {
+      artist: 'Hidden Non-Concert',
+      date: '2099-07-02',
+      status: 'upcoming',
+      ticketPriceMin: null,
+      hiddenFromConsumer: true,
+    })
+
+    const res = await app.request('/v1/admin/prices/events', {
+      headers: ADMIN_HEADERS,
+    })
+    const body = await res.json()
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0].eventTitle).toBeDefined()
+    // Visible Concert seeded as artist; default title is 'Test Show'.
+    expect(body.data[0].artist).toBe('Visible Concert')
+  })
+
+  it('excludes hidden_from_consumer events when missingOnly=false too', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      artist: 'Visible',
+      date: '2099-07-01',
+      status: 'upcoming',
+      ticketPriceMin: '25.00',
+      hiddenFromConsumer: false,
+    })
+    await seedEvent(venue.id, {
+      artist: 'Hidden',
+      date: '2099-07-02',
+      status: 'upcoming',
+      ticketPriceMin: '30.00',
+      hiddenFromConsumer: true,
+    })
+
+    const res = await app.request('/v1/admin/prices/events?missingOnly=false', {
+      headers: ADMIN_HEADERS,
+    })
+    const body = await res.json()
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0].artist).toBe('Visible')
+  })
+})
+
+describe('GET /v1/admin/prices/coverage', () => {
+  beforeEach(() => {
+    setAdminAuth()
+    return clearTables()
+  })
+
+  // Regression for #732: coverage % was deflated by admin-hidden
+  // non-concerts (counted as upcoming events that "lack" prices). The
+  // metric should reflect only the events that actually need price
+  // coverage.
+  it('excludes hidden_from_consumer from total and withPrice counts', async () => {
+    const venue = await seedVenue()
+    // 2 visible upcoming, 1 with price → coverage 1/2 = 50%
+    await seedEvent(venue.id, {
+      artist: 'Visible With Price',
+      date: '2099-07-01',
+      status: 'upcoming',
+      ticketPriceMin: '25.00',
+      hiddenFromConsumer: false,
+    })
+    await seedEvent(venue.id, {
+      artist: 'Visible Missing Price',
+      date: '2099-07-02',
+      status: 'upcoming',
+      ticketPriceMin: null,
+      hiddenFromConsumer: false,
+    })
+    // 1 hidden non-concert with price (should NOT count toward either)
+    await seedEvent(venue.id, {
+      artist: 'Hidden Non-Concert',
+      date: '2099-07-03',
+      status: 'upcoming',
+      ticketPriceMin: '20.00',
+      hiddenFromConsumer: true,
+    })
+
+    const res = await app.request('/v1/admin/prices/coverage', {
+      headers: ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.data.total).toBe(2)
+    expect(body.data.withPrice).toBe(1)
+    expect(body.data.pct).toBe(50)
+  })
 })
 
 describe('GET /v1/admin/prices/events?count=true', () => {

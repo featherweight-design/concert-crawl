@@ -49,9 +49,14 @@ pricesAdminRouter.get(
       timeZone: 'America/Denver',
     })
 
+    // Exclude admin-hidden non-concerts (#732, same pattern as #712 on the
+    // Missing tab). Events flagged hidden_from_consumer=true have already
+    // been triaged as non-concerts — they shouldn't appear in the missing-
+    // price queue or skew the coverage %.
     const conditions = [
       eq(events.status, 'upcoming'),
       gte(events.date, today),
+      eq(events.hiddenFromConsumer, false),
       ...(missingOnly ? [isNull(events.ticketPriceMin)] : []),
     ]
     const whereClause = and(...conditions)
@@ -148,11 +153,17 @@ pricesAdminRouter.get('/log', async (ctx) => {
 })
 
 // GET /v1/admin/prices/coverage — % of upcoming events with price data
+//
+// Excludes admin-hidden non-concerts (#732) so the coverage % reflects only
+// events that actually need prices. Counting hidden non-concerts as
+// "uncovered" deflated the percentage without representing real work.
 pricesAdminRouter.get('/coverage', async (ctx) => {
   const [total] = await db
     .select({ count: count() })
     .from(events)
-    .where(eq(events.status, 'upcoming'))
+    .where(
+      and(eq(events.status, 'upcoming'), eq(events.hiddenFromConsumer, false)),
+    )
 
   const [withPrice] = await db
     .select({ count: count() })
@@ -160,6 +171,7 @@ pricesAdminRouter.get('/coverage', async (ctx) => {
     .where(
       and(
         eq(events.status, 'upcoming'),
+        eq(events.hiddenFromConsumer, false),
         sql`${events.ticketPriceMin} IS NOT NULL`,
       ),
     )
