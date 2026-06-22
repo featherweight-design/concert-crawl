@@ -250,6 +250,42 @@ describe('POST /v1/submissions/:id/dispute', () => {
     }
     expect(parentBody.data.status).toBe('disputed')
   })
+
+  it('inherits vendor from parent when dispute body omits it (price-only contest scope)', async () => {
+    const corroborated = await seedPriceSubmission(eventId, 'user_owner', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      status: 'corroborated',
+    })
+
+    setAuth('user_disputer')
+    const res = await app.request(
+      `/v1/submissions/${corroborated.id}/dispute`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-token',
+        },
+        body: JSON.stringify({ floor: 35 }),
+      },
+    )
+    expect(res.status).toBe(201)
+    const body = (await res.json()) as {
+      success: boolean
+      data: {
+        vendor: string
+        tier: string
+        sourceCategory: string | null
+      }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.vendor).toBe('AXS')
+    expect(body.data.tier).toBe('GA')
+    expect(body.data.sourceCategory).toBe('standard')
+  })
 })
 
 describe('PATCH /v1/submissions/:id', () => {

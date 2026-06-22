@@ -84,14 +84,19 @@ const disputeBodySchema = z
   .object({
     floor: z.number().int().min(SP_POLICY.floorMin).max(SP_POLICY.floorMax),
     ceiling: z.number().int().min(1).max(SP_POLICY.ceilingMax).optional(),
-    vendor: z.enum([
-      'AXS',
-      'Ticketmaster',
-      'SeatGeek',
-      'DICE',
-      'Eventbrite',
-      'VenueBoxOffice',
-    ]),
+    // Optional per the price-only contest scope (locked design decision).
+    // When omitted, the server inherits the parent submission's vendor so the
+    // (tier, source_category) slot identity stays fixed across the dispute.
+    vendor: z
+      .enum([
+        'AXS',
+        'Ticketmaster',
+        'SeatGeek',
+        'DICE',
+        'Eventbrite',
+        'VenueBoxOffice',
+      ])
+      .optional(),
   })
   .refine((data) => !data.ceiling || data.ceiling >= data.floor, {
     message: "Ceiling can't be below floor.",
@@ -117,7 +122,7 @@ submissionsRouter.post(
   async (ctx) => {
     const { id: submissionId } = ctx.req.param()
     const { userId } = getAuthUser(ctx)
-    const { floor, ceiling, vendor } = ctx.req.valid('json')
+    const { floor, ceiling, vendor: vendorOverride } = ctx.req.valid('json')
 
     const [parent] = await db
       .select()
@@ -134,6 +139,12 @@ submissionsRouter.post(
         403,
       )
     }
+
+    // Price-only contest scope: vendor inherits from parent when the body
+    // omits it, so the (tier, source_category) slot identity stays fixed
+    // across the dispute. Changing tier or source is a new submission, not a
+    // contest.
+    const vendor = vendorOverride ?? parent.vendor
 
     const [disputeRow] = await db.transaction(async (tx) => {
       const [created] = await tx
