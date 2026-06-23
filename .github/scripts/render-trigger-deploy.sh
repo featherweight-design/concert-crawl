@@ -17,12 +17,14 @@
 # code.
 #
 # Why this script exists: the same curl + JSON-body + log-deploy-id
-# pattern was repeated for staging API + 3 prod services (1 web + 2
-# crons). Centralizing here removes the drift risk (one place to add
-# a header, retry, timeout, etc.) and lets us handle jq parse failure
-# in one place — a non-JSON Render response on a successful enqueue
-# would otherwise fail the workflow step even though the deploy went
-# through, leaving the pipeline lying about deploy state.
+# pattern was repeated for staging API + 3 prod services (the prod
+# API web service + 2 crawler crons). The user-facing website is
+# on Vercel and is not covered by this script. Centralizing here
+# removes the drift risk (one place to add a header, retry, timeout,
+# etc.) and lets us handle jq parse failure in one place — a non-JSON
+# Render response on a successful enqueue would otherwise fail the
+# workflow step even though the deploy went through, leaving the
+# pipeline lying about deploy state.
 
 set -euo pipefail
 
@@ -62,8 +64,15 @@ fi
 # enqueue (or changes the response shape), we still want the workflow
 # to succeed because the deploy itself was accepted (2xx). `2>/dev/null`
 # suppresses jq's parse error text; `|| echo` provides a fallback for
-# the variable. The `// "<no id>"` jq filter handles the missing-field
+# the variable.
+#
+# `(.deploy // .)` handles both response shapes that exist across
+# Render endpoints: some wrap the deploy object in `.deploy`
+# (render-wait-for-live.sh has the same defensive unwrap), others
+# return it flat. The POST deploy endpoint currently returns flat,
+# but matching the pattern keeps us robust to future API changes.
+# The trailing `// "<no id>"` jq filter handles the missing-field
 # case within otherwise-valid JSON.
-deploy_id=$(echo "${response}" | jq -r '.id // "<no id in response>"' 2>/dev/null || echo "<jq parse failed>")
+deploy_id=$(echo "${response}" | jq -r '(.deploy // .).id // "<no id in response>"' 2>/dev/null || echo "<jq parse failed>")
 
 echo "${LABEL} deploy enqueued: id=${deploy_id} service=${SERVICE_ID} commit=${COMMIT_SHA}"
