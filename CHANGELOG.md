@@ -1,3 +1,12 @@
+## [1.74.8](https://github.com/HartiganHM/concert-crawl/compare/v1.74.7...v1.74.8) (2026-06-23)
+
+
+### Bug Fixes
+
+* **deploy:** clarify script scope + handle both Render response shapes ([71c625b](https://github.com/HartiganHM/concert-crawl/commit/71c625b039b03c529bd02bf4a3963a568f8de6ca))
+* **deploy:** print Render API error body on failure + correct preflight path ([a742456](https://github.com/HartiganHM/concert-crawl/commit/a7424568dd857e600c08baf31537fb9c6e3f86d8)), closes [#740](https://github.com/HartiganHM/concert-crawl/issues/740)
+* **deploy:** use Render API + commitId pinning instead of deploy hooks ([bd650bc](https://github.com/HartiganHM/concert-crawl/commit/bd650bcfe1cd5cac8a0e735f1e1723f24b8530ea))
+
 ## [1.74.7](https://github.com/HartiganHM/concert-crawl/compare/v1.74.6...v1.74.7) (2026-06-23)
 
 
