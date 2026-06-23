@@ -27,11 +27,15 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
     await page.waitForLoadState('networkidle')
 
     await page.getByLabel(/email/i).fill(email)
-    await page.getByRole('button', { name: /continue/i }).click()
+    // `exact: true` is required because Clerk renders a "Sign in with
+    // Google" OAuth button whose accessible name resolves to "Sign in
+    // with Google Continue" — a substring match on /continue/i hits
+    // both buttons and trips Playwright's strict-mode check.
+    await page.getByRole('button', { name: 'Continue', exact: true }).click()
     await page.waitForLoadState('networkidle')
 
     await page.getByLabel(/password/i).fill(password)
-    await page.getByRole('button', { name: /continue|sign in/i }).click()
+    await page.getByRole('button', { name: 'Continue', exact: true }).click()
 
     await page.waitForURL((url) => !url.pathname.includes('sign-in'), {
       timeout: 15_000,
