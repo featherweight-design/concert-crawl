@@ -62,7 +62,12 @@ fi
 # and github.sha both produce lowercase, but git SHAs are technically
 # case-insensitive (`A` and `a` are the same commit), so accept either
 # form from manual callers without false-failing.
-COMMIT_SHA=$(echo "${COMMIT_SHA}" | tr 'A-F' 'a-f')
+#
+# Use `printf '%s'` rather than `echo` — some echo implementations
+# treat values beginning with `-` as options (e.g. `-n`, `-e`) and
+# eat them or change behavior. printf has no option-parsing ambiguity
+# for the value passed to %s.
+COMMIT_SHA=$(printf '%s' "${COMMIT_SHA}" | tr 'A-F' 'a-f')
 
 # Validate the normalized shape — full 40-char hex. If a caller ever
 # passes whitespace, a short SHA, or branch-name junk, the curl below
