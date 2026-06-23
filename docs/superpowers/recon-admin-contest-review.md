@@ -615,7 +615,7 @@ The recon couldn't determine the following; the bridging spec will need to resol
 - ✅ `priceSubmissions.disputedSubmissionId` (FK to parent)
 - ✅ `priceSubmissions.status` enum (pending, corroborated, disputed, stale)
 - ✅ `priceSubmissions.corroborationCount` (observer count)
-- ✅ `priceSubmissions.note` (admin notes)
+- ✅ `priceSubmissions.note` (submitter-provided free-text on insert, content-moderated server-side; admin's archive reason is a separate `archived_reason` column added in migration 0041)
 - ⚠️ No indexes yet for dispute/contest queries
 - ⚠️ No contest-specific status values (relying on generic enum)
 

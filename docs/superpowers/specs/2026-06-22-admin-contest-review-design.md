@@ -132,7 +132,12 @@ BEGIN
 COMMIT
 ```
 
-Audit row and notifications are written **after** the transaction commits (not inside it — failures there should not roll back the resolution). The audit middleware's post-response pattern already handles this.
+Both audit and notification writes happen **after** the resolution transaction commits (so failures in either cannot roll the resolution back), but via distinct mechanisms:
+
+- **Audit log** — written by the existing post-response middleware (`apps/api/src/routes/admin/index.ts`), driven by `ctx.set('auditAction', ...)`, `ctx.set('auditTargetId', ...)`, `ctx.set('auditMeta', ...)` calls inside the handler. The middleware inserts the audit row after the response has flushed. Handler code does NOT call `db.insert(auditLog)` directly.
+- **Notification rows** — written explicitly by the handler via `await writeContestNotifications({...})` (the helper in `apps/api/src/lib/contest-notifications.ts`), wrapped in a try/catch so failures don't fail the response. Distinct from audit: the helper inserts into `notifications`, not `audit_log`.
+
+Both run outside the resolution transaction so a Sentry-tagged error in either telemetry path leaves the DB resolution intact.
 
 ### 4.4 `events` projection on contest resolution
 
@@ -276,18 +281,23 @@ CREATE INDEX price_submissions_pending_counters_idx
 
 These power the contest-queue query (parent rows in `disputed` state) and the counter-lookup join (pending rows that point at a parent), respectively. Current volume is small (4 submissions in prod) but the cost is near-zero and the queue query is the hot path for the new UI.
 
-### 5.4 `PriceSubmission` shared type gets `note` + `archivedReason`
+### 5.4 `PriceSubmission` shared type extension
 
-`packages/types/src/index.ts` interface extension:
+`packages/types/src/index.ts` interface — must match every column added by migration 0041 (§12) so the shared type is the single source of truth for both API and web app:
+
 ```ts
 export interface PriceSubmission {
   // ... existing fields
-  note: string | null            // was missing from shared type — added
-  archivedReason: string | null  // NEW
+  note: string | null              // was missing from shared type — added
+  archivedReason: string | null    // NEW — admin's archive reason
+  lastAdminActionAt: string | null // NEW — ISO timestamp of most recent admin action
+  lastAdminActionKind: 'defer' | null  // NEW — drives the "Admin requested more info" pill on consumer event detail
 }
 ```
 
-`note` was always in the DB but missing from the shared interface — recon caught this. The admin panel needs it for the per-side display per design table §3 (`AdminEntry.note`).
+Also: the `status` union literal must include the new `'archived'` value. Update the existing union from `'pending' | 'corroborated' | 'disputed' | 'stale'` to `'pending' | 'corroborated' | 'disputed' | 'stale' | 'archived'`.
+
+`note` was always in the DB but missing from the shared interface — recon caught this. `archivedReason`, `lastAdminActionAt`, `lastAdminActionKind` are added in step 3 of the migration. The admin panel needs `note` for the per-side display per design table §3 (`AdminEntry.note`); the consumer event-detail handler reads `lastAdminActionAt`/`Kind` from the counter row to surface the engagement-signal pill per §4.5.
 
 ---
 
@@ -461,9 +471,7 @@ The design property table at `docs/superpowers/design-tables/admin-contest-revie
 | `useReviewContestDetail` | same | Single contest query |
 | `useResolveContest`, `useDeferContest` | same | Mutations |
 
-**A12 resolution:** `winner` parameter is a **preview** state. As the admin clicks `Keep original` or `Promote counter`, the corresponding column gets the `winner` border treatment. The action does NOT commit until the `Submit resolution` button is clicked (renamed from the design's `Keep original` / `Promote counter` buttons to make the two-step commit obvious — see §7.3).
-
-Actually — reconsidering. The design has the buttons themselves be the action. Adding a separate "Submit resolution" step would diverge. Lock: **buttons commit on click**, but they require a non-empty (min 10-char) reason. The `winner` preview state is set on click of `Keep original` / `Promote counter` BEFORE the API call so the optimistic UI shows the chosen side highlighted while the request is in flight.
+**A12 resolution — buttons commit on click.** The design's `Keep original` / `Promote counter` buttons are the action triggers directly; there is NO separate "Submit resolution" step. Each button requires a non-empty (min 10-char) reason before it enables. On click, the corresponding column gets the `winner` border treatment optimistically (preview UI while the API request is in flight) and the API call fires immediately. The `winner` parameter is therefore a transient client-side preview state derived from the action click, not a committed pre-decision.
 
 ### 7.3 Actions
 
@@ -673,22 +681,13 @@ CREATE INDEX price_submissions_pending_counters_idx
   WHERE status = 'pending' AND disputed_submission_id IS NOT NULL;
 --> statement-breakpoint
 
--- 5. Schema-enforced 1-counter-per-parent (the §4.6 lock)
-CREATE UNIQUE INDEX price_submissions_pending_counter_unique_idx
-  ON price_submissions (disputed_submission_id)
-  WHERE status = 'pending' AND disputed_submission_id IS NOT NULL;
-```
-
-Each `--> statement-breakpoint` is the Drizzle migrator's required separator between top-level SQL statements (see `packages/db/migrations/0039_events_hidden_from_consumer.sql` for the established pattern). Without these, multi-statement migrations may execute as a single batch or fail at runtime.
-
-Expand-only per project convention. The Contract PR (post-PR 4 of price-source cycle) does NOT remove anything from this migration.
-
-**Pre-deploy cleanup:** if any in-flight contests already have multiple pending counters against the same parent (possible via the race-window prior to this PR), the migration must first archive the older ones before adding the unique index. The migration SQL should include a defensive cleanup step:
-```sql
--- Defensive cleanup: archive older pending counters that would violate the
--- new unique index. Keeps the newest pending counter per parent; older
--- pending counters get archived with reason "superseded by newer counter
--- before schema lock". Run BEFORE the CREATE UNIQUE INDEX above.
+-- 5. Defensive pre-index cleanup. If any in-flight contests already have
+--    multiple pending counters against the same parent (possible via the
+--    race-window prior to this PR), archive the older ones BEFORE adding
+--    the unique index — otherwise the CREATE UNIQUE INDEX would fail in
+--    any environment where such duplicates exist. Production has 0 active
+--    disputes today (verify at plan-execution time), so this is expected
+--    to update 0 rows, but the safety net is essential.
 WITH ranked AS (
   SELECT id,
          ROW_NUMBER() OVER (
@@ -703,9 +702,18 @@ UPDATE price_submissions
    SET status = 'archived',
        archived_reason = 'superseded by newer counter before schema lock'
  WHERE id IN (SELECT id FROM ranked WHERE rn > 1);
+--> statement-breakpoint
+
+-- 6. Schema-enforced 1-counter-per-parent (the §4.6 lock). Safe to add now
+--    that step 5 has cleared any pre-existing duplicates.
+CREATE UNIQUE INDEX price_submissions_pending_counter_unique_idx
+  ON price_submissions (disputed_submission_id)
+  WHERE status = 'pending' AND disputed_submission_id IS NOT NULL;
 ```
 
-Production has 0 active disputes today (verify at plan time), so this cleanup is expected to update 0 rows. But the safety net is essential for the migration to never fail in any environment.
+Each `--> statement-breakpoint` is the Drizzle migrator's required separator between top-level SQL statements (see `packages/db/migrations/0039_events_hidden_from_consumer.sql` for the established pattern). Without these, multi-statement migrations may execute as a single batch or fail at runtime.
+
+Expand-only per project convention. The Contract PR (post-PR 4 of price-source cycle) does NOT remove anything from this migration.
 
 ---
 
