@@ -1,3 +1,10 @@
+## [1.74.7](https://github.com/HartiganHM/concert-crawl/compare/v1.74.6...v1.74.7) (2026-06-23)
+
+
+### Bug Fixes
+
+* **e2e:** target password input by name attr, not label ([4791ff5](https://github.com/HartiganHM/concert-crawl/commit/4791ff5998d24d008f0aec38cd7544895760fa8c))
+
 ## [1.74.6](https://github.com/HartiganHM/concert-crawl/compare/v1.74.5...v1.74.6) (2026-06-23)
 
 
