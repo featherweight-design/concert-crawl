@@ -1,3 +1,14 @@
+## [1.74.9](https://github.com/HartiganHM/concert-crawl/compare/v1.74.8...v1.74.9) (2026-06-23)
+
+
+### Bug Fixes
+
+* **ci:** apply [skip ci] walk to render-wait too; correct gate comment ([d8c41db](https://github.com/HartiganHM/concert-crawl/commit/d8c41dbcfe128328c4682f980fcfde7a158a889b))
+* **ci:** fetch main in deploy-prod gate before resolving deployable SHA ([cb22249](https://github.com/HartiganHM/concert-crawl/commit/cb2224999b087a7893f4a6cc7fbf8bb327b544d3))
+* **ci:** resolve main_sha from fetched ref (atomic) — close race ([2dbb624](https://github.com/HartiganHM/concert-crawl/commit/2dbb6240bc3b1ec5c74004c40e24f7293d6b1a21)), closes [#API](https://github.com/HartiganHM/concert-crawl/issues/API)
+* **ci:** walk from github.sha not origin/main on workflow_dispatch ([4871a3b](https://github.com/HartiganHM/concert-crawl/commit/4871a3b57928e5bd8fdd7d5ad703ce5034fbba4c)), closes [#742](https://github.com/HartiganHM/concert-crawl/issues/742)
+* **ci:** walk past [skip ci] release commits in SHA-drift guards ([3844454](https://github.com/HartiganHM/concert-crawl/commit/384445462587089b7daafa41f65d35632ba847ad)), closes [#740](https://github.com/HartiganHM/concert-crawl/issues/740) [#740](https://github.com/HartiganHM/concert-crawl/issues/740)
+
 ## [1.74.8](https://github.com/HartiganHM/concert-crawl/compare/v1.74.7...v1.74.8) (2026-06-23)
 
 
