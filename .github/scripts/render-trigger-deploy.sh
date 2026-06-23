@@ -58,6 +58,17 @@ if [ -z "${RENDER_API_TOKEN:-}" ]; then
   exit 1
 fi
 
+# Validate COMMIT_SHA shape — full 40-char lowercase hex. github.event.
+# workflow_run.head_sha and github.sha both produce this form, but if
+# a caller ever passes whitespace, a short SHA, or branch-name junk,
+# the curl below would fail with an opaque Render error (or worse,
+# produce malformed JSON). Catch it here with a clear message.
+if ! [[ "${COMMIT_SHA}" =~ ^[0-9a-f]{40}$ ]]; then
+  echo "✗ COMMIT_SHA must be a 40-character lowercase hex git SHA"
+  echo "  got: '${COMMIT_SHA}'"
+  exit 1
+fi
+
 # Decide whether to pin the deploy to a specific commit. Render's
 # API supports `commitId` for Web Services but rejects it for Cron
 # Jobs with HTTP 400 ("cannot deploy cron job service by commit
@@ -76,7 +87,11 @@ if [[ "${SERVICE_ID}" == crn-* ]]; then
   pin_status="unpinned — Render API does not support commitId for cron jobs"
   commit_log_field="gated_commit"
 elif [[ "${SERVICE_ID}" == srv-* ]]; then
-  body="{\"commitId\":\"${COMMIT_SHA}\"}"
+  # Build the JSON body via jq rather than string interpolation. jq
+  # is already a hard dependency above (used for response parsing),
+  # and `--arg` properly escapes the value — defensive against any
+  # COMMIT_SHA shape the regex above might miss in the future.
+  body=$(jq -nc --arg sha "${COMMIT_SHA}" '{commitId: $sha}')
   pin_status="pinned"
   commit_log_field="commit"
 else
