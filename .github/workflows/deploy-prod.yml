@@ -221,85 +221,41 @@ jobs:
           fi
           echo "Upstream SHA $UPSTREAM_SHA still matches main HEAD; triggering Render deploys."
 
-      # Trigger each Render deploy via the Render API, pinning to the
-      # exact SHA that staging-smoke validated (or current main HEAD on
-      # manual workflow_dispatch). Bounded curl timeouts + --silent
-      # --show-error so a stalled Render endpoint cannot hang the
-      # workflow, and logs stay clean (only errors print).
-      #
-      # `commitId` in the request body is what makes this safer than
-      # deploy hooks: hooks build whatever is at branch HEAD at POST
-      # time, racing with any post-smoke merges to main. Pinning to the
-      # specific SHA means Render builds exactly the validated commit.
-      #
-      # `--fail-with-body` (not just --fail) prints the Render API's JSON
-      # error response when the request fails, so a misconfigured token,
-      # disabled service, or invalid commit SHA surfaces with the actual
-      # error message instead of just an HTTP status code.
+      # Each step delegates to render-trigger-deploy.sh, which
+      # centralizes the curl + commitId-pinning + deploy-id-logging
+      # pattern (mirroring render-wait-for-live.sh and render-
+      # rollback.sh). Keeping the shared logic in one script
+      # prevents drift across the three services — an added header,
+      # retry, or timeout belongs in one place — and isolates the
+      # jq-parse fallback for the response body. See the script
+      # header for the full rationale, including why we pin to a
+      # `commitId` instead of letting Render build branch HEAD.
       - name: Trigger Render deploy — API
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-          SERVICE_ID: ${{ vars.RENDER_SERVICE_ID_API }}
-          COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
-          # `--fail-with-body` writes the error body to stdout on
-          # failure (vs `--fail` which suppresses it). The `if !`
-          # form preserves $response for the failure branch so we
-          # can print Render's actual error JSON instead of just
-          # curl's generic exit-code message.
-          if ! response=$(curl --fail-with-body --silent --show-error \
-            --connect-timeout 10 --max-time 30 \
-            -X POST "https://api.render.com/v1/services/${SERVICE_ID}/deploys" \
-            -H "Authorization: Bearer ${RENDER_API_TOKEN}" \
-            -H "Accept: application/json" \
-            -H "Content-Type: application/json" \
-            -d "{\"commitId\":\"${COMMIT_SHA}\"}"); then
-            echo "Render API deploy POST failed for service ${SERVICE_ID}. Response body:"
-            echo "${response}"
-            exit 1
-          fi
-          deploy_id=$(echo "$response" | jq -r '.id // "<no id in response>"')
-          echo "API deploy enqueued: id=${deploy_id} service=${SERVICE_ID} commit=${COMMIT_SHA}"
+          bash .github/scripts/render-trigger-deploy.sh \
+            "${{ vars.RENDER_SERVICE_ID_API }}" \
+            "${{ github.event.workflow_run.head_sha || github.sha }}" \
+            "API"
 
       - name: Trigger Render deploy — crawler triggers cron
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-          SERVICE_ID: ${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}
-          COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
-          if ! response=$(curl --fail-with-body --silent --show-error \
-            --connect-timeout 10 --max-time 30 \
-            -X POST "https://api.render.com/v1/services/${SERVICE_ID}/deploys" \
-            -H "Authorization: Bearer ${RENDER_API_TOKEN}" \
-            -H "Accept: application/json" \
-            -H "Content-Type: application/json" \
-            -d "{\"commitId\":\"${COMMIT_SHA}\"}"); then
-            echo "Render API deploy POST failed for service ${SERVICE_ID}. Response body:"
-            echo "${response}"
-            exit 1
-          fi
-          deploy_id=$(echo "$response" | jq -r '.id // "<no id in response>"')
-          echo "Crawler-triggers deploy enqueued: id=${deploy_id} service=${SERVICE_ID} commit=${COMMIT_SHA}"
+          bash .github/scripts/render-trigger-deploy.sh \
+            "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" \
+            "${{ github.event.workflow_run.head_sha || github.sha }}" \
+            "Crawler-triggers"
 
       - name: Trigger Render deploy — crawler daily cron
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-          SERVICE_ID: ${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}
-          COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
-          if ! response=$(curl --fail-with-body --silent --show-error \
-            --connect-timeout 10 --max-time 30 \
-            -X POST "https://api.render.com/v1/services/${SERVICE_ID}/deploys" \
-            -H "Authorization: Bearer ${RENDER_API_TOKEN}" \
-            -H "Accept: application/json" \
-            -H "Content-Type: application/json" \
-            -d "{\"commitId\":\"${COMMIT_SHA}\"}"); then
-            echo "Render API deploy POST failed for service ${SERVICE_ID}. Response body:"
-            echo "${response}"
-            exit 1
-          fi
-          deploy_id=$(echo "$response" | jq -r '.id // "<no id in response>"')
-          echo "Crawler-daily deploy enqueued: id=${deploy_id} service=${SERVICE_ID} commit=${COMMIT_SHA}"
+          bash .github/scripts/render-trigger-deploy.sh \
+            "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" \
+            "${{ github.event.workflow_run.head_sha || github.sha }}" \
+            "Crawler-daily"
 
       # Wait for the prod API to actually be live on the new commit
       # before this workflow completes. Render's deploy hooks return

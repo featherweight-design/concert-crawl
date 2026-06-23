@@ -26,6 +26,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      # Need the working tree so we can call .github/scripts/render-
+      # trigger-deploy.sh below. Pinned to the upstream CI's SHA so
+      # the script we run matches the commit this deploy targets.
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
       # Triggers a Render deploy via the API rather than a per-service
       # deploy hook. Same `commitId`-pinning safety as deploy-prod.yml —
       # the deploy is pinned to the upstream CI's SHA so a fast-follow
@@ -40,31 +48,14 @@ jobs:
           SERVICE_ID: ${{ vars.RENDER_SERVICE_ID_API_STAGING }}
           COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
-          if [ -z "$RENDER_API_TOKEN" ] || [ -z "$SERVICE_ID" ] || [ -z "$COMMIT_SHA" ]; then
+          if [ -z "$SERVICE_ID" ] || [ -z "$COMMIT_SHA" ]; then
             echo "Missing required value:"
-            [ -z "$RENDER_API_TOKEN" ] && echo "  - RENDER_API_TOKEN (secret)"
             [ -z "$SERVICE_ID" ] && echo "  - RENDER_SERVICE_ID_API_STAGING (variable)"
             [ -z "$COMMIT_SHA" ] && echo "  - github.event.workflow_run.head_sha (event payload)"
             exit 1
           fi
-          # `--fail-with-body` writes the error body to stdout on
-          # failure (vs `--fail` which suppresses it). The `if !`
-          # form preserves $response for the failure branch so we
-          # can print Render's actual error JSON instead of just
-          # curl's generic message.
-          if ! response=$(curl --fail-with-body --silent --show-error \
-            --connect-timeout 10 --max-time 30 \
-            -X POST "https://api.render.com/v1/services/${SERVICE_ID}/deploys" \
-            -H "Authorization: Bearer ${RENDER_API_TOKEN}" \
-            -H "Accept: application/json" \
-            -H "Content-Type: application/json" \
-            -d "{\"commitId\":\"${COMMIT_SHA}\"}"); then
-            echo "Render API deploy POST failed. Response body:"
-            echo "${response}"
-            exit 1
-          fi
-          deploy_id=$(echo "$response" | jq -r '.id // "<no id in response>"')
-          echo "Staging API deploy enqueued: id=${deploy_id} commit=${COMMIT_SHA}"
+          bash .github/scripts/render-trigger-deploy.sh \
+            "$SERVICE_ID" "$COMMIT_SHA" "Staging API"
 
   # Web deploys are handled by Vercel's GitHub integration directly —
   # Vercel watches main for the `concert-crawl-staging` project and deploys
