@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - TypeScript strict mode across packages. Per CLAUDE.md "Type safety is the first line of defence", `as` casts are a **last resort** — prefer Zod `safeParse` for data crossing boundaries (JWTs, API responses, env vars), interface/declaration merging for library types we control, and type guards for discriminated unions. Narrow assertions like `as const` and `satisfies` are fine; type-erasing casts like `as SomeUnrelatedType` should be replaced with one of the alternatives above.
-- **No single-character variable names** — ESLint enforces minimum identifier length of 2 (`err` not `e`, `idx` not `i`, `ctx` not `c`).
+- **Identifier length** — ESLint `id-length` rule enforces `min: 2` with explicit exceptions for `i, j, k, x, y, z, _` (loop indexes + coordinate vars + intentional ignores; see `packages/config/eslint-node.mjs` + `apps/web/eslint.config.mjs`). Prefer descriptive names for everything else (`err` not `e`, `ctx` not `c`, `idx` over `i` if it's not a loop counter).
 - **Expand-only migration** — `archived` is added alongside the existing `pending`/`corroborated`/`disputed`/`stale` values. No enum drops; `note` keeps the existing 280-char cap; `archived_reason` is added as nullable text. Defensive pre-index cleanup CTE runs before the unique index in the same migration.
 - **Resolution atomicity** — every contest resolution wraps parent flip + challenger flip + `events` projection update + cred award + orphan cleanup in one `db.transaction(...)` with `SELECT FOR UPDATE` on both submission rows at the top. Notifications and audit rows are written **after** the transaction commits.
 - **`design-review` is a hard gate before `gh pr create`.** The property table at `docs/superpowers/design-tables/admin-contest-review.md` is the source of truth for every visual + state claim. Run `design-review` against the implementation before opening the PR; resolve every gap.
@@ -51,8 +51,8 @@
 - `apps/api/src/routes/submissions.ts` — dispute POST adds a pre-insert duplicate-counter check + translates DB unique-violation into a clean 409.
 - `apps/api/src/routes/submissions.integration.test.ts` — add duplicate-counter rejection case.
 - `apps/api/src/routes/admin/index.ts` — mount `contestsAdminRouter`.
-- `apps/api/src/routes/admin/review.ts` (the counts route owner — verify name) — `GET /v1/admin/review/counts` adds `priceContests: number`.
-- `apps/api/src/routes/admin/review.integration.test.ts` — assert `priceContests` appears in the counts payload.
+- `apps/api/src/routes/admin/index.ts` (the counts route owner — `adminRouter.get('/review/counts', ...)` at ~line 73) — `GET /v1/admin/review/counts` adds `priceContests: number`.
+- `apps/api/src/routes/admin/index.integration.test.ts` (or the existing test file for the counts endpoint — verify at plan-execution time) — assert `priceContests` appears in the counts payload.
 - `apps/api/src/routes/events.ts` — `priceByTier[].counterSubmission` shape gains `lastAdminActionAt: string | null` + `lastAdminActionKind: 'defer' | null`, read off the counter row.
 - `apps/api/src/routes/events.integration.test.ts` — defer a contest, then GET event detail, assert `counterSubmission.lastAdminActionKind === 'defer'`.
 - `apps/web/src/components/admin/review/ReviewPageClient.tsx` — add `'contests'` to the tab key union + `VALID_TAB_KEYS`; mount `ContestsTabContent`; pass the new `priceContests` count to the tab pill.
@@ -253,15 +253,25 @@ describe('migration 0041 — admin contest review', () => {
 
   it('unique index rejects a 2nd pending counter against the same parent', async () => {
     // Seed a venue + event + parent submission so we can attach counters.
+    // venues.websiteUrl, events.title, events.artist are notNull — must be
+    // provided explicitly to avoid runtime + type errors. canonicalArtist is
+    // forced unique-per-(venueId, date) so we set it explicitly to dodge the
+    // partial unique index from migration 0035 when tests run in parallel.
     const [venue] = await db
       .insert(venues)
-      .values({ name: 'Contest Test Venue', slug: 'contest-mig-test' })
+      .values({
+        name: 'Contest Test Venue',
+        slug: 'contest-mig-test',
+        websiteUrl: 'https://contest-mig-test.example.com',
+      })
       .returning({ id: venues.id })
     const [event] = await db
       .insert(events)
       .values({
         venueId: venue!.id,
         title: 'Contest Mig Test Show',
+        artist: 'Contest Mig Test Artist',
+        canonicalArtist: 'contest mig test artist',
         date: '2027-12-01',
         verified: true,
       })
@@ -315,7 +325,7 @@ describe('migration 0041 — admin contest review', () => {
 
 ```bash
 docker compose up -d
-pnpm --filter @concert-crawl/db migrate
+pnpm db:migrate
 pnpm --filter @concert-crawl/db test -- 0041_admin_contest_review
 ```
 
@@ -505,8 +515,7 @@ it('rejects PATCH on a counter row (disputedSubmissionId !== null) with 409', as
     {
       method: 'PATCH',
       headers: {
-        'content-type': 'application/json',
-        authorization: makeAdminAuthHeader(),
+        ...ADMIN_HEADERS,
       },
       body: JSON.stringify({ status: 'corroborated' }),
     },
@@ -536,8 +545,7 @@ it('rejects PATCH on a parent row whose status is disputed with 409', async () =
     {
       method: 'PATCH',
       headers: {
-        'content-type': 'application/json',
-        authorization: makeAdminAuthHeader(),
+        ...ADMIN_HEADERS,
       },
       body: JSON.stringify({ status: 'corroborated' }),
     },
@@ -563,8 +571,7 @@ it('still accepts PATCH on a non-contest pending row', async () => {
     {
       method: 'PATCH',
       headers: {
-        'content-type': 'application/json',
-        authorization: makeAdminAuthHeader(),
+        ...ADMIN_HEADERS,
       },
       body: JSON.stringify({ status: 'corroborated' }),
     },
@@ -695,6 +702,10 @@ git commit -m "feat(api): PATCH /v1/admin/prices/submissions/:id rejects contest
 Append to `apps/api/src/routes/submissions.integration.test.ts`:
 
 ```typescript
+// submissions.integration.test.ts already uses the hoisted-authState pattern
+// with a `setAuth(userId)` helper and standard 'Bearer test-token' headers.
+// Mirror that — call setAuth(challenger.userId) before each request to set the
+// current actor. Don't invent makeAuthHeader.
 it('rejects a 2nd pending counter against the same parent with 409', async () => {
   const venue = await seedVenue({ name: 'Dup Counter', slug: 'dup-counter' })
   const event = await seedEvent(venue.id, { date: '2027-06-01' })
@@ -711,22 +722,24 @@ it('rejects a 2nd pending counter against the same parent with 409', async () =>
   })
 
   // First counter succeeds.
+  setAuth(challenger1.userId)
   const firstRes = await app.request(`/v1/submissions/${parent.id}/dispute`, {
     method: 'POST',
     headers: {
-      'content-type': 'application/json',
-      authorization: makeAuthHeader(challenger1.userId),
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer test-token',
     },
     body: JSON.stringify({ floor: 50 }),
   })
   expect(firstRes.status).toBe(201)
 
   // Second counter against the SAME parent — rejected with 409.
+  setAuth(challenger2.userId)
   const secondRes = await app.request(`/v1/submissions/${parent.id}/dispute`, {
     method: 'POST',
     headers: {
-      'content-type': 'application/json',
-      authorization: makeAuthHeader(challenger2.userId),
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer test-token',
     },
     body: JSON.stringify({ floor: 55 }),
   })
@@ -834,7 +847,7 @@ git commit -m "feat(api): dispute endpoint rejects duplicate pending counters wi
 
 **Interfaces:**
 
-- Consumes: `priceSubmissions`, `events`, `venues`, `userProfiles`, `submissionConfirms` Drizzle schemas.
+- Consumes: `priceSubmissions`, `events`, `venues`, `userProfiles` Drizzle schemas. `corroborationCount` on the parent row provides the "fans" count directly (no separate `submission_confirms` aggregation needed).
 - Produces:
 
   ```ts
@@ -883,26 +896,75 @@ git commit -m "feat(api): dispute endpoint rejects duplicate pending counters wi
 
 - [ ] **Step 1: Write the failing integration test**
 
-Create `apps/api/src/routes/admin/contests.integration.test.ts`:
+Create `apps/api/src/routes/admin/contests.integration.test.ts`. Mirror the pattern from `apps/api/src/routes/admin/prices.integration.test.ts` exactly — hoisted `authState`, mocked Clerk middleware, `createApp()` factory, `setAdminAuth()` helper, `ADMIN_HEADERS` constant. Do NOT invent a `makeAdminAuthHeader` helper or import `{ app }` directly from app.js — neither exists.
 
 ```typescript
-import { describe, expect, it } from 'vitest'
-import { app } from '../../app.js'
+import { describe, expect, it, beforeEach, vi } from 'vitest'
+
+// Hoisted auth state so the Clerk mock can swap users between tests without
+// reloading modules. Same pattern as admin/prices.integration.test.ts.
+const { authState } = vi.hoisted(() => ({
+  authState: {
+    current: null as {
+      userId: string
+      sessionClaims: { metadata?: { role?: string } }
+    } | null,
+  },
+}))
+
+vi.mock('@hono/clerk-auth', () => ({
+  clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
+    next(),
+  getAuth: () => authState.current,
+}))
+
+import { createApp } from '../../app.js'
 import {
-  makeAdminAuthHeader,
+  clearTables,
   seedEvent,
   seedPriceSubmission,
   seedUserProfile,
   seedVenue,
 } from '../../test/helpers/seed.js'
 
+const app = createApp()
+
+function setAdminAuth(): void {
+  authState.current = {
+    userId: 'admin_contest_test',
+    sessionClaims: { metadata: { role: 'admin' } },
+  }
+}
+
+function clearAuth(): void {
+  authState.current = null
+}
+
+const ADMIN_HEADERS = {
+  Authorization: 'Bearer admin-token',
+  'Content-Type': 'application/json',
+}
+
+// Convention: every admin-action test body in this file calls
+// `setAdminAuth()` as its first line. The `requires admin auth` test starts
+// with the cleared default state from beforeEach to verify the gate. Tests
+// for non-admin user scenarios (none in this file — see
+// submissions.integration.test.ts for that pattern) would call
+// `setAuth(userId)` instead.
+
 describe('GET /v1/admin/contests/prices', () => {
+  beforeEach(async () => {
+    clearAuth()
+    await clearTables()
+  })
+
   it('requires admin auth', async () => {
     const res = await app.request('/v1/admin/contests/prices')
     expect([401, 403]).toContain(res.status)
   })
 
   it('lists open contests with full parent + counter shape', async () => {
+    setAdminAuth()
     const venue = await seedVenue({ name: 'Contest Venue', slug: 'contest-list-1' })
     const event = await seedEvent(venue.id, {
       date: '2027-06-01',
@@ -929,7 +991,7 @@ describe('GET /v1/admin/contests/prices', () => {
     })
 
     const res = await app.request('/v1/admin/contests/prices', {
-      headers: { authorization: makeAdminAuthHeader() },
+      headers: ADMIN_HEADERS,
     })
     expect(res.status).toBe(200)
     const body = (await res.json()) as {
@@ -1000,14 +1062,13 @@ import { db } from '../../db.js'
 import {
   events,
   priceSubmissions,
-  submissionConfirms,
   userProfiles,
   venues,
 } from '@concert-crawl/db'
 import type { AdminVariables } from './index.js'
 import { getAuthUser } from '../../middleware/auth.js'
 
-export const contestsAdminRouter = new Hono<{ Variables: AdminVariables }>()
+export const contestsAdminRouter = new Hono<AdminVariables>()
 
 const listQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
@@ -1049,6 +1110,12 @@ contestsAdminRouter.get(
         parentObservedAt: parentAlias.createdAt,
         parentApprovedAt: parentAlias.updatedAt,
         parentNote: parentAlias.note,
+        // corroborationCount already includes the submitter's implicit
+        // observation (1/2 model: default flipped 0→1 in PR #705 with the
+        // (COUNT(submission_confirms)+1) backfill). This is the right field
+        // for the "fans" count, NOT a SELECT COUNT(*) on submission_confirms
+        // which would undercount by 1.
+        parentCorroborationCount: parentAlias.corroborationCount,
         // Counter fields (the pending challenger). createdAt = filedAt per spec §6.1.
         counterId: priceSubmissions.id,
         counterPriceMin: priceSubmissions.priceMin,
@@ -1096,24 +1163,11 @@ contestsAdminRouter.get(
       for (const row of handles) handleMap.set(row.userId, row.handle ?? null)
     }
 
-    // Confirms split (fans vs admin) for parents only. submission_confirms
-    // doesn't currently distinguish; treat all rows as "fans" and surface
-    // admin=0 unless/until that distinction lands. Counters don't carry a
-    // confirms split in the design.
-    const confirmsBySubmissionId = new Map<string, number>()
-    if (parentIds.length > 0) {
-      const confirmsRows = await db
-        .select({
-          submissionId: submissionConfirms.submissionId,
-          total: count(),
-        })
-        .from(submissionConfirms)
-        .where(inArray(submissionConfirms.submissionId, parentIds))
-        .groupBy(submissionConfirms.submissionId)
-      for (const row of confirmsRows) {
-        confirmsBySubmissionId.set(row.submissionId, row.total)
-      }
-    }
+    // `fans` count comes from corroborationCount directly (it already
+    // includes the submitter's implicit observation #1 — see the SELECT
+    // comment above). Admin=0 stays as a placeholder until the
+    // submission_confirms table grows a method/kind that distinguishes
+    // admin approvals from fan confirms. No separate count query needed.
 
     const items = counterRows.map((row) => ({
       contestId: row.contestId,
@@ -1135,7 +1189,7 @@ contestsAdminRouter.get(
             : null,
         },
         confirms: {
-          fans: confirmsBySubmissionId.get(row.parentId) ?? 0,
+          fans: row.parentCorroborationCount,
           admin: 0,
         },
         observedAt: row.parentObservedAt.toISOString(),
@@ -1250,7 +1304,7 @@ describe('GET /v1/admin/contests/prices/:contestId', () => {
 
     const res = await app.request(
       `/v1/admin/contests/prices/${parent.id}`,
-      { headers: { authorization: makeAdminAuthHeader() } },
+      { headers: ADMIN_HEADERS },
     )
     expect(res.status).toBe(200)
     const body = (await res.json()) as {
@@ -1267,7 +1321,7 @@ describe('GET /v1/admin/contests/prices/:contestId', () => {
   it('returns 404 for an unknown contestId', async () => {
     const res = await app.request(
       '/v1/admin/contests/prices/00000000-0000-0000-0000-000000000000',
-      { headers: { authorization: makeAdminAuthHeader() } },
+      { headers: ADMIN_HEADERS },
     )
     expect(res.status).toBe(404)
   })
@@ -1307,6 +1361,7 @@ contestsAdminRouter.get('/prices/:contestId', async (ctx) => {
       approvedAt: priceSubmissions.updatedAt,
       note: priceSubmissions.note,
       status: priceSubmissions.status,
+      corroborationCount: priceSubmissions.corroborationCount,
     })
     .from(priceSubmissions)
     .innerJoin(events, eq(events.id, priceSubmissions.eventId))
@@ -1358,10 +1413,9 @@ contestsAdminRouter.get('/prices/:contestId', async (ctx) => {
     for (const row of handles) handleMap.set(row.userId, row.handle ?? null)
   }
 
-  const [confirmsRow] = await db
-    .select({ total: count() })
-    .from(submissionConfirms)
-    .where(eq(submissionConfirms.submissionId, parentRow.id))
+  // fans = corroborationCount (already includes the submitter's implicit
+  // observation #1 — see list endpoint for the same comment). No separate
+  // submission_confirms query needed.
 
   return ctx.json({
     success: true,
@@ -1383,7 +1437,7 @@ contestsAdminRouter.get('/prices/:contestId', async (ctx) => {
           handle: parentRow.userId ? (handleMap.get(parentRow.userId) ?? null) : null,
         },
         confirms: {
-          fans: confirmsRow?.total ?? 0,
+          fans: parentRow.corroborationCount,
           admin: 0,
         },
         observedAt: parentRow.observedAt.toISOString(),
@@ -1491,8 +1545,7 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
       {
         method: 'POST',
         headers: {
-          'content-type': 'application/json',
-          authorization: makeAdminAuthHeader(),
+          ...ADMIN_HEADERS,
         },
         body: JSON.stringify({
           resolution: 'parent_wins',
@@ -1527,8 +1580,7 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
       {
         method: 'POST',
         headers: {
-          'content-type': 'application/json',
-          authorization: makeAdminAuthHeader(),
+          ...ADMIN_HEADERS,
         },
         body: JSON.stringify({
           resolution: 'challenger_wins',
@@ -1562,8 +1614,7 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
       {
         method: 'POST',
         headers: {
-          'content-type': 'application/json',
-          authorization: makeAdminAuthHeader(),
+          ...ADMIN_HEADERS,
         },
         body: JSON.stringify({ resolution: 'parent_wins', reason: 'short' }),
       },
@@ -1584,8 +1635,7 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
       {
         method: 'POST',
         headers: {
-          'content-type': 'application/json',
-          authorization: makeAdminAuthHeader(),
+          ...ADMIN_HEADERS,
         },
         body: JSON.stringify({
           resolution: 'parent_wins',
@@ -1903,8 +1953,7 @@ describe('POST /v1/admin/contests/prices/:contestId/defer', () => {
       {
         method: 'POST',
         headers: {
-          'content-type': 'application/json',
-          authorization: makeAdminAuthHeader(),
+          ...ADMIN_HEADERS,
         },
         body: JSON.stringify({
           reason: 'Need ticket URL screenshot to verify the new price.',
@@ -1928,8 +1977,7 @@ describe('POST /v1/admin/contests/prices/:contestId/defer', () => {
       {
         method: 'POST',
         headers: {
-          'content-type': 'application/json',
-          authorization: makeAdminAuthHeader(),
+          ...ADMIN_HEADERS,
         },
         body: JSON.stringify({ reason: 'too short' }),
       },
@@ -2096,7 +2144,7 @@ git commit -m "feat(api): POST /v1/admin/contests/prices/:contestId/defer — se
     - `title: 'Your price submission was reviewed.'` (resolve) OR `'More info requested on your price submission.'` (defer)
     - `body: <reason>`
     - `actionUrl: /events/<eventId>`
-    - `metadata: { submissionId, contestId, resolution? }`
+    - `metadata: JSON.stringify({ submissionId, contestId, resolution? })` (text column in DB, not jsonb)
 
 - [ ] **Step 1: Write the failing unit test**
 
@@ -2271,19 +2319,21 @@ export async function writeContestNotifications(
     title,
     body: input.reason,
     actionUrl: `/events/${input.eventId}`,
-    metadata: {
+    // notifications.metadata is a `text` column per
+    // packages/db/src/schema/notifications.ts:17 — serialize to JSON string
+    // here. Drizzle won't auto-stringify a plain object into a text column;
+    // inserting one would surface a Postgres type error at runtime.
+    metadata: JSON.stringify({
       submissionId: recipient.submissionId,
       contestId: input.contestId,
       ...(input.resolution ? { resolution: input.resolution } : {}),
-    },
+    }),
   }))
 
   await db.insert(notifications).values(rows)
   return { written: rows.length }
 }
 ```
-
-(If the actual `notifications` schema has different column names or required fields, adjust the insert payload to match — verify by reading `packages/db/src/schema/notifications.ts` or the equivalent file. The contract above is the spec target.)
 
 - [ ] **Step 4: Wire the helper into resolve + defer handlers**
 
@@ -2351,8 +2401,7 @@ it('writes notification rows to both parties on resolve', async () => {
   await app.request(`/v1/admin/contests/prices/${parent.id}/resolve`, {
     method: 'POST',
     headers: {
-      'content-type': 'application/json',
-      authorization: makeAdminAuthHeader(),
+      ...ADMIN_HEADERS,
     },
     body: JSON.stringify({
       resolution: 'challenger_wins',
@@ -2398,7 +2447,7 @@ git commit -m "feat(api): write contest notification rows on resolve/defer"
 
 **Files:**
 
-- Modify: `apps/api/src/routes/admin/review.ts` (or wherever `/v1/admin/review/counts` lives — verify path during implementation)
+- Modify: `apps/api/src/routes/admin/index.ts` (the `/v1/admin/review/counts` handler at ~line 73 — `adminRouter.get('/review/counts', ...)`)
 - Modify: `apps/api/src/routes/admin/review.integration.test.ts`
 - Modify: `apps/web/src/lib/queries/use-admin-review.ts` (extend `ReviewCounts` interface)
 
@@ -2416,7 +2465,7 @@ it('counts response includes priceContests with the disputed-parent total', asyn
   // Seed 2 open contests + 5 non-contest pending submissions.
   // ... seeds ...
   const res = await app.request('/v1/admin/review/counts', {
-    headers: { authorization: makeAdminAuthHeader() },
+    headers: ADMIN_HEADERS,
   })
   expect(res.status).toBe(200)
   const body = (await res.json()) as {
@@ -2482,7 +2531,7 @@ Expected: PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add apps/api/src/routes/admin/review.ts \
+git add apps/api/src/routes/admin/index.ts \
         apps/api/src/routes/admin/review.integration.test.ts \
         apps/web/src/lib/queries/use-admin-review.ts
 git commit -m "feat(api): /v1/admin/review/counts adds priceContests field"
@@ -2570,8 +2619,7 @@ it('priceByTier counterSubmission carries lastAdminActionKind after defer', asyn
   await app.request(`/v1/admin/contests/prices/${parent.id}/defer`, {
     method: 'POST',
     headers: {
-      'content-type': 'application/json',
-      authorization: makeAdminAuthHeader(),
+      ...ADMIN_HEADERS,
     },
     body: JSON.stringify({
       reason: 'Need a screenshot from the AXS cart to verify.',

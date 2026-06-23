@@ -240,7 +240,7 @@ priceSubmissions = pgTable('price_submissions', {
 | `disputedSubmissionId` | UUID fk | Parent submission being disputed; NULL if this is the parent |
 | `status` | enum | pending, corroborated, disputed, stale |
 | `corroborationCount` | int | Number of users who confirmed this price (submitter counts as #1) |
-| `note` | varchar(280) | Admin notes (e.g., reason for stale marking) |
+| `note` | varchar(280) | Submitter-provided free-text on submission insert (content-moderated server-side). Distinct from admin's archive reason — that lands on the new `archived_reason` column added in migration 0041. |
 | `tier` | enum | GA, Reserved, VIP, Pit, Lawn |
 | `vendor` | enum | AXS, Ticketmaster, SeatGeek, DICE, Eventbrite, VenueBoxOffice |
 
