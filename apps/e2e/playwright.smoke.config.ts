@@ -11,6 +11,7 @@ export default defineConfig({
   use: {
     baseURL:
       process.env['PLAYWRIGHT_SMOKE_BASE_URL'] ?? 'https://concertcrawl.app',
+    storageState: '.auth/smoke.json',
     screenshot: 'only-on-failure',
   },
   projects: [

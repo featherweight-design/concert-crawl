@@ -44,6 +44,12 @@ jobs:
         env:
           PLAYWRIGHT_SMOKE_BASE_URL: ${{ vars.PROD_URL }}
           PLAYWRIGHT_API_URL: ${{ vars.PROD_API_URL }}
+          # Smoke globalSetup signs in via Clerk before any spec runs
+          # so the suite can exercise auth-gated routes. Without
+          # these, every gated spec fails — middleware redirects
+          # unauthenticated users to `/`.
+          E2E_TEST_USER_EMAIL: ${{ secrets.E2E_TEST_USER_EMAIL }}
+          E2E_TEST_USER_PASSWORD: ${{ secrets.E2E_TEST_USER_PASSWORD }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN_SMOKE }}
 
       - name: Upload failure artifacts

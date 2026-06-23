@@ -176,6 +176,13 @@ jobs:
         env:
           PLAYWRIGHT_SMOKE_BASE_URL: ${{ vars.STAGING_URL }}
           PLAYWRIGHT_API_URL: ${{ vars.STAGING_API_URL }}
+          # Smoke globalSetup signs in via Clerk before any spec runs
+          # so the suite can exercise auth-gated routes (/events,
+          # /venues, /admin). Without these, sign-in is skipped and
+          # every gated spec fails downstream — middleware redirects
+          # to `/`.
+          E2E_TEST_USER_EMAIL: ${{ secrets.E2E_TEST_USER_EMAIL }}
+          E2E_TEST_USER_PASSWORD: ${{ secrets.E2E_TEST_USER_PASSWORD }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN_SMOKE }}
           # Tag Sentry events as `staging` so they don't pollute the
           # production environment in dashboards or alert rules.

@@ -30,16 +30,19 @@ test.describe('smoke: event data', () => {
     await page.goto('/events')
     await page.waitForLoadState('networkidle')
 
+    // Require the chip to be present. The previous version no-op'd
+    // silently when no chip was visible, which masked the auth-redirect
+    // bug that landed the entire suite on `/` — a page that has no
+    // chips at all. If real venue data ever disappears such that no
+    // chip renders, that's itself a smoke-worthy failure.
     const firstChip = page.locator('[data-testid="venue-chip"]').first()
-    const isChipVisible = await firstChip.isVisible()
+    await expect(firstChip).toBeVisible({ timeout: 10_000 })
 
-    if (isChipVisible) {
-      await firstChip.click()
-      await page.waitForLoadState('networkidle')
-      await expect(page.locator('body')).not.toContainText(
-        /error|500|unexpected/i,
-      )
-    }
+    await firstChip.click()
+    await page.waitForLoadState('networkidle')
+    await expect(page.locator('body')).not.toContainText(
+      /error|500|unexpected/i,
+    )
   })
 
   test('event detail page renders for the first browse event', async ({
@@ -103,11 +106,23 @@ test.describe('smoke: search', () => {
 })
 
 test.describe('smoke: auth protection', () => {
-  test('admin route redirects unauthenticated users', async ({ page }) => {
+  // Run this describe without the shared smoke storage state so we
+  // can verify the unauthenticated redirect contract. Without the
+  // override, the suite-wide signed-in session would let /admin
+  // render (or 403), and we'd no longer be testing the auth gate.
+  test.use({ storageState: { cookies: [], origins: [] } })
+
+  test('admin route redirects unauthenticated users to homepage', async ({
+    page,
+  }) => {
     await page.goto('/admin')
     await page.waitForLoadState('networkidle')
-    const url = page.url()
-    expect(url).toMatch(/sign-in|clerk\.com|accounts\./i)
+    // apps/web/src/middleware.ts redirects all auth-gated routes to
+    // `/` (not `/sign-in`) via `auth.protect({ unauthenticatedUrl })`.
+    // The smoke contract follows the middleware: any landing pathname
+    // other than `/` means the gate failed open.
+    const url = new URL(page.url())
+    expect(url.pathname).toBe('/')
   })
 })
 
@@ -117,7 +132,12 @@ test.describe('smoke: known venue', () => {
     await page.waitForLoadState('networkidle')
 
     await expect(page).not.toHaveTitle(/404|not found/i)
+    // Assert the heading actually contains the venue name. The
+    // previous version only checked that an h1 was visible — the
+    // homepage also has an h1, so the test passed even when the
+    // route silently redirected to `/`.
     const heading = page.getByRole('heading', { level: 1 })
     await expect(heading).toBeVisible()
+    await expect(heading).toContainText(/larimer/i)
   })
 })
