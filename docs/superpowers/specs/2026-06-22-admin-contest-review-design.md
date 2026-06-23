@@ -627,7 +627,7 @@ Contest volume in prod today: 0 active disputes. Even at 10x consumer growth and
 
 ## 12. Migrations
 
-Single migration `0049_admin_contest_review.sql` (next available number — verify at plan time):
+Single migration `0041_admin_contest_review.sql` (verified — `0040_price_source_category.sql` is current latest as of 2026-06-23):
 
 ```sql
 -- 1. Add 'archived' to status enum (loser-of-contest sink)

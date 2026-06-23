@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- TypeScript strict mode across packages; **no `as` casts** — use Zod `safeParse`, type guards, or interface augmentation per CLAUDE.md "Type safety is the first line of defence".
+- TypeScript strict mode across packages. Per CLAUDE.md "Type safety is the first line of defence", `as` casts are a **last resort** — prefer Zod `safeParse` for data crossing boundaries (JWTs, API responses, env vars), interface/declaration merging for library types we control, and type guards for discriminated unions. Narrow assertions like `as const` and `satisfies` are fine; type-erasing casts like `as SomeUnrelatedType` should be replaced with one of the alternatives above.
 - **No single-character variable names** — ESLint enforces minimum identifier length of 2 (`err` not `e`, `idx` not `i`, `ctx` not `c`).
 - **Expand-only migration** — `archived` is added alongside the existing `pending`/`corroborated`/`disputed`/`stale` values. No enum drops; `note` keeps the existing 280-char cap; `archived_reason` is added as nullable text. Defensive pre-index cleanup CTE runs before the unique index in the same migration.
 - **Resolution atomicity** — every contest resolution wraps parent flip + challenger flip + `events` projection update + cred award + orphan cleanup in one `db.transaction(...)` with `SELECT FOR UPDATE` on both submission rows at the top. Notifications and audit rows are written **after** the transaction commits.
@@ -113,7 +113,7 @@ Eighteen tasks. Each ends with an independently testable deliverable + commit:
 - [ ] **Step 1: Confirm next migration number**
 
 ```bash
-ls /Users/huey/Projects/concert-crawl/.worktrees/feat/admin-contest-review/packages/db/migrations/ | sort | tail -3
+ls packages/db/migrations/ | sort | tail -3
 ```
 
 Expected: shows `0040_price_source_category.sql` as the latest. The new migration is `0041_admin_contest_review.sql`. If a later number has landed since this plan was written, increment accordingly (`0042`, etc.) — the migration filename must be strictly greater than every existing one.
@@ -189,7 +189,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS price_submissions_pending_counter_unique_idx
 Open `packages/db/migrations/meta/_journal.json` and append the new entry with `when` strictly greater than every prior entry. Drizzle sorts migrations by the `when` timestamp, not the index, so an out-of-order timestamp will silently break ordering (bit us on 0008 + 0011 per `feedback_migration_timestamps.md`).
 
 ```bash
-cat /Users/huey/Projects/concert-crawl/.worktrees/feat/admin-contest-review/packages/db/migrations/meta/_journal.json | tail -10
+cat packages/db/migrations/meta/_journal.json | tail -10
 ```
 
 Add the new entry with `idx: 41`, `tag: "0041_admin_contest_review"`, `when: <epoch-ms-now>` (must be greater than the prior `when`).
@@ -993,7 +993,8 @@ Create `apps/api/src/routes/admin/contests.ts`:
 ```typescript
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
-import { and, count, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 import { z } from 'zod'
 import { db } from '../../db.js'
 import {
@@ -1024,9 +1025,12 @@ contestsAdminRouter.get(
   async (ctx) => {
     const { limit, offset } = ctx.req.valid('query')
 
-    // Each row: parent (disputed) + its single pending counter. Counter is
-    // guaranteed-unique by the partial unique index from migration 0041.
-    const parentAlias = priceSubmissions
+    // Pivot the query around the counter (the pending dispute row) so we can
+    // ORDER BY counter.createdAt — the spec's filedAt (oldest contest first).
+    // The §4.6 partial unique index guarantees at most one pending counter per
+    // parent, so one counter row = one contest. parentAlias is the aliased
+    // self-join target.
+    const parentAlias = alias(priceSubmissions, 'parent')
     const counterRows = await db
       .select({
         contestId: parentAlias.id,
@@ -1036,6 +1040,7 @@ contestsAdminRouter.get(
         eventDate: events.date,
         tier: parentAlias.tier,
         sourceCategory: parentAlias.sourceCategory,
+        // Parent fields (the disputed corroborated submission)
         parentId: parentAlias.id,
         parentPriceMin: parentAlias.priceMin,
         parentPriceMax: parentAlias.priceMax,
@@ -1044,49 +1049,38 @@ contestsAdminRouter.get(
         parentObservedAt: parentAlias.createdAt,
         parentApprovedAt: parentAlias.updatedAt,
         parentNote: parentAlias.note,
+        // Counter fields (the pending challenger). createdAt = filedAt per spec §6.1.
+        counterId: priceSubmissions.id,
+        counterPriceMin: priceSubmissions.priceMin,
+        counterPriceMax: priceSubmissions.priceMax,
+        counterVendor: priceSubmissions.vendor,
+        counterUserId: priceSubmissions.userId,
+        counterObservedAt: priceSubmissions.createdAt,
+        counterNote: priceSubmissions.note,
+        filedAt: priceSubmissions.createdAt,
       })
-      .from(parentAlias)
+      .from(priceSubmissions)
+      .innerJoin(parentAlias, eq(parentAlias.id, priceSubmissions.disputedSubmissionId))
       .innerJoin(events, eq(events.id, parentAlias.eventId))
       .innerJoin(venues, eq(venues.id, events.venueId))
-      .where(eq(parentAlias.status, 'disputed'))
-      .orderBy(parentAlias.createdAt)
+      .where(
+        and(
+          eq(priceSubmissions.status, 'pending'),
+          isNotNull(priceSubmissions.disputedSubmissionId),
+          eq(parentAlias.status, 'disputed'),
+        ),
+      )
+      .orderBy(asc(priceSubmissions.createdAt))
       .limit(limit)
       .offset(offset)
 
-    // Batch-load the matching counter rows.
-    const parentIds = counterRows.map((row) => row.contestId)
-    const counters = parentIds.length
-      ? await db
-          .select({
-            id: priceSubmissions.id,
-            disputedSubmissionId: priceSubmissions.disputedSubmissionId,
-            priceMin: priceSubmissions.priceMin,
-            priceMax: priceSubmissions.priceMax,
-            vendor: priceSubmissions.vendor,
-            userId: priceSubmissions.userId,
-            createdAt: priceSubmissions.createdAt,
-            note: priceSubmissions.note,
-          })
-          .from(priceSubmissions)
-          .where(
-            and(
-              inArray(priceSubmissions.disputedSubmissionId, parentIds),
-              eq(priceSubmissions.status, 'pending'),
-            ),
-          )
-      : []
-    const counterByParentId = new Map(
-      counters
-        .filter((row) => row.disputedSubmissionId !== null)
-        .map((row) => [row.disputedSubmissionId as string, row]),
-    )
-
-    // Resolve handles for every userId surfaced (parent + counter).
+    // Resolve handles for every userId surfaced across both sides.
+    const parentIds = counterRows.map((row) => row.parentId)
     const allUserIds = Array.from(
       new Set(
         [
           ...counterRows.map((row) => row.parentUserId),
-          ...counters.map((row) => row.userId),
+          ...counterRows.map((row) => row.counterUserId),
         ].filter((uid): uid is string => uid !== null),
       ),
     )
@@ -1121,60 +1115,62 @@ contestsAdminRouter.get(
       }
     }
 
-    const items = counterRows.flatMap((row) => {
-      const counter = counterByParentId.get(row.contestId)
-      if (!counter) return [] // contest with no counter is malformed; skip
-      return [
-        {
-          contestId: row.contestId,
-          eventId: row.eventId,
-          eventTitle: row.eventTitle ?? '',
-          venueName: row.venueName ?? '',
-          eventDate: row.eventDate ?? '',
-          tier: row.tier,
-          sourceCategory: row.sourceCategory,
-          parent: {
-            id: row.parentId,
-            priceMin: row.parentPriceMin,
-            priceMax: row.parentPriceMax,
-            vendor: row.parentVendor,
-            submitter: {
-              userId: row.parentUserId ?? '',
-              handle: row.parentUserId
-                ? (handleMap.get(row.parentUserId) ?? null)
-                : null,
-            },
-            confirms: {
-              fans: confirmsBySubmissionId.get(row.parentId) ?? 0,
-              admin: 0,
-            },
-            observedAt: row.parentObservedAt.toISOString(),
-            approvedAt: row.parentApprovedAt.toISOString(),
-            note: row.parentNote ?? null,
-          },
-          counter: {
-            id: counter.id,
-            priceMin: counter.priceMin,
-            priceMax: counter.priceMax,
-            vendor: counter.vendor,
-            submitter: {
-              userId: counter.userId ?? '',
-              handle: counter.userId
-                ? (handleMap.get(counter.userId) ?? null)
-                : null,
-            },
-            observedAt: counter.createdAt.toISOString(),
-            note: counter.note ?? null,
-          },
-          filedAt: counter.createdAt.toISOString(),
+    const items = counterRows.map((row) => ({
+      contestId: row.contestId,
+      eventId: row.eventId,
+      eventTitle: row.eventTitle ?? '',
+      venueName: row.venueName ?? '',
+      eventDate: row.eventDate ?? '',
+      tier: row.tier,
+      sourceCategory: row.sourceCategory,
+      parent: {
+        id: row.parentId,
+        priceMin: row.parentPriceMin,
+        priceMax: row.parentPriceMax,
+        vendor: row.parentVendor,
+        submitter: {
+          userId: row.parentUserId ?? '',
+          handle: row.parentUserId
+            ? (handleMap.get(row.parentUserId) ?? null)
+            : null,
         },
-      ]
-    })
+        confirms: {
+          fans: confirmsBySubmissionId.get(row.parentId) ?? 0,
+          admin: 0,
+        },
+        observedAt: row.parentObservedAt.toISOString(),
+        approvedAt: row.parentApprovedAt.toISOString(),
+        note: row.parentNote ?? null,
+      },
+      counter: {
+        id: row.counterId,
+        priceMin: row.counterPriceMin,
+        priceMax: row.counterPriceMax,
+        vendor: row.counterVendor,
+        submitter: {
+          userId: row.counterUserId ?? '',
+          handle: row.counterUserId
+            ? (handleMap.get(row.counterUserId) ?? null)
+            : null,
+        },
+        observedAt: row.counterObservedAt.toISOString(),
+        note: row.counterNote ?? null,
+      },
+      filedAt: row.filedAt.toISOString(),
+    }))
 
+    // total counts contests by their pending counter (matching the items
+    // shape), not by parents with status='disputed' — those numbers can
+    // differ if a parent is flagged disputed but the counter was withdrawn.
     const [{ value: total }] = await db
       .select({ value: count() })
       .from(priceSubmissions)
-      .where(eq(priceSubmissions.status, 'disputed'))
+      .where(
+        and(
+          eq(priceSubmissions.status, 'pending'),
+          isNotNull(priceSubmissions.disputedSubmissionId),
+        ),
+      )
 
     return ctx.json({
       success: true,
@@ -4234,7 +4230,13 @@ After writing the complete plan, look at the spec and design table with fresh ey
 - §13 Implementation order — task ordering follows §13 sequence
 - §19 Final scope summary — every bullet on the **Backend** + **Frontend** + **Audit** lists is mapped above
 
-**Placeholder scan** — no `TBD`, no `implement later`. Every code block contains real code with concrete identifiers, real SQL, real test assertions. The `// ... per design table §2 ...` callouts in Task 13 are acceptable because the property table is explicitly the source of truth and Task 18's design-review pass verifies each property.
+**Placeholder scan** — no `TBD`, no `implement later`, no decision-deferring placeholders. Every code block contains real, runnable code with concrete identifiers, real SQL, and real test assertions.
+
+A small number of intentional elisions exist — these are NOT decision placeholders, they're deliberate references to other source-of-truth documents to avoid duplication:
+- `// ... per design table §<N>` callouts in component-rendering tasks (Tasks 13, 14, 15) reference visual properties owned by `docs/superpowers/design-tables/admin-contest-review.md`. Task 18's design-review pass (Agent 2) verifies each property against the table, so duplicating them in the plan would create drift.
+- Test-data setup boilerplate that mirrors existing patterns in adjacent test files is referenced rather than copied wholesale (e.g., the `seedContest` helper in Task 8's test step is fully written; the cross-cutting boilerplate around it isn't).
+
+Any reader executing the plan can resolve every elision by reading the cited source document. The plan does not defer any decision — only repetition.
 
 **Type consistency** — `PriceSubmission` (Task 3) flows into the API responses (Tasks 6, 7, 8, 9) and the shared `TierCounter` (Task 12). `PriceContestRow` (Task 13) matches the list-endpoint response shape (Task 6). `ContestDetailData` (Task 15) matches the detail-endpoint response shape (Task 7). `winner: 'original' | 'counter' | null` is consistent across `AdminEntry` (Task 14) and `AdminDisputePanel` (Task 15). `ContestNotificationInput.action: 'resolve' | 'defer'` (Task 10) covers exactly the two action endpoints (Tasks 8, 9).
 
