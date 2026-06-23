@@ -1,3 +1,10 @@
+## [1.74.6](https://github.com/HartiganHM/concert-crawl/compare/v1.74.5...v1.74.6) (2026-06-23)
+
+
+### Bug Fixes
+
+* **e2e:** disambiguate Clerk Continue button with exact match ([740c773](https://github.com/HartiganHM/concert-crawl/commit/740c773cede256e2da8491a62db94da308d4166b)), closes [#734](https://github.com/HartiganHM/concert-crawl/issues/734)
+
 ## [1.74.5](https://github.com/HartiganHM/concert-crawl/compare/v1.74.4...v1.74.5) (2026-06-23)
 
 
