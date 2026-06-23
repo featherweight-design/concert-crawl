@@ -94,7 +94,7 @@ against the old code.
 
 After stage 1 has been stable through a handful of merges:
 
-1. Provision the Render hooks and API token (see env vars table below)
+1. Provision the prod environment variables + secret (see env vars table below): three `RENDER_SERVICE_ID_*` variables in the `production` environment, plus `RENDER_API_TOKEN` as a `production`-environment secret
 2. Set `AUTO_DEPLOY_PROD_ENABLED` repo variable to `true`
 3. Merge a small no-op PR to `main`
 4. Watch the full chain run end-to-end: CI → deploy-staging → staging-smoke
@@ -111,15 +111,15 @@ on the next workflow_run trigger.
 
 ### Repository variables (Settings → Variables → Actions)
 
-| Variable                        | Required by                                        | Notes                                                                                                              |
-| ------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `STAGING_URL`                   | staging-smoke                                      | already present — `https://staging.concertcrawl.app`                                                               |
-| `STAGING_API_URL`               | staging-smoke                                      | **new** — `https://concert-crawl-api-staging.onrender.com`                                                         |
-| `RENDER_SERVICE_ID_API_STAGING` | staging-smoke                                      | **new** — staging API service ID (e.g. `srv-abc123`). Used by `render-wait-for-live.sh` to wait for the new deploy |
-| `PROD_URL`                      | prod-post-deploy-smoke                             | already present                                                                                                    |
-| `PROD_API_URL`                  | prod-post-deploy-smoke                             | already present                                                                                                    |
-| `STAGING_SMOKE_ENABLED`         | staging-smoke                                      | **new** — default `false`; set to `true` in Stage 1                                                                |
-| `AUTO_DEPLOY_PROD_ENABLED`      | deploy-prod, prod-post-deploy-smoke, rollback-prod | **new** — default `false`; set to `true` in Stage 2                                                                |
+| Variable                        | Required by                                        | Notes                                                                                                                                                                |
+| ------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `STAGING_URL`                   | staging-smoke                                      | already present — `https://staging.concertcrawl.app`                                                                                                                 |
+| `STAGING_API_URL`               | staging-smoke                                      | **new** — `https://concert-crawl-api-staging.onrender.com`                                                                                                           |
+| `RENDER_SERVICE_ID_API_STAGING` | deploy-staging, staging-smoke                      | **new** — staging API service ID (e.g. `srv-abc123`). Used by `deploy-staging.yml` (deploy POST) and `render-wait-for-live.sh` (waits for the new deploy to be live) |
+| `PROD_URL`                      | prod-post-deploy-smoke                             | already present                                                                                                                                                      |
+| `PROD_API_URL`                  | prod-post-deploy-smoke                             | already present                                                                                                                                                      |
+| `STAGING_SMOKE_ENABLED`         | staging-smoke                                      | **new** — default `false`; set to `true` in Stage 1                                                                                                                  |
+| `AUTO_DEPLOY_PROD_ENABLED`      | deploy-prod, prod-post-deploy-smoke, rollback-prod | **new** — default `false`; set to `true` in Stage 2                                                                                                                  |
 
 ### `production` environment — Variables (Settings → Environments → production)
 
