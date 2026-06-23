@@ -172,22 +172,28 @@ jobs:
       #   to the most recent commit Render actually built.
       - name: Resolve render-wait target SHA
         id: wait_target
+        env:
+          DISPATCH_SHA: ${{ github.sha }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_run" ]; then
             target="${{ github.event.workflow_run.head_sha }}"
             echo "workflow_run: waiting for upstream CI head_sha = ${target}"
           else
-            # Read main_sha from the just-fetched ref so it's atomic
-            # with the fetch — no race window where main can advance
-            # between resolving the SHA and the walk that consumes it.
-            git fetch origin main --depth=20
-            main_sha=$(git rev-parse origin/main)
-            target=$(bash .github/scripts/resolve-deployable-sha.sh "$main_sha")
-            if [ "$main_sha" != "$target" ]; then
-              echo "workflow_dispatch: main HEAD ${main_sha} is a [skip ci] commit;"
+            # Walk past [skip ci] from github.sha — NOT from current
+            # origin/main HEAD. github.sha is the commit we actually
+            # checked out for this run (so the Playwright code matches);
+            # origin/main may have advanced since dispatch. Resolving
+            # from github.sha keeps the deployed-SHA and test-code in
+            # lockstep — the smoke validates whatever Render built from
+            # the same commit we're running tests from.
+            #
+            # Checkout above has fetch-depth=20 so the walk has parents.
+            target=$(bash .github/scripts/resolve-deployable-sha.sh "${DISPATCH_SHA}")
+            if [ "${DISPATCH_SHA}" != "$target" ]; then
+              echo "workflow_dispatch: github.sha ${DISPATCH_SHA} is a [skip ci] commit;"
               echo "                   waiting for deployable ancestor ${target} instead"
             else
-              echo "workflow_dispatch: waiting for current main HEAD = ${target}"
+              echo "workflow_dispatch: waiting for github.sha = ${target}"
             fi
           fi
           echo "sha=${target}" >> "$GITHUB_OUTPUT"
