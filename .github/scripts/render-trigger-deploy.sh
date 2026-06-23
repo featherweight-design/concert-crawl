@@ -63,12 +63,25 @@ fi
 # Jobs with HTTP 400 ("cannot deploy cron job service by commit
 # reference ID"). The ID prefix is the reliable signal — Render's
 # IDs are stable (`srv-*` for web services, `crn-*` for crons).
+#
+# Validate the prefix explicitly rather than treating "anything not
+# crn-*" as a web service. A mis-copied service ID, leading/trailing
+# whitespace, or a future Render service type would otherwise hit
+# the API with commitId pinned and fail with an opaque error.
+# Failing here points the operator straight at the misconfig.
 if [[ "${SERVICE_ID}" == crn-* ]]; then
   body="{}"
   pin_status="unpinned (Render API does not support commitId for cron jobs)"
-else
+  commit_log_field="gated_commit"
+elif [[ "${SERVICE_ID}" == srv-* ]]; then
   body="{\"commitId\":\"${COMMIT_SHA}\"}"
   pin_status="pinned to commit ${COMMIT_SHA}"
+  commit_log_field="commit"
+else
+  echo "✗ Unrecognized Render service ID prefix: '${SERVICE_ID}'"
+  echo "  Expected srv-* (web service) or crn-* (cron job)."
+  echo "  Check for typos or whitespace in the RENDER_SERVICE_ID_* variable."
+  exit 1
 fi
 
 # `--fail-with-body` writes the API error body to stdout on failure
@@ -104,4 +117,9 @@ fi
 # case within otherwise-valid JSON.
 deploy_id=$(echo "${response}" | jq -r '(.deploy // .).id // "<no id in response>"' 2>/dev/null || echo "<jq parse failed>")
 
-echo "${LABEL} deploy enqueued: id=${deploy_id} service=${SERVICE_ID} commit=${COMMIT_SHA} (${pin_status})"
+# Use distinct field names so the log is unambiguous during incident
+# forensics: `commit=` for web services means "what Render will
+# build"; `gated_commit=` for crons means "what the pipeline gated
+# on, not what Render builds" — Render builds branch HEAD when
+# commitId is omitted.
+echo "${LABEL} deploy enqueued: id=${deploy_id} service=${SERVICE_ID} ${commit_log_field}=${COMMIT_SHA} (${pin_status})"
