@@ -62,7 +62,12 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
     await page.getByRole('button', { name: 'Continue', exact: true }).click()
     await page.waitForLoadState('networkidle')
 
-    await page.getByLabel(/password/i).fill(password)
+    // Target by `name` attribute, not label. `getByLabel(/password/i)`
+    // also matches Clerk's "Show password" toggle button (aria-label
+    // "Show password"), tripping strict mode. Playwright's `fill()`
+    // auto-waits for the input to become enabled — Clerk renders the
+    // field `disabled` for a beat after the email-step transition.
+    await page.locator('input[name="password"]').fill(password)
     await page.getByRole('button', { name: 'Continue', exact: true }).click()
 
     await page.waitForURL((url) => !url.pathname.includes('sign-in'), {
