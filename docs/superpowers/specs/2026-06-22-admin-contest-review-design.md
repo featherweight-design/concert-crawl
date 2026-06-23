@@ -225,6 +225,8 @@ if (existingCounter.length > 0) {
 
 **Consistency fix — both routes must also flip the parent to `disputed`.** Today only `/v1/submissions/:id/dispute` updates `parent.status` in the same transaction; `/v1/events/:eventId/price-submissions` inserts the child but leaves the parent on `corroborated`. The admin queue query in §6.1 is therefore keyed off the pending counter row (`disputed_submission_id IS NOT NULL AND status='pending'`) — not the parent's status field — so contests are discoverable regardless of the creation route. For data hygiene, the price-submissions route also gets the parent-flip in the same transaction as the insert (matches the existing dispute-route behavior).
 
+**Slot-identity inheritance — both routes must lock the child to the parent's slot.** The resolve transaction's same-slot assertions (event_id / tier / source_category match) will 409 at admin resolution time if a counter was ever inserted with a mismatched slot. `/v1/submissions/:id/dispute` already inherits `eventId`, `tier`, `vendor`, and `sourceCategory` from the parent (`apps/api/src/routes/submissions.ts:155–168`). `/v1/events/:eventId/price-submissions` does NOT — it currently lets the submitter supply `tier`, `vendor`, `howFound`, and `sourceCategory` from the request body, and only validates that the referenced parent is `status='corroborated'`. When `disputedSubmissionId` is provided in that route, the server MUST overwrite the submitter-supplied slot fields with the parent's values (or reject with 400 if they don't match) so the contest is guaranteed to be a clean 1-vs-1 same-slot adjudication at admin resolve time. Without this, well-meaning UI changes upstream (or a malicious client) can create contests that always 409 at resolve.
+
 **Consumer-side UX (locked for PR 4 of the price-source cycle, not this PR):** when `priceByTier[tier].counterSubmission !== null`, the Consumer UI hides the dispute affordance for that tier and surfaces a CTA to engage with the existing contest instead (confirm or wait). This rule is saved to memory at `project_pr4_dispute_affordance_hiding.md`. A user should never see a 409 from filling out a dispute form — the affordance is hidden BEFORE they reach the form, not after they submit it.
 
 ### 4.7 Defensive update to existing PATCH endpoint
@@ -280,7 +282,12 @@ ALTER TABLE price_submissions
   ADD COLUMN archived_reason text;
 ```
 
-Plain text (no length limit chosen — admin reasons can be longer than the 280-char `note` cap). Nullable; only set when `status = 'archived'`.
+Plain text (no length limit chosen — admin reasons can be longer than the 280-char `note` cap). Nullable; set in two cases:
+
+1. **Steady state** — admin resolution and defer flows set `archived_reason` together with `status = 'archived'` on the losing row in the same transaction. This is the primary use case.
+2. **Migration-window cleanup** — the §12 defensive pre-index cleanup also writes `archived_reason` while marking pre-existing orphaned pending counters as `status = 'stale'` (not `'archived'`). The cleanup can't use `'archived'` because Postgres forbids referencing a newly-`ALTER TYPE ADD VALUE`'d enum label inside the same transaction that added it (see migration `0034_crawl_status_skipped.sql:21–24` for the documented precedent). `'stale'` is the closest existing enum value semantically; `archived_reason` still carries the audit trail of WHY the row was swept.
+
+Implication for downstream code: do NOT assume `archived_reason IS NOT NULL ⇒ status = 'archived'`. The relationship is "archived_reason is the admin/system rationale for why this row is no longer active". Query by `status` for behavior; read `archived_reason` for the explanation.
 
 Why not reuse `note`: `note` is the submitter's free-text. Stomping it with admin text would lose context. Separate column makes the intent legible.
 
