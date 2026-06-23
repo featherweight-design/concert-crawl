@@ -1,3 +1,10 @@
+## [1.74.5](https://github.com/HartiganHM/concert-crawl/compare/v1.74.4...v1.74.5) (2026-06-23)
+
+
+### Bug Fixes
+
+* **smoke:** authenticate before exercising auth-gated routes ([fa96940](https://github.com/HartiganHM/concert-crawl/commit/fa9694058ede0c06e1b593ebc6da1b83c6420126)), closes [#716](https://github.com/HartiganHM/concert-crawl/issues/716)
+
 ## [1.74.4](https://github.com/HartiganHM/concert-crawl/compare/v1.74.3...v1.74.4) (2026-06-22)
 
 
