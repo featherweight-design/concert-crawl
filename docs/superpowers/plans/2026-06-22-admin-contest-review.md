@@ -17,7 +17,7 @@
 - **`design-review` is a hard gate before `gh pr create`.** The property table at `docs/superpowers/design-tables/admin-contest-review.md` is the source of truth for every visual + state claim. Run `design-review` against the implementation before opening the PR; resolve every gap.
 - Worktree: `.worktrees/feat/admin-contest-review` on branch `feat/admin-contest-review`.
 - Pre-push quality gate from the worktree root: `pnpm typecheck && pnpm lint && pnpm test && pnpm --filter @concert-crawl/api test:integration && pnpm --filter @concert-crawl/db test`.
-- **2 SUCCESSFUL Copilot reviews before merge** per `feedback_copilot_review_multi_round.md` (small-to-medium PR; iterate until only Low/Nit remains).
+- **2 SUCCESSFUL Copilot reviews before merge** per `memory:feedback_copilot_review_multi_round` (small-to-medium PR; iterate until only Low/Nit remains). Memory files live at `~/.claude/projects/-Users-huey-Projects-concert-crawl/memory/` and are not in-repo; they're loaded into the Claude Code session context at startup.
 - **No `progress.md` row** — admin tooling, not a phase milestone.
 
 ---
@@ -62,7 +62,7 @@
 
 - `apps/crawler/*` — contest resolution is API-only; the crawler does not write to `price_submissions` directly.
 - The consumer notification bell/panel — `#737` tracks that surface; this PR only writes the `notifications` rows.
-- Consumer dispute affordance hiding — locked for PR 4 of the price-source cycle (`project_pr4_dispute_affordance_hiding.md`), not this PR.
+- Consumer dispute affordance hiding — locked for PR 4 of the price-source cycle (`memory:project_pr4_dispute_affordance_hiding`), not this PR.
 
 ---
 
@@ -132,28 +132,34 @@ Create `packages/db/migrations/0041_admin_contest_review.sql`:
 -- 1. Add 'archived' to the status enum (loser-of-contest sink, distinct from
 --    'stale' which keeps its current "outdated/no-longer-valid" semantics).
 ALTER TYPE price_submission_status ADD VALUE IF NOT EXISTS 'archived';
+--> statement-breakpoint
 
 -- 2. Add the admin's archive reason (no length cap — admins can write longer
 --    than the 280-char submitter `note` field).
 ALTER TABLE price_submissions
   ADD COLUMN IF NOT EXISTS archived_reason text;
+--> statement-breakpoint
 
 -- 3. Add the engagement-signal columns. `last_admin_action_kind` stays as
 --    text (not an enum) because the only legal value today is 'defer';
 --    validation lives at the application boundary.
 ALTER TABLE price_submissions
   ADD COLUMN IF NOT EXISTS last_admin_action_at timestamptz;
+--> statement-breakpoint
 ALTER TABLE price_submissions
   ADD COLUMN IF NOT EXISTS last_admin_action_kind text;
+--> statement-breakpoint
 
 -- 4. Partial indexes that power the contest queue + counter-lookup join.
 CREATE INDEX IF NOT EXISTS price_submissions_disputed_status_idx
   ON price_submissions (created_at)
   WHERE status = 'disputed';
+--> statement-breakpoint
 
 CREATE INDEX IF NOT EXISTS price_submissions_pending_counters_idx
   ON price_submissions (disputed_submission_id, created_at)
   WHERE status = 'pending' AND disputed_submission_id IS NOT NULL;
+--> statement-breakpoint
 
 -- 5. Defensive pre-index cleanup. If any in-flight contests already have
 --    multiple pending counters against the same parent (possible in the
@@ -175,6 +181,7 @@ UPDATE price_submissions
    SET status = 'archived',
        archived_reason = 'superseded by newer counter before schema lock'
  WHERE id IN (SELECT id FROM ranked WHERE rn > 1);
+--> statement-breakpoint
 
 -- 6. Schema-enforced 1-pending-counter-per-parent. The dispute POST also
 --    rejects with a clean 409 (belt-and-braces), but this is the primary
@@ -869,7 +876,7 @@ git commit -m "feat(api): dispute endpoint rejects duplicate pending counters wi
       submitter: { userId: string; handle: string | null }
       confirms: { fans: number; admin: number }
       observedAt: string
-      approvedAt: string
+      lastUpdatedAt: string  // parent.updatedAt — see spec §6.1 on naming
       note: string | null
     }
     counter: {
@@ -878,6 +885,7 @@ git commit -m "feat(api): dispute endpoint rejects duplicate pending counters wi
       priceMax: string | null
       vendor: Vendor
       submitter: { userId: string; handle: string | null }
+      confirms: { fans: number; admin: number }
       observedAt: string
       note: string | null
     }
@@ -1108,7 +1116,7 @@ contestsAdminRouter.get(
         parentVendor: parentAlias.vendor,
         parentUserId: parentAlias.userId,
         parentObservedAt: parentAlias.createdAt,
-        parentApprovedAt: parentAlias.updatedAt,
+        parentLastUpdatedAt: parentAlias.updatedAt,
         parentNote: parentAlias.note,
         // corroborationCount already includes the submitter's implicit
         // observation (1/2 model: default flipped 0→1 in PR #705 with the
@@ -1124,6 +1132,10 @@ contestsAdminRouter.get(
         counterUserId: priceSubmissions.userId,
         counterObservedAt: priceSubmissions.createdAt,
         counterNote: priceSubmissions.note,
+        // Counter confirms mirror the parent shape — drives the queue row's
+        // counter attribution text per design table §2. corroborationCount
+        // on a pending counter starts at 1 (submitter = observation #1).
+        counterCorroborationCount: priceSubmissions.corroborationCount,
         filedAt: priceSubmissions.createdAt,
       })
       .from(priceSubmissions)
@@ -1193,7 +1205,7 @@ contestsAdminRouter.get(
           admin: 0,
         },
         observedAt: row.parentObservedAt.toISOString(),
-        approvedAt: row.parentApprovedAt.toISOString(),
+        lastUpdatedAt: row.parentLastUpdatedAt.toISOString(),
         note: row.parentNote ?? null,
       },
       counter: {
@@ -1206,6 +1218,10 @@ contestsAdminRouter.get(
           handle: row.counterUserId
             ? (handleMap.get(row.counterUserId) ?? null)
             : null,
+        },
+        confirms: {
+          fans: row.counterCorroborationCount,
+          admin: 0,
         },
         observedAt: row.counterObservedAt.toISOString(),
         note: row.counterNote ?? null,
@@ -1358,7 +1374,7 @@ contestsAdminRouter.get('/prices/:contestId', async (ctx) => {
       vendor: priceSubmissions.vendor,
       userId: priceSubmissions.userId,
       observedAt: priceSubmissions.createdAt,
-      approvedAt: priceSubmissions.updatedAt,
+      lastUpdatedAt: priceSubmissions.updatedAt,
       note: priceSubmissions.note,
       status: priceSubmissions.status,
       corroborationCount: priceSubmissions.corroborationCount,
@@ -1388,6 +1404,7 @@ contestsAdminRouter.get('/prices/:contestId', async (ctx) => {
       observedAt: priceSubmissions.createdAt,
       note: priceSubmissions.note,
       status: priceSubmissions.status,
+      corroborationCount: priceSubmissions.corroborationCount,
       lastAdminActionAt: priceSubmissions.lastAdminActionAt,
       lastAdminActionKind: priceSubmissions.lastAdminActionKind,
     })
@@ -1441,7 +1458,7 @@ contestsAdminRouter.get('/prices/:contestId', async (ctx) => {
           admin: 0,
         },
         observedAt: parentRow.observedAt.toISOString(),
-        approvedAt: parentRow.approvedAt.toISOString(),
+        lastUpdatedAt: parentRow.lastUpdatedAt.toISOString(),
         note: parentRow.note ?? null,
         status: parentRow.status,
       },
@@ -1455,6 +1472,10 @@ contestsAdminRouter.get('/prices/:contestId', async (ctx) => {
           handle: counterRow.userId
             ? (handleMap.get(counterRow.userId) ?? null)
             : null,
+        },
+        confirms: {
+          fans: counterRow.corroborationCount,
+          admin: 0,
         },
         observedAt: counterRow.observedAt.toISOString(),
         note: counterRow.note ?? null,
@@ -1753,16 +1774,29 @@ contestsAdminRouter.post(
 
       let eventPriceUpdated = false
 
+      // Every status-flip below also clears lastAdminActionKind +
+      // lastAdminActionAt — per spec §4.5, the 'Admin requested more info'
+      // pill (powered by lastAdminActionKind === 'defer') must NOT persist
+      // past resolution. A previously-deferred contest that's now resolved
+      // should look fully resolved on the event detail page.
+
       if (resolution === 'challenger_wins') {
         await tx
           .update(priceSubmissions)
-          .set({ status: 'corroborated', updatedAt: sql`now()` })
+          .set({
+            status: 'corroborated',
+            lastAdminActionKind: null,
+            lastAdminActionAt: null,
+            updatedAt: sql`now()`,
+          })
           .where(eq(priceSubmissions.id, challenger.id))
         await tx
           .update(priceSubmissions)
           .set({
             status: 'archived',
             archivedReason: reason,
+            lastAdminActionKind: null,
+            lastAdminActionAt: null,
             updatedAt: sql`now()`,
           })
           .where(eq(priceSubmissions.id, parent.id))
@@ -1786,13 +1820,20 @@ contestsAdminRouter.post(
         // parent_wins
         await tx
           .update(priceSubmissions)
-          .set({ status: 'corroborated', updatedAt: sql`now()` })
+          .set({
+            status: 'corroborated',
+            lastAdminActionKind: null,
+            lastAdminActionAt: null,
+            updatedAt: sql`now()`,
+          })
           .where(eq(priceSubmissions.id, parent.id))
         await tx
           .update(priceSubmissions)
           .set({
             status: 'archived',
             archivedReason: reason,
+            lastAdminActionKind: null,
+            lastAdminActionAt: null,
             updatedAt: sql`now()`,
           })
           .where(eq(priceSubmissions.id, challenger.id))
@@ -2781,7 +2822,7 @@ const mockRow = (overrides: Partial<PriceContestRow>): PriceContestRow => ({
     submitter: { userId: 'u-1', handle: 'hugh' },
     confirms: { fans: 2, admin: 0 },
     observedAt: '2026-06-20T00:00:00Z',
-    approvedAt: '2026-06-20T00:00:00Z',
+    lastUpdatedAt: '2026-06-20T00:00:00Z',
     note: 'Standing GA verified on AXS.',
   },
   counter: {
@@ -2790,6 +2831,7 @@ const mockRow = (overrides: Partial<PriceContestRow>): PriceContestRow => ({
     priceMax: '80',
     vendor: 'AXS',
     submitter: { userId: 'u-2', handle: 'kel' },
+    confirms: { fans: 1, admin: 0 },
     observedAt: '2026-06-22T00:00:00Z',
     note: 'Face moved to $65 after openers announced.',
   },
@@ -2859,7 +2901,7 @@ export interface PriceContestRow {
     submitter: { userId: string; handle: string | null }
     confirms: { fans: number; admin: number }
     observedAt: string
-    approvedAt: string
+    lastUpdatedAt: string
     note: string | null
   }
   counter: {
@@ -2868,6 +2910,7 @@ export interface PriceContestRow {
     priceMax: string | null
     vendor: Vendor
     submitter: { userId: string; handle: string | null }
+    confirms: { fans: number; admin: number }
     observedAt: string
     note: string | null
   }
@@ -3377,7 +3420,7 @@ const baseContest = {
     submitter: { userId: 'u-1', handle: 'hugh' },
     confirms: { fans: 2, admin: 0 },
     observedAt: '2026-06-20T00:00:00Z',
-    approvedAt: '2026-06-20T00:00:00Z',
+    lastUpdatedAt: '2026-06-20T00:00:00Z',
     note: null,
     status: 'disputed' as const,
   },
@@ -3387,6 +3430,7 @@ const baseContest = {
     priceMax: '80',
     vendor: 'AXS' as const,
     submitter: { userId: 'u-2', handle: 'kel' },
+    confirms: { fans: 1, admin: 0 },
     observedAt: '2026-06-22T00:00:00Z',
     note: null,
     status: 'pending' as const,
@@ -3486,7 +3530,7 @@ export interface ContestDetailData {
     submitter: { userId: string; handle: string | null }
     confirms: { fans: number; admin: number }
     observedAt: string
-    approvedAt: string
+    lastUpdatedAt: string
     note: string | null
     status: 'pending' | 'corroborated' | 'disputed' | 'stale' | 'archived'
   }
@@ -3496,6 +3540,7 @@ export interface ContestDetailData {
     priceMax: string | null
     vendor: 'AXS' | 'Ticketmaster' | 'SeatGeek' | 'DICE' | 'Eventbrite' | 'VenueBoxOffice'
     submitter: { userId: string; handle: string | null }
+    confirms: { fans: number; admin: number }
     observedAt: string
     note: string | null
     status: 'pending' | 'corroborated' | 'disputed' | 'stale' | 'archived'
@@ -3928,6 +3973,7 @@ Create `apps/web/src/lib/queries/admin-contests.ts`:
 ```typescript
 'use client'
 
+import { useAuth } from '@clerk/nextjs'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api'
 import { reviewQueryKeys } from './use-admin-review'
@@ -3948,27 +3994,37 @@ interface ListResponse {
   offset: number
 }
 
-export const useReviewContestsQuery = () =>
-  useQuery({
+// apiClient signature per apps/web/src/lib/api.ts and existing admin hooks
+// in apps/web/src/lib/queries/use-admin-review.ts:
+//   - Every method takes a Clerk auth token as its last arg.
+//   - Methods return the parsed data directly (NOT wrapped in `{ data: ... }`).
+// Hooks use the `useAuth()` → `getToken()` pattern to fetch the token before
+// every request.
+
+export const useReviewContestsQuery = () => {
+  const { getToken } = useAuth()
+  return useQuery({
     queryKey: adminContestsKeys.list(),
     queryFn: async (): Promise<ListResponse> => {
-      const res = await apiClient.get<{ data: ListResponse }>(
-        '/v1/admin/contests/prices',
-      )
-      return res.data
+      const token = await getToken()
+      return apiClient.get<ListResponse>('/v1/admin/contests/prices', token)
     },
   })
+}
 
-export const useReviewContestDetail = (contestId: string) =>
-  useQuery({
+export const useReviewContestDetail = (contestId: string) => {
+  const { getToken } = useAuth()
+  return useQuery({
     queryKey: adminContestsKeys.detail(contestId),
     queryFn: async (): Promise<ContestDetailData> => {
-      const res = await apiClient.get<{ data: ContestDetailData }>(
+      const token = await getToken()
+      return apiClient.get<ContestDetailData>(
         `/v1/admin/contests/prices/${contestId}`,
+        token,
       )
-      return res.data
     },
   })
+}
 
 interface ResolveInput {
   contestId: string
@@ -3977,14 +4033,16 @@ interface ResolveInput {
 }
 
 export const useResolveContest = () => {
+  const { getToken } = useAuth()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: ResolveInput) => {
-      const res = await apiClient.post(
+      const token = await getToken()
+      return apiClient.post(
         `/v1/admin/contests/prices/${input.contestId}/resolve`,
         { resolution: input.resolution, reason: input.reason },
+        token,
       )
-      return res
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: adminContestsKeys.all })
@@ -3999,14 +4057,16 @@ interface DeferInput {
 }
 
 export const useDeferContest = () => {
+  const { getToken } = useAuth()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: DeferInput) => {
-      const res = await apiClient.post(
+      const token = await getToken()
+      return apiClient.post(
         `/v1/admin/contests/prices/${input.contestId}/defer`,
         { reason: input.reason },
+        token,
       )
-      return res
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: adminContestsKeys.all })
@@ -4132,7 +4192,7 @@ Expected: every command exits 0.
 
 - [ ] **Step 2: Run design-review against the implementation**
 
-Per `feedback_design_review_with_complete_and_ship.md` — design-review is a hard gate before `gh pr create` regardless of how visual-heavy the PR is. Run it with the property table at `docs/superpowers/design-tables/admin-contest-review.md` as the source of truth. The agent splits into:
+Per `memory:feedback_design_review_with_complete_and_ship` — design-review is a hard gate before `gh pr create` regardless of how visual-heavy the PR is. Run it with the property table at `docs/superpowers/design-tables/admin-contest-review.md` as the source of truth. The agent splits into:
 
 - **Agent 1 (component-scoped enumeration):** per-file passes over `PriceDisputesQueue.tsx`, `AdminDisputePanel.tsx`, `AdminEntry.tsx`. Concatenate output before proceeding.
 - **Agent 2 (visual properties + state reachability):** confirm every named state in the property table is reachable in code (field present in type, route computes it, props plumbed). Per `feedback_state_reachability_in_design_review.md`.
@@ -4212,7 +4272,7 @@ Verify `response.requested_reviewers[].login` is non-empty per `feedback_copilot
 
 - [ ] **Step 7: Iterate Copilot review**
 
-Per `feedback_copilot_review_multi_round.md` — minimum 2 successful Copilot reviews before merge. For each round:
+Per `memory:feedback_copilot_review_multi_round` — minimum 2 successful Copilot reviews before merge. For each round:
 
 - **Critical / High** → fix inline, re-run quality gate, commit, push, request next round.
 - **Medium** → fix inline, re-run quality gate, commit, push, request next round.
@@ -4292,8 +4352,8 @@ Any reader executing the plan can resolve every elision by reading the cited sou
 
 ## What's next after merge
 
-**PR 4 of the price-source discoverability cycle (Consumer UI) is unblocked.** With contest adjudication on the admin side complete, the consumer dispute affordance can ship: when `priceByTier[tier].counterSubmission !== null`, the consumer UI hides the dispute form and surfaces a CTA to engage with the existing contest. The `lastAdminActionKind === 'defer'` quiet pill ("Admin requested more info") on the counter card lights up automatically. Rule documented at `project_pr4_dispute_affordance_hiding.md`.
+**PR 4 of the price-source discoverability cycle (Consumer UI) is unblocked.** With contest adjudication on the admin side complete, the consumer dispute affordance can ship: when `priceByTier[tier].counterSubmission !== null`, the consumer UI hides the dispute form and surfaces a CTA to engage with the existing contest. The `lastAdminActionKind === 'defer'` quiet pill ("Admin requested more info") on the counter card lights up automatically. Rule documented at `memory:project_pr4_dispute_affordance_hiding`.
 
 **Event-report adjudication (PR 2 of the contest-review split)** remains a follow-up. Backend semantics differ (events vs price submissions) and no parallel foot-gun gates it. Spec §14 lays out the shape — mirror UI surfaces (`EventReportsQueue` + `EventReportResolutionPanel`), filter chips (`All`, `Sold out`, `Cancelled`, `Postponed`), `imminent · <7 days` row tell for `cancelled` reports — ready to draft when needed.
 
-**Consumer notification UI (#737)** is a separate track. This PR writes `notifications` rows on every contest action so when the bell + panel + consumer endpoints ship under #737, the backfill is automatic. Design pass is required before implementation per `reference_consumer_notifications_gap.md`.
+**Consumer notification UI (#737)** is a separate track. This PR writes `notifications` rows on every contest action so when the bell + panel + consumer endpoints ship under #737, the backfill is automatic. Design pass is required before implementation per `memory:reference_consumer_notifications_gap`.

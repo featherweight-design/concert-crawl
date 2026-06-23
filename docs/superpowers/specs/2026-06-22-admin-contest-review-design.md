@@ -297,7 +297,7 @@ export interface PriceSubmission {
 
 **Auth:** admin only.
 
-**Query params:** `limit` (default 20, max 100), `offset` (default 0), `sort` (default `created_at_asc`).
+**Query params:** `limit` (default 20, max 100), `offset` (default 0). Sort is locked to `filedAt asc` (counter.createdAt ascending — oldest contest first) per §7.8; no `sort` param in v1. Configurable sort is deferred to a follow-up alongside the "All disputes" full-list view.
 
 **Response shape:**
 ```ts
@@ -320,7 +320,15 @@ export interface PriceSubmission {
         submitter: { userId: string, handle: string | null }
         confirms: { fans: number, admin: number }
         observedAt: string                 // parent.createdAt
-        approvedAt: string                 // parent.updatedAt (when corroborated)
+        lastUpdatedAt: string              // parent.updatedAt — the most recent
+                                            // server-side row update (bumped on
+                                            // dispute-file, confirm, and admin
+                                            // action). NOT a reliable "approved at"
+                                            // since disputing flips parent to
+                                            // 'disputed' + bumps updatedAt. Honest
+                                            // name; an actual approvedAt would need
+                                            // a separate column or audit-log lookup
+                                            // (deferred).
         note: string | null
       }
       counter: {
@@ -329,6 +337,12 @@ export interface PriceSubmission {
         priceMax: string | null
         vendor: Vendor
         submitter: { userId: string, handle: string | null }
+        confirms: { fans: number, admin: number }  // mirrors parent shape;
+                                                    // fans = counter.corroborationCount
+                                                    // (pending counter starts at 1 — submitter
+                                                    // is implicit observation #1). Drives the
+                                                    // queue row's counter attribution text
+                                                    // per design table §2.
         observedAt: string                 // counter.createdAt
         note: string | null
       }
@@ -632,10 +646,12 @@ Single migration `0041_admin_contest_review.sql` (verified — `0040_price_sourc
 ```sql
 -- 1. Add 'archived' to status enum (loser-of-contest sink)
 ALTER TYPE price_submission_status ADD VALUE 'archived';
+--> statement-breakpoint
 
 -- 2. Add admin's archived reason
 ALTER TABLE price_submissions
   ADD COLUMN archived_reason text;
+--> statement-breakpoint
 
 -- 3. Add the engagement-signal columns surfaced via priceByTier[].counterSubmission
 ALTER TABLE price_submissions
@@ -644,21 +660,26 @@ ALTER TABLE price_submissions
   -- Note: keeping last_admin_action_kind as text (not enum) — the only value
   -- today is 'defer'; new categories don't justify an enum yet. Validation
   -- happens at the application boundary.
+--> statement-breakpoint
 
 -- 4. Partial indexes for contest queue performance
 CREATE INDEX price_submissions_disputed_status_idx
   ON price_submissions (created_at)
   WHERE status = 'disputed';
+--> statement-breakpoint
 
 CREATE INDEX price_submissions_pending_counters_idx
   ON price_submissions (disputed_submission_id, created_at)
   WHERE status = 'pending' AND disputed_submission_id IS NOT NULL;
+--> statement-breakpoint
 
 -- 5. Schema-enforced 1-counter-per-parent (the §4.6 lock)
 CREATE UNIQUE INDEX price_submissions_pending_counter_unique_idx
   ON price_submissions (disputed_submission_id)
   WHERE status = 'pending' AND disputed_submission_id IS NOT NULL;
 ```
+
+Each `--> statement-breakpoint` is the Drizzle migrator's required separator between top-level SQL statements (see `packages/db/migrations/0039_events_hidden_from_consumer.sql` for the established pattern). Without these, multi-statement migrations may execute as a single batch or fail at runtime.
 
 Expand-only per project convention. The Contract PR (post-PR 4 of price-source cycle) does NOT remove anything from this migration.
 
