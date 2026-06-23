@@ -69,46 +69,70 @@ jobs:
           echo "Refusing to smoke a staging build that didn't deploy."
           exit 1
 
-      # SHA-drift guard: Render deploy hooks pull HEAD of `main` at
-      # deploy time, not a specific commit. If the deploy-staging
-      # workflow_run was queued (runner backlog) and `main` advanced
-      # before it actually executed, Render would have deployed the
-      # newer commit while this workflow_run carries the older SHA.
-      # We'd then check out the older code and wait for the older SHA
-      # to be live on staging — which will never happen because Render
-      # is on the newer code. Refuse cleanly rather than burning the
-      # render-wait-for-live timeout. Same gate exists in deploy-prod.
+      # Pin the checkout to the SHA that triggered the upstream
+      # deploy-staging run. Without this, actions/checkout fetches default
+      # branch HEAD, which can drift if a new commit lands while this
+      # workflow is queued — and we'd then smoke a different revision
+      # than the one actually deployed to staging.
+      #
+      # fetch-depth=20 (was 1) so the SHA-drift guard below can walk
+      # past any [skip ci] release commits that have landed on main
+      # between deploy-staging completion and this workflow running.
+      # Without the depth, `git log` on a non-checked-out ancestor
+      # would fail and the walk would not see the release commit
+      # chain. 20 is comfortably beyond any realistic case.
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 20
+
+      # SHA-drift guard: refuse to smoke if `main` has advanced past
+      # the SHA that deploy-staging acted on. If the workflow_run was
+      # queued (runner backlog) and `main` moved before this fired,
+      # we'd be smoking against a Render build that doesn't match the
+      # code we checked out here. Refuse cleanly rather than burning
+      # the render-wait-for-live timeout. Same gate exists in
+      # deploy-prod.
+      #
+      # The walk-past-[skip-ci] step is the actual fix for the
+      # common case: semantic-release lands `chore(release): X.Y.Z
+      # [skip ci]` commits in parallel with deploy-staging completion.
+      # Without the walk, the raw `main` HEAD (= the release commit)
+      # would never match the upstream SHA (= the merge commit) and
+      # this guard would refuse every staging-smoke run after a real
+      # merge.
       - name: Verify upstream SHA is still main HEAD
         if: github.event_name == 'workflow_run'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           UPSTREAM_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
+          # Fetch main so the walk can see commits that landed after
+          # our pinned checkout (which is at UPSTREAM_SHA, an ancestor).
+          git fetch origin main --depth=20
           main_sha=$(curl --fail --silent --show-error \
             --connect-timeout 5 --max-time 15 \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${{ github.repository }}/branches/main" \
             | jq -r .commit.sha)
-          if [ "$UPSTREAM_SHA" != "$main_sha" ]; then
+          deployable_sha=$(bash .github/scripts/resolve-deployable-sha.sh "$main_sha")
+          if [ "$UPSTREAM_SHA" != "$deployable_sha" ]; then
             echo "Refusing to smoke staging — main advanced after deploy-staging started."
-            echo "  Upstream deploy-staging ran against: $UPSTREAM_SHA"
-            echo "  Current main HEAD:                   $main_sha"
+            echo "  Upstream deploy-staging ran against:       $UPSTREAM_SHA"
+            echo "  Current main HEAD:                         $main_sha"
+            echo "  Most recent deployable ancestor of HEAD:   $deployable_sha"
             echo ""
             echo "The next merge's pipeline will deploy and smoke the latest code."
             exit 1
           fi
-          echo "Upstream SHA $UPSTREAM_SHA matches current main HEAD; proceeding."
-
-      # Pin the checkout to the SHA that triggered the upstream
-      # deploy-staging run. Without this, actions/checkout fetches default
-      # branch HEAD, which can drift if a new commit lands while this
-      # workflow is queued — and we'd then smoke a different revision
-      # than the one actually deployed to staging.
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          if [ "$main_sha" != "$deployable_sha" ]; then
+            echo "Upstream SHA $UPSTREAM_SHA matches deployable ancestor of main HEAD"
+            echo "(HEAD $main_sha is a [skip ci] release commit); proceeding."
+          else
+            echo "Upstream SHA $UPSTREAM_SHA matches current main HEAD; proceeding."
+          fi
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6

@@ -95,6 +95,15 @@ jobs:
           echo "'reason' input for the audit trail), not through staging-smoke."
           exit 1
 
+      # Checkout so resolve-deployable-sha.sh below can walk the
+      # commit chain. Fetched depth=20 is comfortably beyond any
+      # realistic [skip ci] streak — semantic-release produces one
+      # release commit per merge, so two in a row is unusual.
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 20
+
       # SHA-drift guard: refuse to deploy if main has advanced past the
       # SHA that staging-smoke validated. With Render-API commitId
       # pinning the wrong code can't reach prod (we pass the specific
@@ -102,6 +111,13 @@ jobs:
       # without the validation gate — and that's what we refuse here.
       # The next merge's pipeline will deploy the latest code through
       # its own staging-smoke run.
+      #
+      # The walk-past-[skip-ci] step is the real fix: semantic-release
+      # creates `chore(release): X.Y.Z [skip ci]` commits between
+      # staging-smoke completion and this run. Without the walk, the
+      # raw `main` HEAD (= the release commit) would never match the
+      # upstream SHA (= the merge commit), and this guard would refuse
+      # every legitimate auto-deploy.
       - name: Verify upstream SHA is still main HEAD
         if: github.event_name == 'workflow_run'
         env:
@@ -114,15 +130,22 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${{ github.repository }}/branches/main" \
             | jq -r .commit.sha)
-          if [ "$UPSTREAM_SHA" != "$main_sha" ]; then
+          deployable_sha=$(bash .github/scripts/resolve-deployable-sha.sh "$main_sha")
+          if [ "$UPSTREAM_SHA" != "$deployable_sha" ]; then
             echo "Refusing to deploy prod — main advanced after staging-smoke succeeded."
-            echo "  Upstream staging-smoke ran against: $UPSTREAM_SHA"
-            echo "  Current main HEAD:                  $main_sha"
+            echo "  Upstream staging-smoke ran against:        $UPSTREAM_SHA"
+            echo "  Current main HEAD:                         $main_sha"
+            echo "  Most recent deployable ancestor of HEAD:   $deployable_sha"
             echo ""
             echo "The next merge's pipeline will deploy the latest code instead."
             exit 1
           fi
-          echo "Upstream SHA $UPSTREAM_SHA matches current main HEAD; proceeding."
+          if [ "$main_sha" != "$deployable_sha" ]; then
+            echo "Upstream SHA $UPSTREAM_SHA matches the deployable ancestor of main HEAD"
+            echo "(HEAD $main_sha is a [skip ci] release commit on top of it); proceeding."
+          else
+            echo "Upstream SHA $UPSTREAM_SHA matches current main HEAD; proceeding."
+          fi
 
       - name: Gate passed
         run: echo "All deploy gates satisfied; proceeding to deploy job."
@@ -199,27 +222,41 @@ jobs:
       # never validated by staging-smoke and we don't want to promote
       # it without that gate. The NEXT merge to main will start its
       # own pipeline and deploy the latest code through proper smoke.
+      #
+      # The same walk-past-[skip-ci] logic as the gate job applies
+      # here. The earlier Checkout step in this job pins to
+      # UPSTREAM_SHA, so we need to fetch main with depth>=2 to make
+      # the release commit + its parent locally available for the
+      # walk. Depth=20 mirrors the gate job's safety margin.
       - name: Re-verify upstream SHA is still main HEAD
         if: github.event_name == 'workflow_run'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           UPSTREAM_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
+          git fetch origin main --depth=20
           main_sha=$(curl --fail --silent --show-error \
             --connect-timeout 5 --max-time 15 \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${{ github.repository }}/branches/main" \
             | jq -r .commit.sha)
-          if [ "$UPSTREAM_SHA" != "$main_sha" ]; then
+          deployable_sha=$(bash .github/scripts/resolve-deployable-sha.sh "$main_sha")
+          if [ "$UPSTREAM_SHA" != "$deployable_sha" ]; then
             echo "Refusing to trigger Render deploys — main advanced between gate and deploy."
-            echo "  Upstream staging-smoke ran against: $UPSTREAM_SHA"
-            echo "  Current main HEAD:                  $main_sha"
+            echo "  Upstream staging-smoke ran against:        $UPSTREAM_SHA"
+            echo "  Current main HEAD:                         $main_sha"
+            echo "  Most recent deployable ancestor of HEAD:   $deployable_sha"
             echo ""
             echo "The next merge's pipeline will deploy the latest code."
             exit 1
           fi
-          echo "Upstream SHA $UPSTREAM_SHA still matches main HEAD; triggering Render deploys."
+          if [ "$main_sha" != "$deployable_sha" ]; then
+            echo "Upstream SHA $UPSTREAM_SHA matches deployable ancestor of main HEAD"
+            echo "(HEAD $main_sha is a [skip ci] release commit); triggering Render deploys."
+          else
+            echo "Upstream SHA $UPSTREAM_SHA still matches main HEAD; triggering Render deploys."
+          fi
 
       # Each step delegates to render-trigger-deploy.sh, which
       # centralizes the curl + commitId-pinning + deploy-id-logging
