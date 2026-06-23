@@ -83,7 +83,7 @@ The contest endpoints live under `apps/api/src/routes/admin/contests.ts` (new fi
 
 ### 4.3 Resolution as a single transaction
 
-**Locked: every resolution is one DB transaction.** Mirrors the existing pattern at `apps/api/src/lib/price-submission-confirms.ts`. Steps (in order):
+**Locked: every resolution is one DB transaction.** Mirrors the existing consumer pattern at `apps/api/src/routes/price-submission-confirms.ts` and the admin PATCH transaction at `apps/api/src/routes/admin/prices.ts`. Steps (in order):
 
 ```
 BEGIN
