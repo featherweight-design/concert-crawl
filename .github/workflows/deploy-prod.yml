@@ -121,26 +121,16 @@ jobs:
       - name: Verify upstream SHA is still main HEAD
         if: github.event_name == 'workflow_run'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           UPSTREAM_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
-          # The checkout above uses the default ref. For workflow_run
-          # events, github.sha is the head of the default branch at
-          # workflow_run-trigger time — which is usually but not always
-          # equal to the main_sha we fetch from the API below (main can
-          # advance between trigger and run). Fetch main with depth=20
-          # as a safety net so the resolver can always see the [skip ci]
-          # release commits regardless of when they landed; without this
-          # the resolver could `git log` against an unknown SHA, hit its
-          # empty-subject fallback, and return main_sha unchanged —
-          # silently reintroducing the false-drift bug this PR fixes.
+          # Fetch main with depth=20, then read main_sha from the
+          # just-fetched ref. Doing fetch+rev-parse atomically (rather
+          # than fetch then a separate API call) means main can't
+          # advance between resolving the SHA and the walk that
+          # consumes it. Depth=20 is comfortably beyond any realistic
+          # [skip ci] release-commit streak.
           git fetch origin main --depth=20
-          main_sha=$(curl --fail --silent --show-error \
-            --connect-timeout 5 --max-time 15 \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${{ github.repository }}/branches/main" \
-            | jq -r .commit.sha)
+          main_sha=$(git rev-parse origin/main)
           deployable_sha=$(bash .github/scripts/resolve-deployable-sha.sh "$main_sha")
           if [ "$UPSTREAM_SHA" != "$deployable_sha" ]; then
             echo "Refusing to deploy prod — main advanced after staging-smoke succeeded."
@@ -242,16 +232,13 @@ jobs:
       - name: Re-verify upstream SHA is still main HEAD
         if: github.event_name == 'workflow_run'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           UPSTREAM_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
+          # Read main_sha from the just-fetched ref (atomic) rather
+          # than a separate API call (racy). Same rationale as the
+          # gate-job guard.
           git fetch origin main --depth=20
-          main_sha=$(curl --fail --silent --show-error \
-            --connect-timeout 5 --max-time 15 \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${{ github.repository }}/branches/main" \
-            | jq -r .commit.sha)
+          main_sha=$(git rev-parse origin/main)
           deployable_sha=$(bash .github/scripts/resolve-deployable-sha.sh "$main_sha")
           if [ "$UPSTREAM_SHA" != "$deployable_sha" ]; then
             echo "Refusing to trigger Render deploys — main advanced between gate and deploy."

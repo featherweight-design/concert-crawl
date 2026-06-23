@@ -105,18 +105,18 @@ jobs:
       - name: Verify upstream SHA is still main HEAD
         if: github.event_name == 'workflow_run'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           UPSTREAM_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           # Fetch main so the walk can see commits that landed after
           # our pinned checkout (which is at UPSTREAM_SHA, an ancestor).
+          # Read main_sha from the just-fetched ref rather than a
+          # separate API call — using `git rev-parse origin/main` is
+          # atomic with the fetch, so there's no race where main
+          # advances between the fetch and the resolution that would
+          # leave the resolver looking at a commit it doesn't have
+          # locally.
           git fetch origin main --depth=20
-          main_sha=$(curl --fail --silent --show-error \
-            --connect-timeout 5 --max-time 15 \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${{ github.repository }}/branches/main" \
-            | jq -r .commit.sha)
+          main_sha=$(git rev-parse origin/main)
           deployable_sha=$(bash .github/scripts/resolve-deployable-sha.sh "$main_sha")
           if [ "$UPSTREAM_SHA" != "$deployable_sha" ]; then
             echo "Refusing to smoke staging — main advanced after deploy-staging started."
@@ -172,20 +172,16 @@ jobs:
       #   to the most recent commit Render actually built.
       - name: Resolve render-wait target SHA
         id: wait_target
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_run" ]; then
             target="${{ github.event.workflow_run.head_sha }}"
             echo "workflow_run: waiting for upstream CI head_sha = ${target}"
           else
+            # Read main_sha from the just-fetched ref so it's atomic
+            # with the fetch — no race window where main can advance
+            # between resolving the SHA and the walk that consumes it.
             git fetch origin main --depth=20
-            main_sha=$(curl --fail --silent --show-error \
-              --connect-timeout 5 --max-time 15 \
-              -H "Authorization: Bearer $GITHUB_TOKEN" \
-              -H "Accept: application/vnd.github+json" \
-              "https://api.github.com/repos/${{ github.repository }}/branches/main" \
-              | jq -r .commit.sha)
+            main_sha=$(git rev-parse origin/main)
             target=$(bash .github/scripts/resolve-deployable-sha.sh "$main_sha")
             if [ "$main_sha" != "$target" ]; then
               echo "workflow_dispatch: main HEAD ${main_sha} is a [skip ci] commit;"
