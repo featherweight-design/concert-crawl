@@ -124,6 +124,15 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           UPSTREAM_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
+          # The checkout above pins to github.sha (= UPSTREAM_SHA on
+          # workflow_run), so main_sha — a descendant on top of our
+          # checkout — isn't in the local git repo. The resolver script
+          # would then `git log` against an unknown SHA, hit its
+          # empty-subject fallback, and return main_sha unchanged —
+          # silently reintroducing the false-drift bug this PR fixes.
+          # Fetch main with depth=20 to make the [skip ci] release
+          # commit chain locally available for the walk.
+          git fetch origin main --depth=20
           main_sha=$(curl --fail --silent --show-error \
             --connect-timeout 5 --max-time 15 \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
