@@ -58,13 +58,18 @@ if [ -z "${RENDER_API_TOKEN:-}" ]; then
   exit 1
 fi
 
-# Validate COMMIT_SHA shape — full 40-char lowercase hex. github.event.
-# workflow_run.head_sha and github.sha both produce this form, but if
-# a caller ever passes whitespace, a short SHA, or branch-name junk,
-# the curl below would fail with an opaque Render error (or worse,
-# produce malformed JSON). Catch it here with a clear message.
+# Normalize COMMIT_SHA to lowercase. github.event.workflow_run.head_sha
+# and github.sha both produce lowercase, but git SHAs are technically
+# case-insensitive (`A` and `a` are the same commit), so accept either
+# form from manual callers without false-failing.
+COMMIT_SHA=$(echo "${COMMIT_SHA}" | tr 'A-F' 'a-f')
+
+# Validate the normalized shape — full 40-char hex. If a caller ever
+# passes whitespace, a short SHA, or branch-name junk, the curl below
+# would fail with an opaque Render error (or worse, produce malformed
+# JSON). Catch it here with a clear message.
 if ! [[ "${COMMIT_SHA}" =~ ^[0-9a-f]{40}$ ]]; then
-  echo "✗ COMMIT_SHA must be a 40-character lowercase hex git SHA"
+  echo "✗ COMMIT_SHA must be a 40-character hex git SHA"
   echo "  got: '${COMMIT_SHA}'"
   exit 1
 fi
