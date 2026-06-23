@@ -1,12 +1,26 @@
 name: Deploy to Production
 
-# Triggers automatically when the staging smoke suite passes. POSTs Render
-# deploy hooks for the three production Render services (API + 2 crawler
-# crons). Vercel auto-deploys the prod web project on push to `main`, so
-# there is no Vercel job here — that path is already wired up.
+# Triggers automatically when the staging smoke suite passes. Uses the
+# Render API (POST /v1/services/{id}/deploys with `commitId`) to deploy
+# the three production Render services (API + 2 crawler crons) to the
+# exact SHA that staging-smoke validated. Vercel auto-deploys the prod
+# web project on push to `main`, so there is no Vercel job here — that
+# path is already wired up.
 #
 # Disabled by default. Flip `AUTO_DEPLOY_PROD_ENABLED` repo variable to
 # `true` to turn on. See docs/runbooks/auto-deploy-prod.md.
+#
+# Why the Render API instead of per-service deploy hooks:
+#   - Render Cron Jobs don't expose a Deploy Hook UI (confirmed in
+#     Render dashboard 2026-06-23), so we couldn't provision hooks for
+#     the two crawler crons in the first place.
+#   - The Render API accepts a `commitId` body parameter, pinning each
+#     deploy to a specific SHA. Hooks always deploy branch HEAD, which
+#     leaves a race window between SHA-drift validation and the hook
+#     POST. With commitId-pinned deploys, drift cannot occur — Render
+#     builds exactly the commit we passed staging-smoke.
+#   - One `RENDER_API_TOKEN` (already wired) replaces three per-service
+#     hook secrets — smaller secret surface, easier rotation.
 
 on:
   workflow_run:
@@ -30,8 +44,9 @@ concurrency:
   group: prod-pipeline
   cancel-in-progress: false
 
-# Scope GITHUB_TOKEN to least privilege. This workflow only POSTs to
-# Render's deploy hooks — it does not need any GitHub write surface.
+# Scope GITHUB_TOKEN to least privilege. This workflow only reads the
+# main branch HEAD (for the SHA-drift guards) and POSTs to Render's
+# API — it does not need any GitHub write surface.
 permissions:
   contents: read
 
@@ -80,18 +95,13 @@ jobs:
           echo "'reason' input for the audit trail), not through staging-smoke."
           exit 1
 
-      # SHA-drift guard: Render deploy hooks pull whatever is at HEAD of
-      # the configured branch (main) at deploy time, NOT a specific
-      # commit. If main has advanced between staging-smoke completion
-      # and this run, Render would deploy the newer (un-smoked) commit
-      # while render-wait-for-live waits for the old (smoked) commit's
-      # SHA to be live — the wait would time out, deploy-prod would
-      # fail, prod-post-deploy-smoke would be skipped, and rollback
-      # would not fire (gated on smoke failure, not deploy failure).
-      # Prod would be left on un-smoked code with no automatic recovery.
-      #
-      # Refuse to deploy if the upstream SHA isn't current main HEAD;
-      # the next merge's pipeline will pick up the latest code instead.
+      # SHA-drift guard: refuse to deploy if main has advanced past the
+      # SHA that staging-smoke validated. With Render-API commitId
+      # pinning the wrong code can't reach prod (we pass the specific
+      # SHA to deploy), but the un-smoked code would still be promoted
+      # without the validation gate — and that's what we refuse here.
+      # The next merge's pipeline will deploy the latest code through
+      # its own staging-smoke run.
       - name: Verify upstream SHA is still main HEAD
         if: github.event_name == 'workflow_run'
         env:
@@ -122,10 +132,11 @@ jobs:
     needs: gate
     runs-on: ubuntu-latest
     # 20 min: render-wait-for-live polls for up to 10 min for the prod
-    # API to reach `live` on the new SHA, plus checkout, secret/ID
-    # preflights, and the three deploy-hook POSTs. 10 min was tight
-    # enough that a legitimately slow Render build could time the job
-    # out before the wait completed.
+    # API to reach `live` on the new SHA, plus checkout, preflight,
+    # and the three Render-API deploy triggers (each returns
+    # immediately on enqueue; the actual build runs async on Render).
+    # 10 min was tight enough that a legitimately slow Render build
+    # could time the job out before the wait completed.
     timeout-minutes: 20
     # `environment: production` is requested ONLY here, after the
     # gate job has validated all conditions. This avoids tripping
@@ -141,38 +152,47 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
-      # Preflight check that all three deploy-hook secrets are
-      # configured. Without it, a missing secret would surface as a
-      # generic curl error ("URL using bad/illegal format") and the
-      # operator would have to dig to find out which one. We only
-      # check for empty strings — the values themselves are not
-      # echoed, and GitHub Actions masks secret values in logs anyway.
-      - name: Verify Render deploy hook secrets are configured
+      # Preflight check that all three service ID variables AND the
+      # Render API token are configured. Without it, a missing value
+      # would surface as a generic curl error ("URL using bad/illegal
+      # format" or "401 Unauthorized") and the operator would have to
+      # dig to find out which one. Variable existence is logged plainly;
+      # the API token's existence is checked with -z only — its value is
+      # never echoed, and GitHub Actions masks secret values in logs.
+      - name: Verify Render API token + service ID variables are configured
         env:
-          HOOK_API: ${{ secrets.RENDER_DEPLOY_HOOK_API }}
-          HOOK_CRAWLER_TRIGGERS: ${{ secrets.RENDER_DEPLOY_HOOK_CRAWLER_TRIGGERS }}
-          HOOK_CRAWLER_DAILY: ${{ secrets.RENDER_DEPLOY_HOOK_CRAWLER_DAILY }}
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+          SERVICE_ID_API: ${{ vars.RENDER_SERVICE_ID_API }}
+          SERVICE_ID_CRAWLER_TRIGGERS: ${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}
+          SERVICE_ID_CRAWLER_DAILY: ${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}
         run: |
           missing=()
-          [ -z "$HOOK_API" ] && missing+=("RENDER_DEPLOY_HOOK_API")
-          [ -z "$HOOK_CRAWLER_TRIGGERS" ] && missing+=("RENDER_DEPLOY_HOOK_CRAWLER_TRIGGERS")
-          [ -z "$HOOK_CRAWLER_DAILY" ] && missing+=("RENDER_DEPLOY_HOOK_CRAWLER_DAILY")
+          [ -z "$RENDER_API_TOKEN" ] && missing+=("RENDER_API_TOKEN (secret)")
+          [ -z "$SERVICE_ID_API" ] && missing+=("RENDER_SERVICE_ID_API (production-env var)")
+          [ -z "$SERVICE_ID_CRAWLER_TRIGGERS" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_TRIGGERS (production-env var)")
+          [ -z "$SERVICE_ID_CRAWLER_DAILY" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_DAILY (production-env var)")
           if [ ${#missing[@]} -gt 0 ]; then
-            echo "Missing production-env secrets: ${missing[*]}"
-            echo "Set them via Settings → Environments → production → Secrets."
+            echo "Missing production-env configuration:"
+            printf '  - %s\n' "${missing[@]}"
+            echo ""
+            echo "RENDER_API_TOKEN goes in Settings → Secrets and variables → Actions → Secrets."
+            echo "RENDER_SERVICE_ID_* go in Settings → Environments → production → Variables."
             exit 1
           fi
 
-      # Second SHA-drift guard, immediately before POSTing the deploy
-      # hooks. The gate job already checked this, but gate → deploy
-      # is two separate jobs and `environment: production` can hold
-      # the deploy job in an approval/notification queue while main
-      # keeps advancing. Re-check at the last possible moment so we
-      # never fire a deploy hook for a SHA that is no longer current
-      # main HEAD. Render's hooks deploy whatever is at main HEAD at
-      # POST time, not a specific commit, so a drift here would mean
-      # deploying un-smoked code and then waiting for the wrong SHA
-      # in render-wait-for-live.
+      # Second SHA-drift guard, immediately before triggering deploys.
+      # The gate job already checked this, but gate → deploy is two
+      # separate jobs and `environment: production` can hold the deploy
+      # job in an approval/notification queue while main keeps
+      # advancing.
+      #
+      # With Render-API commitId pinning, this guard is no longer
+      # required for correctness (the API call deploys exactly the
+      # SHA we pass — drift cannot send the wrong code to prod).
+      # But we still refuse on drift, because the un-smoked SHA was
+      # never validated by staging-smoke and we don't want to promote
+      # it without that gate. The NEXT merge to main will start its
+      # own pipeline and deploy the latest code through proper smoke.
       - name: Re-verify upstream SHA is still main HEAD
         if: github.event_name == 'workflow_run'
         env:
@@ -186,35 +206,77 @@ jobs:
             "https://api.github.com/repos/${{ github.repository }}/branches/main" \
             | jq -r .commit.sha)
           if [ "$UPSTREAM_SHA" != "$main_sha" ]; then
-            echo "Refusing to POST Render deploy hooks — main advanced between gate and deploy."
+            echo "Refusing to trigger Render deploys — main advanced between gate and deploy."
             echo "  Upstream staging-smoke ran against: $UPSTREAM_SHA"
             echo "  Current main HEAD:                  $main_sha"
             echo ""
             echo "The next merge's pipeline will deploy the latest code."
             exit 1
           fi
-          echo "Upstream SHA $UPSTREAM_SHA still matches main HEAD; firing deploy hooks."
+          echo "Upstream SHA $UPSTREAM_SHA still matches main HEAD; triggering Render deploys."
 
-      # Bounded curl timeouts + --silent --show-error so a stalled Render
-      # endpoint cannot hang the workflow indefinitely, and logs stay
-      # clean (only errors print).
+      # Trigger each Render deploy via the Render API, pinning to the
+      # exact SHA that staging-smoke validated (or current main HEAD on
+      # manual workflow_dispatch). Bounded curl timeouts + --silent
+      # --show-error so a stalled Render endpoint cannot hang the
+      # workflow, and logs stay clean (only errors print).
+      #
+      # `commitId` in the request body is what makes this safer than
+      # deploy hooks: hooks build whatever is at branch HEAD at POST
+      # time, racing with any post-smoke merges to main. Pinning to the
+      # specific SHA means Render builds exactly the validated commit.
+      #
+      # `--fail-with-body` (not just --fail) prints the Render API's JSON
+      # error response when the request fails, so a misconfigured token,
+      # disabled service, or invalid commit SHA surfaces with the actual
+      # error message instead of just an HTTP status code.
       - name: Trigger Render deploy — API
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+          SERVICE_ID: ${{ vars.RENDER_SERVICE_ID_API }}
+          COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
-          curl --fail --silent --show-error \
+          response=$(curl --fail-with-body --silent --show-error \
             --connect-timeout 10 --max-time 30 \
-            -X POST "${{ secrets.RENDER_DEPLOY_HOOK_API }}"
+            -X POST "https://api.render.com/v1/services/${SERVICE_ID}/deploys" \
+            -H "Authorization: Bearer ${RENDER_API_TOKEN}" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            -d "{\"commitId\":\"${COMMIT_SHA}\"}")
+          deploy_id=$(echo "$response" | jq -r '.id // "<no id in response>"')
+          echo "API deploy enqueued: id=${deploy_id} service=${SERVICE_ID} commit=${COMMIT_SHA}"
 
       - name: Trigger Render deploy — crawler triggers cron
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+          SERVICE_ID: ${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}
+          COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
-          curl --fail --silent --show-error \
+          response=$(curl --fail-with-body --silent --show-error \
             --connect-timeout 10 --max-time 30 \
-            -X POST "${{ secrets.RENDER_DEPLOY_HOOK_CRAWLER_TRIGGERS }}"
+            -X POST "https://api.render.com/v1/services/${SERVICE_ID}/deploys" \
+            -H "Authorization: Bearer ${RENDER_API_TOKEN}" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            -d "{\"commitId\":\"${COMMIT_SHA}\"}")
+          deploy_id=$(echo "$response" | jq -r '.id // "<no id in response>"')
+          echo "Crawler-triggers deploy enqueued: id=${deploy_id} service=${SERVICE_ID} commit=${COMMIT_SHA}"
 
       - name: Trigger Render deploy — crawler daily cron
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+          SERVICE_ID: ${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}
+          COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
-          curl --fail --silent --show-error \
+          response=$(curl --fail-with-body --silent --show-error \
             --connect-timeout 10 --max-time 30 \
-            -X POST "${{ secrets.RENDER_DEPLOY_HOOK_CRAWLER_DAILY }}"
+            -X POST "https://api.render.com/v1/services/${SERVICE_ID}/deploys" \
+            -H "Authorization: Bearer ${RENDER_API_TOKEN}" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            -d "{\"commitId\":\"${COMMIT_SHA}\"}")
+          deploy_id=$(echo "$response" | jq -r '.id // "<no id in response>"')
+          echo "Crawler-daily deploy enqueued: id=${deploy_id} service=${SERVICE_ID} commit=${COMMIT_SHA}"
 
       # Wait for the prod API to actually be live on the new commit
       # before this workflow completes. Render's deploy hooks return
@@ -226,18 +288,16 @@ jobs:
       # and is the one smoke probes); the crawler crons deploy
       # independently and their failure modes surface via Sentry, not
       # via the smoke gate.
+      # No preflight here — the deploy preflight earlier in this job
+      # already validates RENDER_SERVICE_ID_API and RENDER_API_TOKEN.
+      # If either were missing this step would never be reached.
       - name: Wait for prod API to be live on new SHA
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
         run: |
-          if [ -z "${{ vars.RENDER_SERVICE_ID_API }}" ]; then
-            echo "RENDER_SERVICE_ID_API production-env variable is empty or unset."
-            echo "Set it via Settings → Environments → production → Variables before enabling auto-deploy-prod."
-            exit 1
-          fi
           bash .github/scripts/render-wait-for-live.sh \
             "${{ vars.RENDER_SERVICE_ID_API }}" \
             "${{ github.event.workflow_run.head_sha || github.sha }}"
-        env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
 
       # `inputs.*` is only defined for `workflow_dispatch`. Using
       # `github.event.inputs.reason` is safe on `workflow_run` too — it

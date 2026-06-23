@@ -123,22 +123,21 @@ on the next workflow_run trigger.
 
 ### `production` environment — Variables (Settings → Environments → production)
 
-| Variable                             | Required by                | Notes                                                                                                                                          |
-| ------------------------------------ | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `RENDER_SERVICE_ID_API`              | deploy-prod, rollback-prod | **new** — prod API service ID (visible in Render dashboard URL, e.g. `srv-abc123`). Used by `render-wait-for-live.sh` and `render-rollback.sh` |
-| `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | rollback-prod              | **new** — prod crawler triggers cron service ID                                                                                                |
-| `RENDER_SERVICE_ID_CRAWLER_DAILY`    | rollback-prod              | **new** — prod crawler daily cron service ID                                                                                                   |
+| Variable                             | Required by                | Notes                                                                                                                                                  |
+| ------------------------------------ | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `RENDER_SERVICE_ID_API`              | deploy-prod, rollback-prod | **new** — prod API service ID (visible in Render dashboard URL, e.g. `srv-abc123`). Used for the deploy POST, `render-wait-for-live.sh`, and rollback. |
+| `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | deploy-prod, rollback-prod | **new** — prod crawler triggers cron service ID. Used by deploy-prod's API POST and rollback.                                                          |
+| `RENDER_SERVICE_ID_CRAWLER_DAILY`    | deploy-prod, rollback-prod | **new** — prod crawler daily cron service ID. Same.                                                                                                    |
 
-Service IDs live in the `production` environment (not at the repo level) so they are scoped to prod-only workflow runs and stay aligned with `production-launch.md`. The `rollback-prod.yml` job uses `environment: production` and reads them as `vars.RENDER_SERVICE_ID_*`.
+Service IDs live in the `production` environment (not at the repo level) so they are scoped to prod-only workflow runs and stay aligned with `production-launch.md`. The `deploy-prod.yml` and `rollback-prod.yml` jobs use `environment: production` and read them as `vars.RENDER_SERVICE_ID_*`.
 
 ### `production` environment — Secrets (Settings → Environments → production)
 
-| Secret                                | Required by                | Notes                                                                                                                                                             |
-| ------------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `RENDER_DEPLOY_HOOK_API`              | deploy-prod                | already present per `production-launch.md`                                                                                                                        |
-| `RENDER_DEPLOY_HOOK_CRAWLER_TRIGGERS` | deploy-prod                | **new** — Render → `concert-crawl-crawler-triggers` → Settings → Deploy Hook                                                                                      |
-| `RENDER_DEPLOY_HOOK_CRAWLER_DAILY`    | deploy-prod                | **new** — Render → `concert-crawl-crawler-daily` → Settings → Deploy Hook                                                                                         |
-| `RENDER_API_TOKEN`                    | deploy-prod, rollback-prod | **new** — Render → Account Settings → API Keys → generate a token with deploy + read permissions. Consumed by `render-wait-for-live.sh` and `render-rollback.sh`. |
+| Secret             | Required by                | Notes                                                                                                                                                                                                    |
+| ------------------ | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RENDER_API_TOKEN` | deploy-prod, rollback-prod | **new** — Render → Account Settings → API Keys → generate a token with deploy + read permissions. Consumed by the deploy POST in deploy-prod, by `render-wait-for-live.sh`, and by `render-rollback.sh`. |
+
+No per-service `RENDER_DEPLOY_HOOK_*` secrets are needed: the deploy POST uses the Render API directly with `RENDER_API_TOKEN` + the service IDs above. Render Cron Jobs don't expose a Deploy Hook UI anyway (confirmed 2026-06-23), so the hook-based approach couldn't have covered the two crawler crons.
 
 ### Repository-level secrets (Settings → Secrets and variables → Actions)
 

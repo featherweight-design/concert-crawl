@@ -293,11 +293,12 @@ GitHub → repository → **Settings** → **Environments**.
 
 ### `staging` environment — Secrets
 
-| Secret                   | Value                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`           | `NEON_STAGING_POOLED` from Step 2 — for future crawler/migration GHA jobs                                                                                                                                                                                                                                                                                                                                             |
-| `SENTRY_DSN`             | Staging Sentry project DSN                                                                                                                                                                                                                                                                                                                                                                                            |
-| `RENDER_DEPLOY_HOOK_API` | Render → `concert-crawl-api-staging` → **Settings → Deploy Hook** → generate and copy. Required by `deploy-staging.yml`'s `deploy-api` job — the workflow fires on every successful CI run targeting `main` (typically a merge, but any push that passes CI qualifies) and POSTs to this hook to redeploy the staging API. (Staging web is deployed by Vercel's GitHub integration directly — no deploy hook needed.) |
+| Secret         | Value                                                                     |
+| -------------- | ------------------------------------------------------------------------- |
+| `DATABASE_URL` | `NEON_STAGING_POOLED` from Step 2 — for future crawler/migration GHA jobs |
+| `SENTRY_DSN`   | Staging Sentry project DSN                                                |
+
+Staging deploys use the Render API (with `RENDER_API_TOKEN` at the repo level — see below) rather than a per-service deploy hook. Staging web is deployed by Vercel's GitHub integration directly — no deploy hook needed there either.
 
 ### `staging` environment — Variables
 
@@ -308,25 +309,24 @@ GitHub → repository → **Settings** → **Environments**.
 
 ### `production` environment — Secrets
 
-| Secret                                | Value                                                                                                                                                                                                               |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                        | `NEON_PROD_POOLED` from Step 2                                                                                                                                                                                      |
-| `SENTRY_DSN`                          | Crawler project DSN from Step 5                                                                                                                                                                                     |
-| `RENDER_DEPLOY_HOOK_API`              | Render → `concert-crawl-api` → **Settings → Deploy Hook** → generate and copy. Consumed by `deploy-prod.yml` (auto-deploy pipeline — gated by `AUTO_DEPLOY_PROD_ENABLED`). See `docs/runbooks/auto-deploy-prod.md`. |
-| `RENDER_DEPLOY_HOOK_CRAWLER_TRIGGERS` | Render → `concert-crawl-crawler-triggers` → **Settings → Deploy Hook**. Consumed by `deploy-prod.yml`.                                                                                                              |
-| `RENDER_DEPLOY_HOOK_CRAWLER_DAILY`    | Render → `concert-crawl-crawler-daily` → **Settings → Deploy Hook**. Consumed by `deploy-prod.yml`.                                                                                                                 |
-| `RENDER_API_TOKEN`                    | Render → Account Settings → **API Keys** → generate token with deploy permissions. Consumed by `rollback-prod.yml` to list deploys and POST `/rollback`.                                                            |
+| Secret             | Value                                                                                                                                                                                                                                                                     |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`     | `NEON_PROD_POOLED` from Step 2                                                                                                                                                                                                                                            |
+| `SENTRY_DSN`       | Crawler project DSN from Step 5                                                                                                                                                                                                                                           |
+| `RENDER_API_TOKEN` | Render → Account Settings → **API Keys** → generate token with deploy + read permissions. Consumed by `deploy-prod.yml` (POST `/v1/services/{id}/deploys` for the three prod services — API + 2 crawler crons), by `render-wait-for-live.sh`, and by `rollback-prod.yml`. |
+
+No per-service `RENDER_DEPLOY_HOOK_*` secrets are needed — the deploy POST uses the Render API with `RENDER_API_TOKEN` + the service IDs in the variables table below. Render Cron Jobs don't expose a Deploy Hook UI (confirmed 2026-06-23), so the hook-based approach couldn't have covered the two crawler crons anyway.
 
 ### `production` environment — Variables
 
-| Variable                             | Value                                                                                                          |
-| ------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| `SENTRY_ENVIRONMENT`                 | `production`                                                                                                   |
-| `LOG_LEVEL`                          | `info`                                                                                                         |
-| `ADMIN_EMAIL`                        | Pre-provisioned                                                                                                |
-| `RENDER_SERVICE_ID_API`              | Render → `concert-crawl-api` → service ID from the dashboard URL (`srv-...`). Consumed by `rollback-prod.yml`. |
-| `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | Service ID for `concert-crawl-crawler-triggers`. Consumed by `rollback-prod.yml`.                              |
-| `RENDER_SERVICE_ID_CRAWLER_DAILY`    | Service ID for `concert-crawl-crawler-daily`. Consumed by `rollback-prod.yml`.                                 |
+| Variable                             | Value                                                                                                                                                            |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SENTRY_ENVIRONMENT`                 | `production`                                                                                                                                                     |
+| `LOG_LEVEL`                          | `info`                                                                                                                                                           |
+| `ADMIN_EMAIL`                        | Pre-provisioned                                                                                                                                                  |
+| `RENDER_SERVICE_ID_API`              | Render → `concert-crawl-api` → service ID from the dashboard URL (`srv-...`). Consumed by `deploy-prod.yml` (deploy POST + render-wait) and `rollback-prod.yml`. |
+| `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | Service ID for `concert-crawl-crawler-triggers`. Consumed by `deploy-prod.yml` and `rollback-prod.yml`.                                                          |
+| `RENDER_SERVICE_ID_CRAWLER_DAILY`    | Service ID for `concert-crawl-crawler-daily`. Consumed by `deploy-prod.yml` and `rollback-prod.yml`.                                                             |
 
 ### Repository-level secrets (Settings → Secrets → Actions)
 
@@ -342,17 +342,17 @@ GitHub → repository → **Settings** → **Environments**.
 
 ### Repository-level variables (Settings → Variables → Actions)
 
-| Variable                        | Value                                                                                                                                                               |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SMOKE_ENABLED`                 | `false` during private beta; flip to `true` at public launch. Gates the scheduled 6-hourly `smoke.yml` only — the auto-deploy pipeline uses separate kill switches. |
-| `STAGING_SMOKE_ENABLED`         | `false` by default. Set to `true` to enable `staging-smoke.yml` (gate before `deploy-prod.yml`). See `docs/runbooks/auto-deploy-prod.md`.                           |
-| `AUTO_DEPLOY_PROD_ENABLED`      | `false` by default. Set to `true` to enable `deploy-prod.yml` + `prod-post-deploy-smoke.yml` + `rollback-prod.yml` chain.                                           |
-| `PROD_URL`                      | `https://concertcrawl.app`                                                                                                                                          |
-| `PROD_API_URL`                  | `https://concert-crawl-api.onrender.com`                                                                                                                            |
-| `STAGING_URL`                   | `https://staging.concertcrawl.app`                                                                                                                                  |
-| `STAGING_API_URL`               | `https://concert-crawl-api-staging.onrender.com`. Consumed by `staging-smoke.yml`.                                                                                  |
-| `RENDER_SERVICE_ID_API_STAGING` | Render → `concert-crawl-api-staging` → service ID from the dashboard URL (`srv-...`). Consumed by `staging-smoke.yml` via `render-wait-for-live.sh`.                |
-| `ADMIN_EMAIL`                   | Pre-provisioned                                                                                                                                                     |
+| Variable                        | Value                                                                                                                                                                                         |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SMOKE_ENABLED`                 | `false` during private beta; flip to `true` at public launch. Gates the scheduled 6-hourly `smoke.yml` only — the auto-deploy pipeline uses separate kill switches.                           |
+| `STAGING_SMOKE_ENABLED`         | `false` by default. Set to `true` to enable `staging-smoke.yml` (gate before `deploy-prod.yml`). See `docs/runbooks/auto-deploy-prod.md`.                                                     |
+| `AUTO_DEPLOY_PROD_ENABLED`      | `false` by default. Set to `true` to enable `deploy-prod.yml` + `prod-post-deploy-smoke.yml` + `rollback-prod.yml` chain.                                                                     |
+| `PROD_URL`                      | `https://concertcrawl.app`                                                                                                                                                                    |
+| `PROD_API_URL`                  | `https://concert-crawl-api.onrender.com`                                                                                                                                                      |
+| `STAGING_URL`                   | `https://staging.concertcrawl.app`                                                                                                                                                            |
+| `STAGING_API_URL`               | `https://concert-crawl-api-staging.onrender.com`. Consumed by `staging-smoke.yml`.                                                                                                            |
+| `RENDER_SERVICE_ID_API_STAGING` | Render → `concert-crawl-api-staging` → service ID from the dashboard URL (`srv-...`). Consumed by `deploy-staging.yml` (deploy POST) and `staging-smoke.yml` (via `render-wait-for-live.sh`). |
+| `ADMIN_EMAIL`                   | Pre-provisioned                                                                                                                                                                               |
 
 ---
 
