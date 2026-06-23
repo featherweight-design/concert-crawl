@@ -200,7 +200,12 @@ Rationale:
 - Simpler audit trail, simpler queue rendering, simpler edge cases
 - If consumer feedback later asks for parallel dispute support, that's a separate, opinionated PR
 
-**Server-side defense:** dispute endpoint at `apps/api/src/routes/submissions.ts` adds a pre-insert check and translates the DB unique-violation into a clean 409:
+**Server-side defense — both counter-creation routes get the same treatment:** counters today can be inserted from TWO places (see recon §gap-5):
+- `POST /v1/submissions/:id/dispute` (`apps/api/src/routes/submissions.ts`) — initial dispute from DisputeForm
+- `POST /v1/events/:eventId/price-submissions` (`apps/api/src/routes/price-submissions.ts`) — CounterSubmitSheet path; allowed when the body includes `disputedSubmissionId` (server validates the referenced parent has `status='corroborated'`)
+
+The DB partial unique index is the source of truth and catches duplicates in either route. Both handlers add the same pre-insert check + DB unique-violation (Postgres SQLSTATE `23505`) translation so consumers see a clean 409 instead of a 500:
+
 ```ts
 const existingCounter = await db.select({ id: priceSubmissions.id })
   .from(priceSubmissions)
@@ -212,7 +217,13 @@ const existingCounter = await db.select({ id: priceSubmissions.id })
 if (existingCounter.length > 0) {
   return ctx.json({ success: false, error: 'Another challenge is already pending against this submission.' }, 409)
 }
+
+// Plus, wrap the insert in a try/catch and translate SQLSTATE 23505 on
+// price_submissions_pending_counter_unique_idx to the same clean 409 —
+// belt-and-braces against the narrow race window between the SELECT and INSERT.
 ```
+
+**Consistency fix — both routes must also flip the parent to `disputed`.** Today only `/v1/submissions/:id/dispute` updates `parent.status` in the same transaction; `/v1/events/:eventId/price-submissions` inserts the child but leaves the parent on `corroborated`. The admin queue query in §6.1 is therefore keyed off the pending counter row (`disputed_submission_id IS NOT NULL AND status='pending'`) — not the parent's status field — so contests are discoverable regardless of the creation route. For data hygiene, the price-submissions route also gets the parent-flip in the same transaction as the insert (matches the existing dispute-route behavior).
 
 **Consumer-side UX (locked for PR 4 of the price-source cycle, not this PR):** when `priceByTier[tier].counterSubmission !== null`, the Consumer UI hides the dispute affordance for that tier and surfaces a CTA to engage with the existing contest instead (confirm or wait). This rule is saved to memory at `project_pr4_dispute_affordance_hiding.md`. A user should never see a 409 from filling out a dispute form — the affordance is hidden BEFORE they reach the form, not after they submit it.
 
@@ -286,7 +297,7 @@ CREATE INDEX price_submissions_pending_counters_idx
   WHERE status = 'pending' AND disputed_submission_id IS NOT NULL;
 ```
 
-These power the contest-queue query (parent rows in `disputed` state) and the counter-lookup join (pending rows that point at a parent), respectively. Current volume is small (4 submissions in prod) but the cost is near-zero and the queue query is the hot path for the new UI.
+These power the contest-queue query and the counter-lookup join. **The queue query is keyed off pending counter rows** (`status='pending' AND disputed_submission_id IS NOT NULL`), not parent rows in `disputed` state — see §4.6 for why (two counter-creation routes exist and historically only one flipped the parent). The `disputed`-status index on the parent side is still useful for the §6.5 event-detail aggregation that surfaces the per-event contest pill, and post-§4.6 the two indexes will agree in steady state. Current volume is small (4 submissions in prod) but the cost is near-zero and the queue query is the hot path for the new UI.
 
 ### 5.4 `PriceSubmission` shared type extension
 
@@ -826,7 +837,7 @@ Once this spec is approved:
 
 | # | Lock | Sign-off |
 |---|---|---|
-| 1 | Tab on `/admin/review` (not separate route) | ✅ Confirmed. Existing `ReviewTabs` primitive at `apps/web/src/components/admin/review/ReviewTabs.tsx` is WAI-ARIA-compliant and accepts a `ReviewTabDescriptor[]`. Adding a 4th tab is a one-line array addition + new `ContestsTabContent.tsx` mirroring the existing `_tabs/*.tsx` pattern. No design input needed. The `priceContests` count surfaces on the tab pill AND the admin nav badge (existing badge plumbing aggregates from the counts API). |
+| 1 | Tab on `/admin/review` (not separate route) | ✅ Confirmed. Existing `ReviewTabs` primitive at `apps/web/src/components/admin/review/ReviewTabs.tsx` is WAI-ARIA-compliant and accepts a `ReviewTabDescriptor[]`. Adding a 4th tab is a one-line array addition + new `ContestsTabContent.tsx` mirroring the existing `_tabs/*.tsx` pattern. No design input needed. The `priceContests` count surfaces on the tab pill AND the admin nav sidebar badge — the sidebar badge plumbing in `apps/web/src/app/(protected)/admin/layout.tsx` currently sums `eventFlags + prices + missing` into `pendingReview`; this PR extends the `ReviewCounts` type and the sum so the badge includes `priceContests` (see plan task that touches `layout.tsx`). |
 | 2 | `archived` as distinct status from `stale` | ✅ Confirmed |
 | 3 | Reason min 10 chars | ✅ Confirmed |
 | 4 | 1-pending-counter-per-parent | ✅ **Strengthened** — DB-enforced via partial unique index (not just app-level 409). Consumer side hides the dispute affordance entirely so users never fill out a form they'll 409 on. Saved to memory at `project_pr4_dispute_affordance_hiding.md` for PR 4 of the price-source cycle. |

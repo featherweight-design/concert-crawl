@@ -6,7 +6,7 @@
 
 **Architecture:** A new `admin/contests.ts` Hono router owns four endpoints (list / detail / resolve / defer) that wrap state transitions in a single `SELECT FOR UPDATE` Drizzle transaction (parent + challenger + denormalized `events` projection + cred award + orphan cleanup). Notifications and audit rows are written outside the transaction so their failures cannot roll back resolution. A migration adds `archived` to `price_submission_status`, `archived_reason` + `last_admin_action_at` + `last_admin_action_kind` columns, two performance indexes, one uniqueness index (1-pending-counter-per-parent), and a defensive cleanup CTE. The web app adds a `Contests` tab whose queue and per-contest panel reuse `ReviewTabs`, the existing admin theme tokens, and shared `AdminEntry` sub-component pinned to the design property table.
 
-**Tech Stack:** TypeScript strict · Hono + Zod · Drizzle ORM · Postgres · Vitest (unit + integration against `concert_crawl_test`) · Next.js 14 App Router · React Query · pnpm workspaces · Conventional commits
+**Tech Stack:** TypeScript strict · Hono + Zod · Drizzle ORM · Postgres · Vitest (unit + integration against `concert_crawl_test`) · Next.js 15 App Router · React Query · pnpm workspaces · Conventional commits
 
 ## Global Constraints
 
@@ -27,7 +27,7 @@
 **Create:**
 
 - `packages/db/migrations/0041_admin_contest_review.sql` — enum value, three columns, three indexes (two for queue performance + one uniqueness), defensive pre-index cleanup CTE.
-- `packages/db/migrations/0041_admin_contest_review.integration.test.ts` — asserts enum/column/index existence + that the unique-index rejects duplicate pending counters.
+- `apps/api/src/routes/admin/contests.migration.integration.test.ts` — DB-backed test that runs against the same `concert_crawl_test` instance the rest of the `apps/api` integration suite uses. Asserts enum/column/index existence + that the unique-index rejects duplicate pending counters. (Located in `apps/api` rather than `packages/db` because `packages/db` tests today are pure schema/unit-style and don't have a real-Postgres harness; the API integration suite already wires up `concert_crawl_test` via Drizzle migrations.)
 - `apps/api/src/routes/admin/contests.ts` — new router: `GET /v1/admin/contests/prices`, `GET /v1/admin/contests/prices/:contestId`, `POST /v1/admin/contests/prices/:contestId/resolve`, `POST /v1/admin/contests/prices/:contestId/defer`.
 - `apps/api/src/routes/admin/contests.integration.test.ts` — integration tests for all four endpoints.
 - `apps/api/src/lib/contest-notifications.ts` — helper that writes 2 notification rows (parent submitter + challenger submitter, deduped) after a contest action.
@@ -48,8 +48,10 @@
 - `packages/types/src/index.ts` — `PriceSubmission` interface gains `note: string | null`, `archivedReason: string | null`, `lastAdminActionAt: string | null`, `lastAdminActionKind: 'defer' | null`; status union gains `archived`.
 - `apps/api/src/routes/admin/prices.ts` — PATCH `/submissions/:id` rejects rows where `disputedSubmissionId !== null` OR `status === 'disputed'` with 409 + loud Sentry tag `endpoint_lockout: contest_row`.
 - `apps/api/src/routes/admin/prices.integration.test.ts` — add contest-row PATCH lockout cases.
-- `apps/api/src/routes/submissions.ts` — dispute POST adds a pre-insert duplicate-counter check + translates DB unique-violation into a clean 409.
+- `apps/api/src/routes/submissions.ts` — dispute POST adds a pre-insert duplicate-counter check + translates DB unique-violation (SQLSTATE `23505` on `price_submissions_pending_counter_unique_idx`) into a clean 409.
 - `apps/api/src/routes/submissions.integration.test.ts` — add duplicate-counter rejection case.
+- `apps/api/src/routes/price-submissions.ts` — the OTHER counter-creation path (CounterSubmitSheet calls `POST /v1/events/:eventId/price-submissions` with `disputedSubmissionId` in the body). When `disputedSubmissionId` is present: (a) add the same pre-insert duplicate-counter check + 23505 translation as above, AND (b) flip the parent row to `status='disputed'` in the same `db.transaction(...)` as the insert, to match the existing `/v1/submissions/:id/dispute` behavior. Without this, contests created via this route would leave the parent on `corroborated` and the admin queue would still find them (because the queue is keyed off the counter, not the parent — see spec §4.6 / §6.1), but the data inconsistency would surface elsewhere (e.g., consumer event detail showing a "corroborated" headline while a contest is pending against it).
+- `apps/api/src/routes/price-submissions.integration.test.ts` (or the equivalent existing test file for this route — verify at execution time) — add duplicate-counter rejection case AND assert the parent row is flipped to `disputed` when a counter is filed via this route.
 - `apps/api/src/routes/admin/index.ts` — mount `contestsAdminRouter`.
 - `apps/api/src/routes/admin/index.ts` (the counts route owner — `adminRouter.get('/review/counts', ...)` at ~line 73) — `GET /v1/admin/review/counts` adds `priceContests: number`.
 - `apps/api/src/routes/admin/index.integration.test.ts` (or the existing test file for the counts endpoint — verify at plan-execution time) — assert `priceContests` appears in the counts payload.
@@ -57,6 +59,7 @@
 - `apps/api/src/routes/events.integration.test.ts` — defer a contest, then GET event detail, assert `counterSubmission.lastAdminActionKind === 'defer'`.
 - `apps/web/src/components/admin/review/ReviewPageClient.tsx` — add `'contests'` to the tab key union + `VALID_TAB_KEYS`; mount `ContestsTabContent`; pass the new `priceContests` count to the tab pill.
 - `apps/web/src/lib/queries/use-admin-review.ts` — extend `ReviewCounts` interface with `priceContests: number`.
+- `apps/web/src/app/(protected)/admin/layout.tsx` — the sidebar's `pendingReview` badge currently sums `eventFlags + prices + missing` (lines ~58–61). Extend the sum to also add `priceContests` so the new tab's count rolls into the existing nav badge. Without this change the new tab pill increments but the sidebar badge stays stuck on the old three-count sum.
 
 **Not modified:**
 
@@ -96,7 +99,7 @@ Eighteen tasks. Each ends with an independently testable deliverable + commit:
 **Files:**
 
 - Create: `packages/db/migrations/0041_admin_contest_review.sql`
-- Create: `packages/db/migrations/0041_admin_contest_review.integration.test.ts`
+- Create: `apps/api/src/routes/admin/contests.migration.integration.test.ts` (DB-backed test runs against `concert_crawl_test` via the apps/api integration suite — `packages/db` tests today are schema/unit-only and have no real-Postgres harness)
 
 **Interfaces:**
 
@@ -211,15 +214,15 @@ Add the new entry with `idx: 41`, `tag: "0041_admin_contest_review"`, `when: <ep
 
 - [ ] **Step 4: Write the integration test**
 
-Create `packages/db/migrations/0041_admin_contest_review.integration.test.ts`:
+Create `apps/api/src/routes/admin/contests.migration.integration.test.ts`:
+
+> **Why this lives in `apps/api`, not `packages/db`:** `packages/db` tests today are pure schema/unit-style (see `packages/db/src/schema.test.ts` — it just asserts table exports + column names without touching a real Postgres). There is no DB harness on `packages/db`'s `pnpm test` gate. The `apps/api` integration suite (`pnpm --filter @concert-crawl/api test:integration`) already wires up `concert_crawl_test` via `vitest.integration.ts` (`globalSetup`, `DATABASE_URL`, `*.integration.test.ts` glob), so dropping the migration verification next to the other `apps/api` integration tests keeps the existing CI gate intact and avoids inventing a new DB harness.
 
 ```typescript
 import { describe, expect, it } from 'vitest'
 import { sql } from 'drizzle-orm'
-import { db } from '../src/index.js'
-import { priceSubmissions } from '../src/schema/prices.js'
-import { events } from '../src/schema/events.js'
-import { venues } from '../src/schema/venues.js'
+import { priceSubmissions, events, venues } from '@concert-crawl/db'
+import { testDb as db } from '../../test/helpers/db.js'
 
 describe('migration 0041 — admin contest review', () => {
   it('adds the archived status value to price_submission_status', async () => {
@@ -341,7 +344,7 @@ describe('migration 0041 — admin contest review', () => {
 ```bash
 docker compose up -d
 pnpm db:migrate
-pnpm --filter @concert-crawl/db test -- 0041_admin_contest_review
+pnpm --filter @concert-crawl/api test:integration -- contests.migration
 ```
 
 Expected: migration applies cleanly; all 4 integration tests pass.
@@ -350,7 +353,7 @@ Expected: migration applies cleanly; all 4 integration tests pass.
 
 ```bash
 git add packages/db/migrations/0041_admin_contest_review.sql \
-        packages/db/migrations/0041_admin_contest_review.integration.test.ts \
+        apps/api/src/routes/admin/contests.migration.integration.test.ts \
         packages/db/migrations/meta/_journal.json
 git commit -m "feat(db): migration 0041 — admin contest review (archived status + indexes)"
 ```

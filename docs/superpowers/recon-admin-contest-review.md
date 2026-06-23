@@ -128,7 +128,7 @@ To add a new admin page (e.g., contest-review):
    }
    ```
 
-3. Badge count is dynamic. The spec extends the existing `/v1/admin/review/counts` endpoint (mounted in `apps/api/src/routes/admin/index.ts` at line 61) to add a `contests` field. `apps/web/src/app/(protected)/admin/layout.tsx` already fetches that endpoint via `apiClient.get<ReviewCounts>('/v1/admin/review/counts', token)` — extend the `ReviewCounts` shape to include `contests` and the layout automatically picks it up. Do NOT add a separate `/contests/counts` endpoint.
+3. Badge count is dynamic. The spec extends the existing `/v1/admin/review/counts` endpoint (mounted in `apps/api/src/routes/admin/index.ts` at line 61) to add a `priceContests` field. `apps/web/src/app/(protected)/admin/layout.tsx` already fetches that endpoint via `apiClient.get<ReviewCounts>('/v1/admin/review/counts', token)` — but does NOT auto-pick-up new fields: the sidebar's `pendingReview` total is an explicit sum of `eventFlags + prices + missing` (~lines 58–61). To make the new tab's count roll up into the sidebar badge, this PR extends BOTH the `ReviewCounts` shape (to include `priceContests`) AND the `pendingReview` sum in `layout.tsx`. Do NOT add a separate `/contests/counts` endpoint.
 
 **All admin routes inherit:**
 - Clerk auth middleware
@@ -448,7 +448,7 @@ Both should stay in sync. The shared type is the contract; if DB schema changes,
 
 **Location:** `apps/web/src/components/consumer/CounterSubmitSheet.tsx` (1–100+)
 
-- **Purpose:** Modal form for submitting a counter-submission against a disputed price
+- **Purpose:** Modal form for submitting a counter-submission against a price. The server route (`apps/api/src/routes/price-submissions.ts:189`) validates that the referenced parent has `status === 'corroborated'` — so today this is effectively a SECOND initial-dispute path, not "counter against an already-disputed parent". See gap §5 below for the full picture.
 - **Input:** `eventId`, `disputedSubmissionId`, `currentFloor`, `currentCeiling`, `currentVendor`, `onSuccess` callback
 - **Form fields:**
   - Floor + Ceiling (required)
@@ -468,12 +468,20 @@ Both should stay in sync. The shared type is the contract; if DB schema changes,
 Event Detail Page
 ├── Fetch event including priceByTier / pending submissions
 ├── Show corroborated price (headline)
-├── If user not submitter + not yet disputed:
-│   └── Show "Dispute this price" button → DisputeForm
-├── If disputed (status='disputed') AND user is submitter:
-│   └── Show CounterSubmitSheet to respond
+├── If status='corroborated' and the user is NOT the submitter:
+│   └── Show "Dispute this price" button → DisputeForm (calls POST /v1/submissions/:id/dispute)
+├── If status='disputed':
+│   └── Show DisputedPriceCard, which renders a "Submit an update" CTA → CounterSubmitSheet UNCONDITIONALLY
+│       (no submitter gate today — anyone who can see the card can open the sheet; see
+│        DisputedPriceCard.tsx — setIsSheetOpen(true) is wired to a button click with no userId check)
+│   └── CounterSubmitSheet calls POST /v1/events/:eventId/price-submissions with disputedSubmissionId.
+│       Server requires the referenced parent to be status='corroborated' (price-submissions.ts:189),
+│       so an already-disputed parent rejects this path — meaning today the sheet effectively
+│       only succeeds during the brief moment before the parent flips.
 └── Show counter-submissions and their statuses
 ```
+
+**Important:** the spec §4.6 fix requires both counter-creation routes (the `/dispute` route and the price-submissions route) to flip the parent to `disputed` in the same transaction, so the behavior becomes consistent regardless of which route created the counter.
 
 ---
 
@@ -569,10 +577,13 @@ The recon couldn't determine the following; the bridging spec will need to resol
 - **Current:** Code supports corroborated/disputed/stale; no special contest outcomes
 
 ### 5. Counter-Submission Creation Today
-- **Resolved:** There are two distinct write paths:
-  - **Initial dispute** — `POST /v1/submissions/:id/dispute` (called by DisputeForm.tsx:87). Creates a child row with `disputedSubmissionId = :id`, flips parent to `disputed`.
-  - **Counter-submission against a disputed parent** — `POST /v1/events/:eventId/price-submissions` with `disputedSubmissionId` in the JSON body (called by CounterSubmitSheet.tsx:163). Reuses the generic price-submission ingest route; the `disputedSubmissionId` field is what makes it a counter rather than a fresh submission.
-- **Implication for spec:** §4.6's DB-level partial unique index covers BOTH routes (it's enforced at insert regardless of which route triggers it). The spec's app-level pre-insert check at §4.6 lives in `apps/api/src/routes/submissions.ts` for the `/dispute` path; the implementer should consider whether the same pre-check belongs in the `/v1/events/:eventId/price-submissions` route (which CounterSubmitSheet uses) so consumers get the clean 409 message rather than a unique-violation surface. Recommended: yes — but the DB is the source of truth either way.
+- **Resolved:** There are two distinct write paths with subtly different behavior:
+  - **`POST /v1/submissions/:id/dispute`** (DisputeForm.tsx:87). No explicit `parent.status` check, BUT it flips the parent to `disputed` in the same transaction as the child insert (`apps/api/src/routes/submissions.ts:174–177`). Effectively initial-dispute path.
+  - **`POST /v1/events/:eventId/price-submissions`** with `disputedSubmissionId` in body (CounterSubmitSheet.tsx:163). Server explicitly requires the referenced parent to have `status === 'corroborated'` (`apps/api/src/routes/price-submissions.ts:189`) and does NOT flip the parent — so today this is a SECOND initial-dispute path that leaves the parent's status field stuck on `corroborated` even though a pending counter exists against it. There is no codepath today that actually creates a "counter against an already-disputed parent" — the route name on CounterSubmitSheet is somewhat aspirational.
+- **Implications for spec §4.6:**
+  - **DB-level**: the partial unique index covers BOTH routes (enforced at insert regardless of which route triggers it).
+  - **App-level pre-check + 23505 translation**: the spec extends BOTH routes (`submissions.ts` and `price-submissions.ts`) to do the pre-insert duplicate check + translate the unique-violation into a clean 409. Single source of truth for the user-facing error.
+  - **Parent-flip consistency**: spec §4.6 also requires the `price-submissions.ts` route to flip the parent to `disputed` in the same transaction (matches the existing `submissions.ts` behavior), so the admin queue + consumer headline stay in agreement regardless of creation route. Even with that fix, the admin queue query is keyed off the pending counter row (`disputed_submission_id IS NOT NULL AND status='pending'`), not parent status — so legacy in-flight contests created before this PR (where parent may still be on `corroborated`) are still discoverable.
 
 ### 6. Partial Indexes for Contest Queries
 - **Gap:** DB has no indexed query for "all disputed submissions" or "submissions with disputed_submission_id IS NOT NULL"
