@@ -97,6 +97,13 @@ BEGIN
   ASSERT challenger.disputed_submission_id = parent.id
   ASSERT parent.status IN ('corroborated', 'disputed')   -- not already archived
   ASSERT challenger.status = 'pending'                    -- not withdrawn
+  -- Same-slot assertions: defensive against any upstream bug or parameter
+  -- mix-up. The slot identity is (event_id, tier, source_category); if any
+  -- diverges between parent and challenger we never propagate a wrong
+  -- price to the events row.
+  ASSERT parent.event_id = challenger.event_id
+  ASSERT parent.tier = challenger.tier
+  ASSERT parent.source_category IS NOT DISTINCT FROM challenger.source_category
 
   IF resolution = 'challenger_wins':
     UPDATE price_submissions SET status = 'corroborated', updated_at = NOW()
@@ -134,7 +141,7 @@ COMMIT
 
 Both audit and notification writes happen **after** the resolution transaction commits (so failures in either cannot roll the resolution back), but via distinct mechanisms:
 
-- **Audit log** — written by the existing post-response middleware (`apps/api/src/routes/admin/index.ts`), driven by `ctx.set('auditAction', ...)`, `ctx.set('auditTargetId', ...)`, `ctx.set('auditMeta', ...)` calls inside the handler. The middleware inserts the audit row after the response has flushed. Handler code does NOT call `db.insert(auditLog)` directly.
+- **Audit log** — written by the existing audit middleware (`apps/api/src/routes/admin/index.ts:31–59`), driven by `ctx.set('auditAction', ...)`, `ctx.set('auditTargetId', ...)`, `ctx.set('auditMeta', ...)` calls inside the handler. The middleware runs `await next()` first (so the handler completes and the resolution transaction commits), then writes the audit row inside a try/catch that swallows insert failures. The insert is part of the request lifecycle — not literally post-response-flush — but its failures cannot roll back the resolution because the resolution transaction has already committed. Handler code does NOT call `db.insert(auditLog)` directly.
 - **Notification rows** — written explicitly by the handler via `await writeContestNotifications({...})` (the helper in `apps/api/src/lib/contest-notifications.ts`), wrapped in a try/catch so failures don't fail the response. Distinct from audit: the helper inserts into `notifications`, not `audit_log`.
 
 Both run outside the resolution transaction so a Sentry-tagged error in either telemetry path leaves the DB resolution intact.
@@ -405,10 +412,13 @@ Returns the same shape as a single row from §6.1, plus an optional `history` fi
 
 **Effect:**
 - No status changes to either submission (both stay as they are — parent `disputed`, challenger `pending`)
-- Writes audit row `contest.defer` with the reason
-- Sends `contest_needs_info` in-app notification to both parties with the admin's reason
+- **Sets `last_admin_action_at = NOW()` and `last_admin_action_kind = 'defer'` on the COUNTER row** (not the parent — the pill in §4.5 surfaces on the counter card via `priceByTier[].counterSubmission`). This is the mechanism that lights up the "Admin requested more info" pill on the consumer event-detail page; without setting these columns, the defer action is invisible to consumers.
+- Writes audit row `contest.defer` with the reason via `ctx.set('auditAction', ...)` (the audit middleware handles the insert)
+- Writes `notifications` rows for both parties with `category: 'contest.needs_info'` and the admin's reason as the body, via `writeContestNotifications({ action: 'defer', ... })`
 
 Admin can revisit the contest later. The queue still shows it (no state change). This is intentional: "Need more info" creates a pause, not a resolution.
+
+The column writes happen inside a small transaction (or single UPDATE — no concurrency risk because there's no atomicity requirement with anything else). Audit + notification writes happen outside per §4.3 (best-effort).
 
 ### 6.5 Counts extension
 
@@ -455,7 +465,7 @@ The design property table at `docs/superpowers/design-tables/admin-contest-revie
 
 - `/admin/review?tab=contests` — new tab on the existing review page
 - Tab pill copy: `Contests · {count}` (count from `priceContests` field of counts API)
-- Default tab when count > 0: `contests` (newest unresolved work surfaces first)
+- Default tab when count > 0: `contests` (so unresolved adjudication work surfaces immediately when admin opens the review page; within the tab, the queue is sorted `filedAt asc` per §7.8 — oldest contest first)
 - Default tab when count === 0: `pending` (existing behavior preserved)
 - URL is the source of truth for tab selection (shareable admin links)
 
@@ -683,11 +693,18 @@ CREATE INDEX price_submissions_pending_counters_idx
 
 -- 5. Defensive pre-index cleanup. If any in-flight contests already have
 --    multiple pending counters against the same parent (possible via the
---    race-window prior to this PR), archive the older ones BEFORE adding
+--    race-window prior to this PR), retire the older ones BEFORE adding
 --    the unique index — otherwise the CREATE UNIQUE INDEX would fail in
---    any environment where such duplicates exist. Production has 0 active
---    disputes today (verify at plan-execution time), so this is expected
---    to update 0 rows, but the safety net is essential.
+--    any environment where such duplicates exist.
+--
+--    IMPORTANT: this UPDATE uses `'stale'` (an existing enum value), NOT
+--    the new `'archived'` value added in step 1. Postgres refuses to USE a
+--    newly added enum value inside the same transaction (Drizzle wraps
+--    each migration in one transaction — see the warning at
+--    packages/db/migrations/0034_crawl_status_skipped.sql:21–24 for the
+--    same constraint). `archived_reason` still carries the audit trail.
+--    Production has 0 active disputes today (verify at plan-execution time),
+--    so this is expected to update 0 rows, but the safety net is essential.
 WITH ranked AS (
   SELECT id,
          ROW_NUMBER() OVER (
@@ -699,7 +716,7 @@ WITH ranked AS (
     AND disputed_submission_id IS NOT NULL
 )
 UPDATE price_submissions
-   SET status = 'archived',
+   SET status = 'stale',
        archived_reason = 'superseded by newer counter before schema lock'
  WHERE id IN (SELECT id FROM ranked WHERE rn > 1);
 --> statement-breakpoint

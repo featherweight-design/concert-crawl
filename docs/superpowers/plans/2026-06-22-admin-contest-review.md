@@ -163,10 +163,18 @@ CREATE INDEX IF NOT EXISTS price_submissions_pending_counters_idx
 
 -- 5. Defensive pre-index cleanup. If any in-flight contests already have
 --    multiple pending counters against the same parent (possible in the
---    race-window prior to this PR), archive the older ones so the unique
+--    race-window prior to this PR), retire the older ones so the unique
 --    index below can be created safely. In prod today this is expected to
---    update 0 rows, but it's the only path that lets the migration run in
---    every environment without manual intervention.
+--    update 0 rows.
+--
+--    IMPORTANT: this UPDATE uses `'stale'` (an existing enum value), NOT
+--    the new `'archived'` value added in step 1. Postgres refuses to USE a
+--    newly ADDed enum value inside the same transaction (Drizzle wraps
+--    each migration in one transaction — see
+--    packages/db/migrations/0034_crawl_status_skipped.sql:21–24 for the
+--    same constraint and rationale). `archived_reason` still carries the
+--    audit trail of why the row was retired, so downstream review can
+--    distinguish "retired because of contest cleanup" from other stale rows.
 WITH ranked AS (
   SELECT id,
          ROW_NUMBER() OVER (
@@ -178,7 +186,7 @@ WITH ranked AS (
     AND disputed_submission_id IS NOT NULL
 )
 UPDATE price_submissions
-   SET status = 'archived',
+   SET status = 'stale',
        archived_reason = 'superseded by newer counter before schema lock'
  WHERE id IN (SELECT id FROM ranked WHERE rn > 1);
 --> statement-breakpoint
@@ -1756,6 +1764,28 @@ contestsAdminRouter.post(
         return {
           ok: 'precondition_failed',
           reason: `Challenger status is ${challenger.status}; cannot resolve.`,
+        }
+      }
+      // Same-slot assertions: defensive against any upstream bug or
+      // parameter mix-up. Slot identity is (event_id, tier, source_category).
+      // Without these, a parameter swap could propagate the wrong price into
+      // the events row.
+      if (parent.eventId !== challenger.eventId) {
+        return {
+          ok: 'precondition_failed',
+          reason: 'Parent and challenger belong to different events.',
+        }
+      }
+      if (parent.tier !== challenger.tier) {
+        return {
+          ok: 'precondition_failed',
+          reason: `Parent tier ${parent.tier} does not match challenger tier ${challenger.tier}.`,
+        }
+      }
+      if (parent.sourceCategory !== challenger.sourceCategory) {
+        return {
+          ok: 'precondition_failed',
+          reason: `Parent source_category ${parent.sourceCategory ?? 'null'} does not match challenger source_category ${challenger.sourceCategory ?? 'null'}.`,
         }
       }
 
