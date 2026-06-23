@@ -47,13 +47,22 @@ jobs:
             [ -z "$COMMIT_SHA" ] && echo "  - github.event.workflow_run.head_sha (event payload)"
             exit 1
           fi
-          response=$(curl --fail-with-body --silent --show-error \
+          # `--fail-with-body` writes the error body to stdout on
+          # failure (vs `--fail` which suppresses it). The `if !`
+          # form preserves $response for the failure branch so we
+          # can print Render's actual error JSON instead of just
+          # curl's generic message.
+          if ! response=$(curl --fail-with-body --silent --show-error \
             --connect-timeout 10 --max-time 30 \
             -X POST "https://api.render.com/v1/services/${SERVICE_ID}/deploys" \
             -H "Authorization: Bearer ${RENDER_API_TOKEN}" \
             -H "Accept: application/json" \
             -H "Content-Type: application/json" \
-            -d "{\"commitId\":\"${COMMIT_SHA}\"}")
+            -d "{\"commitId\":\"${COMMIT_SHA}\"}"); then
+            echo "Render API deploy POST failed. Response body:"
+            echo "${response}"
+            exit 1
+          fi
           deploy_id=$(echo "$response" | jq -r '.id // "<no id in response>"')
           echo "Staging API deploy enqueued: id=${deploy_id} commit=${COMMIT_SHA}"
 

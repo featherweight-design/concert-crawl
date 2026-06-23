@@ -175,8 +175,14 @@ jobs:
             echo "Missing production-env configuration:"
             printf '  - %s\n' "${missing[@]}"
             echo ""
-            echo "RENDER_API_TOKEN goes in Settings → Secrets and variables → Actions → Secrets."
-            echo "RENDER_SERVICE_ID_* go in Settings → Environments → production → Variables."
+            echo "This job runs with environment: production, so secrets and vars"
+            echo "resolve from the production GH environment first."
+            echo ""
+            echo "RENDER_API_TOKEN goes in Settings → Environments → production → Secrets."
+            echo "RENDER_SERVICE_ID_*   go in Settings → Environments → production → Variables."
+            echo ""
+            echo "(RENDER_API_TOKEN must also exist at repo level for the staging-smoke"
+            echo "and deploy-staging workflows, which don't use the production environment.)"
             exit 1
           fi
 
@@ -236,13 +242,22 @@ jobs:
           SERVICE_ID: ${{ vars.RENDER_SERVICE_ID_API }}
           COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
-          response=$(curl --fail-with-body --silent --show-error \
+          # `--fail-with-body` writes the error body to stdout on
+          # failure (vs `--fail` which suppresses it). The `if !`
+          # form preserves $response for the failure branch so we
+          # can print Render's actual error JSON instead of just
+          # curl's generic exit-code message.
+          if ! response=$(curl --fail-with-body --silent --show-error \
             --connect-timeout 10 --max-time 30 \
             -X POST "https://api.render.com/v1/services/${SERVICE_ID}/deploys" \
             -H "Authorization: Bearer ${RENDER_API_TOKEN}" \
             -H "Accept: application/json" \
             -H "Content-Type: application/json" \
-            -d "{\"commitId\":\"${COMMIT_SHA}\"}")
+            -d "{\"commitId\":\"${COMMIT_SHA}\"}"); then
+            echo "Render API deploy POST failed for service ${SERVICE_ID}. Response body:"
+            echo "${response}"
+            exit 1
+          fi
           deploy_id=$(echo "$response" | jq -r '.id // "<no id in response>"')
           echo "API deploy enqueued: id=${deploy_id} service=${SERVICE_ID} commit=${COMMIT_SHA}"
 
@@ -252,13 +267,17 @@ jobs:
           SERVICE_ID: ${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}
           COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
-          response=$(curl --fail-with-body --silent --show-error \
+          if ! response=$(curl --fail-with-body --silent --show-error \
             --connect-timeout 10 --max-time 30 \
             -X POST "https://api.render.com/v1/services/${SERVICE_ID}/deploys" \
             -H "Authorization: Bearer ${RENDER_API_TOKEN}" \
             -H "Accept: application/json" \
             -H "Content-Type: application/json" \
-            -d "{\"commitId\":\"${COMMIT_SHA}\"}")
+            -d "{\"commitId\":\"${COMMIT_SHA}\"}"); then
+            echo "Render API deploy POST failed for service ${SERVICE_ID}. Response body:"
+            echo "${response}"
+            exit 1
+          fi
           deploy_id=$(echo "$response" | jq -r '.id // "<no id in response>"')
           echo "Crawler-triggers deploy enqueued: id=${deploy_id} service=${SERVICE_ID} commit=${COMMIT_SHA}"
 
@@ -268,13 +287,17 @@ jobs:
           SERVICE_ID: ${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}
           COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
-          response=$(curl --fail-with-body --silent --show-error \
+          if ! response=$(curl --fail-with-body --silent --show-error \
             --connect-timeout 10 --max-time 30 \
             -X POST "https://api.render.com/v1/services/${SERVICE_ID}/deploys" \
             -H "Authorization: Bearer ${RENDER_API_TOKEN}" \
             -H "Accept: application/json" \
             -H "Content-Type: application/json" \
-            -d "{\"commitId\":\"${COMMIT_SHA}\"}")
+            -d "{\"commitId\":\"${COMMIT_SHA}\"}"); then
+            echo "Render API deploy POST failed for service ${SERVICE_ID}. Response body:"
+            echo "${response}"
+            exit 1
+          fi
           deploy_id=$(echo "$response" | jq -r '.id // "<no id in response>"')
           echo "Crawler-daily deploy enqueued: id=${deploy_id} service=${SERVICE_ID} commit=${COMMIT_SHA}"
 
