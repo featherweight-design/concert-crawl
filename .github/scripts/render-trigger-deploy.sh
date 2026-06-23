@@ -1,10 +1,18 @@
 #!/usr/bin/env bash
-# render-trigger-deploy.sh — trigger a Render deploy via the API,
-# pinning it to a specific commit SHA.
+# render-trigger-deploy.sh — trigger a Render deploy via the API.
+#
+# For Web Services (srv-*), pins the deploy to the given commit SHA
+# via the `commitId` body parameter. For Cron Jobs (crn-*), Render's
+# API rejects commitId ("cannot deploy cron job service by commit
+# reference ID", HTTP 400), so we omit it and let Render build branch
+# HEAD. The commit SHA is still logged for traceability.
 #
 # Usage: render-trigger-deploy.sh <service-id> <commit-sha> <label>
-#   <service-id> — Render service ID (e.g. srv-abc123)
-#   <commit-sha> — full git SHA Render should build
+#   <service-id> — Render service ID. Prefix decides behavior:
+#                    srv-* → web service, deploy is pinned to commit-sha
+#                    crn-* → cron job, deploy is branch-HEAD (unpinned)
+#   <commit-sha> — full git SHA Render should build (web services only;
+#                  logged but not sent for crons)
 #   <label>      — human-readable label for the log line (e.g. "API",
 #                  "Crawler-daily"); only affects the success-log text.
 #
@@ -21,10 +29,18 @@
 # API web service + 2 crawler crons). The user-facing website is
 # on Vercel and is not covered by this script. Centralizing here
 # removes the drift risk (one place to add a header, retry, timeout,
-# etc.) and lets us handle jq parse failure in one place — a non-JSON
-# Render response on a successful enqueue would otherwise fail the
-# workflow step even though the deploy went through, leaving the
-# pipeline lying about deploy state.
+# etc.) and lets us handle jq parse failure + the cron-vs-web
+# commitId divergence in one place — a non-JSON Render response on a
+# successful enqueue would otherwise fail the workflow step even
+# though the deploy went through, leaving the pipeline lying about
+# deploy state.
+#
+# Trade-off accepted by omitting commitId for crons: a fast-follow
+# merge between staging-smoke and this deploy POST could land newer
+# (un-smoked) code on the cron service. Crons don't serve HTTP
+# traffic and self-heal at the next scheduled run, so the blast
+# radius is one missed crawl window at worst, not a user-facing
+# outage. Pinning is preferred where the API supports it.
 
 set -euo pipefail
 
@@ -42,6 +58,19 @@ if [ -z "${RENDER_API_TOKEN:-}" ]; then
   exit 1
 fi
 
+# Decide whether to pin the deploy to a specific commit. Render's
+# API supports `commitId` for Web Services but rejects it for Cron
+# Jobs with HTTP 400 ("cannot deploy cron job service by commit
+# reference ID"). The ID prefix is the reliable signal — Render's
+# IDs are stable (`srv-*` for web services, `crn-*` for crons).
+if [[ "${SERVICE_ID}" == crn-* ]]; then
+  body="{}"
+  pin_status="unpinned (Render API does not support commitId for cron jobs)"
+else
+  body="{\"commitId\":\"${COMMIT_SHA}\"}"
+  pin_status="pinned to commit ${COMMIT_SHA}"
+fi
+
 # `--fail-with-body` writes the API error body to stdout on failure
 # (vs `--fail` which suppresses it). Bounded timeouts prevent a
 # stalled Render endpoint from hanging the workflow indefinitely.
@@ -53,7 +82,7 @@ if ! response=$(curl --fail-with-body --silent --show-error \
   -H "Authorization: Bearer ${RENDER_API_TOKEN}" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d "{\"commitId\":\"${COMMIT_SHA}\"}"); then
+  -d "${body}"); then
   echo "✗ Render API deploy POST failed for ${LABEL} (service ${SERVICE_ID}). Response body:"
   echo "${response}"
   exit 1
@@ -75,4 +104,4 @@ fi
 # case within otherwise-valid JSON.
 deploy_id=$(echo "${response}" | jq -r '(.deploy // .).id // "<no id in response>"' 2>/dev/null || echo "<jq parse failed>")
 
-echo "${LABEL} deploy enqueued: id=${deploy_id} service=${SERVICE_ID} commit=${COMMIT_SHA}"
+echo "${LABEL} deploy enqueued: id=${deploy_id} service=${SERVICE_ID} commit=${COMMIT_SHA} (${pin_status})"
