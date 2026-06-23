@@ -71,11 +71,13 @@ fi
 # Failing here points the operator straight at the misconfig.
 if [[ "${SERVICE_ID}" == crn-* ]]; then
   body="{}"
-  pin_status="unpinned (Render API does not support commitId for cron jobs)"
+  # No parens inside pin_status — the log line below wraps it with
+  # parens, and nesting hurts log scannability during incidents.
+  pin_status="unpinned — Render API does not support commitId for cron jobs"
   commit_log_field="gated_commit"
 elif [[ "${SERVICE_ID}" == srv-* ]]; then
   body="{\"commitId\":\"${COMMIT_SHA}\"}"
-  pin_status="pinned to commit ${COMMIT_SHA}"
+  pin_status="pinned"
   commit_log_field="commit"
 else
   echo "✗ Unrecognized Render service ID prefix: '${SERVICE_ID}'"
