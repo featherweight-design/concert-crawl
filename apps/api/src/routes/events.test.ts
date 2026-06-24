@@ -160,6 +160,11 @@ describe('GET /v1/events', () => {
     // rows query: select().from().innerJoin().where().orderBy().limit().offset() → terminal
     mockDb.where.mockReturnValueOnce(mockDb)
     mockDb.offset.mockResolvedValueOnce([mockEvent])
+    // priceByTier corroborated-rows query — closes #787. Terminal at .where().
+    // mockEvent.priceSource is 'structured_data' so the community-vendor query
+    // is skipped, but the priceByTier query runs for every visible event ID.
+    // Empty array → priceByTier ends up null for the row.
+    mockDb.where.mockResolvedValueOnce([])
 
     const res = await createApp().request('/v1/events')
     expect(res.status).toBe(200)
