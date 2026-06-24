@@ -88,20 +88,18 @@ jobs:
           fetch-depth: 20
 
       # SHA-drift guard: refuse to smoke if `main` has advanced past
-      # the SHA that deploy-staging acted on. If the workflow_run was
-      # queued (runner backlog) and `main` moved before this fired,
-      # we'd be smoking against a Render build that doesn't match the
-      # code we checked out here. Refuse cleanly rather than burning
-      # the render-wait-for-live timeout. Same gate exists in
-      # deploy-prod.
+      # the deployable code that deploy-staging acted on. If the
+      # workflow_run was queued (runner backlog) and `main` moved
+      # before this fired, we'd be smoking against a Render build that
+      # doesn't match the code we checked out here. Refuse cleanly
+      # rather than burning the render-wait-for-live timeout. Same
+      # gate logic exists in deploy-prod.
       #
-      # The walk-past-[skip-ci] step is the actual fix for the
-      # common case: semantic-release lands `chore(release): X.Y.Z
-      # [skip ci]` commits in parallel with deploy-staging completion.
-      # Without the walk, the raw `main` HEAD (= the release commit)
-      # would never match the upstream SHA (= the merge commit) and
-      # this guard would refuse every staging-smoke run after a real
-      # merge.
+      # The check resolves BOTH UPSTREAM_SHA and main_sha through
+      # `resolve-deployable-sha.sh` (walks past `[skip ci]` ancestors)
+      # before comparing. This handles every combination of release
+      # commit position — see deploy-prod.yml's mirror of this step
+      # for the full case analysis (#777).
       - name: Verify upstream SHA is still main HEAD
         if: github.event_name == 'workflow_run'
         env:
@@ -117,21 +115,29 @@ jobs:
           # locally.
           git fetch origin main --depth=20
           main_sha=$(git rev-parse origin/main)
-          deployable_sha=$(bash .github/scripts/resolve-deployable-sha.sh "$main_sha")
-          if [ "$UPSTREAM_SHA" != "$deployable_sha" ]; then
+          # See deploy-prod.yml for why this explicit UPSTREAM_SHA
+          # fetch is needed.
+          git fetch origin "$UPSTREAM_SHA" --depth=20 2>/dev/null || true
+          upstream_deployable=$(bash .github/scripts/resolve-deployable-sha.sh "$UPSTREAM_SHA")
+          main_deployable=$(bash .github/scripts/resolve-deployable-sha.sh "$main_sha")
+          if [ "$upstream_deployable" != "$main_deployable" ]; then
             echo "Refusing to smoke staging — main advanced after deploy-staging started."
             echo "  Upstream deploy-staging ran against:       $UPSTREAM_SHA"
+            echo "    → resolves to deployable:                $upstream_deployable"
             echo "  Current main HEAD:                         $main_sha"
-            echo "  Most recent deployable ancestor of HEAD:   $deployable_sha"
+            echo "    → resolves to deployable:                $main_deployable"
             echo ""
             echo "The next merge's pipeline will deploy and smoke the latest code."
             exit 1
           fi
-          if [ "$main_sha" != "$deployable_sha" ]; then
+          if [ "$UPSTREAM_SHA" = "$main_sha" ] && [ "$UPSTREAM_SHA" = "$upstream_deployable" ]; then
+            echo "Upstream SHA $UPSTREAM_SHA matches current main HEAD; proceeding."
+          elif [ "$UPSTREAM_SHA" = "$upstream_deployable" ]; then
             echo "Upstream SHA $UPSTREAM_SHA matches deployable ancestor of main HEAD"
             echo "(HEAD $main_sha is a [skip ci] release commit); proceeding."
           else
-            echo "Upstream SHA $UPSTREAM_SHA matches current main HEAD; proceeding."
+            echo "Upstream SHA $UPSTREAM_SHA and main HEAD $main_sha both resolve to deployable"
+            echo "ancestor $upstream_deployable; proceeding."
           fi
 
       - name: Setup pnpm

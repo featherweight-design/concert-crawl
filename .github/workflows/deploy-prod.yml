@@ -135,19 +135,32 @@ jobs:
           fetch-depth: 20
 
       # SHA-drift guard: refuse to deploy if main has advanced past the
-      # SHA that staging-smoke validated. With Render-API commitId
-      # pinning the wrong code can't reach prod (we pass the specific
-      # SHA to deploy), but the un-smoked code would still be promoted
-      # without the validation gate — and that's what we refuse here.
-      # The next merge's pipeline will deploy the latest code through
-      # its own staging-smoke run.
+      # deployable code that staging-smoke validated. With Render-API
+      # commitId pinning the wrong code can't reach prod (we pass the
+      # specific SHA to deploy), but the un-smoked code would still be
+      # promoted without the validation gate — and that's what we refuse
+      # here. The next merge's pipeline will deploy the latest code
+      # through its own staging-smoke run.
       #
-      # The walk-past-[skip-ci] step is the real fix: semantic-release
-      # creates `chore(release): X.Y.Z [skip ci]` commits between
-      # staging-smoke completion and this run. Without the walk, the
-      # raw `main` HEAD (= the release commit) would never match the
-      # upstream SHA (= the merge commit), and this guard would refuse
-      # every legitimate auto-deploy.
+      # The check resolves BOTH UPSTREAM_SHA and main_sha through
+      # `resolve-deployable-sha.sh` (walks past `[skip ci]` ancestors)
+      # before comparing. This handles every combination of release
+      # commit position:
+      #   1. Normal case: UPSTREAM == merge commit == main HEAD.
+      #   2. Release on top: UPSTREAM == merge commit, main HEAD ==
+      #      release commit on top of it. (resolve-main → merge commit)
+      #   3. UPSTREAM is itself a release commit (#777): GitHub Actions
+      #      records workflow_run.head_sha as the release commit even
+      #      though the upstream actually validated the deployable code
+      #      underneath. (resolve-upstream → merge commit, resolve-main
+      #      → merge commit)
+      #   4. Multiple release commits stacked: same as #3 but the chain
+      #      is longer. resolve walks the full streak.
+      #
+      # The original gate (pre-#777) only resolved one side, refusing
+      # case #3 even though the smoke result was valid. After #777 we
+      # compare resolved values on both sides, which collapses cases
+      # 1–4 into "same deployable" and only refuses true drift.
       - name: Verify upstream SHA is still main HEAD
         if: github.event_name == 'workflow_run'
         env:
@@ -161,21 +174,32 @@ jobs:
           # [skip ci] release-commit streak.
           git fetch origin main --depth=20
           main_sha=$(git rev-parse origin/main)
-          deployable_sha=$(bash .github/scripts/resolve-deployable-sha.sh "$main_sha")
-          if [ "$UPSTREAM_SHA" != "$deployable_sha" ]; then
+          # Make sure the resolver can walk from UPSTREAM_SHA too. If
+          # UPSTREAM_SHA isn't reachable from local refs (e.g. shallow
+          # checkout from a different branch), `git log` inside the
+          # resolver would fail silently. Fetching explicitly is a
+          # no-op when already in the local object graph.
+          git fetch origin "$UPSTREAM_SHA" --depth=20 2>/dev/null || true
+          upstream_deployable=$(bash .github/scripts/resolve-deployable-sha.sh "$UPSTREAM_SHA")
+          main_deployable=$(bash .github/scripts/resolve-deployable-sha.sh "$main_sha")
+          if [ "$upstream_deployable" != "$main_deployable" ]; then
             echo "Refusing to deploy prod — main advanced after staging-smoke succeeded."
             echo "  Upstream staging-smoke ran against:        $UPSTREAM_SHA"
+            echo "    → resolves to deployable:                $upstream_deployable"
             echo "  Current main HEAD:                         $main_sha"
-            echo "  Most recent deployable ancestor of HEAD:   $deployable_sha"
+            echo "    → resolves to deployable:                $main_deployable"
             echo ""
             echo "The next merge's pipeline will deploy the latest code instead."
             exit 1
           fi
-          if [ "$main_sha" != "$deployable_sha" ]; then
-            echo "Upstream SHA $UPSTREAM_SHA matches the deployable ancestor of main HEAD"
+          if [ "$UPSTREAM_SHA" = "$main_sha" ] && [ "$UPSTREAM_SHA" = "$upstream_deployable" ]; then
+            echo "Upstream SHA $UPSTREAM_SHA matches current main HEAD; proceeding."
+          elif [ "$UPSTREAM_SHA" = "$upstream_deployable" ]; then
+            echo "Upstream SHA $UPSTREAM_SHA matches deployable ancestor of main HEAD"
             echo "(HEAD $main_sha is a [skip ci] release commit on top of it); proceeding."
           else
-            echo "Upstream SHA $UPSTREAM_SHA matches current main HEAD; proceeding."
+            echo "Upstream SHA $UPSTREAM_SHA and main HEAD $main_sha both resolve to deployable"
+            echo "ancestor $upstream_deployable; proceeding."
           fi
 
       - name: Gate passed
@@ -254,11 +278,13 @@ jobs:
       # it without that gate. The NEXT merge to main will start its
       # own pipeline and deploy the latest code through proper smoke.
       #
-      # The same walk-past-[skip-ci] logic as the gate job applies
-      # here. The earlier Checkout step in this job pins to
-      # UPSTREAM_SHA, so we need to fetch main with depth>=2 to make
-      # the release commit + its parent locally available for the
-      # walk. Depth=20 mirrors the gate job's safety margin.
+      # The resolve-both-sides logic mirrors the gate-job guard above
+      # (#777). See that step's comment for the full case analysis of
+      # how UPSTREAM_SHA and main_sha can each independently be either
+      # a real merge commit or a `[skip ci]` release commit on top of
+      # one. The earlier Checkout step in this job pins to
+      # UPSTREAM_SHA, so we need to fetch main with depth>=20 to make
+      # the release commit chain locally available for the walk.
       - name: Re-verify upstream SHA is still main HEAD
         if: github.event_name == 'workflow_run'
         env:
@@ -269,21 +295,29 @@ jobs:
           # gate-job guard.
           git fetch origin main --depth=20
           main_sha=$(git rev-parse origin/main)
-          deployable_sha=$(bash .github/scripts/resolve-deployable-sha.sh "$main_sha")
-          if [ "$UPSTREAM_SHA" != "$deployable_sha" ]; then
+          # See the gate-job step for why we explicitly fetch
+          # UPSTREAM_SHA before resolving.
+          git fetch origin "$UPSTREAM_SHA" --depth=20 2>/dev/null || true
+          upstream_deployable=$(bash .github/scripts/resolve-deployable-sha.sh "$UPSTREAM_SHA")
+          main_deployable=$(bash .github/scripts/resolve-deployable-sha.sh "$main_sha")
+          if [ "$upstream_deployable" != "$main_deployable" ]; then
             echo "Refusing to trigger Render deploys — main advanced between gate and deploy."
             echo "  Upstream staging-smoke ran against:        $UPSTREAM_SHA"
+            echo "    → resolves to deployable:                $upstream_deployable"
             echo "  Current main HEAD:                         $main_sha"
-            echo "  Most recent deployable ancestor of HEAD:   $deployable_sha"
+            echo "    → resolves to deployable:                $main_deployable"
             echo ""
             echo "The next merge's pipeline will deploy the latest code."
             exit 1
           fi
-          if [ "$main_sha" != "$deployable_sha" ]; then
+          if [ "$UPSTREAM_SHA" = "$main_sha" ] && [ "$UPSTREAM_SHA" = "$upstream_deployable" ]; then
+            echo "Upstream SHA $UPSTREAM_SHA still matches main HEAD; triggering Render deploys."
+          elif [ "$UPSTREAM_SHA" = "$upstream_deployable" ]; then
             echo "Upstream SHA $UPSTREAM_SHA matches deployable ancestor of main HEAD"
             echo "(HEAD $main_sha is a [skip ci] release commit); triggering Render deploys."
           else
-            echo "Upstream SHA $UPSTREAM_SHA still matches main HEAD; triggering Render deploys."
+            echo "Upstream SHA $UPSTREAM_SHA and main HEAD $main_sha both resolve to deployable"
+            echo "ancestor $upstream_deployable; triggering Render deploys."
           fi
 
       # Each step delegates to render-trigger-deploy.sh, which
