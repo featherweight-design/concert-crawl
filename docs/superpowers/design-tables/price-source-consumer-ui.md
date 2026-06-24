@@ -420,7 +420,8 @@ StarGlyph rendered (line 209): `<window.PendingStarGlyph size={10} color={GOLD_T
 | white-space | `nowrap` |
 | color (boxoffice) | `GOLD_T` |
 | color (community) | `var(--fg)` |
-| color (resale / default) | `var(--fg)` |
+| color (resale) | coral `oklch(0.65 0.20 25)` — per Appendix A.3 |
+| color (default — `null` / `'standard'`) | `var(--fg-muted)` — matches the Resolved color table above |
 
 Format: `from=true` → `from $${price}`; `from=false` → `$${price}`.
 
@@ -977,11 +978,11 @@ Text: `"resale"`.
 
 ---
 
-### A.4 — `DisputedPriceCard` footer pointer (Q3 verdict)
+### A.4 — `PendingCardB` footer pointer (Q3 verdict)
 
-Replaces the shipped `"Saw a different number?"` footer link when `counterSubmission !== null` against this price. Per the addendum: *"replace the suppressed link in the same footer slot with a quiet pointer to the live counter."* `Confirm price` button stays UNCHANGED. Net-new chrome = zero — it's a copy swap in the footer slot the dispute link already owned.
+Replaces the shipped `"Saw a different number?"` footer link when `counterSubmission !== null` against this price. The shipped affordance lives on `PendingCardB` (view=`'other'`) — the design mock file frames it under `DisputedPriceCard` because that's where the addendum visualizes the parent↔counter relationship side-by-side, but the actual implementation target is `PendingCardB`'s footer slot (see plan Modify list: `apps/web/src/components/consumer/PendingCardB.tsx` gets a new `counterPointer?: { href: string } | null` prop). Per the addendum: *"replace the suppressed link in the same footer slot with a quiet pointer to the live counter."* `Confirm price` button stays UNCHANGED. Net-new chrome = zero — it's a copy swap in the footer slot the dispute link already owned.
 
-Source: `pr4-addendum-mocks.jsx:299-365` (full `DisputedPriceCard withPointer={true}` variant), specifically `:337-345` (the pointer link).
+Source: `pr4-addendum-mocks.jsx:299-365` (the addendum visualizes this in a `DisputedPriceCard withPointer={true}` variant), specifically `:337-345` (the pointer link). The visual specs below apply to the link wherever it renders.
 
 #### Pointer link `<a>` (lines 337-345)
 | Property | Value |
@@ -1025,7 +1026,7 @@ Points at the counter card on the same page. Implementation can be a fragment an
 
 Two unknowns from §9 that design does NOT need to specify; eng-owned defaults are locked here for the record:
 
-- **Q2-eng (browse: no-price + no ticket links at all):** fall through to the legacy community-handoff card (existing `NoPriceCard`); NO `FaceValueCard`. Pedagogy collapses without a resale anchor — same logic as Q1.
+- **Q2-eng (event detail: no `priceByTier` + no ticket links at all — §8 state #13):** fall through to the legacy community-handoff card (existing `NoPriceCard`); NO `FaceValueCard`. Pedagogy collapses without a resale anchor — same logic as Q1. (Browse-list rendering for this same data shape is covered by §8 browse #5, a separate eng-owned case.)
 - **Q4-eng (submit-success add-another-tier picker drive):** client-side session state of "tiers I just submitted in this session." Re-fetching `priceByTier` after each tier-success creates flicker; the rare race (two devices submitting simultaneously) is recoverable on next load. → `MT_AddTierSuccess` uses local React state.
 
 These defaults inform the locked decisions in the plan §9 section.
