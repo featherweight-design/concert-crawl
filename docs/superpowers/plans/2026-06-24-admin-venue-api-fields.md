@@ -56,7 +56,7 @@ Each item below corresponds 1:1 to "Eng-side clarifications" #1–#8 in the read
 
 ### 1. Placement — top of **Crawl config**, above Extraction strategy
 
-**Decision:** The two new fields land at the top of the existing **Crawl config** `VDSection` (section `03 · crawl config` in `VenueDetailsClient.tsx`, around line 1325–1326), immediately before the Extraction strategy field. No new section; no "Integration" header.
+**Decision:** The two new fields land at the top of the existing **Crawl config** `VDSection` (section `03 · crawl config` in `VenueDetailsClient.tsx`, around line 1325–1326), as a lightweight "Integration" subsection above the Extraction strategy field. This aligns with `READINESS_506.md` item 1 — preserves the inherited "Integration subsection inside Crawl config" framing without spinning up a whole new `VDSection`. Concretely: a JetBrains Mono uppercase eyebrow line (`Integration`) rendered above the two `VDField` rows, using the same eyebrow type the existing sections use at the section-level. No new component primitive required.
 
 **Rationale:** They're crawl concerns (which path the crawler takes for this venue). Keeping them inside Crawl config avoids fragmenting an already-dense form. Placing them at the top of the section signals "this field affects everything below it" — the provider choice controls whether the rest of the Crawl config fields (extraction strategy, crawl mode, wait selectors, etc.) are even relevant for the venue.
 
@@ -165,7 +165,12 @@ The codebase splits validation and persistence across two layers — this plan r
 
 ### API Zod additions (`apps/api/src/routes/admin/venues.ts`)
 
-The existing `createVenueSchema` and `updateVenueSchema` already use the `.nullable().optional()` + transform pattern for cleared fields (see `ticketVendor` lines ~35–46 and `priceUrl` lines ~96–101). The new fields follow the same shape — `null` is the "None" / cleared value over the wire (not `""`), because the body arrives as JSON.
+The existing `createVenueSchema` and `updateVenueSchema` already establish two related patterns:
+
+- **Nullable enum without transform** — `ticketVendor` (lines ~35–46) uses `.enum([...]).nullable().optional()`. This is the shape `apiProvider` mirrors: a fixed set of string literals plus null/absent for "None."
+- **String-with-trim transform** — `priceUrl` (lines ~96–101), `address` (lines ~47–56), and `crawlWaitForSelector` (lines ~29–34) use `.string().nullable().optional().transform(trim → null-if-empty)`. This is the shape `apiAccountId` mirrors: a free-text field that needs whitespace normalization.
+
+`null` is the "None" / cleared value over the wire (not `""`), because the body arrives as JSON.
 
 **Decision: extend `updateVenueSchema` only. Leave `createVenueSchema` unchanged.** This honors the v1 scope lock (Add Venue modal stays out — see Eng-side decision #3). `createVenueSchema` is the API contract for `POST /v1/admin/venues`, which is exclusively called from the Add Venue modal flow; touching it would force the modal to surface the new fields, which Hugh ruled out. `updateVenueSchema` is the contract for `PATCH /v1/admin/venues/:id`, which is what the Edit page hits — this is where the new fields belong in v1.
 
@@ -506,7 +511,7 @@ Voice tone: match the existing entries in `releases.ts` (casual, second-person, 
 |------|--------------|-----------|
 | Add Venue modal getting the new fields | Locked by Hugh — keeps modal scope clean | Open ticket if user demand emerges |
 | "Informational only" badge on Source URL when provider set | Design polish — needs design call | Optional design addendum ticket |
-| Own "Integration" section vs. tacked onto Crawl config | Decided: tacked onto Crawl config | If form density gets uncomfortable later, restructure ticket |
+| Own top-level "Integration" section (separate `VDSection`) vs. subsection inside Crawl config | Decided: subsection inside Crawl config (eyebrow line above the two fields) | If form density gets uncomfortable later, restructure ticket |
 | Provider-specific account-ID hint text ("e.g. VenuePilot venue ID") | Generic hint is fine for v1 (one provider) | Add per-provider hints when 2nd provider lands |
 | Add `read_only` treatment when API Provider is set | Source URL stays editable | Revisit when 2nd provider lands |
 | Source URL required-bypass for API-backed venues | Source URL is consumer-facing, not just crawler input | Not changing — kept as-is |
