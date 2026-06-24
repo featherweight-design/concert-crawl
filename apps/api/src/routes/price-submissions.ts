@@ -191,6 +191,7 @@ priceSubmissionsRouter.post(
       const [disputed] = await db
         .select({
           id: priceSubmissions.id,
+          userId: priceSubmissions.userId,
           status: priceSubmissions.status,
           tier: priceSubmissions.tier,
           vendor: priceSubmissions.vendor,
@@ -209,6 +210,19 @@ priceSubmissionsRouter.post(
         return ctx.json(
           { success: false, error: 'Disputed submission not found' },
           404,
+        )
+      }
+
+      // Self-dispute guard. Mirrors POST /v1/submissions/:id/dispute at
+      // apps/api/src/routes/submissions.ts:143-148 so the same 403 + error
+      // string fires on BOTH counter-creation paths. Checked BEFORE the
+      // duplicate-counter and status guards so a self-disputer who already
+      // has a pending counter gets the actual reason (403) instead of a
+      // 409/400 that misdescribes the problem.
+      if (disputed.userId === userId) {
+        return ctx.json(
+          { success: false, error: 'Cannot dispute your own submission' },
+          403,
         )
       }
 

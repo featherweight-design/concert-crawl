@@ -325,6 +325,58 @@ describe('POST /v1/events/:eventId/price-submissions — counter path', () => {
     await clearTables()
   })
 
+  // R4-1: The counter-path route must enforce the same self-dispute 403 as
+  // POST /v1/submissions/:id/dispute (submissions.ts:143-148). Without it a
+  // user could contest their OWN row via this surface — the contest would
+  // land in the admin queue and flip the parent's visible state to
+  // 'disputed' for no legitimate reason.
+  it('rejects self-dispute with 403', async () => {
+    const venue = await seedVenue({
+      name: 'Self Dispute PS',
+      slug: 'self-dispute-ps',
+    })
+    const event = await seedEvent(venue.id, { date: '2027-07-04' })
+    await seedUserProfile('submitter-self', { handle: 'submitter_self' })
+
+    const parent = await seedPriceSubmission(event.id, 'submitter-self', {
+      tier: 'GA',
+      vendor: 'AXS',
+      howFound: 'saw_listing',
+      sourceCategory: 'standard',
+      status: 'corroborated',
+    })
+
+    setAuth('submitter-self')
+    const res = await app.request(`/v1/events/${event.id}/price-submissions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
+      body: JSON.stringify({
+        priceMin: 55,
+        tier: 'GA',
+        vendor: 'AXS',
+        howFound: 'saw_listing',
+        sourceCategory: 'standard',
+        disputedSubmissionId: parent.id,
+      }),
+    })
+    expect(res.status).toBe(403)
+    const body = (await res.json()) as { success: boolean; error: string }
+    expect(body.success).toBe(false)
+    expect(body.error).toMatch(/your own submission/i)
+
+    // Parent must NOT flip to 'disputed' — the 403 must short-circuit
+    // before the parent-flip transaction runs. Otherwise the rejection
+    // would still leak the contested visual state.
+    const [reloadedParent] = await testDb
+      .select({ status: priceSubmissions.status })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.id, parent.id))
+    expect(reloadedParent?.status).toBe('corroborated')
+  })
+
   it('rejects a 2nd pending counter against the same parent with 409', async () => {
     const venue = await seedVenue({
       name: 'Dup Counter PS',

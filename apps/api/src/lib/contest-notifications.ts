@@ -53,13 +53,16 @@ interface Recipient {
  * Write `user_notification` rows for the parent + challenger submitters of a
  * contest. Deduped when both ids are the same user (self-contest, defensive
  * only — in practice `parentUserId === challengerUserId` is impossible at
- * insert time because `POST /v1/submissions/:id/dispute` returns 403
- * ("Cannot dispute your own submission", see
- * apps/api/src/routes/submissions.ts) and the counter-submission route
- * inherits the parent's eventId/tier/slot so a self-submitter is already
- * blocked by the rate limiter. The §4.6 partial unique index is a separate
- * guarantee — it prevents two pending counters against the same parent, not
- * self-contest). Skipped entirely when both ids are null.
+ * insert time because BOTH counter-creation routes enforce a self-dispute 403
+ * with the same "Cannot dispute your own submission" error:
+ *   - POST /v1/submissions/:id/dispute (apps/api/src/routes/submissions.ts)
+ *   - POST /v1/events/:eventId/price-submissions when `disputedSubmissionId`
+ *     is set (apps/api/src/routes/price-submissions.ts — the counter path
+ *     bypasses the rate limiter, so the explicit guard is what blocks it).
+ * We still dedupe defensively here for any future codepath that bypasses
+ * those gates. The §4.6 partial unique index is a separate guarantee — it
+ * prevents two pending counters against the same parent, not self-contest.
+ * Skipped entirely when both ids are null.
  *
  * `notifications.metadata` is a `text` column (see packages/db schema), so
  * the metadata blob is JSON.stringify'd here. Inserting a raw object would
