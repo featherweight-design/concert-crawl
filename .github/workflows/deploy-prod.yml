@@ -72,11 +72,30 @@ jobs:
     name: Validate deploy gates
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    if: |
-      vars.AUTO_DEPLOY_PROD_ENABLED == 'true' &&
-      (github.event_name != 'workflow_dispatch' ||
-       github.ref == 'refs/heads/main')
+    # AUTO_DEPLOY_PROD_ENABLED is the only condition that genuinely
+    # silently-skips: when the kill switch is off, the entire workflow
+    # should look idle without surfacing as a failed run. The wrong-
+    # branch case for workflow_dispatch is enforced inside the gate as
+    # an explicit fail-loud step (see "Refuse workflow_dispatch from
+    # non-main ref" below) — same pattern as rollback-prod.yml — so a
+    # mis-targeted manual deploy doesn't show as a silently-skipped
+    # success.
+    if: vars.AUTO_DEPLOY_PROD_ENABLED == 'true'
     steps:
+      # Fail loudly on the wrong branch for manual dispatches. A
+      # job-level `if:` filter would silently skip the run and could
+      # show as `success`, which would let the operator believe the
+      # deploy ran from main when in fact nothing happened.
+      - name: Refuse workflow_dispatch from non-main ref
+        if: |
+          github.event_name == 'workflow_dispatch' &&
+          github.ref != 'refs/heads/main'
+        run: |
+          echo "✗ Refusing to deploy prod from ref '${{ github.ref }}'."
+          echo "  Manual prod deploys must be dispatched from main."
+          echo "  Use the workflow_dispatch UI's branch picker to select main, then re-dispatch."
+          exit 1
+
       # On the workflow_run path the upstream Staging Smoke Tests
       # workflow could have concluded `success` even though all its
       # jobs were SKIPPED (kill switch off, or the gate step it
@@ -349,6 +368,17 @@ jobs:
     needs: deploy
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Output an explicit "Playwright completed and asserted a failure"
+    # signal that the rollback job keys off, instead of relying on
+    # `needs.smoke.result == 'failure'`. The result-based check would
+    # also fire on job timeouts, runner deaths, or cancellations
+    # (GitHub treats all of those as `failure`), which would mean a
+    # network blip during smoke triggers a destructive prod rollback.
+    # The original multi-workflow design explicitly excluded that case
+    # via `timed_out`-aware gates; this output preserves that behavior
+    # in the unified design.
+    outputs:
+      assertions_failed: ${{ steps.evaluate_smoke.outputs.assertions_failed }}
     steps:
       # Pin to the SHA the deploy job acted on so the Playwright code
       # we run matches the code Render just built.
@@ -397,7 +427,14 @@ jobs:
             exit 1
           fi
 
+      # `continue-on-error: true` lets the workflow proceed to the
+      # evaluate step below regardless of the Playwright exit code.
+      # The job is still marked failed at the end via "Surface smoke
+      # failure" — we just defer the failure-surfacing so the
+      # `assertions_failed` output can be written first.
       - name: Run smoke tests against production
+        id: run_smoke
+        continue-on-error: true
         run: pnpm --filter @concert-crawl/e2e test:smoke
         env:
           PLAYWRIGHT_SMOKE_BASE_URL: ${{ vars.PROD_URL }}
@@ -412,13 +449,40 @@ jobs:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN_SMOKE }}
           SENTRY_ENVIRONMENT: production
 
+      # Set the job-level output that distinguishes "Playwright ran
+      # and asserted a failure" (rollback-worthy) from "the smoke job
+      # didn't complete for some other reason" (NOT rollback-worthy:
+      # job timeout, runner death, cancellation — none of those reach
+      # this step, so the output stays unset and the rollback job's
+      # `if:` evaluates to false).
+      - name: Evaluate smoke outcome
+        id: evaluate_smoke
+        run: |
+          if [ "${{ steps.run_smoke.outcome }}" = "failure" ]; then
+            echo "assertions_failed=true" >> "$GITHUB_OUTPUT"
+            echo "Playwright smoke asserted a failure → rollback will fire."
+          else
+            echo "assertions_failed=false" >> "$GITHUB_OUTPUT"
+            echo "Playwright smoke passed."
+          fi
+
       - name: Upload failure artifacts
         uses: actions/upload-artifact@v7
-        if: failure()
+        if: steps.run_smoke.outcome == 'failure'
         with:
           name: prod-smoke-failure-${{ github.run_id }}
           path: apps/e2e/test-results/
           retention-days: 14
+
+      # Re-surface the Playwright failure so the smoke job itself
+      # exits non-zero — keeps the Actions UI honest about the run's
+      # outcome. The `assertions_failed` output is already written
+      # above, so the rollback job can still consume it.
+      - name: Surface smoke failure
+        if: steps.run_smoke.outcome == 'failure'
+        run: |
+          echo "Playwright smoke failed; failing the job after writing the assertions_failed output."
+          exit 1
 
   # Automatic prod rollback on smoke failure. Mirrors what was previously
   # in `rollback-prod.yml`'s `workflow_run` trigger path. The manual
@@ -428,20 +492,28 @@ jobs:
   #
   # `if:` semantics:
   #   - `always()` overrides the default "skip if any needs failed"
-  #     behavior so this job actually evaluates.
-  #   - `needs.smoke.result == 'failure'` is the actual trigger —
-  #     `skipped` (deploy failed → smoke didn't run) does NOT fire
-  #     rollback. That's intentional: we don't roll back a deploy
-  #     that never landed.
-  #   - `cancelled` (runner killed, workflow cancelled by an
-  #     operator, etc.) also does NOT fire rollback. A non-`failure`
-  #     terminal state isn't enough signal to destructively roll back
-  #     prod; an operator can use rollback-prod.yml's workflow_dispatch
-  #     path if they want to roll back after investigating.
+  #     behavior so this job evaluates regardless of the smoke job's
+  #     terminal state.
+  #   - `needs.smoke.outputs.assertions_failed == 'true'` is the
+  #     actual trigger — set ONLY by the smoke job's "Evaluate smoke
+  #     outcome" step after Playwright has actually completed and
+  #     returned non-zero. Job-level failures that prevent that step
+  #     from running (timeout, runner death, cancellation) leave the
+  #     output unset → rollback does not fire. This is the original
+  #     "don't roll back on transient infrastructure failure" semantic
+  #     from the multi-workflow design.
+  #   - A `deploy` failure also leaves the output unset (smoke job
+  #     never starts → no output written → rollback skipped). That
+  #     preserves "don't compound a failed deploy with a destructive
+  #     rollback for a deploy that never happened."
+  #
+  # In all "transient blip" and "deploy never ran" cases, an operator
+  # can still trigger rollback explicitly via rollback-prod.yml's
+  # workflow_dispatch.
   rollback:
     name: Auto-rollback (prod smoke failed)
     needs: smoke
-    if: always() && needs.smoke.result == 'failure'
+    if: always() && needs.smoke.outputs.assertions_failed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # `environment: production` is requested here so the rollback path
