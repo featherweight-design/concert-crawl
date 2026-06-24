@@ -26,7 +26,7 @@ This plan resolves the 8 eng-side decisions enumerated in `READINESS_506.md` and
 - Inputs use the 8-state spec (default/hover/focused/filled/success/error/disabled/read-only); on the Edit page (`VenueDetailsClient.tsx`) the new fields inherit those states via the `VDInput` component. (The Add Venue modal uses a separate `inputStyle()` helper defined locally in `AddVenueModal.tsx` — irrelevant for this PR since the modal stays unchanged.)
 - Sticky save bar surfaces when the form is dirty; new fields participate in dirty-tracking.
 - `var(--*)` tokens only.
-- A11y: 3px signal-tinted focus ring via `:focus-visible`.
+- A11y: 3px signal-tinted focus ring. Note that the handoff README describes this as `:focus-visible`-driven, but the shipped `VDInput` / `VDSelect` in `VenueDetailsClient.tsx` use React focus state (`onFocus` / `onBlur` toggling a `focused` boolean) to apply the ring — not the CSS pseudo-class. The new fields inherit the shipped pattern; this plan does NOT change focus-styling mechanics, and the impl PR should not retrofit `:focus-visible` as part of this PR (separate concern if pursued later).
 
 Codebase conventions also applied (not stated in the handoff README, but enforced project-wide):
 
@@ -101,7 +101,7 @@ Order inside Crawl config (after this PR):
 "API account ID is required when an API provider is selected"
 ```
 
-Rendered as an error under the API Account ID field (red border + `:focus-visible` signal ring per the 8-state spec). No error rendered on the API Provider select itself — the error belongs to the field whose value is missing.
+Rendered as an error under the API Account ID field. Error styling matches the existing `VDInput` `hasError` treatment — danger-tinted border, with the React-state focus ring switching to the danger tint when `hasError` is true. No error rendered on the API Provider select itself — the error belongs to the field whose value is missing.
 
 ### 7. Source URL — stays required
 
