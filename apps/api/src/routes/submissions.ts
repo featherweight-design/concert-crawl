@@ -5,6 +5,7 @@ import { and, eq, sql } from 'drizzle-orm'
 import { db, priceSubmissions, submissionConfirms } from '@concert-crawl/db'
 import { SP_POLICY, deriveSourceCategory } from '@concert-crawl/types'
 import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js'
+import { isPendingCounterUniqueViolation } from '../lib/pg-errors.js'
 
 export const submissionsRouter = new Hono()
 
@@ -234,32 +235,6 @@ submissionsRouter.post(
     return ctx.json({ success: true, data: disputeRow }, 201)
   },
 )
-
-/**
- * Detect a Postgres unique_violation (SQLSTATE 23505) against the
- * `price_submissions_pending_counter_unique_idx` partial unique index.
- *
- * Drizzle wraps the underlying postgres-js error in a DrizzleQueryError, so
- * the original `code` lives on `err.cause`. We check both so the translation
- * survives if Drizzle's wrapping behavior changes.
- */
-function isPendingCounterUniqueViolation(err: unknown): boolean {
-  const indexName = 'price_submissions_pending_counter_unique_idx'
-  const matches = (candidate: unknown): boolean => {
-    if (typeof candidate !== 'object' || candidate === null) return false
-    const record = candidate as Record<string, unknown>
-    if (record['code'] !== '23505') return false
-    if (record['constraint_name'] === indexName) return true
-    if (record['constraint'] === indexName) return true
-    const message = record['message']
-    return typeof message === 'string' && message.includes(indexName)
-  }
-  if (matches(err)) return true
-  if (err instanceof Error && 'cause' in err) {
-    return matches((err as Error & { cause?: unknown }).cause)
-  }
-  return false
-}
 
 const patchBodySchema = z
   .object({
