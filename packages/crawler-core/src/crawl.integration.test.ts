@@ -828,3 +828,201 @@ describe('crawlVenue — non-concert auto-classification (#696)', () => {
     expect(row?.title).toBe('Originally Misclassified Show — Updated')
   })
 })
+
+describe('crawlVenue — auto-pause at threshold (#743)', () => {
+  async function seedVenueWithCount(
+    consecutiveFailures: number,
+    active = true,
+  ): Promise<{ id: string; name: string; url: string }> {
+    const [venue] = await db
+      .insert(venues)
+      .values({
+        name: `Auto-pause Test ${crypto.randomUUID()}`,
+        slug: `auto-pause-${crypto.randomUUID()}`,
+        websiteUrl: 'https://auto-pause-test.example.com',
+        city: 'Denver',
+        timezone: 'America/Denver',
+        active,
+        verified: true,
+        crawlMode: 'browser',
+        consecutiveFailures,
+      })
+      .returning()
+    if (!venue) throw new Error('venue insert returned no row')
+    return { id: venue.id, name: venue.name, url: venue.websiteUrl }
+  }
+
+  beforeEach(async () => {
+    const { sendCrawlFailureEmail } = await import('./lib/email.js')
+    vi.mocked(sendCrawlFailureEmail).mockReset()
+    vi.mocked(sendCrawlFailureEmail).mockResolvedValue(undefined)
+  })
+
+  it('auto-pauses the venue on the 3rd consecutive failure', async () => {
+    const venue = await seedVenueWithCount(2)
+    mockFetchPage.mockRejectedValue(new Error('generic schema error'))
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const [row] = await db
+      .select({
+        active: venues.active,
+        consecutiveFailures: venues.consecutiveFailures,
+      })
+      .from(venues)
+      .where(eq(venues.id, venue.id))
+    expect(row?.consecutiveFailures).toBe(3)
+    expect(row?.active).toBe(false)
+  })
+
+  it('does not auto-pause before the 3rd consecutive failure', async () => {
+    const venue = await seedVenueWithCount(1)
+    mockFetchPage.mockRejectedValue(new Error('generic schema error'))
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const [row] = await db
+      .select({
+        active: venues.active,
+        consecutiveFailures: venues.consecutiveFailures,
+      })
+      .from(venues)
+      .where(eq(venues.id, venue.id))
+    expect(row?.consecutiveFailures).toBe(2)
+    expect(row?.active).toBe(true)
+  })
+
+  it('does not re-pause a venue an admin has re-activated (count goes 3 → 4)', async () => {
+    // Admin manually un-paused after the initial auto-pause. The venue's
+    // bug hasn't been fixed yet, so the next crawl still fails. The CASE
+    // guard in the UPDATE must NOT flip `active` back to false (otherwise
+    // the auto-pause would fight every admin re-activation indefinitely).
+    const venue = await seedVenueWithCount(3, true)
+    mockFetchPage.mockRejectedValue(new Error('generic schema error'))
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const [row] = await db
+      .select({
+        active: venues.active,
+        consecutiveFailures: venues.consecutiveFailures,
+      })
+      .from(venues)
+      .where(eq(venues.id, venue.id))
+    expect(row?.consecutiveFailures).toBe(4)
+    expect(row?.active).toBe(true)
+  })
+
+  it('sends the crawl-failure email exactly once, at the 3rd failure', async () => {
+    const { sendCrawlFailureEmail } = await import('./lib/email.js')
+    const mockSendEmail = vi.mocked(sendCrawlFailureEmail)
+    const venue = await seedVenueWithCount(2)
+    mockFetchPage.mockRejectedValue(new Error('generic schema error'))
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    expect(mockSendEmail).toHaveBeenCalledTimes(1)
+    expect(mockSendEmail).toHaveBeenCalledWith(venue.name, 3)
+  })
+
+  it('does not re-send the email on subsequent failures', async () => {
+    const { sendCrawlFailureEmail } = await import('./lib/email.js')
+    const mockSendEmail = vi.mocked(sendCrawlFailureEmail)
+    const venue = await seedVenueWithCount(3, true)
+    mockFetchPage.mockRejectedValue(new Error('generic schema error'))
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    expect(mockSendEmail).not.toHaveBeenCalled()
+  })
+
+  it('notification body indicates auto-pause on the 3rd failure', async () => {
+    const venue = await seedVenueWithCount(2)
+    mockFetchPage.mockRejectedValue(new Error('generic schema error'))
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const { notifications } = await import('@concert-crawl/db')
+    const rows = await db
+      .select({ body: notifications.body, category: notifications.category })
+      .from(notifications)
+      .where(eq(notifications.category, 'crawl.failed'))
+    expect(rows.length).toBe(1)
+    expect(String(rows[0]?.body)).toMatch(/auto-paused/i)
+  })
+
+  it('notification body does NOT mention auto-pause on subsequent failures', async () => {
+    const venue = await seedVenueWithCount(3, true)
+    mockFetchPage.mockRejectedValue(new Error('generic schema error'))
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const { notifications } = await import('@concert-crawl/db')
+    const rows = await db
+      .select({ body: notifications.body, category: notifications.category })
+      .from(notifications)
+      .where(eq(notifications.category, 'crawl.failed'))
+    expect(rows.length).toBe(1)
+    expect(String(rows[0]?.body)).not.toMatch(/auto-paused/i)
+  })
+
+  it('fires the email exactly once when two concurrent crawls hit the threshold simultaneously', async () => {
+    // The concrete race Copilot caught on PR #746: two workers (daily +
+    // triggers cron) both read consecutiveFailures=2, both fail to fetch.
+    // Without the SQL increment + CASE, both would compute
+    // newFailureCount=3 and both would fire the auto-pause email +
+    // notification. With the atomic UPDATE + RETURNING, exactly one worker
+    // sees the row land on 3 (the other sees 4) and fires the threshold
+    // side-effects once.
+    //
+    // We deliberately use a deferred-rejection mock so both workers reach
+    // the failure path *together*. Using mockRejectedValue would let worker
+    // A's failure path commit (including the auto-pause that flips active
+    // to false) before worker B's initial venue SELECT — which would throw
+    // "venue not active" on B and never reach the race.
+    const { sendCrawlFailureEmail } = await import('./lib/email.js')
+    const mockSendEmail = vi.mocked(sendCrawlFailureEmail)
+    const venue = await seedVenueWithCount(2)
+
+    // 50ms delay before the throw guarantees both workers complete their
+    // initial venue SELECT (where active=true) before either reaches the
+    // failure path. Without this, A's mockRejectedValue would synchronously
+    // fail in the same microtask cycle, letting A's UPDATE (which flips
+    // active to false) commit before B's SELECT even runs — and B would
+    // throw "venue not found" instead of racing through the threshold.
+    mockFetchPage.mockImplementation(
+      () =>
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('generic schema error')), 50),
+        ),
+    )
+
+    await Promise.all([
+      crawlVenue(venue.id, mockBrowser),
+      crawlVenue(venue.id, mockBrowser),
+    ])
+
+    const [row] = await db
+      .select({
+        active: venues.active,
+        consecutiveFailures: venues.consecutiveFailures,
+      })
+      .from(venues)
+      .where(eq(venues.id, venue.id))
+    expect(row?.consecutiveFailures).toBe(4)
+    expect(row?.active).toBe(false)
+    expect(mockSendEmail).toHaveBeenCalledTimes(1)
+    expect(mockSendEmail).toHaveBeenCalledWith(venue.name, 3)
+
+    const { notifications } = await import('@concert-crawl/db')
+    const noteRows = await db
+      .select({ body: notifications.body })
+      .from(notifications)
+      .where(eq(notifications.category, 'crawl.failed'))
+    expect(noteRows.length).toBe(2)
+    const autoPausedNotes = noteRows.filter((rr) =>
+      /auto-paused/i.test(String(rr.body)),
+    )
+    expect(autoPausedNotes.length).toBe(1)
+  })
+})

@@ -858,27 +858,28 @@ export async function crawlVenue(
       venue.consecutiveFailures >= 2 // becomes 3 after the increment below
     const isBlocked = isHttpBlocked || isTimeoutBlock
 
-    // Compute the new count in JS rather than via a SQL increment so we can
-    // branch on the exact threshold value (auto-pause + email both fire once
-    // at === 3). The crawler is the only writer of `consecutive_failures`
-    // and the daily + triggers crons don't run on the same venue
-    // concurrently, so read-modify-write is safe here.
-    const newFailureCount = (venue.consecutiveFailures ?? 0) + 1
     // CLAUDE.md crawl rule: "3 consecutive failures → pause venue + notify
-    // admin". The `=== 3` guard makes the auto-pause one-shot: if an admin
-    // manually re-activates a still-broken venue, the next failure won't
-    // re-flip `active` to false. (#743)
-    const shouldAutoPause = newFailureCount === 3
-
-    await db
+    // admin". Use a SQL increment + CASE so the increment, the auto-pause
+    // flip, and the threshold-derivation all serialize on the row UPDATE.
+    // This is what gives us exactly-once email/notification semantics under
+    // concurrent crawls of the same venue (the daily cron and the triggers
+    // cron CAN overlap on the same venue — there's no per-venue lock above
+    // this layer). The CASE on `active` ensures only the transition to 3
+    // flips the column, so an admin who manually re-activates a still-broken
+    // venue isn't fought by the crawler on the next failure. (#743)
+    const [updatedVenue] = await db
       .update(venues)
       .set({
-        consecutiveFailures: newFailureCount,
-        ...(shouldAutoPause ? { active: false } : {}),
+        consecutiveFailures: sql`${venues.consecutiveFailures} + 1`,
+        active: sql`CASE WHEN ${venues.consecutiveFailures} + 1 = 3 THEN false ELSE ${venues.active} END`,
         ...(isBlocked ? { blockedAt: new Date() } : {}),
         updatedAt: new Date(),
       })
       .where(eq(venues.id, venueId))
+      .returning()
+
+    const newFailureCount = updatedVenue?.consecutiveFailures ?? 0
+    const shouldAutoPause = newFailureCount === 3
 
     if (newFailureCount >= 3) {
       const notificationBody = shouldAutoPause
