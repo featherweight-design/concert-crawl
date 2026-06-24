@@ -6,14 +6,13 @@ import { z } from 'zod'
 import {
   db,
   events,
-  notifications,
   priceSubmissions,
   userProfiles,
   userRoles,
   venues,
 } from '@concert-crawl/db'
 import { getAuthUser } from '../../middleware/auth.js'
-import { apiLogger } from '../../lib/logger.js'
+import { writeContestNotifications } from '../../lib/contest-notifications.js'
 import type { AdminVariables } from './index.js'
 
 export const contestsAdminRouter = new Hono<AdminVariables>()
@@ -412,8 +411,9 @@ const resolveBodySchema = z.object({
 // so a Sentry-tagged failure in either telemetry path can't roll back the
 // resolution. Audit is driven by ctx.set('auditAction', ...) etc. and handled
 // by the middleware in apps/api/src/routes/admin/index.ts. Notifications are
-// inserted inline here until Task 10 extracts the helper into
-// apps/api/src/lib/contest-notifications.ts.
+// fanned out via writeContestNotifications in apps/api/src/lib/contest-
+// notifications.ts (helper extracted in Task 10) — it dedupes parent ===
+// challenger and swallows insert failures internally.
 contestsAdminRouter.post(
   '/prices/:contestId/resolve',
   zValidator('param', resolveParamsSchema, (result, ctx) => {
@@ -725,52 +725,21 @@ contestsAdminRouter.post(
       orphanedCounterIds: outcome.orphanedCounterIds,
     })
 
-    // Notification fan-out — inline until Task 10 extracts a helper. Both
-    // submitters get a user_notification row pointing at the event detail
-    // page. Deduped when parent.userId === challenger.userId. metadata is a
-    // text column on the notifications table (see packages/db schema), so
-    // JSON.stringify is mandatory — passing a raw object would surface a
-    // Postgres type error at runtime.
-    try {
-      const recipients: Array<{ userId: string; submissionId: string }> = []
-      if (outcome.parent.userId !== null) {
-        recipients.push({
-          userId: outcome.parent.userId,
-          submissionId: outcome.parent.id,
-        })
-      }
-      if (
-        outcome.challenger.userId !== null &&
-        outcome.challenger.userId !== outcome.parent.userId
-      ) {
-        recipients.push({
-          userId: outcome.challenger.userId,
-          submissionId: outcome.challenger.id,
-        })
-      }
-      if (recipients.length > 0) {
-        await db.insert(notifications).values(
-          recipients.map((recipient) => ({
-            userId: recipient.userId,
-            type: 'user_notification' as const,
-            category: 'contest.resolved',
-            title: 'Your price submission was reviewed.',
-            body: reason,
-            actionUrl: `/events/${outcome.parent.eventId}`,
-            metadata: JSON.stringify({
-              submissionId: recipient.submissionId,
-              contestId,
-              resolution,
-            }),
-          })),
-        )
-      }
-    } catch (notifyErr) {
-      apiLogger.warn(
-        { contestId, err: notifyErr },
-        'Failed to write contest resolve notifications; resolution itself committed.',
-      )
-    }
+    // Notification fan-out lives in apps/api/src/lib/contest-notifications.ts
+    // (extracted in Task 10). The helper handles dedupe, JSON-encoding the
+    // metadata text column, and swallowing insert failures so a notification
+    // error can't appear to roll back the already-committed resolution.
+    await writeContestNotifications({
+      contestId,
+      parentSubmissionId: outcome.parent.id,
+      challengerSubmissionId: outcome.challenger.id,
+      parentUserId: outcome.parent.userId,
+      challengerUserId: outcome.challenger.userId,
+      eventId: outcome.parent.eventId,
+      action: 'resolve',
+      resolution,
+      reason,
+    })
 
     return ctx.json({
       success: true,
@@ -819,8 +788,8 @@ const deferBodySchema = z.object({
 // mismatched slot) would be invisible to consumers.
 //
 // Audit + notification writes happen OUTSIDE the transaction (after commit),
-// same pattern as resolve. Notifications are inlined here until Task 10
-// extracts the shared helper.
+// same pattern as resolve. Notifications are fanned out via
+// writeContestNotifications in apps/api/src/lib/contest-notifications.ts.
 contestsAdminRouter.post(
   '/prices/:contestId/defer',
   zValidator('param', deferParamsSchema, (result, ctx) => {
@@ -967,61 +936,22 @@ contestsAdminRouter.post(
       reason,
     })
 
-    // Notification fan-out — inline until Task 10 extracts a helper. Both
-    // submitters get a user_notification row with kind:'defer' in metadata,
-    // pointing at the event detail page so they can refresh and see the
-    // pill / quiet engagement signal. Deduped when parent.userId ===
-    // counter.userId. metadata is a text column on the notifications table,
-    // so JSON.stringify is mandatory.
-    try {
-      const recipients: Array<{
-        userId: string
-        submissionId: string
-        role: 'parent' | 'challenger'
-      }> = []
-      if (outcome.parent.userId !== null) {
-        recipients.push({
-          userId: outcome.parent.userId,
-          submissionId: outcome.parent.id,
-          role: 'parent',
-        })
-      }
-      if (
-        outcome.counter.userId !== null &&
-        outcome.counter.userId !== outcome.parent.userId
-      ) {
-        recipients.push({
-          userId: outcome.counter.userId,
-          submissionId: outcome.counter.id,
-          role: 'challenger',
-        })
-      }
-      if (recipients.length > 0) {
-        await db.insert(notifications).values(
-          recipients.map((recipient) => ({
-            userId: recipient.userId,
-            type: 'user_notification' as const,
-            category: 'contest.needs_info',
-            title: 'More info requested on your price submission.',
-            body: reason,
-            actionUrl: `/events/${outcome.parent.eventId}`,
-            metadata: JSON.stringify({
-              submissionId: recipient.submissionId,
-              contestId,
-              eventId: outcome.parent.eventId,
-              role: recipient.role,
-              kind: 'defer',
-              reason,
-            }),
-          })),
-        )
-      }
-    } catch (notifyErr) {
-      apiLogger.warn(
-        { contestId, err: notifyErr },
-        'Failed to write contest defer notifications; defer signal itself committed.',
-      )
-    }
+    // Notification fan-out lives in apps/api/src/lib/contest-notifications.ts
+    // (extracted in Task 10). The helper handles dedupe, JSON-encoding the
+    // metadata text column (defer metadata includes kind:'defer' and a
+    // denormalized reason for consumer surfacing per #737), and swallowing
+    // insert failures so a notification error can't appear to roll back the
+    // already-committed defer signal.
+    await writeContestNotifications({
+      contestId,
+      parentSubmissionId: outcome.parent.id,
+      challengerSubmissionId: outcome.counter.id,
+      parentUserId: outcome.parent.userId,
+      challengerUserId: outcome.counter.userId,
+      eventId: outcome.parent.eventId,
+      action: 'defer',
+      reason,
+    })
 
     return ctx.json({
       success: true,
