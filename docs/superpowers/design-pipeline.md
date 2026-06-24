@@ -4,6 +4,8 @@ The Concert Crawl product runs a structured design pipeline that ensures every s
 
 Established 2026-06-23 in a dedicated design-track session.
 
+> **Note for readers viewing this on GitHub:** This document references several Claude memory notes inline (filenames matching `feedback_*.md`, `project_*.md`, `user_*.md`, `reference_*.md`). These live outside the repo at `~/.claude/projects/.../memory/` and are loaded into Claude Code sessions automatically. They are not browsable in the repo. See the "Related memory" section at the bottom for the canonical cross-reference list.
+
 ---
 
 ## Why this exists

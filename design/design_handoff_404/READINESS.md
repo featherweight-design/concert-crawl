@@ -3,7 +3,7 @@
 **Verdict:** 🟡 Yellow
 **Audited:** 2026-06-23
 **Auditor:** Claude (autonomous Readiness Review)
-**Related ticket(s):** #68 (`404 page` — `type: polish, source: internal, phase: beta, priority: normal`). Slated for Beta wk 2 (Jun 23–29) per `docs/superpowers/progress.md` line 169 and `2026-05-09-beta-to-launch-design.md` line 121.
+**Related ticket(s):** #68 (`404 page` — `type: polish, source: internal, phase: beta, priority: normal`). Slated for Beta wk 2 (Jun 23–29) per `docs/superpowers/progress.md` line 169 and `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md` line 121.
 **Plan PR target:** TBD (`docs/superpowers/plans/404-page.md` — next step)
 
 ## Summary

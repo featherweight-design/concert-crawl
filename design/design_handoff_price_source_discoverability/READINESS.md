@@ -5,7 +5,7 @@
 **Auditor:** Claude (autonomous Readiness Review)
 **Related ticket(s):** #641 (open), #644 (open)
 **Prior eng sign-off:** 2026-06-17 (logged inline in README, plus three follow-up rounds — round 3 captured 2026-06-19/20 with the SeatGeek correction inline)
-**Plan PR target:** TBD — Consumer UI PR (PR 4 of 4) per `project_price_source_discoverability` Claude memory note.
+**Plan PR target:** TBD — Consumer UI PR (PR 4 of 4) per `project_price_source_discoverability.md` Claude memory note.
 
 ## Summary
 
