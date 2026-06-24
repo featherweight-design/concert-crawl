@@ -1077,6 +1077,11 @@ export const CONSUMER_COPY = {
     },
     altSourceRow: {
       pricePrefix: '$',
+      kindLabels: {
+        boxoffice: 'box office',
+        resale: 'resale',
+        community: 'community',
+      },
     },
     addTierSuccess: {
       headline: (tier: string) => `${tier} price is in. Thanks.`,
