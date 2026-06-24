@@ -58,7 +58,7 @@ If Playwright runs and fails an assertion, `rollback` runs automatically. The wo
 
 1. **GHA workflow-failure email** — the deploy-prod workflow ends with `failure` conclusion (smoke job failed = whole workflow failed). GitHub Actions emails you by default when a workflow on `main` fails.
 2. **`::warning::` annotation in the workflow summary** — each skipped cron emits a warning that surfaces on the workflow run's summary card at the top of the page, not buried in step logs.
-3. **Admin email via Resend** — the rollback job's last step calls Resend (`alerts@concertcrawl.app` → `ADMIN_EMAIL`) with a summary and the workflow run URL. Requires `RESEND_API_KEY` (secret) + `ADMIN_EMAIL` (variable) in the `production` environment. Missing either falls back to the annotation only — non-fatal.
+3. **Admin email via Resend** — the rollback job's "Notify admin" step calls Resend (`alerts@concertcrawl.app` → `ADMIN_EMAIL`) with a summary and the workflow run URL. Runs with `if: always()` so the email goes out even if a rollback step earlier in the job failed; the email body says "rollback was triggered" (not "succeeded") and points at the run URL for the actual outcome. Requires `RESEND_API_KEY` (secret) + `ADMIN_EMAIL` (variable) in the `production` environment. Missing either falls back to the annotation only — non-fatal.
 
 ### Manual rollback path
 

@@ -612,7 +612,13 @@ jobs:
           fi
           # Build the JSON body via jq so commit SHA and the HTML
           # body's quoted/escaped characters can't break the request.
-          html_body="<p>Production auto-rollback fired for commit <code>${COMMIT_SHA}</code>.</p><p>The API web service was rolled back to its prior deploy. The two crawler crons require <strong>manual rollback</strong> — Render's API does not support cron rollback. Vercel web also requires manual rollback (one-click promote in the dashboard).</p><p>Workflow run: <a href=\"${RUN_URL}\">${RUN_URL}</a></p><p>See <code>docs/runbooks/auto-deploy-prod.md</code> — sections \"Caveat on cron service rollback\" and \"Vercel + cron rollback is manual\" — for the manual paths.</p>"
+          #
+          # Phrasing carefully avoids claiming the API rollback
+          # succeeded — this step runs with `if: always()` and may
+          # execute even when an earlier rollback step failed. The
+          # operator should always look at the workflow run for the
+          # actual per-service outcome.
+          html_body="<p>Production auto-rollback was <strong>triggered</strong> for commit <code>${COMMIT_SHA}</code>.</p><p>The API web service rollback was attempted via the Render API. The two crawler crons require <strong>manual rollback</strong> — Render's API does not support cron rollback. Vercel web also requires manual rollback (one-click promote in the dashboard).</p><p><strong>Check the workflow run for the per-service outcome — this email does not confirm success:</strong> <a href=\"${RUN_URL}\">${RUN_URL}</a></p><p>See <code>docs/runbooks/auto-deploy-prod.md</code> — sections \"Caveat on cron service rollback\" and \"Vercel + cron rollback is manual\" — for the manual paths.</p>"
           payload=$(jq -nc \
             --arg from "Concert Crawl Alerts <alerts@concertcrawl.app>" \
             --arg to "${ADMIN_EMAIL}" \
@@ -639,11 +645,18 @@ jobs:
           fi
           echo "✓ Admin notified at ${ADMIN_EMAIL}"
 
+      # `if: always()` so this context always logs, even if one of
+      # the rollback steps above failed (rare — e.g. RENDER_API_TOKEN
+      # rotated mid-deploy). Wording deliberately says "attempted"
+      # rather than "complete" since this step has no visibility
+      # into the per-service outcomes — the operator should
+      # consult the individual job step results above.
       - name: Log rollback context
         if: always()
         run: |
-          echo "Rollback complete for prod Render services"
-          echo "Triggered by: failing smoke job in this workflow run"
+          echo "Rollback attempted for prod Render services."
+          echo "Triggered by: failing smoke job in this workflow run."
+          echo "Per-service outcome: check the rollback step results above (✓/X)."
           echo ""
           echo "Vercel web prod is NOT automatically rolled back."
           echo "If the failure is web-related, run the manual rollback procedure"
