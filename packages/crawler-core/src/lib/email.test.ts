@@ -228,10 +228,15 @@ describe('environment qualification on alert emails (admin-UI feedback)', () => 
   beforeEach(() => {
     vi.clearAllMocks()
     vi.resetModules()
+    // ADMIN_URL set here so the env-label assertions aren't drowned out by
+    // the unrelated "ADMIN_URL missing in non-prod" warning from
+    // adminCrawlUrl. The missing-ADMIN_URL behaviour is exercised by its
+    // own test in the URL-construction suite below.
     process.env = {
       ...originalEnv,
       RESEND_API_KEY: 're_test_key',
       ADMIN_EMAIL: 'admin@example.com',
+      ADMIN_URL: 'https://concertcrawl.app',
     }
   })
 
@@ -407,7 +412,7 @@ describe('admin crawl URL construction', () => {
 
       const warning = warnSpy.mock.calls
         .map((args) => String(args[0]))
-        .find((line) => line.includes('email.invalid_admin_url'))
+        .find((line) => line.includes('email.misconfigured'))
       expect(warning).toBeDefined()
     } finally {
       warnSpy.mockRestore()
@@ -477,10 +482,13 @@ describe('SENTRY_ENVIRONMENT CR/LF stripping', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.resetModules()
+    // ADMIN_URL set here so the CR/LF assertion isn't drowned out by the
+    // unrelated "ADMIN_URL missing in non-prod" warning.
     process.env = {
       ...originalEnv,
       RESEND_API_KEY: 're_test_key',
       ADMIN_EMAIL: 'admin@example.com',
+      ADMIN_URL: 'https://concertcrawl.app',
     }
   })
 

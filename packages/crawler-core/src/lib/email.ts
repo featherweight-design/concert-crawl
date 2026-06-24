@@ -9,13 +9,28 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#39;')
 }
 
-// Log a missing-env-var warning so misconfigurations surface in Render
-// logs / Sentry instead of silently dropping admin alerts.
+// Log a missing-env-var warning for the email-skipping case (no key, no
+// recipient). When the misconfig is non-blocking (e.g. ADMIN_URL unset but
+// we can fall back to the prod default), use warnMisconfigured instead so
+// metrics on `email.skipped` aren't polluted with non-skip events.
 function warnMissingEnv(varName: string, context: string): void {
   console.warn(
     JSON.stringify({
       event: 'email.skipped',
       reason: `${varName} not set`,
+      context,
+    }),
+  )
+}
+
+// Misconfiguration warning that does NOT block the email send (the alert
+// still goes out, just with a fallback). Kept as a distinct event so a
+// dashboard counting 'email.skipped' won't false-alarm on these.
+function warnMisconfigured(varName: string, context: string): void {
+  console.warn(
+    JSON.stringify({
+      event: 'email.misconfigured',
+      reason: `${varName} missing or invalid`,
       context,
     }),
   )
@@ -87,7 +102,7 @@ function adminCrawlUrl(venueId?: string): string {
   const rawAdminUrl = process.env.ADMIN_URL
 
   if ((!rawAdminUrl || rawAdminUrl.trim() === '') && !isProduction()) {
-    warnMissingEnv('ADMIN_URL', 'adminCrawlUrl (non-prod env)')
+    warnMisconfigured('ADMIN_URL', 'adminCrawlUrl (non-prod env)')
   }
 
   const adminUrl = rawAdminUrl?.trim() || PROD_DEFAULT
@@ -96,9 +111,12 @@ function adminCrawlUrl(venueId?: string): string {
   try {
     url = new URL('/admin/crawl', adminUrl)
   } catch (err) {
+    // Distinct event from email.skipped — the email still sends, we just
+    // can't honour the configured ADMIN_URL.
     console.warn(
       JSON.stringify({
-        event: 'email.invalid_admin_url',
+        event: 'email.misconfigured',
+        reason: 'ADMIN_URL is not a parseable URL',
         adminUrl,
         error: String(err),
       }),
