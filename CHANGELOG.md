@@ -1,3 +1,14 @@
+## [1.76.2](https://github.com/HartiganHM/concert-crawl/compare/v1.76.1...v1.76.2) (2026-06-24)
+
+
+### Bug Fixes
+
+* **crawler:** distinct event name for non-blocking misconfig + silence test noise ([dd58e21](https://github.com/HartiganHM/concert-crawl/commit/dd58e21ab31c09d7e94be01e87a68f5db279e644))
+* **crawler:** normalize SENTRY_ENVIRONMENT + harden URL construction ([b6acab1](https://github.com/HartiganHM/concert-crawl/commit/b6acab1bbe81330e8b5fa26a6c6ef8f746742b29))
+* **crawler:** qualify alert emails by env + deep-link to alerted venue ([d0572c6](https://github.com/HartiganHM/concert-crawl/commit/d0572c66177cfde512b2efe2f773d4dd83fae434))
+* **crawler:** sanitize subject CR/LF at email-send choke point ([9c5ce55](https://github.com/HartiganHM/concert-crawl/commit/9c5ce55dc8e4de044f73eab64c6bb2bfdb0c7519))
+* **crawler:** strip CR/LF from env label + safe-fallback on URL errors ([4b3405a](https://github.com/HartiganHM/concert-crawl/commit/4b3405aee6fe1a6f96eed4b264b75a955489f3aa))
+
 ## [1.76.1](https://github.com/HartiganHM/concert-crawl/compare/v1.76.0...v1.76.1) (2026-06-24)
 
 
