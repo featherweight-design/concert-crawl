@@ -9,41 +9,44 @@ Source-of-truth enumeration of every visual + state claim for the consumer-side 
 ## Shared primitives (price-source-mocks.jsx)
 
 ### Tier color constants
-| Token | Value | Source line |
-|---|---|---|
-| `TIER.boxoffice` | `oklch(0.66 0.14 78)` (gold) | price-source-mocks.jsx:23 |
-| `TIER.resale` | `oklch(0.65 0.20 25)` (coral) | price-source-mocks.jsx:24 |
-| `TIER.community` | `oklch(0.62 0.12 240)` (azure) | price-source-mocks.jsx:25 |
+
+| Token                             | Value                                        | Source line                  |
+| --------------------------------- | -------------------------------------------- | ---------------------------- |
+| `TIER.boxoffice`                  | `oklch(0.66 0.14 78)` (gold)                 | price-source-mocks.jsx:23    |
+| `TIER.resale`                     | `oklch(0.65 0.20 25)` (coral)                | price-source-mocks.jsx:24    |
+| `TIER.community`                  | `oklch(0.62 0.12 240)` (azure)               | price-source-mocks.jsx:25    |
 | `mix(c, pct, base='transparent')` | `color-mix(in oklab, ${c} ${pct}%, ${base})` | price-source-mocks.jsx:27-28 |
 
 ### Mono Eyebrow primitive (price-source-mocks.jsx:31-39)
-| Property | Value |
-|----------|-------|
-| font-family | `'JetBrains Mono', monospace` |
-| font-size | `9.5px` |
-| letter-spacing | `0.12em` |
-| text-transform | `uppercase` |
-| font-weight | `700` |
-| color | `var(--fg-subtle)` (default; overridable) |
+
+| Property       | Value                                     |
+| -------------- | ----------------------------------------- |
+| font-family    | `'JetBrains Mono', monospace`             |
+| font-size      | `9.5px`                                   |
+| letter-spacing | `0.12em`                                  |
+| text-transform | `uppercase`                               |
+| font-weight    | `700`                                     |
+| color          | `var(--fg-subtle)` (default; overridable) |
 
 ### TierMark helper (price-source-mocks.jsx:42-63)
-| Property | Value |
-|----------|-------|
-| display | `inline-flex` |
-| align-items | `center` |
-| gap | `5px` |
-| padding | `2px 7px` |
-| border-radius | `4px` |
-| background | `mix(color, 14)` |
-| border | `1px solid mix(color, 50)` |
-| color | tier color (gold/coral/azure) |
-| font-family | `'JetBrains Mono', monospace` |
-| font-size | `9px` |
-| letter-spacing | `0.08em` |
-| text-transform | `uppercase` |
-| font-weight | `700` |
-| line-height | `1` |
-| white-space | `nowrap` |
+
+| Property       | Value                         |
+| -------------- | ----------------------------- |
+| display        | `inline-flex`                 |
+| align-items    | `center`                      |
+| gap            | `5px`                         |
+| padding        | `2px 7px`                     |
+| border-radius  | `4px`                         |
+| background     | `mix(color, 14)`              |
+| border         | `1px solid mix(color, 50)`    |
+| color          | tier color (gold/coral/azure) |
+| font-family    | `'JetBrains Mono', monospace` |
+| font-size      | `9px`                         |
+| letter-spacing | `0.08em`                      |
+| text-transform | `uppercase`                   |
+| font-weight    | `700`                         |
+| line-height    | `1`                           |
+| white-space    | `nowrap`                      |
 
 When `kind='boxoffice'` AND `glyph={true}`, render the gold star SVG (width=9, height=9, viewBox=`0 0 12 12`, fill=color, path d="M6 0.8l1.5 3.1 3.4.5-2.5 2.4.6 3.4L6 8.9 2.9 10.6l.6-3.4L1 4.4l3.4-.5z").
 
@@ -54,65 +57,73 @@ When `kind='boxoffice'` AND `glyph={true}`, render the gold star SVG (width=9, h
 The centerpiece of #641. Two-row ladder (resale + box-office ghost) with a `--signal` CTA.
 
 ### Outer container (lines 128-132)
-| Property | Value |
-|----------|-------|
-| border-radius | `12px` |
-| overflow | `hidden` |
-| background | `var(--surface-1)` |
-| border | `1px solid var(--border)` |
+
+| Property      | Value                     |
+| ------------- | ------------------------- |
+| border-radius | `12px`                    |
+| overflow      | `hidden`                  |
+| background    | `var(--surface-1)`        |
+| border        | `1px solid var(--border)` |
 
 ### Head block (line 134)
-| Property | Value |
-|----------|-------|
-| padding | `14px 14px 10px` |
+
+| Property | Value            |
+| -------- | ---------------- |
+| padding  | `14px 14px 10px` |
 
 ### Eyebrow text
+
 Default: `"Face value ≠ resale"`. Inherits Eyebrow primitive styling.
 
 ### Headline (lines 136-141)
-| Property | Value |
-|----------|-------|
-| margin-top | `7px` |
-| font-family | `Inter, system-ui` |
-| font-weight | `800` |
-| font-size | `16.5px` |
-| color | `var(--fg)` |
-| letter-spacing | `-0.02em` |
-| line-height | `1.2` |
-| text-wrap | `balance` |
+
+| Property       | Value              |
+| -------------- | ------------------ |
+| margin-top     | `7px`              |
+| font-family    | `Inter, system-ui` |
+| font-weight    | `800`              |
+| font-size      | `16.5px`           |
+| color          | `var(--fg)`        |
+| letter-spacing | `-0.02em`          |
+| line-height    | `1.2`              |
+| text-wrap      | `balance`          |
 
 Default copy: `"That's resale — not face value."`.
 `AfterNoPrice` override: `"All we can see is resale."`.
 
 ### Subline (lines 142-148)
-| Property | Value |
-|----------|-------|
-| margin-top | `5px` |
-| font-family | `Inter, system-ui` |
-| font-size | `12.5px` |
-| font-weight | `500` |
-| color | `var(--fg-muted)` |
-| letter-spacing | `-0.005em` |
-| line-height | `1.5` |
+
+| Property       | Value              |
+| -------------- | ------------------ |
+| margin-top     | `5px`              |
+| font-family    | `Inter, system-ui` |
+| font-size      | `12.5px`           |
+| font-weight    | `500`              |
+| color          | `var(--fg-muted)`  |
+| letter-spacing | `-0.005em`         |
+| line-height    | `1.5`              |
 
 Default copy: `"Only resale tickets left. Know the box-office price? Add it."`.
 
 ### Ladder wrapper (lines 152-156)
-| Property | Value |
-|----------|-------|
-| margin | `2px 0` |
-| border-top | `1px solid var(--border)` |
+
+| Property      | Value                     |
+| ------------- | ------------------------- |
+| margin        | `2px 0`                   |
+| border-top    | `1px solid var(--border)` |
 | border-bottom | `1px solid var(--border)` |
 
 Inter-row divider (line 162): 1px high, `background: var(--border)`, `margin: 0 14px`.
 
 ### Resale LadderRow props
+
 - `kind: 'resale'`
 - `sub: ${resaleVendor} · marked up over face`
 - `right: resaleRange` (default `"$110–180"`)
 - `ghost: false`
 
 ### Box-office (ghost) LadderRow props (lines 163-168)
+
 - `kind: 'boxoffice'`
 - `sub: 'the printed price · no fees'`
 - `right: 'not reported'`
@@ -137,6 +148,7 @@ Inter-row divider (line 162): 1px high, `background: var(--border)`, `margin: 0 
 | justify-content | `center` |
 
 **Inner glyph:**
+
 - `kind='boxoffice'`: star SVG (width=9, height=9, viewBox=`0 0 12 12`, fill=color, same path d as TierMark)
 - `kind='resale'/'community'`: solid dot — width=6px, height=6px, border-radius=50%, background=color
 
@@ -169,47 +181,50 @@ Inter-row divider (line 162): 1px high, `background: var(--border)`, `margin: 0 
 | letter-spacing | `0.07em` | `-0.015em` |
 | text-transform | `uppercase` | `none` |
 | color | `mix(color, 90, var(--fg-subtle))` | `var(--fg)` |
-| (common) | text-align: right, white-space: nowrap, flex-shrink: 0 |  |
+| (common) | text-align: right, white-space: nowrap, flex-shrink: 0 | |
 
 ### CTA wrapper (line 172): `padding: 12px 14px 14px`.
 
 ### CTA button (lines 173-181)
-| Property | Value |
-|----------|-------|
-| all | `unset` |
-| cursor | `pointer` |
-| box-sizing | `border-box` |
-| display | `flex` |
-| align-items | `center` |
-| justify-content | `center` |
-| gap | `8px` |
-| width | `100%` |
-| height | `46px` |
-| border-radius | `10px` |
-| background | `var(--signal)` |
-| color | `var(--fg-on-accent)` |
-| font-family | `Inter, system-ui` |
-| font-weight | `800` |
-| font-size | `14.5px` |
-| letter-spacing | `-0.01em` |
-| box-shadow | `0 12px 28px -14px var(--signal)` |
+
+| Property        | Value                             |
+| --------------- | --------------------------------- |
+| all             | `unset`                           |
+| cursor          | `pointer`                         |
+| box-sizing      | `border-box`                      |
+| display         | `flex`                            |
+| align-items     | `center`                          |
+| justify-content | `center`                          |
+| gap             | `8px`                             |
+| width           | `100%`                            |
+| height          | `46px`                            |
+| border-radius   | `10px`                            |
+| background      | `var(--signal)`                   |
+| color           | `var(--fg-on-accent)`             |
+| font-family     | `Inter, system-ui`                |
+| font-weight     | `800`                             |
+| font-size       | `14.5px`                          |
+| letter-spacing  | `-0.01em`                         |
+| box-shadow      | `0 12px 28px -14px var(--signal)` |
 
 Default label: `"Add the box-office price"` (the trailing `→` is the SVG arrow).
 `AfterNoPrice` override: `"Add a price you've seen"`.
 
 ### CTA arrow SVG (lines 183-186)
+
 width=13, height=13, viewBox=`0 0 16 16`, path d=`M3 8h9M9 4l4 4-4 4`, stroke=`currentColor`, stroke-width=2, stroke-linecap=round, stroke-linejoin=round.
 
 ### Caption row under CTA (lines 188-192)
-| Property | Value |
-|----------|-------|
-| margin-top | `9px` |
-| text-align | `center` |
-| font-family | `'JetBrains Mono', monospace` |
-| font-size | `9px` |
-| color | `var(--fg-subtle)` |
-| letter-spacing | `0.06em` |
-| text-transform | `uppercase` |
+
+| Property       | Value                         |
+| -------------- | ----------------------------- |
+| margin-top     | `9px`                         |
+| text-align     | `center`                      |
+| font-family    | `'JetBrains Mono', monospace` |
+| font-size      | `9px`                         |
+| color          | `var(--fg-subtle)`            |
+| letter-spacing | `0.06em`                      |
+| text-transform | `uppercase`                   |
 
 Caption copy: `"Goes live once one more fan confirms"`.
 
@@ -220,42 +235,47 @@ Caption copy: `"Goes live once one more fan confirms"`.
 Honest outbound "Get Tickets" button. 3 variants × optional outline.
 
 ### Outer wrapper (line 213)
-| Property | Value |
-|----------|-------|
-| display | `flex` |
+
+| Property       | Value    |
+| -------------- | -------- |
+| display        | `flex`   |
 | flex-direction | `column` |
-| gap | `9px` |
+| gap            | `9px`    |
 
 ### Button — common (lines 214-223)
-| Property | Value |
-|----------|-------|
-| display | `flex` |
-| align-items | `center` |
-| justify-content | `center` |
-| height | `48px` |
-| width | `100%` |
-| border-radius | `10px` |
-| box-sizing | `border-box` |
-| text-decoration | `none` |
-| white-space | `nowrap` |
-| font-family | `Inter, system-ui` |
-| font-weight | `800` |
-| font-size | `15px` |
-| letter-spacing | `-0.01em` |
+
+| Property        | Value              |
+| --------------- | ------------------ |
+| display         | `flex`             |
+| align-items     | `center`           |
+| justify-content | `center`           |
+| height          | `48px`             |
+| width           | `100%`             |
+| border-radius   | `10px`             |
+| box-sizing      | `border-box`       |
+| text-decoration | `none`             |
+| white-space     | `nowrap`           |
+| font-family     | `Inter, system-ui` |
+| font-weight     | `800`              |
+| font-size       | `15px`             |
+| letter-spacing  | `-0.01em`          |
 
 ### Variant: `kind='boxoffice'` (outline=false)
+
 - Button: `background: var(--signal)`, `border: none`, `color: var(--fg-on-accent)`
 - Label: `"Get Tickets ↗"`
 - Caption dot: 6×6 circle, background=`TIER.boxoffice` (gold)
 - Caption text: `${vendor} · face value, no fees`
 
 ### Variant: `kind='primary'` (outline=false)
+
 - Button: same as boxoffice (signal background)
 - Label: `"Get Tickets ↗"`
 - Caption dot: background=`var(--fg-subtle)`
 - Caption text: `Official vendor · ${vendor} · face + fees`
 
 ### Variant: `kind='resale'` (outline=true everywhere it's used in compositions)
+
 - Button: `background: transparent`, `border: 1px solid var(--border-strong)`, `color: var(--fg)`
 - Label: `"See resale tickets ↗"`
 - Caption dot: background=`TIER.resale` (coral)
@@ -263,20 +283,22 @@ Honest outbound "Get Tickets" button. 3 variants × optional outline.
 - Caption color: `mix(TIER.resale, 92, var(--fg-muted))`
 
 ### Caption row (lines 224-233)
-| Property | Value |
-|----------|-------|
-| display | `flex` |
-| align-items | `center` |
-| gap | `7px` |
+
+| Property        | Value    |
+| --------------- | -------- |
+| display         | `flex`   |
+| align-items     | `center` |
+| gap             | `7px`    |
 | justify-content | `center` |
 
 ### Caption text (common across variants)
-| Property | Value |
-|----------|-------|
-| font-family | `'JetBrains Mono', monospace` |
-| font-size | `10px` |
-| color | `var(--fg-muted)` (resale variant overrides) |
-| letter-spacing | `0.03em` |
+
+| Property       | Value                                        |
+| -------------- | -------------------------------------------- |
+| font-family    | `'JetBrains Mono', monospace`                |
+| font-size      | `10px`                                       |
+| color          | `var(--fg-muted)` (resale variant overrides) |
+| letter-spacing | `0.03em`                                     |
 
 ---
 
@@ -285,19 +307,21 @@ Honest outbound "Get Tickets" button. 3 variants × optional outline.
 The Q1 supporting change. `FormAfter` is the canonical "AFTER" state; `FormBefore` is the baseline for reference.
 
 ### FormCard shell (lines 532-541)
-| Property | Value |
-|----------|-------|
-| width | `100%` |
-| box-sizing | `border-box` |
-| background | `var(--bg-elevated)` |
-| border | `1px solid var(--border-strong)` |
-| border-radius | `14px` |
-| padding | `18px` |
-| display | `flex` |
-| flex-direction | `column` |
-| gap | `16px` |
+
+| Property       | Value                            |
+| -------------- | -------------------------------- |
+| width          | `100%`                           |
+| box-sizing     | `border-box`                     |
+| background     | `var(--bg-elevated)`             |
+| border         | `1px solid var(--border-strong)` |
+| border-radius  | `14px`                           |
+| padding        | `18px`                           |
+| display        | `flex`                           |
+| flex-direction | `column`                         |
+| gap            | `16px`                           |
 
 ### Source-category block (line 578) — LEADS THE FORM
+
 - FormLabel `req`: `"Where's this price from?"`
 - Chip row: gap 8px, flex-wrap
 - Chips:
@@ -308,44 +332,56 @@ The Q1 supporting change. `FormAfter` is the canonical "AFTER" state; `FormBefor
   - Copy: `"Box office is face value — the most useful number for other fans."`
 
 ### Number row (line 592): `display: flex; gap: 12px`.
+
 - NumberField "Face value" (label changes per source): placeholder `"32"`, hint `"the printed price"`
 - NumberField "Ceiling": placeholder `"optional"`
 
 ### Tier picker (line 596)
+
 - FormLabel `"Tier"` (no required marker)
 - Chip row: gap 8px, flex-wrap
 - Chips: `[GA, Reserved, VIP, Pit, Lawn]`, default active = `GA`
 
 ### Vendor block (lines 603-606) — DEMOTED BUT REQUIRED
+
 - FormLabel `req`: `"Vendor"`
 - Chip row: gap 8px, flex-wrap
-- Chips: `[Venue, AXS, Ticketmaster]`, default active = `Venue` when source=boxoffice
+- Chips: `[Venue, AXS, Ticketmaster, SeatGeek, DICE, Eventbrite]`, default active = `Venue` when source=boxoffice
+- **Locked 2026-06-24:** the chip enumeration ships with all six vendors above
+  (matches `VENDOR_OPTIONS` in `submit-price/SubmitPriceModal.tsx`). The earlier
+  three-chip enumeration (`Venue, AXS, Ticketmaster`) in this row was a design
+  idealization for the handoff sketch — the shipped consumer surface keeps
+  parity with the full vendor enum so no in-flight resale source goes
+  unrepresented at submit time. Supersedes the original three-chip line.
 
 ### `howFound` field
+
 **REMOVED.** Does not render. Locked per spec + memory.
 
 ### SourceChip primitive (lines 519-527)
-| Property | Value |
-|----------|-------|
-| padding | `9px 13px` |
-| border-radius | `999px` |
-| box-sizing | `border-box` |
-| border (active) | `1.5px solid ${color}` |
-| border (inactive) | `1px solid var(--border-strong)` |
-| background (active) | `mix(color, 10)` |
-| background (inactive) | `var(--surface-1)` |
-| color (active) | `color` (default `var(--signal)`) |
-| color (inactive) | `var(--fg)` |
-| font-family | `Inter, system-ui` |
-| font-size | `13px` |
-| font-weight | `600` |
-| letter-spacing | `-0.005em` |
-| white-space | `nowrap` |
-| display | `inline-flex` |
-| align-items | `center` |
-| gap | `7px` |
+
+| Property              | Value                             |
+| --------------------- | --------------------------------- |
+| padding               | `9px 13px`                        |
+| border-radius         | `999px`                           |
+| box-sizing            | `border-box`                      |
+| border (active)       | `1.5px solid ${color}`            |
+| border (inactive)     | `1px solid var(--border-strong)`  |
+| background (active)   | `mix(color, 10)`                  |
+| background (inactive) | `var(--surface-1)`                |
+| color (active)        | `color` (default `var(--signal)`) |
+| color (inactive)      | `var(--fg)`                       |
+| font-family           | `Inter, system-ui`                |
+| font-size             | `13px`                            |
+| font-weight           | `600`                             |
+| letter-spacing        | `-0.005em`                        |
+| white-space           | `nowrap`                          |
+| display               | `inline-flex`                     |
+| align-items           | `center`                          |
+| gap                   | `7px`                             |
 
 ### NumberField primitive (lines 500-513)
+
 **Wrapper:** flex column, gap 6px, flex 1.
 
 **Input shell:** `display: flex`, `align-items: center`, `background: var(--surface-1)`, `border: 1px solid var(--border-strong)`, `border-radius: 10px`, `padding: 0 0 0 12px`.
@@ -357,16 +393,17 @@ The Q1 supporting change. `FormAfter` is the canonical "AFTER" state; `FormBefor
 **Hint** (when set): Inter 12px, color `var(--fg-muted)`.
 
 ### FormLabel primitive (lines 491-495)
-| Property | Value |
-|----------|-------|
-| font-family | `Inter, system-ui` |
-| font-size | `13px` |
-| font-weight | `700` |
-| color | `var(--fg)` |
-| letter-spacing | `-0.005em` |
-| display | `flex` |
-| align-items | `center` |
-| gap | `6px` |
+
+| Property       | Value              |
+| -------------- | ------------------ |
+| font-family    | `Inter, system-ui` |
+| font-size      | `13px`             |
+| font-weight    | `700`              |
+| color          | `var(--fg)`        |
+| letter-spacing | `-0.005em`         |
+| display        | `flex`             |
+| align-items    | `center`           |
+| gap            | `6px`              |
 
 Required asterisk: `color: var(--accent)`, rendered only when `req` prop true.
 
@@ -377,50 +414,54 @@ Required asterisk: `color: var(--accent)`, rendered only when `req` prop true.
 The price chip surface for browse cards. Replaces today's `PriceChip` with same-source-selection-logic-as-detail-headline + gold star when boxoffice.
 
 ### Default props
-| Prop | Default |
-|------|---------|
-| price | `25` |
-| kind | `'boxoffice'` |
-| from | `true` |
+
+| Prop  | Default       |
+| ----- | ------------- |
+| price | `25`          |
+| kind  | `'boxoffice'` |
+| from  | `true`        |
 
 ### Resolved color (line 202)
 
-Browse chips reserve tier chrome (dot, tint, accent border) for *marked* tiers only — `boxoffice` (gold) and `resale` (coral, see Appendix A.3). `community` and the default fall back to neutral text; the chrome budget is spent where the source distinction changes how the fan reads the number. Community keeps full azure on the **detail** page (PendingTrustPill) where there's no competing chrome — this is intentional asymmetry, not a bug.
+Browse chips reserve tier chrome (dot, tint, accent border) for _marked_ tiers only — `boxoffice` (gold) and `resale` (coral, see Appendix A.3). `community` and the default fall back to neutral text; the chrome budget is spent where the source distinction changes how the fan reads the number. Community keeps full azure on the **detail** page (PendingTrustPill) where there's no competing chrome — this is intentional asymmetry, not a bug.
 
-| kind | Browse chip (this component) | Detail surface |
-|------|------------------------------|----------------|
-| `'boxoffice'` | `GOLD_T` (`oklch(0.66 0.14 78)`) — dot + label | gold pill (PendingTrustPill / FaceValueCard) |
-| `'resale'` | coral (`oklch(0.65 0.20 25)`) — see Appendix A.3 for full chrome | coral caption + chrome (PriceBlockB / FaceValueCard) |
-| `'community'` | neutral — label `var(--fg)`, no dot, no tinted bg/border (shared with default) | `AZ_T` (`oklch(0.62 0.12 240)`) — PendingTrustPill on detail |
-| (default — incl. `'standard'`, `null`) | label `var(--fg-muted)`, no dot, no tinted bg/border | — |
+| kind                                   | Browse chip (this component)                                                   | Detail surface                                               |
+| -------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------ |
+| `'boxoffice'`                          | `GOLD_T` (`oklch(0.66 0.14 78)`) — dot + label                                 | gold pill (PendingTrustPill / FaceValueCard)                 |
+| `'resale'`                             | coral (`oklch(0.65 0.20 25)`) — see Appendix A.3 for full chrome               | coral caption + chrome (PriceBlockB / FaceValueCard)         |
+| `'community'`                          | neutral — label `var(--fg)`, no dot, no tinted bg/border (shared with default) | `AZ_T` (`oklch(0.62 0.12 240)`) — PendingTrustPill on detail |
+| (default — incl. `'standard'`, `null`) | label `var(--fg-muted)`, no dot, no tinted bg/border                           | —                                                            |
 
 (See PR4-ADDENDUM.md §"Q2" for the markedness rationale and the rejected "tint everything" alternative.)
 
 ### Chip container — common (lines 204-208)
-| Property | Value |
-|----------|-------|
-| display | `inline-flex` |
-| align-items | `center` |
-| gap | `6px` |
-| padding | `5px 10px` |
-| border-radius | `8px` |
-| background | `var(--surface-1)` |
-| border | `1px solid var(--border)` |
+
+| Property      | Value                     |
+| ------------- | ------------------------- |
+| display       | `inline-flex`             |
+| align-items   | `center`                  |
+| gap           | `6px`                     |
+| padding       | `5px 10px`                |
+| border-radius | `8px`                     |
+| background    | `var(--surface-1)`        |
+| border        | `1px solid var(--border)` |
 
 ### Variant: kind='boxoffice'
+
 StarGlyph rendered (line 209): `<window.PendingStarGlyph size={10} color={GOLD_T} />`.
 
 ### Price label — common (lines 210-213)
-| Property | Value |
-|----------|-------|
-| font-family | `Inter, system-ui` |
-| font-weight | `800` |
-| font-size | `14px` |
-| letter-spacing | `-0.01em` |
-| white-space | `nowrap` |
-| color (boxoffice) | `GOLD_T` |
-| color (community) | `var(--fg)` |
-| color (resale) | coral `oklch(0.65 0.20 25)` — per Appendix A.3 |
+
+| Property                                | Value                                                      |
+| --------------------------------------- | ---------------------------------------------------------- |
+| font-family                             | `Inter, system-ui`                                         |
+| font-weight                             | `800`                                                      |
+| font-size                               | `14px`                                                     |
+| letter-spacing                          | `-0.01em`                                                  |
+| white-space                             | `nowrap`                                                   |
+| color (boxoffice)                       | `GOLD_T`                                                   |
+| color (community)                       | `var(--fg)`                                                |
+| color (resale)                          | coral `oklch(0.65 0.20 25)` — per Appendix A.3             |
 | color (default — `null` / `'standard'`) | `var(--fg-muted)` — matches the Resolved color table above |
 
 Format: `from=true` → `from $${price}`; `from=false` → `$${price}`.
@@ -432,62 +473,67 @@ Format: `from=true` → `from $${price}`; `from=false` → `$${price}`.
 Net-new — submission success with sequential "add another tier" fold-in.
 
 ### Outer container (lines 222-226)
-| Property | Value |
-|----------|-------|
-| width | `100%` |
-| box-sizing | `border-box` |
-| background | `var(--bg-elevated)` |
-| border | `1px solid var(--border-strong)` |
-| border-radius | `14px` |
-| padding | `18px` |
-| display | `flex` |
-| flex-direction | `column` |
-| gap | `14px` |
+
+| Property       | Value                            |
+| -------------- | -------------------------------- |
+| width          | `100%`                           |
+| box-sizing     | `border-box`                     |
+| background     | `var(--bg-elevated)`             |
+| border         | `1px solid var(--border-strong)` |
+| border-radius  | `14px`                           |
+| padding        | `18px`                           |
+| display        | `flex`                           |
+| flex-direction | `column`                         |
+| gap            | `14px`                           |
 
 ### Success eyebrow panel (lines 227-232)
-| Property | Value |
-|----------|-------|
-| padding | `16px 14px` |
-| border-radius | `12px` |
-| background | `color-mix(in oklab, var(--success) 6%, var(--surface-1))` |
-| border | `1px solid var(--success)` |
-| display | `flex` |
-| flex-direction | `column` |
-| gap | `8px` |
+
+| Property       | Value                                                      |
+| -------------- | ---------------------------------------------------------- |
+| padding        | `16px 14px`                                                |
+| border-radius  | `12px`                                                     |
+| background     | `color-mix(in oklab, var(--success) 6%, var(--surface-1))` |
+| border         | `1px solid var(--success)`                                 |
+| display        | `flex`                                                     |
+| flex-direction | `column`                                                   |
+| gap            | `8px`                                                      |
 
 ### Success header row (line 233): flex, align-items center, gap 10px.
 
 ### Check glyph circle (lines 234-237)
-| Property | Value |
-|----------|-------|
-| width | `22px` |
-| height | `22px` |
-| border-radius | `11px` |
-| background | `var(--success)` |
-| color | `var(--fg-on-accent)` |
-| display | `inline-flex` |
-| align-items | `center` |
-| justify-content | `center` |
+
+| Property        | Value                 |
+| --------------- | --------------------- |
+| width           | `22px`                |
+| height          | `22px`                |
+| border-radius   | `11px`                |
+| background      | `var(--success)`      |
+| color           | `var(--fg-on-accent)` |
+| display         | `inline-flex`         |
+| align-items     | `center`              |
+| justify-content | `center`              |
 
 Inner CheckGlyph: `<window.PendingCheckGlyph size={12} color="var(--fg-on-accent)" />`.
 
 ### Success headline (lines 240-242)
-| Property | Value |
-|----------|-------|
+
+| Property    | Value              |
+| ----------- | ------------------ |
 | font-family | `Inter, system-ui` |
-| font-weight | `800` |
-| font-size | `15px` |
-| color | `var(--fg)` |
+| font-weight | `800`              |
+| font-size   | `15px`             |
+| color       | `var(--fg)`        |
 
 Copy: `"GA price is in. Thanks."` (tier label is interpolated).
 
 ### Success body line (lines 244-246)
-| Property | Value |
-|----------|-------|
+
+| Property    | Value              |
+| ----------- | ------------------ |
 | font-family | `Inter, system-ui` |
-| font-size | `13px` |
-| line-height | `1.5` |
-| color | `var(--fg-muted)` |
+| font-size   | `13px`             |
+| line-height | `1.5`              |
+| color       | `var(--fg-muted)`  |
 
 Copy: `$25 box office · sits pending · 1/2 until one more fan confirms.`.
 The `pending · 1/2` segment is wrapped in `<strong>` with color `AZ_T` (azure).
@@ -495,60 +541,64 @@ The `pending · 1/2` segment is wrapped in `<strong>` with color `AZ_T` (azure).
 ### "Add another tier" section container (line 249): flex column, gap 8px.
 
 ### Section eyebrow (line 250)
+
 Eyebrow primitive copy: `"This show has more than one tier?"`.
 
 ### Tier-pill row (line 251): flex, gap 8px, flex-wrap.
 
 ### Tier "Add" pill button (lines 252-263)
+
 Rendered per non-submitted tier from the event's tier enum.
 
-| Property | Value |
-|----------|-------|
-| all | `unset` |
-| cursor | `pointer` |
-| box-sizing | `border-box` |
-| display | `inline-flex` |
-| align-items | `center` |
-| gap | `7px` |
-| padding | `10px 14px` |
-| border-radius | `999px` |
-| border | `1px dashed var(--border-strong)` |
-| background | `var(--surface-1)` |
-| color | `var(--fg)` |
-| font-family | `Inter, system-ui` |
-| font-size | `13px` |
-| font-weight | `600` |
+| Property      | Value                             |
+| ------------- | --------------------------------- |
+| all           | `unset`                           |
+| cursor        | `pointer`                         |
+| box-sizing    | `border-box`                      |
+| display       | `inline-flex`                     |
+| align-items   | `center`                          |
+| gap           | `7px`                             |
+| padding       | `10px 14px`                       |
+| border-radius | `999px`                           |
+| border        | `1px dashed var(--border-strong)` |
+| background    | `var(--surface-1)`                |
+| color         | `var(--fg)`                       |
+| font-family   | `Inter, system-ui`                |
+| font-size     | `13px`                            |
+| font-weight   | `600`                             |
 
 Label format: `+ Add ${tier.toLowerCase()}` (e.g. `+ Add reserved`, `+ Add vip`).
 
 `+` glyph inside pill: font-weight 800, color `var(--signal)`.
 
 ### Helper line (lines 265-267)
-| Property | Value |
-|----------|-------|
+
+| Property    | Value              |
+| ----------- | ------------------ |
 | font-family | `Inter, system-ui` |
-| font-size | `12px` |
-| color | `var(--fg-muted)` |
-| line-height | `1.5` |
+| font-size   | `12px`             |
+| color       | `var(--fg-muted)`  |
+| line-height | `1.5`              |
 
 Copy: `"Each tier is its own quick submission — only add the ones you actually saw."`.
 
 ### "Done" button (lines 270-275)
-| Property | Value |
-|----------|-------|
-| all | `unset` |
-| cursor | `pointer` |
-| text-align | `center` |
-| height | `44px` |
-| border-radius | `10px` |
-| border | `1px solid var(--border-strong)` |
-| color | `var(--fg)` |
-| font-family | `Inter, system-ui` |
-| font-weight | `700` |
-| font-size | `14px` |
-| display | `flex` |
-| align-items | `center` |
-| justify-content | `center` |
+
+| Property        | Value                            |
+| --------------- | -------------------------------- |
+| all             | `unset`                          |
+| cursor          | `pointer`                        |
+| text-align      | `center`                         |
+| height          | `44px`                           |
+| border-radius   | `10px`                           |
+| border          | `1px solid var(--border-strong)` |
+| color           | `var(--fg)`                      |
+| font-family     | `Inter, system-ui`               |
+| font-weight     | `700`                            |
+| font-size       | `14px`                           |
+| display         | `flex`                           |
+| align-items     | `center`                         |
+| justify-content | `center`                         |
 
 Label: `"Done"`.
 
@@ -559,23 +609,25 @@ Label: `"Done"`.
 Net-new composition for box-office × resale mixed sources across multiple tiers. Entry tier headlines; cross-source resale folds into "Or pay for convenience"; remaining tiers render via shipped `TierAlternateRow`.
 
 ### Card container (lines 129-132)
-| Property | Value |
-|----------|-------|
-| border-radius | `12px` |
-| background | `var(--surface-1)` |
-| border | `1px solid var(--border)` |
-| padding | `14px 14px 12px` |
+
+| Property      | Value                     |
+| ------------- | ------------------------- |
+| border-radius | `12px`                    |
+| background    | `var(--surface-1)`        |
+| border        | `1px solid var(--border)` |
+| padding       | `14px 14px 12px`          |
 
 ### Eyebrow: `"Tickets"`.
 
 ### Headline row (line 136)
-| Property | Value |
-|----------|-------|
-| margin-top | `6px` |
-| display | `flex` |
+
+| Property    | Value      |
+| ----------- | ---------- |
+| margin-top  | `6px`      |
+| display     | `flex`     |
 | align-items | `baseline` |
-| gap | `8px` |
-| flex-wrap | `wrap` |
+| gap         | `8px`      |
+| flex-wrap   | `wrap`     |
 
 ### "from" word (line 137): Inter 13px, font-weight 600, color `var(--fg-muted)`.
 
@@ -586,27 +638,31 @@ Net-new composition for box-office × resale mixed sources across multiple tiers
 ### PendingTrustPill (line 140): shipped `window.PendingTrustPill`, `kind='boxoffice'`.
 
 ### Headline meta line (lines 142-144): margin-top 6px, mono 10px, color `var(--fg-muted)`, letter-spacing 0.04em.
+
 Copy: `seen on Venue · face value · no fees`.
 
 ### "Or pay for convenience" section (lines 147-151)
+
 - Wrapper margin-top 12px
 - Eyebrow: mono 9px, color `var(--fg-subtle)`, letter-spacing 0.06em, uppercase, margin-bottom 2px
 - Copy: `Or pay for convenience`
 - Then `<AltSourceRow source="Ticketmaster" kind="resale" price={35} />`
 
 ### "Other tiers" section (lines 153-156)
+
 - Wrapper margin-top 12px
 - Same eyebrow style; copy: `Other tiers`
 - Then `<TierAlternateRow tier="VIP" floor={80} vendor="Venue" kind="boxoffice" confirms={2} />` (shipped)
 
 ### AltSourceRow (lines 100-115) — net-new sub-component
-| Property | Value |
-|----------|-------|
-| display | `flex` |
-| align-items | `baseline` |
-| gap | `8px` |
-| padding | `8px 0` |
-| border-top | `1px dashed var(--border)` |
+
+| Property    | Value                      |
+| ----------- | -------------------------- |
+| display     | `flex`                     |
+| align-items | `baseline`                 |
+| gap         | `8px`                      |
+| padding     | `8px 0`                    |
+| border-top  | `1px dashed var(--border)` |
 
 Kind dot: 5×5, border-radius 2.5px, background matches kind (resale=coral, boxoffice=gold, community=azure, default=`var(--fg-muted)`).
 Source label: Inter 12px, font-weight 500, color `var(--fg-muted)`.
@@ -636,70 +692,70 @@ These are shipped from prior PRs (`multi-tier.jsx`, `pending-card.jsx`). PR 4 re
 
 ### Event detail page — price-region states
 
-| # | State | Trigger (API field/value) | Components | Key props | Source |
-|---|---|---|---|---|---|
-| 1 | Live single-tier · box-office headline | `event.status != 'soldout'` AND `priceByTier.length === 1` AND `priceByTier[0].headline.sourceCategory === 'boxoffice'` | `MultiTierLiveCard` (shipped) + `ProvenanceCTA kind='boxoffice'` | `cheapestTier, cheapestFloor, cheapestVendor='Venue', cheapestKind='boxoffice', observedAt, reports, alternates` | README §"Multi-tier pricing"; `MTDetailScreen` |
-| 2 | Live single-tier · community headline | `priceByTier.length === 1` AND `headline.sourceCategory === 'standard'` | `MultiTierLiveCard` | `cheapestKind='community'`, vendor name | README §"kind=community vocabulary" |
-| 3 | Live single-tier · resale headline (no box-office reported yet) | `priceByTier.length === 1` AND `headline.sourceCategory === 'resale'` AND no boxoffice alternate | `MultiTierLiveCard` (coral) + show-level `FaceValueCard` (invites box-office number) | `cheapestKind='resale'`, FaceValueCard with headline's vendor/range | README §"How #641 and #644 interact" — "no box office yet" |
-| 4 | Live multi-tier · box-office cheapest tier headline | `priceByTier.length > 1`, cheapest tier `sourceCategory='boxoffice'` | `MultiTierLiveCard` | `cheapestKind='boxoffice'`, `alternates=[{tier, floor, vendor, kind, confirms}, …]` | `MTDetailScreen`; README §"Display = MultiTierLiveCard / MixedTierCard" |
-| 5 | Live multi-tier · mixed sources, cross-source for entry tier | `priceByTier.length > 1` AND entry tier has BOTH a `headline` (boxoffice) AND an `alternates[]` entry whose `sourceCategory='resale'` for the same tier | `MultiSourceMultiTierCard` (net-new) wrapping shipped `TierAlternateRow` + new `AltSourceRow` ("Or pay for convenience") | headline tier props, `AltSourceRow source/kind/price` for cross-source, other-tier rows | README §round-3 #4; `MultiSourceMultiTierCard` |
-| 6 | Live tier headline + other tier(s) pending | `priceByTier[a].headline !== null` AND `priceByTier[b].headline === null` AND `priceByTier[b].pending.length > 0` | `MixedTierCard` (shipped) | shipped `pending · N/2` tell per alternate row | README §"MixedTierCard demonstrates per-tier corroboration" |
-| 7 | All tiers pending — stacked focused cards | every `priceByTier[i].headline === null` AND `priceByTier[i].pending.length > 0` | `TwoPendingStack` (shipped) — each as `PendingCardB` | `floor, ceiling, tier, vendor, kind, submitter, submittedAt, confirms, needed=2, view='other'/'submitter', note` | `multi-tier.jsx` `TwoPendingStack`; README §round-3 #5 |
-| 8 | Pending — viewer IS the submitter | `pending[i].isSubmitter === true` | `PendingCardB view='submitter'` (shipped) | "YOUR SUBMISSION" footer, suppress confirm affordance | shipped `PendingCardB` |
-| 9 | Pending — other viewer (can confirm) | `pending[i].isSubmitter === false` | `PendingCardB view='other'` (shipped) | "Saw a different number?" + "Confirm price" footer | README §round-3 #5 |
-| 10 | Sold-out with resale available | `event.status === 'soldout'` AND `ticketLinks` has `kind='resale'` entry | `SoldOutPriceCard` (shipped) + new `FaceValueCard` + new `ProvenanceCTA kind='resale' outline` + `ReportFooter` (shipped) | FaceValueCard `resaleRange, resaleVendor`; ProvenanceCTA `kind='resale', vendor, outline=true` | `AfterSoldOut`; README §"The fix — sold-out" |
-| 11 | Sold-out with no resale or primary link | `event.status='soldout'` AND `ticketLinks` empty | `SoldOutPriceCard` `variant='no-listing'` (degraded — see Appendix A.2) + `ContributeFaceValueCard` (Appendix A.1, replaces `FaceValueCard`) | `SoldOutPriceCard variant='no-listing'`; `ContributeFaceValueCard` (single ghost box-office row + signal CTA, NO resale row, NO outbound ProvenanceCTA) | Locked: Appendix A.1 + A.2 |
-| 12 | No-price (community handoff) — resale link exists | `priceByTier === null \|\| priceByTier.length === 0` AND `event.status !== 'soldout'` AND `ticketLinks` has resale | `NoPriceCard` (shipped) + new `FaceValueCard` (alt headline + CTA) + `ProvenanceCTA kind='resale' outline` + `ReportFooter` | FaceValueCard `headline='All we can see is resale.'`, `ctaLabel='Add a price you've seen'` | `AfterNoPrice`; README §"The fix — no price" |
-| 13 | No-price (community handoff) — no ticket links at all | priceByTier empty AND `ticketLinks` empty | `NoPriceCard` only + community-handoff CTA wired to submit-price modal | NO `FaceValueCard` / `ContributeFaceValueCard` — pedagogy collapses without a resale anchor | Locked: Appendix A.5 (Q2-eng) |
-| 14 | Outbound CTA · boxoffice (rare, venue sells direct) | `ticketLinks[0].kind='boxoffice'` | `ProvenanceCTA kind='boxoffice'` filled | `vendor='Venue'` per round-3 #2 | `CTAVariants` |
-| 15 | Outbound CTA · primary (official vendor) | `ticketLinks[0].kind='primary'` | `ProvenanceCTA kind='primary'` filled | `vendor=<AXS\|Ticketmaster\|SeatGeek\|…>` | `CTAVariants`; SeatGeek stays per round-3 #1 |
-| 16 | Outbound CTA · resale only | only resale link in `ticketLinks` | `ProvenanceCTA kind='resale' outline` | `vendor, outline=true` (NOT recommended path) | `ProvenanceCTA`; README §"`<ProvenanceCTA/>`" |
-| 17 | **Per-tier counter pending — dispute affordance HIDDEN** | `priceByTier[t].counterSubmission !== null` (any value, regardless of `lastAdminActionKind`) | shipped tier card with the "Saw a different number? Let us know →" entry REMOVED for that tier; counter card surfaces | conditional render guard; `memory:project_pr4_dispute_affordance_hiding` | READINESS §"Eng-side clarifications #1" |
-| 18 | **Per-tier counter pending — admin deferred engagement pill** | `priceByTier[t].counterSubmission.lastAdminActionKind === 'defer'` (and `lastAdminActionAt !== null`) | counter card with quiet "Admin requested more info" pill | `lastAdminActionAt`, `lastAdminActionKind` | from `#697`; passive surface added here |
-| 19 | Multi-tier reports caption (consensus tell) | `priceByTier[t].reports > 1` | `MultiTierLiveCard` with `reports` prop → "· N reports" appended to meta line | `reports: number` | README §"Ask #3 — within-tier pick cue" |
+| #   | State                                                           | Trigger (API field/value)                                                                                                                               | Components                                                                                                                                   | Key props                                                                                                                                               | Source                                                                  |
+| --- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| 1   | Live single-tier · box-office headline                          | `event.status != 'soldout'` AND `priceByTier.length === 1` AND `priceByTier[0].headline.sourceCategory === 'boxoffice'`                                 | `MultiTierLiveCard` (shipped) + `ProvenanceCTA kind='boxoffice'`                                                                             | `cheapestTier, cheapestFloor, cheapestVendor='Venue', cheapestKind='boxoffice', observedAt, reports, alternates`                                        | README §"Multi-tier pricing"; `MTDetailScreen`                          |
+| 2   | Live single-tier · community headline                           | `priceByTier.length === 1` AND `headline.sourceCategory === 'standard'`                                                                                 | `MultiTierLiveCard`                                                                                                                          | `cheapestKind='community'`, vendor name                                                                                                                 | README §"kind=community vocabulary"                                     |
+| 3   | Live single-tier · resale headline (no box-office reported yet) | `priceByTier.length === 1` AND `headline.sourceCategory === 'resale'` AND no boxoffice alternate                                                        | `MultiTierLiveCard` (coral) + show-level `FaceValueCard` (invites box-office number)                                                         | `cheapestKind='resale'`, FaceValueCard with headline's vendor/range                                                                                     | README §"How #641 and #644 interact" — "no box office yet"              |
+| 4   | Live multi-tier · box-office cheapest tier headline             | `priceByTier.length > 1`, cheapest tier `sourceCategory='boxoffice'`                                                                                    | `MultiTierLiveCard`                                                                                                                          | `cheapestKind='boxoffice'`, `alternates=[{tier, floor, vendor, kind, confirms}, …]`                                                                     | `MTDetailScreen`; README §"Display = MultiTierLiveCard / MixedTierCard" |
+| 5   | Live multi-tier · mixed sources, cross-source for entry tier    | `priceByTier.length > 1` AND entry tier has BOTH a `headline` (boxoffice) AND an `alternates[]` entry whose `sourceCategory='resale'` for the same tier | `MultiSourceMultiTierCard` (net-new) wrapping shipped `TierAlternateRow` + new `AltSourceRow` ("Or pay for convenience")                     | headline tier props, `AltSourceRow source/kind/price` for cross-source, other-tier rows                                                                 | README §round-3 #4; `MultiSourceMultiTierCard`                          |
+| 6   | Live tier headline + other tier(s) pending                      | `priceByTier[a].headline !== null` AND `priceByTier[b].headline === null` AND `priceByTier[b].pending.length > 0`                                       | `MixedTierCard` (shipped)                                                                                                                    | shipped `pending · N/2` tell per alternate row                                                                                                          | README §"MixedTierCard demonstrates per-tier corroboration"             |
+| 7   | All tiers pending — stacked focused cards                       | every `priceByTier[i].headline === null` AND `priceByTier[i].pending.length > 0`                                                                        | `TwoPendingStack` (shipped) — each as `PendingCardB`                                                                                         | `floor, ceiling, tier, vendor, kind, submitter, submittedAt, confirms, needed=2, view='other'/'submitter', note`                                        | `multi-tier.jsx` `TwoPendingStack`; README §round-3 #5                  |
+| 8   | Pending — viewer IS the submitter                               | `pending[i].isSubmitter === true`                                                                                                                       | `PendingCardB view='submitter'` (shipped)                                                                                                    | "YOUR SUBMISSION" footer, suppress confirm affordance                                                                                                   | shipped `PendingCardB`                                                  |
+| 9   | Pending — other viewer (can confirm)                            | `pending[i].isSubmitter === false`                                                                                                                      | `PendingCardB view='other'` (shipped)                                                                                                        | "Saw a different number?" + "Confirm price" footer                                                                                                      | README §round-3 #5                                                      |
+| 10  | Sold-out with resale available                                  | `event.status === 'soldout'` AND `ticketLinks` has `kind='resale'` entry                                                                                | `SoldOutPriceCard` (shipped) + new `FaceValueCard` + new `ProvenanceCTA kind='resale' outline` + `ReportFooter` (shipped)                    | FaceValueCard `resaleRange, resaleVendor`; ProvenanceCTA `kind='resale', vendor, outline=true`                                                          | `AfterSoldOut`; README §"The fix — sold-out"                            |
+| 11  | Sold-out with no resale or primary link                         | `event.status='soldout'` AND `ticketLinks` empty                                                                                                        | `SoldOutPriceCard` `variant='no-listing'` (degraded — see Appendix A.2) + `ContributeFaceValueCard` (Appendix A.1, replaces `FaceValueCard`) | `SoldOutPriceCard variant='no-listing'`; `ContributeFaceValueCard` (single ghost box-office row + signal CTA, NO resale row, NO outbound ProvenanceCTA) | Locked: Appendix A.1 + A.2                                              |
+| 12  | No-price (community handoff) — resale link exists               | `priceByTier === null \|\| priceByTier.length === 0` AND `event.status !== 'soldout'` AND `ticketLinks` has resale                                      | `NoPriceCard` (shipped) + new `FaceValueCard` (alt headline + CTA) + `ProvenanceCTA kind='resale' outline` + `ReportFooter`                  | FaceValueCard `headline='All we can see is resale.'`, `ctaLabel='Add a price you've seen'`                                                              | `AfterNoPrice`; README §"The fix — no price"                            |
+| 13  | No-price (community handoff) — no ticket links at all           | priceByTier empty AND `ticketLinks` empty                                                                                                               | `NoPriceCard` only + community-handoff CTA wired to submit-price modal                                                                       | NO `FaceValueCard` / `ContributeFaceValueCard` — pedagogy collapses without a resale anchor                                                             | Locked: Appendix A.5 (Q2-eng)                                           |
+| 14  | Outbound CTA · boxoffice (rare, venue sells direct)             | `ticketLinks[0].kind='boxoffice'`                                                                                                                       | `ProvenanceCTA kind='boxoffice'` filled                                                                                                      | `vendor='Venue'` per round-3 #2                                                                                                                         | `CTAVariants`                                                           |
+| 15  | Outbound CTA · primary (official vendor)                        | `ticketLinks[0].kind='primary'`                                                                                                                         | `ProvenanceCTA kind='primary'` filled                                                                                                        | `vendor=<AXS\|Ticketmaster\|SeatGeek\|…>`                                                                                                               | `CTAVariants`; SeatGeek stays per round-3 #1                            |
+| 16  | Outbound CTA · resale only                                      | only resale link in `ticketLinks`                                                                                                                       | `ProvenanceCTA kind='resale' outline`                                                                                                        | `vendor, outline=true` (NOT recommended path)                                                                                                           | `ProvenanceCTA`; README §"`<ProvenanceCTA/>`"                           |
+| 17  | **Per-tier counter pending — dispute affordance HIDDEN**        | `priceByTier[t].counterSubmission !== null` (any value, regardless of `lastAdminActionKind`)                                                            | shipped tier card with the "Saw a different number? Let us know →" entry REMOVED for that tier; counter card surfaces                        | conditional render guard; `memory:project_pr4_dispute_affordance_hiding`                                                                                | READINESS §"Eng-side clarifications #1"                                 |
+| 18  | **Per-tier counter pending — admin deferred engagement pill**   | `priceByTier[t].counterSubmission.lastAdminActionKind === 'defer'` (and `lastAdminActionAt !== null`)                                                   | counter card with quiet "Admin requested more info" pill                                                                                     | `lastAdminActionAt`, `lastAdminActionKind`                                                                                                              | from `#697`; passive surface added here                                 |
+| 19  | Multi-tier reports caption (consensus tell)                     | `priceByTier[t].reports > 1`                                                                                                                            | `MultiTierLiveCard` with `reports` prop → "· N reports" appended to meta line                                                                | `reports: number`                                                                                                                                       | README §"Ask #3 — within-tier pick cue"                                 |
 
 ### Submit-price form — states
 
-| # | State | Trigger | Components | Notes |
-|---|---|---|---|---|
-| 1 | Initial — provenance-first | modal opened | `FormCard` with source-category picker FIRST | source-chip group `[Box office, Standard ticket, Resale]`, none selected by default per round-2 |
-| 2 | source = `boxoffice` selected | user clicks `"Box office"` chip | NumberField label `"Face value"` + hint `"the printed price"`; vendor auto-fills `Venue` | `label='Face value', placeholder='32', hint='the printed price'` |
-| 3 | source = `standard` selected | user clicks `"Standard ticket"` chip | NumberField generic label | — |
-| 4 | source = `resale` selected | user clicks `"Resale"` chip | NumberField label `"Resale price"` | `label='Resale price'` |
-| 5 | Tier picker rendered | source selected | Tier chip row `[GA, Reserved, VIP, Pit, Lawn]` — single-select | active state on default GA |
-| 6 | Vendor field — required but demoted | source selected | Vendor chip row, required asterisk; `Venue` chip auto-selected when source=boxoffice | `vendor: Vendor`, required |
-| 7 | `howFound` — REMOVED | always | does not render | dropped per spec |
+| #   | State                               | Trigger                              | Components                                                                               | Notes                                                                                           |
+| --- | ----------------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| 1   | Initial — provenance-first          | modal opened                         | `FormCard` with source-category picker FIRST                                             | source-chip group `[Box office, Standard ticket, Resale]`, none selected by default per round-2 |
+| 2   | source = `boxoffice` selected       | user clicks `"Box office"` chip      | NumberField label `"Face value"` + hint `"the printed price"`; vendor auto-fills `Venue` | `label='Face value', placeholder='32', hint='the printed price'`                                |
+| 3   | source = `standard` selected        | user clicks `"Standard ticket"` chip | NumberField generic label                                                                | —                                                                                               |
+| 4   | source = `resale` selected          | user clicks `"Resale"` chip          | NumberField label `"Resale price"`                                                       | `label='Resale price'`                                                                          |
+| 5   | Tier picker rendered                | source selected                      | Tier chip row `[GA, Reserved, VIP, Pit, Lawn]` — single-select                           | active state on default GA                                                                      |
+| 6   | Vendor field — required but demoted | source selected                      | Vendor chip row, required asterisk; `Venue` chip auto-selected when source=boxoffice     | `vendor: Vendor`, required                                                                      |
+| 7   | `howFound` — REMOVED                | always                               | does not render                                                                          | dropped per spec                                                                                |
 
 ### Submit-success — states
 
-| # | State | Trigger | Components | Notes |
-|---|---|---|---|---|
-| 1 | First tier submitted | API 201 | `MTAddTierSuccess` | tier label, floor price, sourceCategory, `confirms=1`, `needed=2` |
-| 2 | Add-another-tier picker | success state | `MTAddTierSuccess` continues; shows `[+ Add reserved] [+ Add VIP]` etc. for tiers user hasn't submitted | client-side state; verify with `priceByTier` whether to disable |
-| 3 | Add-another-tier — chip click | user clicks `+ Add reserved` | reopens submit modal pre-scoped to picked tier | tier locked, other fields cleared |
-| 4 | All tiers submitted | every tier the user has submitted in this session is in client-side state (no re-fetch); `remainingTiers` array is empty | `MTAddTierSuccess` collapses to `"Done"` only | Locked: Appendix A.5 (Q4-eng — client session state, not API re-fetch) |
-| 5 | Submit error — duplicate (tier, source) | API 409 | inline error state in modal | Copy eng-owned per READINESS — not a design ambiguity; resolved via plan copy keys |
-| 6 | Submit error — counter race | API 409 because counter filed between page-load and POST | toast: `"Another challenge was just filed — refresh to see it."` | READINESS §"Defensive 409 handling" |
+| #   | State                                   | Trigger                                                                                                                  | Components                                                                                              | Notes                                                                              |
+| --- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| 1   | First tier submitted                    | API 201                                                                                                                  | `MTAddTierSuccess`                                                                                      | tier label, floor price, sourceCategory, `confirms=1`, `needed=2`                  |
+| 2   | Add-another-tier picker                 | success state                                                                                                            | `MTAddTierSuccess` continues; shows `[+ Add reserved] [+ Add VIP]` etc. for tiers user hasn't submitted | client-side state; verify with `priceByTier` whether to disable                    |
+| 3   | Add-another-tier — chip click           | user clicks `+ Add reserved`                                                                                             | reopens submit modal pre-scoped to picked tier                                                          | tier locked, other fields cleared                                                  |
+| 4   | All tiers submitted                     | every tier the user has submitted in this session is in client-side state (no re-fetch); `remainingTiers` array is empty | `MTAddTierSuccess` collapses to `"Done"` only                                                           | Locked: Appendix A.5 (Q4-eng — client session state, not API re-fetch)             |
+| 5   | Submit error — duplicate (tier, source) | API 409                                                                                                                  | inline error state in modal                                                                             | Copy eng-owned per READINESS — not a design ambiguity; resolved via plan copy keys |
+| 6   | Submit error — counter race             | API 409 because counter filed between page-load and POST                                                                 | toast: `"Another challenge was just filed — refresh to see it."`                                        | READINESS §"Defensive 409 handling"                                                |
 
 ### Browse / search — states
 
-| # | State | Trigger | Components | Notes |
-|---|---|---|---|---|
-| 1 | List chip — boxoffice headline | event list response cheapest tier `sourceCategory='boxoffice'` | `MT_ListChip kind='boxoffice'` — gold StarGlyph + gold `"from $X"` | `price, kind='boxoffice', from=true` |
-| 2 | List chip — community headline | cheapest tier `sourceCategory='standard'` | `MT_ListChip kind='community'` — neutral (label `var(--fg)`, NO azure dot/tint on browse chip; azure reserved for detail surfaces like PendingTrustPill) | `price, kind='community', from=true` — see §4 Resolved color table for markedness rationale |
-| 3 | List chip — resale-only | cheapest tier `sourceCategory='resale'` AND no boxoffice/standard | `MT_ListChip kind='resale'` — coral (Appendix A.3) with always-present mono "resale" tag | `price, kind='resale', from=true` — locked per Appendix A.3; tap-through to detail teaches the rest |
-| 4 | List chip — multi-tier collapsed | `priceByTier.length > 1` | `MT_ListChip` with `from=true`, price = cheapest tier's floor | README §"Browse/search collapse to 'from $X'" |
-| 5 | ⚠️ List chip — no price | event has no `priceByTier` entries | omitted entirely OR no-price variant | verify with current `PriceChip` behavior |
-| 6 | List chip — sold-out | `event.status === 'soldout'` | shipped sold-out chip (out of scope) | existing behavior |
-| 7 | **PriceChip browse-card selection parity** | any event with `priceByTier` | `PriceChip` must mirror `pickTierHeadline` / `compareTierRows` from `apps/api/src/lib/price-aggregation/` | flagged as PR 4 sub-task; READINESS §"PriceChip selection parity" |
+| #   | State                                      | Trigger                                                           | Components                                                                                                                                               | Notes                                                                                               |
+| --- | ------------------------------------------ | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| 1   | List chip — boxoffice headline             | event list response cheapest tier `sourceCategory='boxoffice'`    | `MT_ListChip kind='boxoffice'` — gold StarGlyph + gold `"from $X"`                                                                                       | `price, kind='boxoffice', from=true`                                                                |
+| 2   | List chip — community headline             | cheapest tier `sourceCategory='standard'`                         | `MT_ListChip kind='community'` — neutral (label `var(--fg)`, NO azure dot/tint on browse chip; azure reserved for detail surfaces like PendingTrustPill) | `price, kind='community', from=true` — see §4 Resolved color table for markedness rationale         |
+| 3   | List chip — resale-only                    | cheapest tier `sourceCategory='resale'` AND no boxoffice/standard | `MT_ListChip kind='resale'` — coral (Appendix A.3) with always-present mono "resale" tag                                                                 | `price, kind='resale', from=true` — locked per Appendix A.3; tap-through to detail teaches the rest |
+| 4   | List chip — multi-tier collapsed           | `priceByTier.length > 1`                                          | `MT_ListChip` with `from=true`, price = cheapest tier's floor                                                                                            | README §"Browse/search collapse to 'from $X'"                                                       |
+| 5   | ⚠️ List chip — no price                    | event has no `priceByTier` entries                                | omitted entirely OR no-price variant                                                                                                                     | verify with current `PriceChip` behavior                                                            |
+| 6   | List chip — sold-out                       | `event.status === 'soldout'`                                      | shipped sold-out chip (out of scope)                                                                                                                     | existing behavior                                                                                   |
+| 7   | **PriceChip browse-card selection parity** | any event with `priceByTier`                                      | `PriceChip` must mirror `pickTierHeadline` / `compareTierRows` from `apps/api/src/lib/price-aggregation/`                                                | flagged as PR 4 sub-task; READINESS §"PriceChip selection parity"                                   |
 
 ### Cross-cutting / passive surfaces
 
-| # | State | Trigger | Components | Notes |
-|---|---|---|---|---|
-| 1 | aria-label on resale outbound | `ProvenanceCTA kind='resale'` | anchor with aria-label carrying caveat | Suggested: `"Buy resale on {vendor} — usually above face value"` |
-| 2 | Outbound link semantics | any `ProvenanceCTA` | `<a target="_blank" rel="noopener noreferrer">` | matches shipped pattern |
-| 3 | Status reporter (footer) | always | `ReportFooterLink` (shipped) | unchanged from today |
+| #   | State                         | Trigger                       | Components                                      | Notes                                                            |
+| --- | ----------------------------- | ----------------------------- | ----------------------------------------------- | ---------------------------------------------------------------- |
+| 1   | aria-label on resale outbound | `ProvenanceCTA kind='resale'` | anchor with aria-label carrying caveat          | Suggested: `"Buy resale on {vendor} — usually above face value"` |
+| 2   | Outbound link semantics       | any `ProvenanceCTA`           | `<a target="_blank" rel="noopener noreferrer">` | matches shipped pattern                                          |
+| 3   | Status reporter (footer)      | always                        | `ReportFooterLink` (shipped)                    | unchanged from today                                             |
 
 ---
 
@@ -743,63 +799,70 @@ Every addition below is a net-new variant of an existing shape — same gold/cor
 
 ### A.1 — `ContributeFaceValueCard` (NEW component — Q1 verdict)
 
-**Replaces `FaceValueCard` in the §8 state #11 slot** (sold-out + no resale + no primary + no boxoffice). Per the addendum: *"it is NOT a FaceValueCard anymore — what survives is the contribution half."* Modeled as a sibling component, NOT a variant of `FaceValueCard`. Same chrome family (12px border, surface-1, border 1px var(--border)) but only ONE ghost box-office row (no resale row, no outbound CTA).
+**Replaces `FaceValueCard` in the §8 state #11 slot** (sold-out + no resale + no primary + no boxoffice). Per the addendum: _"it is NOT a FaceValueCard anymore — what survives is the contribution half."_ Modeled as a sibling component, NOT a variant of `FaceValueCard`. Same chrome family (12px border, surface-1, border 1px var(--border)) but only ONE ghost box-office row (no resale row, no outbound CTA).
 
 Source: `pr4-addendum-mocks.jsx:42-113`.
 
 #### Outer container (line 45-48)
-| Property | Value |
-|----------|-------|
-| border-radius | `12px` |
-| overflow | `hidden` |
-| background | `var(--surface-1)` |
-| border | `1px solid var(--border)` |
+
+| Property      | Value                     |
+| ------------- | ------------------------- |
+| border-radius | `12px`                    |
+| overflow      | `hidden`                  |
+| background    | `var(--surface-1)`        |
+| border        | `1px solid var(--border)` |
 
 #### Head block (line 49)
-| Property | Value |
-|----------|-------|
-| padding | `14px 14px 10px` |
+
+| Property | Value            |
+| -------- | ---------------- |
+| padding  | `14px 14px 10px` |
 
 #### Eyebrow (line 50)
+
 Inherits Eyebrow primitive styling. Copy: `"Face value"`.
 
 **Note:** differs from `FaceValueCard` which uses `"Face value ≠ resale"`. The comparison framing is dropped because there's nothing to compare to.
 
 #### Headline (lines 51-54)
-| Property | Value |
-|----------|-------|
-| margin-top | `7px` |
-| font-family | `Inter, system-ui` |
-| font-weight | `800` |
-| font-size | `16.5px` |
-| color | `var(--fg)` |
-| letter-spacing | `-0.02em` |
-| line-height | `1.2` |
-| text-wrap | `balance` |
+
+| Property       | Value              |
+| -------------- | ------------------ |
+| margin-top     | `7px`              |
+| font-family    | `Inter, system-ui` |
+| font-weight    | `800`              |
+| font-size      | `16.5px`           |
+| color          | `var(--fg)`        |
+| letter-spacing | `-0.02em`          |
+| line-height    | `1.2`              |
+| text-wrap      | `balance`          |
 
 Copy: `"No price to show — yet."`.
 
 #### Subline (lines 55-58)
-| Property | Value |
-|----------|-------|
-| margin-top | `5px` |
-| font-family | `Inter, system-ui` |
-| font-size | `12.5px` |
-| font-weight | `500` |
-| color | `var(--fg-muted)` |
-| letter-spacing | `-0.005em` |
-| line-height | `1.5` |
+
+| Property       | Value              |
+| -------------- | ------------------ |
+| margin-top     | `5px`              |
+| font-family    | `Inter, system-ui` |
+| font-size      | `12.5px`           |
+| font-weight    | `500`              |
+| color          | `var(--fg-muted)`  |
+| letter-spacing | `-0.005em`         |
+| line-height    | `1.5`              |
 
 Copy: `"Sold out, nothing listed. Know the box-office number? Add it."`.
 
 #### Ladder wrapper (line 62)
-| Property | Value |
-|----------|-------|
-| margin | `2px 0` |
-| border-top | `1px solid var(--border)` |
+
+| Property      | Value                     |
+| ------------- | ------------------------- |
+| margin        | `2px 0`                   |
+| border-top    | `1px solid var(--border)` |
 | border-bottom | `1px solid var(--border)` |
 
 #### Box-office ghost row (lines 63-89)
+
 IDENTICAL to the box-office (ghost) `LadderRow` enumerated in §1 of this table (lines 121–172 above):
 
 - **Row container:** `display: flex`, `align-items: center`, `gap: 11px`, `padding: 12px 14px`
@@ -812,52 +875,57 @@ IDENTICAL to the box-office (ghost) `LadderRow` enumerated in §1 of this table 
 **No resale row.** `FaceValueCard`'s resale row is dropped entirely.
 
 #### CTA wrapper (line 92)
-| Property | Value |
-|----------|-------|
-| padding | `12px 14px 14px` |
+
+| Property | Value            |
+| -------- | ---------------- |
+| padding  | `12px 14px 14px` |
 
 #### CTA button (lines 93-105)
+
 IDENTICAL to `FaceValueCard` CTA enumerated in §1 (lines 176–195 above):
 
-| Property | Value |
-|----------|-------|
-| all | `unset` |
-| cursor | `pointer` |
-| box-sizing | `border-box` |
-| display | `flex` |
-| align-items | `center` |
-| justify-content | `center` |
-| gap | `8px` |
-| width | `100%` |
-| height | `46px` |
-| border-radius | `10px` |
-| background | `var(--signal)` |
-| color | `var(--fg-on-accent)` |
-| font-family | `Inter, system-ui` |
-| font-weight | `800` |
-| font-size | `14.5px` |
-| letter-spacing | `-0.01em` |
-| box-shadow | `0 12px 28px -14px var(--signal)` |
+| Property        | Value                             |
+| --------------- | --------------------------------- |
+| all             | `unset`                           |
+| cursor          | `pointer`                         |
+| box-sizing      | `border-box`                      |
+| display         | `flex`                            |
+| align-items     | `center`                          |
+| justify-content | `center`                          |
+| gap             | `8px`                             |
+| width           | `100%`                            |
+| height          | `46px`                            |
+| border-radius   | `10px`                            |
+| background      | `var(--signal)`                   |
+| color           | `var(--fg-on-accent)`             |
+| font-family     | `Inter, system-ui`                |
+| font-weight     | `800`                             |
+| font-size       | `14.5px`                          |
+| letter-spacing  | `-0.01em`                         |
+| box-shadow      | `0 12px 28px -14px var(--signal)` |
 
 Label: `"Add the box-office price"`.
 
 #### CTA arrow SVG (lines 102-104)
+
 width=13, height=13, viewBox=`0 0 16 16`, path d=`M3 8h9M9 4l4 4-4 4`, stroke=`currentColor`, stroke-width=2, stroke-linecap=round, stroke-linejoin=round. Same as §1.
 
 #### Caption row under CTA (lines 106-109)
-| Property | Value |
-|----------|-------|
-| margin-top | `9px` |
-| text-align | `center` |
-| font-family | `'JetBrains Mono', monospace` |
-| font-size | `9px` |
-| color | `var(--fg-subtle)` |
-| letter-spacing | `0.06em` |
-| text-transform | `uppercase` |
+
+| Property       | Value                         |
+| -------------- | ----------------------------- |
+| margin-top     | `9px`                         |
+| text-align     | `center`                      |
+| font-family    | `'JetBrains Mono', monospace` |
+| font-size      | `9px`                         |
+| color          | `var(--fg-subtle)`            |
+| letter-spacing | `0.06em`                      |
+| text-transform | `uppercase`                   |
 
 Copy: `"Goes live once one more fan confirms"`.
 
 #### NO outbound `ProvenanceCTA`
+
 `FaceValueCard`'s normal path includes a `ProvenanceCTA` underneath; this state explicitly drops it because there's no link to point at.
 
 ---
@@ -866,48 +934,51 @@ Copy: `"Goes live once one more fan confirms"`.
 
 Sister component in the Q1 state. The shipped `SoldOutPriceCard` sits ABOVE the new `ContributeFaceValueCard`. In the no-listing scenario the existing card renders a degraded form. Source: `pr4-addendum-mocks.jsx:132-155`.
 
-| Property | Value |
-|----------|-------|
-| Eyebrow copy | `"Tickets"` (same as shipped) |
-| Container | same as shipped — border-radius 12, background `var(--surface-1)`, border 1px `var(--border)`, padding `14px 14px 13px` |
+| Property     | Value                                                                                                                   |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| Eyebrow copy | `"Tickets"` (same as shipped)                                                                                           |
+| Container    | same as shipped — border-radius 12, background `var(--surface-1)`, border 1px `var(--border)`, padding `14px 14px 13px` |
 
 #### Price value (lines 140-143)
+
 Shows `"—"` (em-dash) instead of strikethrough number.
 
-| Property | Value |
-|----------|-------|
-| font-family | `Inter, system-ui` |
-| font-weight | `800` |
-| font-size | `26px` (slightly smaller than shipped's 28px — addendum-specified) |
-| color | `var(--fg-subtle)` |
-| letter-spacing | `-0.025em` |
-| line-height | `1.05` |
+| Property       | Value                                                              |
+| -------------- | ------------------------------------------------------------------ |
+| font-family    | `Inter, system-ui`                                                 |
+| font-weight    | `800`                                                              |
+| font-size      | `26px` (slightly smaller than shipped's 28px — addendum-specified) |
+| color          | `var(--fg-subtle)`                                                 |
+| letter-spacing | `-0.025em`                                                         |
+| line-height    | `1.05`                                                             |
 
 #### Sold-out pill (lines 144-148)
+
 Same as shipped — no change:
 
-| Property | Value |
-|----------|-------|
-| padding | `2px 7px` |
-| border-radius | `4px` |
-| background | `var(--warning)` |
-| color | `var(--fg-on-accent)` |
-| font-family | `'JetBrains Mono', monospace` |
-| font-size | `9px` |
-| font-weight | `700` |
-| letter-spacing | `0.06em` |
-| text-transform | `uppercase` |
+| Property       | Value                         |
+| -------------- | ----------------------------- |
+| padding        | `2px 7px`                     |
+| border-radius  | `4px`                         |
+| background     | `var(--warning)`              |
+| color          | `var(--fg-on-accent)`         |
+| font-family    | `'JetBrains Mono', monospace` |
+| font-size      | `9px`                         |
+| font-weight    | `700`                         |
+| letter-spacing | `0.06em`                      |
+| text-transform | `uppercase`                   |
 
 Copy: `"Sold out"`.
 
 #### Caption (lines 150-152)
-| Property | Value |
-|----------|-------|
-| margin-top | `9px` |
-| font-family | `Inter, system-ui` |
-| font-size | `12px` |
-| color | `var(--fg-muted)` |
-| letter-spacing | `-0.005em` |
+
+| Property       | Value              |
+| -------------- | ------------------ |
+| margin-top     | `9px`              |
+| font-family    | `Inter, system-ui` |
+| font-size      | `12px`             |
+| color          | `var(--fg-muted)`  |
+| letter-spacing | `-0.005em`         |
 
 Copy: `"No tickets listed anywhere we can see — not even resale."`.
 
@@ -917,7 +988,7 @@ Copy: `"No tickets listed anywhere we can see — not even resale."`.
 
 ### A.3 — `MT_ListChip kind='resale'` (NEW variant — Q2 verdict)
 
-NEW variant on the existing `MT_ListChip` component enumerated in §4 above. Per the addendum: *"a coral resale chip that ALWAYS carries an explicit 'resale' tag. Never bare, never hidden."*
+NEW variant on the existing `MT_ListChip` component enumerated in §4 above. Per the addendum: _"a coral resale chip that ALWAYS carries an explicit 'resale' tag. Never bare, never hidden."_
 
 Source: `pr4-addendum-mocks.jsx:214-234`.
 
@@ -928,15 +999,16 @@ Differs from the §4 `kind='boxoffice'` and `kind='community'` variants in three
 3. **A mono `"resale"` tag is appended after the price** (NON-NEGOTIABLE per the addendum — color alone is too quiet to decode at scan speed)
 
 #### Container (lines 217-222)
-| Property | Value |
-|----------|-------|
-| display | `inline-flex` |
-| align-items | `center` |
-| gap | `7px` (NOTE: 7px, not the 6px used by boxoffice/community variants — addendum tightened the gap to fit the trailing tag) |
-| padding | `5px 10px` (same as other variants) |
-| border-radius | `8px` (same) |
-| background | `color-mix(in oklab, oklch(0.65 0.20 25) 8%, var(--surface-1))` (coral 8% over surface-1) |
-| border | `1px solid color-mix(in oklab, oklch(0.65 0.20 25) 34%, var(--border))` (coral-tinted border) |
+
+| Property      | Value                                                                                                                    |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| display       | `inline-flex`                                                                                                            |
+| align-items   | `center`                                                                                                                 |
+| gap           | `7px` (NOTE: 7px, not the 6px used by boxoffice/community variants — addendum tightened the gap to fit the trailing tag) |
+| padding       | `5px 10px` (same as other variants)                                                                                      |
+| border-radius | `8px` (same)                                                                                                             |
+| background    | `color-mix(in oklab, oklch(0.65 0.20 25) 8%, var(--surface-1))` (coral 8% over surface-1)                                |
+| border        | `1px solid color-mix(in oklab, oklch(0.65 0.20 25) 34%, var(--border))` (coral-tinted border)                            |
 
 #### Inner content (in order)
 
@@ -980,44 +1052,50 @@ Text: `"resale"`.
 
 ### A.4 — `PendingCardB` footer pointer (Q3 verdict)
 
-Replaces the shipped `"Saw a different number?"` footer link when `counterSubmission !== null` against this price. The shipped affordance lives on `PendingCardB` (view=`'other'`) — the design mock file frames it under `DisputedPriceCard` because that's where the addendum visualizes the parent↔counter relationship side-by-side, but the actual implementation target is `PendingCardB`'s footer slot (see plan Modify list: `apps/web/src/components/consumer/PendingCardB.tsx` gets a new `counterPointer?: { href: string } | null` prop). Per the addendum: *"replace the suppressed link in the same footer slot with a quiet pointer to the live counter."* `Confirm price` button stays UNCHANGED. Net-new chrome = zero — it's a copy swap in the footer slot the dispute link already owned.
+Replaces the shipped `"Saw a different number?"` footer link when `counterSubmission !== null` against this price. The shipped affordance lives on `PendingCardB` (view=`'other'`) — the design mock file frames it under `DisputedPriceCard` because that's where the addendum visualizes the parent↔counter relationship side-by-side, but the actual implementation target is `PendingCardB`'s footer slot (see plan Modify list: `apps/web/src/components/consumer/PendingCardB.tsx` gets a new `counterPointer?: { href: string } | null` prop). Per the addendum: _"replace the suppressed link in the same footer slot with a quiet pointer to the live counter."_ `Confirm price` button stays UNCHANGED. Net-new chrome = zero — it's a copy swap in the footer slot the dispute link already owned.
 
 Source: `pr4-addendum-mocks.jsx:299-365` (the addendum visualizes this in a `DisputedPriceCard withPointer={true}` variant), specifically `:337-345` (the pointer link). The visual specs below apply to the link wherever it renders.
 
 #### Pointer link `<a>` (lines 337-345)
-| Property | Value |
-|----------|-------|
-| display | `inline-flex` |
-| align-items | `center` |
-| gap | `6px` |
-| text-decoration | `none` |
-| font-family | `'JetBrains Mono', monospace` |
-| font-size | `10px` |
-| color | `oklch(0.65 0.20 25)` (coral — `PR4_TIER.resale`) |
-| letter-spacing | `0.04em` |
-| text-transform | `uppercase` |
-| font-weight | `700` |
+
+| Property        | Value                                             |
+| --------------- | ------------------------------------------------- |
+| display         | `inline-flex`                                     |
+| align-items     | `center`                                          |
+| gap             | `6px`                                             |
+| text-decoration | `none`                                            |
+| font-family     | `'JetBrains Mono', monospace`                     |
+| font-size       | `10px`                                            |
+| color           | `oklch(0.65 0.20 25)` (coral — `PR4_TIER.resale`) |
+| letter-spacing  | `0.04em`                                          |
+| text-transform  | `uppercase`                                       |
+| font-weight     | `700`                                             |
 
 **The color is coral** — `PR4_TIER.resale` = `oklch(0.65 0.20 25)`. NOT muted, NOT `var(--fg-subtle)`.
 
 #### Coral dot prefix (line 342)
-| Property | Value |
-|----------|-------|
-| width | `5px` |
-| height | `5px` |
-| border-radius | `50%` |
-| background | `oklch(0.65 0.20 25)` (coral) |
+
+| Property      | Value                         |
+| ------------- | ----------------------------- |
+| width         | `5px`                         |
+| height        | `5px`                         |
+| border-radius | `50%`                         |
+| background    | `oklch(0.65 0.20 25)` (coral) |
 
 #### Label text (line 343)
+
 `"Someone's contesting this — see the counter"`.
 
 #### Arrow SVG (line 344)
+
 width=11, height=11, viewBox=`0 0 12 12`, path d=`M2.5 6h7M6 2.5l3.5 3.5L6 9.5`, stroke=`currentColor`, stroke-width=1.8, stroke-linecap=round, stroke-linejoin=round.
 
 #### `href` semantics
+
 Points at the counter card on the same page. Implementation can be a fragment anchor (`#counter-<id>`) or an in-page `scrollIntoView` handler. Design did not specify the routing mechanic; eng's call.
 
 #### Confirm price button (lines 352-360)
+
 **UNCHANGED** from the shipped/existing button — same kind background, same Check glyph, same copy.
 
 ---

@@ -80,8 +80,8 @@ describe('EventCard — browse chip parity (MTListChip)', () => {
         }}
       />,
     )
-    // MTListChip renders "$25" (from=false)
-    const priceText = screen.getByText('$25') as HTMLElement
+    // MTListChip renders "from $25" (from=true is the spec default).
+    const priceText = screen.getByText('from $25') as HTMLElement
     expect(priceText).toBeDefined()
     // boxoffice kind renders a star svg inside the chip — locate via parent chip
     const chip = priceText.parentElement as HTMLElement
@@ -100,7 +100,7 @@ describe('EventCard — browse chip parity (MTListChip)', () => {
         }}
       />,
     )
-    const priceText = screen.getByText('$25') as HTMLElement
+    const priceText = screen.getByText('from $25') as HTMLElement
     expect(priceText).toBeDefined()
     // community has no glyph — scoped to the chip
     const chip = priceText.parentElement as HTMLElement
@@ -118,7 +118,7 @@ describe('EventCard — browse chip parity (MTListChip)', () => {
         }}
       />,
     )
-    expect(screen.getByText('$25')).toBeDefined()
+    expect(screen.getByText('from $25')).toBeDefined()
     expect(screen.getByText('resale')).toBeDefined()
   })
 
@@ -132,7 +132,7 @@ describe('EventCard — browse chip parity (MTListChip)', () => {
         }}
       />,
     )
-    const priceText = screen.getByText('$25') as HTMLElement
+    const priceText = screen.getByText('from $25') as HTMLElement
     expect(priceText).toBeDefined()
     const chip = priceText.parentElement as HTMLElement
     expect(chip.querySelector('svg')).toBeNull()
@@ -148,7 +148,7 @@ describe('EventCard — browse chip parity (MTListChip)', () => {
         }}
       />,
     )
-    expect(screen.queryByText('$25')).toBeNull()
+    expect(screen.queryByText('from $25')).toBeNull()
     expect(screen.queryByText('tba')).toBeNull()
   })
 
@@ -161,7 +161,7 @@ describe('EventCard — browse chip parity (MTListChip)', () => {
         }}
       />,
     )
-    expect(screen.queryByText('$25')).toBeNull()
+    expect(screen.queryByText('from $25')).toBeNull()
     expect(screen.queryByText('tba')).toBeNull()
   })
 
@@ -174,11 +174,11 @@ describe('EventCard — browse chip parity (MTListChip)', () => {
         }}
       />,
     )
-    expect(screen.queryByText('$25')).toBeNull()
+    expect(screen.queryByText('from $25')).toBeNull()
     expect(screen.getByText('tba')).toBeDefined()
   })
 
-  it('from={false} parity — chip renders bare "$25", never "from $25"', () => {
+  it('from={true} parity — chip renders "from $25" prefix on the browse chip', () => {
     render(
       <EventCard
         event={{
@@ -188,7 +188,7 @@ describe('EventCard — browse chip parity (MTListChip)', () => {
         }}
       />,
     )
-    expect(screen.getByText('$25')).toBeDefined()
-    expect(screen.queryByText('from $25')).toBeNull()
+    expect(screen.getByText('from $25')).toBeDefined()
+    expect(screen.queryByText('$25')).toBeNull()
   })
 })

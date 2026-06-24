@@ -138,7 +138,11 @@ export function EventCard({
         tabIndex={-1}
       >
         {!isCancelled && !isPostponed && priceNum !== null ? (
-          <MTListChip price={priceNum} kind={listChipKind} from={false} />
+          // Property table §8 Browse table #1–4: list chips always render the
+          // "from $X" prefix to signal that this is the cheapest tier, not the
+          // only tier. MTListChip defaults to from=true; pass explicitly to
+          // keep the contract obvious at the call site.
+          <MTListChip price={priceNum} kind={listChipKind} from={true} />
         ) : !isCancelled && !isPostponed ? (
           <span
             style={{
