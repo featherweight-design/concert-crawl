@@ -861,12 +861,16 @@ export async function crawlVenue(
     // CLAUDE.md crawl rule: "3 consecutive failures → pause venue + notify
     // admin". Use a SQL increment + CASE so the increment, the auto-pause
     // flip, and the threshold-derivation all serialize on the row UPDATE.
-    // This is what gives us exactly-once email/notification semantics under
-    // concurrent crawls of the same venue (the daily cron and the triggers
-    // cron CAN overlap on the same venue — there's no per-venue lock above
-    // this layer). The CASE on `active` ensures only the transition to 3
-    // flips the column, so an admin who manually re-activates a still-broken
-    // venue isn't fought by the crawler on the next failure. (#743)
+    // This is what gives the auto-pause + crawl-failure email exactly-once
+    // semantics at the threshold under concurrent crawls of the same venue
+    // (the daily cron and the triggers cron CAN overlap on the same venue —
+    // there's no per-venue lock above this layer). The crawl.failed
+    // notification still inserts on every failure where newFailureCount >=
+    // 3 — that's intentional re-alerting; only the "venue auto-paused"
+    // wording is gated to the === 3 transition. The CASE on `active`
+    // ensures only the transition to 3 flips the column, so an admin who
+    // manually re-activates a still-broken venue isn't fought by the
+    // crawler on the next failure. (#743)
     const [updatedVenue] = await db
       .update(venues)
       .set({

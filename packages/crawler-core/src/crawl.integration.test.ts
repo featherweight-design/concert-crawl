@@ -970,10 +970,13 @@ describe('crawlVenue — auto-pause at threshold (#743)', () => {
     // The concrete race Copilot caught on PR #746: two workers (daily +
     // triggers cron) both read consecutiveFailures=2, both fail to fetch.
     // Without the SQL increment + CASE, both would compute
-    // newFailureCount=3 and both would fire the auto-pause email +
-    // notification. With the atomic UPDATE + RETURNING, exactly one worker
-    // sees the row land on 3 (the other sees 4) and fires the threshold
-    // side-effects once.
+    // newFailureCount=3 and both would fire the auto-pause flip + the
+    // crawl-failure email + the "auto-paused"-wording notification. With
+    // the atomic UPDATE + RETURNING, exactly one worker sees the row land
+    // on 3 (the other sees 4) and fires those threshold-only side-effects
+    // once. The plain crawl.failed notification still inserts on both
+    // workers — that's intentional re-alerting and is exercised by the
+    // assertions below (two notifications, only one with "auto-paused").
     //
     // We deliberately use a deferred-rejection mock so both workers reach
     // the failure path *together*. Using mockRejectedValue would let worker
