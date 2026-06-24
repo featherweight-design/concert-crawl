@@ -11,6 +11,7 @@ import { eventsAdminRouter } from './events.js'
 import { pricesAdminRouter } from './prices.js'
 import { usersAdminRouter } from './users.js'
 import { feedbackAdminRouter } from './feedback.js'
+import { contestsAdminRouter } from './contests.js'
 
 export type AdminVariables = {
   Variables: {
@@ -114,3 +115,4 @@ adminRouter.route('/events', eventsAdminRouter)
 adminRouter.route('/prices', pricesAdminRouter)
 adminRouter.route('/users', usersAdminRouter)
 adminRouter.route('/feedback', feedbackAdminRouter)
+adminRouter.route('/contests', contestsAdminRouter)
