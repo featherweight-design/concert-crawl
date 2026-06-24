@@ -212,8 +212,10 @@ describe('sendEventCountDropEmail', () => {
       dropPercent: 100,
     })
 
+    // URLSearchParams uses form-urlencoded (spaces → '+', '&' → '%26').
+    // Both '+' and '%20' are valid query-string space encodings per RFC 1738.
     const call = mockSend.mock.calls[0][0]
-    expect(call.html).toContain('venueId=has%20spaces%20%26%20ampersand')
+    expect(call.html).toContain('venueId=has+spaces+%26+ampersand')
   })
 })
 
@@ -301,5 +303,82 @@ describe('environment qualification on alert emails (admin-UI feedback)', () => 
 
     const call = mockSend.mock.calls[0][0]
     expect(call.subject.startsWith('[Local] ')).toBe(true)
+  })
+
+  // Misconfiguration defense: a value like 'Production' or 'production '
+  // (capitalisation / whitespace) should still suppress the prefix/banner
+  // — otherwise prod alerts would acquire `[Production] ` and look like
+  // a staging email in the inbox.
+  it('treats "Production" / "production " as production (case + whitespace tolerant)', async () => {
+    process.env.SENTRY_ENVIRONMENT = '  Production  '
+    const { sendEventCountDropEmail } = await import('./email.js')
+    await sendEventCountDropEmail({
+      venueName: 'Ogden',
+      venueId: 'v1',
+      crawlRunId: 'r1',
+      eventsFound: 0,
+      baselineCount: 100,
+      dropPercent: 100,
+    })
+
+    const call = mockSend.mock.calls[0][0]
+    expect(call.subject.startsWith('[')).toBe(false)
+    expect(call.html).not.toContain('Sent from')
+  })
+
+  it('treats empty SENTRY_ENVIRONMENT as local (safe default)', async () => {
+    process.env.SENTRY_ENVIRONMENT = ''
+    const { sendEventCountDropEmail } = await import('./email.js')
+    await sendEventCountDropEmail({
+      venueName: 'Ogden',
+      venueId: 'v1',
+      crawlRunId: 'r1',
+      eventsFound: 0,
+      baselineCount: 100,
+      dropPercent: 100,
+    })
+
+    const call = mockSend.mock.calls[0][0]
+    expect(call.subject.startsWith('[Local] ')).toBe(true)
+  })
+})
+
+// Pins URL construction so a future change can't reintroduce trailing-slash
+// or encoding bugs. The URL constructor handles both consistently.
+describe('admin crawl URL construction', () => {
+  const originalEnv = process.env
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.resetModules()
+    process.env = {
+      ...originalEnv,
+      RESEND_API_KEY: 're_test_key',
+      ADMIN_EMAIL: 'admin@example.com',
+      SENTRY_ENVIRONMENT: 'production',
+    }
+  })
+
+  afterEach(() => {
+    process.env = originalEnv
+  })
+
+  it('handles ADMIN_URL with a trailing slash without double-slashing the path', async () => {
+    process.env.ADMIN_URL = 'https://concertcrawl.app/'
+    const { sendEventCountDropEmail } = await import('./email.js')
+    await sendEventCountDropEmail({
+      venueName: 'Ogden',
+      venueId: 'v-1',
+      crawlRunId: 'r-1',
+      eventsFound: 0,
+      baselineCount: 100,
+      dropPercent: 100,
+    })
+
+    const call = mockSend.mock.calls[0][0]
+    expect(call.html).toContain(
+      'https://concertcrawl.app/admin/crawl?venueId=v-1',
+    )
+    expect(call.html).not.toContain('//admin/crawl')
   })
 })

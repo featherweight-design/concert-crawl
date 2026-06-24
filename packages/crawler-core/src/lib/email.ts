@@ -29,8 +29,14 @@ const ALERT_FROM = 'Concert Crawl Alerts <alerts@concertcrawl.app>'
 // one carries the same signal. Anything other than 'production' is treated
 // as non-prod and is qualified in the alert so admins know not to act on it
 // in the prod admin UI.
-function getEnvironmentLabel(): 'production' | 'staging' | 'local' | string {
-  return process.env.SENTRY_ENVIRONMENT ?? 'local'
+//
+// Normalisation (trim + lowercase + default-on-empty) keeps a misconfigured
+// `Production`, `production ` or empty value from accidentally letting a
+// non-prod alert through unqualified. Empty defaults to 'local' so a brand
+// new service without the var set is treated as the safest case.
+function getEnvironmentLabel(): string {
+  const raw = (process.env.SENTRY_ENVIRONMENT ?? '').trim().toLowerCase()
+  return raw === '' ? 'local' : raw
 }
 
 function isProduction(): boolean {
@@ -56,13 +62,16 @@ function envBanner(): string {
   `
 }
 
-// Build the admin-crawl deep-link. When a venueId is provided the dashboard
-// pre-selects that venue's row (#608); without it the link lands on the full
-// status list.
+// Build the admin-crawl deep-link. Uses the URL constructor so a trailing
+// slash on ADMIN_URL (e.g. `https://concertcrawl.app/`) doesn't double-up
+// into `//admin/crawl`, and searchParams handles query encoding.
+// When a venueId is provided the dashboard pre-selects that venue's row
+// (#608); without it the link lands on the full status list.
 function adminCrawlUrl(venueId?: string): string {
   const adminUrl = process.env.ADMIN_URL ?? 'https://concertcrawl.app'
-  const base = `${adminUrl}/admin/crawl`
-  return venueId ? `${base}?venueId=${encodeURIComponent(venueId)}` : base
+  const url = new URL('/admin/crawl', adminUrl)
+  if (venueId) url.searchParams.set('venueId', venueId)
+  return url.toString()
 }
 
 // Shared sender for all crawl-side admin alerts. Returns void.
