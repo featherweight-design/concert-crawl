@@ -90,13 +90,19 @@ fi
 # whitespace, or a future Render service type would otherwise hit
 # the API with commitId pinned and fail with an opaque error.
 # Failing here points the operator straight at the misconfig.
-if [[ "${SERVICE_ID}" == crn-* ]]; then
+#
+# Use regex (`=~ ^...$`) not glob (`== crn-*`) — a glob accepts
+# trailing whitespace ("crn-abc " matches `crn-*`), which would
+# silently take the cron path and mask the misconfig. Render IDs are
+# `^(srv|crn)-[a-z0-9]+$` in practice (lowercase base32-ish), so
+# anchor strictly.
+if [[ "${SERVICE_ID}" =~ ^crn-[a-z0-9]+$ ]]; then
   body="{}"
   # No parens inside pin_status — the log line below wraps it with
   # parens, and nesting hurts log scannability during incidents.
   pin_status="unpinned — Render API does not support commitId for cron jobs"
   commit_log_field="gated_commit"
-elif [[ "${SERVICE_ID}" == srv-* ]]; then
+elif [[ "${SERVICE_ID}" =~ ^srv-[a-z0-9]+$ ]]; then
   # Build the JSON body via jq rather than string interpolation. jq
   # is already a hard dependency above (used for response parsing),
   # and `--arg` properly escapes the value — defensive against any
@@ -105,8 +111,9 @@ elif [[ "${SERVICE_ID}" == srv-* ]]; then
   pin_status="pinned"
   commit_log_field="commit"
 else
-  echo "✗ Unrecognized Render service ID prefix: '${SERVICE_ID}'"
-  echo "  Expected srv-* (web service) or crn-* (cron job)."
+  echo "✗ Unrecognized or malformed Render service ID: '${SERVICE_ID}'"
+  echo "  Expected srv-* (web service) or crn-* (cron job), with only"
+  echo "  lowercase alphanumerics after the prefix and no whitespace."
   echo "  Check for typos or whitespace in the RENDER_SERVICE_ID_* variable."
   exit 1
 fi

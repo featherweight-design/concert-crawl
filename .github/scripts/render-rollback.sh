@@ -37,7 +37,14 @@ NAME="${2:?human name required}"
 # future Render service type would otherwise surface as an opaque
 # Render API error after several script steps. Fail here instead with
 # a message that points at the misconfig.
-if [[ "${SERVICE_ID}" == crn-* ]]; then
+#
+# Use regex (`=~ ^...$`) not glob (`== crn-*`) so trailing whitespace
+# or other stray characters don't slip through the prefix check.
+# A glob like `crn-*` matches `"crn-abc "` (with trailing space),
+# which would take the skip path silently and mask the misconfig.
+# Render service IDs are `^(srv|crn)-[a-z0-9]+$` in practice
+# (lowercase base32-ish), so anchor strictly.
+if [[ "${SERVICE_ID}" =~ ^crn-[a-z0-9]+$ ]]; then
   # Render's /rollback endpoint returns HTTP 400 for cron jobs — there
   # is no API path to roll a cron back to a specific prior deploy.
   # Skip rather than fail: the caller (deploy-prod.yml's rollback job)
@@ -55,9 +62,10 @@ if [[ "${SERVICE_ID}" == crn-* ]]; then
   exit 0
 fi
 
-if [[ "${SERVICE_ID}" != srv-* ]]; then
-  echo "✗ Unrecognized Render service ID prefix: '${SERVICE_ID}'"
-  echo "  Expected srv-* (web service) or crn-* (cron job)."
+if ! [[ "${SERVICE_ID}" =~ ^srv-[a-z0-9]+$ ]]; then
+  echo "✗ Unrecognized or malformed Render service ID: '${SERVICE_ID}'"
+  echo "  Expected srv-* (web service) or crn-* (cron job), with only"
+  echo "  lowercase alphanumerics after the prefix and no whitespace."
   echo "  Check for typos or whitespace in the RENDER_SERVICE_ID_* variable."
   exit 1
 fi
