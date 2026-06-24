@@ -36,6 +36,20 @@ CREATE INDEX IF NOT EXISTS price_submissions_pending_counters_idx
   WHERE status = 'pending' AND disputed_submission_id IS NOT NULL;
 --> statement-breakpoint
 
+-- price_submissions_pending_counters_by_filed_idx — supports the admin
+-- contests queue's global ORDER BY counter.created_at ASC scan. The sibling
+-- price_submissions_pending_counters_idx (disputed_submission_id, created_at)
+-- is optimized for per-parent lookups (e.g. "find pending counters against
+-- parent X"), not for the global-ordered queue scan. With created_at as the
+-- leading column the planner can walk pending counters in filedAt order
+-- without a sort step as the table grows. `id` is the secondary sort column
+-- so the planner gets a stable tiebreaker that matches the contest list
+-- endpoint's pagination cursor logic (asc(createdAt), asc(id)).
+CREATE INDEX IF NOT EXISTS price_submissions_pending_counters_by_filed_idx
+  ON price_submissions (created_at, id)
+  WHERE status = 'pending' AND disputed_submission_id IS NOT NULL;
+--> statement-breakpoint
+
 -- 5. Defensive pre-index cleanup. If any in-flight contests already have
 --    multiple pending counters against the same parent (possible in the
 --    race-window prior to this PR), retire the older ones so the unique

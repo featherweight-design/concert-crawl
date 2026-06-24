@@ -45,13 +45,14 @@ describe('migration 0041 — admin contest review', () => {
     ])
   })
 
-  it('creates the three contest-queue indexes', async () => {
+  it('creates the four contest-queue indexes', async () => {
     const rows = await db.execute<{ indexname: string }>(sql`
       SELECT indexname FROM pg_indexes
        WHERE tablename = 'price_submissions'
          AND indexname IN (
            'price_submissions_disputed_status_idx',
            'price_submissions_pending_counters_idx',
+           'price_submissions_pending_counters_by_filed_idx',
            'price_submissions_pending_counter_unique_idx'
          )
        ORDER BY indexname
@@ -60,6 +61,7 @@ describe('migration 0041 — admin contest review', () => {
     expect(names).toEqual([
       'price_submissions_disputed_status_idx',
       'price_submissions_pending_counter_unique_idx',
+      'price_submissions_pending_counters_by_filed_idx',
       'price_submissions_pending_counters_idx',
     ])
   })
