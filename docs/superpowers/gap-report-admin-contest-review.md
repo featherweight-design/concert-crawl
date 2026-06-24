@@ -24,64 +24,100 @@ Generated 2026-06-24 via design-review Agent 2 across 4 parallel verification pa
 
 ---
 
-## GAPS — Fix in this PR
+## IMPLEMENTED — Gap fixes (G1–G9)
 
-### G1. archivedReason not surfaced on detail endpoint or in read-only banner (state reachability)
+All nine gaps surfaced by the design-review Agent 2 verification pass were
+addressed in the same branch before opening the PR. Each fix landed with
+matching test coverage; full quality gate (typecheck, lint, web tests, contest
+integration tests) passes after the bundle.
 
-**Severity:** Medium. Spec §4 line 245 says "reason shown to both submitters." When an admin re-visits a resolved contest, the panel renders a read-only banner with a generic lead string. The actual archive reason (the rationale they typed at resolution time) is never re-surfaced.
+### G1. archivedReason surfaced through detail endpoint + read-only banner ✅
 
-**Root cause:** Two-layer gap:
+- API: `apps/api/src/routes/admin/contests.ts` detail handler SELECTs
+  `priceSubmissions.archivedReason` on both parent and counter rows and projects
+  them onto the response.
+- Type: `ContestDetailData` in `apps/web/src/lib/queries/admin-contests.ts` adds
+  `archivedReason: string | null` to both `parent` and `counter` shapes.
+- UI: `AdminDisputePanel` read-only banner now appends an "Admin reason" label +
+  blockquote with the archived side's reason text when present.
+- Copy: `panel.archivedReason = 'Admin reason'` added to `definitions/copy.ts`.
+- Tests: extended `AdminDisputePanel.test.tsx` with two cases (parent-archived
+  and counter-archived). Extended `contests.integration.test.ts` resolved-detail
+  case to assert `counter.archivedReason` round-trips and `parent.archivedReason`
+  stays null when parent corroborated.
 
-- `apps/api/src/routes/admin/contests.ts` detail endpoint does NOT SELECT `parent.archived_reason` or `counter.archived_reason`
-- `ContestDetailData` type in `apps/web/src/lib/queries/admin-contests.ts` does not declare `parent.archivedReason` or `counter.archivedReason`
-- `AdminDisputePanel.tsx` read-only banner uses a generic copy string
+### G2. Precondition error message surfaced inline ✅
 
-**Fix:** Add `archivedReason` to the response shape (both parent + counter), select it in the route, surface it in the read-only banner when present.
+- `ApiError` in `apps/web/src/lib/api.ts` gained an optional `code` field
+  (parameter-property style — additive, no breakage). The request body type
+  threads through `body.code`.
+- `AdminDisputePanel` now stores the latest mutation error message in state
+  (string | null) and falls back to the generic copy only when the error has no
+  readable message. `mutationErrorMessage(err)` helper centralizes the precedence
+  (ApiError.message → Error.message → generic copy).
+- Tests: extended `AdminDisputePanel.test.tsx` with a case asserting the
+  server's specific message ("Parent tier GA does not match challenger tier VIP")
+  surfaces from an ApiError(409, …, 'precondition_failed') and the generic copy
+  is NOT shown when a specific message is available.
 
-### G2. Precondition error message lost in transit (state reachability)
+### G3. Flat EventDetailResponse.counterSubmission carries engagement-signal fields ✅
 
-**Severity:** Medium. When the resolve/defer transaction's same-slot assertions or counter-status guard fires (409 with `error.code='precondition_failed'`), the server returns the specific reason (e.g., "Parent tier GA does not match challenger tier VIP"). But:
+- `packages/types/src/index.ts` flat `counterSubmission` shape adds
+  `lastAdminActionAt: string | null` and `lastAdminActionKind: 'defer' | null`.
+- No API change required — the route already writes both fields on the wire
+  (events.ts:666–675). Pre-existing integration assertions at
+  `events.integration.test.ts:500–501, 575–576` already cover the wire
+  shape; this fix closes the type-layer gap.
 
-- `ApiError` at `apps/web/src/lib/api.ts:6-14` strips the `code` discriminator and only forwards `message`
-- `AdminDisputePanel.tsx` renders a static generic copy string (`REVIEW_CONTEST_COPY.panel.mutationError`) instead of the server-supplied message
+### G4. Mutation error alert moved below the textarea, above the action row ✅
 
-**Result:** Admin sees "Something went wrong, please try again" with no clue whether it's a tier mismatch, a race with another admin, or an actual server fault.
+- `AdminDisputePanel` reorders the JSX so the inline error renders between the
+  reason char-count row and the action button row.
+- Tests: extended `AdminDisputePanel.test.tsx` with a case using
+  `Node.compareDocumentPosition` to assert the alert appears AFTER the textarea
+  and BEFORE the "Keep original" button in document order.
+- Copy comment in `definitions/copy.ts` updated to reflect the new placement.
 
-**Fix:** Surface the server error message in the inline alert when it's available; keep the generic copy as fallback.
+### G5. 404 differentiation wired to notFound copy ✅
 
-### G3. Flat EventDetailResponse.counterSubmission missing engagement-signal fields (state reachability)
+- `AdminDisputePanel` error branch checks `detail.error instanceof ApiError &&
+status === 404` first; when true, renders the contest-specific `notFound`
+  copy in a neutral panel with no retry affordance. Any other error keeps the
+  generic banner + retry button.
+- Tests: extended `AdminDisputePanel.test.tsx` with two cases — one asserting
+  404 renders `notFound` copy with no retry button, another asserting non-404
+  (500) renders the generic banner with retry.
 
-**Severity:** Low–Medium. The per-tier `TierCounter` shape at `packages/types/src/index.ts:415-416` correctly declares `lastAdminActionAt` and `lastAdminActionKind`. But the FLAT `counterSubmission` at `packages/types/src/index.ts:455-462` does NOT — even though `apps/api/src/routes/events.ts:666-675` writes them on the wire.
+### G6. Header layout — eyebrow + title left, status pill + chip right ✅
 
-**Result:** Any consumer code that reads `event.counterSubmission` (not `event.priceByTier[].counterSubmission`) will not see the engagement pill data at the type layer.
+- `AdminDisputePanel` header restructured to `display: flex; justifyContent:
+space-between; alignItems: flex-start; gap: 12`. Left container holds eyebrow
+  - title; right container holds the status pill + optional deferred chip with
+    `flexShrink: 0`. Mirrors design source dispute-surfaces.jsx:753–776 (single
+    horizontal flex row).
 
-**Fix:** Add `lastAdminActionAt: string | null` and `lastAdminActionKind: 'defer' | null` to the flat `counterSubmission` type. Already on the wire — no API change needed.
+### G7. Header bottom margin standardized to 16px ✅
 
-### G4. AdminDisputePanel mutation error banner placement (visual)
+- Header now carries a fixed `marginBottom: 16` regardless of read-only vs.
+  active state. The conditional 12 (active) / 18 (read-only) marginTop on the
+  next block was removed so the header owns the spacing rhythm.
 
-**Severity:** Low. Currently the inline error banner renders ABOVE the reason field. Copy comment in `copy.ts` (lines 184–187) says "Surfaced inline above the action row." Move the banner below the reason field, directly above the action buttons.
+### G8. Title margin set to top-only ✅
 
-### G5. AdminDisputePanel 404 differentiation (visual / dead code)
+- Title `margin` changed from `'4px 0'` (top + bottom) to `'4px 0 0'` (top
+  only). Matches design source dispute-surfaces.jsx:764.
 
-**Severity:** Low. The `panel.notFound` copy string exists but the implementation never routes to it. Any error (404, 500, network) renders the generic error block. Either wire the 404 path (`detail.error.status === 404` → notFound copy) or remove the dead copy string.
+### G9. AdminEntry renders the trust pill in the headline row ✅
 
-### G6. AdminDisputePanel header layout (visual)
-
-**Severity:** Low. Design source `dispute-surfaces.jsx:753–776` puts eyebrow + title in a left flex container and the status pill on the right (`justifyContent: space-between` row). Implementation stacks eyebrow → title → status pill vertically. Visual outcome is acceptable but design intent is single horizontal row.
-
-### G7. AdminDisputePanel header bottom margin (visual)
-
-**Severity:** Trivial. Property table specifies 16px margin below header before guidance. Implementation uses 12px (active) / 18px (read-only). Pick a single value matching the table.
-
-### G8. AdminDisputePanel title margin (visual)
-
-**Severity:** Trivial. Design has `margin: '4px 0 0'` (top only). Implementation has `margin: '4px 0'` (top + bottom). One-character fix.
-
-### G9. AdminEntry trust pill placement (design table vs implementation)
-
-**Severity:** Low. Property table §3b line 214 lists `trustPill` as a property of AdminEntry (rendered via `window.PendingTrustPill` with a `kind` prop in the design source). Implementation defers the trust pill to AdminDisputePanel (parent) and omits it from AdminEntry. This is a documented intentional deferral in the JSX comments but contradicts the property table.
-
-**Fix:** Either render the trust pill inside AdminEntry (faithful to design table) OR document the deferral by adding a note in §3b that the trust pill rendering moved to the parent panel. Simpler: render it in AdminEntry — the prop is already passed through (sourceCategory).
+- `AdminEntry.tsx` now renders the trust pill beside the price + tier in the
+  headline row. Maps `sourceCategory` ('boxoffice' | 'standard' | 'resale') →
+  gold/azure pill with the appropriate label. Style values pulled from
+  `pending-card.jsx:108–124` so the pill matches the design source 1:1. Pill
+  is skipped when `sourceCategory === null` (older rows pre-PR #696).
+- Copy: `adminEntry.trustPill = { boxoffice, standard, resale }` added to
+  `definitions/copy.ts`.
+- Tests: extended `AdminEntry.test.tsx` with four cases — one per
+  SourceCategory variant + a null-skip case.
 
 ---
 
@@ -119,6 +155,9 @@ Generated 2026-06-24 via design-review Agent 2 across 4 parallel verification pa
 
 ## Action plan
 
-Fix G1–G9 in this PR before opening the PR. Re-run quality gate, then design-review Agent 3 (confirm), then proceed to env scan + PR open.
+G1–G9 fixed in this PR (see "IMPLEMENTED — Gap fixes" section above). Quality
+gate re-ran clean: typecheck + lint pass on api + web, 593 web tests pass, 36
+contests integration tests pass with archivedReason round-trip assertion. Ready
+for design-review Agent 3 (confirm) → env scan → PR open.
 
 Deferred items D1–D7 land in the PR body's "Deferred" section so reviewers see them.
