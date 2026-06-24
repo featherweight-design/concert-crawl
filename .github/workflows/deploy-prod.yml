@@ -593,6 +593,16 @@ jobs:
           COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
+          # jq is used below to construct the Resend JSON body
+          # safely. GitHub-hosted runners ship with jq, but a future
+          # self-hosted runner might not. Fail soft so the workflow
+          # doesn't end in `failure` over a missing optional tool —
+          # the `::warning::` annotation surfaces the gap.
+          if ! command -v jq >/dev/null 2>&1; then
+            echo "::warning title=Admin email skipped::jq not found on runner — admin not notified. Install jq or move to a runner image that ships with it."
+            exit 0
+          fi
+
           if [ -z "${RESEND_API_KEY:-}" ] || [ -z "${ADMIN_EMAIL:-}" ]; then
             missing=()
             [ -z "${RESEND_API_KEY:-}" ] && missing+=("RESEND_API_KEY (secret)")
@@ -615,9 +625,16 @@ jobs:
             -H "Authorization: Bearer ${RESEND_API_KEY}" \
             -H "Content-Type: application/json" \
             -d "${payload}"); then
-            echo "::warning title=Admin email failed::Resend API call failed. Response: ${response}"
-            # Don't fail the workflow — the warning annotation above
-            # plus GHA's workflow-failure email are the primary signals.
+            # Keep the annotation message STATIC — the Resend response
+            # body can contain newlines or characters that would break
+            # the workflow-command format if interpolated directly.
+            # Log the response separately so the operator can still
+            # see what Resend said in the step logs.
+            echo "::warning title=Admin email failed::Resend API call failed. See step log for response body."
+            echo "Resend response body:"
+            echo "${response}"
+            # Don't fail the workflow — the cron-skip annotation +
+            # GHA's workflow-failure email are still primary signals.
             exit 0
           fi
           echo "✓ Admin notified at ${ADMIN_EMAIL}"
