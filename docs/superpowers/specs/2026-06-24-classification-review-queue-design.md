@@ -6,7 +6,9 @@
 
 ## Goal
 
-Close the recovery gap for LLM `isConcert` false positives. Today's classifier produces ~1–2% false positives on backfills — real concerts misclassified as non-concerts, then hidden from consumers via `hidden_from_consumer=true`. There's no admin UI affordance to un-hide an event, so false positives sit hidden indefinitely.
+Close the recovery gap for LLM `isConcert` **false negatives** — real concerts the classifier wrongly tagged as non-concerts, then hidden from consumers via `hidden_from_consumer=true`. Today's classifier produces ~1–2% of these on backfills, and there's no admin UI affordance to un-hide an event, so these misclassifications sit hidden indefinitely.
+
+(Terminology: `isConcert` is the LLM predicate. A "false negative" is an event the predicate marked `false` when the truth is `true` — a real concert wrongly hidden. A "false positive" is the inverse direction — a non-concert wrongly left visible. This spec targets the false-negative direction; the false-positive direction is preserved as data but not surfaced in this cycle.)
 
 This spec adds (1) a per-row LLM-uncertainty signal so admins can find the borderline calls, (2) a filter chip on the existing All Events tab that scopes to hidden-and-flagged rows, and (3) an editor affordance to flip an event back to visible.
 
@@ -14,7 +16,7 @@ This spec adds (1) a per-row LLM-uncertainty signal so admins can find the borde
 
 The original auto-classification work (`2026-06-18-non-concert-auto-classification-design.md`) deliberately deferred admin override UI: "the API already supports `PATCH /v1/admin/events/:id { hiddenFromConsumer: false }`; for v1 we use that directly. UI affordance gets revisited in v2 once we have data on misclassification rates."
 
-We now have that data. The 2026-06-24 prod backfill hid 130 events, with 2 known false positives (PRESIDENT: North American Campaign 2026, Levity Presents: Laser Therapy) excluded by hand from the dry-run review because there was no un-hide path. Operating without an inverse affordance has reached its breaking point: the next backfill cycle will produce more borderline calls, and human dry-run review is fallible.
+We now have that data. The 2026-06-24 prod backfill hid 130 events, with 2 known `isConcert` false negatives (PRESIDENT: North American Campaign 2026, Levity Presents: Laser Therapy) excluded by hand from the dry-run review because there was no un-hide path. Operating without an inverse affordance has reached its breaking point: the next backfill cycle will produce more borderline calls, and human dry-run review is fallible.
 
 The 3 events that motivated PR #730's prompt iteration illustrate the borderline shape this spec targets:
 
@@ -87,7 +89,7 @@ The existing `onConflictDoUpdate` `set` clause does NOT include this field, mirr
 
 New file `scripts/2026-06-24-isconcert-review-needed-backfill.ts`, following the pattern established by `scripts/2026-06-19-non-concert-backfill.ts`. Behavior:
 
-1. Load all events where `hidden_from_consumer = true AND date >= CURRENT_DATE AND status IN ('upcoming', 'cancelled', 'postponed')` — ~130 rows on prod today.
+1. Load all events where `hidden_from_consumer = true AND date >= (NOW() AT TIME ZONE 'America/Denver')::date AND status IN ('upcoming', 'cancelled', 'postponed')` — ~130 rows on prod today. The Denver-tz pin matches the codebase convention (see `apps/api/src/routes/admin/events.ts:248–250`) so the backfill window doesn't shift around UTC midnight relative to what admins see in the UI.
 2. Batch of 25–50. Single Haiku call per batch using the same prompt as the live crawler (the `IS_CONCERT_RULES` block, including the new `reviewNeeded` rules). Output schema: `[{id, isConcert, reviewNeeded}]`.
 3. Dry-run by default → CSV at `dry-run-isconcert-review-needed-YYYY-MM-DDTHH-MM-SS.csv`:
    - Columns: `event_id, title, artist, date, venue_name, current_isConcert_implied, llm_isConcert, llm_reviewNeeded, action`
@@ -113,7 +115,7 @@ Today it's read-only and shows only genre. After this work it owns the event's c
   - **Mark non-concert** (shown when `hiddenFromConsumer=false`) — sets `hiddenFromConsumer: true`.
   - **Mark as concert** (shown when `hiddenFromConsumer=true`) — sets `hiddenFromConsumer: false`.
 - Both actions route through `EventConfirmModal` with new `kind` values `'mark-non-concert'` and `'mark-as-concert'`. Confirm modal copy lives in `ADMIN_COPY`.
-- A small inline pill ("LLM flagged for review") renders when `is_concert_review_needed=true`, so the admin opening the editor sees the flag immediately.
+- A small inline pill ("LLM flagged for review") renders when `isConcertReviewNeeded=true` (the camelCase field on the admin-events payload — the DB column itself is `is_concert_review_needed`), so the admin opening the editor sees the flag immediately.
 
 Both actions hit the existing `PATCH /v1/admin/events/:id { hiddenFromConsumer: true | false }` — no API change, the endpoint already supports both directions.
 
@@ -185,7 +187,7 @@ PRs 1 and 3 share no code paths (column write vs column read), so they can be de
 | Risk | Likelihood | Mitigation |
 |---|---|---|
 | LLM emits `reviewNeeded=true` too liberally; queue floods with false alarms | Medium | Dry-run review surfaces this before commit. Prompt examples are tight. If observed post-deploy: tighten prompt, re-run backfill. |
-| LLM emits `reviewNeeded=false` on genuinely borderline cases; real FPs stay hidden | Medium | This is the recovery story we already have — admin can still un-hide via the editor directly (now possible via the new button without going through the queue first). Manual scan of the full hidden list remains an option for high-stakes corpora. |
+| LLM emits `reviewNeeded=false` on genuinely borderline cases; real concerts stay hidden as `isConcert` false negatives | Medium | This is the recovery story we already have — admin can still un-hide via the editor directly (now possible via the new button without going through the queue first). Manual scan of the full hidden list remains an option for high-stakes corpora. |
 | Re-running backfill flips review-needed differently each run | Low (binary classification with examples should be stable) | If observed: pin model version in the script + record it alongside the flag. Initial version doesn't need this. |
 | Existing admin "Mark non-concert" callers (bulk dock, all-events row menu) drift after the editor refactor | Low | The bulk + row menu paths don't change; only `DangerZoneSection`'s affordance moves to `ClassificationSection`. Component test covers it. |
 | Single `view=hidden-flagged-for-review` param limits future composability | Low | If a second use case appears (e.g. visible-and-flagged queue), refactor to orthogonal params then. YAGNI now. |
@@ -205,7 +207,7 @@ PRs 1 and 3 share no code paths (column write vs column read), so they can be de
 
 - Reconcile single-row vs bulk audit action key asymmetry. Today single-row Mark non-concert audits as generic `event.update`; bulk audits as `event.bulk_mark_non_concert`. Adding distinct keys for `event.mark_non_concert` and `event.mark_as_concert` would let compliance grep cleanly without parsing meta JSON.
 - Promote the filter chip to a top-level Review tab if the queue grows past ~20 active rows at steady state.
-- Build a visible-but-flagged admin UI surface if FPs in the visible direction become an operational problem. The `is_concert_review_needed` column already carries this data symmetrically per the B2 brainstorm decision.
+- Build a visible-but-flagged admin UI surface if `isConcert` false positives (non-concerts wrongly left visible) become an operational problem. The `is_concert_review_needed` column already carries this data symmetrically per the B2 brainstorm decision.
 
 ## Open questions
 
