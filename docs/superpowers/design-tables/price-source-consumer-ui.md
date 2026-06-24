@@ -384,11 +384,17 @@ The price chip surface for browse cards. Replaces today's `PriceChip` with same-
 | from | `true` |
 
 ### Resolved color (line 202)
-| kind | color |
-|------|-------|
-| `'boxoffice'` | `GOLD_T` (`oklch(0.66 0.14 78)`) |
-| `'community'` | `AZ_T` (`oklch(0.62 0.12 240)`) |
-| (default — incl. `'resale'`, `'standard'`) | `var(--fg-muted)` |
+
+Browse chips reserve tier chrome (dot, tint, accent border) for *marked* tiers only — `boxoffice` (gold) and `resale` (coral, see Appendix A.3). `community` and the default fall back to neutral text; the chrome budget is spent where the source distinction changes how the fan reads the number. Community keeps full azure on the **detail** page (PendingTrustPill) where there's no competing chrome — this is intentional asymmetry, not a bug.
+
+| kind | Browse chip (this component) | Detail surface |
+|------|------------------------------|----------------|
+| `'boxoffice'` | `GOLD_T` (`oklch(0.66 0.14 78)`) — dot + label | gold pill (PendingTrustPill / FaceValueCard) |
+| `'resale'` | coral (`oklch(0.65 0.20 25)`) — see Appendix A.3 for full chrome | coral caption + chrome (PriceBlockB / FaceValueCard) |
+| `'community'` | neutral — label `var(--fg)`, no dot, no tinted bg/border (shared with default) | `AZ_T` (`oklch(0.62 0.12 240)`) — PendingTrustPill on detail |
+| (default — incl. `'standard'`, `null`) | label `var(--fg-muted)`, no dot, no tinted bg/border | — |
+
+(See PR4-ADDENDUM.md §"Q2" for the markedness rationale and the rejected "tint everything" alternative.)
 
 ### Chip container — common (lines 204-208)
 | Property | Value |
@@ -641,9 +647,9 @@ These are shipped from prior PRs (`multi-tier.jsx`, `pending-card.jsx`). PR 4 re
 | 8 | Pending — viewer IS the submitter | `pending[i].isSubmitter === true` | `PendingCardB view='submitter'` (shipped) | "YOUR SUBMISSION" footer, suppress confirm affordance | shipped `PendingCardB` |
 | 9 | Pending — other viewer (can confirm) | `pending[i].isSubmitter === false` | `PendingCardB view='other'` (shipped) | "Saw a different number?" + "Confirm price" footer | README §round-3 #5 |
 | 10 | Sold-out with resale available | `event.status === 'soldout'` AND `ticketLinks` has `kind='resale'` entry | `SoldOutPriceCard` (shipped) + new `FaceValueCard` + new `ProvenanceCTA kind='resale' outline` + `ReportFooter` (shipped) | FaceValueCard `resaleRange, resaleVendor`; ProvenanceCTA `kind='resale', vendor, outline=true` | `AfterSoldOut`; README §"The fix — sold-out" |
-| 11 | ⚠️ Sold-out with no resale or primary link | `event.status='soldout'` AND `ticketLinks` empty | `SoldOutPriceCard` (shipped) + `FaceValueCard` degraded ("available, above face value", no number) + `ReportFooter` | FaceValueCard degraded variant | README open Q #1 — verify with user |
+| 11 | Sold-out with no resale or primary link | `event.status='soldout'` AND `ticketLinks` empty | `SoldOutPriceCard` `variant='no-listing'` (degraded — see Appendix A.2) + `ContributeFaceValueCard` (Appendix A.1, replaces `FaceValueCard`) | `SoldOutPriceCard variant='no-listing'`; `ContributeFaceValueCard` (single ghost box-office row + signal CTA, NO resale row, NO outbound ProvenanceCTA) | Locked: Appendix A.1 + A.2 |
 | 12 | No-price (community handoff) — resale link exists | `priceByTier === null \|\| priceByTier.length === 0` AND `event.status !== 'soldout'` AND `ticketLinks` has resale | `NoPriceCard` (shipped) + new `FaceValueCard` (alt headline + CTA) + `ProvenanceCTA kind='resale' outline` + `ReportFooter` | FaceValueCard `headline='All we can see is resale.'`, `ctaLabel='Add a price you've seen'` | `AfterNoPrice`; README §"The fix — no price" |
-| 13 | ⚠️ No-price (community handoff) — no ticket links at all | priceByTier empty AND `ticketLinks` empty | `NoPriceCard` only + community-handoff CTA wired to submit-price modal | — | ⚠️ verify — design doesn't specify whether `FaceValueCard` appears |
+| 13 | No-price (community handoff) — no ticket links at all | priceByTier empty AND `ticketLinks` empty | `NoPriceCard` only + community-handoff CTA wired to submit-price modal | NO `FaceValueCard` / `ContributeFaceValueCard` — pedagogy collapses without a resale anchor | Locked: Appendix A.5 (Q2-eng) |
 | 14 | Outbound CTA · boxoffice (rare, venue sells direct) | `ticketLinks[0].kind='boxoffice'` | `ProvenanceCTA kind='boxoffice'` filled | `vendor='Venue'` per round-3 #2 | `CTAVariants` |
 | 15 | Outbound CTA · primary (official vendor) | `ticketLinks[0].kind='primary'` | `ProvenanceCTA kind='primary'` filled | `vendor=<AXS\|Ticketmaster\|SeatGeek\|…>` | `CTAVariants`; SeatGeek stays per round-3 #1 |
 | 16 | Outbound CTA · resale only | only resale link in `ticketLinks` | `ProvenanceCTA kind='resale' outline` | `vendor, outline=true` (NOT recommended path) | `ProvenanceCTA`; README §"`<ProvenanceCTA/>`" |
@@ -670,8 +676,8 @@ These are shipped from prior PRs (`multi-tier.jsx`, `pending-card.jsx`). PR 4 re
 | 1 | First tier submitted | API 201 | `MTAddTierSuccess` | tier label, floor price, sourceCategory, `confirms=1`, `needed=2` |
 | 2 | Add-another-tier picker | success state | `MTAddTierSuccess` continues; shows `[+ Add reserved] [+ Add VIP]` etc. for tiers user hasn't submitted | client-side state; verify with `priceByTier` whether to disable |
 | 3 | Add-another-tier — chip click | user clicks `+ Add reserved` | reopens submit modal pre-scoped to picked tier | tier locked, other fields cleared |
-| 4 | ⚠️ All tiers submitted | every tier has user submission | `MTAddTierSuccess` collapses to `"Done"` only | verify with API |
-| 5 | ⚠️ Submit error — duplicate (tier, source) | API 409 | error state in modal | copy not in handoff; eng-owned per READINESS |
+| 4 | All tiers submitted | every tier the user has submitted in this session is in client-side state (no re-fetch); `remainingTiers` array is empty | `MTAddTierSuccess` collapses to `"Done"` only | Locked: Appendix A.5 (Q4-eng — client session state, not API re-fetch) |
+| 5 | Submit error — duplicate (tier, source) | API 409 | inline error state in modal | Copy eng-owned per READINESS — not a design ambiguity; resolved via plan copy keys |
 | 6 | Submit error — counter race | API 409 because counter filed between page-load and POST | toast: `"Another challenge was just filed — refresh to see it."` | READINESS §"Defensive 409 handling" |
 
 ### Browse / search — states
@@ -679,8 +685,8 @@ These are shipped from prior PRs (`multi-tier.jsx`, `pending-card.jsx`). PR 4 re
 | # | State | Trigger | Components | Notes |
 |---|---|---|---|---|
 | 1 | List chip — boxoffice headline | event list response cheapest tier `sourceCategory='boxoffice'` | `MT_ListChip kind='boxoffice'` — gold StarGlyph + gold `"from $X"` | `price, kind='boxoffice', from=true` |
-| 2 | List chip — community headline | cheapest tier `sourceCategory='standard'` | `MT_ListChip kind='community'` — azure | `price, kind='community', from=true` |
-| 3 | ⚠️ List chip — resale-only | cheapest tier `sourceCategory='resale'` AND no boxoffice/standard | `MT_ListChip kind='resale'` — coral | ⚠️ verify intent — mock doesn't show; could be omitted or distinct affordance |
+| 2 | List chip — community headline | cheapest tier `sourceCategory='standard'` | `MT_ListChip kind='community'` — neutral (label `var(--fg)`, NO azure dot/tint on browse chip; azure reserved for detail surfaces like PendingTrustPill) | `price, kind='community', from=true` — see §4 Resolved color table for markedness rationale |
+| 3 | List chip — resale-only | cheapest tier `sourceCategory='resale'` AND no boxoffice/standard | `MT_ListChip kind='resale'` — coral (Appendix A.3) with always-present mono "resale" tag | `price, kind='resale', from=true` — locked per Appendix A.3; tap-through to detail teaches the rest |
 | 4 | List chip — multi-tier collapsed | `priceByTier.length > 1` | `MT_ListChip` with `from=true`, price = cheapest tier's floor | README §"Browse/search collapse to 'from $X'" |
 | 5 | ⚠️ List chip — no price | event has no `priceByTier` entries | omitted entirely OR no-price variant | verify with current `PriceChip` behavior |
 | 6 | List chip — sold-out | `event.status === 'soldout'` | shipped sold-out chip (out of scope) | existing behavior |
@@ -696,16 +702,16 @@ These are shipped from prior PRs (`multi-tier.jsx`, `pending-card.jsx`). PR 4 re
 
 ---
 
-## §9. Unknowns / verification needed
+## §9. Verification status (formerly "Unknowns") — all resolved 2026-06-24
 
-1. **State #11 (sold-out, no resale, no primary link)** — design open Q #1: if `ticketLinks` is fully empty, does `FaceValueCard` render at all? Design says it degrades to "available, above face value" with no number — but if no resale link exists either, there's no resale row to anchor.
-2. **State #13 (no-price, no ticket links)** — same uncertainty.
-3. **Browse #3 (resale-only list chip)** — mock doesn't include a coral chip; verify intent.
-4. **Submit-success #2/#4 (add-another-tier picker drive)** — verify whether client tracks "which tiers I just submitted" via local state or re-fetches `priceByTier` after each success.
-5. **State #17 dispute-affordance replacement copy** — README doesn't carry the copy; memory note suggests "Confirm this challenge" pointing at the existing `PendingCardB`. Eng locks in plan if README doesn't update.
-6. **Engagement pill (#18)** — comes from `#697` admin contest-review track. PR 4 ships the passive consumer surfacing.
+Every open question on this list now has a locked answer. Kept here as a paper trail; the live answer lives in Appendix A.
 
-These are flagged for plan-time decisions or user approval. None are merge-blocking design ambiguities — implementation defaults are obvious.
+1. **State #11 (sold-out, no resale, no primary link)** — ✅ Resolved by Appendix A.1 + A.2: `SoldOutPriceCard variant='no-listing'` (price renders as `—`, no strikethrough) + `ContributeFaceValueCard` (single ghost box-office row + signal CTA, no resale row, no outbound ProvenanceCTA).
+2. **State #13 (no-price, no ticket links)** — ✅ Resolved by Appendix A.5 (Q2-eng): NO `FaceValueCard` / `ContributeFaceValueCard`. Fall through to legacy `NoPriceCard` only; pedagogy collapses without a resale anchor.
+3. **Browse #3 (resale-only list chip)** — ✅ Resolved by Appendix A.3: `MT_ListChip kind='resale'` with always-present mono "resale" tag. Never bare, never hidden.
+4. **Submit-success #2/#4 (add-another-tier picker drive)** — ✅ Resolved by Appendix A.5 (Q4-eng): client-side React session state of "tiers I just submitted." Avoids flicker; rare cross-device race is recoverable on next load.
+5. **State #17 dispute-affordance replacement copy** — ✅ Resolved by Appendix A.4: pointer link replaces the suppressed dispute link in the same footer slot, mono coral `oklch(0.65 0.20 25)`, copy `"Someone's contesting this — see the counter →"`.
+6. **Engagement pill (#18)** — Out of scope, pointer only: passive consumer surfacing of the `#697` admin contest-review engagement signal. PR 4 reads `lastAdminActionKind` and `lastAdminActionAt` from the API; no design decision needed here.
 
 ---
 

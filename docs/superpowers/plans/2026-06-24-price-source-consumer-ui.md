@@ -44,7 +44,7 @@
 - `apps/web/src/components/consumer/price-region/MultiSourceMultiTierCard.tsx` — §6.
 - `apps/web/src/components/consumer/price-region/MultiSourceMultiTierCard.test.tsx`
 - `apps/web/src/components/consumer/price-region/AltSourceRow.tsx` — §6 sub-component.
-- `apps/web/src/components/consumer/price-region/lib/pick-headline.ts` — pure helper that mirrors `apps/api/src/lib/price-aggregation/pick-tier-headline.ts` for browse-card chip selection. Re-implements `trustRank` + `compareTierRows` against the consumer-side `TierPriceBlock` shape (which omits the `userId` / `createdAt` fields the API uses).
+- `apps/web/src/components/consumer/price-region/lib/pick-headline.ts` — pure helper that adapts pre-aggregated `priceByTier` for browse-card chip selection. Walks the API-sorted (price-ASC) blocks and returns the first one with a non-null headline. Does NOT re-implement trust ordering or tie-break — those decisions are owned by `apps/api/src/lib/price-aggregation/pick-tier-headline.ts` and are already applied by the time the consumer sees the data.
 - `apps/web/src/components/consumer/price-region/lib/pick-headline.test.ts`
 - `apps/web/src/components/consumer/price-region/lib/decision-tree.ts` — pure state-machine helper that takes the relevant `EventDetailResponse` slice and returns a tagged union `{ kind: 'sold-out-resale', … } | { kind: 'sold-out-contribute', … } | { kind: 'no-price-resale', … } | …` for the orchestrator to render. Keeps the giant if-tree in `EventDetailClient.tsx` legible. Discriminant names follow the §9 lock vocabulary (`sold-out-contribute` is the Q1 lock; `no-price-empty` is the Q2-eng lock).
 - `apps/web/src/components/consumer/price-region/lib/decision-tree.test.ts`
@@ -60,7 +60,7 @@
 - `apps/web/src/components/consumer/SoldOutPriceCard.test.tsx` — add cases for the new `'no-listing'` variant.
 - `apps/web/src/components/consumer/PendingCardB.tsx` — add additive prop `counterPointer?: { href: string } | null` per Appendix A.4 / §9 Q3 lock. When non-null, replace the existing `"Saw a different number?"` footer link with the coral counter-pointer link (mono 10px, coral, 5×5 coral dot, 11×11 arrow SVG); `Confirm price` button stays unchanged.
 - `apps/web/src/components/consumer/PendingCardB.test.tsx` — add cases for the new `counterPointer` prop.
-- `apps/web/src/components/consumer/event-card/EventCard.tsx` — replace the inline `PriceChip` (lines 43-119) with `<MTListChip>` rendered with `pickBrowseHeadline(event)` so the browse-card chip mirrors `pickTierHeadline`. Keep the existing "tba" / `null` fallback path.
+- `apps/web/src/components/consumer/event-card/EventCard.tsx` — replace the inline `PriceChip` (lines 43-119) with `<MTListChip>` rendered with `pickBrowseHeadline(event)`. `pickBrowseHeadline` adapts the API's pre-aggregated `priceByTier` (already run through `pickTierHeadline` per tier, already sorted price-ASC) into a single `{ price, kind }` for the chip. Keep the existing "tba" / `null` fallback path.
 - `apps/web/src/components/consumer/submit-price/SubmitPriceModal.tsx` — reorder form (lines 535–602): (1) source-category chip group leads (new), (2) floor/ceiling row second with dynamic floor label per source, (3) tier group third, (4) vendor group fourth (auto-fill "Venue" + lock-but-required when source=boxoffice). Remove the `howFound` chip group + dependent payload field. Update payload type + POST/PATCH bodies to send `sourceCategory` instead of `howFound`. Add the 409 race-case toast handler per `memory:project_pr4_dispute_affordance_hiding`.
 - `apps/web/src/components/consumer/submit-price/SubmitPriceModal.test.tsx` — update tests to expect the new field order, the new `sourceCategory` payload, and absence of `howFound`. Add tests for the source→floor label switch and the 409 race-case toast.
 - `apps/api/src/routes/submissions.ts` — accept `sourceCategory` as optional in the POST body schema (it's already derived server-side from `howFound`; with `howFound` removed at the consumer layer, the server keeps a fallback to derive from `vendor` + the explicit `sourceCategory` when provided). _NOTE: this is a small contract follow-on. If PR 3 already accepts `sourceCategory`, this is a no-op — read first._
@@ -124,11 +124,16 @@ priceRegion: {
     eyebrow: 'Face value ≠ resale',
     headlineDefault: "That's resale — not face value.",
     headlineNoPrice: 'All we can see is resale.',
-    sublineDefault: 'Only resale tickets left. Know the box-office price? Add it.',
-    sublineNoPrice: 'Only resale showed up. Know the box-office price? Add it.',
+    // Single subline — property table state #12 (no-price) only overrides the
+    // headline; subline copy is shared between the sold-out-with-resale (#10)
+    // and no-price-with-resale (#12) variants.
+    subline: 'Only resale tickets left. Know the box-office price? Add it.',
+    ladderResaleLabel: 'Resale',
     ladderResaleSub: (vendor: string) => `${vendor} · marked up over face`,
+    ladderResaleRightFallback: 'available, above face value',
+    ladderBoxofficeLabel: 'Box office',
     ladderBoxofficeSub: 'the printed price · no fees',
-    ladderBoxofficeRight: 'NOT REPORTED',
+    ladderBoxofficeRight: 'not reported',
     ctaLabelDefault: 'Add the box-office price',
     ctaLabelNoPrice: "Add a price you've seen",
     caption: 'Goes live once one more fan confirms',
@@ -596,11 +601,9 @@ export const FaceValueCard = ({
 }: FaceValueCardProps) => {
   const headline =
     variant === 'no-price' ? copy.headlineNoPrice : copy.headlineDefault
-  const subline =
-    variant === 'no-price' ? copy.sublineNoPrice : copy.sublineDefault
   const ctaLabel =
     variant === 'no-price' ? copy.ctaLabelNoPrice : copy.ctaLabelDefault
-  const resaleRight = resaleRange ?? 'available, above face value'
+  const resaleRight = resaleRange ?? copy.ladderResaleRightFallback
 
   return (
     <div
@@ -638,7 +641,7 @@ export const FaceValueCard = ({
             lineHeight: 1.5,
           }}
         >
-          {subline}
+          {copy.subline}
         </div>
       </div>
 
@@ -651,7 +654,7 @@ export const FaceValueCard = ({
       >
         <LadderRow
           kind="resale"
-          label="Resale"
+          label={copy.ladderResaleLabel}
           sub={copy.ladderResaleSub(resaleVendor)}
           right={resaleRight}
           ghost={false}
@@ -659,7 +662,7 @@ export const FaceValueCard = ({
         <div style={{ height: 1, background: 'var(--border)', margin: '0 14px' }} />
         <LadderRow
           kind="boxoffice"
-          label="Box office"
+          label={copy.ladderBoxofficeLabel}
           sub={copy.ladderBoxofficeSub}
           right={copy.ladderBoxofficeRight}
           ghost
@@ -729,7 +732,7 @@ export const FaceValueCard = ({
 **TDD steps:**
 
 - [ ] **Step 1**: Write `FaceValueCard.test.tsx` covering states 3, 10, 12 from property table §8:
-  - default variant: renders eyebrow "Face value ≠ resale", headline "That's resale — not face value.", resale row with `vendor="Ticketmaster"` + range `"$110–180"`, ghost box-office row reading "NOT REPORTED", CTA "Add the box-office price"
+  - default variant: renders eyebrow "Face value ≠ resale", headline "That's resale — not face value.", resale row with `vendor="Ticketmaster"` + range `"$110–180"`, ghost box-office row reading "not reported", CTA "Add the box-office price"
   - no-price variant: headline switches to "All we can see is resale.", CTA to "Add a price you've seen"
   - clicking CTA fires `onAddPrice`
 - [ ] **Step 2**: Run failing tests, implement `FaceValueCard.tsx` per snippet, re-run green.
@@ -1038,9 +1041,19 @@ export const MultiSourceMultiTierCard = ({
 **Interfaces produced:**
 
 ```ts
-// pick-headline.ts — consumer-side mirror of apps/api/src/lib/price-aggregation/pick-tier-headline.ts.
-// CRITICAL: keep trust ordering identical to apps/api: boxoffice=0, standard=1, resale=2.
-// CRITICAL: tie-break must match — lowest priceMin (numeric), then newest observedAt.
+// pick-headline.ts — consumer-side adapter over the API-side aggregation.
+//
+// IMPORTANT: this helper does NOT re-implement trust ordering or tie-break.
+// Those decisions are owned by the API's pick-tier-headline.ts; by the time
+// the consumer sees `priceByTier`, each block already has a single pre-picked
+// `headline` (or null) and the blocks are sorted by entry price ascending.
+//
+// This helper's job is to (a) translate the API's `sourceCategory` enum into
+// the chip's `kind` vocabulary, and (b) pick the FIRST block with a non-null
+// headline — which is the cheapest tier with any price data, per API sort
+// order. If the API guarantees change, this helper must change with them.
+//
+// Cross-reference: apps/api/src/lib/price-aggregation/pick-tier-headline.ts.
 
 import type { TierPriceBlock } from '@concert-crawl/types'
 
@@ -1063,7 +1076,9 @@ export interface MTListChipProps {
 }
 ```
 
-**`pick-headline.ts` implementation (mirrors api/src/lib/price-aggregation/pick-tier-headline.ts exactly):**
+**`pick-headline.ts` implementation:**
+
+The consumer helper consumes pre-aggregated data — `priceByTier` is already sorted by entry price ASC by `aggregateByTier`, and within each block the API's `pick-tier-headline.ts` has already collapsed candidates into a single headline (or null) using trust → price → observedAt ordering. The helper here just (a) walks tiers in price-ASC order to find the first one with a non-null headline, and (b) maps `sourceCategory` to the chip's `kind` vocabulary.
 
 ```ts
 import type { TierPriceBlock, SourceCategory } from '@concert-crawl/types'
@@ -1075,12 +1090,6 @@ export interface BrowseHeadline {
   kind: BrowseHeadlineKind
 }
 
-function trustRank(category: SourceCategory | null): number {
-  if (category === 'boxoffice') return 0
-  if (category === 'resale') return 2
-  return 1
-}
-
 function kindFromCategory(category: SourceCategory | null): BrowseHeadlineKind {
   if (category === 'boxoffice') return 'boxoffice'
   if (category === 'resale') return 'resale'
@@ -1088,10 +1097,7 @@ function kindFromCategory(category: SourceCategory | null): BrowseHeadlineKind {
   return null
 }
 
-// Mirror of compareTierRows from apps/api/src/lib/price-aggregation/pick-tier-headline.ts:30
-// Trust → price ASC → observedAt DESC.
-// We operate on TierHeadline shape (no createdAt; observedAt is the substitute).
-function pickWithinBlock(block: TierPriceBlock): BrowseHeadline | null {
+function adaptBlock(block: TierPriceBlock): BrowseHeadline | null {
   if (block.headline === null) return null
   return {
     price: parseFloat(block.headline.priceMin),
@@ -1099,21 +1105,23 @@ function pickWithinBlock(block: TierPriceBlock): BrowseHeadline | null {
   }
 }
 
-// Pick the cheapest tier — i.e., the tier whose headline has the lowest price.
-// PR 3's aggregateByTier already sorts priceByTier[] by entry price ASC, so the
-// first block with a non-null headline is the right pick. If every tier is
-// pending-only, return null (no chip data).
+// Pick the cheapest tier with any price data.
+// Relies on aggregateByTier sorting priceByTier[] by entry price ASC, so the
+// first block with a non-null headline IS the cheapest with a price. If every
+// tier is pending-only (all headlines null), return null (no chip data).
 export function pickBrowseHeadline(
   priceByTier: ReadonlyArray<TierPriceBlock> | null | undefined,
 ): BrowseHeadline | null {
   if (priceByTier == null || priceByTier.length === 0) return null
   for (const block of priceByTier) {
-    const headline = pickWithinBlock(block)
+    const headline = adaptBlock(block)
     if (headline !== null) return headline
   }
   return null
 }
 ```
+
+(If the API's sort guarantee for `priceByTier` ever changes, this helper must change too — the cheapest-tier pick assumes API-side ASC ordering.)
 
 **`MTListChip.tsx` implementation (property table §4, lines 376–420; `kind='resale'` per Appendix A.3 / §9 Q1 lock):**
 

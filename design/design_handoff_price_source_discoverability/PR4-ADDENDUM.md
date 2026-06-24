@@ -39,7 +39,7 @@ The detail page already shows the resale number framed as resale (coral caption 
 
 **Verdict: Path B, kept weightless — replace the suppressed link in the same footer slot with a quiet pointer to the live counter.**
 
-Go one notch past eng's default. In the slot the "Saw a different number?" link already owned, swap in: **"Someone's contesting this — see the counter →"** (mono, `--fg-subtle`/coral, same treatment as the dispute link). Net-new chrome = zero; it's a copy swap.
+Go one notch past eng's default. In the slot the "Saw a different number?" link already owned, swap in: **"Someone's contesting this — see the counter →"** (mono, strict coral `oklch(0.65 0.20 25)` — *not* muted; the pointer is a coral signal, deliberately distinct from the original `--fg-subtle` dispute link). Net-new chrome = zero; it's a copy swap.
 
 Why not silent (A): it leaves two problems — the fan who reaches for the dispute link out of muscle memory finds nothing (reads as broken), and the relationship between the original price and the adjacent counter stays invisible (adjacency alone doesn't say "these two are arguing about the same number"). The pointer fixes both: it explains *why* the dispute form is unavailable (someone already filed one — the locked "don't let them submit a doomed contest" rule), and it routes more eyes onto the pending counter, which is what drives the 1/2 resolution faster.
 
