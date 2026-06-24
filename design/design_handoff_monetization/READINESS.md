@@ -3,7 +3,11 @@
 **Verdict:** 🔴 Red
 **Audited:** 2026-06-24
 **Auditor:** Claude (autonomous Readiness Review)
-**Related ticket(s):** Beta-to-Launch Design Queue row 4 (`design/design_handoff_monetization/`); eng target Beta wk 3 (Jun 30 – Jul 6) per `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md` — "Beta Period Plan (Jun 16 – Aug 3)" section and "Design Queue → Beta bucket" section (lines ~122 and ~258 as of audit date).
+**Related ticket(s):**
+- **Eng infra:** #775 (`type: chore, priority: blocker`) — Monetization infrastructure spec
+- **Design addenda (must all close before plan PR can open):** #780, #781, #782, #783
+- **Source design:** `design/design_handoff_monetization/` — Beta-to-Launch Design Queue row 4
+- **Eng target:** Beta wk 3 (Jun 30 – Jul 6) per `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md` — "Beta Period Plan (Jun 16 – Aug 3)" section and "Design Queue → Beta bucket" section (lines ~122 and ~258 as of audit date).
 
 **Addendum tickets opened from this audit** (all must be resolved before a Monetization plan PR can open). The initial pass opened 10 design addenda + 1 eng infra ticket; these were consolidated into 4 design briefs + 1 eng infra ticket so Design receives coherent problem statements instead of a fragmented eng-flavored checklist. The eng infra ticket retains its full technical depth — that's the right audience for it.
 
