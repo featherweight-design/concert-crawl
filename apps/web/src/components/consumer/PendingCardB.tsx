@@ -136,6 +136,15 @@ export interface PendingCardBProps {
   // REPLACES the "Saw a different number?" dispute entry with a coral pointer
   // link to the existing counter card. Confirm button stays unchanged.
   counterPointer?: { href: string } | null
+  // §8 state #18 — when an admin defers the contest on the counter for this
+  // tier, render a quiet "Admin requested more info" pill near the pending
+  // strip's right side. Mirrors the same affordance on DisputedPriceCard so
+  // the engagement signal is visible regardless of which tier-card variant
+  // a viewer is looking at. Sourced from
+  // priceByTier[].counterSubmission.lastAdminActionKind on the parent
+  // orchestrator. The pill only renders on the `view === 'other'` variant
+  // (the counter is someone else's; the submitter view has its own footer).
+  lastAdminActionKind?: 'defer' | null
 }
 
 // ── Component ────────────────────────────────────────────────────
@@ -155,6 +164,7 @@ export const PendingCardB = ({
   onWithdraw,
   onEdit,
   counterPointer = null,
+  lastAdminActionKind = null,
 }: PendingCardBProps) => {
   const tok = pendingTokens(kind)
   const isBox = kind === 'boxoffice'
@@ -226,18 +236,44 @@ export const PendingCardB = ({
           </span>
         </div>
 
-        {/* Strip right */}
-        <span
-          style={{
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: '9px',
-            color: 'var(--fg-subtle)',
-            letterSpacing: '0.04em',
-            textTransform: 'uppercase',
-          }}
-        >
-          {remaining} {copy.toGo}
-        </span>
+        {/* Strip right — `view === 'other'` + admin-deferred counter renders
+            the engagement-signal pill in place of the "N to go" caption so the
+            tile reads consistently with DisputedPriceCard. §8 state #18. */}
+        {view === 'other' && lastAdminActionKind === 'defer' ? (
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: '2px 8px',
+              borderRadius: 999,
+              background:
+                'color-mix(in oklab, var(--warning) 10%, transparent)',
+              color: 'var(--warning)',
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 9,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              fontWeight: 700,
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {CONSUMER_COPY.priceRegion.adminDeferPillLabel}
+          </span>
+        ) : (
+          <span
+            style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: '9px',
+              color: 'var(--fg-subtle)',
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+            }}
+          >
+            {remaining} {copy.toGo}
+          </span>
+        )}
       </div>
 
       {/* ── Body ── */}

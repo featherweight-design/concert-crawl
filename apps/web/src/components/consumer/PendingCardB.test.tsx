@@ -338,4 +338,42 @@ describe('PendingCardB', () => {
       ).toBeNull()
     })
   })
+
+  describe("§8 state #18 — admin defer pill on view='other'", () => {
+    it("renders 'Admin requested more info' pill in place of the 'to go' caption when lastAdminActionKind='defer'", () => {
+      render(
+        <PendingCardB
+          {...buildProps({
+            view: 'other',
+            confirms: 1,
+            needed: 2,
+            lastAdminActionKind: 'defer',
+          })}
+        />,
+      )
+      // Pill copy comes from CONSUMER_COPY.priceRegion.adminDeferPillLabel.
+      expect(screen.getByText(/admin requested more info/i)).toBeTruthy()
+      // The "to go" caption is suppressed when the pill takes over the slot.
+      expect(screen.queryByText(/to go/i)).toBeNull()
+    })
+
+    it("does NOT render the pill when view='submitter' (engagement signal only on counters from someone else)", () => {
+      render(
+        <PendingCardB
+          {...buildProps({
+            view: 'submitter',
+            lastAdminActionKind: 'defer',
+          })}
+        />,
+      )
+      expect(screen.queryByText(/admin requested more info/i)).toBeNull()
+      expect(screen.getByText(/to go/i)).toBeTruthy()
+    })
+
+    it('does NOT render the pill when lastAdminActionKind is null/omitted', () => {
+      render(<PendingCardB {...buildProps({ view: 'other' })} />)
+      expect(screen.queryByText(/admin requested more info/i)).toBeNull()
+      expect(screen.getByText(/to go/i)).toBeTruthy()
+    })
+  })
 })

@@ -34,6 +34,12 @@ export interface MultiTierLiveCardProps {
     kind: 'community' | 'boxoffice' | 'resale'
   }
   alternates: Array<AlternateTier>
+  // §8 state #19 — within-tier consensus tell. When > 1, the meta line
+  // appends `· N reports` after the "seen on <vendor>" caption. Sourced
+  // from TierPriceBlock.reports on the corresponding priceByTier block.
+  // Anything ≤ 1 hides the caption — a single report isn't a corroboration
+  // signal, just the source row itself.
+  reports?: number
 }
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -46,6 +52,7 @@ const formatHeadlinePrice = (floor: number, ceiling?: number): string => {
 export const MultiTierLiveCard = ({
   headline,
   alternates,
+  reports,
 }: MultiTierLiveCardProps) => {
   const hasAlternates = alternates.length > 0
 
@@ -108,7 +115,10 @@ export const MultiTierLiveCard = ({
         <PendingTrustPill kind={headline.kind} />
       </div>
 
-      {/* Vendor/observation line */}
+      {/* Vendor/observation line — appends `· N reports` when reports > 1
+          per §8 state #19 (consensus tell). reports === 1 is suppressed
+          because the source row itself is one observation; the caption only
+          earns its space when others have corroborated. */}
       <div
         style={{
           marginTop: '6px',
@@ -119,6 +129,7 @@ export const MultiTierLiveCard = ({
         }}
       >
         {'seen on ' + headline.vendor}
+        {reports !== undefined && reports > 1 && ` · ${reports} reports`}
       </div>
 
       {/* Other tiers section */}

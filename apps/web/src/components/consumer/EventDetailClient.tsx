@@ -666,6 +666,9 @@ export function EventDetailPriceBlock({
             kind: 'resale',
           }}
           alternates={alternates}
+          {...(headlineBlock?.reports !== undefined
+            ? { reports: headlineBlock.reports }
+            : {})}
         />
         <div className="mt-3">
           <FaceValueCard
@@ -816,6 +819,7 @@ export function EventDetailPriceBlock({
               kind: headlineKind,
             }}
             alternates={alternateRows}
+            reports={headlineBlock.reports}
           />
           {outboundLink !== null && outboundKind !== null && (
             <div className="mt-3">
@@ -1105,6 +1109,14 @@ export function EventDetailPriceBlock({
       return { href: `#counter-${block.counterSubmission.id}` }
     }
 
+    // §8 state #18 — surfaces the admin defer engagement signal on the
+    // PendingCardB that sits alongside a counter. Falls back to null when
+    // there's no counter for the tier or the counter has no admin action.
+    const lastAdminActionKindFor = (tier: string): 'defer' | null => {
+      const block = event.priceByTier?.find((blk) => blk.tier === tier)
+      return block?.counterSubmission?.lastAdminActionKind ?? null
+    }
+
     const pendingCardProps = visibleSubs.map((sub) => {
       const displayConfirms = sub.confirmsCount + (localConfirms[sub.id] ?? 0)
       const isBoxOffice = sub.vendor === 'VenueBoxOffice'
@@ -1125,6 +1137,7 @@ export function EventDetailPriceBlock({
         needed: sub.confirmsNeeded,
         view: viewKind,
         counterPointer: counterPointerFor(sub.tier),
+        lastAdminActionKind: lastAdminActionKindFor(sub.tier),
         note: sub.note,
         onConfirm: () => setActiveCorroborationId(sub.id),
         onWithdraw: () => {

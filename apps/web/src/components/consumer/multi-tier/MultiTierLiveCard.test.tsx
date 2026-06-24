@@ -64,6 +64,56 @@ describe('MultiTierLiveCard', () => {
     expect(pillEl.style.background).toContain('oklch(0.65 0.2 25)')
   })
 
+  it('appends "· N reports" to the meta line when reports > 1 (§8 state #19)', () => {
+    render(
+      <MultiTierLiveCard
+        headline={{
+          floor: 30,
+          tier: 'GA',
+          vendor: 'AXS',
+          kind: 'community',
+        }}
+        alternates={[]}
+        reports={3}
+      />,
+    )
+    // Single text node: "seen on AXS · 3 reports"
+    expect(screen.getByText('seen on AXS · 3 reports')).toBeDefined()
+  })
+
+  it('suppresses the reports caption when reports === 1 (single observation)', () => {
+    render(
+      <MultiTierLiveCard
+        headline={{
+          floor: 30,
+          tier: 'GA',
+          vendor: 'AXS',
+          kind: 'community',
+        }}
+        alternates={[]}
+        reports={1}
+      />,
+    )
+    expect(screen.getByText('seen on AXS')).toBeDefined()
+    expect(screen.queryByText(/reports/)).toBeNull()
+  })
+
+  it('suppresses the reports caption when reports is undefined', () => {
+    render(
+      <MultiTierLiveCard
+        headline={{
+          floor: 30,
+          tier: 'GA',
+          vendor: 'AXS',
+          kind: 'community',
+        }}
+        alternates={[]}
+      />,
+    )
+    expect(screen.getByText('seen on AXS')).toBeDefined()
+    expect(screen.queryByText(/reports/)).toBeNull()
+  })
+
   it('renders alternates including kind=resale (coral dot)', () => {
     const { container } = render(
       <MultiTierLiveCard
