@@ -407,6 +407,13 @@ export interface TierCounter {
   ceiling?: number
   submitter: { handle: string } | null
   submittedAt: string
+  // Engagement-signal columns surfaced when an admin defers the contest.
+  // The consumer event-detail page renders a quiet "Admin requested more
+  // info" pill on the counter card when lastAdminActionKind === 'defer'.
+  // Both stay null while the contest sits with no admin engagement; resolve
+  // clears them on both rows so a prior defer doesn't outlive resolution.
+  lastAdminActionAt: string | null
+  lastAdminActionKind: 'defer' | null
 }
 
 export interface TierPriceBlock {

@@ -448,6 +448,135 @@ describe('GET /v1/events/:id — integration', () => {
     expect(body.data.pendingSubmissions).toHaveLength(1)
     expect(body.data.pendingSubmissions?.[0]?.tier).toBe('VIP')
   })
+
+  it('counterSubmission carries lastAdminActionAt + lastAdminActionKind as null when never deferred', async () => {
+    const venue = await seedVenue({
+      name: 'Counter No Defer',
+      slug: 'counter-no-defer',
+    })
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-01',
+      priceSource: 'community',
+    })
+
+    const submitter = await seedUserProfile('cnd-parent', { handle: 'p-cnd' })
+    const challenger = await seedUserProfile('cnd-chal', { handle: 'c-cnd' })
+
+    const parent = await seedPriceSubmission(event.id, submitter.userId, {
+      tier: 'GA',
+      vendor: 'Ticketmaster',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      status: 'corroborated',
+    })
+    await seedPriceSubmission(event.id, challenger.userId, {
+      tier: 'GA',
+      vendor: 'Ticketmaster',
+      sourceCategory: 'standard',
+      priceMin: '55',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+    })
+
+    const res = await app.request(`/v1/events/${event.id}`)
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      data: {
+        counterSubmission: {
+          lastAdminActionAt: string | null
+          lastAdminActionKind: string | null
+        } | null
+        priceByTier: Array<{
+          tier: string
+          counterSubmission: {
+            lastAdminActionAt: string | null
+            lastAdminActionKind: string | null
+          } | null
+        }>
+      }
+    }
+
+    // Flat counterSubmission carries both fields as null.
+    expect(body.data.counterSubmission?.lastAdminActionAt).toBeNull()
+    expect(body.data.counterSubmission?.lastAdminActionKind).toBeNull()
+
+    // priceByTier counterSubmission carries both fields as null too — the two
+    // surfaces stay lock-step during PR 4's migration window.
+    const gaBlock = body.data.priceByTier.find((block) => block.tier === 'GA')
+    expect(gaBlock?.counterSubmission?.lastAdminActionAt).toBeNull()
+    expect(gaBlock?.counterSubmission?.lastAdminActionKind).toBeNull()
+  })
+
+  it('priceByTier counterSubmission surfaces lastAdminActionKind="defer" after a defer', async () => {
+    const venue = await seedVenue({
+      name: 'Defer surfacing',
+      slug: 'defer-surface',
+    })
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-01',
+      ticketPriceMin: '40',
+      priceSource: 'community',
+    })
+
+    const submitter = await seedUserProfile('parent-u-d', { handle: 'p-d' })
+    const challenger = await seedUserProfile('chal-u-d', { handle: 'c-d' })
+
+    const parent = await seedPriceSubmission(event.id, submitter.userId, {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      // Defer doesn't change parent status, but tests seed both states the
+      // contest naturally lands in (corroborated parent + pending counter,
+      // then admin marks defer on the counter).
+      status: 'corroborated',
+    })
+    // The defer endpoint writes these two fields to the counter; the seed
+    // helper writes them directly so this test verifies only the projection.
+    // Task 9 covers end-to-end via the defer endpoint.
+    const deferredAt = new Date('2026-06-21T18:00:00Z')
+    await seedPriceSubmission(event.id, challenger.userId, {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '55',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+      lastAdminActionKind: 'defer',
+      lastAdminActionAt: deferredAt,
+    })
+
+    const res = await app.request(`/v1/events/${event.id}`)
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      data: {
+        counterSubmission: {
+          lastAdminActionAt: string | null
+          lastAdminActionKind: string | null
+        } | null
+        priceByTier: Array<{
+          tier: string
+          counterSubmission: {
+            lastAdminActionAt: string | null
+            lastAdminActionKind: string | null
+          } | null
+        }>
+      }
+    }
+
+    // priceByTier surfaces the defer signal on the right tier's counter.
+    const gaBlock = body.data.priceByTier.find((block) => block.tier === 'GA')
+    expect(gaBlock?.counterSubmission?.lastAdminActionKind).toBe('defer')
+    expect(gaBlock?.counterSubmission?.lastAdminActionAt).toBe(
+      deferredAt.toISOString(),
+    )
+
+    // The flat counterSubmission stays in lock-step (PR 4 migration window).
+    expect(body.data.counterSubmission?.lastAdminActionKind).toBe('defer')
+    expect(body.data.counterSubmission?.lastAdminActionAt).toBe(
+      deferredAt.toISOString(),
+    )
+  })
 })
 
 describe('GET /v1/events — filterPrice', () => {

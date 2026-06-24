@@ -42,6 +42,13 @@ export interface CounterTierRow {
   priceMax: string | null
   userId: string | null
   createdAt: Date
+  // Engagement-signal columns carried straight off the counter's
+  // price_submissions row. The consumer event-detail surface renders a
+  // quiet pill on the counter card when lastAdminActionKind === 'defer'.
+  // `string | null` (not the narrow union) because Drizzle returns the raw
+  // text column — buildCounter narrows to the API shape.
+  lastAdminActionAt: Date | null
+  lastAdminActionKind: string | null
 }
 
 export interface AggregateByTierInput {
@@ -151,6 +158,12 @@ function buildCounter(
 ): TierCounter {
   const handle = row.userId !== null ? (handles.get(row.userId) ?? null) : null
   const ceiling = row.priceMax !== null ? parseFloat(row.priceMax) : null
+  // Narrow the raw text column to the API's discriminated union before
+  // emitting. Today 'defer' is the only kind we surface; resolve clears the
+  // field. Any unrecognized value is treated as null defensively so we never
+  // leak a future internal kind to consumers.
+  const kind: 'defer' | null =
+    row.lastAdminActionKind === 'defer' ? 'defer' : null
   return {
     id: row.id,
     parentSubmissionId: row.parentSubmissionId,
@@ -158,6 +171,8 @@ function buildCounter(
     ...(ceiling !== null ? { ceiling } : {}),
     submitter: handle !== null ? { handle } : null,
     submittedAt: row.createdAt.toISOString(),
+    lastAdminActionAt: row.lastAdminActionAt?.toISOString() ?? null,
+    lastAdminActionKind: kind,
   }
 }
 

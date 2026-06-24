@@ -164,6 +164,8 @@ describe('aggregateByTier', () => {
           priceMax: null,
           userId: 'challenger',
           createdAt: new Date('2026-06-12T00:00:00Z'),
+          lastAdminActionAt: null,
+          lastAdminActionKind: null,
         },
       ],
       handles: new Map([['challenger', 'fan-2']]),
@@ -173,6 +175,62 @@ describe('aggregateByTier', () => {
     expect(blocks[0]?.counterSubmission?.parentSubmissionId).toBe('head')
     expect(blocks[0]?.counterSubmission?.floor).toBe(20)
     expect(blocks[0]?.counterSubmission?.submitter?.handle).toBe('fan-2')
+    // Default state — neither field set on the row → both null in the output.
+    expect(blocks[0]?.counterSubmission?.lastAdminActionAt).toBeNull()
+    expect(blocks[0]?.counterSubmission?.lastAdminActionKind).toBeNull()
+  })
+
+  it('counter-submission carries lastAdminActionKind="defer" when the counter row was deferred', () => {
+    const headline = corrob({ id: 'head', tier: 'GA' })
+    const deferredAt = new Date('2026-06-15T12:00:00Z')
+    const blocks = aggregateByTier({
+      ...baseInput,
+      corroborated: [headline],
+      counters: [
+        {
+          id: 'counter-2',
+          parentSubmissionId: 'head',
+          tier: 'GA',
+          priceMin: '25',
+          priceMax: null,
+          userId: 'challenger',
+          createdAt: new Date('2026-06-12T00:00:00Z'),
+          lastAdminActionAt: deferredAt,
+          lastAdminActionKind: 'defer',
+        },
+      ],
+      handles: new Map([['challenger', 'fan-2']]),
+      reportsByTier: new Map([['GA', 1]]),
+    })
+    expect(blocks[0]?.counterSubmission?.lastAdminActionKind).toBe('defer')
+    expect(blocks[0]?.counterSubmission?.lastAdminActionAt).toBe(
+      deferredAt.toISOString(),
+    )
+  })
+
+  it('counter-submission narrows unrecognized lastAdminActionKind values to null', () => {
+    const headline = corrob({ id: 'head', tier: 'GA' })
+    const blocks = aggregateByTier({
+      ...baseInput,
+      corroborated: [headline],
+      counters: [
+        {
+          id: 'counter-3',
+          parentSubmissionId: 'head',
+          tier: 'GA',
+          priceMin: '25',
+          priceMax: null,
+          userId: 'challenger',
+          createdAt: new Date('2026-06-12T00:00:00Z'),
+          lastAdminActionAt: new Date('2026-06-15T12:00:00Z'),
+          // Future admin actions might land here; we never leak them.
+          lastAdminActionKind: 'some_future_kind',
+        },
+      ],
+      handles: new Map([['challenger', 'fan-2']]),
+      reportsByTier: new Map([['GA', 1]]),
+    })
+    expect(blocks[0]?.counterSubmission?.lastAdminActionKind).toBeNull()
   })
 
   it('includes pending-only tiers after corroborated-headline tiers', () => {

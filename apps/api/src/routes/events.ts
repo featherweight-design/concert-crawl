@@ -411,6 +411,11 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     ceiling?: number
     submitter: { handle: string } | null
     submittedAt: string
+    // Engagement-signal fields mirror priceByTier[].counterSubmission so the
+    // flat + per-tier shapes stay in lock-step during PR 4's migration window.
+    // 'defer' is the only kind we surface to consumers today.
+    lastAdminActionAt: string | null
+    lastAdminActionKind: 'defer' | null
   } | null = null
 
   // Per-tier price aggregation (PR 3) and the flat priceVendor/priceAlternates/
@@ -451,6 +456,12 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       userId: priceSubmissions.userId,
       createdAt: priceSubmissions.createdAt,
       disputedSubmissionId: priceSubmissions.disputedSubmissionId,
+      // Engagement-signal columns surfaced on counter rows via
+      // counterSubmission.lastAdminActionAt/Kind. Read here so the same
+      // allPendingRows scan feeds both priceByTier (via counterTierRows)
+      // and the flat counterSubmission shape without a second query.
+      lastAdminActionAt: priceSubmissions.lastAdminActionAt,
+      lastAdminActionKind: priceSubmissions.lastAdminActionKind,
     })
     .from(priceSubmissions)
     .where(
@@ -488,6 +499,8 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
           priceMax: sub.priceMax,
           userId: sub.userId,
           createdAt: sub.createdAt,
+          lastAdminActionAt: sub.lastAdminActionAt,
+          lastAdminActionKind: sub.lastAdminActionKind,
         },
       ]
     })
@@ -645,6 +658,11 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
           : null
       const counterCeiling =
         counter.priceMax !== null ? parseFloat(counter.priceMax) : null
+      // Narrow the raw text column to the discriminated union — same
+      // defensive treatment as buildCounter in aggregate-by-tier.ts so the
+      // flat + per-tier shapes can't drift on an unrecognized kind.
+      const counterKind: 'defer' | null =
+        counter.lastAdminActionKind === 'defer' ? 'defer' : null
       counterSubmission = {
         id: counter.id,
         parentSubmissionId: counter.parentSubmissionId,
@@ -652,6 +670,8 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         ...(counterCeiling !== null ? { ceiling: counterCeiling } : {}),
         submitter: counterHandle !== null ? { handle: counterHandle } : null,
         submittedAt: counter.createdAt.toISOString(),
+        lastAdminActionAt: counter.lastAdminActionAt?.toISOString() ?? null,
+        lastAdminActionKind: counterKind,
       }
     }
   }
