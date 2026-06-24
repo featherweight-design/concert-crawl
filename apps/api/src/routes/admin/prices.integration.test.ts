@@ -293,10 +293,15 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
 
   // Defensive lockout — see spec §4.7 + §11.3 and plan Task 4.
   // The pre-contest-UI PATCH endpoint cannot be allowed to overturn a
-  // corroborated price by silently approving a counter row, and cannot be
-  // allowed to mutate a parent whose status is already 'disputed'. Both
+  // corroborated price by silently approving a counter row, nor mutate a
+  // parent that has a pending counter against it (an active contest). Both
   // cases must return 409 and fire a loud Sentry capture so the
   // `endpoint_lockout: contest_row` tag baseline can be alerted on.
+  //
+  // The lockout is narrowed (R8) to fire only when a contest actually
+  // exists. A row in `status='disputed'` with `disputed_submission_id IS
+  // NULL` (e.g. admin moderation denial via PATCH) is NOT a contest and
+  // remains PATCH-able.
   describe('contest-row lockout', () => {
     beforeEach(() => {
       vi.mocked(Sentry.captureMessage).mockClear()
@@ -347,13 +352,20 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
       })
     })
 
-    it('rejects PATCH on a parent row whose status is disputed with 409', async () => {
+    // R8: the lockout is narrowed to fire only when a contest actually
+    // exists. A row in status='disputed' but with disputed_submission_id
+    // IS NULL is NOT in a contest — e.g. an admin moderation denial via
+    // PATCH. Such rows must remain PATCH-able; locking them out would
+    // surface a misleading "part of a contest" 409.
+    it('accepts PATCH on a non-contest disputed row (disputed_submission_id IS NULL)', async () => {
       const venue = await seedVenue({
-        name: 'PATCH Lockout 2',
-        slug: 'patch-lockout-2',
+        name: 'PATCH Non-Contest Disputed',
+        slug: 'patch-non-contest-disputed',
       })
       const event = await seedEvent(venue.id, { date: '2027-06-01' })
-      const parent = await seedPriceSubmission(event.id, 'parent-user-2', {
+      // status='disputed' but no counter row points at it and
+      // disputedSubmissionId is NULL — a moderation denial, not a contest.
+      const submission = await seedPriceSubmission(event.id, 'denied-user', {
         tier: 'GA',
         vendor: 'AXS',
         howFound: 'bought_myself',
@@ -362,7 +374,7 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
       })
 
       const res = await app.request(
-        `/v1/admin/prices/submissions/${parent.id}`,
+        `/v1/admin/prices/submissions/${submission.id}`,
         {
           method: 'PATCH',
           headers: ADMIN_HEADERS,
@@ -370,17 +382,16 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
         },
       )
 
-      expect(res.status).toBe(409)
-      const body = (await res.json()) as { success: boolean; error: string }
-      expect(body.success).toBe(false)
-      expect(body.error).toMatch(/contest/i)
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as {
+        success: boolean
+        data: { id: string; status: string }
+      }
+      expect(body.success).toBe(true)
+      expect(body.data.status).toBe('corroborated')
 
-      expect(Sentry.captureMessage).toHaveBeenCalledTimes(1)
-      const [, options] = vi.mocked(Sentry.captureMessage).mock.calls[0] ?? []
-      expect(options).toMatchObject({
-        level: 'warning',
-        tags: { endpoint_lockout: 'contest_row' },
-      })
+      // The lockout Sentry capture must NOT fire for non-contest rows.
+      expect(Sentry.captureMessage).not.toHaveBeenCalled()
     })
 
     // R2-2: a parent in status='corroborated' with a pending counter

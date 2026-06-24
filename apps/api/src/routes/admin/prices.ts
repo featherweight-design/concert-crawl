@@ -344,18 +344,23 @@ pricesAdminRouter.patch(
       // pre-contest-UI endpoint can silently overturn a corroborated price if
       // an admin approves a counter row from the flat queue — block it at the
       // gate, before any update is applied. Spec §4.7 + §11.3.
-      if (
-        existing.disputedSubmissionId !== null ||
-        existing.status === 'disputed'
-      ) {
+      //
+      // The condition is intentionally narrow: it fires only when a contest
+      // ACTUALLY exists (counter row OR pending counter against this row).
+      // We do NOT block PATCH on `status === 'disputed'` alone — a row may
+      // be 'disputed' without a contest (e.g. admin moderation denial via
+      // PATCH where disputed_submission_id IS NULL), and locking those out
+      // would surface a misleading "part of a contest" 409. The pending-
+      // counter check below catches the actual active-contest parent case.
+      if (existing.disputedSubmissionId !== null) {
         return { ok: 'contest_lockout' as const }
       }
 
-      // R2-2 — defense in depth. Both counter-creation routes flip the
-      // parent to status='disputed' in the same transaction that inserts
-      // the counter (Tasks 5 + 5b), so in steady state the previous check
-      // is sufficient. But a parent could still be in status='corroborated'
-      // with a pending counter against it under three scenarios:
+      // R2-2 — active-contest parent lockout. Both counter-creation routes
+      // flip the parent to status='disputed' in the same transaction that
+      // inserts the counter (Tasks 5 + 5b), but the parent could still be
+      // in status='corroborated' with a pending counter against it under
+      // three scenarios:
       //   (a) migration-window orphan rows that pre-date the flip logic,
       //   (b) the narrow window inside the resolve transaction between
       //       counter INSERT and parent UPDATE,
@@ -363,9 +368,9 @@ pricesAdminRouter.patch(
       //       the parent (would be a bug, but the lockout costs us nothing).
       // In any of these cases, mutating the parent here would race the
       // resolve flow's `parent.status IN ('corroborated', 'disputed')`
-      // sanity gate. Placed AFTER the existing two checks so the more
-      // specific lockout reasons (counter row, disputed parent) fire
-      // first.
+      // sanity gate. This is also the canonical "parent in an active
+      // contest" lockout — counter rows hit the disputedSubmissionId check
+      // above; parents land here.
       const [pendingCounterCount] = await tx
         .select({ count: sql<number>`count(*)::int` })
         .from(priceSubmissions)
