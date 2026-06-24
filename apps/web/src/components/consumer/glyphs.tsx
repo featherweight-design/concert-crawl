@@ -174,3 +174,63 @@ export const PendingTrustPill = ({
     </span>
   )
 }
+
+// TierMark
+// Property table §primitives lines 42-63. The boxoffice star intentionally uses
+// an inline 12×12 viewBox SVG with a fuller star path — it is NOT the shipped
+// 10×10 `StarGlyph` above. The two stars coexist intentionally: `StarGlyph` is
+// the chip-scale glyph used by `MT_ListChip` and pending cards, while
+// `TierMark` carries a slightly fuller star sized for the eyebrow surface.
+const TIER_COLOR = {
+  boxoffice: 'oklch(0.66 0.14 78)',
+  resale: 'oklch(0.65 0.20 25)',
+  community: 'oklch(0.62 0.12 240)',
+} as const
+
+const TIER_MARK_STAR_PATH =
+  'M6 0.8l1.5 3.1 3.4.5-2.5 2.4.6 3.4L6 8.9 2.9 10.6l.6-3.4L1 4.4l3.4-.5z'
+
+export interface TierMarkProps {
+  kind: 'boxoffice' | 'resale' | 'community'
+  glyph?: boolean
+  children: React.ReactNode
+}
+
+export const TierMark = ({ kind, glyph = false, children }: TierMarkProps) => {
+  const color = TIER_COLOR[kind]
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '5px',
+        padding: '2px 7px',
+        borderRadius: '4px',
+        background: `color-mix(in oklab, ${color} 14%, transparent)`,
+        border: `1px solid color-mix(in oklab, ${color} 50%, transparent)`,
+        color,
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: '9px',
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase',
+        fontWeight: 700,
+        lineHeight: 1,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {kind === 'boxoffice' && glyph && (
+        <svg
+          width={9}
+          height={9}
+          viewBox="0 0 12 12"
+          fill={color}
+          aria-hidden
+          style={{ flexShrink: 0 }}
+        >
+          <path d={TIER_MARK_STAR_PATH} />
+        </svg>
+      )}
+      {children}
+    </span>
+  )
+}

@@ -1003,4 +1003,125 @@ export const CONSUMER_COPY = {
     errorTryAgainButton: 'Try again',
     errorCloseButton: 'Close',
   },
+
+  // ── Price region ────────────────────────────────────────────────
+  // Shown on the event detail page — face-value framing, provenance CTAs,
+  // multi-source tier display, alt-source rows, and add-tier success states.
+  priceRegion: {
+    faceValue: {
+      eyebrow: 'Face value ≠ resale',
+      headlineDefault: "That's resale — not face value.",
+      headlineNoPrice: 'All we can see is resale.',
+      // Single subline — property table state #12 (no-price) only overrides the
+      // headline; subline copy is shared between the sold-out-with-resale (#10)
+      // and no-price-with-resale (#12) variants.
+      subline: 'Only resale tickets left. Know the box-office price? Add it.',
+      ladderResaleLabel: 'Resale',
+      ladderResaleSub: (vendor: string) => `${vendor} · marked up over face`,
+      ladderResaleRightFallback: 'available, above face value',
+      ladderBoxofficeLabel: 'Box office',
+      ladderBoxofficeSub: 'the printed price · no fees',
+      ladderBoxofficeRight: 'not reported',
+      ctaLabelDefault: 'Add the box-office price',
+      ctaLabelNoPrice: "Add a price you've seen",
+      caption: 'Goes live once one more fan confirms',
+    },
+    // LOCKED §9 Q1 — ContributeFaceValueCard copy (Appendix A.1).
+    // Differs from faceValue.* — eyebrow drops the "≠ resale" framing, body
+    // pitches contribution directly. New component, new copy block.
+    contributeFaceValue: {
+      eyebrow: 'Face value',
+      headline: 'No price to show — yet.',
+      subline: 'Sold out, nothing listed. Know the box-office number? Add it.',
+      ladderBoxofficeLabel: 'Box office',
+      ladderBoxofficeSub: 'the printed price · no fees',
+      ladderBoxofficeRight: 'not reported',
+      ctaLabel: 'Add the box-office price',
+      caption: 'Goes live once one more fan confirms',
+    },
+    // LOCKED §9 Q1 — SoldOutPriceCard variant='no-listing' caption (Appendix A.2).
+    soldOutNoListingCaption:
+      'No tickets listed anywhere we can see — not even resale.',
+    provenance: {
+      getTickets: 'Get Tickets',
+      seeResale: 'See resale tickets',
+      captionBoxoffice: (vendor: string) => `${vendor} · face value, no fees`,
+      captionPrimary: (vendor: string) =>
+        `Official vendor · ${vendor} · face + fees`,
+      captionResale: (vendor: string) =>
+        `${vendor} resale · usually above face value`,
+      ariaLabelBoxoffice: (vendor: string) =>
+        `Get tickets at the box office via ${vendor} — face value, no fees`,
+      ariaLabelPrimary: (vendor: string) =>
+        `Get tickets via ${vendor} — official vendor, face value plus fees`,
+      ariaLabelResale: (vendor: string) =>
+        `Buy resale on ${vendor} — usually above face value`,
+    },
+    mtListChip: {
+      fromPrefix: 'from',
+      // LOCKED §9 Q2 — MT_ListChip kind='resale' trailing tag (Appendix A.3).
+      // NON-NEGOTIABLE that this always renders on the resale variant.
+      resaleTag: 'resale',
+    },
+    // LOCKED §9 Q3 — DisputedPriceCard / PendingCardB footer pointer (Appendix A.4).
+    dispute: {
+      counterPointerLabel: "Someone's contesting this — see the counter",
+    },
+    multiSource: {
+      eyebrow: 'Tickets',
+      fromLabel: 'from',
+      metaTemplate: (vendor: string) =>
+        `seen on ${vendor} · face value · no fees`,
+      orPayConvenience: 'Or pay for convenience',
+      otherTiers: 'Other tiers',
+    },
+    altSourceRow: {
+      pricePrefix: '$',
+    },
+    addTierSuccess: {
+      headline: (tier: string) => `${tier} price is in. Thanks.`,
+      bodyTemplate: (price: string, source: string) => `$${price} ${source} · `,
+      pendingFragment: 'sits pending · 1/2 until one more fan confirms.',
+      addAnotherEyebrow: 'This show has more than one tier?',
+      addPillTemplate: (tier: string) => `+ Add ${tier.toLowerCase()}`,
+      helperLine:
+        'Each tier is its own quick submission — only add the ones you actually saw.',
+      doneButton: 'Done',
+    },
+    disputeRace409Toast:
+      'Another challenge was just filed — refresh to see it.',
+    adminDeferPillLabel: 'Admin requested more info',
+  },
+
+  // ── Submit price v2 ─────────────────────────────────────────────
+  // Shown in the redesigned price submission form. Replaces the howFound-bearing
+  // form. Field order: source → number → tier → vendor.
+  // NOTE: required markers are NOT embedded in label strings. The shipped
+  // `FormLabel` primitive accepts a `req` boolean prop and renders a
+  // `var(--accent)`-colored asterisk separately. Required fields: source +
+  // vendor — pass `req` to FormLabel at the call site.
+  submitPriceV2: {
+    sourceLabel: "Where's this price from?",
+    sourceHelper:
+      'Box office is face value — the most useful number for other fans.',
+    sourceOptionBoxoffice: 'Box office',
+    sourceOptionStandard: 'Standard ticket',
+    sourceOptionResale: 'Resale',
+    floorLabelBoxoffice: 'Face value',
+    floorLabelStandard: 'Floor',
+    floorLabelResale: 'Resale price',
+    floorHintBoxoffice: 'the printed price',
+    floorPlaceholder: '32',
+    ceilingLabel: 'Ceiling',
+    ceilingPlaceholder: 'optional',
+    tierLabel: 'Tier',
+    vendorLabel: 'Vendor',
+    vendorOptionVenue: 'Venue',
+    vendorOptionAXS: 'AXS',
+    vendorOptionTicketmaster: 'Ticketmaster',
+    vendorOptionSeatGeek: 'SeatGeek',
+    vendorOptionDICE: 'DICE',
+    vendorOptionEventbrite: 'Eventbrite',
+    vendorAutoFilledNote: 'Auto-filled because source is box office',
+  },
 } as const
