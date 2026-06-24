@@ -238,6 +238,132 @@ describe('decidePriceRegion', () => {
     expect(result.kind).toBe('multi-tier-shipped')
   })
 
+  it('STATE #6 — priceByTier with one headline tier + one pending-only tier → mixed-tier', () => {
+    const headlineBlock = makeBlock({
+      tier: 'GA',
+      headline: makeHeadline({
+        priceMin: '25',
+        sourceCategory: 'boxoffice',
+      }),
+    })
+    const pendingOnlyBlock = makeBlock({
+      tier: 'VIP',
+      headline: null,
+      pending: [
+        {
+          id: 'p1',
+          priceMin: '80',
+          priceMax: null,
+          vendor: 'AXS',
+          howFound: 'saw_listing',
+          sourceCategory: 'standard',
+          note: null,
+          submitterHandle: 'jordan',
+          submittedAt: '2026-06-22T00:00:00Z',
+          confirmsCount: 1,
+          confirmsNeeded: 2,
+          isSubmitter: false,
+        },
+      ],
+    })
+    const result = decidePriceRegion({
+      event: makeInput({ priceByTier: [headlineBlock, pendingOnlyBlock] }),
+    })
+    expect(result.kind).toBe('mixed-tier')
+    if (result.kind === 'mixed-tier') {
+      expect(result.priceByTier).toHaveLength(2)
+    }
+  })
+
+  it('STATE #7 — priceByTier where every tier is pending-only → all-tiers-pending', () => {
+    const first = makeBlock({
+      tier: 'GA',
+      headline: null,
+      pending: [
+        {
+          id: 'p1',
+          priceMin: '40',
+          priceMax: null,
+          vendor: 'AXS',
+          howFound: 'saw_listing',
+          sourceCategory: 'standard',
+          note: null,
+          submitterHandle: 'jordan',
+          submittedAt: '2026-06-22T00:00:00Z',
+          confirmsCount: 0,
+          confirmsNeeded: 2,
+          isSubmitter: false,
+        },
+      ],
+    })
+    const second = makeBlock({
+      tier: 'VIP',
+      headline: null,
+      pending: [
+        {
+          id: 'p2',
+          priceMin: '90',
+          priceMax: null,
+          vendor: 'Ticketmaster',
+          howFound: 'saw_listing',
+          sourceCategory: 'standard',
+          note: null,
+          submitterHandle: 'kim',
+          submittedAt: '2026-06-22T00:00:00Z',
+          confirmsCount: 0,
+          confirmsNeeded: 2,
+          isSubmitter: false,
+        },
+      ],
+    })
+    const result = decidePriceRegion({
+      event: makeInput({ priceByTier: [first, second] }),
+    })
+    expect(result.kind).toBe('all-tiers-pending')
+    if (result.kind === 'all-tiers-pending') {
+      expect(result.priceByTier).toHaveLength(2)
+    }
+  })
+
+  it('STATE #6 — mixed-tier wins over multi-tier-shipped only when a pending-only tier exists', () => {
+    // Two headline tiers, both with pending corroborators — NOT mixed-tier
+    // (no pending-only tier).
+    const ga = makeBlock({
+      tier: 'GA',
+      headline: makeHeadline({
+        priceMin: '25',
+        sourceCategory: 'boxoffice',
+      }),
+      pending: [
+        {
+          id: 'p-ga',
+          priceMin: '26',
+          priceMax: null,
+          vendor: 'AXS',
+          howFound: 'saw_listing',
+          sourceCategory: 'standard',
+          note: null,
+          submitterHandle: 'jordan',
+          submittedAt: '2026-06-22T00:00:00Z',
+          confirmsCount: 1,
+          confirmsNeeded: 2,
+          isSubmitter: false,
+        },
+      ],
+    })
+    const vip = makeBlock({
+      tier: 'VIP',
+      headline: makeHeadline({
+        priceMin: '80',
+        sourceCategory: 'boxoffice',
+      }),
+    })
+    const result = decidePriceRegion({
+      event: makeInput({ priceByTier: [ga, vip] }),
+    })
+    expect(result.kind).toBe('multi-tier-shipped')
+  })
+
   it('soldout trumps priceByTier (priceByTier present + priceStatus=soldout → soldout branch)', () => {
     const block = makeBlock({
       tier: 'GA',

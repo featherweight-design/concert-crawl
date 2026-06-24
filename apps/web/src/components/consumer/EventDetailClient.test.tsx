@@ -304,6 +304,107 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     expect(pill).toBeDefined()
   })
 
+  it('STATE #6 mixed-tier — headline tier + pending-only tier routes through MixedTierCard', () => {
+    const headlineBlock = makeTierBlock({
+      tier: 'GA',
+      headline: {
+        submissionId: 's1',
+        priceMin: '25',
+        priceMax: null,
+        vendor: 'VenueBoxOffice',
+        sourceCategory: 'boxoffice',
+        submitterHandle: 'ada',
+        observedAt: '2026-06-20T00:00:00Z',
+        approvedAt: '2026-06-20T00:00:00Z',
+        approvalKind: 'fan',
+        confirmsCount: 2,
+      },
+    })
+    const pendingOnlyBlock = makeTierBlock({
+      tier: 'VIP',
+      headline: null,
+      pending: [
+        {
+          id: 'p-vip',
+          priceMin: '80',
+          priceMax: null,
+          vendor: 'AXS',
+          howFound: 'saw_listing',
+          sourceCategory: 'standard',
+          note: null,
+          submitterHandle: 'jordan',
+          submittedAt: '2026-06-22T00:00:00Z',
+          confirmsCount: 1,
+          confirmsNeeded: 2,
+          isSubmitter: false,
+        },
+      ],
+    })
+    const event = buildBaseEvent({
+      priceByTier: [headlineBlock, pendingOnlyBlock],
+    })
+    render(
+      <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
+    )
+    // Headline tier renders.
+    expect(screen.getByText('$25')).toBeDefined()
+    // Pending-only tier renders its price + the shipped per-tier pending tell
+    // via TierAlternateRow ("pending · 1/2").
+    expect(screen.getByText('$80')).toBeDefined()
+    // VIP shows up as alternate tier label.
+    expect(screen.getByText('VIP')).toBeDefined()
+  })
+
+  it('STATE #7 all-tiers-pending — every tier is pending-only routes through TwoPendingStack', () => {
+    const ga = makeTierBlock({
+      tier: 'GA',
+      headline: null,
+      pending: [
+        {
+          id: 'p-ga',
+          priceMin: '40',
+          priceMax: null,
+          vendor: 'AXS',
+          howFound: 'saw_listing',
+          sourceCategory: 'standard',
+          note: null,
+          submitterHandle: 'jordan',
+          submittedAt: '2026-06-22T00:00:00Z',
+          confirmsCount: 0,
+          confirmsNeeded: 2,
+          isSubmitter: false,
+        },
+      ],
+    })
+    const vip = makeTierBlock({
+      tier: 'VIP',
+      headline: null,
+      pending: [
+        {
+          id: 'p-vip',
+          priceMin: '95',
+          priceMax: null,
+          vendor: 'Ticketmaster',
+          howFound: 'saw_listing',
+          sourceCategory: 'standard',
+          note: null,
+          submitterHandle: 'kim',
+          submittedAt: '2026-06-22T00:00:00Z',
+          confirmsCount: 0,
+          confirmsNeeded: 2,
+          isSubmitter: false,
+        },
+      ],
+    })
+    const event = buildBaseEvent({ priceByTier: [ga, vip] })
+    render(
+      <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
+    )
+    // Both pending cards render side-by-side.
+    expect(screen.getByText('$40')).toBeDefined()
+    expect(screen.getByText('$95')).toBeDefined()
+  })
+
   it('submit success in sold-out-resale branch → MTAddTierSuccess renders (Fix 4 — hoisted surface)', async () => {
     const event = buildBaseEvent({
       priceStatus: 'soldout',

@@ -796,6 +796,172 @@ export function EventDetailPriceBlock({
     )
   }
 
+  if (priceDecision.kind === 'mixed-tier') {
+    // STATE #6 — at least one tier has a headline, at least one other tier
+    // is pending-only. Render shipped MixedTierCard with per-tier pending
+    // tells. Pick the cheapest headline tier as the card headline, route
+    // every other block through TierAlternateRow.
+    const blocks = priceDecision.priceByTier
+    const headlineBlock =
+      blocks.find((block) => block.headline !== null) ?? blocks[0]
+    const headlineRow = headlineBlock?.headline
+    if (headlineRow != null && headlineBlock != null) {
+      const headlineFloor = parseFloat(headlineRow.priceMin)
+      const headlineCeiling =
+        headlineRow.priceMax != null ? parseFloat(headlineRow.priceMax) : null
+      const headlineKind: 'boxoffice' | 'resale' | 'community' =
+        headlineRow.sourceCategory === 'boxoffice'
+          ? 'boxoffice'
+          : headlineRow.sourceCategory === 'resale'
+            ? 'resale'
+            : 'community'
+      const otherBlocks = blocks.filter((block) => block !== headlineBlock)
+      const alternateRows = otherBlocks.map((block) => {
+        // Headline-bearing tier → render as alternate row (resolved tier).
+        if (block.headline != null) {
+          const altKind: 'boxoffice' | 'resale' | 'community' =
+            block.headline.sourceCategory === 'boxoffice'
+              ? 'boxoffice'
+              : block.headline.sourceCategory === 'resale'
+                ? 'resale'
+                : 'community'
+          return {
+            tier: block.tier,
+            vendor: block.headline.vendor,
+            floor: parseFloat(block.headline.priceMin),
+            ...(block.headline.priceMax != null
+              ? { ceiling: parseFloat(block.headline.priceMax) }
+              : {}),
+            kind: altKind,
+          }
+        }
+        // Pending-only tier → render the cheapest pending row with the
+        // per-tier pending tell (`pending · N/needed`).
+        const firstPending = block.pending[0]
+        const pendingKind: 'boxoffice' | 'community' | null = firstPending
+          ? firstPending.vendor === 'VenueBoxOffice'
+            ? 'boxoffice'
+            : 'community'
+          : null
+        return {
+          tier: block.tier,
+          vendor: firstPending?.vendor ?? 'Community',
+          floor: firstPending ? parseFloat(firstPending.priceMin) : 0,
+          ...(firstPending?.priceMax != null
+            ? { ceiling: parseFloat(firstPending.priceMax) }
+            : {}),
+          kind: pendingKind,
+          pending: true as const,
+          confirms: firstPending?.confirmsCount ?? 0,
+          needed: firstPending?.confirmsNeeded ?? SP_POLICY.confirmsRequired,
+        }
+      })
+      return (
+        <>
+          <MixedTierCard
+            headline={{
+              floor: headlineFloor,
+              ...(headlineCeiling !== null ? { ceiling: headlineCeiling } : {}),
+              tier: headlineBlock.tier,
+              vendor: headlineRow.vendor,
+              kind: headlineKind,
+            }}
+            alternates={alternateRows}
+          />
+          {submitSuccessSurface}
+          <SubmitPriceModal
+            open={submitPriceOpen}
+            onClose={() => {
+              setSubmitPriceOpen(false)
+              setPreselectedTier(null)
+            }}
+            openInEditMode={false}
+            preselectedTier={preselectedTier}
+            eventId={event.id}
+            artist={event.artist}
+            venueName={event.venue.name}
+            date={event.date}
+            onSuccess={handleSubmitSuccess}
+          />
+        </>
+      )
+    }
+  }
+
+  if (priceDecision.kind === 'all-tiers-pending') {
+    // STATE #7 — every tier is pending-only. Stack the per-tier first-pending
+    // rows in TwoPendingStack (handles 1–2 well; degrades gracefully on >2 by
+    // showing the first two — same shipped behavior as the legacy path below).
+    const blocks = priceDecision.priceByTier
+    const cardPropsList: Array<React.ComponentProps<typeof PendingCardB>> = []
+    for (const block of blocks) {
+      const firstPending = block.pending[0]
+      if (firstPending == null) continue
+      const isBoxOffice = firstPending.vendor === 'VenueBoxOffice'
+      cardPropsList.push({
+        floor: parseFloat(firstPending.priceMin),
+        ...(firstPending.priceMax != null
+          ? { ceiling: parseFloat(firstPending.priceMax) }
+          : {}),
+        tier: block.tier,
+        vendor: firstPending.vendor,
+        kind: isBoxOffice ? 'boxoffice' : 'community',
+        submitter: firstPending.submitterHandle
+          ? { handle: firstPending.submitterHandle, url: '' }
+          : null,
+        submittedAt: firstPending.submittedAt,
+        confirms: firstPending.confirmsCount,
+        needed: firstPending.confirmsNeeded,
+        view: firstPending.isSubmitter ? 'submitter' : 'other',
+        note: firstPending.note,
+        ...(block.counterSubmission != null
+          ? {
+              counterPointer: {
+                href: `#counter-${block.counterSubmission.id}`,
+              },
+            }
+          : {}),
+        lastAdminActionKind:
+          block.counterSubmission?.lastAdminActionKind ?? null,
+        onConfirm: () => {
+          // Confirm flow lives in the legacy pendingSubmissions path; the
+          // priceByTier-driven render delegates to the user opening a detail
+          // sheet via the submit modal CTA. Future iteration can wire a
+          // dedicated CorroborationSheet here once the API surfaces enough
+          // detail at the priceByTier level.
+        },
+        onWithdraw: () => {
+          // see above
+        },
+        onEdit: () => {
+          setSubmitPriceEditMode(true)
+          setSubmitPriceOpen(true)
+        },
+      })
+    }
+    return (
+      <>
+        <TwoPendingStack cards={cardPropsList} />
+        {submitSuccessSurface}
+        <SubmitPriceModal
+          open={submitPriceOpen}
+          onClose={() => {
+            setSubmitPriceOpen(false)
+            setPreselectedTier(null)
+            setSubmitPriceEditMode(false)
+          }}
+          openInEditMode={submitPriceEditMode}
+          preselectedTier={preselectedTier}
+          eventId={event.id}
+          artist={event.artist}
+          venueName={event.venue.name}
+          date={event.date}
+          onSuccess={handleSubmitSuccess}
+        />
+      </>
+    )
+  }
+
   if (priceDecision.kind === 'multi-tier-shipped') {
     // Multi-tier path that goes through the new priceByTier API.
     // Kept side-by-side with the legacy flat-field MixedTierCard branch

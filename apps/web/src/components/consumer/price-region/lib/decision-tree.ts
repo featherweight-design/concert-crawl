@@ -47,6 +47,20 @@ export type PriceRegionDecision =
       crossSourceAlt: TierAlternate
       otherTiers: TierPriceBlock[]
     }
+  | {
+      // STATE #6 — at least one tier has a corroborated headline AND at least
+      // one other tier has NO headline but pending submissions. MixedTierCard
+      // handles the per-tier pending tells (shipped from prior cycle).
+      kind: 'mixed-tier'
+      priceByTier: TierPriceBlock[]
+    }
+  | {
+      // STATE #7 — every tier is pending-only (no headlines anywhere) AND at
+      // least one tier has pending submissions. Renders the focused
+      // TwoPendingStack — each block contributes its first pending row.
+      kind: 'all-tiers-pending'
+      priceByTier: TierPriceBlock[]
+    }
   | { kind: 'multi-tier-shipped'; priceByTier: TierPriceBlock[] }
   | { kind: 'legacy' } // priceByTier null → existing flat-field code path
 
@@ -144,6 +158,32 @@ export function decidePriceRegion({
     }
   }
 
-  // Default — let MultiTierLiveCard / MixedTierCard / TwoPendingStack handle it.
+  // STATE #7 — all tiers pending. Every block has no headline AND at least
+  // one block has pending rows. Routes to TwoPendingStack via the renderer.
+  // Checked BEFORE mixed-tier because the all-pending case is a strict subset
+  // of "any-pending" — mixed-tier requires at least one headline to exist.
+  const anyHeadline = blocks.some((block) => block.headline !== null)
+  const anyPending = blocks.some((block) => block.pending.length > 0)
+  if (!anyHeadline && anyPending) {
+    return { kind: 'all-tiers-pending', priceByTier: blocks }
+  }
+
+  // STATE #6 — mixed-tier: some blocks have headlines AND other blocks have
+  // pending-only state (no headline + pending.length > 0). MixedTierCard
+  // handles this case natively (shipped per-tier pending tells).
+  const anyHeadlineOnlyTier = blocks.some(
+    (block) => block.headline !== null && block.pending.length === 0,
+  )
+  const anyPendingOnlyTier = blocks.some(
+    (block) => block.headline === null && block.pending.length > 0,
+  )
+  if (anyHeadlineOnlyTier && anyPendingOnlyTier) {
+    return { kind: 'mixed-tier', priceByTier: blocks }
+  }
+
+  // Default — let MultiTierLiveCard handle it (multi-headline cases, single-
+  // tier cases, etc.). MixedTierCard / TwoPendingStack now have their own
+  // explicit branches above; this branch is the simple "all tiers have a
+  // headline" path.
   return { kind: 'multi-tier-shipped', priceByTier: blocks }
 }
