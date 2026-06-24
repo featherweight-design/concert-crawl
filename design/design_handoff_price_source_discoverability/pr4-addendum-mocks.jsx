@@ -237,7 +237,7 @@ function MTListChipResale({ price = 85, from = true }) {
 function Q2ChipRow() {
   const rows = [
     { node: <window.MT_ListChip price={25} kind="boxoffice" />, note: "box office · gold star (shipped)" },
-    { node: <window.MT_ListChip price={48} kind="community" />, note: "community · azure (shipped)" },
+    { node: <window.MT_ListChip price={48} kind="community" />, note: "community · neutral on browse (shipped) — azure reserved for detail surfaces only" },
     { node: <MTListChipResale price={85} />, note: "resale · coral + explicit tag (proposed)" },
   ];
   return (

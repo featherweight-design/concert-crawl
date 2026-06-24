@@ -2,7 +2,7 @@
 
 Source-of-truth enumeration of every visual + state claim for the consumer-side surfaces shipping in PR 4. Built from `design/design_handoff_price_source_discoverability/` (price-source-mocks.jsx, multi-tier-mocks.jsx, multi-tier.jsx, pending-card.jsx, design-canvas.jsx, theme-context.jsx, README.md, READINESS.md). Closes #641 (price source discoverability) + #644 (multi-tier pricing).
 
-**Scope note:** The shipped components from prior PRs (`MultiTierLiveCard`, `MixedTierCard`, `TierAlternateRow`, `PendingCardB`, `TwoPendingStack`, `PendingTrustPill`, `PendingStarGlyph`, `PendingCheckGlyph`) are NOT re-enumerated here — they live in `multi-tier.jsx` + `pending-card.jsx` from prior cycle. PR 4 reuses them verbatim, sometimes with new props (e.g., `cheapestKind='boxoffice'`, `reports`).
+**Scope note:** The shipped components from prior PRs (`MultiTierLiveCard`, `MixedTierCard`, `TierAlternateRow`, `PendingCardB`, `TwoPendingStack`, `PendingTrustPill`, `PendingStarGlyph`, `PendingCheckGlyph`) are NOT re-enumerated here — they live in `multi-tier.jsx` + `pending-card.jsx` from prior cycle. PR 4 reuses them with two kinds of additive extensions: (a) the existing `kind: 'community' | 'boxoffice' | null` enum on `MultiTierLiveCard`, `MixedTierCard`, and `TierAlternateRow` is extended to include `'resale'` so state #3 (resale-headline) can route through `MultiTierLiveCard` with a coral headline; (b) `PendingCardB`, `DisputedPriceCard`, and `SoldOutPriceCard` receive optional additive props (`counterPointer`, `lastAdminActionKind`, `variant`) per the §9 locks in Appendix A — see Task 9 + Task 12. No existing props are removed, renamed, or repurposed.
 
 ---
 

@@ -65,10 +65,14 @@
 - `apps/api/src/routes/submissions.ts` — accept `sourceCategory` as optional in the POST body schema (it's already derived server-side from `howFound`; with `howFound` removed at the consumer layer, the server keeps a fallback to derive from `vendor` + the explicit `sourceCategory` when provided). _NOTE: this is a small contract follow-on. If PR 3 already accepts `sourceCategory`, this is a no-op — read first._
 - `packages/types/src/index.ts` — make `howFound` optional on the submission-input payload type (if currently required). The `SubmitPriceModal` is the sole producer of that payload; making it optional doesn't break the API which keeps `how_found` for the migration buffer.
 - `apps/web/src/lib/definitions/releases.ts` — add the release-notes entry. See Task 13.
+- `apps/web/src/components/consumer/multi-tier/MultiTierLiveCard.tsx` + its test — extend `headline.kind` and `AlternateTierBase.kind` from `'community' | 'boxoffice'` (+ `| null` for alternates) to `'community' | 'boxoffice' | 'resale'` (+ `| null`). When `kind === 'resale'`, the headline + dot render in coral `oklch(0.65 0.20 25)` (mirrors the existing gold/azure code paths). This unlocks property table state #3 (resale-headline tier card). Task 9 sub-step.
+- `apps/web/src/components/consumer/multi-tier/MixedTierCard.tsx` + its test — same `kind` enum extension so resale-headline tiers can appear in mixed multi-tier views.
+- `apps/web/src/components/consumer/multi-tier/TierAlternateRow.tsx` + its test — same `kind` enum extension so a per-tier resale alternate can render with coral chrome.
+- `apps/web/src/components/consumer/multi-tier/MultiTierLiveCard.test.tsx` — add a `kind='resale'` case (headline + alternate). Verify coral resolves to the property table's `oklch(0.65 0.20 25)`.
 
 **Not modified:**
 
-- Shipped `MultiTierLiveCard`, `MixedTierCard`, `TierAlternateRow`, `TwoPendingStack`, `PendingTrustPill`, `StarGlyph`, `CheckGlyph`, `Eyebrow`. Per `memory:project_price_source_discoverability` — reused verbatim. `MultiTierLiveCard` already supports `kind='boxoffice'`. A small `reports?` prop wiring at the call site appends the "· N reports" caption — but only if the shipped component already accepts it. **Verify before extending.** If shipped component does NOT accept `reports`, file a 1-line follow-up issue rather than expanding scope. (`PendingCardB`, `DisputedPriceCard`, and `SoldOutPriceCard` are MODIFIED in this PR — see Modify section above for the §9 lock-driven additive props.)
+- Shipped `TwoPendingStack`, `PendingTrustPill`, `StarGlyph`, `CheckGlyph`, `Eyebrow`. Per `memory:project_price_source_discoverability` — reused verbatim. (`PendingCardB`, `DisputedPriceCard`, `SoldOutPriceCard`, `MultiTierLiveCard`, `MixedTierCard`, and `TierAlternateRow` are MODIFIED in this PR — see Modify section above for the §9 lock-driven additive props + the resale-kind enum extension.) `reports`-style "· N reports" caption support is NOT in scope for PR 4 — the property table calls it out as a state #19 rendering, but it depends on a server-side field that may not yet be wired; **verify before implementing**, file a 1-line follow-up issue if not yet wired rather than expanding scope.
 - The `apps/api/src/lib/price-aggregation/` helpers — the browse-side parity is done by mirroring the rules in `pick-headline.ts`, NOT by importing from `apps/api`. The `apps/web` package must not import from `apps/api`.
 - Database schema, migrations, crawler.
 
@@ -226,6 +230,8 @@ submitPriceV2: {
 
 **TierMark implementation** (`apps/web/src/components/consumer/glyphs.tsx`, append below `PendingTrustPill`):
 
+NOTE: TierMark's gold star is NOT the same SVG as the existing `StarGlyph` (which uses a 10×10 viewBox with a different path). The property table (§primitives line 48) locks TierMark's star to viewBox `0 0 12 12` with the path d below — render the SVG inline rather than reusing `StarGlyph`. The two stars exist intentionally: `StarGlyph` is the chip-scale glyph used by `MT_ListChip` and pending cards; `TierMark` carries a slightly fuller star sized for the eyebrow surface.
+
 ```tsx
 // Property table §primitives lines 42-63
 const TIER_COLOR = {
@@ -233,6 +239,9 @@ const TIER_COLOR = {
   resale: 'oklch(0.65 0.20 25)',
   community: 'oklch(0.62 0.12 240)',
 } as const
+
+const TIER_MARK_STAR_PATH =
+  'M6 0.8l1.5 3.1 3.4.5-2.5 2.4.6 3.4L6 8.9 2.9 10.6l.6-3.4L1 4.4l3.4-.5z'
 
 export interface TierMarkProps {
   kind: 'boxoffice' | 'resale' | 'community'
@@ -262,7 +271,18 @@ export const TierMark = ({ kind, glyph = false, children }: TierMarkProps) => {
         whiteSpace: 'nowrap',
       }}
     >
-      {kind === 'boxoffice' && glyph && <StarGlyph size={9} color={color} />}
+      {kind === 'boxoffice' && glyph && (
+        <svg
+          width={9}
+          height={9}
+          viewBox="0 0 12 12"
+          fill={color}
+          aria-hidden
+          style={{ flexShrink: 0 }}
+        >
+          <path d={TIER_MARK_STAR_PATH} />
+        </svg>
+      )}
       {children}
     </span>
   )
@@ -274,10 +294,10 @@ export const TierMark = ({ kind, glyph = false, children }: TierMarkProps) => {
 - [ ] **Step 1**: Add copy keys. Run `pnpm --filter @concert-crawl/web typecheck` — expect failures only in files that reference these keys (none yet).
 - [ ] **Step 2**: Write `glyphs.test.tsx` cases for `TierMark`:
   - renders children
-  - applies gold star for `kind='boxoffice'` + `glyph=true`
+  - applies gold star SVG with viewBox `0 0 12 12` for `kind='boxoffice'` + `glyph=true` (assert it's the TierMark inline star, NOT the shipped 10×10 `StarGlyph`)
   - omits glyph when `glyph=false`
   - applies resale coral color
-  - applies community azure color
+  - applies community azure color (TierMark is a shared primitive — community-azure here is for the detail-surface call sites; browse chips do NOT consume TierMark)
 - [ ] **Step 3**: Run failing tests. Implement `TierMark` per the snippet above. Re-run tests; expect green.
 - [ ] **Step 4**: Commit: `feat(consumer): add price-region copy keys + TierMark primitive`.
 
@@ -1497,6 +1517,11 @@ export type PriceRegionDecision =
   | { kind: 'sold-out-contribute' } // LOCKED §9 Q1 — render ContributeFaceValueCard + SoldOutPriceCard variant='no-listing'
   | { kind: 'no-price-resale'; resaleLink: TicketLink; faceValueResaleVendor: string }
   | { kind: 'no-price-empty' } // LOCKED §9 Q2-eng — fall through to legacy NoPriceCard, no FaceValueCard
+  | { kind: 'resale-headline'; priceByTier: TierPriceBlock[]; faceValueResaleVendor: string }
+    // STATE #3 — at least one tier's headline is resale AND there is no
+    // boxoffice alternate in that tier. Render shipped MultiTierLiveCard
+    // (with the new kind='resale' enum value — see Modify list) AND a
+    // show-level FaceValueCard underneath inviting box-office contribution.
   | { kind: 'multi-source-mixed'; entryBlock: TierPriceBlock; crossSourceAlt: TierPriceBlock['alternates'][number]; otherTiers: TierPriceBlock[] }
   | { kind: 'multi-tier-shipped'; priceByTier: TierPriceBlock[] } // routes to MultiTierLiveCard / MixedTierCard / TwoPendingStack
   | { kind: 'legacy' } // priceByTier null → existing flat-field code path
@@ -1568,6 +1593,31 @@ export function decidePriceRegion({ event }: PriceRegionInput): PriceRegionDecis
     }
   }
 
+  // STATE #3 — resale headline with no boxoffice alternate: render the
+  // shipped MultiTierLiveCard with kind='resale' AND a show-level
+  // FaceValueCard inviting box-office contribution. Detect any tier whose
+  // headline is resale and lacks a corroborating boxoffice/standard
+  // headline alongside.
+  const hasResaleHeadline = blocks.some(
+    (block) => block.headline?.sourceCategory === 'resale',
+  )
+  const hasNonResaleHeadline = blocks.some(
+    (block) =>
+      block.headline !== null &&
+      block.headline.sourceCategory !== null &&
+      block.headline.sourceCategory !== 'resale',
+  )
+  if (hasResaleHeadline && !hasNonResaleHeadline) {
+    const resaleBlock = blocks.find(
+      (block) => block.headline?.sourceCategory === 'resale',
+    )
+    return {
+      kind: 'resale-headline',
+      priceByTier: blocks,
+      faceValueResaleVendor: resaleBlock?.headline?.vendor ?? 'Resale',
+    }
+  }
+
   // Default — let MultiTierLiveCard / MixedTierCard / TwoPendingStack handle it.
   return { kind: 'multi-tier-shipped', priceByTier: blocks }
 }
@@ -1580,8 +1630,10 @@ export function decidePriceRegion({ event }: PriceRegionInput): PriceRegionDecis
   - sold-out + no resale link → `sold-out-contribute` (LOCKED §9 Q1)
   - no priceByTier + resale link → `no-price-resale`
   - no priceByTier + no links → `no-price-empty` (LOCKED §9 Q2-eng)
-  - priceByTier with entry tier mixed sources → `multi-source-mixed`
-  - priceByTier with entry tier single source → `multi-tier-shipped`
+  - priceByTier with entry tier mixed sources (boxoffice headline + resale alt) → `multi-source-mixed`
+  - priceByTier with sole resale headline (no boxoffice/standard headline anywhere) → `resale-headline` with vendor (STATE #3)
+  - priceByTier with boxoffice headline + resale headline on another tier → `multi-tier-shipped` (NOT `resale-headline` — resale is not the sole signal)
+  - priceByTier with entry tier single boxoffice source → `multi-tier-shipped`
   - null priceByTier + no soldout → `no-price-empty` (legacy fallback)
 - [ ] **Step 2**: Implement; re-run green.
 - [ ] **Step 3**: Commit: `feat(consumer): add price-region decision-tree helper`.
@@ -1602,6 +1654,7 @@ export function decidePriceRegion({ event }: PriceRegionInput): PriceRegionDecis
 - For `sold-out-contribute` (LOCKED §9 Q1 — see property table Appendix A.1 + A.2): render `[SoldOutPriceCard variant='no-listing' (em-dash price + "No tickets listed anywhere we can see — not even resale.")] + ContributeFaceValueCard + ReportFooter`. **No `FaceValueCard`** (it's a different component now), **no `ProvenanceCTA`** (no link to point at). `SoldOutPriceCard` needs a new additive prop — see "Task 9 sub-step" below.
 - For `no-price-resale`: keep existing `PriceDisplay` no-price path BUT additionally render `FaceValueCard variant='no-price'` + `ProvenanceCTA kind='resale' outline` underneath. (`PriceDisplay` handles the community-handoff "Submit a price" card; we layer source legibility on top.)
 - For `no-price-empty` (LOCKED §9 Q2-eng): fall through to existing legacy logic — `return { kind: 'noop' }` semantically. No `FaceValueCard`, no `ContributeFaceValueCard` — existing community-handoff card carries the state.
+- For `resale-headline` (STATE #3): render `<MultiTierLiveCard>` with the resale-headline block mapped to `headline.kind='resale'` (requires the shipped-component enum extension listed in the Modify section), THEN render `<FaceValueCard variant='no-price'>` underneath — same component used for state #12 — inviting box-office contribution. The `faceValueResaleVendor` from the decision powers the resale row. `<ProvenanceCTA kind='resale' outline>` follows for the outbound link.
 - For `multi-source-mixed`: render `<MultiSourceMultiTierCard>` from the `entryBlock` + `crossSourceAlt`; map other-tier `TierPriceBlock` rows to `TierAlternateRow` props.
 - For `multi-tier-shipped`: delegate to shipped `MultiTierLiveCard` / `MixedTierCard` / `TwoPendingStack` with `event.priceByTier` mapped to their expected prop shapes. **Note:** the shipped components currently accept the LEGACY flat-field shape — see existing wiring at lines 605–646. The new path maps `priceByTier[0]` → headline, `.alternates` → `alternates`, etc. Keep both call sites side-by-side initially (priceByTier branch above the legacy alternates branch); only flip the legacy code to a `priceByTier == null` guard once the migration is verified green.
 
@@ -1619,6 +1672,7 @@ export function decidePriceRegion({ event }: PriceRegionInput): PriceRegionDecis
   if (decision.kind === 'sold-out-resale') { … }
   if (decision.kind === 'sold-out-contribute') { … }   // LOCKED §9 Q1
   if (decision.kind === 'no-price-resale') { … }
+  if (decision.kind === 'resale-headline') { … }       // STATE #3
   if (decision.kind === 'multi-source-mixed') { … }
   if (decision.kind === 'multi-tier-shipped') { … }
   // fall through to remaining legacy branches (Pending sold-out report, etc.)
