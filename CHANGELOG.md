@@ -1,3 +1,13 @@
+## [1.74.12](https://github.com/HartiganHM/concert-crawl/compare/v1.74.11...v1.74.12) (2026-06-24)
+
+
+### Bug Fixes
+
+* **deploy-prod:** clean up stale comment fragments + artifact name ([bd512ce](https://github.com/HartiganHM/concert-crawl/commit/bd512cec5171fead3aeffafac466195f449f19e4)), closes [#745](https://github.com/HartiganHM/concert-crawl/issues/745)
+* **deploy-prod:** loud-fail gate on wrong branch + don't rollback on smoke timeout ([420f057](https://github.com/HartiganHM/concert-crawl/commit/420f05719c18414adf47d39b1ff803ff1946db00)), closes [#745](https://github.com/HartiganHM/concert-crawl/issues/745)
+* **deploy-prod:** sync comments + runbook with new rollback trigger ([6c47476](https://github.com/HartiganHM/concert-crawl/commit/6c474760b41fad3d81a187018d443158ac965720)), closes [#745](https://github.com/HartiganHM/concert-crawl/issues/745)
+* **workflows:** fail loud on wrong-branch rollback; runbook stale text ([d7ddae1](https://github.com/HartiganHM/concert-crawl/commit/d7ddae1201a1203fe977836efd5d09769104e292)), closes [#745](https://github.com/HartiganHM/concert-crawl/issues/745)
+
 ## [1.74.11](https://github.com/HartiganHM/concert-crawl/compare/v1.74.10...v1.74.11) (2026-06-24)
 
 
