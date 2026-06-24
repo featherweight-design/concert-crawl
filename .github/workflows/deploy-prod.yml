@@ -610,6 +610,13 @@ jobs:
             echo "::warning title=Admin email skipped::Missing ${missing[*]} — admin not notified of auto-rollback. Set via Settings → Environments → production."
             exit 0
           fi
+
+          # Mask ADMIN_EMAIL in any subsequent log output. Variables
+          # are unmasked by default (only secrets get auto-masked),
+          # and the email address could appear in the Resend response
+          # body on failure (Resend may echo the `to:` field back).
+          # The mask redacts it as `***` wherever it shows up.
+          echo "::add-mask::${ADMIN_EMAIL}"
           # Build the JSON body via jq so commit SHA and the HTML
           # body's quoted/escaped characters can't break the request.
           #
@@ -643,7 +650,10 @@ jobs:
             # GHA's workflow-failure email are still primary signals.
             exit 0
           fi
-          echo "✓ Admin notified at ${ADMIN_EMAIL}"
+          # Generic success line — don't echo the address even though
+          # add-mask above would redact it. Keeps logs clean of any
+          # PII signal regardless of mask behavior.
+          echo "✓ Admin notified via Resend"
 
       # `if: always()` so this context always logs, even if one of
       # the rollback steps above failed (rare — e.g. RENDER_API_TOKEN
