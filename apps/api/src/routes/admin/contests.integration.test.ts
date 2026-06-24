@@ -1179,3 +1179,474 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
     expect(notifs).toHaveLength(1)
   })
 })
+
+describe('POST /v1/admin/contests/prices/:contestId/defer', () => {
+  beforeEach(async () => {
+    clearAuth()
+    await clearTables()
+    // notifications is NOT in the shared clearTables TRUNCATE list. Wipe it
+    // here so per-test assertions about row counts aren't contaminated by
+    // rows from previous tests (same pattern as the resolve block above).
+    await testDb.delete(notifications)
+  })
+
+  // Mirror of the resolve block's seedContest helper. Defer doesn't propagate
+  // to the events row or cred, so eventOverrides default is fine; the key
+  // bits are the parent (disputed) + counter (pending) pair.
+  const seedContest = async (
+    options: {
+      eventOverrides?: Partial<typeof events.$inferInsert>
+      counterOverrides?: Partial<typeof priceSubmissions.$inferInsert>
+      parentOverrides?: Partial<typeof priceSubmissions.$inferInsert>
+    } = {},
+  ) => {
+    const uniq = `${Date.now()}-${Math.floor(Math.random() * 1e9)}`
+    const venue = await seedVenue({
+      name: 'Defer Venue',
+      slug: `defer-venue-${uniq}`,
+    })
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-01',
+      title: `Defer Show ${uniq}`,
+      artist: `Defer Artist ${uniq}`,
+      ticketPriceMin: '40',
+      ticketPriceMax: '40',
+      priceSource: 'community',
+      ...options.eventOverrides,
+    })
+    const submitter = await seedUserProfile(`defer-parent-${uniq}`, {
+      handle: `parent-${uniq}`,
+    })
+    const challenger = await seedUserProfile(`defer-chal-${uniq}`, {
+      handle: `chal-${uniq}`,
+    })
+    await seedUserRole(submitter.userId, {
+      role: 'user',
+      grantedBy: 'system',
+      priceCredScore: 5,
+    })
+    await seedUserRole(challenger.userId, {
+      role: 'user',
+      grantedBy: 'system',
+      priceCredScore: 2,
+    })
+    const parent = await seedPriceSubmission(event.id, submitter.userId, {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      priceMax: '40',
+      status: 'disputed',
+      note: 'Original observation',
+      corroborationCount: 3,
+      ...options.parentOverrides,
+    })
+    const counter = await seedPriceSubmission(event.id, challenger.userId, {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '55',
+      priceMax: '55',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+      note: 'New AXS price after openers added',
+      corroborationCount: 1,
+      ...options.counterOverrides,
+    })
+    return {
+      venue,
+      event,
+      submitter,
+      challenger,
+      parent,
+      counter,
+    }
+  }
+
+  const fetchSubmission = async (id: string) => {
+    const [row] = await testDb
+      .select()
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.id, id))
+      .limit(1)
+    if (!row) throw new Error(`fetchSubmission: id ${id} not found`)
+    return row
+  }
+
+  const fetchEvent = async (id: string) => {
+    const [row] = await testDb
+      .select()
+      .from(events)
+      .where(eq(events.id, id))
+      .limit(1)
+    if (!row) throw new Error(`fetchEvent: id ${id} not found`)
+    return row
+  }
+
+  const fetchCred = async (userId: string): Promise<number> => {
+    const [row] = await testDb
+      .select({ score: userRoles.priceCredScore })
+      .from(userRoles)
+      .where(eq(userRoles.userId, userId))
+      .limit(1)
+    return row?.score ?? 0
+  }
+
+  it('requires admin auth', async () => {
+    const { parent } = await seedContest()
+
+    // Unauthed
+    const unauthRes = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/defer`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reason: 'Need ticket URL screenshot to verify the new price.',
+        }),
+      },
+    )
+    expect([401, 403]).toContain(unauthRes.status)
+
+    // Non-admin
+    authState.current = {
+      userId: 'user_non_admin',
+      sessionClaims: { metadata: { role: 'user' } },
+    }
+    const nonAdminRes = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/defer`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          reason: 'Need ticket URL screenshot to verify the new price.',
+        }),
+      },
+    )
+    expect([401, 403]).toContain(nonAdminRes.status)
+  })
+
+  it('rejects missing reason field with 400/422', async () => {
+    setAdminAuth()
+    const { parent } = await seedContest()
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/defer`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({}),
+      },
+    )
+    expect([400, 422]).toContain(res.status)
+  })
+
+  it('rejects reason shorter than 10 chars with 400/422', async () => {
+    setAdminAuth()
+    const { parent } = await seedContest()
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/defer`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({ reason: 'too short' }),
+      },
+    )
+    expect([400, 422]).toContain(res.status)
+  })
+
+  it('returns 404 for an unknown contestId', async () => {
+    setAdminAuth()
+    const res = await app.request(
+      '/v1/admin/contests/prices/00000000-0000-0000-0000-000000000000/defer',
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          reason: 'Need ticket URL screenshot to verify the new price.',
+        }),
+      },
+    )
+    expect(res.status).toBe(404)
+  })
+
+  it('sets lastAdminActionKind=defer + lastAdminActionAt on the counter row; leaves statuses unchanged', async () => {
+    setAdminAuth()
+    const beforeCall = Date.now()
+    const { event, parent, counter } = await seedContest()
+
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/defer`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          reason: 'Need ticket URL screenshot to verify the new price.',
+        }),
+      },
+    )
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: {
+        contestId: string
+        deferredAt: string
+        deferReason: string
+      }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.contestId).toBe(parent.id)
+    expect(body.data.deferReason).toMatch(/ticket URL screenshot/i)
+    expect(body.data.deferredAt).toBeTruthy()
+    const deferredAtMs = new Date(body.data.deferredAt).getTime()
+    expect(deferredAtMs).toBeGreaterThanOrEqual(beforeCall - 1000)
+    expect(deferredAtMs).toBeLessThanOrEqual(Date.now() + 1000)
+
+    // Counter: engagement-signal fields set, status untouched.
+    const counterAfter = await fetchSubmission(counter.id)
+    expect(counterAfter.status).toBe('pending')
+    expect(counterAfter.lastAdminActionKind).toBe('defer')
+    expect(counterAfter.lastAdminActionAt).not.toBeNull()
+
+    // Parent: completely untouched (status still disputed; no engagement
+    // fields set on the parent — those live on the counter per spec §4.5).
+    const parentAfter = await fetchSubmission(parent.id)
+    expect(parentAfter.status).toBe('disputed')
+    expect(parentAfter.lastAdminActionKind).toBeNull()
+    expect(parentAfter.lastAdminActionAt).toBeNull()
+
+    // Event projection untouched.
+    const eventAfter = await fetchEvent(event.id)
+    expect(eventAfter.ticketPriceMin).toBe('40.00')
+    expect(eventAfter.priceSource).toBe('community')
+  })
+
+  it('does NOT award cred to either submitter', async () => {
+    setAdminAuth()
+    const { parent, submitter, challenger } = await seedContest()
+    const submitterCredBefore = await fetchCred(submitter.userId)
+    const challengerCredBefore = await fetchCred(challenger.userId)
+
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/defer`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          reason: 'Need ticket URL screenshot to verify the new price.',
+        }),
+      },
+    )
+    expect(res.status).toBe(200)
+
+    const submitterCredAfter = await fetchCred(submitter.userId)
+    const challengerCredAfter = await fetchCred(challenger.userId)
+    expect(submitterCredAfter).toBe(submitterCredBefore)
+    expect(challengerCredAfter).toBe(challengerCredBefore)
+  })
+
+  it('writes 2 notification rows (parent + challenger submitters) with kind=defer', async () => {
+    setAdminAuth()
+    const { parent, submitter, challenger } = await seedContest()
+
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/defer`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          reason: 'Need vendor screenshot to confirm the new price.',
+        }),
+      },
+    )
+    expect(res.status).toBe(200)
+
+    const notifs = await testDb
+      .select()
+      .from(notifications)
+      .where(eq(notifications.type, 'user_notification'))
+    expect(notifs).toHaveLength(2)
+    const userIds = new Set(notifs.map((row) => row.userId))
+    expect(userIds.has(submitter.userId)).toBe(true)
+    expect(userIds.has(challenger.userId)).toBe(true)
+    for (const row of notifs) {
+      // Inline fan-out uses kind:'defer' in metadata so Task 10 can extract
+      // the helper without changing the wire shape. category column on this
+      // path is not asserted here — Task 10 will lock it.
+      const parsed = JSON.parse(row.metadata ?? 'null') as {
+        contestId: string
+        kind: string
+        reason: string
+      }
+      expect(parsed.contestId).toBe(parent.id)
+      expect(parsed.kind).toBe('defer')
+      expect(parsed.reason).toMatch(/vendor screenshot/i)
+    }
+  })
+
+  it('dedupes notification rows when parent and challenger are the same user', async () => {
+    setAdminAuth()
+    const venue = await seedVenue({
+      name: 'Defer Dedupe Venue',
+      slug: `defer-dedupe-venue-${Date.now()}`,
+    })
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-02',
+      title: 'Defer Dedupe Show',
+      artist: 'Defer Dedupe Artist',
+      ticketPriceMin: '40',
+      priceSource: 'community',
+    })
+    const sameUser = await seedUserProfile(`defer-dedupe-u-${Date.now()}`, {
+      handle: 'defer-dedupe',
+    })
+    await seedUserRole(sameUser.userId, {
+      role: 'user',
+      grantedBy: 'system',
+    })
+    const parent = await seedPriceSubmission(event.id, sameUser.userId, {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      status: 'disputed',
+    })
+    await seedPriceSubmission(event.id, sameUser.userId, {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '55',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+    })
+
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/defer`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          reason: 'Same-user defer — verifying notification dedupe.',
+        }),
+      },
+    )
+    expect(res.status).toBe(200)
+
+    const notifs = await testDb
+      .select()
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.type, 'user_notification'),
+          eq(notifications.userId, sameUser.userId),
+        ),
+      )
+    expect(notifs).toHaveLength(1)
+  })
+
+  it('returns 409 when no pending counter exists (race: counter already archived)', async () => {
+    setAdminAuth()
+    const { parent, counter } = await seedContest()
+    // Simulate concurrent state change: another admin already archived the
+    // counter (resolve raced ahead of this defer click).
+    await testDb
+      .update(priceSubmissions)
+      .set({ status: 'archived', archivedReason: 'race winner' })
+      .where(eq(priceSubmissions.id, counter.id))
+
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/defer`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          reason: 'Should be rejected because counter already archived.',
+        }),
+      },
+    )
+    expect(res.status).toBe(409)
+    const body = (await res.json()) as {
+      success: boolean
+      error: string
+      code?: string
+    }
+    expect(body.success).toBe(false)
+    expect(body.code).toBe('precondition_failed')
+  })
+
+  it('returns 409 on slot mismatch (tier differs between parent and counter)', async () => {
+    setAdminAuth()
+    const { parent, counter } = await seedContest()
+    // Same defensive same-slot assertion the resolve handler has — bypass
+    // creation-time slot locking by directly writing a mismatched tier.
+    await testDb
+      .update(priceSubmissions)
+      .set({ tier: 'VIP' })
+      .where(eq(priceSubmissions.id, counter.id))
+
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/defer`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          reason: 'Tier mismatch — should be rejected.',
+        }),
+      },
+    )
+    expect(res.status).toBe(409)
+    const body = (await res.json()) as {
+      success: boolean
+      error: string
+      code?: string
+    }
+    expect(body.success).toBe(false)
+    expect(body.code).toBe('precondition_failed')
+    expect(body.error).toMatch(/tier/i)
+  })
+
+  it('allows multiple defers in sequence; lastAdminActionAt advances', async () => {
+    setAdminAuth()
+    const { parent, counter } = await seedContest()
+
+    const firstRes = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/defer`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          reason: 'First defer — initial info request.',
+        }),
+      },
+    )
+    expect(firstRes.status).toBe(200)
+    const firstCounter = await fetchSubmission(counter.id)
+    expect(firstCounter.lastAdminActionKind).toBe('defer')
+    expect(firstCounter.lastAdminActionAt).not.toBeNull()
+    const firstAt = firstCounter.lastAdminActionAt as Date
+
+    // Sleep briefly so the second NOW() is strictly after the first.
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    const secondRes = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/defer`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          reason: 'Second defer — still need more info.',
+        }),
+      },
+    )
+    expect(secondRes.status).toBe(200)
+    const secondCounter = await fetchSubmission(counter.id)
+    expect(secondCounter.lastAdminActionKind).toBe('defer')
+    expect(secondCounter.lastAdminActionAt).not.toBeNull()
+    const secondAt = secondCounter.lastAdminActionAt as Date
+    expect(secondAt.getTime()).toBeGreaterThan(firstAt.getTime())
+
+    // Statuses still unchanged after two defers.
+    expect(secondCounter.status).toBe('pending')
+    const parentAfter = await fetchSubmission(parent.id)
+    expect(parentAfter.status).toBe('disputed')
+  })
+})

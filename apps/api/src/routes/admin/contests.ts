@@ -783,3 +783,253 @@ contestsAdminRouter.post(
     })
   },
 )
+
+const deferParamsSchema = z.object({
+  contestId: z.string().uuid(),
+})
+
+const deferBodySchema = z.object({
+  reason: z.string().min(10).max(2000),
+})
+
+// POST /v1/admin/contests/prices/:contestId/defer — "Need more info"
+// engagement signal.
+//
+// Spec §4.5, §6.4. The contestId path param is the PARENT submission id
+// (consistent with the list, detail, and resolve endpoints).
+//
+// Unlike resolve, defer changes NO statuses. The counter stays `pending`, the
+// parent stays `disputed` (or `corroborated` — see below), and the events
+// projection is untouched. The single state mutation is on the counter row:
+// `lastAdminActionKind = 'defer'`, `lastAdminActionAt = NOW()`. That's the
+// surface the consumer event-detail page reads to render the quiet pill on
+// the counter card per §4.5; without these columns set, the defer is
+// invisible to consumers.
+//
+// The handler runs inside a transaction with SELECT FOR UPDATE on parent +
+// counter even though only one row is mutated. This prevents races with a
+// concurrent resolve: if another admin resolved the contest between the
+// dropdown click and the confirm, we surface a 409 precondition_failed rather
+// than silently writing engagement-signal fields onto a row that's already
+// archived.
+//
+// Same-slot assertions (event_id / tier / source_category) are kept for
+// defense-in-depth — by §4.6 + Task 5b they should never fire, but the cost
+// is one comparison per request and the failure mode (defer signals on a
+// mismatched slot) would be invisible to consumers.
+//
+// Audit + notification writes happen OUTSIDE the transaction (after commit),
+// same pattern as resolve. Notifications are inlined here until Task 10
+// extracts the shared helper.
+contestsAdminRouter.post(
+  '/prices/:contestId/defer',
+  zValidator('param', deferParamsSchema, (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid contestId' }, 400)
+    }
+  }),
+  zValidator('json', deferBodySchema, (result, ctx) => {
+    if (!result.success) {
+      return ctx.json(
+        { success: false, error: 'Reason must be 10–2000 characters.' },
+        400,
+      )
+    }
+  }),
+  async (ctx) => {
+    const { contestId } = ctx.req.valid('param')
+    const { reason } = ctx.req.valid('json')
+    const admin = getAuthUser(ctx)
+
+    type DeferOutcome =
+      | {
+          ok: 'committed'
+          parent: typeof priceSubmissions.$inferSelect
+          counter: typeof priceSubmissions.$inferSelect
+          deferredAt: Date
+        }
+      | { ok: 'not_found' }
+      | { ok: 'precondition_failed'; reason: string }
+
+    const outcome: DeferOutcome = await db.transaction(async (tx) => {
+      // Lock the parent row first.
+      const [parent] = await tx
+        .select()
+        .from(priceSubmissions)
+        .where(eq(priceSubmissions.id, contestId))
+        .limit(1)
+        .for('update')
+      if (!parent) return { ok: 'not_found' }
+
+      // Lock the single pending counter (§4.6 partial unique index).
+      const [counter] = await tx
+        .select()
+        .from(priceSubmissions)
+        .where(
+          and(
+            eq(priceSubmissions.disputedSubmissionId, contestId),
+            eq(priceSubmissions.status, 'pending'),
+          ),
+        )
+        .limit(1)
+        .for('update')
+      if (!counter) {
+        return {
+          ok: 'precondition_failed',
+          reason: 'No pending counter exists for this contest.',
+        }
+      }
+
+      // Sanity gates — symmetric with the resolve handler so a defer can't
+      // silently land on a mismatched slot. The parent.disputedSubmissionId
+      // null check confirms the caller passed a parent id (not a counter id).
+      if (parent.disputedSubmissionId !== null) {
+        return {
+          ok: 'precondition_failed',
+          reason: 'Target row is a counter, not a parent.',
+        }
+      }
+      if (parent.eventId !== counter.eventId) {
+        return {
+          ok: 'precondition_failed',
+          reason: 'Parent and challenger belong to different events.',
+        }
+      }
+      if (parent.tier !== counter.tier) {
+        return {
+          ok: 'precondition_failed',
+          reason: `Parent tier ${parent.tier} does not match challenger tier ${counter.tier}.`,
+        }
+      }
+      if (parent.sourceCategory !== counter.sourceCategory) {
+        return {
+          ok: 'precondition_failed',
+          reason: `Parent source_category ${parent.sourceCategory ?? 'null'} does not match challenger source_category ${counter.sourceCategory ?? 'null'}.`,
+        }
+      }
+
+      // Single UPDATE — engagement-signal fields on the counter. Status
+      // intentionally untouched. RETURNING captures the server-side NOW() for
+      // the response body (so the client doesn't have to re-fetch to surface
+      // the timestamp).
+      const [updated] = await tx
+        .update(priceSubmissions)
+        .set({
+          lastAdminActionKind: 'defer',
+          lastAdminActionAt: sql`now()`,
+        })
+        .where(eq(priceSubmissions.id, counter.id))
+        .returning()
+      if (!updated) {
+        throw new Error(
+          'Post-defer read failed — counter row missing after update.',
+        )
+      }
+      const deferredAt = updated.lastAdminActionAt
+      if (!deferredAt) {
+        throw new Error(
+          'Post-defer read returned null lastAdminActionAt — expected timestamp.',
+        )
+      }
+
+      return {
+        ok: 'committed',
+        parent,
+        counter: updated,
+        deferredAt,
+      }
+    })
+
+    if (outcome.ok === 'not_found') {
+      return ctx.json({ success: false, error: 'Contest not found' }, 404)
+    }
+    if (outcome.ok === 'precondition_failed') {
+      return ctx.json(
+        {
+          success: false,
+          error: outcome.reason,
+          code: 'precondition_failed',
+        },
+        409,
+      )
+    }
+
+    // Audit middleware reads these from context after the response is built.
+    // Same pattern as resolve. Failures inside the middleware are swallowed
+    // there; the defer signal is already committed.
+    ctx.set('auditActorId', admin.userId)
+    ctx.set('auditAction', 'contest.defer')
+    ctx.set('auditTargetId', contestId)
+    ctx.set('auditMeta', {
+      parentId: outcome.parent.id,
+      challengerId: outcome.counter.id,
+      eventId: outcome.parent.eventId,
+      reason,
+    })
+
+    // Notification fan-out — inline until Task 10 extracts a helper. Both
+    // submitters get a user_notification row with kind:'defer' in metadata,
+    // pointing at the event detail page so they can refresh and see the
+    // pill / quiet engagement signal. Deduped when parent.userId ===
+    // counter.userId. metadata is a text column on the notifications table,
+    // so JSON.stringify is mandatory.
+    try {
+      const recipients: Array<{
+        userId: string
+        submissionId: string
+        role: 'parent' | 'challenger'
+      }> = []
+      if (outcome.parent.userId !== null) {
+        recipients.push({
+          userId: outcome.parent.userId,
+          submissionId: outcome.parent.id,
+          role: 'parent',
+        })
+      }
+      if (
+        outcome.counter.userId !== null &&
+        outcome.counter.userId !== outcome.parent.userId
+      ) {
+        recipients.push({
+          userId: outcome.counter.userId,
+          submissionId: outcome.counter.id,
+          role: 'challenger',
+        })
+      }
+      if (recipients.length > 0) {
+        await db.insert(notifications).values(
+          recipients.map((recipient) => ({
+            userId: recipient.userId,
+            type: 'user_notification' as const,
+            category: 'contest.needs_info',
+            title: 'More info requested on your price submission.',
+            body: reason,
+            actionUrl: `/events/${outcome.parent.eventId}`,
+            metadata: JSON.stringify({
+              submissionId: recipient.submissionId,
+              contestId,
+              eventId: outcome.parent.eventId,
+              role: recipient.role,
+              kind: 'defer',
+              reason,
+            }),
+          })),
+        )
+      }
+    } catch (notifyErr) {
+      apiLogger.warn(
+        { contestId, err: notifyErr },
+        'Failed to write contest defer notifications; defer signal itself committed.',
+      )
+    }
+
+    return ctx.json({
+      success: true,
+      data: {
+        contestId: outcome.parent.id,
+        deferredAt: outcome.deferredAt.toISOString(),
+        deferReason: reason,
+      },
+    })
+  },
+)
