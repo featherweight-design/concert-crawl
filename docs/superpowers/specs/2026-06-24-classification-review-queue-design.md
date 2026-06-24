@@ -146,7 +146,7 @@ When `view=hidden-flagged-for-review`, the where clause ANDs `eq(events.hiddenFr
 
 #### New chip on All Events filter rail
 
-Labeled per `feedback_definitions_copy_rule`: defined in `ADMIN_COPY`. Placeholder copy:
+Labeled per `feedback_definitions_copy_rule.md`: defined in `ADMIN_COPY`. Placeholder copy:
 
 - Chip label: `Hidden — flagged for review`
 - Count badge: live count from existing `count=true` mechanism
