@@ -23,7 +23,11 @@ import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 const AMBER = 'oklch(0.73 0.13 78)'
 
 const formatTimeAgo = (reportedAtIso: string): string => {
-  const diffMs = Date.now() - new Date(reportedAtIso).getTime()
+  const reportedAtMs = new Date(reportedAtIso).getTime()
+  if (Number.isNaN(reportedAtMs)) return 'recently'
+  // Clamp at 0 so future timestamps (e.g. server-client clock skew) don't
+  // render as "-5m ago".
+  const diffMs = Math.max(0, Date.now() - reportedAtMs)
   const diffMins = Math.floor(diffMs / 60000)
   if (diffMins < 60) return `${diffMins}m ago`
   const diffHours = Math.floor(diffMins / 60)
@@ -106,11 +110,13 @@ export function SoldOutPriceCard(props: SoldOutPriceCardProps) {
                 lineHeight: 1.05,
               }}
             >
-              {priceMax != null
+              {priceMin != null && priceMax != null
                 ? `$${priceMin}–$${priceMax}`
                 : priceMin != null
                   ? `$${priceMin}`
-                  : '—'}
+                  : priceMax != null
+                    ? `$${priceMax}`
+                    : '—'}
             </span>
             <span
               style={{

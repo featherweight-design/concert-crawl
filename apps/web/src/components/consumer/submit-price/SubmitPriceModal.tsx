@@ -39,6 +39,33 @@ type PriceSubmissionResponse =
   | { success: true; data: PriceSubmission }
   | { success?: false; error?: string; submission?: PriceSubmission }
 
+const TIERS: readonly Tier[] = ['GA', 'Reserved', 'VIP', 'Pit', 'Lawn']
+const VENDORS: readonly Vendor[] = [
+  'AXS',
+  'Ticketmaster',
+  'SeatGeek',
+  'DICE',
+  'Eventbrite',
+  'VenueBoxOffice',
+]
+const SOURCE_CATEGORIES: readonly SourceCategory[] = [
+  'boxoffice',
+  'standard',
+  'resale',
+]
+
+function isTier(value: string): value is Tier {
+  return (TIERS as readonly string[]).includes(value)
+}
+
+function isVendor(value: string): value is Vendor {
+  return (VENDORS as readonly string[]).includes(value)
+}
+
+function isSourceCategory(value: string): value is SourceCategory {
+  return (SOURCE_CATEGORIES as readonly string[]).includes(value)
+}
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object'
 }
@@ -249,6 +276,29 @@ export function SubmitPriceModal({
     setFieldWarnings(validation.warnings)
     if (!validation.valid) return
 
+    // validateSubmission guarantees these are non-null + members of their
+    // respective enums, but TS can't narrow through a separate function call.
+    // Re-check at runtime instead of `as` casts (CLAUDE.md: type-safety is
+    // the first line of defence; casts are a last resort). If we somehow
+    // slipped through validation, fail loudly here rather than send malformed
+    // data to the API.
+    if (
+      formState.sourceCategory === null ||
+      formState.tier === null ||
+      !isTier(formState.tier) ||
+      formState.vendor === null ||
+      !isVendor(formState.vendor)
+    ) {
+      console.error(
+        'Submit reached non-null guard with invalid required fields',
+        formState,
+      )
+      setModalState('error')
+      return
+    }
+    const sourceCategory: SourceCategory = formState.sourceCategory
+    const tier: Tier = formState.tier
+
     setModalState('submitting')
     setRaceToast(null)
     try {
@@ -258,16 +308,12 @@ export function SubmitPriceModal({
         return
       }
 
-      // sourceCategory is required by the form validator above; this branch
-      // is unreachable when valid=true, but the cast keeps the type narrower
-      // than the SubmissionInput shape.
-      const sourceCategory = formState.sourceCategory as SourceCategory
-      // Vendor auto-fills to VenueBoxOffice when source = boxoffice. Otherwise
-      // use whatever the chip group resolves to (the validator rejects null).
+      // Vendor auto-fills to VenueBoxOffice when source = boxoffice; otherwise
+      // use what the chip group resolved to (now narrowed via isVendor).
       const vendor: Vendor =
         sourceCategory === 'boxoffice'
           ? VENDOR_BOXOFFICE_AUTOFILL
-          : (formState.vendor as Vendor)
+          : formState.vendor
       const howFound: HowFound = howFoundForSource(sourceCategory)
 
       // Edit mode → PATCH the existing submission instead of POST a new one.
@@ -289,7 +335,7 @@ export function SubmitPriceModal({
               ...(formState.ceiling
                 ? { ceiling: Number(formState.ceiling) }
                 : {}),
-              tier: formState.tier as Tier,
+              tier,
               vendor,
               howFound,
             }),
@@ -310,7 +356,7 @@ export function SubmitPriceModal({
           id: existingSubmission.id,
           priceMin: String(formState.floor),
           priceMax: formState.ceiling ? String(formState.ceiling) : null,
-          tier: formState.tier!,
+          tier,
           vendor,
           howFound,
           // Server preserves an explicit sourceCategory on PATCH and only
@@ -334,7 +380,7 @@ export function SubmitPriceModal({
           body: JSON.stringify({
             priceMin: Number(formState.floor),
             priceMax: formState.ceiling ? Number(formState.ceiling) : undefined,
-            tier: formState.tier as Tier,
+            tier,
             vendor,
             howFound,
             sourceCategory,
@@ -631,7 +677,10 @@ export function SubmitPriceModal({
             value={formState.sourceCategory}
             onChange={(val) =>
               setFormState((prev) => {
-                const nextSource = val as SourceCategory
+                // ChipGroup is generic; narrow to the SourceCategory enum
+                // (ignore the change if somehow an out-of-enum value arrives).
+                if (!isSourceCategory(val)) return prev
+                const nextSource = val
                 // When source flips to boxoffice, auto-fill the vendor so the
                 // user doesn't have to pick it twice. When the source flips
                 // AWAY from boxoffice AND the vendor was the auto-fill value,

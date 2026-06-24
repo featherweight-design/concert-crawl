@@ -58,6 +58,21 @@ const defaultProps = {
   date: '2099-07-15T19:00:00.000Z',
 }
 
+// Fill the form with values that pass the runtime type-guard in handleSubmit.
+// validateSubmission is mocked above (always valid), but the component does a
+// follow-up isTier/isVendor/isSourceCategory check before sending the payload,
+// so we have to click through the chip groups to seed real enum values.
+async function fillForm() {
+  await waitFor(() => expect(screen.getByText('Box office')).toBeTruthy())
+  fireEvent.click(screen.getByText('Box office')) // sourceCategory + vendor auto-fill
+  fireEvent.click(screen.getByText('GA')) // tier
+  // Floor needs a value > 0 (the form validates floor min); the runtime guard
+  // doesn't check floor specifically but mocked validateSubmission already
+  // skips the check, so any number works.
+  const floorInput = screen.getByLabelText(/Face value/i) as HTMLInputElement
+  fireEvent.change(floorInput, { target: { value: '32' } })
+}
+
 describe('SubmitPriceModal — form view', () => {
   it('renders nothing when closed', () => {
     render(<SubmitPriceModal {...defaultProps} open={false} />)
@@ -182,7 +197,7 @@ describe('SubmitPriceModal — success state', () => {
     })
 
     render(<SubmitPriceModal {...defaultProps} />)
-    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy())
+    await fillForm()
 
     fireEvent.click(screen.getByText('Submit price'))
     await waitFor(() => expect(screen.getByText('Got it.')).toBeTruthy())
@@ -229,8 +244,7 @@ describe('SubmitPriceModal — payload shape', () => {
       })
 
     render(<SubmitPriceModal {...defaultProps} />)
-    await waitFor(() => expect(screen.getByText('Box office')).toBeTruthy())
-    fireEvent.click(screen.getByText('Box office'))
+    await fillForm()
     fireEvent.click(screen.getByText('Submit price'))
     await waitFor(() => expect(screen.getByText('Got it.')).toBeTruthy())
 
@@ -271,8 +285,7 @@ describe('SubmitPriceModal — 409 race toast', () => {
     })
 
     render(<SubmitPriceModal {...defaultProps} />)
-    await waitFor(() => expect(screen.getByText('Box office')).toBeTruthy())
-    fireEvent.click(screen.getByText('Box office'))
+    await fillForm()
     fireEvent.click(screen.getByText('Submit price'))
     await waitFor(() =>
       expect(
@@ -411,7 +424,7 @@ describe('SubmitPriceModal — alreadySubmitted state', () => {
     })
 
     render(<SubmitPriceModal {...defaultProps} />)
-    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy())
+    await fillForm()
     fireEvent.click(screen.getByText('Submit price'))
     await waitFor(() => expect(screen.getByText('Already in.')).toBeTruthy())
   })
@@ -455,7 +468,7 @@ describe('SubmitPriceModal — alreadySubmitted state', () => {
     })
 
     render(<SubmitPriceModal {...defaultProps} onClose={onClose} />)
-    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy())
+    await fillForm()
 
     fireEvent.click(screen.getByText('Submit price'))
     await waitFor(() => expect(screen.getByText('Already in.')).toBeTruthy())
@@ -504,7 +517,7 @@ describe('SubmitPriceModal — alreadySubmitted state', () => {
     })
 
     render(<SubmitPriceModal {...defaultProps} />)
-    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy())
+    await fillForm()
 
     fireEvent.click(screen.getByText('Submit price'))
     await waitFor(() => expect(screen.getByText('Already in.')).toBeTruthy())

@@ -259,6 +259,7 @@ eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
         userId: priceSubmissions.userId,
         createdAt: priceSubmissions.createdAt,
         updatedAt: priceSubmissions.updatedAt,
+        corroborationCount: priceSubmissions.corroborationCount,
       })
       .from(priceSubmissions)
       .where(
@@ -290,7 +291,13 @@ eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
           userId: sub.userId,
           createdAt: sub.createdAt,
           updatedAt: sub.updatedAt,
-          confirmsCount: 0,
+          // confirmsCount excludes the submitter (who counts as observation #1
+          // per the price_submissions.corroboration_count schema comment).
+          // Without this derivation buildHeadline would compute approvalKind
+          // as 'admin' for every list row, which is wrong for fan-corroborated
+          // submissions and leaks into any consumer that starts reading the
+          // richer priceByTier payload.
+          confirmsCount: Math.max(0, sub.corroborationCount - 1),
         })),
         pending: [],
         counters: [],
