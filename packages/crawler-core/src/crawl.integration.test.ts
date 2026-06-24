@@ -992,7 +992,8 @@ describe('crawlVenue — auto-pause at threshold (#743)', () => {
     // failure path. Without this, A's mockRejectedValue would synchronously
     // fail in the same microtask cycle, letting A's UPDATE (which flips
     // active to false) commit before B's SELECT even runs — and B would
-    // throw "venue not found" instead of racing through the threshold.
+    // throw `Venue ${venueId} not found or not active/verified`
+    // (crawl.ts:196) instead of racing through the threshold.
     mockFetchPage.mockImplementation(
       () =>
         new Promise<never>((_, reject) =>
