@@ -364,6 +364,15 @@ export interface EventWithVenue extends Event {
   >
   // Vendor from the corroborated community submission — only present for community-priced events
   priceVendor?: string | null
+  // Per-tier price aggregation surfaced on the BROWSE list endpoint so the
+  // browse chip can mirror pickTierHeadline / compareTierRows exactly
+  // (issue #787). Only `headline` is consumed by the browse surface today
+  // — `alternates`, `pending`, `counterSubmission`, and `reports` are
+  // populated for parity with the detail endpoint, but the list endpoint
+  // intentionally skips the secondary side-tables (pending, counter,
+  // confirms) to keep N+1 cost bounded. `pickBrowseHeadline` reads only
+  // `block.headline`, so the trimmed payload is sufficient.
+  priceByTier?: TierPriceBlock[] | null
 }
 
 // Per-tier price-aggregation building blocks (issue #644). Surfaced inside

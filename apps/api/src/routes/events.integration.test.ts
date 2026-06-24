@@ -130,6 +130,73 @@ describe('GET /v1/events — integration', () => {
     expect(body.data.limit).toBe(2)
   })
 
+  it('includes priceByTier with per-row headline for each event (closes #787 — browse chip parity)', async () => {
+    const venue = await seedVenue({
+      name: 'Tier List Venue',
+      slug: 'tier-list-venue',
+    })
+    const event = await seedEvent(venue.id, {
+      title: 'Tier Show',
+      date: '2027-06-01',
+      priceSource: 'community',
+    })
+    const profile = await seedUserProfile('user-list-tier', {
+      handle: 'list-tier',
+    })
+    // Corroborated GA box-office at $25 (this is what the browse chip
+    // should show as `from $25` with kind=boxoffice — even though the
+    // event row's ticketPriceMin / priceSource / priceVendor may diverge).
+    await seedPriceSubmission(event.id, profile.userId, {
+      tier: 'GA',
+      vendor: 'VenueBoxOffice',
+      howFound: 'at_the_venue',
+      sourceCategory: 'boxoffice',
+      priceMin: '25',
+      status: 'corroborated',
+    })
+
+    const res = await app.request('/v1/events?venueSlug=tier-list-venue')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      data: {
+        data: Array<{
+          id: string
+          priceByTier: Array<{
+            tier: string
+            headline: { priceMin: string; sourceCategory: string } | null
+          }> | null
+        }>
+      }
+    }
+    expect(body.data.data).toHaveLength(1)
+    const row = body.data.data[0]
+    expect(row?.priceByTier).not.toBeNull()
+    expect(row?.priceByTier).toHaveLength(1)
+    const gaBlock = row?.priceByTier?.[0]
+    expect(gaBlock?.tier).toBe('GA')
+    // Postgres `numeric` columns serialize with their precision suffix.
+    expect(parseFloat(gaBlock?.headline?.priceMin ?? '0')).toBe(25)
+    expect(gaBlock?.headline?.sourceCategory).toBe('boxoffice')
+  })
+
+  it('priceByTier on list endpoint is null when event has no corroborated submissions', async () => {
+    const venue = await seedVenue({
+      name: 'No Subs Venue',
+      slug: 'no-subs-venue',
+    })
+    await seedEvent(venue.id, {
+      title: 'No-subs show',
+      date: '2027-06-01',
+    })
+
+    const res = await app.request('/v1/events?venueSlug=no-subs-venue')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      data: { data: Array<{ priceByTier: unknown }> }
+    }
+    expect(body.data.data[0]?.priceByTier).toBeNull()
+  })
+
   it('excludes rows with first_missing_at set so stale dupes do not leak to consumers', async () => {
     // Regression for the BASS BINGO / Olivia Rodrigo duplicate-display issue
     // observed 2026-06-18. The crawler's stale-detection pass flags rows the

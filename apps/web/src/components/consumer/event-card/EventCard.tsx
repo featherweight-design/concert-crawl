@@ -11,6 +11,7 @@ import {
   MTListChip,
   type MTListChipKind,
 } from '@/components/consumer/price-region'
+import { pickBrowseHeadline } from '@/components/consumer/price-region/lib/pick-headline'
 
 const copy = CONSUMER_COPY
 
@@ -20,10 +21,12 @@ interface EventCardProps {
   isWatching?: boolean
 }
 
-// Fallback path while the browse list endpoint does not surface `priceByTier`
-// (tracked as GH issue #787 — once the list response carries per-tier data,
-// this helper is replaced with `pickBrowseHeadline(event.priceByTier)`).
-function resolveListChipKind(
+// Defensive fallback for events whose API row omits priceByTier (legacy
+// payloads, draft events, anything mid-migration). The list endpoint now
+// always populates priceByTier when at least one corroborated submission
+// exists for the event (closes #787), so the hot path is the helper-based
+// resolution above this comment.
+function resolveListChipKindLegacy(
   priceSource: EventWithVenue['priceSource'],
   priceVendor: string | null | undefined,
 ): MTListChipKind {
@@ -46,11 +49,24 @@ export function EventCard({
   const isCancelled = event.status === 'cancelled'
   const isPostponed = event.status === 'postponed'
 
+  // Browse table #7 (locked): mirror pickTierHeadline / compareTierRows
+  // from the API by reading the headline directly off the canonical
+  // priceByTier payload. The helper returns { price, kind } picked from
+  // the cheapest tier with a non-null headline; falls through to the
+  // legacy ticketPriceMin + (priceSource, priceVendor) heuristic when the
+  // event's priceByTier is null (defensive — list endpoint should always
+  // populate it for events with at least one corroborated submission).
+  const browseHeadline = pickBrowseHeadline(event.priceByTier)
   const priceNum =
-    event.ticketPriceMin != null
-      ? Math.round(parseFloat(event.ticketPriceMin))
-      : null
-  const listChipKind = resolveListChipKind(event.priceSource, event.priceVendor)
+    browseHeadline !== null
+      ? Math.round(browseHeadline.price)
+      : event.ticketPriceMin != null
+        ? Math.round(parseFloat(event.ticketPriceMin))
+        : null
+  const listChipKind: MTListChipKind =
+    browseHeadline !== null
+      ? browseHeadline.kind
+      : resolveListChipKindLegacy(event.priceSource, event.priceVendor)
 
   return (
     <div

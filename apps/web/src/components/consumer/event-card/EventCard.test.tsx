@@ -191,4 +191,128 @@ describe('EventCard — browse chip parity (MTListChip)', () => {
     expect(screen.getByText('from $25')).toBeDefined()
     expect(screen.queryByText('$25')).toBeNull()
   })
+
+  describe('Browse #7 — priceByTier-driven chip parity (closes #787)', () => {
+    it('priceByTier with boxoffice headline → boxoffice chip regardless of priceSource', () => {
+      render(
+        <EventCard
+          event={{
+            ...baseEvent,
+            // priceSource intentionally mismatches the headline source to
+            // assert priceByTier wins.
+            priceSource: 'ticketmaster',
+            priceVendor: null,
+            priceByTier: [
+              {
+                tier: 'GA',
+                headline: {
+                  submissionId: 's1',
+                  priceMin: '32',
+                  priceMax: null,
+                  vendor: 'VenueBoxOffice',
+                  sourceCategory: 'boxoffice',
+                  submitterHandle: 'ada',
+                  observedAt: '2026-06-20T00:00:00Z',
+                  approvedAt: '2026-06-20T00:00:00Z',
+                  approvalKind: 'fan',
+                  confirmsCount: 2,
+                },
+                alternates: [],
+                pending: [],
+                counterSubmission: null,
+                reports: 0,
+              },
+            ],
+          }}
+        />,
+      )
+      // Picks up the priceByTier headline floor instead of ticketPriceMin.
+      const priceText = screen.getByText('from $32') as HTMLElement
+      expect(priceText).toBeDefined()
+      // Boxoffice glyph (star SVG) renders inside the chip.
+      const chip = priceText.parentElement as HTMLElement
+      expect(chip.querySelector('svg')).not.toBeNull()
+    })
+
+    it('priceByTier with resale headline → coral resale chip', () => {
+      render(
+        <EventCard
+          event={{
+            ...baseEvent,
+            priceSource: 'community',
+            priceVendor: null,
+            priceByTier: [
+              {
+                tier: 'GA',
+                headline: {
+                  submissionId: 's1',
+                  priceMin: '120',
+                  priceMax: null,
+                  vendor: 'SeatGeek',
+                  sourceCategory: 'resale',
+                  submitterHandle: 'ada',
+                  observedAt: '2026-06-20T00:00:00Z',
+                  approvedAt: '2026-06-20T00:00:00Z',
+                  approvalKind: 'fan',
+                  confirmsCount: 2,
+                },
+                alternates: [],
+                pending: [],
+                counterSubmission: null,
+                reports: 0,
+              },
+            ],
+          }}
+        />,
+      )
+      expect(screen.getByText('from $120')).toBeDefined()
+      // Coral resale chip carries the "resale" tag.
+      expect(screen.getByText('resale')).toBeDefined()
+    })
+
+    it('priceByTier with no headlines falls back to legacy resolveListChipKind', () => {
+      render(
+        <EventCard
+          event={{
+            ...baseEvent,
+            priceSource: 'community',
+            priceVendor: 'VenueBoxOffice',
+            // Pending-only tier — no headline. browseHeadline returns null;
+            // EventCard falls through to (priceSource, priceVendor) heuristic
+            // which yields kind='boxoffice'.
+            priceByTier: [
+              {
+                tier: 'GA',
+                headline: null,
+                alternates: [],
+                pending: [
+                  {
+                    id: 'p1',
+                    priceMin: '40',
+                    priceMax: null,
+                    vendor: 'VenueBoxOffice',
+                    howFound: 'saw_listing',
+                    sourceCategory: 'boxoffice',
+                    note: null,
+                    submitterHandle: null,
+                    submittedAt: '2026-06-20T00:00:00Z',
+                    confirmsCount: 0,
+                    confirmsNeeded: 2,
+                    isSubmitter: false,
+                  },
+                ],
+                counterSubmission: null,
+                reports: 0,
+              },
+            ],
+          }}
+        />,
+      )
+      // Falls back to ticketPriceMin ($25) + boxoffice kind via legacy helper.
+      const priceText = screen.getByText('from $25') as HTMLElement
+      expect(priceText).toBeDefined()
+      const chip = priceText.parentElement as HTMLElement
+      expect(chip.querySelector('svg')).not.toBeNull()
+    })
+  })
 })

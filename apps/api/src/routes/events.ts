@@ -226,12 +226,90 @@ eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
     }
   }
 
+  // priceByTier on the browse list endpoint — closes issue #787 (browse chip
+  // parity). The consumer EventCard now reads `event.priceByTier` directly
+  // via `pickBrowseHeadline()`, which mirrors `pickTierHeadline` /
+  // `compareTierRows` on the API side. This was the locked Browse table #7
+  // sub-task — the legacy `resolveListChipKind(priceSource, priceVendor)`
+  // fallback stays on EventCard for events the API doesn't surface
+  // priceByTier for (defensive only — the list endpoint always populates it
+  // now for events with at least one corroborated submission).
+  //
+  // Cost control: only `headline` is consumed by the browse chip, so we skip
+  // the per-event side-table fetches (pending, counters, confirms, handles,
+  // reports) that the /v1/events/:id endpoint runs. Each event row gets the
+  // same TierPriceBlock shape with empty pending / counterSubmission arrays
+  // and confirmsCount=0; the headline still picks correctly because
+  // pickTierHeadline doesn't read confirmsCount as a tiebreaker.
+  const visibleEventIds = rows.map((row) => row.id)
+  const priceByTierByEventId = new Map<
+    string,
+    Awaited<ReturnType<typeof aggregateByTier>>
+  >()
+  if (visibleEventIds.length > 0) {
+    const corroboratedListRows = await db
+      .select({
+        id: priceSubmissions.id,
+        eventId: priceSubmissions.eventId,
+        tier: priceSubmissions.tier,
+        priceMin: priceSubmissions.priceMin,
+        priceMax: priceSubmissions.priceMax,
+        vendor: priceSubmissions.vendor,
+        sourceCategory: priceSubmissions.sourceCategory,
+        userId: priceSubmissions.userId,
+        createdAt: priceSubmissions.createdAt,
+        updatedAt: priceSubmissions.updatedAt,
+      })
+      .from(priceSubmissions)
+      .where(
+        and(
+          inArray(priceSubmissions.eventId, visibleEventIds),
+          eq(priceSubmissions.status, 'corroborated'),
+        ),
+      )
+
+    // Group by eventId so aggregateByTier sees only this event's corroborated
+    // rows; pending + counters are intentionally empty to keep the browse
+    // endpoint cheap (per the comment block above).
+    const corroboratedByEvent = new Map<string, typeof corroboratedListRows>()
+    for (const sub of corroboratedListRows) {
+      const existing = corroboratedByEvent.get(sub.eventId)
+      if (existing) existing.push(sub)
+      else corroboratedByEvent.set(sub.eventId, [sub])
+    }
+
+    for (const [eventId, subs] of corroboratedByEvent) {
+      const blocks = aggregateByTier({
+        corroborated: subs.map((sub) => ({
+          id: sub.id,
+          tier: sub.tier,
+          priceMin: sub.priceMin,
+          priceMax: sub.priceMax,
+          vendor: sub.vendor,
+          sourceCategory: sub.sourceCategory,
+          userId: sub.userId,
+          createdAt: sub.createdAt,
+          updatedAt: sub.updatedAt,
+          confirmsCount: 0,
+        })),
+        pending: [],
+        counters: [],
+        handles: new Map(),
+        reportsByTier: new Map(),
+        confirmsNeeded: SP_POLICY.confirmsRequired,
+        viewerUserId: null,
+      })
+      priceByTierByEventId.set(eventId, blocks)
+    }
+  }
+
   const enrichedRows = rows.map((row) => ({
     ...row,
     priceVendor:
       row.priceSource === 'community'
         ? (vendorByEventId[row.id] ?? null)
         : null,
+    priceByTier: priceByTierByEventId.get(row.id) ?? null,
   }))
 
   return ctx.json({
