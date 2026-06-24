@@ -60,7 +60,7 @@ If Playwright runs and fails an assertion, `rollback` runs automatically. The wo
 
 ## Vercel + cron rollback is manual
 
-This pipeline auto-rolls-back **only the Render API web service**.
+This pipeline auto-rolls back **only the Render API web service**.
 Both prod **crawler crons** require manual rollback because Render's
 `/rollback` endpoint rejects cron services — see the "Caveat on cron
 service rollback" section above for the manual paths. **Vercel web
