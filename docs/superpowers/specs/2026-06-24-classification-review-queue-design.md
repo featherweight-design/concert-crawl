@@ -18,7 +18,7 @@ The original auto-classification work (`2026-06-18-non-concert-auto-classificati
 
 We now have that data. The 2026-06-24 prod backfill hid 130 events, with 2 known `isConcert` false negatives (PRESIDENT: North American Campaign 2026, Levity Presents: Laser Therapy) excluded by hand from the dry-run review because there was no un-hide path. Operating without an inverse affordance has reached its breaking point: the next backfill cycle will produce more borderline calls, and human dry-run review is fallible.
 
-The 3 events that motivated PR #730's prompt iteration illustrate the borderline shape this spec targets:
+The 3 events that surfaced in the 2026-06-24 prod backfill (after PR #730 merged) illustrate the borderline shape this spec targets — distinct from the DJ-as-headliner shapes PR #730 closed (Honey Dijon, DJ Sliink, Taste of Chaos):
 
 | Event | Verdict | Why it was borderline |
 |---|---|---|
@@ -57,10 +57,12 @@ No partial index pre-emptively. At current corpus size (~3,000 events) the filte
 `NormalizedEventSchema` in `packages/crawler-core/src/lib/extractors/llm.ts` gains:
 
 ```typescript
-reviewNeeded: z.boolean(),
+reviewNeeded: z.boolean().optional(),
 ```
 
-…and the matching field is added to the `save_events` tool input schema's `properties` and `required` array alongside `title`, `artist`, `date`, `confidence`, `isConcert`. The runtime `NormalizedEvent` type in `packages/crawler-core/src/types.ts` gains the matching field.
+`.optional()` mirrors the existing `isConcert` field's Zod shape — defensive against the LLM occasionally omitting the field, even though it's in the tool's `required` array. The matching field is added to the `save_events` tool input schema's `properties` and `required` array alongside `title`, `artist`, `date`, `confidence`, `isConcert`. The runtime `NormalizedEvent` type in `packages/crawler-core/src/types.ts` gains the matching `reviewNeeded?: boolean` field.
+
+**Non-LLM extraction paths** (JSON-LD structured data, platform fetchers — anything that constructs `NormalizedEvent` without going through the LLM tool) leave `reviewNeeded` undefined. The crawler's INSERT mapping treats undefined as not-flagged (see "Crawler write path" below: `event.reviewNeeded === true` evaluates `false` for undefined). This matches the existing `isConcert` convention — non-LLM paths don't emit the LLM's introspection signal, and the column stays at its default `false`.
 
 `IS_CONCERT_RULES` gets a new trailing block:
 
