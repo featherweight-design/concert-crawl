@@ -597,6 +597,72 @@ describe('AdminDisputePanel', () => {
     expect(screen.queryByRole('button', { name: /retry/i })).toBeNull()
   })
 
+  // R9-1/2/3 — surrounding whitespace must be trimmed before the reason
+  // hits the API so persisted rationale matches the validation semantics
+  // (the disabled-state check uses `reason.trim()`). Without the trim, an
+  // admin who types valid content with leading/trailing whitespace would
+  // persist that whitespace into the audit log even though the UI treats
+  // it as semantically invisible.
+  it('trims whitespace from reason before sending to API on resolve', async () => {
+    mockApiGet.mockResolvedValue(buildContest())
+    mockApiPost.mockResolvedValue({ success: true })
+    renderWithClient(<AdminDisputePanel contestId="c1" />)
+    await waitFor(() => {
+      expect(screen.getByText('hugh')).toBeTruthy()
+    })
+    fireEvent.change(screen.getByLabelText(/reason/i), {
+      target: { value: '   keeping the original because…   ' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Keep original' }))
+    await waitFor(() => {
+      expect(mockApiPost).toHaveBeenCalled()
+    })
+    const [, , body] = mockApiPost.mock.calls[0] ?? []
+    expect(body).toEqual({
+      resolution: 'parent_wins',
+      reason: 'keeping the original because…',
+    })
+  })
+
+  it('trims whitespace from reason before sending to API on promote', async () => {
+    mockApiGet.mockResolvedValue(buildContest())
+    mockApiPost.mockResolvedValue({ success: true })
+    renderWithClient(<AdminDisputePanel contestId="c1" />)
+    await waitFor(() => {
+      expect(screen.getByText('hugh')).toBeTruthy()
+    })
+    fireEvent.change(screen.getByLabelText(/reason/i), {
+      target: { value: '   promoting the counter because…   ' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Promote counter' }))
+    await waitFor(() => {
+      expect(mockApiPost).toHaveBeenCalled()
+    })
+    const [, , body] = mockApiPost.mock.calls[0] ?? []
+    expect(body).toEqual({
+      resolution: 'challenger_wins',
+      reason: 'promoting the counter because…',
+    })
+  })
+
+  it('trims whitespace from reason before sending to API on defer', async () => {
+    mockApiGet.mockResolvedValue(buildContest())
+    mockApiPost.mockResolvedValue({ success: true })
+    renderWithClient(<AdminDisputePanel contestId="c1" />)
+    await waitFor(() => {
+      expect(screen.getByText('hugh')).toBeTruthy()
+    })
+    fireEvent.change(screen.getByLabelText(/reason/i), {
+      target: { value: '   need to ask the submitter…   ' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Need more info' }))
+    await waitFor(() => {
+      expect(mockApiPost).toHaveBeenCalled()
+    })
+    const [, , body] = mockApiPost.mock.calls[0] ?? []
+    expect(body).toEqual({ reason: 'need to ask the submitter…' })
+  })
+
   // G5 — non-404 errors keep the generic banner + retry behavior.
   it('renders the generic error banner with retry for non-404 errors', async () => {
     mockApiGet.mockRejectedValue(new MockApiError(500, 'server boom'))

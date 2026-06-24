@@ -261,6 +261,11 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
   const inFlight = resolve.isPending || defer.isPending
   const disabled = !reasonValid || inFlight
 
+  // Trim the reason before sending so persisted rationale matches the
+  // validation semantics (the disabled-state check uses `reason.trim()`).
+  // Without this, an admin who types valid content with trailing
+  // whitespace would persist that whitespace into the audit log even
+  // though the UI treats it as semantically invisible.
   const onKeep = async () => {
     setOptimisticWinner('original')
     setMutationError(null)
@@ -268,7 +273,7 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
       await resolve.mutateAsync({
         contestId: contest.contestId,
         resolution: 'parent_wins',
-        reason,
+        reason: reason.trim(),
       })
       router.push(QUEUE_ROUTE)
     } catch (err) {
@@ -284,7 +289,7 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
       await resolve.mutateAsync({
         contestId: contest.contestId,
         resolution: 'challenger_wins',
-        reason,
+        reason: reason.trim(),
       })
       router.push(QUEUE_ROUTE)
     } catch (err) {
@@ -296,7 +301,10 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
   const onDefer = async () => {
     setMutationError(null)
     try {
-      await defer.mutateAsync({ contestId: contest.contestId, reason })
+      await defer.mutateAsync({
+        contestId: contest.contestId,
+        reason: reason.trim(),
+      })
       router.push(QUEUE_ROUTE)
     } catch (err) {
       setMutationError(mutationErrorMessage(err))

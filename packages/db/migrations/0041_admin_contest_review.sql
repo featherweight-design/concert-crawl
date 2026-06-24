@@ -50,11 +50,22 @@ CREATE INDEX IF NOT EXISTS price_submissions_pending_counters_idx
 --    same constraint and rationale). `archived_reason` still carries the
 --    audit trail of why the row was retired, so downstream review can
 --    distinguish "retired because of contest cleanup" from other stale rows.
+--
+--    NOTE: the window's ORDER BY includes `id DESC` as a stable tie-breaker.
+--    Without it, two pending counters with identical `created_at` (possible
+--    via concurrent inserts in the same second or manual backfills) make
+--    the survivor nondeterministic — different replicas could pick
+--    different survivors during the migration run and diverge from the
+--    leader once the partial unique index is created. The `id DESC`
+--    secondary sort gives every replica the same answer.
+--    `updated_at = NOW()` bumps the retired rows so audit queries see the
+--    cleanup as a real mutation (rather than the row appearing to have
+--    never been touched since its original submission).
 WITH ranked AS (
   SELECT id,
          ROW_NUMBER() OVER (
            PARTITION BY disputed_submission_id
-           ORDER BY created_at DESC
+           ORDER BY created_at DESC, id DESC
          ) AS rn
   FROM price_submissions
   WHERE status = 'pending'
@@ -62,7 +73,8 @@ WITH ranked AS (
 )
 UPDATE price_submissions
    SET status = 'stale',
-       archived_reason = 'superseded by newer counter before schema lock'
+       archived_reason = 'superseded by newer counter before schema lock',
+       updated_at = NOW()
  WHERE id IN (SELECT id FROM ranked WHERE rn > 1);
 --> statement-breakpoint
 
