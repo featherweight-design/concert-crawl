@@ -1092,6 +1092,12 @@ export const CONSUMER_COPY = {
       helperLine:
         'Each tier is its own quick submission — only add the ones you actually saw.',
       doneButton: 'Done',
+      // Per copy-rule — SourceCategory enum → label string used inside bodyTemplate.
+      sourceLabels: {
+        boxoffice: 'box office',
+        standard: 'standard',
+        resale: 'resale',
+      },
     },
     disputeRace409Toast:
       'Another challenge was just filed — refresh to see it.',
