@@ -23,11 +23,14 @@ This plan resolves the 8 eng-side decisions enumerated in `READINESS_506.md` and
 - Edit screen uses **Form + meta column** layout (`editLayout: "meta"`).
 - Section primitive is `VDSection` (eyebrow + title + optional subtitle); all new fields live inside one.
 - Field primitive is `VDField` (label + optional hint + optional error + children).
-- Inputs use the 8-state spec (default/hover/focused/filled/success/error/disabled/read-only); new fields inherit via `VDInput` / `inputStyle()`.
+- Inputs use the 8-state spec (default/hover/focused/filled/success/error/disabled/read-only); on the Edit page (`VenueDetailsClient.tsx`) the new fields inherit those states via the `VDInput` component. (The Add Venue modal uses a separate `inputStyle()` helper defined locally in `AddVenueModal.tsx` — irrelevant for this PR since the modal stays unchanged.)
 - Sticky save bar surfaces when the form is dirty; new fields participate in dirty-tracking.
-- All copy via `apps/web/src/components/admin/definitions/copy.ts` — no hardcoded strings in JSX.
 - `var(--*)` tokens only.
 - A11y: 3px signal-tinted focus ring via `:focus-visible`.
+
+Codebase conventions also applied (not stated in the handoff README, but enforced project-wide):
+
+- All copy lives in a `definitions/copy.ts` module — for the Edit page, that's `apps/web/src/components/admin/definitions/copy.ts` (the existing `ADMIN_COPY` object).
 
 ### From #506
 
@@ -147,7 +150,7 @@ ALTER TABLE "venues" ADD COLUMN "api_account_id" text;
 
 ### Type re-export
 
-`packages/types/src/index.ts` (the single source of truth for shared types — `venue.ts` does not exist in this repo): re-export the `apiProvider` enum values + extend the `Venue` type so the new `apiProvider` and `apiAccountId` fields surface through `@concert-crawl/types`. Pattern: see how `ticketVendor` / `platform` already flow through `index.ts`.
+`packages/types/src/index.ts` (the single source of truth for shared types — `venue.ts` does not exist in this repo): re-export the `apiProvider` enum values + extend the `Venue` type so the new `apiProvider` and `apiAccountId` fields surface through `@concert-crawl/types`. Pattern: see how `ticketVendor` already flows through `index.ts` (the closest precedent — a nullable optional Venue field carrying a Postgres enum value).
 
 ---
 
@@ -284,7 +287,7 @@ const [fieldErrors, setFieldErrors] = useState<{
 }>({})
 ```
 
-**Wiring API validation errors back to `fieldErrors`** — this requires extending the web action's return shape, because today's `updateVenue` action only sets `field: 'slug'` (for the 409 conflict on slug uniqueness — see `apps/web/src/lib/actions/venues.ts:80-81`) and the `apiClient` doesn't surface Zod issue paths from a 400. The impl PR adds the following:
+**Wiring API validation errors back to `fieldErrors`** — this requires extending the web action's return shape, because today's `updateVenue` action only sets `field: 'slug'` (for the 409 conflict on slug uniqueness — see the `catch` block at `apps/web/src/lib/actions/venues.ts:54-56` for `createVenue` and the analogous handler in `updateVenue` around line 223) and the `apiClient` doesn't surface Zod issue paths from a 400. The impl PR adds the following:
 
 1. **API side** — when the Hono route's `zValidator('json', updateVenueSchema)` rejects, the framework already returns a 400 with the Zod issues in the body. No code change needed.
 2. **`apiClient` side** — `ApiError` (in `apps/web/src/lib/api.ts`) is the class thrown for non-2xx responses. The impl PR extends `ApiError` to carry a parsed Zod issues array when the response body has the standard Zod-issues shape (`{ success: false, error: { issues: [...] } }` or whatever Hono's zValidator emits — verify shape during impl). The new `ApiError` field is something like `zodIssues?: Array<{ path: (string | number)[], message: string }>`.
