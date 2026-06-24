@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { type ReactElement } from 'react'
+import { type ReactElement, type ReactNode } from 'react'
 import {
   render,
   screen,
@@ -117,7 +117,7 @@ const renderWithClient = (ui: ReactElement) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
-  const Wrapper = ({ children }: { children: React.ReactNode }) => (
+  const Wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   )
   return render(ui, { wrapper: Wrapper })

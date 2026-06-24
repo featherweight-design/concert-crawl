@@ -2,7 +2,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, cleanup, fireEvent } from '@testing-library/react'
-import { type ReactElement } from 'react'
+import { type ReactElement, type ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReviewContestsResult } from '@/lib/queries/admin-contests'
 
@@ -20,7 +20,7 @@ const renderTab = (ui: ReactElement) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  const Wrapper = ({ children }: { children: React.ReactNode }) => (
+  const Wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   )
   return render(ui, { wrapper: Wrapper })

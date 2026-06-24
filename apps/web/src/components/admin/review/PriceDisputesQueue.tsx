@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { type FC } from 'react'
+import { type FC, type ReactNode } from 'react'
 import { REVIEW_CONTEST_COPY } from './definitions/copy'
 import { formatPriceRange } from './lib/format-price-range'
 // Type lives in the query module — hooks own the API contract, components
@@ -214,7 +214,7 @@ const ColumnHeader: FC<{
 // Reusable td chrome — pinned to design property table §1 lines 44–47
 // (td.padding / td.font / td.color.default / td.borderBottom).
 const DataCell: FC<{
-  children: React.ReactNode
+  children: ReactNode
   align?: 'left' | 'right'
 }> = ({ children, align = 'left' }) => (
   <td

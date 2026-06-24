@@ -1,8 +1,10 @@
 -- Admin contest-review (#697) — adds the loser-of-contest 'archived' status,
 -- the admin's archive reason column, and the engagement-signal columns that
 -- surface via priceByTier[].counterSubmission on the event-detail endpoint.
--- Three indexes back the contest queue (disputed parents + pending counters)
--- and lock 1-pending-counter-per-parent at the DB level.
+-- Four indexes back the contest surfaces: two per-parent lookups (disputed
+-- parents + pending counters), one queue-global ORDER BY counter.created_at,
+-- and one partial unique index enforcing 1-pending-counter-per-parent at
+-- the DB level.
 
 -- 1. Add 'archived' to the status enum (loser-of-contest sink, distinct from
 --    'stale' which keeps its current "outdated/no-longer-valid" semantics).
