@@ -1,3 +1,15 @@
+## [1.74.10](https://github.com/HartiganHM/concert-crawl/compare/v1.74.9...v1.74.10) (2026-06-24)
+
+
+### Bug Fixes
+
+* **deploy:** flatten nested parens in pin_status log ([f736615](https://github.com/HartiganHM/concert-crawl/commit/f736615e0bd95c82ed0267ec3ade4545c793f818))
+* **deploy:** normalize COMMIT_SHA to lowercase before validating ([35d475f](https://github.com/HartiganHM/concert-crawl/commit/35d475febae94cfaa21f93bc44b65e61201ad6c7)), closes [#744](https://github.com/HartiganHM/concert-crawl/issues/744)
+* **deploy:** omit commitId for cron services (Render API limitation) ([6fc70c7](https://github.com/HartiganHM/concert-crawl/commit/6fc70c7b2475a78def335a71e5d4c1e98362e1e2)), closes [#742](https://github.com/HartiganHM/concert-crawl/issues/742) [#740](https://github.com/HartiganHM/concert-crawl/issues/740)
+* **deploy:** use printf not echo for SHA normalization ([a0036ab](https://github.com/HartiganHM/concert-crawl/commit/a0036ab95a0d54f9229b5f155e62adea71335ced))
+* **deploy:** validate COMMIT_SHA + build JSON via jq ([ef629c6](https://github.com/HartiganHM/concert-crawl/commit/ef629c6d61980b97654a0d733515bb9e80bae063)), closes [#744](https://github.com/HartiganHM/concert-crawl/issues/744)
+* **deploy:** validate service ID prefix + clarify log fields ([a91a059](https://github.com/HartiganHM/concert-crawl/commit/a91a0592d5468299a373b19e6967a04e4c5a07f3)), closes [#744](https://github.com/HartiganHM/concert-crawl/issues/744)
+
 ## [1.74.9](https://github.com/HartiganHM/concert-crawl/compare/v1.74.8...v1.74.9) (2026-06-23)
 
 
