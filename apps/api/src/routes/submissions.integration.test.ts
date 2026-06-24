@@ -322,6 +322,52 @@ describe('POST /v1/submissions/:id/dispute', () => {
     expect(body.success).toBe(true)
     expect(body.data.vendor).toBe('AXS')
   })
+
+  it('rejects a 2nd pending counter against the same parent with 409', async () => {
+    // Spec §4.6: schema-enforced 1-pending-counter-per-parent invariant.
+    // First challenger files a counter → 201. Second challenger files a
+    // counter against the SAME parent → 409 from the app-level pre-insert
+    // check. (The DB partial unique index is the primary defence; this test
+    // exercises the clean 409 path consumers see.)
+    const parent = await seedPriceSubmission(eventId, 'user_owner', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      status: 'corroborated',
+    })
+
+    setAuth('user_challenger_1')
+    const firstRes = await app.request(`/v1/submissions/${parent.id}/dispute`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
+      body: JSON.stringify({ floor: 50 }),
+    })
+    expect(firstRes.status).toBe(201)
+
+    setAuth('user_challenger_2')
+    const secondRes = await app.request(
+      `/v1/submissions/${parent.id}/dispute`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-token',
+        },
+        body: JSON.stringify({ floor: 55 }),
+      },
+    )
+    expect(secondRes.status).toBe(409)
+    const body = (await secondRes.json()) as {
+      success: boolean
+      error: string
+    }
+    expect(body.success).toBe(false)
+    expect(body.error).toMatch(/already pending/i)
+  })
 })
 
 describe('PATCH /v1/submissions/:id', () => {

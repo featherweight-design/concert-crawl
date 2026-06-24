@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { eq, sql } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { db, priceSubmissions, submissionConfirms } from '@concert-crawl/db'
 import { SP_POLICY, deriveSourceCategory } from '@concert-crawl/types'
 import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js'
@@ -146,42 +146,120 @@ submissionsRouter.post(
       )
     }
 
+    // 1-pending-counter-per-parent invariant (locked design decision — see
+    // docs/superpowers/specs/2026-06-22-admin-contest-review-design.md §4.6).
+    // The DB partial unique index `price_submissions_pending_counter_unique_idx`
+    // (migration 0041) is the source of truth; this app-level check returns a
+    // clean 409 to consumers instead of letting them race straight into the
+    // raw unique_violation. The try/catch below the transaction catches the
+    // narrow window where two requests race past this SELECT and only one
+    // INSERT survives the index.
+    const [existingCounter] = await db
+      .select({ id: priceSubmissions.id })
+      .from(priceSubmissions)
+      .where(
+        and(
+          eq(priceSubmissions.disputedSubmissionId, submissionId),
+          eq(priceSubmissions.status, 'pending'),
+        ),
+      )
+      .limit(1)
+    if (existingCounter) {
+      return ctx.json(
+        {
+          success: false,
+          error:
+            'Another challenge is already pending against this submission.',
+        },
+        409,
+      )
+    }
+
     const vendor = parent.vendor
 
-    const [disputeRow] = await db.transaction(async (tx) => {
-      const [created] = await tx
-        .insert(priceSubmissions)
-        .values({
-          eventId: parent.eventId,
-          userId,
-          priceMin: String(floor),
-          priceMax: ceiling != null ? String(ceiling) : null,
-          tier: parent.tier,
-          vendor,
-          howFound: parent.howFound,
-          // Dispute creates a new (tier, source_category) row. Inherit the
-          // parent's sourceCategory when present; otherwise derive from the
-          // new (vendor, parent.howFound) so the dispute lands with a non-
-          // null source_category (matches the partial unique index semantics).
-          sourceCategory:
-            parent.sourceCategory ??
-            deriveSourceCategory(vendor, parent.howFound),
-          disputedSubmissionId: submissionId,
-          status: 'pending',
-        })
-        .returning()
+    let disputeRow: typeof priceSubmissions.$inferSelect
+    try {
+      disputeRow = await db.transaction(async (tx) => {
+        const [created] = await tx
+          .insert(priceSubmissions)
+          .values({
+            eventId: parent.eventId,
+            userId,
+            priceMin: String(floor),
+            priceMax: ceiling != null ? String(ceiling) : null,
+            tier: parent.tier,
+            vendor,
+            howFound: parent.howFound,
+            // Dispute creates a new (tier, source_category) row. Inherit the
+            // parent's sourceCategory when present; otherwise derive from the
+            // new (vendor, parent.howFound) so the dispute lands with a non-
+            // null source_category (matches the partial unique index semantics).
+            sourceCategory:
+              parent.sourceCategory ??
+              deriveSourceCategory(vendor, parent.howFound),
+            disputedSubmissionId: submissionId,
+            status: 'pending',
+          })
+          .returning()
 
-      await tx
-        .update(priceSubmissions)
-        .set({ status: 'disputed', updatedAt: sql`now()` })
-        .where(eq(priceSubmissions.id, submissionId))
+        if (!created) {
+          throw new Error('Dispute insert returned no rows')
+        }
 
-      return [created]
-    })
+        await tx
+          .update(priceSubmissions)
+          .set({ status: 'disputed', updatedAt: sql`now()` })
+          .where(eq(priceSubmissions.id, submissionId))
+
+        return created
+      })
+    } catch (err) {
+      // Belt-and-braces: translate the DB unique_violation on the partial
+      // unique index into the same clean 409 the pre-insert SELECT returns.
+      // Drizzle wraps the underlying postgres-js error, so check both the
+      // outer error AND `err.cause` for SQLSTATE 23505 + the index name.
+      if (isPendingCounterUniqueViolation(err)) {
+        return ctx.json(
+          {
+            success: false,
+            error:
+              'Another challenge is already pending against this submission.',
+          },
+          409,
+        )
+      }
+      throw err
+    }
 
     return ctx.json({ success: true, data: disputeRow }, 201)
   },
 )
+
+/**
+ * Detect a Postgres unique_violation (SQLSTATE 23505) against the
+ * `price_submissions_pending_counter_unique_idx` partial unique index.
+ *
+ * Drizzle wraps the underlying postgres-js error in a DrizzleQueryError, so
+ * the original `code` lives on `err.cause`. We check both so the translation
+ * survives if Drizzle's wrapping behavior changes.
+ */
+function isPendingCounterUniqueViolation(err: unknown): boolean {
+  const indexName = 'price_submissions_pending_counter_unique_idx'
+  const matches = (candidate: unknown): boolean => {
+    if (typeof candidate !== 'object' || candidate === null) return false
+    const record = candidate as Record<string, unknown>
+    if (record['code'] !== '23505') return false
+    if (record['constraint_name'] === indexName) return true
+    if (record['constraint'] === indexName) return true
+    const message = record['message']
+    return typeof message === 'string' && message.includes(indexName)
+  }
+  if (matches(err)) return true
+  if (err instanceof Error && 'cause' in err) {
+    return matches((err as Error & { cause?: unknown }).cause)
+  }
+  return false
+}
 
 const patchBodySchema = z
   .object({
