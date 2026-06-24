@@ -1,3 +1,12 @@
+## [1.75.1](https://github.com/HartiganHM/concert-crawl/compare/v1.75.0...v1.75.1) (2026-06-24)
+
+
+### Bug Fixes
+
+* **crawler:** address Copilot review on PR [#746](https://github.com/HartiganHM/concert-crawl/issues/746) — concurrency ([42b0405](https://github.com/HartiganHM/concert-crawl/commit/42b0405c56823ca4808d63eb8087f1699d6d3142))
+* **crawler:** address Copilot round-3 review on PR [#746](https://github.com/HartiganHM/concert-crawl/issues/746) ([dae68f6](https://github.com/HartiganHM/concert-crawl/commit/dae68f6a3eecdc86aaf84cba1454ab7ea55fb315))
+* **crawler:** auto-pause venue at 3 consecutive failures ([32ae0bf](https://github.com/HartiganHM/concert-crawl/commit/32ae0bf3da6c517de0adcc62b3a8ae3bf28060b9)), closes [#743](https://github.com/HartiganHM/concert-crawl/issues/743)
+
 # [1.75.0](https://github.com/HartiganHM/concert-crawl/compare/v1.74.13...v1.75.0) (2026-06-24)
 
 
