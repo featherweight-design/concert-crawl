@@ -513,4 +513,27 @@ describe('SENTRY_ENVIRONMENT CR/LF stripping', () => {
     expect(call.subject.startsWith('[Staging] ')).toBe(true)
     expect(call.subject).not.toMatch(/[\r\n]/)
   })
+
+  // Defense-in-depth for caller-supplied subject content (venueName et al)
+  // — anything reaching sendAdminAlert's input.subject is sanitised at the
+  // choke point so a venue name with embedded \r\n can't open a header-
+  // injection seam.
+  it('strips CR/LF from venueName (which flows into the subject header)', async () => {
+    process.env.SENTRY_ENVIRONMENT = 'production'
+    const { sendEventCountDropEmail } = await import('./email.js')
+    await sendEventCountDropEmail({
+      venueName: 'Bad\r\nVenue: Subject Injection',
+      venueId: 'v-1',
+      crawlRunId: 'r-1',
+      eventsFound: 0,
+      baselineCount: 100,
+      dropPercent: 100,
+    })
+
+    const call = mockSend.mock.calls[0][0]
+    expect(call.subject).not.toMatch(/[\r\n]/)
+    // Sanity: the venue name characters are still present (just no newlines).
+    expect(call.subject).toContain('Bad')
+    expect(call.subject).toContain('Venue')
+  })
 })

@@ -156,10 +156,20 @@ async function sendAdminAlert(
 
   const resend = new Resend(apiKey)
 
+  // Defense-in-depth on the subject header: strip CR/LF from the final
+  // string so untrusted input flowing into input.subject (venue names,
+  // status strings, etc) can't open a header-injection seam or trip a
+  // strict SMTP transport. SENTRY_ENVIRONMENT is already normalised at
+  // its source, but this catches everything else passed by callers.
+  const safeSubject = `${subjectPrefix()}${input.subject}`.replace(
+    /[\r\n]+/g,
+    ' ',
+  )
+
   await resend.emails.send({
     from: ALERT_FROM,
     to: adminEmail,
-    subject: `${subjectPrefix()}${input.subject}`,
+    subject: safeSubject,
     html: `${envBanner()}${input.html}`,
   })
 }
