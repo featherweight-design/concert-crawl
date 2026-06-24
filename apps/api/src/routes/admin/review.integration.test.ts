@@ -339,6 +339,57 @@ describe('GET /v1/admin/review/counts', () => {
     expect(body.data.prices).toBe(1)
   })
 
+  // R1-2 (PR #754): a pending counter row (status='pending' AND
+  // disputed_submission_id IS NOT NULL) is a contest. It must count ONLY
+  // toward `priceContests`, not `prices`. Before R1-2 the `prices` query
+  // matched on status alone, so every counter was double-counted in BOTH
+  // pills — the legacy queue would say "5 pending" while the dedicated
+  // contest queue also said "5 open" for the same 5 rows.
+  it('does not double-count contest counter rows between prices and priceContests', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2099-09-01',
+      verified: true,
+    })
+
+    // 1 pending counter (counts toward priceContests, NOT prices)
+    const parent = await seedPriceSubmission(event.id, 'user-parent', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      status: 'corroborated',
+    })
+    await seedPriceSubmission(event.id, 'user-counter', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '55',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+    })
+
+    // 1 non-contest pending row (counts toward prices, NOT priceContests)
+    await seedPriceSubmission(event.id, 'user-plain', {
+      status: 'pending',
+      priceMin: '38',
+    })
+
+    const res = await app.request('/v1/admin/review/counts', {
+      headers: ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      data: { prices: number; priceContests: number }
+    }
+    // Hard guarantee: each row counts in exactly one pill.
+    expect(body.data.prices).toBe(1)
+    expect(body.data.priceContests).toBe(1)
+    // Sum = 2 total pending rows, NOT 3 (which would mean the counter
+    // was double-counted).
+    expect(body.data.prices + body.data.priceContests).toBe(2)
+  })
+
   it('returns 403 for non-admin callers', async () => {
     setNonAdminAuth()
     const res = await app.request('/v1/admin/review/counts', {

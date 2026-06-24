@@ -227,8 +227,19 @@ pricesAdminRouter.get(
   async (ctx) => {
     const { count, status, limit, offset } = ctx.req.valid('query')
 
+    // Exclude contest counter rows (`disputed_submission_id IS NOT NULL`)
+    // from the legacy submissions queue. Counters are adjudicated through
+    // /v1/admin/contests/prices and the PATCH lockout (#754) returns 409
+    // if an admin tries to action one from this surface — so leaving them
+    // visible here was both un-actionable AND double-counts the pending
+    // pill (matched in /v1/admin/review/counts → `prices`). The list
+    // endpoint and the counts query stay in lock-step with this filter.
     const statusClause =
       status === 'pending' ? eq(priceSubmissions.status, 'pending') : undefined
+    const whereClause = and(
+      statusClause,
+      isNull(priceSubmissions.disputedSubmissionId),
+    )
 
     const rowsPromise = db
       .select({
@@ -238,6 +249,10 @@ pricesAdminRouter.get(
         priceMin: priceSubmissions.priceMin,
         priceMax: priceSubmissions.priceMax,
         status: priceSubmissions.status,
+        // Always null in the filtered result (we excluded contest rows
+        // above), but surfaced on the wire so any future UI can know which
+        // rows are contests without re-querying.
+        disputedSubmissionId: priceSubmissions.disputedSubmissionId,
         createdAt: priceSubmissions.createdAt,
         eventTitle: events.title,
         eventDate: events.date,
@@ -247,7 +262,7 @@ pricesAdminRouter.get(
       .from(priceSubmissions)
       .leftJoin(events, eq(priceSubmissions.eventId, events.id))
       .leftJoin(venues, eq(events.venueId, venues.id))
-      .where(statusClause)
+      .where(whereClause)
       .orderBy(desc(priceSubmissions.createdAt))
       .limit(limit)
       .offset(offset)
@@ -260,7 +275,7 @@ pricesAdminRouter.get(
     const countQuery = db
       .select({ total: sql<number>`count(*)::int` })
       .from(priceSubmissions)
-      .where(statusClause)
+      .where(whereClause)
     const [rows, countResult] = await Promise.all([rowsPromise, countQuery])
     const total = countResult[0]?.total ?? 0
     return ctx.json({ success: true, data: { rows, total } })

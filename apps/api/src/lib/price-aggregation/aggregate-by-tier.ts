@@ -14,6 +14,7 @@ import {
   pickTierHeadline,
   type TierRow,
 } from './pick-tier-headline.js'
+import { narrowLastAdminActionKind } from '../last-admin-action.js'
 
 export interface CorroboratedTierRow extends TierRow {
   tier: Tier
@@ -159,11 +160,9 @@ function buildCounter(
   const handle = row.userId !== null ? (handles.get(row.userId) ?? null) : null
   const ceiling = row.priceMax !== null ? parseFloat(row.priceMax) : null
   // Narrow the raw text column to the API's discriminated union before
-  // emitting. Today 'defer' is the only kind we surface; resolve clears the
-  // field. Any unrecognized value is treated as null defensively so we never
-  // leak a future internal kind to consumers.
-  const kind: 'defer' | null =
-    row.lastAdminActionKind === 'defer' ? 'defer' : null
+  // emitting. See apps/api/src/lib/last-admin-action.ts for the shared
+  // helper used by the three call sites that surface this field.
+  const kind = narrowLastAdminActionKind(row.lastAdminActionKind)
   return {
     id: row.id,
     parentSubmissionId: row.parentSubmissionId,

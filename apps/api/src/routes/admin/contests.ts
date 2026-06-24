@@ -13,6 +13,7 @@ import {
 } from '@concert-crawl/db'
 import { getAuthUser } from '../../middleware/auth.js'
 import { writeContestNotifications } from '../../lib/contest-notifications.js'
+import { narrowLastAdminActionKind } from '../../lib/last-admin-action.js'
 import type { AdminVariables } from './index.js'
 
 export const contestsAdminRouter = new Hono<AdminVariables>()
@@ -144,7 +145,10 @@ contestsAdminRouter.get(
         priceMax: row.parentPriceMax,
         vendor: row.parentVendor,
         submitter: {
-          userId: row.parentUserId ?? '',
+          // Pass `string | null` through verbatim — see detail handler's
+          // submitter comment for rationale (don't coerce a null userId
+          // into a zero-length string).
+          userId: row.parentUserId,
           handle: row.parentUserId
             ? (handleMap.get(row.parentUserId) ?? null)
             : null,
@@ -163,7 +167,8 @@ contestsAdminRouter.get(
         priceMax: row.counterPriceMax,
         vendor: row.counterVendor,
         submitter: {
-          userId: row.counterUserId ?? '',
+          // Same as parent.submitter.userId — string | null.
+          userId: row.counterUserId,
           handle: row.counterUserId
             ? (handleMap.get(row.counterUserId) ?? null)
             : null,
@@ -333,7 +338,13 @@ contestsAdminRouter.get(
           priceMax: parentRow.priceMax,
           vendor: parentRow.vendor,
           submitter: {
-            userId: parentRow.userId ?? '',
+            // Preserve null when the row truly has no submitter (legacy /
+            // anonymous backfill rows) rather than coercing to ''. The
+            // empty string was a lie — it told the wire the user existed
+            // but had a zero-length id. UI reads only `handle` for
+            // rendering; passing `string | null` through keeps the type
+            // honest with the DB column.
+            userId: parentRow.userId,
             handle: parentRow.userId
               ? (handleMap.get(parentRow.userId) ?? null)
               : null,
@@ -354,7 +365,9 @@ contestsAdminRouter.get(
           priceMax: counterRow.priceMax,
           vendor: counterRow.vendor,
           submitter: {
-            userId: counterRow.userId ?? '',
+            // Same rationale as parent.submitter.userId — string | null,
+            // not coerced to ''.
+            userId: counterRow.userId,
             handle: counterRow.userId
               ? (handleMap.get(counterRow.userId) ?? null)
               : null,
@@ -368,7 +381,13 @@ contestsAdminRouter.get(
           status: counterRow.status,
           lastAdminActionAt:
             counterRow.lastAdminActionAt?.toISOString() ?? null,
-          lastAdminActionKind: counterRow.lastAdminActionKind ?? null,
+          // Narrow the raw text column to the API's discriminated union
+          // before emitting — mirrors the buildCounter helper in
+          // aggregate-by-tier.ts and the counterSubmission projection in
+          // events.ts. Shared helper in apps/api/src/lib/last-admin-action.ts.
+          lastAdminActionKind: narrowLastAdminActionKind(
+            counterRow.lastAdminActionKind,
+          ),
           archivedReason: counterRow.archivedReason ?? null,
         },
         filedAt: counterRow.observedAt.toISOString(),
@@ -650,8 +669,12 @@ contestsAdminRouter.post(
         .update(priceSubmissions)
         .set({
           status: 'archived',
-          archivedReason:
-            'parent was archived in a contest; refile against new winner',
+          // Reason text must stay accurate regardless of resolution
+          // direction — the parent is NOT always archived (parent_wins
+          // leaves it corroborated). "Superseded by contest resolution"
+          // works for both branches and points readers at the resolution
+          // audit row by parent id (= contestId).
+          archivedReason: `Superseded by contest resolution ${parent.id}`,
           updatedAt: sql`now()`,
         })
         .where(

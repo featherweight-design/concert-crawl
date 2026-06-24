@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { requireRole } from '../../middleware/role.js'
 import { clerkAuth } from '../../middleware/auth.js'
 import { db, auditLog, events, priceSubmissions } from '@concert-crawl/db'
-import { and, eq, gte, isNotNull, sql } from 'drizzle-orm'
+import { and, eq, gte, isNotNull, isNull, sql } from 'drizzle-orm'
 import { venuesAdminRouter } from './venues.js'
 import { inviteCodesAdminRouter } from './invite-codes.js'
 import { crawlAdminRouter } from './crawl.js'
@@ -90,10 +90,21 @@ adminRouter.get('/review/counts', async (ctx) => {
         .select({ total: sql<number>`count(*)::int` })
         .from(events)
         .where(and(eq(events.verified, false), gte(events.date, today))),
+      // `prices` counts pending submissions awaiting an admin decision in
+      // the legacy queue at /admin/review > Prices. Contest counter rows
+      // (`disputed_submission_id IS NOT NULL`) get their own pill via
+      // `priceContests` below — including them here would double-count
+      // them in BOTH pills AND violate the lock-step contract with
+      // /v1/admin/prices/submissions (which now also excludes them).
       db
         .select({ total: sql<number>`count(*)::int` })
         .from(priceSubmissions)
-        .where(eq(priceSubmissions.status, 'pending')),
+        .where(
+          and(
+            eq(priceSubmissions.status, 'pending'),
+            isNull(priceSubmissions.disputedSubmissionId),
+          ),
+        ),
       db
         .select({ total: sql<number>`count(*)::int` })
         .from(events)

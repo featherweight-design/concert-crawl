@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import { type ReactElement } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReviewContestsResult } from '@/lib/queries/admin-contests'
@@ -31,11 +31,13 @@ const result = (
     data: ReviewContestsResult | undefined
     isPending: boolean
     isError: boolean
+    refetch: () => void
   }> = {},
 ) => ({
   data: undefined,
   isPending: false,
   isError: false,
+  refetch: () => {},
   ...overrides,
 })
 
@@ -55,6 +57,28 @@ describe('ContestsTabContent', () => {
     mockUseReviewContestsQuery.mockReturnValue(result({ isError: true }))
     renderTab(<ContestsTabContent />)
     expect(screen.getByRole('alert')).toBeTruthy()
+  })
+
+  // R1-5 + R1-6: the error banner must include a retry affordance wired
+  // to the hook's refetch — mirrors AdminDisputePanel's error UI so both
+  // surfaces recover the same way. Without this the only recovery path
+  // was a hard reload.
+  it('renders a retry button in the error banner with the errorRetry copy', () => {
+    mockUseReviewContestsQuery.mockReturnValue(result({ isError: true }))
+    renderTab(<ContestsTabContent />)
+    const button = screen.getByRole('button', { name: /retry/i })
+    expect(button).toBeTruthy()
+  })
+
+  it('calls refetch when the retry button is clicked', () => {
+    const refetch = vi.fn()
+    mockUseReviewContestsQuery.mockReturnValue(
+      result({ isError: true, refetch }),
+    )
+    renderTab(<ContestsTabContent />)
+    const button = screen.getByRole('button', { name: /retry/i })
+    fireEvent.click(button)
+    expect(refetch).toHaveBeenCalledTimes(1)
   })
 
   it('renders the queue panel title when data lands with rows', () => {

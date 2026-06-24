@@ -859,4 +859,98 @@ describe('GET /v1/admin/prices/submissions — status filter (#708)', () => {
     }
     expect(body.data).toHaveLength(2)
   })
+
+  // R1-1 (PR #754): contest counter rows (status='pending' AND
+  // disputed_submission_id IS NOT NULL) belong to the dedicated contest
+  // queue at /v1/admin/contests/prices and are blocked from PATCH on the
+  // legacy submissions endpoint (#754 lockout returns 409). Including them
+  // here meant admins saw rows they couldn't action AND they would be
+  // double-counted in BOTH the `prices` pill and the `priceContests` pill
+  // on /admin/review.
+  it('excludes contest counter rows (disputed_submission_id IS NOT NULL)', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2099-10-01',
+      verified: true,
+    })
+    const parent = await seedPriceSubmission(event.id, 'parent-user', {
+      tier: 'GA',
+      vendor: 'AXS',
+      howFound: 'bought_myself',
+      priceMin: '40',
+      status: 'corroborated',
+    })
+    await seedPriceSubmission(event.id, 'counter-user', {
+      tier: 'GA',
+      vendor: 'AXS',
+      howFound: 'bought_myself',
+      priceMin: '60',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+    })
+    // Non-contest pending row to prove the filter is precise — should be
+    // the ONLY row returned.
+    await seedPriceSubmission(event.id, 'plain-pending-user', {
+      status: 'pending',
+      priceMin: '45',
+    })
+
+    const res = await app.request('/v1/admin/prices/submissions', {
+      headers: ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { userId: string; disputedSubmissionId: string | null }[]
+    }
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0]?.userId).toBe('plain-pending-user')
+    // disputedSubmissionId is surfaced on the wire so any future UI can
+    // tell contest rows apart without re-querying. Always null in the
+    // filtered result.
+    expect(body.data[0]?.disputedSubmissionId).toBeNull()
+  })
+
+  it('excludes contest counter rows from the count when count=true', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2099-10-01',
+      verified: true,
+    })
+    const parent = await seedPriceSubmission(event.id, 'parent-user', {
+      tier: 'GA',
+      vendor: 'AXS',
+      howFound: 'bought_myself',
+      priceMin: '40',
+      status: 'corroborated',
+    })
+    await seedPriceSubmission(event.id, 'counter-user', {
+      tier: 'GA',
+      vendor: 'AXS',
+      howFound: 'bought_myself',
+      priceMin: '60',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+    })
+    await seedPriceSubmission(event.id, 'plain-pending-1', {
+      status: 'pending',
+      priceMin: '45',
+    })
+    await seedPriceSubmission(event.id, 'plain-pending-2', {
+      status: 'pending',
+      priceMin: '50',
+    })
+
+    const res = await app.request(
+      '/v1/admin/prices/submissions?count=true&limit=10&offset=0',
+      { headers: ADMIN_HEADERS },
+    )
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { rows: unknown[]; total: number }
+    }
+    expect(body.data.total).toBe(2)
+    expect(body.data.rows).toHaveLength(2)
+  })
 })

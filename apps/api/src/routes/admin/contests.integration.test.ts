@@ -142,7 +142,7 @@ describe('GET /v1/admin/contests/prices', () => {
             priceMin: string
             priceMax: string | null
             vendor: string
-            submitter: { userId: string; handle: string | null }
+            submitter: { userId: string | null; handle: string | null }
             confirms: { fans: number; admin: number }
             observedAt: string
             lastUpdatedAt: string
@@ -153,7 +153,7 @@ describe('GET /v1/admin/contests/prices', () => {
             priceMin: string
             priceMax: string | null
             vendor: string
-            submitter: { userId: string; handle: string | null }
+            submitter: { userId: string | null; handle: string | null }
             confirms: { fans: number; admin: number }
             observedAt: string
             note: string | null
@@ -440,7 +440,7 @@ describe('GET /v1/admin/contests/prices/:contestId', () => {
           priceMin: string
           priceMax: string | null
           vendor: string
-          submitter: { userId: string; handle: string | null }
+          submitter: { userId: string | null; handle: string | null }
           confirms: { fans: number; admin: number }
           observedAt: string
           lastUpdatedAt: string
@@ -452,7 +452,7 @@ describe('GET /v1/admin/contests/prices/:contestId', () => {
           priceMin: string
           priceMax: string | null
           vendor: string
-          submitter: { userId: string; handle: string | null }
+          submitter: { userId: string | null; handle: string | null }
           confirms: { fans: number; admin: number }
           observedAt: string
           note: string | null
@@ -603,6 +603,108 @@ describe('GET /v1/admin/contests/prices/:contestId', () => {
     // Parent's archivedReason stays null because it was the corroborated
     // winner (only the loser carries an archive reason).
     expect(body.data.parent.archivedReason).toBeNull()
+  })
+
+  // R1-4: submitter.userId is a true `string | null` on the wire — not
+  // coerced to '' when the column is null. The UI reads only `handle`
+  // for rendering, but the wire stays honest with the DB column so
+  // downstream consumers (audit views, future modlinks) can distinguish
+  // anonymous-by-construction rows from real users.
+  it('preserves submitter.userId as string for non-null rows (no coercion to empty string)', async () => {
+    setAdminAuth()
+    const venue = await seedVenue({
+      name: 'UserId Venue',
+      slug: 'contest-detail-userid',
+    })
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-05',
+      title: 'UserId Show',
+      artist: 'UserId Artist',
+    })
+    const parent = await seedPriceSubmission(event.id, 'auth_real_user', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      status: 'disputed',
+    })
+    await seedPriceSubmission(event.id, 'auth_real_challenger', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '60',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+    })
+
+    const res = await app.request(`/v1/admin/contests/prices/${parent.id}`, {
+      headers: ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      data: {
+        parent: { submitter: { userId: string | null } }
+        counter: { submitter: { userId: string | null } }
+      }
+    }
+    expect(body.data.parent.submitter.userId).toBe('auth_real_user')
+    expect(body.data.counter.submitter.userId).toBe('auth_real_challenger')
+    // The wire value is a real string — NOT '' from a `?? ''` coalesce.
+    expect(body.data.parent.submitter.userId).not.toBe('')
+    expect(body.data.counter.submitter.userId).not.toBe('')
+  })
+
+  // R1-3: lastAdminActionKind is a free-text column at the DB layer; the
+  // detail endpoint narrows it to `'defer' | null` via the shared helper
+  // (apps/api/src/lib/last-admin-action.ts). Any value that isn't 'defer'
+  // — including the empty string, a future internal kind, or stale data
+  // — must map to null so unrecognized kinds don't leak to consumers.
+  it('narrows lastAdminActionKind to null for unrecognized values', async () => {
+    setAdminAuth()
+    const venue = await seedVenue({
+      name: 'Narrow Venue',
+      slug: 'contest-detail-narrow',
+    })
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-06',
+      title: 'Narrow Show',
+      artist: 'Narrow Artist',
+    })
+    const parent = await seedPriceSubmission(event.id, 'narrow-parent-u', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      status: 'disputed',
+    })
+    const counter = await seedPriceSubmission(event.id, 'narrow-chal-u', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '60',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+      lastAdminActionAt: new Date('2027-05-15T12:00:00Z'),
+    })
+
+    // Direct SQL write: simulate an unrecognized internal kind landing
+    // in the column via a future migration / stale data. Bypass the
+    // typed Drizzle insert path so we can write a value the type system
+    // wouldn't normally allow.
+    await testDb.execute(
+      sql`UPDATE price_submissions
+          SET last_admin_action_kind = 'some_future_kind'
+          WHERE id = ${counter.id}`,
+    )
+
+    const res = await app.request(`/v1/admin/contests/prices/${parent.id}`, {
+      headers: ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      data: { counter: { lastAdminActionKind: 'defer' | null } }
+    }
+    expect(body.data.counter.lastAdminActionKind).toBeNull()
   })
 })
 
@@ -1066,7 +1168,14 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
       const orphanAfter = await fetchSubmission(secondCounter.id)
       expect(counterAfter.status).toBe('corroborated')
       expect(orphanAfter.status).toBe('archived')
-      expect(orphanAfter.archivedReason).toMatch(/parent was archived/i)
+      // Reason text references the contest id (= parent.id) and uses
+      // "Superseded by contest resolution" — accurate regardless of
+      // which side won (parent_wins leaves the parent corroborated, so
+      // the old "parent was archived" phrasing was wrong).
+      expect(orphanAfter.archivedReason).toMatch(
+        /Superseded by contest resolution/i,
+      )
+      expect(orphanAfter.archivedReason).toContain(parent.id)
     } finally {
       // Always restore the index — even if assertions above failed. If the
       // assertions failed mid-test, there may still be two pending counters

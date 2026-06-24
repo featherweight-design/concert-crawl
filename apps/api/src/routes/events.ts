@@ -38,6 +38,7 @@ import {
   aggregateByTier,
   pickHeadlinesByTier,
 } from '../lib/price-aggregation/index.js'
+import { narrowLastAdminActionKind } from '../lib/last-admin-action.js'
 
 const uuidSchema = z.string().uuid()
 
@@ -660,9 +661,9 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         counter.priceMax !== null ? parseFloat(counter.priceMax) : null
       // Narrow the raw text column to the discriminated union — same
       // defensive treatment as buildCounter in aggregate-by-tier.ts so the
-      // flat + per-tier shapes can't drift on an unrecognized kind.
-      const counterKind: 'defer' | null =
-        counter.lastAdminActionKind === 'defer' ? 'defer' : null
+      // flat + per-tier shapes can't drift on an unrecognized kind. Helper
+      // in apps/api/src/lib/last-admin-action.ts.
+      const counterKind = narrowLastAdminActionKind(counter.lastAdminActionKind)
       counterSubmission = {
         id: counter.id,
         parentSubmissionId: counter.parentSubmissionId,

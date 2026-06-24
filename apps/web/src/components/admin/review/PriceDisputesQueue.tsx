@@ -22,7 +22,7 @@ export interface PriceContestRow {
     priceMin: string
     priceMax: string | null
     vendor: Vendor
-    submitter: { userId: string; handle: string | null }
+    submitter: { userId: string | null; handle: string | null }
     confirms: { fans: number; admin: number }
     observedAt: string
     lastUpdatedAt: string
@@ -33,7 +33,7 @@ export interface PriceContestRow {
     priceMin: string
     priceMax: string | null
     vendor: Vendor
-    submitter: { userId: string; handle: string | null }
+    submitter: { userId: string | null; handle: string | null }
     confirms: { fans: number; admin: number }
     observedAt: string
     note: string | null
