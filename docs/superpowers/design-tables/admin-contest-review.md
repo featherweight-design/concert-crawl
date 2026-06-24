@@ -1,6 +1,6 @@
 # Admin Contest-Review — Design Property Table
 
-Source-of-truth enumeration of every visual, interactive, and state claim for the admin contest-review surfaces (PriceDisputesQueue + per-event adjudication via AdminDisputePanel + sibling EventReports counterparts). Built from `design/design_handoff_phase8_5_corroboration/admin-queues.jsx` and `dispute-surfaces.jsx`. README is referenced for narrative context only — claims attribute to the JSX source.
+Source-of-truth enumeration of every visual, interactive, and state claim for the admin contest-review surfaces (PriceDisputesQueue + per-event adjudication via AdminDisputePanel + sibling EventReports counterparts). Built from `design/design_handoff_phase8_5_corroboration/admin-queues.jsx`, `dispute-surfaces.jsx`, and the handoff `README.md`. Three valid claim sources: (1) the JSX files for visual + structural properties; (2) the README for adjudication semantics + transition rules + non-functional requirements that aren't expressible in JSX; (3) JSX + README jointly for any claim that needs both (visual rendering + behavior contract). Each row's `Source` column cites the file(s) and line(s) backing the claim.
 
 Scope note: per the handoff README §11–12, the "contest-review" admin surfaces are PRICE disputes (`PriceDisputesQueue` + `AdminDisputePanel`) AND event-status reports (`EventReportsQueue` + `EventReportResolutionPanel`). Both are mirror-shape adjudication surfaces and are enumerated together below.
 

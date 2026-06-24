@@ -1,6 +1,6 @@
 # Admin Contest-Review UI — Bridging Spec
 
-> **Status:** Approved by Hugh 2026-06-23. All §15 sign-offs and §16 open questions resolved (see §18 Resolution log). Ready for writing-plans to draft the implementation plan. Closes a gap surfaced during the price-source discoverability cycle: contests can be filed and corroborated by fans, but admins have no UI to triage stalled contests — and resolving one today silently overturns a confirmed price with no audit trail tying the parent and challenger together.
+> **Status:** Approved by Hugh 2026-06-23. All §15 sign-offs and §16 open questions resolved (see §18 Resolution log). Plan drafted at `docs/superpowers/plans/2026-06-22-admin-contest-review.md` and shipping for review in the same PR (#739). Closes a gap surfaced during the price-source discoverability cycle: contests can be filed and corroborated by fans, but admins have no UI to triage stalled contests — and resolving one today silently overturns a confirmed price with no audit trail tying the parent and challenger together.
 >
 > **Sources:**
 > - Design property table: `docs/superpowers/design-tables/admin-contest-review.md` (515 lines)
@@ -227,7 +227,7 @@ if (existingCounter.length > 0) {
 
 **Slot-identity inheritance — both routes must lock the child to the parent's slot.** The resolve transaction's same-slot assertions (event_id / tier / source_category match) will 409 at admin resolution time if a counter was ever inserted with a mismatched slot. `/v1/submissions/:id/dispute` already inherits `eventId`, `tier`, `vendor`, and `sourceCategory` from the parent (`apps/api/src/routes/submissions.ts:155–168`). `/v1/events/:eventId/price-submissions` does NOT — it currently lets the submitter supply `tier`, `vendor`, `howFound`, and `sourceCategory` from the request body, and only validates that the referenced parent is `status='corroborated'`. When `disputedSubmissionId` is provided in that route, the server MUST overwrite the submitter-supplied slot fields with the parent's values (or reject with 400 if they don't match) so the contest is guaranteed to be a clean 1-vs-1 same-slot adjudication at admin resolve time. Without this, well-meaning UI changes upstream (or a malicious client) can create contests that always 409 at resolve.
 
-**Consumer-side UX (locked for PR 4 of the price-source cycle, not this PR):** when `priceByTier[tier].counterSubmission !== null`, the Consumer UI hides the dispute affordance for that tier and surfaces a CTA to engage with the existing contest instead (confirm or wait). This rule is saved to memory at `project_pr4_dispute_affordance_hiding.md`. A user should never see a 409 from filling out a dispute form — the affordance is hidden BEFORE they reach the form, not after they submit it.
+**Consumer-side UX (locked for PR 4 of the price-source cycle, not this PR):** when `priceByTier[tier].counterSubmission !== null`, the Consumer UI hides the dispute affordance for that tier and surfaces a CTA to engage with the existing contest instead (confirm or wait). This rule is saved as `memory:project_pr4_dispute_affordance_hiding` (out-of-repo session memory, not a repo file). A user should never see a 409 from filling out a dispute form — the affordance is hidden BEFORE they reach the form, not after they submit it.
 
 ### 4.7 Defensive update to existing PATCH endpoint
 
@@ -847,7 +847,7 @@ Once this spec is approved:
 | 1 | Tab on `/admin/review` (not separate route) | ✅ Confirmed. Existing `ReviewTabs` primitive at `apps/web/src/components/admin/review/ReviewTabs.tsx` is WAI-ARIA-compliant and accepts a `ReviewTabDescriptor[]`. Adding a 4th tab is a one-line array addition + new `ContestsTabContent.tsx` mirroring the existing `_tabs/*.tsx` pattern. No design input needed. The `priceContests` count surfaces on the tab pill AND the admin nav sidebar badge — the sidebar badge plumbing in `apps/web/src/app/(protected)/admin/layout.tsx` currently sums `eventFlags + prices + missing` into `pendingReview`; this PR extends the `ReviewCounts` type and the sum so the badge includes `priceContests` (see plan task that touches `layout.tsx`). |
 | 2 | `archived` as distinct status from `stale` | ✅ Confirmed |
 | 3 | Reason min 10 chars | ✅ Confirmed |
-| 4 | 1-pending-counter-per-parent | ✅ **Strengthened** — DB-enforced via partial unique index (not just app-level 409). Consumer side hides the dispute affordance entirely so users never fill out a form they'll 409 on. Saved to memory at `project_pr4_dispute_affordance_hiding.md` for PR 4 of the price-source cycle. |
+| 4 | 1-pending-counter-per-parent | ✅ **Strengthened** — DB-enforced via partial unique index (not just app-level 409). Consumer side hides the dispute affordance entirely so users never fill out a form they'll 409 on. Saved as `memory:project_pr4_dispute_affordance_hiding` for PR 4 of the price-source cycle. |
 | 5 | Pre-insert duplicate counter check ships with PR 1 | ✅ Confirmed, plus DB unique index per #4 above |
 
 ### §16 open questions resolved
@@ -862,8 +862,8 @@ Once this spec is approved:
 
 ### Adjacent decisions captured
 
-- **GH issue #737** opened for "[consumer] Build the in-app notification surface (bell + panel + endpoints)" with a design prompt. Tracked at `reference_consumer_notifications_gap.md` in memory.
-- **PR 4 of price-source cycle dispute affordance rule** saved to memory at `project_pr4_dispute_affordance_hiding.md`. Consumer UI hides the dispute entry when `priceByTier[tier].counterSubmission !== null`; replaces with a CTA to engage with the existing contest.
+- **GH issue #737** opened for "[consumer] Build the in-app notification surface (bell + panel + endpoints)" with a design prompt. Tracked as `memory:reference_consumer_notifications_gap` (out-of-repo session memory, not a repo file).
+- **PR 4 of price-source cycle dispute affordance rule** saved as `memory:project_pr4_dispute_affordance_hiding` (out-of-repo session memory, not a repo file). Consumer UI hides the dispute entry when `priceByTier[tier].counterSubmission !== null`; replaces with a CTA to engage with the existing contest.
 
 ---
 
