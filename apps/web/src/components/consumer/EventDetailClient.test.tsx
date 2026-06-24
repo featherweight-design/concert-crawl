@@ -304,6 +304,102 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     expect(pill).toBeDefined()
   })
 
+  it('submit success in sold-out-resale branch → MTAddTierSuccess renders (Fix 4 — hoisted surface)', async () => {
+    const event = buildBaseEvent({
+      priceStatus: 'soldout',
+      soldOutReport: null,
+      ticketLinks: [
+        {
+          kind: 'resale',
+          vendor: 'SeatGeek',
+          url: 'https://seatgeek.example/event',
+        },
+      ],
+    })
+    render(
+      <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
+    )
+    expect(latestModalOnSuccess).not.toBeNull()
+    await act(async () => {
+      latestModalOnSuccess?.({
+        isEdit: false,
+        id: 'sub-ga-1',
+        priceMin: '40',
+        priceMax: null,
+        tier: 'GA',
+        vendor: 'VenueBoxOffice',
+        howFound: 'bought_myself',
+        sourceCategory: 'boxoffice',
+      })
+    })
+    // MTAddTierSuccess headline copy template is `${tier} price is in. Thanks.`
+    expect(screen.getByText('GA price is in. Thanks.')).toBeDefined()
+  })
+
+  it('submit success in sold-out-contribute branch → MTAddTierSuccess renders', async () => {
+    const event = buildBaseEvent({
+      priceStatus: 'soldout',
+      soldOutReport: null,
+      ticketLinks: null,
+    })
+    render(
+      <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
+    )
+    expect(latestModalOnSuccess).not.toBeNull()
+    await act(async () => {
+      latestModalOnSuccess?.({
+        isEdit: false,
+        id: 'sub-ga-1',
+        priceMin: '40',
+        priceMax: null,
+        tier: 'GA',
+        vendor: 'VenueBoxOffice',
+        howFound: 'bought_myself',
+        sourceCategory: 'boxoffice',
+      })
+    })
+    expect(screen.getByText('GA price is in. Thanks.')).toBeDefined()
+  })
+
+  it('submit success in resale-headline branch → MTAddTierSuccess renders', async () => {
+    const event = buildBaseEvent({
+      priceByTier: [
+        makeTierBlock({
+          tier: 'GA',
+          headline: {
+            submissionId: 's1',
+            priceMin: '110',
+            priceMax: null,
+            vendor: 'SeatGeek',
+            sourceCategory: 'resale',
+            submitterHandle: 'ada',
+            observedAt: '2026-06-20T00:00:00Z',
+            approvedAt: '2026-06-20T00:00:00Z',
+            approvalKind: 'fan',
+            confirmsCount: 2,
+          },
+        }),
+      ],
+    })
+    render(
+      <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
+    )
+    expect(latestModalOnSuccess).not.toBeNull()
+    await act(async () => {
+      latestModalOnSuccess?.({
+        isEdit: false,
+        id: 'sub-vip-1',
+        priceMin: '40',
+        priceMax: null,
+        tier: 'VIP',
+        vendor: 'VenueBoxOffice',
+        howFound: 'bought_myself',
+        sourceCategory: 'boxoffice',
+      })
+    })
+    expect(screen.getByText('VIP price is in. Thanks.')).toBeDefined()
+  })
+
   it('submit success: after onAddTier("VIP"), VIP pill removed on next render (Q4-eng lock)', async () => {
     const event = buildBaseEvent({
       priceByTier: [

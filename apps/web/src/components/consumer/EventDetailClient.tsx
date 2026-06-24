@@ -434,6 +434,33 @@ export function EventDetailPriceBlock({
     [],
   )
 
+  // Submit-success surface — Submit-success state #1 (post-submit add-tier).
+  // The MTAddTierSuccess follow-up is a GLOBAL after-submit affordance:
+  // every decision branch that owns a SubmitPriceModal must show the tier
+  // pill follow-up, not the modal's internal SuccessState. Lifted here so
+  // each branch can inject the same JSX without duplicating the wiring.
+  // Returns null when there's no payload, so callers can drop it in with
+  // no guard at the call site.
+  const submitSuccessSurface =
+    submitSuccessPayload !== null ? (
+      <div className="mt-3">
+        <MTAddTierSuccess
+          submittedTier={submitSuccessPayload.tier}
+          submittedPrice={submitSuccessPayload.price}
+          submittedSourceCategory={submitSuccessPayload.sourceCategory}
+          remainingTiers={TIER_ENUM.filter(
+            (tier) => !submittedThisSession.has(tier),
+          )}
+          onAddTier={(tier) => {
+            setSubmitSuccessPayload(null)
+            setPreselectedTier(tier)
+            setSubmitPriceOpen(true)
+          }}
+          onDone={() => setSubmitSuccessPayload(null)}
+        />
+      </div>
+    ) : null
+
   // ── Fix 15: postponed confirmed → hide price section ───────────
   if (isPostponedConfirmed) {
     return null
@@ -492,6 +519,7 @@ export function EventDetailPriceBlock({
             outline
           />
         </div>
+        {submitSuccessSurface}
         <SubmitPriceModal
           open={submitPriceOpen}
           onClose={() => {
@@ -499,6 +527,7 @@ export function EventDetailPriceBlock({
             setSubmitSuccessPayload(null)
           }}
           openInEditMode={false}
+          preselectedTier={preselectedTier}
           eventId={event.id}
           artist={event.artist}
           venueName={event.venue.name}
@@ -518,6 +547,7 @@ export function EventDetailPriceBlock({
             onAddPrice={() => setSubmitPriceOpen(true)}
           />
         </div>
+        {submitSuccessSurface}
         <SubmitPriceModal
           open={submitPriceOpen}
           onClose={() => {
@@ -525,6 +555,7 @@ export function EventDetailPriceBlock({
             setSubmitSuccessPayload(null)
           }}
           openInEditMode={false}
+          preselectedTier={preselectedTier}
           eventId={event.id}
           artist={event.artist}
           venueName={event.venue.name}
@@ -573,6 +604,7 @@ export function EventDetailPriceBlock({
             outline
           />
         </div>
+        {submitSuccessSurface}
         <SubmitPriceModal
           open={submitPriceOpen}
           onClose={() => {
@@ -580,6 +612,7 @@ export function EventDetailPriceBlock({
             setSubmitSuccessPayload(null)
           }}
           openInEditMode={false}
+          preselectedTier={preselectedTier}
           eventId={event.id}
           artist={event.artist}
           venueName={event.venue.name}
@@ -687,6 +720,7 @@ export function EventDetailPriceBlock({
             />
           </div>
         )}
+        {submitSuccessSurface}
         <SubmitPriceModal
           open={submitPriceOpen}
           onClose={() => {
@@ -694,6 +728,7 @@ export function EventDetailPriceBlock({
             setSubmitSuccessPayload(null)
           }}
           openInEditMode={false}
+          preselectedTier={preselectedTier}
           eventId={event.id}
           artist={event.artist}
           venueName={event.venue.name}
@@ -831,24 +866,7 @@ export function EventDetailPriceBlock({
               />
             </div>
           )}
-          {submitSuccessPayload !== null && (
-            <div className="mt-3">
-              <MTAddTierSuccess
-                submittedTier={submitSuccessPayload.tier}
-                submittedPrice={submitSuccessPayload.price}
-                submittedSourceCategory={submitSuccessPayload.sourceCategory}
-                remainingTiers={TIER_ENUM.filter(
-                  (tier) => !submittedThisSession.has(tier),
-                )}
-                onAddTier={(tier) => {
-                  setSubmitSuccessPayload(null)
-                  setPreselectedTier(tier)
-                  setSubmitPriceOpen(true)
-                }}
-                onDone={() => setSubmitSuccessPayload(null)}
-              />
-            </div>
-          )}
+          {submitSuccessSurface}
           <SubmitPriceModal
             open={submitPriceOpen}
             onClose={() => {
