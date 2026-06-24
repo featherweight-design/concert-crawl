@@ -188,18 +188,35 @@ apiAccountId: z
   }),
 ```
 
-Cross-field validation via `.superRefine()` (or chained `.refine()` on the extended schema) after the `.partial().extend({ ... })` for `updateVenueSchema`:
+Cross-field validation via `.superRefine()` chained directly onto the `.partial().extend({ ... })` call for `updateVenueSchema` (Zod's `.superRefine()` returns a NEW schema and does not mutate the original — the result must be captured, so the chain happens at declaration time, not as a separate statement). The exported binding must be the chained result:
 
 ```ts
-updateVenueSchema.superRefine((data, ctx) => {
-  if (data.apiProvider != null && (data.apiAccountId == null || data.apiAccountId === '')) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['apiAccountId'],
-      message: 'API account ID is required when an API provider is selected',
-    })
-  }
-})
+const updateVenueSchema = createVenueSchema
+  .partial()
+  .extend({
+    // ... existing fields (active, verified, verifiedBy, crawlMode, etc.)
+    apiProvider: z.enum(['venuepilot']).nullable().optional(),
+    apiAccountId: z
+      .string()
+      .max(200)
+      .nullable()
+      .optional()
+      .transform((val) => {
+        if (val == null) return val
+        const trimmed = val.trim()
+        return trimmed === '' ? null : trimmed
+      }),
+  })
+  .superRefine((data, ctx) => {
+    if (data.apiProvider != null && data.apiAccountId == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['apiAccountId'],
+        message:
+          'API account ID is required when an API provider is selected',
+      })
+    }
+  })
 ```
 
 Notes:
@@ -211,13 +228,14 @@ Notes:
 
 ### Web action FormData → JSON normalization (`apps/web/src/lib/actions/venues.ts`)
 
-`updateVenue` already collects FormData from `VenueDetailsClient` and forwards JSON to the API. Extend the JSON body with the two new fields, mapping the empty-select-value `""` → `null` per the existing pattern for `ticketVendor`:
+`updateVenue` already collects FormData from `VenueDetailsClient` and forwards JSON to the API. Extend the JSON body with the two new fields. The save handler in `VenueDetailsClient.tsx` only calls `formData.set('apiProvider', apiProviderVal)` when `apiProviderVal !== null` (mirroring the existing `ticketVendor` pattern — see line ~669-670), which means **the FormData key may be entirely absent for "None"**, not just empty-string. The normalization must collapse all three cases — missing key, empty string, or whitespace-only string — to a JSON `null`:
 
 ```ts
 // inside updateVenue, building the body:
 const apiProviderRaw = formData.get('apiProvider')
+// Treat missing key (null), empty string, and whitespace-only as None.
 const apiProvider =
-  typeof apiProviderRaw === 'string' && apiProviderRaw !== ''
+  typeof apiProviderRaw === 'string' && apiProviderRaw.trim() !== ''
     ? apiProviderRaw
     : null
 
@@ -233,6 +251,8 @@ const apiAccountId =
 
 // ... include both in the apiClient.patch body
 ```
+
+The `typeof === 'string'` guard handles the missing-key case (`formData.get` returns `null` when the key is absent or a File when the field is a file input). Trim before the empty check so whitespace-only values are treated the same as empty.
 
 When `apiProvider` is null, `apiAccountId` is forced to null in the body — defensive against an orphaned account ID lingering after the admin sets provider back to None. The API Zod `.superRefine()` independently rejects the inverse (provider set, account ID missing).
 
@@ -468,7 +488,7 @@ Voice tone: match the existing entries in `releases.ts` (casual, second-person, 
 
 1. **Schema + migration** — Drizzle delta in `packages/db/src/schema/venues.ts` + SQL migration. Run locally, confirm `\d venues` shows the new columns.
 2. **Type re-exports** — extend the `Venue` type and re-export the enum values from `packages/types/src/index.ts` (single source of truth for shared types).
-3. **API Zod** — extend `createVenueSchema` + `updateVenueSchema` in `apps/api/src/routes/admin/venues.ts` per the snippets above. Add unit tests in `apps/api/src/routes/admin/venues.test.ts`.
+3. **API Zod** — extend `updateVenueSchema` only (the PATCH contract) in `apps/api/src/routes/admin/venues.ts` per the snippets above. `createVenueSchema` (POST contract / Add Venue modal) stays unchanged in v1. Add unit tests in `apps/api/src/routes/admin/venues.test.ts`.
 4. **Web action FormData → JSON** — update `updateVenue` in `apps/web/src/lib/actions/venues.ts` to map the two FormData entries into the JSON body. Extract `buildUpdateVenueBody(formData)` so the mapping is unit-testable; add the new test file `apps/web/src/lib/actions/venues.test.ts`.
 5. **Copy** — add the new keys to `apps/web/src/components/admin/definitions/copy.ts`.
 6. **UI** — `VenueDetailsClient.tsx` state + dirty-tracking + `fieldErrors` extension + JSX + reset/save wiring.
