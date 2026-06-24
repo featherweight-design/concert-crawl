@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PR 4 Addendum — 3 open states</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; background: #070A1A; }
+  * { -webkit-font-smoothing: antialiased; box-sizing: border-box; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="pending-card.jsx"></script>
+<script type="text/babel" src="multi-tier.jsx"></script>
+<script type="text/babel" src="price-source-mocks.jsx"></script>
+<script type="text/babel" src="multi-tier-mocks.jsx"></script>
+<script type="text/babel" src="pr4-addendum-mocks.jsx"></script>
+
+<script type="text/babel">
+const { useThemeState, ThemeProvider, ThemeSwitcher, IOSDevice } = window;
+
+// ── doc primitives ──────────────────────────────────────────
+function Mono({ children, color = "var(--fg-subtle)", size = 11, style }) {
+  return <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: size, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 700, color, ...style }}>{children}</span>;
+}
+
+function VerdictPill({ children, tone = "signal" }) {
+  const c = tone === "signal" ? "var(--signal)" : tone === "accent" ? "var(--accent)" : "var(--success)";
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 7, padding: "5px 12px", borderRadius: 999,
+      background: `color-mix(in oklab, ${c} 12%, transparent)`, border: `1px solid color-mix(in oklab, ${c} 45%, transparent)`,
+      fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: c, whiteSpace: "nowrap",
+    }}>
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: c, flexShrink: 0 }}/>
+      {children}
+    </span>
+  );
+}
+
+function Direction({ children }) {
+  return (
+    <p style={{
+      margin: "14px 0 0", fontFamily: "Inter, system-ui", fontSize: 17, fontWeight: 600,
+      color: "var(--fg)", letterSpacing: "-0.01em", lineHeight: 1.5, textWrap: "pretty",
+    }}>{children}</p>
+  );
+}
+function Body({ children }) {
+  return (
+    <p style={{
+      margin: "12px 0 0", fontFamily: "Inter, system-ui", fontSize: 14.5, fontWeight: 450,
+      color: "var(--fg-muted)", letterSpacing: "-0.005em", lineHeight: 1.62, textWrap: "pretty",
+    }}>{children}</p>
+  );
+}
+function Em({ children }) { return <strong style={{ color: "var(--fg)", fontWeight: 700 }}>{children}</strong>; }
+function Coral({ children }) { return <strong style={{ color: "oklch(0.65 0.20 25)", fontWeight: 700 }}>{children}</strong>; }
+function Gold({ children }) { return <strong style={{ color: "oklch(0.66 0.14 78)", fontWeight: 700 }}>{children}</strong>; }
+
+// dashed rejected-option chip
+function Rejected({ children }) {
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 7,
+      border: "1px dashed var(--border-strong)", background: "transparent",
+      fontFamily: "Inter, system-ui", fontSize: 12.5, fontWeight: 600, color: "var(--fg-subtle)", whiteSpace: "nowrap",
+    }}>
+      <span style={{ textDecoration: "line-through", textDecorationColor: "var(--fg-subtle)" }}>{children}</span>
+    </span>
+  );
+}
+
+function MockFrame({ children, label, w = 402, pad = 0 }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
+      <ThemeProviderPass>
+        <div style={{ width: w, maxWidth: "100%", borderRadius: 16, overflow: "hidden", border: "1px solid var(--border)", background: "var(--bg)" }}>
+          {pad ? <div style={{ padding: pad }}>{children}</div> : children}
+        </div>
+      </ThemeProviderPass>
+      {label && <Mono size={9.5} color="var(--fg-subtle)">{label}</Mono>}
+    </div>
+  );
+}
+// passthrough that reads theme from context via prop injection
+let CURRENT_THEME = "electric";
+function ThemeProviderPass({ children }) {
+  return <ThemeProvider theme={CURRENT_THEME}>{children}</ThemeProvider>;
+}
+
+function Phone({ children, h = 760 }) {
+  return (
+    <ThemeProvider theme={CURRENT_THEME} style={{ borderRadius: 48 }}>
+      <IOSDevice width={402} height={h} dark>{children}</IOSDevice>
+    </ThemeProvider>
+  );
+}
+
+function QuestionBlock({ n, scope, title, children }) {
+  return (
+    <section style={{ marginTop: 64, scrollMarginTop: 24 }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
+        <Mono size={12} color="var(--signal)">Question {n}</Mono>
+        <Mono size={11} color="var(--fg-subtle)">{scope}</Mono>
+      </div>
+      <h2 style={{
+        margin: "10px 0 0", fontFamily: "Inter, system-ui", fontWeight: 900, fontSize: 30,
+        color: "var(--fg)", letterSpacing: "-0.03em", lineHeight: 1.1, textWrap: "balance",
+      }}>{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+function Divider() {
+  return <div style={{ height: 1, background: "var(--border)", margin: "0" }}/>;
+}
+
+// ── app ─────────────────────────────────────────────────────
+function App() {
+  const [theme, setTheme] = useThemeState("electric");
+  CURRENT_THEME = theme;
+  return (
+    <ThemeProvider theme={theme} style={{ minHeight: "100vh", background: "var(--bg)" }}>
+      <div style={{ maxWidth: 860, margin: "0 auto", padding: "72px 28px 140px" }}>
+
+        {/* masthead */}
+        <Mono size={11} color="var(--accent)">Concert Crawl · PR 4 · price-source discoverability</Mono>
+        <h1 style={{
+          margin: "14px 0 0", fontFamily: "Inter, system-ui", fontWeight: 900, fontSize: 46,
+          color: "var(--fg)", letterSpacing: "-0.035em", lineHeight: 1.04, textWrap: "balance",
+        }}>Addendum — three open states</h1>
+        <p style={{
+          margin: "18px 0 0", fontFamily: "Inter, system-ui", fontSize: 16.5, fontWeight: 450,
+          color: "var(--fg-muted)", lineHeight: 1.6, letterSpacing: "-0.005em", maxWidth: 640, textWrap: "pretty",
+        }}>
+          Targeted answers to the three states eng flagged before finalizing the PR 4 plan. No changes to the
+          shipped handoff — each answer is a net-new variant of an existing shape, built on the same gold / coral /
+          azure tier vocabulary and tokens. One direction + one minimal mock per question. Theme switcher, bottom-right.
+        </p>
+
+        <div style={{ marginTop: 22, display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <VerdictPill tone="signal">Q1 · keep the card, degraded</VerdictPill>
+          <VerdictPill tone="signal">Q2 · coral chip + explicit tag</VerdictPill>
+          <VerdictPill tone="signal">Q3 · minimal inline pointer</VerdictPill>
+        </div>
+
+        <div style={{ marginTop: 40 }}><Divider/></div>
+
+        {/* ───────────── Q1 ───────────── */}
+        <QuestionBlock n="1" scope="sold out · no resale · no primary · no box office" title="Keep the card — but it stops being a FaceValueCard.">
+          <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <VerdictPill>Path A — render it, degraded</VerdictPill>
+            <Rejected>B · hide it, fall through to status reporter</Rejected>
+          </div>
+
+          <Direction>
+            Go with eng's default (A), but be honest about what's left: with no resale row to anchor against, the
+            <Gold> resale ≠ face value</Gold> lesson genuinely collapses. What survives is the <Em>contribution</Em> half —
+            and that half is still worth showing, because the alternative is the exact dead-end this whole project exists to kill.
+          </Direction>
+          <Body>
+            So the card degrades from <Em>“teach the distinction”</Em> to <Em>“make the gap legible and fill it.”</Em> Drop the
+            resale row, drop the comparison headline, drop the outbound <code style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: "var(--fg)" }}>ProvenanceCTA</code>
+            {" "}(there's no link to point at). Keep one <Gold>ghost box-office row</Gold> — the signature “concretize the missing
+            number” move — plus the <Em>--signal</Em> CTA. Reworded copy stays deadpan and short: <Em>“No price to show — yet.
+            Sold out, nothing listed. Know the box-office number? Add it.”</Em> Visually it's the same card minus one row, so the
+            family read is intact.
+          </Body>
+          <Body>
+            Net effect: the fan who hits the worst-case dead end still gets one useful thing to do, and the next fan benefits.
+            The status reporter stays as the universal “something's off” magnet underneath, unchanged.
+          </Body>
+
+          <div style={{ marginTop: 30, display: "flex", gap: 40, alignItems: "flex-start", flexWrap: "wrap", justifyContent: "center" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
+              <Phone h={720}><window.PR4_Q1Screen /></Phone>
+              <Mono size={9.5} color="var(--fg-subtle)">in context · below the sold-out card</Mono>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center", paddingTop: 20 }}>
+              <MockFrame w={360} pad={20} label="the degraded card · standalone">
+                <window.PR4_ContributeCard />
+              </MockFrame>
+            </div>
+          </div>
+        </QuestionBlock>
+
+        <div style={{ marginTop: 56 }}><Divider/></div>
+
+        {/* ───────────── Q2 ───────────── */}
+        <QuestionBlock n="2" scope="browse card · cheapest tier is resale-only" title="Show a coral resale chip — with the tag always attached.">
+          <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <VerdictPill>Path A — sharpened</VerdictPill>
+            <Rejected>B · hide the chip</Rejected>
+            <Rejected>C · “no face value yet”</Rejected>
+          </div>
+
+          <Direction>
+            Eng's default (A) is right, with one rule attached: the resale chip <Em>always</Em> carries an explicit
+            <Coral> “resale”</Coral> tag — never a bare number. Color alone is too quiet to decode at scan speed, and a bare
+            “$85” is exactly the laundering-as-face-value we're fighting. The tag is what makes it honest.
+          </Direction>
+          <Body>
+            I rejected <Em>hiding</Em> (B): when a show is resale-only, resale <Em>is</Em> the cost to get in, so that number is
+            precisely what the scanning fan needs to decide whether to tap — hiding it starves the decision and reads as broken /
+            missing data. I rejected the neutral <Em>“no face value yet”</Em> (C) for the same reason: it withholds the one
+            actionable number we actually have. The detail page already shows the resale number framed as resale (coral caption +
+            FaceValueCard); the browse chip is just the smallest honest version of that same treatment — coral dot, coral number,
+            tiny <Coral>resale</Coral> caption. Tap-through lands on the detail page where the full distinction gets taught.
+          </Body>
+
+          <div style={{ marginTop: 30, display: "flex", gap: 32, alignItems: "flex-start", flexWrap: "wrap", justifyContent: "center" }}>
+            <MockFrame w={420} label="the three chip variants — resale is the new one">
+              <window.PR4_Q2ChipRow />
+            </MockFrame>
+            <MockFrame w={402} label="in a browse list, at scan scale">
+              <window.PR4_Q2BrowseCard />
+            </MockFrame>
+          </div>
+        </QuestionBlock>
+
+        <div style={{ marginTop: 56 }}><Divider/></div>
+
+        {/* ───────────── Q3 ───────────── */}
+        <QuestionBlock n="3" scope="counter pending · dispute affordance suppressed" title="Don't leave it blank — swap in a quiet pointer to the counter.">
+          <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <VerdictPill>Path B — kept minimal</VerdictPill>
+            <Rejected>A · hide silently, no replacement</Rejected>
+          </div>
+
+          <Direction>
+            Go one notch past eng's default to (B), but keep it weightless: replace the suppressed “Saw a different number?” link
+            <Em> in the same footer slot</Em> with a quiet pointer — <Coral>“Someone's contesting this — see the counter →”.</Coral>
+            {" "}Net-new chrome is zero; it's a copy swap in the slot the dispute link already owned.
+          </Direction>
+          <Body>
+            Silent hiding (A) leaves two problems: the fan who reaches for the dispute link out of muscle memory finds nothing
+            (reads as broken), and the relationship between the original price and the adjacent counter stays invisible — adjacency
+            alone doesn't say “these two are arguing about the same number.” The pointer fixes both: it explains <Em>why</Em> the
+            dispute form is unavailable (someone already filed one — the locked “don't let them submit a doomed contest” rule), and
+            it routes more eyes onto the pending counter, which is exactly what drives the <Em>1/2</Em> resolution faster.
+            {" "}<Em>Confirm price</Em> stays put — only the escape-hatch link swaps.
+          </Body>
+          <Body>
+            Copy owned here is one line. It's self-contained, deadpan, and matches the mono footer treatment the dispute link
+            already used — so there's nothing new for eng to style.
+          </Body>
+
+          <div style={{ marginTop: 30 }}>
+            <div style={{ display: "flex", gap: 28, alignItems: "flex-start", flexWrap: "wrap", justifyContent: "center" }}>
+              <MockFrame w={420} pad={20} label="today · dispute link in the footer">
+                <window.PR4_DisputedCard withPointer={false} />
+              </MockFrame>
+              <MockFrame w={420} pad={20} label="PR 4 · pointer replaces it (same slot)">
+                <window.PR4_DisputedCard withPointer={true} />
+              </MockFrame>
+            </div>
+            <div style={{ marginTop: 28, display: "flex", justifyContent: "center" }}>
+              <MockFrame w={460} label="the whole relationship — parent price points at its live counter">
+                <window.PR4_Q3Relationship />
+              </MockFrame>
+            </div>
+          </div>
+        </QuestionBlock>
+
+        <div style={{ marginTop: 64 }}><Divider/></div>
+
+        {/* recap */}
+        <section style={{ marginTop: 40 }}>
+          <Mono size={11} color="var(--fg-subtle)">Recap · what eng can build against</Mono>
+          <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 12 }}>
+            {[
+              ["Q1", "Render the card, degraded — single ghost box-office row + CTA, no resale row, no outbound CTA. Reworded headline. Status reporter unchanged."],
+              ["Q2", "Coral MT_ListChip kind='resale', 'from $X' + an always-present 'resale' tag. Never bare, never hidden. Tap → detail page teaches the rest."],
+              ["Q3", "Replace the suppressed dispute link, in the same footer slot, with a quiet pointer to the live counter. Confirm-price stays. One line of copy."],
+            ].map(([k, v]) => (
+              <div key={k} style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+                <span style={{
+                  flexShrink: 0, width: 40, height: 40, borderRadius: 10, display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  background: "color-mix(in oklab, var(--signal) 12%, transparent)", border: "1px solid color-mix(in oklab, var(--signal) 40%, transparent)",
+                  fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 700, color: "var(--signal)",
+                }}>{k}</span>
+                <p style={{ margin: 0, paddingTop: 1, fontFamily: "Inter, system-ui", fontSize: 14.5, fontWeight: 450, color: "var(--fg-muted)", lineHeight: 1.55, letterSpacing: "-0.005em", textWrap: "pretty" }}>{v}</p>
+              </div>
+            ))}
+          </div>
+          <p style={{ marginTop: 26, fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, color: "var(--fg-subtle)", letterSpacing: "0.04em", lineHeight: 1.7 }}>
+            No new tokens · no new typefaces · no new tier colors · no shipped asset touched.<br/>
+            Pasteable text version: PR4-ADDENDUM.md
+          </p>
+        </section>
+
+      </div>
+      <ThemeSwitcher value={theme} onChange={setTheme} position="bottom-right" />
+    </ThemeProvider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

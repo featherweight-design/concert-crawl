@@ -719,3 +719,307 @@ These are flagged for plan-time decisions or user approval. None are merge-block
   - `multi-tier.jsx`, `pending-card.jsx`, `design-canvas.jsx`, `theme-context.jsx`, `README.md`, `READINESS.md`
 - Section count: 10 (8 visual property sections + 1 state coverage table + 1 unknowns + metadata)
 - State coverage: 19 event-detail states + 7 submit-form states + 6 submit-success states + 7 browse states + 3 cross-cutting
+
+---
+
+## Appendix A — Addendum specs (2026-06-24)
+
+Design addendum delivered three targeted answers to the §9 unknowns (Q1 state #11, Q2 browse #3, Q3 state #17). Source files committed in this branch:
+
+- `design/design_handoff_price_source_discoverability/PR4-ADDENDUM.md` — verdicts + rationale
+- `design/design_handoff_price_source_discoverability/pr4-addendum-mocks.jsx` — full visual specs (every CSS value)
+- `design/design_handoff_price_source_discoverability/PR4 Addendum - 3 open states.html` — HTML preview
+
+Every addition below is a net-new variant of an existing shape — same gold/coral/azure tier vocabulary, same tokens, no new typefaces or tier colors. The shipped components from §1–§7 above are NOT modified.
+
+---
+
+### A.1 — `ContributeFaceValueCard` (NEW component — Q1 verdict)
+
+**Replaces `FaceValueCard` in the §8 state #11 slot** (sold-out + no resale + no primary + no boxoffice). Per the addendum: *"it is NOT a FaceValueCard anymore — what survives is the contribution half."* Modeled as a sibling component, NOT a variant of `FaceValueCard`. Same chrome family (12px border, surface-1, border 1px var(--border)) but only ONE ghost box-office row (no resale row, no outbound CTA).
+
+Source: `pr4-addendum-mocks.jsx:42-113`.
+
+#### Outer container (line 45-48)
+| Property | Value |
+|----------|-------|
+| border-radius | `12px` |
+| overflow | `hidden` |
+| background | `var(--surface-1)` |
+| border | `1px solid var(--border)` |
+
+#### Head block (line 49)
+| Property | Value |
+|----------|-------|
+| padding | `14px 14px 10px` |
+
+#### Eyebrow (line 50)
+Inherits Eyebrow primitive styling. Copy: `"Face value"`.
+
+**Note:** differs from `FaceValueCard` which uses `"Face value ≠ resale"`. The comparison framing is dropped because there's nothing to compare to.
+
+#### Headline (lines 51-54)
+| Property | Value |
+|----------|-------|
+| margin-top | `7px` |
+| font-family | `Inter, system-ui` |
+| font-weight | `800` |
+| font-size | `16.5px` |
+| color | `var(--fg)` |
+| letter-spacing | `-0.02em` |
+| line-height | `1.2` |
+| text-wrap | `balance` |
+
+Copy: `"No price to show — yet."`.
+
+#### Subline (lines 55-58)
+| Property | Value |
+|----------|-------|
+| margin-top | `5px` |
+| font-family | `Inter, system-ui` |
+| font-size | `12.5px` |
+| font-weight | `500` |
+| color | `var(--fg-muted)` |
+| letter-spacing | `-0.005em` |
+| line-height | `1.5` |
+
+Copy: `"Sold out, nothing listed. Know the box-office number? Add it."`.
+
+#### Ladder wrapper (line 62)
+| Property | Value |
+|----------|-------|
+| margin | `2px 0` |
+| border-top | `1px solid var(--border)` |
+| border-bottom | `1px solid var(--border)` |
+
+#### Box-office ghost row (lines 63-89)
+IDENTICAL to the box-office (ghost) `LadderRow` enumerated in §1 of this table (lines 121–172 above):
+
+- **Row container:** `display: flex`, `align-items: center`, `gap: 11px`, `padding: 12px 14px`
+- **Tier glyph wrapper:** width 18px, height 18px, border-radius 5px, background `color-mix(in oklab, gold 10%, transparent)`, border `1px dashed color-mix(in oklab, gold 55%, transparent)`, inline-flex centered
+- **Inner star SVG:** width 9, height 9, viewBox `0 0 12 12`, fill=gold, path d=`M6 0.8l1.5 3.1 3.4.5-2.5 2.4.6 3.4L6 8.9 2.9 10.6l.6-3.4L1 4.4l3.4-.5z`
+- **Label:** Inter 13.5px, font-weight 700, color `var(--fg-muted)`, letter-spacing `-0.005em`. Copy: `"Box office"`
+- **Sub:** Inter 11.5px, font-weight 500, color `var(--fg-subtle)`, letter-spacing `-0.005em`. Copy: `"the printed price · no fees"`
+- **Right value:** mono 9.5px, font-weight 700, letter-spacing 0.07em, uppercase, color `color-mix(in oklab, gold 90%, var(--fg-subtle))`, text-align right, white-space nowrap, flex-shrink 0. Copy: `"not reported"`
+
+**No resale row.** `FaceValueCard`'s resale row is dropped entirely.
+
+#### CTA wrapper (line 92)
+| Property | Value |
+|----------|-------|
+| padding | `12px 14px 14px` |
+
+#### CTA button (lines 93-105)
+IDENTICAL to `FaceValueCard` CTA enumerated in §1 (lines 176–195 above):
+
+| Property | Value |
+|----------|-------|
+| all | `unset` |
+| cursor | `pointer` |
+| box-sizing | `border-box` |
+| display | `flex` |
+| align-items | `center` |
+| justify-content | `center` |
+| gap | `8px` |
+| width | `100%` |
+| height | `46px` |
+| border-radius | `10px` |
+| background | `var(--signal)` |
+| color | `var(--fg-on-accent)` |
+| font-family | `Inter, system-ui` |
+| font-weight | `800` |
+| font-size | `14.5px` |
+| letter-spacing | `-0.01em` |
+| box-shadow | `0 12px 28px -14px var(--signal)` |
+
+Label: `"Add the box-office price"`.
+
+#### CTA arrow SVG (lines 102-104)
+width=13, height=13, viewBox=`0 0 16 16`, path d=`M3 8h9M9 4l4 4-4 4`, stroke=`currentColor`, stroke-width=2, stroke-linecap=round, stroke-linejoin=round. Same as §1.
+
+#### Caption row under CTA (lines 106-109)
+| Property | Value |
+|----------|-------|
+| margin-top | `9px` |
+| text-align | `center` |
+| font-family | `'JetBrains Mono', monospace` |
+| font-size | `9px` |
+| color | `var(--fg-subtle)` |
+| letter-spacing | `0.06em` |
+| text-transform | `uppercase` |
+
+Copy: `"Goes live once one more fan confirms"`.
+
+#### NO outbound `ProvenanceCTA`
+`FaceValueCard`'s normal path includes a `ProvenanceCTA` underneath; this state explicitly drops it because there's no link to point at.
+
+---
+
+### A.2 — `SoldOutPriceCard` degraded variant (Q1 sister card — no listing)
+
+Sister component in the Q1 state. The shipped `SoldOutPriceCard` sits ABOVE the new `ContributeFaceValueCard`. In the no-listing scenario the existing card renders a degraded form. Source: `pr4-addendum-mocks.jsx:132-155`.
+
+| Property | Value |
+|----------|-------|
+| Eyebrow copy | `"Tickets"` (same as shipped) |
+| Container | same as shipped — border-radius 12, background `var(--surface-1)`, border 1px `var(--border)`, padding `14px 14px 13px` |
+
+#### Price value (lines 140-143)
+Shows `"—"` (em-dash) instead of strikethrough number.
+
+| Property | Value |
+|----------|-------|
+| font-family | `Inter, system-ui` |
+| font-weight | `800` |
+| font-size | `26px` (slightly smaller than shipped's 28px — addendum-specified) |
+| color | `var(--fg-subtle)` |
+| letter-spacing | `-0.025em` |
+| line-height | `1.05` |
+
+#### Sold-out pill (lines 144-148)
+Same as shipped — no change:
+
+| Property | Value |
+|----------|-------|
+| padding | `2px 7px` |
+| border-radius | `4px` |
+| background | `var(--warning)` |
+| color | `var(--fg-on-accent)` |
+| font-family | `'JetBrains Mono', monospace` |
+| font-size | `9px` |
+| font-weight | `700` |
+| letter-spacing | `0.06em` |
+| text-transform | `uppercase` |
+
+Copy: `"Sold out"`.
+
+#### Caption (lines 150-152)
+| Property | Value |
+|----------|-------|
+| margin-top | `9px` |
+| font-family | `Inter, system-ui` |
+| font-size | `12px` |
+| color | `var(--fg-muted)` |
+| letter-spacing | `-0.005em` |
+
+Copy: `"No tickets listed anywhere we can see — not even resale."`.
+
+**Implementation note:** best handled as a `variant: 'has-listing' | 'no-listing'` prop on `SoldOutPriceCard` (or `showStrikethrough: boolean` — eng's call). The shipped `SoldOutPriceCard` doesn't currently handle the no-listing case; this is a small additive prop, NOT a separate component.
+
+---
+
+### A.3 — `MT_ListChip kind='resale'` (NEW variant — Q2 verdict)
+
+NEW variant on the existing `MT_ListChip` component enumerated in §4 above. Per the addendum: *"a coral resale chip that ALWAYS carries an explicit 'resale' tag. Never bare, never hidden."*
+
+Source: `pr4-addendum-mocks.jsx:214-234`.
+
+Differs from the §4 `kind='boxoffice'` and `kind='community'` variants in three ways:
+
+1. **Background is coral-tinted** (not generic `var(--surface-1)`)
+2. **Border is coral-tinted** (not generic `var(--border)`)
+3. **A mono `"resale"` tag is appended after the price** (NON-NEGOTIABLE per the addendum — color alone is too quiet to decode at scan speed)
+
+#### Container (lines 217-222)
+| Property | Value |
+|----------|-------|
+| display | `inline-flex` |
+| align-items | `center` |
+| gap | `7px` (NOTE: 7px, not the 6px used by boxoffice/community variants — addendum tightened the gap to fit the trailing tag) |
+| padding | `5px 10px` (same as other variants) |
+| border-radius | `8px` (same) |
+| background | `color-mix(in oklab, oklch(0.65 0.20 25) 8%, var(--surface-1))` (coral 8% over surface-1) |
+| border | `1px solid color-mix(in oklab, oklch(0.65 0.20 25) 34%, var(--border))` (coral-tinted border) |
+
+#### Inner content (in order)
+
+**1. Coral dot** (line 223):
+| Property | Value |
+|----------|-------|
+| width | `6px` |
+| height | `6px` |
+| border-radius | `50%` |
+| background | `oklch(0.65 0.20 25)` (coral) |
+| flex-shrink | `0` |
+
+**2. Price label** (lines 224-227):
+| Property | Value |
+|----------|-------|
+| font-family | `Inter, system-ui` |
+| font-weight | `800` |
+| font-size | `14px` |
+| color | `oklch(0.65 0.20 25)` (coral) |
+| letter-spacing | `-0.01em` |
+| white-space | `nowrap` |
+
+Format: `from $${price}` (when `from=true`) or `$${price}` (when `from=false`).
+
+**3. `"resale"` tag** (lines 228-231) — **NON-NEGOTIABLE; always present on this variant**:
+| Property | Value |
+|----------|-------|
+| font-family | `'JetBrains Mono', monospace` |
+| font-size | `8.5px` |
+| font-weight | `700` |
+| color | `oklch(0.65 0.20 25)` (coral) |
+| letter-spacing | `0.08em` |
+| text-transform | `uppercase` |
+| opacity | `0.95` |
+
+Text: `"resale"`.
+
+**Other variants** (kind='boxoffice', kind='community') keep their existing spec from §4 above — no change.
+
+---
+
+### A.4 — `DisputedPriceCard` footer pointer (Q3 verdict)
+
+Replaces the shipped `"Saw a different number?"` footer link when `counterSubmission !== null` against this price. Per the addendum: *"replace the suppressed link in the same footer slot with a quiet pointer to the live counter."* `Confirm price` button stays UNCHANGED. Net-new chrome = zero — it's a copy swap in the footer slot the dispute link already owned.
+
+Source: `pr4-addendum-mocks.jsx:299-365` (full `DisputedPriceCard withPointer={true}` variant), specifically `:337-345` (the pointer link).
+
+#### Pointer link `<a>` (lines 337-345)
+| Property | Value |
+|----------|-------|
+| display | `inline-flex` |
+| align-items | `center` |
+| gap | `6px` |
+| text-decoration | `none` |
+| font-family | `'JetBrains Mono', monospace` |
+| font-size | `10px` |
+| color | `oklch(0.65 0.20 25)` (coral — `PR4_TIER.resale`) |
+| letter-spacing | `0.04em` |
+| text-transform | `uppercase` |
+| font-weight | `700` |
+
+**The color is coral** — `PR4_TIER.resale` = `oklch(0.65 0.20 25)`. NOT muted, NOT `var(--fg-subtle)`.
+
+#### Coral dot prefix (line 342)
+| Property | Value |
+|----------|-------|
+| width | `5px` |
+| height | `5px` |
+| border-radius | `50%` |
+| background | `oklch(0.65 0.20 25)` (coral) |
+
+#### Label text (line 343)
+`"Someone's contesting this — see the counter"`.
+
+#### Arrow SVG (line 344)
+width=11, height=11, viewBox=`0 0 12 12`, path d=`M2.5 6h7M6 2.5l3.5 3.5L6 9.5`, stroke=`currentColor`, stroke-width=1.8, stroke-linecap=round, stroke-linejoin=round.
+
+#### `href` semantics
+Points at the counter card on the same page. Implementation can be a fragment anchor (`#counter-<id>`) or an in-page `scrollIntoView` handler. Design did not specify the routing mechanic; eng's call.
+
+#### Confirm price button (lines 352-360)
+**UNCHANGED** from the shipped/existing button — same kind background, same Check glyph, same copy.
+
+---
+
+### A.5 — Eng-owned defaults locked in this addendum cycle
+
+Two unknowns from §9 that design does NOT need to specify; eng-owned defaults are locked here for the record:
+
+- **Q2-eng (browse: no-price + no ticket links at all):** fall through to the legacy community-handoff card (existing `NoPriceCard`); NO `FaceValueCard`. Pedagogy collapses without a resale anchor — same logic as Q1.
+- **Q4-eng (submit-success add-another-tier picker drive):** client-side session state of "tiers I just submitted in this session." Re-fetching `priceByTier` after each tier-success creates flicker; the rare race (two devices submitting simultaneously) is recoverable on next load. → `MT_AddTierSuccess` uses local React state.
+
+These defaults inform the locked decisions in the plan §9 section.

@@ -4,7 +4,7 @@
 
 **Goal:** Ship the consumer-side surfaces for the price-source-discoverability + multi-tier-pricing cycle (#641 + #644). Closes the comprehension gap on sold-out / no-price states (resale ≠ face value) and lets fans collapse multi-tier prices to "from $X" with a per-tier breakdown on detail.
 
-**Architecture:** Net-new presentational components live under `apps/web/src/components/consumer/price-region/` — `FaceValueCard`, `ProvenanceCTA`, `MTListChip`, `MTAddTierSuccess`, `MultiSourceMultiTierCard`, `AltSourceRow`, plus a small shared `TierMark` primitive added to `glyphs.tsx`. They are wired through `apps/web/src/components/consumer/EventDetailClient.tsx` (the `EventDetailPriceBlock` orchestrator, ~280–950) by introducing a new branch that consumes `event.priceByTier` and falls back to the legacy branches when `priceByTier == null`. Browse-card price chip parity moves into `apps/web/src/components/consumer/event-card/EventCard.tsx` so `PriceChip` mirrors `pickTierHeadline`'s selection. Submit-form reorder happens in-place in `apps/web/src/components/consumer/submit-price/SubmitPriceModal.tsx` — source-category leads, `howFound` is removed, the `Floor`/`Ceiling` row stays but the floor label switches based on source-category. Submit-success leverages a per-tier `MTAddTierSuccess` callback that re-opens the modal pre-scoped to a picked tier. Passive surfaces from #697 — hide dispute affordance when `counterSubmission !== null`, surface "Admin requested more info" pill when `lastAdminActionKind === 'defer'` — happen at the orchestrator and inside `DisputedPriceCard` respectively.
+**Architecture:** Net-new presentational components live under `apps/web/src/components/consumer/price-region/` — `FaceValueCard`, `ContributeFaceValueCard` (LOCKED §9 Q1 — sibling for sold-out + no-listing), `ProvenanceCTA`, `MTListChip` (includes LOCKED §9 Q2 `kind='resale'` variant), `MTAddTierSuccess`, `MultiSourceMultiTierCard`, `AltSourceRow`, plus a small shared `TierMark` primitive added to `glyphs.tsx`. They are wired through `apps/web/src/components/consumer/EventDetailClient.tsx` (the `EventDetailPriceBlock` orchestrator, ~280–950) by introducing a new branch that consumes `event.priceByTier` and falls back to the legacy branches when `priceByTier == null`. Browse-card price chip parity moves into `apps/web/src/components/consumer/event-card/EventCard.tsx` so `PriceChip` mirrors `pickTierHeadline`'s selection. Submit-form reorder happens in-place in `apps/web/src/components/consumer/submit-price/SubmitPriceModal.tsx` — source-category leads, `howFound` is removed, the `Floor`/`Ceiling` row stays but the floor label switches based on source-category. Submit-success leverages a per-tier `MTAddTierSuccess` callback that re-opens the modal pre-scoped to a picked tier; remaining-tier filtering is driven by client session state (LOCKED §9 Q4-eng). Passive surfaces from #697 — replace the "Saw a different number?" link with a coral counter-pointer when `counterSubmission !== null` (LOCKED §9 Q3 — see property table Appendix A.4), surface "Admin requested more info" pill when `lastAdminActionKind === 'defer'` — happen at the orchestrator, inside `PendingCardB`, and inside `DisputedPriceCard` respectively.
 
 **Tech Stack:** TypeScript strict · Next.js 15 App Router · React 19 · React Query · CSS variables via inline `style` (matches existing `multi-tier/` and `PendingCardB.tsx` convention — Tailwind utilities only on existing components when nothing else changes) · Vitest + React Testing Library · pnpm workspaces · Conventional commits · `memory:feedback_definitions_pattern` (copy in `definitions/copy.ts`) · `memory:feedback_component_conventions` (arrow function components, descriptive names, no "handle" prefix on internal helpers).
 
@@ -33,6 +33,8 @@
 - `apps/web/src/components/consumer/price-region/index.ts` — barrel re-exports.
 - `apps/web/src/components/consumer/price-region/FaceValueCard.tsx` — §1 of the property table.
 - `apps/web/src/components/consumer/price-region/FaceValueCard.test.tsx`
+- `apps/web/src/components/consumer/price-region/ContributeFaceValueCard.tsx` — Appendix A.1 (LOCKED §9 Q1); sibling of FaceValueCard for the sold-out + no-listing state.
+- `apps/web/src/components/consumer/price-region/ContributeFaceValueCard.test.tsx`
 - `apps/web/src/components/consumer/price-region/ProvenanceCTA.tsx` — §2.
 - `apps/web/src/components/consumer/price-region/ProvenanceCTA.test.tsx`
 - `apps/web/src/components/consumer/price-region/MTListChip.tsx` — §4 (browse-card chip parity).
@@ -44,7 +46,7 @@
 - `apps/web/src/components/consumer/price-region/AltSourceRow.tsx` — §6 sub-component.
 - `apps/web/src/components/consumer/price-region/lib/pick-headline.ts` — pure helper that mirrors `apps/api/src/lib/price-aggregation/pick-tier-headline.ts` for browse-card chip selection. Re-implements `trustRank` + `compareTierRows` against the consumer-side `TierPriceBlock` shape (which omits the `userId` / `createdAt` fields the API uses).
 - `apps/web/src/components/consumer/price-region/lib/pick-headline.test.ts`
-- `apps/web/src/components/consumer/price-region/lib/decision-tree.ts` — pure state-machine helper that takes the relevant `EventDetailResponse` slice and returns a tagged union `{ kind: 'sold-out-resale', … } | { kind: 'sold-out-degraded', … } | { kind: 'no-price-resale', … } | …` for the orchestrator to render. Keeps the giant if-tree in `EventDetailClient.tsx` legible.
+- `apps/web/src/components/consumer/price-region/lib/decision-tree.ts` — pure state-machine helper that takes the relevant `EventDetailResponse` slice and returns a tagged union `{ kind: 'sold-out-resale', … } | { kind: 'sold-out-contribute', … } | { kind: 'no-price-resale', … } | …` for the orchestrator to render. Keeps the giant if-tree in `EventDetailClient.tsx` legible. Discriminant names follow the §9 lock vocabulary (`sold-out-contribute` is the Q1 lock; `no-price-empty` is the Q2-eng lock).
 - `apps/web/src/components/consumer/price-region/lib/decision-tree.test.ts`
 - `apps/web/src/components/consumer/price-region/definitions/copy.ts` — all copy strings for the new components, keyed under `CONSUMER_COPY.priceRegion.*` (re-exported from `apps/web/src/components/consumer/definitions/copy.ts` so call sites use the canonical import path).
 
@@ -52,8 +54,12 @@
 
 - `apps/web/src/components/consumer/definitions/copy.ts` — extend `CONSUMER_COPY` with the `priceRegion`, `submitPriceV2`, and `mtAddTierSuccess` sub-trees. Add admin-defer engagement pill copy (`adminDeferPillLabel`) inside the existing `multiTier` block.
 - `apps/web/src/components/consumer/glyphs.tsx` — add `TierMark` primitive (price-region §primitives, lines 42-63 of the property table). `Eyebrow` already exists; do NOT add a second copy.
-- `apps/web/src/components/consumer/EventDetailClient.tsx` — `EventDetailPriceBlock` (lines 280–950): insert a new branch at the top of the decision tree that consumes `event.priceByTier` when non-null. Add the dispute-affordance hiding guard (state #17). Surface the admin-defer pill via the `DisputedPriceCard` prop additions in the next bullet.
-- `apps/web/src/components/consumer/DisputedPriceCard.tsx` — extend props with optional `lastAdminActionKind?: 'defer' | null` and `lastAdminActionAt?: string | null`. When `lastAdminActionKind === 'defer'`, render a quiet "Admin requested more info" pill near the counter card header (per state #18).
+- `apps/web/src/components/consumer/EventDetailClient.tsx` — `EventDetailPriceBlock` (lines 280–950): insert a new branch at the top of the decision tree that consumes `event.priceByTier` when non-null. Wire the Q3-locked counter-pointer (state #17) per Task 12. Surface the admin-defer pill via the `DisputedPriceCard` prop additions in the next bullet. Add the `sold-out-contribute` branch (LOCKED §9 Q1) that renders `<SoldOutPriceCard variant='no-listing' />` + `<ContributeFaceValueCard />`.
+- `apps/web/src/components/consumer/DisputedPriceCard.tsx` — extend props with optional `lastAdminActionKind?: 'defer' | null` and `lastAdminActionAt?: string | null`. When `lastAdminActionKind === 'defer'`, render a quiet "Admin requested more info" pill near the counter card header (per state #18). Add an `id={`counter-${counterSubmission.id}`}` attribute on the card root so the Q3 counter-pointer (Task 12) can deep-link / scroll to it.
+- `apps/web/src/components/consumer/SoldOutPriceCard.tsx` — add additive prop (recommended: `variant: 'has-listing' | 'no-listing'`, default `'has-listing'`) per Appendix A.2 / §9 Q1 lock. The `'no-listing'` variant shows `"—"` (em-dash) in place of the strikethrough price and the caption `"No tickets listed anywhere we can see — not even resale."`. Default behavior is unchanged.
+- `apps/web/src/components/consumer/SoldOutPriceCard.test.tsx` — add cases for the new `'no-listing'` variant.
+- `apps/web/src/components/consumer/PendingCardB.tsx` — add additive prop `counterPointer?: { href: string } | null` per Appendix A.4 / §9 Q3 lock. When non-null, replace the existing `"Saw a different number?"` footer link with the coral counter-pointer link (mono 10px, coral, 5×5 coral dot, 11×11 arrow SVG); `Confirm price` button stays unchanged.
+- `apps/web/src/components/consumer/PendingCardB.test.tsx` — add cases for the new `counterPointer` prop.
 - `apps/web/src/components/consumer/event-card/EventCard.tsx` — replace the inline `PriceChip` (lines 43-119) with `<MTListChip>` rendered with `pickBrowseHeadline(event)` so the browse-card chip mirrors `pickTierHeadline`. Keep the existing "tba" / `null` fallback path.
 - `apps/web/src/components/consumer/submit-price/SubmitPriceModal.tsx` — reorder form (lines 535–602): (1) source-category chip group leads (new), (2) floor/ceiling row second with dynamic floor label per source, (3) tier group third, (4) vendor group fourth (auto-fill "Venue" + lock-but-required when source=boxoffice). Remove the `howFound` chip group + dependent payload field. Update payload type + POST/PATCH bodies to send `sourceCategory` instead of `howFound`. Add the 409 race-case toast handler per `memory:project_pr4_dispute_affordance_hiding`.
 - `apps/web/src/components/consumer/submit-price/SubmitPriceModal.test.tsx` — update tests to expect the new field order, the new `sourceCategory` payload, and absence of `howFound`. Add tests for the source→floor label switch and the 409 race-case toast.
@@ -63,7 +69,7 @@
 
 **Not modified:**
 
-- Shipped `MultiTierLiveCard`, `MixedTierCard`, `TierAlternateRow`, `TwoPendingStack`, `PendingCardB`, `PendingTrustPill`, `StarGlyph`, `CheckGlyph`, `Eyebrow`. Per `memory:project_price_source_discoverability` — reused verbatim. `MultiTierLiveCard` already supports `kind='boxoffice'`. A small `reports?` prop wiring at the call site appends the "· N reports" caption — but only if the shipped component already accepts it. **Verify before extending.** If shipped component does NOT accept `reports`, file a 1-line follow-up issue rather than expanding scope.
+- Shipped `MultiTierLiveCard`, `MixedTierCard`, `TierAlternateRow`, `TwoPendingStack`, `PendingTrustPill`, `StarGlyph`, `CheckGlyph`, `Eyebrow`. Per `memory:project_price_source_discoverability` — reused verbatim. `MultiTierLiveCard` already supports `kind='boxoffice'`. A small `reports?` prop wiring at the call site appends the "· N reports" caption — but only if the shipped component already accepts it. **Verify before extending.** If shipped component does NOT accept `reports`, file a 1-line follow-up issue rather than expanding scope. (`PendingCardB`, `DisputedPriceCard`, and `SoldOutPriceCard` are MODIFIED in this PR — see Modify section above for the §9 lock-driven additive props.)
 - The `apps/api/src/lib/price-aggregation/` helpers — the browse-side parity is done by mirroring the rules in `pick-headline.ts`, NOT by importing from `apps/api`. The `apps/web` package must not import from `apps/api`.
 - Database schema, migrations, crawler.
 
@@ -73,18 +79,18 @@
 
 Fourteen tasks. Each ends with an independently testable deliverable + commit:
 
-1. Copy file extension + `TierMark` primitive (foundations)
+1. Copy file extension + `TierMark` primitive (foundations) — includes Q1/Q2/Q3 copy keys (`contributeFaceValue.*`, `soldOutNoListingCaption`, `mtListChip.resaleTag`, `dispute.counterPointerLabel`)
 2. `ProvenanceCTA` (smallest leaf component, used by FaceValueCard composition)
-3. `FaceValueCard` (centerpiece)
+3. `FaceValueCard` + `ContributeFaceValueCard` (centerpiece + Q1-locked sibling)
 4. `AltSourceRow`
 5. `MultiSourceMultiTierCard` (composes shipped + `AltSourceRow`)
-6. `MTListChip` + `pick-headline.ts` parity helper
+6. `MTListChip` + `pick-headline.ts` parity helper (includes Q2-locked `kind='resale'` variant with always-present `"resale"` tag)
 7. `MTAddTierSuccess`
-8. `decision-tree.ts` orchestrator helper
-9. Wire `EventDetailClient` to consume `priceByTier` via decision-tree
+8. `decision-tree.ts` orchestrator helper (discriminants include Q1-locked `sold-out-contribute`)
+9. Wire `EventDetailClient` to consume `priceByTier` via decision-tree + add Q1-locked `SoldOutPriceCard variant='no-listing'` prop + Q4-eng-locked session-state tier tracking
 10. Browse-card wiring (replace inline `PriceChip` with `MTListChip`)
 11. Submit form reorder + `sourceCategory` payload + 409 race toast
-12. Passive surfaces — dispute-affordance hiding + admin-defer pill
+12. Passive surfaces — Q3-locked counter pointer (replaces dispute link) + admin-defer pill
 13. Release-notes entry + final sweep (typecheck/lint/test/integration)
 14. `design-review` skill + open PR + Copilot iteration to Low/Nit
 
@@ -120,7 +126,6 @@ priceRegion: {
     headlineNoPrice: 'All we can see is resale.',
     sublineDefault: 'Only resale tickets left. Know the box-office price? Add it.',
     sublineNoPrice: 'Only resale showed up. Know the box-office price? Add it.',
-    sublineSoldOutDegraded: 'Resale is selling above face value. The box-office price is the printed one.',
     ladderResaleSub: (vendor: string) => `${vendor} · marked up over face`,
     ladderBoxofficeSub: 'the printed price · no fees',
     ladderBoxofficeRight: 'NOT REPORTED',
@@ -128,6 +133,21 @@ priceRegion: {
     ctaLabelNoPrice: "Add a price you've seen",
     caption: 'Goes live once one more fan confirms',
   },
+  // LOCKED §9 Q1 — ContributeFaceValueCard copy (Appendix A.1).
+  // Differs from faceValue.* — eyebrow drops the "≠ resale" framing, body
+  // pitches contribution directly. New component, new copy block.
+  contributeFaceValue: {
+    eyebrow: 'Face value',
+    headline: 'No price to show — yet.',
+    subline: 'Sold out, nothing listed. Know the box-office number? Add it.',
+    ladderBoxofficeLabel: 'Box office',
+    ladderBoxofficeSub: 'the printed price · no fees',
+    ladderBoxofficeRight: 'not reported',
+    ctaLabel: 'Add the box-office price',
+    caption: 'Goes live once one more fan confirms',
+  },
+  // LOCKED §9 Q1 — SoldOutPriceCard variant='no-listing' caption (Appendix A.2).
+  soldOutNoListingCaption: 'No tickets listed anywhere we can see — not even resale.',
   provenance: {
     getTickets: 'Get Tickets',
     seeResale: 'See resale tickets',
@@ -140,6 +160,13 @@ priceRegion: {
   },
   mtListChip: {
     fromPrefix: 'from',
+    // LOCKED §9 Q2 — MT_ListChip kind='resale' trailing tag (Appendix A.3).
+    // NON-NEGOTIABLE that this always renders on the resale variant.
+    resaleTag: 'resale',
+  },
+  // LOCKED §9 Q3 — DisputedPriceCard / PendingCardB footer pointer (Appendix A.4).
+  dispute: {
+    counterPointerLabel: "Someone's contesting this — see the counter",
   },
   multiSource: {
     eyebrow: 'Tickets',
@@ -402,23 +429,33 @@ export const ProvenanceCTA = ({
 
 ---
 
-### Task 3: `FaceValueCard`
+### Task 3: `FaceValueCard` + `ContributeFaceValueCard`
 
 **Files:**
 
 - Create: `apps/web/src/components/consumer/price-region/FaceValueCard.tsx`
 - Create: `apps/web/src/components/consumer/price-region/FaceValueCard.test.tsx`
+- Create: `apps/web/src/components/consumer/price-region/ContributeFaceValueCard.tsx` — Q1 locked spec; sibling component for state #11 (sold-out + no resale + no primary + no boxoffice). See property table Appendix A.1.
+- Create: `apps/web/src/components/consumer/price-region/ContributeFaceValueCard.test.tsx`
 - Modify: `apps/web/src/components/consumer/price-region/index.ts`
 
-**Property table reference:** §1 (lines 52–214).
+**Property table reference:** §1 (lines 52–214) for `FaceValueCard`; Appendix A.1 for `ContributeFaceValueCard`.
+
+**Locked decision callout (§9 Q1):** `ContributeFaceValueCard` is a NEW, SEPARATE component — NOT a variant of `FaceValueCard`. Per the addendum: *"it is NOT a FaceValueCard anymore — what survives is the contribution half."* Do not model it as `FaceValueCard variant='sold-out-degraded'`. The `sold-out-degraded` variant is removed from `FaceValueCardProps` below; the props now only carry `'default' | 'no-price'`.
 
 **Interfaces produced:**
 
 ```ts
 export interface FaceValueCardProps {
-  variant: 'default' | 'no-price' | 'sold-out-degraded'
+  variant: 'default' | 'no-price'
   resaleVendor: string
-  resaleRange?: string // e.g. "$110–180"; omitted in sold-out-degraded variant
+  resaleRange?: string // e.g. "$110–180"
+  onAddPrice: () => void
+}
+
+// ContributeFaceValueCard — NEW component per §9 Q1 lock + Appendix A.1.
+// Renders one ghost box-office row, no resale row, no outbound CTA.
+export interface ContributeFaceValueCardProps {
   onAddPrice: () => void
 }
 ```
@@ -545,7 +582,7 @@ const LadderRow = ({ kind, label, sub, right, ghost }: LadderRowProps) => {
 }
 
 export interface FaceValueCardProps {
-  variant: 'default' | 'no-price' | 'sold-out-degraded'
+  variant: 'default' | 'no-price'
   resaleVendor: string
   resaleRange?: string
   onAddPrice: () => void
@@ -560,11 +597,7 @@ export const FaceValueCard = ({
   const headline =
     variant === 'no-price' ? copy.headlineNoPrice : copy.headlineDefault
   const subline =
-    variant === 'no-price'
-      ? copy.sublineNoPrice
-      : variant === 'sold-out-degraded'
-        ? copy.sublineSoldOutDegraded
-        : copy.sublineDefault
+    variant === 'no-price' ? copy.sublineNoPrice : copy.sublineDefault
   const ctaLabel =
     variant === 'no-price' ? copy.ctaLabelNoPrice : copy.ctaLabelDefault
   const resaleRight = resaleRange ?? 'available, above face value'
@@ -695,15 +728,23 @@ export const FaceValueCard = ({
 
 **TDD steps:**
 
-- [ ] **Step 1**: Write `FaceValueCard.test.tsx` covering states 3, 10, 11, 12 from property table §8:
+- [ ] **Step 1**: Write `FaceValueCard.test.tsx` covering states 3, 10, 12 from property table §8:
   - default variant: renders eyebrow "Face value ≠ resale", headline "That's resale — not face value.", resale row with `vendor="Ticketmaster"` + range `"$110–180"`, ghost box-office row reading "NOT REPORTED", CTA "Add the box-office price"
   - no-price variant: headline switches to "All we can see is resale.", CTA to "Add a price you've seen"
-  - sold-out-degraded variant (state #11, **flagged unknown #1 in §9**; default behavior pending user decision): degraded subline, resale row right reads "available, above face value" when `resaleRange` is omitted
   - clicking CTA fires `onAddPrice`
-- [ ] **Step 2**: Run failing tests, implement per snippet, re-run green.
-- [ ] **Step 3**: Add to barrel `index.ts`.
-- [ ] **Step 4**: `pnpm --filter @concert-crawl/web test FaceValueCard`.
-- [ ] **Step 5**: Commit: `feat(consumer): add FaceValueCard — resale-vs-box-office ladder + contribution CTA`.
+- [ ] **Step 2**: Run failing tests, implement `FaceValueCard.tsx` per snippet, re-run green.
+- [ ] **Step 3**: Write `ContributeFaceValueCard.test.tsx` covering state #11 (Q1 lock) per Appendix A.1:
+  - renders eyebrow `"Face value"` (NOT `"Face value ≠ resale"` — comparison framing is dropped)
+  - headline `"No price to show — yet."`
+  - subline `"Sold out, nothing listed. Know the box-office number? Add it."`
+  - renders exactly ONE ghost box-office row (gold star, label "Box office", sub "the printed price · no fees", right "not reported"); NO resale row
+  - CTA label `"Add the box-office price"`, signal background, fires `onAddPrice` on click
+  - caption `"Goes live once one more fan confirms"`
+  - does NOT render a `ProvenanceCTA` (no outbound link slot — verify by querying for any anchor in the rendered subtree)
+- [ ] **Step 4**: Implement `ContributeFaceValueCard.tsx` per Appendix A.1; re-run tests green.
+- [ ] **Step 5**: Add both to barrel `index.ts`.
+- [ ] **Step 6**: `pnpm --filter @concert-crawl/web test FaceValueCard ContributeFaceValueCard`.
+- [ ] **Step 7**: Commit: `feat(consumer): add FaceValueCard + ContributeFaceValueCard — resale ladder + Q1 contribution-only variant`.
 
 ---
 
@@ -1074,7 +1115,9 @@ export function pickBrowseHeadline(
 }
 ```
 
-**`MTListChip.tsx` implementation (property table §4, lines 376–420):**
+**`MTListChip.tsx` implementation (property table §4, lines 376–420; `kind='resale'` per Appendix A.3 / §9 Q1 lock):**
+
+Note: `kind='resale'` is materially different from `kind='boxoffice'` / `kind='community'` — it has coral-tinted background + border, a 7px gap (vs. 6px on other variants), and an ALWAYS-PRESENT mono `"resale"` tag appended after the price. The tag is NON-NEGOTIABLE per the design addendum and must never be conditionally hidden. Add copy key `mtListChip.resaleTag` (value `'resale'`) to `CONSUMER_COPY` as part of this task.
 
 ```tsx
 import { StarGlyph } from '@/components/consumer/glyphs'
@@ -1104,6 +1147,61 @@ export const MTListChip = ({ price, kind, from = true }: MTListChipProps) => {
   const text = from
     ? `${CONSUMER_COPY.priceRegion.mtListChip.fromPrefix} $${price}`
     : `$${price}`
+
+  // kind='resale' — Appendix A.3 locked spec: coral chrome + always-present resale tag.
+  if (kind === 'resale') {
+    return (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 7, // NOTE: 7px not 6px — addendum-specified to fit trailing tag
+          padding: '5px 10px',
+          borderRadius: 8,
+          background: `color-mix(in oklab, ${RESALE} 8%, var(--surface-1))`,
+          border: `1px solid color-mix(in oklab, ${RESALE} 34%, var(--border))`,
+        }}
+      >
+        <span
+          aria-hidden
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            background: RESALE,
+            flexShrink: 0,
+            display: 'inline-block',
+          }}
+        />
+        <span
+          style={{
+            fontFamily: 'Inter, system-ui',
+            fontWeight: 800,
+            fontSize: 14,
+            color: RESALE,
+            letterSpacing: '-0.01em',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {text}
+        </span>
+        <span
+          style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 8.5,
+            fontWeight: 700,
+            color: RESALE,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            opacity: 0.95,
+          }}
+        >
+          {CONSUMER_COPY.priceRegion.mtListChip.resaleTag}
+        </span>
+      </span>
+    )
+  }
+
   return (
     <span
       style={{
@@ -1144,15 +1242,16 @@ export const MTListChip = ({ price, kind, from = true }: MTListChipProps) => {
   - multi-tier sorted (cheapest first) → returns first block (PR 3 already sorts)
   - pending-only tier (headline null) → continues to next; returns null when all pending
 - [ ] **Step 2**: Implement; re-run green.
-- [ ] **Step 3**: Write `MTListChip.test.tsx` covering browse states #1–#5 from §8:
-  - kind='boxoffice' + from=true → "from $25" gold + star glyph
-  - kind='community' + from=true → "from $25" default fg
-  - kind='resale' (state #3 ⚠️ flagged unknown — default rendering is coral text + "from $X"; **caller may pass `kind='resale'`. See decision-tree task for whether browse cards render this at all**)
-  - kind=null (no source) → fg-muted, no glyph
-  - from=false → no "from" prefix
-- [ ] **Step 4**: Implement; re-run green.
+- [ ] **Step 3**: Write `MTListChip.test.tsx` covering browse states #1–#5 from §8 (kind='resale' is LOCKED per §9 Q2 / Appendix A.3 — NOT optional, NOT hidden):
+  - kind='boxoffice' + from=true → "from $25" gold + star glyph, generic surface-1 background, 6px gap
+  - kind='community' + from=true → "from $25" default fg, generic surface-1 background, 6px gap
+  - kind='resale' + from=true → "from $85" in coral, coral dot prefix, **always-present mono "resale" tag** rendered AFTER the price (assert the literal text "resale" is in the DOM regardless of other props), coral-tinted background, coral-tinted border, **7px gap** (not 6px)
+  - kind='resale' + from=false → "$85" in coral with "resale" tag still present (verify the tag does not depend on the `from` prop)
+  - kind=null (no source) → fg-muted, no glyph, generic chrome
+  - from=false (non-resale kinds) → no "from" prefix
+- [ ] **Step 4**: Implement; re-run green. Add `mtListChip.resaleTag: 'resale'` to `CONSUMER_COPY.priceRegion` in `definitions/copy.ts`.
 - [ ] **Step 5**: Barrel exports.
-- [ ] **Step 6**: Commit: `feat(consumer): add MTListChip + pickBrowseHeadline parity helper`.
+- [ ] **Step 6**: Commit: `feat(consumer): add MTListChip + pickBrowseHeadline parity helper (includes Q2 locked resale variant)`.
 
 ---
 
@@ -1351,13 +1450,15 @@ export const MTAddTierSuccess = ({
 )
 ```
 
+**Locked decision callout (§9 Q4-eng):** `remainingTiers` is driven by client-side session state — "tiers I just submitted in this session" — NOT by re-fetching `priceByTier` after success. Re-fetch causes flicker; the rare two-device race is recoverable on next page load. This component just renders the `remainingTiers` array it's handed; the orchestrator (Task 9) is responsible for filtering against session state.
+
 **TDD steps:**
 
 - [ ] **Step 1**: Write `MTAddTierSuccess.test.tsx`:
   - state #1 first tier submitted: success eyebrow + check glyph + headline "GA price is in. Thanks." + body "$25 box office · sits pending · 1/2 until one more fan confirms." (pending fragment in azure)
   - state #2 remaining tiers: renders `+ Add reserved`, `+ Add vip` pills when `remainingTiers=['Reserved','VIP']`
   - state #3 clicking pill fires `onAddTier(tier)` with the picked tier
-  - state #4 (⚠️ flagged unknown #4): empty `remainingTiers` → collapses to Done only (no add-another section)
+  - state #4 (LOCKED per §9 Q4-eng): empty `remainingTiers` → collapses to Done only (no add-another section)
   - clicking Done fires `onDone`
 - [ ] **Step 2**: Implement; re-run green.
 - [ ] **Step 3**: Barrel export.
@@ -1382,9 +1483,9 @@ import type { EventDetailResponse, TierPriceBlock, TicketLink, Tier } from '@con
 export type PriceRegionDecision =
   | { kind: 'noop' } // server-rendered PriceDisplay handles it
   | { kind: 'sold-out-resale'; resaleLink: TicketLink; faceValueResaleVendor: string; faceValueResaleRange?: string }
-  | { kind: 'sold-out-degraded' } // ⚠️ §9 unknown #1
+  | { kind: 'sold-out-contribute' } // LOCKED §9 Q1 — render ContributeFaceValueCard + SoldOutPriceCard variant='no-listing'
   | { kind: 'no-price-resale'; resaleLink: TicketLink; faceValueResaleVendor: string }
-  | { kind: 'no-price-empty' } // ⚠️ §9 unknown #2
+  | { kind: 'no-price-empty' } // LOCKED §9 Q2-eng — fall through to legacy NoPriceCard, no FaceValueCard
   | { kind: 'multi-source-mixed'; entryBlock: TierPriceBlock; crossSourceAlt: TierAlternate; otherTiers: TierPriceBlock[] }
   | { kind: 'multi-tier-shipped'; priceByTier: TierPriceBlock[] } // routes to MultiTierLiveCard / MixedTierCard / TwoPendingStack
   | { kind: 'legacy' } // priceByTier null → existing flat-field code path
@@ -1399,6 +1500,8 @@ export interface PriceRegionInput {
 export function decidePriceRegion(input: PriceRegionInput): PriceRegionDecision
 ```
 
+**Discriminant rename:** the `'sold-out-degraded'` discriminant from the original plan is renamed to `'sold-out-contribute'` to match the Q1-locked `ContributeFaceValueCard` component. The semantics are unchanged but the new name surfaces the contribution-only nature of the state (vs. a degraded comparison card).
+
 **Decision logic (mirrors property table §8 states 1–13):**
 
 ```ts
@@ -1409,10 +1512,11 @@ export function decidePriceRegion({ event }: PriceRegionInput): PriceRegionDecis
   if (event.priceStatus === 'soldout' || event.status === 'soldout') {
     const resaleLink = event.ticketLinks?.find((link) => link.kind === 'resale') ?? null
     if (resaleLink === null) {
-      // ⚠️ §9 unknown #1 — design open Q. Default to degraded variant per the
-      // mock's documented fallback "available, above face value". User decision
-      // pending in plan review.
-      return { kind: 'sold-out-degraded' }
+      // LOCKED §9 Q1 — render ContributeFaceValueCard (single ghost box-office
+      // row + signal CTA, no resale row, no outbound ProvenanceCTA) alongside
+      // SoldOutPriceCard variant='no-listing'. See property table Appendix A.1
+      // + A.2.
+      return { kind: 'sold-out-contribute' }
     }
     return {
       kind: 'sold-out-resale',
@@ -1431,9 +1535,9 @@ export function decidePriceRegion({ event }: PriceRegionInput): PriceRegionDecis
         faceValueResaleVendor: resaleLink.vendor ?? 'Resale',
       }
     }
-    // ⚠️ §9 unknown #2 — no resale link AND no priceByTier. Default to
-    // 'legacy' so the existing community-handoff card renders. User decision
-    // pending in plan review on whether FaceValueCard appears at all.
+    // LOCKED §9 Q2-eng — no resale link AND no priceByTier. Fall through to
+    // the existing community-handoff card (NoPriceCard). NO FaceValueCard —
+    // pedagogy collapses without a resale anchor.
     return { kind: 'no-price-empty' }
   }
 
@@ -1460,11 +1564,11 @@ export function decidePriceRegion({ event }: PriceRegionInput): PriceRegionDecis
 
 **TDD steps:**
 
-- [ ] **Step 1**: Write `decision-tree.test.ts` covering state #s 3, 5, 10, 11, 12, 13 from property table §8:
+- [ ] **Step 1**: Write `decision-tree.test.ts` covering state #s 3, 5, 10, 11, 12, 13 from property table §8 (all §9 unknowns are now LOCKED):
   - sold-out + resale link → `sold-out-resale` with vendor
-  - sold-out + no resale link → `sold-out-degraded` (⚠️ §9 #1)
+  - sold-out + no resale link → `sold-out-contribute` (LOCKED §9 Q1)
   - no priceByTier + resale link → `no-price-resale`
-  - no priceByTier + no links → `no-price-empty` (⚠️ §9 #2)
+  - no priceByTier + no links → `no-price-empty` (LOCKED §9 Q2-eng)
   - priceByTier with entry tier mixed sources → `multi-source-mixed`
   - priceByTier with entry tier single source → `multi-tier-shipped`
   - null priceByTier + no soldout → `no-price-empty` (legacy fallback)
@@ -1484,9 +1588,9 @@ export function decidePriceRegion({ event }: PriceRegionInput): PriceRegionDecis
 `EventDetailPriceBlock` function starts at ~line 280. Insert a new branch **after** the "0. Promoted sold-out" branch (~line 372) and **before** the "1. Pending sold-out report" branch (~line 500). The new branch calls `decidePriceRegion(event)` and:
 
 - For `sold-out-resale`: replaces the disabled `SoldOutCta` (already replaced server-side by `PriceDisplay` flow but we hijack here when `priceByTier` is present) with a stack: `[SoldOutPriceCard (strikethrough header)] + FaceValueCard + ProvenanceCTA kind='resale' outline + ReportFooter`. The existing `SoldOutPriceCard` block at lines 384–497 stays as the upper card; the new wiring appends `FaceValueCard` + `ProvenanceCTA` below it (replacing nothing — pure addition).
-- For `sold-out-degraded`: same composition but `FaceValueCard variant='sold-out-degraded'` with `resaleRange` undefined. **No `ProvenanceCTA`** since there's no link to point at.
+- For `sold-out-contribute` (LOCKED §9 Q1 — see property table Appendix A.1 + A.2): render `[SoldOutPriceCard variant='no-listing' (em-dash price + "No tickets listed anywhere we can see — not even resale.")] + ContributeFaceValueCard + ReportFooter`. **No `FaceValueCard`** (it's a different component now), **no `ProvenanceCTA`** (no link to point at). `SoldOutPriceCard` needs a new additive prop — see "Task 9 sub-step" below.
 - For `no-price-resale`: keep existing `PriceDisplay` no-price path BUT additionally render `FaceValueCard variant='no-price'` + `ProvenanceCTA kind='resale' outline` underneath. (`PriceDisplay` handles the community-handoff "Submit a price" card; we layer source legibility on top.)
-- For `no-price-empty`: fall through to existing legacy logic — `return { kind: 'noop' }` semantically.
+- For `no-price-empty` (LOCKED §9 Q2-eng): fall through to existing legacy logic — `return { kind: 'noop' }` semantically. No `FaceValueCard`, no `ContributeFaceValueCard` — existing community-handoff card carries the state.
 - For `multi-source-mixed`: render `<MultiSourceMultiTierCard>` from the `entryBlock` + `crossSourceAlt`; map other-tier `TierPriceBlock` rows to `TierAlternateRow` props.
 - For `multi-tier-shipped`: delegate to shipped `MultiTierLiveCard` / `MixedTierCard` / `TwoPendingStack` with `event.priceByTier` mapped to their expected prop shapes. **Note:** the shipped components currently accept the LEGACY flat-field shape — see existing wiring at lines 605–646. The new path maps `priceByTier[0]` → headline, `.alternates` → `alternates`, etc. Keep both call sites side-by-side initially (priceByTier branch above the legacy alternates branch); only flip the legacy code to a `priceByTier == null` guard once the migration is verified green.
 
@@ -1497,24 +1601,27 @@ export function decidePriceRegion({ event }: PriceRegionInput): PriceRegionDecis
 **TDD steps:**
 
 - [ ] **Step 1**: Read the existing `EventDetailClient.tsx` decision tree lines 280–950 carefully. Map each existing branch to one of the property-table §8 states. Anything unaccounted for is "legacy" and stays put.
-- [ ] **Step 2**: Add the new branches above the existing "0. Promoted sold-out" branch:
+- [ ] **Step 2**: Add an additive prop to `SoldOutPriceCard` for the Q1-locked no-listing variant. Per the addendum (property table Appendix A.2), the shipped card needs to support rendering `"—"` (em-dash) instead of a strikethrough price + the caption `"No tickets listed anywhere we can see — not even resale."`. Eng's call on the prop shape — recommended: `variant: 'has-listing' | 'no-listing'` (default `'has-listing'`) OR `showStrikethrough: boolean` (default `true`). Update `SoldOutPriceCard.tsx` + tests for the new variant.
+- [ ] **Step 3**: Add the new branches above the existing "0. Promoted sold-out" branch:
   ```tsx
   const decision = decidePriceRegion(event)
   if (decision.kind === 'sold-out-resale') { … }
-  if (decision.kind === 'sold-out-degraded') { … }
+  if (decision.kind === 'sold-out-contribute') { … }   // LOCKED §9 Q1
   if (decision.kind === 'no-price-resale') { … }
   if (decision.kind === 'multi-source-mixed') { … }
   if (decision.kind === 'multi-tier-shipped') { … }
   // fall through to legacy branches
   ```
-- [ ] **Step 3**: For each new branch, render the appropriate component(s). Wire `onAddPrice` handlers to `setSubmitPriceOpen(true)`.
-- [ ] **Step 4**: Add the post-submit success branch — when `submitSuccessPayload !== null`, render `MTAddTierSuccess` and route picked tier to re-open the modal with that tier pre-selected.
-- [ ] **Step 5**: Write integration test (`EventDetailClient.test.tsx`, extend if exists, otherwise create alongside):
+- [ ] **Step 4**: For each new branch, render the appropriate component(s). Wire `onAddPrice` handlers to `setSubmitPriceOpen(true)`. For `sold-out-contribute` specifically: render `<SoldOutPriceCard variant='no-listing' />` (or equivalent) ABOVE `<ContributeFaceValueCard onAddPrice={…} />`; do NOT render a `FaceValueCard` and do NOT render a `ProvenanceCTA`.
+- [ ] **Step 5**: Add the post-submit success branch — when `submitSuccessPayload !== null`, render `MTAddTierSuccess` and route picked tier to re-open the modal with that tier pre-selected. Per §9 Q4-eng lock: track `submittedThisSession: Set<Tier>` in local React state (NOT a re-fetch of `priceByTier`); derive `remainingTiers` as `TIER_ENUM.filter(t => !submittedThisSession.has(t))`. Reset the set when the modal closes.
+- [ ] **Step 6**: Write integration test (`EventDetailClient.test.tsx`, extend if exists, otherwise create alongside):
   - mocked `event` with sold-out + resale ticketLink → renders `FaceValueCard` + `ProvenanceCTA` resale
+  - mocked `event` with sold-out + NO ticketLinks → renders `SoldOutPriceCard variant='no-listing'` + `ContributeFaceValueCard`; assert NO `FaceValueCard` and NO `ProvenanceCTA` in the rendered tree (Q1 lock verification)
   - mocked event with `priceByTier` multi-source → renders `MultiSourceMultiTierCard`
   - mocked event with `priceByTier` single-tier boxoffice → renders shipped `MultiTierLiveCard` with `kind='boxoffice'`
-- [ ] **Step 6**: `pnpm --filter @concert-crawl/web typecheck && pnpm --filter @concert-crawl/web test EventDetailClient`.
-- [ ] **Step 7**: Commit: `feat(consumer): wire price-region decision tree into event detail page`.
+  - submit-success state: after `MTAddTierSuccess` fires `onAddTier('VIP')`, verify the session-tracking set updates and the VIP pill is removed on next render (Q4-eng lock verification — no re-fetch)
+- [ ] **Step 7**: `pnpm --filter @concert-crawl/web typecheck && pnpm --filter @concert-crawl/web test EventDetailClient`.
+- [ ] **Step 8**: Commit: `feat(consumer): wire price-region decision tree into event detail page`.
 
 ---
 
@@ -1640,30 +1747,54 @@ return (
 - Modify: `apps/web/src/components/consumer/DisputedPriceCard.tsx`
 - Modify: `apps/web/src/components/consumer/DisputedPriceCard.test.tsx` (or create)
 
-**Property table reference:** states #17 + #18; `memory:project_pr4_dispute_affordance_hiding`; `memory:reference_consumer_notifications_gap` (passive surfacing is acceptable until #737 ships).
+**Property table reference:** states #17 + #18; Appendix A.4 (Q3 lock — pointer copy + styling); `memory:project_pr4_dispute_affordance_hiding`; `memory:reference_consumer_notifications_gap` (passive surfacing is acceptable until #737 ships).
 
-**State #17 — hide dispute affordance:**
+**State #17 — REPLACE the dispute affordance with a counter pointer (LOCKED §9 Q3 — see Appendix A.4):**
 
-The dispute-entry affordance lives in two places:
+The dispute-entry affordance lives in three places:
 
 1. `PendingCardB`'s footer "Saw a different number?" button (lines 336–351 of `PendingCardB.tsx`).
 2. `CommunityPriceChip`'s "Saw the same? Confirm" button (line 71–78 of `CommunityPriceChip.tsx`).
 3. The submit-price card CTA when a counter is pending (`SubmitPriceCardCta`).
 
-The orchestrator (`EventDetailClient`) is the gate. When `event.counterSubmission !== null` (legacy field) OR `event.priceByTier[i].counterSubmission !== null` (per-tier), the orchestrator passes a `hideDisputeAffordance` prop to the affected card OR simply omits the entry CTA.
+Per the Q3 lock, the `PendingCardB` footer link is REPLACED (not silently hidden) with a coral pointer link in the same footer slot. The orchestrator (`EventDetailClient`) is the gate. When `event.counterSubmission !== null` (legacy field) OR `event.priceByTier[i].counterSubmission !== null` (per-tier), it passes a `counterPointerHref` (or equivalent — see below) to the affected card.
 
-**Approach:** add a `hideDisputeAffordance?: boolean` prop to `PendingCardB`. When true, the `view === 'other'` footer renders only the "Confirm price" button (no "Saw a different number?" link). At the orchestrator, compute the flag per tier:
+**Approach:** add a `counterPointer?: { href: string } | null` prop to `PendingCardB` (and any other card that surfaces the "Saw a different number?" link). When non-null, the `view === 'other'` footer renders the coral pointer link from Appendix A.4 INSTEAD OF the "Saw a different number?" button. `Confirm price` button stays unchanged. When null, the existing dispute link renders as today.
+
+Pointer styling (LOCKED — copy verbatim from Appendix A.4):
+
+| Property | Value |
+|----------|-------|
+| display | `inline-flex` |
+| align-items | `center` |
+| gap | `6px` |
+| text-decoration | `none` |
+| font-family | `'JetBrains Mono', monospace` |
+| font-size | `10px` |
+| color | `oklch(0.65 0.20 25)` (coral — NOT muted, NOT `var(--fg-subtle)`) |
+| letter-spacing | `0.04em` |
+| text-transform | `uppercase` |
+| font-weight | `700` |
+
+Coral dot prefix: 5×5, border-radius 50%, background `oklch(0.65 0.20 25)`.
+
+Label text: `"Someone's contesting this — see the counter"` (add to `CONSUMER_COPY.priceRegion.dispute.counterPointerLabel`).
+
+Arrow SVG: width=11, height=11, viewBox=`0 0 12 12`, path d=`M2.5 6h7M6 2.5l3.5 3.5L6 9.5`, stroke=`currentColor`, stroke-width=1.8, stroke-linecap=round, stroke-linejoin=round.
+
+`href` semantics: points at the counter card on the same page. Implementation can be a fragment anchor (`#counter-<id>`) OR an in-page `scrollIntoView` handler — eng's call. Recommendation: fragment anchor with the counter card rendering an `id={`counter-${tierOrSubmissionId}`}` attribute; this works without any client-side JS and gives free deep-link behavior.
+
+At the orchestrator, compute the pointer per tier:
 
 ```tsx
-const tierHasCounter = (tier: string): boolean => {
+const counterPointerFor = (tier: string): { href: string } | null => {
   const block = event.priceByTier?.find((blk) => blk.tier === tier)
-  return block?.counterSubmission != null
+  if (block?.counterSubmission == null) return null
+  return { href: `#counter-${block.counterSubmission.id}` }
 }
 ```
 
-And pass `hideDisputeAffordance={tierHasCounter(sub.tier)}` to each `<PendingCardB>` render.
-
-For the legacy `event.counterSubmission !== null` case (single-tier), the existing `DisputedPriceCard` branch already hides the affordance by virtue of rendering the counter card instead of the dispute-entry card. No change needed for that path.
+And pass `counterPointer={counterPointerFor(sub.tier)}` to each `<PendingCardB>` render. For the legacy `event.counterSubmission !== null` case (single-tier), the existing `DisputedPriceCard` branch already renders the counter card; the swap just wires the pointer to its anchor.
 
 **State #18 — admin defer pill:**
 
@@ -1694,13 +1825,18 @@ For the legacy `event.counterSubmission !== null` case (single-tier), the existi
 
 **TDD steps:**
 
-- [ ] **Step 1**: Update `PendingCardB.tsx` props with `hideDisputeAffordance?: boolean`. In the `view === 'other'` branch, conditionally render the "Saw a different number?" button.
-- [ ] **Step 2**: Update `PendingCardB.test.tsx` — when `hideDisputeAffordance` is true, the dispute link is NOT in the DOM.
-- [ ] **Step 3**: Update `EventDetailClient` orchestrator to pass `hideDisputeAffordance={tierHasCounter(sub.tier)}` to each pending card.
-- [ ] **Step 4**: Update `DisputedPriceCard.tsx` props with `lastAdminActionKind?: 'defer' | null`. Render the pill near the header when truthy.
-- [ ] **Step 5**: Update `DisputedPriceCard.test.tsx` — pill appears when `lastAdminActionKind='defer'`; absent when null.
-- [ ] **Step 6**: Wire `lastAdminActionKind` through from `event.counterSubmission` (already on the type per `packages/types/src/index.ts:474`) and from `event.priceByTier[].counterSubmission`.
-- [ ] **Step 7**: Commit: `feat(consumer): passive surfaces — hide dispute affordance on counter + admin defer pill`.
+- [ ] **Step 1**: Add `dispute.counterPointerLabel: "Someone's contesting this — see the counter"` to `CONSUMER_COPY.priceRegion` in `definitions/copy.ts`. Add a small inline `CounterPointerLink` component (either as a private helper inside `PendingCardB.tsx` or as a shared file under `price-region/` — eng's call; recommend shared if `DisputedPriceCard` also needs it).
+- [ ] **Step 2**: Update `PendingCardB.tsx` props with `counterPointer?: { href: string } | null`. In the `view === 'other'` branch footer, render the coral `CounterPointerLink` INSTEAD OF the "Saw a different number?" button when `counterPointer != null`. The `Confirm price` button stays unchanged in both cases. Use the styling from Appendix A.4 verbatim (mono 10px, coral, 5×5 coral dot, 11×11 arrow SVG, 6px gap).
+- [ ] **Step 3**: Update `PendingCardB.test.tsx`:
+  - when `counterPointer={{ href: '#counter-abc' }}`, the dispute link "Saw a different number?" is NOT in the DOM
+  - the coral pointer link IS in the DOM with text "Someone's contesting this — see the counter", `href="#counter-abc"`, color `oklch(0.65 0.20 25)`, mono font, uppercase
+  - the `Confirm price` button is still present in both cases
+  - when `counterPointer={null}` (or omitted), the original "Saw a different number?" button renders as today
+- [ ] **Step 4**: Update `EventDetailClient` orchestrator to compute `counterPointerFor(sub.tier)` per tier and pass to each `<PendingCardB>` render. When `DisputedPriceCard` renders the counter, ensure it carries the matching `id={`counter-${counterSubmission.id}`}` anchor target.
+- [ ] **Step 5**: Update `DisputedPriceCard.tsx` props with `lastAdminActionKind?: 'defer' | null`. Render the admin-defer pill near the header when truthy. Add the `id` anchor on the counter card root for the Q3 pointer to land on.
+- [ ] **Step 6**: Update `DisputedPriceCard.test.tsx` — pill appears when `lastAdminActionKind='defer'`; absent when null. `id` attribute is present and matches `counter-${counterSubmission.id}`.
+- [ ] **Step 7**: Wire `lastAdminActionKind` through from `event.counterSubmission` (already on the type per `packages/types/src/index.ts:474`) and from `event.priceByTier[].counterSubmission`.
+- [ ] **Step 8**: Commit: `feat(consumer): passive surfaces — counter pointer (Q3 lock) + admin defer pill`.
 
 ---
 
@@ -1754,17 +1890,40 @@ For the legacy `event.counterSubmission !== null` case (single-tier), the existi
 
 ---
 
-## Open §9 Unknowns — User Decision Required Before Implementation
+## §9. Locked decisions — design addendum 2026-06-24
 
-These unknowns appear in property table §9 and surface as code branches in this plan. The default behavior is implemented (so the plan can proceed) but flagged as `⚠️` in tests. Calling agent must surface these to the user during plan review:
+Three open consumer-UI questions resolved by design's targeted addendum (PR4-ADDENDUM.md). All addendum files committed to `design/design_handoff_price_source_discoverability/` (PR4-ADDENDUM.md + pr4-addendum-mocks.jsx + the HTML preview). Property table Appendix A enumerates every CSS value. No `⚠️` flags remain on these states — defaults are LOCKED.
 
-1. **State #11 — sold-out with no resale or primary link.** Plan default: render `FaceValueCard variant='sold-out-degraded'` with "available, above face value" copy, no `ProvenanceCTA`. Open question: should `FaceValueCard` render at all when there's no resale link to anchor against?
-2. **State #13 — no-price with no ticket links.** Plan default: fall through to legacy community-handoff card (existing `PriceDisplay` no-price path) without adding `FaceValueCard`. Open question: should `FaceValueCard` appear here as a generic "We don't have a price" prompt?
-3. **Browse #3 — resale-only list chip.** Plan default: render `MTListChip kind='resale'` with coral text. Open question: should resale-only events display a distinct affordance (e.g. "resale only" label) or be visually downplayed?
-4. **Submit-success #2/#4 — add-another-tier picker drive.** Plan default: client tracks "tiers I just submitted" via local state inside `EventDetailPriceBlock`; remaining tiers are derived as `TIER_ENUM.filter(t => !submittedThisSession.has(t))`. Open question: should we re-fetch `priceByTier` after each success to ensure server-side correctness, or trust client tracking?
-5. **State #17 — dispute-affordance replacement copy.** Plan default: simply HIDE the "Saw a different number?" link when a counter exists; do NOT add a "Confirm this challenge" replacement (the existing counter card surfacing already invites engagement via `DisputedPriceCard` footer). Open question: should we add an explicit replacement CTA pointing at the counter card?
+**Q1 (state #11 — sold-out, no resale, no primary, no boxoffice):** Render a NEW component `ContributeFaceValueCard` — sibling of `FaceValueCard` (NOT a variant; the comparison lesson collapses without a resale anchor). Single ghost box-office row + signal CTA. No outbound `ProvenanceCTA`. New copy per Appendix A.1.
 
-(Number 6 from §9 — engagement pill — is not an unknown; it's a passive surface from #697 that PR 4 lights up automatically via `lastAdminActionKind === 'defer'`.)
+Additionally, `SoldOutPriceCard` gains a `variant='no-listing'` prop (or equivalent — eng's call; could also be `showStrikethrough: boolean`) that shows `"—"` instead of strikethrough price + caption `"No tickets listed anywhere we can see — not even resale."` per Appendix A.2.
+
+→ **Task 3** (`FaceValueCard`) adds `ContributeFaceValueCard.tsx` as a sibling output file.
+→ **Task 8** (`decision-tree.ts`) returns `{ kind: 'sold-out-contribute' }` (renamed from the original plan's `'sold-out-degraded'`) to route this state to `ContributeFaceValueCard`.
+→ **Task 9** (`EventDetailClient` wiring) renders `ContributeFaceValueCard` (NOT `FaceValueCard variant='sold-out-degraded'` as the original plan had it) on the `sold-out-contribute` branch.
+→ **Task 9** also wires `SoldOutPriceCard` with the new `variant='no-listing'` (or equivalent) prop for this state.
+
+**Q2 (browse state #3 — cheapest tier is resale-only):** New variant `MT_ListChip kind='resale'` — coral dot + `"from $X"` in coral + always-present mono `"resale"` tag. NON-NEGOTIABLE that the tag is always present (color alone is too quiet at scan speed). Background and border are coral-tinted; gap is 7px (not the 6px used by other variants).
+
+→ **Task 6** (`MTListChip`) extends the existing component to support `kind='resale'` per Appendix A.3. TDD test cases must explicitly include: coral background and border, always-present `"resale"` mono tag (no prop toggle hides it), 7px gap (vs. 6px on other variants).
+
+**Q3 (state #17 — dispute affordance suppression):** Replace the `"Saw a different number?"` footer link with a coral pointer `"Someone's contesting this — see the counter →"` in the SAME footer slot. `Confirm price` button stays unchanged. The pointer scrolls/navigates to the counter card on the same page (implementation: fragment anchor or `scrollIntoView` — eng's call). Color is coral (`oklch(0.65 0.20 25)`), NOT muted.
+
+→ **Task 12** (passive surfaces) handles the footer swap. The dispute-entry "Saw a different number?" link is replaced (not just hidden) per Appendix A.4. Pointer styling: mono 10px, coral, 5×5 coral dot prefix, 11×11 arrow SVG.
+
+### Eng-owned defaults — locked here for the record
+
+These were not design questions but eng decisions that needed an explicit lock:
+
+**Q2-eng (no-price + no ticket links, state #13):** Fall through to the legacy community-handoff card (existing `NoPriceCard` / `PriceDisplay` no-price path); NO `FaceValueCard`. Pedagogy collapses without a resale anchor — same logic as Q1.
+
+→ **Task 8** decision-tree returns `no-price-empty` for this case; the orchestrator falls through to existing legacy logic (no new component).
+
+**Q4-eng (submit-success add-another-tier picker drive, success states #2/#4):** Client-side session state of "tiers I just submitted in this session." Re-fetching `priceByTier` after each tier-success creates flicker; the rare race (two devices submitting simultaneously) is recoverable on next load.
+
+→ **Task 7** (`MT_AddTierSuccess`) uses local React state to track submitted tiers. `remainingTiers` prop is derived at the orchestrator (Task 9) as `TIER_ENUM.filter(t => !submittedThisSession.has(t))`. No re-fetch on success.
+
+(Number 6 from the original §9 list — engagement pill — was already not an unknown; it's a passive surface from #697 that PR 4 lights up automatically via `lastAdminActionKind === 'defer'`. Task 12 covers it.)
 
 ---
 
@@ -1774,9 +1933,9 @@ These unknowns appear in property table §9 and surface as code branches in this
 
 ## Plan Self-Review
 
-- Every §1–§6 property table section maps to a task: §1 → Task 3, §2 → Task 2, §3 → Task 11, §4 → Task 6, §5 → Task 7, §6 → Tasks 4 + 5.
-- Every §8 state has a branch: states 1–9 + 19 → shipped components reused via Task 9 (multi-tier-shipped branch); state 5 → Task 5 (multi-source-mixed); state 10 → Task 9 (sold-out-resale); state 11 → Task 9 + §9 unknown #1; state 12 → Task 9 (no-price-resale); state 13 → Task 9 + §9 unknown #2; states 14/15/16 → Task 2 + Task 9 ProvenanceCTA wiring; state 17 → Task 12; state 18 → Task 12.
+- Every §1–§6 property table section maps to a task: §1 → Task 3, §2 → Task 2, §3 → Task 11, §4 → Task 6, §5 → Task 7, §6 → Tasks 4 + 5. Appendix A.1 (`ContributeFaceValueCard`) → Task 3; A.2 (`SoldOutPriceCard variant='no-listing'`) → Task 9 step 2; A.3 (`MT_ListChip kind='resale'`) → Task 6; A.4 (counter pointer) → Task 12.
+- Every §8 state has a branch: states 1–9 + 19 → shipped components reused via Task 9 (multi-tier-shipped branch); state 5 → Task 5 (multi-source-mixed); state 10 → Task 9 (sold-out-resale); state 11 → Task 3 + Task 9 (sold-out-contribute — LOCKED §9 Q1); state 12 → Task 9 (no-price-resale); state 13 → Task 9 (no-price-empty — LOCKED §9 Q2-eng, falls through to legacy); states 14/15/16 → Task 2 + Task 9 ProvenanceCTA wiring; state 17 → Task 12 (counter pointer — LOCKED §9 Q3); state 18 → Task 12.
 - Every submit-form state #1–#7 → Task 11.
-- Every submit-success state #1–#6 → Task 7 (component) + Task 9 (orchestration).
-- Every browse state #1–#7 → Task 10.
-- Every locked decision is honored: no `VenueBoxOffice` vendor display (Task 11 step 3 keeps it as the value but relabels to "Venue"); SeatGeek stays in vendor enum (Task 11 step 3 — included in `VENDOR_OPTIONS`); tier enum unchanged (Task 7 uses `Tier` from types unchanged); 1/2 confirmation copy in MTAddTierSuccess (Task 7); box-office exempt from staleness — implicit, not a UI concern in PR 4.
+- Every submit-success state #1–#6 → Task 7 (component) + Task 9 (orchestration — LOCKED §9 Q4-eng uses client session state).
+- Every browse state #1–#7 → Task 10. Browse #3 (resale-only chip) is LOCKED §9 Q2 — Task 6 ships `MT_ListChip kind='resale'` per Appendix A.3.
+- Every locked decision is honored: no `VenueBoxOffice` vendor display (Task 11 step 3 keeps it as the value but relabels to "Venue"); SeatGeek stays in vendor enum (Task 11 step 3 — included in `VENDOR_OPTIONS`); tier enum unchanged (Task 7 uses `Tier` from types unchanged); 1/2 confirmation copy in MTAddTierSuccess (Task 7); box-office exempt from staleness — implicit, not a UI concern in PR 4. All §9 addendum locks (Q1/Q2/Q3/Q2-eng/Q4-eng) honored — see §9 section above.
