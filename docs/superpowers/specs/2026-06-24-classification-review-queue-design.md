@@ -97,7 +97,7 @@ New file `scripts/2026-06-24-isconcert-review-needed-backfill.ts`, following the
    - Columns: `event_id, title, artist, date, venue_name, current_isConcert_implied, llm_isConcert, llm_reviewNeeded, action`
    - `action` is one of:
      - `flag-for-review` — `reviewNeeded=true`, will write `is_concert_review_needed=true`
-     - `unflag` — `reviewNeeded=false`, column stays `false` (no-op write)
+     - `unflag` — `reviewNeeded=false`, will write `is_concert_review_needed=false` (no-op for rows already at the default `false`; clears any prior `true` flag if the LLM has since changed its mind under an improved prompt). This is re-classification semantics: the column always reflects the LLM's latest view.
      - `disagrees-with-prior` — LLM now says `isConcert=true` while the row was hidden. The script does NOT auto-unhide; this surface is purely informational for the human reviewer to consider applying the new UI's Mark-as-concert action after commit.
    - Sorted: `flag-for-review` + `disagrees-with-prior` rows first; `unflag` rows last.
 4. `--commit`: opens transaction, runs `UPDATE events SET is_concert_review_needed = $1 WHERE id = $2` per row. **Does NOT touch `hidden_from_consumer`.**
@@ -197,8 +197,8 @@ PRs 1 and 3 share no code paths (column write vs column read), so they can be de
 
 ## Acceptance criteria
 
-- Crawler emits `reviewNeeded` on every extracted event (unit tests pass).
-- New events arriving via INSERT have `is_concert_review_needed` populated; UPDATE re-crawls leave it alone (integration test passes).
+- LLM-extracted events emit `reviewNeeded` on every extraction (unit tests pass). Non-LLM extraction paths (JSON-LD, platform fetchers) leave `reviewNeeded` undefined, and the column defaults to `false` on INSERT — explicitly intended behavior per the LLM signal section.
+- New events arriving via INSERT have `is_concert_review_needed` populated from the LLM path's signal (or default `false` for non-LLM paths); UPDATE re-crawls leave it alone (integration test passes).
 - Backfill script produces a dry-run CSV listing every currently-hidden event with the LLM's new opinion; `--commit` writes only `is_concert_review_needed`, never `hidden_from_consumer`.
 - Admin can apply the "Hidden — flagged for review" chip on All Events and see the queue.
 - Admin can click into a hidden event's editor, hit Mark as concert in `ClassificationSection`, confirm via modal, and the event re-appears on the consumer surface within one router-refresh cycle. Audit log records the flip.
