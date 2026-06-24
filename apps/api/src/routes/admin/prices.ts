@@ -206,7 +206,16 @@ pricesAdminRouter.get('/coverage', async (ctx) => {
 // that still need an admin decision — corroborated/disputed/stale items have
 // already been processed and don't belong on this surface (#708). The pill
 // on /admin/review uses the same status='pending' filter, so the two surfaces
-// stay in lock-step. Pass `?status=all` to opt out (e.g. for audit views).
+// stay in lock-step. Pass `?status=all` to opt out of the default pending
+// filter for audit views (returns corroborated + archived + stale rows in
+// addition to pending).
+//
+// NOTE: contest counter rows (`disputed_submission_id IS NOT NULL`) are
+// ALWAYS excluded here — including when status=all — because they're owned
+// by the contest endpoints (GET /v1/admin/contests/prices). The PATCH
+// lockout (#754) + the partial unique index keep contest rows on a
+// separate path from the regular single-submission lifecycle, so audit
+// callers needing contest visibility must use the contests endpoint.
 const submissionsQuerySchema = z.object({
   count: z
     .enum(['true', 'false'])

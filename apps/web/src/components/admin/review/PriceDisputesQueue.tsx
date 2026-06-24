@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { type FC } from 'react'
 import type { SourceCategory, Tier, Vendor } from '@concert-crawl/types'
 import { REVIEW_CONTEST_COPY } from './definitions/copy'
+import { formatPriceRange } from './lib/format-price-range'
 
 // Mirrors the per-row payload returned by GET /v1/admin/contests/prices
 // (apps/api/src/routes/admin/contests.ts line ~133). Price-min/max stay as
@@ -50,21 +51,6 @@ interface PriceDisputesQueueProps {
   // pulls from `counts.priceContests` (the same true total), so reading
   // `total` here keeps the two surfaces in agreement.
   total: number
-}
-
-// Design property table §2 — `$floor–$ceiling` if ceiling > floor, else
-// `$floor`. parseFloat tolerates Postgres decimal strings like "48.00";
-// integer values render without trailing ".00" via the explicit
-// Number.isInteger branch.
-const formatPriceRange = (floor: string, ceiling: string | null): string => {
-  const floorNum = parseFloat(floor)
-  const formatNum = (num: number): string =>
-    Number.isInteger(num) ? `$${num}` : `$${num.toFixed(2)}`
-  if (ceiling === null) return formatNum(floorNum)
-  const ceilingNum = parseFloat(ceiling)
-  if (ceilingNum > floorNum)
-    return `${formatNum(floorNum)}–${formatNum(ceilingNum)}`
-  return formatNum(floorNum)
 }
 
 // Inter font stack repeated across the panel + cells. Pulled out so the

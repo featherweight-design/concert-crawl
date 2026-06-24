@@ -1,6 +1,7 @@
 import { type FC } from 'react'
 import type { SourceCategory, Tier, Vendor } from '@concert-crawl/types'
 import { REVIEW_CONTEST_COPY } from './definitions/copy'
+import { formatPriceRange } from './lib/format-price-range'
 
 // Shared per-side card rendered twice inside AdminDisputePanel (parent +
 // counter, side-by-side). Pure presentational: takes props, renders DOM.
@@ -44,21 +45,6 @@ export interface AdminEntryProps {
   // 2px accent border + "winner" badge. `null` = unresolved (no badge,
   // no accent on either side).
   winner: 'original' | 'counter' | null
-}
-
-// Design table §3b line 208 — `FormatRange(floor, ceiling)`.
-// Matches PriceDisputesQueue.formatPriceRange for consistency: integers
-// render without trailing ".00"; range collapses to single value when
-// ceiling <= floor or ceiling is null.
-const formatPriceRange = (floor: string, ceiling: string | null): string => {
-  const floorNum = parseFloat(floor)
-  const formatNum = (num: number): string =>
-    Number.isInteger(num) ? `$${num}` : `$${num.toFixed(2)}`
-  if (ceiling === null) return formatNum(floorNum)
-  const ceilingNum = parseFloat(ceiling)
-  if (ceilingNum > floorNum)
-    return `${formatNum(floorNum)}–${formatNum(ceilingNum)}`
-  return formatNum(floorNum)
 }
 
 // Repeated font stacks pulled out for readability; same convention as
