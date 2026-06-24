@@ -30,7 +30,7 @@ The first two are the recovery cases. The third is what the LLM should keep gett
 
 ## Out of scope
 
-- Numeric LLM confidence scores. Binary `reviewNeeded` only. The brainstorm explicitly weighed confidence-as-number vs boolean and picked boolean — tuning surface (threshold knob, audit semantics, retroactive re-tuning) doesn't justify itself at the current volume.
+- Numeric LLM **isConcert-classification** confidence scores (distinct from the existing `confidence` field on `NormalizedEvent`, which scores extraction accuracy — not classification certainty). Binary `reviewNeeded` only. The brainstorm explicitly weighed confidence-as-number vs boolean for the classification signal and picked boolean — tuning surface (threshold knob, audit semantics, retroactive re-tuning) doesn't justify itself at the current volume.
 - Bulk "Mark as concert" endpoint. At expected steady-state queue volume (~1–2 events per backfill cycle, ≤5 active at any time), single-row action is sufficient. The existing bulk "Mark non-concert" endpoint remains as-is for the primary-direction workflow.
 - Surfacing visible-but-flagged events in the admin UI. The `is_concert_review_needed` column is written symmetrically (on both `isConcert=true` and `isConcert=false` classifications), but only the hidden-and-flagged slice surfaces in this cycle. The visible-and-flagged data is preserved for future tuning and a possible later UI.
 - Separate audit action keys for single-row Mark as concert vs Mark non-concert. Both audit as `event.update` today (inherited from the existing PATCH route's blanket action key). Reconciling that asymmetry is a separate cleanup tracked as a follow-up issue.
@@ -48,7 +48,7 @@ ALTER TABLE events
   ADD COLUMN is_concert_review_needed BOOLEAN NOT NULL DEFAULT FALSE;
 ```
 
-Semantically: "the LLM had reasonable doubt about the `isConcert` classification of this row." Three write paths, distinct:
+Semantically: "the LLM had reasonable doubt about the `isConcert` classification of this row." Four write paths, distinct:
 
 - **Crawler INSERT** writes the column once when the row is first created from an LLM extraction.
 - **Crawler re-crawl** (the `ON CONFLICT DO UPDATE` path) does NOT touch the column — once a row exists, the crawler is frozen.
