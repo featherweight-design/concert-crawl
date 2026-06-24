@@ -83,6 +83,58 @@ describe('SubmitPriceModal — form view', () => {
     await waitFor(() => expect(screen.getByText('GA')).toBeTruthy())
     expect(screen.getByText('VIP')).toBeTruthy()
   })
+
+  it('renders source-category options and they appear BEFORE the floor field in DOM order', async () => {
+    const { container } = render(<SubmitPriceModal {...defaultProps} />)
+    await waitFor(() =>
+      expect(screen.getByText("Where's this price from?")).toBeTruthy(),
+    )
+    expect(screen.getByText('Box office')).toBeTruthy()
+    expect(screen.getByText('Standard ticket')).toBeTruthy()
+    expect(screen.getByText('Resale')).toBeTruthy()
+
+    // Source group must precede the Floor field in DOM order
+    const sourceLabel = screen.getByText("Where's this price from?")
+    const floorLabel = screen.getByText('Floor')
+    const orderPosition = sourceLabel.compareDocumentPosition(floorLabel)
+    // Node.DOCUMENT_POSITION_FOLLOWING === 0x04
+    expect(orderPosition & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // Should NOT render the old howFound chip group
+    expect(screen.queryByText('Bought it myself')).toBeNull()
+    expect(screen.queryByText('Saw the listing')).toBeNull()
+    expect(container).toBeDefined()
+  })
+
+  it("clicking source='boxoffice' switches the floor label to 'Face value' and renders the 'printed price' hint", async () => {
+    render(<SubmitPriceModal {...defaultProps} />)
+    await waitFor(() => expect(screen.getByText('Box office')).toBeTruthy())
+    fireEvent.click(screen.getByText('Box office'))
+    await waitFor(() => expect(screen.getByText('Face value')).toBeTruthy())
+    expect(screen.getByText('the printed price')).toBeTruthy()
+    // Floor label should be replaced, not duplicated
+    expect(screen.queryByText('Floor')).toBeNull()
+  })
+
+  it("clicking source='resale' switches the floor label to 'Resale price'", async () => {
+    render(<SubmitPriceModal {...defaultProps} />)
+    await waitFor(() => expect(screen.getByText('Resale')).toBeTruthy())
+    fireEvent.click(screen.getByText('Resale'))
+    await waitFor(() => expect(screen.getByText('Resale price')).toBeTruthy())
+    expect(screen.queryByText('Floor')).toBeNull()
+  })
+
+  it("source='boxoffice' auto-fills the vendor to 'Venue' and renders the auto-filled note", async () => {
+    render(<SubmitPriceModal {...defaultProps} />)
+    await waitFor(() => expect(screen.getByText('Box office')).toBeTruthy())
+    fireEvent.click(screen.getByText('Box office'))
+    await waitFor(() =>
+      expect(
+        screen.getByText('Auto-filled because source is box office'),
+      ).toBeTruthy(),
+    )
+    // The Vendor chip "Venue" should be present (vendor auto-fills to VenueBoxOffice)
+    expect(screen.getByText('Venue')).toBeTruthy()
+  })
 })
 
 describe('SubmitPriceModal — success state', () => {
@@ -113,6 +165,103 @@ describe('SubmitPriceModal — success state', () => {
     await waitFor(() => expect(screen.getByText('Got it.')).toBeTruthy())
     expect(screen.getByText('Back to show')).toBeTruthy()
     expect(screen.queryByText('Submit another')).toBeNull()
+  })
+})
+
+describe('SubmitPriceModal — payload shape', () => {
+  it('POST body includes sourceCategory + derived howFound; no standalone howFound chip-group field', async () => {
+    let postBody: unknown
+    let callCount = 0
+    global.fetch = vi
+      .fn()
+      .mockImplementation((_url: string, init?: RequestInit) => {
+        callCount++
+        if (callCount === 1) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              success: true,
+              data: { alreadySubmitted: false, userSubmission: null },
+            }),
+          })
+        }
+        if (init?.body) {
+          postBody = JSON.parse(init.body as string)
+        }
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            success: true,
+            data: {
+              id: 'sub-new',
+              priceMin: '32',
+              priceMax: null,
+              tier: 'GA',
+              vendor: 'VenueBoxOffice',
+              howFound: 'bought_myself',
+              sourceCategory: 'boxoffice',
+            },
+          }),
+        })
+      })
+
+    render(<SubmitPriceModal {...defaultProps} />)
+    await waitFor(() => expect(screen.getByText('Box office')).toBeTruthy())
+    fireEvent.click(screen.getByText('Box office'))
+    fireEvent.click(screen.getByText('Submit price'))
+    await waitFor(() => expect(screen.getByText('Got it.')).toBeTruthy())
+
+    expect(postBody).toBeDefined()
+    const body = postBody as Record<string, unknown>
+    expect(body['sourceCategory']).toBe('boxoffice')
+    // boxoffice → bought_myself per howFoundForSource
+    expect(body['howFound']).toBe('bought_myself')
+    // boxoffice auto-fills vendor to VenueBoxOffice (API value preserved)
+    expect(body['vendor']).toBe('VenueBoxOffice')
+  })
+})
+
+describe('SubmitPriceModal — 409 race toast', () => {
+  it('surfaces the disputeRace409Toast and returns to form when 409 has no `submission` payload', async () => {
+    let callCount = 0
+    global.fetch = vi.fn().mockImplementation(() => {
+      callCount++
+      if (callCount === 1) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            success: true,
+            data: { alreadySubmitted: false, userSubmission: null },
+          }),
+        })
+      }
+      // 409 without `submission` body → race-case (counter conflict)
+      return Promise.resolve({
+        ok: false,
+        status: 409,
+        json: async () => ({
+          success: false,
+          error:
+            'Another challenge is already pending against this submission.',
+        }),
+      })
+    })
+
+    render(<SubmitPriceModal {...defaultProps} />)
+    await waitFor(() => expect(screen.getByText('Box office')).toBeTruthy())
+    fireEvent.click(screen.getByText('Box office'))
+    fireEvent.click(screen.getByText('Submit price'))
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          'Another challenge was just filed — refresh to see it.',
+        ),
+      ).toBeTruthy(),
+    )
+    // Form is still visible (not transitioned to alreadySubmitted)
+    expect(screen.queryByText('Already in.')).toBeNull()
+    // Source field still on screen — confirms we returned to 'form'
+    expect(screen.getByText("Where's this price from?")).toBeTruthy()
   })
 })
 
@@ -207,7 +356,7 @@ describe('SubmitPriceModal — alreadySubmitted state', () => {
     expect(screen.getByText('Withdraw')).toBeTruthy()
   })
 
-  it('transitions to alreadySubmitted on 409 from POST', async () => {
+  it('transitions to alreadySubmitted on 409 from POST when `submission` payload is included', async () => {
     let callCount = 0
     global.fetch = vi.fn().mockImplementation(() => {
       callCount++
@@ -220,10 +369,21 @@ describe('SubmitPriceModal — alreadySubmitted state', () => {
           }),
         })
       }
+      // 409 WITH `submission` body — the "already submitted" flavor, not the
+      // race-case. Per PR 4 the race-case (empty 409 body) now surfaces
+      // disputeRace409Toast and stays on form; see "409 race toast" describe.
       return Promise.resolve({
         ok: false,
         status: 409,
-        json: async () => ({}),
+        json: async () => ({
+          submission: {
+            id: 'sub-existing',
+            priceMin: '40',
+            priceMax: null,
+            tier: 'GA',
+            vendor: 'AXS',
+          },
+        }),
       })
     })
 

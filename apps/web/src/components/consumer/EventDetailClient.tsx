@@ -351,10 +351,10 @@ export function EventDetailPriceBlock({
     price: number
     sourceCategory: SourceCategory
   } | null>(null)
+  // Pre-populates the tier picker when the user clicks "+ Add <tier>" on
+  // MTAddTierSuccess. SubmitPriceModal accepts this as an optional prop and
+  // seeds formState.tier on open.
   const [preselectedTier, setPreselectedTier] = useState<Tier | null>(null)
-  // Linter quirk — preselectedTier wiring is finished as part of submit-price
-  // form changes in Task 11; surface the read here so eslint doesn't flag it.
-  void preselectedTier
 
   const pendingSoldOutReport = findPendingReport(reports, 'sold-out')
   const pendingCancelledReport = findPendingReport(reports, 'cancelled')
@@ -852,6 +852,7 @@ export function EventDetailPriceBlock({
               setPreselectedTier(null)
             }}
             openInEditMode={false}
+            preselectedTier={preselectedTier}
             eventId={event.id}
             artist={event.artist}
             venueName={event.venue.name}

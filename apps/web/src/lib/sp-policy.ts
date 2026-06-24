@@ -2,7 +2,7 @@ import { SP_POLICY } from '@concert-crawl/types'
 
 export interface ValidationResult {
   errors: Partial<
-    Record<'floor' | 'ceiling' | 'tier' | 'vendor' | 'howFound', string>
+    Record<'floor' | 'ceiling' | 'tier' | 'vendor' | 'sourceCategory', string>
   >
   warnings: Partial<Record<'floor', string>>
   valid: boolean
@@ -13,7 +13,11 @@ export interface SubmissionInput {
   ceiling: string
   tier: string | null
   vendor: string | null
-  howFound: string | null
+  // PR 4 provenance-first redesign: sourceCategory is the new required field
+  // (replaces the howFound chip group). The API still requires `howFound` on
+  // POST, so SubmitPriceModal derives it from sourceCategory at submit time
+  // (boxoffice → bought_myself, resale/standard → saw_listing).
+  sourceCategory: 'boxoffice' | 'standard' | 'resale' | null
 }
 
 export function validateSubmission(
@@ -41,7 +45,7 @@ export function validateSubmission(
 
   if (!input.tier) errors.tier = 'Pick a tier.'
   if (!input.vendor) errors.vendor = "Pick where it's listed."
-  if (!input.howFound) errors.howFound = 'Pick how you found out.'
+  if (!input.sourceCategory) errors.sourceCategory = 'Pick where this is from.'
 
   if (!errors.floor && peerAvg != null && peerAvg > 0 && input.floor) {
     if (floorNum < SP_POLICY.outlierLowFactor * peerAvg) {

@@ -18,6 +18,19 @@ import type {
   SubmissionWithMeta,
 } from '@concert-crawl/types'
 
+// Derive the API-required `howFound` from the new `sourceCategory` field.
+// The API still requires howFound on POST (price-submissions.ts:29) — this
+// 1:1 mapping keeps the legacy payload satisfied while the v2 form drops
+// the chip group. boxoffice (bought-it-myself) is the strong signal; standard
+// + resale collapse to saw_listing because the form no longer asks "how".
+const howFoundForSource = (source: SourceCategory): HowFound =>
+  source === 'boxoffice' ? 'bought_myself' : 'saw_listing'
+
+// Vendor auto-fill when source = boxoffice. Keeps the VenueBoxOffice enum
+// value for the API (contract-PR drops the value later); consumer display
+// label is "Venue" per round-3 locked decision #2.
+const VENDOR_BOXOFFICE_AUTOFILL: Vendor = 'VenueBoxOffice'
+
 // Type guards for fetch() JSON responses. CLAUDE.md flags `as` casts as a
 // last resort; these read-only guards verify the discriminator + shape we
 // actually rely on without forcing every PriceSubmission field through a
@@ -78,6 +91,10 @@ interface SubmitPriceModalProps {
   venueName: string
   date: string
   openInEditMode?: boolean
+  // When set, the tier picker is pre-populated (still editable so the user
+  // can correct it). Used by EventDetailClient when the user clicks "+ Add
+  // <tier>" on MTAddTierSuccess.
+  preselectedTier?: Tier | null
   onSuccess?: (result: {
     isEdit: boolean
     id: string
@@ -99,19 +116,21 @@ const TIER_OPTIONS = [
   { value: 'Lawn', label: 'Lawn' },
 ]
 
+// "Venue" label replaces "Venue box office" per round-3 locked decision #2.
+// The API value stays `VenueBoxOffice` until the Contract PR retires it.
 const VENDOR_OPTIONS = [
+  { value: 'VenueBoxOffice', label: 'Venue' },
   { value: 'AXS', label: 'AXS' },
   { value: 'Ticketmaster', label: 'Ticketmaster' },
   { value: 'SeatGeek', label: 'SeatGeek' },
   { value: 'DICE', label: 'DICE' },
   { value: 'Eventbrite', label: 'Eventbrite' },
-  { value: 'VenueBoxOffice', label: 'Venue box office' },
 ]
 
-const HOW_FOUND_OPTIONS = [
-  { value: 'bought_myself', label: 'Bought it myself' },
-  { value: 'saw_listing', label: 'Saw the listing' },
-  { value: 'at_the_venue', label: 'At the venue' },
+const SOURCE_CATEGORY_OPTIONS = [
+  { value: 'boxoffice', label: 'Box office' },
+  { value: 'standard', label: 'Standard ticket' },
+  { value: 'resale', label: 'Resale' },
 ]
 
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? ''
@@ -124,6 +143,7 @@ export function SubmitPriceModal({
   venueName,
   date,
   openInEditMode = false,
+  preselectedTier = null,
   onSuccess,
   onWithdrawSuccess,
 }: SubmitPriceModalProps) {
@@ -134,10 +154,15 @@ export function SubmitPriceModal({
   const [formState, setFormState] = useState<SubmissionInput>({
     floor: '',
     ceiling: '',
-    tier: null,
+    tier: preselectedTier,
     vendor: null,
-    howFound: null,
+    sourceCategory: null,
   })
+  // 409 race toast — surfaces when the API returns 409 because another fan
+  // raced a counter ahead of us. Per memory:project_pr4_dispute_affordance_hiding
+  // the toast says "Another challenge was just filed — refresh to see it."
+  // (copy at CONSUMER_COPY.priceRegion.disputeRace409Toast).
+  const [raceToast, setRaceToast] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<
     Partial<Record<string, string>>
   >({})
@@ -156,6 +181,7 @@ export function SubmitPriceModal({
     setIsEditMode(false)
     setFieldErrors({})
     setFieldWarnings({})
+    setRaceToast(null)
 
     const checkExisting = async () => {
       try {
@@ -178,13 +204,16 @@ export function SubmitPriceModal({
           if (body.data.alreadySubmitted && body.data.userSubmission) {
             setExistingSubmission(body.data.userSubmission)
             if (openInEditMode) {
-              // Skip the "Already in." screen — go straight to the edit form
+              // Skip the "Already in." screen — go straight to the edit form.
+              // sourceCategory from the existing row drives the floor label;
+              // when null (legacy rows), default to 'standard'.
               setFormState({
                 floor: body.data.userSubmission.priceMin,
                 ceiling: body.data.userSubmission.priceMax ?? '',
                 tier: body.data.userSubmission.tier,
                 vendor: body.data.userSubmission.vendor,
-                howFound: body.data.userSubmission.howFound,
+                sourceCategory:
+                  body.data.userSubmission.sourceCategory ?? 'standard',
               })
               setIsEditMode(true)
               setModalState('form')
@@ -209,6 +238,7 @@ export function SubmitPriceModal({
     if (!validation.valid) return
 
     setModalState('submitting')
+    setRaceToast(null)
     try {
       const token = await getToken()
       if (!token) {
@@ -216,7 +246,23 @@ export function SubmitPriceModal({
         return
       }
 
-      // Edit mode → PATCH the existing submission instead of POST a new one
+      // sourceCategory is required by the form validator above; this branch
+      // is unreachable when valid=true, but the cast keeps the type narrower
+      // than the SubmissionInput shape.
+      const sourceCategory = formState.sourceCategory as SourceCategory
+      // Vendor auto-fills to VenueBoxOffice when source = boxoffice. Otherwise
+      // use whatever the chip group resolves to (the validator rejects null).
+      const vendor: Vendor =
+        sourceCategory === 'boxoffice'
+          ? VENDOR_BOXOFFICE_AUTOFILL
+          : (formState.vendor as Vendor)
+      const howFound: HowFound = howFoundForSource(sourceCategory)
+
+      // Edit mode → PATCH the existing submission instead of POST a new one.
+      // PATCH does not yet accept sourceCategory; the API re-derives it from
+      // (vendor, howFound) only when the existing row has NULL. Submitting
+      // vendor+howFound that match the new sourceCategory keeps the row
+      // consistent with the form choice without needing a schema change.
       if (isEditMode && existingSubmission) {
         const res = await fetch(
           `${API_URL}/v1/submissions/${existingSubmission.id}`,
@@ -232,8 +278,8 @@ export function SubmitPriceModal({
                 ? { ceiling: Number(formState.ceiling) }
                 : {}),
               tier: formState.tier as Tier,
-              vendor: formState.vendor as Vendor,
-              howFound: formState.howFound as HowFound,
+              vendor,
+              howFound,
             }),
           },
         )
@@ -253,8 +299,8 @@ export function SubmitPriceModal({
           priceMin: String(formState.floor),
           priceMax: formState.ceiling ? String(formState.ceiling) : null,
           tier: formState.tier!,
-          vendor: formState.vendor!,
-          howFound: formState.howFound!,
+          vendor,
+          howFound,
           // Server preserves an explicit sourceCategory on PATCH and only
           // re-derives it when the existing row has NULL (legacy backfill
           // scenarios). Either way, surface whatever the server returns so
@@ -277,8 +323,9 @@ export function SubmitPriceModal({
             priceMin: Number(formState.floor),
             priceMax: formState.ceiling ? Number(formState.ceiling) : undefined,
             tier: formState.tier as Tier,
-            vendor: formState.vendor as Vendor,
-            howFound: formState.howFound as HowFound,
+            vendor,
+            howFound,
+            sourceCategory,
           }),
         },
       )
@@ -289,10 +336,18 @@ export function SubmitPriceModal({
       const responseData = rawResponse
       if (!res.ok) {
         if (res.status === 409) {
+          // 409 has two flavors today:
+          //   (a) "already submitted" — the response carries a `submission`
+          //       payload; route to the alreadySubmitted view.
+          //   (b) counter race — no submission attached. Surface the race
+          //       toast and return to the form so the user can refresh.
           if (!responseData.success && responseData.submission) {
             setExistingSubmission(responseData.submission)
+            setModalState('alreadySubmitted')
+            return
           }
-          setModalState('alreadySubmitted')
+          setRaceToast(CONSUMER_COPY.priceRegion.disputeRace409Toast)
+          setModalState('form')
           return
         }
         throw new Error(
@@ -441,7 +496,10 @@ export function SubmitPriceModal({
                 ceiling: existingSubmission.priceMax ?? '',
                 tier: existingSubmission.tier,
                 vendor: existingSubmission.vendor,
-                howFound: existingSubmission.howFound,
+                // Legacy rows may have a null sourceCategory; default to
+                // 'standard' so the form still renders a floor label and the
+                // validator doesn't immediately complain about a missing pick.
+                sourceCategory: existingSubmission.sourceCategory ?? 'standard',
               })
             }
             setFieldErrors({})
@@ -532,33 +590,92 @@ export function SubmitPriceModal({
             </p>
           </div>
 
-          {/* Floor + Ceiling */}
+          {/* 409 race toast (re-displays the form so the user can retry) */}
+          {raceToast !== null && (
+            <div
+              role="status"
+              aria-live="polite"
+              style={{
+                borderRadius: 8,
+                background:
+                  'color-mix(in oklab, var(--warning) 12%, var(--surface-2))',
+                border:
+                  '1px solid color-mix(in oklab, var(--warning) 40%, var(--border))',
+                padding: '10px 12px',
+                fontFamily: 'var(--font-ui)',
+                fontSize: 12,
+                color: 'var(--warning)',
+                lineHeight: 1.5,
+              }}
+            >
+              {raceToast}
+            </div>
+          )}
+
+          {/* Source-category — provenance FIRST (Q2-lock: where is this from?) */}
+          <ChipGroup
+            label={CONSUMER_COPY.submitPriceV2.sourceLabel}
+            options={SOURCE_CATEGORY_OPTIONS}
+            value={formState.sourceCategory}
+            onChange={(val) =>
+              setFormState((prev) => ({
+                ...prev,
+                sourceCategory: val as SourceCategory,
+                // When source flips to boxoffice, auto-fill the vendor so the
+                // user doesn't have to pick it twice.
+                vendor:
+                  val === 'boxoffice' ? VENDOR_BOXOFFICE_AUTOFILL : prev.vendor,
+              }))
+            }
+            error={fieldErrors['sourceCategory']}
+          />
+
+          {/* Floor + Ceiling — floor label is dynamic per source */}
           <div
             style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}
           >
             <SPNumberField
               id="sp-floor"
-              label={CONSUMER_COPY.submitPrice.form.floorLabel}
+              label={
+                formState.sourceCategory === 'boxoffice'
+                  ? CONSUMER_COPY.submitPriceV2.floorLabelBoxoffice
+                  : formState.sourceCategory === 'resale'
+                    ? CONSUMER_COPY.submitPriceV2.floorLabelResale
+                    : CONSUMER_COPY.submitPriceV2.floorLabelStandard
+              }
               value={formState.floor}
               onChange={(val) =>
                 setFormState((prev) => ({ ...prev, floor: val }))
               }
-              placeholder={CONSUMER_COPY.submitPrice.form.floorPlaceholder}
+              placeholder={CONSUMER_COPY.submitPriceV2.floorPlaceholder}
               required
               error={fieldErrors['floor']}
               warning={fieldWarnings['floor']}
             />
             <SPNumberField
               id="sp-ceiling"
-              label={CONSUMER_COPY.submitPrice.form.ceilingLabel}
+              label={CONSUMER_COPY.submitPriceV2.ceilingLabel}
               value={formState.ceiling}
               onChange={(val) =>
                 setFormState((prev) => ({ ...prev, ceiling: val }))
               }
-              placeholder={CONSUMER_COPY.submitPrice.form.ceilingPlaceholder}
+              placeholder={CONSUMER_COPY.submitPriceV2.ceilingPlaceholder}
               error={fieldErrors['ceiling']}
             />
           </div>
+          {formState.sourceCategory === 'boxoffice' && (
+            <p
+              style={{
+                margin: '-12px 0 0 0',
+                fontFamily: 'var(--font-mono)',
+                fontSize: 10,
+                color: 'var(--fg-subtle)',
+                letterSpacing: '0.04em',
+              }}
+            >
+              {CONSUMER_COPY.submitPriceV2.floorHintBoxoffice}
+            </p>
+          )}
 
           <ChipGroup
             label={CONSUMER_COPY.submitPrice.form.tierLabel}
@@ -577,16 +694,20 @@ export function SubmitPriceModal({
             }
             error={fieldErrors['vendor']}
           />
-
-          <ChipGroup
-            label={CONSUMER_COPY.submitPrice.form.howFoundLabel}
-            options={HOW_FOUND_OPTIONS}
-            value={formState.howFound}
-            onChange={(val) =>
-              setFormState((prev) => ({ ...prev, howFound: val }))
-            }
-            error={fieldErrors['howFound']}
-          />
+          {formState.sourceCategory === 'boxoffice' &&
+            formState.vendor === VENDOR_BOXOFFICE_AUTOFILL && (
+              <p
+                style={{
+                  margin: '-12px 0 0 0',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 10,
+                  color: 'var(--fg-subtle)',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                {CONSUMER_COPY.submitPriceV2.vendorAutoFilledNote}
+              </p>
+            )}
 
           <p
             style={{
