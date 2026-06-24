@@ -207,8 +207,11 @@ pricesAdminRouter.get('/coverage', async (ctx) => {
 // already been processed and don't belong on this surface (#708). The pill
 // on /admin/review uses the same status='pending' filter, so the two surfaces
 // stay in lock-step. Pass `?status=all` to opt out of the default pending
-// filter for audit views (returns corroborated + archived + stale rows in
-// addition to pending).
+// filter for audit views — returns corroborated + archived + stale rows
+// alongside non-contest disputed rows (R8 narrowed the PATCH lockout to
+// active-contest rows only, so a `disputed_submission_id IS NULL` row in
+// status='disputed' is a legitimate admin moderation denial and audit
+// callers should see it).
 //
 // NOTE: contest counter rows (`disputed_submission_id IS NOT NULL`) are
 // ALWAYS excluded here — including when status=all — because they're owned
@@ -292,11 +295,23 @@ pricesAdminRouter.get(
 )
 
 // GET /v1/admin/prices/submissions/count — pending submissions count for dashboard
+//
+// Mirrors the list endpoint's filter: contest counter rows
+// (`disputed_submission_id IS NOT NULL`) are excluded so the dashboard count,
+// the moderation queue list, and the `prices` pill in
+// /v1/admin/review/counts all stay in lock-step. Counters are owned by the
+// contest endpoints (GET /v1/admin/contests/prices) and would otherwise
+// double-count alongside the `priceContests` pill on /admin/review.
 pricesAdminRouter.get('/submissions/count', async (ctx) => {
   const [result] = await db
     .select({ pending: sql<number>`count(*)::int` })
     .from(priceSubmissions)
-    .where(eq(priceSubmissions.status, 'pending'))
+    .where(
+      and(
+        eq(priceSubmissions.status, 'pending'),
+        isNull(priceSubmissions.disputedSubmissionId),
+      ),
+    )
   return ctx.json({ success: true, data: { pending: result?.pending ?? 0 } })
 })
 

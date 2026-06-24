@@ -1019,3 +1019,86 @@ describe('GET /v1/admin/prices/submissions — status filter (#708)', () => {
     expect(body.data.rows).toHaveLength(2)
   })
 })
+
+describe('GET /v1/admin/prices/submissions/count', () => {
+  beforeEach(() => {
+    setAdminAuth()
+    return clearTables()
+  })
+
+  it('returns the pending count for plain submissions', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, { date: '2099-10-01' })
+    await seedPriceSubmission(event.id, 'user-pending-1', {
+      status: 'pending',
+      priceMin: '20',
+    })
+    await seedPriceSubmission(event.id, 'user-pending-2', {
+      status: 'pending',
+      priceMin: '25',
+    })
+    await seedPriceSubmission(event.id, 'user-corroborated', {
+      status: 'corroborated',
+      priceMin: '30',
+    })
+
+    const res = await app.request('/v1/admin/prices/submissions/count', {
+      headers: ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { pending: number }
+    }
+    expect(body.data.pending).toBe(2)
+  })
+
+  // R11-1 (PR #754): the dashboard count must stay in lock-step with the
+  // list endpoint (/v1/admin/prices/submissions) and the `prices` field on
+  // /v1/admin/review/counts. Both already exclude contest counter rows
+  // (`disputed_submission_id IS NOT NULL`) — the count endpoint previously
+  // included them, so dashboard count > list count > review counts and
+  // admins saw three disagreeing numbers for the same surface.
+  it('excludes contest counter rows (disputed_submission_id IS NOT NULL)', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2099-10-01',
+      verified: true,
+    })
+    const parent = await seedPriceSubmission(event.id, 'parent-user', {
+      tier: 'GA',
+      vendor: 'AXS',
+      howFound: 'bought_myself',
+      priceMin: '40',
+      status: 'corroborated',
+    })
+    await seedPriceSubmission(event.id, 'counter-user', {
+      tier: 'GA',
+      vendor: 'AXS',
+      howFound: 'bought_myself',
+      priceMin: '60',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+    })
+    // Two plain pending rows — the count should return exactly these and
+    // exclude the counter above.
+    await seedPriceSubmission(event.id, 'plain-pending-1', {
+      status: 'pending',
+      priceMin: '45',
+    })
+    await seedPriceSubmission(event.id, 'plain-pending-2', {
+      status: 'pending',
+      priceMin: '50',
+    })
+
+    const res = await app.request('/v1/admin/prices/submissions/count', {
+      headers: ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { pending: number }
+    }
+    expect(body.data.pending).toBe(2)
+  })
+})
