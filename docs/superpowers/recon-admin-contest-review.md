@@ -128,7 +128,7 @@ To add a new admin page (e.g., contest-review):
    }
    ```
 
-3. Badge count is dynamic. The spec extends the existing `/v1/admin/review/counts` endpoint (mounted in `apps/api/src/routes/admin/index.ts` at line 61) to add a `priceContests` field. `apps/web/src/app/(protected)/admin/layout.tsx` already fetches that endpoint via `apiClient.get<ReviewCounts>('/v1/admin/review/counts', token)` — but does NOT auto-pick-up new fields: the sidebar's `pendingReview` total is an explicit sum of `eventFlags + prices + missing` (~lines 58–61). To make the new tab's count roll up into the sidebar badge, this PR extends BOTH the `ReviewCounts` shape (to include `priceContests`) AND the `pendingReview` sum in `layout.tsx`. Do NOT add a separate `/contests/counts` endpoint.
+3. Badge count is dynamic. The spec extends the existing `/v1/admin/review/counts` endpoint (mounted in `apps/api/src/routes/admin/index.ts` — grep for `'/review/counts'` to find the current handler) to add a `priceContests` field. `apps/web/src/app/(protected)/admin/layout.tsx` already fetches that endpoint via `apiClient.get<ReviewCounts>('/v1/admin/review/counts', token)` — but does NOT auto-pick-up new fields: the sidebar's `pendingReview` total is an explicit sum of `eventFlags + prices + missing` (~lines 58–61). To make the new tab's count roll up into the sidebar badge, this PR extends BOTH the `ReviewCounts` shape (to include `priceContests`) AND the `pendingReview` sum in `layout.tsx`. Do NOT add a separate `/contests/counts` endpoint.
 
 **All admin routes inherit:**
 - Clerk auth middleware
@@ -140,9 +140,9 @@ To add a new admin page (e.g., contest-review):
 
 ## 3. Admin API Endpoints
 
-**Location:** `apps/api/src/routes/admin/prices.ts` (1–476)
+**Location:** `apps/api/src/routes/admin/prices.ts`
 
-### PATCH `/v1/admin/prices/submissions/:id` (258–330)
+### PATCH `/v1/admin/prices/submissions/:id`
 
 **Schema:**
 ```typescript
@@ -159,7 +159,7 @@ To add a new admin page (e.g., contest-review):
    - Propagate to event: `UPDATE events SET ticketPriceMin, ticketPriceMax, priceSource='community'`
 4. Return updated row
 
-**Audit fields set** (lines 324–326):
+**Audit fields set** (grep `auditAction` in `prices.ts` for the current location):
 ```typescript
 ctx.set('auditActorId', getAuthUser(ctx).userId)
 ctx.set('auditAction', 'price.submission.update')

@@ -511,5 +511,5 @@ The system has two layers per family. **Queues** (`PriceDisputesQueue`, `EventRe
 ## File metadata
 
 - Path: `docs/superpowers/design-tables/admin-contest-review.md` (repo-relative)
-- Sources: `admin-queues.jsx` (708 lines), `dispute-surfaces.jsx` (893 lines)
+- Sources: `admin-queues.jsx`, `dispute-surfaces.jsx`
 - Section count: 8 tables + Ambiguities (17 items)

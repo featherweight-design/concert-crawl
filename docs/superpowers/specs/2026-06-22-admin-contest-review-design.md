@@ -1,10 +1,10 @@
 # Admin Contest-Review UI — Bridging Spec
 
-> **Status:** Approved by Hugh 2026-06-23. All §15 sign-offs and §16 open questions resolved (see §18 Resolution log). Plan drafted at `docs/superpowers/plans/2026-06-22-admin-contest-review.md` and shipping for review in the same PR (#739). Closes a gap surfaced during the price-source discoverability cycle: contests can be filed and corroborated by fans, but admins have no UI to triage stalled contests — and resolving one today silently overturns a confirmed price with no audit trail tying the parent and challenger together.
+> **Status:** Approved by Hugh 2026-06-23. All §15 sign-offs and §16 open questions resolved (see §18 Resolution log). Plan drafted at `docs/superpowers/plans/2026-06-22-admin-contest-review.md` and shipping for review alongside this spec. Closes a gap surfaced during the price-source discoverability cycle: contests can be filed and corroborated by fans, but admins have no UI to triage stalled contests — and resolving one today silently overturns a confirmed price with no audit trail tying the parent and challenger together.
 >
 > **Sources:**
-> - Design property table: `docs/superpowers/design-tables/admin-contest-review.md` (515 lines)
-> - Code recon: `docs/superpowers/recon-admin-contest-review.md` (643 lines)
+> - Design property table: `docs/superpowers/design-tables/admin-contest-review.md`
+> - Code recon: `docs/superpowers/recon-admin-contest-review.md`
 > - Design handoff: `design/design_handoff_phase8_5_corroboration/` (admin-queues.jsx, dispute-surfaces.jsx, README.md)
 > - Hard-dependency relationship: gates the consumer-side elevated contest entry in PR 4 of the price-source cycle (#641 / #644).
 
@@ -869,7 +869,7 @@ Once this spec is approved:
 
 ## 19. Final scope summary (post-resolution)
 
-This PR (#697) ships:
+The implementation PR that closes issue #697 (drafted as the companion plan) will ship:
 
 **Backend:**
 - Migration: `archived` enum + `archived_reason` + `last_admin_action_at` + `last_admin_action_kind` columns + 3 indexes (queue perf × 2 + 1-counter-per-parent uniqueness) + defensive pre-index cleanup
