@@ -134,7 +134,7 @@ Both columns are nullable. Default is `null` for existing venues — no backfill
 
 ### Postgres migration
 
-New migration `packages/db/migrations/00XX_admin_venue_api_provider.sql`:
+New migration `packages/db/migrations/00NN_admin_venue_api_provider.sql` where `00NN` is the next sequential 4-digit prefix at impl PR time (the most recent on `main` at plan PR time is `0041_admin_contest_review.sql`, so `0042_` is the expected next slot — verify before authoring):
 
 ```sql
 CREATE TYPE "api_provider" AS ENUM ('venuepilot');
@@ -143,7 +143,7 @@ ALTER TABLE "venues" ADD COLUMN "api_provider" "api_provider";
 ALTER TABLE "venues" ADD COLUMN "api_account_id" text;
 ```
 
-Per `feedback_migration_timestamps.md`, the migration `when` value must be > all prior entries — confirm at PR time and bump if a parallel migration lands between plan PR merge and impl PR open.
+**Drizzle journal ordering — explicit rule.** Drizzle uses `packages/db/migrations/meta/_journal.json` to order migrations, and it sorts by the `when` timestamp in that JSON, not by filename prefix. The impl PR must set the migration's `when` to a value strictly greater than every prior entry in `_journal.json`. This has bitten the project before (migrations `0008` and `0011`), so the check is non-negotiable. If a parallel migration lands between plan PR merge and impl PR open, bump the new entry's `when` to be greater than the latest in `_journal.json` and renumber the filename to the next free prefix.
 
 ### Type re-export
 
@@ -164,7 +164,9 @@ The codebase splits validation and persistence across two layers — this plan r
 
 The existing `createVenueSchema` and `updateVenueSchema` already use the `.nullable().optional()` + transform pattern for cleared fields (see `ticketVendor` lines ~35–46 and `priceUrl` lines ~96–101). The new fields follow the same shape — `null` is the "None" / cleared value over the wire (not `""`), because the body arrives as JSON.
 
-Add to `createVenueSchema` (or extend on `updateVenueSchema` if we keep create scope clean — see "Add Venue modal scope" below):
+**Decision: extend `updateVenueSchema` only. Leave `createVenueSchema` unchanged.** This honors the v1 scope lock (Add Venue modal stays out — see Eng-side decision #3). `createVenueSchema` is the API contract for `POST /v1/admin/venues`, which is exclusively called from the Add Venue modal flow; touching it would force the modal to surface the new fields, which Hugh ruled out. `updateVenueSchema` is the contract for `PATCH /v1/admin/venues/:id`, which is what the Edit page hits — this is where the new fields belong in v1.
+
+Add to `updateVenueSchema` (extending the existing `createVenueSchema.partial().extend({ ... })` block):
 
 ```ts
 apiProvider: z
@@ -231,9 +233,9 @@ const apiAccountId =
 
 When `apiProvider` is null, `apiAccountId` is forced to null in the body — defensive against an orphaned account ID lingering after the admin sets provider back to None. The API Zod `.superRefine()` independently rejects the inverse (provider set, account ID missing).
 
-### `createVenueSchema` / Add Venue modal — unchanged
+### `createVenueSchema` / Add Venue modal — unchanged in v1
 
-Per Hugh's locked decision (Add Venue modal scope out of v1), the impl PR leaves `createVenueSchema` and the modal unchanged. If we later want create-time provider configuration, the API additions above are non-breaking — `createVenueSchema` can adopt them in a future PR.
+Per Hugh's locked decision (Add Venue modal scope out of v1), the impl PR leaves `createVenueSchema` and the modal unchanged. The two new fields are added to `updateVenueSchema` (the PATCH contract) only — see the section above. If we later want create-time provider configuration, the API additions can be lifted to `createVenueSchema` in a follow-up PR; the shape is non-breaking either way.
 
 ---
 
@@ -282,7 +284,30 @@ const [fieldErrors, setFieldErrors] = useState<{
 }>({})
 ```
 
-The submit handler (around line 685 today) already sets `fieldErrors` from API error responses — extend the same `setFieldErrors({ ... })` call to include `apiAccountId` when the API returns a Zod issue with `path: ['apiAccountId']`.
+**Wiring API validation errors back to `fieldErrors`** — this requires extending the web action's return shape, because today's `updateVenue` action only sets `field: 'slug'` (for the 409 conflict on slug uniqueness — see `apps/web/src/lib/actions/venues.ts:80-81`) and the `apiClient` doesn't surface Zod issue paths from a 400. The impl PR adds the following:
+
+1. **API side** — when the Hono route's `zValidator('json', updateVenueSchema)` rejects, the framework already returns a 400 with the Zod issues in the body. No code change needed.
+2. **`apiClient` side** — `ApiError` (in `apps/web/src/lib/api.ts`) is the class thrown for non-2xx responses. The impl PR extends `ApiError` to carry a parsed Zod issues array when the response body has the standard Zod-issues shape (`{ success: false, error: { issues: [...] } }` or whatever Hono's zValidator emits — verify shape during impl). The new `ApiError` field is something like `zodIssues?: Array<{ path: (string | number)[], message: string }>`.
+3. **`updateVenue` action** — extend the return type from `{ success: boolean; error?: string; field?: string }` to `{ success: boolean; error?: string; field?: 'slug' | 'apiAccountId' }` (or `field?: string` kept open). In the existing `catch` block where the 409 is handled, add a parallel branch for 400 + `zodIssues` containing `path: ['apiAccountId']`:
+
+   ```ts
+   if (err instanceof ApiError && err.status === 400 && err.zodIssues) {
+     const apiAccountIdIssue = err.zodIssues.find(
+       (issue) => issue.path[0] === 'apiAccountId',
+     )
+     if (apiAccountIdIssue) {
+       return {
+         success: false,
+         error: apiAccountIdIssue.message,
+         field: 'apiAccountId',
+       }
+     }
+   }
+   ```
+
+4. **UI side** — the submit handler (around line 685 today) already does `setFieldErrors({ slug: result.error })` when `result.field === 'slug'`. The impl PR adds the analogous branch for `result.field === 'apiAccountId'`.
+
+This split keeps the API as the single source of truth for cross-field validation; the UI just surfaces the result.
 
 **JSX inside the Crawl config `VDSection`, above the Extraction strategy field.** The actual primitive shapes (verified in the file): `VDField` takes `htmlFor` (not `id`), `VDSelect.onChange` receives a `ChangeEvent<HTMLSelectElement>` (not a raw value), `VDInput` exposes `hasError` (boolean) and pairs with `VDField.error` for the message — no `required` prop. IDs follow the `edit-venue-*` convention used elsewhere in the file (e.g. `edit-venue-ticket-vendor`, `edit-venue-price-url`).
 
@@ -414,9 +439,9 @@ Recommendation: include the e2e spec — Levitt is the v1 user and the admin flo
 
 ## Release notes plan
 
-Per `feedback_release_notes_on_major_pr.md`, the implementation PR adds an entry to `apps/web/src/lib/definitions/releases.ts`.
+CLAUDE.md's "Release notes on user-facing PRs" rule (under Conventions → Code) requires any PR shipping a meaningful user-facing feature to add an entry to `apps/web/src/lib/definitions/releases.ts` on the same branch — mirroring the substantive-only standard that governs `docs/superpowers/progress.md`.
 
-**Judgment call:** this is an admin-only field addition with no direct consumer surface. Release notes are consumer-facing. Recommendation: **skip the release-notes entry**. If Hugh disagrees during plan PR review, the entry should match the actual `Release` interface in `apps/web/src/lib/definitions/releases.ts` (`{ version, date, headline?, items: ReleaseItem[], spotlight? }`, versions prefixed `v`):
+**Judgment call:** this is an admin-only field addition with no direct consumer surface. Release notes are consumer-facing. Recommendation: **skip the release-notes entry** — the admin-only / no-consumer-surface basis is the primary justification. If Hugh disagrees during plan PR review, the entry should match the actual `Release` interface in `apps/web/src/lib/definitions/releases.ts` (`{ version, date, headline?, items: ReleaseItem[], spotlight? }`, versions prefixed `v`):
 
 ```ts
 {
@@ -432,7 +457,7 @@ Per `feedback_release_notes_on_major_pr.md`, the implementation PR adds an entry
 }
 ```
 
-The "skip" path matches `progress.md`'s substantive-only rule for admin chores.
+Voice tone: match the existing entries in `releases.ts` (casual, second-person, direct — see the May 8 community-pricing entry as the closest precedent).
 
 ---
 
@@ -469,22 +494,26 @@ The "skip" path matches `progress.md`'s substantive-only rule for admin chores.
 
 Before this plan PR merges:
 
-- Plan PR through Copilot review loop (min 2 successful reviews, no Crit/High/Med — per `feedback_copilot_review_multi_round.md`).
+- Plan PR through Copilot review loop. Exit criteria documented in `docs/superpowers/design-pipeline.md` ("Cadence rules" section): minimum 2 successful Copilot reviews, with no Critical / High / Medium remaining at exit. Apply valid Low / Nit comments; skip invalid ones. Do not iterate to zero.
 
 Before the implementation PR merges:
 
 - Migration applied locally and confirmed against `packages/db` types.
 - Unit + integration tests green.
 - `pnpm test`, `pnpm typecheck`, `pnpm lint` clean.
-- Manual QA across themes × breakpoints.
+- Manual QA across themes × breakpoints (mobile + desktop parity is non-negotiable per the project's existing convention — see `docs/superpowers/design-pipeline.md` state-coverage dimension).
 - Levitt Pavilion seed applied (or seeded post-merge) per #505.
 
 ---
 
 ## Related
 
-- Design pipeline workflow: `docs/superpowers/design-pipeline.md`
+- Design pipeline workflow: [`docs/superpowers/design-pipeline.md`](../design-pipeline.md) — workflow, audit checklist, exit criteria. Note that the workflow doc itself cross-references Claude memory notes (`feedback_*.md`, `project_*.md`, etc.) — those live at `~/.claude/projects/.../memory/` and are loaded into Claude Code sessions automatically; they are not browsable in the repo. The "Related memory" section at the bottom of the design-pipeline doc is the canonical cross-reference for readers viewing on GitHub.
 - Handoff folder: `design/design_handoff_admin_venues/`
 - Readiness review (this addendum): `design/design_handoff_admin_venues/READINESS_506.md`
 - Downstream consumer: `#505` (VenuePilot adapter)
-- Memory: `feedback_definitions_copy_rule.md`, `feedback_mobile_desktop_parity.md`, `feedback_migration_timestamps.md`, `feedback_release_notes_on_major_pr.md`, `feedback_copilot_review_multi_round.md`, `feedback_user_voice.md`
+- Conventions referenced inline (rules stated where they apply, not delegated to memory files):
+  - All customer-facing strings live in `definitions/copy.ts` (see `apps/web/src/components/admin/definitions/copy.ts` for the existing `ADMIN_COPY` shape).
+  - Mobile + desktop parity is required for every UI feature on the same PR — visual differences are fine, behavioural asymmetry is not.
+  - Migration `when` timestamps must be strictly greater than every prior entry in `packages/db/migrations/meta/_journal.json` — see the Postgres migration section above.
+  - Release-notes rule is in CLAUDE.md (Conventions → Code), summarized in the Release notes plan section above.
