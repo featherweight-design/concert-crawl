@@ -165,14 +165,12 @@ export const REVIEW_CONTEST_COPY = {
 
     // §3 line 157 — reason field eyebrow. Disclosure is built into the
     // label: the reason is shown to BOTH submitters when the contest
-    // resolves (per README §5).
+    // resolves (per README §5). The textarea is wrapped by the <label>,
+    // so the visible string above is also its accessible name — no
+    // separate aria-label is needed (and one would override the wrapping
+    // label, hiding the disclosure from screen readers).
     reason: {
       label: 'Reason (shown to both submitters)',
-      // Hidden a11y-only counterpart for the textarea — RTL queries the
-      // label via `screen.getByLabelText(/reason/i)`. The visible eyebrow
-      // sits above the textarea via `aria-labelledby`; the textarea also
-      // carries an `aria-label` for the role-name match.
-      ariaLabel: 'Reason for resolving this dispute',
       // Helper line under the textarea; surfaces when the reason is
       // shorter than the minimum (spec §4.7).
       tooShort: 'Reason must be at least 10 characters.',

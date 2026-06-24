@@ -632,7 +632,11 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
               onChange={(evt) => setReason(evt.target.value)}
               maxLength={REASON_MAX}
               minLength={REASON_MIN}
-              aria-label={REVIEW_CONTEST_COPY.panel.reason.ariaLabel}
+              // No explicit aria-label — the wrapping <label> supplies the
+              // accessible name via implicit association, preserving the
+              // full visible disclosure ("Reason (shown to both
+              // submitters)") for screen reader users. An aria-label would
+              // override the wrapping label and hide the disclosure (R13).
               style={{
                 width: '100%',
                 background: 'var(--surface-1)',
