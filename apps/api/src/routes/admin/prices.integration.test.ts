@@ -383,6 +383,60 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
       })
     })
 
+    // R2-2: a parent in status='corroborated' with a pending counter
+    // against it must be locked from PATCH too. Both counter-creation
+    // routes flip the parent to 'disputed' in the same transaction, so
+    // this should be rare — but migration-window orphans and the narrow
+    // window inside the resolve transaction can produce this state, and
+    // the lockout is defense in depth.
+    it('rejects PATCH on a corroborated parent with a pending counter against it', async () => {
+      const venue = await seedVenue({
+        name: 'PATCH Lockout 3',
+        slug: 'patch-lockout-3',
+      })
+      const event = await seedEvent(venue.id, { date: '2027-06-01' })
+      const parent = await seedPriceSubmission(event.id, 'parent-user-3', {
+        tier: 'GA',
+        vendor: 'AXS',
+        howFound: 'bought_myself',
+        priceMin: '40',
+        status: 'corroborated',
+      })
+      // Pending counter against the parent — but the parent's status
+      // was not flipped (simulating the orphan / race scenarios the R2-2
+      // lockout guards against).
+      await seedPriceSubmission(event.id, 'challenger-user-3', {
+        tier: 'GA',
+        vendor: 'AXS',
+        howFound: 'bought_myself',
+        priceMin: '55',
+        status: 'pending',
+        disputedSubmissionId: parent.id,
+      })
+
+      const res = await app.request(
+        `/v1/admin/prices/submissions/${parent.id}`,
+        {
+          method: 'PATCH',
+          headers: ADMIN_HEADERS,
+          body: JSON.stringify({ status: 'stale' }),
+        },
+      )
+
+      expect(res.status).toBe(409)
+      const body = (await res.json()) as { success: boolean; error: string }
+      expect(body.success).toBe(false)
+      expect(body.error).toMatch(/contest/i)
+      expect(body.error).toMatch(/\/v1\/admin\/contests\/prices/)
+
+      expect(Sentry.captureMessage).toHaveBeenCalledTimes(1)
+      const [, options] = vi.mocked(Sentry.captureMessage).mock.calls[0] ?? []
+      expect(options).toMatchObject({
+        level: 'warning',
+        tags: { endpoint_lockout: 'contest_row' },
+      })
+    })
+
     it('still accepts PATCH on a non-contest pending row (regression)', async () => {
       const venue = await seedVenue({ name: 'PATCH OK', slug: 'patch-ok' })
       const event = await seedEvent(venue.id, { date: '2027-06-01' })

@@ -342,6 +342,34 @@ pricesAdminRouter.patch(
         return { ok: 'contest_lockout' as const }
       }
 
+      // R2-2 — defense in depth. Both counter-creation routes flip the
+      // parent to status='disputed' in the same transaction that inserts
+      // the counter (Tasks 5 + 5b), so in steady state the previous check
+      // is sufficient. But a parent could still be in status='corroborated'
+      // with a pending counter against it under three scenarios:
+      //   (a) migration-window orphan rows that pre-date the flip logic,
+      //   (b) the narrow window inside the resolve transaction between
+      //       counter INSERT and parent UPDATE,
+      //   (c) any future codepath that creates a counter without flipping
+      //       the parent (would be a bug, but the lockout costs us nothing).
+      // In any of these cases, mutating the parent here would race the
+      // resolve flow's `parent.status IN ('corroborated', 'disputed')`
+      // sanity gate. Placed AFTER the existing two checks so the more
+      // specific lockout reasons (counter row, disputed parent) fire
+      // first.
+      const [pendingCounterCount] = await tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(priceSubmissions)
+        .where(
+          and(
+            eq(priceSubmissions.disputedSubmissionId, id),
+            eq(priceSubmissions.status, 'pending'),
+          ),
+        )
+      if ((pendingCounterCount?.count ?? 0) > 0) {
+        return { ok: 'contest_lockout' as const }
+      }
+
       const [updated] = await tx
         .update(priceSubmissions)
         .set({ status, updatedAt: sql`now()` })

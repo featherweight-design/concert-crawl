@@ -214,15 +214,15 @@ describe('AdminDisputePanel', () => {
     await waitFor(() => {
       expect(screen.getByText('hugh')).toBeTruthy()
     })
-    // Empty initial state — 0 / 280.
-    expect(screen.getByText('0 / 280')).toBeTruthy()
+    // Empty initial state — 0 / 2000.
+    expect(screen.getByText('0 / 2000')).toBeTruthy()
     fireEvent.change(screen.getByLabelText(/reason/i), {
       target: { value: 'twelve chars' },
     })
-    expect(screen.getByText('12 / 280')).toBeTruthy()
+    expect(screen.getByText('12 / 2000')).toBeTruthy()
   })
 
-  it('caps the reason textarea at 280 characters via maxLength', async () => {
+  it('caps the reason textarea at 2000 characters via maxLength', async () => {
     mockApiGet.mockResolvedValue(buildContest())
     renderWithClient(<AdminDisputePanel contestId="c1" />)
     await waitFor(() => {
@@ -232,7 +232,35 @@ describe('AdminDisputePanel', () => {
     if (!(textarea instanceof HTMLTextAreaElement)) {
       throw new Error('Expected a textarea element for the reason field')
     }
-    expect(textarea.maxLength).toBe(280)
+    expect(textarea.maxLength).toBe(2000)
+  })
+
+  // R2-1 regression: spec §6.3 + plan locks reason at min(10).max(2000).
+  // The UI previously capped at 280 (confused with the `note` field),
+  // blocking admins from writing the long paragraphs the backend accepts.
+  // Pin the new bound so we don't regress: a 280-character reason is now
+  // ACCEPTED (not rejected), and a reason at the 2000 char ceiling is
+  // also accepted.
+  it('accepts a 280-character reason (no longer rejected as too long)', async () => {
+    mockApiGet.mockResolvedValue(buildContest())
+    mockApiPost.mockResolvedValue({ success: true })
+    renderWithClient(<AdminDisputePanel contestId="c1" />)
+    await waitFor(() => {
+      expect(screen.getByText('hugh')).toBeTruthy()
+    })
+    const longReason = 'x'.repeat(280)
+    fireEvent.change(screen.getByLabelText(/reason/i), {
+      target: { value: longReason },
+    })
+    // Buttons enabled — the 280-char reason clears the min(10) gate and
+    // does NOT trip the (now 2000) max.
+    expect(buttonByName('Keep original').disabled).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Keep original' }))
+    await waitFor(() => {
+      expect(mockApiPost).toHaveBeenCalled()
+    })
+    const [, , body] = mockApiPost.mock.calls[0] ?? []
+    expect(body).toEqual({ resolution: 'parent_wins', reason: longReason })
   })
 
   it('Keep original calls resolve with parent_wins and the reason', async () => {

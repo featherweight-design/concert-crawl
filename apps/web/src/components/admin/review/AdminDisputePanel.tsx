@@ -42,7 +42,7 @@ import { REVIEW_CONTEST_COPY } from './definitions/copy'
 // client mirrors them so the buttons stay disabled until the minimum is
 // reached and the textarea caps typing at the maximum.
 const REASON_MIN = 10
-const REASON_MAX = 280
+const REASON_MAX = 2000
 
 // Palette constants — same source pixels as AdminEntry / PriceDisputesQueue
 // (dispute-surfaces.jsx:21–22 GOLD_D + AZ_D). Kept as literals so the
