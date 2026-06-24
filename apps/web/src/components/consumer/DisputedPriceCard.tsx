@@ -41,6 +41,16 @@ export interface DisputedPriceCardProps {
   disputeCeiling?: number
   disputedAt: string // ISO date
 
+  // The counter-submission ID — used as the deep-link anchor target for the
+  // coral CounterPointerLink rendered inside PendingCardB.
+  counterSubmissionId?: string | null
+
+  // Engagement-signal pill. When 'defer', a quiet warning chip near the
+  // dashed update strip surfaces CONSUMER_COPY.priceRegion.adminDeferPillLabel
+  // ("Admin requested more info"). Sourced from
+  // EventDetailResponse.counterSubmission.lastAdminActionKind.
+  lastAdminActionKind?: 'defer' | null
+
   // For CounterSubmitSheet
   eventId: string
   disputedSubmissionId: string
@@ -63,6 +73,8 @@ export const DisputedPriceCard = ({
   disputeFloor,
   disputeCeiling,
   disputedAt,
+  counterSubmissionId = null,
+  lastAdminActionKind = null,
   eventId,
   disputedSubmissionId,
   onUpdateSuccess,
@@ -99,10 +111,16 @@ export const DisputedPriceCard = ({
       ? `$${Math.round(floor)}–$${Math.round(ceiling)}`
       : `$${Math.round(floor)}`
 
+  // Anchor target for the coral CounterPointerLink rendered inside
+  // PendingCardB. Falls back to the disputed parent ID if the counter ID
+  // wasn't passed — keeps the anchor non-broken for legacy callers.
+  const anchorId = `counter-${counterSubmissionId ?? disputedSubmissionId}`
+
   return (
     <>
       {/* Card */}
       <div
+        id={anchorId}
         style={{
           borderRadius: 12,
           background: 'var(--surface-1)',
@@ -194,6 +212,31 @@ export const DisputedPriceCard = ({
               {attributionText}
             </span>
           </div>
+
+          {/* Admin-defer pill (LOCKED §9 — engagement signal) */}
+          {lastAdminActionKind === 'defer' && (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '2px 8px',
+                borderRadius: 999,
+                background:
+                  'color-mix(in oklab, var(--warning) 10%, transparent)',
+                color: 'var(--warning)',
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 9,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                fontWeight: 700,
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {CONSUMER_COPY.priceRegion.adminDeferPillLabel}
+            </span>
+          )}
         </div>
 
         {/* Main price area */}

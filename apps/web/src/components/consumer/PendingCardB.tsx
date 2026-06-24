@@ -60,6 +60,62 @@ const pendingTokens = (kind: 'community' | 'boxoffice'): PendingTokens => {
   }
 }
 
+// ── Counter pointer link (LOCKED §9 Q3 — Appendix A.4) ──────────
+// Coral mono pointer that REPLACES the "Saw a different number?" dispute
+// entry when a counter-submission already exists for this parent. Schema
+// enforces one counter per parent (migration 0041 partial unique index),
+// so opening a second dispute form is guaranteed to 409 — see
+// memory:project_pr4_dispute_affordance_hiding. Hiding the affordance is
+// the UX equivalent.
+const COUNTER_POINTER_CORAL = 'oklch(0.65 0.20 25)'
+
+const CounterPointerLink = ({ href }: { href: string }) => (
+  <a
+    href={href}
+    style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 6,
+      textDecoration: 'none',
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: 10,
+      color: COUNTER_POINTER_CORAL,
+      letterSpacing: '0.04em',
+      textTransform: 'uppercase',
+      fontWeight: 700,
+    }}
+  >
+    <span
+      aria-hidden
+      style={{
+        width: 5,
+        height: 5,
+        borderRadius: '50%',
+        background: COUNTER_POINTER_CORAL,
+        display: 'inline-block',
+        flexShrink: 0,
+      }}
+    />
+    <span>{CONSUMER_COPY.priceRegion.dispute.counterPointerLabel}</span>
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 12 12"
+      fill="none"
+      aria-hidden
+      style={{ flexShrink: 0 }}
+    >
+      <path
+        d="M2.5 6h7M6 2.5l3.5 3.5L6 9.5"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  </a>
+)
+
 // ── Props ────────────────────────────────────────────────────────
 export interface PendingCardBProps {
   floor: number
@@ -76,6 +132,10 @@ export interface PendingCardBProps {
   onConfirm: () => void
   onWithdraw: () => void
   onEdit: () => void
+  // LOCKED §9 Q3 — Appendix A.4. When non-null, the `view === 'other'` footer
+  // REPLACES the "Saw a different number?" dispute entry with a coral pointer
+  // link to the existing counter card. Confirm button stays unchanged.
+  counterPointer?: { href: string } | null
 }
 
 // ── Component ────────────────────────────────────────────────────
@@ -94,6 +154,7 @@ export const PendingCardB = ({
   onConfirm,
   onWithdraw,
   onEdit,
+  counterPointer = null,
 }: PendingCardBProps) => {
   const tok = pendingTokens(kind)
   const isBox = kind === 'boxoffice'
@@ -335,20 +396,27 @@ export const PendingCardB = ({
         >
           {view === 'other' && (
             <>
-              <button
-                onClick={onEdit}
-                style={{
-                  all: 'unset',
-                  cursor: 'pointer',
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: '10px',
-                  color: 'var(--fg-subtle)',
-                  letterSpacing: '0.04em',
-                  textTransform: 'uppercase',
-                }}
-              >
-                {copy.sawDifferentNumber}
-              </button>
+              {counterPointer != null ? (
+                // Schema enforces one pending counter per parent — surface a
+                // pointer to the existing counter instead of letting the user
+                // start a duplicate dispute form (would 409).
+                <CounterPointerLink href={counterPointer.href} />
+              ) : (
+                <button
+                  onClick={onEdit}
+                  style={{
+                    all: 'unset',
+                    cursor: 'pointer',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: '10px',
+                    color: 'var(--fg-subtle)',
+                    letterSpacing: '0.04em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {copy.sawDifferentNumber}
+                </button>
+              )}
               <button
                 onClick={onConfirm}
                 style={{

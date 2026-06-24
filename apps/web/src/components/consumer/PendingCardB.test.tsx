@@ -284,4 +284,58 @@ describe('PendingCardB', () => {
       expect(screen.getByText('3d ago')).toBeTruthy()
     })
   })
+
+  describe('counter pointer (LOCKED §9 Q3 — Appendix A.4)', () => {
+    it("when counterPointer is set, the 'Saw a different number?' button is NOT in the DOM", () => {
+      render(
+        <PendingCardB
+          {...buildProps({
+            view: 'other',
+            counterPointer: { href: '#counter-abc' },
+          })}
+        />,
+      )
+      expect(screen.queryByText(/saw a different/i)).toBeNull()
+    })
+
+    it('when counterPointer is set, renders the coral pointer link with the locked label, href, mono uppercase styling', () => {
+      render(
+        <PendingCardB
+          {...buildProps({
+            view: 'other',
+            counterPointer: { href: '#counter-abc' },
+          })}
+        />,
+      )
+      const link = screen.getByRole('link', {
+        name: /someone's contesting this/i,
+      })
+      expect(link.getAttribute('href')).toBe('#counter-abc')
+      // Coral (oklch) + mono + uppercase per Appendix A.4
+      // jsdom normalizes the trailing zero on 0.20 → 0.2
+      expect(link.getAttribute('style')).toMatch(/oklch\(0\.65 0\.2 25\)/)
+      expect(link.getAttribute('style')).toMatch(/JetBrains Mono/)
+      expect(link.getAttribute('style')).toMatch(/text-transform:\s*uppercase/)
+    })
+
+    it("when counterPointer is set, the 'Confirm price' button is STILL rendered", () => {
+      render(
+        <PendingCardB
+          {...buildProps({
+            view: 'other',
+            counterPointer: { href: '#counter-abc' },
+          })}
+        />,
+      )
+      expect(screen.getByText('Confirm price')).toBeTruthy()
+    })
+
+    it("when counterPointer is null/omitted, the original 'Saw a different number?' button renders", () => {
+      render(<PendingCardB {...buildProps({ view: 'other' })} />)
+      expect(screen.getByText(/saw a different/i)).toBeTruthy()
+      expect(
+        screen.queryByRole('link', { name: /someone's contesting this/i }),
+      ).toBeNull()
+    })
+  })
 })

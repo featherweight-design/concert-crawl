@@ -965,6 +965,8 @@ export function EventDetailPriceBlock({
           ? { disputeCeiling: counter.ceiling }
           : {})}
         disputedAt={counter.submittedAt}
+        counterSubmissionId={counter.id}
+        lastAdminActionKind={counter.lastAdminActionKind ?? null}
         eventId={event.id}
         disputedSubmissionId={counter.parentSubmissionId}
         onUpdateSuccess={() => router.refresh()}
@@ -1088,6 +1090,21 @@ export function EventDetailPriceBlock({
         ? (visibleSubs.find((sub) => sub.id === activeCorroborationId) ?? null)
         : null
 
+    // Per-tier counter pointer (LOCKED §9 Q3). When a tier already has a
+    // counter-submission, `view === 'other'` PendingCardB cards REPLACE the
+    // dispute affordance with a deep-link to the counter card instead of
+    // letting the user start a duplicate dispute form (would 409 — schema
+    // enforces one counter per parent).
+    //
+    // pendingSubmissions.tier is typed as `string` on the wire (legacy shape),
+    // so the helper accepts string and matches against priceByTier.tier
+    // (typed `Tier`). Non-canonical tier strings yield no match → null.
+    const counterPointerFor = (tier: string): { href: string } | null => {
+      const block = event.priceByTier?.find((blk) => blk.tier === tier)
+      if (block?.counterSubmission == null) return null
+      return { href: `#counter-${block.counterSubmission.id}` }
+    }
+
     const pendingCardProps = visibleSubs.map((sub) => {
       const displayConfirms = sub.confirmsCount + (localConfirms[sub.id] ?? 0)
       const isBoxOffice = sub.vendor === 'VenueBoxOffice'
@@ -1107,6 +1124,7 @@ export function EventDetailPriceBlock({
         confirms: displayConfirms,
         needed: sub.confirmsNeeded,
         view: viewKind,
+        counterPointer: counterPointerFor(sub.tier),
         note: sub.note,
         onConfirm: () => setActiveCorroborationId(sub.id),
         onWithdraw: () => {
