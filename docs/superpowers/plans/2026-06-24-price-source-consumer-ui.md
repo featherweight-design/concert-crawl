@@ -48,11 +48,10 @@
 - `apps/web/src/components/consumer/price-region/lib/pick-headline.test.ts`
 - `apps/web/src/components/consumer/price-region/lib/decision-tree.ts` — pure state-machine helper that takes the relevant `EventDetailResponse` slice and returns a tagged union `{ kind: 'sold-out-resale', … } | { kind: 'sold-out-contribute', … } | { kind: 'no-price-resale', … } | …` for the orchestrator to render. Keeps the giant if-tree in `EventDetailClient.tsx` legible. Discriminant names follow the §9 lock vocabulary (`sold-out-contribute` is the Q1 lock; `no-price-empty` is the Q2-eng lock).
 - `apps/web/src/components/consumer/price-region/lib/decision-tree.test.ts`
-- `apps/web/src/components/consumer/price-region/definitions/copy.ts` — all copy strings for the new components, keyed under `CONSUMER_COPY.priceRegion.*` (re-exported from `apps/web/src/components/consumer/definitions/copy.ts` so call sites use the canonical import path).
 
 **Modify:**
 
-- `apps/web/src/components/consumer/definitions/copy.ts` — extend `CONSUMER_COPY` with the `priceRegion`, `submitPriceV2`, and `mtAddTierSuccess` sub-trees. Add admin-defer engagement pill copy (`adminDeferPillLabel`) inside the existing `multiTier` block.
+- `apps/web/src/components/consumer/definitions/copy.ts` — single source of truth for ALL consumer copy (per `memory:feedback_definitions_copy_rule`). Extend `CONSUMER_COPY` with the `priceRegion` and `submitPriceV2` sub-trees per the Task 1 snippet. `priceRegion.addTierSuccess` and `priceRegion.adminDeferPillLabel` live under the new `priceRegion` block (NOT under the existing `multiTier` block). Do NOT create a parallel scoped copy file under `price-region/definitions/` — call sites import from this canonical path.
 - `apps/web/src/components/consumer/glyphs.tsx` — add `TierMark` primitive (price-region §primitives, lines 42-63 of the property table). `Eyebrow` already exists; do NOT add a second copy.
 - `apps/web/src/components/consumer/EventDetailClient.tsx` — `EventDetailPriceBlock` (lines 280–950): insert a new branch at the top of the decision tree that consumes `event.priceByTier` when non-null. Wire the Q3-locked counter-pointer (state #17) per Task 12. Surface the admin-defer pill via the `DisputedPriceCard` prop additions in the next bullet. Add the `sold-out-contribute` branch (LOCKED §9 Q1) that renders `<SoldOutPriceCard variant='no-listing' />` + `<ContributeFaceValueCard />`.
 - `apps/web/src/components/consumer/DisputedPriceCard.tsx` — extend props with optional `lastAdminActionKind?: 'defer' | null` and `lastAdminActionAt?: string | null`. When `lastAdminActionKind === 'defer'`, render a quiet "Admin requested more info" pill near the counter card header (per state #18). Add an `id={`counter-${counterSubmission.id}`}` attribute on the card root so the Q3 counter-pointer (Task 12) can deep-link / scroll to it.
@@ -197,7 +196,11 @@ priceRegion: {
 },
 submitPriceV2: {
   // Replaces the howFound-bearing form. Field order: source → number → tier → vendor.
-  sourceLabel: "Where's this price from? *",
+  // NOTE: required markers are NOT embedded in label strings. The shipped
+  // `FormLabel` primitive accepts a `req` boolean prop and renders a
+  // `var(--accent)`-colored asterisk separately. Required fields: source +
+  // vendor — pass `req` to FormLabel at the call site.
+  sourceLabel: "Where's this price from?",
   sourceHelper: 'Box office is face value — the most useful number for other fans.',
   sourceOptionBoxoffice: 'Box office',
   sourceOptionStandard: 'Standard ticket',
@@ -210,7 +213,7 @@ submitPriceV2: {
   ceilingLabel: 'Ceiling',
   ceilingPlaceholder: 'optional',
   tierLabel: 'Tier',
-  vendorLabel: 'Vendor *',
+  vendorLabel: 'Vendor',
   vendorOptionVenue: 'Venue',
   vendorOptionAXS: 'AXS',
   vendorOptionTicketmaster: 'Ticketmaster',
@@ -1123,7 +1126,7 @@ export function pickBrowseHeadline(
 
 (If the API's sort guarantee for `priceByTier` ever changes, this helper must change too — the cheapest-tier pick assumes API-side ASC ordering.)
 
-**`MTListChip.tsx` implementation (property table §4, lines 376–420; `kind='resale'` per Appendix A.3 / §9 Q1 lock):**
+**`MTListChip.tsx` implementation (property table §4, lines 376–420; `kind='resale'` per Appendix A.3 / §9 Q2 lock):**
 
 Note: `kind='resale'` is materially different from `kind='boxoffice'` / `kind='community'` — it has coral-tinted background + border, a 7px gap (vs. 6px on other variants), and an ALWAYS-PRESENT mono `"resale"` tag appended after the price. The tag is NON-NEGOTIABLE per the design addendum and must never be conditionally hidden. Add copy key `mtListChip.resaleTag` (value `'resale'`) to `CONSUMER_COPY` as part of this task.
 
@@ -1494,7 +1497,7 @@ export type PriceRegionDecision =
   | { kind: 'sold-out-contribute' } // LOCKED §9 Q1 — render ContributeFaceValueCard + SoldOutPriceCard variant='no-listing'
   | { kind: 'no-price-resale'; resaleLink: TicketLink; faceValueResaleVendor: string }
   | { kind: 'no-price-empty' } // LOCKED §9 Q2-eng — fall through to legacy NoPriceCard, no FaceValueCard
-  | { kind: 'multi-source-mixed'; entryBlock: TierPriceBlock; crossSourceAlt: TierAlternate; otherTiers: TierPriceBlock[] }
+  | { kind: 'multi-source-mixed'; entryBlock: TierPriceBlock; crossSourceAlt: TierPriceBlock['alternates'][number]; otherTiers: TierPriceBlock[] }
   | { kind: 'multi-tier-shipped'; priceByTier: TierPriceBlock[] } // routes to MultiTierLiveCard / MixedTierCard / TwoPendingStack
   | { kind: 'legacy' } // priceByTier null → existing flat-field code path
 
@@ -1610,7 +1613,7 @@ export function decidePriceRegion({ event }: PriceRegionInput): PriceRegionDecis
 
 - [ ] **Step 1**: Read the existing `EventDetailClient.tsx` decision tree lines 280–950 carefully. Map each existing branch to one of the property-table §8 states. Anything unaccounted for is "legacy" and stays put.
 - [ ] **Step 2**: Add an additive prop to `SoldOutPriceCard` for the Q1-locked no-listing variant. Per the addendum (property table Appendix A.2), the shipped card needs to support rendering `"—"` (em-dash) instead of a strikethrough price + the caption `"No tickets listed anywhere we can see — not even resale."`. Eng's call on the prop shape — recommended: `variant: 'has-listing' | 'no-listing'` (default `'has-listing'`) OR `showStrikethrough: boolean` (default `true`). Update `SoldOutPriceCard.tsx` + tests for the new variant.
-- [ ] **Step 3**: Add the new branches above the existing "0. Promoted sold-out" branch:
+- [ ] **Step 3**: Insert the new decision-tree block at the position described above — **after** the "0. Promoted sold-out" branch (~line 372) and **before** the "1. Pending sold-out report" branch (~line 500). The "Promoted sold-out" branch keeps first-strike precedence (it's an explicit admin signal); all other states now flow through the new decision tree:
   ```tsx
   const decision = decidePriceRegion(event)
   if (decision.kind === 'sold-out-resale') { … }
@@ -1618,7 +1621,7 @@ export function decidePriceRegion({ event }: PriceRegionInput): PriceRegionDecis
   if (decision.kind === 'no-price-resale') { … }
   if (decision.kind === 'multi-source-mixed') { … }
   if (decision.kind === 'multi-tier-shipped') { … }
-  // fall through to legacy branches
+  // fall through to remaining legacy branches (Pending sold-out report, etc.)
   ```
 - [ ] **Step 4**: For each new branch, render the appropriate component(s). Wire `onAddPrice` handlers to `setSubmitPriceOpen(true)`. For `sold-out-contribute` specifically: render `<SoldOutPriceCard variant='no-listing' />` (or equivalent) ABOVE `<ContributeFaceValueCard onAddPrice={…} />`; do NOT render a `FaceValueCard` and do NOT render a `ProvenanceCTA`.
 - [ ] **Step 5**: Add the post-submit success branch — when `submitSuccessPayload !== null`, render `MTAddTierSuccess` and route picked tier to re-open the modal with that tier pre-selected. Per §9 Q4-eng lock: track `submittedThisSession: Set<Tier>` in local React state (NOT a re-fetch of `priceByTier`); derive `remainingTiers` as `TIER_ENUM.filter(t => !submittedThisSession.has(t))`. Reset the set when the modal closes.

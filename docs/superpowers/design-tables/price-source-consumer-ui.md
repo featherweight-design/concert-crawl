@@ -710,7 +710,7 @@ Every open question on this list now has a locked answer. Kept here as a paper t
 2. **State #13 (no-price, no ticket links)** — ✅ Resolved by Appendix A.5 (Q2-eng): NO `FaceValueCard` / `ContributeFaceValueCard`. Fall through to legacy `NoPriceCard` only; pedagogy collapses without a resale anchor.
 3. **Browse #3 (resale-only list chip)** — ✅ Resolved by Appendix A.3: `MT_ListChip kind='resale'` with always-present mono "resale" tag. Never bare, never hidden.
 4. **Submit-success #2/#4 (add-another-tier picker drive)** — ✅ Resolved by Appendix A.5 (Q4-eng): client-side React session state of "tiers I just submitted." Avoids flicker; rare cross-device race is recoverable on next load.
-5. **State #17 dispute-affordance replacement copy** — ✅ Resolved by Appendix A.4: pointer link replaces the suppressed dispute link in the same footer slot, mono coral `oklch(0.65 0.20 25)`, copy `"Someone's contesting this — see the counter →"`.
+5. **State #17 dispute-affordance replacement copy** — ✅ Resolved by Appendix A.4: pointer link replaces the suppressed dispute link in the same footer slot, mono coral `oklch(0.65 0.20 25)`, copy `"Someone's contesting this — see the counter"` followed by an 11×11 arrow SVG (modeled as separate chrome, NOT embedded in the copy string).
 6. **Engagement pill (#18)** — Out of scope, pointer only: passive consumer surfacing of the `#697` admin contest-review engagement signal. PR 4 reads `lastAdminActionKind` and `lastAdminActionAt` from the API; no design decision needed here.
 
 ---
