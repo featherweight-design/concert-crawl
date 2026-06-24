@@ -51,6 +51,12 @@ if [[ "${SERVICE_ID}" =~ ^crn-[a-z0-9]+$ ]]; then
   # rolls back three services serially, and failing here would stop the
   # workflow from rolling back the others. Exit 0 with a loud warning
   # so the operator knows manual action is needed for this service.
+  #
+  # The `::warning::` line is the GitHub Actions annotation format —
+  # it surfaces in the workflow run's summary card at the top of the
+  # page, not only buried in the step logs. The detailed paragraphs
+  # below stay in the logs for the operator who clicks through.
+  echo "::warning title=Cron rollback skipped — manual action required::${NAME} (${SERVICE_ID}) needs manual rollback. Render's API rejects cron rollback; use the dashboard's Manual Deploy or revert the commit on main. See docs/runbooks/auto-deploy-prod.md."
   echo "⚠ ${NAME} (${SERVICE_ID}) is a Render cron job."
   echo "  The Render API's /rollback endpoint rejects cron services"
   echo "  (HTTP 400) — no API path exists for cron rollback."

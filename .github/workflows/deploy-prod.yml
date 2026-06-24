@@ -567,7 +567,63 @@ jobs:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
         run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" "concert-crawl-crawler-daily"
 
+      # Email the admin that auto-rollback fired. The auto-rollback
+      # only covers the API service (Render's API rejects cron
+      # rollback) and never touches Vercel. The operator needs to
+      # know so they can either revert the offending commit on main
+      # (rolls everything back together on the next CI run) or
+      # manually roll back the two crawler crons + Vercel via their
+      # respective dashboards.
+      #
+      # Uses the same Resend setup the API + crawler already use —
+      # `alerts@concertcrawl.app` is already a verified sender in
+      # Resend (apps/api/src/lib/email.ts, packages/crawler-core/
+      # src/lib/email.ts both send from this address).
+      #
+      # Gracefully degrades: if RESEND_API_KEY or ADMIN_EMAIL is
+      # missing, log a warning and continue. The `::warning::`
+      # annotation in the rollback step + the workflow's own failure
+      # email (Actions notifies on workflow failure by default) are
+      # both still primary signals. This email is a convenience layer.
+      - name: Notify admin — auto-rollback fired
+        if: always()
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
+          COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "${RESEND_API_KEY:-}" ] || [ -z "${ADMIN_EMAIL:-}" ]; then
+            missing=()
+            [ -z "${RESEND_API_KEY:-}" ] && missing+=("RESEND_API_KEY (secret)")
+            [ -z "${ADMIN_EMAIL:-}" ] && missing+=("ADMIN_EMAIL (variable)")
+            echo "::warning title=Admin email skipped::Missing ${missing[*]} — admin not notified of auto-rollback. Set via Settings → Environments → production."
+            exit 0
+          fi
+          # Build the JSON body via jq so commit SHA and the HTML
+          # body's quoted/escaped characters can't break the request.
+          html_body="<p>Production auto-rollback fired for commit <code>${COMMIT_SHA}</code>.</p><p>The API web service was rolled back to its prior deploy. The two crawler crons require <strong>manual rollback</strong> — Render's API does not support cron rollback. Vercel web also requires manual rollback (one-click promote in the dashboard).</p><p>Workflow run: <a href=\"${RUN_URL}\">${RUN_URL}</a></p><p>See <code>docs/runbooks/auto-deploy-prod.md</code> — sections \"Caveat on cron service rollback\" and \"Vercel + cron rollback is manual\" — for the manual paths.</p>"
+          payload=$(jq -nc \
+            --arg from "Concert Crawl Alerts <alerts@concertcrawl.app>" \
+            --arg to "${ADMIN_EMAIL}" \
+            --arg subject "[concert-crawl] Prod auto-rollback fired; manual cron + Vercel action required" \
+            --arg html "${html_body}" \
+            '{from: $from, to: [$to], subject: $subject, html: $html}')
+          if ! response=$(curl --fail-with-body --silent --show-error \
+            --connect-timeout 5 --max-time 15 \
+            -X POST "https://api.resend.com/emails" \
+            -H "Authorization: Bearer ${RESEND_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "${payload}"); then
+            echo "::warning title=Admin email failed::Resend API call failed. Response: ${response}"
+            # Don't fail the workflow — the warning annotation above
+            # plus GHA's workflow-failure email are the primary signals.
+            exit 0
+          fi
+          echo "✓ Admin notified at ${ADMIN_EMAIL}"
+
       - name: Log rollback context
+        if: always()
         run: |
           echo "Rollback complete for prod Render services"
           echo "Triggered by: failing smoke job in this workflow run"

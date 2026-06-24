@@ -54,6 +54,12 @@ If Playwright runs and fails an assertion, `rollback` runs automatically. The wo
 - Render dashboard → cron service (`concert-crawl-crawler-triggers` or `concert-crawl-crawler-daily`) → Settings → Manual Deploy → pick a prior commit from the dropdown.
 - Or — more commonly preferred — revert the offending commit on `main` and let the next CI-triggered deploy roll the reverted code out to API and crons together.
 
+**How you're notified the cron action is needed:**
+
+1. **GHA workflow-failure email** — the deploy-prod workflow ends with `failure` conclusion (smoke job failed = whole workflow failed). GitHub Actions emails you by default when a workflow on `main` fails.
+2. **`::warning::` annotation in the workflow summary** — each skipped cron emits a warning that surfaces on the workflow run's summary card at the top of the page, not buried in step logs.
+3. **Admin email via Resend** — the rollback job's last step calls Resend (`alerts@concertcrawl.app` → `ADMIN_EMAIL`) with a summary and the workflow run URL. Requires `RESEND_API_KEY` (secret) + `ADMIN_EMAIL` (variable) in the `production` environment. Missing either falls back to the annotation only — non-fatal.
+
 ### Manual rollback path
 
 `rollback-prod.yml` exists for the human-driven incident-response case: an issue surfaced via Sentry hours after deploy, a manual prod deploy went sideways, or any other reason an operator needs to roll back independently. It is `workflow_dispatch` only, restricted to `main`, and intentionally **NOT** gated by `AUTO_DEPLOY_PROD_ENABLED` — the kill switch pauses the auto-pipeline; an operator explicitly invoking incident response must still be able to roll back even when the auto-pipeline is off.
@@ -140,6 +146,7 @@ on the next workflow_run trigger.
 | `RENDER_SERVICE_ID_API`              | deploy-prod, rollback-prod | **new** — prod API service ID (visible in Render dashboard URL, e.g. `srv-abc123`). Used for the deploy POST, `render-wait-for-live.sh`, and rollback. |
 | `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | deploy-prod, rollback-prod | **new** — prod crawler triggers cron service ID. Used by deploy-prod's API POST and rollback.                                                          |
 | `RENDER_SERVICE_ID_CRAWLER_DAILY`    | deploy-prod, rollback-prod | **new** — prod crawler daily cron service ID. Same.                                                                                                    |
+| `ADMIN_EMAIL`                        | deploy-prod (rollback job) | **optional** — address that receives an auto-rollback notification when smoke fails. Falls back to a `::warning::` annotation only when unset.         |
 
 Service IDs live in the `production` environment (not at the repo level) so they are scoped to prod-only workflow runs and stay aligned with `production-launch.md`. The `deploy-prod.yml` and `rollback-prod.yml` jobs use `environment: production` and read them as `vars.RENDER_SERVICE_ID_*`.
 
@@ -148,6 +155,7 @@ Service IDs live in the `production` environment (not at the repo level) so they
 | Secret             | Required by                | Notes                                                                                                                                                                                                    |
 | ------------------ | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `RENDER_API_TOKEN` | deploy-prod, rollback-prod | **new** — Render → Account Settings → API Keys → generate a token with deploy + read permissions. Consumed by the deploy POST in deploy-prod, by `render-wait-for-live.sh`, and by `render-rollback.sh`. |
+| `RESEND_API_KEY`   | deploy-prod (rollback job) | **optional** — same Resend API key the API + crawler already use. When set together with `ADMIN_EMAIL`, the rollback job emails the admin from `alerts@concertcrawl.app`. Missing → warning annotation only. |
 
 No per-service `RENDER_DEPLOY_HOOK_*` secrets are needed: the deploy POST uses the Render API directly with `RENDER_API_TOKEN` + the service IDs above. Render Cron Jobs don't expose a Deploy Hook UI anyway (confirmed 2026-06-23), so the hook-based approach couldn't have covered the two crawler crons.
 
