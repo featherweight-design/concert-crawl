@@ -30,12 +30,17 @@ const ALERT_FROM = 'Concert Crawl Alerts <alerts@concertcrawl.app>'
 // as non-prod and is qualified in the alert so admins know not to act on it
 // in the prod admin UI.
 //
-// Normalisation (trim + lowercase + default-on-empty) keeps a misconfigured
-// `Production`, `production ` or empty value from accidentally letting a
-// non-prod alert through unqualified. Empty defaults to 'local' so a brand
-// new service without the var set is treated as the safest case.
+// Normalisation:
+//   - trim whitespace and CR/LF (the latter would otherwise flow into the
+//     email subject header, where Resend would reject the message or — on
+//     a less strict transport — open a header-injection seam)
+//   - lowercase so 'Production'/'PRODUCTION' don't slip past isProduction
+//   - default empty to 'local' (the safest non-prod case)
 function getEnvironmentLabel(): string {
-  const raw = (process.env.SENTRY_ENVIRONMENT ?? '').trim().toLowerCase()
+  const raw = (process.env.SENTRY_ENVIRONMENT ?? '')
+    .replace(/[\r\n]/g, '')
+    .trim()
+    .toLowerCase()
   return raw === '' ? 'local' : raw
 }
 
@@ -67,9 +72,39 @@ function envBanner(): string {
 // into `//admin/crawl`, and searchParams handles query encoding.
 // When a venueId is provided the dashboard pre-selects that venue's row
 // (#608); without it the link lands on the full status list.
+//
+// Two failure modes are defended:
+//   1. ADMIN_URL unset in a non-prod env → silently falling back to
+//      concertcrawl.app would send admins to *prod* even though the email
+//      is qualified [Staging] / [Local]. Log a warning so the missing
+//      config surfaces (the email still sends — better an alert with a
+//      slightly-wrong link than no alert).
+//   2. ADMIN_URL set to a malformed value → `new URL()` would throw. Catch
+//      and degrade to the production default rather than crash the entire
+//      alert pipeline; the warning above already covers the diagnostic.
 function adminCrawlUrl(venueId?: string): string {
-  const adminUrl = process.env.ADMIN_URL ?? 'https://concertcrawl.app'
-  const url = new URL('/admin/crawl', adminUrl)
+  const PROD_DEFAULT = 'https://concertcrawl.app'
+  const rawAdminUrl = process.env.ADMIN_URL
+
+  if ((!rawAdminUrl || rawAdminUrl.trim() === '') && !isProduction()) {
+    warnMissingEnv('ADMIN_URL', 'adminCrawlUrl (non-prod env)')
+  }
+
+  const adminUrl = rawAdminUrl?.trim() || PROD_DEFAULT
+
+  let url: URL
+  try {
+    url = new URL('/admin/crawl', adminUrl)
+  } catch (err) {
+    console.warn(
+      JSON.stringify({
+        event: 'email.invalid_admin_url',
+        adminUrl,
+        error: String(err),
+      }),
+    )
+    url = new URL('/admin/crawl', PROD_DEFAULT)
+  }
   if (venueId) url.searchParams.set('venueId', venueId)
   return url.toString()
 }

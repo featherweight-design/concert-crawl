@@ -381,4 +381,128 @@ describe('admin crawl URL construction', () => {
     )
     expect(call.html).not.toContain('//admin/crawl')
   })
+
+  // ADMIN_URL malformed → the email should still send (don't break the
+  // alert pipeline over a misconfig); fall back to the prod default + log
+  // a diagnostic so the operator can fix it.
+  it('falls back to prod default + logs when ADMIN_URL is malformed', async () => {
+    process.env.ADMIN_URL = 'not a url'
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const { sendEventCountDropEmail } = await import('./email.js')
+      await sendEventCountDropEmail({
+        venueName: 'Ogden',
+        venueId: 'v-1',
+        crawlRunId: 'r-1',
+        eventsFound: 0,
+        baselineCount: 100,
+        dropPercent: 100,
+      })
+
+      expect(mockSend).toHaveBeenCalledOnce()
+      const call = mockSend.mock.calls[0][0]
+      expect(call.html).toContain(
+        'https://concertcrawl.app/admin/crawl?venueId=v-1',
+      )
+
+      const warning = warnSpy.mock.calls
+        .map((args) => String(args[0]))
+        .find((line) => line.includes('email.invalid_admin_url'))
+      expect(warning).toBeDefined()
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  // ADMIN_URL unset in non-prod → admin would be sent to the prod domain
+  // even though the email is qualified as [Staging]. Log a warning so the
+  // misconfig is visible; the email still sends.
+  it('warns when ADMIN_URL is unset in a non-prod env', async () => {
+    process.env.SENTRY_ENVIRONMENT = 'staging'
+    delete process.env.ADMIN_URL
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const { sendEventCountDropEmail } = await import('./email.js')
+      await sendEventCountDropEmail({
+        venueName: 'Ogden',
+        venueId: 'v-1',
+        crawlRunId: 'r-1',
+        eventsFound: 0,
+        baselineCount: 100,
+        dropPercent: 100,
+      })
+
+      expect(mockSend).toHaveBeenCalledOnce()
+      const warning = warnSpy.mock.calls
+        .map((args) => String(args[0]))
+        .find((line) => line.includes('ADMIN_URL'))
+      expect(warning).toBeDefined()
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+
+  it('does NOT warn when ADMIN_URL is unset in production (default is correct)', async () => {
+    process.env.SENTRY_ENVIRONMENT = 'production'
+    delete process.env.ADMIN_URL
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const { sendEventCountDropEmail } = await import('./email.js')
+      await sendEventCountDropEmail({
+        venueName: 'Ogden',
+        venueId: 'v-1',
+        crawlRunId: 'r-1',
+        eventsFound: 0,
+        baselineCount: 100,
+        dropPercent: 100,
+      })
+
+      const adminUrlWarning = warnSpy.mock.calls
+        .map((args) => String(args[0]))
+        .find((line) => line.includes('ADMIN_URL'))
+      expect(adminUrlWarning).toBeUndefined()
+    } finally {
+      warnSpy.mockRestore()
+    }
+  })
+})
+
+// CR/LF defense for the env label: a value with embedded \r or \n would
+// otherwise flow into the email subject header, where Resend would reject
+// the message or — on a less strict transport — open a header-injection
+// seam. Strip at normalization time.
+describe('SENTRY_ENVIRONMENT CR/LF stripping', () => {
+  const originalEnv = process.env
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.resetModules()
+    process.env = {
+      ...originalEnv,
+      RESEND_API_KEY: 're_test_key',
+      ADMIN_EMAIL: 'admin@example.com',
+    }
+  })
+
+  afterEach(() => {
+    process.env = originalEnv
+  })
+
+  it('strips embedded \\r and \\n from the env label', async () => {
+    process.env.SENTRY_ENVIRONMENT = 'stag\r\ning'
+    const { sendEventCountDropEmail } = await import('./email.js')
+    await sendEventCountDropEmail({
+      venueName: 'Ogden',
+      venueId: 'v-1',
+      crawlRunId: 'r-1',
+      eventsFound: 0,
+      baselineCount: 100,
+      dropPercent: 100,
+    })
+
+    const call = mockSend.mock.calls[0][0]
+    // Normalised to plain 'staging' — no \r or \n leaking into the header.
+    expect(call.subject.startsWith('[Staging] ')).toBe(true)
+    expect(call.subject).not.toMatch(/[\r\n]/)
+  })
 })
