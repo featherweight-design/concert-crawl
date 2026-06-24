@@ -867,23 +867,37 @@ export async function crawlVenue(
     // there's no per-venue lock above this layer). The crawl.failed
     // notification still inserts on every failure where newFailureCount >=
     // 3 — that's intentional re-alerting; only the "venue auto-paused"
-    // wording is gated to the === 3 transition. The CASE on `active`
-    // ensures only the transition to 3 flips the column, so an admin who
-    // manually re-activates a still-broken venue isn't fought by the
-    // crawler on the next failure. (#743)
+    // wording is gated to the === 3 transition.
+    //
+    // Block vs auto-pause are intentionally separate signals: HTTP blocks
+    // (403/429) and TimeoutErrors set `blockedAt`, while non-block
+    // failures (schema errors, parse errors, etc.) auto-pause via
+    // `active = false`. Conflating them would prevent admins from
+    // manually queuing a recovery trigger on a blocked venue (the admin
+    // trigger endpoint rejects when !active), forcing an extra Admin UI
+    // un-pause step before retry. The CASE on `active` is therefore gated
+    // to the non-block branch, and an admin who manually re-activates a
+    // still-broken venue isn't fought by the crawler on the next failure
+    // (because newFailureCount === 4 doesn't satisfy the CASE). (#743,
+    // round-3 review on PR #746)
     const [updatedVenue] = await db
       .update(venues)
       .set({
         consecutiveFailures: sql`${venues.consecutiveFailures} + 1`,
-        active: sql`CASE WHEN ${venues.consecutiveFailures} + 1 = 3 THEN false ELSE ${venues.active} END`,
-        ...(isBlocked ? { blockedAt: new Date() } : {}),
+        ...(isBlocked
+          ? { blockedAt: new Date() }
+          : {
+              active: sql`CASE WHEN ${venues.consecutiveFailures} + 1 = 3 THEN false ELSE ${venues.active} END`,
+            }),
         updatedAt: new Date(),
       })
       .where(eq(venues.id, venueId))
       .returning()
 
     const newFailureCount = updatedVenue?.consecutiveFailures ?? 0
-    const shouldAutoPause = newFailureCount === 3
+    // Auto-pause side-effects (active flip, email, "auto-paused" wording)
+    // align on a single gate: non-block 3rd consecutive failure only.
+    const shouldAutoPause = !isBlocked && newFailureCount === 3
 
     if (newFailureCount >= 3) {
       const notificationBody = shouldAutoPause

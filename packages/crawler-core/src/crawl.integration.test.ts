@@ -1028,4 +1028,78 @@ describe('crawlVenue — auto-pause at threshold (#743)', () => {
     )
     expect(autoPausedNotes.length).toBe(1)
   })
+
+  // Block vs auto-pause are separate signals — see crawl.ts failure-path
+  // comment. These tests pin the boundary so a future refactor can't
+  // re-conflate them. Regression coverage for Copilot's round-3 review on
+  // PR #746.
+  it('does NOT auto-pause when the 3rd failure is an HTTP block (403)', async () => {
+    const { sendCrawlFailureEmail } = await import('./lib/email.js')
+    const mockSendEmail = vi.mocked(sendCrawlFailureEmail)
+    const venue = await seedVenueWithCount(2)
+
+    // CrawlFetchError with httpStatus 403 = isHttpBlocked = isBlocked.
+    const { CrawlFetchError } = await import('./lib/fetcher.js')
+    mockFetchPage.mockRejectedValue(new CrawlFetchError(403, 'Forbidden'))
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const [row] = await db
+      .select({
+        active: venues.active,
+        blockedAt: venues.blockedAt,
+        consecutiveFailures: venues.consecutiveFailures,
+      })
+      .from(venues)
+      .where(eq(venues.id, venue.id))
+    expect(row?.consecutiveFailures).toBe(3)
+    // The fix: a 403 at the 3rd consecutive failure sets blockedAt but
+    // leaves `active` alone, so the admin trigger endpoint still accepts
+    // a recovery trigger without an extra un-pause step.
+    expect(row?.active).toBe(true)
+    expect(row?.blockedAt).not.toBeNull()
+    expect(mockSendEmail).not.toHaveBeenCalled()
+
+    const { notifications } = await import('@concert-crawl/db')
+    const noteRows = await db
+      .select({ body: notifications.body })
+      .from(notifications)
+      .where(eq(notifications.category, 'crawl.failed'))
+    expect(noteRows.length).toBe(1)
+    expect(String(noteRows[0]?.body)).not.toMatch(/auto-paused/i)
+  })
+
+  it('does NOT auto-pause when the 3rd failure is a TimeoutError', async () => {
+    const { sendCrawlFailureEmail } = await import('./lib/email.js')
+    const mockSendEmail = vi.mocked(sendCrawlFailureEmail)
+    const venue = await seedVenueWithCount(2)
+
+    // TimeoutError + consecutiveFailures >= 2 = isTimeoutBlock = isBlocked.
+    const timeoutError = new Error('Timeout exceeded')
+    timeoutError.name = 'TimeoutError'
+    mockFetchPage.mockRejectedValue(timeoutError)
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const [row] = await db
+      .select({
+        active: venues.active,
+        blockedAt: venues.blockedAt,
+        consecutiveFailures: venues.consecutiveFailures,
+      })
+      .from(venues)
+      .where(eq(venues.id, venue.id))
+    expect(row?.consecutiveFailures).toBe(3)
+    expect(row?.active).toBe(true)
+    expect(row?.blockedAt).not.toBeNull()
+    expect(mockSendEmail).not.toHaveBeenCalled()
+
+    const { notifications } = await import('@concert-crawl/db')
+    const noteRows = await db
+      .select({ body: notifications.body })
+      .from(notifications)
+      .where(eq(notifications.category, 'crawl.failed'))
+    expect(noteRows.length).toBe(1)
+    expect(String(noteRows[0]?.body)).not.toMatch(/auto-paused/i)
+  })
 })
