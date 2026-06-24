@@ -1,3 +1,10 @@
+## [1.76.3](https://github.com/HartiganHM/concert-crawl/compare/v1.76.2...v1.76.3) (2026-06-24)
+
+
+### Bug Fixes
+
+* **deploy-prod:** resolve both sides of SHA-drift gate past [skip ci] ([28f743b](https://github.com/HartiganHM/concert-crawl/commit/28f743bd0153a97a1c4a03d202ec2838ae14db4e)), closes [#777](https://github.com/HartiganHM/concert-crawl/issues/777)
+
 ## [1.76.2](https://github.com/HartiganHM/concert-crawl/compare/v1.76.1...v1.76.2) (2026-06-24)
 
 
