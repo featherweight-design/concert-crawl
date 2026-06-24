@@ -48,7 +48,14 @@ ALTER TABLE events
   ADD COLUMN is_concert_review_needed BOOLEAN NOT NULL DEFAULT FALSE;
 ```
 
-Semantically: "the LLM had reasonable doubt about the `isConcert` classification of this row." Written on INSERT only, by the crawler and the one-shot backfill script. Admin actions (Mark non-concert, Mark as concert) flip `hidden_from_consumer`; they do NOT clear `is_concert_review_needed`, so re-running the backfill remains idempotent — the bit reflects the LLM's view, not the admin's resolution.
+Semantically: "the LLM had reasonable doubt about the `isConcert` classification of this row." Three write paths, distinct:
+
+- **Crawler INSERT** writes the column once when the row is first created from an LLM extraction.
+- **Crawler re-crawl** (the `ON CONFLICT DO UPDATE` path) does NOT touch the column — once a row exists, the crawler is frozen.
+- **One-shot backfill script** may UPDATE the column on existing rows to refresh against the latest prompt (set or clear, per the LLM's current view).
+- **Admin actions** (Mark non-concert, Mark as concert) flip `hidden_from_consumer`; they do NOT touch `is_concert_review_needed`.
+
+So re-running the backfill against rows the admin has already triaged remains idempotent on the visibility decision — the bit reflects the LLM's view, not the admin's resolution.
 
 No partial index pre-emptively. At current corpus size (~3,000 events) the filter chip's `WHERE hidden_from_consumer=true AND is_concert_review_needed=true` is a small sequential scan. If the corpus grows past ~10k events with the chip in active use, add a partial index then.
 
@@ -85,7 +92,7 @@ In `packages/crawler-core/src/crawl.ts`, the existing block that sets `hiddenFro
 isConcertReviewNeeded: event.reviewNeeded === true,
 ```
 
-The existing `onConflictDoUpdate` `set` clause does NOT include this field, mirroring the existing `hiddenFromConsumer` rule: once a row exists, the column is admin- and backfill-frozen. The crawler does not re-evaluate it on subsequent crawls.
+The existing `onConflictDoUpdate` `set` clause does NOT include this field, mirroring the existing `hiddenFromConsumer` rule: once a row exists, the column is **crawler-frozen** — the crawler never re-evaluates it on subsequent crawls. The only post-INSERT writer is the one-shot backfill script (see Data model above); admin actions never touch this column.
 
 ### Backfill script (targeted to currently-hidden events)
 
