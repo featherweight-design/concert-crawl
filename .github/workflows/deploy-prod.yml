@@ -84,10 +84,10 @@ jobs:
       # staging-smoke kill switch AND a real upstream success so a
       # skipped staging smoke does not trigger a prod deploy. Exiting
       # non-zero here fails this gate job → the deploy job never
-      # runs → workflow conclusion is `failure`. prod-post-deploy-
-      # downstream smoke + rollback jobs in this workflow are gated by
-      # `needs:` ordering, so a failed gate here naturally short-
-      # circuits them too.
+      # runs → workflow conclusion is `failure`. The downstream smoke
+      # and rollback jobs in this workflow are gated by `needs:`
+      # ordering, so a failed gate here naturally short-circuits them
+      # too.
       - name: Verify staging-smoke gate
         if: |
           github.event_name == 'workflow_run' &&
@@ -416,7 +416,7 @@ jobs:
         uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: prod-post-deploy-smoke-failure-${{ github.run_id }}
+          name: prod-smoke-failure-${{ github.run_id }}
           path: apps/e2e/test-results/
           retention-days: 14
 
@@ -433,11 +433,11 @@ jobs:
   #     `skipped` (deploy failed → smoke didn't run) does NOT fire
   #     rollback. That's intentional: we don't roll back a deploy
   #     that never landed.
-  #   - `cancelled` and `timed_out` also do NOT fire rollback. A
-  #     transient runner death is not enough signal to destructively
-  #     roll back prod; an operator can use rollback-prod.yml's
-  #     workflow_dispatch path if they want to roll back after
-  #     investigating.
+  #   - `cancelled` (runner killed, workflow cancelled by an
+  #     operator, etc.) also does NOT fire rollback. A non-`failure`
+  #     terminal state isn't enough signal to destructively roll back
+  #     prod; an operator can use rollback-prod.yml's workflow_dispatch
+  #     path if they want to roll back after investigating.
   rollback:
     name: Auto-rollback (prod smoke failed)
     needs: smoke
