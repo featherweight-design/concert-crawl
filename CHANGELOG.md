@@ -1,3 +1,14 @@
+## [1.74.11](https://github.com/HartiganHM/concert-crawl/compare/v1.74.10...v1.74.11) (2026-06-24)
+
+
+### Bug Fixes
+
+* **docs:** address all 10 Copilot review 2 comments on PR 739 ([2c23e82](https://github.com/HartiganHM/concert-crawl/commit/2c23e82c5d3a58f9271cc010152a17c6af71cda6)), closes [#705](https://github.com/HartiganHM/concert-crawl/issues/705)
+* **docs:** address all 5 Copilot review 4 comments on PR 739 ([8895068](https://github.com/HartiganHM/concert-crawl/commit/8895068110a5067aff10efc8ad78bec4302350f2))
+* **docs:** address all 5 Copilot review 5 comments on PR 739 ([6dd8fe0](https://github.com/HartiganHM/concert-crawl/commit/6dd8fe043054cac4a9ebf49b3d1313c8bb42a65e))
+* **docs:** address all 7 Copilot review 1 comments on PR 739 ([14ae281](https://github.com/HartiganHM/concert-crawl/commit/14ae28165afebff0f49269b66970bc624378522d))
+* **docs:** address all 8 Copilot review 3 comments on PR 739 ([6d63f75](https://github.com/HartiganHM/concert-crawl/commit/6d63f75e2c6b1beaf4483719f8812433a159d680)), closes [#1](https://github.com/HartiganHM/concert-crawl/issues/1)
+
 ## [1.74.10](https://github.com/HartiganHM/concert-crawl/compare/v1.74.9...v1.74.10) (2026-06-24)
 
 
