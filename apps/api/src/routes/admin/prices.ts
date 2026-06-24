@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { and, asc, count, desc, eq, gte, isNull, max, sql } from 'drizzle-orm'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
+import * as Sentry from '@sentry/hono/node'
 import {
   db,
   events,
@@ -14,6 +15,7 @@ import { runPricePipeline } from '@concert-crawl/price-pipeline'
 import { createLogger } from '@concert-crawl/logger'
 import { deriveSourceCategory } from '@concert-crawl/types'
 import { getAuthUser } from '../../middleware/auth.js'
+import { apiLogger } from '../../lib/logger.js'
 import type { AdminVariables } from './index.js'
 
 const logger = createLogger('admin:prices')
@@ -293,6 +295,7 @@ pricesAdminRouter.patch(
     type TxResult =
       | { ok: true; updated: typeof priceSubmissions.$inferSelect }
       | { ok: false }
+      | { ok: 'contest_lockout' }
 
     const result: TxResult = await db.transaction(async (tx) => {
       const [existing] = await tx
@@ -302,6 +305,7 @@ pricesAdminRouter.patch(
           eventId: priceSubmissions.eventId,
           priceMin: priceSubmissions.priceMin,
           priceMax: priceSubmissions.priceMax,
+          disputedSubmissionId: priceSubmissions.disputedSubmissionId,
         })
         .from(priceSubmissions)
         .where(eq(priceSubmissions.id, id))
@@ -309,6 +313,19 @@ pricesAdminRouter.patch(
         .for('update')
 
       if (!existing) return { ok: false }
+
+      // Defensive lockout: contests must resolve through the dedicated
+      // /v1/admin/contests/prices/:contestId endpoint so the parent + counter
+      // are adjudicated atomically with audit + cred + event projection. This
+      // pre-contest-UI endpoint can silently overturn a corroborated price if
+      // an admin approves a counter row from the flat queue — block it at the
+      // gate, before any update is applied. Spec §4.7 + §11.3.
+      if (
+        existing.disputedSubmissionId !== null ||
+        existing.status === 'disputed'
+      ) {
+        return { ok: 'contest_lockout' as const }
+      }
 
       const [updated] = await tx
         .update(priceSubmissions)
@@ -340,6 +357,32 @@ pricesAdminRouter.patch(
 
       return { ok: true, updated }
     })
+
+    if (result.ok === 'contest_lockout') {
+      apiLogger.warn(
+        { submissionId: id },
+        'PATCH lockout: contest row reached the non-contest endpoint',
+      )
+      // `endpoint_lockout: contest_row` is the alert tag (spec §11.3). Baseline
+      // volume should be near zero — any firing is real signal that the new
+      // contest UI is being bypassed.
+      Sentry.captureMessage(
+        'Contest row hit PATCH /v1/admin/prices/submissions/:id',
+        {
+          level: 'warning',
+          tags: { endpoint_lockout: 'contest_row' },
+          extra: { submissionId: id },
+        },
+      )
+      return ctx.json(
+        {
+          success: false,
+          error:
+            'This submission is part of a contest. Resolve via /v1/admin/contests/prices/:contestId instead.',
+        },
+        409,
+      )
+    }
 
     if (!result.ok)
       return ctx.json({ success: false, error: 'Submission not found' }, 404)

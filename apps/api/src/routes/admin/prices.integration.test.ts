@@ -2,6 +2,19 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { userRoles } from '@concert-crawl/db'
 
+vi.mock('@sentry/hono/node', async () => {
+  const actual =
+    await vi.importActual<typeof import('@sentry/hono/node')>(
+      '@sentry/hono/node',
+    )
+  return {
+    ...actual,
+    captureMessage: vi.fn(),
+  }
+})
+
+import * as Sentry from '@sentry/hono/node'
+
 const { authState } = vi.hoisted(() => ({
   authState: {
     current: null as {
@@ -276,6 +289,122 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
       },
     )
     expect(res.status).toBe(404)
+  })
+
+  // Defensive lockout — see spec §4.7 + §11.3 and plan Task 4.
+  // The pre-contest-UI PATCH endpoint cannot be allowed to overturn a
+  // corroborated price by silently approving a counter row, and cannot be
+  // allowed to mutate a parent whose status is already 'disputed'. Both
+  // cases must return 409 and fire a loud Sentry capture so the
+  // `endpoint_lockout: contest_row` tag baseline can be alerted on.
+  describe('contest-row lockout', () => {
+    beforeEach(() => {
+      vi.mocked(Sentry.captureMessage).mockClear()
+    })
+
+    it('rejects PATCH on a counter row (disputedSubmissionId !== null) with 409', async () => {
+      const venue = await seedVenue({
+        name: 'PATCH Lockout',
+        slug: 'patch-lockout-1',
+      })
+      const event = await seedEvent(venue.id, { date: '2027-06-01' })
+      const parent = await seedPriceSubmission(event.id, 'parent-user', {
+        tier: 'GA',
+        vendor: 'AXS',
+        howFound: 'bought_myself',
+        priceMin: '40',
+        status: 'corroborated',
+      })
+      const counter = await seedPriceSubmission(event.id, 'challenger-user', {
+        tier: 'GA',
+        vendor: 'AXS',
+        howFound: 'bought_myself',
+        priceMin: '50',
+        status: 'pending',
+        disputedSubmissionId: parent.id,
+      })
+
+      const res = await app.request(
+        `/v1/admin/prices/submissions/${counter.id}`,
+        {
+          method: 'PATCH',
+          headers: ADMIN_HEADERS,
+          body: JSON.stringify({ status: 'corroborated' }),
+        },
+      )
+
+      expect(res.status).toBe(409)
+      const body = (await res.json()) as { success: boolean; error: string }
+      expect(body.success).toBe(false)
+      expect(body.error).toMatch(/contest/i)
+      expect(body.error).toMatch(/\/v1\/admin\/contests\/prices/)
+
+      expect(Sentry.captureMessage).toHaveBeenCalledTimes(1)
+      const [, options] = vi.mocked(Sentry.captureMessage).mock.calls[0] ?? []
+      expect(options).toMatchObject({
+        level: 'warning',
+        tags: { endpoint_lockout: 'contest_row' },
+      })
+    })
+
+    it('rejects PATCH on a parent row whose status is disputed with 409', async () => {
+      const venue = await seedVenue({
+        name: 'PATCH Lockout 2',
+        slug: 'patch-lockout-2',
+      })
+      const event = await seedEvent(venue.id, { date: '2027-06-01' })
+      const parent = await seedPriceSubmission(event.id, 'parent-user-2', {
+        tier: 'GA',
+        vendor: 'AXS',
+        howFound: 'bought_myself',
+        priceMin: '40',
+        status: 'disputed',
+      })
+
+      const res = await app.request(
+        `/v1/admin/prices/submissions/${parent.id}`,
+        {
+          method: 'PATCH',
+          headers: ADMIN_HEADERS,
+          body: JSON.stringify({ status: 'corroborated' }),
+        },
+      )
+
+      expect(res.status).toBe(409)
+      const body = (await res.json()) as { success: boolean; error: string }
+      expect(body.success).toBe(false)
+      expect(body.error).toMatch(/contest/i)
+
+      expect(Sentry.captureMessage).toHaveBeenCalledTimes(1)
+      const [, options] = vi.mocked(Sentry.captureMessage).mock.calls[0] ?? []
+      expect(options).toMatchObject({
+        level: 'warning',
+        tags: { endpoint_lockout: 'contest_row' },
+      })
+    })
+
+    it('still accepts PATCH on a non-contest pending row (regression)', async () => {
+      const venue = await seedVenue({ name: 'PATCH OK', slug: 'patch-ok' })
+      const event = await seedEvent(venue.id, { date: '2027-06-01' })
+      const submission = await seedPriceSubmission(event.id, 'plain-user', {
+        tier: 'GA',
+        vendor: 'AXS',
+        howFound: 'bought_myself',
+        priceMin: '40',
+        status: 'pending',
+      })
+
+      const res = await app.request(
+        `/v1/admin/prices/submissions/${submission.id}`,
+        {
+          method: 'PATCH',
+          headers: ADMIN_HEADERS,
+          body: JSON.stringify({ status: 'corroborated' }),
+        },
+      )
+      expect(res.status).toBe(200)
+      expect(Sentry.captureMessage).not.toHaveBeenCalled()
+    })
   })
 })
 
