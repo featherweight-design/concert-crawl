@@ -316,3 +316,274 @@ describe('GET /v1/admin/contests/prices', () => {
     expect(body.data.offset).toBe(1)
   })
 })
+
+describe('GET /v1/admin/contests/prices/:contestId', () => {
+  beforeEach(async () => {
+    clearAuth()
+    await clearTables()
+  })
+
+  it('requires admin auth', async () => {
+    // Unauthed
+    const unauthRes = await app.request(
+      '/v1/admin/contests/prices/00000000-0000-0000-0000-000000000000',
+    )
+    expect([401, 403]).toContain(unauthRes.status)
+
+    // Non-admin role
+    authState.current = {
+      userId: 'user_non_admin',
+      sessionClaims: { metadata: { role: 'user' } },
+    }
+    const nonAdminRes = await app.request(
+      '/v1/admin/contests/prices/00000000-0000-0000-0000-000000000000',
+      { headers: ADMIN_HEADERS },
+    )
+    expect([401, 403]).toContain(nonAdminRes.status)
+  })
+
+  it('returns 404 for an unknown contestId', async () => {
+    setAdminAuth()
+    const res = await app.request(
+      '/v1/admin/contests/prices/00000000-0000-0000-0000-000000000000',
+      { headers: ADMIN_HEADERS },
+    )
+    expect(res.status).toBe(404)
+  })
+
+  it('returns 404 when the parent has no counter (not a contest)', async () => {
+    setAdminAuth()
+    const venue = await seedVenue({
+      name: 'No Counter',
+      slug: 'contest-detail-no-counter',
+    })
+    const event = await seedEvent(venue.id, { date: '2027-06-02' })
+    const orphan = await seedPriceSubmission(event.id, 'orphan-u', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      status: 'corroborated',
+    })
+
+    const res = await app.request(`/v1/admin/contests/prices/${orphan.id}`, {
+      headers: ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(404)
+  })
+
+  it('returns full detail for an open contest', async () => {
+    setAdminAuth()
+    const venue = await seedVenue({
+      name: 'Detail Venue',
+      slug: 'contest-detail-1',
+    })
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-01',
+      title: 'Detail Show',
+      artist: 'Detail Artist',
+      ticketPriceMin: '40',
+      ticketPriceMax: '80',
+      priceSource: 'community',
+    })
+    const submitter = await seedUserProfile('detail-parent-u', {
+      handle: 'parent-detail',
+    })
+    const challenger = await seedUserProfile('detail-chal-u', {
+      handle: 'chal-detail',
+    })
+    const parent = await seedPriceSubmission(event.id, submitter.userId, {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      status: 'disputed',
+      note: 'Original observation',
+      corroborationCount: 3,
+    })
+    const counter = await seedPriceSubmission(event.id, challenger.userId, {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '55',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+      note: 'Saw new price on AXS',
+      corroborationCount: 1,
+    })
+
+    const res = await app.request(`/v1/admin/contests/prices/${parent.id}`, {
+      headers: ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: {
+        contestId: string
+        eventId: string
+        eventTitle: string
+        venueName: string
+        eventDate: string
+        tier: string
+        sourceCategory: string | null
+        parent: {
+          id: string
+          priceMin: string
+          priceMax: string | null
+          vendor: string
+          submitter: { userId: string; handle: string | null }
+          confirms: { fans: number; admin: number }
+          observedAt: string
+          lastUpdatedAt: string
+          note: string | null
+          status: string
+        }
+        counter: {
+          id: string
+          priceMin: string
+          priceMax: string | null
+          vendor: string
+          submitter: { userId: string; handle: string | null }
+          confirms: { fans: number; admin: number }
+          observedAt: string
+          note: string | null
+          status: string
+          lastAdminActionAt: string | null
+          lastAdminActionKind: string | null
+        }
+        filedAt: string
+        history: unknown[]
+      }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.contestId).toBe(parent.id)
+    expect(body.data.eventId).toBe(event.id)
+    expect(body.data.eventTitle).toBe('Detail Show')
+    expect(body.data.venueName).toBe('Detail Venue')
+    expect(body.data.eventDate).toBe('2027-06-01')
+    expect(body.data.tier).toBe('GA')
+    expect(body.data.sourceCategory).toBe('standard')
+
+    // Parent shape
+    expect(body.data.parent.id).toBe(parent.id)
+    expect(body.data.parent.priceMin).toBe('40.00')
+    expect(body.data.parent.vendor).toBe('AXS')
+    expect(body.data.parent.note).toBe('Original observation')
+    expect(body.data.parent.submitter.userId).toBe('detail-parent-u')
+    expect(body.data.parent.submitter.handle).toBe('parent-detail')
+    expect(body.data.parent.confirms.fans).toBe(3)
+    expect(body.data.parent.confirms.admin).toBe(0)
+    expect(body.data.parent.status).toBe('disputed')
+    expect(body.data.parent.observedAt).toBeTruthy()
+    expect(body.data.parent.lastUpdatedAt).toBeTruthy()
+
+    // Counter shape
+    expect(body.data.counter.id).toBe(counter.id)
+    expect(body.data.counter.priceMin).toBe('55.00')
+    expect(body.data.counter.vendor).toBe('AXS')
+    expect(body.data.counter.note).toBe('Saw new price on AXS')
+    expect(body.data.counter.submitter.userId).toBe('detail-chal-u')
+    expect(body.data.counter.submitter.handle).toBe('chal-detail')
+    expect(body.data.counter.confirms.fans).toBe(1)
+    expect(body.data.counter.confirms.admin).toBe(0)
+    expect(body.data.counter.status).toBe('pending')
+    expect(body.data.counter.lastAdminActionAt).toBeNull()
+    expect(body.data.counter.lastAdminActionKind).toBeNull()
+
+    expect(body.data.filedAt).toBeTruthy()
+    expect(body.data.history).toEqual([])
+  })
+
+  it('surfaces lastAdminActionKind=defer and lastAdminActionAt on a deferred counter', async () => {
+    setAdminAuth()
+    const venue = await seedVenue({
+      name: 'Defer Venue',
+      slug: 'contest-detail-defer',
+    })
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-03',
+      title: 'Defer Show',
+      artist: 'Defer Artist',
+    })
+    const parent = await seedPriceSubmission(event.id, 'defer-parent-u', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      status: 'disputed',
+    })
+    const deferTimestamp = new Date('2027-05-15T12:00:00Z')
+    await seedPriceSubmission(event.id, 'defer-chal-u', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '60',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+      lastAdminActionAt: deferTimestamp,
+      lastAdminActionKind: 'defer',
+    })
+
+    const res = await app.request(`/v1/admin/contests/prices/${parent.id}`, {
+      headers: ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      data: {
+        counter: {
+          lastAdminActionAt: string | null
+          lastAdminActionKind: string | null
+          status: string
+        }
+      }
+    }
+    expect(body.data.counter.lastAdminActionKind).toBe('defer')
+    expect(body.data.counter.lastAdminActionAt).toBe(
+      deferTimestamp.toISOString(),
+    )
+    expect(body.data.counter.status).toBe('pending')
+  })
+
+  it('returns detail for a resolved contest (counter archived, parent corroborated)', async () => {
+    setAdminAuth()
+    const venue = await seedVenue({
+      name: 'Resolved Venue',
+      slug: 'contest-detail-resolved',
+    })
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-04',
+      title: 'Resolved Show',
+      artist: 'Resolved Artist',
+    })
+    // parent_wins outcome: parent flipped back to corroborated, counter archived.
+    const parent = await seedPriceSubmission(event.id, 'resolved-parent-u', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      status: 'corroborated',
+    })
+    await seedPriceSubmission(event.id, 'resolved-chal-u', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '60',
+      status: 'archived',
+      disputedSubmissionId: parent.id,
+      archivedReason: 'Original held — box-office confirmed.',
+    })
+
+    const res = await app.request(`/v1/admin/contests/prices/${parent.id}`, {
+      headers: ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      data: {
+        parent: { status: string }
+        counter: { status: string }
+      }
+    }
+    expect(body.data.parent.status).toBe('corroborated')
+    expect(body.data.counter.status).toBe('archived')
+  })
+})

@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
-import { and, asc, eq, inArray, isNotNull, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import { z } from 'zod'
 import {
@@ -192,6 +192,176 @@ contestsAdminRouter.get(
     return ctx.json({
       success: true,
       data: { items, total: totalRow?.value ?? 0, limit, offset },
+    })
+  },
+)
+
+const detailParamsSchema = z.object({
+  contestId: z.string().uuid(),
+})
+
+// GET /v1/admin/contests/prices/:contestId — full detail for one contest.
+//
+// Mirrors a single row from the list endpoint (§6.1) plus an empty `history`
+// array placeholder per spec §6.2. The path param is the PARENT submission id
+// (the contest's stable cursor — same field the list endpoint surfaces as
+// `contestId`, see line ~45).
+//
+// Unlike the list endpoint, this handler does NOT filter the counter by
+// status='pending'. The AdminDisputePanel renders read-only banners off the
+// actual parent/counter statuses for already-resolved or deferred contests, so
+// the detail endpoint must surface them as-is. The counter is fetched by
+// ORDER BY createdAt DESC LIMIT 1 — the §4.6 partial unique index guarantees
+// at most one pending counter per parent, but historical resolved counters can
+// stack up after multiple contests on the same parent. Most-recent-counter is
+// the right surface for the panel.
+contestsAdminRouter.get(
+  '/prices/:contestId',
+  zValidator('param', detailParamsSchema, (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid contestId' }, 400)
+    }
+  }),
+  async (ctx) => {
+    const { contestId } = ctx.req.valid('param')
+
+    // Parent = the row at :contestId. Join events + venues for the projection.
+    const [parentRow] = await db
+      .select({
+        id: priceSubmissions.id,
+        eventId: priceSubmissions.eventId,
+        eventTitle: events.title,
+        venueName: venues.name,
+        eventDate: events.date,
+        tier: priceSubmissions.tier,
+        sourceCategory: priceSubmissions.sourceCategory,
+        priceMin: priceSubmissions.priceMin,
+        priceMax: priceSubmissions.priceMax,
+        vendor: priceSubmissions.vendor,
+        userId: priceSubmissions.userId,
+        observedAt: priceSubmissions.createdAt,
+        lastUpdatedAt: priceSubmissions.updatedAt,
+        note: priceSubmissions.note,
+        status: priceSubmissions.status,
+        // corroborationCount already includes the submitter's implicit
+        // observation (1/2 model). Used directly as `confirms.fans`; admin=0
+        // is a placeholder until submission_confirms grows an admin-method
+        // discriminator. Same comment as the list endpoint above.
+        corroborationCount: priceSubmissions.corroborationCount,
+      })
+      .from(priceSubmissions)
+      .innerJoin(events, eq(events.id, priceSubmissions.eventId))
+      .innerJoin(venues, eq(venues.id, events.venueId))
+      .where(eq(priceSubmissions.id, contestId))
+      .limit(1)
+
+    if (!parentRow) {
+      return ctx.json({ success: false, error: 'Contest not found' }, 404)
+    }
+
+    // Counter = the most recent row whose disputedSubmissionId = parent.id.
+    // No status filter (spec §6.2) — read-only banners for resolved/deferred
+    // states render off the actual counter.status.
+    const [counterRow] = await db
+      .select({
+        id: priceSubmissions.id,
+        priceMin: priceSubmissions.priceMin,
+        priceMax: priceSubmissions.priceMax,
+        vendor: priceSubmissions.vendor,
+        userId: priceSubmissions.userId,
+        observedAt: priceSubmissions.createdAt,
+        note: priceSubmissions.note,
+        status: priceSubmissions.status,
+        corroborationCount: priceSubmissions.corroborationCount,
+        lastAdminActionAt: priceSubmissions.lastAdminActionAt,
+        lastAdminActionKind: priceSubmissions.lastAdminActionKind,
+      })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.disputedSubmissionId, contestId))
+      .orderBy(desc(priceSubmissions.createdAt))
+      .limit(1)
+
+    if (!counterRow) {
+      // The parent exists but no row references it as a dispute — caller
+      // passed a non-contest submission id. 404 keeps the contract simple:
+      // either we have both sides, or we don't have a contest.
+      return ctx.json({ success: false, error: 'Counter not found' }, 404)
+    }
+
+    // Resolve handles for both sides via a single LEFT JOIN-style lookup.
+    // Same pattern as the list endpoint.
+    const userIds = [parentRow.userId, counterRow.userId].filter(
+      (uid): uid is string => uid !== null,
+    )
+    const handleMap = new Map<string, string | null>()
+    if (userIds.length > 0) {
+      const handles = await db
+        .select({
+          userId: userProfiles.userId,
+          handle: userProfiles.handle,
+        })
+        .from(userProfiles)
+        .where(inArray(userProfiles.userId, userIds))
+      for (const row of handles) {
+        handleMap.set(row.userId, row.handle ?? null)
+      }
+    }
+
+    return ctx.json({
+      success: true,
+      data: {
+        contestId: parentRow.id,
+        eventId: parentRow.eventId,
+        eventTitle: parentRow.eventTitle ?? '',
+        venueName: parentRow.venueName ?? '',
+        eventDate: parentRow.eventDate ?? '',
+        tier: parentRow.tier,
+        sourceCategory: parentRow.sourceCategory,
+        parent: {
+          id: parentRow.id,
+          priceMin: parentRow.priceMin,
+          priceMax: parentRow.priceMax,
+          vendor: parentRow.vendor,
+          submitter: {
+            userId: parentRow.userId ?? '',
+            handle: parentRow.userId
+              ? (handleMap.get(parentRow.userId) ?? null)
+              : null,
+          },
+          confirms: {
+            fans: parentRow.corroborationCount,
+            admin: 0,
+          },
+          observedAt: parentRow.observedAt.toISOString(),
+          lastUpdatedAt: parentRow.lastUpdatedAt.toISOString(),
+          note: parentRow.note ?? null,
+          status: parentRow.status,
+        },
+        counter: {
+          id: counterRow.id,
+          priceMin: counterRow.priceMin,
+          priceMax: counterRow.priceMax,
+          vendor: counterRow.vendor,
+          submitter: {
+            userId: counterRow.userId ?? '',
+            handle: counterRow.userId
+              ? (handleMap.get(counterRow.userId) ?? null)
+              : null,
+          },
+          confirms: {
+            fans: counterRow.corroborationCount,
+            admin: 0,
+          },
+          observedAt: counterRow.observedAt.toISOString(),
+          note: counterRow.note ?? null,
+          status: counterRow.status,
+          lastAdminActionAt:
+            counterRow.lastAdminActionAt?.toISOString() ?? null,
+          lastAdminActionKind: counterRow.lastAdminActionKind ?? null,
+        },
+        filedAt: counterRow.observedAt.toISOString(),
+        history: [],
+      },
     })
   },
 )
