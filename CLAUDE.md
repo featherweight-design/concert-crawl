@@ -14,6 +14,7 @@ Concert Crawl aggregates live music events from Denver venue websites into a sin
 
 - Original design spec: `docs/superpowers/specs/2026-04-23-denver-concert-calendar-design.md`
 - **Beta-to-launch plan (current):** `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md`
+- **Design pipeline workflow:** `docs/superpowers/design-pipeline.md` — two-track design pipeline (Track 1: build pending, gated by Readiness Review; Track 2: needs design, workshopped before handoff)
 - DB rollback runbook: `docs/runbooks/db-rollback.md`
 
 ---
@@ -141,6 +142,15 @@ Claude Code sessions are finite. To preserve continuity across sessions:
 - **All API routes** namespaced under `/v1/`
 - **Drizzle only** for DB access — no raw SQL except in migration files
 - **No single-character variable names** — ESLint enforces a minimum identifier length of 2. Use descriptive names (`err` not `e`, `idx` not `i`, `ctx` not `c`). This applies to all identifiers: variables, parameters, and destructured bindings.
+- **Release notes on user-facing PRs** — any PR shipping a meaningful user-facing feature MUST add an entry to `apps/web/src/lib/definitions/releases.ts` on the same branch. Mirror the `progress.md` substantive-only rule: skip chores, dep bumps, doc tweaks, refactors, and customer-invisible bug fixes. For features with spotlight assets in `design/design_handoff_spotlight_heroes/`, wire up the spotlight as part of the entry. See `docs/superpowers/design-pipeline.md`.
+
+### Design pipeline
+
+All design work — both new design tickets and the build of existing handoffs — follows the structured two-track pipeline documented at `docs/superpowers/design-pipeline.md`. Key gates:
+
+- **Pre-existing handoffs** (merged before 2026-06-23) require a Design Readiness Review (verdict in `design/design_handoff_X/READINESS.md`) before opening a plan PR
+- **New design tickets** (Track 2) use the handoff prompt template — objective problem + app context + technical requirements, design decisions left to Design
+- **Plan PRs** live in `docs/superpowers/plans/` and go through the Copilot review loop (min 2 successful reviews, no Crit/High/Medium remaining) before implementation
 
 ### Testing
 
