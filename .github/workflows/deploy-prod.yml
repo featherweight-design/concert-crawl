@@ -359,10 +359,11 @@ jobs:
   #
   # Skipped automatically when `deploy` fails (`needs: deploy` default
   # behavior) — which means `rollback` below also won't fire (its `if:`
-  # requires `needs.smoke.result == 'failure'`, not `skipped`). That's
-  # the intended "don't compound a failed-deploy with a destructive
-  # rollback for a deploy that never happened" semantic from the
-  # original two-workflow design.
+  # requires `needs.smoke.outputs.assertions_failed == 'true'`, and a
+  # skipped smoke job leaves the output unset). That's the intended
+  # "don't compound a failed-deploy with a destructive rollback for a
+  # deploy that never happened" semantic from the original two-workflow
+  # design.
   smoke:
     name: Playwright smoke (production, post-deploy)
     needs: deploy
@@ -371,12 +372,17 @@ jobs:
     # Output an explicit "Playwright completed and asserted a failure"
     # signal that the rollback job keys off, instead of relying on
     # `needs.smoke.result == 'failure'`. The result-based check would
-    # also fire on job timeouts, runner deaths, or cancellations
-    # (GitHub treats all of those as `failure`), which would mean a
-    # network blip during smoke triggers a destructive prod rollback.
-    # The original multi-workflow design explicitly excluded that case
-    # via `timed_out`-aware gates; this output preserves that behavior
-    # in the unified design.
+    # also fire on cases that present as job `failure` for reasons
+    # other than smoke assertion failures — most commonly job-level
+    # timeout-minutes hits, but also any step-level hard failure
+    # before Playwright runs (env-var preflight fail, dependency
+    # install crash, runner OOM). The original multi-workflow design
+    # explicitly excluded that class of failure to prevent a
+    # destructive rollback on infrastructure flakiness; this output
+    # preserves that behavior in the unified design. (`cancelled` is
+    # also not `failure` per GHA — it's its own `result` value — but
+    # the same "don't trigger rollback unless Playwright itself
+    # said no" principle applies.)
     outputs:
       assertions_failed: ${{ steps.evaluate_smoke.outputs.assertions_failed }}
     steps:

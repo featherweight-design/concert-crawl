@@ -41,11 +41,13 @@ The scheduled `smoke.yml` (every 6 hours against prod) is independent and remain
 | `gate`     | (entry)    | `AUTO_DEPLOY_PROD_ENABLED == 'true'` + branch checks |
 | `deploy`   | `gate`     | gate succeeded                                       |
 | `smoke`    | `deploy`   | deploy succeeded (skipped if deploy failed)          |
-| `rollback` | `smoke`    | `needs.smoke.result == 'failure'`                    |
+| `rollback` | `smoke`    | `needs.smoke.outputs.assertions_failed == 'true'`    |
 
-If `deploy` fails, `smoke` is skipped → `rollback` is skipped too (it requires smoke to be `failure`, not `skipped`). This preserves the original "don't compound a failed deploy with a destructive rollback for a deploy that never happened" semantic.
+The rollback trigger keys on a job output that the smoke job sets ONLY after Playwright has actually run and returned non-zero. Job-level failures that prevent that step from being reached — timeouts, runner deaths, cancellations, env-var preflight crashes — leave the output unset and the rollback skipped. The original multi-workflow design excluded this class of failure deliberately, to prevent infrastructure flakiness from causing destructive prod rollbacks. The unified design preserves that semantic.
 
-If `smoke` fails, `rollback` runs automatically — rolling back the three Render services to their most recent prior successful deploys via `render-rollback.sh`.
+If `deploy` fails, `smoke` is skipped → the output is unset → `rollback` skipped too. This preserves the original "don't compound a failed deploy with a destructive rollback for a deploy that never happened" semantic.
+
+If Playwright runs and fails an assertion, `rollback` runs automatically — rolling back the three Render services to their most recent prior successful deploys via `render-rollback.sh`. Operators can still trigger rollback manually via `rollback-prod.yml`'s `workflow_dispatch` for any infrastructure-failure case where the auto-path was skipped.
 
 ### Manual rollback path
 
