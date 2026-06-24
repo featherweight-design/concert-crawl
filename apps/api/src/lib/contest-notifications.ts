@@ -4,31 +4,44 @@ import { apiLogger } from './logger.js'
 /**
  * Input for the contest notification fan-out.
  *
+ * Modeled as a discriminated union on `action` so the compiler enforces the
+ * resolution invariant at every call site — without it, calling with
+ * `action: 'resolve'` and `resolution: undefined` would silently drop the
+ * key during JSON.stringify and break downstream consumers (and tests) that
+ * read `metadata.resolution`.
+ *
  * `action: 'resolve'` requires `resolution` and produces rows with
  * `category = 'contest.resolved'`. The metadata blob is `{ submissionId,
  * contestId, resolution }`.
  *
- * `action: 'defer'` does NOT carry a resolution and produces rows with
- * `category = 'contest.needs_info'`. The metadata blob is `{ submissionId,
- * contestId, eventId, role, kind: 'defer', reason }`.
+ * `action: 'defer'` does NOT carry a resolution (`resolution?: never`) and
+ * produces rows with `category = 'contest.needs_info'`. The metadata blob is
+ * `{ submissionId, contestId, eventId, role, kind: 'defer', reason }`.
  *
  * The two shapes differ deliberately — they were inlined in the resolve and
  * defer handlers at different points and the integration tests pin each
  * shape's keys. Lift verbatim, do not "harmonize" — downstream consumer
  * surfaces (issue #737) read the keys as-is.
  */
-export interface ContestNotificationInput {
+interface ContestNotificationInputBase {
   contestId: string
   parentSubmissionId: string
   challengerSubmissionId: string
   parentUserId: string | null
   challengerUserId: string | null
   eventId: string
-  action: 'resolve' | 'defer'
-  /** Required when action === 'resolve'. */
-  resolution?: 'parent_wins' | 'challenger_wins'
   reason: string
 }
+
+export type ContestNotificationInput =
+  | (ContestNotificationInputBase & {
+      action: 'resolve'
+      resolution: 'parent_wins' | 'challenger_wins'
+    })
+  | (ContestNotificationInputBase & {
+      action: 'defer'
+      resolution?: never
+    })
 
 interface Recipient {
   userId: string
@@ -39,8 +52,14 @@ interface Recipient {
 /**
  * Write `user_notification` rows for the parent + challenger submitters of a
  * contest. Deduped when both ids are the same user (self-contest, defensive
- * only — the §4.6 partial unique index makes this dead-by-construction in
- * steady state). Skipped entirely when both ids are null.
+ * only — in practice `parentUserId === challengerUserId` is impossible at
+ * insert time because `POST /v1/submissions/:id/dispute` returns 403
+ * ("Cannot dispute your own submission", see
+ * apps/api/src/routes/submissions.ts) and the counter-submission route
+ * inherits the parent's eventId/tier/slot so a self-submitter is already
+ * blocked by the rate limiter. The §4.6 partial unique index is a separate
+ * guarantee — it prevents two pending counters against the same parent, not
+ * self-contest). Skipped entirely when both ids are null.
  *
  * `notifications.metadata` is a `text` column (see packages/db schema), so
  * the metadata blob is JSON.stringify'd here. Inserting a raw object would

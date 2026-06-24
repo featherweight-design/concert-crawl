@@ -23,11 +23,11 @@ export interface AdminEntryProps {
   priceMax: string | null
   tier: Tier
   vendor: Vendor
-  // Drives the trust pill kind in the eventual TrustPill integration.
-  // Held in the prop surface now so AdminDisputePanel (Task 15) can pass
-  // it through without a follow-up prop change. The pill itself is
-  // wired by the parent panel — design table §3b line 214 references
-  // `window.PendingTrustPill` which lives at the panel layer.
+  // Drives the inline trust pill rendered in the headline row beside
+  // price + tier (gold for 'boxoffice', azure-tinted for 'standard',
+  // neutral for 'resale'; null hides the pill entirely). The pill mirrors
+  // the dispute-surfaces.jsx `PendingTrustPill` reference (design table §3b
+  // line 214) and the kind→label map lives in copy.ts adminEntry.trustPill.
   sourceCategory: SourceCategory | null
   submitter: { handle: string | null }
   // ISO timestamp; rendered as raw string per design (§3b line 720

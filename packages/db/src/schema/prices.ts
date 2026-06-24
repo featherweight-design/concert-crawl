@@ -112,8 +112,9 @@ export const priceSubmissions = pgTable('price_submissions', {
   corroborationCount: integer('corroboration_count').notNull().default(1),
   note: varchar('note', { length: 280 }),
   // Admin's archive reason when status='archived' (loser-of-contest sink).
-  // Plain text, no length cap — admin reasons can run longer than `note`'s
-  // 280-char submitter cap. See migration 0041 + spec §5.
+  // No DB-level length cap; the API enforces min 10 / max 2000 chars at
+  // the Zod validator boundary (resolveBodySchema + deferBodySchema in
+  // apps/api/src/routes/admin/contests.ts). See migration 0041 + spec §5.
   archivedReason: text('archived_reason'),
   // Engagement-signal columns — surfaced via priceByTier[].counterSubmission
   // so consumers see a quiet "Admin requested more info" pill on the event
