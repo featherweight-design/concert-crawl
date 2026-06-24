@@ -9,8 +9,12 @@
 //   - 'has-listing' (default) → strikethrough price + reporter caption.
 //   - 'no-listing'            → em-dash price, no strikethrough, and a
 //     subline "No tickets listed anywhere we can see — not even resale."
-//     replaces the reporter caption. Used when ticketLinks is empty AND the
-//     event is sold-out (the Q1 contribute path).
+//     replaces the reporter caption. Used when the event is sold-out AND
+//     there is no resale ticketLink (the Q1 `sold-out-contribute` path —
+//     see decision-tree.ts). Other ticketLink kinds (primary, boxoffice)
+//     may still exist; we trigger the contribution-only state because
+//     resale is the anchor for the face-value pedagogy, so absent a resale
+//     row there's nothing to contrast face value against.
 //
 // Property table reference: §8 state #10 + #11, Appendix A.2.
 

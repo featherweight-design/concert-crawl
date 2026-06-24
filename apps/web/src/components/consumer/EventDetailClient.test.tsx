@@ -11,11 +11,13 @@ import type {
 
 // ── Mocks ──────────────────────────────────────────────────────────────
 const mockGetToken = vi.fn().mockResolvedValue('test-token')
+const mockRouterRefresh = vi.fn()
+const mockRouterPush = vi.fn()
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: mockGetToken }),
 }))
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({ push: mockRouterPush, refresh: mockRouterRefresh }),
 }))
 // PriceDisplay is server-leaning + has its own deep tree; stub it.
 vi.mock('@/components/consumer/PriceDisplay', () => ({
@@ -35,6 +37,13 @@ let latestModalOnSuccess:
       sourceCategory: 'boxoffice' | 'standard' | 'resale' | null
     }) => void)
   | null = null
+// CorroborationSheet renders a portal-mounted modal; stub it so we can
+// detect open=true purely from the rendered DOM without dragging in the
+// real sheet's tree.
+vi.mock('@/components/consumer/CorroborationSheet', () => ({
+  CorroborationSheet: (props: { open: boolean }) =>
+    props.open ? <div data-testid="corroboration-sheet-open" /> : null,
+}))
 vi.mock('@/components/consumer/submit-price/SubmitPriceModal', () => ({
   SubmitPriceModal: (props: {
     open: boolean
@@ -554,7 +563,86 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     // VIP pill must NOT appear.
     expect(screen.queryByText(/Add vip/i)).toBeNull()
   })
-})
 
-// Helper: silence unused-import warning on fireEvent for future expansion.
-void fireEvent
+  it('STATE #7 all-tiers-pending: clicking Confirm on a non-submitter card opens the CorroborationSheet', () => {
+    const ga = makeTierBlock({
+      tier: 'GA',
+      headline: null,
+      pending: [
+        {
+          id: 'p-ga',
+          priceMin: '40',
+          priceMax: null,
+          vendor: 'AXS',
+          howFound: 'saw_listing',
+          sourceCategory: 'standard',
+          note: null,
+          submitterHandle: 'jordan',
+          submittedAt: '2026-06-22T00:00:00Z',
+          confirmsCount: 0,
+          confirmsNeeded: 2,
+          isSubmitter: false,
+        },
+      ],
+    })
+    const event = buildBaseEvent({ priceByTier: [ga] })
+    render(
+      <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
+    )
+    // Sheet not open before click.
+    expect(screen.queryByTestId('corroboration-sheet-open')).toBeNull()
+    // PendingCardB renders the "Confirm price" affordance for view='other'.
+    const confirmBtn = screen.getByText('Confirm price')
+    act(() => {
+      fireEvent.click(confirmBtn)
+    })
+    // onConfirm wired to setActiveCorroborationId → sheet now mounted.
+    expect(screen.getByTestId('corroboration-sheet-open')).toBeDefined()
+  })
+
+  it('STATE #7 all-tiers-pending: clicking Withdraw on the submitter card DELETEs the submission + refreshes router', async () => {
+    const ga = makeTierBlock({
+      tier: 'GA',
+      headline: null,
+      pending: [
+        {
+          id: 'p-ga',
+          priceMin: '40',
+          priceMax: null,
+          vendor: 'AXS',
+          howFound: 'saw_listing',
+          sourceCategory: 'standard',
+          note: null,
+          submitterHandle: 'me',
+          submittedAt: '2026-06-22T00:00:00Z',
+          confirmsCount: 0,
+          confirmsNeeded: 2,
+          isSubmitter: true,
+        },
+      ],
+    })
+    const event = buildBaseEvent({ priceByTier: [ga] })
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 200 }))
+    render(
+      <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
+    )
+    // view='submitter' → "Withdraw" button is rendered alongside "Edit".
+    const withdrawBtn = screen.getByText('Withdraw')
+    await act(async () => {
+      fireEvent.click(withdrawBtn)
+    })
+    // Allow the void-async IIFE to resolve.
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const [calledUrl, calledInit] = fetchMock.mock.calls[0] ?? []
+    expect(String(calledUrl)).toContain('/v1/submissions/p-ga')
+    expect((calledInit as RequestInit | undefined)?.method).toBe('DELETE')
+    expect(mockRouterRefresh).toHaveBeenCalledTimes(1)
+    fetchMock.mockRestore()
+  })
+})
