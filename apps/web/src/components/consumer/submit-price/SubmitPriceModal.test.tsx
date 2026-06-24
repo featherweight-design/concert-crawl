@@ -135,6 +135,29 @@ describe('SubmitPriceModal — form view', () => {
     // The Vendor chip "Venue" should be present (vendor auto-fills to VenueBoxOffice)
     expect(screen.getByText('Venue')).toBeTruthy()
   })
+
+  it('switching source away from boxoffice clears the auto-filled vendor', async () => {
+    // Regression test for Copilot R2 finding: previously the vendor stayed
+    // as 'Venue' (VenueBoxOffice) when the user switched the source category
+    // away from 'boxoffice', allowing inconsistent payloads (e.g. resale
+    // price tagged with box-office vendor).
+    render(<SubmitPriceModal {...defaultProps} />)
+    await waitFor(() => expect(screen.getByText('Box office')).toBeTruthy())
+    // Pick boxoffice → vendor auto-fills, auto-filled note appears
+    fireEvent.click(screen.getByText('Box office'))
+    await waitFor(() =>
+      expect(
+        screen.getByText('Auto-filled because source is box office'),
+      ).toBeTruthy(),
+    )
+    // Switch to resale → auto-filled note should disappear (vendor cleared)
+    fireEvent.click(screen.getByText('Resale'))
+    await waitFor(() =>
+      expect(
+        screen.queryByText('Auto-filled because source is box office'),
+      ).toBeNull(),
+    )
+  })
 })
 
 describe('SubmitPriceModal — success state', () => {

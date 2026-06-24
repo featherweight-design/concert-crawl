@@ -182,6 +182,18 @@ export function SubmitPriceModal({
     setFieldErrors({})
     setFieldWarnings({})
     setRaceToast(null)
+    // Reset the form on each open. Without this, the modal — which stays
+    // mounted across open/close — would carry over the previous tier
+    // selection, defeating the `preselectedTier` from the "+ Add VIP" loop
+    // in MTAddTierSuccess (Q4-eng session flow). The edit-mode branch below
+    // overwrites these with the existing submission's values.
+    setFormState({
+      floor: '',
+      ceiling: '',
+      tier: preselectedTier,
+      vendor: null,
+      sourceCategory: null,
+    })
 
     const checkExisting = async () => {
       try {
@@ -229,7 +241,7 @@ export function SubmitPriceModal({
       setModalState('form')
     }
     void checkExisting()
-  }, [open, eventId, getToken, openInEditMode])
+  }, [open, eventId, getToken, openInEditMode, preselectedTier])
 
   const handleSubmit = useCallback(async () => {
     const validation = validateSubmission(formState)
@@ -618,14 +630,27 @@ export function SubmitPriceModal({
             options={SOURCE_CATEGORY_OPTIONS}
             value={formState.sourceCategory}
             onChange={(val) =>
-              setFormState((prev) => ({
-                ...prev,
-                sourceCategory: val as SourceCategory,
+              setFormState((prev) => {
+                const nextSource = val as SourceCategory
                 // When source flips to boxoffice, auto-fill the vendor so the
-                // user doesn't have to pick it twice.
-                vendor:
-                  val === 'boxoffice' ? VENDOR_BOXOFFICE_AUTOFILL : prev.vendor,
-              }))
+                // user doesn't have to pick it twice. When the source flips
+                // AWAY from boxoffice AND the vendor was the auto-fill value,
+                // clear it so the user doesn't accidentally submit e.g. a
+                // resale price with vendor='VenueBoxOffice'.
+                let nextVendor: string | null
+                if (nextSource === 'boxoffice') {
+                  nextVendor = VENDOR_BOXOFFICE_AUTOFILL
+                } else if (prev.vendor === VENDOR_BOXOFFICE_AUTOFILL) {
+                  nextVendor = null
+                } else {
+                  nextVendor = prev.vendor
+                }
+                return {
+                  ...prev,
+                  sourceCategory: nextSource,
+                  vendor: nextVendor,
+                }
+              })
             }
             error={fieldErrors['sourceCategory']}
             req
