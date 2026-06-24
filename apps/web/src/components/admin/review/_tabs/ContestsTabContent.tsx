@@ -54,7 +54,7 @@ export const ContestsTabContent: FC = () => {
         <span>{REVIEW_CONTEST_COPY.queue.errorHeading}</span>
         <button
           type="button"
-          onClick={() => refetch()}
+          onClick={() => void refetch()}
           style={{
             background: 'transparent',
             border: '1px solid currentColor',

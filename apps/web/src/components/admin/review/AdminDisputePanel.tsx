@@ -225,7 +225,7 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
         <span>{REVIEW_CONTEST_COPY.panel.errorHeading}</span>
         <button
           type="button"
-          onClick={() => detail.refetch()}
+          onClick={() => void detail.refetch()}
           style={{
             background: 'transparent',
             border: '1px solid currentColor',
