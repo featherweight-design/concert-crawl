@@ -5,19 +5,13 @@
 **Auditor:** Claude (autonomous Readiness Review)
 **Related ticket(s):** Beta-to-Launch Design Queue row 4 (`design/design_handoff_monetization/`); eng target Beta wk 3 (Jun 30 – Jul 6) per `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md` line 122 and line 258.
 
-**Addendum tickets opened from this audit** (all must be resolved before a Monetization plan PR can open):
+**Addendum tickets opened from this audit** (all must be resolved before a Monetization plan PR can open). The initial pass opened 10 design addenda + 1 eng infra ticket; these were consolidated into 4 design briefs + 1 eng infra ticket so Design receives coherent problem statements instead of a fragmented eng-flavored checklist. The eng infra ticket retains its full technical depth — that's the right audience for it.
 
-- #765 — Subscription lifecycle states (cancel / downgrade / upgrade / dunning / refund / dispute / account-delete-while-subscribed / win-back) — `type: design, priority: high`
-- #766 — Payment failure states (decline / 3DS / SCA / retry / idempotency) — `type: design, priority: high`
-- #767 — Beta `premium_gifted` user state across picker + settings — `type: design, priority: high`
-- #768 — Founder availability + claim race + post-claim confirmation — `type: design, priority: high`
-- #769 — Tier-feature gating per-surface visibility map — `type: design, priority: high`
-- #770 — Cancel + manage flow (in-app vs. Stripe portal) — `type: design, priority: high`
-- #771 — a11y review pass + screen-reader walkthrough — `type: design, priority: normal`
-- #772 — Trial-ended takeover timing — `type: design, priority: normal`
-- #773 — Renewal receipt + email touchpoints — `type: design, priority: normal`
-- #774 — Price-change policy copy (Supporter / Premium) — `type: design, priority: normal`
-- **#775** — **Monetization infrastructure spec** (Stripe wiring, schema expand, type expansion, entitlements helper, founder counter, PostHog funnel, env-var matrix) — `type: chore, priority: blocker` — the eng companion to the design addenda above
+- **#780** — Monetization — subscription lifecycle + management (cancel / downgrade / upgrade / trial-end timing / manage-subscription entry) — `type: design, priority: high` — supersedes closed #765, #770, #772
+- **#781** — Monetization — tier states + entitlements matrix (beta gifted state, Founder race + post-claim, per-tier × per-feature visibility map) — `type: design, priority: high` — supersedes closed #767, #768, #769
+- **#782** — Monetization — failure states, a11y, and required microcopy (payment-failure family, a11y annotations, auto-renew / SCA disclosures, price-change policy) — `type: design, priority: high` — supersedes closed #766, #771, #774
+- **#783** — Monetization — email touchpoints (welcome / renewal receipt / dunning / card-expiring / cancel ack / win-back) — `type: design, priority: normal` — supersedes closed #773
+- **#775** — **Monetization infrastructure spec** (Stripe wiring, schema expand, type expansion, entitlements helper, founder counter, PostHog funnel, env-var matrix) — `type: chore, priority: blocker` — eng companion to the design addenda above; the technical depth here is intentional and stays.
 
 **Plan PR target:** Blocked. The Monetization plan PR cannot open until all of the above are resolved. #775 (infra spec) is the blocking eng prerequisite; the design addenda gate the surface design.
 
