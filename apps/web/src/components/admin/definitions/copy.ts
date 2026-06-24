@@ -1239,6 +1239,7 @@ export const ADMIN_COPY = {
       prices: 'Prices',
       missing: 'Missing',
       allEvents: 'All events',
+      contests: 'Contests',
       ariaLabel: 'Review sections',
     },
 

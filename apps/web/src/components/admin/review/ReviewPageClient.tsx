@@ -25,6 +25,7 @@ import { editEventHref } from '@/lib/admin/edit-event-link'
 import { computePendingCount } from '@/lib/admin/review-pending'
 import { PricesTabContent } from './_tabs/PricesTabContent'
 import { AllEventsTabContent } from './_tabs/AllEventsTabContent'
+import { ContestsTabContent } from './_tabs/ContestsTabContent'
 import {
   EMPTY_PAGINATION,
   parseFiltersFromParams,
@@ -58,13 +59,19 @@ interface ReviewPageClientProps {
   initialCounts: ReviewCounts
 }
 
-type ReviewTabKey = 'event-flags' | 'prices' | 'missing' | 'all-events'
+type ReviewTabKey =
+  | 'event-flags'
+  | 'prices'
+  | 'missing'
+  | 'all-events'
+  | 'contests'
 
 const VALID_TAB_KEYS: ReadonlySet<string> = new Set([
   'event-flags',
   'prices',
   'missing',
   'all-events',
+  'contests',
 ])
 
 const isValidTabKey = (value: string | null): value is ReviewTabKey =>
@@ -729,6 +736,12 @@ export const ReviewPageClient = ({
       kind: 'danger',
     },
     { key: 'all-events', label: ADMIN_COPY.review.tabs.allEvents },
+    {
+      key: 'contests',
+      label: ADMIN_COPY.review.tabs.contests,
+      count: counts.priceContests,
+      kind: 'warning',
+    },
   ]
 
   return (
@@ -817,6 +830,8 @@ export const ReviewPageClient = ({
           onPaginationChange={onPaginationChange}
         />
       )}
+
+      {activeTab === 'contests' && <ContestsTabContent />}
     </div>
   )
 }

@@ -16,6 +16,7 @@ interface ReviewCounts {
   eventFlags: number
   prices: number
   missing: number
+  priceContests: number
 }
 
 interface FeedbackCounts {
@@ -55,10 +56,15 @@ export default async function AdminLayout({
     }
 
     if (reviewRes.status === 'fulfilled') {
+      // Sidebar badge sums every triage tab so the nav signal moves in
+      // lock-step with the per-tab pills inside /admin/review. Spec
+      // §18 lock #1 requires priceContests to roll into this sum
+      // alongside the existing three (#697).
       pendingReview =
         reviewRes.value.eventFlags +
         reviewRes.value.prices +
-        reviewRes.value.missing
+        reviewRes.value.missing +
+        reviewRes.value.priceContests
     } else {
       console.warn('[admin layout] review counts fetch failed', {
         reason: reviewRes.reason,
