@@ -168,7 +168,9 @@ The codebase splits validation and persistence across two layers — this plan r
 The existing `createVenueSchema` and `updateVenueSchema` already establish two related patterns:
 
 - **Nullable enum without transform** — `ticketVendor` (lines ~35–46) uses `.enum([...]).nullable().optional()`. This is the shape `apiProvider` mirrors: a fixed set of string literals plus null/absent for "None."
-- **String-with-trim transform** — `priceUrl` (lines ~96–101), `address` (lines ~47–56), and `crawlWaitForSelector` (lines ~29–34) use `.string().nullable().optional().transform(trim → null-if-empty)`. This is the shape `apiAccountId` mirrors: a free-text field that needs whitespace normalization.
+- **String-with-trim transform** — `address` (lines ~47–56) and `crawlWaitForSelector` (lines ~29–34) use `.string().nullable().optional().transform(...)` that both **trims AND returns the trimmed string** (null-if-empty). This is the shape `apiAccountId` mirrors: a free-text field that needs whitespace normalization on write.
+
+  (For reference: `priceUrl` (lines ~96–101) has a related but distinct transform — it checks `val?.trim() === ''` to null-out empty strings but returns the **original** `val`, not the trimmed value. That's not what we want for `apiAccountId`. The address / crawlWaitForSelector shape is the correct precedent.)
 
 `null` is the "None" / cleared value over the wire (not `""`), because the body arrives as JSON.
 
