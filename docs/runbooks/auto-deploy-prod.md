@@ -47,7 +47,7 @@ The rollback trigger keys on a job output that the smoke job sets ONLY after Pla
 
 If `deploy` fails, `smoke` is skipped → the output is unset → `rollback` skipped too. This preserves the original "don't compound a failed deploy with a destructive rollback for a deploy that never happened" semantic.
 
-If Playwright runs and fails an assertion, `rollback` runs automatically — rolling back the **API web service** to its most recent prior successful deploy via `render-rollback.sh`. Operators can still trigger rollback manually via `rollback-prod.yml`'s `workflow_dispatch` for any infrastructure-failure case where the auto-path was skipped.
+If Playwright runs and fails an assertion, `rollback` runs automatically. The workflow invokes `render-rollback.sh` for all three Render services serially, but the script's prefix-based routing means **only the API web service is actually rolled back via the Render API**; the two crawler crons are skipped with a warning (see caveat below). Operators can still trigger rollback manually via `rollback-prod.yml`'s `workflow_dispatch` for any infrastructure-failure case where the auto-path was skipped.
 
 **Caveat on cron service rollback:** Render's `/rollback` API endpoint rejects cron job services (`crn-*`) with HTTP 400 — there is no API path for cron rollback. `render-rollback.sh` detects cron service IDs by prefix and skips them with a loud warning, returning exit 0 so the workflow can proceed to roll back the other services. The two crawler crons require a manual rollback when needed:
 
@@ -58,12 +58,15 @@ If Playwright runs and fails an assertion, `rollback` runs automatically — rol
 
 `rollback-prod.yml` exists for the human-driven incident-response case: an issue surfaced via Sentry hours after deploy, a manual prod deploy went sideways, or any other reason an operator needs to roll back independently. It is `workflow_dispatch` only, restricted to `main`, and intentionally **NOT** gated by `AUTO_DEPLOY_PROD_ENABLED` — the kill switch pauses the auto-pipeline; an operator explicitly invoking incident response must still be able to roll back even when the auto-pipeline is off.
 
-## Vercel rollback is manual
+## Vercel + cron rollback is manual
 
-This pipeline rolls back Render services (API + 2 crawler crons)
-automatically. **Vercel web prod is NOT auto-rolled back** because Vercel
-already offers a one-click instant promote and Vercel deploys are reliable
-in our experience. If a post-deploy smoke failure looks web-related:
+This pipeline auto-rolls-back **only the Render API web service**.
+Both prod **crawler crons** require manual rollback because Render's
+`/rollback` endpoint rejects cron services — see the "Caveat on cron
+service rollback" section above for the manual paths. **Vercel web
+prod is NOT auto-rolled back** either, because Vercel already offers
+a one-click instant promote and Vercel deploys are reliable in our
+experience. If a post-deploy smoke failure looks web-related:
 
 1. Open the Vercel dashboard → `concert-crawl` (production) project
 2. Deployments tab → find the most recent prior deploy marked `Ready`
