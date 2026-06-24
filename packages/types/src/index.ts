@@ -287,10 +287,16 @@ export interface PriceSubmission {
   // Submitter's free-text note (existed in DB but was missing from this
   // shared interface — added during the admin contest-review PR per #697).
   note: string | null
-  // Admin's reason text when status = 'archived' (loser-of-contest sink).
-  // No DB-level length cap; the API enforces min 10 / max 2000 chars at
-  // the resolve/defer Zod validators (see apps/api/src/routes/admin/
-  // contests.ts resolveBodySchema + deferBodySchema).
+  // Admin's archive reason. No DB-level length cap; the API enforces
+  // min 10 / max 2000 chars at the resolve/defer Zod validators (see
+  // apps/api/src/routes/admin/contests.ts resolveBodySchema +
+  // deferBodySchema). Also set by migration 0041's pre-unique-index
+  // cleanup on rows it retires as status='stale' (the Postgres
+  // same-transaction enum restriction prevented using 'archived' inside
+  // the migration that adds the enum value — spec §5.2). So
+  // archived_reason CAN be non-null on status='stale' rows — do NOT
+  // infer status from this field's presence; query by status for
+  // behavior, read archived_reason for the explanation.
   archivedReason: string | null
   // Engagement-signal columns surfaced via priceByTier[].counterSubmission
   // so consumers see a quiet "Admin requested more info" pill on the event

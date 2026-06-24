@@ -111,10 +111,15 @@ export const priceSubmissions = pgTable('price_submissions', {
   // uniform across the table (corroborationCount = total observations).
   corroborationCount: integer('corroboration_count').notNull().default(1),
   note: varchar('note', { length: 280 }),
-  // Admin's archive reason when status='archived' (loser-of-contest sink).
-  // No DB-level length cap; the API enforces min 10 / max 2000 chars at
-  // the Zod validator boundary (resolveBodySchema + deferBodySchema in
-  // apps/api/src/routes/admin/contests.ts). See migration 0041 + spec §5.
+  // archived_reason: text — admin's archive reason. No DB-level cap;
+  // the API enforces min 10 / max 2000 at the resolve/defer Zod
+  // validators (resolveBodySchema + deferBodySchema in
+  // apps/api/src/routes/admin/contests.ts). Also written by migration
+  // 0041's pre-unique-index cleanup on rows it retires as status='stale'
+  // (the Postgres same-transaction enum restriction prevented using
+  // 'archived' inside that migration — spec §5.2). Non-null
+  // archived_reason does NOT imply status='archived' — query by status
+  // for behavior, read archived_reason for the explanation.
   archivedReason: text('archived_reason'),
   // Engagement-signal columns — surfaced via priceByTier[].counterSubmission
   // so consumers see a quiet "Admin requested more info" pill on the event

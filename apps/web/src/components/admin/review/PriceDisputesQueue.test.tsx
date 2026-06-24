@@ -45,7 +45,7 @@ describe('PriceDisputesQueue', () => {
   // stays visible with (0) in the pill (separate ReviewTabs surface), but
   // the queue panel does not render any empty-state message.
   it('returns null when items is empty', () => {
-    const { container } = render(<PriceDisputesQueue items={[]} />)
+    const { container } = render(<PriceDisputesQueue items={[]} total={0} />)
     expect(container.firstChild).toBeNull()
   })
 
@@ -53,21 +53,36 @@ describe('PriceDisputesQueue', () => {
     render(
       <PriceDisputesQueue
         items={[mockRow({ contestId: 'c1' }), mockRow({ contestId: 'c2' })]}
+        total={2}
       />,
     )
     // 1 header row + 2 data rows
     expect(screen.getAllByRole('row')).toHaveLength(3)
   })
 
-  // Design property table §1 line 21: count.badge.text = `{items.length} open`
+  // Design property table §1 line 21: count.badge.text = `{total} open`.
+  // R6-3: badge reads the paginated envelope `total`, not `items.length`,
+  // so the count stays accurate once contests exceed one page.
   it('renders the count badge with "{n} open"', () => {
-    render(<PriceDisputesQueue items={[mockRow({})]} />)
+    render(<PriceDisputesQueue items={[mockRow({})]} total={1} />)
     expect(screen.getByText(/1 open/i)).toBeTruthy()
+  })
+
+  // R6-3 regression pin — when the API returns one page (e.g. limit=20)
+  // but the true open-contest count is 47, the badge must read "47 open"
+  // (not "20 open"). Locks in the badge ↔ Contests tab pill agreement.
+  it('renders total in the badge when items.length is less than total (paginated)', () => {
+    const twentyItems = Array.from({ length: 20 }, (_unused, idx) =>
+      mockRow({ contestId: `c-${idx}` }),
+    )
+    render(<PriceDisputesQueue items={twentyItems} total={47} />)
+    expect(screen.getByText(/47 open/i)).toBeTruthy()
+    expect(screen.queryByText(/20 open/i)).toBeNull()
   })
 
   // Design property table §1 line 16: title.text = "Price disputes"
   it('renders the panel title', () => {
-    render(<PriceDisputesQueue items={[mockRow({})]} />)
+    render(<PriceDisputesQueue items={[mockRow({})]} total={1} />)
     expect(screen.getByText('Price disputes')).toBeTruthy()
   })
 
@@ -75,7 +90,9 @@ describe('PriceDisputesQueue', () => {
   // Using a Next.js <Link> means the rendered anchor href is the
   // navigation target — no useRouter mock required.
   it('renders the resolve button as a link to /admin/review/contests/:contestId', () => {
-    render(<PriceDisputesQueue items={[mockRow({ contestId: 'go-1' })]} />)
+    render(
+      <PriceDisputesQueue items={[mockRow({ contestId: 'go-1' })]} total={1} />,
+    )
     const link = screen.getByRole('link', { name: /resolve/i })
     expect(link.getAttribute('href')).toBe('/admin/review/contests/go-1')
   })
@@ -92,6 +109,7 @@ describe('PriceDisputesQueue', () => {
             eventDate: '2027-09-14',
           }),
         ]}
+        total={1}
       />,
     )
     expect(screen.getByText('Big Thief')).toBeTruthy()
@@ -102,7 +120,7 @@ describe('PriceDisputesQueue', () => {
   // Design property table §2 — original.cell.price.format =
   // `$floor–$ceiling` if ceiling > floor, else `$floor`.
   it('renders the original price as a range when ceiling > floor', () => {
-    render(<PriceDisputesQueue items={[mockRow({})]} />)
+    render(<PriceDisputesQueue items={[mockRow({})]} total={1} />)
     expect(screen.getByText('$48–$58')).toBeTruthy()
   })
 
@@ -118,6 +136,7 @@ describe('PriceDisputesQueue', () => {
             },
           }),
         ]}
+        total={1}
       />,
     )
     expect(screen.getByText('$42')).toBeTruthy()
@@ -127,14 +146,20 @@ describe('PriceDisputesQueue', () => {
   // sourceCategory === 'boxoffice'. The badge.text is "box office".
   it('renders the box-office badge when sourceCategory is boxoffice', () => {
     render(
-      <PriceDisputesQueue items={[mockRow({ sourceCategory: 'boxoffice' })]} />,
+      <PriceDisputesQueue
+        items={[mockRow({ sourceCategory: 'boxoffice' })]}
+        total={1}
+      />,
     )
     expect(screen.getByText(/box office/i)).toBeTruthy()
   })
 
   it('does not render the box-office badge when sourceCategory is standard', () => {
     render(
-      <PriceDisputesQueue items={[mockRow({ sourceCategory: 'standard' })]} />,
+      <PriceDisputesQueue
+        items={[mockRow({ sourceCategory: 'standard' })]}
+        total={1}
+      />,
     )
     expect(screen.queryByText(/box office/i)).toBeNull()
   })
@@ -142,19 +167,19 @@ describe('PriceDisputesQueue', () => {
   // Design property table §2 — counter cell always renders a "pending"
   // azure badge (the counter row is by definition status='pending').
   it('renders the pending badge on every counter cell', () => {
-    render(<PriceDisputesQueue items={[mockRow({})]} />)
+    render(<PriceDisputesQueue items={[mockRow({})]} total={1} />)
     expect(screen.getByText(/pending/i)).toBeTruthy()
   })
 
   // Design property table §2 — attribution format
   // `{submitter} · {confirms} confirms`.
   it('renders the parent attribution with the submitter handle and fan-confirm count', () => {
-    render(<PriceDisputesQueue items={[mockRow({})]} />)
+    render(<PriceDisputesQueue items={[mockRow({})]} total={1} />)
     expect(screen.getByText(/hugh · 2 confirms/)).toBeTruthy()
   })
 
   it('renders the counter attribution with the counter submitter handle and fan-confirm count', () => {
-    render(<PriceDisputesQueue items={[mockRow({})]} />)
+    render(<PriceDisputesQueue items={[mockRow({})]} total={1} />)
     expect(screen.getByText(/kel · 1 confirms/)).toBeTruthy()
   })
 
@@ -172,6 +197,7 @@ describe('PriceDisputesQueue', () => {
             },
           }),
         ]}
+        total={1}
       />,
     )
     expect(screen.getByText(/anonymous · 2 confirms/)).toBeTruthy()
@@ -187,6 +213,7 @@ describe('PriceDisputesQueue', () => {
           mockRow({ contestId: 'bbb', eventTitle: 'Show B' }),
           mockRow({ contestId: 'ccc', eventTitle: 'Show C' }),
         ]}
+        total={3}
       />,
     )
     const links = screen.getAllByRole('link', { name: /resolve/i })
@@ -198,7 +225,7 @@ describe('PriceDisputesQueue', () => {
 
   // Column headers — design property table §1 line 38.
   it('renders all five column headers (last is the empty actions column)', () => {
-    render(<PriceDisputesQueue items={[mockRow({})]} />)
+    render(<PriceDisputesQueue items={[mockRow({})]} total={1} />)
     expect(screen.getByRole('columnheader', { name: 'Event' })).toBeTruthy()
     expect(screen.getByRole('columnheader', { name: 'Original' })).toBeTruthy()
     expect(screen.getByRole('columnheader', { name: 'Counter' })).toBeTruthy()

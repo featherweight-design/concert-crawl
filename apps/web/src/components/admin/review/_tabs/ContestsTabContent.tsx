@@ -73,5 +73,7 @@ export const ContestsTabContent: FC = () => {
     )
   }
 
-  return <PriceDisputesQueue items={data?.items ?? []} />
+  return (
+    <PriceDisputesQueue items={data?.items ?? []} total={data?.total ?? 0} />
+  )
 }

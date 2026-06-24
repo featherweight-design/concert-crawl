@@ -43,6 +43,13 @@ export interface PriceContestRow {
 
 interface PriceDisputesQueueProps {
   items: ReadonlyArray<PriceContestRow>
+  // Total open-contest count from the paginated API envelope
+  // (`{ items, total, limit, offset }`). Required — `items.length` is
+  // capped by `limit` (default 20) so using it for the header badge
+  // under-reports once contests exceed one page. The Contests tab pill
+  // pulls from `counts.priceContests` (the same true total), so reading
+  // `total` here keeps the two surfaces in agreement.
+  total: number
 }
 
 // Design property table §2 — `$floor–$ceiling` if ceiling > floor, else
@@ -126,7 +133,10 @@ const StatusBadge: FC<{ kind: BadgeKind; children: string }> = ({
   )
 }
 
-export const PriceDisputesQueue: FC<PriceDisputesQueueProps> = ({ items }) => {
+export const PriceDisputesQueue: FC<PriceDisputesQueueProps> = ({
+  items,
+  total,
+}) => {
   // Auto-hide on empty — design property table §1 line 15. The tab pill
   // (separate ReviewTabs surface) still shows (0); this panel renders
   // nothing rather than an "empty" message.
@@ -170,7 +180,7 @@ export const PriceDisputesQueue: FC<PriceDisputesQueueProps> = ({ items }) => {
             {REVIEW_CONTEST_COPY.queue.heading}
           </h3>
           <StatusBadge kind="warning">
-            {REVIEW_CONTEST_COPY.queue.countBadge(items.length)}
+            {REVIEW_CONTEST_COPY.queue.countBadge(total)}
           </StatusBadge>
         </div>
         {/*
