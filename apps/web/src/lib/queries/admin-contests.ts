@@ -74,6 +74,11 @@ export interface ContestDetailData {
     lastUpdatedAt: string
     note: string | null
     status: 'pending' | 'corroborated' | 'disputed' | 'stale' | 'archived'
+    // Archive rationale captured at resolution time. Re-surfaced in the
+    // panel's read-only banner so admins re-visiting a resolved contest can
+    // see WHY a side was archived (spec §4 line 245 — "reason shown to both
+    // submitters"). Stays null on actionable / pending contests.
+    archivedReason: string | null
   }
   counter: {
     id: string
@@ -87,6 +92,9 @@ export interface ContestDetailData {
     status: 'pending' | 'corroborated' | 'disputed' | 'stale' | 'archived'
     lastAdminActionAt: string | null
     lastAdminActionKind: 'defer' | null
+    // Same rationale as parent.archivedReason — captures the admin's reason
+    // when the counter loses a resolution.
+    archivedReason: string | null
   }
   filedAt: string
   // Empty placeholder per spec §6.2 — the history pane is follow-up scope.

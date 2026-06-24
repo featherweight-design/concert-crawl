@@ -26,20 +26,34 @@ vi.mock('next/navigation', () => ({
 
 const mockApiGet = vi.fn()
 const mockApiPost = vi.fn()
-vi.mock('@/lib/api', () => ({
-  apiClient: {
-    get: (...args: unknown[]) => mockApiGet(...args),
-    post: (...args: unknown[]) => mockApiPost(...args),
-  },
-  ApiError: class ApiError extends Error {
+// ApiError class kept inside the vi.mock factory so vi.mock's hoisting
+// can't trip on top-level access. The mocked class carries status +
+// code + message so `instanceof ApiError` checks inside
+// AdminDisputePanel narrow correctly (404 path, mutation error path).
+vi.mock('@/lib/api', () => {
+  class ApiError extends Error {
     constructor(
       public readonly status: number,
       message: string,
+      public readonly code?: string,
     ) {
       super(message)
+      this.name = 'ApiError'
     }
-  },
-}))
+  }
+  return {
+    apiClient: {
+      get: (...args: unknown[]) => mockApiGet(...args),
+      post: (...args: unknown[]) => mockApiPost(...args),
+    },
+    ApiError,
+  }
+})
+
+// Re-import the mocked ApiError for use in test factories. Importing
+// AFTER the vi.mock call ensures we receive the mock's class, not the
+// real one.
+import { ApiError as MockApiError } from '@/lib/api'
 
 import { AdminDisputePanel } from './AdminDisputePanel'
 
@@ -78,6 +92,7 @@ const buildContest = (
     lastUpdatedAt: '2026-06-20T00:00:00Z',
     note: null,
     status: 'disputed',
+    archivedReason: null,
   },
   counter: {
     id: 'counter-1',
@@ -91,6 +106,7 @@ const buildContest = (
     status: 'pending',
     lastAdminActionAt: null,
     lastAdminActionKind: null,
+    archivedReason: null,
   },
   filedAt: '2026-06-22T00:00:00Z',
   history: [],
@@ -314,9 +330,12 @@ describe('AdminDisputePanel', () => {
     })
   })
 
-  it('surfaces the mutation error inline when resolve rejects', async () => {
+  it('surfaces the mutation error inline when resolve rejects (generic fallback)', async () => {
     mockApiGet.mockResolvedValue(buildContest())
-    mockApiPost.mockRejectedValue(new Error('mutation boom'))
+    // Reject with an error that has no readable message so the panel
+    // falls back to the generic copy. (Errors with messages flow
+    // through; see the ApiError-specific test below.)
+    mockApiPost.mockRejectedValue(new Error(''))
     renderWithClient(<AdminDisputePanel contestId="c1" />)
     await waitFor(() => {
       expect(screen.getByText('hugh')).toBeTruthy()
@@ -424,5 +443,139 @@ describe('AdminDisputePanel', () => {
     // Deferred contests stay actionable — reason field + buttons render.
     expect(screen.getByLabelText(/reason/i)).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Promote counter' })).toBeTruthy()
+  })
+
+  // G1 — read-only banner surfaces the archived side's archivedReason
+  // so admins re-visiting a resolved contest see WHY the side was
+  // archived (spec §4 line 245).
+  it('surfaces the counter archivedReason in the read-only banner', async () => {
+    mockApiGet.mockResolvedValue(
+      buildContest({
+        parent: {
+          ...buildContest().parent,
+          status: 'corroborated',
+        },
+        counter: {
+          ...buildContest().counter,
+          status: 'archived',
+          archivedReason: 'Original held — box-office confirmed.',
+        },
+      }),
+    )
+    renderWithClient(<AdminDisputePanel contestId="c1" />)
+    await waitFor(() => {
+      expect(screen.getByText(/already resolved/i)).toBeTruthy()
+    })
+    expect(screen.getByText('Admin reason')).toBeTruthy()
+    expect(
+      screen.getByText(/original held — box-office confirmed/i),
+    ).toBeTruthy()
+  })
+
+  it('surfaces the parent archivedReason when parent is the archived side', async () => {
+    mockApiGet.mockResolvedValue(
+      buildContest({
+        parent: {
+          ...buildContest().parent,
+          status: 'archived',
+          archivedReason: 'Counter promoted — checkout screenshot verified.',
+        },
+        counter: {
+          ...buildContest().counter,
+          status: 'corroborated',
+        },
+      }),
+    )
+    renderWithClient(<AdminDisputePanel contestId="c1" />)
+    await waitFor(() => {
+      expect(screen.getByText(/already resolved/i)).toBeTruthy()
+    })
+    expect(screen.getByText('Admin reason')).toBeTruthy()
+    expect(screen.getByText(/checkout screenshot verified/i)).toBeTruthy()
+  })
+
+  // G2 — server-supplied error message surfaces in the inline alert
+  // when an ApiError carries a usable message.
+  it('surfaces the server error message when mutation rejects with ApiError', async () => {
+    mockApiGet.mockResolvedValue(buildContest())
+    mockApiPost.mockRejectedValue(
+      new MockApiError(
+        409,
+        'Parent tier GA does not match challenger tier VIP.',
+        'precondition_failed',
+      ),
+    )
+    renderWithClient(<AdminDisputePanel contestId="c1" />)
+    await waitFor(() => {
+      expect(screen.getByText('hugh')).toBeTruthy()
+    })
+    fireEvent.change(screen.getByLabelText(/reason/i), {
+      target: { value: 'keeping the original because…' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Keep original' }))
+    await waitFor(() => {
+      expect(
+        screen.getByText(/parent tier GA does not match challenger tier VIP/i),
+      ).toBeTruthy()
+    })
+    // The generic fallback copy must NOT appear when a specific message
+    // is available.
+    expect(
+      screen.queryByText('That action failed. Please try again.'),
+    ).toBeNull()
+  })
+
+  // G4 — mutation error alert renders below the reason textarea, NOT
+  // above it. The action button row sits below the alert.
+  it('renders mutation error alert below the textarea and above the action row', async () => {
+    mockApiGet.mockResolvedValue(buildContest())
+    mockApiPost.mockRejectedValue(new Error('mutation boom'))
+    renderWithClient(<AdminDisputePanel contestId="c1" />)
+    await waitFor(() => {
+      expect(screen.getByText('hugh')).toBeTruthy()
+    })
+    fireEvent.change(screen.getByLabelText(/reason/i), {
+      target: { value: 'keeping the original because…' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Keep original' }))
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeTruthy()
+    })
+    const alert = screen.getByRole('alert')
+    const textarea = screen.getByLabelText(/reason/i)
+    const keepBtn = screen.getByRole('button', { name: 'Keep original' })
+    // DOCUMENT_POSITION_FOLLOWING = 4 — alert appears AFTER the textarea
+    // in document order (i.e. below it).
+    expect(
+      textarea.compareDocumentPosition(alert) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    // And BEFORE the action button row.
+    expect(
+      keepBtn.compareDocumentPosition(alert) & Node.DOCUMENT_POSITION_PRECEDING,
+    ).toBeTruthy()
+  })
+
+  // G5 — 404 differentiation renders the contest-specific notFound copy
+  // without a retry affordance.
+  it('renders the notFound copy when the detail fetch rejects with 404', async () => {
+    mockApiGet.mockRejectedValue(new MockApiError(404, 'Contest not found'))
+    renderWithClient(<AdminDisputePanel contestId="c1" />)
+    await waitFor(() => {
+      expect(screen.getByText('Contest not found.')).toBeTruthy()
+    })
+    // A 404 has no retry button — retrying a hard-deleted contest never
+    // succeeds.
+    expect(screen.queryByRole('button', { name: /retry/i })).toBeNull()
+  })
+
+  // G5 — non-404 errors keep the generic banner + retry behavior.
+  it('renders the generic error banner with retry for non-404 errors', async () => {
+    mockApiGet.mockRejectedValue(new MockApiError(500, 'server boom'))
+    renderWithClient(<AdminDisputePanel contestId="c1" />)
+    await waitFor(() => {
+      expect(screen.getByText('Failed to load contest.')).toBeTruthy()
+    })
+    expect(screen.getByRole('button', { name: /retry/i })).toBeTruthy()
   })
 })

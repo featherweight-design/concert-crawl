@@ -71,6 +71,38 @@ const MONO = "'JetBrains Mono', monospace"
 // design source pixel-for-pixel. Same convention as the GOLD_Q / AZ_Q
 // palette in PriceDisputesQueue.tsx.
 const AZURE_DARK = 'oklch(0.62 0.12 240)'
+// GOLD_D — gold accent for the box-office trust pill. Mirrors the
+// pending-card.jsx pendingTokens map (`GOLD` literal at line 21) and
+// the same constant the AdminDisputePanel uses for the keep-original
+// button border.
+const GOLD_DARK = 'oklch(0.66 0.14 78)'
+
+// Trust pill — design property table §3b line 214 routes through the
+// pending-card.jsx `PendingTrustPill` component, which maps a `kind`
+// to a colored pill (gold for box office, azure for community). The
+// SourceCategory discriminator we receive ('boxoffice' | 'standard' |
+// 'resale') maps onto that pill: 'boxoffice' → gold, 'standard' →
+// azure community, 'resale' → neutral azure with the 'Resale' label.
+// Style values pulled from pending-card.jsx:108–124 so the pill
+// renders 1:1 with the design source.
+const trustPillStyle = (
+  kind: SourceCategory,
+): { background: string; color: string; border: string } => {
+  if (kind === 'boxoffice') {
+    return {
+      background: `color-mix(in oklab, ${GOLD_DARK} 22%, transparent)`,
+      color: GOLD_DARK,
+      border: `1px solid color-mix(in oklab, ${GOLD_DARK} 60%, transparent)`,
+    }
+  }
+  // 'standard' and 'resale' share the azure community-style treatment;
+  // only the label changes (per copy.ts adminEntry.trustPill map).
+  return {
+    background: `color-mix(in oklab, ${AZURE_DARK} 16%, transparent)`,
+    color: AZURE_DARK,
+    border: 'none',
+  }
+}
 
 export const AdminEntry: FC<AdminEntryProps> = ({
   side,
@@ -78,6 +110,7 @@ export const AdminEntry: FC<AdminEntryProps> = ({
   priceMax,
   tier,
   vendor,
+  sourceCategory,
   submitter,
   observedAt,
   confirms,
@@ -91,6 +124,15 @@ export const AdminEntry: FC<AdminEntryProps> = ({
     confirms?.fans ?? 0,
     confirms?.admin ?? 0,
   )
+  // Trust pill renders only when sourceCategory is known. Null comes
+  // from older rows pre-PR #696 (the backfill assigned categories to
+  // every row, but the type stays nullable for the wire shape).
+  const trustPillTokens =
+    sourceCategory !== null ? trustPillStyle(sourceCategory) : null
+  const trustPillLabel =
+    sourceCategory !== null
+      ? REVIEW_CONTEST_COPY.adminEntry.trustPill[sourceCategory]
+      : null
 
   return (
     <div
@@ -131,11 +173,9 @@ export const AdminEntry: FC<AdminEntryProps> = ({
         </span>
       ) : null}
 
-      {/* Headline row — price + tier + (future) trust pill, all on one
-          baseline-aligned line. Mirrors dispute-surfaces.jsx:693–706. The
-          PendingTrustPill referenced in §3b line 214 is wired by the
-          parent AdminDisputePanel (Task 15) so this component stays
-          dependency-light. */}
+      {/* Headline row — price + tier + trust pill, all on one
+          baseline-aligned line. Mirrors dispute-surfaces.jsx:693–706
+          including the trust pill at the trailing edge. */}
       <div
         style={{
           display: 'flex',
@@ -171,6 +211,34 @@ export const AdminEntry: FC<AdminEntryProps> = ({
         >
           {tier}
         </span>
+        {trustPillTokens !== null && trustPillLabel !== null ? (
+          <span
+            // Trust pill — §3b line 214 + pending-card.jsx:108–124. Pill
+            // shape mirrors PendingTrustPill so the dispute panel reads
+            // 1:1 with the design source. Gold for box-office,
+            // azure-tinted for community + resale; label discriminator
+            // lives in copy.ts adminEntry.trustPill.
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: '2px 6px',
+              borderRadius: 4,
+              background: trustPillTokens.background,
+              color: trustPillTokens.color,
+              border: trustPillTokens.border,
+              fontFamily: MONO,
+              fontSize: 9,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              fontWeight: 700,
+              lineHeight: 1,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {trustPillLabel}
+          </span>
+        ) : null}
       </div>
 
       {/* Metadata grid — §3b lines 215–224. Two-column grid: mono

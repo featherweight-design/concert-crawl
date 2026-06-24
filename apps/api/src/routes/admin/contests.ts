@@ -251,6 +251,10 @@ contestsAdminRouter.get(
         // is a placeholder until submission_confirms grows an admin-method
         // discriminator. Same comment as the list endpoint above.
         corroborationCount: priceSubmissions.corroborationCount,
+        // Surfaced so AdminDisputePanel's read-only banner can re-display the
+        // admin's resolution rationale to admins re-visiting a resolved
+        // contest (spec §4 line 245). Null on actionable contests.
+        archivedReason: priceSubmissions.archivedReason,
       })
       .from(priceSubmissions)
       .innerJoin(events, eq(events.id, priceSubmissions.eventId))
@@ -278,6 +282,9 @@ contestsAdminRouter.get(
         corroborationCount: priceSubmissions.corroborationCount,
         lastAdminActionAt: priceSubmissions.lastAdminActionAt,
         lastAdminActionKind: priceSubmissions.lastAdminActionKind,
+        // Same as parent.archivedReason — surfaces the admin's resolution
+        // rationale on the loser side of an already-resolved contest.
+        archivedReason: priceSubmissions.archivedReason,
       })
       .from(priceSubmissions)
       .where(eq(priceSubmissions.disputedSubmissionId, contestId))
@@ -339,6 +346,7 @@ contestsAdminRouter.get(
           lastUpdatedAt: parentRow.lastUpdatedAt.toISOString(),
           note: parentRow.note ?? null,
           status: parentRow.status,
+          archivedReason: parentRow.archivedReason ?? null,
         },
         counter: {
           id: counterRow.id,
@@ -361,6 +369,7 @@ contestsAdminRouter.get(
           lastAdminActionAt:
             counterRow.lastAdminActionAt?.toISOString() ?? null,
           lastAdminActionKind: counterRow.lastAdminActionKind ?? null,
+          archivedReason: counterRow.archivedReason ?? null,
         },
         filedAt: counterRow.observedAt.toISOString(),
         history: [],

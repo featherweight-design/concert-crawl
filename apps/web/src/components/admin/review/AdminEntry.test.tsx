@@ -152,4 +152,30 @@ describe('AdminEntry', () => {
     render(<AdminEntry {...baseProps} vendor="Ticketmaster" />)
     expect(screen.getByText('Ticketmaster')).toBeTruthy()
   })
+
+  // Design property table §3b line 214 — trust pill renders in the
+  // headline row beside the price + tier. Source category drives the
+  // pill's label (boxoffice → 'Box office', standard → 'Community',
+  // resale → 'Resale').
+  it('renders the box-office trust pill when sourceCategory is "boxoffice"', () => {
+    render(<AdminEntry {...baseProps} sourceCategory="boxoffice" />)
+    expect(screen.getByText('Box office')).toBeTruthy()
+  })
+
+  it('renders the community trust pill when sourceCategory is "standard"', () => {
+    render(<AdminEntry {...baseProps} sourceCategory="standard" />)
+    expect(screen.getByText('Community')).toBeTruthy()
+  })
+
+  it('renders the resale trust pill when sourceCategory is "resale"', () => {
+    render(<AdminEntry {...baseProps} sourceCategory="resale" />)
+    expect(screen.getByText('Resale')).toBeTruthy()
+  })
+
+  it('omits the trust pill when sourceCategory is null', () => {
+    render(<AdminEntry {...baseProps} sourceCategory={null} />)
+    expect(screen.queryByText('Box office')).toBeNull()
+    expect(screen.queryByText('Community')).toBeNull()
+    expect(screen.queryByText('Resale')).toBeNull()
+  })
 })

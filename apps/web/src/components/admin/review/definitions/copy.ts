@@ -89,6 +89,17 @@ export const REVIEW_CONTEST_COPY = {
     // not a structured value, so we keep formatting in copy.ts.
     confirmsValue: (fans: number, admin: number): string =>
       admin > 0 ? `${fans} fans · ${admin} admin` : `${fans} fans`,
+
+    // §3b line 214 — trust pill rendered alongside the price + tier in
+    // the headline row. Maps the SourceCategory discriminator to the
+    // pill's text. Mirrors the labels in the pending-card design source
+    // (pending-card.jsx:26–46 — pendingTokens map), extended with a
+    // 'resale' label for the third SourceCategory value.
+    trustPill: {
+      boxoffice: 'Box office',
+      standard: 'Community',
+      resale: 'Resale',
+    },
   },
 
   // AdminDisputePanel — the 760px two-up adjudication surface mounted at
@@ -127,6 +138,13 @@ export const REVIEW_CONTEST_COPY = {
       lead: 'This contest was already resolved.',
       link: 'View the new live price.',
     },
+
+    // Label preceding the archived side's reason text in the read-only
+    // banner. Re-surfaces the rationale the admin typed at resolution
+    // time so an admin re-visiting a resolved contest can see WHY a
+    // side was archived (spec §4 line 245 — "reason shown to both
+    // submitters").
+    archivedReason: 'Admin reason',
 
     // Deferred chip — shown near the header when
     // counter.status === 'pending' AND counter.lastAdminActionKind ===
@@ -181,10 +199,11 @@ export const REVIEW_CONTEST_COPY = {
     errorHeading: 'Failed to load contest.',
     errorRetry: 'Retry',
     notFound: 'Contest not found.',
-    // Surfaced inline above the action row when a mutation rejects. The
-    // hook surfaces toasts on error too; this is the in-panel backup so
-    // admins reading the panel can see the failure without scanning a
-    // toast region.
+    // Generic fallback surfaced inline between the reason field and the
+    // action row when a mutation rejects without a usable message. The
+    // panel prefers the server's specific reason (ApiError.message) when
+    // available; this is the catch-all when the rejection has nothing
+    // readable.
     mutationError: 'That action failed. Please try again.',
   },
 } as const

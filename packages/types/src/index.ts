@@ -459,6 +459,13 @@ export interface EventDetailResponse extends EventWithVenue {
     ceiling?: number
     submitter: { handle: string } | null
     submittedAt: string
+    // Engagement-signal columns surfaced when an admin defers the contest.
+    // Mirrors TierCounter.lastAdminAction* above so the flat shape stays in
+    // lock-step with the per-tier shape during the PR 4 migration window
+    // (events.ts:666–675 writes both paths off the same counter row). Both
+    // stay null while the contest sits with no admin engagement.
+    lastAdminActionAt: string | null
+    lastAdminActionKind: 'defer' | null
   } | null
   // Promoted sold-out report — present when a community sold-out report was confirmed
   soldOutReport?: {

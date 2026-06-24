@@ -10,6 +10,7 @@ import {
   useReviewContestDetail,
   type ContestDetailData,
 } from '@/lib/queries/admin-contests'
+import { ApiError } from '@/lib/api'
 import { REVIEW_CONTEST_COPY } from './definitions/copy'
 
 // AdminDisputePanel — 760px two-up adjudication surface mounted at
@@ -90,6 +91,29 @@ const wasDeferred = (contest: ContestDetailData): boolean =>
   contest.counter.status === 'pending' &&
   contest.counter.lastAdminActionKind === 'defer'
 
+// Extracts a usable banner message from a mutation rejection. Prefer
+// ApiError.message when present (carries the server's specific reason
+// — tier mismatch, precondition_failed, etc.) so admins see the exact
+// failure mode instead of a generic copy line. Falls back to the
+// generic copy when the rejection has no readable message.
+const mutationErrorMessage = (err: unknown): string => {
+  if (err instanceof ApiError && err.message.length > 0) return err.message
+  if (err instanceof Error && err.message.length > 0) return err.message
+  return REVIEW_CONTEST_COPY.panel.mutationError
+}
+
+// Returns the side whose `status === 'archived'` so the banner can
+// surface that side's `archivedReason` (the admin's resolution
+// rationale). Null when neither side is archived (corroborated /
+// resolved-without-archive states).
+const archivedSide = (
+  contest: ContestDetailData,
+): 'parent' | 'counter' | null => {
+  if (contest.counter.status === 'archived') return 'counter'
+  if (contest.parent.status === 'archived') return 'parent'
+  return null
+}
+
 // ───── Component ─────────────────────────────────────────────────────────────
 
 export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
@@ -100,7 +124,13 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
   const resolve = useResolveContest()
   const defer = useDeferContest()
   const [reason, setReason] = useState('')
-  const [mutationErrored, setMutationErrored] = useState(false)
+  // Stores the latest mutation error message so the inline banner can
+  // surface the server's specific reason (e.g. "Parent tier GA does not
+  // match challenger tier VIP" on a 409 precondition_failed) instead of
+  // a static generic copy line. Null when no error is pending; a string
+  // when the most recent mutation rejected. Falls back to a generic
+  // copy line when the error has no usable message.
+  const [mutationError, setMutationError] = useState<string | null>(null)
   // Optimistic winner preview — set on click before the API commits so
   // the AdminEntry winner border flashes the admin's choice while the
   // mutation is in flight. Cleared on error so the optimistic accent
@@ -151,6 +181,30 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
 
   // ───── Error state ─────────────────────────────────────────────────
   if (detail.isError || !detail.data) {
+    // Differentiate 404 (contest never existed / was hard-deleted) from
+    // generic errors. 404s render the contest-specific notFound copy
+    // without a retry affordance (retrying a 404 never succeeds);
+    // anything else gets the generic banner + retry button.
+    const isNotFound =
+      detail.error instanceof ApiError && detail.error.status === 404
+    if (isNotFound) {
+      return (
+        <div
+          role="alert"
+          style={{
+            padding: '14px 16px',
+            borderRadius: 10,
+            border: '1px solid var(--border)',
+            background: 'var(--surface-1)',
+            color: 'var(--fg-muted)',
+            fontFamily: INTER,
+            fontSize: 13,
+          }}
+        >
+          {REVIEW_CONTEST_COPY.panel.notFound}
+        </div>
+      )
+    }
     return (
       <div
         role="alert"
@@ -209,7 +263,7 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
 
   const onKeep = async () => {
     setOptimisticWinner('original')
-    setMutationErrored(false)
+    setMutationError(null)
     try {
       await resolve.mutateAsync({
         contestId: contest.contestId,
@@ -217,15 +271,15 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
         reason,
       })
       router.push(QUEUE_ROUTE)
-    } catch {
+    } catch (err) {
       setOptimisticWinner(null)
-      setMutationErrored(true)
+      setMutationError(mutationErrorMessage(err))
     }
   }
 
   const onPromote = async () => {
     setOptimisticWinner('counter')
-    setMutationErrored(false)
+    setMutationError(null)
     try {
       await resolve.mutateAsync({
         contestId: contest.contestId,
@@ -233,19 +287,19 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
         reason,
       })
       router.push(QUEUE_ROUTE)
-    } catch {
+    } catch (err) {
       setOptimisticWinner(null)
-      setMutationErrored(true)
+      setMutationError(mutationErrorMessage(err))
     }
   }
 
   const onDefer = async () => {
-    setMutationErrored(false)
+    setMutationError(null)
     try {
       await defer.mutateAsync({ contestId: contest.contestId, reason })
       router.push(QUEUE_ROUTE)
-    } catch {
-      setMutationErrored(true)
+    } catch (err) {
+      setMutationError(mutationErrorMessage(err))
     }
   }
 
@@ -268,38 +322,57 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
         border: '1px solid var(--border)',
       }}
     >
-      {/* Header — eyebrow + title + status pill (+ deferred chip). §3
-          lines 109–120. */}
-      <header>
-        <div
-          style={{
-            fontFamily: MONO,
-            fontSize: 9.5,
-            color: 'var(--fg-subtle)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-          }}
-        >
-          {REVIEW_CONTEST_COPY.panel.eyebrow}
+      {/* Header — eyebrow + title on the left, status pill + deferred
+          chip on the right. §3 lines 109–120 + dispute-surfaces.jsx:
+          753–776 (single horizontal flex row with space-between). The
+          16px bottom margin is constant regardless of read-only vs
+          active state to keep the header rhythm consistent across the
+          two surfaces. */}
+      <header
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          gap: 12,
+          marginBottom: 16,
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontFamily: MONO,
+              fontSize: 9.5,
+              color: 'var(--fg-subtle)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+            }}
+          >
+            {REVIEW_CONTEST_COPY.panel.eyebrow}
+          </div>
+          <h2
+            // Title — design source margin is top-only (`4px 0 0`) so
+            // the spacing rhythm collapses between the title and the
+            // header's bottom edge; the header's marginBottom owns the
+            // gap to the next block.
+            style={{
+              fontFamily: INTER,
+              fontSize: 22,
+              fontWeight: 900,
+              letterSpacing: '-0.025em',
+              color: 'var(--fg)',
+              margin: '4px 0 0',
+            }}
+          >
+            {title}
+          </h2>
         </div>
-        <h2
-          style={{
-            fontFamily: INTER,
-            fontSize: 22,
-            fontWeight: 900,
-            letterSpacing: '-0.025em',
-            color: 'var(--fg)',
-            margin: '4px 0',
-          }}
-        >
-          {title}
-        </h2>
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: 8,
             flexWrap: 'wrap',
+            flexShrink: 0,
           }}
         >
           <span
@@ -347,12 +420,14 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
       </header>
 
       {/* Guidance block OR read-only banner. Mutually exclusive. §3
-          lines 121–127 (guidance), plan §15 line 3689 (banner). */}
+          lines 121–127 (guidance), plan §15 line 3689 (banner). The
+          header's 16px marginBottom owns the gap above; no marginTop
+          here so the spacing rhythm stays consistent across the two
+          surfaces. */}
       {readOnly ? (
         <div
           role="status"
           style={{
-            marginTop: 18,
             padding: '12px 14px',
             background: 'color-mix(in oklab, var(--fg) 4%, transparent)',
             border: '1px solid var(--border)',
@@ -371,12 +446,63 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
           >
             {REVIEW_CONTEST_COPY.panel.staleBanner.link}
           </Link>
+          {(() => {
+            // Surface the archived side's resolution rationale so an
+            // admin re-visiting a resolved contest sees WHY the loser
+            // was archived (spec §4 line 245 — "reason shown to both
+            // submitters"). The reason is captured on the archived row
+            // at resolution time and round-trips through the detail
+            // endpoint.
+            const side = archivedSide(contest)
+            const reasonText =
+              side === 'parent'
+                ? contest.parent.archivedReason
+                : side === 'counter'
+                  ? contest.counter.archivedReason
+                  : null
+            if (!reasonText) return null
+            return (
+              <div
+                style={{
+                  marginTop: 10,
+                  paddingTop: 10,
+                  borderTop: '1px solid var(--border)',
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: MONO,
+                    fontSize: 9.5,
+                    color: 'var(--fg-subtle)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    marginBottom: 4,
+                  }}
+                >
+                  {REVIEW_CONTEST_COPY.panel.archivedReason}
+                </div>
+                <blockquote
+                  style={{
+                    margin: 0,
+                    color: 'var(--fg)',
+                    fontFamily: INTER,
+                    fontSize: 13,
+                    lineHeight: 1.5,
+                    letterSpacing: '-0.005em',
+                    fontStyle: 'italic',
+                  }}
+                >
+                  {`“${reasonText}”`}
+                </blockquote>
+              </div>
+            )
+          })()}
         </div>
       ) : (
         <p
           style={{
-            marginTop: 12,
             padding: '10px 14px',
+            margin: 0,
             background: 'color-mix(in oklab, var(--fg) 4%, transparent)',
             border: '1px solid var(--border)',
             borderRadius: 10,
@@ -480,26 +606,6 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
           [needMoreInfo, keepOriginal, promoteCounter]. */}
       {readOnly ? null : (
         <>
-          {mutationErrored ? (
-            <div
-              role="alert"
-              style={{
-                marginBottom: 12,
-                padding: '10px 12px',
-                borderRadius: 8,
-                border:
-                  '1px solid color-mix(in oklab, var(--danger) 30%, transparent)',
-                background:
-                  'color-mix(in oklab, var(--danger) 8%, transparent)',
-                color: 'var(--danger)',
-                fontFamily: INTER,
-                fontSize: 12.5,
-              }}
-            >
-              {REVIEW_CONTEST_COPY.panel.mutationError}
-            </div>
-          ) : null}
-
           <label>
             <div
               style={{
@@ -562,6 +668,31 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
               )}
             </span>
           </div>
+
+          {mutationError !== null ? (
+            <div
+              role="alert"
+              // Inline mutation error — sits between the reason field
+              // and the action row so admins reading the buttons see
+              // the server's specific failure reason in their reading
+              // path. Prefers the API's message (e.g. tier mismatch on
+              // a 409 precondition_failed) over the generic copy.
+              style={{
+                marginTop: 12,
+                padding: '10px 12px',
+                borderRadius: 8,
+                border:
+                  '1px solid color-mix(in oklab, var(--danger) 30%, transparent)',
+                background:
+                  'color-mix(in oklab, var(--danger) 8%, transparent)',
+                color: 'var(--danger)',
+                fontFamily: INTER,
+                fontSize: 12.5,
+              }}
+            >
+              {mutationError}
+            </div>
+          ) : null}
 
           <div
             // §3 line 167 — flex row, gap 10, justifyContent flex-end.

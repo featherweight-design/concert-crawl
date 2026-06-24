@@ -4,9 +4,15 @@ const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
 const SERVICE_KEY = process.env['INTERNAL_API_SECRET']
 
 export class ApiError extends Error {
+  // `code` carries the API's optional discriminator (e.g.
+  // 'precondition_failed' on 409s from the admin contests resolve/defer
+  // routes). Callers that want to brand-narrow the failure use this
+  // instead of substring-matching `message`. Optional so legacy throw
+  // sites that don't pass it stay valid.
   constructor(
     public readonly status: number,
     message: string,
+    public readonly code?: string,
   ) {
     super(message)
     this.name = 'ApiError'
@@ -52,12 +58,17 @@ async function request<T>(
     success: boolean
     data?: T
     error?: string
+    // Optional discriminator used by routes that want clients to brand-
+    // narrow specific failure modes (admin contests resolve/defer return
+    // code: 'precondition_failed' on 409). Threaded through ApiError.code.
+    code?: string
   }
 
   if (!res.ok || !body.success) {
     throw new ApiError(
       res.status,
       body.error ?? `Request failed with status ${res.status}`,
+      body.code,
     )
   }
 

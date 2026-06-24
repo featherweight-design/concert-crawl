@@ -588,12 +588,21 @@ describe('GET /v1/admin/contests/prices/:contestId', () => {
     expect(res.status).toBe(200)
     const body = (await res.json()) as {
       data: {
-        parent: { status: string }
-        counter: { status: string }
+        parent: { status: string; archivedReason: string | null }
+        counter: { status: string; archivedReason: string | null }
       }
     }
     expect(body.data.parent.status).toBe('corroborated')
     expect(body.data.counter.status).toBe('archived')
+    // G1 — archivedReason round-trips through the detail endpoint so
+    // the AdminDisputePanel read-only banner can re-display the admin's
+    // resolution rationale.
+    expect(body.data.counter.archivedReason).toBe(
+      'Original held — box-office confirmed.',
+    )
+    // Parent's archivedReason stays null because it was the corroborated
+    // winner (only the loser carries an archive reason).
+    expect(body.data.parent.archivedReason).toBeNull()
   })
 })
 
