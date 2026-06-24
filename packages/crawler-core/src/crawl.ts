@@ -858,28 +858,41 @@ export async function crawlVenue(
       venue.consecutiveFailures >= 2 // becomes 3 after the increment below
     const isBlocked = isHttpBlocked || isTimeoutBlock
 
-    const [updatedVenue] = await db
+    // Compute the new count in JS rather than via a SQL increment so we can
+    // branch on the exact threshold value (auto-pause + email both fire once
+    // at === 3). The crawler is the only writer of `consecutive_failures`
+    // and the daily + triggers crons don't run on the same venue
+    // concurrently, so read-modify-write is safe here.
+    const newFailureCount = (venue.consecutiveFailures ?? 0) + 1
+    // CLAUDE.md crawl rule: "3 consecutive failures → pause venue + notify
+    // admin". The `=== 3` guard makes the auto-pause one-shot: if an admin
+    // manually re-activates a still-broken venue, the next failure won't
+    // re-flip `active` to false. (#743)
+    const shouldAutoPause = newFailureCount === 3
+
+    await db
       .update(venues)
       .set({
-        consecutiveFailures: sql`${venues.consecutiveFailures} + 1`,
+        consecutiveFailures: newFailureCount,
+        ...(shouldAutoPause ? { active: false } : {}),
         ...(isBlocked ? { blockedAt: new Date() } : {}),
         updatedAt: new Date(),
       })
       .where(eq(venues.id, venueId))
-      .returning()
-
-    const newFailureCount = updatedVenue?.consecutiveFailures ?? 0
 
     if (newFailureCount >= 3) {
+      const notificationBody = shouldAutoPause
+        ? `${newFailureCount} consecutive failures for ${venue.name} — venue auto-paused`
+        : `${newFailureCount} consecutive failures for ${venue.name}`
       await db.insert(notifications).values({
         type: 'admin_alert',
         category: 'crawl.failed',
         title: `Crawl failing: ${venue.name}`,
-        body: `${newFailureCount} consecutive failures for ${venue.name}`,
+        body: notificationBody,
         metadata: JSON.stringify({ venueId }),
       })
 
-      if (newFailureCount === 3) {
+      if (shouldAutoPause) {
         // Await the email send. The crawler hard-exits via process.exit(0)
         // when main() resolves; a detached Promise here gets severed before
         // the HTTP request to Resend completes, which is why no crawl.failed
