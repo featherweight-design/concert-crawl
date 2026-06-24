@@ -164,9 +164,9 @@ Create the **prod** Vercel project. (The staging project should already exist as
 
 Add under **Production-only** scope on the prod Vercel project. **Do NOT** apply them to the Preview environment — scoping these to Preview would cause accidental preview deploys to run against real prod Clerk sessions, the prod Sentry environment, and the prod `INTERNAL_API_SECRET`. Leave Preview unset on the prod project so any preview deploy fails closed (missing required env vars) rather than failing open (running with prod credentials).
 
-Note: PR-branch deploys are disabled repo-wide via `vercel.json`'s `ignoreCommand` (returns exit 0 — skip — on any branch other than `main`), so the Preview environment shouldn't trigger in practice. The Production-only scope is defense in depth.
+Note: PR-branch deploys are disabled per-project via the **Preview environment's Branch Tracking toggle** (Vercel Dashboard → project → Settings → Environments → Preview → Branch Tracking → Disabled), so the Preview environment shouldn't trigger in practice. The Production-only scope is defense in depth.
 
-The staging Vercel project would normally invert this (Production + Preview so per-PR previews exercise the staging stack), but staging previews are also disabled by the repo `vercel.json` for now — keep its env vars Production-only as well until the rate-limit-driven `vercel.json` is reverted or scoped per-project.
+The staging Vercel project would normally invert this (Production + Preview so per-PR previews exercise the staging stack), but staging previews are also disabled by the same Branch Tracking toggle for now — keep its env vars Production-only as well until the rate-limit-driven default is reverted or per-project Branch Tracking is re-enabled on staging.
 
 **All `NEXT_PUBLIC_*` keys must have Sensitive OFF** — Sensitive blocks `NEXT_PUBLIC_` inlining at build time, which breaks Clerk + Sentry at runtime.
 
@@ -198,7 +198,7 @@ The staging Vercel project would normally invert this (Production + Preview so p
 
 Vercel will show the DNS records needed in Step 7.
 
-> **Preview deployments** (both projects) are disabled via the root `vercel.json`'s `ignoreCommand` — a bash one-liner that returns exit 0 (skip) on any branch other than `main`. The Vercel UI toggle for the same setting was buggy at migration time; the `vercel.json` is the source of truth.
+> **Preview deployments** (both projects) are disabled via the **Preview environment's Branch Tracking toggle** in Vercel Project Settings → Environments → Preview. When disabled, Vercel doesn't create deployment slots for non-main branches at the webhook layer, so the free-tier 100/day quota isn't consumed by routine PR pushes. CLI/API deploys (used by the `Deploy to Production` workflow) still work. An earlier `vercel.json` `ignoreCommand` workaround was removed once the toggle was confirmed working — see the troubleshooting entry near the bottom of this runbook for history.
 
 ---
 
@@ -497,13 +497,21 @@ Without a matching app-side rewrite to forward `/__clerk/*` to Clerk's CDN, all 
 
 Cloudflare's orange-cloud proxy interferes with Vercel's SSL provisioning and creates double-CDN issues. Always **DNS only** (grey cloud) for any record pointing at Vercel.
 
-### Vercel "preview deploys" can't be toggled in the UI
+### Vercel preview deploys — disable via Branch Tracking toggle
 
-The Vercel dashboard toggle for disabling preview deploys didn't persist as of 2026-06-15. The repo-level `vercel.json` `ignoreCommand` (a bash one-liner that returns exit 0 — skip — on any branch other than `main`) is the workaround and is now the source of truth for both projects.
+**Where:** Vercel Dashboard → project → **Settings** → **Environments** → **Preview** → **Branch Tracking** → toggle to **Disabled**, then click Save.
 
-Note: an earlier attempt used `git.deploymentEnabled: { main: true, "*": false }` (PR #656). That looked clean but the `*` wildcard isn't documented for `deploymentEnabled` — Vercel silently ignored it and previews kept firing. `ignoreCommand` is the working form and is explicitly documented (https://vercel.com/docs/git/git-deployment#ignored-build-step).
+When Disabled, Vercel does not create deployments for any branch that doesn't match another environment — the GitHub webhook is dropped before a deployment slot is consumed. This is what we want on the free tier, where the 100/day `api-deployments-free-per-day` quota is easy to exhaust on a busy PR day. CLI/API deploys (e.g. the `Deploy to Production` GitHub Actions workflow) continue to work because they bypass the Git integration.
 
-If you ever need to re-enable previews per-project (e.g. keep staging previews on, prod off), extend the `ignoreCommand` to also check `$VERCEL_PROJECT_ID` and gate accordingly.
+**History (for posterity):**
+
+- An earlier `git.deploymentEnabled: { main: true, "*": false }` config (PR #656) was silently ignored — the `*` wildcard isn't supported by `deploymentEnabled`.
+- A `vercel.json` `ignoreCommand` workaround (PR #660) prevented BUILDS from running on non-main pushes but did NOT prevent deployment slots from being created. The free-tier daily quota counted those ignored deployments, so on busy days (e.g. 2026-06-24) the quota still tipped over and prod auto-deploy was blocked for 24 hours.
+- The dashboard Branch Tracking toggle was reported buggy at migration time (2026-06-15) but appears to work reliably as of 2026-06-24, after which the `vercel.json` was removed in favor of the toggle.
+
+If the toggle ever silently re-enables itself, reintroduce a `vercel.json` with `ignoreCommand` as a build-skip layer (won't help with quota, but at least stops compute waste) and open an issue against Vercel.
+
+If you ever need to re-enable previews on one project but not the other (e.g. staging previews back on for QA), use the per-project Branch Tracking toggle — there's nothing to coordinate in the repo.
 
 ### Render manual deploy is under the Builds tab
 
