@@ -1,2 +1,6 @@
 export { ProvenanceCTA } from './ProvenanceCTA'
 export type { ProvenanceCTAKind, ProvenanceCTAProps } from './ProvenanceCTA'
+export { FaceValueCard } from './FaceValueCard'
+export type { FaceValueCardProps } from './FaceValueCard'
+export { ContributeFaceValueCard } from './ContributeFaceValueCard'
+export type { ContributeFaceValueCardProps } from './ContributeFaceValueCard'
