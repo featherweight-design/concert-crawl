@@ -130,10 +130,12 @@ export const Eyebrow = ({
 // PendingTrustPill
 const AZURE = 'oklch(0.62 0.12 240)'
 const GOLD = 'oklch(0.66 0.14 78)'
+const CORAL = 'oklch(0.65 0.20 25)'
 
-const pendingPillTokens = (kind: 'community' | 'boxoffice') => {
-  const color = kind === 'boxoffice' ? GOLD : AZURE
-  const pillPercent = kind === 'boxoffice' ? '22%' : '16%'
+const pendingPillTokens = (kind: 'community' | 'boxoffice' | 'resale') => {
+  const color = kind === 'boxoffice' ? GOLD : kind === 'resale' ? CORAL : AZURE
+  const pillPercent =
+    kind === 'boxoffice' ? '22%' : kind === 'resale' ? '18%' : '16%'
   return {
     color,
     pill: `color-mix(in oklab, ${color} ${pillPercent}, transparent)`,
@@ -143,10 +145,17 @@ const pendingPillTokens = (kind: 'community' | 'boxoffice') => {
 export const PendingTrustPill = ({
   kind,
 }: {
-  kind: 'community' | 'boxoffice'
+  kind: 'community' | 'boxoffice' | 'resale'
 }) => {
   const tok = pendingPillTokens(kind)
   const isBox = kind === 'boxoffice'
+  const isResale = kind === 'resale'
+  const label = isBox ? 'Box office' : isResale ? 'Resale' : 'Community'
+  const border = isBox
+    ? `1px solid color-mix(in oklab, ${GOLD} 60%, transparent)`
+    : isResale
+      ? `1px solid color-mix(in oklab, ${CORAL} 60%, transparent)`
+      : 'none'
   return (
     <span
       style={{
@@ -157,9 +166,7 @@ export const PendingTrustPill = ({
         borderRadius: '4px',
         background: tok.pill,
         color: tok.color,
-        border: isBox
-          ? `1px solid color-mix(in oklab, ${GOLD} 60%, transparent)`
-          : 'none',
+        border,
         fontFamily: "'JetBrains Mono', monospace",
         fontSize: '9px',
         letterSpacing: '0.06em',
@@ -170,7 +177,7 @@ export const PendingTrustPill = ({
       }}
     >
       {isBox && <StarGlyph size={8} />}
-      {isBox ? 'Box office' : 'Community'}
+      {label}
     </span>
   )
 }

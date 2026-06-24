@@ -8,10 +8,14 @@ const copy = CONSUMER_COPY.multiTier
 const GOLD = 'oklch(0.66 0.14 78)'
 const AZURE = 'oklch(0.62 0.12 240)'
 const AZURE_M = 'oklch(0.62 0.12 240)'
+const CORAL = 'oklch(0.65 0.20 25)'
 
 // ── Helpers ──────────────────────────────────────────────────────
-const dotColor = (kind: 'community' | 'boxoffice' | null): string => {
+const dotColor = (
+  kind: 'community' | 'boxoffice' | 'resale' | null,
+): string => {
   if (kind === 'boxoffice') return GOLD
+  if (kind === 'resale') return CORAL
   if (kind === 'community') return AZURE
   return 'var(--fg-muted)'
 }
@@ -29,7 +33,7 @@ interface TierAlternateRowBase {
   vendor: string
   floor: number
   ceiling?: number
-  kind: 'community' | 'boxoffice' | null
+  kind: 'community' | 'boxoffice' | 'resale' | null
 }
 
 export type TierAlternateRowProps = TierAlternateRowBase &

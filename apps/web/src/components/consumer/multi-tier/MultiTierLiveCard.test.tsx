@@ -1,0 +1,98 @@
+// @vitest-environment jsdom
+
+import React from 'react'
+import { describe, it, expect, afterEach } from 'vitest'
+import { render, screen, cleanup } from '@testing-library/react'
+import { MultiTierLiveCard } from './MultiTierLiveCard'
+
+afterEach(() => {
+  cleanup()
+})
+
+describe('MultiTierLiveCard', () => {
+  it('renders boxoffice headline with PendingTrustPill kind=boxoffice (gold pill)', () => {
+    render(
+      <MultiTierLiveCard
+        headline={{
+          floor: 25,
+          tier: 'GA',
+          vendor: 'Bluebird',
+          kind: 'boxoffice',
+        }}
+        alternates={[]}
+      />,
+    )
+    expect(screen.getByText('$25')).toBeDefined()
+    expect(screen.getByText('GA')).toBeDefined()
+    // PendingTrustPill renders "Box office" when kind=boxoffice
+    expect(screen.getByText('Box office')).toBeDefined()
+    expect(screen.getByText('seen on Bluebird')).toBeDefined()
+  })
+
+  it('renders community headline with PendingTrustPill kind=community', () => {
+    render(
+      <MultiTierLiveCard
+        headline={{
+          floor: 30,
+          tier: 'GA',
+          vendor: 'AXS',
+          kind: 'community',
+        }}
+        alternates={[]}
+      />,
+    )
+    expect(screen.getByText('Community')).toBeDefined()
+  })
+
+  it('renders resale headline with PendingTrustPill kind=resale (coral pill)', () => {
+    render(
+      <MultiTierLiveCard
+        headline={{
+          floor: 110,
+          tier: 'GA',
+          vendor: 'StubHub',
+          kind: 'resale',
+        }}
+        alternates={[]}
+      />,
+    )
+    // PendingTrustPill renders "Resale" when kind=resale
+    const pill = screen.getByText('Resale')
+    expect(pill).toBeDefined()
+    // Coral pill background — JSDOM normalizes 0.20 → 0.2.
+    const pillEl = pill as HTMLElement
+    expect(pillEl.style.background).toContain('oklch(0.65 0.2 25)')
+  })
+
+  it('renders alternates including kind=resale (coral dot)', () => {
+    const { container } = render(
+      <MultiTierLiveCard
+        headline={{
+          floor: 25,
+          tier: 'GA',
+          vendor: 'Bluebird',
+          kind: 'boxoffice',
+        }}
+        alternates={[
+          {
+            tier: 'VIP',
+            vendor: 'StubHub',
+            floor: 150,
+            kind: 'resale',
+          },
+        ]}
+      />,
+    )
+    // Alternate row vendor + price visible
+    expect(screen.getByText('StubHub')).toBeDefined()
+    expect(screen.getByText('$150')).toBeDefined()
+    // Look for the coral dot in the alternate row.
+    const dots = Array.from(
+      container.querySelectorAll('div[style*="border-radius: 2.5px"]'),
+    )
+    const coral = dots.find((dot) =>
+      (dot as HTMLElement).style.background.includes('oklch(0.65 0.2 25)'),
+    )
+    expect(coral).toBeDefined()
+  })
+})

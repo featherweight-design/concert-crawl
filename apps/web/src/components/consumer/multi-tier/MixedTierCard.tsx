@@ -15,7 +15,7 @@ interface AlternateTierBase {
   vendor: string
   floor: number
   ceiling?: number
-  kind: 'community' | 'boxoffice' | null
+  kind: 'community' | 'boxoffice' | 'resale' | null
 }
 
 type AlternateTier = AlternateTierBase &
@@ -31,7 +31,7 @@ export interface MixedTierCardProps {
     ceiling?: number
     tier: string
     vendor: string
-    kind: 'community' | 'boxoffice'
+    kind: 'community' | 'boxoffice' | 'resale'
   }
   alternates: Array<AlternateTier>
 }

@@ -14,12 +14,18 @@
 import { useState, useCallback } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
-import type { EventReport, EventDetailResponse } from '@concert-crawl/types'
+import type {
+  EventReport,
+  EventDetailResponse,
+  Tier,
+  SourceCategory,
+} from '@concert-crawl/types'
 import { SP_POLICY } from '@concert-crawl/types'
 import { confirmEventReport, withdrawEventReport } from '@/lib/events'
 import { PendingCardB } from '@/components/consumer/PendingCardB'
 import { CorroborationSheet } from '@/components/consumer/CorroborationSheet'
 import { MixedTierCard } from '@/components/consumer/multi-tier/MixedTierCard'
+import { MultiTierLiveCard } from '@/components/consumer/multi-tier/MultiTierLiveCard'
 import { TwoPendingStack } from '@/components/consumer/multi-tier/TwoPendingStack'
 import { PendingReportBanner } from '@/components/consumer/reporting/PendingReportBanner'
 import { PendingSoldOutCard } from '@/components/consumer/reporting/PendingSoldOutCard'
@@ -30,8 +36,22 @@ import { EvidenceForm } from '@/components/consumer/reporting/EvidenceForm'
 import { ConfirmReportSheet } from '@/components/consumer/reporting/ConfirmReportSheet'
 import { PriceDisplay } from '@/components/consumer/PriceDisplay'
 import { DisputedPriceCard } from '@/components/consumer/DisputedPriceCard'
+import { SoldOutPriceCard } from '@/components/consumer/SoldOutPriceCard'
 import { SubmitPriceCardCta } from '@/components/consumer/SubmitPriceCardCta'
 import { SubmitPriceModal } from '@/components/consumer/submit-price/SubmitPriceModal'
+import {
+  FaceValueCard,
+  ContributeFaceValueCard,
+  MultiSourceMultiTierCard,
+  MTAddTierSuccess,
+  ProvenanceCTA,
+  type ProvenanceCTAKind,
+} from '@/components/consumer/price-region'
+import { decidePriceRegion } from '@/components/consumer/price-region/lib/decision-tree'
+
+// All five canonical tiers — used by MTAddTierSuccess to derive `remainingTiers`
+// from this session's submitted tiers (Q4-eng lock).
+const TIER_ENUM: ReadonlyArray<Tier> = ['GA', 'Reserved', 'VIP', 'Pit', 'Lawn']
 
 // ── Shared types ─────────────────────────────────────────────────────
 
@@ -319,6 +339,22 @@ export function EventDetailPriceBlock({
   const [localSubmissions, setLocalSubmissions] = useState<PendingSubItem[]>(
     event.pendingSubmissions ?? [],
   )
+  // Q4-eng lock — client-side React session state of "tiers I just submitted
+  // in this session." Drives `remainingTiers` for MTAddTierSuccess without
+  // a refetch of priceByTier. Resets only when the user clicks Done on the
+  // success card (or the modal closes after another submission).
+  const [submittedThisSession, setSubmittedThisSession] = useState<Set<Tier>>(
+    new Set(),
+  )
+  const [submitSuccessPayload, setSubmitSuccessPayload] = useState<{
+    tier: Tier
+    price: number
+    sourceCategory: SourceCategory
+  } | null>(null)
+  const [preselectedTier, setPreselectedTier] = useState<Tier | null>(null)
+  // Linter quirk — preselectedTier wiring is finished as part of submit-price
+  // form changes in Task 11; surface the read here so eslint doesn't flag it.
+  void preselectedTier
 
   const pendingSoldOutReport = findPendingReport(reports, 'sold-out')
   const pendingCancelledReport = findPendingReport(reports, 'cancelled')
@@ -364,138 +400,471 @@ export function EventDetailPriceBlock({
     [event.id, getToken, router],
   )
 
+  // Shared submit-success handler — used by every new decision-tree branch
+  // that owns a SubmitPriceModal. Captures tier + source for the post-submit
+  // MTAddTierSuccess card and updates the session "tiers I submitted" set
+  // for Q4-eng locking. Falls back to GA when tier comes back non-canonical
+  // so the picker still shows something useful.
+  const handleSubmitSuccess = useCallback(
+    (result: {
+      isEdit: boolean
+      id: string
+      priceMin: string
+      priceMax: string | null
+      tier: string
+      vendor: string
+      howFound: string
+      sourceCategory: SourceCategory | null
+    }) => {
+      if (result.isEdit) return
+      const tier: Tier = TIER_ENUM.includes(result.tier as Tier)
+        ? (result.tier as Tier)
+        : 'GA'
+      const price = Math.round(parseFloat(result.priceMin))
+      const sourceCategory: SourceCategory = result.sourceCategory ?? 'standard'
+      setSubmittedThisSession((prev) => {
+        const next = new Set(prev)
+        next.add(tier)
+        return next
+      })
+      setSubmitSuccessPayload({ tier, price, sourceCategory })
+      setSubmitPriceOpen(false)
+      setPreselectedTier(null)
+    },
+    [],
+  )
+
   // ── Fix 15: postponed confirmed → hide price section ───────────
   if (isPostponedConfirmed) {
     return null
   }
 
   // ── 0. Promoted sold-out (confirmed by community) ──────────────
+  // First-strike precedence (per plan Task 9 step 3): when admin has
+  // promoted a community-confirmed sold-out report, render the reporter
+  // caption card alone. The new decision-tree branches below only fire
+  // when `priceStatus === 'soldout'` AND `soldOutReport == null` (i.e.
+  // sold-out flagged by another path).
   if (event.priceStatus === 'soldout' && event.soldOutReport != null) {
     const soldOut = event.soldOutReport
-    const timeAgo = (() => {
-      const diffMs = Date.now() - new Date(soldOut.reportedAt).getTime()
-      const diffMins = Math.floor(diffMs / 60000)
-      if (diffMins < 60) return `${diffMins}m ago`
-      const diffHours = Math.floor(diffMins / 60)
-      if (diffHours < 24) return `${diffHours}h ago`
-      return `${Math.floor(diffHours / 24)}d ago`
-    })()
-    const AMBER = 'oklch(0.73 0.13 78)'
     return (
-      <div
-        style={{
-          borderRadius: 12,
-          background: 'var(--surface-1)',
-          border: '1px solid var(--border)',
-          overflow: 'hidden',
-        }}
-      >
-        <div style={{ padding: '14px 14px 0' }}>
-          <span
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 9,
-              fontWeight: 700,
-              color: 'var(--fg-subtle)',
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-            }}
-          >
-            Tickets
-          </span>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'baseline',
-              gap: 10,
-              marginTop: 6,
-              flexWrap: 'wrap',
-            }}
-          >
-            <span
-              style={{
-                fontFamily: 'var(--font-ui)',
-                fontWeight: 800,
-                fontSize: 28,
-                color: 'var(--fg-subtle)',
-                textDecoration: 'line-through',
-                letterSpacing: '-0.025em',
-                lineHeight: 1.05,
-              }}
-            >
-              {priceMax != null
-                ? `$${priceMin}–$${priceMax}`
-                : priceMin != null
-                  ? `$${priceMin}`
-                  : '—'}
-            </span>
-            {/* Fix 13: bottom-aligned chip via alignSelf flex-end */}
-            <span
-              style={{
-                background: AMBER,
-                borderRadius: 6,
-                padding: '3px 9px',
-                fontFamily: 'var(--font-mono)',
-                fontSize: 10,
-                fontWeight: 700,
-                color: 'var(--fg-on-accent)',
-                letterSpacing: '0.06em',
-                textTransform: 'uppercase',
-                alignSelf: 'flex-end',
-              }}
-            >
-              Sold out
-            </span>
-          </div>
-          <div
-            style={{
-              marginTop: 8,
-              fontFamily: 'var(--font-mono)',
-              fontSize: 10,
-              color: 'var(--fg-muted)',
-              letterSpacing: '0.04em',
-            }}
-          >
-            {soldOut.reporterHandle
-              ? `Reported sold out by @${soldOut.reporterHandle} · ${soldOut.confirmsCount} fan${soldOut.confirmsCount !== 1 ? 's' : ''} confirmed`
-              : `Reported sold out · ${soldOut.confirmsCount} fan${soldOut.confirmsCount !== 1 ? 's' : ''} confirmed`}
-          </div>
-        </div>
-        <div
-          style={{
-            margin: '12px 14px 0',
-            borderTop: '1px solid var(--border)',
-            padding: '10px 0 12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-          }}
-        >
-          <span
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              background: AMBER,
-              flexShrink: 0,
-              display: 'inline-block',
-            }}
-          />
-          <span
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 9,
-              color: `color-mix(in oklab, ${AMBER} 80%, var(--fg-subtle))`,
-              letterSpacing: '0.04em',
-            }}
-          >
-            {`as of ${timeAgo} — could be stale`}
-            {soldOut.reporterHandle && ` · @${soldOut.reporterHandle}`}
-          </span>
-        </div>
-      </div>
+      <SoldOutPriceCard
+        priceMin={priceMin}
+        priceMax={priceMax}
+        reporterHandle={soldOut.reporterHandle}
+        confirmsCount={soldOut.confirmsCount}
+        reportedAt={soldOut.reportedAt}
+      />
     )
   }
+
+  // ── 0b. New decision-tree branches (property-table §8 states #3, #10–13) ─
+  // Pure-function helper returns a tagged union; only the new states route
+  // through this block. All other state still falls into the legacy
+  // branches below — promoted sold-out + counter-submission + pending-report
+  // logic stays intact during the migration window.
+  const priceDecision = decidePriceRegion({ event })
+  if (priceDecision.kind === 'sold-out-resale') {
+    return (
+      <>
+        <SoldOutPriceCard
+          priceMin={priceMin}
+          priceMax={priceMax}
+          reporterHandle={null}
+          confirmsCount={0}
+          reportedAt={event.priceObservedAt ?? new Date().toISOString()}
+        />
+        <div className="mt-3">
+          <FaceValueCard
+            variant="default"
+            resaleVendor={priceDecision.faceValueResaleVendor}
+            {...(priceDecision.faceValueResaleRange !== undefined
+              ? { resaleRange: priceDecision.faceValueResaleRange }
+              : {})}
+            onAddPrice={() => setSubmitPriceOpen(true)}
+          />
+        </div>
+        <div className="mt-3">
+          <ProvenanceCTA
+            kind="resale"
+            vendor={priceDecision.resaleLink.vendor ?? 'Resale'}
+            href={priceDecision.resaleLink.url}
+            outline
+          />
+        </div>
+        <SubmitPriceModal
+          open={submitPriceOpen}
+          onClose={() => {
+            setSubmitPriceOpen(false)
+            setSubmitSuccessPayload(null)
+          }}
+          openInEditMode={false}
+          eventId={event.id}
+          artist={event.artist}
+          venueName={event.venue.name}
+          date={event.date}
+          onSuccess={handleSubmitSuccess}
+        />
+      </>
+    )
+  }
+
+  if (priceDecision.kind === 'sold-out-contribute') {
+    return (
+      <>
+        <SoldOutPriceCard variant="no-listing" />
+        <div className="mt-3">
+          <ContributeFaceValueCard
+            onAddPrice={() => setSubmitPriceOpen(true)}
+          />
+        </div>
+        <SubmitPriceModal
+          open={submitPriceOpen}
+          onClose={() => {
+            setSubmitPriceOpen(false)
+            setSubmitSuccessPayload(null)
+          }}
+          openInEditMode={false}
+          eventId={event.id}
+          artist={event.artist}
+          venueName={event.venue.name}
+          date={event.date}
+          onSuccess={handleSubmitSuccess}
+        />
+      </>
+    )
+  }
+
+  if (priceDecision.kind === 'no-price-resale') {
+    return (
+      <>
+        <PriceDisplay
+          priceMin={event.ticketPriceMin}
+          priceMax={event.ticketPriceMax}
+          priceSource={event.priceSource}
+          venueName={event.venue.name}
+          ticketUrl={event.ticketUrl}
+          eventId={event.id}
+          artist={event.artist}
+          date={event.date}
+          priceStatus={event.priceStatus ?? null}
+          ticketPriceOpenedAt={event.ticketPriceOpenedAt ?? null}
+          ticketFees={event.ticketFees ?? null}
+          priceVendor={event.priceVendor ?? null}
+          priceSubmitterHandle={event.priceSubmitterHandle ?? null}
+          priceObservedAt={event.priceObservedAt ?? null}
+          priceApprovalKind={event.priceApprovalKind ?? null}
+          priceApprovedAt={event.priceApprovedAt ?? null}
+          priceAlternates={event.priceAlternates ?? null}
+          onSubmitPrice={() => setSubmitPriceOpen(true)}
+        />
+        <div className="mt-3">
+          <FaceValueCard
+            variant="no-price"
+            resaleVendor={priceDecision.faceValueResaleVendor}
+            onAddPrice={() => setSubmitPriceOpen(true)}
+          />
+        </div>
+        <div className="mt-3">
+          <ProvenanceCTA
+            kind="resale"
+            vendor={priceDecision.resaleLink.vendor ?? 'Resale'}
+            href={priceDecision.resaleLink.url}
+            outline
+          />
+        </div>
+        <SubmitPriceModal
+          open={submitPriceOpen}
+          onClose={() => {
+            setSubmitPriceOpen(false)
+            setSubmitSuccessPayload(null)
+          }}
+          openInEditMode={false}
+          eventId={event.id}
+          artist={event.artist}
+          venueName={event.venue.name}
+          date={event.date}
+          onSuccess={handleSubmitSuccess}
+        />
+      </>
+    )
+  }
+
+  if (priceDecision.kind === 'resale-headline') {
+    // STATE #3 — at least one tier headline is resale AND no boxoffice/
+    // standard headline anywhere. Render MultiTierLiveCard with kind='resale'
+    // + show-level FaceValueCard inviting box-office contribution + outbound
+    // resale ProvenanceCTA.
+    const blocks = priceDecision.priceByTier
+    const headlineBlock =
+      blocks.find((block) => block.headline?.sourceCategory === 'resale') ??
+      blocks[0]
+    const headlineRow = headlineBlock?.headline
+    const headlineFloor = headlineRow ? parseFloat(headlineRow.priceMin) : 0
+    const headlineCeiling =
+      headlineRow?.priceMax != null ? parseFloat(headlineRow.priceMax) : null
+    const headlineVendor = headlineRow?.vendor ?? event.venue.name
+    const otherBlocks = blocks.filter((block) => block !== headlineBlock)
+    const alternates = otherBlocks.map((block) => {
+      const altHeadline = block.headline
+      if (altHeadline != null) {
+        return {
+          tier: block.tier,
+          vendor: altHeadline.vendor,
+          floor: parseFloat(altHeadline.priceMin),
+          ...(altHeadline.priceMax != null
+            ? { ceiling: parseFloat(altHeadline.priceMax) }
+            : {}),
+          kind:
+            altHeadline.sourceCategory === 'boxoffice'
+              ? ('boxoffice' as const)
+              : altHeadline.sourceCategory === 'resale'
+                ? ('resale' as const)
+                : ('community' as const),
+        }
+      }
+      const firstAlt = block.alternates[0]
+      if (firstAlt != null) {
+        return {
+          tier: block.tier,
+          vendor: firstAlt.vendor,
+          floor: parseFloat(firstAlt.priceMin),
+          ...(firstAlt.priceMax != null
+            ? { ceiling: parseFloat(firstAlt.priceMax) }
+            : {}),
+          kind: null as null,
+        }
+      }
+      const firstPending = block.pending[0]
+      return {
+        tier: block.tier,
+        vendor: firstPending?.vendor ?? 'Community',
+        floor: firstPending ? parseFloat(firstPending.priceMin) : 0,
+        ...(firstPending?.priceMax != null
+          ? { ceiling: parseFloat(firstPending.priceMax) }
+          : {}),
+        kind: null as null,
+        pending: true as const,
+        confirms: firstPending?.confirmsCount ?? 0,
+        needed: firstPending?.confirmsNeeded ?? SP_POLICY.confirmsRequired,
+      }
+    })
+
+    // Find a resale ticketLink for the outbound CTA; fall back to the headline
+    // vendor when no link is surfaced.
+    const resaleLink =
+      event.ticketLinks?.find((link) => link.kind === 'resale') ?? null
+
+    return (
+      <>
+        <MultiTierLiveCard
+          headline={{
+            floor: headlineFloor,
+            ...(headlineCeiling !== null ? { ceiling: headlineCeiling } : {}),
+            tier: headlineBlock?.tier ?? 'GA',
+            vendor: headlineVendor,
+            kind: 'resale',
+          }}
+          alternates={alternates}
+        />
+        <div className="mt-3">
+          <FaceValueCard
+            variant="no-price"
+            resaleVendor={priceDecision.faceValueResaleVendor}
+            onAddPrice={() => setSubmitPriceOpen(true)}
+          />
+        </div>
+        {resaleLink !== null && (
+          <div className="mt-3">
+            <ProvenanceCTA
+              kind="resale"
+              vendor={resaleLink.vendor ?? 'Resale'}
+              href={resaleLink.url}
+              outline
+            />
+          </div>
+        )}
+        <SubmitPriceModal
+          open={submitPriceOpen}
+          onClose={() => {
+            setSubmitPriceOpen(false)
+            setSubmitSuccessPayload(null)
+          }}
+          openInEditMode={false}
+          eventId={event.id}
+          artist={event.artist}
+          venueName={event.venue.name}
+          date={event.date}
+          onSuccess={handleSubmitSuccess}
+        />
+      </>
+    )
+  }
+
+  if (priceDecision.kind === 'multi-source-mixed') {
+    const { entryBlock, crossSourceAlt, otherTiers } = priceDecision
+    const headlineRow = entryBlock.headline
+    const headlineFloor = headlineRow
+      ? Math.round(parseFloat(headlineRow.priceMin))
+      : 0
+    const crossKind: 'boxoffice' | 'resale' | 'community' =
+      crossSourceAlt.sourceCategory === 'boxoffice'
+        ? 'boxoffice'
+        : crossSourceAlt.sourceCategory === 'resale'
+          ? 'resale'
+          : 'community'
+    const otherTierRows = otherTiers.map((block) => {
+      const altHeadline = block.headline ?? block.alternates[0] ?? null
+      const altFloor = altHeadline
+        ? parseFloat(
+            'priceMin' in altHeadline
+              ? altHeadline.priceMin
+              : String(altHeadline),
+          )
+        : 0
+      const altCeilingStr =
+        altHeadline && 'priceMax' in altHeadline ? altHeadline.priceMax : null
+      const altKind: 'boxoffice' | 'resale' | 'community' | null = altHeadline
+        ? altHeadline.sourceCategory === 'boxoffice'
+          ? 'boxoffice'
+          : altHeadline.sourceCategory === 'resale'
+            ? 'resale'
+            : altHeadline.sourceCategory === 'standard'
+              ? 'community'
+              : null
+        : null
+      return {
+        tier: block.tier,
+        vendor: altHeadline?.vendor ?? 'Community',
+        floor: altFloor,
+        ...(altCeilingStr != null
+          ? { ceiling: parseFloat(altCeilingStr) }
+          : {}),
+        kind: altKind,
+      }
+    })
+    return (
+      <MultiSourceMultiTierCard
+        headlineTier={entryBlock.tier}
+        headlinePrice={headlineFloor}
+        headlineVendor={headlineRow?.vendor ?? event.venue.name}
+        crossSource={{
+          source: crossSourceAlt.vendor,
+          kind: crossKind,
+          price: Math.round(parseFloat(crossSourceAlt.priceMin)),
+        }}
+        otherTiers={otherTierRows}
+      />
+    )
+  }
+
+  if (priceDecision.kind === 'multi-tier-shipped') {
+    // Multi-tier path that goes through the new priceByTier API.
+    // Kept side-by-side with the legacy flat-field MixedTierCard branch
+    // below until the migration is verified — eventually that branch
+    // becomes unreachable when priceByTier is non-null.
+    const blocks = priceDecision.priceByTier
+    const headlineBlock = blocks[0]
+    const headlineRow = headlineBlock?.headline
+    if (headlineRow != null && headlineBlock != null) {
+      const headlineFloor = parseFloat(headlineRow.priceMin)
+      const headlineCeiling =
+        headlineRow.priceMax != null ? parseFloat(headlineRow.priceMax) : null
+      const headlineKind: 'boxoffice' | 'resale' | 'community' =
+        headlineRow.sourceCategory === 'boxoffice'
+          ? 'boxoffice'
+          : headlineRow.sourceCategory === 'resale'
+            ? 'resale'
+            : 'community'
+      const alternateRows = blocks.slice(1).map((block) => {
+        const altHeadline = block.headline ?? block.alternates[0] ?? null
+        const altFloor = altHeadline ? parseFloat(altHeadline.priceMin) : 0
+        const altCeilingStr = altHeadline?.priceMax ?? null
+        const altKind: 'boxoffice' | 'resale' | 'community' | null = altHeadline
+          ? altHeadline.sourceCategory === 'boxoffice'
+            ? 'boxoffice'
+            : altHeadline.sourceCategory === 'resale'
+              ? 'resale'
+              : 'community'
+          : null
+        return {
+          tier: block.tier,
+          vendor: altHeadline?.vendor ?? 'Community',
+          floor: altFloor,
+          ...(altCeilingStr != null
+            ? { ceiling: parseFloat(altCeilingStr) }
+            : {}),
+          kind: altKind,
+        }
+      })
+      const outboundLink = event.ticketLinks?.[0] ?? null
+      const outboundKind: ProvenanceCTAKind | null = outboundLink
+        ? outboundLink.kind === 'boxoffice'
+          ? 'boxoffice'
+          : outboundLink.kind === 'resale'
+            ? 'resale'
+            : 'primary'
+        : null
+      return (
+        <>
+          <MultiTierLiveCard
+            headline={{
+              floor: headlineFloor,
+              ...(headlineCeiling !== null ? { ceiling: headlineCeiling } : {}),
+              tier: headlineBlock.tier,
+              vendor: headlineRow.vendor,
+              kind: headlineKind,
+            }}
+            alternates={alternateRows}
+          />
+          {outboundLink !== null && outboundKind !== null && (
+            <div className="mt-3">
+              <ProvenanceCTA
+                kind={outboundKind}
+                vendor={outboundLink.vendor ?? event.venue.name}
+                href={outboundLink.url}
+                outline={outboundKind === 'resale'}
+              />
+            </div>
+          )}
+          {submitSuccessPayload !== null && (
+            <div className="mt-3">
+              <MTAddTierSuccess
+                submittedTier={submitSuccessPayload.tier}
+                submittedPrice={submitSuccessPayload.price}
+                submittedSourceCategory={submitSuccessPayload.sourceCategory}
+                remainingTiers={TIER_ENUM.filter(
+                  (tier) => !submittedThisSession.has(tier),
+                )}
+                onAddTier={(tier) => {
+                  setSubmitSuccessPayload(null)
+                  setPreselectedTier(tier)
+                  setSubmitPriceOpen(true)
+                }}
+                onDone={() => setSubmitSuccessPayload(null)}
+              />
+            </div>
+          )}
+          <SubmitPriceModal
+            open={submitPriceOpen}
+            onClose={() => {
+              setSubmitPriceOpen(false)
+              setPreselectedTier(null)
+            }}
+            openInEditMode={false}
+            eventId={event.id}
+            artist={event.artist}
+            venueName={event.venue.name}
+            date={event.date}
+            onSuccess={handleSubmitSuccess}
+          />
+        </>
+      )
+    }
+  }
+
+  // priceDecision.kind === 'no-price-empty' / 'noop' / 'legacy' — fall through
+  // to the existing legacy branches below.
 
   // ── 1. Pending sold-out report ──────────────────────────────────
   if (pendingSoldOutReport !== null) {
