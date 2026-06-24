@@ -1,3 +1,17 @@
+# [1.75.0](https://github.com/HartiganHM/concert-crawl/compare/v1.74.13...v1.75.0) (2026-06-24)
+
+
+### Bug Fixes
+
+* **deploy-prod:** "rollback attempted" not "completed" in email + log ([bde6a76](https://github.com/HartiganHM/concert-crawl/commit/bde6a76a27d6c87bb2fa622937c9d38860c772db)), closes [#749](https://github.com/HartiganHM/concert-crawl/issues/749)
+* **deploy-prod:** mask ADMIN_EMAIL + generic success log ([e4ea49a](https://github.com/HartiganHM/concert-crawl/commit/e4ea49ad4ab85cbcc299f85376166b443cabcb1c)), closes [#749](https://github.com/HartiganHM/concert-crawl/issues/749)
+* **deploy-prod:** preflight jq + sanitize email-failure annotation ([a91e73b](https://github.com/HartiganHM/concert-crawl/commit/a91e73b0aaf78627c2920864aec87ff7ee26d647)), closes [#749](https://github.com/HartiganHM/concert-crawl/issues/749)
+
+
+### Features
+
+* **deploy-prod:** surface auto-rollback via annotation + admin email ([4b0033a](https://github.com/HartiganHM/concert-crawl/commit/4b0033a09cd65bfe042042189ce239471f0b5ef4))
+
 ## [1.74.13](https://github.com/HartiganHM/concert-crawl/compare/v1.74.12...v1.74.13) (2026-06-24)
 
 
