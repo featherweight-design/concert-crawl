@@ -13,7 +13,7 @@ import {
 } from '@concert-crawl/db'
 import { getAuthUser } from '../../middleware/auth.js'
 import { writeContestNotifications } from '../../lib/contest-notifications.js'
-import { narrowLastAdminActionKind } from '../../lib/last-admin-action.js'
+import { narrowLastAdminAction } from '../../lib/last-admin-action.js'
 import type { AdminVariables } from './index.js'
 
 export const contestsAdminRouter = new Hono<AdminVariables>()
@@ -322,6 +322,15 @@ contestsAdminRouter.get(
       }
     }
 
+    // Pair-narrow the counter's engagement signal so kind + at can't drift.
+    // Shared helper in apps/api/src/lib/last-admin-action.ts — same defensive
+    // treatment as buildCounter in aggregate-by-tier.ts and the
+    // counterSubmission projection in events.ts.
+    const counterLastAction = narrowLastAdminAction(
+      counterRow.lastAdminActionKind,
+      counterRow.lastAdminActionAt,
+    )
+
     return ctx.json({
       success: true,
       data: {
@@ -379,15 +388,10 @@ contestsAdminRouter.get(
           observedAt: counterRow.observedAt.toISOString(),
           note: counterRow.note ?? null,
           status: counterRow.status,
-          lastAdminActionAt:
-            counterRow.lastAdminActionAt?.toISOString() ?? null,
-          // Narrow the raw text column to the API's discriminated union
-          // before emitting — mirrors the buildCounter helper in
-          // aggregate-by-tier.ts and the counterSubmission projection in
-          // events.ts. Shared helper in apps/api/src/lib/last-admin-action.ts.
-          lastAdminActionKind: narrowLastAdminActionKind(
-            counterRow.lastAdminActionKind,
-          ),
+          // Paired above so an unrecognized kind in the column never leaves
+          // a half-populated pair (kind=null, at=<timestamp>) on the wire.
+          lastAdminActionAt: counterLastAction.at,
+          lastAdminActionKind: counterLastAction.kind,
           archivedReason: counterRow.archivedReason ?? null,
         },
         filedAt: counterRow.observedAt.toISOString(),

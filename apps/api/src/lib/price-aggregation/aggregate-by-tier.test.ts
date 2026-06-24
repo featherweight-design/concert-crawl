@@ -208,7 +208,12 @@ describe('aggregateByTier', () => {
     )
   })
 
-  it('counter-submission narrows unrecognized lastAdminActionKind values to null', () => {
+  it('counter-submission narrows unrecognized lastAdminActionKind values to null AND pairs the timestamp to null', () => {
+    // Regression for R16: when kind narrows away an unrecognized value,
+    // the matching `lastAdminActionAt` must be forced to null too so the
+    // wire never carries a half-populated pair (kind=null, at=<timestamp>).
+    // Without the pair-narrow, an unknown kind landing in the column would
+    // partially leak the existence of a future internal admin action.
     const headline = corrob({ id: 'head', tier: 'GA' })
     const blocks = aggregateByTier({
       ...baseInput,
@@ -231,6 +236,8 @@ describe('aggregateByTier', () => {
       reportsByTier: new Map([['GA', 1]]),
     })
     expect(blocks[0]?.counterSubmission?.lastAdminActionKind).toBeNull()
+    // Paired: the timestamp must also be null when kind narrowed away.
+    expect(blocks[0]?.counterSubmission?.lastAdminActionAt).toBeNull()
   })
 
   it('includes pending-only tiers after corroborated-headline tiers', () => {

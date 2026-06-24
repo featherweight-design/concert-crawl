@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { sql } from 'drizzle-orm'
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
@@ -7,6 +8,7 @@ vi.mock('@hono/clerk-auth', () => ({
 }))
 
 import { createApp } from '../app.js'
+import { testDb } from '../test/helpers/db.js'
 import {
   clearTables,
   seedVenue,
@@ -576,6 +578,78 @@ describe('GET /v1/events/:id — integration', () => {
     expect(body.data.counterSubmission?.lastAdminActionAt).toBe(
       deferredAt.toISOString(),
     )
+  })
+
+  // R16: counterSubmission emits paired (kind=null, at=null) when the DB
+  // text column carries an unrecognized kind. Without the paired narrow
+  // both the flat and the per-tier surfaces would leak the timestamp.
+  it('counterSubmission pairs lastAdminActionKind + lastAdminActionAt to null for unrecognized DB kinds (flat + per-tier)', async () => {
+    const venue = await seedVenue({
+      name: 'Unrecognized kind venue',
+      slug: 'unrecognized-kind-venue',
+    })
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-01',
+      priceSource: 'community',
+    })
+
+    const submitter = await seedUserProfile('uk-parent', { handle: 'p-uk' })
+    const challenger = await seedUserProfile('uk-chal', { handle: 'c-uk' })
+
+    const parent = await seedPriceSubmission(event.id, submitter.userId, {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      status: 'corroborated',
+    })
+    const counter = await seedPriceSubmission(event.id, challenger.userId, {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '55',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+      // Real timestamp paired with a future kind that the narrowing
+      // union doesn't yet recognize — the projection must drop both.
+      lastAdminActionAt: new Date('2027-05-15T12:00:00Z'),
+    })
+
+    // Direct SQL write: simulate an unrecognized internal kind landing in
+    // the column. Bypass the typed Drizzle insert path so we can write a
+    // value the type system wouldn't normally allow.
+    await testDb.execute(
+      sql`UPDATE price_submissions
+          SET last_admin_action_kind = 'some_future_kind'
+          WHERE id = ${counter.id}`,
+    )
+
+    const res = await app.request(`/v1/events/${event.id}`)
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      data: {
+        counterSubmission: {
+          lastAdminActionAt: string | null
+          lastAdminActionKind: string | null
+        } | null
+        priceByTier: Array<{
+          tier: string
+          counterSubmission: {
+            lastAdminActionAt: string | null
+            lastAdminActionKind: string | null
+          } | null
+        }>
+      }
+    }
+
+    // Flat counterSubmission must pair both fields to null.
+    expect(body.data.counterSubmission?.lastAdminActionKind).toBeNull()
+    expect(body.data.counterSubmission?.lastAdminActionAt).toBeNull()
+
+    // Per-tier counterSubmission must too — the two surfaces stay lock-step.
+    const gaBlock = body.data.priceByTier.find((block) => block.tier === 'GA')
+    expect(gaBlock?.counterSubmission?.lastAdminActionKind).toBeNull()
+    expect(gaBlock?.counterSubmission?.lastAdminActionAt).toBeNull()
   })
 })
 

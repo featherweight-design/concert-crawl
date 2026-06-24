@@ -654,12 +654,14 @@ describe('GET /v1/admin/contests/prices/:contestId', () => {
     expect(body.data.counter.submitter.userId).not.toBe('')
   })
 
-  // R1-3: lastAdminActionKind is a free-text column at the DB layer; the
-  // detail endpoint narrows it to `'defer' | null` via the shared helper
+  // R1-3 + R16: lastAdminActionKind is a free-text column at the DB layer;
+  // the detail endpoint narrows it to `'defer' | null` via the shared helper
   // (apps/api/src/lib/last-admin-action.ts). Any value that isn't 'defer'
   // — including the empty string, a future internal kind, or stale data
-  // — must map to null so unrecognized kinds don't leak to consumers.
-  it('narrows lastAdminActionKind to null for unrecognized values', async () => {
+  // — must map to null AND its paired lastAdminActionAt must collapse to
+  // null too so consumers never see a half-populated pair partially leaking
+  // a future admin action.
+  it('narrows lastAdminActionKind to null AND pairs lastAdminActionAt to null for unrecognized values', async () => {
     setAdminAuth()
     const venue = await seedVenue({
       name: 'Narrow Venue',
@@ -690,7 +692,8 @@ describe('GET /v1/admin/contests/prices/:contestId', () => {
     // Direct SQL write: simulate an unrecognized internal kind landing
     // in the column via a future migration / stale data. Bypass the
     // typed Drizzle insert path so we can write a value the type system
-    // wouldn't normally allow.
+    // wouldn't normally allow. The lastAdminActionAt was seeded above as
+    // a real timestamp — without the R16 paired-narrow, this would leak.
     await testDb.execute(
       sql`UPDATE price_submissions
           SET last_admin_action_kind = 'some_future_kind'
@@ -702,9 +705,17 @@ describe('GET /v1/admin/contests/prices/:contestId', () => {
     })
     expect(res.status).toBe(200)
     const body = (await res.json()) as {
-      data: { counter: { lastAdminActionKind: 'defer' | null } }
+      data: {
+        counter: {
+          lastAdminActionKind: 'defer' | null
+          lastAdminActionAt: string | null
+        }
+      }
     }
     expect(body.data.counter.lastAdminActionKind).toBeNull()
+    // Paired: when kind narrows away an unrecognized value, the timestamp
+    // must collapse to null too so the pair stays consistent.
+    expect(body.data.counter.lastAdminActionAt).toBeNull()
   })
 })
 

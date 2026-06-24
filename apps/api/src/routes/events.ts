@@ -38,7 +38,7 @@ import {
   aggregateByTier,
   pickHeadlinesByTier,
 } from '../lib/price-aggregation/index.js'
-import { narrowLastAdminActionKind } from '../lib/last-admin-action.js'
+import { narrowLastAdminAction } from '../lib/last-admin-action.js'
 
 const uuidSchema = z.string().uuid()
 
@@ -659,11 +659,15 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
           : null
       const counterCeiling =
         counter.priceMax !== null ? parseFloat(counter.priceMax) : null
-      // Narrow the raw text column to the discriminated union — same
-      // defensive treatment as buildCounter in aggregate-by-tier.ts so the
-      // flat + per-tier shapes can't drift on an unrecognized kind. Helper
-      // in apps/api/src/lib/last-admin-action.ts.
-      const counterKind = narrowLastAdminActionKind(counter.lastAdminActionKind)
+      // Pair-narrow kind + at together — same defensive treatment as
+      // buildCounter in aggregate-by-tier.ts and the contest detail
+      // endpoint so the flat + per-tier shapes can't drift on an
+      // unrecognized kind and consumers never see a half-populated pair.
+      // Helper in apps/api/src/lib/last-admin-action.ts.
+      const counterLastAction = narrowLastAdminAction(
+        counter.lastAdminActionKind,
+        counter.lastAdminActionAt,
+      )
       counterSubmission = {
         id: counter.id,
         parentSubmissionId: counter.parentSubmissionId,
@@ -671,8 +675,8 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         ...(counterCeiling !== null ? { ceiling: counterCeiling } : {}),
         submitter: counterHandle !== null ? { handle: counterHandle } : null,
         submittedAt: counter.createdAt.toISOString(),
-        lastAdminActionAt: counter.lastAdminActionAt?.toISOString() ?? null,
-        lastAdminActionKind: counterKind,
+        lastAdminActionAt: counterLastAction.at,
+        lastAdminActionKind: counterLastAction.kind,
       }
     }
   }

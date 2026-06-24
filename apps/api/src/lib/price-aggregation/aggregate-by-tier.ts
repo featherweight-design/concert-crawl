@@ -14,7 +14,7 @@ import {
   pickTierHeadline,
   type TierRow,
 } from './pick-tier-headline.js'
-import { narrowLastAdminActionKind } from '../last-admin-action.js'
+import { narrowLastAdminAction } from '../last-admin-action.js'
 
 export interface CorroboratedTierRow extends TierRow {
   tier: Tier
@@ -159,10 +159,15 @@ function buildCounter(
 ): TierCounter {
   const handle = row.userId !== null ? (handles.get(row.userId) ?? null) : null
   const ceiling = row.priceMax !== null ? parseFloat(row.priceMax) : null
-  // Narrow the raw text column to the API's discriminated union before
-  // emitting. See apps/api/src/lib/last-admin-action.ts for the shared
-  // helper used by the three call sites that surface this field.
-  const kind = narrowLastAdminActionKind(row.lastAdminActionKind)
+  // Pair-narrow kind + at together so an unrecognized kind in the column
+  // never leaves a half-populated pair (kind=null, at=<timestamp>) for
+  // consumers. Shared helper in apps/api/src/lib/last-admin-action.ts —
+  // same defensive treatment as the contest detail endpoint and the
+  // counterSubmission projection in events.ts.
+  const lastAction = narrowLastAdminAction(
+    row.lastAdminActionKind,
+    row.lastAdminActionAt,
+  )
   return {
     id: row.id,
     parentSubmissionId: row.parentSubmissionId,
@@ -170,8 +175,8 @@ function buildCounter(
     ...(ceiling !== null ? { ceiling } : {}),
     submitter: handle !== null ? { handle } : null,
     submittedAt: row.createdAt.toISOString(),
-    lastAdminActionAt: row.lastAdminActionAt?.toISOString() ?? null,
-    lastAdminActionKind: kind,
+    lastAdminActionAt: lastAction.at,
+    lastAdminActionKind: lastAction.kind,
   }
 }
 
