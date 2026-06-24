@@ -2,45 +2,13 @@
 
 import Link from 'next/link'
 import { type FC } from 'react'
-import type { SourceCategory, Tier, Vendor } from '@concert-crawl/types'
 import { REVIEW_CONTEST_COPY } from './definitions/copy'
 import { formatPriceRange } from './lib/format-price-range'
-
-// Mirrors the per-row payload returned by GET /v1/admin/contests/prices
-// (apps/api/src/routes/admin/contests.ts line ~133). Price-min/max stay as
-// strings because they're Postgres `decimal` columns — parsing happens at
-// the display layer so cents survive the round trip.
-export interface PriceContestRow {
-  contestId: string
-  eventId: string
-  eventTitle: string
-  venueName: string
-  eventDate: string
-  tier: Tier
-  sourceCategory: SourceCategory | null
-  parent: {
-    id: string
-    priceMin: string
-    priceMax: string | null
-    vendor: Vendor
-    submitter: { userId: string | null; handle: string | null }
-    confirms: { fans: number; admin: number }
-    observedAt: string
-    lastUpdatedAt: string
-    note: string | null
-  }
-  counter: {
-    id: string
-    priceMin: string
-    priceMax: string | null
-    vendor: Vendor
-    submitter: { userId: string | null; handle: string | null }
-    confirms: { fans: number; admin: number }
-    observedAt: string
-    note: string | null
-  }
-  filedAt: string
-}
+// Type lives in the query module — hooks own the API contract, components
+// import the type (see admin-contests.ts header comment). Keeping the
+// direction one-way prevents circular imports if this component ever needs
+// to reach back into the query layer.
+import type { PriceContestRow } from '@/lib/queries/admin-contests'
 
 interface PriceDisputesQueueProps {
   items: ReadonlyArray<PriceContestRow>

@@ -12,17 +12,18 @@
 //     in one `invalidateQueries` call. Counts pill is invalidated via
 //     `reviewQueryKeys.counts` so the Contests tab badge refreshes.
 //
-// ContestDetailData is defined here (not in AdminDisputePanel, which is
-// Task 15's file) to keep the dependency direction one-way: hooks own the
-// API contract, components import the type. This also lets Task 15 mount
-// the panel without ever circularly importing back into the hook module.
+// Response types (PriceContestRow, ContestDetailData) are defined here —
+// not in the consuming components — to keep the dependency direction
+// one-way: hooks own the API contract, components import the type. This
+// prevents circular imports if a component module ever needs to reach
+// back into the query layer (e.g. AdminDisputePanel mounting under
+// PriceDisputesQueue).
 
 import { useAuth } from '@clerk/nextjs'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { SourceCategory, Tier, Vendor } from '@concert-crawl/types'
 import { apiClient } from '@/lib/api'
 import { reviewQueryKeys } from './use-admin-review'
-import type { PriceContestRow } from '@/components/admin/review/PriceDisputesQueue'
 
 // ───── Query keys ────────────────────────────────────────────────────────────
 
@@ -35,11 +36,49 @@ export const adminContestsKeys = {
 
 // ───── Response types — match the wire shape exactly ─────────────────────────
 
+// Per-row payload returned by GET /v1/admin/contests/prices (see
+// apps/api/src/routes/admin/contests.ts line ~133). Price-min/max stay as
+// strings because they're Postgres `decimal` columns — parsing happens at
+// the display layer so cents survive the round trip.
+//
+// Defined here (not in PriceDisputesQueue) so the dependency direction stays
+// one-way: hooks own the API contract, components import the type. Same
+// rationale as ContestDetailData below.
+export interface PriceContestRow {
+  contestId: string
+  eventId: string
+  eventTitle: string
+  venueName: string
+  eventDate: string
+  tier: Tier
+  sourceCategory: SourceCategory | null
+  parent: {
+    id: string
+    priceMin: string
+    priceMax: string | null
+    vendor: Vendor
+    submitter: { userId: string | null; handle: string | null }
+    confirms: { fans: number; admin: number }
+    observedAt: string
+    lastUpdatedAt: string
+    note: string | null
+  }
+  counter: {
+    id: string
+    priceMin: string
+    priceMax: string | null
+    vendor: Vendor
+    submitter: { userId: string | null; handle: string | null }
+    confirms: { fans: number; admin: number }
+    observedAt: string
+    note: string | null
+  }
+  filedAt: string
+}
+
 // GET /v1/admin/contests/prices response shape — see
 // apps/api/src/routes/admin/contests.ts (`items` projection ~line 133, list
-// `{ items, total, limit, offset }` envelope ~line 197). PriceContestRow is
-// re-used from PriceDisputesQueue so the queue component, the list hook, and
-// the API stay in lock-step.
+// `{ items, total, limit, offset }` envelope ~line 197).
 export interface ReviewContestsResult {
   items: PriceContestRow[]
   total: number

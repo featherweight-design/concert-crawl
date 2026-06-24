@@ -2,7 +2,8 @@
 
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { PriceDisputesQueue, type PriceContestRow } from './PriceDisputesQueue'
+import { PriceDisputesQueue } from './PriceDisputesQueue'
+import type { PriceContestRow } from '@/lib/queries/admin-contests'
 
 const mockRow = (
   overrides: Partial<PriceContestRow> = {},
