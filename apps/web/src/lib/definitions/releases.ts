@@ -26,6 +26,33 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.6.0-beta',
+    date: 'Jun 24, 2026',
+    headline: "Resale isn't face value — and now we make that obvious.",
+    items: [
+      {
+        kind: 'changed',
+        text: "Sold-out and resale-only events now spell out what resale actually means. No more guessing whether that $180 'price' is the box office or a markup.",
+      },
+      {
+        kind: 'added',
+        text: 'Multi-tier breakdowns on event pages — GA, Reserved, and VIP each get their own row instead of collapsing into a single number.',
+      },
+      {
+        kind: 'added',
+        text: 'Browse cards flag resale-only events with a coral tag, so you can spot the markups before you tap in.',
+      },
+      {
+        kind: 'changed',
+        text: "Submit-a-price form now leads with where the price came from (box office, resale, the venue's site) instead of how you found it.",
+      },
+      {
+        kind: 'fixed',
+        text: "When two fans disagree on a price, the contest button points you to the live counter instead of letting you start a second one you'd lose.",
+      },
+    ],
+  },
+  {
     version: 'v0.5.0-beta',
     date: 'May 8, 2026',
     headline:
