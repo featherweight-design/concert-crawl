@@ -282,8 +282,20 @@ export interface PriceSubmission {
   howFound: HowFound
   sourceCategory: SourceCategory | null
   disputedSubmissionId: string | null
-  status: 'pending' | 'corroborated' | 'disputed' | 'stale'
+  status: 'pending' | 'corroborated' | 'disputed' | 'stale' | 'archived'
   corroborationCount: number
+  // Submitter's free-text note (existed in DB but was missing from this
+  // shared interface — added during the admin contest-review PR per #697).
+  note: string | null
+  // Admin's reason text when status = 'archived' (loser-of-contest sink).
+  // Plain text, no length cap (admin reasons can run longer than `note`'s
+  // 280-char submitter cap).
+  archivedReason: string | null
+  // Engagement-signal columns surfaced via priceByTier[].counterSubmission
+  // so consumers see a quiet "Admin requested more info" pill on the event
+  // detail page after an admin defers the contest.
+  lastAdminActionAt: string | null
+  lastAdminActionKind: 'defer' | null
   createdAt: string
   updatedAt: string
 }
