@@ -195,7 +195,7 @@ apiAccountId: z
   }),
 ```
 
-Cross-field validation via `.superRefine()` chained directly onto the `.partial().extend({ ... })` call for `updateVenueSchema` (Zod's `.superRefine()` returns a NEW schema and does not mutate the original — the result must be captured, so the chain happens at declaration time, not as a separate statement). The exported binding must be the chained result:
+Cross-field validation via `.superRefine()` chained directly onto the `.partial().extend({ ... })` call for `updateVenueSchema` (Zod's `.superRefine()` returns a NEW schema and does not mutate the original — the result must be captured, so the chain happens at declaration time, not as a separate statement). The `updateVenueSchema` binding (a local `const` in `apps/api/src/routes/admin/venues.ts`, not exported) must be assigned to the chained result:
 
 ```ts
 const updateVenueSchema = createVenueSchema
@@ -413,7 +413,7 @@ apiAccountId: {
 },
 ```
 
-Exact micro-copy is not design-locked; the implementation PR can refine voice per `feedback_user_voice.md` — but the keys above are stable.
+Exact micro-copy is not design-locked; the implementation PR can refine the voice to match the existing `ADMIN_COPY` tone (concise, direct, no jokes — admin surfaces lean utilitarian) — but the keys above are stable.
 
 ---
 
