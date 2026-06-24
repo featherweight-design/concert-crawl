@@ -24,6 +24,7 @@ export const priceSubmissionStatusEnum = pgEnum('price_submission_status', [
   'corroborated',
   'disputed',
   'stale',
+  'archived',
 ])
 
 export const submissionTierEnum = pgEnum('submission_tier', [
@@ -110,6 +111,17 @@ export const priceSubmissions = pgTable('price_submissions', {
   // uniform across the table (corroborationCount = total observations).
   corroborationCount: integer('corroboration_count').notNull().default(1),
   note: varchar('note', { length: 280 }),
+  // Admin's archive reason when status='archived' (loser-of-contest sink).
+  // Plain text, no length cap — admin reasons can run longer than `note`'s
+  // 280-char submitter cap. See migration 0041 + spec §5.
+  archivedReason: text('archived_reason'),
+  // Engagement-signal columns — surfaced via priceByTier[].counterSubmission
+  // so consumers see a quiet "Admin requested more info" pill on the event
+  // detail page after an admin defers the contest. `lastAdminActionKind`
+  // stays text (not enum) per spec §4.5 — only 'defer' is legal today;
+  // app-layer validation enforces the union.
+  lastAdminActionAt: timestamp('last_admin_action_at', { withTimezone: true }),
+  lastAdminActionKind: text('last_admin_action_kind', { enum: ['defer'] }),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),

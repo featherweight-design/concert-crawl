@@ -106,7 +106,7 @@ priceSubmissionConfirmsRouter.post(
     let updated:
       | {
           corroborationCount: number
-          status: 'pending' | 'corroborated' | 'disputed' | 'stale'
+          status: 'pending' | 'corroborated' | 'disputed' | 'stale' | 'archived'
         }
       | undefined
     let alreadyConfirmed = false
