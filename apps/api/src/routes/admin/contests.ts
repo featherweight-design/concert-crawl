@@ -1,15 +1,19 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
-import { and, asc, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import { z } from 'zod'
 import {
   db,
   events,
+  notifications,
   priceSubmissions,
   userProfiles,
+  userRoles,
   venues,
 } from '@concert-crawl/db'
+import { getAuthUser } from '../../middleware/auth.js'
+import { apiLogger } from '../../lib/logger.js'
 import type { AdminVariables } from './index.js'
 
 export const contestsAdminRouter = new Hono<AdminVariables>()
@@ -361,6 +365,420 @@ contestsAdminRouter.get(
         },
         filedAt: counterRow.observedAt.toISOString(),
         history: [],
+      },
+    })
+  },
+)
+
+const resolveParamsSchema = z.object({
+  contestId: z.string().uuid(),
+})
+
+const resolveBodySchema = z.object({
+  resolution: z.enum(['parent_wins', 'challenger_wins']),
+  reason: z.string().min(10).max(2000),
+})
+
+// POST /v1/admin/contests/prices/:contestId/resolve — atomic resolution.
+//
+// Spec §4.3, §6.3. The contestId path param is the PARENT submission id
+// (consistent with the list + detail endpoints).
+//
+// The handler runs all DB mutations inside one transaction with SELECT FOR
+// UPDATE on both rows up front. Sanity gates inside the transaction return a
+// discriminated `precondition_failed` outcome that maps to a 409 response
+// (with the precondition's reason in the body) — NOT 200, NOT a partial
+// commit. Same-slot assertions (event_id / tier / source_category) defend
+// against any upstream bug that could land a counter in a different slot;
+// without them, a malformed counter could propagate the wrong price to the
+// events projection.
+//
+// On status flips for BOTH winner and loser we clear lastAdminActionKind +
+// lastAdminActionAt so the consumer-facing "Admin requested more info" pill
+// from a previous defer doesn't persist after resolution.
+//
+// The events projection update is gated on event.priceSource being
+// 'community' or NULL — we never overwrite a Ticketmaster/AXS/etc.-sourced
+// price even if a community contest landed on the same slot. The cred award
+// (+1 priceCredScore to the winner's submitter) happens regardless of the
+// projection gate.
+//
+// Orphan cleanup archives any OTHER pending counters against the same parent
+// inside the transaction. The §4.6 partial unique index makes this dead-by-
+// construction in steady state, but the branch is kept defensively for
+// migration-window in-flight rows.
+//
+// Audit + notification writes happen OUTSIDE the transaction (after commit)
+// so a Sentry-tagged failure in either telemetry path can't roll back the
+// resolution. Audit is driven by ctx.set('auditAction', ...) etc. and handled
+// by the middleware in apps/api/src/routes/admin/index.ts. Notifications are
+// inserted inline here until Task 10 extracts the helper into
+// apps/api/src/lib/contest-notifications.ts.
+contestsAdminRouter.post(
+  '/prices/:contestId/resolve',
+  zValidator('param', resolveParamsSchema, (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid contestId' }, 400)
+    }
+  }),
+  zValidator('json', resolveBodySchema, (result, ctx) => {
+    if (!result.success) {
+      return ctx.json(
+        { success: false, error: 'Reason must be 10–2000 characters.' },
+        400,
+      )
+    }
+  }),
+  async (ctx) => {
+    const { contestId } = ctx.req.valid('param')
+    const { resolution, reason } = ctx.req.valid('json')
+    const admin = getAuthUser(ctx)
+
+    type ResolveOutcome =
+      | {
+          ok: 'committed'
+          parent: typeof priceSubmissions.$inferSelect
+          challenger: typeof priceSubmissions.$inferSelect
+          eventPriceUpdated: boolean
+          orphanedCounterIds: string[]
+          before: {
+            parent: {
+              status: string
+              priceMin: string
+              priceMax: string | null
+            }
+            challenger: {
+              status: string
+              priceMin: string
+              priceMax: string | null
+            }
+          }
+        }
+      | { ok: 'not_found' }
+      | { ok: 'precondition_failed'; reason: string }
+
+    const outcome: ResolveOutcome = await db.transaction(async (tx) => {
+      // Lock the parent row first.
+      const [parent] = await tx
+        .select()
+        .from(priceSubmissions)
+        .where(eq(priceSubmissions.id, contestId))
+        .limit(1)
+        .for('update')
+      if (!parent) return { ok: 'not_found' }
+
+      // Lock the (single, per §4.6) pending counter. If a previous resolution
+      // already archived it, we surface precondition_failed instead of
+      // silently no-oping.
+      const [challenger] = await tx
+        .select()
+        .from(priceSubmissions)
+        .where(
+          and(
+            eq(priceSubmissions.disputedSubmissionId, contestId),
+            eq(priceSubmissions.status, 'pending'),
+          ),
+        )
+        .limit(1)
+        .for('update')
+      if (!challenger) {
+        return {
+          ok: 'precondition_failed',
+          reason: 'No pending counter exists for this contest.',
+        }
+      }
+
+      // Sanity gates.
+      if (parent.disputedSubmissionId !== null) {
+        return {
+          ok: 'precondition_failed',
+          reason: 'Target row is a counter, not a parent.',
+        }
+      }
+      if (parent.status !== 'disputed' && parent.status !== 'corroborated') {
+        return {
+          ok: 'precondition_failed',
+          reason: `Parent status is ${parent.status}; cannot resolve.`,
+        }
+      }
+      if (challenger.status !== 'pending') {
+        return {
+          ok: 'precondition_failed',
+          reason: `Challenger status is ${challenger.status}; cannot resolve.`,
+        }
+      }
+      // Same-slot assertions — defense-in-depth against a counter being
+      // inserted with a mismatched slot. Without these, a parameter mix-up
+      // could propagate the wrong price into the events row.
+      if (parent.eventId !== challenger.eventId) {
+        return {
+          ok: 'precondition_failed',
+          reason: 'Parent and challenger belong to different events.',
+        }
+      }
+      if (parent.tier !== challenger.tier) {
+        return {
+          ok: 'precondition_failed',
+          reason: `Parent tier ${parent.tier} does not match challenger tier ${challenger.tier}.`,
+        }
+      }
+      if (parent.sourceCategory !== challenger.sourceCategory) {
+        return {
+          ok: 'precondition_failed',
+          reason: `Parent source_category ${parent.sourceCategory ?? 'null'} does not match challenger source_category ${challenger.sourceCategory ?? 'null'}.`,
+        }
+      }
+
+      const before = {
+        parent: {
+          status: parent.status,
+          priceMin: parent.priceMin,
+          priceMax: parent.priceMax,
+        },
+        challenger: {
+          status: challenger.status,
+          priceMin: challenger.priceMin,
+          priceMax: challenger.priceMax,
+        },
+      }
+
+      // Read the event row inside the transaction to gate the projection
+      // update on priceSource — we never overwrite a non-community headline
+      // (ticketmaster/axs/etc.) even when a community contest resolves on the
+      // same slot.
+      const [eventRow] = await tx
+        .select({ priceSource: events.priceSource })
+        .from(events)
+        .where(eq(events.id, parent.eventId))
+        .limit(1)
+      if (!eventRow) {
+        // Should be unreachable given the FK from price_submissions.event_id,
+        // but treat as precondition_failed rather than a 500 if it ever fires.
+        return {
+          ok: 'precondition_failed',
+          reason: 'Event row missing for parent submission.',
+        }
+      }
+      const projectionAllowed =
+        eventRow.priceSource === null || eventRow.priceSource === 'community'
+
+      let eventPriceUpdated = false
+
+      if (resolution === 'challenger_wins') {
+        // Winner = challenger → corroborated. Loser = parent → archived.
+        // Clearing lastAdminActionKind/At on BOTH rows ensures any prior
+        // "Admin requested more info" pill from a defer doesn't outlive the
+        // resolution (spec §4.5).
+        await tx
+          .update(priceSubmissions)
+          .set({
+            status: 'corroborated',
+            lastAdminActionKind: null,
+            lastAdminActionAt: null,
+            updatedAt: sql`now()`,
+          })
+          .where(eq(priceSubmissions.id, challenger.id))
+        await tx
+          .update(priceSubmissions)
+          .set({
+            status: 'archived',
+            archivedReason: reason,
+            lastAdminActionKind: null,
+            lastAdminActionAt: null,
+            updatedAt: sql`now()`,
+          })
+          .where(eq(priceSubmissions.id, parent.id))
+        if (projectionAllowed) {
+          await tx
+            .update(events)
+            .set({
+              ticketPriceMin: challenger.priceMin,
+              ticketPriceMax: challenger.priceMax ?? null,
+              priceSource: 'community',
+              updatedAt: sql`now()`,
+            })
+            .where(eq(events.id, parent.eventId))
+          eventPriceUpdated = true
+        }
+        if (challenger.userId !== null) {
+          await tx
+            .update(userRoles)
+            .set({ priceCredScore: sql`${userRoles.priceCredScore} + 1` })
+            .where(eq(userRoles.userId, challenger.userId))
+        }
+      } else {
+        // parent_wins: parent stays canonical → corroborated.
+        // counter loses → archived with admin's reason.
+        await tx
+          .update(priceSubmissions)
+          .set({
+            status: 'corroborated',
+            lastAdminActionKind: null,
+            lastAdminActionAt: null,
+            updatedAt: sql`now()`,
+          })
+          .where(eq(priceSubmissions.id, parent.id))
+        await tx
+          .update(priceSubmissions)
+          .set({
+            status: 'archived',
+            archivedReason: reason,
+            lastAdminActionKind: null,
+            lastAdminActionAt: null,
+            updatedAt: sql`now()`,
+          })
+          .where(eq(priceSubmissions.id, challenger.id))
+        // events row already reflects parent's price; no propagation.
+        // Parent submitter already received cred when initially corroborated;
+        // no re-award.
+      }
+
+      // Orphan cleanup — archive any OTHER pending counters against this
+      // parent. Dead-by-construction post-§4.6 unique index, but kept for
+      // migration-window in-flight rows. The ne() guard avoids double-touching
+      // the winner/loser the handler just flipped.
+      const orphans = await tx
+        .update(priceSubmissions)
+        .set({
+          status: 'archived',
+          archivedReason:
+            'parent was archived in a contest; refile against new winner',
+          updatedAt: sql`now()`,
+        })
+        .where(
+          and(
+            eq(priceSubmissions.disputedSubmissionId, parent.id),
+            eq(priceSubmissions.status, 'pending'),
+            ne(priceSubmissions.id, challenger.id),
+          ),
+        )
+        .returning({ id: priceSubmissions.id })
+      const orphanedCounterIds = orphans.map((row) => row.id)
+
+      const [parentAfter] = await tx
+        .select()
+        .from(priceSubmissions)
+        .where(eq(priceSubmissions.id, parent.id))
+        .limit(1)
+      const [challengerAfter] = await tx
+        .select()
+        .from(priceSubmissions)
+        .where(eq(priceSubmissions.id, challenger.id))
+        .limit(1)
+      if (!parentAfter || !challengerAfter) {
+        throw new Error(
+          'Post-resolution read failed — parent or challenger missing.',
+        )
+      }
+
+      return {
+        ok: 'committed',
+        parent: parentAfter,
+        challenger: challengerAfter,
+        eventPriceUpdated,
+        orphanedCounterIds,
+        before,
+      }
+    })
+
+    if (outcome.ok === 'not_found') {
+      return ctx.json({ success: false, error: 'Contest not found' }, 404)
+    }
+    if (outcome.ok === 'precondition_failed') {
+      return ctx.json(
+        {
+          success: false,
+          error: outcome.reason,
+          code: 'precondition_failed',
+        },
+        409,
+      )
+    }
+
+    // Audit middleware reads these from context after the response is built.
+    // Failures inside the middleware are swallowed there; the resolution
+    // itself is already committed.
+    ctx.set('auditActorId', admin.userId)
+    ctx.set('auditAction', 'contest.resolve')
+    ctx.set('auditTargetId', contestId)
+    ctx.set('auditMeta', {
+      resolution,
+      parentId: outcome.parent.id,
+      challengerId: outcome.challenger.id,
+      eventId: outcome.parent.eventId,
+      tier: outcome.parent.tier,
+      sourceCategory: outcome.parent.sourceCategory,
+      reason,
+      parentBefore: outcome.before.parent,
+      parentAfter: {
+        status: outcome.parent.status,
+        priceMin: outcome.parent.priceMin,
+        priceMax: outcome.parent.priceMax,
+      },
+      challengerBefore: outcome.before.challenger,
+      challengerAfter: {
+        status: outcome.challenger.status,
+        priceMin: outcome.challenger.priceMin,
+        priceMax: outcome.challenger.priceMax,
+      },
+      eventPriceUpdated: outcome.eventPriceUpdated,
+      orphanedCounterIds: outcome.orphanedCounterIds,
+    })
+
+    // Notification fan-out — inline until Task 10 extracts a helper. Both
+    // submitters get a user_notification row pointing at the event detail
+    // page. Deduped when parent.userId === challenger.userId. metadata is a
+    // text column on the notifications table (see packages/db schema), so
+    // JSON.stringify is mandatory — passing a raw object would surface a
+    // Postgres type error at runtime.
+    try {
+      const recipients: Array<{ userId: string; submissionId: string }> = []
+      if (outcome.parent.userId !== null) {
+        recipients.push({
+          userId: outcome.parent.userId,
+          submissionId: outcome.parent.id,
+        })
+      }
+      if (
+        outcome.challenger.userId !== null &&
+        outcome.challenger.userId !== outcome.parent.userId
+      ) {
+        recipients.push({
+          userId: outcome.challenger.userId,
+          submissionId: outcome.challenger.id,
+        })
+      }
+      if (recipients.length > 0) {
+        await db.insert(notifications).values(
+          recipients.map((recipient) => ({
+            userId: recipient.userId,
+            type: 'user_notification' as const,
+            category: 'contest.resolved',
+            title: 'Your price submission was reviewed.',
+            body: reason,
+            actionUrl: `/events/${outcome.parent.eventId}`,
+            metadata: JSON.stringify({
+              submissionId: recipient.submissionId,
+              contestId,
+              resolution,
+            }),
+          })),
+        )
+      }
+    } catch (notifyErr) {
+      apiLogger.warn(
+        { contestId, err: notifyErr },
+        'Failed to write contest resolve notifications; resolution itself committed.',
+      )
+    }
+
+    return ctx.json({
+      success: true,
+      data: {
+        resolution,
+        parent: outcome.parent,
+        challenger: outcome.challenger,
+        eventPriceUpdated: outcome.eventPriceUpdated,
       },
     })
   },

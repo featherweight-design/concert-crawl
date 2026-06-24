@@ -1,4 +1,5 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest'
+import { and, eq, sql } from 'drizzle-orm'
 
 // Hoisted auth state so the Clerk mock can swap users between tests without
 // reloading modules. Same pattern as admin/prices.integration.test.ts.
@@ -17,12 +18,20 @@ vi.mock('@hono/clerk-auth', () => ({
   getAuth: () => authState.current,
 }))
 
+import {
+  events,
+  notifications,
+  priceSubmissions,
+  userRoles,
+} from '@concert-crawl/db'
 import { createApp } from '../../app.js'
+import { testDb } from '../../test/helpers/db.js'
 import {
   clearTables,
   seedEvent,
   seedPriceSubmission,
   seedUserProfile,
+  seedUserRole,
   seedVenue,
 } from '../../test/helpers/seed.js'
 
@@ -585,5 +594,588 @@ describe('GET /v1/admin/contests/prices/:contestId', () => {
     }
     expect(body.data.parent.status).toBe('corroborated')
     expect(body.data.counter.status).toBe('archived')
+  })
+})
+
+describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
+  beforeEach(async () => {
+    clearAuth()
+    await clearTables()
+    // notifications is NOT in the shared clearTables TRUNCATE list. Wipe it
+    // here so per-test assertions about row counts aren't contaminated by
+    // rows from previous tests.
+    await testDb.delete(notifications)
+  })
+
+  // Seeds one contest:
+  //   - venue + event (priceSource='community' by default so the projection
+  //     update can be observed in challenger_wins paths)
+  //   - parent submission (status=disputed) + user profile + user role row
+  //   - counter submission (status=pending, disputedSubmissionId=parent.id) +
+  //     user profile + user role row
+  // Returns all rows so tests can assert against them.
+  const seedContest = async (
+    options: {
+      eventOverrides?: Partial<typeof events.$inferInsert>
+      counterOverrides?: Partial<typeof priceSubmissions.$inferInsert>
+      parentOverrides?: Partial<typeof priceSubmissions.$inferInsert>
+    } = {},
+  ) => {
+    const uniq = `${Date.now()}-${Math.floor(Math.random() * 1e9)}`
+    const venue = await seedVenue({
+      name: 'Resolve Venue',
+      slug: `resolve-venue-${uniq}`,
+    })
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-01',
+      title: `Resolve Show ${uniq}`,
+      artist: `Resolve Artist ${uniq}`,
+      ticketPriceMin: '40',
+      ticketPriceMax: '40',
+      priceSource: 'community',
+      ...options.eventOverrides,
+    })
+    const submitter = await seedUserProfile(`resolve-parent-${uniq}`, {
+      handle: `parent-${uniq}`,
+    })
+    const challenger = await seedUserProfile(`resolve-chal-${uniq}`, {
+      handle: `chal-${uniq}`,
+    })
+    // Cred is awarded by UPDATE — rows must exist for the +1 to land.
+    const parentRole = await seedUserRole(submitter.userId, {
+      role: 'user',
+      grantedBy: 'system',
+      priceCredScore: 5,
+    })
+    const challengerRole = await seedUserRole(challenger.userId, {
+      role: 'user',
+      grantedBy: 'system',
+      priceCredScore: 2,
+    })
+    const parent = await seedPriceSubmission(event.id, submitter.userId, {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      priceMax: '40',
+      status: 'disputed',
+      note: 'Original observation',
+      corroborationCount: 3,
+      ...options.parentOverrides,
+    })
+    const counter = await seedPriceSubmission(event.id, challenger.userId, {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '55',
+      priceMax: '55',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+      note: 'New AXS price after openers added',
+      corroborationCount: 1,
+      ...options.counterOverrides,
+    })
+    return {
+      venue,
+      event,
+      submitter,
+      challenger,
+      parent,
+      counter,
+      parentRoleBefore: parentRole,
+      challengerRoleBefore: challengerRole,
+    }
+  }
+
+  const fetchSubmission = async (id: string) => {
+    const [row] = await testDb
+      .select()
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.id, id))
+      .limit(1)
+    if (!row) throw new Error(`fetchSubmission: id ${id} not found`)
+    return row
+  }
+
+  const fetchEvent = async (id: string) => {
+    const [row] = await testDb
+      .select()
+      .from(events)
+      .where(eq(events.id, id))
+      .limit(1)
+    if (!row) throw new Error(`fetchEvent: id ${id} not found`)
+    return row
+  }
+
+  const fetchCred = async (userId: string): Promise<number> => {
+    const [row] = await testDb
+      .select({ score: userRoles.priceCredScore })
+      .from(userRoles)
+      .where(eq(userRoles.userId, userId))
+      .limit(1)
+    return row?.score ?? 0
+  }
+
+  it('requires admin auth', async () => {
+    const { parent } = await seedContest()
+
+    // Unauthed
+    const unauthRes = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/resolve`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resolution: 'parent_wins',
+          reason: 'Original observation still holds.',
+        }),
+      },
+    )
+    expect([401, 403]).toContain(unauthRes.status)
+
+    // Non-admin
+    authState.current = {
+      userId: 'user_non_admin',
+      sessionClaims: { metadata: { role: 'user' } },
+    }
+    const nonAdminRes = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/resolve`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          resolution: 'parent_wins',
+          reason: 'Original observation still holds.',
+        }),
+      },
+    )
+    expect([401, 403]).toContain(nonAdminRes.status)
+  })
+
+  it('rejects invalid uuid path param with 400', async () => {
+    setAdminAuth()
+    const res = await app.request(
+      '/v1/admin/contests/prices/not-a-uuid/resolve',
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          resolution: 'parent_wins',
+          reason: 'Original observation still holds.',
+        }),
+      },
+    )
+    expect(res.status).toBe(400)
+  })
+
+  it('rejects missing resolution field with 400/422', async () => {
+    setAdminAuth()
+    const { parent } = await seedContest()
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/resolve`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          reason: 'Sufficiently long reason but no resolution field.',
+        }),
+      },
+    )
+    expect([400, 422]).toContain(res.status)
+  })
+
+  it('rejects reason shorter than 10 chars with 400/422', async () => {
+    setAdminAuth()
+    const { parent } = await seedContest()
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/resolve`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({ resolution: 'parent_wins', reason: 'short' }),
+      },
+    )
+    expect([400, 422]).toContain(res.status)
+  })
+
+  it('returns 404 for an unknown contestId', async () => {
+    setAdminAuth()
+    const res = await app.request(
+      '/v1/admin/contests/prices/00000000-0000-0000-0000-000000000000/resolve',
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          resolution: 'parent_wins',
+          reason: 'Original observation still holds.',
+        }),
+      },
+    )
+    expect(res.status).toBe(404)
+  })
+
+  it('parent_wins: parent → corroborated, counter → archived, event unchanged', async () => {
+    setAdminAuth()
+    const { event, parent, counter } = await seedContest()
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/resolve`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          resolution: 'parent_wins',
+          reason: 'Original price still accurate per box-office confirmation.',
+        }),
+      },
+    )
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { resolution: string; eventPriceUpdated: boolean }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.resolution).toBe('parent_wins')
+    expect(body.data.eventPriceUpdated).toBe(false)
+
+    const parentAfter = await fetchSubmission(parent.id)
+    const counterAfter = await fetchSubmission(counter.id)
+    expect(parentAfter.status).toBe('corroborated')
+    expect(counterAfter.status).toBe('archived')
+    expect(counterAfter.archivedReason).toMatch(/box-office/i)
+
+    // event row unchanged (still $40, community source)
+    const eventAfter = await fetchEvent(event.id)
+    expect(eventAfter.ticketPriceMin).toBe('40.00')
+  })
+
+  it('challenger_wins: counter → corroborated, parent → archived, event projection updated, +1 cred', async () => {
+    setAdminAuth()
+    const { event, parent, counter, challenger } = await seedContest()
+    const credBefore = await fetchCred(challenger.userId)
+
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/resolve`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          resolution: 'challenger_wins',
+          reason: 'Verified AXS face moved to $55 after openers announced.',
+        }),
+      },
+    )
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      data: { resolution: string; eventPriceUpdated: boolean }
+    }
+    expect(body.data.resolution).toBe('challenger_wins')
+    expect(body.data.eventPriceUpdated).toBe(true)
+
+    const parentAfter = await fetchSubmission(parent.id)
+    const counterAfter = await fetchSubmission(counter.id)
+    expect(parentAfter.status).toBe('archived')
+    expect(parentAfter.archivedReason).toMatch(/AXS face moved/i)
+    expect(counterAfter.status).toBe('corroborated')
+
+    const eventAfter = await fetchEvent(event.id)
+    expect(eventAfter.ticketPriceMin).toBe('55.00')
+    expect(eventAfter.priceSource).toBe('community')
+
+    const credAfter = await fetchCred(challenger.userId)
+    expect(credAfter).toBe(credBefore + 1)
+  })
+
+  it('challenger_wins with event.priceSource=ticketmaster: does NOT overwrite event projection', async () => {
+    setAdminAuth()
+    const { event, parent, counter, challenger } = await seedContest({
+      eventOverrides: {
+        priceSource: 'ticketmaster',
+        ticketPriceMin: '40',
+        ticketPriceMax: '40',
+      },
+    })
+    const credBefore = await fetchCred(challenger.userId)
+
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/resolve`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          resolution: 'challenger_wins',
+          reason: 'Challenger price is correct but Ticketmaster is canonical.',
+        }),
+      },
+    )
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      data: { resolution: string; eventPriceUpdated: boolean }
+    }
+    // Status flips still happen (counter wins) but the events row is not
+    // stomped because a non-community priceSource owns the headline.
+    expect(body.data.eventPriceUpdated).toBe(false)
+
+    const counterAfter = await fetchSubmission(counter.id)
+    const parentAfter = await fetchSubmission(parent.id)
+    expect(counterAfter.status).toBe('corroborated')
+    expect(parentAfter.status).toBe('archived')
+
+    const eventAfter = await fetchEvent(event.id)
+    expect(eventAfter.ticketPriceMin).toBe('40.00')
+    expect(eventAfter.priceSource).toBe('ticketmaster')
+
+    // Cred still awarded — the slot winner deserves it regardless of which
+    // source owns the projection.
+    const credAfter = await fetchCred(challenger.userId)
+    expect(credAfter).toBe(credBefore + 1)
+  })
+
+  it('clears lastAdminActionKind + lastAdminActionAt on both rows after resolve', async () => {
+    setAdminAuth()
+    const { parent, counter } = await seedContest({
+      counterOverrides: {
+        lastAdminActionKind: 'defer',
+        lastAdminActionAt: new Date('2027-05-15T12:00:00Z'),
+      },
+    })
+
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/resolve`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          resolution: 'challenger_wins',
+          reason: 'Verified counter price; closing the deferred contest.',
+        }),
+      },
+    )
+    expect(res.status).toBe(200)
+
+    const parentAfter = await fetchSubmission(parent.id)
+    const counterAfter = await fetchSubmission(counter.id)
+    expect(parentAfter.lastAdminActionKind).toBeNull()
+    expect(parentAfter.lastAdminActionAt).toBeNull()
+    expect(counterAfter.lastAdminActionKind).toBeNull()
+    expect(counterAfter.lastAdminActionAt).toBeNull()
+  })
+
+  it('returns 409 when the counter status is not pending (race: already resolved)', async () => {
+    setAdminAuth()
+    const { parent, counter } = await seedContest()
+    // Simulate concurrent resolution: another admin already archived the counter.
+    await testDb
+      .update(priceSubmissions)
+      .set({ status: 'archived', archivedReason: 'race winner' })
+      .where(eq(priceSubmissions.id, counter.id))
+
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/resolve`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          resolution: 'parent_wins',
+          reason: 'Should be rejected because counter already archived.',
+        }),
+      },
+    )
+    expect(res.status).toBe(409)
+    const body = (await res.json()) as { success: boolean; error: string }
+    expect(body.success).toBe(false)
+    expect(body.error).toBeTruthy()
+  })
+
+  it('returns 409 on slot mismatch (tier differs between parent and counter)', async () => {
+    setAdminAuth()
+    const { parent, counter } = await seedContest()
+    // Bypass the application code that locks counter slot to parent slot at
+    // creation time — write a mismatched tier directly to reach the resolve
+    // handler's same-slot assertion.
+    await testDb
+      .update(priceSubmissions)
+      .set({ tier: 'VIP' })
+      .where(eq(priceSubmissions.id, counter.id))
+
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/resolve`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          resolution: 'parent_wins',
+          reason: 'Tier mismatch — should be rejected.',
+        }),
+      },
+    )
+    expect(res.status).toBe(409)
+    const body = (await res.json()) as { success: boolean; error: string }
+    expect(body.success).toBe(false)
+    expect(body.error).toMatch(/tier/i)
+  })
+
+  it('archives orphaned pending counters against the same parent in the same transaction', async () => {
+    setAdminAuth()
+    const { event, parent, counter } = await seedContest()
+    // Stage an orphaned second pending counter by inserting it as archived
+    // (which the partial unique index does not constrain) and then flipping
+    // it to pending after dropping the index. §4.6 calls out orphan cleanup
+    // as a migration-window safety net — without the index drop the row is
+    // dead-by-construction, but we still want to exercise the cleanup branch.
+    const secondCounter = await seedPriceSubmission(event.id, 'orphan-u', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '60',
+      status: 'archived',
+      disputedSubmissionId: parent.id,
+    })
+
+    await testDb.execute(
+      sql`DROP INDEX IF EXISTS price_submissions_pending_counter_unique_idx`,
+    )
+    try {
+      await testDb
+        .update(priceSubmissions)
+        .set({ status: 'pending' })
+        .where(eq(priceSubmissions.id, secondCounter.id))
+
+      const res = await app.request(
+        `/v1/admin/contests/prices/${parent.id}/resolve`,
+        {
+          method: 'POST',
+          headers: ADMIN_HEADERS,
+          body: JSON.stringify({
+            resolution: 'challenger_wins',
+            reason: 'Original counter wins; orphan must be archived.',
+          }),
+        },
+      )
+
+      expect(res.status).toBe(200)
+      const counterAfter = await fetchSubmission(counter.id)
+      const orphanAfter = await fetchSubmission(secondCounter.id)
+      expect(counterAfter.status).toBe('corroborated')
+      expect(orphanAfter.status).toBe('archived')
+      expect(orphanAfter.archivedReason).toMatch(/parent was archived/i)
+    } finally {
+      // Always restore the index — even if assertions above failed. If the
+      // assertions failed mid-test, there may still be two pending counters
+      // referencing the same parent; archive any pending rows for this parent
+      // before recreating the partial unique index so the CREATE doesn't 23505.
+      await testDb
+        .update(priceSubmissions)
+        .set({ status: 'archived', archivedReason: 'test cleanup' })
+        .where(
+          and(
+            eq(priceSubmissions.disputedSubmissionId, parent.id),
+            eq(priceSubmissions.status, 'pending'),
+          ),
+        )
+      await testDb.execute(
+        sql`CREATE UNIQUE INDEX IF NOT EXISTS price_submissions_pending_counter_unique_idx
+            ON price_submissions (disputed_submission_id)
+            WHERE status = 'pending' AND disputed_submission_id IS NOT NULL`,
+      )
+    }
+  })
+
+  it('writes notification rows for parent + challenger submitters', async () => {
+    setAdminAuth()
+    const { parent, submitter, challenger } = await seedContest()
+
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/resolve`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          resolution: 'challenger_wins',
+          reason: 'Counter wins — verified via box office.',
+        }),
+      },
+    )
+    expect(res.status).toBe(200)
+
+    const notifs = await testDb
+      .select()
+      .from(notifications)
+      .where(eq(notifications.type, 'user_notification'))
+    expect(notifs).toHaveLength(2)
+    const userIds = new Set(notifs.map((row) => row.userId))
+    expect(userIds.has(submitter.userId)).toBe(true)
+    expect(userIds.has(challenger.userId)).toBe(true)
+    for (const row of notifs) {
+      expect(row.category).toBe('contest.resolved')
+      // metadata is a JSON-encoded text column
+      const parsed = JSON.parse(row.metadata ?? 'null') as {
+        contestId: string
+        resolution: string
+      }
+      expect(parsed.contestId).toBe(parent.id)
+      expect(parsed.resolution).toBe('challenger_wins')
+    }
+  })
+
+  it('dedupes notification rows when parent and challenger are the same user', async () => {
+    setAdminAuth()
+    // Seed contest with same user on both sides so the dedupe path executes.
+    const venue = await seedVenue({
+      name: 'Dedupe Venue',
+      slug: `dedupe-venue-${Date.now()}`,
+    })
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-02',
+      title: 'Dedupe Show',
+      artist: 'Dedupe Artist',
+      ticketPriceMin: '40',
+      priceSource: 'community',
+    })
+    const sameUser = await seedUserProfile(`dedupe-u-${Date.now()}`, {
+      handle: 'dedupe',
+    })
+    await seedUserRole(sameUser.userId, {
+      role: 'user',
+      grantedBy: 'system',
+    })
+    const parent = await seedPriceSubmission(event.id, sameUser.userId, {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      status: 'disputed',
+    })
+    await seedPriceSubmission(event.id, sameUser.userId, {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '55',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+    })
+
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/resolve`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          resolution: 'parent_wins',
+          reason: 'Same-user contest — verifying dedupe of notifications.',
+        }),
+      },
+    )
+    expect(res.status).toBe(200)
+
+    const notifs = await testDb
+      .select()
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.type, 'user_notification'),
+          eq(notifications.userId, sameUser.userId),
+        ),
+      )
+    expect(notifs).toHaveLength(1)
   })
 })
