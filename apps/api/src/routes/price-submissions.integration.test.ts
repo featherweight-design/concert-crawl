@@ -15,12 +15,16 @@ vi.mock('@hono/clerk-auth', () => ({
   getAuth: () => authState.current,
 }))
 
+import { eq } from 'drizzle-orm'
+import { priceSubmissions } from '@concert-crawl/db'
 import { createApp } from '../app.js'
+import { testDb } from '../test/helpers/db.js'
 import {
   clearTables,
   seedEvent,
   seedVenue,
   seedPriceSubmission,
+  seedUserProfile,
 } from '../test/helpers/seed.js'
 
 const app = createApp()
@@ -307,5 +311,180 @@ describe('GET /v1/events/:id/price-submissions — beta auth gate', () => {
     } finally {
       process.env.REQUIRE_BETA_AUTH = original
     }
+  })
+})
+
+// Task 5b — counter-creation via POST /v1/events/:eventId/price-submissions.
+// This is the SECOND counter-creation path (CounterSubmitSheet posts here with
+// `disputedSubmissionId` in the body). Must mirror the /v1/submissions/:id/dispute
+// route's contract: 1-pending-counter-per-parent invariant, parent-flip to
+// 'disputed' in the same transaction, and slot-identity inheritance from parent.
+describe('POST /v1/events/:eventId/price-submissions — counter path', () => {
+  beforeEach(async () => {
+    clearAuth()
+    await clearTables()
+  })
+
+  it('rejects a 2nd pending counter against the same parent with 409', async () => {
+    const venue = await seedVenue({
+      name: 'Dup Counter PS',
+      slug: 'dup-counter-ps',
+    })
+    const event = await seedEvent(venue.id, { date: '2027-07-01' })
+    await seedUserProfile('parent-user-ps', { handle: 'parent_ps' })
+    await seedUserProfile('chal-1-ps', { handle: 'chal1_ps' })
+    await seedUserProfile('chal-2-ps', { handle: 'chal2_ps' })
+
+    const parent = await seedPriceSubmission(event.id, 'parent-user-ps', {
+      tier: 'GA',
+      vendor: 'AXS',
+      howFound: 'saw_listing',
+      sourceCategory: 'standard',
+      status: 'corroborated',
+    })
+
+    setAuth('chal-1-ps')
+    const first = await app.request(
+      `/v1/events/${event.id}/price-submissions`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-token',
+        },
+        body: JSON.stringify({
+          priceMin: 50,
+          tier: 'GA',
+          vendor: 'AXS',
+          howFound: 'saw_listing',
+          sourceCategory: 'standard',
+          disputedSubmissionId: parent.id,
+        }),
+      },
+    )
+    expect(first.status).toBe(201)
+
+    setAuth('chal-2-ps')
+    const second = await app.request(
+      `/v1/events/${event.id}/price-submissions`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-token',
+        },
+        body: JSON.stringify({
+          priceMin: 60,
+          tier: 'GA',
+          vendor: 'AXS',
+          howFound: 'saw_listing',
+          sourceCategory: 'standard',
+          disputedSubmissionId: parent.id,
+        }),
+      },
+    )
+    expect(second.status).toBe(409)
+    const body = (await second.json()) as { success: boolean; error: string }
+    expect(body.success).toBe(false)
+    expect(body.error).toMatch(/already pending/i)
+  })
+
+  it('flips the parent row to disputed when a counter is filed', async () => {
+    const venue = await seedVenue({
+      name: 'Flip Parent PS',
+      slug: 'flip-parent-ps',
+    })
+    const event = await seedEvent(venue.id, { date: '2027-07-02' })
+    await seedUserProfile('flip-parent', { handle: 'flip_parent' })
+    await seedUserProfile('flip-chal', { handle: 'flip_chal' })
+
+    const parent = await seedPriceSubmission(event.id, 'flip-parent', {
+      tier: 'GA',
+      vendor: 'AXS',
+      howFound: 'saw_listing',
+      sourceCategory: 'standard',
+      status: 'corroborated',
+    })
+
+    setAuth('flip-chal')
+    const res = await app.request(`/v1/events/${event.id}/price-submissions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
+      body: JSON.stringify({
+        priceMin: 70,
+        tier: 'GA',
+        vendor: 'AXS',
+        howFound: 'saw_listing',
+        sourceCategory: 'standard',
+        disputedSubmissionId: parent.id,
+      }),
+    })
+    expect(res.status).toBe(201)
+
+    const [reloadedParent] = await testDb
+      .select({ status: priceSubmissions.status })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.id, parent.id))
+    expect(reloadedParent?.status).toBe('disputed')
+  })
+
+  it('overwrites submitter-supplied slot fields with parent values', async () => {
+    const venue = await seedVenue({
+      name: 'Slot Inherit',
+      slug: 'slot-inherit',
+    })
+    const event = await seedEvent(venue.id, { date: '2027-07-03' })
+    await seedUserProfile('slot-parent', { handle: 'slot_parent' })
+    await seedUserProfile('slot-chal', { handle: 'slot_chal' })
+
+    const parent = await seedPriceSubmission(event.id, 'slot-parent', {
+      tier: 'GA',
+      vendor: 'AXS',
+      howFound: 'saw_listing',
+      sourceCategory: 'standard',
+      status: 'corroborated',
+    })
+
+    setAuth('slot-chal')
+    const res = await app.request(`/v1/events/${event.id}/price-submissions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
+      body: JSON.stringify({
+        priceMin: 80,
+        // Submitter tries to override slot fields — server must IGNORE these
+        // when disputedSubmissionId is set and inherit from the parent. Without
+        // this inheritance the counter would land in a different (tier,
+        // source_category) slot than the parent and trip the admin resolve
+        // transaction's same-slot assertions (spec §4.3).
+        tier: 'VIP',
+        vendor: 'Ticketmaster',
+        howFound: 'bought_myself',
+        sourceCategory: 'resale',
+        disputedSubmissionId: parent.id,
+      }),
+    })
+    expect(res.status).toBe(201)
+    const body = (await res.json()) as {
+      success: boolean
+      data: {
+        tier: string
+        vendor: string
+        sourceCategory: string
+        howFound: string
+      }
+    }
+    expect(body.data.tier).toBe('GA') // parent's value, not submitter's 'VIP'
+    expect(body.data.vendor).toBe('AXS') // parent's value, not 'Ticketmaster'
+    expect(body.data.sourceCategory).toBe('standard') // parent's value, not 'resale'
+    // howFound is NOT slot identity — submitter's value is preserved. This
+    // intentionally differs from the /v1/submissions/:id/dispute route which
+    // inherits howFound; that small inconsistency is out of scope for this PR.
+    expect(body.data.howFound).toBe('bought_myself')
   })
 })
