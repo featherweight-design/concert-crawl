@@ -855,6 +855,268 @@ git commit -m "feat(api): dispute endpoint rejects duplicate pending counters wi
 
 ---
 
+### Task 5b: Price-submissions endpoint — second counter-creation path
+
+**Why this task exists (added during plan amendment, 2026-06-24):** Spec §4.6 was updated during the Copilot review of the docs PR (#739) to recognize that `apps/api/src/routes/price-submissions.ts` is a SECOND counter-creation path (CounterSubmitSheet uses it when posting with `disputedSubmissionId`). The original Task 5 only modified `submissions.ts`. The spec File Structure list captured the new modification but no discrete task body did. This task closes that gap so the executing-plans subagent doesn't have to infer it from spec §4.6.
+
+**Files:**
+
+- Modify: `apps/api/src/routes/price-submissions.ts`
+- Modify: `apps/api/src/routes/price-submissions.integration.test.ts` (or the equivalent existing test file — verify at execution time)
+
+**Interfaces:**
+
+- Consumes: existing `POST /v1/events/:eventId/price-submissions` handler at `apps/api/src/routes/price-submissions.ts`. Existing behavior: validates parent has `status='corroborated'` when `disputedSubmissionId` is provided; lets the submitter supply `tier`, `vendor`, `howFound`, `sourceCategory` from the request body; does NOT flip the parent's status.
+- Produces: when `disputedSubmissionId` is present in the request body, the route now:
+  1. Performs the same pre-insert duplicate-counter check as Task 5 (returns 409 with `{ success: false, error: 'Another challenge is already pending against this submission.' }` when a pending counter against the same parent already exists).
+  2. Translates the DB unique-violation (SQLSTATE `23505` on `price_submissions_pending_counter_unique_idx`) into the same clean 409 in a try/catch around the insert.
+  3. Inside the SAME `db.transaction(...)` as the insert, flips the parent row to `status='disputed'` (matches `/v1/submissions/:id/dispute` behavior at `submissions.ts:174-177`).
+  4. Overwrites submitter-supplied `tier`, `vendor`, `sourceCategory` with the parent row's values (inherits from parent — same pattern as `submissions.ts:155-168`). The submitter's request body is treated as a hint for the headline price/floor/ceiling/note only; the slot identity is always the parent's.
+
+**Why parent-flip + slot inheritance matter:** without parent-flip, the consumer event detail headline keeps showing "corroborated" while a contest is pending. Without slot inheritance, the resolve transaction's same-slot assertions (§4.3) will 409 at admin resolution time if a counter ever lands in a different slot than the parent.
+
+- [ ] **Step 1: Write the failing tests**
+
+Append three new cases to `apps/api/src/routes/price-submissions.integration.test.ts` (or the appropriate existing test file — check first). Mirror Task 5's auth helper pattern (hoisted `authState` + `setAuth(userId)` + `Bearer test-token` headers — do NOT invent new helpers).
+
+```typescript
+describe('POST /v1/events/:eventId/price-submissions — counter path', () => {
+  it('rejects a 2nd pending counter against the same parent with 409', async () => {
+    const venue = await seedVenue({ name: 'Dup Counter PS', slug: 'dup-counter-ps' })
+    const event = await seedEvent(venue.id, { date: '2027-07-01' })
+    const submitter = await seedUserProfile('parent-user-ps', { handle: 'parent_ps' })
+    const challenger1 = await seedUserProfile('chal-1-ps', { handle: 'chal1_ps' })
+    const challenger2 = await seedUserProfile('chal-2-ps', { handle: 'chal2_ps' })
+
+    const parent = await seedPriceSubmission(event.id, submitter.userId, {
+      tier: 'GA',
+      vendor: 'AXS',
+      howFound: 'saw_listing',
+      sourceCategory: 'standard',
+      status: 'corroborated',
+    })
+
+    setAuth(challenger1.userId)
+    const first = await app.request(`/v1/events/${event.id}/price-submissions`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer test-token', 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        priceMin: 50, tier: 'GA', vendor: 'AXS', howFound: 'saw_listing',
+        sourceCategory: 'standard', disputedSubmissionId: parent.id,
+      }),
+    })
+    expect(first.status).toBe(201)
+
+    setAuth(challenger2.userId)
+    const second = await app.request(`/v1/events/${event.id}/price-submissions`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer test-token', 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        priceMin: 60, tier: 'GA', vendor: 'AXS', howFound: 'saw_listing',
+        sourceCategory: 'standard', disputedSubmissionId: parent.id,
+      }),
+    })
+    expect(second.status).toBe(409)
+    const body = await second.json() as { success: boolean; error: string }
+    expect(body.success).toBe(false)
+    expect(body.error).toMatch(/already pending/i)
+  })
+
+  it('flips the parent row to disputed when a counter is filed', async () => {
+    const venue = await seedVenue({ name: 'Flip Parent PS', slug: 'flip-parent-ps' })
+    const event = await seedEvent(venue.id, { date: '2027-07-02' })
+    const submitter = await seedUserProfile('flip-parent', { handle: 'flip_parent' })
+    const challenger = await seedUserProfile('flip-chal', { handle: 'flip_chal' })
+
+    const parent = await seedPriceSubmission(event.id, submitter.userId, {
+      tier: 'GA',
+      vendor: 'AXS',
+      howFound: 'saw_listing',
+      sourceCategory: 'standard',
+      status: 'corroborated',
+    })
+
+    setAuth(challenger.userId)
+    await app.request(`/v1/events/${event.id}/price-submissions`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer test-token', 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        priceMin: 70, tier: 'GA', vendor: 'AXS', howFound: 'saw_listing',
+        sourceCategory: 'standard', disputedSubmissionId: parent.id,
+      }),
+    })
+
+    const [reloadedParent] = await testDb
+      .select({ status: priceSubmissions.status })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.id, parent.id))
+    expect(reloadedParent!.status).toBe('disputed')
+  })
+
+  it('overwrites submitter-supplied slot fields with parent values', async () => {
+    const venue = await seedVenue({ name: 'Slot Inherit', slug: 'slot-inherit' })
+    const event = await seedEvent(venue.id, { date: '2027-07-03' })
+    const submitter = await seedUserProfile('slot-parent', { handle: 'slot_parent' })
+    const challenger = await seedUserProfile('slot-chal', { handle: 'slot_chal' })
+
+    const parent = await seedPriceSubmission(event.id, submitter.userId, {
+      tier: 'GA',
+      vendor: 'AXS',
+      howFound: 'saw_listing',
+      sourceCategory: 'standard',
+      status: 'corroborated',
+    })
+
+    setAuth(challenger.userId)
+    const res = await app.request(`/v1/events/${event.id}/price-submissions`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer test-token', 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        priceMin: 80,
+        // Submitter tries to override slot fields — server must IGNORE these
+        // when disputedSubmissionId is set and inherit from the parent.
+        tier: 'VIP',
+        vendor: 'Ticketmaster',
+        howFound: 'bought_myself',
+        sourceCategory: 'resale',
+        disputedSubmissionId: parent.id,
+      }),
+    })
+    expect(res.status).toBe(201)
+    const body = await res.json() as { success: boolean; data: { tier: string; vendor: string; sourceCategory: string } }
+    expect(body.data.tier).toBe('GA')                  // parent's value, not submitter's 'VIP'
+    expect(body.data.vendor).toBe('AXS')               // parent's value, not 'Ticketmaster'
+    expect(body.data.sourceCategory).toBe('standard')  // parent's value, not 'resale'
+  })
+})
+```
+
+- [ ] **Step 2: Run tests to verify they fail**
+
+Run: `pnpm --filter @concert-crawl/api test:integration -- price-submissions`
+Expected: All three new cases fail (current behavior: no duplicate check, no parent flip, no slot inheritance).
+
+- [ ] **Step 3: Implement in `apps/api/src/routes/price-submissions.ts`**
+
+Locate the existing `if (body.disputedSubmissionId)` block (currently at ~line 172). Restructure the handler so that when `disputedSubmissionId` is set, ALL of the following happen in a single `db.transaction(...)`:
+
+```typescript
+if (body.disputedSubmissionId) {
+  // Existing validation: parent must exist + be corroborated
+  const [disputed] = await db
+    .select({
+      id: priceSubmissions.id,
+      status: priceSubmissions.status,
+      tier: priceSubmissions.tier,
+      vendor: priceSubmissions.vendor,
+      sourceCategory: priceSubmissions.sourceCategory,
+    })
+    .from(priceSubmissions)
+    .where(
+      and(
+        eq(priceSubmissions.id, body.disputedSubmissionId),
+        eq(priceSubmissions.eventId, eventId),
+      ),
+    )
+    .limit(1)
+  if (!disputed) {
+    return ctx.json({ success: false, error: 'Disputed submission not found' }, 404)
+  }
+  if (disputed.status !== 'corroborated') {
+    return ctx.json({ success: false, error: 'Can only dispute a corroborated submission' }, 400)
+  }
+
+  // NEW: pre-insert duplicate-counter check (same as Task 5)
+  const existingCounter = await db
+    .select({ id: priceSubmissions.id })
+    .from(priceSubmissions)
+    .where(
+      and(
+        eq(priceSubmissions.disputedSubmissionId, body.disputedSubmissionId),
+        eq(priceSubmissions.status, 'pending'),
+      ),
+    )
+    .limit(1)
+  if (existingCounter.length > 0) {
+    return ctx.json(
+      { success: false, error: 'Another challenge is already pending against this submission.' },
+      409,
+    )
+  }
+
+  // NEW: inherit slot identity from parent (overwrite submitter-supplied)
+  const inheritedTier = disputed.tier
+  const inheritedVendor = disputed.vendor
+  const inheritedSourceCategory = disputed.sourceCategory
+
+  // NEW: insert child + flip parent in the SAME transaction
+  try {
+    const [created] = await db.transaction(async (tx) => {
+      const [child] = await tx
+        .insert(priceSubmissions)
+        .values({
+          eventId,
+          userId,
+          priceMin: String(body.priceMin),
+          priceMax: body.priceMax != null ? String(body.priceMax) : null,
+          tier: inheritedTier,
+          vendor: inheritedVendor,
+          howFound: body.howFound, // howFound is NOT slot identity — keep submitter's
+          sourceCategory: inheritedSourceCategory,
+          corroborationCount: 1,
+          note: body.note ?? null,
+          disputedSubmissionId: body.disputedSubmissionId,
+        })
+        .returning()
+
+      await tx
+        .update(priceSubmissions)
+        .set({ status: 'disputed', updatedAt: sql`now()` })
+        .where(eq(priceSubmissions.id, body.disputedSubmissionId!))
+
+      return [child]
+    })
+    return ctx.json({ success: true, data: created }, 201)
+  } catch (err) {
+    // Translate 23505 on the pending-counter unique index → clean 409
+    if (
+      err instanceof Error &&
+      'code' in err &&
+      (err as { code: string }).code === '23505' &&
+      err.message.includes('price_submissions_pending_counter_unique_idx')
+    ) {
+      return ctx.json(
+        { success: false, error: 'Another challenge is already pending against this submission.' },
+        409,
+      )
+    }
+    throw err
+  }
+}
+
+// Existing non-counter path (no disputedSubmissionId) is unchanged below.
+```
+
+Notes:
+- The existing 409 ("Already submitted") and 429 (rate-limit) checks below this block stay intact for the non-counter path. Counter inserts deliberately bypass the per-user-per-event-rate-limit because a counter is a response to a contest, not a fresh submission attempt.
+- `howFound` is treated as user-supplied (it's how THIS submitter saw the price; not slot identity).
+- `disputedSubmissionId` is non-null inside the try block; the `!` assertion is narrow and acceptable per `memory:feedback_no_type_casting`.
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `pnpm --filter @concert-crawl/api test:integration -- price-submissions`
+Expected: All three new cases pass; existing test cases still pass.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add apps/api/src/routes/price-submissions.ts \
+        apps/api/src/routes/price-submissions.integration.test.ts
+git commit -m "feat(api): counter-creation via price-submissions route — duplicate check, parent-flip, slot inheritance"
+```
+
+---
+
 ### Task 6: `GET /v1/admin/contests/prices` list endpoint
 
 **Files:**
