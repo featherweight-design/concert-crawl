@@ -240,6 +240,36 @@ describe('aggregateByTier', () => {
     expect(blocks[0]?.counterSubmission?.lastAdminActionAt).toBeNull()
   })
 
+  it('counter-submission forces lastAdminActionKind to null when kind="defer" but the timestamp is missing', () => {
+    // Regression for R19: matching half of the pair-narrow contract — if the
+    // row has kind='defer' but at=null (partial write, manual UPDATE that
+    // forgot the timestamp, bad backfill), we must not surface kind='defer'
+    // to consumers. The contract is "both null unless a real defer event
+    // occurred"; a half-populated kind without a timestamp is invalid state.
+    const headline = corrob({ id: 'head', tier: 'GA' })
+    const blocks = aggregateByTier({
+      ...baseInput,
+      corroborated: [headline],
+      counters: [
+        {
+          id: 'counter-4',
+          parentSubmissionId: 'head',
+          tier: 'GA',
+          priceMin: '25',
+          priceMax: null,
+          userId: 'challenger',
+          createdAt: new Date('2026-06-12T00:00:00Z'),
+          lastAdminActionAt: null,
+          lastAdminActionKind: 'defer',
+        },
+      ],
+      handles: new Map([['challenger', 'fan-2']]),
+      reportsByTier: new Map([['GA', 1]]),
+    })
+    expect(blocks[0]?.counterSubmission?.lastAdminActionKind).toBeNull()
+    expect(blocks[0]?.counterSubmission?.lastAdminActionAt).toBeNull()
+  })
+
   it('includes pending-only tiers after corroborated-headline tiers', () => {
     const blocks = aggregateByTier({
       ...baseInput,

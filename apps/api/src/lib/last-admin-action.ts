@@ -14,19 +14,27 @@ export const narrowLastAdminActionKind = (
   raw: string | null,
 ): LastAdminActionKind => (raw === 'defer' ? 'defer' : null)
 
-// Pair-narrow the engagement signal fields. When kind narrows to null
-// (unknown value or absent), force the timestamp to null too so consumers
-// never see a half-populated pair. This protects against a future internal
-// kind landing in the DB column before the narrowing union here is widened:
-// without this, the client would see `kind: null` but a real timestamp,
-// which violates the "both null unless deferred" contract and partially
-// leaks the existence of an unrecognized admin action.
+// Pair-narrow the engagement signal fields. The contract is "both fields null
+// unless a real defer event occurred." This helper enforces it defensively
+// from both sides:
+//
+//   - If kind is unknown (not 'defer'), force both to null. Protects against
+//     a future internal kind landing in the DB column before the narrowing
+//     union here is widened (e.g., a future 'escalate' value leaking with a
+//     real timestamp would partially expose the new admin action).
+//   - If at is null, force both to null. Protects against half-populated
+//     state (partial write from a connection drop mid-transaction, a manual
+//     UPDATE that set kind but forgot at, or a bad backfill) where the kind
+//     is set but the timestamp isn't.
+//
+// Steady-state contract: either both fields are null, or kind='defer' AND
+// at is a real ISO timestamp. Never a half-populated pair.
 export const narrowLastAdminAction = (
   rawKind: string | null,
   rawAt: Date | string | null,
 ): { kind: LastAdminActionKind; at: string | null } => {
   const kind = narrowLastAdminActionKind(rawKind)
-  if (kind === null) {
+  if (kind === null || rawAt === null) {
     return { kind: null, at: null }
   }
   const at = rawAt instanceof Date ? rawAt.toISOString() : rawAt
