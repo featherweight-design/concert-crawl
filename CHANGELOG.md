@@ -1,3 +1,10 @@
+## [1.76.1](https://github.com/HartiganHM/concert-crawl/compare/v1.76.0...v1.76.1) (2026-06-24)
+
+
+### Bug Fixes
+
+* **vercel:** remove ignoreCommand in favor of Branch Tracking toggle ([882b4f0](https://github.com/HartiganHM/concert-crawl/commit/882b4f073ffe2a947cc182262da649e334a361f9)), closes [#660](https://github.com/HartiganHM/concert-crawl/issues/660)
+
 # [1.76.0](https://github.com/HartiganHM/concert-crawl/compare/v1.75.1...v1.76.0) (2026-06-24)
 
 
