@@ -55,8 +55,21 @@ jobs:
     # the kill switch exists to pause the auto-pipeline; an
     # operator manually invoking incident response must still be
     # able to roll back even when the auto-pipeline is disabled.
-    if: github.ref == 'refs/heads/main'
     steps:
+      # Fail loudly on the wrong branch rather than relying on a
+      # job-level `if:` to skip. A silently-skipped run can show as
+      # `success` in the Actions UI, which during an incident would
+      # let the operator believe the rollback ran when nothing did.
+      # Explicit `exit 1` fails the job + the workflow so the
+      # operator sees the problem immediately.
+      - name: Refuse if not on main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "✗ Refusing to roll back from ref '${{ github.ref }}'."
+          echo "  Manual rollback must be dispatched from main."
+          echo "  Use the workflow_dispatch UI's branch picker to select main, then re-dispatch."
+          exit 1
+
       - name: Gate passed
         run: echo "All rollback gates satisfied; proceeding to rollback job."
 
