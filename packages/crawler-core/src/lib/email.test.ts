@@ -20,6 +20,7 @@ describe('sendCrawlFailureEmail', () => {
       ...originalEnv,
       RESEND_API_KEY: 're_test_key',
       ADMIN_EMAIL: 'admin@example.com',
+      SENTRY_ENVIRONMENT: 'production',
     }
   })
 
@@ -29,7 +30,11 @@ describe('sendCrawlFailureEmail', () => {
 
   it('sends an email with venue name and failure count', async () => {
     const { sendCrawlFailureEmail } = await import('./email.js')
-    await sendCrawlFailureEmail('Ogden Theatre', 3)
+    await sendCrawlFailureEmail({
+      venueName: 'Ogden Theatre',
+      venueId: 'venue-ogden',
+      consecutiveFailures: 3,
+    })
 
     expect(mockSend).toHaveBeenCalledOnce()
     const call = mockSend.mock.calls[0][0]
@@ -43,7 +48,11 @@ describe('sendCrawlFailureEmail', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     try {
       const { sendCrawlFailureEmail } = await import('./email.js')
-      await sendCrawlFailureEmail('Ogden Theatre', 3)
+      await sendCrawlFailureEmail({
+        venueName: 'Ogden Theatre',
+        venueId: 'venue-ogden',
+        consecutiveFailures: 3,
+      })
 
       expect(mockSend).not.toHaveBeenCalled()
       const warning = warnSpy.mock.calls
@@ -61,7 +70,11 @@ describe('sendCrawlFailureEmail', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     try {
       const { sendCrawlFailureEmail } = await import('./email.js')
-      await sendCrawlFailureEmail('Ogden Theatre', 3)
+      await sendCrawlFailureEmail({
+        venueName: 'Ogden Theatre',
+        venueId: 'venue-ogden',
+        consecutiveFailures: 3,
+      })
 
       expect(mockSend).not.toHaveBeenCalled()
       const warning = warnSpy.mock.calls
@@ -72,6 +85,21 @@ describe('sendCrawlFailureEmail', () => {
     } finally {
       warnSpy.mockRestore()
     }
+  })
+
+  it('deep-links the dashboard with ?venueId= so the admin lands on the alerted row', async () => {
+    process.env.ADMIN_URL = 'https://concertcrawl.app'
+    const { sendCrawlFailureEmail } = await import('./email.js')
+    await sendCrawlFailureEmail({
+      venueName: 'Ogden Theatre',
+      venueId: 'venue-ogden-123',
+      consecutiveFailures: 3,
+    })
+
+    const call = mockSend.mock.calls[0][0]
+    expect(call.html).toContain(
+      'https://concertcrawl.app/admin/crawl?venueId=venue-ogden-123',
+    )
   })
 })
 
@@ -85,6 +113,7 @@ describe('sendEventCountDropEmail', () => {
       ...originalEnv,
       RESEND_API_KEY: 're_test_key',
       ADMIN_EMAIL: 'admin@example.com',
+      SENTRY_ENVIRONMENT: 'production',
     }
   })
 
@@ -151,5 +180,126 @@ describe('sendEventCountDropEmail', () => {
     } finally {
       warnSpy.mockRestore()
     }
+  })
+
+  it('deep-links the dashboard with ?venueId= so the admin lands on the alerted row', async () => {
+    process.env.ADMIN_URL = 'https://concertcrawl.app'
+    const { sendEventCountDropEmail } = await import('./email.js')
+    await sendEventCountDropEmail({
+      venueName: 'Cervantes',
+      venueId: 'venue-cervantes-abc',
+      crawlRunId: 'run-9',
+      eventsFound: 0,
+      baselineCount: 137.7,
+      dropPercent: 100,
+    })
+
+    const call = mockSend.mock.calls[0][0]
+    expect(call.html).toContain(
+      'https://concertcrawl.app/admin/crawl?venueId=venue-cervantes-abc',
+    )
+  })
+
+  it('URL-encodes venueId to defend against future non-uuid id formats', async () => {
+    process.env.ADMIN_URL = 'https://concertcrawl.app'
+    const { sendEventCountDropEmail } = await import('./email.js')
+    await sendEventCountDropEmail({
+      venueName: 'Test',
+      venueId: 'has spaces & ampersand',
+      crawlRunId: 'run-x',
+      eventsFound: 0,
+      baselineCount: 50,
+      dropPercent: 100,
+    })
+
+    const call = mockSend.mock.calls[0][0]
+    expect(call.html).toContain('venueId=has%20spaces%20%26%20ampersand')
+  })
+})
+
+// Pinning the cross-cutting environment qualification on both alert types
+// so a future caller can't accidentally remove the [Staging] prefix +
+// banner and start spamming admins with prod-shaped emails from staging.
+describe('environment qualification on alert emails (admin-UI feedback)', () => {
+  const originalEnv = process.env
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.resetModules()
+    process.env = {
+      ...originalEnv,
+      RESEND_API_KEY: 're_test_key',
+      ADMIN_EMAIL: 'admin@example.com',
+    }
+  })
+
+  afterEach(() => {
+    process.env = originalEnv
+  })
+
+  it('production: subject has no prefix and body has no banner', async () => {
+    process.env.SENTRY_ENVIRONMENT = 'production'
+    const { sendEventCountDropEmail } = await import('./email.js')
+    await sendEventCountDropEmail({
+      venueName: 'Ogden',
+      venueId: 'v1',
+      crawlRunId: 'r1',
+      eventsFound: 0,
+      baselineCount: 100,
+      dropPercent: 100,
+    })
+
+    const call = mockSend.mock.calls[0][0]
+    expect(call.subject.startsWith('[')).toBe(false)
+    expect(call.html).not.toContain('Sent from')
+  })
+
+  it('staging: subject prefixed with [Staging] and body has banner', async () => {
+    process.env.SENTRY_ENVIRONMENT = 'staging'
+    const { sendEventCountDropEmail } = await import('./email.js')
+    await sendEventCountDropEmail({
+      venueName: 'Ogden',
+      venueId: 'v1',
+      crawlRunId: 'r1',
+      eventsFound: 0,
+      baselineCount: 100,
+      dropPercent: 100,
+    })
+
+    const call = mockSend.mock.calls[0][0]
+    expect(call.subject.startsWith('[Staging] ')).toBe(true)
+    expect(call.html).toContain('Sent from <strong>staging</strong>')
+  })
+
+  it('local: subject prefixed with [Local] and body has banner', async () => {
+    process.env.SENTRY_ENVIRONMENT = 'local'
+    const { sendCrawlFailureEmail } = await import('./email.js')
+    await sendCrawlFailureEmail({
+      venueName: 'Ogden',
+      venueId: 'v1',
+      consecutiveFailures: 3,
+    })
+
+    const call = mockSend.mock.calls[0][0]
+    expect(call.subject.startsWith('[Local] ')).toBe(true)
+    expect(call.html).toContain('Sent from <strong>local</strong>')
+  })
+
+  // Default behavior: when SENTRY_ENVIRONMENT is unset, treat as 'local' so
+  // a forgotten env var on a new service doesn't masquerade as production.
+  it('defaults to local-qualification when SENTRY_ENVIRONMENT is unset', async () => {
+    delete process.env.SENTRY_ENVIRONMENT
+    const { sendEventCountDropEmail } = await import('./email.js')
+    await sendEventCountDropEmail({
+      venueName: 'Ogden',
+      venueId: 'v1',
+      crawlRunId: 'r1',
+      eventsFound: 0,
+      baselineCount: 100,
+      dropPercent: 100,
+    })
+
+    const call = mockSend.mock.calls[0][0]
+    expect(call.subject.startsWith('[Local] ')).toBe(true)
   })
 })

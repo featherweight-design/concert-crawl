@@ -922,7 +922,11 @@ describe('crawlVenue — auto-pause at threshold (#743)', () => {
     await crawlVenue(venue.id, mockBrowser)
 
     expect(mockSendEmail).toHaveBeenCalledTimes(1)
-    expect(mockSendEmail).toHaveBeenCalledWith(venue.name, 3)
+    expect(mockSendEmail).toHaveBeenCalledWith({
+      venueName: venue.name,
+      venueId: venue.id,
+      consecutiveFailures: 3,
+    })
   })
 
   it('does not re-send the email on subsequent failures', async () => {
@@ -1016,7 +1020,11 @@ describe('crawlVenue — auto-pause at threshold (#743)', () => {
     expect(row?.consecutiveFailures).toBe(4)
     expect(row?.active).toBe(false)
     expect(mockSendEmail).toHaveBeenCalledTimes(1)
-    expect(mockSendEmail).toHaveBeenCalledWith(venue.name, 3)
+    expect(mockSendEmail).toHaveBeenCalledWith({
+      venueName: venue.name,
+      venueId: venue.id,
+      consecutiveFailures: 3,
+    })
 
     const { notifications } = await import('@concert-crawl/db')
     const noteRows = await db

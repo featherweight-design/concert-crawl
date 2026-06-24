@@ -23,6 +23,48 @@ function warnMissingEnv(varName: string, context: string): void {
 
 const ALERT_FROM = 'Concert Crawl Alerts <alerts@concertcrawl.app>'
 
+// Environment label drives the subject prefix + body banner on alert emails.
+// Reuses SENTRY_ENVIRONMENT (already set per-service in Render: 'local' /
+// 'staging' / 'production') so we don't add a new env var when an existing
+// one carries the same signal. Anything other than 'production' is treated
+// as non-prod and is qualified in the alert so admins know not to act on it
+// in the prod admin UI.
+function getEnvironmentLabel(): 'production' | 'staging' | 'local' | string {
+  return process.env.SENTRY_ENVIRONMENT ?? 'local'
+}
+
+function isProduction(): boolean {
+  return getEnvironmentLabel() === 'production'
+}
+
+// Subject prefix: "[Staging] " / "[Local] " for non-prod, "" for prod.
+function subjectPrefix(): string {
+  if (isProduction()) return ''
+  const label = getEnvironmentLabel()
+  return `[${label.charAt(0).toUpperCase()}${label.slice(1)}] `
+}
+
+// Body banner: a single yellow strip rendered above the alert content so
+// the email is visually distinct from a prod alert in the inbox preview.
+function envBanner(): string {
+  if (isProduction()) return ''
+  const label = getEnvironmentLabel()
+  return `
+    <div style="background:#fff4cd;border:1px solid #f0d878;padding:10px 14px;border-radius:6px;font-family:sans-serif;font-size:13px;color:#5c4400;margin-bottom:16px;">
+      Sent from <strong>${escapeHtml(label)}</strong> — not production. Take action in the corresponding ${escapeHtml(label)} admin UI.
+    </div>
+  `
+}
+
+// Build the admin-crawl deep-link. When a venueId is provided the dashboard
+// pre-selects that venue's row (#608); without it the link lands on the full
+// status list.
+function adminCrawlUrl(venueId?: string): string {
+  const adminUrl = process.env.ADMIN_URL ?? 'https://concertcrawl.app'
+  const base = `${adminUrl}/admin/crawl`
+  return venueId ? `${base}?venueId=${encodeURIComponent(venueId)}` : base
+}
+
 // Shared sender for all crawl-side admin alerts. Returns void.
 //
 // Missing-env-var failures (no RESEND_API_KEY or no ADMIN_EMAIL) are
@@ -55,22 +97,27 @@ async function sendAdminAlert(
   await resend.emails.send({
     from: ALERT_FROM,
     to: adminEmail,
-    subject: input.subject,
-    html: input.html,
+    subject: `${subjectPrefix()}${input.subject}`,
+    html: `${envBanner()}${input.html}`,
   })
 }
 
+export interface CrawlFailureInput {
+  venueName: string
+  venueId: string
+  consecutiveFailures: number
+}
+
 export async function sendCrawlFailureEmail(
-  venueName: string,
-  consecutiveFailures: number,
+  input: CrawlFailureInput,
 ): Promise<void> {
-  const adminUrl = process.env.ADMIN_URL ?? 'https://concertcrawl.app'
+  const url = adminCrawlUrl(input.venueId)
   await sendAdminAlert('sendCrawlFailureEmail', {
-    subject: `Crawl failing: ${venueName}`,
+    subject: `Crawl failing: ${input.venueName}`,
     html: `
-      <p><strong>${escapeHtml(venueName)}</strong> has failed ${consecutiveFailures} consecutive crawls.</p>
+      <p><strong>${escapeHtml(input.venueName)}</strong> has failed ${input.consecutiveFailures} consecutive crawls.</p>
       <p>The venue has been flagged for review. Visit the
-      <a href="${adminUrl}/admin/crawl">admin crawl dashboard</a>
+      <a href="${url}">admin crawl dashboard</a>
       to investigate and take action.</p>
     `,
   })
@@ -88,7 +135,7 @@ export interface EventCountDropInput {
 export async function sendEventCountDropEmail(
   input: EventCountDropInput,
 ): Promise<void> {
-  const adminUrl = process.env.ADMIN_URL ?? 'https://concertcrawl.app'
+  const url = adminCrawlUrl(input.venueId)
   const severity = input.eventsFound === 0 ? 'went dark' : 'dropped sharply'
   await sendAdminAlert('sendEventCountDropEmail', {
     subject: `Event count ${severity}: ${input.venueName}`,
@@ -100,7 +147,7 @@ export async function sendEventCountDropEmail(
         <li>Drop: <strong>${input.dropPercent.toFixed(0)}%</strong></li>
       </ul>
       <p>This usually means the venue's site changed shape (hydration, paywall, redesign) and the crawler is no longer pulling events. The crawl returned <code>status: success</code>, so the consecutive-failure path did <em>not</em> trigger — that's why you're getting this alert instead.</p>
-      <p><a href="${adminUrl}/admin/crawl">Admin crawl dashboard</a></p>
+      <p><a href="${url}">Admin crawl dashboard</a></p>
     `,
   })
 }

@@ -917,7 +917,11 @@ export async function crawlVenue(
         // the HTTP request to Resend completes, which is why no crawl.failed
         // email has ever arrived since PR #51 (#649).
         try {
-          await sendCrawlFailureEmail(venue.name, newFailureCount)
+          await sendCrawlFailureEmail({
+            venueName: venue.name,
+            venueId,
+            consecutiveFailures: newFailureCount,
+          })
         } catch (emailErr) {
           console.log(
             JSON.stringify({
