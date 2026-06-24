@@ -3,11 +3,19 @@
 # successful deploy (status `live` or `deactivated`).
 #
 # Usage: render-rollback.sh <service-id> <human-name>
+#   <service-id> — Render service ID. Prefix decides behavior:
+#                    srv-* → web service, rollback via /rollback endpoint
+#                    crn-* → cron job, SKIPPED with warning (Render's
+#                            /rollback endpoint returns HTTP 400 for crons;
+#                            no API path exists for cron rollback)
+#   <human-name> — display name for log lines (e.g. concert-crawl-api)
 #
 # Required env:
 #   RENDER_API_TOKEN — Render personal API token with deploy permissions
 #
-# Exits non-zero on any failure so the calling workflow fails loud.
+# Exits non-zero on any failure so the calling workflow fails loud, EXCEPT
+# for the cron-service skip path which exits 0 (the calling workflow must
+# continue to roll back the other services).
 
 set -euo pipefail
 
@@ -23,6 +31,36 @@ SERVICE_ID="${1:?service id required}"
 NAME="${2:?human name required}"
 
 : "${RENDER_API_TOKEN:?RENDER_API_TOKEN must be set}"
+
+# Validate the service ID prefix is one of the two known forms.
+# Mirrors render-trigger-deploy.sh — a mis-copied ID, whitespace, or
+# future Render service type would otherwise surface as an opaque
+# Render API error after several script steps. Fail here instead with
+# a message that points at the misconfig.
+if [[ "${SERVICE_ID}" == crn-* ]]; then
+  # Render's /rollback endpoint returns HTTP 400 for cron jobs — there
+  # is no API path to roll a cron back to a specific prior deploy.
+  # Skip rather than fail: the caller (deploy-prod.yml's rollback job)
+  # rolls back three services serially, and failing here would stop the
+  # workflow from rolling back the others. Exit 0 with a loud warning
+  # so the operator knows manual action is needed for this service.
+  echo "⚠ ${NAME} (${SERVICE_ID}) is a Render cron job."
+  echo "  The Render API's /rollback endpoint rejects cron services"
+  echo "  (HTTP 400) — no API path exists for cron rollback."
+  echo "  Skipping automatic rollback for this service. If the cron's"
+  echo "  current code is bad, roll back manually via:"
+  echo "    Render dashboard → ${NAME} → Settings → Manual Deploy →"
+  echo "    pick a prior commit from the dropdown"
+  echo "  Or revert the offending commit on main and let CI redeploy."
+  exit 0
+fi
+
+if [[ "${SERVICE_ID}" != srv-* ]]; then
+  echo "✗ Unrecognized Render service ID prefix: '${SERVICE_ID}'"
+  echo "  Expected srv-* (web service) or crn-* (cron job)."
+  echo "  Check for typos or whitespace in the RENDER_SERVICE_ID_* variable."
+  exit 1
+fi
 
 API="https://api.render.com/v1"
 AUTH="Authorization: Bearer ${RENDER_API_TOKEN}"

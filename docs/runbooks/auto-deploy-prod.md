@@ -47,7 +47,12 @@ The rollback trigger keys on a job output that the smoke job sets ONLY after Pla
 
 If `deploy` fails, `smoke` is skipped → the output is unset → `rollback` skipped too. This preserves the original "don't compound a failed deploy with a destructive rollback for a deploy that never happened" semantic.
 
-If Playwright runs and fails an assertion, `rollback` runs automatically — rolling back the three Render services to their most recent prior successful deploys via `render-rollback.sh`. Operators can still trigger rollback manually via `rollback-prod.yml`'s `workflow_dispatch` for any infrastructure-failure case where the auto-path was skipped.
+If Playwright runs and fails an assertion, `rollback` runs automatically — rolling back the **API web service** to its most recent prior successful deploy via `render-rollback.sh`. Operators can still trigger rollback manually via `rollback-prod.yml`'s `workflow_dispatch` for any infrastructure-failure case where the auto-path was skipped.
+
+**Caveat on cron service rollback:** Render's `/rollback` API endpoint rejects cron job services (`crn-*`) with HTTP 400 — there is no API path for cron rollback. `render-rollback.sh` detects cron service IDs by prefix and skips them with a loud warning, returning exit 0 so the workflow can proceed to roll back the other services. The two crawler crons require a manual rollback when needed:
+
+- Render dashboard → cron service (`concert-crawl-crawler-triggers` or `concert-crawl-crawler-daily`) → Settings → Manual Deploy → pick a prior commit from the dropdown.
+- Or — more commonly preferred — revert the offending commit on `main` and let the next CI-triggered deploy roll the reverted code out to API and crons together.
 
 ### Manual rollback path
 
