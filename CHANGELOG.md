@@ -1,3 +1,49 @@
+# [1.76.0](https://github.com/HartiganHM/concert-crawl/compare/v1.75.1...v1.76.0) (2026-06-24)
+
+
+### Bug Fixes
+
+* **admin-contest-review:** address Copilot R1 (counter filters, narrow types, refetch) ([81e10cd](https://github.com/HartiganHM/concert-crawl/commit/81e10cdd538ea47881e9461f371777e7af68d665))
+* **admin-contest-review:** address design-review gaps G1-G9 ([d82ef21](https://github.com/HartiganHM/concert-crawl/commit/d82ef21477b3e6a1f1e745dfb9d85c2e1b86450b))
+* **admin-contest-review:** align reason max to 2000 + extend PATCH lockout to contested parents (R2) ([9af214c](https://github.com/HartiganHM/concert-crawl/commit/9af214c0a69ab6ddac761069841698d22d445e84))
+* **admin-contest-review:** r3 — discriminated ContestNotificationInput + doc/comment corrections ([fcdab8e](https://github.com/HartiganHM/concert-crawl/commit/fcdab8e1d949b768c7cc8959ff4f13cf90906c87))
+* **api:** add self-dispute 403 guard to price-submissions counter path (R4) ([6a04a9e](https://github.com/HartiganHM/concert-crawl/commit/6a04a9e751c7246175d3da7c594ccaa04f7d1dcb)), closes [#754](https://github.com/HartiganHM/concert-crawl/issues/754)
+* **api:** r11 — count endpoint excludes contest counters + clarify status=all comment ([b8d9374](https://github.com/HartiganHM/concert-crawl/commit/b8d937440b1029f7c4e1fc84ab4b446f494a59fe))
+* **api:** r15 — allow null sourceCategory + EXISTS-style lockout ([4d3b100](https://github.com/HartiganHM/concert-crawl/commit/4d3b1005fef8a450f5d1dfa5a5cd03fd5adabc24)), closes [pre-PR-#651](https://github.com/pre-PR-/issues/651)
+* **api:** r16 — pair lastAdminActionAt narrowing with kind (defensive contract enforcement) ([e648f62](https://github.com/HartiganHM/concert-crawl/commit/e648f627ab1ca8f2d7742474c67ecef7e999f0be))
+* **api:** r19 — force null pair when timestamp is missing (defensive contract enforcement) ([0903fb9](https://github.com/HartiganHM/concert-crawl/commit/0903fb965df90356c647f9770223eb9c53908c8a))
+* **api:** r5 — clear engagement signals on resolve orphan cleanup + bump updatedAt on defer ([b668655](https://github.com/HartiganHM/concert-crawl/commit/b668655a7cf124d4a86d950e34853c4c8a20c056))
+* **api:** r8 — narrow PATCH lockout to active-contest rows only ([2b03eda](https://github.com/HartiganHM/concert-crawl/commit/2b03edaad33554ddc8d295e070904820374cf7e3))
+* r6 — badge uses total (not items.length) + archivedReason comment clarifications ([c1fb8b5](https://github.com/HartiganHM/concert-crawl/commit/c1fb8b5547a74e028938c1ab18191065f92d8c84))
+* r9 — trim reason before API send + migration cleanup tie-breaker + updated_at ([c7957be](https://github.com/HartiganHM/concert-crawl/commit/c7957be462171a8d4e415847fced0dd7a06dabe4))
+* **web:** r13 — textarea aria-label matches visible label disclosure (a11y consistency) ([4811be2](https://github.com/HartiganHM/concert-crawl/commit/4811be204a3aeb13486042448707f575343b229c))
+
+
+### Features
+
+* **api:** /v1/admin/review/counts adds priceContests field ([5f6b44d](https://github.com/HartiganHM/concert-crawl/commit/5f6b44d8fcad8ecb33a2c118e19175ed2bad0026))
+* **api:** admin contest defer endpoint — engagement signal without state change ([2ce4470](https://github.com/HartiganHM/concert-crawl/commit/2ce4470a24d3b52224db5bf455029ddeaa181990))
+* **api:** admin contest detail endpoint — GET /v1/admin/contests/prices/:contestId ([ff47c30](https://github.com/HartiganHM/concert-crawl/commit/ff47c3035320df0f9973242d13ab47622c878a1c))
+* **api:** admin contest resolve endpoint — atomic transaction with same-slot assertions ([7015d76](https://github.com/HartiganHM/concert-crawl/commit/7015d76602a8da183fd3739d19afd630118aa502))
+* **api:** admin contests list endpoint — GET /v1/admin/contests/prices ([a159326](https://github.com/HartiganHM/concert-crawl/commit/a159326eaa7c9fbdfefa08457b988f73eee767fc)), closes [#1](https://github.com/HartiganHM/concert-crawl/issues/1)
+* **api:** admin PATCH lockout — reject updates on contest rows (parent disputed OR child counter) ([44b3c44](https://github.com/HartiganHM/concert-crawl/commit/44b3c449ffd1a87733238a3ead5f1cf62ddd5bcf))
+* **api:** counter-creation via price-submissions — duplicate check + parent-flip ([5bfe5ea](https://github.com/HartiganHM/concert-crawl/commit/5bfe5ea9ccc0760a2f7a58026bb4522d15518800))
+* **api:** dispute endpoint rejects duplicate pending counters with 409 ([f0b0861](https://github.com/HartiganHM/concert-crawl/commit/f0b0861dede6a92d37b55e8d5d26b8c710559bfc))
+* **api:** event detail surfaces lastAdminActionAt/Kind on counterSubmission ([ee5a562](https://github.com/HartiganHM/concert-crawl/commit/ee5a562cff86aadc82dc9c832691003af447b345))
+* **db:** drizzle schema sync — archived status + 3 new columns on price_submissions ([ae483e6](https://github.com/HartiganHM/concert-crawl/commit/ae483e6b4135e8526328e5d902e6c128e16da0ea)), closes [#697](https://github.com/HartiganHM/concert-crawl/issues/697)
+* **db:** migration 0041 — admin contest review (archived status + indexes) ([5d34719](https://github.com/HartiganHM/concert-crawl/commit/5d34719d332105802ebcf2abf91858f68af33192))
+* **types:** extend PriceSubmission shared type — 4 new fields + 'archived' status ([e85120e](https://github.com/HartiganHM/concert-crawl/commit/e85120e3c4135cacc1d97cd4b4dee6372c6d29b5)), closes [#697](https://github.com/HartiganHM/concert-crawl/issues/697)
+* **web:** admin contests queue — ContestsTabContent + PriceDisputesQueue ([1224b4a](https://github.com/HartiganHM/concert-crawl/commit/1224b4a2bdba72d51ae5b1e2d6d82c7df9edacff))
+* **web:** admin contests React Query hooks — queue, detail, resolve, defer ([a69796c](https://github.com/HartiganHM/concert-crawl/commit/a69796ce189741857ca30470d5a4dece1e582b64))
+* **web:** admin dispute panel + dynamic route — 760px two-up adjudication surface ([477d24b](https://github.com/HartiganHM/concert-crawl/commit/477d24b982924f8dcfb8a29069366dccc6334467))
+* **web:** admin entry shared sub-component for dispute panel ([cbec40b](https://github.com/HartiganHM/concert-crawl/commit/cbec40bc4cd26906668662e26af19b350c037ef4))
+* **web:** wire contests tab in ReviewPageClient + sidebar badge sum ([61feab3](https://github.com/HartiganHM/concert-crawl/commit/61feab3c0178a717b9dff4d245b4c169f1f27523)), closes [#1](https://github.com/HartiganHM/concert-crawl/issues/1) [#697](https://github.com/HartiganHM/concert-crawl/issues/697)
+
+
+### Performance Improvements
+
+* **db:** r18 — add partial index for pending-counter queue ORDER BY scan ([771ecdc](https://github.com/HartiganHM/concert-crawl/commit/771ecdc1140a652a49ce69897f63b305093a768e))
+
 ## [1.75.1](https://github.com/HartiganHM/concert-crawl/compare/v1.75.0...v1.75.1) (2026-06-24)
 
 
