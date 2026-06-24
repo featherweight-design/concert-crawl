@@ -675,6 +675,8 @@ contestsAdminRouter.post(
           // works for both branches and points readers at the resolution
           // audit row by parent id (= contestId).
           archivedReason: `Superseded by contest resolution ${parent.id}`,
+          lastAdminActionKind: null,
+          lastAdminActionAt: null,
           updatedAt: sql`now()`,
         })
         .where(
@@ -918,6 +920,7 @@ contestsAdminRouter.post(
         .set({
           lastAdminActionKind: 'defer',
           lastAdminActionAt: sql`now()`,
+          updatedAt: sql`now()`,
         })
         .where(eq(priceSubmissions.id, counter.id))
         .returning()

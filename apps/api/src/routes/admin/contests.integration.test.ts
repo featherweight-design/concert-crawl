@@ -1176,6 +1176,11 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
         /Superseded by contest resolution/i,
       )
       expect(orphanAfter.archivedReason).toContain(parent.id)
+      // R5-1: every status flip during resolve must clear engagement
+      // signals so a previously-deferred row doesn't keep showing the
+      // "Admin requested more info" pill after the contest closes.
+      expect(orphanAfter.lastAdminActionKind).toBeNull()
+      expect(orphanAfter.lastAdminActionAt).toBeNull()
     } finally {
       // Always restore the index — even if assertions above failed. If the
       // assertions failed mid-test, there may still be two pending counters
@@ -1491,6 +1496,11 @@ describe('POST /v1/admin/contests/prices/:contestId/defer', () => {
     setAdminAuth()
     const beforeCall = Date.now()
     const { event, parent, counter } = await seedContest()
+    // R5-2: capture counter's updatedAt BEFORE the defer call so we can
+    // assert the handler bumped it. Every other UPDATE in this file sets
+    // updatedAt=now() — defer must too or the row's "last updated"
+    // timestamp lags behind the action.
+    const counterBefore = await fetchSubmission(counter.id)
 
     const res = await app.request(
       `/v1/admin/contests/prices/${parent.id}/defer`,
@@ -1524,6 +1534,12 @@ describe('POST /v1/admin/contests/prices/:contestId/defer', () => {
     expect(counterAfter.status).toBe('pending')
     expect(counterAfter.lastAdminActionKind).toBe('defer')
     expect(counterAfter.lastAdminActionAt).not.toBeNull()
+    // R5-2: updatedAt bumped to match the action. Use a strictly-greater
+    // comparison against the pre-call updatedAt rather than a NOW()-window
+    // check to dodge any clock skew between the test runner and Postgres.
+    expect(new Date(counterAfter.updatedAt).getTime()).toBeGreaterThan(
+      new Date(counterBefore.updatedAt).getTime(),
+    )
 
     // Parent: completely untouched (status still disputed; no engagement
     // fields set on the parent — those live on the counter per spec §4.5).
