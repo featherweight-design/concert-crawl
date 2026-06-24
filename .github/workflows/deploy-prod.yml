@@ -1,14 +1,25 @@
 name: Deploy to Production
 
-# Triggers automatically when the staging smoke suite passes. Uses the
-# Render API (POST /v1/services/{id}/deploys with `commitId`) to deploy
-# the three production Render services (API + 2 crawler crons) to the
-# exact SHA that staging-smoke validated. Vercel auto-deploys the prod
-# web project on push to `main`, so there is no Vercel job here — that
-# path is already wired up.
+# Full production-deploy pipeline: gate → deploy → smoke → auto-rollback
+# (on smoke failure). Triggers automatically when the staging smoke
+# suite passes. Uses the Render API (POST /v1/services/{id}/deploys
+# with `commitId` for web services) to deploy the three production
+# Render services (API + 2 crawler crons) to the exact SHA that
+# staging-smoke validated. Vercel auto-deploys the prod web project on
+# push to `main`, so there is no Vercel job here — that path is
+# already wired up.
 #
 # Disabled by default. Flip `AUTO_DEPLOY_PROD_ENABLED` repo variable to
 # `true` to turn on. See docs/runbooks/auto-deploy-prod.md.
+#
+# Why all four jobs live in ONE workflow (not chained via workflow_run):
+#   GitHub Actions caps `workflow_run` chains at 3 levels. A real merge
+#   produces a 4-deep chain (CI → Deploy-staging → Staging-smoke →
+#   Deploy-prod), which already hits the cap — so a 5th level
+#   (Prod-post-deploy-smoke) would be silently dropped. By merging the
+#   smoke + rollback into this workflow as `needs:`-chained jobs, we
+#   sidestep the cap entirely. `needs:` between jobs in the same
+#   workflow does not count toward the chain depth limit.
 #
 # Why the Render API instead of per-service deploy hooks:
 #   - Render Cron Jobs don't expose a Deploy Hook UI (confirmed in
@@ -18,7 +29,9 @@ name: Deploy to Production
 #     deploy to a specific SHA. Hooks always deploy branch HEAD, which
 #     leaves a race window between SHA-drift validation and the hook
 #     POST. With commitId-pinned deploys, drift cannot occur — Render
-#     builds exactly the commit we passed staging-smoke.
+#     builds exactly the commit we passed staging-smoke. (commitId is
+#     omitted for cron services — Render's API rejects it for crn-*;
+#     see render-trigger-deploy.sh for the routing.)
 #   - One `RENDER_API_TOKEN` (already wired) replaces three per-service
 #     hook secrets — smaller secret surface, easier rotation.
 
@@ -35,11 +48,9 @@ on:
         type: string
 
 # Serialize prod deploys. cancel-in-progress: false means a queued deploy
-# waits for the running one rather than being replaced.
-# Shared with prod-post-deploy-smoke.yml and rollback-prod.yml so all
-# prod-touching workflows serialize through a single queue. GitHub
-# Actions concurrency is keyed by group name across the repo — using
-# different group names would let these workflows run concurrently.
+# waits for the running one rather than being replaced. Shared with
+# rollback-prod.yml (the manual incident-response path) so a manual
+# rollback can't run while a deploy is in flight, and vice versa.
 concurrency:
   group: prod-pipeline
   cancel-in-progress: false
@@ -74,9 +85,9 @@ jobs:
       # skipped staging smoke does not trigger a prod deploy. Exiting
       # non-zero here fails this gate job → the deploy job never
       # runs → workflow conclusion is `failure`. prod-post-deploy-
-      # smoke's workflow_run trigger DOES still fire on `completed`
-      # regardless of conclusion, but its own `if:` gate then refuses
-      # to run because the upstream conclusion is not `success`.
+      # downstream smoke + rollback jobs in this workflow are gated by
+      # `needs:` ordering, so a failed gate here naturally short-
+      # circuits them too.
       - name: Verify staging-smoke gate
         if: |
           github.event_name == 'workflow_run' &&
@@ -293,11 +304,10 @@ jobs:
             "Crawler-daily"
 
       # Wait for the prod API to actually be live on the new commit
-      # before this workflow completes. Render's deploy hooks return
+      # before this job completes. The Render API's deploy POST returns
       # immediately and Render keeps the prior build serving until the
-      # new one is healthy — without this wait, prod-post-deploy-smoke
-      # would fire on a workflow_run conclusion of `success` while the
-      # OLD build was still serving, and could pass against the
+      # new one is healthy — without this wait, the downstream `smoke`
+      # job would run against the OLD build and could pass against
       # unchanged code. We only wait on the API (it serves HTTP traffic
       # and is the one smoke probes); the crawler crons deploy
       # independently and their failure modes surface via Sentry, not
@@ -322,3 +332,168 @@ jobs:
           if [ -n "${{ github.event.inputs.reason }}" ]; then
             echo "Manual reason: ${{ github.event.inputs.reason }}"
           fi
+
+  # Production post-deploy smoke. Was a separate workflow until we hit
+  # the workflow_run chain-depth cap (see header). Now runs as a job
+  # in this workflow so `needs:` ordering replaces the workflow_run
+  # trigger — no chain-depth math to worry about.
+  #
+  # Skipped automatically when `deploy` fails (`needs: deploy` default
+  # behavior) — which means `rollback` below also won't fire (its `if:`
+  # requires `needs.smoke.result == 'failure'`, not `skipped`). That's
+  # the intended "don't compound a failed-deploy with a destructive
+  # rollback for a deploy that never happened" semantic from the
+  # original two-workflow design.
+  smoke:
+    name: Playwright smoke (production, post-deploy)
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # Pin to the SHA the deploy job acted on so the Playwright code
+      # we run matches the code Render just built.
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('apps/e2e/package.json') }}
+          restore-keys: playwright-${{ runner.os }}-
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @concert-crawl/e2e install-browsers
+
+      # The deploy job already waited for the prod API to be live on
+      # the new SHA via render-wait-for-live.sh. By the time this job
+      # runs, we're guaranteed to be on the new build — no extra wait.
+      #
+      # Sanity-check the URL is configured though, so we don't run
+      # Playwright against an empty base.
+      - name: Check PROD_API_URL is configured
+        run: |
+          if [ -z "${{ vars.PROD_API_URL }}" ]; then
+            echo "PROD_API_URL repo variable is empty or unset."
+            echo "Set it via Settings → Variables → Actions before enabling auto-deploy-prod."
+            exit 1
+          fi
+          if [ -z "${{ vars.PROD_URL }}" ]; then
+            echo "PROD_URL repo variable is empty or unset."
+            exit 1
+          fi
+
+      - name: Run smoke tests against production
+        run: pnpm --filter @concert-crawl/e2e test:smoke
+        env:
+          PLAYWRIGHT_SMOKE_BASE_URL: ${{ vars.PROD_URL }}
+          PLAYWRIGHT_API_URL: ${{ vars.PROD_API_URL }}
+          # Smoke globalSetup signs in via Clerk before any spec runs
+          # so the suite can exercise auth-gated routes (/events,
+          # /venues, /admin). Without these, sign-in is skipped and
+          # every gated spec fails downstream — middleware redirects
+          # to `/`.
+          E2E_TEST_USER_EMAIL: ${{ secrets.E2E_TEST_USER_EMAIL }}
+          E2E_TEST_USER_PASSWORD: ${{ secrets.E2E_TEST_USER_PASSWORD }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN_SMOKE }}
+          SENTRY_ENVIRONMENT: production
+
+      - name: Upload failure artifacts
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: prod-post-deploy-smoke-failure-${{ github.run_id }}
+          path: apps/e2e/test-results/
+          retention-days: 14
+
+  # Automatic prod rollback on smoke failure. Mirrors what was previously
+  # in `rollback-prod.yml`'s `workflow_run` trigger path. The manual
+  # incident-response path stays in `rollback-prod.yml` (workflow_dispatch
+  # only) so an operator can roll back independently of a freshly-deployed
+  # smoke failure.
+  #
+  # `if:` semantics:
+  #   - `always()` overrides the default "skip if any needs failed"
+  #     behavior so this job actually evaluates.
+  #   - `needs.smoke.result == 'failure'` is the actual trigger —
+  #     `skipped` (deploy failed → smoke didn't run) does NOT fire
+  #     rollback. That's intentional: we don't roll back a deploy
+  #     that never landed.
+  #   - `cancelled` and `timed_out` also do NOT fire rollback. A
+  #     transient runner death is not enough signal to destructively
+  #     roll back prod; an operator can use rollback-prod.yml's
+  #     workflow_dispatch path if they want to roll back after
+  #     investigating.
+  rollback:
+    name: Auto-rollback (prod smoke failed)
+    needs: smoke
+    if: always() && needs.smoke.result == 'failure'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # `environment: production` is requested here so the rollback path
+    # respects the same approval/notification rules as the deploy path.
+    environment: production
+    steps:
+      # Pin to the SHA the deploy + smoke jobs acted on so render-
+      # rollback.sh is the version associated with the failing deploy.
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      # Preflight check — fail fast with a clear message if any of the
+      # three service IDs is missing. Without this, the rollback script
+      # would exit with a generic bash "service id required" error
+      # that's harder to diagnose during an incident.
+      - name: Verify Render service ID variables are configured
+        run: |
+          missing=()
+          [ -z "${{ vars.RENDER_SERVICE_ID_API }}" ] && missing+=("RENDER_SERVICE_ID_API")
+          [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_TRIGGERS")
+          [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_DAILY")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "Missing production-env variables: ${missing[*]}"
+            echo "Set them via Settings → Environments → production → Variables."
+            exit 1
+          fi
+
+      # Invoke via `bash` rather than `./script.sh` so we don't depend on
+      # the executable bit surviving git checkout (which depends on
+      # core.filemode and platform).
+      - name: Roll back API service
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_API }}" "concert-crawl-api"
+
+      - name: Roll back crawler triggers cron
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" "concert-crawl-crawler-triggers"
+
+      - name: Roll back crawler daily cron
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" "concert-crawl-crawler-daily"
+
+      - name: Log rollback context
+        run: |
+          echo "Rollback complete for prod Render services"
+          echo "Triggered by: failing smoke job in this workflow run"
+          echo ""
+          echo "Vercel web prod is NOT automatically rolled back."
+          echo "If the failure is web-related, run the manual rollback procedure"
+          echo "in docs/runbooks/auto-deploy-prod.md."

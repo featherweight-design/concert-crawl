@@ -15,38 +15,41 @@ push to main
 CI workflow ───► Deploy to Staging ───► Staging Smoke Tests
                                                 │
                                                 ▼ success
-                                       Deploy to Production
-                                                │
-                                                ▼ success
-                                  Production Post-Deploy Smoke
-                                                │
-                                                ▼ failure
-                                       Rollback Production
+                                       Deploy to Production           ◄── single workflow,
+                                       ├─ gate                            4 jobs chained
+                                       ├─ deploy                          via `needs:`
+                                       ├─ smoke (post-deploy)
+                                       └─ rollback (if smoke fails)
 ```
 
-Each arrow is a GitHub Actions `workflow_run` trigger. Each downstream
-workflow gates on the upstream one's `conclusion`, so a failure short-
-circuits the chain.
+Each `workflow_run` arrow (CI → Deploy-staging → Staging-smoke → Deploy-prod) is a separate workflow gated on the upstream's `conclusion`. The four jobs **inside** `Deploy to Production` are chained via `needs:` instead — they all live in one workflow because GitHub Actions caps `workflow_run` chains at 3 levels, and the original 5-workflow design hit that cap after a real merge (CI is level 0; deploy-staging, staging-smoke, deploy-prod = 3 levels; a separate prod-post-deploy-smoke workflow would be the 4th level and never fire).
 
-| Workflow                     | Path                                           | Trigger                      | Kill switch                                 |
-| ---------------------------- | ---------------------------------------------- | ---------------------------- | ------------------------------------------- |
-| CI                           | `.github/workflows/ci.yml`                     | push to `main`               | (always on)                                 |
-| Deploy to Staging            | `.github/workflows/deploy-staging.yml`         | CI success                   | (always on)                                 |
-| Staging Smoke Tests          | `.github/workflows/staging-smoke.yml`          | Deploy to Staging success    | `STAGING_SMOKE_ENABLED`                     |
-| Deploy to Production         | `.github/workflows/deploy-prod.yml`            | Staging Smoke success        | `AUTO_DEPLOY_PROD_ENABLED`                  |
-| Production Post-Deploy Smoke | `.github/workflows/prod-post-deploy-smoke.yml` | Deploy to Production success | `AUTO_DEPLOY_PROD_ENABLED`                  |
-| Rollback Production          | `.github/workflows/rollback-prod.yml`          | Post-deploy smoke failure    | `AUTO_DEPLOY_PROD_ENABLED` (automatic only) |
+| Workflow                     | Path                                   | Trigger                   | Kill switch                |
+| ---------------------------- | -------------------------------------- | ------------------------- | -------------------------- |
+| CI                           | `.github/workflows/ci.yml`             | push to `main`            | (always on)                |
+| Deploy to Staging            | `.github/workflows/deploy-staging.yml` | CI success                | (always on)                |
+| Staging Smoke Tests          | `.github/workflows/staging-smoke.yml`  | Deploy to Staging success | `STAGING_SMOKE_ENABLED`    |
+| Deploy to Production         | `.github/workflows/deploy-prod.yml`    | Staging Smoke success     | `AUTO_DEPLOY_PROD_ENABLED` |
+| Rollback Production (manual) | `.github/workflows/rollback-prod.yml`  | `workflow_dispatch` only  | (always available)         |
 
-The scheduled `smoke.yml` (every 6 hours against prod) is independent and
-remains gated by the separate `SMOKE_ENABLED` variable.
+The scheduled `smoke.yml` (every 6 hours against prod) is independent and remains gated by the separate `SMOKE_ENABLED` variable.
 
-**Note on the rollback kill switch:** `AUTO_DEPLOY_PROD_ENABLED` gates
-only the `workflow_run` (automatic) path of `rollback-prod.yml`. Manual
-`workflow_dispatch` of the rollback is intentionally **NOT** gated by
-the kill switch — the kill switch exists to pause the auto-pipeline;
-an operator explicitly invoking incident response must still be able
-to roll back even when the auto-pipeline is disabled. Manual
-dispatches are still restricted to `main`.
+### Jobs inside `Deploy to Production`
+
+| Job        | Depends on | Fires when                                           |
+| ---------- | ---------- | ---------------------------------------------------- |
+| `gate`     | (entry)    | `AUTO_DEPLOY_PROD_ENABLED == 'true'` + branch checks |
+| `deploy`   | `gate`     | gate succeeded                                       |
+| `smoke`    | `deploy`   | deploy succeeded (skipped if deploy failed)          |
+| `rollback` | `smoke`    | `needs.smoke.result == 'failure'`                    |
+
+If `deploy` fails, `smoke` is skipped → `rollback` is skipped too (it requires smoke to be `failure`, not `skipped`). This preserves the original "don't compound a failed deploy with a destructive rollback for a deploy that never happened" semantic.
+
+If `smoke` fails, `rollback` runs automatically — rolling back the three Render services to their most recent prior successful deploys via `render-rollback.sh`.
+
+### Manual rollback path
+
+`rollback-prod.yml` exists for the human-driven incident-response case: an issue surfaced via Sentry hours after deploy, a manual prod deploy went sideways, or any other reason an operator needs to roll back independently. It is `workflow_dispatch` only, restricted to `main`, and intentionally **NOT** gated by `AUTO_DEPLOY_PROD_ENABLED` — the kill switch pauses the auto-pipeline; an operator explicitly invoking incident response must still be able to roll back even when the auto-pipeline is off.
 
 ## Vercel rollback is manual
 
@@ -97,8 +100,7 @@ After stage 1 has been stable through a handful of merges:
 1. Provision the prod environment variables + secret (see env vars table below): three `RENDER_SERVICE_ID_*` variables in the `production` environment, plus `RENDER_API_TOKEN` as a `production`-environment secret
 2. Set `AUTO_DEPLOY_PROD_ENABLED` repo variable to `true`
 3. Merge a small no-op PR to `main`
-4. Watch the full chain run end-to-end: CI → deploy-staging → staging-smoke
-   → deploy-prod → prod-post-deploy-smoke
+4. Watch the full chain run end-to-end: CI → deploy-staging → staging-smoke → deploy-prod (gate → deploy → smoke; rollback fires only on smoke failure)
 5. Force a rollback in a controlled way to validate it (see
    "Testing the rollback path" below)
 
@@ -111,15 +113,15 @@ on the next workflow_run trigger.
 
 ### Repository variables (Settings → Variables → Actions)
 
-| Variable                        | Required by                                        | Notes                                                                                                                                                                |
-| ------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `STAGING_URL`                   | staging-smoke                                      | already present — `https://staging.concertcrawl.app`                                                                                                                 |
-| `STAGING_API_URL`               | staging-smoke                                      | **new** — `https://concert-crawl-api-staging.onrender.com`                                                                                                           |
-| `RENDER_SERVICE_ID_API_STAGING` | deploy-staging, staging-smoke                      | **new** — staging API service ID (e.g. `srv-abc123`). Used by `deploy-staging.yml` (deploy POST) and `render-wait-for-live.sh` (waits for the new deploy to be live) |
-| `PROD_URL`                      | prod-post-deploy-smoke                             | already present                                                                                                                                                      |
-| `PROD_API_URL`                  | prod-post-deploy-smoke                             | already present                                                                                                                                                      |
-| `STAGING_SMOKE_ENABLED`         | staging-smoke                                      | **new** — default `false`; set to `true` in Stage 1                                                                                                                  |
-| `AUTO_DEPLOY_PROD_ENABLED`      | deploy-prod, prod-post-deploy-smoke, rollback-prod | **new** — default `false`; set to `true` in Stage 2                                                                                                                  |
+| Variable                        | Required by                   | Notes                                                                                                                                                                |
+| ------------------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `STAGING_URL`                   | staging-smoke                 | already present — `https://staging.concertcrawl.app`                                                                                                                 |
+| `STAGING_API_URL`               | staging-smoke                 | **new** — `https://concert-crawl-api-staging.onrender.com`                                                                                                           |
+| `RENDER_SERVICE_ID_API_STAGING` | deploy-staging, staging-smoke | **new** — staging API service ID (e.g. `srv-abc123`). Used by `deploy-staging.yml` (deploy POST) and `render-wait-for-live.sh` (waits for the new deploy to be live) |
+| `PROD_URL`                      | deploy-prod (smoke job)       | already present                                                                                                                                                      |
+| `PROD_API_URL`                  | deploy-prod (smoke job)       | already present                                                                                                                                                      |
+| `STAGING_SMOKE_ENABLED`         | staging-smoke                 | **new** — default `false`; set to `true` in Stage 1                                                                                                                  |
+| `AUTO_DEPLOY_PROD_ENABLED`      | deploy-prod                   | **new** — default `false`; set to `true` in Stage 2. Gates the whole deploy-prod workflow including its smoke + auto-rollback jobs.                                  |
 
 ### `production` environment — Variables (Settings → Environments → production)
 
@@ -151,21 +153,9 @@ just list recent deploys and POST `/rollback`, nothing else.
 
 ## Testing the rollback path
 
-The cleanest way to verify the rollback wiring without breaking anything:
+**For the auto-rollback path** (smoke → rollback inside `deploy-prod.yml`): the cleanest way to verify the wiring without breaking real prod is to invoke **Deploy to Production** manually (`workflow_dispatch`, supply a `reason`) while temporarily pointing `PROD_API_URL` at a bogus hostname. The deploy job succeeds, the smoke job fails against the bogus URL, the rollback job fires, and Render shows new deploys on each service matching the previous-prior commit SHA. Restore `PROD_API_URL` and run one more clean deploy to roll forward again.
 
-1. Run **Production Post-Deploy Smoke** manually (`workflow_dispatch`)
-   against a known-broken state — for example, point `PROD_API_URL` at a
-   bogus hostname temporarily and trigger the workflow
-2. Confirm `prod-post-deploy-smoke.yml` exits with failure
-3. Confirm `rollback-prod.yml` automatically picks up the failure and runs
-4. Confirm Render shows new deploys on each of the three services
-   matching the previous-prior commit SHA
-5. Restore `PROD_API_URL` and trigger one more clean deploy to roll
-   forward again
-
-Alternatively just invoke **Rollback Production** with `workflow_dispatch`
-and a `reason` value. The script will roll back to the prior live deploy
-on each service. Use this exact path for any incident response.
+**For the manual rollback path:** invoke **Rollback Production (manual)** with `workflow_dispatch` and a `reason` value. The script rolls back to the prior live deploy on each service. Use this exact path for any incident response that doesn't originate from a freshly-deployed smoke failure.
 
 ## Limitations and known gaps
 

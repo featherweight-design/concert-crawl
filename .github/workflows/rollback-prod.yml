@@ -1,21 +1,23 @@
-name: Rollback Production
+name: Rollback Production (manual)
 
-# Rolls back the three production Render services (API + 2 crawler crons)
-# to the most recent prior successful deploy. Triggers automatically when
-# `prod-post-deploy-smoke.yml` fails, and can be invoked manually via
-# `workflow_dispatch` for any incident response.
+# Manual incident-response rollback for the three production Render
+# services (API + 2 crawler crons). Rolls back to the most recent prior
+# successful deploy.
 #
-# Vercel web rollback is NOT automated here — it is a one-click promote in
-# the Vercel dashboard. See docs/runbooks/auto-deploy-prod.md for the
-# manual procedure if the web prod build is the one at fault.
+# Manual-only by design. The AUTO rollback path (triggered when the
+# prod post-deploy smoke fails) is now a job inside `deploy-prod.yml`
+# (see that workflow's `rollback` job) rather than a separate workflow,
+# because the workflow_run chain depth limit (3) dropped the original
+# 4-deep auto-pipeline path. This file exists for the human-driven
+# case: an operator needs to roll back independently of a freshly-
+# deployed smoke failure — e.g. an issue surfaced via Sentry hours
+# later, or a manual prod deploy went sideways.
 #
-# Disabled by default — same kill switch as `deploy-prod.yml`.
+# Vercel web rollback is NOT automated here — it is a one-click promote
+# in the Vercel dashboard. See docs/runbooks/auto-deploy-prod.md for
+# the manual procedure if the web prod build is the one at fault.
 
 on:
-  workflow_run:
-    workflows: [Production Post-Deploy Smoke]
-    types: [completed]
-    branches: [main]
   workflow_dispatch:
     inputs:
       reason:
@@ -24,9 +26,9 @@ on:
         type: string
 
 # Serialize rollbacks. A rollback running concurrently with anything else
-# touching the same service is a recipe for inconsistent state.
-# Shared with deploy-prod.yml and prod-post-deploy-smoke.yml so all
-# prod-touching workflows serialize through a single queue.
+# touching the same service is a recipe for inconsistent state. Shared
+# with deploy-prod.yml so all prod-touching workflows serialize through
+# a single queue.
 concurrency:
   group: prod-pipeline
   cancel-in-progress: false
@@ -47,25 +49,13 @@ jobs:
     name: Validate rollback gates
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # Gate logic:
-    #   - workflow_dispatch: allowed only from `main` (so a feature
-    #     branch cannot drive a rollback via the Actions UI's branch
-    #     picker), and intentionally NOT gated by AUTO_DEPLOY_PROD_ENABLED.
-    #     The kill switch exists to pause the auto-pipeline; an operator
-    #     using workflow_dispatch is explicitly invoking incident response
-    #     and must still be able to roll back even when the auto-pipeline
-    #     is disabled.
-    #   - workflow_run: AUTO_DEPLOY_PROD_ENABLED must be on AND the
-    #     upstream prod-post-deploy-smoke must have concluded `failure`
-    #     specifically. `timed_out` is intentionally NOT included: a
-    #     runner death or transient network blip should not trigger a
-    #     destructive prod rollback. Operators can use workflow_dispatch
-    #     if they want to roll back after investigating a timeout.
-    if: |
-      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'workflow_run' &&
-       vars.AUTO_DEPLOY_PROD_ENABLED == 'true' &&
-       github.event.workflow_run.conclusion == 'failure')
+    # workflow_dispatch only — restricted to `main` so a feature
+    # branch cannot drive a rollback via the Actions UI's branch
+    # picker. Intentionally NOT gated by AUTO_DEPLOY_PROD_ENABLED:
+    # the kill switch exists to pause the auto-pipeline; an
+    # operator manually invoking incident response must still be
+    # able to roll back even when the auto-pipeline is disabled.
+    if: github.ref == 'refs/heads/main'
     steps:
       - name: Gate passed
         run: echo "All rollback gates satisfied; proceeding to rollback job."
@@ -79,16 +69,11 @@ jobs:
     # gate job has validated all conditions.
     environment: production
     steps:
-      # Pin the checkout to the SHA that triggered the upstream
-      # prod-post-deploy-smoke run so the rollback script we execute
-      # matches the version associated with the failing deploy. Without
-      # this, actions/checkout fetches default branch HEAD, which can
-      # drift if a new commit lands while this incident-response
-      # workflow is queued.
+      # For manual dispatch we just use the default checkout (main
+      # HEAD at dispatch time). The rollback script is small + stable;
+      # using whatever version is on main is fine.
       - name: Checkout
         uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       # Preflight check — fail fast with a clear message if any of the
       # three service IDs is missing. Without this, the rollback script
@@ -124,19 +109,10 @@ jobs:
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
 
-      # `inputs.*` is only defined for `workflow_dispatch`. Using
-      # `github.event.inputs.reason` is safe on `workflow_run` too — it
-      # evaluates to empty rather than breaking expression evaluation.
       - name: Log rollback context
         run: |
-          echo "Rollback complete for prod Render services"
-          echo "Triggered by: ${{ github.event_name }}"
-          if [ -n "${{ github.event.inputs.reason }}" ]; then
-            echo "Manual reason: ${{ github.event.inputs.reason }}"
-          fi
-          if [ -n "${{ github.event.workflow_run.id }}" ]; then
-            echo "Failing smoke run: ${{ github.event.workflow_run.html_url }}"
-          fi
+          echo "Manual rollback complete for prod Render services"
+          echo "Operator-supplied reason: ${{ github.event.inputs.reason }}"
           echo ""
           echo "Vercel web prod is NOT automatically rolled back."
           echo "If the failure is web-related, run the manual rollback procedure"
