@@ -99,12 +99,19 @@ describe('GET /v1/admin/review/counts', () => {
     expect(res.status).toBe(200)
     const body = (await res.json()) as {
       success: boolean
-      data: { eventFlags: number; prices: number; missing: number }
+      data: {
+        eventFlags: number
+        prices: number
+        missing: number
+        priceContests: number
+      }
     }
     expect(body.success).toBe(true)
     expect(body.data.eventFlags).toBe(2)
     expect(body.data.prices).toBe(1)
     expect(body.data.missing).toBe(1)
+    // No counter rows seeded above → priceContests should default to 0.
+    expect(body.data.priceContests).toBe(0)
   })
 
   it('excludes past-dated missing events from the missing count', async () => {
@@ -182,6 +189,130 @@ describe('GET /v1/admin/review/counts', () => {
       data: { missing: number }
     }
     expect(body.data.missing).toBe(1)
+  })
+
+  // The priceContests pill counts open contests — pending counter rows
+  // (status='pending' AND disputed_submission_id IS NOT NULL). MUST stay
+  // lock-step with the GET /v1/admin/contests/prices list endpoint's WHERE
+  // clause, otherwise the badge ("5 open") will disagree with the queue
+  // table's row count.
+  it('counts open price contests toward the priceContests pill', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2099-09-01',
+      verified: true,
+    })
+
+    // Parent A — corroborated; will get an open counter.
+    const parentA = await seedPriceSubmission(event.id, 'user-parent-a', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      status: 'corroborated',
+    })
+    // Parent B — disputed (handler flips parent.status when a counter lands);
+    // will get an open counter.
+    const parentB = await seedPriceSubmission(event.id, 'user-parent-b', {
+      tier: 'VIP',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '120',
+      status: 'disputed',
+    })
+
+    // 2 open counters → priceContests should be 2.
+    await seedPriceSubmission(event.id, 'user-challenger-a', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '55',
+      status: 'pending',
+      disputedSubmissionId: parentA.id,
+    })
+    await seedPriceSubmission(event.id, 'user-challenger-b', {
+      tier: 'VIP',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '140',
+      status: 'pending',
+      disputedSubmissionId: parentB.id,
+    })
+
+    // Resolved counter (archived) — does NOT count.
+    const parentC = await seedPriceSubmission(event.id, 'user-parent-c', {
+      tier: 'Pit',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '60',
+      status: 'corroborated',
+    })
+    await seedPriceSubmission(event.id, 'user-challenger-c', {
+      tier: 'Pit',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '75',
+      status: 'archived',
+      disputedSubmissionId: parentC.id,
+    })
+
+    // Deferred counter (lastAdminActionKind='defer') is still pending →
+    // STILL counts. Defer is an engagement signal, not a state change.
+    const parentD = await seedPriceSubmission(event.id, 'user-parent-d', {
+      tier: 'Lawn',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '80',
+      status: 'disputed',
+    })
+    await seedPriceSubmission(event.id, 'user-challenger-d', {
+      tier: 'Lawn',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '95',
+      status: 'pending',
+      disputedSubmissionId: parentD.id,
+      lastAdminActionKind: 'defer',
+      lastAdminActionAt: new Date('2099-08-15T00:00:00Z'),
+    })
+
+    // Non-contest pending submission (disputed_submission_id IS NULL) — must
+    // NOT count toward priceContests (it counts toward prices, separately).
+    await seedPriceSubmission(event.id, 'user-non-contest', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '38',
+      status: 'pending',
+    })
+
+    const res = await app.request('/v1/admin/review/counts', {
+      headers: ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      data: { priceContests: number }
+    }
+    // 2 open + 1 deferred (still pending) = 3
+    expect(body.data.priceContests).toBe(3)
+  })
+
+  it('returns priceContests: 0 when no contests are open', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2099-09-01',
+      verified: true,
+    })
+    // Pending non-contest submissions exist, but no counter rows.
+    await seedPriceSubmission(event.id, 'user-pending', { status: 'pending' })
+
+    const res = await app.request('/v1/admin/review/counts', {
+      headers: ADMIN_HEADERS,
+    })
+    const body = (await res.json()) as {
+      data: { priceContests: number }
+    }
+    expect(body.data.priceContests).toBe(0)
   })
 
   // Regression for #708: the pill counts pending submissions only and the

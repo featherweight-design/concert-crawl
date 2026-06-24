@@ -65,10 +65,16 @@ interface CountedResponse<TRow> {
 // Aggregate counts for the Review tab pills — surfaced on initial mount via
 // the SSR fetch in /admin/review/page.tsx and refreshed client-side after
 // mutations.
+//
+// `priceContests` mirrors the count of open price contests (pending counter
+// rows with disputed_submission_id IS NOT NULL). The API's WHERE clause for
+// this field stays lock-step with the /v1/admin/contests/prices list so the
+// pill never disagrees with the queue table's row count.
 export interface ReviewCounts {
   eventFlags: number
   prices: number
   missing: number
+  priceContests: number
 }
 
 // Stable query key roots. Each `(page, pageSize)` pair gets its own cache

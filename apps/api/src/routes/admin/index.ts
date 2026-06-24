@@ -60,7 +60,7 @@ adminRouter.use('*', async (ctx, next) => {
 })
 
 // GET /v1/admin/review/counts — tab-pill counts for /admin/review and the
-// admin sidebar badge. Three of the four data-bearing Review tabs render
+// admin sidebar badge. Four of the five data-bearing Review tabs render
 // a pill count (All Events has none); this endpoint returns one number per
 // pill so the SSR initial paint shows them without activating each tab.
 //
@@ -68,41 +68,60 @@ adminRouter.use('*', async (ctx, next) => {
 // list endpoint's default filter — otherwise the pill says "X items" while
 // the tab renders "Queue clear" (issues #708, #709, #712). The semantics:
 //
-//   eventFlags → /v1/admin/events?verified=false   (defaults to date >= today)
-//   prices     → /v1/admin/prices/submissions      (defaults to status=pending)
-//   missing    → /v1/admin/events?missing=true     (excludes hidden_from_consumer)
+//   eventFlags    → /v1/admin/events?verified=false   (defaults to date >= today)
+//   prices        → /v1/admin/prices/submissions      (defaults to status=pending)
+//   missing       → /v1/admin/events?missing=true     (excludes hidden_from_consumer)
+//   priceContests → /v1/admin/contests/prices         (pending counter rows;
+//                   §4.6 partial unique index guarantees one per parent)
+//
+// priceContests' WHERE clause (status='pending' AND disputed_submission_id IS
+// NOT NULL) mirrors the list endpoint in apps/api/src/routes/admin/contests.ts
+// exactly. Deferred counters (lastAdminActionKind='defer') are still pending —
+// defer is an engagement signal, not a state flip — so they correctly stay in
+// the count.
 adminRouter.get('/review/counts', async (ctx) => {
   const today = new Date().toLocaleDateString('en-CA', {
     timeZone: 'America/Denver',
   })
 
-  const [eventFlagsResult, pricesResult, missingResult] = await Promise.all([
-    db
-      .select({ total: sql<number>`count(*)::int` })
-      .from(events)
-      .where(and(eq(events.verified, false), gte(events.date, today))),
-    db
-      .select({ total: sql<number>`count(*)::int` })
-      .from(priceSubmissions)
-      .where(eq(priceSubmissions.status, 'pending')),
-    db
-      .select({ total: sql<number>`count(*)::int` })
-      .from(events)
-      .where(
-        and(
-          isNotNull(events.firstMissingAt),
-          eq(events.status, 'upcoming'),
-          gte(events.date, today),
-          eq(events.hiddenFromConsumer, false),
+  const [eventFlagsResult, pricesResult, missingResult, priceContestsResult] =
+    await Promise.all([
+      db
+        .select({ total: sql<number>`count(*)::int` })
+        .from(events)
+        .where(and(eq(events.verified, false), gte(events.date, today))),
+      db
+        .select({ total: sql<number>`count(*)::int` })
+        .from(priceSubmissions)
+        .where(eq(priceSubmissions.status, 'pending')),
+      db
+        .select({ total: sql<number>`count(*)::int` })
+        .from(events)
+        .where(
+          and(
+            isNotNull(events.firstMissingAt),
+            eq(events.status, 'upcoming'),
+            gte(events.date, today),
+            eq(events.hiddenFromConsumer, false),
+          ),
         ),
-      ),
-  ])
+      db
+        .select({ total: sql<number>`count(*)::int` })
+        .from(priceSubmissions)
+        .where(
+          and(
+            eq(priceSubmissions.status, 'pending'),
+            isNotNull(priceSubmissions.disputedSubmissionId),
+          ),
+        ),
+    ])
   return ctx.json({
     success: true,
     data: {
       eventFlags: eventFlagsResult[0]?.total ?? 0,
       prices: pricesResult[0]?.total ?? 0,
       missing: missingResult[0]?.total ?? 0,
+      priceContests: priceContestsResult[0]?.total ?? 0,
     },
   })
 })

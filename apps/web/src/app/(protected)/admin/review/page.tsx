@@ -57,9 +57,15 @@ export default async function ReviewPage() {
     apiClient
       .get<PriceSubmission[]>('/v1/admin/prices/submissions', token)
       .catch(() => [] as PriceSubmission[]),
-    apiClient
-      .get<ReviewCounts>('/v1/admin/review/counts', token)
-      .catch(() => ({ eventFlags: 0, prices: 0, missing: 0 }) as ReviewCounts),
+    apiClient.get<ReviewCounts>('/v1/admin/review/counts', token).catch(
+      () =>
+        ({
+          eventFlags: 0,
+          prices: 0,
+          missing: 0,
+          priceContests: 0,
+        }) as ReviewCounts,
+    ),
   ])
 
   return (
