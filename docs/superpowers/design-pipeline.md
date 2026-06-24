@@ -109,7 +109,9 @@ The gate between design handoff and plan PR. Audits a design folder against seve
 
 ### Output: READINESS.md
 
-Lives at `design/design_handoff_X/READINESS.md`. Structure:
+Lives at `design/design_handoff_X/READINESS.md`. For design folders that span multiple feature additions over time (e.g., a parent design that ships once and later receives field additions or extensions via separate tickets), addendum audits may live alongside the general audit as `READINESS_<issue>.md` — e.g., `design/design_handoff_admin_venues/READINESS_506.md` audits the #506 field-addition extension while a future general `READINESS.md` would audit the parent design itself.
+
+Structure:
 
 ```markdown
 # Readiness Review — <Feature Name>
