@@ -162,9 +162,16 @@ The plan PR must respect these locked decisions from the handoff README, regardl
 - **Use existing `CCMark`** — do not ship the local `MMark` copy.
 - **All Stripe Elements internals are owned by Stripe** — we render the container, summary rail, totals, and result states only.
 
-## Out-of-scope (per the handoff README, must be respected)
+## Out-of-scope per the handoff README (with one re-scope exception)
+
+The handoff README lists the following as out-of-scope. The plan PR should respect these EXCEPT where flagged for re-scoping in the audit body above.
+
+Respected as-is:
 
 - Stripe Elements form internals (Stripe owns; we render the dashed slot).
 - Artist following UI / notification prefs (separate handoffs).
 - Granular admin role assignment (separate ticket).
-- ~~Subscription management / cancel flow~~ — **flagged for re-scoping above; cannot remain fully out-of-scope.**
+
+Flagged for re-scoping (cannot remain fully out-of-scope):
+
+- **Subscription management / cancel flow.** Marked out-of-scope in the handoff README, but referenced by shipped surfaces (the "Manage subscription" and "Upgrade or cancel" CTAs in `monetization-settings.jsx`) and required at beta wk 3 for the lifecycle the addendum tickets cover (see #780 Subscription lifecycle + management). The plan PR must NOT treat this as out-of-scope.
