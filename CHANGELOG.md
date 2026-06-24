@@ -1,3 +1,11 @@
+## [1.74.13](https://github.com/HartiganHM/concert-crawl/compare/v1.74.12...v1.74.13) (2026-06-24)
+
+
+### Bug Fixes
+
+* **rollback:** skip cron services — Render API has no cron rollback path ([cf59b82](https://github.com/HartiganHM/concert-crawl/commit/cf59b8237ebddb4a668651b8812e6bdb4a2be2f5)), closes [#744](https://github.com/HartiganHM/concert-crawl/issues/744)
+* **scripts:** use regex not glob for service-ID prefix check ([01221e3](https://github.com/HartiganHM/concert-crawl/commit/01221e3552f26dad4c7f0376fa78cbcf29feea8a)), closes [#747](https://github.com/HartiganHM/concert-crawl/issues/747)
+
 ## [1.74.12](https://github.com/HartiganHM/concert-crawl/compare/v1.74.11...v1.74.12) (2026-06-24)
 
 
