@@ -5,7 +5,7 @@
 **Auditor:** Claude (autonomous Readiness Review)
 **Related ticket(s):** #641 (open), #644 (open)
 **Prior eng sign-off:** 2026-06-17 (logged inline in README, plus three follow-up rounds — round 3 captured 2026-06-19/20 with the SeatGeek correction inline)
-**Plan PR target:** TBD — next action is the Consumer UI PR (PR 4 of 4) per `project_price_source_discoverability` memory; `design-review` skill is the hard gate before plan.
+**Plan PR target:** TBD — Consumer UI PR (PR 4 of 4) per `project_price_source_discoverability` Claude memory note.
 
 ## Summary
 
@@ -33,7 +33,7 @@ The 2026-06-17 eng sign-off still holds. In the six days since, three of the fou
 - ✅ `sourceCategoryEnum` (`boxoffice` | `standard` | `resale`) shipped in `packages/db/src/schema/prices.ts:56-60`.
 - ✅ Multi-tier representation in DB: per-(tier, source) partial unique index lives on `price_submissions` (per PR #705), so per-tier corroboration "falls out for free" as the design intends.
 - ✅ `ticketLinks` jsonb shipped on `events` with `kind: boxoffice | primary | resale` and vendor classification — directly feeds `ProvenanceCTA` (`primary` = "Official vendor", `resale` = "Resale", `boxoffice` = "{venue} · face value, no fees").
-- 🟡 **PR 4 dispute-affordance hiding interaction** (`~/.claude/projects/-Users-huey-Projects-concert-crawl/memory/project_pr4_dispute_affordance_hiding.md`): when `priceByTier[tier].counterSubmission !== null`, the UI MUST hide the dispute entry for that tier (schema enforces 1 counter per parent via partial unique index; second submit hits a 409). This was pre-decided 2026-06-23 (today) but is **not in the README "Eng review — sign-off & changes"** section. The handoff's `MT_ConfirmContestFork` was retired in round 3 (replaced by `PendingCardB`), so the natural place for this rule is wherever the consumer UI renders "Saw a different number? Let us know →". Replacement copy/CTA is TBD with design (memory note says "likely point users at the existing counter card with 'Confirm this challenge' affordance"). Flagging as the single clarification eng will need to nail down in the plan PR — either by surfacing it to design for a tiny copy update, or by eng owning the conditional rendering and the eventual race-case toast.
+- 🟡 **PR 4 dispute-affordance hiding interaction** (Claude memory note: `project_pr4_dispute_affordance_hiding.md`): when `priceByTier[tier].counterSubmission !== null`, the UI MUST hide the dispute entry for that tier (schema enforces 1 counter per parent via partial unique index; second submit hits a 409). This was pre-decided 2026-06-23 (today) but is **not in the README "Eng review — sign-off & changes"** section. The handoff's `MT_ConfirmContestFork` was retired in round 3 (replaced by `PendingCardB`), so the natural place for this rule is wherever the consumer UI renders "Saw a different number? Let us know →". Replacement copy/CTA is TBD with design (memory note says "likely point users at the existing counter card with 'Confirm this challenge' affordance"). Flagging as the single clarification eng will need to nail down in the plan PR — either by surfacing it to design for a tiny copy update, or by eng owning the conditional rendering and the eventual race-case toast.
 
 ### 🧱 Codebase fit
 - ✅ All mock components use `var(--*)` tokens (`var(--bg)`, `var(--fg-subtle)`, `var(--surface-1)`, `var(--border)`, `var(--signal)`, etc.) — same token system the shipped event detail page uses.

@@ -245,6 +245,8 @@ Living state — moves to `project_design_pipeline.md` memory after this initial
 
 ## Related memory
 
+These are Claude memory notes (not in-repo) living at `~/.claude/projects/.../memory/`. Cross-referenced here for use within Claude sessions:
+
 - `project_design_pipeline.md` — current state + workflow summary
 - `feedback_design_readiness_review.md` — when the audit is required
 - `feedback_design_handoff_style.md` — handoff prompt principles
