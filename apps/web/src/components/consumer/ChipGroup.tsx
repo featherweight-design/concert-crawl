@@ -11,6 +11,12 @@ interface ChipGroupProps {
   value: string | null
   onChange: (value: string) => void
   error?: string | undefined
+  // When true, render an accent-colored asterisk after the label. Mirrors the
+  // SPNumberField `required` prop but uses var(--accent) instead of var(--warning)
+  // — required-marker pattern locked in property table §3 "Vendor block — DEMOTED
+  // BUT REQUIRED" and submitPriceV2 copy notes (FormLabel `req` accepts asterisk
+  // separately from the label string).
+  req?: boolean
 }
 
 export function ChipGroup({
@@ -19,6 +25,7 @@ export function ChipGroup({
   value,
   onChange,
   error,
+  req,
 }: ChipGroupProps) {
   return (
     <div className="flex flex-col gap-2">
@@ -33,6 +40,14 @@ export function ChipGroup({
         }}
       >
         {label}
+        {req && (
+          <span
+            aria-hidden="true"
+            style={{ color: 'var(--accent)', marginLeft: 4 }}
+          >
+            *
+          </span>
+        )}
       </span>
       <div className="flex flex-wrap gap-2">
         {options.map((opt) => {

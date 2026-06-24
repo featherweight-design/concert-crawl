@@ -628,40 +628,46 @@ export function SubmitPriceModal({
               }))
             }
             error={fieldErrors['sourceCategory']}
+            req
           />
 
-          {/* Floor + Ceiling — floor label is dynamic per source */}
-          <div
-            style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}
-          >
-            <SPNumberField
-              id="sp-floor"
-              label={
-                formState.sourceCategory === 'boxoffice'
-                  ? CONSUMER_COPY.submitPriceV2.floorLabelBoxoffice
-                  : formState.sourceCategory === 'resale'
-                    ? CONSUMER_COPY.submitPriceV2.floorLabelResale
-                    : CONSUMER_COPY.submitPriceV2.floorLabelStandard
-              }
-              value={formState.floor}
-              onChange={(val) =>
-                setFormState((prev) => ({ ...prev, floor: val }))
-              }
-              placeholder={CONSUMER_COPY.submitPriceV2.floorPlaceholder}
-              required
-              error={fieldErrors['floor']}
-              warning={fieldWarnings['floor']}
-            />
-            <SPNumberField
-              id="sp-ceiling"
-              label={CONSUMER_COPY.submitPriceV2.ceilingLabel}
-              value={formState.ceiling}
-              onChange={(val) =>
-                setFormState((prev) => ({ ...prev, ceiling: val }))
-              }
-              placeholder={CONSUMER_COPY.submitPriceV2.ceilingPlaceholder}
-              error={fieldErrors['ceiling']}
-            />
+          {/* Floor + Ceiling — floor label is dynamic per source.
+              Property table §3 "Number row" calls for `display: flex; gap: 12`
+              (each child flex: 1 keeps equal-width columns identical to the
+              prior 1fr 1fr grid). */}
+          <div style={{ display: 'flex', gap: 12 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <SPNumberField
+                id="sp-floor"
+                label={
+                  formState.sourceCategory === 'boxoffice'
+                    ? CONSUMER_COPY.submitPriceV2.floorLabelBoxoffice
+                    : formState.sourceCategory === 'resale'
+                      ? CONSUMER_COPY.submitPriceV2.floorLabelResale
+                      : CONSUMER_COPY.submitPriceV2.floorLabelStandard
+                }
+                value={formState.floor}
+                onChange={(val) =>
+                  setFormState((prev) => ({ ...prev, floor: val }))
+                }
+                placeholder={CONSUMER_COPY.submitPriceV2.floorPlaceholder}
+                required
+                error={fieldErrors['floor']}
+                warning={fieldWarnings['floor']}
+              />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <SPNumberField
+                id="sp-ceiling"
+                label={CONSUMER_COPY.submitPriceV2.ceilingLabel}
+                value={formState.ceiling}
+                onChange={(val) =>
+                  setFormState((prev) => ({ ...prev, ceiling: val }))
+                }
+                placeholder={CONSUMER_COPY.submitPriceV2.ceilingPlaceholder}
+                error={fieldErrors['ceiling']}
+              />
+            </div>
           </div>
           {formState.sourceCategory === 'boxoffice' && (
             <p
@@ -693,6 +699,7 @@ export function SubmitPriceModal({
               setFormState((prev) => ({ ...prev, vendor: val }))
             }
             error={fieldErrors['vendor']}
+            req
           />
           {formState.sourceCategory === 'boxoffice' &&
             formState.vendor === VENDOR_BOXOFFICE_AUTOFILL && (
