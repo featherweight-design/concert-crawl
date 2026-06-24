@@ -30,7 +30,7 @@ jobs:
       # trigger-deploy.sh below. Pinned to the upstream CI's SHA so
       # the script we run matches the commit this deploy targets.
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 

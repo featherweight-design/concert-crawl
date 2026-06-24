@@ -86,7 +86,7 @@ jobs:
       # HEAD at dispatch time). The rollback script is small + stable;
       # using whatever version is on main is fine.
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # Preflight check — fail fast with a clear message if any of the
       # three service IDs is missing. Without this, the rollback script

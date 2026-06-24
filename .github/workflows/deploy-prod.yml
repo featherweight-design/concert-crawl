@@ -130,7 +130,7 @@ jobs:
       # realistic [skip ci] streak — semantic-release produces one
       # release commit per merge, so two in a row is unusual.
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 20
 
@@ -202,7 +202,7 @@ jobs:
       # Pinned to the upstream-deploying SHA so the wait logic we run
       # matches the version associated with this deploy.
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
@@ -389,7 +389,7 @@ jobs:
       # Pin to the SHA the deploy job acted on so the Playwright code
       # we run matches the code Render just built.
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
@@ -406,7 +406,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Cache Playwright browsers
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('apps/e2e/package.json') }}
@@ -529,7 +529,7 @@ jobs:
       # Pin to the SHA the deploy + smoke jobs acted on so render-
       # rollback.sh is the version associated with the failing deploy.
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
