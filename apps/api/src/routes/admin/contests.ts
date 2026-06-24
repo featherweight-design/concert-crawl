@@ -550,10 +550,20 @@ contestsAdminRouter.post(
           reason: `Parent tier ${parent.tier} does not match challenger tier ${challenger.tier}.`,
         }
       }
-      if (parent.sourceCategory !== challenger.sourceCategory) {
+      // Treat NULL source_category as "matches anything." Legacy rows
+      // pre-PR-#651 have parent.sourceCategory = null; the counter-creation
+      // routes explicitly derive a non-null value (see submissions.ts and
+      // price-submissions.ts), so a strict `!==` check permanently locks
+      // those contests at the same-slot assertion. The original safety
+      // invariant — both sides non-null and unequal — is preserved.
+      if (
+        parent.sourceCategory !== null &&
+        challenger.sourceCategory !== null &&
+        parent.sourceCategory !== challenger.sourceCategory
+      ) {
         return {
           ok: 'precondition_failed',
-          reason: `Parent source_category ${parent.sourceCategory ?? 'null'} does not match challenger source_category ${challenger.sourceCategory ?? 'null'}.`,
+          reason: `Parent source_category ${parent.sourceCategory} does not match challenger source_category ${challenger.sourceCategory}.`,
         }
       }
 
@@ -904,10 +914,18 @@ contestsAdminRouter.post(
           reason: `Parent tier ${parent.tier} does not match challenger tier ${counter.tier}.`,
         }
       }
-      if (parent.sourceCategory !== counter.sourceCategory) {
+      // Treat NULL source_category as "matches anything." See the resolve
+      // handler above for the full rationale — legacy parents have
+      // sourceCategory=null and counters derive a non-null value, so a
+      // strict `!==` check would permanently block defer on legacy contests.
+      if (
+        parent.sourceCategory !== null &&
+        counter.sourceCategory !== null &&
+        parent.sourceCategory !== counter.sourceCategory
+      ) {
         return {
           ok: 'precondition_failed',
-          reason: `Parent source_category ${parent.sourceCategory ?? 'null'} does not match challenger source_category ${counter.sourceCategory ?? 'null'}.`,
+          reason: `Parent source_category ${parent.sourceCategory} does not match challenger source_category ${counter.sourceCategory}.`,
         }
       }
 

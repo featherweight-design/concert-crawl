@@ -1125,6 +1125,70 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
     expect(body.error).toMatch(/tier/i)
   })
 
+  it('allows resolve when parent.sourceCategory is null and counter.sourceCategory is derived (R15 — legacy row)', async () => {
+    // Legacy rows pre-PR-#651 have parent.sourceCategory = null. The counter-
+    // creation routes inherit-or-derive a non-null value, so a strict !==
+    // check would permanently lock these contests. Pin null-as-wildcard
+    // semantics so a future refactor can't silently break the unlock.
+    setAdminAuth()
+    const { parent, counter } = await seedContest()
+    // Seed the legacy shape: null parent, derived counter. Bypass the
+    // seedContest defaults via raw insert/update so we are explicit about
+    // null on the parent side.
+    await testDb
+      .update(priceSubmissions)
+      .set({ sourceCategory: null })
+      .where(eq(priceSubmissions.id, parent.id))
+    await testDb
+      .update(priceSubmissions)
+      .set({ sourceCategory: 'standard' })
+      .where(eq(priceSubmissions.id, counter.id))
+
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/resolve`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          resolution: 'challenger_wins',
+          reason: 'Legacy row — null parent source_category should not block.',
+        }),
+      },
+    )
+    expect(res.status).toBe(200)
+  })
+
+  it('returns 409 when BOTH parent.sourceCategory and counter.sourceCategory are non-null and mismatched (R15 — preserves safety invariant)', async () => {
+    setAdminAuth()
+    const { parent, counter } = await seedContest()
+    // Both sides explicitly non-null but different — the original same-slot
+    // safety check must still fire.
+    await testDb
+      .update(priceSubmissions)
+      .set({ sourceCategory: 'standard' })
+      .where(eq(priceSubmissions.id, parent.id))
+    await testDb
+      .update(priceSubmissions)
+      .set({ sourceCategory: 'resale' })
+      .where(eq(priceSubmissions.id, counter.id))
+
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/resolve`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          resolution: 'parent_wins',
+          reason: 'Source category mismatch — should be rejected.',
+        }),
+      },
+    )
+    expect(res.status).toBe(409)
+    const body = (await res.json()) as { success: boolean; error: string }
+    expect(body.success).toBe(false)
+    expect(body.error).toMatch(/source_category/i)
+  })
+
   it('archives orphaned pending counters against the same parent in the same transaction', async () => {
     setAdminAuth()
     const { event, parent, counter } = await seedContest()
@@ -1736,6 +1800,68 @@ describe('POST /v1/admin/contests/prices/:contestId/defer', () => {
     expect(body.success).toBe(false)
     expect(body.code).toBe('precondition_failed')
     expect(body.error).toMatch(/tier/i)
+  })
+
+  it('allows defer when parent.sourceCategory is null and counter.sourceCategory is derived (R15 — legacy row)', async () => {
+    // Legacy rows pre-PR-#651 have parent.sourceCategory = null. The counter-
+    // creation routes inherit-or-derive a non-null value, so a strict !==
+    // check would permanently lock these contests at the defer assertion.
+    setAdminAuth()
+    const { parent, counter } = await seedContest()
+    await testDb
+      .update(priceSubmissions)
+      .set({ sourceCategory: null })
+      .where(eq(priceSubmissions.id, parent.id))
+    await testDb
+      .update(priceSubmissions)
+      .set({ sourceCategory: 'standard' })
+      .where(eq(priceSubmissions.id, counter.id))
+
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/defer`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          reason:
+            'Legacy row — null parent source_category should not block defer.',
+        }),
+      },
+    )
+    expect(res.status).toBe(200)
+  })
+
+  it('returns 409 on defer when BOTH parent.sourceCategory and counter.sourceCategory are non-null and mismatched (R15 — preserves safety invariant)', async () => {
+    setAdminAuth()
+    const { parent, counter } = await seedContest()
+    await testDb
+      .update(priceSubmissions)
+      .set({ sourceCategory: 'standard' })
+      .where(eq(priceSubmissions.id, parent.id))
+    await testDb
+      .update(priceSubmissions)
+      .set({ sourceCategory: 'resale' })
+      .where(eq(priceSubmissions.id, counter.id))
+
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/defer`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          reason: 'Source category mismatch — should be rejected.',
+        }),
+      },
+    )
+    expect(res.status).toBe(409)
+    const body = (await res.json()) as {
+      success: boolean
+      error: string
+      code?: string
+    }
+    expect(body.success).toBe(false)
+    expect(body.code).toBe('precondition_failed')
+    expect(body.error).toMatch(/source_category/i)
   })
 
   it('allows multiple defers in sequence; lastAdminActionAt advances', async () => {

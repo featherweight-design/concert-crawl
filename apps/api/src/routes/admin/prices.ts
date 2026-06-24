@@ -386,8 +386,11 @@ pricesAdminRouter.patch(
       // sanity gate. This is also the canonical "parent in an active
       // contest" lockout — counter rows hit the disputedSubmissionId check
       // above; parents land here.
-      const [pendingCounterCount] = await tx
-        .select({ count: sql<number>`count(*)::int` })
+      // EXISTS-style probe: we only need to know whether ANY pending counter
+      // exists, not how many. SELECT ... LIMIT 1 gives the planner the same
+      // early-exit semantics as EXISTS without requiring a count aggregate.
+      const pendingCounter = await tx
+        .select({ id: priceSubmissions.id })
         .from(priceSubmissions)
         .where(
           and(
@@ -395,7 +398,8 @@ pricesAdminRouter.patch(
             eq(priceSubmissions.status, 'pending'),
           ),
         )
-      if ((pendingCounterCount?.count ?? 0) > 0) {
+        .limit(1)
+      if (pendingCounter.length > 0) {
         return { ok: 'contest_lockout' as const }
       }
 
