@@ -142,14 +142,18 @@ export function decidePriceRegion({
   // STATE #3 — resale headline with no boxoffice/standard headline anywhere:
   // render shipped MultiTierLiveCard with kind='resale' AND a show-level
   // FaceValueCard inviting box-office contribution.
+  //
+  // Important — the API treats sourceCategory === null as 'standard' (see
+  // apps/api/src/lib/price-aggregation/pick-tier-headline.ts:16-21), so a
+  // legacy null-category headline IS a non-resale headline for routing
+  // purposes. Treating it otherwise would push events with real
+  // boxoffice/standard prices into the face-value-pedagogy state.
   const hasResaleHeadline = blocks.some(
     (block) => block.headline?.sourceCategory === 'resale',
   )
   const hasNonResaleHeadline = blocks.some(
     (block) =>
-      block.headline !== null &&
-      block.headline.sourceCategory !== null &&
-      block.headline.sourceCategory !== 'resale',
+      block.headline !== null && block.headline.sourceCategory !== 'resale',
   )
   if (hasResaleHeadline && !hasNonResaleHeadline) {
     const resaleBlock = blocks.find(

@@ -299,12 +299,12 @@ export function SubmitPriceModal({
     setFieldWarnings(validation.warnings)
     if (!validation.valid) return
 
-    // validateSubmission guarantees these are non-null + members of their
-    // respective enums, but TS can't narrow through a separate function call.
-    // Re-check at runtime instead of `as` casts (CLAUDE.md: type-safety is
-    // the first line of defence; casts are a last resort). If we somehow
-    // slipped through validation, fail loudly here rather than send malformed
-    // data to the API.
+    // validateSubmission guarantees these are non-null but does NOT verify
+    // enum membership — the runtime isTier/isVendor/isSourceCategory guards
+    // below cover that gap. We re-check both pieces at runtime instead of
+    // `as` casts (CLAUDE.md: type-safety is the first line of defence; casts
+    // are a last resort). If we somehow slipped through validation, fail
+    // loudly here rather than send malformed data to the API.
     if (
       formState.sourceCategory === null ||
       formState.tier === null ||

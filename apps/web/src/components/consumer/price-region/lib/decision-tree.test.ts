@@ -203,6 +203,33 @@ describe('decidePriceRegion', () => {
     }
   })
 
+  it('priceByTier with resale headline + LEGACY null-category headline on another tier → multi-tier-shipped (Copilot R12 regression — null is "standard" per API convention, NOT a missing headline)', () => {
+    const resaleBlock = makeBlock({
+      tier: 'GA',
+      headline: makeHeadline({
+        priceMin: '85',
+        sourceCategory: 'resale',
+        vendor: 'SeatGeek',
+      }),
+    })
+    const legacyNullBlock = makeBlock({
+      tier: 'VIP',
+      headline: makeHeadline({
+        priceMin: '120',
+        // Legacy row (pre PR 3 backfill) — sourceCategory column was null.
+        // API treats null as 'standard'; the decision tree must treat it
+        // the same way so a real box-office/standard tier doesn't get
+        // misrouted into the face-value-pedagogy state.
+        sourceCategory: null,
+        vendor: 'VenueBoxOffice',
+      }),
+    })
+    const result = decidePriceRegion({
+      event: makeInput({ priceByTier: [resaleBlock, legacyNullBlock] }),
+    })
+    expect(result.kind).toBe('multi-tier-shipped')
+  })
+
   it('priceByTier with boxoffice headline + resale headline on another tier → multi-tier-shipped (NOT resale-headline)', () => {
     const boxOfficeBlock = makeBlock({
       tier: 'GA',
