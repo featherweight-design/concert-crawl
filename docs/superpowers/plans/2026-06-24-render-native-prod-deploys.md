@@ -101,21 +101,20 @@ Implementation tasks below execute on a new branch (`feat/render-native-prod-dep
 - Consumes: same env (`RENDER_API_TOKEN`), same first two args (`<service-id> <expected-sha>`). New optional 3rd arg: `<timeout-seconds>` (default 600).
 - Produces: same — exit 0 when service is live on expected SHA; exit 1 on timeout.
 
-- [ ] **Step 1: Edit the script to accept an optional timeout arg.**
+- [ ] **Step 1: Replace the hardcoded `timeout=600` line with an optional-arg version.**
 
-Replace the existing `timeout=600` line near the top of the loop block with:
+The existing script already declares `SERVICE_ID`, `EXPECTED_SHA`, and the `RENDER_API_TOKEN` check at the top. Leave all of those alone. Only the `timeout=600` line changes; insert the new validation immediately after it:
 
 ```bash
-SERVICE_ID="${1:?service id required}"
-EXPECTED_SHA="${2:?expected commit sha required}"
+# Replace this single line:
+#   timeout=600
+# With:
 # Optional 3rd arg: timeout in seconds. Defaults to 600 (10 min) for
 # backward compatibility with the staging-smoke caller. The new
 # prod-smoke-after-deploy.yml passes 300 (5 min) because the prod
 # API deploys consistently take ~2 min on Render — see plan
 # 2026-06-24-render-native-prod-deploys.md for the deploy-time data.
 timeout="${3:-600}"
-
-: "${RENDER_API_TOKEN:?RENDER_API_TOKEN must be set}"
 
 # Validate timeout is a positive integer. A bad value (e.g. "5m" or
 # "300s") would silently coerce to 0 in arithmetic context and the
@@ -126,44 +125,75 @@ if ! [[ "${timeout}" =~ ^[0-9]+$ ]] || [ "${timeout}" -le 0 ]; then
 fi
 ```
 
-(The arithmetic-coercion validation is the only new logic; default-600 keeps every existing caller working.)
+The arithmetic-coercion validation is the only new logic; default-600 keeps every existing caller (`staging-smoke.yml`) working unchanged.
 
-- [ ] **Step 2: Update the user-facing echo line to reference the dynamic value.**
+- [ ] **Step 2: Change the timeout-branch exit code from 1 to 124 so callers can distinguish "Render didn't reach live in time" from "the script hit a real error."**
+
+Find the existing block at the bottom of the script:
 
 ```bash
-echo "→ Waiting for service ${SERVICE_ID} to be live on ${EXPECTED_SHA} (up to ${timeout}s)"
+echo "✗ Service ${SERVICE_ID} did not reach live on ${EXPECTED_SHA} within ${timeout}s"
+exit 1
 ```
 
-(Already uses `${timeout}` in the original — confirm no string concat changes are needed.)
+Change `exit 1` to `exit 124`. Exit 124 is the conventional "timed out" code (matches GNU `timeout(1)`), so the new prod-smoke workflow can branch on it: 0 = live, 124 = benign timeout (likely fast-follow merge superseded the deploy), anything else = hard failure (jq/curl/auth/network/no-live-deploy) that must fail the calling job.
 
-- [ ] **Step 3: Verify existing staging-smoke usage still works.**
+Add a header comment above the line explaining the convention:
+
+```bash
+# Exit 124 = timeout (matches GNU timeout(1) convention). Distinct from
+# the script's other non-zero exits (jq missing, missing env, curl
+# failure, no live deploy found), all of which use exit 1. Callers
+# that treat timeout as a benign-skip should key off this code
+# explicitly — anything other than 0 or 124 indicates a real failure.
+```
+
+Existing staging-smoke caller is unaffected: it treats any non-zero as failure, so 124 still fails as before.
+
+- [ ] **Step 3: Update the user-facing echo line to reference the dynamic value.**
+
+Already uses `${timeout}` in the original. Re-grep to confirm no string concat changes are needed:
+
+```bash
+grep -n 'within \${timeout}' .github/scripts/render-wait-for-live.sh
+```
+
+Expected: line matches; nothing to change.
+
+- [ ] **Step 4: Verify existing staging-smoke usage still works.**
 
 ```bash
 grep -n 'render-wait-for-live.sh' .github/workflows/staging-smoke.yml
 ```
 
-Expected: one call site, two args only (`"${{ vars.RENDER_SERVICE_ID_API_STAGING }}" "${{ steps.wait_target.outputs.sha }}"`). No change needed — the default-600 keeps it working.
+Expected: one call site, two args only (`"${{ vars.RENDER_SERVICE_ID_API_STAGING }}" "${{ steps.wait_target.outputs.sha }}"`). No change needed — the default-600 keeps it working, and exit 124 still surfaces as job failure for that caller.
 
-- [ ] **Step 4: Manual smoke test against staging (read RENDER_API_TOKEN from worktree's apps/api/.env.local).**
+- [ ] **Step 5: Manual smoke test against staging (read RENDER_API_TOKEN from worktree's apps/api/.env.local).**
 
 ```bash
 RENDER_API_TOKEN=<token> bash .github/scripts/render-wait-for-live.sh \
   srv-d7lnkdmgvqtc73f8eec0 \
   $(git rev-parse origin/main) \
   300
+echo "exit code: $?"
 ```
 
-Expected: either ✓ "live on ${SHA} after Ns" (Render is up to date), or a clean "did not reach live within 300s" timeout. Either is fine — confirms the timeout arg is plumbed correctly.
+Expected: either ✓ "live on ${SHA} after Ns" (exit 0), or a clean "did not reach live within 300s" timeout (exit 124). Either is fine — confirms the timeout arg + new exit code are plumbed correctly.
 
-- [ ] **Step 5: Commit.**
+- [ ] **Step 6: Commit.**
 
 ```bash
 git add .github/scripts/render-wait-for-live.sh
-git commit -m "feat(deploy-prod): accept optional timeout arg in render-wait-for-live
+git commit -m "feat(deploy-prod): accept optional timeout arg + distinct timeout exit code
 
 Default stays at 600s for backward compat (staging-smoke). New
 prod-smoke-after-deploy.yml passes 300s — prod API deploys take ~2 min
 consistently (15-deploy sample), so 5 min is plenty.
+
+Timeout branch now exits 124 (GNU timeout(1) convention) instead of 1.
+The new prod-smoke workflow keys off the distinct code so a real
+failure (jq missing, auth/network, no live deploy) doesn't get
+silently treated as a benign-skip alongside genuine timeouts.
 
 Refs #786"
 ```
@@ -298,13 +328,20 @@ jobs:
         with:
           ref: ${{ github.sha }}
 
-      # Preflight on every required var/secret used by any later step
-      # in this job — Render API + service IDs + smoke URLs + the
-      # Playwright globalSetup credentials (E2E_TEST_USER_*) + the
-      # Sentry DSN consumed by smoke. Listing all of them here means
-      # a missing value surfaces as a clear "Missing X" message rather
-      # than as an opaque Playwright globalSetup failure or a Sentry
-      # transport error several minutes into the run.
+      # Preflight on every fail-fast prerequisite for this job:
+      # Render API + service IDs + smoke URLs + Playwright
+      # globalSetup credentials (E2E_TEST_USER_*) + the Sentry DSN
+      # consumed by smoke. A missing value surfaces as a clear
+      # "Missing X" message rather than as an opaque Playwright
+      # globalSetup failure or a Sentry transport error several
+      # minutes into the run.
+      #
+      # Deliberately NOT preflighted: RESEND_API_KEY and ADMIN_EMAIL.
+      # The Resend notify step (Step 5) gracefully degrades to a
+      # `::warning::` annotation when either is missing — that's
+      # matched to deploy-prod.yml's existing behavior. Including
+      # them here would convert a best-effort signal into a hard
+      # blocker, which isn't the design intent.
       - name: Verify required config
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
@@ -337,54 +374,59 @@ jobs:
       # across 15 recent deploys: 1:50–2:26, median ~2:00), so 5 min
       # is 2x safety factor.
       #
-      # continue-on-error: a timeout here is benign — it means Render
-      # has moved past github.sha (e.g. a fast-follow merge superseded
-      # this deploy, or semantic-release's release commit raced past).
-      # We don't want to fail the workflow in that case; just skip
-      # smoke and let the next push's run pick up.
+      # The script exits 0 on live, 124 on timeout (benign — likely
+      # a fast-follow merge superseded this deploy), and 1 on hard
+      # error (jq missing, auth/network failure, no live deploy
+      # found, malformed service ID). We branch explicitly on those
+      # codes — NOT on `continue-on-error` + step.outcome — so a real
+      # failure can't silently get bucketed as "benign timeout" and
+      # skip smoke + rollback. `set +e` lets us inspect $? without
+      # the runner-level non-zero handling kicking in.
       - name: Wait for prod API to be live on pushed SHA
         id: wait_for_live
-        continue-on-error: true
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
         run: |
+          set +e
           bash .github/scripts/render-wait-for-live.sh \
             "${{ vars.RENDER_SERVICE_ID_API }}" \
             "${{ github.sha }}" \
             300
-
-      - name: Skip smoke if Render didn't reach github.sha
-        id: should_smoke
-        run: |
-          if [ "${{ steps.wait_for_live.outcome }}" = "success" ]; then
+          exit_code=$?
+          set -e
+          echo "exit_code=${exit_code}" >> "$GITHUB_OUTPUT"
+          if [ "${exit_code}" -eq 0 ]; then
             echo "should_smoke=true" >> "$GITHUB_OUTPUT"
-            echo "Render is live on ${{ github.sha }}; proceeding to smoke."
-          else
+            echo "✓ Render is live on ${{ github.sha }}; proceeding to smoke."
+          elif [ "${exit_code}" -eq 124 ]; then
             echo "should_smoke=false" >> "$GITHUB_OUTPUT"
             echo "::warning title=Smoke skipped::Render did not reach live on ${{ github.sha }} within 5 min. Most likely cause: a fast-follow merge superseded this deploy. The next push's smoke run will validate the latest deployable code."
+          else
+            echo "::error title=Wait-for-live failed::render-wait-for-live.sh exited ${exit_code} (not a timeout). Failing the job — nothing was smoked or rolled back. Check Render API status + RENDER_API_TOKEN."
+            exit "${exit_code}"
           fi
 ```
 
-- [ ] **Step 3: Add the Playwright setup + smoke steps (gated on `should_smoke == 'true'`).**
+- [ ] **Step 3: Add the Playwright setup + smoke steps (gated on `wait_for_live.outputs.should_smoke == 'true'`).**
 
 ```yaml
       - name: Setup pnpm
-        if: steps.should_smoke.outputs.should_smoke == 'true'
+        if: steps.wait_for_live.outputs.should_smoke == 'true'
         uses: pnpm/action-setup@v6
 
       - name: Setup Node.js
-        if: steps.should_smoke.outputs.should_smoke == 'true'
+        if: steps.wait_for_live.outputs.should_smoke == 'true'
         uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: 'pnpm'
 
       - name: Install dependencies
-        if: steps.should_smoke.outputs.should_smoke == 'true'
+        if: steps.wait_for_live.outputs.should_smoke == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Cache Playwright browsers
-        if: steps.should_smoke.outputs.should_smoke == 'true'
+        if: steps.wait_for_live.outputs.should_smoke == 'true'
         uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
@@ -392,7 +434,7 @@ jobs:
           restore-keys: playwright-${{ runner.os }}-
 
       - name: Install Playwright browsers
-        if: steps.should_smoke.outputs.should_smoke == 'true'
+        if: steps.wait_for_live.outputs.should_smoke == 'true'
         run: pnpm --filter @concert-crawl/e2e install-browsers
 
       # continue-on-error so evaluate_smoke can write the assertions_failed
@@ -402,7 +444,7 @@ jobs:
       # another reason" (not rollback-worthy).
       - name: Run smoke tests against production
         id: run_smoke
-        if: steps.should_smoke.outputs.should_smoke == 'true'
+        if: steps.wait_for_live.outputs.should_smoke == 'true'
         continue-on-error: true
         run: pnpm --filter @concert-crawl/e2e test:smoke
         env:
@@ -415,7 +457,7 @@ jobs:
 
       - name: Evaluate smoke outcome
         id: evaluate_smoke
-        if: steps.should_smoke.outputs.should_smoke == 'true'
+        if: steps.wait_for_live.outputs.should_smoke == 'true'
         run: |
           if [ "${{ steps.run_smoke.outcome }}" = "failure" ]; then
             echo "assertions_failed=true" >> "$GITHUB_OUTPUT"
@@ -436,20 +478,31 @@ jobs:
 
 - [ ] **Step 4: Add the rollback steps (gated on `assertions_failed == 'true'`).**
 
+`render-rollback.sh` detects service-ID prefix and behaves differently per type: `srv-*` (web service) is rolled back via Render's `/rollback` endpoint; `crn-*` (cron job) emits a `::warning::` annotation and exits 0 because Render's API rejects cron rollback (HTTP 400, no API path exists). Net effect of these three steps: API is rolled back automatically; the two crons need manual operator action — the Resend notify step below surfaces this so the operator knows.
+
 ```yaml
+      # Rolls back via Render's /rollback API. Only fires when
+      # Playwright actually asserted a failure (not on timeout, not
+      # on runner death) — see evaluate_smoke step above.
       - name: Roll back API service
         if: steps.evaluate_smoke.outputs.assertions_failed == 'true'
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
         run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_API }}" "concert-crawl-api"
 
-      - name: Roll back crawler triggers cron
+      # render-rollback.sh detects the crn-* prefix and SKIPS the
+      # rollback with a `::warning::` annotation — Render's API does
+      # not support cron rollback (HTTP 400 confirmed live). The
+      # step still runs so the warning is loud + audited; the
+      # operator handles cron rollback manually via the Render
+      # dashboard or by reverting the offending commit.
+      - name: Roll back crawler triggers cron (auto-skips — see comment)
         if: steps.evaluate_smoke.outputs.assertions_failed == 'true'
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
         run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" "concert-crawl-crawler-triggers"
 
-      - name: Roll back crawler daily cron
+      - name: Roll back crawler daily cron (auto-skips — see comment)
         if: steps.evaluate_smoke.outputs.assertions_failed == 'true'
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
@@ -694,10 +747,20 @@ After the pipeline overview, insert:
 
 1. Checks out `github.sha` — the SHA that just landed.
 2. Calls `render-wait-for-live.sh "$RENDER_SERVICE_ID_API" "$github.sha" 300` — polls Render every 10s for up to 5 min, waiting for the API service to be `live` on the pushed SHA.
-3. If Render reaches `live` in time: runs the Playwright smoke suite against prod.
-4. If Render doesn't reach `live` in 5 min: emits a `::warning::` annotation ("smoke skipped — Render didn't reach github.sha; likely a fast-follow merge superseded this deploy") and exits success. The NEXT push's smoke run will validate the latest deployable code.
-5. On smoke success: workflow ends green.
-6. On smoke failure: invokes `render-rollback.sh` for all three prod services, sends a Resend admin email, ends in `failure`.
+3. Branches on the script's exit code:
+   - `0` (live) → runs the Playwright smoke suite against prod.
+   - `124` (timeout) → emits a `::warning::` annotation and exits success. Common cause is a fast-follow merge or `[skip ci]` release commit superseding this deploy. The NEXT push's smoke run validates the latest deployable code.
+   - Any other code → fails the job loudly. Hard failures (jq missing, auth/network, no live deploy, malformed service ID) must not get silently bucketed as "benign timeout."
+4. On smoke success: workflow ends green.
+5. On smoke failure: invokes `render-rollback.sh` for all three prod services. Behavior diverges by service type — see "Caveat on cron service rollback" below — and the workflow sends a Resend admin email summarizing the attempt, then ends in `failure`.
+
+### Caveat on cron service rollback (preserved from prior runbook)
+
+`render-rollback.sh` detects Render service ID prefix:
+- `srv-*` (web service) → calls Render's `/rollback` endpoint, rolls API back to the prior `live` deploy.
+- `crn-*` (cron job) → Render's `/rollback` endpoint rejects cron services (HTTP 400; confirmed against the live API). The script emits a `::warning::` annotation and exits 0 so the workflow can continue rolling back the other services.
+
+**Net behavior of "smoke failure → rollback":** only the API web service is actually rolled back automatically. The two crawler crons require manual rollback — either via the Render dashboard's Manual Deploy on a prior commit, or (typically preferred) by reverting the offending commit on `main` and letting Render auto-deploy the revert. The Resend admin email surfaces this explicitly so the operator knows manual action is needed for the crons.
 
 ### Why push, not cron
 
@@ -707,7 +770,11 @@ A cron design was evaluated and rejected: it would have cost ~$35/mo more in idl
 
 ### Semantic-release release commits
 
-semantic-release lands a `chore(release): X.Y.Z [skip ci]` commit ~3 min after every merge. The `[skip ci]` convention prevents this workflow from firing for that commit. The merge commit's smoke workflow does fire — by the time it smokes prod, Render may already be on the release commit (merge-commit code + a `package.json` version bump). Smoke validity is preserved either way.
+semantic-release lands a `chore(release): X.Y.Z [skip ci]` commit ~3 min after every merge. The `[skip ci]` convention prevents this workflow from firing for that commit. The merge commit's smoke workflow does fire and waits for Render to be live on the merge SHA.
+
+**Typical case (Render queues deploys in order):** the merge build completes first and is live for ~3 min before the release build supersedes it. The smoke catches that window. ✓
+
+**Edge case (Render cancels merge build mid-flight when the release commit lands):** merge SHA never reaches `live`, the wait exits 124, smoke is skipped, release commit ends up live and unsmoked. We accept this gap because the release commit is code-equivalent to the merge commit (`package.json` + CHANGELOG version bumps only). Operators can `workflow_dispatch` the smoke workflow against the release commit if a specific release warrants explicit validation.
 ```
 
 - [ ] **Step 3: Rewrite "Enabling the pipeline" to reflect Render-native enablement.**
