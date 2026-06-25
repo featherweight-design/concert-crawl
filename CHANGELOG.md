@@ -1,3 +1,23 @@
+# [1.79.0](https://github.com/HartiganHM/concert-crawl/compare/v1.78.0...v1.79.0) (2026-06-25)
+
+
+### Bug Fixes
+
+* **web:** r2 — address Copilot review round 2 on PR [#802](https://github.com/HartiganHM/concert-crawl/issues/802) ([64bed50](https://github.com/HartiganHM/concert-crawl/commit/64bed503bcc6517272e1278b04c876b9c395dc9c))
+* **web:** r3 — address Copilot review round 3 on PR [#802](https://github.com/HartiganHM/concert-crawl/issues/802) ([7cc58ae](https://github.com/HartiganHM/concert-crawl/commit/7cc58aebc526173d5a93cdf7fa98a17ef28ea8a8))
+
+
+### Features
+
+* **api:** view=hidden-flagged-for-review + isConcertReviewNeeded projection ([783be11](https://github.com/HartiganHM/concert-crawl/commit/783be110f967fc359385bd99a4e805dd23c0f249))
+* **web:** admin copy for classification review queue ([9853d34](https://github.com/HartiganHM/concert-crawl/commit/9853d341a33414c5c965f1c7a4f2ae389f2b6585))
+* **web:** all-events filters flagged round-trip + isConcertReviewNeeded ([d55aa2f](https://github.com/HartiganHM/concert-crawl/commit/d55aa2f3303a7bf8582ff339ce94e1c728e12c61))
+* **web:** classification section becomes interactive ([26af4df](https://github.com/HartiganHM/concert-crawl/commit/26af4df9b2ba6f65e8eb88421ec4c487946222e6))
+* **web:** danger zone section drops mark-non-concert ([f5d271e](https://github.com/HartiganHM/concert-crawl/commit/f5d271e747d37490c63ff412207702a5dc601681))
+* **web:** event confirm modal handles mark-as-concert kind ([01c5473](https://github.com/HartiganHM/concert-crawl/commit/01c54737c7bc267d65d63f932554cad6335f2a1d))
+* **web:** flagged-for-review filter chip + empty state ([c995a84](https://github.com/HartiganHM/concert-crawl/commit/c995a84c951c8769f5c50ba56258878dd8a1d5e1))
+* **web:** wire classification + danger zone refactor ([ea15ac2](https://github.com/HartiganHM/concert-crawl/commit/ea15ac22829819ec4fbeda198bd2ca699ec09ef8))
+
 # [1.78.0](https://github.com/HartiganHM/concert-crawl/compare/v1.77.0...v1.78.0) (2026-06-25)
 
 
