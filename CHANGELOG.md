@@ -1,3 +1,16 @@
+# [1.78.0](https://github.com/HartiganHM/concert-crawl/compare/v1.77.0...v1.78.0) (2026-06-25)
+
+
+### Bug Fixes
+
+* **scripts:** r1 — address Copilot review round 1 on PR [#799](https://github.com/HartiganHM/concert-crawl/issues/799) ([20f184a](https://github.com/HartiganHM/concert-crawl/commit/20f184a25aad1807f114de8fcf3b36ed97d5c543))
+
+
+### Features
+
+* **scripts:** isconcert-review-needed backfill helpers ([d4d7aa8](https://github.com/HartiganHM/concert-crawl/commit/d4d7aa877a428a320718f0f655fe782d7e50b4b3))
+* **scripts:** isconcert-review-needed backfill main + classifyBatch ([6810409](https://github.com/HartiganHM/concert-crawl/commit/6810409e4d4e1c381d29baa0263017bac9533795))
+
 # [1.77.0](https://github.com/HartiganHM/concert-crawl/compare/v1.76.3...v1.77.0) (2026-06-25)
 
 
