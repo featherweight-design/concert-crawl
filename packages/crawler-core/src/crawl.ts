@@ -9,6 +9,7 @@ import {
   costTracking,
 } from '@concert-crawl/db'
 import type { CrawlRun } from '@concert-crawl/db'
+import { reportFailure } from '@concert-crawl/logger'
 import { isAllowed } from './lib/robots.js'
 import { sendCrawlFailureEmail } from './lib/email.js'
 import { checkEventCountDrop } from './lib/event-count-alert.js'
@@ -937,13 +938,12 @@ export async function crawlVenue(
             consecutiveFailures: newFailureCount,
           })
         } catch (emailErr) {
-          console.log(
-            JSON.stringify({
-              event: 'crawl.email_error',
-              venueId,
-              error: String(emailErr),
-            }),
-          )
+          reportFailure({
+            event: 'crawl.email_error',
+            severity: 'error',
+            venueId,
+            error: String(emailErr),
+          })
         }
       }
     }
@@ -965,14 +965,13 @@ export async function crawlVenue(
       .returning()
     if (!crawlRun) throw new Error('crawl_runs insert returned no row')
 
-    console.log(
-      JSON.stringify({
-        event: 'crawl.failed',
-        venueId,
-        error: String(err),
-        durationMs,
-      }),
-    )
+    reportFailure({
+      event: 'crawl.failed',
+      severity: 'error',
+      venueId,
+      error: String(err),
+      durationMs,
+    })
 
     return crawlRun
   }

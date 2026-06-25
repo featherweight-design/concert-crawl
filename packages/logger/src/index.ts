@@ -1,4 +1,5 @@
 import pino, { type Logger } from 'pino'
+import * as Sentry from '@sentry/node'
 import type {} from 'hono'
 
 // Extend Hono's context type map so c.get('requestId') is typed everywhere.
@@ -28,4 +29,52 @@ export function createLogger(name: string): Logger {
       : undefined
 
   return pino({ name, level }, transport)
+}
+
+// Operational-failure reporter: emits a structured stdout log AND forwards
+// to Sentry. Crawler/API code historically called
+// `console.log(JSON.stringify({event: '...', ...}))` directly for operational
+// failures (LLM tool-call invalidation, email send errors, alert pipeline
+// crashes). Those logs were captured by Render's log aggregator but never
+// reached Sentry — the Sentry Node SDK does not auto-capture `console.log`
+// (only unhandled exceptions and, with `captureConsoleIntegration`,
+// `console.error`). The Red Rocks went-dark incident on 2026-06-25 made
+// this gap concrete: the `llm.invalid_tool_input` failure that silently
+// caused 0-event extractions for hours was invisible in Sentry.
+//
+// `reportFailure` is the new canonical helper for those callsites. Severity
+// 'error' fires `Sentry.captureMessage(event, { level: 'error', extra })`;
+// severity 'warn' fires the same with `level: 'warning'`. The stdout log
+// shape is preserved (existing `{event, ...extra}` JSON line) so log-search
+// dashboards and alert rules built on the old pattern keep working.
+//
+// Sentry.captureMessage is a no-op when Sentry has not been initialized in
+// the current process (e.g. local dev, unit tests), so callers do not need
+// to gate on environment.
+export type FailureSeverity = 'error' | 'warn'
+
+export interface FailureReport {
+  /** Structured event identifier, e.g. 'llm.invalid_tool_input'. */
+  event: string
+  /** Routing severity. 'error' maps to Sentry level 'error'; 'warn' maps to 'warning'. */
+  severity: FailureSeverity
+  /** Arbitrary structured context. Forwarded to Sentry `extra` verbatim. */
+  [key: string]: unknown
+}
+
+export function reportFailure(report: FailureReport): void {
+  // Stdout side: preserve the historic structured-log shape. The 'severity'
+  // field is included so log-search consumers can distinguish error vs warn
+  // without re-deriving from the event name.
+  console.log(JSON.stringify(report))
+
+  // Sentry side: forward as a captureMessage. The 'severity' and 'event'
+  // fields are unpacked off the extra payload because they're already
+  // represented in the message + level; everything else flows as 'extra'
+  // context (visible on the Sentry issue page).
+  const { event, severity, ...extra } = report
+  Sentry.captureMessage(event, {
+    level: severity === 'error' ? 'error' : 'warning',
+    extra,
+  })
 }

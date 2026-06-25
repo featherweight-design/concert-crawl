@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import { reportFailure } from '@concert-crawl/logger'
 
 function escapeHtml(str: string): string {
   return str
@@ -14,26 +15,24 @@ function escapeHtml(str: string): string {
 // we can fall back to the prod default), use warnMisconfigured instead so
 // metrics on `email.skipped` aren't polluted with non-skip events.
 function warnMissingEnv(varName: string, context: string): void {
-  console.warn(
-    JSON.stringify({
-      event: 'email.skipped',
-      reason: `${varName} not set`,
-      context,
-    }),
-  )
+  reportFailure({
+    event: 'email.skipped',
+    severity: 'warn',
+    reason: `${varName} not set`,
+    context,
+  })
 }
 
 // Misconfiguration warning that does NOT block the email send (the alert
 // still goes out, just with a fallback). Kept as a distinct event so a
 // dashboard counting 'email.skipped' won't false-alarm on these.
 function warnMisconfigured(varName: string, context: string): void {
-  console.warn(
-    JSON.stringify({
-      event: 'email.misconfigured',
-      reason: `${varName} missing or invalid`,
-      context,
-    }),
-  )
+  reportFailure({
+    event: 'email.misconfigured',
+    severity: 'warn',
+    reason: `${varName} missing or invalid`,
+    context,
+  })
 }
 
 const ALERT_FROM = 'Concert Crawl Alerts <alerts@concertcrawl.app>'
@@ -113,14 +112,13 @@ function adminCrawlUrl(venueId?: string): string {
   } catch (err) {
     // Distinct event from email.skipped — the email still sends, we just
     // can't honour the configured ADMIN_URL.
-    console.warn(
-      JSON.stringify({
-        event: 'email.misconfigured',
-        reason: 'ADMIN_URL is not a parseable URL',
-        adminUrl,
-        error: String(err),
-      }),
-    )
+    reportFailure({
+      event: 'email.misconfigured',
+      severity: 'warn',
+      reason: 'ADMIN_URL is not a parseable URL',
+      adminUrl,
+      error: String(err),
+    })
     url = new URL('/admin/crawl', PROD_DEFAULT)
   }
   if (venueId) url.searchParams.set('venueId', venueId)

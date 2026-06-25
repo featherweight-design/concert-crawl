@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod'
+import { reportFailure } from '@concert-crawl/logger'
 import type { LLMResult } from '../../types.js'
 
 const isoDateSchema = z
@@ -234,19 +235,22 @@ export async function extractWithLlm(
 
   const toolUseBlock = response.content.find((b) => b.type === 'tool_use')
   if (!toolUseBlock || toolUseBlock.type !== 'tool_use') {
-    console.log(JSON.stringify({ event: 'llm.no_tool_use', sourceUrl }))
+    reportFailure({
+      event: 'llm.no_tool_use',
+      severity: 'warn',
+      sourceUrl,
+    })
     return { events: [], usage: tokenUsage }
   }
 
   const parsed = ToolInputSchema.safeParse(toolUseBlock.input)
   if (!parsed.success) {
-    console.log(
-      JSON.stringify({
-        event: 'llm.invalid_tool_input',
-        sourceUrl,
-        error: parsed.error.message,
-      }),
-    )
+    reportFailure({
+      event: 'llm.invalid_tool_input',
+      severity: 'error',
+      sourceUrl,
+      error: parsed.error.message,
+    })
     return { events: [], usage: tokenUsage }
   }
 

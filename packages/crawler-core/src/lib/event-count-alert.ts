@@ -7,6 +7,7 @@
 
 import { and, desc, eq, gt, ne } from 'drizzle-orm'
 import { db, crawlRuns, notifications, venues } from '@concert-crawl/db'
+import { reportFailure } from '@concert-crawl/logger'
 import { sendEventCountDropEmail } from './email.js'
 
 // How many recent successful runs to average for the baseline. 7 days of
@@ -66,14 +67,13 @@ export async function checkEventCountDrop(
   try {
     return await runCheck(input)
   } catch (err) {
-    console.log(
-      JSON.stringify({
-        event: 'crawl.event_count_alert.error',
-        venueId: input.venueId,
-        crawlRunId: input.crawlRunId,
-        error: err instanceof Error ? err.message : String(err),
-      }),
-    )
+    reportFailure({
+      event: 'crawl.event_count_alert.error',
+      severity: 'error',
+      venueId: input.venueId,
+      crawlRunId: input.crawlRunId,
+      error: err instanceof Error ? err.message : String(err),
+    })
     return { fired: false, reason: 'no_drop' }
   }
 }
@@ -190,13 +190,12 @@ async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
       dropPercent,
     })
   } catch (emailErr) {
-    console.log(
-      JSON.stringify({
-        event: 'crawl.event_count_alert.email_error',
-        venueId: input.venueId,
-        error: String(emailErr),
-      }),
-    )
+    reportFailure({
+      event: 'crawl.event_count_alert.email_error',
+      severity: 'error',
+      venueId: input.venueId,
+      error: String(emailErr),
+    })
   }
 
   return {

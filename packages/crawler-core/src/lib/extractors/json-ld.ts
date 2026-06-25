@@ -1,3 +1,4 @@
+import { reportFailure } from '@concert-crawl/logger'
 import type { NormalizedEvent } from '../../types.js'
 
 const EVENT_TYPES = new Set(['Event', 'MusicEvent'])
@@ -159,14 +160,13 @@ function validateTimeZone(timeZone: string, sourceUrl: string): string {
     new Intl.DateTimeFormat('en-CA', { timeZone })
     return timeZone
   } catch {
-    console.log(
-      JSON.stringify({
-        event: 'json-ld.invalid_timezone',
-        sourceUrl,
-        timeZone,
-        fallback: 'UTC',
-      }),
-    )
+    reportFailure({
+      event: 'json-ld.invalid_timezone',
+      severity: 'error',
+      sourceUrl,
+      timeZone,
+      fallback: 'UTC',
+    })
     return 'UTC'
   }
 }
@@ -192,7 +192,11 @@ export function extractJsonLd(
         ...extractEventsFromParsed(parsed, sourceUrl, effectiveTimeZone),
       )
     } catch {
-      console.log(JSON.stringify({ event: 'json-ld.parse_error', sourceUrl }))
+      reportFailure({
+        event: 'json-ld.parse_error',
+        severity: 'warn',
+        sourceUrl,
+      })
     }
   }
 

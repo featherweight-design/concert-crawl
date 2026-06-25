@@ -434,6 +434,9 @@ importers:
 
   packages/logger:
     dependencies:
+      '@sentry/node':
+        specifier: ^10.58.0
+        version: 10.58.0
       pino:
         specifier: ^10.3.1
         version: 10.3.1
