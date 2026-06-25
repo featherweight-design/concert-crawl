@@ -120,10 +120,7 @@ function resolveTierCta(tierKey, state) {
       founder: { label: "Claim Founder · $3", tone: "founder" },
     }[tierKey];
   }
-  if (state === "free") {
-    if (tierKey === "free") return base;
-    return base; // upgrade actions
-  }
+  if (state === "free") return base; // upgrade actions (current-Free is short-circuited above via isCurrent)
   if (state === "supporter") {
     if (tierKey === "free") return { label: "Downgrade to Free", tone: "ghost" };
     if (tierKey === "premium") return { label: "Upgrade to Premium", tone: "signal" };
@@ -376,7 +373,7 @@ function TierPicker({
         <div style={{
           textAlign: "center", fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5,
           color: "var(--fg-subtle)", letterSpacing: "0.12em", textTransform: "uppercase", padding: "8px 0 4px",
-        }}>Cancel any time · billed monthly · stripe handles cards</div>
+        }}>Cancel any time · billed monthly · Stripe handles cards</div>
       </div>
     </SheetChrome>
   );
