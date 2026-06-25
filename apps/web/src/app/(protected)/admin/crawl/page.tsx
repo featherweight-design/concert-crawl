@@ -5,6 +5,7 @@ import {
   CrawlSplitView,
   CrawlRunAllButton,
 } from '@/components/admin/crawl/CrawlSplitView'
+import { CrawlAlertFilter } from '@/components/admin/crawl/CrawlAlertFilter'
 import { IssuesBanner } from '@/components/admin/crawl/IssuesBanner'
 import {
   formatSweepHint,
@@ -102,10 +103,23 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
     (Array.isArray(rawVenueId) ? rawVenueId[0] : rawVenueId) || undefined
   const rawTab = resolvedParams.tab
   const initialTab = (Array.isArray(rawTab) ? rawTab[0] : rawTab) || undefined
+  // #804: when `?hasAlert=true` is in the URL, narrow the runs list to only
+  // those carrying an unread admin_alert. The filter UI in the page header
+  // toggles this param via Next.js navigation; the server component
+  // re-renders without needing client state.
+  const rawHasAlert = resolvedParams.hasAlert
+  const hasAlertParam = Array.isArray(rawHasAlert)
+    ? rawHasAlert[0]
+    : rawHasAlert
+  const hasAlertOnly = hasAlertParam === 'true'
+
+  const runsUrl = hasAlertOnly
+    ? '/v1/admin/crawl/runs?limit=50&hasAlert=true'
+    : '/v1/admin/crawl/runs?limit=50'
 
   const [rawStatus, runs] = await Promise.all([
     apiClient.get<RawVenueStatus[]>('/v1/admin/crawl/status', token),
-    apiClient.get<CrawlRun[]>('/v1/admin/crawl/runs?limit=50', token),
+    apiClient.get<CrawlRun[]>(runsUrl, token),
   ])
   const status = rawStatus.map(toStatusRow)
   const todayStrMT = new Date().toLocaleDateString('en-US', {
@@ -164,7 +178,19 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
         eyebrow={ADMIN_COPY.crawlPage.sectionEyebrow}
         title={ADMIN_COPY.crawlPage.sectionTitle}
         subtitle={ADMIN_COPY.crawlPage.sectionSubtitle}
-        actions={<CrawlRunAllButton />}
+        actions={
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 12,
+              flexWrap: 'wrap',
+            }}
+          >
+            <CrawlAlertFilter hasAlert={hasAlertOnly} />
+            <CrawlRunAllButton />
+          </div>
+        }
       />
 
       <IssuesBanner

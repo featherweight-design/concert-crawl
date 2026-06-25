@@ -328,15 +328,15 @@ describe('Admin crawl routes', () => {
     // through /runs. Both the notifications scan and the crawl_runs chain
     // end in `.orderBy().limit()`, so the same `limit` mock handles both.
     //
-    // After the PR #812 round-3 refactor, the route runs the notifications
-    // scan FIRST (its result is used to scope the crawl_runs query when
-    // hasAlert=true) and the crawl_runs query SECOND. The intermediate
-    // `where()` and `orderBy()` calls use the default `mockReturnThis()`.
+    // The route runs the notifications scan FIRST (its result scopes the
+    // crawl_runs query when hasAlert=true) and the crawl_runs query
+    // SECOND. The intermediate `where()` and `orderBy()` calls use the
+    // default `mockReturnThis()`.
     //
-    // For hasAlert=true with no matching notifications, the route short-
-    // circuits before the crawl_runs query — callers can pass an empty
-    // `crawlRunRows` and the second mockResolvedValueOnce is harmlessly
-    // ignored.
+    // For hasAlert=true with no matching notifications, the route
+    // short-circuits before the crawl_runs query — callers can pass an
+    // empty `crawlRunRows` and the second mockResolvedValueOnce is
+    // harmlessly ignored.
     function queueAlertsThenRuns(
       db: typeof import('@concert-crawl/db').db,
       notificationRows: unknown[],
@@ -539,10 +539,11 @@ describe('Admin crawl routes', () => {
       adminAuth()
       const { db } = await import('@concert-crawl/db')
       const RUN_WITH_ALERT = '00000000-0000-0000-0000-0000000000e1'
-      // The post-PR #812-round-3 refactor scopes the crawl_runs query by
-      // the alerted run-id set, so the DB returns only the alerted run.
-      // The mock can't actually evaluate the SQL `IN`, so it has to return
-      // the expected filtered result directly.
+      // The route scopes the crawl_runs query by the alerted run-id set
+      // (WHERE id IN (alertedRunIds)) when hasAlert=true, so the DB
+      // returns only the alerted run. The mock can't actually evaluate
+      // the SQL `IN`, so it has to return the expected filtered result
+      // directly.
       queueAlertsThenRuns(
         db,
         [
@@ -570,12 +571,12 @@ describe('Admin crawl routes', () => {
       expect(body.data[0]?.activeAlert).not.toBeNull()
     })
 
-    // PR #812 round 3 regression: previously the route fetched the top-N
-    // crawl_runs from SQL FIRST and then JS-filtered by activeAlert. That
-    // meant `hasAlert=true&limit=10` could return an empty list even when
-    // older runs (rank 11+) had unread alerts. After the refactor the
-    // notifications scan runs first and the crawl_runs query is scoped
-    // by the alerted id set, so older alerted runs surface correctly.
+    // Regression: a previous implementation fetched the top-N crawl_runs
+    // from SQL first and then JS-filtered by activeAlert, which meant
+    // `hasAlert=true&limit=10` could return an empty list even when
+    // older runs (rank 11+) had unread alerts. The notifications scan
+    // now runs first and scopes the crawl_runs query by the alerted id
+    // set, so older alerted runs surface correctly.
     it('hasAlert=true surfaces older alerted runs outside the natural top-N window', async () => {
       adminAuth()
       const { db } = await import('@concert-crawl/db')

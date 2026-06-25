@@ -183,14 +183,15 @@ crawlAdminRouter.get(
   async (ctx) => {
     const { venueId, limit, hasAlert } = ctx.req.valid('query')
 
-    // Scan unread admin_alert notifications first when we'll need them.
-    // We always do this when hasAlert=true (because the alert set determines
-    // which crawl_runs to return), and also do it when hasAlert is unset so
-    // the list rows that match can carry the badge. Scope is the two
-    // categories a crawl row surfaces (`crawl.event_count_dropped` for
-    // went-dark/sharp-drop, `crawl.failed` for the consecutive-failure path)
-    // and only unread rows — once an operator clears the notification,
-    // the badge clears too.
+    // Scan unread admin_alert notifications first. When hasAlert=true
+    // the alert set determines which crawl_runs to return; when
+    // hasAlert=false (the default — the Zod transform coerces missing
+    // params to false) the list rows still need the badge annotation,
+    // so we fetch alerts unconditionally. Scope is the two categories a
+    // crawl row surfaces (`crawl.event_count_dropped` for went-dark /
+    // sharp-drop, `crawl.failed` for the consecutive-failure path) and
+    // only unread rows — once an operator clears the notification, the
+    // badge clears too.
     const rawAlerts = await db
       .select({
         id: notifications.id,

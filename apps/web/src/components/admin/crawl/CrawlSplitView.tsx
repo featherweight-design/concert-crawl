@@ -20,6 +20,7 @@ import type { InspectorTab } from '@/components/admin/crawl/InspectorTabs'
 import { DiagnosticsPanel } from '@/components/admin/crawl/DiagnosticsPanel'
 import { StagedApplyConfirm } from '@/components/admin/crawl/StagedApplyConfirm'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { resolveCrawlAlertBadge } from '@/components/admin/definitions/constants'
 
 const MT_TIMEZONE = 'America/Denver'
 
@@ -1358,12 +1359,47 @@ export const CrawlRunHistoryTable = ({
                       : '—'}
                   </TD>
                   <TD>
-                    <StatusBadge
-                      kind={STATUS_KIND[run.status] ?? 'neutral'}
-                      dot
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: 6,
+                      }}
                     >
-                      {run.status.charAt(0).toUpperCase() + run.status.slice(1)}
-                    </StatusBadge>
+                      <StatusBadge
+                        kind={STATUS_KIND[run.status] ?? 'neutral'}
+                        dot
+                      >
+                        {run.status.charAt(0).toUpperCase() +
+                          run.status.slice(1)}
+                      </StatusBadge>
+                      {run.activeAlert
+                        ? (() => {
+                            const alertConfig = resolveCrawlAlertBadge(
+                              run.activeAlert,
+                            )
+                            // StatusBadge primitive doesn't accept title/
+                            // aria-label, so wrap in a span with both:
+                            // title gives mouse-hover context; aria-label
+                            // prepends the visible label so screen readers
+                            // announce the specific failure mode rather
+                            // than only the generic description.
+                            return (
+                              <span
+                                title={
+                                  ADMIN_COPY.crawlHistoryTable.alertBadgeTitle
+                                }
+                                aria-label={`${alertConfig.label}. ${ADMIN_COPY.crawlHistoryTable.alertBadgeAriaLabel}`}
+                              >
+                                <StatusBadge kind={alertConfig.kind}>
+                                  {alertConfig.label}
+                                </StatusBadge>
+                              </span>
+                            )
+                          })()
+                        : null}
+                    </span>
                   </TD>
                   <TD>
                     <StatusBadge

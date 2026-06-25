@@ -14,7 +14,7 @@ describe('resolveCrawlAlertBadge', () => {
       severity: 'went_dark',
     })
     expect(config.label).toBe('Went dark')
-    expect(config.variant).toBe('destructive')
+    expect(config.kind).toBe('danger')
   })
 
   it('returns Dropped sharply label for dropped_sharply severity', () => {
@@ -24,7 +24,7 @@ describe('resolveCrawlAlertBadge', () => {
       severity: 'dropped_sharply',
     })
     expect(config.label).toBe('Dropped sharply')
-    expect(config.variant).toBe('destructive')
+    expect(config.kind).toBe('danger')
   })
 
   it('falls back to neutral Event drop label when severity is null', () => {
@@ -50,6 +50,6 @@ describe('resolveCrawlAlertBadge', () => {
       category: 'crawl.failed',
     })
     expect(config.label).toBe('Failing')
-    expect(config.variant).toBe('destructive')
+    expect(config.kind).toBe('danger')
   })
 })

@@ -1,5 +1,6 @@
 import type { ActiveCrawlAlert, CrawlStatus } from '@concert-crawl/types'
 import type { CrawlStatusBadgeConfig } from '@/types/badge'
+import type { StatusKind } from '@/components/admin/primitives/utils'
 import { ADMIN_COPY } from './copy'
 
 export const CRAWL_STATUS_BADGES: Record<CrawlStatus, CrawlStatusBadgeConfig> =
@@ -12,39 +13,45 @@ export const CRAWL_STATUS_BADGES: Record<CrawlStatus, CrawlStatusBadgeConfig> =
     skipped: { label: 'Skipped', variant: 'outline' },
   }
 
-// Additive alert pill rendered alongside the status pill when an unread
-// admin_alert notification points at this crawl_run (#804). Lets an operator
-// see at a glance that a "Success" row actually tripped the went-dark check
-// or a 3-failure consecutive auto-pause.
+// Additive alert pill rendered alongside the status pill in the existing
+// CrawlRunHistoryTable (apps/web/src/components/admin/crawl/CrawlSplitView.tsx)
+// when an unread admin_alert notification points at the crawl_run (#804).
+// Lets an operator see at a glance that a "Success" row actually tripped
+// the went-dark check or a 3-failure consecutive auto-pause.
 //
 // 'crawl.event_count_dropped' covers two failure modes — went-dark (0
 // events) and dropped-sharply (non-zero but well below baseline). The API
 // threads `severity` through `ActiveCrawlAlert` so we render the specific
 // label here instead of a generic "Event drop". Older rows whose metadata
 // predates the severity field fall back to the neutral label.
-export function resolveCrawlAlertBadge(
-  alert: ActiveCrawlAlert,
-): CrawlStatusBadgeConfig {
+//
+// `kind` is `StatusKind` rather than a shadcn Badge variant because the
+// consumer renders via the admin StatusBadge primitive (matches the visual
+// language of the other badges in that table).
+export function resolveCrawlAlertBadge(alert: ActiveCrawlAlert): {
+  label: string
+  kind: StatusKind
+} {
   if (alert.category === 'crawl.failed') {
     return {
       label: ADMIN_COPY.crawlHistoryTable.alertBadgeLabelFailing,
-      variant: 'destructive',
+      kind: 'danger',
     }
   }
   if (alert.severity === 'went_dark') {
     return {
       label: ADMIN_COPY.crawlHistoryTable.alertBadgeLabelWentDark,
-      variant: 'destructive',
+      kind: 'danger',
     }
   }
   if (alert.severity === 'dropped_sharply') {
     return {
       label: ADMIN_COPY.crawlHistoryTable.alertBadgeLabelDroppedSharply,
-      variant: 'destructive',
+      kind: 'danger',
     }
   }
   return {
     label: ADMIN_COPY.crawlHistoryTable.alertBadgeLabelEventDrop,
-    variant: 'destructive',
+    kind: 'danger',
   }
 }
