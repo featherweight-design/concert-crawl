@@ -1390,8 +1390,10 @@ export const CrawlRunHistoryTable = ({
                             // prepends the visible label so screen readers
                             // announce the specific failure mode. The
                             // StatusBadge primitive forwards both to its
-                            // inner span and adds role="img" so the
-                            // accessible name is reliably exposed.
+                            // inner span; we deliberately don't promote
+                            // the span to role="img" (semantically wrong
+                            // for a text badge) — modern AT widely
+                            // supports aria-label on role="generic".
                             return (
                               <StatusBadge
                                 kind={alertConfig.kind}
