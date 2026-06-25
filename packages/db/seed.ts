@@ -2113,15 +2113,19 @@ async function seed() {
         const popularityOlderish = new Date(Date.now() - 7 * popularityDayMs)
         const popularityFresh = new Date(Date.now() - 1 * popularityDayMs)
 
+        // Templates omit `eventId` because it's resolved per-target after the
+        // events lookup below. Typing the template as Omit<…, 'eventId'>
+        // prevents a future refactor from accidentally pushing the templates
+        // straight to `db.insert(priceSubmissions)` and inserting a row with
+        // `eventId === ''` (would violate the FK to events.id).
         const popularityTargets: ReadonlyArray<{
           title: string
-          submissions: ReadonlyArray<NewPriceSubmission>
+          submissions: ReadonlyArray<Omit<NewPriceSubmission, 'eventId'>>
         }> = [
           {
             title: 'Radiohead at Red Rocks',
             submissions: [
               {
-                eventId: '',
                 userId: FAKE_USER_IDS.phishfan42,
                 priceMin: '78.00',
                 priceMax: '155.00',
@@ -2136,7 +2140,6 @@ async function seed() {
                 updatedAt: popularityOlder,
               },
               {
-                eventId: '',
                 userId: FAKE_USER_IDS.denvermusic,
                 priceMin: '95.00',
                 priceMax: '220.00',
@@ -2151,7 +2154,6 @@ async function seed() {
                 updatedAt: popularityOlderish,
               },
               {
-                eventId: '',
                 userId: FAKE_USER_IDS.bouldergrrl,
                 priceMin: '80.00',
                 tier: 'GA',
@@ -2170,7 +2172,6 @@ async function seed() {
             title: 'Phish at Red Rocks',
             submissions: [
               {
-                eventId: '',
                 userId: FAKE_USER_IDS.phishfan42,
                 priceMin: '90.00',
                 priceMax: '180.00',
@@ -2185,7 +2186,6 @@ async function seed() {
                 updatedAt: popularityOlder,
               },
               {
-                eventId: '',
                 userId: FAKE_USER_IDS.mtncreature,
                 priceMin: '100.00',
                 priceMax: '210.00',
@@ -2205,7 +2205,6 @@ async function seed() {
             title: 'Big Thief',
             submissions: [
               {
-                eventId: '',
                 userId: FAKE_USER_IDS.notyourgf,
                 priceMin: '35.00',
                 priceMax: '52.00',
@@ -2220,7 +2219,6 @@ async function seed() {
                 updatedAt: popularityOlder,
               },
               {
-                eventId: '',
                 userId: FAKE_USER_IDS.lola,
                 priceMin: '40.00',
                 tier: 'GA',
@@ -2239,7 +2237,6 @@ async function seed() {
             title: 'Bon Iver',
             submissions: [
               {
-                eventId: '',
                 userId: FAKE_USER_IDS.denvermusic,
                 priceMin: '60.00',
                 priceMax: '98.00',
@@ -2254,7 +2251,6 @@ async function seed() {
                 updatedAt: popularityOlderish,
               },
               {
-                eventId: '',
                 userId: FAKE_USER_IDS.jordan_m,
                 priceMin: '70.00',
                 priceMax: '110.00',
@@ -2273,7 +2269,6 @@ async function seed() {
             title: 'Khruangbin at Red Rocks',
             submissions: [
               {
-                eventId: '',
                 userId: FAKE_USER_IDS.bouldergrrl,
                 priceMin: '68.00',
                 priceMax: '125.00',
@@ -3611,11 +3606,16 @@ async function seed() {
   // apps/web/src/components/consumer/price-region/lib/decision-tree.ts so a
   // dev can run `pnpm db:seed` and click through every new component + state.
   // -----------------------------------------------------------------------
+  // Guard on the FULL expected count (9) rather than `> 0` so a previous
+  // run that crashed mid-insert (say after inserting events Q-T but before
+  // U-Y) can still complete on the next `pnpm db:seed` instead of silently
+  // declaring "done" with partial coverage.
+  const PR4_EXPECTED_COUNT = 9
   const pr4Count = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(eventsTable)
     .where(sql`title LIKE '[PR4]%'`)
-  const hasPr4 = (pr4Count[0]?.count ?? 0) > 0
+  const hasPr4 = (pr4Count[0]?.count ?? 0) >= PR4_EXPECTED_COUNT
 
   if (!hasPr4) {
     const allVenuesPr4 = await db.select().from(venues)
@@ -3788,14 +3788,32 @@ async function seed() {
         },
       ]
 
-      const insertedPr4 = await db
-        .insert(eventsTable)
-        .values(pr4EventRows)
-        .returning()
-      console.warn(`Inserted ${insertedPr4.length} PR4 test events.`)
+      // Pre-filter against existing PR4 titles so a previous run that
+      // inserted some-but-not-all PR4 events (crashed mid-block) can
+      // re-attempt to fill in the missing ones without hitting the
+      // (venue_id, date, artist) unique index or creating duplicates.
+      const existingPr4 = await db
+        .select()
+        .from(eventsTable)
+        .where(sql`title LIKE '[PR4]%'`)
+      const existingPr4Titles = new Set(existingPr4.map((ev) => ev.title))
+      const newPr4EventRows = pr4EventRows.filter(
+        (row) => !existingPr4Titles.has(row.title),
+      )
 
+      const insertedPr4 =
+        newPr4EventRows.length > 0
+          ? await db.insert(eventsTable).values(newPr4EventRows).returning()
+          : []
+      console.warn(
+        `Inserted ${insertedPr4.length} PR4 test events (${existingPr4.length} already present).`,
+      )
+
+      // Lookup considers BOTH newly-inserted + previously-existing rows so
+      // partial prior runs can still wire up their submissions/reports below.
+      const allPr4Events = [...existingPr4, ...insertedPr4]
       const pr4Event = (suffix: string) =>
-        insertedPr4.find((ev) => ev.title === `[PR4] ${suffix}`)
+        allPr4Events.find((ev) => ev.title === `[PR4] ${suffix}`)
 
       const evQ = pr4Event('Sold Out Resale')
       const evR = pr4Event('Sold Out Contribute')
