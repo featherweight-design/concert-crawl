@@ -298,7 +298,7 @@ GitHub → repository → **Settings** → **Environments**.
 | `DATABASE_URL` | `NEON_STAGING_POOLED` from Step 2 — for future crawler/migration GHA jobs |
 | `SENTRY_DSN`   | Staging Sentry project DSN                                                |
 
-Staging deploys go via Render's git auto-deploy on push to `main` (Render dashboard → service → Settings → Auto-Deploy: On Commit). Same model as prod (#786) and identical for both. `RENDER_API_TOKEN` is only consumed by `staging-smoke.yml` to poll Render's API via `render-wait-for-live.sh` — it doesn't trigger any deploy. Staging web is deployed by Vercel's GitHub integration directly — no deploy hook needed there either.
+Staging deploys go via Render's git auto-deploy on push to `main` (Render dashboard → service → Settings → Auto-Deploy: On Commit). Same model as prod (#786) and identical for both. On the staging side, `RENDER_API_TOKEN` (repo-level — see the staging secrets table below) is only consumed by `staging-smoke.yml` to poll Render's API via `render-wait-for-live.sh` — it doesn't trigger any deploy. The same token exists separately in the `production` GH environment for prod workflows (`prod-smoke-after-deploy.yml`, `deploy-prod.yml` manual escape hatch, `rollback-prod.yml`) — see those tables for prod usage. Staging web is deployed by Vercel's GitHub integration directly — no deploy hook needed there either.
 
 ### `staging` environment — Variables
 

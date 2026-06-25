@@ -13,9 +13,11 @@ name: Staging Smoke Tests
 # Mirrors prod-smoke-after-deploy.yml's structure for symmetry, with
 # two intentional differences:
 #   1. No rollback path — staging failures are alerts, not auto-
-#      actions. The GHA workflow-failure email is the primary signal.
-#   2. No Resend admin email — same reason. Staging failures don't
-#      page; they show up in the operator's GH notifications.
+#      actions. Smoke assertion failures fail the job → GHA workflow-
+#      failure email is the operator's signal. Benign wait-for-live
+#      timeouts (124) stay as warning + success, same as prod-smoke
+#      — those don't page.
+#   2. No Resend admin email — only GHA notifications.
 #
 # Disabled by default. Flip STAGING_SMOKE_ENABLED to 'true' to arm.
 # workflow_dispatch bypasses the kill switch so manual operator
@@ -117,8 +119,8 @@ jobs:
       # ~2 min on Render (same build profile as prod).
       #
       # The script exits 0 on live, 124 on timeout (benign — likely
-      # a fast-follow merge superseded this deploy or [skip ci]
-      # release commit suppressed the auto-deploy), and 1 on hard
+      # a fast-follow merge or `[skip ci]` release commit superseded
+      # this deploy on Render's build queue), and 1 on hard
       # error (jq missing, auth/network failure, no live deploy
       # found, malformed service ID). We branch explicitly on those
       # codes so a real failure can't silently get bucketed as
