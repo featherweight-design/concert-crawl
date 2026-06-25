@@ -28,8 +28,8 @@ describe('seed data', () => {
   })
 
   describe('FAKE_USER_PROFILES', () => {
-    it('contains exactly 9 profiles', () => {
-      expect(FAKE_USER_PROFILES.length).toBe(9)
+    it('contains exactly 16 profiles', () => {
+      expect(FAKE_USER_PROFILES.length).toBe(16)
     })
 
     it('hugh profile has handle and electric theme', () => {
@@ -55,8 +55,8 @@ describe('seed data', () => {
   })
 
   describe('FAKE_USER_ROLES', () => {
-    it('contains exactly 9 roles', () => {
-      expect(FAKE_USER_ROLES.length).toBe(9)
+    it('contains exactly 16 roles', () => {
+      expect(FAKE_USER_ROLES.length).toBe(16)
     })
 
     it('hugh is admin with priceCredScore 150', () => {

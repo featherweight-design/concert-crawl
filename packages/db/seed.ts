@@ -18,6 +18,7 @@ import {
   waitlistEntries,
   auditLog,
   type NewVenue,
+  type NewPriceSubmission,
 } from './src/schema/index.js'
 
 // ---------------------------------------------------------------------------
@@ -311,6 +312,16 @@ const FAKE_USER_IDS = {
   riley: 'user_fake_riley_0006',
   sam: 'user_fake_sam_0007',
   kai: 'user_fake_kai_0008',
+  // Phase 8.6 — additional handles so the price-submissions feed feels like
+  // many fans, not three. Used heavily by PR4 seed below and as backfill on
+  // popular realistic events (Radiohead, Phish, Big Thief, etc.).
+  phishfan42: 'user_fake_phishfan42_0009',
+  denvermusic: 'user_fake_denvermusic_0010',
+  notyourgf: 'user_fake_notyourgf_0011',
+  bouldergrrl: 'user_fake_bouldergrrl_0012',
+  mtncreature: 'user_fake_mtncreature_0013',
+  lola: 'user_fake_lola_0014',
+  jordan_m: 'user_fake_jordan_m_0015',
 } as const
 
 export const FAKE_USER_PROFILES = [
@@ -376,6 +387,56 @@ export const FAKE_USER_PROFILES = [
     theme: 'electric' as const,
     avatarColor: null,
     city: null,
+  },
+  // Phase 8.6 — additional handled users for richer submitter diversity.
+  {
+    userId: FAKE_USER_IDS.phishfan42,
+    handle: 'phishfan42',
+    theme: 'forge' as const,
+    avatarColor: 'warning' as const,
+    city: 'Denver',
+  },
+  {
+    userId: FAKE_USER_IDS.denvermusic,
+    handle: 'denvermusic',
+    theme: 'bluenote' as const,
+    avatarColor: 'signal' as const,
+    city: 'Denver',
+  },
+  {
+    userId: FAKE_USER_IDS.notyourgf,
+    handle: 'notyourgf',
+    theme: 'pulse' as const,
+    avatarColor: 'accent' as const,
+    city: 'Denver',
+  },
+  {
+    userId: FAKE_USER_IDS.bouldergrrl,
+    handle: 'bouldergrrl',
+    theme: 'jade' as const,
+    avatarColor: 'success' as const,
+    city: 'Boulder',
+  },
+  {
+    userId: FAKE_USER_IDS.mtncreature,
+    handle: 'mtncreature',
+    theme: 'cedar' as const,
+    avatarColor: 'signal' as const,
+    city: 'Denver',
+  },
+  {
+    userId: FAKE_USER_IDS.lola,
+    handle: 'lola_dnvr',
+    theme: 'drip' as const,
+    avatarColor: 'accent' as const,
+    city: 'Denver',
+  },
+  {
+    userId: FAKE_USER_IDS.jordan_m,
+    handle: 'jordan_m',
+    theme: 'gloss' as const,
+    avatarColor: 'warning' as const,
+    city: 'Denver',
   },
 ]
 
@@ -445,6 +506,57 @@ export const FAKE_USER_ROLES = [
     userId: FAKE_USER_IDS.kai,
     role: 'user' as const,
     priceCredScore: 0,
+    grantedBy: 'seed',
+    permissions: [] as string[],
+  },
+  // Phase 8.6 — additional handled users. Cred spread on purpose so the
+  // submitter list doesn't all look like the same archetype.
+  {
+    userId: FAKE_USER_IDS.phishfan42,
+    role: 'user' as const,
+    priceCredScore: 62,
+    grantedBy: 'seed',
+    permissions: [] as string[],
+  },
+  {
+    userId: FAKE_USER_IDS.denvermusic,
+    role: 'user' as const,
+    priceCredScore: 41,
+    grantedBy: 'seed',
+    permissions: [] as string[],
+  },
+  {
+    userId: FAKE_USER_IDS.notyourgf,
+    role: 'user' as const,
+    priceCredScore: 12,
+    grantedBy: 'seed',
+    permissions: [] as string[],
+  },
+  {
+    userId: FAKE_USER_IDS.bouldergrrl,
+    role: 'user' as const,
+    priceCredScore: 24,
+    grantedBy: 'seed',
+    permissions: [] as string[],
+  },
+  {
+    userId: FAKE_USER_IDS.mtncreature,
+    role: 'user' as const,
+    priceCredScore: 35,
+    grantedBy: 'seed',
+    permissions: [] as string[],
+  },
+  {
+    userId: FAKE_USER_IDS.lola,
+    role: 'user' as const,
+    priceCredScore: 7,
+    grantedBy: 'seed',
+    permissions: [] as string[],
+  },
+  {
+    userId: FAKE_USER_IDS.jordan_m,
+    role: 'user' as const,
+    priceCredScore: 19,
     grantedBy: 'seed',
     permissions: [] as string[],
   },
@@ -1962,6 +2074,253 @@ async function seed() {
           .onConflictDoNothing()
         console.warn(`Inserted ${confirmRows.length} submission confirms.`)
       }
+
+      // -----------------------------------------------------------------------
+      // Popularity backfill — add multi-source price submissions to a few of
+      // the marquee realistic events so multi-tier cards show the "N reports"
+      // social-proof caption naturally. Targeted (not blanket) per CLAUDE.md
+      // KISS guidance. Each block queries by event title so the work is
+      // independent of the recentEvents idx mapping above.
+      // -----------------------------------------------------------------------
+      const popularityDayMs = 86_400_000
+      const popularityOlder = new Date(Date.now() - 18 * popularityDayMs)
+      const popularityOlderish = new Date(Date.now() - 7 * popularityDayMs)
+      const popularityFresh = new Date(Date.now() - 1 * popularityDayMs)
+
+      const popularityTargets: ReadonlyArray<{
+        title: string
+        submissions: ReadonlyArray<NewPriceSubmission>
+      }> = [
+        {
+          title: 'Radiohead at Red Rocks',
+          submissions: [
+            {
+              eventId: '',
+              userId: FAKE_USER_IDS.phishfan42,
+              priceMin: '78.00',
+              priceMax: '155.00',
+              tier: 'GA',
+              vendor: 'AXS',
+              howFound: 'bought_myself',
+              sourceCategory: 'standard',
+              status: 'corroborated',
+              corroborationCount: 3,
+              note: 'AXS pre-sale code worked — $78 GA, $155 reserved.',
+              createdAt: popularityOlder,
+              updatedAt: popularityOlder,
+            },
+            {
+              eventId: '',
+              userId: FAKE_USER_IDS.denvermusic,
+              priceMin: '95.00',
+              priceMax: '220.00',
+              tier: 'GA',
+              vendor: 'SeatGeek',
+              howFound: 'saw_listing',
+              sourceCategory: 'resale',
+              status: 'corroborated',
+              corroborationCount: 2,
+              note: 'SeatGeek resale was already 25% over face the day after on-sale.',
+              createdAt: popularityOlderish,
+              updatedAt: popularityOlderish,
+            },
+            {
+              eventId: '',
+              userId: FAKE_USER_IDS.bouldergrrl,
+              priceMin: '80.00',
+              tier: 'GA',
+              vendor: 'AXS',
+              howFound: 'saw_listing',
+              sourceCategory: 'standard',
+              status: 'pending',
+              corroborationCount: 1,
+              note: 'Drop just popped on AXS at $80 — looked legit, not a flip.',
+              createdAt: popularityFresh,
+              updatedAt: popularityFresh,
+            },
+          ],
+        },
+        {
+          title: 'Phish at Red Rocks',
+          submissions: [
+            {
+              eventId: '',
+              userId: FAKE_USER_IDS.phishfan42,
+              priceMin: '90.00',
+              priceMax: '180.00',
+              tier: 'GA',
+              vendor: 'Ticketmaster',
+              howFound: 'bought_myself',
+              sourceCategory: 'standard',
+              status: 'corroborated',
+              corroborationCount: 4,
+              note: 'Phish ticketing lottery hit — GA was $90, reserved up to $180.',
+              createdAt: popularityOlder,
+              updatedAt: popularityOlder,
+            },
+            {
+              eventId: '',
+              userId: FAKE_USER_IDS.mtncreature,
+              priceMin: '100.00',
+              priceMax: '210.00',
+              tier: 'GA',
+              vendor: 'SeatGeek',
+              howFound: 'saw_listing',
+              sourceCategory: 'resale',
+              status: 'corroborated',
+              corroborationCount: 2,
+              note: 'Stubhub/SeatGeek floor was $100 day-of, climbed all afternoon.',
+              createdAt: popularityOlderish,
+              updatedAt: popularityOlderish,
+            },
+          ],
+        },
+        {
+          title: 'Big Thief',
+          submissions: [
+            {
+              eventId: '',
+              userId: FAKE_USER_IDS.notyourgf,
+              priceMin: '35.00',
+              priceMax: '52.00',
+              tier: 'GA',
+              vendor: 'AXS',
+              howFound: 'bought_myself',
+              sourceCategory: 'standard',
+              status: 'corroborated',
+              corroborationCount: 3,
+              note: 'GA was $35 even, $52 with the AXS fees stacked.',
+              createdAt: popularityOlder,
+              updatedAt: popularityOlder,
+            },
+            {
+              eventId: '',
+              userId: FAKE_USER_IDS.lola,
+              priceMin: '40.00',
+              tier: 'GA',
+              vendor: 'SeatGeek',
+              howFound: 'saw_listing',
+              sourceCategory: 'resale',
+              status: 'pending',
+              corroborationCount: 1,
+              note: 'Resale was already up to $40 a couple weeks out.',
+              createdAt: popularityFresh,
+              updatedAt: popularityFresh,
+            },
+          ],
+        },
+        {
+          title: 'Bon Iver',
+          submissions: [
+            {
+              eventId: '',
+              userId: FAKE_USER_IDS.denvermusic,
+              priceMin: '60.00',
+              priceMax: '98.00',
+              tier: 'GA',
+              vendor: 'AXS',
+              howFound: 'bought_myself',
+              sourceCategory: 'standard',
+              status: 'corroborated',
+              corroborationCount: 2,
+              note: 'AXS GA was $60. Pit went up to $98 reserved.',
+              createdAt: popularityOlderish,
+              updatedAt: popularityOlderish,
+            },
+            {
+              eventId: '',
+              userId: FAKE_USER_IDS.jordan_m,
+              priceMin: '70.00',
+              priceMax: '110.00',
+              tier: 'GA',
+              vendor: 'Ticketmaster',
+              howFound: 'saw_listing',
+              sourceCategory: 'resale',
+              status: 'pending',
+              corroborationCount: 1,
+              createdAt: popularityFresh,
+              updatedAt: popularityFresh,
+            },
+          ],
+        },
+        {
+          title: 'Khruangbin at Red Rocks',
+          submissions: [
+            {
+              eventId: '',
+              userId: FAKE_USER_IDS.bouldergrrl,
+              priceMin: '68.00',
+              priceMax: '125.00',
+              tier: 'GA',
+              vendor: 'AXS',
+              howFound: 'bought_myself',
+              sourceCategory: 'standard',
+              status: 'corroborated',
+              corroborationCount: 2,
+              note: 'Pulled GA at $68 — locking in feels like a steal already.',
+              createdAt: popularityOlderish,
+              updatedAt: popularityOlderish,
+            },
+          ],
+        },
+      ]
+
+      const popularityInsertRows: NewPriceSubmission[] = []
+      for (const target of popularityTargets) {
+        const row = await db
+          .select({ id: eventsTable.id })
+          .from(eventsTable)
+          .where(eq(eventsTable.title, target.title))
+          .limit(1)
+        const targetId = row[0]?.id
+        if (!targetId) continue
+        for (const sub of target.submissions) {
+          popularityInsertRows.push({ ...sub, eventId: targetId })
+        }
+      }
+
+      if (popularityInsertRows.length > 0) {
+        const insertedPopularity = await db
+          .insert(priceSubmissions)
+          .values(popularityInsertRows)
+          .returning()
+
+        // Confirms for the corroborated rows — same convention as above
+        // (corroborationCount = total observations including submitter).
+        const popularityConfirmers = [
+          FAKE_USER_IDS.amy,
+          FAKE_USER_IDS.taylor,
+          FAKE_USER_IDS.jess,
+          FAKE_USER_IDS.marco,
+          FAKE_USER_IDS.riley,
+          FAKE_USER_IDS.notyourgf,
+        ]
+        const popularityConfirmRows = insertedPopularity.flatMap((sub) => {
+          if (sub.status !== 'corroborated') return []
+          const desired = Math.max(0, sub.corroborationCount - 1)
+          const eligible = popularityConfirmers.filter(
+            (uid) => uid !== sub.userId,
+          )
+          return eligible
+            .slice(0, Math.min(desired, eligible.length))
+            .map((uid) => ({
+              submissionId: sub.id,
+              userId: uid,
+              method: 'same-vendor' as const,
+            }))
+        })
+
+        if (popularityConfirmRows.length > 0) {
+          await db
+            .insert(submissionConfirms)
+            .values(popularityConfirmRows)
+            .onConflictDoNothing()
+        }
+
+        console.warn(
+          `Popularity backfill: inserted ${insertedPopularity.length} submissions + ${popularityConfirmRows.length} confirms across ${popularityTargets.length} marquee events.`,
+        )
+      }
     } else {
       console.warn('Price submissions already seeded, skipping.')
     }
@@ -3268,7 +3627,7 @@ async function seed() {
           venueId: venueBluebird.id,
           title: '[PR4] Sold Out Resale',
           artist: '[PR4] Sold Out Resale Artist',
-          date: '2026-07-25',
+          date: '2026-08-15',
           showTime: '20:00',
           status: 'upcoming' as const,
           verified: false,
@@ -3287,7 +3646,7 @@ async function seed() {
           venueId: venueHiDive.id,
           title: '[PR4] Sold Out Contribute',
           artist: '[PR4] Sold Out Contribute Artist',
-          date: '2026-08-01',
+          date: '2026-10-14',
           showTime: '20:00',
           status: 'upcoming' as const,
           verified: false,
@@ -3300,7 +3659,7 @@ async function seed() {
           venueId: venueLarimer.id,
           title: '[PR4] No Price Resale',
           artist: '[PR4] No Price Resale Artist',
-          date: '2026-08-08',
+          date: '2026-11-07',
           showTime: '20:00',
           status: 'upcoming' as const,
           verified: false,
@@ -3318,7 +3677,7 @@ async function seed() {
           venueId: venueMarquis.id,
           title: '[PR4] No Price Empty',
           artist: '[PR4] No Price Empty Artist',
-          date: '2026-08-15',
+          date: '2026-12-03',
           showTime: '20:00',
           status: 'upcoming' as const,
           verified: false,
@@ -3332,7 +3691,7 @@ async function seed() {
           venueId: venueGothic.id,
           title: '[PR4] Resale Headline',
           artist: '[PR4] Resale Headline Artist',
-          date: '2026-08-22',
+          date: '2026-09-26',
           showTime: '20:00',
           status: 'upcoming' as const,
           verified: false,
@@ -3351,7 +3710,7 @@ async function seed() {
           venueId: venueMission.id,
           title: '[PR4] Multi Source Mixed',
           artist: '[PR4] Multi Source Mixed Artist',
-          date: '2026-08-29',
+          date: '2027-01-22',
           showTime: '20:00',
           status: 'upcoming' as const,
           verified: false,
@@ -3370,7 +3729,7 @@ async function seed() {
           venueId: venueFillmore.id,
           title: '[PR4] Mixed Tier',
           artist: '[PR4] Mixed Tier Artist',
-          date: '2026-09-05',
+          date: '2027-02-19',
           showTime: '20:00',
           status: 'upcoming' as const,
           verified: false,
@@ -3383,7 +3742,7 @@ async function seed() {
           venueId: venueOgden.id,
           title: '[PR4] Reports Caption',
           artist: '[PR4] Reports Caption Artist',
-          date: '2026-09-12',
+          date: '2027-03-04',
           showTime: '20:00',
           status: 'upcoming' as const,
           verified: false,
@@ -3396,7 +3755,7 @@ async function seed() {
           venueId: venueRedRocks.id,
           title: '[PR4] Admin Defer',
           artist: '[PR4] Admin Defer Artist',
-          date: '2026-09-19',
+          date: '2027-04-25',
           showTime: '20:00',
           status: 'upcoming' as const,
           verified: false,
@@ -3423,7 +3782,14 @@ async function seed() {
       // Events S, T intentionally have no price submissions (no-price states).
 
       // --- Sold-out reports for Q + R (drives priceStatus='soldout' in API) ---
-      const pastDatePr4 = new Date(Date.now() - 2 * 86_400_000)
+      // Time offsets in ms — used throughout to scatter submittedAt so feeds
+      // don't all look like one batch insert. "older" = ~weeks before show,
+      // "fresh" = within last few days.
+      const dayMs = 86_400_000
+      const pastDatePr4 = new Date(Date.now() - 2 * dayMs)
+      const olderDatePr4 = new Date(Date.now() - 21 * dayMs)
+      const olderishDatePr4 = new Date(Date.now() - 10 * dayMs)
+      const veryRecentDatePr4 = new Date(Date.now() - 1 * dayMs)
       const soldOutReportTargets = [
         { event: evQ, reporter: FAKE_USER_IDS.marco, label: 'Q' },
         { event: evR, reporter: FAKE_USER_IDS.taylor, label: 'R' },
@@ -3470,21 +3836,74 @@ async function seed() {
             howFound: 'saw_listing' as const,
             sourceCategory: 'resale' as const,
             status: 'corroborated' as const,
-            corroborationCount: 2,
+            corroborationCount: 3,
             note: 'StubHub listings ranged from $95 to $140 face. No box office number yet.',
+            createdAt: olderDatePr4,
+            updatedAt: olderDatePr4,
           })
           .returning()
         if (resaleHeadline[0]) {
           await db
             .insert(submissionConfirms)
-            .values({
-              submissionId: resaleHeadline[0].id,
-              userId: FAKE_USER_IDS.kai,
-              method: 'same-vendor' as const,
-            })
+            .values([
+              {
+                submissionId: resaleHeadline[0].id,
+                userId: FAKE_USER_IDS.kai,
+                method: 'same-vendor' as const,
+              },
+              {
+                submissionId: resaleHeadline[0].id,
+                userId: FAKE_USER_IDS.phishfan42,
+                method: 'same-vendor' as const,
+              },
+            ])
             .onConflictDoNothing()
         }
-        console.warn('PR4 Event U: inserted resale-only headline (GA).')
+
+        // Second resale submission at the same tier from a different fan —
+        // drives multi-report social proof on the resale-only headline.
+        await db
+          .insert(priceSubmissions)
+          .values({
+            eventId: evU.id,
+            userId: FAKE_USER_IDS.denvermusic,
+            priceMin: '105.00',
+            priceMax: '160.00',
+            tier: 'GA' as const,
+            vendor: 'SeatGeek' as const,
+            howFound: 'saw_listing' as const,
+            sourceCategory: 'resale' as const,
+            status: 'corroborated' as const,
+            corroborationCount: 2,
+            note: 'Stubhub crept up to $160 over the weekend — supply tightening.',
+            createdAt: olderishDatePr4,
+            updatedAt: olderishDatePr4,
+          })
+          .onConflictDoNothing()
+
+        // Fresh pending — last 24h, one fan, drives "live, just submitted" feel.
+        await db
+          .insert(priceSubmissions)
+          .values({
+            eventId: evU.id,
+            userId: FAKE_USER_IDS.notyourgf,
+            priceMin: '88.00',
+            priceMax: '120.00',
+            tier: 'GA' as const,
+            vendor: 'SeatGeek' as const,
+            howFound: 'saw_listing' as const,
+            sourceCategory: 'resale' as const,
+            status: 'pending' as const,
+            corroborationCount: 1,
+            note: 'Stubhub listing, no fees yet.',
+            createdAt: veryRecentDatePr4,
+            updatedAt: veryRecentDatePr4,
+          })
+          .onConflictDoNothing()
+
+        console.warn(
+          'PR4 Event U: inserted resale headline + corroborated alt + fresh pending.',
+        )
       }
 
       // --- V: multi-source mixed (GA boxoffice + GA resale alt + VIP boxoffice)
@@ -3501,18 +3920,32 @@ async function seed() {
             howFound: 'at_the_venue' as const,
             sourceCategory: 'boxoffice' as const,
             status: 'corroborated' as const,
-            corroborationCount: 2,
+            corroborationCount: 4,
             note: 'Walked up to Mission box office — GA was $32 even, no fees.',
+            createdAt: olderDatePr4,
+            updatedAt: olderDatePr4,
           })
           .returning()
         if (vGaBoxoffice[0]) {
           await db
             .insert(submissionConfirms)
-            .values({
-              submissionId: vGaBoxoffice[0].id,
-              userId: FAKE_USER_IDS.amy,
-              method: 'box-office' as const,
-            })
+            .values([
+              {
+                submissionId: vGaBoxoffice[0].id,
+                userId: FAKE_USER_IDS.amy,
+                method: 'box-office' as const,
+              },
+              {
+                submissionId: vGaBoxoffice[0].id,
+                userId: FAKE_USER_IDS.bouldergrrl,
+                method: 'box-office' as const,
+              },
+              {
+                submissionId: vGaBoxoffice[0].id,
+                userId: FAKE_USER_IDS.mtncreature,
+                method: 'box-office' as const,
+              },
+            ])
             .onConflictDoNothing()
         }
 
@@ -3532,6 +3965,8 @@ async function seed() {
             status: 'corroborated' as const,
             corroborationCount: 2,
             note: 'Ticketmaster Verified Resale showed $52-78. Useful if you do not want to wait for the line.',
+            createdAt: olderishDatePr4,
+            updatedAt: olderishDatePr4,
           })
           .onConflictDoNothing()
 
@@ -3548,21 +3983,52 @@ async function seed() {
             howFound: 'at_the_venue' as const,
             sourceCategory: 'boxoffice' as const,
             status: 'corroborated' as const,
-            corroborationCount: 2,
+            corroborationCount: 3,
+            createdAt: olderDatePr4,
+            updatedAt: olderDatePr4,
           })
           .returning()
         if (vVipBoxoffice[0]) {
           await db
             .insert(submissionConfirms)
-            .values({
-              submissionId: vVipBoxoffice[0].id,
-              userId: FAKE_USER_IDS.marco,
-              method: 'box-office' as const,
-            })
+            .values([
+              {
+                submissionId: vVipBoxoffice[0].id,
+                userId: FAKE_USER_IDS.marco,
+                method: 'box-office' as const,
+              },
+              {
+                submissionId: vVipBoxoffice[0].id,
+                userId: FAKE_USER_IDS.jordan_m,
+                method: 'box-office' as const,
+              },
+            ])
             .onConflictDoNothing()
         }
+
+        // Fresh pending GA submission from a separate fan — drives "active
+        // submissions on a corroborated event" without changing decision tree.
+        await db
+          .insert(priceSubmissions)
+          .values({
+            eventId: evV.id,
+            userId: FAKE_USER_IDS.lola,
+            priceMin: '34.00',
+            priceMax: null,
+            tier: 'GA' as const,
+            vendor: 'AXS' as const,
+            howFound: 'saw_listing' as const,
+            sourceCategory: 'standard' as const,
+            status: 'pending' as const,
+            corroborationCount: 1,
+            note: 'Saw it at the BO last night — they were holding tier still.',
+            createdAt: veryRecentDatePr4,
+            updatedAt: veryRecentDatePr4,
+          })
+          .onConflictDoNothing()
+
         console.warn(
-          'PR4 Event V: inserted GA boxoffice + GA resale alt + VIP boxoffice.',
+          'PR4 Event V: inserted GA boxoffice + GA resale alt + VIP boxoffice + fresh pending GA.',
         )
       }
 
@@ -3580,19 +4046,55 @@ async function seed() {
             howFound: 'bought_myself' as const,
             sourceCategory: 'standard' as const,
             status: 'corroborated' as const,
-            corroborationCount: 2,
+            corroborationCount: 4,
+            note: 'AXS GA pre-sale opened at $42 face.',
+            createdAt: olderDatePr4,
+            updatedAt: olderDatePr4,
           })
           .returning()
         if (wGaHeadline[0]) {
           await db
             .insert(submissionConfirms)
-            .values({
-              submissionId: wGaHeadline[0].id,
-              userId: FAKE_USER_IDS.taylor,
-              method: 'same-vendor' as const,
-            })
+            .values([
+              {
+                submissionId: wGaHeadline[0].id,
+                userId: FAKE_USER_IDS.taylor,
+                method: 'same-vendor' as const,
+              },
+              {
+                submissionId: wGaHeadline[0].id,
+                userId: FAKE_USER_IDS.phishfan42,
+                method: 'same-vendor' as const,
+              },
+              {
+                submissionId: wGaHeadline[0].id,
+                userId: FAKE_USER_IDS.denvermusic,
+                method: 'same-vendor' as const,
+              },
+            ])
             .onConflictDoNothing()
         }
+
+        // Second corroborated GA submission — same tier, different submitter +
+        // vendor. Drives the "· N reports" caption naturally on the GA tier.
+        await db
+          .insert(priceSubmissions)
+          .values({
+            eventId: evW.id,
+            userId: FAKE_USER_IDS.bouldergrrl,
+            priceMin: '44.00',
+            priceMax: '58.00',
+            tier: 'GA' as const,
+            vendor: 'Ticketmaster' as const,
+            howFound: 'bought_myself' as const,
+            sourceCategory: 'standard' as const,
+            status: 'corroborated' as const,
+            corroborationCount: 2,
+            note: 'Same GA, slightly higher on TM after fees rolled in.',
+            createdAt: olderishDatePr4,
+            updatedAt: olderishDatePr4,
+          })
+          .onConflictDoNothing()
 
         // Reserved tier — pending-only, no headline. Drives the per-tier
         // "pending · N/2" tell on MixedTierCard's Reserved row.
@@ -3610,10 +4112,12 @@ async function seed() {
             status: 'pending' as const,
             corroborationCount: 1,
             note: 'Reserved seating showed $78-95 on Ticketmaster — one more fan needs to confirm.',
+            createdAt: veryRecentDatePr4,
+            updatedAt: veryRecentDatePr4,
           })
           .onConflictDoNothing()
         console.warn(
-          'PR4 Event W: inserted GA corroborated + Reserved pending (mixed-tier).',
+          'PR4 Event W: inserted GA corroborated (x2) + Reserved pending.',
         )
       }
 
@@ -3631,7 +4135,10 @@ async function seed() {
             howFound: 'bought_myself' as const,
             sourceCategory: 'standard' as const,
             status: 'corroborated' as const,
-            corroborationCount: 3,
+            corroborationCount: 5,
+            note: 'GA opened at $38 on AXS, capped at $46 with fees.',
+            createdAt: olderDatePr4,
+            updatedAt: olderDatePr4,
           })
           .returning()
         if (xGaHeadline[0]) {
@@ -3648,12 +4155,23 @@ async function seed() {
                 userId: FAKE_USER_IDS.taylor,
                 method: 'same-vendor' as const,
               },
+              {
+                submissionId: xGaHeadline[0].id,
+                userId: FAKE_USER_IDS.phishfan42,
+                method: 'same-vendor' as const,
+              },
+              {
+                submissionId: xGaHeadline[0].id,
+                userId: FAKE_USER_IDS.notyourgf,
+                method: 'same-vendor' as const,
+              },
             ])
             .onConflictDoNothing()
         }
 
-        // Two additional pending GA submissions so the API's reportsByTier
-        // count for GA = 3 → MultiTierLiveCard meta line appends "· 3 reports".
+        // Several additional GA submissions — different submitters, mix of
+        // pending + corroborated. Drives reportsByTier well above 1 so the
+        // caption shows "· N reports" and the feed feels populated.
         await db
           .insert(priceSubmissions)
           .values([
@@ -3669,6 +4187,8 @@ async function seed() {
               status: 'pending' as const,
               corroborationCount: 1,
               note: 'Same GA tier, slightly higher with fees on Ticketmaster.',
+              createdAt: olderishDatePr4,
+              updatedAt: olderishDatePr4,
             },
             {
               eventId: evX.id,
@@ -3681,11 +4201,44 @@ async function seed() {
               sourceCategory: 'standard' as const,
               status: 'pending' as const,
               corroborationCount: 1,
+              createdAt: olderishDatePr4,
+              updatedAt: olderishDatePr4,
+            },
+            {
+              eventId: evX.id,
+              userId: FAKE_USER_IDS.mtncreature,
+              priceMin: '38.00',
+              priceMax: '44.00',
+              tier: 'GA' as const,
+              vendor: 'AXS' as const,
+              howFound: 'bought_myself' as const,
+              sourceCategory: 'standard' as const,
+              status: 'corroborated' as const,
+              corroborationCount: 2,
+              note: 'Bought two for $38 each — same AXS GA tier.',
+              createdAt: olderishDatePr4,
+              updatedAt: olderishDatePr4,
+            },
+            // Fresh pending — last 24h, drives the live-feel.
+            {
+              eventId: evX.id,
+              userId: FAKE_USER_IDS.lola,
+              priceMin: '42.00',
+              priceMax: null,
+              tier: 'GA' as const,
+              vendor: 'SeatGeek' as const,
+              howFound: 'saw_listing' as const,
+              sourceCategory: 'resale' as const,
+              status: 'pending' as const,
+              corroborationCount: 1,
+              note: 'SeatGeek showed $42 just now — could be a flip.',
+              createdAt: veryRecentDatePr4,
+              updatedAt: veryRecentDatePr4,
             },
           ])
           .onConflictDoNothing()
         console.warn(
-          'PR4 Event X: inserted GA corroborated + 2 pending (reports=3).',
+          'PR4 Event X: inserted GA corroborated headline + 4 additional GA reports (mix of pending + corroborated).',
         )
       }
 
@@ -3706,8 +4259,10 @@ async function seed() {
             howFound: 'bought_myself' as const,
             sourceCategory: 'standard' as const,
             status: 'corroborated' as const,
-            corroborationCount: 3,
+            corroborationCount: 5,
             note: 'Bought on AXS day-of-sale. GA was $125 face + $40 fees.',
+            createdAt: olderDatePr4,
+            updatedAt: olderDatePr4,
           })
           .returning()
         if (yHeadline[0]) {
@@ -3724,16 +4279,28 @@ async function seed() {
                 userId: FAKE_USER_IDS.marco,
                 method: 'same-vendor' as const,
               },
+              {
+                submissionId: yHeadline[0].id,
+                userId: FAKE_USER_IDS.denvermusic,
+                method: 'same-vendor' as const,
+              },
+              {
+                submissionId: yHeadline[0].id,
+                userId: FAKE_USER_IDS.bouldergrrl,
+                method: 'same-vendor' as const,
+              },
             ])
             .onConflictDoNothing()
 
           // Counter submission against the headline — admin has deferred for
           // more info (lastAdminActionKind='defer', lastAdminActionAt=past).
+          // Counter comes from jordan_m (different from the headline submitter
+          // and the confirmers) so the dispute reads like a real disagreement.
           await db
             .insert(priceSubmissions)
             .values({
               eventId: evY.id,
-              userId: FAKE_USER_IDS.sam,
+              userId: FAKE_USER_IDS.jordan_m,
               priceMin: '155.00',
               priceMax: '195.00',
               tier: 'GA' as const,
@@ -3746,11 +4313,13 @@ async function seed() {
               lastAdminActionAt: pastDatePr4,
               lastAdminActionKind: 'defer' as const,
               note: 'GA showed $155+ later in the week — might be a different tier or pricing tier change.',
+              createdAt: olderishDatePr4,
+              updatedAt: olderishDatePr4,
             })
             .onConflictDoNothing()
         }
         console.warn(
-          'PR4 Event Y: inserted GA headline + counter with admin defer.',
+          'PR4 Event Y: inserted GA headline + counter (jordan_m) with admin defer.',
         )
       }
     }
