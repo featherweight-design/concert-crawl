@@ -128,7 +128,8 @@ When a `logged-out` visitor taps a locked active affordance:
 - **Returning user:** Inline "Already have an account? Sign in" link.
 - **Flow on selection:**
   - Pick Free → Clerk signup → returns to the same screen → heart still locked → next tap shows the small Free→Premium paywall sheet (matrix-consistent with §4 above).
-  - Pick Premium / Supporter / Founder → Clerk signup → Stripe checkout → returns → heart now active.
+  - Pick Supporter → Clerk signup → Stripe checkout → returns → heart still locked. Supporter is badge-only (§6); the next tap shows the same Free→Premium paywall sheet as the Free outcome above.
+  - Pick Premium / Founder → Clerk signup → Stripe checkout → returns → heart now active.
 
 **Why this mechanic:** A logged-out user has two decisions to make (do you have an account? do you want to pay?). A mini paywall sheet implies one. The full picker tells the truth about both, lets the visitor self-select, and frames every premium affordance as the natural entry point to the value ladder. Locked in this brief — see "Round 8" discussion in session notes.
 
@@ -152,6 +153,8 @@ Cell value semantics:
 | **Price-drop alerts** | hidden                | hidden          | hidden          | visible-active | visible-active | visible-active |
 
 **Supporter rationale.** Supporter is a $2/mo "thank you for keeping us alive" gesture. The reward is the Supporter badge, the eyebrow on the Plan card, and the warm feeling of supporting the project — not premium feature unlocks. If Supporter unlocked any Premium feature, the Premium tier's $5 ask becomes harder to justify. The matrix encodes this deliberately.
+
+**Supersedes Beta-to-Launch tier assignments.** This brief moves **Concert history** and **Calendar export** from Supporter to Premium-and-up. The Beta-to-Launch spec (`docs/superpowers/specs/2026-05-09-beta-to-launch-design.md` lines 236–237 as of audit date) is updated in lockstep in this PR so the two docs stay aligned. Future readers should treat this brief as the source of truth on tier assignments.
 
 **Logged-out rationale.** Logged-out users see the active affordances *visible-locked* (same as Free), but tap routes to the full picker instead of the mini sheet. This is the locked "tiered ask" mechanic — every premium affordance is also a tier-picker entry point. Background features (Spotify sync, Alerts, Price-drop) stay hidden — they have no on-page affordance to lock against.
 

@@ -233,8 +233,8 @@ Features behind the Supporter or Premium paywall at launch.
 
 | Feature | Tier | Technical notes |
 |---|---|---|
-| Concert history | Supporter | `user_events.status = 'attended'`. Filter past events. Simple. |
-| Calendar export | Supporter | iCal file generation (standard) + Google Calendar URL scheme. Effectively free to operate. |
+| Concert history | Premium | `user_events.status = 'attended'`. Filter past events. Simple. Moved to Premium per `docs/superpowers/specs/2026-06-24-monetization-tier-states-entitlements-design.md` (Supporter is badge-only). |
+| Calendar export | Premium | iCal file generation (standard) + Google Calendar URL scheme. Effectively free to operate. Moved to Premium per `docs/superpowers/specs/2026-06-24-monetization-tier-states-entitlements-design.md` (Supporter is badge-only). |
 | Supporter badge | Supporter | Cosmetic. Shown on profile. |
 | Artist following | Premium | `user_artist_follows` table exists. Follow button on artist name anywhere it appears. |
 | New show alerts | Premium | Background job matches new crawled events against followed artists. Notification delivery via Resend (email) + PWA push. Smart batching: multiple events same day = single digest. 60-day lookahead default. Per-artist: instant vs. daily digest preference. **Launch feature — not beta.** |
