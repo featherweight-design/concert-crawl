@@ -388,7 +388,7 @@ export const FAKE_USER_PROFILES = [
     avatarColor: null,
     city: null,
   },
-  // Phase 8.6 — additional handled users for richer submitter diversity.
+  // Phase 8.6 — additional users-with-handles for richer submitter diversity.
   {
     userId: FAKE_USER_IDS.phishfan42,
     handle: 'phishfan42',
@@ -4508,24 +4508,58 @@ async function seed() {
           // more info (lastAdminActionKind='defer', lastAdminActionAt=past).
           // Counter comes from jordan_m (different from the headline submitter
           // and the confirmers) so the dispute reads like a real disagreement.
-          await pr4UpsertSubmission({
-            eventId: evY.id,
-            userId: FAKE_USER_IDS.jordan_m,
-            priceMin: '155.00',
-            priceMax: '195.00',
-            tier: 'GA' as const,
-            vendor: 'AXS' as const,
-            howFound: 'saw_listing' as const,
-            sourceCategory: 'standard' as const,
-            status: 'pending' as const,
-            corroborationCount: 1,
-            disputedSubmissionId: yHeadline.id,
-            lastAdminActionAt: pastDatePr4,
-            lastAdminActionKind: 'defer' as const,
-            note: 'GA showed $155+ later in the week — might be a different tier or pricing tier change.',
-            createdAt: olderishDatePr4,
-            updatedAt: olderishDatePr4,
-          })
+          //
+          // Restore-or-insert (NOT pr4UpsertSubmission): if a previous run
+          // resolved/archived the counter (status != 'pending'), the outer
+          // pr4EventCompletedByCounter marker correctly reports incomplete
+          // and re-triggers this block — but a plain upsert helper would
+          // find the existing (eventId, userId) row and short-circuit
+          // without restoring it to pending+defer. UPDATE first; INSERT
+          // only when no row exists.
+          const counterUpdated = await db
+            .update(priceSubmissions)
+            .set({
+              priceMin: '155.00',
+              priceMax: '195.00',
+              tier: 'GA' as const,
+              vendor: 'AXS' as const,
+              howFound: 'saw_listing' as const,
+              sourceCategory: 'standard' as const,
+              status: 'pending' as const,
+              corroborationCount: 1,
+              disputedSubmissionId: yHeadline.id,
+              lastAdminActionAt: pastDatePr4,
+              lastAdminActionKind: 'defer' as const,
+              note: 'GA showed $155+ later in the week — might be a different tier or pricing tier change.',
+              updatedAt: olderishDatePr4,
+            })
+            .where(
+              and(
+                eq(priceSubmissions.eventId, evY.id),
+                eq(priceSubmissions.userId, FAKE_USER_IDS.jordan_m),
+              ),
+            )
+            .returning({ id: priceSubmissions.id })
+          if (counterUpdated.length === 0) {
+            await db.insert(priceSubmissions).values({
+              eventId: evY.id,
+              userId: FAKE_USER_IDS.jordan_m,
+              priceMin: '155.00',
+              priceMax: '195.00',
+              tier: 'GA' as const,
+              vendor: 'AXS' as const,
+              howFound: 'saw_listing' as const,
+              sourceCategory: 'standard' as const,
+              status: 'pending' as const,
+              corroborationCount: 1,
+              disputedSubmissionId: yHeadline.id,
+              lastAdminActionAt: pastDatePr4,
+              lastAdminActionKind: 'defer' as const,
+              note: 'GA showed $155+ later in the week — might be a different tier or pricing tier change.',
+              createdAt: olderishDatePr4,
+              updatedAt: olderishDatePr4,
+            })
+          }
         }
         console.warn(
           'PR4 Event Y: inserted GA headline + counter (jordan_m) with admin defer.',
