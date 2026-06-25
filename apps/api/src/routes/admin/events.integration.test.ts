@@ -1107,6 +1107,89 @@ describe('PR 6 — DELETE loosened + PATCH hiddenFromConsumer', () => {
   })
 })
 
+describe('GET /v1/admin/events — view=hidden-flagged-for-review', () => {
+  beforeEach(() => {
+    setAdminAuth()
+    return clearTables()
+  })
+
+  it('returns only events where hidden_from_consumer=true AND is_concert_review_needed=true', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      title: 'Visible Concert',
+      artist: 'Artist Visible',
+      date: futureDate(7),
+      hiddenFromConsumer: false,
+      isConcertReviewNeeded: true,
+    })
+    await seedEvent(venue.id, {
+      title: 'Hidden Unflagged',
+      artist: 'Artist Unflagged',
+      date: futureDate(8),
+      hiddenFromConsumer: true,
+      isConcertReviewNeeded: false,
+    })
+    await seedEvent(venue.id, {
+      title: 'Hidden Flagged Borderline',
+      artist: 'Artist Borderline',
+      date: futureDate(9),
+      hiddenFromConsumer: true,
+      isConcertReviewNeeded: true,
+    })
+
+    const res = await app.request(
+      '/v1/admin/events?view=hidden-flagged-for-review',
+      { headers: ADMIN_HEADERS },
+    )
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { title: string }[]
+    }
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0]?.title).toBe('Hidden Flagged Borderline')
+  })
+
+  it('GET /:id projection includes isConcertReviewNeeded', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: futureDate(7),
+      hiddenFromConsumer: true,
+      isConcertReviewNeeded: true,
+    })
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      headers: ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { isConcertReviewNeeded: boolean }
+    }
+    expect(body.data.isConcertReviewNeeded).toBe(true)
+  })
+
+  it('list projection includes isConcertReviewNeeded', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      date: futureDate(7),
+      hiddenFromConsumer: true,
+      isConcertReviewNeeded: true,
+    })
+
+    const res = await app.request(
+      '/v1/admin/events?view=hidden-flagged-for-review',
+      { headers: ADMIN_HEADERS },
+    )
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { isConcertReviewNeeded: boolean }[]
+    }
+    expect(body.data[0]?.isConcertReviewNeeded).toBe(true)
+  })
+})
+
 describe('PR 10 — bulk endpoints', () => {
   beforeEach(() => {
     setAdminAuth()

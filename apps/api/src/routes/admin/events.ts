@@ -119,6 +119,12 @@ const listQuerySchema = z.object({
     .enum(['true', 'false'])
     .optional()
     .transform((val) => val === 'true'),
+  // Composite view enum. When 'hidden-flagged-for-review', scopes the list
+  // to hidden_from_consumer=true AND is_concert_review_needed=true — the
+  // admin classification review queue. Single combined param (rather than
+  // two orthogonal hiddenFromConsumer + reviewNeeded params) keeps the API
+  // surface narrow until a second use case demands the orthogonal shape.
+  view: z.enum(['hidden-flagged-for-review']).optional(),
   // PR 5 — search + range + multi-tag filters. Comma-separated lists.
   query: z.string().trim().min(1).max(200).optional(),
   dateFrom: z.string().regex(dateOnlyRegex).optional(),
@@ -236,6 +242,7 @@ eventsAdminRouter.get(
       count,
       verified,
       missing,
+      view,
       query,
       dateFrom,
       dateTo,
@@ -265,6 +272,7 @@ eventsAdminRouter.get(
         confidenceScore: sql<number | null>`(${events.confidenceScore})::float`,
         verified: events.verified,
         hiddenFromConsumer: events.hiddenFromConsumer,
+        isConcertReviewNeeded: events.isConcertReviewNeeded,
         status: events.status,
         extractionStrategy: events.extractionStrategy,
         sourceUrl: events.sourceUrl,
@@ -336,14 +344,25 @@ eventsAdminRouter.get(
           gte(events.date, today),
           eq(events.hiddenFromConsumer, false),
         )
-      : and(
-          verified === undefined ? undefined : eq(events.verified, verified),
-          dateFromClause,
-          dateToClause,
-          searchClause,
-          genreClause,
-          ...missingDataClauses,
-        )
+      : view === 'hidden-flagged-for-review'
+        ? and(
+            eq(events.hiddenFromConsumer, true),
+            eq(events.isConcertReviewNeeded, true),
+            verified === undefined ? undefined : eq(events.verified, verified),
+            dateFromClause,
+            dateToClause,
+            searchClause,
+            genreClause,
+            ...missingDataClauses,
+          )
+        : and(
+            verified === undefined ? undefined : eq(events.verified, verified),
+            dateFromClause,
+            dateToClause,
+            searchClause,
+            genreClause,
+            ...missingDataClauses,
+          )
 
     const rowsPromise = missing
       ? baseSelect
@@ -462,6 +481,7 @@ eventsAdminRouter.get(
         confidenceScore: sql<number | null>`(${events.confidenceScore})::float`,
         verified: events.verified,
         hiddenFromConsumer: events.hiddenFromConsumer,
+        isConcertReviewNeeded: events.isConcertReviewNeeded,
         status: events.status,
         extractionStrategy: events.extractionStrategy,
         sourceUrl: events.sourceUrl,
