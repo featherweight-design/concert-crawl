@@ -1,45 +1,33 @@
 name: Deploy to Production
 
-# Full production-deploy pipeline: gate → deploy → smoke → auto-rollback
-# (on smoke failure). Triggers automatically when the staging smoke
-# suite passes. Uses the Render API (POST /v1/services/{id}/deploys
-# with `commitId` for web services) to deploy the three production
-# Render services (API + 2 crawler crons) to the exact SHA that
-# staging-smoke validated. Vercel auto-deploys the prod web project on
-# push to `main`, so there is no Vercel job here — that path is
-# already wired up.
+# Manual prod-deploy escape hatch. Under normal operation, prod deploys
+# happen via Render's native git auto-deploy on push to main — no GH
+# Actions trigger is involved. The post-deploy smoke + rollback path is
+# in prod-smoke-after-deploy.yml.
 #
-# Disabled by default. Flip `AUTO_DEPLOY_PROD_ENABLED` repo variable to
-# `true` to turn on. See docs/runbooks/auto-deploy-prod.md.
+# This workflow exists for manual operator intervention:
+#   - rerun a deploy after a transient Render failure
+#   - re-deploy a known-good commit when Render's auto-deploy is paused
+#   - emergency dispatch when the auto path is blocked
 #
-# Why all four jobs live in ONE workflow (not chained via workflow_run):
-#   GitHub Actions caps `workflow_run` chains at 3 levels. A real merge
-#   produces a 4-deep chain (CI → Deploy-staging → Staging-smoke →
-#   Deploy-prod), which already hits the cap — so a 5th level
-#   (Prod-post-deploy-smoke) would be silently dropped. By merging the
-#   smoke + rollback into this workflow as `needs:`-chained jobs, we
-#   sidestep the cap entirely. `needs:` between jobs in the same
-#   workflow does not count toward the chain depth limit.
+# All gates + the deploy/smoke/rollback chain stay in place as defense-
+# in-depth. The SHA-drift gates' `if: github.event_name == 'workflow_run'`
+# conditions are now always-false (no workflow_run trigger) and the
+# steps are unreachable under workflow_dispatch — kept so re-enabling
+# workflow_run in the future is a one-line revert.
 #
-# Why the Render API instead of per-service deploy hooks:
+# Background on the original Render-API-not-hooks decision (still
+# applies to the manual deploy path):
 #   - Render Cron Jobs don't expose a Deploy Hook UI (confirmed in
-#     Render dashboard 2026-06-23), so we couldn't provision hooks for
-#     the two crawler crons in the first place.
+#     Render dashboard 2026-06-23), so hooks couldn't cover the two
+#     crawler crons.
 #   - The Render API accepts a `commitId` body parameter, pinning each
-#     deploy to a specific SHA. Hooks always deploy branch HEAD, which
-#     leaves a race window between SHA-drift validation and the hook
-#     POST. With commitId-pinned deploys, drift cannot occur — Render
-#     builds exactly the commit we passed staging-smoke. (commitId is
-#     omitted for cron services — Render's API rejects it for crn-*;
-#     see render-trigger-deploy.sh for the routing.)
-#   - One `RENDER_API_TOKEN` (already wired) replaces three per-service
-#     hook secrets — smaller secret surface, easier rotation.
+#     deploy to a specific SHA. Hooks always deploy branch HEAD.
+#   - One `RENDER_API_TOKEN` replaces three per-service hook secrets.
+#
+# See docs/runbooks/auto-deploy-prod.md.
 
 on:
-  workflow_run:
-    workflows: [Staging Smoke Tests]
-    types: [completed]
-    branches: [main]
   workflow_dispatch:
     inputs:
       reason:
@@ -96,35 +84,6 @@ jobs:
           echo "  Use the workflow_dispatch UI's branch picker to select main, then re-dispatch."
           exit 1
 
-      # On the workflow_run path the upstream Staging Smoke Tests
-      # workflow could have concluded `success` even though all its
-      # jobs were SKIPPED (kill switch off, or the gate step it
-      # inherited from this same pattern fired). Require both the
-      # staging-smoke kill switch AND a real upstream success so a
-      # skipped staging smoke does not trigger a prod deploy. Exiting
-      # non-zero here fails this gate job → the deploy job never
-      # runs → workflow conclusion is `failure`. The downstream smoke
-      # and rollback jobs in this workflow are gated by `needs:`
-      # ordering, so a failed gate here naturally short-circuits them
-      # too.
-      - name: Verify staging-smoke gate
-        if: |
-          github.event_name == 'workflow_run' &&
-          (github.event.workflow_run.conclusion != 'success' ||
-           vars.STAGING_SMOKE_ENABLED != 'true' ||
-           github.event.workflow_run.event == 'workflow_dispatch')
-        run: |
-          echo "Refusing to deploy prod."
-          echo "  Upstream Staging Smoke Tests conclusion: ${{ github.event.workflow_run.conclusion }}"
-          echo "  STAGING_SMOKE_ENABLED: ${{ vars.STAGING_SMOKE_ENABLED }}"
-          echo "  Upstream trigger event:  ${{ github.event.workflow_run.event }}"
-          echo ""
-          echo "If the upstream was workflow_dispatch (manual), auto-deploy is"
-          echo "intentionally refused — manual prod deploys must go through"
-          echo "deploy-prod.yml workflow_dispatch directly (which requires a"
-          echo "'reason' input for the audit trail), not through staging-smoke."
-          exit 1
-
       # Checkout so resolve-deployable-sha.sh below can walk the
       # commit chain. Fetched depth=20 is comfortably beyond any
       # realistic [skip ci] streak — semantic-release produces one
@@ -134,6 +93,12 @@ jobs:
         with:
           fetch-depth: 20
 
+      # Under workflow_dispatch-only (post-#786), this step is
+      # unreachable — `if: github.event_name == 'workflow_run'` is
+      # always false. Left in place as defense-in-depth so re-enabling
+      # the workflow_run trigger is a one-line change. See #779 for
+      # the original drift-detection rationale.
+      #
       # SHA-drift guard: refuse to deploy if main has advanced past the
       # deployable code that staging-smoke validated. With Render-API
       # commitId pinning the wrong code can't reach prod (we pass the
@@ -264,6 +229,12 @@ jobs:
             exit 1
           fi
 
+      # Under workflow_dispatch-only (post-#786), this step is
+      # unreachable — `if: github.event_name == 'workflow_run'` is
+      # always false. Left in place as defense-in-depth so re-enabling
+      # the workflow_run trigger is a one-line change. See #779 for
+      # the original drift-detection rationale.
+      #
       # Second SHA-drift guard, immediately before triggering deploys.
       # The gate job already checked this, but gate → deploy is two
       # separate jobs and `environment: production` can hold the deploy
