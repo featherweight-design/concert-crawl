@@ -264,4 +264,30 @@ describe('extractWithLlm', () => {
     expect(result.events).toHaveLength(1)
     expect(result.events[0]?.reviewNeeded).toBeUndefined()
   })
+
+  it('SAVE_EVENTS_TOOL declares reviewNeeded as a required boolean property', async () => {
+    mockCreate.mockResolvedValue(makeAnthropicResponse([]))
+    await extractWithLlm('<html>test</html>', SOURCE_URL)
+
+    const call = mockCreate.mock.calls[0]?.[0]
+    const tool = call.tools[0]
+    expect(tool.name).toBe('save_events')
+    const itemSchema = tool.input_schema.properties.events.items
+    expect(itemSchema.properties.reviewNeeded).toEqual({
+      type: 'boolean',
+      description: expect.stringContaining('reasonable doubt'),
+    })
+    expect(itemSchema.required).toContain('reviewNeeded')
+  })
+
+  it('system prompt instructs the LLM to set reviewNeeded for borderline cases', async () => {
+    mockCreate.mockResolvedValue(makeAnthropicResponse([]))
+    await extractWithLlm('<html>test</html>', SOURCE_URL)
+
+    const call = mockCreate.mock.calls[0]?.[0]
+    const systemText: string = call.system[0].text
+    expect(systemText).toContain('reviewNeeded')
+    expect(systemText).toContain('ambiguous')
+    expect(systemText).toContain('PRESIDENT')
+  })
 })
