@@ -309,24 +309,24 @@ Staging deploys use the Render API (with `RENDER_API_TOKEN` at the repo level �
 
 ### `production` environment — Secrets
 
-| Secret             | Value                                                                                                                                                                                                                                                                     |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`     | `NEON_PROD_POOLED` from Step 2                                                                                                                                                                                                                                            |
-| `SENTRY_DSN`       | Crawler project DSN from Step 5                                                                                                                                                                                                                                           |
-| `RENDER_API_TOKEN` | Render → Account Settings → **API Keys** → generate token with deploy + read permissions. Consumed by `prod-smoke-after-deploy.yml` (via `render-wait-for-live.sh` + `render-rollback.sh`), by the manual `deploy-prod.yml` escape hatch, and by `rollback-prod.yml`. Under the post-#786 model, normal prod deploys go via Render's git auto-deploy and don't use this token. |
+| Secret             | Value                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`     | `NEON_PROD_POOLED` from Step 2                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `SENTRY_DSN`       | Crawler project DSN from Step 5                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `RENDER_API_TOKEN` | Render → Account Settings → **API Keys** → generate token with deploy + read permissions. Consumed by `prod-smoke-after-deploy.yml` (via `render-wait-for-live.sh` + `render-rollback.sh`), by the manual `deploy-prod.yml` escape hatch, and by `rollback-prod.yml`. Under the post-#786 model, normal prod deploys are _triggered_ by Render's git auto-deploy (no token needed for the trigger), but the token is still required for the smoke workflow's deploy-verification (`render-wait-for-live.sh`) and for any rollback (`render-rollback.sh`). |
 
 No per-service `RENDER_DEPLOY_HOOK_*` secrets are needed — the manual deploy path uses the Render API with `RENDER_API_TOKEN` + the service IDs in the variables table below. Normal prod deploys use Render's git auto-deploy and don't need any token.
 
 ### `production` environment — Variables
 
-| Variable                             | Value                                                                                                                                                            |
-| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SENTRY_ENVIRONMENT`                 | `production`                                                                                                                                                     |
-| `LOG_LEVEL`                          | `info`                                                                                                                                                           |
-| `ADMIN_EMAIL`                        | Pre-provisioned                                                                                                                                                  |
+| Variable                             | Value                                                                                                                                                                                                          |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SENTRY_ENVIRONMENT`                 | `production`                                                                                                                                                                                                   |
+| `LOG_LEVEL`                          | `info`                                                                                                                                                                                                         |
+| `ADMIN_EMAIL`                        | Pre-provisioned                                                                                                                                                                                                |
 | `RENDER_SERVICE_ID_API`              | Render → `concert-crawl-api` → service ID from the dashboard URL (`srv-...`). Consumed by `prod-smoke-after-deploy.yml` (wait + rollback), the manual `deploy-prod.yml` escape hatch, and `rollback-prod.yml`. |
-| `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | Service ID for `concert-crawl-crawler-triggers`. Consumed by `prod-smoke-after-deploy.yml`, `deploy-prod.yml`, and `rollback-prod.yml`. |
-| `RENDER_SERVICE_ID_CRAWLER_DAILY`    | Service ID for `concert-crawl-crawler-daily`. Same callers as above. |
+| `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | Service ID for `concert-crawl-crawler-triggers`. Consumed by `prod-smoke-after-deploy.yml`, `deploy-prod.yml`, and `rollback-prod.yml`.                                                                        |
+| `RENDER_SERVICE_ID_CRAWLER_DAILY`    | Service ID for `concert-crawl-crawler-daily`. Same callers as above.                                                                                                                                           |
 
 ### Repository-level secrets (Settings → Secrets → Actions)
 
@@ -342,18 +342,18 @@ No per-service `RENDER_DEPLOY_HOOK_*` secrets are needed — the manual deploy p
 
 ### Repository-level variables (Settings → Variables → Actions)
 
-| Variable                        | Value                                                                                                                                                                                                                                                                             |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SMOKE_ENABLED`                 | `false` during private beta; flip to `true` at public launch. Gates the scheduled 6-hourly `smoke.yml` only — the auto-deploy pipeline uses separate kill switches.                                                                                                               |
-| `STAGING_SMOKE_ENABLED`         | `false` by default. Set to `true` to enable `staging-smoke.yml`. See `docs/runbooks/auto-deploy-prod.md`. |
-| `AUTO_DEPLOY_PROD_ENABLED`      | `false` by default. Set to `true` to keep the manual `deploy-prod.yml` escape hatch usable. Post-#786, normal prod deploys go via Render's git auto-deploy; this workflow is reserved for operator intervention. |
+| Variable                        | Value                                                                                                                                                                                                                                  |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SMOKE_ENABLED`                 | `false` during private beta; flip to `true` at public launch. Gates the scheduled 6-hourly `smoke.yml` only — the auto-deploy pipeline uses separate kill switches.                                                                    |
+| `STAGING_SMOKE_ENABLED`         | `false` by default. Set to `true` to enable `staging-smoke.yml`. See `docs/runbooks/auto-deploy-prod.md`.                                                                                                                              |
+| `AUTO_DEPLOY_PROD_ENABLED`      | `false` by default. Set to `true` to keep the manual `deploy-prod.yml` escape hatch usable. Post-#786, normal prod deploys go via Render's git auto-deploy; this workflow is reserved for operator intervention.                       |
 | `PROD_SMOKE_RECONCILER_ENABLED` | `false` by default. Set to `true` to arm `prod-smoke-after-deploy.yml` (smoke + rollback on push to main). `workflow_dispatch` bypasses this kill switch so manual operator runs always work. See `docs/runbooks/auto-deploy-prod.md`. |
-| `PROD_URL`                      | `https://concertcrawl.app`                                                                                                                                                                                                                                                        |
-| `PROD_API_URL`                  | `https://concert-crawl-api.onrender.com`                                                                                                                                                                                                                                          |
-| `STAGING_URL`                   | `https://staging.concertcrawl.app`                                                                                                                                                                                                                                                |
-| `STAGING_API_URL`               | `https://concert-crawl-api-staging.onrender.com`. Consumed by `staging-smoke.yml`.                                                                                                                                                                                                |
-| `RENDER_SERVICE_ID_API_STAGING` | Render → `concert-crawl-api-staging` → service ID from the dashboard URL (`srv-...`). Consumed by `deploy-staging.yml` (deploy POST) and `staging-smoke.yml` (via `render-wait-for-live.sh`).                                                                                     |
-| `ADMIN_EMAIL`                   | Pre-provisioned                                                                                                                                                                                                                                                                   |
+| `PROD_URL`                      | `https://concertcrawl.app`                                                                                                                                                                                                             |
+| `PROD_API_URL`                  | `https://concert-crawl-api.onrender.com`                                                                                                                                                                                               |
+| `STAGING_URL`                   | `https://staging.concertcrawl.app`                                                                                                                                                                                                     |
+| `STAGING_API_URL`               | `https://concert-crawl-api-staging.onrender.com`. Consumed by `staging-smoke.yml`.                                                                                                                                                     |
+| `RENDER_SERVICE_ID_API_STAGING` | Render → `concert-crawl-api-staging` → service ID from the dashboard URL (`srv-...`). Consumed by `deploy-staging.yml` (deploy POST) and `staging-smoke.yml` (via `render-wait-for-live.sh`).                                          |
+| `ADMIN_EMAIL`                   | Pre-provisioned                                                                                                                                                                                                                        |
 
 ---
 
@@ -376,8 +376,16 @@ These must be in place before any traffic reaches production.
 ### `production` environment protection
 
 1. GitHub → **Settings** → **Environments** → `production`
-2. Enable **Required reviewers** → add yourself
-3. **Deployment branches** → **Selected branches** → add `main`
+2. **Deployment branches** → **Selected branches** → add `main`
+3. **Required reviewers** — see warning below before enabling
+
+> ⚠️ **Required reviewers + automated workflows conflict.** The following three workflows declare `environment: production` to access env-scoped secrets (e.g. `RESEND_API_KEY`) and would pause for manual approval on every run if Required reviewers is enabled:
+>
+> - `prod-smoke-after-deploy.yml` — fires on every push to `main`. Pausing for approval per merge would defeat the smoke automation entirely.
+> - `deploy-prod.yml` — manual escape hatch; the gate-then-approve flow is intended on this one.
+> - `rollback-prod.yml` — incident response; pause-for-approval would slow recovery.
+>
+> Current model: **Required reviewers OFF.** Branch protection on `main` (above) is the pre-merge gate; the smoke workflow's `PROD_SMOKE_RECONCILER_ENABLED` kill switch is the operational pause control. If you ever want Required reviewers on prod-mutating workflows specifically, the cleanest path is to create a separate `production-automation` GitHub Environment with no protection rules, mirror the secrets there, and reference it from the three automated workflows — leaving `production` with Required reviewers on for whatever else uses it.
 
 ---
 

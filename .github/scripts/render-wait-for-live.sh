@@ -2,13 +2,29 @@
 # render-wait-for-live.sh — wait for a Render service's deploy of a
 # specific commit SHA to reach `live` status.
 #
-# Usage: render-wait-for-live.sh <service-id> <expected-sha>
+# Usage: render-wait-for-live.sh <service-id> <expected-sha> [<timeout-seconds>]
+#
+# Args:
+#   <service-id>      Render service ID (srv-* or crn-*).
+#   <expected-sha>    The git SHA we expect the service to be live on.
+#   <timeout-seconds> Optional. Max time to wait, in seconds. Defaults to
+#                     600 (10 min) for backward compat with staging-smoke.
+#                     prod-smoke-after-deploy.yml passes 300 (5 min).
 #
 # Required env:
 #   RENDER_API_TOKEN — Render API token with read permission on deploys.
 #
-# Polls every 10s up to 10 minutes. Exits 0 when the service's currently-
-# live deploy matches the expected SHA; exits 1 on timeout or any error.
+# Polls every 10s up to <timeout-seconds>. Exit codes:
+#   0   — service is live on expected SHA
+#   124 — timeout reached without seeing the expected SHA go live
+#         (matches GNU timeout(1) convention; new caller behavior:
+#         prod-smoke-after-deploy.yml treats this as benign-skip)
+#   1   — hard failure (jq missing, missing env, malformed timeout
+#         arg, curl/auth/network failure, no live deploy found)
+#
+# Callers that want to distinguish benign timeout from real failure
+# should branch on the exit code explicitly. Treating any non-zero as
+# generic failure is also safe (existing staging-smoke caller does this).
 #
 # Why this script exists: Render's deploy hooks return immediately, and
 # Render keeps the prior build serving traffic until the new one is

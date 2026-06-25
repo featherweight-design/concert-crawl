@@ -358,9 +358,16 @@ jobs:
             # the workflow-command format if interpolated directly.
             # Log the response separately so the operator can still
             # see what Resend said in the step logs.
+            #
+            # Prefix every echoed line with two spaces via sed so a
+            # response containing `::warning::` / `::error::` / similar
+            # at the start of a line can't be interpreted as a workflow
+            # command. Defense against external-API workflow-command
+            # injection — low-probability against Resend specifically
+            # but cheap to enforce.
             echo "::warning title=Admin email failed::Resend API call failed. See step log for response body."
             echo "Resend response body:"
-            echo "${response}"
+            printf '%s\n' "${response}" | sed 's/^/  /'
             # Don't fail the workflow — the cron-skip annotation +
             # GHA's workflow-failure email are still primary signals.
             exit 0
