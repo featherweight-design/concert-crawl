@@ -5,8 +5,8 @@
 **Auditor:** Claude (autonomous Track 2 parity-gate Readiness Review)
 **Audited handoff:** `design/design_handoff_monetization_tier_states/` (Round 5)
 **Source brief:** `docs/superpowers/specs/2026-06-24-monetization-tier-states-entitlements-design.md` (PR #795, merged 2026-06-25)
-**Companion specs in play:** [#780](https://github.com/HartiganHM/concert-crawl/issues/780) (lifecycle), [#782](https://github.com/HartiganHM/concert-crawl/issues/782) (failure states + a11y), [#783](https://github.com/HartiganHM/concert-crawl/issues/783) (email), [#775](https://github.com/HartiganHM/concert-crawl/issues/775) (eng infra), [#794](https://github.com/HartiganHM/concert-crawl/issues/794) (logged-out broader UX)
-**Addendum ticket opened from this audit:** [#800](https://github.com/HartiganHM/concert-crawl/issues/800) (`[design] Monetization R5 addendum — §5.1 paywall sheet + mobile picker comparison mechanic`)
+**Related ticket(s):** [#781](https://github.com/HartiganHM/concert-crawl/issues/781) (the source ticket — tier states + entitlements matrix). Addendum opened from this audit: [#800](https://github.com/HartiganHM/concert-crawl/issues/800) (`[design] Monetization R5 addendum — §5.1 paywall sheet + mobile picker comparison mechanic`). Sister addenda in play: [#780](https://github.com/HartiganHM/concert-crawl/issues/780) (lifecycle), [#782](https://github.com/HartiganHM/concert-crawl/issues/782) (failure states + a11y), [#783](https://github.com/HartiganHM/concert-crawl/issues/783) (email), [#775](https://github.com/HartiganHM/concert-crawl/issues/775) (eng infra), [#794](https://github.com/HartiganHM/concert-crawl/issues/794) (logged-out broader UX).
+**Plan PR target:** TBD — blocked. The Monetization plan PR cannot open until #800 closes plus the sister addenda (#780, #782, #783) and the eng infra spec (#775) close. Path when ready: `docs/superpowers/plans/<date>-monetization-implementation-plan.md` per `docs/superpowers/design-pipeline.md`.
 
 ## Summary
 

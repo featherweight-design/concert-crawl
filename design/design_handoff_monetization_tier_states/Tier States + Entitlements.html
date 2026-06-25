@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Tier States + Entitlements (R5)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="monetization-shared.jsx"></script>
+<script type="text/babel" src="monetization-tier-states.jsx"></script>
+<script type="text/babel" src="monetization-founder-gifted.jsx"></script>
+<script type="text/babel" src="monetization-entitlements.jsx"></script>
+
+<script type="text/babel">
+const { ThemeProvider } = window;
+const { DesignCanvas, DCSection, DCArtboard } = window;
+const { IOSDevice } = window;
+const { MMark, MonoEyebrow, PageBehindMock, Scrim } = window;
+const { TierPicker, GiftedThankYou } = window;
+const { FounderRaceLoser, FounderClaimTakeover, GiftedPlanCardDesktop, GiftedPlanCardMobile } = window;
+const { EntitlementsMatrix } = window;
+
+const PHONE_W = 402, PHONE_H = 874;
+const DESK_W = 1240, DESK_H = 860;
+const PICKER_DESK_H = 920;
+const MATRIX_DESK_H = 1160;
+
+// ── Phone scene ───────────────────────────────────────────────
+function PhoneScene({ theme = "electric", children, pageBehind = "settings", bare = false }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <IOSDevice width={PHONE_W} height={PHONE_H} dark={theme !== "light"}>
+        {bare ? children : (
+          <div style={{ position: "relative", width: "100%", height: "100%" }}>
+            <PageBehindMock scene={pageBehind}/>
+            <Scrim/>
+            {children}
+          </div>
+        )}
+      </IOSDevice>
+    </ThemeProvider>
+  );
+}
+
+// ── Desktop browser chrome ────────────────────────────────────
+function DesktopChrome({ theme = "electric", url = "concertcrawl.app/settings/plan", height = DESK_H, children }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <div style={{ width: DESK_W, height, position: "relative", background: "var(--bg)", overflow: "hidden" }}>
+        <div style={{
+          position: "absolute", top: 0, left: 0, right: 0, height: 36,
+          background: "var(--surface-1)", borderBottom: "1px solid var(--border)",
+          display: "flex", alignItems: "center", padding: "0 14px", gap: 8, zIndex: 5,
+        }}>
+          {[0,1,2].map(i => <span key={i} style={{ width: 11, height: 11, borderRadius: 6, background: ["#FF7A8A","#FFD27A","#7BFFB0"][i], opacity: 0.7 }}/>)}
+          <div style={{ flex: 1 }}/>
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "var(--fg-subtle)", letterSpacing: "0.06em" }}>{url}</div>
+          <div style={{ flex: 1 }}/>
+        </div>
+        <div style={{ position: "absolute", inset: "36px 0 0 0" }}>{children}</div>
+      </div>
+    </ThemeProvider>
+  );
+}
+
+// ── Desktop settings page-behind (for modal pickers) ──────────
+function DesktopSettingsMock() {
+  return (
+    <div style={{ width: "100%", height: "100%", display: "grid", gridTemplateColumns: "240px 1fr", background: "var(--bg)", color: "var(--fg)", fontFamily: "Inter, system-ui" }}>
+      <div style={{ borderRight: "1px solid var(--border)", padding: "20px 16px", display: "flex", flexDirection: "column", gap: 14, background: "var(--surface-1)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <MMark size={24}/>
+          <div style={{ fontWeight: 800, letterSpacing: "-0.02em" }}>concert<span style={{ color: "var(--accent)" }}>crawl.</span></div>
+        </div>
+        {["Profile","Plan","My submissions","Appearance","Account"].map((l, i) => (
+          <div key={i} style={{ fontSize: 13, color: l === "Plan" ? "var(--fg)" : "var(--fg-muted)", fontWeight: l === "Plan" ? 700 : 500 }}>{l}</div>
+        ))}
+      </div>
+      <div style={{ padding: "30px 36px", display: "flex", flexDirection: "column", gap: 16 }}>
+        <MonoEyebrow size={11}>SETTINGS · PLAN</MonoEyebrow>
+        <div style={{ fontSize: 38, fontWeight: 900, letterSpacing: "-0.035em" }}>Plan</div>
+        <div style={{ height: 120, borderRadius: 12, background: "var(--surface-1)", border: "1px solid var(--border)" }}/>
+      </div>
+    </div>
+  );
+}
+
+function DesktopModalScene({ theme = "electric", height = PICKER_DESK_H, children }) {
+  return (
+    <DesktopChrome theme={theme} height={height}>
+      <div style={{ position: "absolute", inset: 0, opacity: 0.5 }}><DesktopSettingsMock/></div>
+      <Scrim/>
+      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: 28 }}>
+        {children}
+      </div>
+    </DesktopChrome>
+  );
+}
+
+// ── Settings "Plan" frame holding a plan card (gifted) ────────
+function SettingsPlanDesktop({ theme = "electric", children }) {
+  return (
+    <DesktopChrome theme={theme} height={DESK_H}>
+      <div style={{ width: "100%", height: "100%", display: "grid", gridTemplateColumns: "280px 1fr", background: "var(--bg)", color: "var(--fg)", fontFamily: "Inter, system-ui" }}>
+        <div style={{ borderRight: "1px solid var(--border)", padding: "22px 18px", display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 36, background: "var(--signal)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--fg-on-accent)", fontWeight: 900, fontSize: 14 }}>S</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <div style={{ fontWeight: 800, fontSize: 14, letterSpacing: "-0.01em" }}>@sasha</div>
+              <MonoEyebrow size={9}>— · joined mar 2026</MonoEyebrow>
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 8 }}>
+            {["Profile","Plan","My submissions","Appearance","Account","Danger zone"].map((l) => (
+              <div key={l} style={{
+                padding: "10px 12px", borderRadius: 8,
+                background: l === "Plan" ? "color-mix(in oklch, var(--signal) 14%, var(--surface-1))" : "transparent",
+                border: l === "Plan" ? "1px solid color-mix(in oklch, var(--signal) 40%, var(--border))" : "1px solid transparent",
+                color: l === "Plan" ? "var(--fg)" : (l === "Danger zone" ? "var(--danger)" : "var(--fg-muted)"),
+                fontWeight: l === "Plan" ? 800 : 600, fontSize: 13.5,
+              }}>{l}</div>
+            ))}
+          </div>
+        </div>
+        <div style={{ padding: "34px 42px", overflow: "auto" }}>
+          <div style={{ fontWeight: 900, fontSize: 42, letterSpacing: "-0.035em", lineHeight: 1 }}>Plan</div>
+          <div style={{ fontWeight: 500, fontSize: 15, color: "var(--fg-muted)", marginTop: 6 }}>What you're paying us. (Or not.)</div>
+          <div style={{ height: 24 }}/>
+          {children}
+        </div>
+      </div>
+    </DesktopChrome>
+  );
+}
+
+function SettingsPlanMobile({ theme = "electric", children }) {
+  return (
+    <PhoneScene theme={theme} bare={true}>
+      <div style={{ width: "100%", height: "100%", background: "var(--bg)", color: "var(--fg)", fontFamily: "Inter, system-ui", display: "flex", flexDirection: "column" }}>
+        <div style={{ display: "flex", alignItems: "center", padding: "62px 16px 12px", borderBottom: "1px solid var(--border)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700, letterSpacing: "0.18em", color: "var(--signal)" }}>
+            <svg width="14" height="14" viewBox="0 0 14 14"><path d="M9 3 L4 7 L9 11" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            DONE
+          </div>
+          <div style={{ flex: 1, textAlign: "center", fontWeight: 800, fontSize: 17 }}>Settings</div>
+          <div style={{ width: 50 }}/>
+        </div>
+        <div style={{ flex: 1, overflow: "auto", padding: "18px 16px 28px", display: "flex", flexDirection: "column", gap: 12 }}>
+          <MonoEyebrow size={10}>Your plan</MonoEyebrow>
+          {children}
+        </div>
+      </div>
+    </PhoneScene>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Tweaks
+// ─────────────────────────────────────────────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "electric",
+  "state": "founder",
+  "founderKind": "ending-soon",
+  "urgencyIntensity": "medium"
+}/*EDITMODE-END*/;
+
+const { TweaksPanel, useTweaks, TweakSection, TweakRadio, TweakSelect } = window;
+const THEME_OPTS = window.CC_THEME_KEYS.map(k => ({ value: k, label: window.CC_THEMES[k].label }));
+
+function FlowTweaks() {
+  const [t, setT] = useTweaks(TWEAK_DEFAULTS);
+  return (
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="State + theme">
+        <TweakSelect label="Picker state" value={t.state} onChange={(v)=>setT("state",v)} options={[
+          { value: "logged-out", label: "Logged out (paywall)" },
+          { value: "free",       label: "Free" },
+          { value: "supporter",  label: "Supporter" },
+          { value: "premium",    label: "Premium" },
+          { value: "founder",    label: "Founder" },
+          { value: "gifted",     label: "Gifted (thank-you)" },
+        ]}/>
+        <TweakSelect label="Theme (all 9)" value={t.theme} onChange={(v)=>setT("theme",v)} options={THEME_OPTS}/>
+      </TweakSection>
+      <TweakSection label="Founder window">
+        <TweakSelect label="Window" value={t.founderKind} onChange={(v)=>setT("founderKind",v)} options={[
+          { value: "open-many",   label: "Open · many (23/100)" },
+          { value: "open-few",    label: "Open · few (88/100)" },
+          { value: "ending-soon", label: "Ending soon (2d)" },
+          { value: "closed",      label: "Closed (Founder hidden)" },
+        ]}/>
+        <TweakRadio label="Urgency" value={t.urgencyIntensity} onChange={(v)=>setT("urgencyIntensity",v)} options={[
+          { value: "subtle", label: "Subtle" },
+          { value: "medium", label: "Medium" },
+          { value: "loud",   label: "Loud" },
+        ]}/>
+      </TweakSection>
+    </TweaksPanel>
+  );
+}
+
+function LiveMobile() {
+  const [t] = useTweaks(TWEAK_DEFAULTS);
+  return (
+    <PhoneScene theme={t.theme} pageBehind="settings">
+      <TierPicker state={t.state} variant="mobile" founderKind={t.founderKind} urgencyIntensity={t.urgencyIntensity}/>
+    </PhoneScene>
+  );
+}
+function LiveDesktop() {
+  const [t] = useTweaks(TWEAK_DEFAULTS);
+  return (
+    <DesktopModalScene theme={t.theme}>
+      <TierPicker state={t.state} variant="desktop" founderKind={t.founderKind} urgencyIntensity={t.urgencyIntensity}/>
+    </DesktopModalScene>
+  );
+}
+
+const SIX_STATES = [
+  { key: "logged-out", label: "Logged out · picker IS the paywall" },
+  { key: "free",       label: "Free · upgrade targets" },
+  { key: "supporter",  label: "Supporter · badge-only, upsell to Premium" },
+  { key: "premium",    label: "Premium · current plan stamped" },
+  { key: "founder",    label: "Founder · locked $3 stamped" },
+  { key: "gifted",     label: "Gifted · thank-you replaces the surface" },
+];
+
+// ─────────────────────────────────────────────────────────────
+function App() {
+  return (
+    <>
+      <DesignCanvas
+        title="Monetization · Tier States + Entitlements"
+        subtitle="Round 5 · six locked states · Founder race surfaces · gifted plan card · §6 entitlements matrix · token-only across all 9 themes"
+      >
+        {/* 0 · LIVE */}
+        <DCSection id="live" title="0 · Live preview" subtitle="Drive state + theme (all 9) + Founder window from the Tweaks panel (toggle it on in the toolbar). Mobile sheet + desktop modal stay in lockstep.">
+          <DCArtboard id="live-mobile" label="Mobile · responds to Tweaks" width={PHONE_W} height={PHONE_H}><LiveMobile/></DCArtboard>
+          <DCArtboard id="live-desktop" label="Desktop · responds to Tweaks" width={DESK_W} height={PICKER_DESK_H}><LiveDesktop/></DCArtboard>
+        </DCSection>
+
+        {/* 1 · PICKER · 6 STATES · MOBILE */}
+        <DCSection id="states-mobile" title="1 · Tier picker · 6 states · mobile"
+          subtitle="Every locked state on the mobile bottom sheet. Founder window open (23/100). Logged-out is feature-anchored with an inline sign-in. Gifted swaps the whole surface for the thank-you panel.">
+          {SIX_STATES.map(s => (
+            <DCArtboard key={s.key} id={"sm-" + s.key} label={s.label} width={PHONE_W} height={PHONE_H}>
+              <PhoneScene theme="electric" pageBehind="settings">
+                <TierPicker state={s.key} variant="mobile" founderKind="open-many" urgencyIntensity="medium"/>
+              </PhoneScene>
+            </DCArtboard>
+          ))}
+        </DCSection>
+
+        {/* 2 · PICKER · 6 STATES · DESKTOP */}
+        <DCSection id="states-desktop" title="2 · Tier picker · 6 states · desktop"
+          subtitle="Same six states as a centered modal over Settings · Plan. Cards sit in a row; Founder is the 4th column while the window's open.">
+          {SIX_STATES.map(s => (
+            <DCArtboard key={s.key} id={"sd-" + s.key} label={s.label} width={DESK_W} height={PICKER_DESK_H}>
+              <DesktopModalScene theme="electric">
+                <TierPicker state={s.key} variant="desktop" founderKind="open-many" urgencyIntensity="medium"/>
+              </DesktopModalScene>
+            </DCArtboard>
+          ))}
+        </DCSection>
+
+        {/* 3 · FOUNDER · CLAIM RACE LOSER */}
+        <DCSection id="race-loser" title="3 · Founder · claim-race loser (§3.2)"
+          subtitle="Seat #100 went to someone else mid-tap. Honest full-bleed 'just missed it' surface. No charge, no consolation pricing — the fallback is regular Premium at $5/mo. After this, Founder flips to closed for everyone.">
+          <DCArtboard id="loser-mobile" label="Mobile · full-bleed takeover" width={PHONE_W} height={PHONE_H}>
+            <PhoneScene theme="electric" bare={true}><FounderRaceLoser variant="mobile"/></PhoneScene>
+          </DCArtboard>
+          <DCArtboard id="loser-desktop" label="Desktop · full-bleed" width={DESK_W} height={DESK_H}>
+            <DesktopChrome theme="electric" url="concertcrawl.app/founder/claim"><FounderRaceLoser variant="desktop"/></DesktopChrome>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 4 · FOUNDER · POST-CLAIM TAKEOVER */}
+        <DCSection id="claim-winner" title="4 · Founder · post-claim takeover (§3.3)"
+          subtitle="The dedicated win moment — not the generic success state. Seat-number reveal, $3/mo locked-forever stamp, Founder badge preview. One CTA, auto-routes to Settings · Plan. No confetti; the seat number is the moment.">
+          <DCArtboard id="winner-mobile" label="Mobile · seat #37" width={PHONE_W} height={PHONE_H}>
+            <PhoneScene theme="electric" bare={true}><FounderClaimTakeover variant="mobile" seatNumber={37}/></PhoneScene>
+          </DCArtboard>
+          <DCArtboard id="winner-mobile-low" label="Mobile · seat #03 (early claimer)" width={PHONE_W} height={PHONE_H}>
+            <PhoneScene theme="electric" bare={true}><FounderClaimTakeover variant="mobile" seatNumber={3}/></PhoneScene>
+          </DCArtboard>
+          <DCArtboard id="winner-desktop" label="Desktop · seat #37" width={DESK_W} height={DESK_H}>
+            <DesktopChrome theme="electric" url="concertcrawl.app/founder/welcome"><FounderClaimTakeover variant="desktop" seatNumber={37}/></DesktopChrome>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 5 · GIFTED · PLAN CARD */}
+        <DCSection id="gifted-plan" title="5 · Gifted · Plan card (§4)"
+          subtitle="Lifetime-Premium-comped users in Settings · Plan. Gratitude voice, Premium + Beta badges, no 'Manage subscription', no 'Cancel any time' — there's no payment relationship to manage. One discovery affordance, never a billing one.">
+          <DCArtboard id="gifted-desktop" label="Desktop · Settings · Plan" width={DESK_W} height={DESK_H}>
+            <SettingsPlanDesktop theme="electric"><GiftedPlanCardDesktop/></SettingsPlanDesktop>
+          </DCArtboard>
+          <DCArtboard id="gifted-mobile" label="Mobile · Settings · Plan" width={PHONE_W} height={PHONE_H}>
+            <SettingsPlanMobile theme="electric"><GiftedPlanCardMobile/></SettingsPlanMobile>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 6 · ENTITLEMENTS MATRIX */}
+        <DCSection id="matrix" title="6 · Entitlements matrix (§6)"
+          subtitle="The canonical table, rendered. 7 features × 6 states, four cell semantics. Grouped by gating philosophy: active affordances render visible-locked when gated; background features stay hidden. Only 'Active' returns true from canUseFeature.">
+          <DCArtboard id="matrix-desktop" label="Desktop · full table" width={DESK_W} height={MATRIX_DESK_H}>
+            <DesktopChrome theme="electric" url="concertcrawl.app/docs/entitlements" height={MATRIX_DESK_H}>
+              <EntitlementsMatrix variant="desktop"/>
+            </DesktopChrome>
+          </DCArtboard>
+          <DCArtboard id="matrix-mobile" label="Mobile · compact grid" width={PHONE_W} height={PHONE_H}>
+            <PhoneScene theme="electric" bare={true}><EntitlementsMatrix variant="mobile"/></PhoneScene>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 7 · THEME PARITY */}
+        <DCSection id="theme-parity" title="7 · Theme parity"
+          subtitle="Token-only proof. The Free-state picker across light + dark + a high-contrast genre theme. Every color reads from var(--*); nothing hard-coded. Flip all 9 in the Tweaks panel.">
+          {["light","drip","forge","pulse"].map(th => (
+            <DCArtboard key={th} id={"tp-" + th} label={"Picker · Free · " + window.CC_THEMES[th].label} width={PHONE_W} height={PHONE_H}>
+              <PhoneScene theme={th} pageBehind="settings">
+                <TierPicker state="free" variant="mobile" founderKind="open-many" urgencyIntensity="medium"/>
+              </PhoneScene>
+            </DCArtboard>
+          ))}
+          <DCArtboard id="tp-matrix-light" label="Matrix · Light" width={DESK_W} height={MATRIX_DESK_H}>
+            <DesktopChrome theme="light" url="concertcrawl.app/docs/entitlements" height={MATRIX_DESK_H}>
+              <EntitlementsMatrix variant="desktop"/>
+            </DesktopChrome>
+          </DCArtboard>
+        </DCSection>
+
+      </DesignCanvas>
+      <FlowTweaks/>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
