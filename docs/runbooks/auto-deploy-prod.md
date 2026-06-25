@@ -1,64 +1,87 @@
 # Auto-Deploy Production — Runbook
 
-This runbook covers the automated promotion pipeline from `main` → staging
-→ smoke-verified production, plus the rollback path when prod smoke fails.
+This runbook covers prod deploys via Render's native git auto-deploy plus the push-triggered smoke + rollback workflow that gates them.
 
-The pipeline is **disabled by default**. Two repo variables gate it; see
-the "Enabling the pipeline" section below.
+Two repo configurations gate the pipeline; see the "Enabling the pipeline" section below.
 
 ## Pipeline overview
 
 ```
 push to main
    │
-   ▼
-CI workflow ───► Deploy to Staging ───► Staging Smoke Tests
-                                                │
-                                                ▼ success
-                                       Deploy to Production           ◄── single workflow,
-                                       ├─ gate                            4 jobs chained
-                                       ├─ deploy                          via `needs:`
-                                       ├─ smoke (post-deploy)
-                                       └─ rollback (if smoke fails)
+   ├──► CI ──► Deploy to Staging ──► Staging Smoke
+   │
+   ├──► Render git auto-deploy
+   │       ├──► concert-crawl-api
+   │       ├──► concert-crawl-crawler-triggers
+   │       └──► concert-crawl-crawler-daily
+   │              │
+   │              ▼
+   │      (Render builds + serves)
+   │
+   └──► Prod smoke (after Render auto-deploy)
+              │  waits up to 5 min for Render to be live on github.sha
+              ▼
+        Playwright smoke against prod
+              ├──► success: workflow ends green
+              └──► failure: render-rollback.sh + Resend admin email
 ```
 
-Each `workflow_run` arrow (CI → Deploy-staging → Staging-smoke → Deploy-prod) is a separate workflow gated on the upstream's `conclusion`. The four jobs **inside** `Deploy to Production` are chained via `needs:` instead — they all live in one workflow because GitHub Actions caps `workflow_run` chains at 3 levels, and the original 5-workflow design hit that cap after a real merge (CI is level 0; deploy-staging, staging-smoke, deploy-prod = 3 levels; a separate prod-post-deploy-smoke workflow would be the 4th level and never fire).
+Render's git integration handles prod deploys directly — there is no GH Actions chain from CI → Deploy-staging → Staging-smoke → Deploy-prod anymore. The four-deep `workflow_run` chain that hit GitHub's 3-level depth cap is gone.
 
-| Workflow                     | Path                                   | Trigger                   | Kill switch                |
-| ---------------------------- | -------------------------------------- | ------------------------- | -------------------------- |
-| CI                           | `.github/workflows/ci.yml`             | push to `main`            | (always on)                |
-| Deploy to Staging            | `.github/workflows/deploy-staging.yml` | CI success                | (always on)                |
-| Staging Smoke Tests          | `.github/workflows/staging-smoke.yml`  | Deploy to Staging success | `STAGING_SMOKE_ENABLED`    |
-| Deploy to Production         | `.github/workflows/deploy-prod.yml`    | Staging Smoke success     | `AUTO_DEPLOY_PROD_ENABLED` |
-| Rollback Production (manual) | `.github/workflows/rollback-prod.yml`  | `workflow_dispatch` only  | (always available)         |
+| Workflow                              | Path                                              | Trigger                            | Kill switch                          |
+| ------------------------------------- | ------------------------------------------------- | ---------------------------------- | ------------------------------------ |
+| CI                                    | `.github/workflows/ci.yml`                        | push to `main`, PRs                | (always on)                          |
+| Deploy to Staging                     | `.github/workflows/deploy-staging.yml`            | CI success                         | (always on)                          |
+| Staging Smoke Tests                   | `.github/workflows/staging-smoke.yml`             | Deploy to Staging success          | `STAGING_SMOKE_ENABLED`              |
+| Prod smoke (after Render auto-deploy) | `.github/workflows/prod-smoke-after-deploy.yml`   | push to `main` + workflow_dispatch | `PROD_SMOKE_RECONCILER_ENABLED`      |
+| Deploy to Production (manual)         | `.github/workflows/deploy-prod.yml`               | `workflow_dispatch` only           | `AUTO_DEPLOY_PROD_ENABLED`           |
+| Rollback Production (manual)          | `.github/workflows/rollback-prod.yml`             | `workflow_dispatch` only           | (always available)                   |
 
 The scheduled `smoke.yml` (every 6 hours against prod) is independent and remains gated by the separate `SMOKE_ENABLED` variable.
 
-### Jobs inside `Deploy to Production`
+## How the prod smoke workflow works
 
-| Job        | Depends on | Fires when                                           |
-| ---------- | ---------- | ---------------------------------------------------- |
-| `gate`     | (entry)    | `AUTO_DEPLOY_PROD_ENABLED == 'true'` + branch checks |
-| `deploy`   | `gate`     | gate succeeded                                       |
-| `smoke`    | `deploy`   | deploy succeeded (skipped if deploy failed)          |
-| `rollback` | `smoke`    | `needs.smoke.outputs.assertions_failed == 'true'`    |
+`prod-smoke-after-deploy.yml` fires on every push to `main`. Each run:
 
-The rollback trigger keys on a job output that the smoke job sets ONLY after Playwright has actually run and returned non-zero. Job-level failures that prevent that step from being reached — timeouts, runner deaths, cancellations, env-var preflight crashes — leave the output unset and the rollback skipped. The original multi-workflow design excluded this class of failure deliberately, to prevent infrastructure flakiness from causing destructive prod rollbacks. The unified design preserves that semantic.
+1. Checks out `github.sha` — the SHA that just landed.
+2. Calls `render-wait-for-live.sh "$RENDER_SERVICE_ID_API" "$github.sha" 300` — polls Render every 10s for up to 5 min, waiting for the API service to be `live` on the pushed SHA.
+3. Branches on the script's exit code:
+   - `0` (live) → runs the Playwright smoke suite against prod.
+   - `124` (timeout) → emits a `::warning::` annotation and exits success. Common cause is a fast-follow merge or `[skip ci]` release commit superseding this deploy. The NEXT push's smoke run validates the latest deployable code.
+   - Any other code → fails the job loudly. Hard failures (jq missing, auth/network, no live deploy, malformed service ID) must not get silently bucketed as "benign timeout."
+4. On smoke success: workflow ends green.
+5. On smoke failure: invokes `render-rollback.sh` for all three prod services. Behavior diverges by service type — see "Caveat on cron service rollback" below — and the workflow sends a Resend admin email summarizing the attempt, then ends in `failure`.
 
-If `deploy` fails, `smoke` is skipped → the output is unset → `rollback` skipped too. This preserves the original "don't compound a failed deploy with a destructive rollback for a deploy that never happened" semantic.
+### Caveat on cron service rollback
 
-If Playwright runs and fails an assertion, `rollback` runs automatically. The workflow invokes `render-rollback.sh` for all three Render services serially, but the script's prefix-based routing means **only the API web service is actually rolled back via the Render API**; the two crawler crons are skipped with a warning (see caveat below). Operators can still trigger rollback manually via `rollback-prod.yml`'s `workflow_dispatch` for any infrastructure-failure case where the auto-path was skipped.
+`render-rollback.sh` detects Render service ID prefix:
+- `srv-*` (web service) → calls Render's `/rollback` endpoint, rolls API back to the prior `live` deploy.
+- `crn-*` (cron job) → Render's `/rollback` endpoint rejects cron services (HTTP 400; confirmed against the live API). The script emits a `::warning::` annotation and exits 0 so the workflow can continue rolling back the other services.
 
-**Caveat on cron service rollback:** Render's `/rollback` API endpoint rejects cron job services (`crn-*`) with HTTP 400 — there is no API path for cron rollback. `render-rollback.sh` detects cron service IDs by prefix and skips them with a loud warning, returning exit 0 so the workflow can proceed to roll back the other services. The two crawler crons require a manual rollback when needed:
+**Net behavior of "smoke failure → rollback":** only the API web service is actually rolled back automatically. The two crawler crons require manual rollback — either via the Render dashboard's Manual Deploy on a prior commit, or (typically preferred) by reverting the offending commit on `main` and letting Render auto-deploy the revert. The Resend admin email surfaces this explicitly so the operator knows manual action is needed for the crons.
 
-- Render dashboard → cron service (`concert-crawl-crawler-triggers` or `concert-crawl-crawler-daily`) → Settings → Manual Deploy → pick a prior commit from the dropdown.
-- Or — more commonly preferred — revert the offending commit on `main` and let the next CI-triggered deploy roll the reverted code out to API and crons together.
+### Why push, not cron
+
+GH Actions schedule cron is famously droppy under load. `push` is one of the most reliable triggers in the system, and it fires the moment main moves. The "wait for Render" piece is unavoidable (Render's deploy is async), but at ~2-min typical Render deploys it's a bounded inner-loop wait.
+
+A cron design was evaluated and rejected: it would have cost ~$35/mo more in idle runner minutes (private-repo billing) and added a 5-min worst-case detection lag, with no correctness benefit.
+
+### Semantic-release release commits
+
+semantic-release lands a `chore(release): X.Y.Z [skip ci]` commit ~3 min after every merge. The `[skip ci]` convention prevents this workflow from firing for that commit. The merge commit's smoke workflow does fire and waits for Render to be live on the merge SHA.
+
+**Typical case (Render queues deploys in order):** the merge build completes first and is live for ~3 min before the release build supersedes it. The smoke catches that window. ✓
+
+**Edge case (Render cancels merge build mid-flight when the release commit lands):** merge SHA never reaches `live`, the wait exits 124, smoke is skipped, release commit ends up live and unsmoked. We accept this gap because the release commit is code-equivalent to the merge commit (`package.json` + CHANGELOG version bumps only). Operators can `workflow_dispatch` the smoke workflow against the release commit if a specific release warrants explicit validation — the kill switch is bypassed for dispatch.
+
+The rollback trigger keys on a job output that the smoke job sets ONLY after Playwright has actually run and returned non-zero. Job-level failures that prevent that step from being reached — timeouts, runner deaths, cancellations, env-var preflight crashes — leave the output unset and the rollback skipped. This prevents infrastructure flakiness from causing destructive prod rollbacks.
 
 **How you're notified the cron action is needed:**
 
-1. **GHA workflow-failure email** — the deploy-prod workflow ends with `failure` conclusion (smoke job failed = whole workflow failed). GitHub Actions emails you by default when a workflow on `main` fails.
+1. **GHA workflow-failure email** — the smoke workflow ends with `failure` conclusion. GitHub Actions emails you by default when a workflow on `main` fails.
 2. **`::warning::` annotation in the workflow summary** — each skipped cron emits a warning that surfaces on the workflow run's summary card at the top of the page, not buried in step logs.
-3. **Admin email via Resend** — the rollback job's "Notify admin" step calls Resend (`alerts@concertcrawl.app` → `ADMIN_EMAIL`) with a summary and the workflow run URL. Runs with `if: always()` so the email goes out even if a rollback step earlier in the job failed; the email body says "rollback was triggered" (not "succeeded") and points at the run URL for the actual outcome. Requires `RESEND_API_KEY` (secret) + `ADMIN_EMAIL` (variable) in the `production` environment. Missing either falls back to the annotation only — non-fatal.
+3. **Admin email via Resend** — the rollback path's "Notify admin" step calls Resend (`alerts@concertcrawl.app` → `ADMIN_EMAIL`) with a summary and the workflow run URL. Runs with `if: always()` so the email goes out even if a rollback step earlier in the job failed; the email body says "rollback was triggered" (not "succeeded") and points at the run URL for the actual outcome. Requires `RESEND_API_KEY` (secret) + `ADMIN_EMAIL` (variable) in the `production` environment. Missing either falls back to the annotation only — non-fatal.
 
 ### Manual rollback path
 
@@ -109,21 +132,27 @@ against the old code.
    "Staging Smoke Tests" workflow run end-to-end against staging
 6. Iterate on the smoke suite if any test flakes
 
-### Stage 2 — enable auto-deploy-prod + rollback
+### Stage 2 — enable Render auto-deploy on prod
 
 After stage 1 has been stable through a handful of merges:
 
-1. Provision the prod environment variables + secret (see env vars table below): three `RENDER_SERVICE_ID_*` variables in the `production` environment, plus `RENDER_API_TOKEN` as a `production`-environment secret
-2. Set `AUTO_DEPLOY_PROD_ENABLED` repo variable to `true`
-3. Merge a small no-op PR to `main`
-4. Watch the full chain run end-to-end: CI → deploy-staging → staging-smoke → deploy-prod (gate → deploy → smoke; rollback fires only on smoke failure)
-5. Force a rollback in a controlled way to validate it (see
-   "Testing the rollback path" below)
+1. Render dashboard → `concert-crawl-api` → Settings → Build & Deploy → set **Auto-Deploy** to `Yes`. Repeat for `concert-crawl-crawler-triggers` and `concert-crawl-crawler-daily`.
+2. The next push to `main` triggers Render auto-deploy automatically — no GitHub `workflow_run` involved.
+3. Leave `AUTO_DEPLOY_PROD_ENABLED=true` so the manual `deploy-prod.yml` escape hatch stays usable.
+
+### Stage 3 — enable the prod smoke workflow
+
+After the first auto-deploy from stage 2 succeeds:
+
+1. Set `PROD_SMOKE_RECONCILER_ENABLED=true` in repo variables (Settings → Variables → Actions). The smoke workflow defaults to off so it stays inert during the migration window.
+2. Trigger a small no-op merge to `main`.
+3. Watch `Prod smoke (after Render auto-deploy)` run end-to-end: wait → install → smoke → green.
 
 ### Disabling
 
-Flip either repo variable from `true` → `false` (or delete it). Effective
-on the next workflow_run trigger.
+- To pause auto-deploy: flip `Auto-Deploy: no` on the three Render services.
+- To pause push-triggered smoke: flip `PROD_SMOKE_RECONCILER_ENABLED=false`. Render keeps auto-deploying, but the smoke + rollback path stops firing on push to main. `workflow_dispatch` still works regardless — the kill switch is bypassed for manual operator intervention, matching `rollback-prod.yml`'s "incident response can't be paused by a feature flag" design.
+- To disable the manual escape hatch on `deploy-prod.yml`: flip `AUTO_DEPLOY_PROD_ENABLED=false`.
 
 ## Required GitHub configuration
 
@@ -137,7 +166,8 @@ on the next workflow_run trigger.
 | `PROD_URL`                      | deploy-prod (smoke job)       | already present                                                                                                                                                      |
 | `PROD_API_URL`                  | deploy-prod (smoke job)       | already present                                                                                                                                                      |
 | `STAGING_SMOKE_ENABLED`         | staging-smoke                 | **new** — default `false`; set to `true` in Stage 1                                                                                                                  |
-| `AUTO_DEPLOY_PROD_ENABLED`      | deploy-prod                   | **new** — default `false`; set to `true` in Stage 2. Gates the whole deploy-prod workflow including its smoke + auto-rollback jobs.                                  |
+| `AUTO_DEPLOY_PROD_ENABLED`      | deploy-prod (manual)          | default `false`; set to `true` to keep the manual `deploy-prod.yml` escape hatch usable. Under the post-#786 model, the normal deploy path runs through Render's git auto-deploy, NOT this workflow. |
+| `PROD_SMOKE_RECONCILER_ENABLED` | prod-smoke-after-deploy       | **new** — default `false`; set to `true` in Stage 3. Gates the push-triggered prod smoke + rollback workflow. `workflow_dispatch` bypasses this kill switch so manual operator intervention always works. |
 
 ### `production` environment — Variables (Settings → Environments → production)
 
@@ -171,7 +201,7 @@ just list recent deploys and POST `/rollback`, nothing else.
 
 ## Testing the rollback path
 
-**For the auto-rollback path** (smoke → rollback inside `deploy-prod.yml`): the cleanest way to verify the wiring without breaking real prod is to invoke **Deploy to Production** manually (`workflow_dispatch`, supply a `reason`) while temporarily pointing `PROD_API_URL` at a bogus hostname. The deploy job succeeds, the smoke job fails against the bogus URL, the rollback job fires, and Render shows new deploys on each service matching the previous-prior commit SHA. Restore `PROD_API_URL` and run one more clean deploy to roll forward again.
+**For the auto-rollback path** (smoke → rollback inside `prod-smoke-after-deploy.yml`): the cleanest way to verify the wiring without breaking real prod is to temporarily point `PROD_API_URL` at a bogus hostname, then `workflow_dispatch` the **Prod smoke (after Render auto-deploy)** workflow. The wait step exits success (Render is still live on the real SHA), the smoke step fails against the bogus URL, the rollback steps fire (API rolls back; the two crons emit warnings — see "Caveat on cron service rollback"), and Render shows a new deploy on the API service matching the previous-prior commit SHA. Restore `PROD_API_URL` afterward.
 
 **For the manual rollback path:** invoke **Rollback Production (manual)** with `workflow_dispatch` and a `reason` value. The script rolls back to the prior live deploy on each service. Use this exact path for any incident response that doesn't originate from a freshly-deployed smoke failure.
 
