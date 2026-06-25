@@ -1,7 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
   buildBatches,
+  classifyAction,
   formatCsvRow,
+  neutralizeFormula,
   type EventForClassification,
   type ClassificationResult,
 } from './2026-06-24-isconcert-review-needed-backfill-helpers.js'
@@ -59,6 +61,114 @@ describe('isconcert-review-needed-backfill — formatCsvRow', () => {
   it('includes the action label in the trailing column', () => {
     const row = formatCsvRow({ ...baseResult, action: 'flag-for-review' })
     expect(row.trimEnd().endsWith(',flag-for-review')).toBe(true)
+  })
+
+  it('neutralizes leading = (CSV formula injection)', () => {
+    const row = formatCsvRow({ ...baseResult, title: '=SUM(A1)' })
+    // Prefixed with ' to neutralize, then needs quoting because = isn't
+    // special but ' is just a literal char — the quoted/unquoted split is
+    // driven by ,/"/\n. =SUM(A1) has no comma/quote/newline so it stays
+    // unquoted, just neutralized.
+    expect(row).toContain("'=SUM(A1)")
+  })
+
+  it('neutralizes leading + (CSV formula injection)', () => {
+    const row = formatCsvRow({ ...baseResult, artist: '+CMD' })
+    expect(row).toContain("'+CMD")
+  })
+
+  it('neutralizes leading - (CSV formula injection)', () => {
+    const row = formatCsvRow({ ...baseResult, venueName: '-2+3' })
+    expect(row).toContain("'-2+3")
+  })
+
+  it('neutralizes leading @ (CSV formula injection)', () => {
+    const row = formatCsvRow({ ...baseResult, title: '@SUM(A1)' })
+    expect(row).toContain("'@SUM(A1)")
+  })
+
+  it('leaves normal text untouched (no formula prefix)', () => {
+    const row = formatCsvRow({ ...baseResult, title: 'PRESIDENT' })
+    expect(row).toContain(',PRESIDENT,')
+    // No leading single quote added
+    expect(row).not.toContain("'PRESIDENT")
+  })
+})
+
+describe('isconcert-review-needed-backfill — neutralizeFormula', () => {
+  it('passes through empty string', () => {
+    expect(neutralizeFormula('')).toBe('')
+  })
+
+  it('passes through strings starting with normal characters', () => {
+    expect(neutralizeFormula('PRESIDENT')).toBe('PRESIDENT')
+    expect(neutralizeFormula('123 Show')).toBe('123 Show')
+    expect(neutralizeFormula(' leading space')).toBe(' leading space')
+  })
+
+  it('prefixes = + - @ with a single quote', () => {
+    expect(neutralizeFormula('=foo')).toBe("'=foo")
+    expect(neutralizeFormula('+foo')).toBe("'+foo")
+    expect(neutralizeFormula('-foo')).toBe("'-foo")
+    expect(neutralizeFormula('@foo')).toBe("'@foo")
+  })
+})
+
+describe('isconcert-review-needed-backfill — classifyAction', () => {
+  it('returns disagrees-with-prior when row is hidden AND llm now says concert', () => {
+    expect(
+      classifyAction({
+        currentHidden: true,
+        llmIsConcert: true,
+        llmReviewNeeded: false,
+      }),
+    ).toBe('disagrees-with-prior')
+  })
+
+  it('disagrees-with-prior takes precedence over reviewNeeded', () => {
+    // Both hidden+concert AND reviewNeeded=true — disagreement wins
+    expect(
+      classifyAction({
+        currentHidden: true,
+        llmIsConcert: true,
+        llmReviewNeeded: true,
+      }),
+    ).toBe('disagrees-with-prior')
+  })
+
+  it('returns flag-for-review when not disagreement AND reviewNeeded=true', () => {
+    // Hidden + non-concert + flagged (LLM still thinks non-concert but uncertain)
+    expect(
+      classifyAction({
+        currentHidden: true,
+        llmIsConcert: false,
+        llmReviewNeeded: true,
+      }),
+    ).toBe('flag-for-review')
+  })
+
+  it('returns unflag when not disagreement AND reviewNeeded=false', () => {
+    // Hidden + non-concert + unambiguous
+    expect(
+      classifyAction({
+        currentHidden: true,
+        llmIsConcert: false,
+        llmReviewNeeded: false,
+      }),
+    ).toBe('unflag')
+  })
+
+  it('handles visible-and-flagged: returns flag-for-review (not disagreement, since not hidden)', () => {
+    // Currently visible row that LLM thinks is concert AND borderline.
+    // Backfill only loads hidden rows in production, but the helper
+    // shouldn't assume that — defensive coverage for any future caller.
+    expect(
+      classifyAction({
+        currentHidden: false,
+        llmIsConcert: true,
+        llmReviewNeeded: true,
+      }),
+    ).toBe('flag-for-review')
   })
 })
 

@@ -60,12 +60,34 @@ export function classifyAction(input: {
   return input.llmReviewNeeded ? 'flag-for-review' : 'unflag'
 }
 
+// Defends against CSV formula injection (=, +, -, @ leading chars get
+// interpreted as formulas in Excel/Sheets when an operator opens the
+// dry-run CSV). Prefix a single quote so spreadsheet apps treat the cell
+// as literal text. Applied to every string-typed column (event titles,
+// artist names, venue names can all originate from untrusted scraped
+// content). See OWASP "CSV Injection".
+export function neutralizeFormula(val: string): string {
+  if (val.length === 0) return val
+  const firstChar = val.charCodeAt(0)
+  // = + - @ in ASCII = 0x3D, 0x2B, 0x2D, 0x40
+  if (
+    firstChar === 0x3d ||
+    firstChar === 0x2b ||
+    firstChar === 0x2d ||
+    firstChar === 0x40
+  ) {
+    return `'${val}`
+  }
+  return val
+}
+
 export function formatCsvRow(result: ClassificationResult): string {
   const escape = (val: string): string => {
-    if (val.includes(',') || val.includes('"') || val.includes('\n')) {
-      return `"${val.replace(/"/g, '""')}"`
+    const safe = neutralizeFormula(val)
+    if (safe.includes(',') || safe.includes('"') || safe.includes('\n')) {
+      return `"${safe.replace(/"/g, '""')}"`
     }
-    return val
+    return safe
   }
   return (
     [
