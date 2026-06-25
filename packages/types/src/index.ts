@@ -242,15 +242,22 @@ export interface CrawlRun {
   venueName?: string | null
   startedAt?: string | null
   // Surfaces an unread admin_alert notification of category
-  // 'crawl.event_count_dropped' or 'crawl.failed' that points at this run.
-  // The admin UI renders a badge alongside the status pill so a "Success"
-  // row that triggered the went-dark alert is no longer silent (#804).
+  // 'crawl.event_count_dropped' (covers both went-dark and sharp-drop)
+  // or 'crawl.failed' (consecutive-failure auto-pause) that points at
+  // this run. The admin UI renders a badge alongside the status pill so a
+  // "Success" row that tripped the event-count alert is no longer silent
+  // (#804). `severity` lets the badge distinguish "Went dark" from
+  // "Dropped sharply" without round-tripping the notification body.
   activeAlert?: ActiveCrawlAlert | null
 }
 
 export interface ActiveCrawlAlert {
   notificationId: string
   category: 'crawl.event_count_dropped' | 'crawl.failed'
+  // Only present for 'crawl.event_count_dropped' — the event-count alert
+  // classifies the drop as 'went_dark' (0 events) or 'dropped_sharply'
+  // (non-zero but well below baseline). 'crawl.failed' has no sub-severity.
+  severity?: 'went_dark' | 'dropped_sharply' | null
 }
 
 // Event — represents the JSON-serialized API response shape.

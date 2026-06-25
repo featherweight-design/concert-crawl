@@ -372,7 +372,11 @@ describe('Admin crawl routes', () => {
           {
             id: NOTIF_ID,
             category: 'crawl.event_count_dropped',
-            metadata: JSON.stringify({ venueId: VENUE_ID, crawlRunId: RUN_ID }),
+            metadata: JSON.stringify({
+              venueId: VENUE_ID,
+              crawlRunId: RUN_ID,
+              severity: 'went_dark',
+            }),
             createdAt: new Date(),
           },
         ],
@@ -385,13 +389,82 @@ describe('Admin crawl routes', () => {
         success: boolean
         data: {
           id: string
-          activeAlert: { notificationId: string; category: string } | null
+          activeAlert: {
+            notificationId: string
+            category: string
+            severity: string | null
+          } | null
         }[]
       }
       expect(body.data[0]?.activeAlert).toEqual({
         notificationId: NOTIF_ID,
         category: 'crawl.event_count_dropped',
+        severity: 'went_dark',
       })
+    })
+
+    // Older event-count notifications written before the severity field
+    // was added (#804 round 2) still need to surface correctly — the badge
+    // just falls back to a neutral label.
+    it('attaches activeAlert with severity=null when notification metadata predates severity', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      const NOTIF_ID = '00000000-0000-0000-0000-0000000000a1'
+      queueRunsThenAlerts(
+        db,
+        [mockCrawlRun],
+        [
+          {
+            id: NOTIF_ID,
+            category: 'crawl.event_count_dropped',
+            metadata: JSON.stringify({ venueId: VENUE_ID, crawlRunId: RUN_ID }),
+            createdAt: new Date(),
+          },
+        ],
+      )
+      const res = await createApp().request(
+        `/v1/admin/crawl/runs?venueId=${VENUE_ID}`,
+      )
+      const body = (await res.json()) as {
+        data: {
+          activeAlert: { severity: string | null } | null
+        }[]
+      }
+      expect(body.data[0]?.activeAlert?.severity).toBeNull()
+    })
+
+    // 'crawl.failed' never carries a sub-severity; the API normalizes to
+    // null so the UI doesn't have to special-case undefined-vs-null.
+    it('returns severity=null for crawl.failed alerts even when metadata accidentally carries one', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      const NOTIF_ID = '00000000-0000-0000-0000-0000000000a2'
+      queueRunsThenAlerts(
+        db,
+        [mockCrawlRun],
+        [
+          {
+            id: NOTIF_ID,
+            category: 'crawl.failed',
+            metadata: JSON.stringify({
+              venueId: VENUE_ID,
+              crawlRunId: RUN_ID,
+              severity: 'went_dark',
+            }),
+            createdAt: new Date(),
+          },
+        ],
+      )
+      const res = await createApp().request(
+        `/v1/admin/crawl/runs?venueId=${VENUE_ID}`,
+      )
+      const body = (await res.json()) as {
+        data: {
+          activeAlert: { category: string; severity: string | null } | null
+        }[]
+      }
+      expect(body.data[0]?.activeAlert?.category).toBe('crawl.failed')
+      expect(body.data[0]?.activeAlert?.severity).toBeNull()
     })
 
     it('ignores notifications whose metadata.crawlRunId does not match any returned run', async () => {

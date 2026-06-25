@@ -31,7 +31,10 @@ export const CrawlHistoryFilter = ({
     >
       <Link
         href={basePath}
-        aria-pressed={allActive}
+        // aria-current is the correct active-state attribute for an
+        // anchor (role="link"); aria-pressed is reserved for buttons /
+        // toggle widgets and is ignored or mis-announced on links.
+        aria-current={allActive ? 'page' : undefined}
         className={`inline-flex items-center rounded-full border px-3 py-1 transition-colors ${
           allActive
             ? 'border-accent bg-accent text-fg-on-accent'
@@ -42,7 +45,7 @@ export const CrawlHistoryFilter = ({
       </Link>
       <Link
         href={`${basePath}?hasAlert=true`}
-        aria-pressed={alertsActive}
+        aria-current={alertsActive ? 'page' : undefined}
         className={`inline-flex items-center rounded-full border px-3 py-1 transition-colors ${
           alertsActive
             ? 'border-accent bg-accent text-fg-on-accent'

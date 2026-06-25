@@ -1,6 +1,6 @@
 import {
-  CRAWL_ALERT_BADGES,
   CRAWL_STATUS_BADGES,
+  resolveCrawlAlertBadge,
 } from '@/components/admin/definitions/constants'
 
-export { CRAWL_ALERT_BADGES, CRAWL_STATUS_BADGES }
+export { CRAWL_STATUS_BADGES, resolveCrawlAlertBadge }

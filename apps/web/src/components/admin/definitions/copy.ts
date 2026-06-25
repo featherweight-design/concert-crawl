@@ -514,6 +514,14 @@ export const ADMIN_COPY = {
       'An unread admin alert is associated with this crawl run. Mark the notification as read to clear this badge.',
     alertBadgeAriaLabel:
       'This crawl run has an unread admin alert. Visit the notifications inbox for details.',
+    // Badge labels keyed by alert category + severity. 'Went dark' = 0
+    // events on a previously healthy venue; 'Dropped sharply' = non-zero
+    // but well below baseline; 'Event drop' is the neutral fallback for
+    // older event-count rows whose metadata predates the severity field.
+    alertBadgeLabelWentDark: 'Went dark',
+    alertBadgeLabelDroppedSharply: 'Dropped sharply',
+    alertBadgeLabelEventDrop: 'Event drop',
+    alertBadgeLabelFailing: 'Failing',
     filterShowAll: 'Show all',
     filterAlertsOnly: 'Show alerts only',
     filterAriaLabel: 'Filter crawl history by active alert state',

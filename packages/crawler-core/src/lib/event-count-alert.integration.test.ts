@@ -137,6 +137,7 @@ describe('checkEventCountDrop', () => {
     expect(notifs).toHaveLength(1)
     expect(notifs[0]!.title).toContain('went dark')
     expect(notifs[0]!.metadata).toContain('"eventsFound":0')
+    expect(notifs[0]!.metadata).toContain('"severity":"went_dark"')
 
     const [updatedVenue] = await db
       .select()

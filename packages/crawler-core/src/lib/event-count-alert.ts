@@ -157,6 +157,10 @@ async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
       metadata: JSON.stringify({
         venueId: input.venueId,
         crawlRunId: input.crawlRunId,
+        // severity threads through to the admin Crawl History badge so the
+        // UI can label the row "Went dark" vs "Dropped sharply" without
+        // re-classifying off raw eventsFound + baseline (#804).
+        severity,
         eventsFound: input.eventsFound,
         baselineCount,
         dropPercent,

@@ -12,8 +12,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
-  CRAWL_ALERT_BADGES,
   CRAWL_STATUS_BADGES,
+  resolveCrawlAlertBadge,
 } from './definitions/constants'
 import { CrawlHistoryFilter } from './CrawlHistoryFilter'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
@@ -99,7 +99,7 @@ export const CrawlHistoryTable = async ({
                   ? CRAWL_STATUS_BADGES[run.status]
                   : null
               const alertConfig = run.activeAlert
-                ? CRAWL_ALERT_BADGES[run.activeAlert.category]
+                ? resolveCrawlAlertBadge(run.activeAlert)
                 : null
 
               return (
