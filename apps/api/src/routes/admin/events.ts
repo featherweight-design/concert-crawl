@@ -876,6 +876,14 @@ eventsAdminRouter.post(
 // review queue chip in the All Events bulk dock, issue #809). Does NOT
 // touch is_concert_review_needed — that flag reflects the LLM's view,
 // not the admin's resolution, per the classification-review-queue spec.
+//
+// The WHERE filter scopes the update to rows currently in
+// hiddenFromConsumer=true, so the endpoint only bumps updatedAt and emits
+// audit entries for rows that actually transitioned. Bulk-dock selections
+// survive pagination, so the request body can include rows the caller no
+// longer sees as hidden; without the filter, those rows would still flip
+// updatedAt and emit audit noise. The mirror cleanup for bulk/mark-non-
+// concert is tracked separately as #815. (#809; #814 review round 2)
 eventsAdminRouter.post(
   '/bulk/mark-as-concert',
   zValidator('json', bulkIdsSchema, (result, ctx) => {
@@ -891,7 +899,9 @@ eventsAdminRouter.post(
       const updated = await tx
         .update(events)
         .set({ hiddenFromConsumer: false, updatedAt: new Date() })
-        .where(inArray(events.id, ids))
+        .where(
+          and(inArray(events.id, ids), eq(events.hiddenFromConsumer, true)),
+        )
         .returning({ id: events.id })
       if (updated.length > 0) {
         await tx.insert(auditLog).values(

@@ -1364,6 +1364,61 @@ describe('PR 10 — bulk endpoints', () => {
     expect(targetIds).toEqual([evt1.id, evt2.id].sort())
   })
 
+  it('POST /bulk/mark-as-concert only flips + audits currently-hidden rows (#814 R2)', async () => {
+    // Mixed selection: 1 hidden row that needs flipping + 1 already-visible
+    // row that survived from a stale cross-page selection. The server-side
+    // WHERE filter must skip the visible row entirely — no updatedAt bump,
+    // no audit entry, and the response count reflects only the row that
+    // actually transitioned.
+    const venue = await seedVenue()
+    const hiddenEvent = await seedEvent(venue.id, {
+      title: 'Hidden',
+      artist: 'A',
+      date: futureDate(7),
+      hiddenFromConsumer: true,
+    })
+    const visibleEvent = await seedEvent(venue.id, {
+      title: 'Visible',
+      artist: 'B',
+      date: futureDate(8),
+      hiddenFromConsumer: false,
+    })
+    const visibleBefore = await testDb
+      .select({ updatedAt: events.updatedAt })
+      .from(events)
+      .where(eq(events.id, visibleEvent.id))
+    const visibleUpdatedAtBefore = visibleBefore[0]?.updatedAt
+
+    const res = await app.request('/v1/admin/events/bulk/mark-as-concert', {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ ids: [hiddenEvent.id, visibleEvent.id] }),
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { count: number }
+    }
+    expect(body.data.count).toBe(1)
+
+    const visibleAfter = await testDb
+      .select({
+        hiddenFromConsumer: events.hiddenFromConsumer,
+        updatedAt: events.updatedAt,
+      })
+      .from(events)
+      .where(eq(events.id, visibleEvent.id))
+    expect(visibleAfter[0]?.hiddenFromConsumer).toBe(false)
+    expect(visibleAfter[0]?.updatedAt).toEqual(visibleUpdatedAtBefore)
+
+    const audits = await testDb
+      .select({ targetId: auditLog.targetId })
+      .from(auditLog)
+      .where(eq(auditLog.action, 'event.bulk_mark_as_concert'))
+    expect(audits).toHaveLength(1)
+    expect(audits[0]?.targetId).toBe(hiddenEvent.id)
+  })
+
   it('POST /bulk/delete requires confirmation=DELETE', async () => {
     const venue = await seedVenue()
     const evt = await seedEvent(venue.id, {

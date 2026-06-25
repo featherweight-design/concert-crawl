@@ -335,10 +335,12 @@ export const AllEventsTabContent = ({
   // Mark-as-concert only applies to hidden rows. selectedIds survives
   // pagination (selections persist across pages), so we only check the
   // selected rows we can see — if any visible row is selected, disable.
-  // Selections on other pages are assumed valid; the API endpoint is
-  // idempotent for visible rows (it's a no-op flip) so a cross-page
-  // selection that turns out to include a visible row commits cleanly.
-  // (#809; #814 review round 1)
+  // The server enforces the invariant too: the bulk endpoint filters its
+  // UPDATE to rows currently in hiddenFromConsumer=true, so cross-page
+  // selections that turn out to include visible rows skip those rows
+  // server-side (no updatedAt bump, no audit entry). The UI disable is
+  // best-effort feedback for what we can see; the server is the truth.
+  // (#809; #814 review rounds 1 + 2)
   const selectedEventsOnPage = events.filter((event) =>
     selectedIds.has(event.id),
   )
