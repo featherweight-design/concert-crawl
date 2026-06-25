@@ -3673,6 +3673,9 @@ async function seed() {
         eq(priceSubmissions.status, 'pending'),
         isNotNull(priceSubmissions.disputedSubmissionId),
         eq(priceSubmissions.lastAdminActionKind, 'defer'),
+        // The defer handler writes (kind, at) together; a row with kind
+        // set but at NULL is half-populated and won't render state #18.
+        isNotNull(priceSubmissions.lastAdminActionAt),
       ),
     )
     .limit(1)
@@ -3932,10 +3935,11 @@ async function seed() {
         return rows.length > 0
       }
       // Treats an event as completed only when a pending counter with an
-      // admin defer action exists. State #18 needs all three: pending
-      // status, dispute link, and lastAdminActionKind='defer'. Missing
-      // any one means the test state is unreachable and the block should
-      // re-seed.
+      // admin defer action exists. State #18 needs all four: pending
+      // status, dispute link, lastAdminActionKind='defer', AND
+      // lastAdminActionAt set (the API pair-narrows kind+at, so kind
+      // without timestamp is half-populated). Missing any means the
+      // test state is unreachable and the block should re-seed.
       const pr4EventCompletedByCounter = async (
         eventId: string,
       ): Promise<boolean> => {
@@ -3948,6 +3952,7 @@ async function seed() {
               eq(priceSubmissions.status, 'pending'),
               isNotNull(priceSubmissions.disputedSubmissionId),
               eq(priceSubmissions.lastAdminActionKind, 'defer'),
+              isNotNull(priceSubmissions.lastAdminActionAt),
             ),
           )
           .limit(1)
@@ -4594,7 +4599,9 @@ async function seed() {
               lastAdminActionAt: pastDatePr4,
               lastAdminActionKind: 'defer' as const,
               note: 'GA showed $155+ later in the week — might be a different tier or pricing tier change.',
-              updatedAt: olderishDatePr4,
+              // The real defer handler bumps updatedAt to now() alongside
+              // the admin action, so updatedAt mirrors the defer time.
+              updatedAt: pastDatePr4,
             })
             .where(
               and(
@@ -4620,7 +4627,10 @@ async function seed() {
               lastAdminActionKind: 'defer' as const,
               note: 'GA showed $155+ later in the week — might be a different tier or pricing tier change.',
               createdAt: olderishDatePr4,
-              updatedAt: olderishDatePr4,
+              // The defer handler bumps updatedAt to now() alongside the
+              // admin action, so updatedAt mirrors lastAdminActionAt and
+              // doesn't appear stale relative to the defer event.
+              updatedAt: pastDatePr4,
             })
           }
         }
