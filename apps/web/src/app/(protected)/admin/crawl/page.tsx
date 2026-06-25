@@ -103,13 +103,16 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
     (Array.isArray(rawVenueId) ? rawVenueId[0] : rawVenueId) || undefined
   const rawTab = resolvedParams.tab
   const initialTab = (Array.isArray(rawTab) ? rawTab[0] : rawTab) || undefined
-  // #804: when `?hasAlert=true` is in the URL, narrow the runs list to only
-  // those carrying an unread admin_alert. The filter UI in the page header
-  // toggles this param via Next.js navigation; the server component
-  // re-renders without needing client state. We also collect the OTHER
-  // search params (venueId, tab) so the filter's hrefs preserve them —
-  // toggling the filter shouldn't clobber the operator's current venue
-  // selection or active inspector tab.
+  // #804: when `?hasAlert=true` is in the URL, narrow the per-venue
+  // history list to only runs carrying an unread admin_alert. The filter
+  // is plumbed through to CrawlSplitView's `useAdminVenueRuns` hook (the
+  // History tab data source); the page-level `runs` fetch stays
+  // unfiltered so the header stats (today's runs, last sweep, ingested
+  // events, LLM cost) reflect the true crawl pipeline regardless of
+  // filter state. We also collect the OTHER search params (venueId, tab)
+  // so the filter's hrefs preserve them — toggling the filter shouldn't
+  // clobber the operator's current venue selection or active inspector
+  // tab.
   const rawHasAlert = resolvedParams.hasAlert
   const hasAlertParam = Array.isArray(rawHasAlert)
     ? rawHasAlert[0]
@@ -122,13 +125,9 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
     otherSearchParams[key] = Array.isArray(value) ? (value[0] ?? '') : value
   }
 
-  const runsUrl = hasAlertOnly
-    ? '/v1/admin/crawl/runs?limit=50&hasAlert=true'
-    : '/v1/admin/crawl/runs?limit=50'
-
   const [rawStatus, runs] = await Promise.all([
     apiClient.get<RawVenueStatus[]>('/v1/admin/crawl/status', token),
-    apiClient.get<CrawlRun[]>(runsUrl, token),
+    apiClient.get<CrawlRun[]>('/v1/admin/crawl/runs?limit=50', token),
   ])
   const status = rawStatus.map(toStatusRow)
   const todayStrMT = new Date().toLocaleDateString('en-US', {
@@ -257,6 +256,7 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
       <CrawlSplitView
         initialStatus={status}
         initialRuns={runs}
+        hasAlert={hasAlertOnly}
         {...(initialVenueId !== undefined && {
           initialSelectedId: initialVenueId,
         })}

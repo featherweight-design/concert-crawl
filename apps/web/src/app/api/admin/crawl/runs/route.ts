@@ -21,8 +21,14 @@ export async function GET(req: Request) {
   const upstreamUrl = new URL(`${API_URL}/v1/admin/crawl/runs`)
   const venueId = searchParams.get('venueId')
   const limit = searchParams.get('limit')
+  const hasAlert = searchParams.get('hasAlert')
   if (venueId) upstreamUrl.searchParams.set('venueId', venueId)
   if (limit) upstreamUrl.searchParams.set('limit', limit)
+  // #804: forward hasAlert filter to upstream so the per-venue History
+  // tab in CrawlSplitView can narrow to only crawl_runs carrying an
+  // unread admin_alert. Only 'true' is forwarded — anything else (or
+  // missing) means "all runs".
+  if (hasAlert === 'true') upstreamUrl.searchParams.set('hasAlert', 'true')
 
   const upstream = await fetch(upstreamUrl.toString(), {
     headers: { Authorization: `Bearer ${token}` },
