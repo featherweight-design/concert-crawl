@@ -33,7 +33,22 @@ EXPECTED_SHA="${2:?expected commit sha required}"
 API="https://api.render.com/v1"
 AUTH="Authorization: Bearer ${RENDER_API_TOKEN}"
 
-timeout=600
+# Optional 3rd arg: timeout in seconds. Defaults to 600 (10 min) for
+# backward compatibility with the staging-smoke caller. The new
+# prod-smoke-after-deploy.yml passes 300 (5 min) because the prod
+# API deploys consistently take ~2 min on Render — see plan
+# docs/superpowers/plans/2026-06-24-render-native-prod-deploys.md for
+# the deploy-time data.
+timeout="${3:-600}"
+
+# Validate timeout is a positive integer. A bad value (e.g. "5m" or
+# "300s") would silently coerce to 0 in arithmetic context and the
+# loop would exit immediately; fail loud instead.
+if ! [[ "${timeout}" =~ ^[0-9]+$ ]] || [ "${timeout}" -le 0 ]; then
+  echo "✗ timeout arg must be a positive integer (seconds); got '${3}'" >&2
+  exit 1
+fi
+
 elapsed=0
 
 echo "→ Waiting for service ${SERVICE_ID} to be live on ${EXPECTED_SHA} (up to ${timeout}s)"
@@ -77,4 +92,9 @@ while [ "${elapsed}" -lt "${timeout}" ]; do
 done
 
 echo "✗ Service ${SERVICE_ID} did not reach live on ${EXPECTED_SHA} within ${timeout}s"
-exit 1
+# Exit 124 = timeout (matches GNU timeout(1) convention). Distinct from
+# the script's other non-zero exits (jq missing, missing env, curl
+# failure, no live deploy found), all of which use exit 1. Callers
+# that treat timeout as a benign-skip should key off this code
+# explicitly — anything other than 0 or 124 indicates a real failure.
+exit 124
