@@ -641,6 +641,11 @@ export async function crawlVenue(
             // the one-way promotion pattern for `artist` and `verified`
             // already in this file.
             hiddenFromConsumer: event.isConcert === false,
+            // LLM-classifier uncertainty signal. INSERT-only — the
+            // onConflictDoUpdate `set` clause below intentionally excludes
+            // this column so re-crawls don't churn the value. The one-shot
+            // backfill script is the only post-INSERT writer.
+            isConcertReviewNeeded: event.reviewNeeded === true,
           }
         })
 

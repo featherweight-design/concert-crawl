@@ -827,6 +827,144 @@ describe('crawlVenue — non-concert auto-classification (#696)', () => {
     expect(row?.hiddenFromConsumer).toBe(true)
     expect(row?.title).toBe('Originally Misclassified Show — Updated')
   })
+
+  it('INSERT path sets is_concert_review_needed=true when LLM returns reviewNeeded=true', async () => {
+    const venue = await seedTestVenue()
+    const dateA = futureDate(7)
+
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE,
+      finalUrl: venue.url,
+      httpStatus: 200,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        {
+          title: 'PRESIDENT: North American Campaign 2026',
+          artist: 'PRESIDENT',
+          date: dateA,
+          confidence: 0.7,
+          sourceUrl: venue.url,
+          isConcert: false,
+          reviewNeeded: true,
+        },
+      ],
+      usage: {
+        inputTokens: 100,
+        outputTokens: 50,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+      },
+    })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const [row] = await db
+      .select({
+        hiddenFromConsumer: events.hiddenFromConsumer,
+        isConcertReviewNeeded: events.isConcertReviewNeeded,
+      })
+      .from(events)
+      .where(eq(events.venueId, venue.id))
+
+    expect(row?.hiddenFromConsumer).toBe(true)
+    expect(row?.isConcertReviewNeeded).toBe(true)
+  })
+
+  it('INSERT path defaults is_concert_review_needed=false when LLM omits reviewNeeded', async () => {
+    const venue = await seedTestVenue()
+    const dateA = futureDate(7)
+
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE,
+      finalUrl: venue.url,
+      httpStatus: 200,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        {
+          title: 'Wynonna Judd Live',
+          artist: 'Wynonna Judd',
+          date: dateA,
+          confidence: 0.95,
+          sourceUrl: venue.url,
+          isConcert: true,
+          // reviewNeeded intentionally undefined
+        },
+      ],
+      usage: {
+        inputTokens: 100,
+        outputTokens: 50,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+      },
+    })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const [row] = await db
+      .select({ isConcertReviewNeeded: events.isConcertReviewNeeded })
+      .from(events)
+      .where(eq(events.venueId, venue.id))
+
+    expect(row?.isConcertReviewNeeded).toBe(false)
+  })
+
+  it('UPDATE path leaves is_concert_review_needed alone (crawler-frozen)', async () => {
+    const venue = await seedTestVenue()
+    const dateA = futureDate(7)
+
+    // Seed an event with is_concert_review_needed=true (as if from a prior
+    // crawl). Re-crawl with reviewNeeded=false; column should stay true.
+    await db.insert(events).values({
+      venueId: venue.id,
+      title: 'Borderline Show',
+      artist: 'Borderline Artist',
+      canonicalArtist: 'borderline artist',
+      date: dateA,
+      status: 'upcoming',
+      isConcertReviewNeeded: true,
+      sourceHash: 'old-hash',
+    })
+
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE_V2,
+      finalUrl: venue.url,
+      httpStatus: 200,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        {
+          title: 'Borderline Show — Updated',
+          artist: 'Borderline Artist',
+          date: dateA,
+          confidence: 0.95,
+          sourceUrl: venue.url,
+          isConcert: true,
+          reviewNeeded: false, // LLM now confident
+        },
+      ],
+      usage: {
+        inputTokens: 100,
+        outputTokens: 50,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+      },
+    })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const [row] = await db
+      .select({
+        isConcertReviewNeeded: events.isConcertReviewNeeded,
+        title: events.title,
+      })
+      .from(events)
+      .where(eq(events.venueId, venue.id))
+
+    expect(row?.isConcertReviewNeeded).toBe(true) // crawler-frozen
+    expect(row?.title).toBe('Borderline Show — Updated') // mutable fields update normally
+  })
 })
 
 describe('crawlVenue — auto-pause at threshold (#743)', () => {
