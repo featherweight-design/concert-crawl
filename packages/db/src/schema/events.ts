@@ -80,9 +80,10 @@ export const events = pgTable(
     // by the crawler INSERT path when the LLM emits reviewNeeded=true;
     // crawler-frozen on UPDATE. Written symmetrically (both true and
     // false isConcert classifications) but only the hidden-and-flagged
-    // slice surfaces in the admin UI today. The one-shot backfill script
-    // (scripts/2026-06-24-isconcert-review-needed-backfill.ts) is the
-    // only post-INSERT writer. Admin actions never touch this column.
+    // slice surfaces in the admin UI today. A one-shot backfill script
+    // lands in a follow-up PR as the only post-INSERT writer (see
+    // docs/superpowers/specs/2026-06-24-classification-review-queue-design.md).
+    // Admin actions never touch this column.
     isConcertReviewNeeded: boolean('is_concert_review_needed')
       .notNull()
       .default(false),
