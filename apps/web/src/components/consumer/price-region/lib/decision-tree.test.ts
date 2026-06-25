@@ -275,6 +275,64 @@ describe('decidePriceRegion', () => {
     }
   })
 
+  it('STATE #6 regression — headline tier WITH pending alongside + pending-only sibling still routes to mixed-tier', () => {
+    // Regression for the Copilot R5 finding: the original mixed-tier check
+    // required headline.pending.length === 0, so a headline tier with new
+    // submissions arriving alongside it (very common) misrouted the
+    // pending-only sibling to multi-tier-shipped where it would render as
+    // a muted $0. The corrected check just looks for "any headline tier"
+    // and "any pending-only tier".
+    const headlineWithPending = makeBlock({
+      tier: 'GA',
+      headline: makeHeadline({
+        priceMin: '25',
+        sourceCategory: 'boxoffice',
+      }),
+      pending: [
+        {
+          id: 'ga-pending',
+          priceMin: '26',
+          priceMax: null,
+          vendor: 'AXS',
+          howFound: 'saw_listing',
+          sourceCategory: 'standard',
+          note: null,
+          submitterHandle: 'sam',
+          submittedAt: '2026-06-22T01:00:00Z',
+          confirmsCount: 0,
+          confirmsNeeded: 2,
+          isSubmitter: false,
+        },
+      ],
+    })
+    const pendingOnlyBlock = makeBlock({
+      tier: 'VIP',
+      headline: null,
+      pending: [
+        {
+          id: 'vip-pending',
+          priceMin: '90',
+          priceMax: null,
+          vendor: 'AXS',
+          howFound: 'saw_listing',
+          sourceCategory: 'standard',
+          note: null,
+          submitterHandle: 'jordan',
+          submittedAt: '2026-06-22T00:00:00Z',
+          confirmsCount: 1,
+          confirmsNeeded: 2,
+          isSubmitter: false,
+        },
+      ],
+    })
+    const result = decidePriceRegion({
+      event: makeInput({
+        priceByTier: [headlineWithPending, pendingOnlyBlock],
+      }),
+    })
+    expect(result.kind).toBe('mixed-tier')
+  })
+
   it('STATE #7 — priceByTier where every tier is pending-only → all-tiers-pending', () => {
     const first = makeBlock({
       tier: 'GA',

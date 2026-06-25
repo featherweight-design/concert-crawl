@@ -168,16 +168,18 @@ export function decidePriceRegion({
     return { kind: 'all-tiers-pending', priceByTier: blocks }
   }
 
-  // STATE #6 — mixed-tier: some blocks have headlines AND other blocks have
-  // pending-only state (no headline + pending.length > 0). MixedTierCard
-  // handles this case natively (shipped per-tier pending tells).
-  const anyHeadlineOnlyTier = blocks.some(
-    (block) => block.headline !== null && block.pending.length === 0,
-  )
+  // STATE #6 — mixed-tier: at least one tier has a headline AND at least one
+  // OTHER tier is pending-only (no headline + pending.length > 0). The
+  // headline tier may also have pending submissions in flight — that's
+  // common when new corroborations are arriving — and shouldn't disqualify
+  // it. MixedTierCard handles this case natively (shipped per-tier pending
+  // tells), where multi-tier-shipped would render the pending-only tier as
+  // a muted $0.
+  const anyHeadlineTier = blocks.some((block) => block.headline !== null)
   const anyPendingOnlyTier = blocks.some(
     (block) => block.headline === null && block.pending.length > 0,
   )
-  if (anyHeadlineOnlyTier && anyPendingOnlyTier) {
+  if (anyHeadlineTier && anyPendingOnlyTier) {
     return { kind: 'mixed-tier', priceByTier: blocks }
   }
 
