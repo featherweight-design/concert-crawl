@@ -332,16 +332,19 @@ export const AllEventsTabContent = ({
 
   const selectionCount = selectedIds.size
   const bulkEnabled = Boolean(api)
-  // Mark-as-concert is only valid when every selected row is currently
-  // hidden — flipping a visible row "to concert" is a no-op. We compute
-  // this against the rendered page of events; the BulkDock disables the
-  // affordance with a tooltip explaining why when the selection includes
-  // visible rows. (#809)
-  const selectedEvents = events.filter((event) => selectedIds.has(event.id))
+  // Mark-as-concert only applies to hidden rows. selectedIds survives
+  // pagination (selections persist across pages), so we only check the
+  // selected rows we can see — if any visible row is selected, disable.
+  // Selections on other pages are assumed valid; the API endpoint is
+  // idempotent for visible rows (it's a no-op flip) so a cross-page
+  // selection that turns out to include a visible row commits cleanly.
+  // (#809; #814 review round 1)
+  const selectedEventsOnPage = events.filter((event) =>
+    selectedIds.has(event.id),
+  )
   const canMarkAsConcert =
     selectionCount > 0 &&
-    selectedEvents.length === selectionCount &&
-    selectedEvents.every((event) => event.hiddenFromConsumer === true)
+    selectedEventsOnPage.every((event) => event.hiddenFromConsumer === true)
 
   const bulkDock = bulkEnabled && (
     <BulkDock

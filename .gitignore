@@ -55,3 +55,6 @@ pnpm-debug.log*
 
 # Non-concert backfill script — dry-run CSVs are operator scratch (#696)
 non-concert-backfill-dry-run-*.csv
+
+# isConcert review-needed backfill script — dry-run CSVs are operator scratch (#810)
+dry-run-isconcert-review-needed-*.csv

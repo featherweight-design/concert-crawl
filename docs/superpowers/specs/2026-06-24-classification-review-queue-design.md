@@ -20,13 +20,34 @@ We now have that data. The 2026-06-24 prod backfill hid 130 events, with 2 known
 
 The 3 events that surfaced in the 2026-06-24 prod backfill (after PR #730 merged) illustrate the borderline shape this spec targets — distinct from the DJ-as-headliner shapes PR #730 closed (Honey Dijon, DJ Sliink, Taste of Chaos):
 
-| Event | Verdict | Why it was borderline |
-|---|---|---|
-| PRESIDENT: North American Campaign 2026 | Real concert (LLM wrong) | Masked-mystery-band brand; no obvious touring-artist name in the title |
-| Levity Presents: Laser Therapy | Real concert (LLM wrong) | "Presents" framing where the named entity could be a DJ brand OR a live act |
-| R&B ONLY LIVE - 18+ | Correctly non-concert | DJ-driven brand with "LIVE" used to mean "in-person experience," not live music |
+| Event                                   | Verdict                  | Why it was borderline                                                           |
+| --------------------------------------- | ------------------------ | ------------------------------------------------------------------------------- |
+| PRESIDENT: North American Campaign 2026 | Real concert (LLM wrong) | Masked-mystery-band brand; no obvious touring-artist name in the title          |
+| Levity Presents: Laser Therapy          | Real concert (LLM wrong) | "Presents" framing where the named entity could be a DJ brand OR a live act     |
+| R&B ONLY LIVE - 18+                     | Correctly non-concert    | DJ-driven brand with "LIVE" used to mean "in-person experience," not live music |
 
 The first two are the recovery cases. The third is what the LLM should keep getting right.
+
+### Editorial refinements after first prod cycle (PR #814)
+
+Walking the staging + prod queues after the first backfill (2026-06-24) surfaced a second shape that wasn't covered by the original `IS_CONCERT_RULES` and was getting waved through as a concert: **recurring local-residency dance nights** branded with "LIVE" in the title.
+
+Concrete examples from prod's flagged-for-review queue:
+
+| Event                                                | Verdict     | Why the LLM was wrong                                                                               |
+| ---------------------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------- |
+| R&B ONLY LIVE                                        | Non-concert | "LIVE" in the brand name; a touring DJ party, not a live band                                       |
+| Bearracuda Denver Pride                              | Non-concert | Recurring local DJ-driven dance brand; "live" is the in-person experience                           |
+| Bop / Broadway Rave / Hard Candy / Gimme Gimme Disco | Non-concert | Themed DJ residencies (90s/00s pop, Broadway, queer dance) — local programming, not touring artists |
+| Swing Nights Lindy Jam                               | Non-concert | Weekly social-dance residency at the venue, not a touring act                                       |
+
+The editorial distinction the LLM now needs to draw:
+
+- **"LIVE" in a brand name is not a signal** that the headliner performs live music. DJ parties, themed dance nights, and recurring dance-floor brands routinely use "LIVE" to differentiate "in-person event" from "livestream / album release / social media." This is the same trap R&B ONLY LIVE represented in the first cycle, now generalized.
+- **Recurring local-residency dance nights are venue programming**, not concerts. If the event is part of a weekly/monthly themed dance series at the venue (Swing Nights, Bop, Broadway Rave), it falls into the same non-concert bucket as bingo/trivia/lip-sync nights, even when the format is "dancing to recorded music played by a DJ." The signal is the residency relationship to the venue, not the music format.
+- **Contrast: an artist's name + "LIVE"** (e.g. "Wynonna Judd LIVE") still classifies as a concert. The anti-pattern is brand-name LIVE (where "LIVE" is part of the brand identity), not artist-name LIVE (where "LIVE" describes the format of a known performer's appearance).
+
+These refinements landed in the prompt as additional anti-examples and a recurring-residency carve-out in `IS_CONCERT_RULES`. They reflect the same human-in-the-loop principle as the first cycle: the LLM gets corrected against real prod queue data, not hypothetical edge cases. Future backfills should re-classify under these tightened rules; the existing `is_concert_review_needed` flag means re-running is non-destructive on the admin's earlier resolutions.
 
 ## Out of scope
 
@@ -193,14 +214,14 @@ PRs 1 and 3 share no code paths (column write vs column read), so they can be de
 
 ## Risks + mitigations
 
-| Risk | Likelihood | Mitigation |
-|---|---|---|
-| LLM emits `reviewNeeded=true` too liberally; queue floods with false alarms | Medium | Dry-run review surfaces this before commit. Prompt examples are tight. If observed post-deploy: tighten prompt, re-run backfill. |
-| LLM emits `reviewNeeded=false` on genuinely borderline cases; real concerts stay hidden as `isConcert` false negatives | Medium | This is the recovery story we already have — admin can still un-hide via the editor directly (now possible via the new button without going through the queue first). Manual scan of the full hidden list remains an option for high-stakes corpora. |
-| Re-running backfill flips review-needed differently each run | Low (binary classification with examples should be stable) | If observed: pin model version in the script + record it alongside the flag. Initial version doesn't need this. |
-| Existing admin "Mark non-concert" callers (bulk dock, all-events row menu) drift after the editor refactor | Low | The bulk + row menu paths don't change; only `DangerZoneSection`'s affordance moves to `ClassificationSection`. Component test covers it. |
-| Single `view=hidden-flagged-for-review` param limits future composability | Low | If a second use case appears (e.g. visible-and-flagged queue), refactor to orthogonal params then. YAGNI now. |
-| Watching/wishlist visibility on a row that the admin then Marks as concert | Low (positive outcome) | `/v1/watching` already filters `hidden_from_consumer = false`. Marking-as-concert restores visibility to users who had previously watched the row before it was auto-hidden. This is the intended recovery behavior, called out so future readers don't misread it as a bug. |
+| Risk                                                                                                                   | Likelihood                                                 | Mitigation                                                                                                                                                                                                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| LLM emits `reviewNeeded=true` too liberally; queue floods with false alarms                                            | Medium                                                     | Dry-run review surfaces this before commit. Prompt examples are tight. If observed post-deploy: tighten prompt, re-run backfill.                                                                                                                                             |
+| LLM emits `reviewNeeded=false` on genuinely borderline cases; real concerts stay hidden as `isConcert` false negatives | Medium                                                     | This is the recovery story we already have — admin can still un-hide via the editor directly (now possible via the new button without going through the queue first). Manual scan of the full hidden list remains an option for high-stakes corpora.                         |
+| Re-running backfill flips review-needed differently each run                                                           | Low (binary classification with examples should be stable) | If observed: pin model version in the script + record it alongside the flag. Initial version doesn't need this.                                                                                                                                                              |
+| Existing admin "Mark non-concert" callers (bulk dock, all-events row menu) drift after the editor refactor             | Low                                                        | The bulk + row menu paths don't change; only `DangerZoneSection`'s affordance moves to `ClassificationSection`. Component test covers it.                                                                                                                                    |
+| Single `view=hidden-flagged-for-review` param limits future composability                                              | Low                                                        | If a second use case appears (e.g. visible-and-flagged queue), refactor to orthogonal params then. YAGNI now.                                                                                                                                                                |
+| Watching/wishlist visibility on a row that the admin then Marks as concert                                             | Low (positive outcome)                                     | `/v1/watching` already filters `hidden_from_consumer = false`. Marking-as-concert restores visibility to users who had previously watched the row before it was auto-hidden. This is the intended recovery behavior, called out so future readers don't misread it as a bug. |
 
 ## Acceptance criteria
 
