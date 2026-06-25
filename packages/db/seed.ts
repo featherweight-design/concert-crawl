@@ -4096,40 +4096,37 @@ async function seed() {
       // --- V: multi-source mixed (GA boxoffice + GA resale alt + VIP boxoffice)
       // End-of-block marker: lola's fresh pending GA (last insert in block).
       if (evV && !(await pr4EventCompletedByUser(evV.id, FAKE_USER_IDS.lola))) {
-        const vGaBoxoffice = await db
-          .insert(priceSubmissions)
-          .values({
-            eventId: evV.id,
-            userId: FAKE_USER_IDS.riley,
-            priceMin: '32.00',
-            priceMax: null,
-            tier: 'GA' as const,
-            vendor: 'VenueBoxOffice' as const,
-            howFound: 'at_the_venue' as const,
-            sourceCategory: 'boxoffice' as const,
-            status: 'corroborated' as const,
-            corroborationCount: 4,
-            note: 'Walked up to Mission box office — GA was $32 even, no fees.',
-            createdAt: olderDatePr4,
-            updatedAt: olderDatePr4,
-          })
-          .returning()
-        if (vGaBoxoffice[0]) {
+        const vGaBoxoffice = await pr4UpsertSubmission({
+          eventId: evV.id,
+          userId: FAKE_USER_IDS.riley,
+          priceMin: '32.00',
+          priceMax: null,
+          tier: 'GA' as const,
+          vendor: 'VenueBoxOffice' as const,
+          howFound: 'at_the_venue' as const,
+          sourceCategory: 'boxoffice' as const,
+          status: 'corroborated' as const,
+          corroborationCount: 4,
+          note: 'Walked up to Mission box office — GA was $32 even, no fees.',
+          createdAt: olderDatePr4,
+          updatedAt: olderDatePr4,
+        })
+        if (vGaBoxoffice) {
           await db
             .insert(submissionConfirms)
             .values([
               {
-                submissionId: vGaBoxoffice[0].id,
+                submissionId: vGaBoxoffice.id,
                 userId: FAKE_USER_IDS.amy,
                 method: 'box-office' as const,
               },
               {
-                submissionId: vGaBoxoffice[0].id,
+                submissionId: vGaBoxoffice.id,
                 userId: FAKE_USER_IDS.bouldergrrl,
                 method: 'box-office' as const,
               },
               {
-                submissionId: vGaBoxoffice[0].id,
+                submissionId: vGaBoxoffice.id,
                 userId: FAKE_USER_IDS.mtncreature,
                 method: 'box-office' as const,
               },
@@ -4166,34 +4163,31 @@ async function seed() {
         }
 
         // VIP tier — separate boxoffice headline so priceByTier.length > 1.
-        const vVipBoxoffice = await db
-          .insert(priceSubmissions)
-          .values({
-            eventId: evV.id,
-            userId: FAKE_USER_IDS.jess,
-            priceMin: '85.00',
-            priceMax: null,
-            tier: 'VIP' as const,
-            vendor: 'VenueBoxOffice' as const,
-            howFound: 'at_the_venue' as const,
-            sourceCategory: 'boxoffice' as const,
-            status: 'corroborated' as const,
-            corroborationCount: 3,
-            createdAt: olderDatePr4,
-            updatedAt: olderDatePr4,
-          })
-          .returning()
-        if (vVipBoxoffice[0]) {
+        const vVipBoxoffice = await pr4UpsertSubmission({
+          eventId: evV.id,
+          userId: FAKE_USER_IDS.jess,
+          priceMin: '85.00',
+          priceMax: null,
+          tier: 'VIP' as const,
+          vendor: 'VenueBoxOffice' as const,
+          howFound: 'at_the_venue' as const,
+          sourceCategory: 'boxoffice' as const,
+          status: 'corroborated' as const,
+          corroborationCount: 3,
+          createdAt: olderDatePr4,
+          updatedAt: olderDatePr4,
+        })
+        if (vVipBoxoffice) {
           await db
             .insert(submissionConfirms)
             .values([
               {
-                submissionId: vVipBoxoffice[0].id,
+                submissionId: vVipBoxoffice.id,
                 userId: FAKE_USER_IDS.marco,
                 method: 'box-office' as const,
               },
               {
-                submissionId: vVipBoxoffice[0].id,
+                submissionId: vVipBoxoffice.id,
                 userId: FAKE_USER_IDS.jordan_m,
                 method: 'box-office' as const,
               },
