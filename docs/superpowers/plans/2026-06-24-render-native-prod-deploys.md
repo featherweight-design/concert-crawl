@@ -99,7 +99,7 @@ Implementation tasks below execute on a new branch (`feat/render-native-prod-dep
 
 **Interfaces:**
 - Consumes: same env (`RENDER_API_TOKEN`), same first two args (`<service-id> <expected-sha>`). New optional 3rd arg: `<timeout-seconds>` (default 600).
-- Produces: same — exit 0 when service is live on expected SHA; exit 1 on timeout.
+- Produces: exit codes — `0` when the service is live on the expected SHA; `124` when the wait times out (GNU `timeout(1)` convention; new in this task — see Step 2 for the change from the previous `exit 1`); `1` for hard errors (jq missing, missing env, curl/auth/network failure, malformed service ID, no live deploy found). The prod-smoke workflow's wait step (Task 2 Step 2) keys off `124` for benign-skip and treats any other non-zero as a hard failure that fails the job. The existing staging-smoke caller is unaffected — it treats every non-zero as failure.
 
 - [ ] **Step 1: Replace the hardcoded `timeout=600` line with an optional-arg version.**
 
