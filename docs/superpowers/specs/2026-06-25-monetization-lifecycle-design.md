@@ -56,7 +56,7 @@ The "Manage subscription" CTA in the existing Plan card opens an in-app **Manage
 
 Trial expires day 15. Instead of a hard takeover the moment day 15 ticks over, the takeover triggers on the user's **next session open**, regardless of route. Once shown and dismissed, it does not re-fire that day.
 
-- **State:** `lastTrialEndedShownAt` (date) on the user record. Compare against today on session start.
+- **State:** `lastTrialEndedShownAt` (timestamp, nullable) on the user record. On session start, evaluate `trial_ends_at < now AND (lastTrialEndedShownAt IS NULL OR lastTrialEndedShownAt < trial_ends_at)` — show the takeover if true. Setting `lastTrialEndedShownAt = now` on render makes it single-fire (the check fails on subsequent sessions for the same trial expiry).
 - **Dismissal:** the takeover dismisses to wherever the user was going. They can still browse Free; gated affordances render per the §6 matrix (`paywall-on-tap` or `tier-picker-on-tap` for active affordances, `hidden` for background features).
 - **Re-trigger semantics:** if the user dismisses and stays Free for weeks, the takeover does NOT re-show on every session — it's a single explicit conversion moment. Subsequent re-engagement happens via the matrix's normal gating + Plan card variants + #783's email touchpoints.
 
@@ -111,7 +111,7 @@ Re-upgrade within 90 days = instant restore (data was never deleted). Re-upgrade
   - Cannot be undone.
 - **Two CTAs prominently:** **[Cancel subscription only]** (ghost) routes to the in-app cancel flow (§3 grace path). **[Delete account]** (danger, signal/red) advances to the second sheet.
 - **Second sheet (confirm-twice):** "Type your email to confirm" — user types their email, button enables on match, single destructive action.
-- **On confirm:** eng calls `DELETE /v1/users/me` which now branches on subscription state — if active subscription, Stripe `subscriptions.cancel({invoice_now: true, prorate: false})` (immediate cancel, no proration credit since the user is leaving), Stripe customer deletion, Clerk user deletion, DB user cascade. Owned by #775.
+- **On confirm:** eng calls `DELETE /v1/users/me` which now branches on subscription state — if the user has an active subscription, the Stripe subscription is canceled immediately (no proration credit since the user is leaving), the Stripe customer is deleted, the Clerk user is deleted, and the DB user record cascades. Exact SDK calls belong to eng infra (#775).
 - **Gifted users:** same warning shape but the body adjusts ("You're on lifetime Premium — deleting cancels the comp and removes everything"). No Stripe customer to delete; Clerk + DB only.
 
 ### 8. Past-due — explicitly deferred to #782
@@ -135,8 +135,8 @@ Design produces these variants on top of #781's existing Plan card shell:
 | **Active Supporter** | `tier=supporter, status=active` | Same as Premium variant, voice/copy adjusted |
 | **Active Founder** | `tier=founder, status=active` | Same shape + locked-forever stamp (from #781) |
 | **Premium trial — day 1–12** | `tier=premium, on_trial=true, days_remaining > 2` | Existing R6 trial card + countdown eyebrow |
-| **Premium trial — day 13** | `on_trial=true, days_remaining ≤ 2` | Emphasis eyebrow "Trial ends tomorrow · Lock it in" + inline CTA |
-| **Premium trial — day 14** | `on_trial=true, days_remaining ≤ 1` | Emphasis eyebrow "Trial ends today · Lock it in" + inline CTA |
+| **Premium trial — day 13** | `tier=premium, on_trial=true, days_remaining == 2` | Emphasis eyebrow "Trial ends tomorrow · Lock it in" + inline CTA |
+| **Premium trial — day 14** | `tier=premium, on_trial=true, days_remaining == 1` | Emphasis eyebrow "Trial ends today · Lock it in" + inline CTA |
 | **Cancel-grace** | `cancel_at_period_end=true, days_until_period_end > 0` | "Premium until {date} · You won't be charged again" + "Resubscribe" affordance + still shows Manage sheet |
 | **Post-cancel-grace Free** | recently rolled to Free from cancel | "You were Premium until {date}. Come back?" — context eyebrow decays after Design-chosen window |
 | **Post-trial-expired Free** | trial ended without upgrade | "Your trial ended. Want to upgrade?" — context eyebrow decays after Design-chosen window |
@@ -161,7 +161,7 @@ Design produces these (mobile sheet + desktop modal each):
   - Date breakdown ("You'd keep Premium until Jul 15. You won't be charged again.")
   - One retention nudge (illustrative: "Did you know Supporter is $2 if Premium's the cost?") with a one-tap "Downgrade to Supporter" path that takes them out of the cancel flow into the downgrade flow.
   - Confirm CTA ("Cancel subscription") + ghost back-out.
-- **On confirm:** Stripe `subscription.update({cancel_at_period_end: true})`, redirect back to Plan card now in cancel-grace variant.
+- **On confirm:** the user's Stripe subscription is updated so `cancel_at_period_end=true`; user redirects back to the Plan card now in cancel-grace variant. Exact SDK call belongs to eng infra (#775).
 - **Note:** the retention nudge copy is illustrative; Design owns exact wording.
 
 ### Downgrade flow (Premium → Supporter)
