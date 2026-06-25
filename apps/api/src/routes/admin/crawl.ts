@@ -23,15 +23,16 @@ const triggerIdSchema = z.object({ id: z.string().uuid('id must be a UUID') })
 // Validated via Zod so a malformed metadata field doesn't poison the badge
 // query — invalid rows just fall through to "no alert" instead of throwing.
 // `severity` is only written for 'crawl.event_count_dropped' notifications;
-// older rows predating that field parse as undefined, and a row that
-// explicitly sets `severity: null` (e.g. a future writer that wants to
-// signal "intentionally absent") parses as null. Both null and undefined
-// collapse to "no severity" in the consumer below — using `.nullish()`
-// here avoids rejecting an otherwise-valid notification just because it
-// carries an explicit null.
+// older rows predating that field parse as undefined, a row that
+// explicitly sets `severity: null` parses as null, and a row that carries
+// an UNKNOWN severity value (e.g. a future writer adding a new variant
+// before the API code is updated) collapses to undefined via `.catch()`
+// rather than dropping the whole notification. All three cases reach the
+// consumer below as "no severity", so the UI falls back to a neutral
+// "Event drop" label and the badge still surfaces.
 const alertMetadataSchema = z.object({
   crawlRunId: z.string().uuid().optional(),
-  severity: z.enum(['went_dark', 'dropped_sharply']).nullish(),
+  severity: z.enum(['went_dark', 'dropped_sharply']).nullish().catch(undefined),
 })
 
 // Cap the unread-notification scan. The list endpoint defaults to 10 runs

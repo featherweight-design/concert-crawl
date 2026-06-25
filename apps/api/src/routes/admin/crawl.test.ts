@@ -410,6 +410,46 @@ describe('Admin crawl routes', () => {
       })
     })
 
+    // A notification whose metadata carries an UNKNOWN severity value
+    // (e.g. a future writer adds a new variant before the API code is
+    // updated) is still a valid badge target — the defensive schema
+    // .catch(undefined)'s unknown values to "no severity" rather than
+    // dropping the notification entirely.
+    it('tolerates notification metadata with an unknown severity value', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      const NOTIF_ID = '00000000-0000-0000-0000-0000000000a4'
+      queueAlertsThenRuns(
+        db,
+        [
+          {
+            id: NOTIF_ID,
+            category: 'crawl.event_count_dropped',
+            metadata: JSON.stringify({
+              venueId: VENUE_ID,
+              crawlRunId: RUN_ID,
+              severity: 'future_unknown_variant',
+            }),
+            createdAt: new Date(),
+          },
+        ],
+        [mockCrawlRun],
+      )
+      const res = await createApp().request(
+        `/v1/admin/crawl/runs?venueId=${VENUE_ID}`,
+      )
+      const body = (await res.json()) as {
+        data: {
+          activeAlert: {
+            notificationId: string
+            severity: string | null
+          } | null
+        }[]
+      }
+      expect(body.data[0]?.activeAlert?.notificationId).toBe(NOTIF_ID)
+      expect(body.data[0]?.activeAlert?.severity).toBeNull()
+    })
+
     // A notification whose metadata explicitly stores `severity: null`
     // (e.g. a future writer that wants to mark "intentionally absent") is
     // still a valid badge target — the defensive schema accepts both

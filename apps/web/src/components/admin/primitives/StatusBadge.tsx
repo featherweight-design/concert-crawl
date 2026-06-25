@@ -12,11 +12,11 @@ interface StatusBadgeProps {
   dot?: boolean
   children: React.ReactNode
   /**
-   * Forwarded to the inner span for mouse-hover context. Optional.
+   * Forwarded to the rendered span for mouse-hover context. Optional.
    */
   title?: string
   /**
-   * Forwarded to the inner span. Optional. We deliberately don't
+   * Forwarded to the rendered span. Optional. We deliberately don't
    * override the implicit role — adding role="img" on a text badge
    * causes screen readers to announce it as a graphic, which is
    * semantically wrong. Accessible-name exposure on aria-label-decorated
