@@ -2075,254 +2075,279 @@ async function seed() {
         console.warn(`Inserted ${confirmRows.length} submission confirms.`)
       }
 
-      // -----------------------------------------------------------------------
-      // Popularity backfill — add multi-source price submissions to a few of
-      // the marquee realistic events so multi-tier cards show the "N reports"
-      // social-proof caption naturally. Targeted (not blanket) per CLAUDE.md
-      // KISS guidance. Each block queries by event title so the work is
-      // independent of the recentEvents idx mapping above.
-      // -----------------------------------------------------------------------
-      const popularityDayMs = 86_400_000
-      const popularityOlder = new Date(Date.now() - 18 * popularityDayMs)
-      const popularityOlderish = new Date(Date.now() - 7 * popularityDayMs)
-      const popularityFresh = new Date(Date.now() - 1 * popularityDayMs)
-
-      const popularityTargets: ReadonlyArray<{
-        title: string
-        submissions: ReadonlyArray<NewPriceSubmission>
-      }> = [
-        {
-          title: 'Radiohead at Red Rocks',
-          submissions: [
-            {
-              eventId: '',
-              userId: FAKE_USER_IDS.phishfan42,
-              priceMin: '78.00',
-              priceMax: '155.00',
-              tier: 'GA',
-              vendor: 'AXS',
-              howFound: 'bought_myself',
-              sourceCategory: 'standard',
-              status: 'corroborated',
-              corroborationCount: 3,
-              note: 'AXS pre-sale code worked — $78 GA, $155 reserved.',
-              createdAt: popularityOlder,
-              updatedAt: popularityOlder,
-            },
-            {
-              eventId: '',
-              userId: FAKE_USER_IDS.denvermusic,
-              priceMin: '95.00',
-              priceMax: '220.00',
-              tier: 'GA',
-              vendor: 'SeatGeek',
-              howFound: 'saw_listing',
-              sourceCategory: 'resale',
-              status: 'corroborated',
-              corroborationCount: 2,
-              note: 'SeatGeek resale was already 25% over face the day after on-sale.',
-              createdAt: popularityOlderish,
-              updatedAt: popularityOlderish,
-            },
-            {
-              eventId: '',
-              userId: FAKE_USER_IDS.bouldergrrl,
-              priceMin: '80.00',
-              tier: 'GA',
-              vendor: 'AXS',
-              howFound: 'saw_listing',
-              sourceCategory: 'standard',
-              status: 'pending',
-              corroborationCount: 1,
-              note: 'Drop just popped on AXS at $80 — looked legit, not a flip.',
-              createdAt: popularityFresh,
-              updatedAt: popularityFresh,
-            },
-          ],
-        },
-        {
-          title: 'Phish at Red Rocks',
-          submissions: [
-            {
-              eventId: '',
-              userId: FAKE_USER_IDS.phishfan42,
-              priceMin: '90.00',
-              priceMax: '180.00',
-              tier: 'GA',
-              vendor: 'Ticketmaster',
-              howFound: 'bought_myself',
-              sourceCategory: 'standard',
-              status: 'corroborated',
-              corroborationCount: 4,
-              note: 'Phish ticketing lottery hit — GA was $90, reserved up to $180.',
-              createdAt: popularityOlder,
-              updatedAt: popularityOlder,
-            },
-            {
-              eventId: '',
-              userId: FAKE_USER_IDS.mtncreature,
-              priceMin: '100.00',
-              priceMax: '210.00',
-              tier: 'GA',
-              vendor: 'SeatGeek',
-              howFound: 'saw_listing',
-              sourceCategory: 'resale',
-              status: 'corroborated',
-              corroborationCount: 2,
-              note: 'Stubhub/SeatGeek floor was $100 day-of, climbed all afternoon.',
-              createdAt: popularityOlderish,
-              updatedAt: popularityOlderish,
-            },
-          ],
-        },
-        {
-          title: 'Big Thief',
-          submissions: [
-            {
-              eventId: '',
-              userId: FAKE_USER_IDS.notyourgf,
-              priceMin: '35.00',
-              priceMax: '52.00',
-              tier: 'GA',
-              vendor: 'AXS',
-              howFound: 'bought_myself',
-              sourceCategory: 'standard',
-              status: 'corroborated',
-              corroborationCount: 3,
-              note: 'GA was $35 even, $52 with the AXS fees stacked.',
-              createdAt: popularityOlder,
-              updatedAt: popularityOlder,
-            },
-            {
-              eventId: '',
-              userId: FAKE_USER_IDS.lola,
-              priceMin: '40.00',
-              tier: 'GA',
-              vendor: 'SeatGeek',
-              howFound: 'saw_listing',
-              sourceCategory: 'resale',
-              status: 'pending',
-              corroborationCount: 1,
-              note: 'Resale was already up to $40 a couple weeks out.',
-              createdAt: popularityFresh,
-              updatedAt: popularityFresh,
-            },
-          ],
-        },
-        {
-          title: 'Bon Iver',
-          submissions: [
-            {
-              eventId: '',
-              userId: FAKE_USER_IDS.denvermusic,
-              priceMin: '60.00',
-              priceMax: '98.00',
-              tier: 'GA',
-              vendor: 'AXS',
-              howFound: 'bought_myself',
-              sourceCategory: 'standard',
-              status: 'corroborated',
-              corroborationCount: 2,
-              note: 'AXS GA was $60. Pit went up to $98 reserved.',
-              createdAt: popularityOlderish,
-              updatedAt: popularityOlderish,
-            },
-            {
-              eventId: '',
-              userId: FAKE_USER_IDS.jordan_m,
-              priceMin: '70.00',
-              priceMax: '110.00',
-              tier: 'GA',
-              vendor: 'Ticketmaster',
-              howFound: 'saw_listing',
-              sourceCategory: 'resale',
-              status: 'pending',
-              corroborationCount: 1,
-              createdAt: popularityFresh,
-              updatedAt: popularityFresh,
-            },
-          ],
-        },
-        {
-          title: 'Khruangbin at Red Rocks',
-          submissions: [
-            {
-              eventId: '',
-              userId: FAKE_USER_IDS.bouldergrrl,
-              priceMin: '68.00',
-              priceMax: '125.00',
-              tier: 'GA',
-              vendor: 'AXS',
-              howFound: 'bought_myself',
-              sourceCategory: 'standard',
-              status: 'corroborated',
-              corroborationCount: 2,
-              note: 'Pulled GA at $68 — locking in feels like a steal already.',
-              createdAt: popularityOlderish,
-              updatedAt: popularityOlderish,
-            },
-          ],
-        },
-      ]
-
-      const popularityInsertRows: NewPriceSubmission[] = []
-      for (const target of popularityTargets) {
-        const row = await db
-          .select({ id: eventsTable.id })
-          .from(eventsTable)
-          .where(eq(eventsTable.title, target.title))
-          .limit(1)
-        const targetId = row[0]?.id
-        if (!targetId) continue
-        for (const sub of target.submissions) {
-          popularityInsertRows.push({ ...sub, eventId: targetId })
-        }
-      }
-
-      if (popularityInsertRows.length > 0) {
-        const insertedPopularity = await db
-          .insert(priceSubmissions)
-          .values(popularityInsertRows)
-          .returning()
-
-        // Confirms for the corroborated rows — same convention as above
-        // (corroborationCount = total observations including submitter).
-        const popularityConfirmers = [
-          FAKE_USER_IDS.amy,
-          FAKE_USER_IDS.taylor,
-          FAKE_USER_IDS.jess,
-          FAKE_USER_IDS.marco,
-          FAKE_USER_IDS.riley,
-          FAKE_USER_IDS.notyourgf,
-        ]
-        const popularityConfirmRows = insertedPopularity.flatMap((sub) => {
-          if (sub.status !== 'corroborated') return []
-          const desired = Math.max(0, sub.corroborationCount - 1)
-          const eligible = popularityConfirmers.filter(
-            (uid) => uid !== sub.userId,
-          )
-          return eligible
-            .slice(0, Math.min(desired, eligible.length))
-            .map((uid) => ({
-              submissionId: sub.id,
-              userId: uid,
-              method: 'same-vendor' as const,
-            }))
-        })
-
-        if (popularityConfirmRows.length > 0) {
-          await db
-            .insert(submissionConfirms)
-            .values(popularityConfirmRows)
-            .onConflictDoNothing()
-        }
-
-        console.warn(
-          `Popularity backfill: inserted ${insertedPopularity.length} submissions + ${popularityConfirmRows.length} confirms across ${popularityTargets.length} marquee events.`,
-        )
-      }
+      // (Popularity backfill lifted out of this if-branch — see "Popularity
+      // backfill" block below. It needs to run even when the main submissions
+      // block was skipped, otherwise devs who already have submissions from a
+      // prior seed never get the marquee multi-source coverage when they pull
+      // a branch that adds new popularity targets.)
     } else {
       console.warn('Price submissions already seeded, skipping.')
+    }
+
+    // -----------------------------------------------------------------------
+    // Popularity backfill — add multi-source price submissions to a few of
+    // the marquee realistic events so multi-tier cards show the "N reports"
+    // social-proof caption naturally. Targeted (not blanket) per CLAUDE.md
+    // KISS guidance. Each block queries by event title so the work is
+    // independent of the recentEvents idx mapping above.
+    //
+    // Runs INDEPENDENTLY of the `!hasSubmissions` guard above so a developer
+    // who already had price_submissions from a prior seed still gets this
+    // coverage when pulling a branch that extends the targets list. Marker
+    // user `phishfan42` is unique to this block — its absence means the
+    // backfill hasn't run yet.
+    // -----------------------------------------------------------------------
+    {
+      const popularityMarker = await db
+        .select({ id: priceSubmissions.id })
+        .from(priceSubmissions)
+        .where(eq(priceSubmissions.userId, FAKE_USER_IDS.phishfan42))
+        .limit(1)
+      if (popularityMarker.length > 0) {
+        console.warn(
+          'Popularity backfill already applied (phishfan42 marker present), skipping.',
+        )
+      } else {
+        const popularityDayMs = 86_400_000
+        const popularityOlder = new Date(Date.now() - 18 * popularityDayMs)
+        const popularityOlderish = new Date(Date.now() - 7 * popularityDayMs)
+        const popularityFresh = new Date(Date.now() - 1 * popularityDayMs)
+
+        const popularityTargets: ReadonlyArray<{
+          title: string
+          submissions: ReadonlyArray<NewPriceSubmission>
+        }> = [
+          {
+            title: 'Radiohead at Red Rocks',
+            submissions: [
+              {
+                eventId: '',
+                userId: FAKE_USER_IDS.phishfan42,
+                priceMin: '78.00',
+                priceMax: '155.00',
+                tier: 'GA',
+                vendor: 'AXS',
+                howFound: 'bought_myself',
+                sourceCategory: 'standard',
+                status: 'corroborated',
+                corroborationCount: 3,
+                note: 'AXS pre-sale code worked — $78 GA, $155 reserved.',
+                createdAt: popularityOlder,
+                updatedAt: popularityOlder,
+              },
+              {
+                eventId: '',
+                userId: FAKE_USER_IDS.denvermusic,
+                priceMin: '95.00',
+                priceMax: '220.00',
+                tier: 'GA',
+                vendor: 'SeatGeek',
+                howFound: 'saw_listing',
+                sourceCategory: 'resale',
+                status: 'corroborated',
+                corroborationCount: 2,
+                note: 'SeatGeek resale was already 25% over face the day after on-sale.',
+                createdAt: popularityOlderish,
+                updatedAt: popularityOlderish,
+              },
+              {
+                eventId: '',
+                userId: FAKE_USER_IDS.bouldergrrl,
+                priceMin: '80.00',
+                tier: 'GA',
+                vendor: 'AXS',
+                howFound: 'saw_listing',
+                sourceCategory: 'standard',
+                status: 'pending',
+                corroborationCount: 1,
+                note: 'Drop just popped on AXS at $80 — looked legit, not a flip.',
+                createdAt: popularityFresh,
+                updatedAt: popularityFresh,
+              },
+            ],
+          },
+          {
+            title: 'Phish at Red Rocks',
+            submissions: [
+              {
+                eventId: '',
+                userId: FAKE_USER_IDS.phishfan42,
+                priceMin: '90.00',
+                priceMax: '180.00',
+                tier: 'GA',
+                vendor: 'Ticketmaster',
+                howFound: 'bought_myself',
+                sourceCategory: 'standard',
+                status: 'corroborated',
+                corroborationCount: 4,
+                note: 'Phish ticketing lottery hit — GA was $90, reserved up to $180.',
+                createdAt: popularityOlder,
+                updatedAt: popularityOlder,
+              },
+              {
+                eventId: '',
+                userId: FAKE_USER_IDS.mtncreature,
+                priceMin: '100.00',
+                priceMax: '210.00',
+                tier: 'GA',
+                vendor: 'SeatGeek',
+                howFound: 'saw_listing',
+                sourceCategory: 'resale',
+                status: 'corroborated',
+                corroborationCount: 2,
+                note: 'Stubhub/SeatGeek floor was $100 day-of, climbed all afternoon.',
+                createdAt: popularityOlderish,
+                updatedAt: popularityOlderish,
+              },
+            ],
+          },
+          {
+            title: 'Big Thief',
+            submissions: [
+              {
+                eventId: '',
+                userId: FAKE_USER_IDS.notyourgf,
+                priceMin: '35.00',
+                priceMax: '52.00',
+                tier: 'GA',
+                vendor: 'AXS',
+                howFound: 'bought_myself',
+                sourceCategory: 'standard',
+                status: 'corroborated',
+                corroborationCount: 3,
+                note: 'GA was $35 even, $52 with the AXS fees stacked.',
+                createdAt: popularityOlder,
+                updatedAt: popularityOlder,
+              },
+              {
+                eventId: '',
+                userId: FAKE_USER_IDS.lola,
+                priceMin: '40.00',
+                tier: 'GA',
+                vendor: 'SeatGeek',
+                howFound: 'saw_listing',
+                sourceCategory: 'resale',
+                status: 'pending',
+                corroborationCount: 1,
+                note: 'Resale was already up to $40 a couple weeks out.',
+                createdAt: popularityFresh,
+                updatedAt: popularityFresh,
+              },
+            ],
+          },
+          {
+            title: 'Bon Iver',
+            submissions: [
+              {
+                eventId: '',
+                userId: FAKE_USER_IDS.denvermusic,
+                priceMin: '60.00',
+                priceMax: '98.00',
+                tier: 'GA',
+                vendor: 'AXS',
+                howFound: 'bought_myself',
+                sourceCategory: 'standard',
+                status: 'corroborated',
+                corroborationCount: 2,
+                note: 'AXS GA was $60. Pit went up to $98 reserved.',
+                createdAt: popularityOlderish,
+                updatedAt: popularityOlderish,
+              },
+              {
+                eventId: '',
+                userId: FAKE_USER_IDS.jordan_m,
+                priceMin: '70.00',
+                priceMax: '110.00',
+                tier: 'GA',
+                vendor: 'Ticketmaster',
+                howFound: 'saw_listing',
+                sourceCategory: 'resale',
+                status: 'pending',
+                corroborationCount: 1,
+                createdAt: popularityFresh,
+                updatedAt: popularityFresh,
+              },
+            ],
+          },
+          {
+            title: 'Khruangbin at Red Rocks',
+            submissions: [
+              {
+                eventId: '',
+                userId: FAKE_USER_IDS.bouldergrrl,
+                priceMin: '68.00',
+                priceMax: '125.00',
+                tier: 'GA',
+                vendor: 'AXS',
+                howFound: 'bought_myself',
+                sourceCategory: 'standard',
+                status: 'corroborated',
+                corroborationCount: 2,
+                note: 'Pulled GA at $68 — locking in feels like a steal already.',
+                createdAt: popularityOlderish,
+                updatedAt: popularityOlderish,
+              },
+            ],
+          },
+        ]
+
+        const popularityInsertRows: NewPriceSubmission[] = []
+        for (const target of popularityTargets) {
+          const row = await db
+            .select({ id: eventsTable.id })
+            .from(eventsTable)
+            .where(eq(eventsTable.title, target.title))
+            .limit(1)
+          const targetId = row[0]?.id
+          if (!targetId) continue
+          for (const sub of target.submissions) {
+            popularityInsertRows.push({ ...sub, eventId: targetId })
+          }
+        }
+
+        if (popularityInsertRows.length > 0) {
+          const insertedPopularity = await db
+            .insert(priceSubmissions)
+            .values(popularityInsertRows)
+            .returning()
+
+          // Confirms for the corroborated rows — same convention as above
+          // (corroborationCount = total observations including submitter).
+          const popularityConfirmers = [
+            FAKE_USER_IDS.amy,
+            FAKE_USER_IDS.taylor,
+            FAKE_USER_IDS.jess,
+            FAKE_USER_IDS.marco,
+            FAKE_USER_IDS.riley,
+            FAKE_USER_IDS.notyourgf,
+          ]
+          const popularityConfirmRows = insertedPopularity.flatMap((sub) => {
+            if (sub.status !== 'corroborated') return []
+            const desired = Math.max(0, sub.corroborationCount - 1)
+            const eligible = popularityConfirmers.filter(
+              (uid) => uid !== sub.userId,
+            )
+            return eligible
+              .slice(0, Math.min(desired, eligible.length))
+              .map((uid) => ({
+                submissionId: sub.id,
+                userId: uid,
+                method: 'same-vendor' as const,
+              }))
+          })
+
+          if (popularityConfirmRows.length > 0) {
+            await db
+              .insert(submissionConfirms)
+              .values(popularityConfirmRows)
+              .onConflictDoNothing()
+          }
+
+          console.warn(
+            `Popularity backfill: inserted ${insertedPopularity.length} submissions + ${popularityConfirmRows.length} confirms across ${popularityTargets.length} marquee events.`,
+          )
+        }
+      }
     }
 
     // Audit log
@@ -3837,7 +3862,7 @@ async function seed() {
             sourceCategory: 'resale' as const,
             status: 'corroborated' as const,
             corroborationCount: 3,
-            note: 'StubHub listings ranged from $95 to $140 face. No box office number yet.',
+            note: 'SeatGeek listings ranged from $95 to $140 face. No box office number yet.',
             createdAt: olderDatePr4,
             updatedAt: olderDatePr4,
           })
@@ -3875,7 +3900,7 @@ async function seed() {
             sourceCategory: 'resale' as const,
             status: 'corroborated' as const,
             corroborationCount: 2,
-            note: 'Stubhub crept up to $160 over the weekend — supply tightening.',
+            note: 'SeatGeek crept up to $160 over the weekend — supply tightening.',
             createdAt: olderishDatePr4,
             updatedAt: olderishDatePr4,
           })
@@ -4021,7 +4046,7 @@ async function seed() {
             sourceCategory: 'standard' as const,
             status: 'pending' as const,
             corroborationCount: 1,
-            note: 'Saw it at the BO last night — they were holding tier still.',
+            note: 'AXS listing was holding tier at $34 last night — quick screenshot.',
             createdAt: veryRecentDatePr4,
             updatedAt: veryRecentDatePr4,
           })
