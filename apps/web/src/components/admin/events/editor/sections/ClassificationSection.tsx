@@ -40,28 +40,49 @@ export const ClassificationSection = ({
 
         {isConcertReviewNeeded && (
           <div
-            title={classification.reviewNeededPillTooltip}
             style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              alignSelf: 'flex-start',
-              padding: '4px 10px',
-              background:
-                'color-mix(in oklab, var(--warning) 12%, transparent)',
-              border:
-                '1px solid color-mix(in oklab, var(--warning) 36%, transparent)',
-              borderRadius: 999,
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 11,
-              fontWeight: 700,
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-              color: 'var(--fg)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: 4,
             }}
           >
-            <Flag size={12} />
-            {classification.reviewNeededPillLabel}
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '4px 10px',
+                background:
+                  'color-mix(in oklab, var(--warning) 12%, transparent)',
+                border:
+                  '1px solid color-mix(in oklab, var(--warning) 36%, transparent)',
+                borderRadius: 999,
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                color: 'var(--fg)',
+              }}
+            >
+              <Flag size={12} />
+              {classification.reviewNeededPillLabel}
+            </div>
+            {/* Visible caption — replaces the prior native title-attribute
+                tooltip, which wasn't reliably keyboard/touch/SR-accessible
+                (Copilot R3). The text is now visible to every user,
+                including keyboard-only and assistive-tech users. */}
+            <div
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 12,
+                color: 'var(--fg-muted)',
+                lineHeight: 1.4,
+              }}
+            >
+              {classification.reviewNeededPillTooltip}
+            </div>
           </div>
         )}
 
