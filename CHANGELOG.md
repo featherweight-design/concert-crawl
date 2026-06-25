@@ -1,3 +1,43 @@
+# [1.80.0](https://github.com/HartiganHM/concert-crawl/compare/v1.79.0...v1.80.0) (2026-06-25)
+
+
+### Bug Fixes
+
+* **consumer:** clear auto-fill vendor + reset form on modal open ([4cbb496](https://github.com/HartiganHM/concert-crawl/commit/4cbb4962b7dcc9389f206453f42a42c3c44b075c))
+* **consumer:** copilot round 10 fixes for pr [#788](https://github.com/HartiganHM/concert-crawl/issues/788) ([378bc37](https://github.com/HartiganHM/concert-crawl/commit/378bc37a31bb8e095d6c47974f4cf374fb8cb433))
+* **consumer:** copilot round 11 fixes for pr [#788](https://github.com/HartiganHM/concert-crawl/issues/788) ([2d4b7c6](https://github.com/HartiganHM/concert-crawl/commit/2d4b7c6d9f45ba027257f3ec86db6bdebcfb687a))
+* **consumer:** copilot round 12 fixes for pr [#788](https://github.com/HartiganHM/concert-crawl/issues/788) ([0f8fdf6](https://github.com/HartiganHM/concert-crawl/commit/0f8fdf6852d0522591ca110bccda89f7a631a7d5))
+* **consumer:** copilot round 3 fixes for pr [#788](https://github.com/HartiganHM/concert-crawl/issues/788) ([6136017](https://github.com/HartiganHM/concert-crawl/commit/61360179e24bd0b9b8afbfc06d2840b3cb9de777))
+* **consumer:** copilot round 4 fixes for pr [#788](https://github.com/HartiganHM/concert-crawl/issues/788) ([fd6f175](https://github.com/HartiganHM/concert-crawl/commit/fd6f17532d9236bfd5585a32e1db3454bb9ad44b))
+* **consumer:** copilot round 5 fix for pr [#788](https://github.com/HartiganHM/concert-crawl/issues/788) — mixed-tier detection ([89c9262](https://github.com/HartiganHM/concert-crawl/commit/89c926245e0cb0c15c6413e8132adfb89ff62c18))
+* **consumer:** copilot round 6 fixes for pr [#788](https://github.com/HartiganHM/concert-crawl/issues/788) — venue display label ([7a30d44](https://github.com/HartiganHM/concert-crawl/commit/7a30d440abf8dbd23865d703ded4fa0fad4bc885)), closes [#2](https://github.com/HartiganHM/concert-crawl/issues/2)
+* **consumer:** copilot round 7 fixes for pr [#788](https://github.com/HartiganHM/concert-crawl/issues/788) ([9f1c83d](https://github.com/HartiganHM/concert-crawl/commit/9f1c83daacb4aad5225a55b5159d5352af5e6a78))
+* **consumer:** copilot round 8 fixes for pr [#788](https://github.com/HartiganHM/concert-crawl/issues/788) ([8f26258](https://github.com/HartiganHM/concert-crawl/commit/8f262582ceabe88d584299d2d237f36d16fc596f))
+* **consumer:** copilot round 9 fixes for pr [#788](https://github.com/HartiganHM/concert-crawl/issues/788) — derive legacy sourceCategory ([89265a8](https://github.com/HartiganHM/concert-crawl/commit/89265a80edd64849a60beee7f65a3a50d717c807))
+* **consumer:** event card from-prefix + doc 6-vendor lock ([3a8bb35](https://github.com/HartiganHM/concert-crawl/commit/3a8bb3539e09e40f7f291d5e485cc4f4a5c0433b))
+* **consumer:** vendor/source required asterisk + submit modal flex layout ([4e9a204](https://github.com/HartiganHM/concert-crawl/commit/4e9a20487037a95f3995e40e68d4f39d5a4a07c7))
+* **consumer:** wire confirm/withdraw handlers in all-tiers-pending branch ([0507a2f](https://github.com/HartiganHM/concert-crawl/commit/0507a2f922a55b07e87af280c7879814c9aac398))
+
+
+### Features
+
+* **consumer:** add AltSourceRow — cross-source secondary price row ([5b745b2](https://github.com/HartiganHM/concert-crawl/commit/5b745b202a2c40f31beecc3a8c0aa398a08d8790))
+* **consumer:** add FaceValueCard + ContributeFaceValueCard ([0ccf701](https://github.com/HartiganHM/concert-crawl/commit/0ccf701e44be5c3836fd94023b1391a7050f3863)), closes [#10](https://github.com/HartiganHM/concert-crawl/issues/10) [#12](https://github.com/HartiganHM/concert-crawl/issues/12) [#641](https://github.com/HartiganHM/concert-crawl/issues/641) [#11](https://github.com/HartiganHM/concert-crawl/issues/11)
+* **consumer:** add MTAddTierSuccess — sequential add-another-tier success state ([ff593f9](https://github.com/HartiganHM/concert-crawl/commit/ff593f97fea652883ed5d4e4ba1f04f47f39cc46))
+* **consumer:** add MTListChip + pickBrowseHeadline helper (Q2 locked resale variant) ([eae9429](https://github.com/HartiganHM/concert-crawl/commit/eae9429746a4a1cda8232e2883697465ff371824))
+* **consumer:** add MultiSourceMultiTierCard — entry tier with cross-source resale fold ([912ae1b](https://github.com/HartiganHM/concert-crawl/commit/912ae1b8c2676c9f0084e7e9f19e700986eb971c)), closes [#5](https://github.com/HartiganHM/concert-crawl/issues/5)
+* **consumer:** add price-region copy keys + TierMark primitive ([7ea3afe](https://github.com/HartiganHM/concert-crawl/commit/7ea3afeefbd71aab9697b47ee21e4f7635244fcf))
+* **consumer:** add price-region decision-tree helper ([6065eab](https://github.com/HartiganHM/concert-crawl/commit/6065eabdcdbeb63407e3fa13bedf193d3d3dd908))
+* **consumer:** add ProvenanceCTA — honest outbound ticket button ([8b4de92](https://github.com/HartiganHM/concert-crawl/commit/8b4de923aa53312fdeead3abaa31cc30bd995a2a))
+* **consumer:** hoist MTAddTierSuccess to all modal-owning branches ([fd1198c](https://github.com/HartiganHM/concert-crawl/commit/fd1198ce0d0d49ae16786b516e6d9f89b6805a8e)), closes [#1](https://github.com/HartiganHM/concert-crawl/issues/1)
+* **consumer:** passive surfaces — counter pointer (Q3 lock) + admin defer pill ([5633499](https://github.com/HartiganHM/concert-crawl/commit/5633499cd74f7f55d5efe53f7ffd3059cd8054ee)), closes [#737](https://github.com/HartiganHM/concert-crawl/issues/737)
+* **consumer:** provenance-first submit form + sourceCategory payload + 409 race toast ([18ded43](https://github.com/HartiganHM/concert-crawl/commit/18ded430974466b131010a0eabef836e8e52d613)), closes [#2](https://github.com/HartiganHM/concert-crawl/issues/2)
+* **consumer:** route state [#6](https://github.com/HartiganHM/concert-crawl/issues/6) + [#7](https://github.com/HartiganHM/concert-crawl/issues/7) through MixedTierCard + TwoPendingStack ([0bebed3](https://github.com/HartiganHM/concert-crawl/commit/0bebed3d7f3d4fe960a0a4a411f24b3d71c52588))
+* **consumer:** surface priceByTier on browse list endpoint + EventCard parity ([c56c8c9](https://github.com/HartiganHM/concert-crawl/commit/c56c8c93c61d850007610955082488f0c3bfaa55)), closes [#787](https://github.com/HartiganHM/concert-crawl/issues/787)
+* **consumer:** use MTListChip on browse cards for source-selection parity ([d6b646d](https://github.com/HartiganHM/concert-crawl/commit/d6b646d21a08ecea160e714595fe9cf4fc58e9ef)), closes [#787](https://github.com/HartiganHM/concert-crawl/issues/787)
+* **consumer:** wire price-region decision tree into event detail page ([8492506](https://github.com/HartiganHM/concert-crawl/commit/84925061c11cd922f13cf21921de370ee866c8f6)), closes [#1-19](https://github.com/HartiganHM/concert-crawl/issues/1-19) [#3](https://github.com/HartiganHM/concert-crawl/issues/3)
+* **consumer:** wire reports caption + admin-defer pill on PendingCardB ([90f0724](https://github.com/HartiganHM/concert-crawl/commit/90f072455bb44320fb819094da10f09a6891b598)), closes [#19](https://github.com/HartiganHM/concert-crawl/issues/19) [#18](https://github.com/HartiganHM/concert-crawl/issues/18)
+
 # [1.79.0](https://github.com/HartiganHM/concert-crawl/compare/v1.78.0...v1.79.0) (2026-06-25)
 
 
