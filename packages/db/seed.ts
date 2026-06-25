@@ -3638,11 +3638,27 @@ async function seed() {
   // marker forces a re-run in that case; the per-event idempotency guard
   // (`pr4EventCompletedByUser` / `pr4EventCompletedByCounter` below) skips
   // events that already finished.
-  const PR4_EXPECTED_COUNT = 9
-  const pr4Count = await db
-    .select({ count: sql<number>`count(*)::int` })
+  // The expected title set is checked here (not just a >= 9 count) so a
+  // dev with stray [PR4] events (manual experiments, leftover branches)
+  // can't accidentally satisfy the count while an official event is
+  // missing. Each title MUST match exactly one row in pr4EventRows
+  // below.
+  const PR4_EXPECTED_TITLES = [
+    '[PR4] Sold Out Resale',
+    '[PR4] Sold Out Contribute',
+    '[PR4] No Price Resale',
+    '[PR4] No Price Empty',
+    '[PR4] Resale Headline',
+    '[PR4] Multi Source Mixed',
+    '[PR4] Mixed Tier',
+    '[PR4] Reports Caption',
+    '[PR4] Admin Defer',
+  ] as const
+  const pr4ExistingTitles = await db
+    .select({ title: eventsTable.title })
     .from(eventsTable)
     .where(like(eventsTable.title, '[PR4]%'))
+  const pr4ExistingTitleSet = new Set(pr4ExistingTitles.map((ev) => ev.title))
   // Marker mirrors the full state #18 requirement: pending counter +
   // admin defer action. If a dev resolves the counter (status != pending),
   // clears the defer (lastAdminActionKind != defer), or removes the
@@ -3660,7 +3676,9 @@ async function seed() {
       ),
     )
     .limit(1)
-  const hasPr4Events = (pr4Count[0]?.count ?? 0) >= PR4_EXPECTED_COUNT
+  const hasPr4Events = PR4_EXPECTED_TITLES.every((title) =>
+    pr4ExistingTitleSet.has(title),
+  )
   const hasPr4EndMarker = pr4AdminDeferMarker.length > 0
   const hasPr4 = hasPr4Events && hasPr4EndMarker
 
