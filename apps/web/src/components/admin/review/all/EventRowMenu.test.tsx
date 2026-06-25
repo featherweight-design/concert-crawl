@@ -24,6 +24,8 @@ const baseEvent = (overrides: Partial<AllEvent> = {}): AllEvent => ({
   genre: ['indie'],
   createdAt: '2026-06-12T18:14:00Z',
   isSoldOut: false,
+  hiddenFromConsumer: false,
+  isConcertReviewNeeded: false,
   ...overrides,
 })
 

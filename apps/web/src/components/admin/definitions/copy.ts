@@ -1224,12 +1224,34 @@ export const ADMIN_COPY = {
     upcomingHint:
       'Postponed, cancelled, and sold-out events all stay published with a fan-facing banner — none are hidden.',
     classification: {
+      reviewNeededPillLabel: 'LLM flagged for review',
+      reviewNeededPillTooltip:
+        'The classifier had reasonable doubt about whether this is a concert.',
+      visibilityTitle: 'Visible to consumers',
+      // Mark non-concert (shown when hiddenFromConsumer=false)
       markNonConcertTitle: 'Mark as non-concert',
       markNonConcertBodyBefore: 'Adds the ',
       markNonConcertTag: 'non-concert',
       markNonConcertBodyAfter:
         ' tag and unpublishes from the consumer app. Stays in the system.',
       markNonConcertButton: 'Mark non-concert',
+      // Mark as concert (shown when hiddenFromConsumer=true)
+      markAsConcertTitle: 'Mark as concert',
+      markAsConcertBody:
+        'Republishes this event to every consumer-facing surface. Use this when the classifier wrongly hid a real concert.',
+      markAsConcertButton: 'Mark as concert',
+      // Confirm-modal copy. Mark-non-concert reuses the existing
+      // review.allEvents.nonConcertConfirm block — EventConfirmModal
+      // already routes the 'non-concert' kind there (see task 3.5),
+      // and the copy is what we'd otherwise be duplicating. Only the
+      // inverse direction needs a new block.
+      markAsConcertConfirm: {
+        heading: 'Mark as concert?',
+        body: 'The event re-appears on every consumer-facing surface within one router refresh cycle. You can flip it back later if the classification was wrong.',
+        confirm: 'Mark as concert',
+        cancel: 'Cancel',
+        eyebrow: 'classification',
+      },
     },
   },
 
@@ -1286,6 +1308,9 @@ export const ADMIN_COPY = {
         activeCount: (count: number) =>
           `${count} active filter${count === 1 ? '' : 's'}`,
         clearAll: 'Clear all',
+        flaggedChipLabel: 'Hidden — flagged for review',
+        flaggedChipAriaLabel: 'Toggle hidden-and-flagged-for-review filter',
+        flaggedChipEmpty: 'No hidden events are flagged for review.',
       },
       rowMenu: {
         triggerAriaLabel: 'Row actions',

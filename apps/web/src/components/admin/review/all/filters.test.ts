@@ -140,6 +140,7 @@ describe('countActiveFilters', () => {
         dateTo: '',
         genre: ['indie', 'folk'],
         missingData: ['no-price'],
+        flagged: false,
       }),
     ).toBe(5)
   })

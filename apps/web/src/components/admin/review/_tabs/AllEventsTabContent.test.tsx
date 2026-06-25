@@ -79,6 +79,8 @@ const buildEvent = (overrides: Partial<AllEvent> = {}): AllEvent => ({
   genre: ['indie', 'folk'],
   createdAt: '2026-06-12T18:14:00Z',
   isSoldOut: false,
+  hiddenFromConsumer: false,
+  isConcertReviewNeeded: false,
   ...overrides,
 })
 
@@ -241,6 +243,7 @@ describe('AllEventsTabContent', () => {
           dateTo: '',
           genre: [],
           missingData: [],
+          flagged: false,
         }}
         onFiltersChange={onFiltersChange}
       />,
