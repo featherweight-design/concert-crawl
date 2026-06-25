@@ -100,10 +100,10 @@ When the user successfully claims Founder, the payment-success path lands them i
 
 When a user encounters a Premium-only feature on a non-Premium tier:
 
-- **Active affordances** (visible UI elements that exist on the page even for Free users — Watching heart, Following button, Calendar export button): **visible-locked**. Render with a small lock + "Premium" chip. Tap opens the paywall surface.
+- **Active affordances** (visible UI elements that exist on the page even for Free users — Following button, Calendar export button): **visible-locked**. Render with a small lock + "Premium" chip. Tap opens the paywall surface. (Watching heart is a Free affordance for signed-in users per the 2026-06-25 amendment to §6 — see Supporter rationale below.)
 - **Background features** (no UI affordance discoverable without explanation — Spotify sync, Alerts, Price drop alerts): **hidden**. They don't render as locked because there's no native surface to lock; they're configuration-level features that don't belong scattered as upsell prompts across the consumer UI.
 
-Reasoning: hybrid gating preserves Premium discovery where it's natural (the user already shows intent by tapping the heart) without cluttering Free with lock-chips on features they have no context for.
+Reasoning: hybrid gating preserves Premium discovery where it's natural (the user already shows intent by tapping a Following or Calendar export affordance) without cluttering Free with lock-chips on features they have no context for.
 
 ### 5. Paywall surface types
 
@@ -146,7 +146,7 @@ Cell value semantics:
 
 | Feature              | logged-out             | free            | supporter       | premium        | founder        | gifted         |
 | -------------------- | ---------------------- | --------------- | --------------- | -------------- | -------------- | -------------- |
-| **Watching** (heart) | tier-picker-on-tap     | paywall-on-tap  | paywall-on-tap  | visible-active | visible-active | visible-active |
+| **Watching** (heart) | tier-picker-on-tap     | visible-active  | visible-active  | visible-active | visible-active | visible-active |
 | **Concert history** (attended) | tier-picker-on-tap | paywall-on-tap | paywall-on-tap | visible-active | visible-active | visible-active |
 | **Calendar export**  | tier-picker-on-tap     | paywall-on-tap  | paywall-on-tap  | visible-active | visible-active | visible-active |
 | **Following** (artists) | tier-picker-on-tap  | paywall-on-tap  | paywall-on-tap  | visible-active | visible-active | visible-active |
@@ -157,6 +157,8 @@ Cell value semantics:
 **Supporter rationale.** Supporter is a $2/mo "thank you for keeping us alive" gesture. The reward is the Supporter badge, the eyebrow on the Plan card, and the warm feeling of supporting the project — not premium feature unlocks. If Supporter unlocked any Premium feature, the Premium tier's $5 ask becomes harder to justify. The matrix encodes this deliberately.
 
 **Supersedes Beta-to-Launch tier assignments.** This brief moves **Concert history** and **Calendar export** from Supporter to Premium-and-up. The Beta-to-Launch spec's *Premium Features* table (`docs/superpowers/specs/2026-05-09-beta-to-launch-design.md`) is updated in lockstep in this PR so the two docs stay aligned. Future readers should treat this brief as the source of truth on tier assignments.
+
+**Amendment 2026-06-25 — Watching is Free for signed-in users.** Hugh amended the matrix during the R6 review: Watching (the heart) is a Free feature for every signed-in tier (`free` / `supporter` / `premium` / `founder` / `gifted`). `logged-out` still routes to the tier picker on tap because saving requires an account. Rationale: it's just tracking a show in a DB — cheap to operate, and the framing aligns with the Sour Patch honesty rail. Premium gating remains on the rest: Concert history (attending + history), Calendar export, Following, Alerts, Spotify sync, Price drop alerts. The amendment applies in lockstep with the R6 handoff (`design/design_handoff_monetization_tier_states/`).
 
 **Logged-out rationale.** Logged-out users see the active affordances *visible-locked* (same as Free), but tap routes to the full picker instead of the mini sheet. This is the locked "tiered ask" mechanic — every premium affordance is also a tier-picker entry point. Background features (Spotify sync, Alerts, Price drop alerts) stay hidden — they have no on-page affordance to lock against.
 

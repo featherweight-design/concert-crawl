@@ -27,6 +27,7 @@
 <script type="text/babel" src="monetization-tier-states.jsx"></script>
 <script type="text/babel" src="monetization-founder-gifted.jsx"></script>
 <script type="text/babel" src="monetization-entitlements.jsx"></script>
+<script type="text/babel" src="monetization-paywall.jsx"></script>
 
 <script type="text/babel">
 const { ThemeProvider } = window;
@@ -36,6 +37,7 @@ const { MMark, MonoEyebrow, PageBehindMock, Scrim } = window;
 const { TierPicker, GiftedThankYou } = window;
 const { FounderRaceLoser, FounderClaimTakeover, GiftedPlanCardDesktop, GiftedPlanCardMobile } = window;
 const { EntitlementsMatrix } = window;
+const { MiniPaywall } = window;
 
 const PHONE_W = 402, PHONE_H = 874;
 const DESK_W = 1240, DESK_H = 860;
@@ -248,7 +250,7 @@ function App() {
     <>
       <DesignCanvas
         title="Monetization · Tier States + Entitlements"
-        subtitle="Round 5 · six locked states · Founder race surfaces · gifted plan card · §6 entitlements matrix · token-only across all 9 themes"
+        subtitle="Round 6 · six locked states · mobile tap-to-expand comparison · Free→Premium mini paywall · Founder race surfaces · gifted plan card · §6 matrix (Watching now Free) · token-only across all 9 themes"
       >
         {/* 0 · LIVE */}
         <DCSection id="live" title="0 · Live preview" subtitle="Drive state + theme (all 9) + Founder window from the Tweaks panel (toggle it on in the toolbar). Mobile sheet + desktop modal stay in lockstep.">
@@ -258,7 +260,7 @@ function App() {
 
         {/* 1 · PICKER · 6 STATES · MOBILE */}
         <DCSection id="states-mobile" title="1 · Tier picker · 6 states · mobile"
-          subtitle="Every locked state on the mobile bottom sheet. Founder window open (23/100). Logged-out is feature-anchored with an inline sign-in. Gifted swaps the whole surface for the thank-you panel.">
+          subtitle="Mobile comparison mechanic (R6): a stack of collapsed summary rows — name, badge, price, tagline all visible for at-a-glance comparison — with one row expanded inline. Tap a header to open it; the previous one collapses. No nested modal, no truncated cards. Logged-out is feature-anchored with inline sign-in; gifted swaps the whole surface.">
           {SIX_STATES.map(s => (
             <DCArtboard key={s.key} id={"sm-" + s.key} label={s.label} width={PHONE_W} height={PHONE_H}>
               <PhoneScene theme="electric" pageBehind="settings">
@@ -266,11 +268,16 @@ function App() {
               </PhoneScene>
             </DCArtboard>
           ))}
+          <DCArtboard id="sm-founder-closed" label="Founder · window CLOSED · still your plan" width={PHONE_W} height={PHONE_H}>
+            <PhoneScene theme="electric" pageBehind="settings">
+              <TierPicker state="founder" variant="mobile" founderKind="closed" urgencyIntensity="medium"/>
+            </PhoneScene>
+          </DCArtboard>
         </DCSection>
 
         {/* 2 · PICKER · 6 STATES · DESKTOP */}
         <DCSection id="states-desktop" title="2 · Tier picker · 6 states · desktop"
-          subtitle="Same six states as a centered modal over Settings · Plan. Cards sit in a row; Founder is the 4th column while the window's open.">
+          subtitle="Same six states as a centered modal over Settings · Plan. Cards sit in a row; Founder is the 4th column while the window's open. Desktop layout is locked from R5 — unchanged.">
           {SIX_STATES.map(s => (
             <DCArtboard key={s.key} id={"sd-" + s.key} label={s.label} width={DESK_W} height={PICKER_DESK_H}>
               <DesktopModalScene theme="electric">
@@ -278,10 +285,29 @@ function App() {
               </DesktopModalScene>
             </DCArtboard>
           ))}
+          <DCArtboard id="sd-founder-closed" label="Founder · window CLOSED · still your plan" width={DESK_W} height={PICKER_DESK_H}>
+            <DesktopModalScene theme="electric">
+              <TierPicker state="founder" variant="desktop" founderKind="closed" urgencyIntensity="medium"/>
+            </DesktopModalScene>
+          </DCArtboard>
         </DCSection>
 
-        {/* 3 · FOUNDER · CLAIM RACE LOSER */}
-        <DCSection id="race-loser" title="3 · Founder · claim-race loser (§3.2)"
+        {/* 3 · FREE → PREMIUM MINI PAYWALL */}
+        <DCSection id="mini-paywall" title="3 · Free→Premium mini paywall (§5.1)"
+          subtitle="What the paywall-on-tap cells open. A free/supporter user tapped a Premium-gated affordance (history / export / following). Feature-anchored, single upgrade path → Settings · Plan, 'Maybe later' dismisses. NOT a signup surface — they already have an account. One anchor shown as the pattern; eng fans out copy per feature.">
+          <DCArtboard id="mp-mobile" label="Mobile · bottom sheet · price-drop anchor" width={PHONE_W} height={PHONE_H}>
+            <PhoneScene theme="electric" pageBehind="event"><MiniPaywall variant="mobile" anchor="drops"/></PhoneScene>
+          </DCArtboard>
+          <DCArtboard id="mp-desktop" label="Desktop · centered modal · price-drop anchor" width={DESK_W} height={DESK_H}>
+            <DesktopModalScene theme="electric" height={DESK_H}><MiniPaywall variant="desktop" anchor="drops"/></DesktopModalScene>
+          </DCArtboard>
+          <DCArtboard id="mp-history" label="Mobile · history anchor (copy variant)" width={PHONE_W} height={PHONE_H}>
+            <PhoneScene theme="electric" pageBehind="event"><MiniPaywall variant="mobile" anchor="history"/></PhoneScene>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 4 · FOUNDER · CLAIM RACE LOSER */}
+        <DCSection id="race-loser" title="4 · Founder · claim-race loser (§3.2)"
           subtitle="Seat #100 went to someone else mid-tap. Honest full-bleed 'just missed it' surface. No charge, no consolation pricing — the fallback is regular Premium at $5/mo. After this, Founder flips to closed for everyone.">
           <DCArtboard id="loser-mobile" label="Mobile · full-bleed takeover" width={PHONE_W} height={PHONE_H}>
             <PhoneScene theme="electric" bare={true}><FounderRaceLoser variant="mobile"/></PhoneScene>
@@ -291,8 +317,8 @@ function App() {
           </DCArtboard>
         </DCSection>
 
-        {/* 4 · FOUNDER · POST-CLAIM TAKEOVER */}
-        <DCSection id="claim-winner" title="4 · Founder · post-claim takeover (§3.3)"
+        {/* 5 · FOUNDER · POST-CLAIM TAKEOVER */}
+        <DCSection id="claim-winner" title="5 · Founder · post-claim takeover (§3.3)"
           subtitle="The dedicated win moment — not the generic success state. Seat-number reveal, $3/mo locked-forever stamp, Founder badge preview. One CTA, auto-routes to Settings · Plan. No confetti; the seat number is the moment.">
           <DCArtboard id="winner-mobile" label="Mobile · seat #37" width={PHONE_W} height={PHONE_H}>
             <PhoneScene theme="electric" bare={true}><FounderClaimTakeover variant="mobile" seatNumber={37}/></PhoneScene>
@@ -305,8 +331,8 @@ function App() {
           </DCArtboard>
         </DCSection>
 
-        {/* 5 · GIFTED · PLAN CARD */}
-        <DCSection id="gifted-plan" title="5 · Gifted · Plan card (§4)"
+        {/* 6 · GIFTED · PLAN CARD */}
+        <DCSection id="gifted-plan" title="6 · Gifted · Plan card (§4)"
           subtitle="Lifetime-Premium-comped users in Settings · Plan. Gratitude voice, Premium + Beta badges, no 'Manage subscription', no 'Cancel any time' — there's no payment relationship to manage. One discovery affordance, never a billing one.">
           <DCArtboard id="gifted-desktop" label="Desktop · Settings · Plan" width={DESK_W} height={DESK_H}>
             <SettingsPlanDesktop theme="electric"><GiftedPlanCardDesktop/></SettingsPlanDesktop>
@@ -316,9 +342,9 @@ function App() {
           </DCArtboard>
         </DCSection>
 
-        {/* 6 · ENTITLEMENTS MATRIX */}
-        <DCSection id="matrix" title="6 · Entitlements matrix (§6)"
-          subtitle="The canonical table, rendered. 7 features × 6 states, four cell semantics. Grouped by gating philosophy: active affordances render visible-locked when gated; background features stay hidden. Only 'Active' returns true from canUseFeature.">
+        {/* 7 · ENTITLEMENTS MATRIX */}
+        <DCSection id="matrix" title="7 · Entitlements matrix (§6)"
+          subtitle="The canonical table, rendered, with the 2026-06-25 amendment: Watching is now Active for every signed-in state (logged-out still routes to the picker). Concert history, calendar export, following, alerts, Spotify sync, price-drops stay Premium-only. Grouped by gating philosophy; only 'Active' returns true from canUseFeature.">
           <DCArtboard id="matrix-desktop" label="Desktop · full table" width={DESK_W} height={MATRIX_DESK_H}>
             <DesktopChrome theme="electric" url="concertcrawl.app/docs/entitlements" height={MATRIX_DESK_H}>
               <EntitlementsMatrix variant="desktop"/>
@@ -329,9 +355,9 @@ function App() {
           </DCArtboard>
         </DCSection>
 
-        {/* 7 · THEME PARITY */}
-        <DCSection id="theme-parity" title="7 · Theme parity"
-          subtitle="Token-only proof. The Free-state picker across light + dark + a high-contrast genre theme. Every color reads from var(--*); nothing hard-coded. Flip all 9 in the Tweaks panel.">
+        {/* 8 · THEME PARITY */}
+        <DCSection id="theme-parity" title="8 · Theme parity"
+          subtitle="Token-only proof. The Free-state picker (now with Watching back on Free) across light + dark + a high-contrast genre theme. Every color reads from var(--*); nothing hard-coded. Flip all 9 in the Tweaks panel.">
           {["light","drip","forge","pulse"].map(th => (
             <DCArtboard key={th} id={"tp-" + th} label={"Picker · Free · " + window.CC_THEMES[th].label} width={PHONE_W} height={PHONE_H}>
               <PhoneScene theme={th} pageBehind="settings">

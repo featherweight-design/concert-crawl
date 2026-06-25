@@ -27,7 +27,7 @@ const ENT_GROUPS = [
     label: "Active affordances",
     note: "A visible control sits on the page. When gated it renders visible-locked (lock + “Premium” chip).",
     features: [
-      { key: "watching",  label: "Watching",        sub: "the heart" },
+      { key: "watching",  label: "Watching",        sub: "the heart", freeForSignedIn: true },
       { key: "history",   label: "Concert history", sub: "attended" },
       { key: "export",    label: "Calendar export", sub: "Apple + Google" },
       { key: "following", label: "Following",       sub: "artists" },
@@ -48,8 +48,15 @@ const ENT_GROUPS = [
 
 const PAID = ["premium", "founder", "gifted"];
 
-// derive the cell value from feature group + state
-function entCell(groupKind, stateKey) {
+// derive the cell value from feature + group + state
+// Amendment 2026-06-25: Watching is a Free feature for all signed-in users
+// (cheap to operate — it's just tracking a show in a DB). Only logged-out is
+// gated, routing to the full picker. Premium gating stays on attending/history,
+// follows, and alerts.
+function entCell(feature, groupKind, stateKey) {
+  if (feature && feature.freeForSignedIn) {
+    return stateKey === "logged-out" ? "picker" : "active";
+  }
   if (PAID.includes(stateKey)) return "active";
   if (groupKind === "background") return "hidden";
   // active affordance, non-paid:
@@ -202,7 +209,7 @@ function EntitlementsMatrixDesktop() {
                     {f.sub && <MonoEyebrow size={8.5} letterSpacing="0.1em">{f.sub}</MonoEyebrow>}
                   </div>
                   {ENT_STATES.map(s => {
-                    const v = entCell(g.kind, s.key);
+                    const v = entCell(f, g.kind, s.key);
                     return (
                       <div key={s.key} style={{
                         padding: "13px 12px", borderBottom: last ? "none" : "1px solid var(--border)",
@@ -285,7 +292,7 @@ function EntitlementsMatrixMobile() {
                       display: "flex", alignItems: "center", justifyContent: "center",
                       background: s.hot ? "color-mix(in oklch, var(--signal) 4%, transparent)" : "transparent",
                     }}>
-                      <MobileCell value={entCell(g.kind, s.key)}/>
+                      <MobileCell value={entCell(f, g.kind, s.key)}/>
                     </div>
                   ))}
                 </React.Fragment>

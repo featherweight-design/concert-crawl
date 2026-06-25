@@ -29,6 +29,7 @@ const R5_TIERS = [
     rationale: "No backend cost to scale, no reason to charge.",
     features: [
       "Browse, search, filter every show",
+      "Save shows you're watching",
       "See community-submitted prices",
       "Submit prices yourself",
     ],
@@ -50,7 +51,7 @@ const R5_TIERS = [
     rationale: "Notification workers, email at volume, price polling, Spotify API.",
     features: [
       "Everything in Free",
-      "Watching list + concert history",
+      "Concert history — shows you attended",
       "Calendar export — Apple + Google",
       "Follow artists + new-show alerts",
       "Price-drop alerts + Spotify sync",
@@ -140,9 +141,13 @@ function resolveTierCta(tierKey, state) {
 }
 
 // ── Which tiers render, given window + state ─────────────────
-function r5VisibleTiers(founderState) {
+// Founder is hidden once the launch window closes — EXCEPT for a user who IS a
+// Founder, who keeps their current-plan card (stamp + Manage subscription) so
+// they can see their plan post-window-close.
+function r5VisibleTiers(founderState, state) {
   let keys = ["free", "supporter", "premium", "founder"];
-  if (!founderState || !founderState.open) keys = keys.filter(k => k !== "founder");
+  const founderClosed = !founderState || !founderState.open;
+  if (founderClosed && state !== "founder") keys = keys.filter(k => k !== "founder");
   return keys.map(k => R5_BY_KEY[k]);
 }
 
@@ -288,10 +293,13 @@ function TierStateCard({ tier, state, founderState, urgencyIntensity = "medium",
 }
 
 // ── Feature-anchored header (logged-out / paywall mode) ──────
+// Watching is free for signed-in users (amendment 2026-06-25); for a logged-out
+// visitor the heart still routes here (tier-picker-on-tap) because saving needs
+// an account. So the anchor frames it as "get in," not "go Premium."
 const DEFAULT_ANCHOR = {
-  eyebrow: "WATCHING · LOCKED",
+  eyebrow: "SAVE A SHOW · SIGN IN",
   headline: "Save the ones you can't miss.",
-  sub: "Watching lives on Premium. Pick a tier to switch it on — or sign in if you're already in.",
+  sub: "Watching's free — you just need an account. Pick a tier to get started, or sign in if you're already in.",
 };
 
 function SignInLink({ size = 12.5 }) {
@@ -317,7 +325,7 @@ function TierPicker({
   if (state === "gifted") return <GiftedThankYou variant={variant}/>;
 
   const founderState = getFounderState(founderKind);
-  const tiers = r5VisibleTiers(founderState);
+  const tiers = r5VisibleTiers(founderState, state);
   const loggedOut = state === "logged-out";
 
   const eyebrow = loggedOut ? featureAnchor.eyebrow : "Upgrade · pick a lane";
@@ -354,12 +362,75 @@ function TierPicker({
     );
   }
 
-  // ── Mobile: bottom sheet, stacked cards ────────────────────
+  // ── Mobile: collapsible comparison sheet (tap-to-expand) ───
   return (
-    <SheetChrome height="92%">
+    <TierComparisonMobile
+      state={state} tiers={tiers} founderState={founderState}
+      urgencyIntensity={urgencyIntensity} loggedOut={loggedOut}
+      eyebrow={eyebrow} title={title} sub={sub}
+    />
+  );
+}
+
+// ── CTA button (shared by desktop card + mobile accordion) ───
+function TierCtaButton({ tier, state }) {
+  const shell = tierShell(tier.key);
+  const cta = resolveTierCta(tier.key, state);
+  const neutralAccent = shell.accent === "var(--fg-muted)";
+  const stampColor = neutralAccent ? "var(--border-strong)" : shell.accent;
+  return (
+    <button
+      disabled={cta.disabled}
+      style={{
+        all: "unset", cursor: cta.disabled ? "default" : "pointer",
+        textAlign: "center", padding: "11px 14px", borderRadius: 10, width: "100%",
+        boxSizing: "border-box",
+        fontWeight: 700, fontSize: 13.5, letterSpacing: "-0.005em",
+        opacity: cta.disabled ? 0.55 : 1,
+        background: cta.tone === "signal" ? "var(--signal)"
+                 : cta.tone === "founder" ? "linear-gradient(135deg, var(--signal), color-mix(in oklch, var(--accent) 60%, var(--signal)))"
+                 : cta.tone === "current" ? "var(--surface-2)"
+                 : "transparent",
+        color: cta.tone === "signal" || cta.tone === "founder" ? "var(--fg-on-accent)"
+            : cta.tone === "current" ? "var(--fg)"
+            : cta.tone === "ghost-accent" ? "var(--accent)"
+            : "var(--fg-muted)",
+        border: cta.tone === "current" ? `1px solid ${stampColor}`
+              : cta.tone === "ghost-accent" ? "1px solid color-mix(in oklch, var(--accent) 50%, var(--border-strong))"
+              : cta.tone === "ghost" ? "1px solid var(--border)"
+              : "1px solid transparent",
+        boxShadow: cta.tone === "founder" ? "0 0 18px color-mix(in oklch, var(--accent) 30%, transparent)" : "none",
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+      }}>
+      {cta.tone === "current" && !cta.disabled && (
+        <svg width="12" height="12" viewBox="0 0 12 12" style={{ color: stampColor }}>
+          <path d="M2 6 L5 9 L10 3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      )}
+      <span>{cta.label}</span>
+    </button>
+  );
+}
+
+// ── Mobile collapsible comparison ────────────────────────────
+// Resolves Hugh's "is it squished / do I tap / scroll / modal?" by making the
+// picker a stack of collapsed summary rows (price + tagline visible for at-a-
+// glance comparison) with ONE row expanded inline. Tap a header to expand it;
+// the open one collapses. No nested modal, no truncated cards.
+function pickDefaultExpanded(tiers, state) {
+  if (tiers.some(t => t.key === state)) return state;     // current plan
+  if (tiers.some(t => t.key === "premium")) return "premium"; // recommended
+  return tiers[0] ? tiers[0].key : null;
+}
+
+function TierComparisonMobile({ state, tiers, founderState, urgencyIntensity, loggedOut, eyebrow, title, sub }) {
+  const [open, setOpen] = React.useState(() => pickDefaultExpanded(tiers, state));
+
+  return (
+    <SheetChrome height="90%">
       <DragHandle/>
       <div style={{ padding: "0 16px 12px" }}>
-        <RailHeader tone={loggedOut ? "accent" : "signal"} eyebrow={eyebrow} code={`${tiers.length}/${tiers.length}`}/>
+        <RailHeader tone={loggedOut ? "accent" : "signal"} eyebrow={eyebrow} code={`${tiers.length} tiers`}/>
       </div>
       <div style={{ flex: 1, overflow: "auto", padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -367,22 +438,128 @@ function TierPicker({
           <div style={{ fontWeight: 500, fontSize: 14, color: "var(--fg-muted)", letterSpacing: "-0.005em", lineHeight: 1.45, fontFamily: "Inter, system-ui" }}>{sub}</div>
           {loggedOut && <div style={{ marginTop: 2 }}><SignInLink/></div>}
         </div>
-        {tiers.map(t => (
-          <TierStateCard key={t.key} tier={t} state={state} founderState={founderState} urgencyIntensity={urgencyIntensity}/>
-        ))}
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {tiers.map(t => (
+            <TierRowMobile
+              key={t.key} tier={t} state={state}
+              founderState={founderState} urgencyIntensity={urgencyIntensity}
+              expanded={open === t.key}
+              onToggle={() => setOpen(open === t.key ? null : t.key)}
+            />
+          ))}
+        </div>
+
         <div style={{
           textAlign: "center", fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5,
-          color: "var(--fg-subtle)", letterSpacing: "0.12em", textTransform: "uppercase", padding: "8px 0 4px",
-        }}>Cancel any time · billed monthly · Stripe handles cards</div>
+          color: "var(--fg-subtle)", letterSpacing: "0.12em", textTransform: "uppercase", padding: "6px 0 4px",
+        }}>Tap a tier to compare · cancel any time · Stripe handles cards</div>
       </div>
     </SheetChrome>
+  );
+}
+
+function TierRowMobile({ tier, state, founderState, urgencyIntensity, expanded, onToggle }) {
+  const shell = tierShell(tier.key);
+  const isCurrent = state === tier.key;
+  const neutralAccent = shell.accent === "var(--fg-muted)";
+  const stampColor = neutralAccent ? "var(--border-strong)" : shell.accent;
+  const recommended = tier.key === "premium" && !isCurrent && state !== "founder";
+
+  return (
+    <div style={{
+      position: "relative",
+      background: shell.bg,
+      border: (isCurrent || expanded) ? `2px solid ${stampColor}` : shell.border,
+      borderRadius: 14, overflow: "hidden",
+      fontFamily: "Inter, system-ui", color: "var(--fg)",
+    }}>
+      {/* left accent stripe for paid tiers */}
+      {!neutralAccent && (
+        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: shell.accent }}/>
+      )}
+
+      {/* Collapsed header — always visible, tap to toggle */}
+      <button onClick={onToggle} style={{
+        all: "unset", cursor: "pointer", display: "flex", alignItems: "center", gap: 10,
+        width: "100%", boxSizing: "border-box", padding: "13px 14px",
+      }}>
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ fontWeight: 900, fontSize: 19, letterSpacing: "-0.02em" }}>{tier.name}</span>
+            {tier.key !== "free" && <TierBadge tier={tier.key} size="sm"/>}
+            {isCurrent && (
+              <span style={{
+                fontFamily: "'JetBrains Mono', monospace", fontWeight: 800, fontSize: 8.5,
+                letterSpacing: "0.14em", textTransform: "uppercase",
+                color: neutralAccent ? "var(--fg-muted)" : shell.accent,
+              }}>· Your plan</span>
+            )}
+            {recommended && (
+              <span style={{
+                padding: "2px 7px", borderRadius: 4,
+                background: "color-mix(in oklch, var(--signal) 14%, transparent)",
+                fontFamily: "'JetBrains Mono', monospace", fontWeight: 800, fontSize: 8.5,
+                letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--signal)",
+              }}>Popular</span>
+            )}
+          </div>
+          <div style={{ fontWeight: 600, fontSize: 12.5, color: "var(--fg-muted)", letterSpacing: "-0.01em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tier.tagline}</div>
+        </div>
+        <div style={{ textAlign: "right", flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1 }}>
+          <div style={{ fontWeight: 900, fontSize: 21, letterSpacing: "-0.04em", lineHeight: 1, color: tier.key === "free" ? "var(--fg-muted)" : "var(--fg)" }}>{tier.priceText}</div>
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: 8, color: "var(--fg-subtle)", letterSpacing: "0.08em", textTransform: "uppercase" }}>{tier.priceUnit}</div>
+        </div>
+        <svg width="14" height="14" viewBox="0 0 14 14" style={{ flexShrink: 0, color: "var(--fg-subtle)", transform: expanded ? "rotate(180deg)" : "none", transition: "transform .18s" }}>
+          <path d="M3 5 L7 9 L11 5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+
+      {/* Expanded detail */}
+      {expanded && (
+        <div style={{ padding: "0 14px 14px", display: "flex", flexDirection: "column", gap: 11 }}>
+          {tier.key === "founder" && founderState?.open && (
+            <ScarcityRail state={founderState} intensity={urgencyIntensity}/>
+          )}
+          {tier.rationale && (
+            <div style={{
+              fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "var(--fg-subtle)",
+              letterSpacing: "0.04em", lineHeight: 1.5, paddingLeft: 9,
+              borderLeft: `2px solid ${shell.accent}`, opacity: 0.85,
+            }}>{tier.rationale}</div>
+          )}
+          <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+            {tier.features.map((f, i) => {
+              const text = typeof f === "string" ? f : f.text;
+              const isFuture = typeof f === "object" && f.future;
+              return (
+                <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontWeight: 500, fontSize: 13, color: "var(--fg)", letterSpacing: "-0.005em", opacity: isFuture ? 0.65 : 1 }}>
+                  {isFuture ? (
+                    <span style={{ width: 12, flexShrink: 0, marginTop: 1, color: shell.accent, fontSize: 12, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", textAlign: "center", lineHeight: 1.2 }}>★</span>
+                  ) : (
+                    <svg width="12" height="12" viewBox="0 0 12 12" style={{ flexShrink: 0, marginTop: 4 }}>
+                      <path d="M2 6 L5 9 L10 3" fill="none" stroke={shell.accent} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                  <span>{text}</span>
+                </li>
+              );
+            })}
+          </ul>
+          {tier.badgeOnlyNote && (
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, color: "var(--fg-subtle)", letterSpacing: "0.08em", textTransform: "uppercase" }}>{tier.badgeOnlyNote}</div>
+          )}
+          <TierCtaButton tier={tier} state={state}/>
+        </div>
+      )}
+    </div>
   );
 }
 
 // ── Gifted thank-you — replaces the whole picker (brief §2) ──
 function GiftedThankYou({ variant = "mobile" }) {
   const perks = [
-    "Watching list + concert history",
+    "Concert history — shows you attended",
     "Calendar export — Apple + Google",
     "Follow artists + new-show alerts",
     "Price-drop alerts + Spotify sync",
@@ -485,6 +662,7 @@ function GiftedThankYou({ variant = "mobile" }) {
 }
 
 Object.assign(window, {
-  R5_TIERS, R5_BY_KEY, TierStateCard, TierPicker, GiftedThankYou,
+  R5_TIERS, R5_BY_KEY, TierStateCard, TierCtaButton, TierPicker,
+  TierComparisonMobile, TierRowMobile, GiftedThankYou,
   r5VisibleTiers, resolveTierCta,
 });
