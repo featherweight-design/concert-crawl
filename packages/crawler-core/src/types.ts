@@ -10,6 +10,7 @@ export interface NormalizedEvent {
   sourceUrl: string
   confidence: number
   isConcert?: boolean
+  reviewNeeded?: boolean
 }
 
 export interface TokenUsage {

@@ -20,6 +20,7 @@ const NormalizedEventSchema = z.object({
   description: z.string().nullable().optional(),
   confidence: z.number().min(0).max(1),
   isConcert: z.boolean().optional(),
+  reviewNeeded: z.boolean().optional(),
 })
 
 const ToolInputSchema = z.object({
@@ -194,6 +195,7 @@ export async function extractWithLlm(
     ...(evt.ticketUrl != null && { ticketUrl: evt.ticketUrl }),
     ...(evt.description != null && { description: evt.description }),
     ...(evt.isConcert != null && { isConcert: evt.isConcert }),
+    ...(evt.reviewNeeded != null && { reviewNeeded: evt.reviewNeeded }),
   }))
 
   console.log(

@@ -213,4 +213,55 @@ describe('extractWithLlm', () => {
     expect(result.events).toHaveLength(1)
     expect(result.events[0]?.isConcert).toBeUndefined()
   })
+
+  it('returns reviewNeeded=true when the LLM emits it (borderline event)', async () => {
+    const mockEvents = [
+      {
+        title: 'PRESIDENT: North American Campaign 2026',
+        artist: 'PRESIDENT',
+        date: '2026-08-15',
+        confidence: 0.7,
+        isConcert: false,
+        reviewNeeded: true,
+      },
+    ]
+    mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents))
+    const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
+    expect(result.events).toHaveLength(1)
+    expect(result.events[0]?.reviewNeeded).toBe(true)
+  })
+
+  it('returns reviewNeeded=false when the LLM emits it (unambiguous event)', async () => {
+    const mockEvents = [
+      {
+        title: 'Wynonna Judd Live',
+        artist: 'Wynonna Judd',
+        date: '2026-08-15',
+        confidence: 0.95,
+        isConcert: true,
+        reviewNeeded: false,
+      },
+    ]
+    mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents))
+    const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
+    expect(result.events).toHaveLength(1)
+    expect(result.events[0]?.reviewNeeded).toBe(false)
+  })
+
+  it('defaults reviewNeeded to undefined when the LLM omits the field', async () => {
+    const mockEvents = [
+      {
+        title: 'Open Mic',
+        artist: 'Various',
+        date: '2026-08-15',
+        confidence: 0.6,
+        isConcert: true,
+        // reviewNeeded intentionally omitted
+      },
+    ]
+    mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents))
+    const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
+    expect(result.events).toHaveLength(1)
+    expect(result.events[0]?.reviewNeeded).toBeUndefined()
+  })
 })
