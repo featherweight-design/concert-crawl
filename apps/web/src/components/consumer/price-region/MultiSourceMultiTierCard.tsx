@@ -4,6 +4,7 @@ import React from 'react'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { Eyebrow, PendingTrustPill } from '@/components/consumer/glyphs'
 import { TierAlternateRow } from '@/components/consumer/multi-tier/TierAlternateRow'
+import { displayVendor } from '@/components/consumer/vendor-display'
 import { AltSourceRow } from './AltSourceRow'
 
 const copy = CONSUMER_COPY.priceRegion.multiSource
@@ -90,7 +91,7 @@ export const MultiSourceMultiTierCard = ({
         letterSpacing: '0.04em',
       }}
     >
-      {copy.metaTemplate(headlineVendor)}
+      {copy.metaTemplate(displayVendor(headlineVendor))}
     </div>
 
     <div style={{ marginTop: 12 }}>

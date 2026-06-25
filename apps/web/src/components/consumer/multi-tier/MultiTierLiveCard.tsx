@@ -6,6 +6,7 @@ import {
   TierAlternateRow,
   type TierAlternateRowProps,
 } from '@/components/consumer/multi-tier/TierAlternateRow'
+import { displayVendor } from '@/components/consumer/vendor-display'
 
 const copy = CONSUMER_COPY.multiTier
 
@@ -128,7 +129,7 @@ export const MultiTierLiveCard = ({
           letterSpacing: '0.04em',
         }}
       >
-        {'seen on ' + headline.vendor}
+        {'seen on ' + displayVendor(headline.vendor)}
         {reports !== undefined && reports > 1 && ` · ${reports} reports`}
       </div>
 

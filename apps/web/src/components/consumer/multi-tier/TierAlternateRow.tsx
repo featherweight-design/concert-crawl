@@ -1,6 +1,7 @@
 'use client'
 
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { displayVendor } from '@/components/consumer/vendor-display'
 
 const copy = CONSUMER_COPY.multiTier
 
@@ -115,7 +116,7 @@ export const TierAlternateRow = (props: TierAlternateRowProps) => {
               letterSpacing: '-0.005em',
             }}
           >
-            {vendor}
+            {displayVendor(vendor)}
           </span>
         )}
       </div>

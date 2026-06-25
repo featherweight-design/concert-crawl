@@ -6,6 +6,7 @@ import {
   TierAlternateRow,
   type TierAlternateRowProps,
 } from '@/components/consumer/multi-tier/TierAlternateRow'
+import { displayVendor } from '@/components/consumer/vendor-display'
 
 const copy = CONSUMER_COPY.multiTier
 
@@ -113,7 +114,7 @@ export const MixedTierCard = ({ headline, alternates }: MixedTierCardProps) => {
           letterSpacing: '0.04em',
         }}
       >
-        {'seen on ' + headline.vendor}
+        {'seen on ' + displayVendor(headline.vendor)}
       </div>
 
       {/* Other tiers section — always rendered */}
