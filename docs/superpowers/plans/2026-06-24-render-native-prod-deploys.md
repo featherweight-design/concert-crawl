@@ -65,8 +65,9 @@ The "we don't have a webhook telling us when Render is done" argument that motiv
 - `concert-crawl-crawler-triggers` (crn-d8o7c10k1i2s7389t3v0): flip `Auto-Deploy: yes`
 - `concert-crawl-crawler-daily` (crn-d8o7egog4nts73d2tni0): flip `Auto-Deploy: yes`
 
-**GH repo configuration (operator, post-merge):**
-- New repo variable `PROD_SMOKE_RECONCILER_ENABLED=true` (Settings → Variables → Actions).
+**GH repo configuration (operator, two-step, post-merge):**
+1. Create repo variable `PROD_SMOKE_RECONCILER_ENABLED` initially set to `false` (Settings → Variables → Actions). The smoke workflow's job-level `if:` will skip until the variable is `true`, so creating it as `false` keeps the workflow inert during the migration window.
+2. **After** flipping `Auto-Deploy: yes` on the three Render services and verifying one auto-deploy completes cleanly, flip `PROD_SMOKE_RECONCILER_ENABLED` to `true` to arm the smoke + rollback path.
 
 ## This-branch vs. implementation-branch split
 
@@ -201,14 +202,32 @@ name: Prod smoke (after Render auto-deploy)
 # trigger in the system and fires the moment main moves. See plan
 # doc 2026-06-24-render-native-prod-deploys.md for the analysis.
 #
-# Why no [skip ci] filter: semantic-release lands a release commit
-# (`chore(release): X.Y.Z [skip ci]`) ~3 min after each merge. The
-# [skip ci] convention automatically prevents this workflow from
-# firing for that commit. The merge commit's smoke workflow runs
-# against Render's live SHA at the time of smoke — by then Render
-# may already be on the release commit (which is the merge commit's
-# code + a package.json version bump). Smoke validity is preserved
-# either way.
+# semantic-release release commits — small coverage gap, accepted:
+# semantic-release lands `chore(release): X.Y.Z [skip ci]` ~3 min
+# after each merge. The [skip ci] convention prevents THIS workflow
+# from firing for that commit. The merge commit's smoke workflow
+# does fire and waits for Render to be live on the merge SHA.
+#
+# Typical case (Render queues deploys in order): the merge build
+# completes first and is live for ~3 min before the release build
+# supersedes it. The smoke catches that live window and validates.
+# ✓ Covered.
+#
+# Edge case (Render cancels the merge build mid-flight if the
+# release commit lands before the merge build finishes): merge SHA
+# never reaches `live`, smoke times out (treated as benign skip,
+# see below), release commit ends up live and unsmoked.
+#
+# We accept this gap. The release commit is code-equivalent to the
+# merge commit (just `package.json` + CHANGELOG version bumps on
+# top), so a passing smoke against the merge commit would have
+# passed against the release commit. The risk is bounded to changes
+# in semantic-release's own commit shape — currently `version-only`,
+# code-irrelevant. If that ever changes (e.g. release adds compiled
+# artifacts), revisit by either filtering [skip ci] from the wait
+# target or smoking whatever is currently live on timeout. The
+# operator can always `workflow_dispatch` this workflow to validate
+# the release commit explicitly if a specific release warrants it.
 #
 # Disabled by default. Flip PROD_SMOKE_RECONCILER_ENABLED to 'true'.
 # See docs/runbooks/auto-deploy-prod.md.
@@ -240,9 +259,34 @@ jobs:
     # safety margin.
     timeout-minutes: 20
     if: vars.PROD_SMOKE_RECONCILER_ENABLED == 'true'
+    # `environment: production` scopes secrets + variables to the
+    # production GH Environment (where RENDER_API_TOKEN, RENDER_SERVICE_ID_*,
+    # ADMIN_EMAIL, RESEND_API_KEY live in this repo). Same pattern as
+    # deploy-prod.yml's deploy + rollback jobs and rollback-prod.yml's
+    # rollback job. Without this, `vars.RENDER_SERVICE_ID_*` and the
+    # related secrets would not resolve at runtime.
+    environment: production
     outputs:
       assertions_failed: ${{ steps.evaluate_smoke.outputs.assertions_failed }}
     steps:
+      # Fail loud on the wrong branch for manual dispatches. Mirrors
+      # deploy-prod.yml / rollback-prod.yml / staging-smoke.yml — a
+      # job-level `if:` filter would silently skip and could show as
+      # `success`, which would let a feature-branch dispatch look idle
+      # while in fact nothing ran (or worse, the operator believes the
+      # smoke ran from main when it didn't). Without this guard, a
+      # feature branch could dispatch this workflow with main's prod
+      # secrets bound to feature-branch Playwright code.
+      - name: Refuse workflow_dispatch from non-main ref
+        if: |
+          github.event_name == 'workflow_dispatch' &&
+          github.ref != 'refs/heads/main'
+        run: |
+          echo "✗ Refusing to smoke prod from ref '${{ github.ref }}'."
+          echo "  Manual prod-smoke dispatches must come from main."
+          echo "  Use the workflow_dispatch UI's branch picker to select main, then re-dispatch."
+          exit 1
+
       # Pin checkout to github.sha — the SHA that just landed on main.
       # The Playwright code we run must match the SHA Render is
       # building. If main has moved by the time this job starts (rare
@@ -254,12 +298,19 @@ jobs:
         with:
           ref: ${{ github.sha }}
 
-      # Preflight on every required var/secret. Fail loud with a clear
-      # list if anything's missing — easier to diagnose than an opaque
-      # curl error mid-script.
+      # Preflight on every required var/secret used by any later step
+      # in this job — Render API + service IDs + smoke URLs + the
+      # Playwright globalSetup credentials (E2E_TEST_USER_*) + the
+      # Sentry DSN consumed by smoke. Listing all of them here means
+      # a missing value surfaces as a clear "Missing X" message rather
+      # than as an opaque Playwright globalSetup failure or a Sentry
+      # transport error several minutes into the run.
       - name: Verify required config
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+          E2E_TEST_USER_EMAIL: ${{ secrets.E2E_TEST_USER_EMAIL }}
+          E2E_TEST_USER_PASSWORD: ${{ secrets.E2E_TEST_USER_PASSWORD }}
+          SENTRY_DSN_SMOKE: ${{ secrets.SENTRY_DSN_SMOKE }}
         run: |
           missing=()
           [ -z "$RENDER_API_TOKEN" ] && missing+=("RENDER_API_TOKEN (secret)")
@@ -268,6 +319,9 @@ jobs:
           [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_DAILY (variable)")
           [ -z "${{ vars.PROD_URL }}" ] && missing+=("PROD_URL (variable)")
           [ -z "${{ vars.PROD_API_URL }}" ] && missing+=("PROD_API_URL (variable)")
+          [ -z "$E2E_TEST_USER_EMAIL" ] && missing+=("E2E_TEST_USER_EMAIL (secret)")
+          [ -z "$E2E_TEST_USER_PASSWORD" ] && missing+=("E2E_TEST_USER_PASSWORD (secret)")
+          [ -z "$SENTRY_DSN_SMOKE" ] && missing+=("SENTRY_DSN_SMOKE (secret)")
           if [ ${#missing[@]} -gt 0 ]; then
             echo "✗ Missing required configuration:"
             printf '  - %s\n' "${missing[@]}"
