@@ -1,3 +1,17 @@
+# [1.84.0](https://github.com/HartiganHM/concert-crawl/compare/v1.83.0...v1.84.0) (2026-06-25)
+
+
+### Bug Fixes
+
+* **crawler:** migrate llm.output_truncated to reportFailure post-[#806](https://github.com/HartiganHM/concert-crawl/issues/806) rebase ([a8d3556](https://github.com/HartiganHM/concert-crawl/commit/a8d3556c5b3e8c9ae410eb8eac7b3d4c11a2dadf))
+* **logger:** copilot round 1 — severity-routed console + json-ld error detail ([79fcc0f](https://github.com/HartiganHM/concert-crawl/commit/79fcc0f9b70fc98abf69b334b84b151f15cea218))
+* **logger:** copilot round 6 fixes for pr [#808](https://github.com/HartiganHM/concert-crawl/issues/808) ([45637d6](https://github.com/HartiganHM/concert-crawl/commit/45637d6c17c408ced947d5e606a176a163234f81))
+
+
+### Features
+
+* **logger:** centralized reportFailure helper; route 11 callsites to Sentry ([ad1b516](https://github.com/HartiganHM/concert-crawl/commit/ad1b516fb54aa49abf467fbe108044f0354e16b0))
+
 # [1.83.0](https://github.com/HartiganHM/concert-crawl/compare/v1.82.0...v1.83.0) (2026-06-25)
 
 
