@@ -366,12 +366,25 @@ export interface EventWithVenue extends Event {
   priceVendor?: string | null
   // Per-tier price aggregation surfaced on the BROWSE list endpoint so the
   // browse chip can mirror pickTierHeadline / compareTierRows exactly
-  // (issue #787). Only `headline` is consumed by the browse surface today
-  // — `alternates`, `pending`, `counterSubmission`, and `reports` are
-  // populated for parity with the detail endpoint, but the list endpoint
-  // intentionally skips the secondary side-tables (pending, counter,
-  // confirms) to keep N+1 cost bounded. `pickBrowseHeadline` reads only
-  // `block.headline`, so the trimmed payload is sufficient.
+  // (issue #787).
+  //
+  // IMPORTANT — the LIST endpoint and the DETAIL endpoint return the same
+  // `TierPriceBlock` SHAPE but populate it differently to keep browse
+  // cheap:
+  //   - `headline`     — populated on both endpoints
+  //   - `alternates`   — populated on both endpoints
+  //   - `pending`      — populated on the detail endpoint only; ALWAYS an
+  //                      empty array on the list endpoint
+  //   - `counterSubmission` — populated on the detail endpoint only; ALWAYS
+  //                      null on the list endpoint
+  //   - `reports`      — populated on the detail endpoint only; ALWAYS 0
+  //                      on the list endpoint
+  //
+  // The list endpoint intentionally skips the secondary side-tables
+  // (pending, counter, reports) to keep N+1 cost bounded. The shipped
+  // `pickBrowseHeadline` reads only `block.headline`, so the trimmed
+  // payload is sufficient for the browse chip. Any consumer that wants
+  // those fields populated must use `EventDetailResponse` instead.
   priceByTier?: TierPriceBlock[] | null
 }
 

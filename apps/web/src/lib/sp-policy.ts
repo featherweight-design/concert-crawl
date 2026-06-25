@@ -1,4 +1,4 @@
-import { SP_POLICY } from '@concert-crawl/types'
+import { SP_POLICY, type SourceCategory } from '@concert-crawl/types'
 
 export interface ValidationResult {
   errors: Partial<
@@ -16,8 +16,10 @@ export interface SubmissionInput {
   // PR 4 provenance-first redesign: sourceCategory is the new required field
   // (replaces the howFound chip group). The API still requires `howFound` on
   // POST, so SubmitPriceModal derives it from sourceCategory at submit time
-  // (boxoffice → bought_myself, resale/standard → saw_listing).
-  sourceCategory: 'boxoffice' | 'standard' | 'resale' | null
+  // (boxoffice → bought_myself, resale/standard → saw_listing). The union
+  // is imported from `@concert-crawl/types` so the client stays aligned with
+  // the API contract — never re-declare it inline here.
+  sourceCategory: SourceCategory | null
 }
 
 export function validateSubmission(
