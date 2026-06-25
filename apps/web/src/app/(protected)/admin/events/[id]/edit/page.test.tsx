@@ -81,6 +81,8 @@ const buildEvent = (overrides: Partial<EditorEvent> = {}): EditorEvent => ({
   venueId: UUID_VENUE,
   venueName: 'Test Venue',
   isSoldOut: false,
+  hiddenFromConsumer: false,
+  isConcertReviewNeeded: false,
   ...overrides,
 })
 

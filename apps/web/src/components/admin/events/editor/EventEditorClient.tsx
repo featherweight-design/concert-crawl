@@ -37,6 +37,8 @@ export interface EditorEvent {
   venueId: string | null
   venueName: string | null
   isSoldOut: boolean
+  hiddenFromConsumer: boolean
+  isConcertReviewNeeded: boolean
 }
 
 interface DraftState {
@@ -100,10 +102,12 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
   const [draft, setDraft] = useState<DraftState>(() => toDraft(event))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [pendingDanger, setPendingDanger] = useState<
-    'non-concert' | 'delete' | null
-  >(null)
+  const [pendingDanger, setPendingDanger] = useState<'delete' | null>(null)
   const [dangerPending, setDangerPending] = useState(false)
+  const [pendingClassification, setPendingClassification] = useState<
+    'mark-non-concert' | 'mark-as-concert' | null
+  >(null)
+  const [classificationPending, setClassificationPending] = useState(false)
   const [mergeOpen, setMergeOpen] = useState(false)
 
   // Reset the draft whenever the event prop identity changes (post-save
@@ -192,26 +196,18 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
   }, [event])
 
   const onConfirmDanger = useCallback(async () => {
-    if (!pendingDanger) return
+    if (pendingDanger !== 'delete') return
     setDangerPending(true)
     setError(null)
     try {
       const token = await getToken()
       if (!token) throw new ApiError(401, 'Unauthorized')
-      if (pendingDanger === 'non-concert') {
-        await apiClient.patch(`/v1/admin/events/${event.id}`, token, {
-          hiddenFromConsumer: true,
-        })
-        setPendingDanger(null)
-        router.refresh()
-      } else {
-        await apiClient.delete(`/v1/admin/events/${event.id}`, token)
-        // Clear the pending state BEFORE redirecting so the modal can't be
-        // re-armed if navigation is delayed (would otherwise allow a second
-        // DELETE on the now-deleted row).
-        setPendingDanger(null)
-        router.push('/admin/review?tab=all-events')
-      }
+      await apiClient.delete(`/v1/admin/events/${event.id}`, token)
+      // Clear the pending state BEFORE redirecting so the modal can't be
+      // re-armed if navigation is delayed (would otherwise allow a second
+      // DELETE on the now-deleted row).
+      setPendingDanger(null)
+      router.push('/admin/review?tab=all-events')
     } catch (dangerErr) {
       const message =
         dangerErr instanceof ApiError
@@ -223,6 +219,34 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
       setDangerPending(false)
     }
   }, [event.id, getToken, pendingDanger, router])
+
+  const onConfirmClassification = useCallback(async () => {
+    if (!pendingClassification) return
+    setClassificationPending(true)
+    setError(null)
+    try {
+      const token = await getToken()
+      if (!token) throw new ApiError(401, 'Unauthorized')
+      const hiddenFromConsumer = pendingClassification === 'mark-non-concert'
+      await apiClient.patch(`/v1/admin/events/${event.id}`, token, {
+        hiddenFromConsumer,
+      })
+      setPendingClassification(null)
+      router.refresh()
+    } catch (classificationErr) {
+      const message =
+        classificationErr instanceof ApiError
+          ? classificationErr.message
+          : ADMIN_COPY.editor.saveBar.saveFailed
+      console.error(
+        'EventEditorClient classification action error:',
+        classificationErr,
+      )
+      setError(message)
+    } finally {
+      setClassificationPending(false)
+    }
+  }, [event.id, getToken, pendingClassification, router])
 
   return (
     <div
@@ -244,7 +268,14 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
       )}
       <IdentitySection event={event} />
       <PricingSection event={event} />
-      <ClassificationSection genre={event.genre} />
+      <ClassificationSection
+        genre={event.genre}
+        hiddenFromConsumer={event.hiddenFromConsumer}
+        isConcertReviewNeeded={event.isConcertReviewNeeded}
+        onMarkNonConcert={() => setPendingClassification('mark-non-concert')}
+        onMarkAsConcert={() => setPendingClassification('mark-as-concert')}
+        disabled={saving || classificationPending}
+      />
       <StatusSection
         event={event}
         editedStatus={draft.status}
@@ -268,7 +299,6 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
       />
       <ArtSection artist={event.artist} />
       <DangerZoneSection
-        onMarkNonConcert={() => setPendingDanger('non-concert')}
         onMerge={() => setMergeOpen(true)}
         onDelete={() => setPendingDanger('delete')}
         disabled={saving || dangerPending}
@@ -280,9 +310,9 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
         onSave={onSave}
         onDiscard={onDiscard}
       />
-      {pendingDanger && (
+      {pendingDanger === 'delete' && (
         <EventConfirmModal
-          kind={pendingDanger}
+          kind="delete"
           event={{
             title: event.title,
             venueName: event.venueName,
@@ -292,6 +322,24 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
           pending={dangerPending}
           onCancel={() => setPendingDanger(null)}
           onConfirm={onConfirmDanger}
+        />
+      )}
+      {pendingClassification && (
+        <EventConfirmModal
+          kind={
+            pendingClassification === 'mark-as-concert'
+              ? 'mark-as-concert'
+              : 'non-concert'
+          }
+          event={{
+            title: event.title,
+            venueName: event.venueName,
+            date: event.date,
+            showTime: event.showTime,
+          }}
+          pending={classificationPending}
+          onCancel={() => setPendingClassification(null)}
+          onConfirm={onConfirmClassification}
         />
       )}
       {mergeOpen && (
