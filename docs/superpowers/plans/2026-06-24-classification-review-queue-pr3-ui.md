@@ -575,9 +575,22 @@ export const EventConfirmModal = ({
     : isMarkAsConcert
       ? 'var(--success)'
       : 'var(--warning)'
-  // ... rest unchanged, including the confirm button's variant logic:
-  // <AdminButton variant={isDelete ? 'danger' : 'outline'} ...>
-  // which already works for both 'non-concert' and 'mark-as-concert'.
+  // ... rest unchanged EXCEPT the confirm button's variant logic — extend
+  // the existing ternary so the button color tracks the accent:
+  //
+  //   <AdminButton
+  //     variant={
+  //       isDelete ? 'danger' : isMarkAsConcert ? 'success' : 'outline'
+  //     }
+  //     onClick={onConfirm}
+  //     disabled={pending}
+  //   >
+  //     {copy.confirm}
+  //   </AdminButton>
+  //
+  // AdminButton already exposes the 'success' variant (see
+  // apps/web/src/components/admin/primitives/AdminButton.tsx:5 and the
+  // reference usage at apps/web/src/components/admin/review/BulkApproveConfirm.tsx:192).
 ```
 
 - [ ] **Step 4: Run tests**
