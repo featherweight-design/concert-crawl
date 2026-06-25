@@ -1,3 +1,16 @@
+# [1.82.0](https://github.com/HartiganHM/concert-crawl/compare/v1.81.0...v1.82.0) (2026-06-25)
+
+
+### Bug Fixes
+
+* **admin:** r1 — address Copilot review round 1 on PR [#814](https://github.com/HartiganHM/concert-crawl/issues/814) ([07a8114](https://github.com/HartiganHM/concert-crawl/commit/07a811453cc08631d0bf6247b811abf5262d167c)), closes [#802](https://github.com/HartiganHM/concert-crawl/issues/802) [#696](https://github.com/HartiganHM/concert-crawl/issues/696)
+* **api:** r2 — bulk/mark-as-concert filters to currently-hidden rows ([0c264af](https://github.com/HartiganHM/concert-crawl/commit/0c264af729a6cc9432e6eb32d1e4a05f950718fe)), closes [#815](https://github.com/HartiganHM/concert-crawl/issues/815)
+
+
+### Features
+
+* bulk Mark-as-concert action on All Events bulk dock ([#809](https://github.com/HartiganHM/concert-crawl/issues/809)) ([fc9231c](https://github.com/HartiganHM/concert-crawl/commit/fc9231cfda20834d0c4ae077d22854c6337e463d)), closes [799/#802](https://github.com/HartiganHM/concert-crawl/issues/802)
+
 # [1.81.0](https://github.com/HartiganHM/concert-crawl/compare/v1.80.0...v1.81.0) (2026-06-25)
 
 
