@@ -287,7 +287,17 @@ jobs:
     # (cold cache) + ~7 min smoke = ~15 min worst case. 20 leaves a
     # safety margin.
     timeout-minutes: 20
-    if: vars.PROD_SMOKE_RECONCILER_ENABLED == 'true'
+    # Kill-switch gate for push-triggered runs, with an explicit
+    # workflow_dispatch bypass so manual operator intervention always
+    # works — including during the migration window when the switch
+    # is `false`. Matches rollback-prod.yml's design (no kill switch
+    # at all on the rollback path; incident response must not be
+    # paused by a feature flag). The non-main-branch guard inside
+    # the job's first step still prevents a feature branch from
+    # dispatching with prod secrets.
+    if: |
+      vars.PROD_SMOKE_RECONCILER_ENABLED == 'true' ||
+      github.event_name == 'workflow_dispatch'
     # `environment: production` scopes secrets + variables to the
     # production GH Environment (where RENDER_API_TOKEN, RENDER_SERVICE_ID_*,
     # ADMIN_EMAIL, RESEND_API_KEY live in this repo). Same pattern as
@@ -802,8 +812,8 @@ After the first auto-deploy from stage 2 succeeds:
 ### Disabling
 
 - To pause auto-deploy: flip `Auto-Deploy: no` on the three Render services.
-- To pause the smoke workflow: flip `PROD_SMOKE_RECONCILER_ENABLED=false`. Render keeps auto-deploying, but smoke + rollback stop.
-- To disable the manual escape hatch: flip `AUTO_DEPLOY_PROD_ENABLED=false`.
+- To pause push-triggered smoke: flip `PROD_SMOKE_RECONCILER_ENABLED=false`. Render keeps auto-deploying, but the smoke + rollback path stops firing on push to main. `workflow_dispatch` still works regardless — the kill switch is bypassed for manual operator intervention, matching `rollback-prod.yml`'s "incident response can't be paused by a feature flag" design.
+- To disable the manual escape hatch on `deploy-prod.yml`: flip `AUTO_DEPLOY_PROD_ENABLED=false`.
 ```
 
 - [ ] **Step 4: Update the repo variables table — add `PROD_SMOKE_RECONCILER_ENABLED`.**
