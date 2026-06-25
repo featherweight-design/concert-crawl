@@ -156,8 +156,10 @@ function useTweaks(defaults) {
   React.useEffect(() => {
     const sub = (v) => setValues(v);
     __twkStore.subs.add(sub);
-    // sync in case the store changed between first render and subscribe
-    if (values !== __twkStore.values) setValues(__twkStore.values);
+    // sync from the store unconditionally after subscribing — covers the case
+    // where the store changed between first render and subscribe. Reading
+    // __twkStore.values (not the captured `values`) avoids a stale closure.
+    setValues(__twkStore.values);
     return () => { __twkStore.subs.delete(sub); };
   }, []);
   // Accepts either setTweak('key', value) or setTweak({ key: value, ... }) so a
@@ -213,8 +215,9 @@ function TweaksPanel({ title = 'Tweaks', children }) {
 
   React.useEffect(() => {
     const onMsg = (e) => {
-      // Origin gate: only honor protocol messages from our embedding host, so an
-      // unrelated frame can't toggle edit mode in an embedded prototype.
+      // Sender gate: only honor protocol messages from our embedding host
+      // window, so an unrelated frame can't toggle edit mode in an embedded
+      // prototype. (Gates on event.source, the posting window.)
       if (e.source !== window.parent) return;
       const t = e?.data?.type;
       if (t === '__activate_edit_mode') setOpen(true);

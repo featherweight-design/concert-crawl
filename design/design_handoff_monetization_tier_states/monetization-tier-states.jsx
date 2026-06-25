@@ -380,6 +380,7 @@ function TierCtaButton({ tier, state }) {
   const stampColor = neutralAccent ? "var(--border-strong)" : shell.accent;
   return (
     <button
+      type="button"
       disabled={cta.disabled}
       style={{
         all: "unset", cursor: cta.disabled ? "default" : "pointer",
@@ -480,10 +481,15 @@ function TierRowMobile({ tier, state, founderState, urgencyIntensity, expanded, 
       )}
 
       {/* Collapsed header — always visible, tap to toggle */}
-      <button onClick={onToggle} style={{
-        all: "unset", cursor: "pointer", display: "flex", alignItems: "center", gap: 10,
-        width: "100%", boxSizing: "border-box", padding: "13px 14px",
-      }}>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        aria-controls={`tier-row-detail-${tier.key}`}
+        style={{
+          all: "unset", cursor: "pointer", display: "flex", alignItems: "center", gap: 10,
+          width: "100%", boxSizing: "border-box", padding: "13px 14px",
+        }}>
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <span style={{ fontWeight: 900, fontSize: 19, letterSpacing: "-0.02em" }}>{tier.name}</span>
@@ -517,7 +523,11 @@ function TierRowMobile({ tier, state, founderState, urgencyIntensity, expanded, 
 
       {/* Expanded detail */}
       {expanded && (
-        <div style={{ padding: "0 14px 14px", display: "flex", flexDirection: "column", gap: 11 }}>
+        <div
+          id={`tier-row-detail-${tier.key}`}
+          role="region"
+          aria-label={`${tier.name} tier details`}
+          style={{ padding: "0 14px 14px", display: "flex", flexDirection: "column", gap: 11 }}>
           {tier.key === "founder" && founderState?.open && (
             <ScarcityRail state={founderState} intensity={urgencyIntensity}/>
           )}

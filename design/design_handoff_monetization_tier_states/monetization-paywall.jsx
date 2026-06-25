@@ -14,7 +14,7 @@
 //
 // Exports (window): MiniPaywall, MINI_PAYWALL_ANCHORS
 
-const { TierBadge, MonoEyebrow, RailHeader, SheetChrome, ModalChrome, DragHandle } = window;
+const { RailHeader, SheetChrome, ModalChrome, DragHandle } = window;
 
 // A few anchors eng can pick from per gated feature. Default = price-drop,
 // which leans on the now-free Watching action as the setup.
@@ -77,7 +77,7 @@ function MiniPaywallBody({ anchor, variant }) {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-        <button style={{
+        <button type="button" style={{
           all: "unset", cursor: "pointer", textAlign: "center", boxSizing: "border-box", width: "100%",
           padding: "13px 16px", borderRadius: 12, background: "var(--signal)", color: "var(--fg-on-accent)",
           fontWeight: 800, fontSize: 14.5,
@@ -87,7 +87,7 @@ function MiniPaywallBody({ anchor, variant }) {
           Go Premium
           <svg width="14" height="14" viewBox="0 0 12 12"><path d="M4.5 2 L8.5 6 L4.5 10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </button>
-        <button style={{
+        <button type="button" style={{
           all: "unset", cursor: "pointer", textAlign: "center", boxSizing: "border-box", width: "100%",
           padding: "11px 16px", borderRadius: 12, border: "1px solid var(--border-strong)",
           color: "var(--fg-muted)", fontWeight: 700, fontSize: 13.5,
