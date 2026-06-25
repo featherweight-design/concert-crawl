@@ -54,7 +54,7 @@ The "Manage subscription" CTA in the existing Plan card opens an in-app **Manage
 
 ### 2. Trial-end timing — next session
 
-Trial expires day 15. Instead of a hard takeover the moment day 15 ticks over, the takeover triggers on the user's **next session open**, regardless of route. Once shown and dismissed, it does not re-fire that day.
+Trial expires day 15. Instead of a hard takeover the moment day 15 ticks over, the takeover triggers on the user's **next session open**, regardless of route. Once shown and dismissed, it does not re-fire for the same trial expiry.
 
 - **State:** `lastTrialEndedShownAt` (timestamp, nullable) on the user record. On session start, evaluate `trial_ends_at < now AND (lastTrialEndedShownAt IS NULL OR lastTrialEndedShownAt < trial_ends_at)` — show the takeover if true. Setting `lastTrialEndedShownAt = now` on render makes it single-fire (the check fails on subsequent sessions for the same trial expiry).
 - **Dismissal:** the takeover dismisses to wherever the user was going. They can still browse Free; gated affordances render per the §6 matrix (`paywall-on-tap` or `tier-picker-on-tap` for active affordances, `hidden` for background features).
@@ -80,7 +80,7 @@ When a user downgrades from a Premium-and-up tier (Premium / Founder / Gifted) t
 | Data | Behavior |
 |---|---|
 | **Watching** (saved shows — the heart) | NEVER purged. Free for everyone signed-in per the R6 amendment to the §6 matrix. |
-| **Concert history** (attended) | Preserved 90 days. After purge, `user_events` rows with `status='attended'` removed. |
+| **Concert history** (attended) | Preserved 90 days. After purge, the user's attended-show records are removed. Exact storage shape (`user_events` rows, status enum value, or new table) is #775's call. |
 | **Following** (artists) | Preserved 90 days. After purge, `user_artist_follows` rows removed. |
 | **Alerts** (new-show + price-drop) | Preserved 90 days (subscription state, prefs). After purge, prefs deleted; user is unsubscribed. |
 | **Spotify sync** state | Preserved 90 days (Clerk OAuth token, last-sync timestamp). After purge, token revoked / disconnected. |
@@ -95,12 +95,14 @@ Re-upgrade within 90 days = instant restore (data was never deleted). Re-upgrade
 
 **Trigger clock:** 90 days starts at the **effective downgrade date** — meaning the date the user actually loses Premium access (= end of cancel-grace period for cancellations, = day 15 for trial-ends, = immediate-switch date for explicit downgrades). #775 implements the schema field (`premium_data_expires_at`) and the background job.
 
-### 6. Day-13 trial nudge — Plan card + top-app banner
+### 6. Day-13 trial nudge — Plan card + top-of-app banner
 
-- **Plan card variant:** the trial Plan card gains an emphasis eyebrow on day 13 + 14 — "Trial ends tomorrow · Lock it in" (day 13) / "Trial ends today · Lock it in" (day 14). Inline CTA on the card.
-- **Top-app banner:** on the user's **first session of day 13**, a dismissible top banner shows across consumer surfaces (browse, event detail, settings — Design judges placement) reading "Trial ends tomorrow — lock it in?" with a CTA that opens the tier picker.
-  - **State:** `dayThirteenBannerDismissedAt` (date). Set on first dismissal that day; the banner does not re-fire for that calendar day. (Re-fires once on day 14 if not yet shown? Design's call. Default: no day-14 banner — the takeover that fires on day 15 is the next nudge.)
-- **No takeover on day 13.** The trial-end takeover only fires after the trial actually expires (day 15+, next session).
+"Day 13" throughout this brief means the **24-hour window before `trial_ends_at`** — i.e., `trial_ends_at - 24h <= now < trial_ends_at`. Defining the trigger in elapsed-time-to-expiry terms rather than calendar days sidesteps the timezone ambiguity of "what day is it for the user?" and matches the timestamp comparisons already in §2.
+
+- **Plan card variant:** the trial Plan card gains an emphasis eyebrow on day 13 + 14 — "Trial ends tomorrow · Lock it in" (day 13, ~24h remaining) / "Trial ends today · Lock it in" (day 14, ~12h remaining). Inline CTA on the card.
+- **Top-of-app banner:** on the user's **first session in the trial's final 24 hours**, a dismissible top-of-app banner shows across consumer surfaces (browse, event detail, settings — Design judges placement) reading "Trial ends tomorrow — lock it in?" with a CTA that opens the tier picker.
+  - **State:** `dayThirteenBannerDismissedAt` (timestamp, nullable). Show predicate: `trial_ends_at - 24h <= now < trial_ends_at AND (dayThirteenBannerDismissedAt IS NULL OR dayThirteenBannerDismissedAt < trial_ends_at - 24h)`. Set on first dismissal so the check fails for the rest of the window. Single-fire per trial expiry. (Whether to fire once more closer to expiry is Design's call; default no — Plan card day-14 emphasis + the eventual takeover are the remaining nudges.)
+- **No takeover on day 13.** The trial-end takeover only fires after the trial actually expires (next session after `trial_ends_at`).
 
 ### 7. Account deletion while subscribed — in-scope with off-ramp
 
@@ -149,7 +151,7 @@ Design produces these (mobile sheet + desktop modal each):
 ### Manage subscription sheet
 
 - **Entry:** tap "Manage subscription" CTA on the active Plan card.
-- **Content:** a list of actions — Change plan (→ in-app tier picker), Cancel subscription (→ in-app cancel flow), Change payment method (→ Stripe portal), View invoices (→ Stripe portal), Change billing email (→ Stripe portal).
+- **Content:** a list of actions — Change plan (→ in-app tier picker), Cancel subscription (→ in-app cancel flow), Change payment method (→ Stripe portal), View invoices (→ Stripe portal), Change billing email (→ Stripe portal), Update tax / region (→ Stripe portal).
 - **Portal-bound rows:** carry a route hint (`→ portal` chip or similar). Design's call on the visual grouping.
 
 ### Cancel flow
@@ -187,15 +189,15 @@ Design produces these (mobile sheet + desktop modal each):
 
 ### Trial-ended takeover
 
-- **Trigger:** next session open after `trial_ends_at` passed AND `lastTrialEndedShownAt < trial_ends_at`.
+- **Trigger:** next session open after `trial_ends_at` passed AND `(lastTrialEndedShownAt IS NULL OR lastTrialEndedShownAt < trial_ends_at)` — same predicate as §2 above.
 - **Surface:** full-bleed takeover, dismissible.
 - **Content:** "Trial's done. Pick a lane." headline. Beneath: the locked tier picker from #781 — Free / Supporter / Premium / Founder (if claimable). User picks → goes through normal flow. Dismiss returns to wherever they were navigating to.
-- **State:** set `lastTrialEndedShownAt = today` on render so it doesn't re-fire that day.
+- **State:** set `lastTrialEndedShownAt = now` on render so the check fails on subsequent sessions for the same trial expiry (single-fire).
 - **Voice:** Sour Patch — honest about what ended without being whiny.
 
 ### Day-13 top-app banner
 
-- **Trigger:** first session of day 13 AND no `dayThirteenBannerDismissedAt = today`.
+- **Trigger:** same predicate as §6 above: `trial_ends_at - 24h <= now < trial_ends_at AND (dayThirteenBannerDismissedAt IS NULL OR dayThirteenBannerDismissedAt < trial_ends_at - 24h)`.
 - **Surface:** thin top banner across consumer surfaces. Compact text + CTA + dismiss X.
 - **Content:** "Trial ends tomorrow — lock it in?" + "Go Premium" CTA + dismiss X.
 - **CTA destination:** opens the trial conversion path (existing payment surface owned by the original handoff + the locked trial → Premium flow).
