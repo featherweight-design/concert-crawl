@@ -11,6 +11,17 @@ interface StatusBadgeProps {
   mono?: boolean
   dot?: boolean
   children: React.ReactNode
+  /**
+   * Forwarded to the inner span for mouse-hover context. Optional.
+   */
+  title?: string
+  /**
+   * Forwarded to the inner span along with role="img" so the accessible
+   * name is reliably exposed to screen readers. Plain `<span>` defaults
+   * to role="generic" which many assistive techs ignore for aria-label
+   * — adding role="img" makes the announcement consistent. Optional.
+   */
+  'aria-label'?: string
 }
 
 export const StatusBadge = ({
@@ -19,6 +30,8 @@ export const StatusBadge = ({
   mono = false,
   dot = false,
   children,
+  title,
+  'aria-label': ariaLabel,
 }: StatusBadgeProps) => {
   const colors = KIND_COLORS[kind]
   const isMono = variant === 'mono' || mono
@@ -26,6 +39,8 @@ export const StatusBadge = ({
 
   return (
     <span
+      {...(title !== undefined && { title })}
+      {...(ariaLabel !== undefined && { 'aria-label': ariaLabel, role: 'img' })}
       style={{
         display: 'inline-flex',
         alignItems: 'center',

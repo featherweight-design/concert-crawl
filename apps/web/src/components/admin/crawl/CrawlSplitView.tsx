@@ -1386,23 +1386,22 @@ export const CrawlRunHistoryTable = ({
                             const alertConfig = resolveCrawlAlertBadge(
                               run.activeAlert,
                             )
-                            // StatusBadge primitive doesn't accept title/
-                            // aria-label, so wrap in a span with both:
                             // title gives mouse-hover context; aria-label
                             // prepends the visible label so screen readers
-                            // announce the specific failure mode rather
-                            // than only the generic description.
+                            // announce the specific failure mode. The
+                            // StatusBadge primitive forwards both to its
+                            // inner span and adds role="img" so the
+                            // accessible name is reliably exposed.
                             return (
-                              <span
+                              <StatusBadge
+                                kind={alertConfig.kind}
                                 title={
                                   ADMIN_COPY.crawlHistoryTable.alertBadgeTitle
                                 }
                                 aria-label={`${alertConfig.label}. ${ADMIN_COPY.crawlHistoryTable.alertBadgeAriaLabel}`}
                               >
-                                <StatusBadge kind={alertConfig.kind}>
-                                  {alertConfig.label}
-                                </StatusBadge>
-                              </span>
+                                {alertConfig.label}
+                              </StatusBadge>
                             )
                           })()
                         : null}
