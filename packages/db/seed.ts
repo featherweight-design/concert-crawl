@@ -3619,9 +3619,10 @@ async function seed() {
     .select({ count: sql<number>`count(*)::int` })
     .from(eventsTable)
     .where(like(eventsTable.title, '[PR4]%'))
-  // Marker requires the counter to still be pending — if a dev resolved or
-  // archived it, the seed should re-run and recreate the pending+defer state
-  // (consumer UI state #18 depends on `status = 'pending'` + admin defer).
+  // Marker mirrors the full state #18 requirement: pending counter +
+  // admin defer action. If a dev resolves the counter (status != pending),
+  // clears the defer (lastAdminActionKind != defer), or removes the
+  // dispute link, the seed re-triggers and recreates the row.
   const pr4AdminDeferMarker = await db
     .select({ id: priceSubmissions.id })
     .from(priceSubmissions)
@@ -3631,6 +3632,7 @@ async function seed() {
         eq(eventsTable.title, '[PR4] Admin Defer'),
         eq(priceSubmissions.status, 'pending'),
         isNotNull(priceSubmissions.disputedSubmissionId),
+        eq(priceSubmissions.lastAdminActionKind, 'defer'),
       ),
     )
     .limit(1)
@@ -3887,10 +3889,11 @@ async function seed() {
           .limit(1)
         return rows.length > 0
       }
-      // Treats an event as completed only when a pending counter exists.
-      // A resolved/archived counter (status != 'pending') means the test
-      // state #18 is no longer reachable in the UI, so re-seed should
-      // recreate the pending+defer row.
+      // Treats an event as completed only when a pending counter with an
+      // admin defer action exists. State #18 needs all three: pending
+      // status, dispute link, and lastAdminActionKind='defer'. Missing
+      // any one means the test state is unreachable and the block should
+      // re-seed.
       const pr4EventCompletedByCounter = async (
         eventId: string,
       ): Promise<boolean> => {
@@ -3902,6 +3905,7 @@ async function seed() {
               eq(priceSubmissions.eventId, eventId),
               eq(priceSubmissions.status, 'pending'),
               isNotNull(priceSubmissions.disputedSubmissionId),
+              eq(priceSubmissions.lastAdminActionKind, 'defer'),
             ),
           )
           .limit(1)
