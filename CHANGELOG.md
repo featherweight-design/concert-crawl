@@ -1,3 +1,13 @@
+# [1.77.0](https://github.com/HartiganHM/concert-crawl/compare/v1.76.3...v1.77.0) (2026-06-25)
+
+
+### Features
+
+* **crawler-core:** add reviewNeeded to LLM tool schema + prompt ([fbb52ac](https://github.com/HartiganHM/concert-crawl/commit/fbb52acaf1df4047397ce738182d4fa04b8b163b))
+* **crawler-core:** emit reviewNeeded from LLM extractor ([ec85816](https://github.com/HartiganHM/concert-crawl/commit/ec858160e370ee0a2709a63bba87a7f1e003d88a))
+* **crawler-core:** write is_concert_review_needed on INSERT ([19b4ec3](https://github.com/HartiganHM/concert-crawl/commit/19b4ec3ff39a8f11c2b91cd40d6f3e4f4baa4547))
+* **db:** add events.is_concert_review_needed column ([361bb63](https://github.com/HartiganHM/concert-crawl/commit/361bb6307d74dcab07b84ff0b9dc88b76fa3996f))
+
 ## [1.76.3](https://github.com/HartiganHM/concert-crawl/compare/v1.76.2...v1.76.3) (2026-06-24)
 
 
