@@ -3,7 +3,7 @@
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { AdminButton } from '@/components/admin/primitives'
 
-type ConfirmKind = 'delete' | 'non-concert'
+type ConfirmKind = 'delete' | 'non-concert' | 'mark-as-concert'
 
 // Only the four identity fields are read for rendering — keeping the prop
 // structural lets non-AllEvent callers (the editor's DangerZone) reuse
@@ -24,6 +24,7 @@ export interface EventConfirmModalProps {
 }
 
 const COPY = ADMIN_COPY.review.allEvents
+const COPY_CLASSIFICATION = ADMIN_COPY.editor.classification
 
 export const EventConfirmModal = ({
   kind,
@@ -33,8 +34,17 @@ export const EventConfirmModal = ({
   pending = false,
 }: EventConfirmModalProps) => {
   const isDelete = kind === 'delete'
-  const copy = isDelete ? COPY.deleteConfirm : COPY.nonConcertConfirm
-  const accent = isDelete ? 'var(--danger)' : 'var(--warning)'
+  const isMarkAsConcert = kind === 'mark-as-concert'
+  const copy = isDelete
+    ? COPY.deleteConfirm
+    : isMarkAsConcert
+      ? COPY_CLASSIFICATION.markAsConcertConfirm
+      : COPY.nonConcertConfirm
+  const accent = isDelete
+    ? 'var(--danger)'
+    : isMarkAsConcert
+      ? 'var(--success)'
+      : 'var(--warning)'
   return (
     <div
       role="dialog"
@@ -140,7 +150,9 @@ export const EventConfirmModal = ({
             {copy.cancel}
           </AdminButton>
           <AdminButton
-            variant={isDelete ? 'danger' : 'outline'}
+            variant={
+              isDelete ? 'danger' : isMarkAsConcert ? 'success' : 'outline'
+            }
             onClick={onConfirm}
             disabled={pending}
           >
