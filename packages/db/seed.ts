@@ -2286,62 +2286,76 @@ async function seed() {
           },
         ]
 
-        const popularityInsertRows: NewPriceSubmission[] = []
-        for (const target of popularityTargets) {
-          const row = await db
-            .select({ id: eventsTable.id })
-            .from(eventsTable)
-            .where(eq(eventsTable.title, target.title))
-            .limit(1)
-          const targetId = row[0]?.id
-          if (!targetId) continue
-          for (const sub of target.submissions) {
-            popularityInsertRows.push({ ...sub, eventId: targetId })
+        // Wrap submissions + confirms in a transaction so a crash between
+        // the two inserts rolls back the marker row (phishfan42) as well.
+        // Without the transaction, the marker could land but the confirms
+        // could fail, leaving corroborationCount > 1 rows with 0 confirm
+        // rows on the next run (which would skip this block because the
+        // marker is present). The transaction restores all-or-nothing
+        // idempotency across re-runs.
+        await db.transaction(async (tx) => {
+          const popularityInsertRows: NewPriceSubmission[] = []
+          for (const target of popularityTargets) {
+            const row = await tx
+              .select({ id: eventsTable.id })
+              .from(eventsTable)
+              .where(eq(eventsTable.title, target.title))
+              .limit(1)
+            const targetId = row[0]?.id
+            if (!targetId) {
+              console.warn(
+                `Popularity backfill: target event "${target.title}" not found — skipping (title drift?).`,
+              )
+              continue
+            }
+            for (const sub of target.submissions) {
+              popularityInsertRows.push({ ...sub, eventId: targetId })
+            }
           }
-        }
 
-        if (popularityInsertRows.length > 0) {
-          const insertedPopularity = await db
-            .insert(priceSubmissions)
-            .values(popularityInsertRows)
-            .returning()
+          if (popularityInsertRows.length > 0) {
+            const insertedPopularity = await tx
+              .insert(priceSubmissions)
+              .values(popularityInsertRows)
+              .returning()
 
-          // Confirms for the corroborated rows — same convention as above
-          // (corroborationCount = total observations including submitter).
-          const popularityConfirmers = [
-            FAKE_USER_IDS.amy,
-            FAKE_USER_IDS.taylor,
-            FAKE_USER_IDS.jess,
-            FAKE_USER_IDS.marco,
-            FAKE_USER_IDS.riley,
-            FAKE_USER_IDS.notyourgf,
-          ]
-          const popularityConfirmRows = insertedPopularity.flatMap((sub) => {
-            if (sub.status !== 'corroborated') return []
-            const desired = Math.max(0, sub.corroborationCount - 1)
-            const eligible = popularityConfirmers.filter(
-              (uid) => uid !== sub.userId,
+            // Confirms for the corroborated rows — same convention as above
+            // (corroborationCount = total observations including submitter).
+            const popularityConfirmers = [
+              FAKE_USER_IDS.amy,
+              FAKE_USER_IDS.taylor,
+              FAKE_USER_IDS.jess,
+              FAKE_USER_IDS.marco,
+              FAKE_USER_IDS.riley,
+              FAKE_USER_IDS.notyourgf,
+            ]
+            const popularityConfirmRows = insertedPopularity.flatMap((sub) => {
+              if (sub.status !== 'corroborated') return []
+              const desired = Math.max(0, sub.corroborationCount - 1)
+              const eligible = popularityConfirmers.filter(
+                (uid) => uid !== sub.userId,
+              )
+              return eligible
+                .slice(0, Math.min(desired, eligible.length))
+                .map((uid) => ({
+                  submissionId: sub.id,
+                  userId: uid,
+                  method: 'same-vendor' as const,
+                }))
+            })
+
+            if (popularityConfirmRows.length > 0) {
+              await tx
+                .insert(submissionConfirms)
+                .values(popularityConfirmRows)
+                .onConflictDoNothing()
+            }
+
+            console.warn(
+              `Popularity backfill: inserted ${insertedPopularity.length} submissions + ${popularityConfirmRows.length} confirms across ${popularityTargets.length} marquee events.`,
             )
-            return eligible
-              .slice(0, Math.min(desired, eligible.length))
-              .map((uid) => ({
-                submissionId: sub.id,
-                userId: uid,
-                method: 'same-vendor' as const,
-              }))
-          })
-
-          if (popularityConfirmRows.length > 0) {
-            await db
-              .insert(submissionConfirms)
-              .values(popularityConfirmRows)
-              .onConflictDoNothing()
           }
-
-          console.warn(
-            `Popularity backfill: inserted ${insertedPopularity.length} submissions + ${popularityConfirmRows.length} confirms across ${popularityTargets.length} marquee events.`,
-          )
-        }
+        })
       }
     }
 
