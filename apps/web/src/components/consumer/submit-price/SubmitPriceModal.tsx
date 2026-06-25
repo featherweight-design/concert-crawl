@@ -774,6 +774,11 @@ export function SubmitPriceModal({
             }
             error={fieldErrors['vendor']}
             req
+            // When source=boxoffice, the vendor auto-fills to VenueBoxOffice
+            // and handleSubmit unconditionally overrides any other choice.
+            // Lock the chips so the UI selection and the submitted payload
+            // can't diverge (e.g. "AXS" shown while payload sends "Venue").
+            disabled={formState.sourceCategory === 'boxoffice'}
           />
           {formState.sourceCategory === 'boxoffice' &&
             formState.vendor === VENDOR_BOXOFFICE_AUTOFILL && (

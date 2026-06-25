@@ -17,6 +17,11 @@ interface ChipGroupProps {
   // BUT REQUIRED" and submitPriceV2 copy notes (FormLabel `req` accepts asterisk
   // separately from the label string).
   req?: boolean
+  // When true, the chips become non-interactive (visually muted, no click
+  // handler). Used by SubmitPriceModal to lock the vendor field when
+  // sourceCategory='boxoffice' auto-fills it to 'VenueBoxOffice' — otherwise
+  // the UI shows e.g. "AXS" selected while the payload sends "Venue".
+  disabled?: boolean
 }
 
 export function ChipGroup({
@@ -26,6 +31,7 @@ export function ChipGroup({
   onChange,
   error,
   req,
+  disabled,
 }: ChipGroupProps) {
   return (
     <div className="flex flex-col gap-2">
@@ -57,14 +63,17 @@ export function ChipGroup({
               key={opt.value}
               type="button"
               aria-pressed={isActive}
+              disabled={disabled}
               onClick={() => onChange(opt.value)}
               className={[
                 'px-3 py-1.5 rounded-full text-sm font-medium border transition-colors',
-                isActive
-                  ? 'border-signal text-signal bg-signal/10'
-                  : error
-                    ? 'border-warning text-fg hover:border-fg-muted'
-                    : 'border-border-strong text-fg hover:border-fg-muted',
+                disabled
+                  ? 'border-border text-fg-muted cursor-not-allowed opacity-60'
+                  : isActive
+                    ? 'border-signal text-signal bg-signal/10'
+                    : error
+                      ? 'border-warning text-fg hover:border-fg-muted'
+                      : 'border-border-strong text-fg hover:border-fg-muted',
               ].join(' ')}
             >
               {opt.label}

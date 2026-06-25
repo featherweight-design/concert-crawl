@@ -236,11 +236,14 @@ eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
   // now for events with at least one corroborated submission).
   //
   // Cost control: only `headline` is consumed by the browse chip, so we skip
-  // the per-event side-table fetches (pending, counters, confirms, handles,
-  // reports) that the /v1/events/:id endpoint runs. Each event row gets the
-  // same TierPriceBlock shape with empty pending / counterSubmission arrays
-  // and confirmsCount=0; the headline still picks correctly because
-  // pickTierHeadline doesn't read confirmsCount as a tiebreaker.
+  // the per-event side-table fetches (pending, counters, handles, reports)
+  // that the /v1/events/:id endpoint runs. Each event row gets the same
+  // TierPriceBlock shape with empty pending / counterSubmission arrays. The
+  // SELECT below pulls priceSubmissions.corroborationCount so confirmsCount
+  // can be derived per-row (submitter counts as observation #1 → the count
+  // we surface is `max(0, corroborationCount - 1)`). Without that derivation
+  // buildHeadline mislabels every fan-corroborated browse row as
+  // approvalKind='admin'.
   const visibleEventIds = rows.map((row) => row.id)
   const priceByTierByEventId = new Map<
     string,

@@ -220,7 +220,7 @@ export function SoldOutPriceCard(props: SoldOutPriceCardProps) {
       >
         <span
           style={{
-            fontFamily: 'Inter, system-ui',
+            fontFamily: 'var(--font-ui)',
             fontWeight: 800,
             fontSize: 26,
             color: 'var(--fg-subtle)',
@@ -236,7 +236,7 @@ export function SoldOutPriceCard(props: SoldOutPriceCardProps) {
             borderRadius: 4,
             background: 'var(--warning)',
             color: 'var(--fg-on-accent)',
-            fontFamily: "'JetBrains Mono', monospace",
+            fontFamily: 'var(--font-mono)',
             fontSize: 9,
             fontWeight: 700,
             letterSpacing: '0.06em',
@@ -250,7 +250,7 @@ export function SoldOutPriceCard(props: SoldOutPriceCardProps) {
       <div
         style={{
           marginTop: 9,
-          fontFamily: 'Inter, system-ui',
+          fontFamily: 'var(--font-ui)',
           fontSize: 12,
           color: 'var(--fg-muted)',
           letterSpacing: '-0.005em',
