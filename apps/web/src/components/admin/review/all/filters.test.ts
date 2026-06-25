@@ -149,6 +149,35 @@ describe('countActiveFilters', () => {
   })
 })
 
+describe('AllEventsFilters — flagged chip round-trip', () => {
+  it('parses view=hidden-flagged-for-review into flagged=true', () => {
+    const params = new URLSearchParams('view=hidden-flagged-for-review')
+    const filters = parseFiltersFromParams(params)
+    expect(filters.flagged).toBe(true)
+  })
+
+  it('serializes flagged=true to view=hidden-flagged-for-review', () => {
+    const params = serializeFiltersToParams({
+      ...EMPTY_FILTERS,
+      flagged: true,
+    })
+    expect(params.get('view')).toBe('hidden-flagged-for-review')
+  })
+
+  it('filtersToFetchQuery includes view when flagged is true', () => {
+    const out = filtersToFetchQuery({ ...EMPTY_FILTERS, flagged: true })
+    expect(out).toContain('view=hidden-flagged-for-review')
+  })
+
+  it('countActiveFilters counts flagged=true', () => {
+    expect(countActiveFilters({ ...EMPTY_FILTERS, flagged: true })).toBe(1)
+  })
+
+  it('EMPTY_FILTERS has flagged=false', () => {
+    expect(EMPTY_FILTERS.flagged).toBe(false)
+  })
+})
+
 describe('parsePaginationFromParams', () => {
   it('returns defaults when the URL is empty', () => {
     expect(parsePaginationFromParams(new URLSearchParams())).toEqual(

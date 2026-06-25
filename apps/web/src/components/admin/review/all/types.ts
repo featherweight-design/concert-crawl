@@ -19,4 +19,6 @@ export interface AllEvent {
   genre: string[] | null
   createdAt: string
   isSoldOut: boolean
+  hiddenFromConsumer: boolean
+  isConcertReviewNeeded: boolean
 }

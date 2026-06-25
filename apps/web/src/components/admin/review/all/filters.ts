@@ -16,6 +16,7 @@ export interface AllEventsFilters {
   dateTo: string
   genre: string[]
   missingData: MissingDataFlag[]
+  flagged: boolean
 }
 
 export const EMPTY_FILTERS: AllEventsFilters = {
@@ -25,6 +26,7 @@ export const EMPTY_FILTERS: AllEventsFilters = {
   dateTo: '',
   genre: [],
   missingData: [],
+  flagged: false,
 }
 
 const isVerification = (val: string | null): val is VerificationFilter =>
@@ -61,6 +63,8 @@ export const parseFiltersFromParams = (
     ),
   )
 
+  const flagged = params.get('view') === 'hidden-flagged-for-review'
+
   return {
     query: params.get('query') ?? '',
     verified,
@@ -68,6 +72,7 @@ export const parseFiltersFromParams = (
     dateTo: params.get('dateTo') ?? '',
     genre,
     missingData,
+    flagged,
   }
 }
 
@@ -84,6 +89,7 @@ export const serializeFiltersToParams = (
     'dateTo',
     'genre',
     'missingData',
+    'view',
   ]) {
     next.delete(key)
   }
@@ -95,6 +101,7 @@ export const serializeFiltersToParams = (
   if (filters.missingData.length > 0) {
     next.set('missingData', filters.missingData.join(','))
   }
+  if (filters.flagged) next.set('view', 'hidden-flagged-for-review')
   return next
 }
 
@@ -125,6 +132,7 @@ export const filtersToFetchQuery = (filters: AllEventsFilters): string => {
   if (filters.missingData.length > 0) {
     params.set('missingData', filters.missingData.join(','))
   }
+  if (filters.flagged) params.set('view', 'hidden-flagged-for-review')
   return params.toString()
 }
 
@@ -195,5 +203,6 @@ export const countActiveFilters = (filters: AllEventsFilters): number => {
   if (filters.dateTo) count++
   if (filters.genre.length > 0) count++
   if (filters.missingData.length > 0) count++
+  if (filters.flagged) count++
   return count
 }
