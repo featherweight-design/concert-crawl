@@ -47,7 +47,7 @@ The picker, Plan card, and entitlements helper all operate on six user states:
 | `founder`      | Founder                                 | $3/mo locked forever. First 100 claimed at launch. Full feature set + Founder badge.              |
 | `gifted`       | (internal code; display name owned by Design) | Lifetime Premium via Clerk `publicMetadata.plan = 'premium_gifted'`. No payment relationship.    |
 
-Each state gets its own picker column and its own Plan card variant. `gifted` is a column because its copy and CTAs diverge meaningfully from `premium` (no Manage subscription, no Cancel any time, gratitude voice).
+Each state gets a tailored picker treatment and its own Plan card variant. Most states render within the standard tier picker: `free`, `supporter`, `premium`, and `founder` (during the launch window) each render as a tier card column; `logged-out` sees the same standard picker as the paywall surface per §5.2. `gifted` is the one *picker variant* — the entire surface is replaced with a thank-you panel per §2, no tier cards rendered — because there's no upsell to render for someone on lifetime Premium.
 
 **Pricing locked:**
 
@@ -188,7 +188,7 @@ The following inherited decisions from the original handoff README remain locked
 - Founder urgency default = Medium; Loud opt-in only.
 - Scarcity = seats + time, both visible, mono meta.
 - Trial CTA defaults to inline on Premium card.
-- Role-holders see the picker with the "You're in already" banner; Founder claimable; Free hidden; Supporter recoloured as voluntary.
+- Role-holders see the picker with the "You're in already" banner; Founder hidden (only purchasable from launch); Free hidden (no downgrade story for them); Supporter recoloured as voluntary. Headline shifts to "Wanna chip in?"
 - Token-only colors. Every accent reads from `var(--signal)` / `var(--accent)`. Cross-theme parity required across all 9 themes.
 - Tier copy table (taglines + rationales + CTAs) locked.
 - Tier badges (cosmetic) + Role badges (utility) compose via `<BadgeRow tier role/>`.
@@ -199,7 +199,7 @@ The following inherited decisions from the original handoff README remain locked
 
 New decisions locked by this brief:
 
-- **Tier vocabulary** = 6 states (logged-out, free, supporter, premium, founder, gifted). `gifted` is its own picker column with thank-you-state-only copy.
+- **Tier vocabulary** = 6 states (logged-out, free, supporter, premium, founder, gifted). `gifted` is treated as a picker *variant* — the whole picker surface is replaced with a thank-you panel rather than rendered as a column — because there's no upsell to render.
 - **Pricing** = Free $0, Supporter $2/mo, Premium $5/mo, Founder $3/mo locked forever.
 - **Founder window timing** = public launch (~Aug 18–22). Hidden during beta.
 - **Founder race loser** = honest "Just missed it" surface → regular Premium offer at $5/mo, no charge, no consolation pricing.
