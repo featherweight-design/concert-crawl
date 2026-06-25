@@ -1159,8 +1159,7 @@ export const ADMIN_COPY = {
     },
     dangerZone: {
       title: 'Danger zone',
-      body: 'Reclassify, merge, or remove this event. Every action is reflected in the audit log.',
-      markNonConcert: 'Mark non-concert',
+      body: 'Merge or remove this event. Every action is reflected in the audit log.',
       mergeIntoAnother: 'Merge with another event…',
       deleteEvent: 'Delete event…',
     },
