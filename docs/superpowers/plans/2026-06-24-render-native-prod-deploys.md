@@ -41,13 +41,12 @@ The "we don't have a webhook telling us when Render is done" argument that motiv
 - The 6 CI job names (`Install dependencies`, `Lint`, `Test`, `Typecheck`, `Build`, `Security audit`) are **already required** on `main` via Ruleset 15513412.
 - `Staging Smoke Tests` runs on `workflow_run` after `Deploy to Staging`, which itself runs on `workflow_run` after `CI`. **Staging Smoke never reports against PR head SHAs.** Adding it as a required check today would block every PR merge indefinitely.
 
-**Three resolutions:**
+**Two viable resolutions** (an earlier draft had a third "cosmetic post-merge enforcement" option, but GitHub branch protection's required-status-checks model gates merges by definition — there's no "required after merge but not before" knob, so any required-check addition either blocks PR merges or does nothing concrete):
 
 1. **No-op for branch protection.** CI already required → nothing to add. Staging-smoke stays as a post-merge alert (failure surfaces via GHA email + Sentry). **Recommended** — matches the architecture and is achievable in this PR.
-2. **Add `Staging Smoke Tests` as a required check on push to `main`** via the ruleset's `strict_required_status_checks_policy`. Cosmetic post-merge enforcement; doesn't change behavior.
-3. **Promote staging-smoke to a true pre-merge gate.** Requires PR-specific staging or GitHub merge queue. **Out of scope** — separate spec.
+2. **Promote staging-smoke to a true pre-merge gate.** Requires either ephemeral-staging-per-PR or a GitHub merge queue with a smoke step. Both are real architectural changes well beyond this PR's scope. **Out of scope** — would be a separate spec.
 
-**Default in this plan: option 1.** Hugh picks during plan PR review; if option 2 is chosen, I'll add a one-step task. Option 3 spawns a follow-up issue.
+**Default in this plan: option 1.** Hugh picks during plan PR review. Option 2 spawns a follow-up issue if chosen.
 
 ## File map (all paths relative to repo root)
 
@@ -982,7 +981,7 @@ Min 2 successful (not errored) reviews. Address Crit/High/Medium; apply valid Lo
 
 | Criterion | Covered by |
 | --------- | ---------- |
-| Branch protection on main requires CI + Staging Smoke Tests | **Partial.** CI already required; Staging Smoke Tests flagged as open question for Hugh to pick option 1/2/3. |
+| Branch protection on main requires CI + Staging Smoke Tests | **Partial.** CI already required; Staging Smoke Tests flagged as open question for Hugh to pick option 1 (no-op) or option 2 (out-of-scope follow-up). |
 | Prod Render services have `autoDeploy: yes` | Operator action documented in implementation PR body + runbook stage 2. |
 | `prod-smoke-after-deploy.yml` exists, smokes prod after deploy, triggers rollback on failure | Task 2. |
 | `deploy-prod.yml` no longer triggers on `workflow_run`; manual dispatch path preserved with `reason` input | Task 3. |
