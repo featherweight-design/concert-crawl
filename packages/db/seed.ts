@@ -1,4 +1,4 @@
-import { and, count, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm'
+import { and, count, desc, eq, isNotNull, isNull, like, sql } from 'drizzle-orm'
 import { deriveSourceCategory } from '@concert-crawl/types'
 import { db } from './src/client.js'
 import {
@@ -3618,13 +3618,20 @@ async function seed() {
   const pr4Count = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(eventsTable)
-    .where(sql`title LIKE '[PR4]%'`)
+    .where(like(eventsTable.title, '[PR4]%'))
+  // Marker requires the counter to still be pending — if a dev resolved or
+  // archived it, the seed should re-run and recreate the pending+defer state
+  // (consumer UI state #18 depends on `status = 'pending'` + admin defer).
   const pr4AdminDeferMarker = await db
     .select({ id: priceSubmissions.id })
     .from(priceSubmissions)
     .innerJoin(eventsTable, eq(eventsTable.id, priceSubmissions.eventId))
     .where(
-      sql`${eventsTable.title} = '[PR4] Admin Defer' AND ${priceSubmissions.disputedSubmissionId} IS NOT NULL`,
+      and(
+        eq(eventsTable.title, '[PR4] Admin Defer'),
+        eq(priceSubmissions.status, 'pending'),
+        isNotNull(priceSubmissions.disputedSubmissionId),
+      ),
     )
     .limit(1)
   const hasPr4Events = (pr4Count[0]?.count ?? 0) >= PR4_EXPECTED_COUNT
@@ -3880,6 +3887,10 @@ async function seed() {
           .limit(1)
         return rows.length > 0
       }
+      // Treats an event as completed only when a pending counter exists.
+      // A resolved/archived counter (status != 'pending') means the test
+      // state #18 is no longer reachable in the UI, so re-seed should
+      // recreate the pending+defer row.
       const pr4EventCompletedByCounter = async (
         eventId: string,
       ): Promise<boolean> => {
@@ -3889,6 +3900,7 @@ async function seed() {
           .where(
             and(
               eq(priceSubmissions.eventId, eventId),
+              eq(priceSubmissions.status, 'pending'),
               isNotNull(priceSubmissions.disputedSubmissionId),
             ),
           )
