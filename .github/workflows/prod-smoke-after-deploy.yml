@@ -1,0 +1,380 @@
+name: Prod smoke (after Render auto-deploy)
+
+# Triggered on every push to main. Waits up to 5 min for Render to
+# deploy github.sha to the prod API service, then runs the Playwright
+# smoke suite against prod. On smoke failure, rolls back via
+# render-rollback.sh (API only — Render's API rejects cron rollback;
+# the two crawler crons emit warnings).
+#
+# Replaces the smoke + rollback jobs that used to run inside
+# deploy-prod.yml under the workflow_run-triggered chain. Under the
+# new model Render's git integration auto-deploys prod on push to main
+# (no GH Actions dispatch involved); this workflow runs in parallel
+# with that deploy, waits for it to be live, then smokes.
+#
+# Why push, not cron: GH Actions schedule cron is unreliable, costs
+# ~$35/mo more in idle runner minutes (private-repo billing), and
+# adds a 5-min worst-case detection lag. Push is the most reliable
+# trigger in the system and fires the moment main moves. See plan
+# doc docs/superpowers/plans/2026-06-24-render-native-prod-deploys.md
+# for the cost + Render-deploy-time data.
+#
+# semantic-release release commits — small coverage gap, accepted:
+# semantic-release lands `chore(release): X.Y.Z [skip ci]` ~3 min
+# after each merge. The [skip ci] convention prevents THIS workflow
+# from firing for that commit. The merge commit's smoke workflow
+# does fire and waits for Render to be live on the merge SHA.
+# Typical case (Render queues deploys in order): merge build is
+# live for ~3 min before release build supersedes it — smoke
+# catches that window. Edge case (Render cancels merge build
+# mid-flight): release commit ends up live and unsmoked. We accept
+# because the release commit is code-equivalent to the merge commit
+# (package.json + CHANGELOG version bumps only). Operators can
+# workflow_dispatch this workflow against the release commit if a
+# specific release warrants explicit validation — the kill switch is
+# bypassed for dispatch (see job-level `if:` below).
+#
+# Disabled by default for push triggers. Flip
+# PROD_SMOKE_RECONCILER_ENABLED to 'true' to arm.
+# See docs/runbooks/auto-deploy-prod.md.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Share concurrency group with deploy-prod.yml + rollback-prod.yml so
+# the smoke can't race a manual deploy or a manual rollback against
+# the same services. cancel-in-progress: false means a queued smoke
+# waits rather than being replaced — matches the rest of the prod
+# pipeline.
+concurrency:
+  group: prod-pipeline
+  cancel-in-progress: false
+
+# Default read; this workflow doesn't push tags or commit.
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Wait for Render, smoke prod, rollback on failure
+    runs-on: ubuntu-latest
+    # 20 min: 5 min Render wait + ~3 min pnpm/Playwright install
+    # (cold cache) + ~7 min smoke = ~15 min worst case. 20 leaves a
+    # safety margin.
+    timeout-minutes: 20
+    # Kill-switch gate for push-triggered runs, with an explicit
+    # workflow_dispatch bypass so manual operator intervention always
+    # works — including during the migration window when the switch
+    # is `false`. Matches rollback-prod.yml's design (no kill switch
+    # at all on the rollback path; incident response must not be
+    # paused by a feature flag). The non-main-branch guard inside
+    # the job's first step still prevents a feature branch from
+    # dispatching with prod secrets.
+    if: |
+      vars.PROD_SMOKE_RECONCILER_ENABLED == 'true' ||
+      github.event_name == 'workflow_dispatch'
+    # `environment: production` scopes secrets + variables to the
+    # production GH Environment (where RENDER_API_TOKEN, RENDER_SERVICE_ID_*,
+    # ADMIN_EMAIL, RESEND_API_KEY live in this repo). Same pattern as
+    # deploy-prod.yml's deploy + rollback jobs and rollback-prod.yml's
+    # rollback job. Without this, `vars.RENDER_SERVICE_ID_*` and the
+    # related secrets would not resolve at runtime.
+    environment: production
+    outputs:
+      assertions_failed: ${{ steps.evaluate_smoke.outputs.assertions_failed }}
+    steps:
+      # Fail loud on the wrong branch for manual dispatches. Mirrors
+      # deploy-prod.yml / rollback-prod.yml / staging-smoke.yml — a
+      # job-level `if:` filter would silently skip and could show as
+      # `success`, which would let a feature-branch dispatch look idle
+      # while in fact nothing ran (or worse, the operator believes the
+      # smoke ran from main when it didn't). Without this guard, a
+      # feature branch could dispatch this workflow with main's prod
+      # secrets bound to feature-branch Playwright code.
+      - name: Refuse workflow_dispatch from non-main ref
+        if: |
+          github.event_name == 'workflow_dispatch' &&
+          github.ref != 'refs/heads/main'
+        run: |
+          echo "✗ Refusing to smoke prod from ref '${{ github.ref }}'."
+          echo "  Manual prod-smoke dispatches must come from main."
+          echo "  Use the workflow_dispatch UI's branch picker to select main, then re-dispatch."
+          exit 1
+
+      # Pin checkout to github.sha — the SHA that just landed on main.
+      # The Playwright code we run must match the SHA Render is
+      # building. If main has moved by the time this job starts (rare
+      # but possible during a fast-follow merge), the wait below would
+      # eventually time out because Render is building a newer SHA;
+      # we exit gracefully then.
+      - name: Checkout pushed SHA
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+
+      # Preflight on every fail-fast prerequisite for this job:
+      # Render API + service IDs + smoke URLs + Playwright
+      # globalSetup credentials (E2E_TEST_USER_*) + the Sentry DSN
+      # consumed by smoke. A missing value surfaces as a clear
+      # "Missing X" message rather than as an opaque Playwright
+      # globalSetup failure or a Sentry transport error several
+      # minutes into the run.
+      #
+      # Deliberately NOT preflighted: RESEND_API_KEY and ADMIN_EMAIL.
+      # The Resend notify step (below) gracefully degrades to a
+      # `::warning::` annotation when either is missing — that's
+      # matched to deploy-prod.yml's existing behavior. Including
+      # them here would convert a best-effort signal into a hard
+      # blocker, which isn't the design intent.
+      - name: Verify required config
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+          E2E_TEST_USER_EMAIL: ${{ secrets.E2E_TEST_USER_EMAIL }}
+          E2E_TEST_USER_PASSWORD: ${{ secrets.E2E_TEST_USER_PASSWORD }}
+          SENTRY_DSN_SMOKE: ${{ secrets.SENTRY_DSN_SMOKE }}
+        run: |
+          missing=()
+          [ -z "$RENDER_API_TOKEN" ] && missing+=("RENDER_API_TOKEN (secret)")
+          [ -z "${{ vars.RENDER_SERVICE_ID_API }}" ] && missing+=("RENDER_SERVICE_ID_API (variable)")
+          [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_TRIGGERS (variable)")
+          [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_DAILY (variable)")
+          [ -z "${{ vars.PROD_URL }}" ] && missing+=("PROD_URL (variable)")
+          [ -z "${{ vars.PROD_API_URL }}" ] && missing+=("PROD_API_URL (variable)")
+          [ -z "$E2E_TEST_USER_EMAIL" ] && missing+=("E2E_TEST_USER_EMAIL (secret)")
+          [ -z "$E2E_TEST_USER_PASSWORD" ] && missing+=("E2E_TEST_USER_PASSWORD (secret)")
+          [ -z "$SENTRY_DSN_SMOKE" ] && missing+=("SENTRY_DSN_SMOKE (secret)")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "✗ Missing required configuration:"
+            printf '  - %s\n' "${missing[@]}"
+            exit 1
+          fi
+
+      # Wait for Render to be live on github.sha. 300s = 5 min. The
+      # prod API deploys consistently take ~2 min on Render (verified
+      # across 15 recent deploys: 1:50–2:26, median ~2:00), so 5 min
+      # is 2x safety factor.
+      #
+      # The script exits 0 on live, 124 on timeout (benign — likely
+      # a fast-follow merge superseded this deploy), and 1 on hard
+      # error (jq missing, auth/network failure, no live deploy
+      # found, malformed service ID). We branch explicitly on those
+      # codes — NOT on `continue-on-error` + step.outcome — so a real
+      # failure can't silently get bucketed as "benign timeout" and
+      # skip smoke + rollback. `set +e` lets us inspect $? without
+      # the runner-level non-zero handling kicking in.
+      - name: Wait for prod API to be live on pushed SHA
+        id: wait_for_live
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+        run: |
+          set +e
+          bash .github/scripts/render-wait-for-live.sh \
+            "${{ vars.RENDER_SERVICE_ID_API }}" \
+            "${{ github.sha }}" \
+            300
+          exit_code=$?
+          set -e
+          echo "exit_code=${exit_code}" >> "$GITHUB_OUTPUT"
+          if [ "${exit_code}" -eq 0 ]; then
+            echo "should_smoke=true" >> "$GITHUB_OUTPUT"
+            echo "✓ Render is live on ${{ github.sha }}; proceeding to smoke."
+          elif [ "${exit_code}" -eq 124 ]; then
+            echo "should_smoke=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Smoke skipped::Render did not reach live on ${{ github.sha }} within 5 min. Most likely cause: a fast-follow merge superseded this deploy. The next push's smoke run will validate the latest deployable code."
+          else
+            echo "::error title=Wait-for-live failed::render-wait-for-live.sh exited ${exit_code} (not a timeout). Failing the job — nothing was smoked or rolled back. Check Render API status + RENDER_API_TOKEN."
+            exit "${exit_code}"
+          fi
+
+      - name: Setup pnpm
+        if: steps.wait_for_live.outputs.should_smoke == 'true'
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        if: steps.wait_for_live.outputs.should_smoke == 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        if: steps.wait_for_live.outputs.should_smoke == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache Playwright browsers
+        if: steps.wait_for_live.outputs.should_smoke == 'true'
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('apps/e2e/package.json') }}
+          restore-keys: playwright-${{ runner.os }}-
+
+      - name: Install Playwright browsers
+        if: steps.wait_for_live.outputs.should_smoke == 'true'
+        run: pnpm --filter @concert-crawl/e2e install-browsers
+
+      # continue-on-error so evaluate_smoke can write the assertions_failed
+      # output regardless of Playwright exit code. Mirrors the existing
+      # deploy-prod.yml smoke pattern — distinguishing "Playwright ran
+      # and asserted a failure" (rollback) from "the job died for
+      # another reason" (not rollback-worthy).
+      - name: Run smoke tests against production
+        id: run_smoke
+        if: steps.wait_for_live.outputs.should_smoke == 'true'
+        continue-on-error: true
+        run: pnpm --filter @concert-crawl/e2e test:smoke
+        env:
+          PLAYWRIGHT_SMOKE_BASE_URL: ${{ vars.PROD_URL }}
+          PLAYWRIGHT_API_URL: ${{ vars.PROD_API_URL }}
+          E2E_TEST_USER_EMAIL: ${{ secrets.E2E_TEST_USER_EMAIL }}
+          E2E_TEST_USER_PASSWORD: ${{ secrets.E2E_TEST_USER_PASSWORD }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN_SMOKE }}
+          SENTRY_ENVIRONMENT: production
+
+      # Distinguish "Playwright ran and asserted a failure" (rollback-
+      # worthy) from "the smoke step was skipped because nothing
+      # changed" or "the runner died" (NOT rollback-worthy). Mirrors
+      # deploy-prod.yml's pattern.
+      - name: Evaluate smoke outcome
+        id: evaluate_smoke
+        if: steps.wait_for_live.outputs.should_smoke == 'true'
+        run: |
+          if [ "${{ steps.run_smoke.outcome }}" = "failure" ]; then
+            echo "assertions_failed=true" >> "$GITHUB_OUTPUT"
+            echo "Playwright smoke asserted a failure → rollback will fire."
+          else
+            echo "assertions_failed=false" >> "$GITHUB_OUTPUT"
+            echo "Playwright smoke passed."
+          fi
+
+      - name: Upload failure artifacts
+        if: steps.run_smoke.outcome == 'failure'
+        uses: actions/upload-artifact@v7
+        with:
+          name: prod-smoke-failure-${{ github.run_id }}
+          path: apps/e2e/test-results/
+          retention-days: 14
+
+      # render-rollback.sh detects service ID prefix and behaves
+      # differently per type: srv-* (web service) is rolled back via
+      # Render's /rollback endpoint; crn-* (cron job) emits a
+      # `::warning::` annotation and exits 0 because Render's API
+      # rejects cron rollback (HTTP 400, no API path exists). Net
+      # effect of these three steps: API is rolled back automatically;
+      # the two crons need manual operator action — the Resend notify
+      # step below surfaces this so the operator knows.
+      - name: Roll back API service
+        if: steps.evaluate_smoke.outputs.assertions_failed == 'true'
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_API }}" "concert-crawl-api"
+
+      - name: Roll back crawler triggers cron (auto-skips — see comment)
+        if: steps.evaluate_smoke.outputs.assertions_failed == 'true'
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" "concert-crawl-crawler-triggers"
+
+      - name: Roll back crawler daily cron (auto-skips — see comment)
+        if: steps.evaluate_smoke.outputs.assertions_failed == 'true'
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" "concert-crawl-crawler-daily"
+
+      # Email the admin that auto-rollback fired. The auto-rollback
+      # only covers the API service (Render's API rejects cron
+      # rollback) and never touches Vercel. The operator needs to
+      # know so they can either revert the offending commit on main
+      # (rolls everything back together on the next CI run) or
+      # manually roll back the two crawler crons + Vercel via their
+      # respective dashboards.
+      #
+      # Uses the same Resend setup the API + crawler already use —
+      # `alerts@concertcrawl.app` is already a verified sender in
+      # Resend.
+      #
+      # Gracefully degrades: if RESEND_API_KEY or ADMIN_EMAIL is
+      # missing, log a warning and continue. The `::warning::`
+      # annotation in the rollback step + the workflow's own failure
+      # email (Actions notifies on workflow failure by default) are
+      # both still primary signals. This email is a convenience layer.
+      - name: Notify admin — auto-rollback fired
+        if: always() && steps.evaluate_smoke.outputs.assertions_failed == 'true'
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
+          COMMIT_SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # jq is used below to construct the Resend JSON body
+          # safely. GitHub-hosted runners ship with jq, but a future
+          # self-hosted runner might not. Fail soft so the workflow
+          # doesn't end in `failure` over a missing optional tool —
+          # the `::warning::` annotation surfaces the gap.
+          if ! command -v jq >/dev/null 2>&1; then
+            echo "::warning title=Admin email skipped::jq not found on runner — admin not notified. Install jq or move to a runner image that ships with it."
+            exit 0
+          fi
+
+          if [ -z "${RESEND_API_KEY:-}" ] || [ -z "${ADMIN_EMAIL:-}" ]; then
+            missing=()
+            [ -z "${RESEND_API_KEY:-}" ] && missing+=("RESEND_API_KEY (secret)")
+            [ -z "${ADMIN_EMAIL:-}" ] && missing+=("ADMIN_EMAIL (variable)")
+            echo "::warning title=Admin email skipped::Missing ${missing[*]} — admin not notified of auto-rollback. Set via Settings → Environments → production."
+            exit 0
+          fi
+
+          # Mask ADMIN_EMAIL in any subsequent log output. Variables
+          # are unmasked by default (only secrets get auto-masked),
+          # and the email address could appear in the Resend response
+          # body on failure (Resend may echo the `to:` field back).
+          # The mask redacts it as `***` wherever it shows up.
+          echo "::add-mask::${ADMIN_EMAIL}"
+          # Build the JSON body via jq so commit SHA and the HTML
+          # body's quoted/escaped characters can't break the request.
+          #
+          # Phrasing carefully avoids claiming the API rollback
+          # succeeded — this step runs with `if: always()` and may
+          # execute even when an earlier rollback step failed. The
+          # operator should always look at the workflow run for the
+          # actual per-service outcome.
+          html_body="<p>Production auto-rollback was <strong>triggered by the post-deploy smoke workflow</strong> for commit <code>${COMMIT_SHA}</code>.</p><p>The API web service rollback was attempted via the Render API. The two crawler crons require <strong>manual rollback</strong> — Render's API does not support cron rollback. Vercel web also requires manual rollback (one-click promote in the dashboard).</p><p><strong>Check the workflow run for the per-service outcome — this email does not confirm success:</strong> <a href=\"${RUN_URL}\">${RUN_URL}</a></p><p>See <code>docs/runbooks/auto-deploy-prod.md</code> — sections \"Caveat on cron service rollback\" and \"Vercel + cron rollback is manual\" — for the manual paths.</p>"
+          payload=$(jq -nc \
+            --arg from "Concert Crawl Alerts <alerts@concertcrawl.app>" \
+            --arg to "${ADMIN_EMAIL}" \
+            --arg subject "[concert-crawl] Prod auto-rollback fired; manual cron + Vercel action required" \
+            --arg html "${html_body}" \
+            '{from: $from, to: [$to], subject: $subject, html: $html}')
+          if ! response=$(curl --fail-with-body --silent --show-error \
+            --connect-timeout 5 --max-time 15 \
+            -X POST "https://api.resend.com/emails" \
+            -H "Authorization: Bearer ${RESEND_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "${payload}"); then
+            # Keep the annotation message STATIC — the Resend response
+            # body can contain newlines or characters that would break
+            # the workflow-command format if interpolated directly.
+            # Log the response separately so the operator can still
+            # see what Resend said in the step logs.
+            echo "::warning title=Admin email failed::Resend API call failed. See step log for response body."
+            echo "Resend response body:"
+            echo "${response}"
+            # Don't fail the workflow — the cron-skip annotation +
+            # GHA's workflow-failure email are still primary signals.
+            exit 0
+          fi
+          # Generic success line — don't echo the address even though
+          # add-mask above would redact it. Keeps logs clean of any
+          # PII signal regardless of mask behavior.
+          echo "✓ Admin notified via Resend"
+
+      # Re-surface the Playwright failure so the smoke job itself
+      # exits non-zero — keeps the Actions UI honest about the run's
+      # outcome.
+      - name: Surface smoke failure
+        if: steps.run_smoke.outcome == 'failure'
+        run: |
+          echo "Playwright smoke failed; failing the job after rollback steps completed."
+          exit 1
