@@ -3606,21 +3606,40 @@ async function seed() {
   // apps/web/src/components/consumer/price-region/lib/decision-tree.ts so a
   // dev can run `pnpm db:seed` and click through every new component + state.
   // -----------------------------------------------------------------------
-  // Guard on the FULL expected count (9) rather than `> 0` so a previous
-  // run that crashed mid-insert (say after inserting events Q-T but before
-  // U-Y) can still complete on the next `pnpm db:seed` instead of silently
-  // declaring "done" with partial coverage.
+  // Guard re-trigger requires BOTH (a) the FULL expected event count and
+  // (b) the end-of-block marker — the Admin Defer counter submission. A
+  // previous run that inserted all 9 events but crashed before the
+  // downstream submissions block would otherwise leave the seed declaring
+  // "PR4 done" with no submissions on those events. The end-of-block
+  // marker forces a re-run in that case; the per-event idempotency guard
+  // (`pr4EventHasSubmissions` below) prevents inserting duplicates on the
+  // events that already finished.
   const PR4_EXPECTED_COUNT = 9
   const pr4Count = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(eventsTable)
     .where(sql`title LIKE '[PR4]%'`)
-  const hasPr4 = (pr4Count[0]?.count ?? 0) >= PR4_EXPECTED_COUNT
+  const pr4AdminDeferMarker = await db
+    .select({ id: priceSubmissions.id })
+    .from(priceSubmissions)
+    .innerJoin(eventsTable, eq(eventsTable.id, priceSubmissions.eventId))
+    .where(
+      sql`${eventsTable.title} = '[PR4] Admin Defer' AND ${priceSubmissions.disputedSubmissionId} IS NOT NULL`,
+    )
+    .limit(1)
+  const hasPr4Events = (pr4Count[0]?.count ?? 0) >= PR4_EXPECTED_COUNT
+  const hasPr4EndMarker = pr4AdminDeferMarker.length > 0
+  const hasPr4 = hasPr4Events && hasPr4EndMarker
 
   if (!hasPr4) {
     const allVenuesPr4 = await db.select().from(venues)
+    // Return undefined when a slug isn't found so the guard below can catch
+    // the missing-venue case explicitly. The previous fallback to
+    // allVenuesPr4[0] silently assigned PR4 events to an unrelated venue,
+    // producing misleading UI states (e.g. "[PR4] Sold Out Resale" landing
+    // at Mission Ballroom because Bluebird wasn't seeded).
     const findVenue = (slug: string) =>
-      allVenuesPr4.find((vn) => vn.slug === slug) ?? allVenuesPr4[0]
+      allVenuesPr4.find((vn) => vn.slug === slug)
 
     const venueBluebird = findVenue('bluebird-theater')
     const venueHiDive = findVenue('hi-dive')
@@ -3643,7 +3662,9 @@ async function seed() {
       !venueOgden ||
       !venueRedRocks
     ) {
-      console.warn('PR4: no venues found — skipping.')
+      console.warn(
+        'PR4: one or more expected venues missing — skipping. Re-run after the venues block populates the standard Denver venue set.',
+      )
     } else {
       const pr4EventRows = [
         // Q — Sold out with resale ticketLink (decision-tree: sold-out-resale).
@@ -3824,6 +3845,24 @@ async function seed() {
       const evY = pr4Event('Admin Defer')
       // Events S, T intentionally have no price submissions (no-price states).
 
+      // Per-event idempotency: price_submissions has no unique constraint
+      // beyond the primary key (UUID), so the `.onConflictDoNothing()` calls
+      // below cannot dedupe partial re-runs. Instead, before each event's
+      // submission insert block, check whether that event already has any
+      // submissions; if so, the block already ran and we skip it. This
+      // recovers cleanly when the outer guard re-triggers (e.g. events
+      // inserted but downstream submissions crashed mid-block).
+      const pr4EventHasSubmissions = async (
+        eventId: string,
+      ): Promise<boolean> => {
+        const rows = await db
+          .select({ id: priceSubmissions.id })
+          .from(priceSubmissions)
+          .where(eq(priceSubmissions.eventId, eventId))
+          .limit(1)
+        return rows.length > 0
+      }
+
       // --- Sold-out reports for Q + R (drives priceStatus='soldout' in API) ---
       // Time offsets in ms — used throughout to scatter submittedAt so feeds
       // don't all look like one batch insert. "older" = ~weeks before show,
@@ -3839,6 +3878,26 @@ async function seed() {
       ]
       for (const target of soldOutReportTargets) {
         if (!target.event) continue
+        // Idempotency: events.event_reports has a partial-unique index on
+        // (event_id) WHERE status='sold-out' AND resolved_at IS NULL, plus
+        // we wouldn't want duplicate "promoted" reports per event either.
+        // Skip the insert if a sold-out report for this event already exists.
+        const existingReport = await db
+          .select({ id: eventReports.id })
+          .from(eventReports)
+          .where(
+            and(
+              eq(eventReports.eventId, target.event.id),
+              eq(eventReports.status, 'sold-out'),
+            ),
+          )
+          .limit(1)
+        if (existingReport.length > 0) {
+          console.warn(
+            `PR4 Event ${target.label}: sold-out report already present, skipping.`,
+          )
+          continue
+        }
         const insertedReport = await db
           .insert(eventReports)
           .values({
@@ -3866,7 +3925,7 @@ async function seed() {
       }
 
       // --- U: resale-only single-tier headline -------------------------------
-      if (evU) {
+      if (evU && !(await pr4EventHasSubmissions(evU.id))) {
         const resaleHeadline = await db
           .insert(priceSubmissions)
           .values({
@@ -3950,7 +4009,7 @@ async function seed() {
       }
 
       // --- V: multi-source mixed (GA boxoffice + GA resale alt + VIP boxoffice)
-      if (evV) {
+      if (evV && !(await pr4EventHasSubmissions(evV.id))) {
         const vGaBoxoffice = await db
           .insert(priceSubmissions)
           .values({
@@ -4076,7 +4135,7 @@ async function seed() {
       }
 
       // --- W: mixed-tier (GA corroborated headline, Reserved pending-only) ---
-      if (evW) {
+      if (evW && !(await pr4EventHasSubmissions(evW.id))) {
         const wGaHeadline = await db
           .insert(priceSubmissions)
           .values({
@@ -4165,7 +4224,7 @@ async function seed() {
       }
 
       // --- X: multi-tier reports caption (GA tier with N > 1 reports) --------
-      if (evX) {
+      if (evX && !(await pr4EventHasSubmissions(evX.id))) {
         const xGaHeadline = await db
           .insert(priceSubmissions)
           .values({
@@ -4289,7 +4348,7 @@ async function seed() {
       // Corroborated headline + counter submission whose
       // lastAdminActionKind='defer' → PendingCardB renders "Admin requested
       // more info" pill, and the dispute-affordance hiding rule kicks in.
-      if (evY) {
+      if (evY && !(await pr4EventHasSubmissions(evY.id))) {
         const yHeadline = await db
           .insert(priceSubmissions)
           .values({
