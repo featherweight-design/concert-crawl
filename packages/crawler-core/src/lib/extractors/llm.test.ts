@@ -366,7 +366,9 @@ describe('extractWithLlm', () => {
   })
 
   it("logs 'llm.output_truncated' when stop_reason is max_tokens", async () => {
-    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    // reportFailure (severity='error') routes the structured JSON line
+    // through console.error (stderr), so we spy there.
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     try {
       mockCreate.mockResolvedValue(
         makeAnthropicResponse(
@@ -394,7 +396,7 @@ describe('extractWithLlm', () => {
   })
 
   it("does NOT log 'llm.output_truncated' on a healthy tool_use stop", async () => {
-    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     try {
       mockCreate.mockResolvedValue(makeAnthropicResponse([]))
 

@@ -223,14 +223,13 @@ export async function extractWithLlm(
   // (e.g. dashboard counts of 'llm.output_truncated') instead of silent
   // zero-event runs.
   if (response.stop_reason === 'max_tokens') {
-    console.log(
-      JSON.stringify({
-        event: 'llm.output_truncated',
-        sourceUrl,
-        maxOutputTokens: MAX_OUTPUT_TOKENS,
-        outputTokens: tokenUsage.outputTokens,
-      }),
-    )
+    reportFailure({
+      event: 'llm.output_truncated',
+      severity: 'error',
+      sourceUrl,
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
+      outputTokens: tokenUsage.outputTokens,
+    })
   }
 
   const toolUseBlock = response.content.find((b) => b.type === 'tool_use')
