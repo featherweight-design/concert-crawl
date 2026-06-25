@@ -727,6 +727,13 @@ export function SubmitPriceModal({
             }
             error={fieldErrors['sourceCategory']}
             req
+            // Edit mode: PATCH /v1/submissions/:id intentionally preserves
+            // any non-null sourceCategory on the existing row and does not
+            // accept a new value. Locking the chips here keeps the UI
+            // honest — otherwise users could appear to flip the provenance
+            // and silently end up with vendor/howFound updated while the
+            // stored sourceCategory stayed the original value.
+            disabled={isEditMode}
           />
 
           {/* Floor + Ceiling — floor label is dynamic per source.

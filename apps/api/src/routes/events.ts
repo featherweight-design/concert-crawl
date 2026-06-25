@@ -30,7 +30,11 @@ import {
   or,
   sql,
 } from 'drizzle-orm'
-import { SP_POLICY, type Tier } from '@concert-crawl/types'
+import {
+  SP_POLICY,
+  deriveSourceCategory,
+  type Tier,
+} from '@concert-crawl/types'
 import { isImminentEvent, todayInTimezone } from '../lib/time.js'
 import { apiLogger } from '../lib/logger.js'
 import { serviceOrClerkAuth } from '../middleware/auth.js'
@@ -259,6 +263,7 @@ eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
         priceMax: priceSubmissions.priceMax,
         vendor: priceSubmissions.vendor,
         sourceCategory: priceSubmissions.sourceCategory,
+        howFound: priceSubmissions.howFound,
         userId: priceSubmissions.userId,
         createdAt: priceSubmissions.createdAt,
         updatedAt: priceSubmissions.updatedAt,
@@ -290,7 +295,15 @@ eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
           priceMin: sub.priceMin,
           priceMax: sub.priceMax,
           vendor: sub.vendor,
-          sourceCategory: sub.sourceCategory,
+          // Legacy corroborated rows may have sourceCategory === null
+          // (PR 3 backfill predated the column). Infer using the shared
+          // deriveSourceCategory helper so a box-office row (vendor =
+          // VenueBoxOffice or howFound = at_the_venue) doesn't get
+          // mislabeled as 'standard' on the browse chip — same drift
+          // we caught on the consumer edit-flow side (Copilot R9).
+          sourceCategory:
+            sub.sourceCategory ??
+            deriveSourceCategory(sub.vendor, sub.howFound),
           userId: sub.userId,
           createdAt: sub.createdAt,
           updatedAt: sub.updatedAt,
