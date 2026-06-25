@@ -106,12 +106,21 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
   // #804: when `?hasAlert=true` is in the URL, narrow the runs list to only
   // those carrying an unread admin_alert. The filter UI in the page header
   // toggles this param via Next.js navigation; the server component
-  // re-renders without needing client state.
+  // re-renders without needing client state. We also collect the OTHER
+  // search params (venueId, tab) so the filter's hrefs preserve them —
+  // toggling the filter shouldn't clobber the operator's current venue
+  // selection or active inspector tab.
   const rawHasAlert = resolvedParams.hasAlert
   const hasAlertParam = Array.isArray(rawHasAlert)
     ? rawHasAlert[0]
     : rawHasAlert
   const hasAlertOnly = hasAlertParam === 'true'
+
+  const otherSearchParams: Record<string, string> = {}
+  for (const [key, value] of Object.entries(resolvedParams)) {
+    if (key === 'hasAlert' || value === undefined) continue
+    otherSearchParams[key] = Array.isArray(value) ? (value[0] ?? '') : value
+  }
 
   const runsUrl = hasAlertOnly
     ? '/v1/admin/crawl/runs?limit=50&hasAlert=true'
@@ -187,7 +196,10 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
               flexWrap: 'wrap',
             }}
           >
-            <CrawlAlertFilter hasAlert={hasAlertOnly} />
+            <CrawlAlertFilter
+              hasAlert={hasAlertOnly}
+              otherParams={otherSearchParams}
+            />
             <CrawlRunAllButton />
           </div>
         }

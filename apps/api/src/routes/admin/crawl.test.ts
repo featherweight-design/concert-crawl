@@ -410,6 +410,45 @@ describe('Admin crawl routes', () => {
       })
     })
 
+    // A notification whose metadata explicitly stores `severity: null`
+    // (e.g. a future writer that wants to mark "intentionally absent") is
+    // still a valid badge target — the defensive schema accepts both
+    // `null` and missing/undefined and collapses them to "no severity".
+    it('tolerates notification metadata that explicitly stores severity=null', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      const NOTIF_ID = '00000000-0000-0000-0000-0000000000a3'
+      queueAlertsThenRuns(
+        db,
+        [
+          {
+            id: NOTIF_ID,
+            category: 'crawl.event_count_dropped',
+            metadata: JSON.stringify({
+              venueId: VENUE_ID,
+              crawlRunId: RUN_ID,
+              severity: null,
+            }),
+            createdAt: new Date(),
+          },
+        ],
+        [mockCrawlRun],
+      )
+      const res = await createApp().request(
+        `/v1/admin/crawl/runs?venueId=${VENUE_ID}`,
+      )
+      const body = (await res.json()) as {
+        data: {
+          activeAlert: {
+            notificationId: string
+            severity: string | null
+          } | null
+        }[]
+      }
+      expect(body.data[0]?.activeAlert?.notificationId).toBe(NOTIF_ID)
+      expect(body.data[0]?.activeAlert?.severity).toBeNull()
+    })
+
     // Older event-count notifications written before the severity field
     // was added (#804 round 2) still need to surface correctly — the badge
     // just falls back to a neutral label.
