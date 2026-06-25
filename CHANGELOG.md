@@ -1,3 +1,43 @@
+# [1.83.0](https://github.com/HartiganHM/concert-crawl/compare/v1.82.0...v1.83.0) (2026-06-25)
+
+
+### Bug Fixes
+
+* **admin:** copilot round 11 fixes for pr [#812](https://github.com/HartiganHM/concert-crawl/issues/812) ([40a584b](https://github.com/HartiganHM/concert-crawl/commit/40a584bc033fa353f99b406e1fff0b9d088dd68a))
+* **admin:** copilot round 2 fixes for pr [#812](https://github.com/HartiganHM/concert-crawl/issues/812) ([77ab4c8](https://github.com/HartiganHM/concert-crawl/commit/77ab4c883d457ee04feb7e0f5839071a91acd325))
+* **admin:** copilot round 3 fixes for pr [#812](https://github.com/HartiganHM/concert-crawl/issues/812) ([cb800ff](https://github.com/HartiganHM/concert-crawl/commit/cb800ffa31faa94a2ef3896ad79e8769fa5903b7))
+* **admin:** copilot round 4 fixes for pr [#812](https://github.com/HartiganHM/concert-crawl/issues/812) — wire badge into real surface ([07f785e](https://github.com/HartiganHM/concert-crawl/commit/07f785e093818ecaa1754eaa01f5a97ab5593e08))
+* **admin:** copilot round 5 fixes for pr [#812](https://github.com/HartiganHM/concert-crawl/issues/812) ([e4fe886](https://github.com/HartiganHM/concert-crawl/commit/e4fe886a65a307bf9bb28e820242185a77369555))
+* **admin:** copilot round 6 fix for pr [#812](https://github.com/HartiganHM/concert-crawl/issues/812) — plumb hasAlert to history hook ([55824f8](https://github.com/HartiganHM/concert-crawl/commit/55824f8c42226dbc4f2d0db8c6574e65cc5c7300))
+* **admin:** copilot round 8 fix for pr [#812](https://github.com/HartiganHM/concert-crawl/issues/812) — forward title/aria-label via StatusBadge ([2a00b20](https://github.com/HartiganHM/concert-crawl/commit/2a00b20018a27ad9583d1767435695ba8df7cc12))
+* **admin:** copilot round 9 fixes for pr [#812](https://github.com/HartiganHM/concert-crawl/issues/812) ([0eceef1](https://github.com/HartiganHM/concert-crawl/commit/0eceef10bf7bf594f2807cecec6f763752283ece))
+* **crawler:** copilot round 1 — outputTokens via tokenUsage; try/finally on test spies ([b2262f5](https://github.com/HartiganHM/concert-crawl/commit/b2262f5596d634c2f9438112214ba1dd625bb3f7))
+* **crawler:** raise LLM output cap + input window; log truncation distinctly ([1a612aa](https://github.com/HartiganHM/concert-crawl/commit/1a612aa9403e18c1c40b40b6d4d30c84f5bbd517))
+* **seed:** copilot round 1 fixes on pr [#803](https://github.com/HartiganHM/concert-crawl/issues/803) ([af1c669](https://github.com/HartiganHM/concert-crawl/commit/af1c66975091b5434101aff79471dd3ab9683217))
+* **seed:** copilot round 10 fixes on pr [#803](https://github.com/HartiganHM/concert-crawl/issues/803) ([2b53a6d](https://github.com/HartiganHM/concert-crawl/commit/2b53a6d31aa06e9a18ad027a5dd38c8fa9e73625)), closes [#18](https://github.com/HartiganHM/concert-crawl/issues/18)
+* **seed:** copilot round 11 fixes on pr [#803](https://github.com/HartiganHM/concert-crawl/issues/803) ([c62eff4](https://github.com/HartiganHM/concert-crawl/commit/c62eff4e38c7dda878785c5d82a7a9efa417f516)), closes [#18](https://github.com/HartiganHM/concert-crawl/issues/18)
+* **seed:** copilot round 12 fixes on pr [#803](https://github.com/HartiganHM/concert-crawl/issues/803) ([dc73d1b](https://github.com/HartiganHM/concert-crawl/commit/dc73d1b94bff727e8c3dc161796cf877f477aba4)), closes [#18](https://github.com/HartiganHM/concert-crawl/issues/18)
+* **seed:** copilot round 13 fixes on pr [#803](https://github.com/HartiganHM/concert-crawl/issues/803) ([97d8e57](https://github.com/HartiganHM/concert-crawl/commit/97d8e5783f43410745aa1b155a3312c48c620f3d))
+* **seed:** copilot round 14 fixes on pr [#803](https://github.com/HartiganHM/concert-crawl/issues/803) ([c6206fe](https://github.com/HartiganHM/concert-crawl/commit/c6206fe0355493d0bc26b51cf1181cd12a2aed81))
+* **seed:** copilot round 15 fixes on pr [#803](https://github.com/HartiganHM/concert-crawl/issues/803) ([e0d9295](https://github.com/HartiganHM/concert-crawl/commit/e0d929532d0f24473e0bdb31f4b308eec5fc1fc3))
+* **seed:** copilot round 16 fixes on pr [#803](https://github.com/HartiganHM/concert-crawl/issues/803) ([0815c2c](https://github.com/HartiganHM/concert-crawl/commit/0815c2c01c88210d5e1137d86d9d07b272fe2781))
+* **seed:** copilot round 17 fixes on pr [#803](https://github.com/HartiganHM/concert-crawl/issues/803) ([eb36684](https://github.com/HartiganHM/concert-crawl/commit/eb36684c5985e53a0f93b2d18a47ba4795d02d34)), closes [#18](https://github.com/HartiganHM/concert-crawl/issues/18)
+* **seed:** copilot round 2 fix on pr [#803](https://github.com/HartiganHM/concert-crawl/issues/803) — last 2 stubhub note refs ([c662abf](https://github.com/HartiganHM/concert-crawl/commit/c662abf16662bd36eb8c126b45631aa01434fe35))
+* **seed:** copilot round 3 fixes on pr [#803](https://github.com/HartiganHM/concert-crawl/issues/803) ([cbd2aca](https://github.com/HartiganHM/concert-crawl/commit/cbd2aca06ecc11c450fa47e033c270278375d705))
+* **seed:** copilot round 4 fixes on pr [#803](https://github.com/HartiganHM/concert-crawl/issues/803) ([06a4ede](https://github.com/HartiganHM/concert-crawl/commit/06a4edee8b2c5ed175c929c684ec6eb1cf1b0e46))
+* **seed:** copilot round 5 fixes on pr [#803](https://github.com/HartiganHM/concert-crawl/issues/803) ([564f74e](https://github.com/HartiganHM/concert-crawl/commit/564f74e71e0ebd46e5f9d9d046cdede90e609d14))
+* **seed:** copilot round 6 fixes on pr [#803](https://github.com/HartiganHM/concert-crawl/issues/803) ([bf0473c](https://github.com/HartiganHM/concert-crawl/commit/bf0473c5c97565b43a8173694980c1f82667f6a2))
+* **seed:** copilot round 7 fixes on pr [#803](https://github.com/HartiganHM/concert-crawl/issues/803) ([b7b1b43](https://github.com/HartiganHM/concert-crawl/commit/b7b1b435c7e0c86057fd1290a6b34c9951b09cbc))
+* **seed:** copilot round 8 fixes on pr [#803](https://github.com/HartiganHM/concert-crawl/issues/803) ([839e100](https://github.com/HartiganHM/concert-crawl/commit/839e100238a45a44285563c67448a58d931bbd61))
+* **seed:** copilot round 9 fixes on pr [#803](https://github.com/HartiganHM/concert-crawl/issues/803) ([dbb557a](https://github.com/HartiganHM/concert-crawl/commit/dbb557a73e96c13f6f05af3d8c6e0b0fb16f3e32))
+* **types:** copilot round 7 nit for pr [#812](https://github.com/HartiganHM/concert-crawl/issues/812) — clarify crawl.failed scope ([e101b7f](https://github.com/HartiganHM/concert-crawl/commit/e101b7f568a3f9b1ca9ed2875e54404c8e7bff0a))
+
+
+### Features
+
+* **admin:** copilot round 1 fixes for pr [#812](https://github.com/HartiganHM/concert-crawl/issues/812) ([456a243](https://github.com/HartiganHM/concert-crawl/commit/456a243b73332f8301be0cc91f408d8e49194e27)), closes [#804](https://github.com/HartiganHM/concert-crawl/issues/804)
+* **admin:** surface active-alert badge on crawl history rows ([0b6beca](https://github.com/HartiganHM/concert-crawl/commit/0b6beca5f2696c7396595b6a082b9d34c4df6167))
+
 # [1.82.0](https://github.com/HartiganHM/concert-crawl/compare/v1.81.0...v1.82.0) (2026-06-25)
 
 
