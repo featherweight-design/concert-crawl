@@ -142,6 +142,8 @@ Cell value semantics:
 - **`tier-picker-on-tap`** — Active affordance renders as visible-locked. Tap opens the full tier picker with feature-anchored copy (§5.2).
 - **`hidden`** — Feature does not render. No upsell affordance present in the consumer UI.
 
+**Entitlement vs. UX routing.** The cell values combine two concerns: whether the user can use the feature (entitlement) and how the locked state surfaces (UX routing). For the runtime `canUseFeature(plan, feature)` helper (per #775), only `visible-active` returns true. The other three values all return false; they differ only in which surface the UI renders when the user attempts the feature (mini paywall sheet, full tier picker, or nothing). Eng treats the matrix as a single source for both questions: the boolean entitlement is the cell's truth value, the UX value tells the renderer what to do on the false case.
+
 | Feature              | logged-out             | free            | supporter       | premium        | founder        | gifted         |
 | -------------------- | ---------------------- | --------------- | --------------- | -------------- | -------------- | -------------- |
 | **Watching** (heart) | tier-picker-on-tap     | paywall-on-tap  | paywall-on-tap  | visible-active | visible-active | visible-active |
@@ -154,7 +156,7 @@ Cell value semantics:
 
 **Supporter rationale.** Supporter is a $2/mo "thank you for keeping us alive" gesture. The reward is the Supporter badge, the eyebrow on the Plan card, and the warm feeling of supporting the project — not premium feature unlocks. If Supporter unlocked any Premium feature, the Premium tier's $5 ask becomes harder to justify. The matrix encodes this deliberately.
 
-**Supersedes Beta-to-Launch tier assignments.** This brief moves **Concert history** and **Calendar export** from Supporter to Premium-and-up. The Beta-to-Launch spec (`docs/superpowers/specs/2026-05-09-beta-to-launch-design.md` lines 236–237 as of audit date) is updated in lockstep in this PR so the two docs stay aligned. Future readers should treat this brief as the source of truth on tier assignments.
+**Supersedes Beta-to-Launch tier assignments.** This brief moves **Concert history** and **Calendar export** from Supporter to Premium-and-up. The Beta-to-Launch spec's *Premium Features* table (`docs/superpowers/specs/2026-05-09-beta-to-launch-design.md`) is updated in lockstep in this PR so the two docs stay aligned. Future readers should treat this brief as the source of truth on tier assignments.
 
 **Logged-out rationale.** Logged-out users see the active affordances *visible-locked* (same as Free), but tap routes to the full picker instead of the mini sheet. This is the locked "tiered ask" mechanic — every premium affordance is also a tier-picker entry point. Background features (Spotify sync, Alerts, Price-drop) stay hidden — they have no on-page affordance to lock against.
 
