@@ -1268,6 +1268,102 @@ describe('PR 10 — bulk endpoints', () => {
     expect(rows.every((row) => row.hiddenFromConsumer === true)).toBe(true)
   })
 
+  it('POST /bulk/mark-as-concert sets hiddenFromConsumer=false (#809)', async () => {
+    const venue = await seedVenue()
+    const evt1 = await seedEvent(venue.id, {
+      title: 'A',
+      artist: 'A',
+      date: futureDate(7),
+      hiddenFromConsumer: true,
+    })
+    const evt2 = await seedEvent(venue.id, {
+      title: 'B',
+      artist: 'B',
+      date: futureDate(8),
+      hiddenFromConsumer: true,
+    })
+
+    const res = await app.request('/v1/admin/events/bulk/mark-as-concert', {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ ids: [evt1.id, evt2.id] }),
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { count: number }
+    }
+    expect(body.data.count).toBe(2)
+
+    const rows = await testDb
+      .select({
+        id: events.id,
+        hiddenFromConsumer: events.hiddenFromConsumer,
+      })
+      .from(events)
+      .where(inArray(events.id, [evt1.id, evt2.id]))
+    expect(rows.every((row) => row.hiddenFromConsumer === false)).toBe(true)
+  })
+
+  it('POST /bulk/mark-as-concert does NOT touch is_concert_review_needed (#809)', async () => {
+    // The flag reflects the LLM's view, not the admin's resolution.
+    // Confirms the spec's invariant: bulk action only flips visibility.
+    const venue = await seedVenue()
+    const evt = await seedEvent(venue.id, {
+      title: 'Flagged Hidden Event',
+      artist: 'Test',
+      date: futureDate(7),
+      hiddenFromConsumer: true,
+      isConcertReviewNeeded: true,
+    })
+
+    const res = await app.request('/v1/admin/events/bulk/mark-as-concert', {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ ids: [evt.id] }),
+    })
+    expect(res.status).toBe(200)
+
+    const [row] = await testDb
+      .select({
+        hiddenFromConsumer: events.hiddenFromConsumer,
+        isConcertReviewNeeded: events.isConcertReviewNeeded,
+      })
+      .from(events)
+      .where(eq(events.id, evt.id))
+    expect(row?.hiddenFromConsumer).toBe(false)
+    expect(row?.isConcertReviewNeeded).toBe(true) // unchanged
+  })
+
+  it('POST /bulk/mark-as-concert writes event.bulk_mark_as_concert audit entries (#809)', async () => {
+    const venue = await seedVenue()
+    const evt1 = await seedEvent(venue.id, {
+      date: futureDate(7),
+      hiddenFromConsumer: true,
+    })
+    const evt2 = await seedEvent(venue.id, {
+      date: futureDate(8),
+      hiddenFromConsumer: true,
+    })
+
+    await app.request('/v1/admin/events/bulk/mark-as-concert', {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ ids: [evt1.id, evt2.id] }),
+    })
+
+    const audits = await testDb
+      .select({
+        action: auditLog.action,
+        targetId: auditLog.targetId,
+      })
+      .from(auditLog)
+      .where(eq(auditLog.action, 'event.bulk_mark_as_concert'))
+    expect(audits).toHaveLength(2)
+    const targetIds = audits.map((entry) => entry.targetId).sort()
+    expect(targetIds).toEqual([evt1.id, evt2.id].sort())
+  })
+
   it('POST /bulk/delete requires confirmation=DELETE', async () => {
     const venue = await seedVenue()
     const evt = await seedEvent(venue.id, {

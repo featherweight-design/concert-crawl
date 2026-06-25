@@ -38,10 +38,11 @@ export interface AllEventsApi {
   deleteEvent: (event: AllEvent) => Promise<void>
   bulkUnverify: (ids: string[]) => Promise<void>
   bulkMarkNonConcert: (ids: string[]) => Promise<void>
+  bulkMarkAsConcert: (ids: string[]) => Promise<void>
   bulkDelete: (ids: string[]) => Promise<void>
 }
 
-type BulkKind = 'unverify' | 'non-concert' | 'delete'
+type BulkKind = 'unverify' | 'non-concert' | 'mark-as-concert' | 'delete'
 
 const BULK_COPY = ADMIN_COPY.review.allEvents
 
@@ -295,6 +296,8 @@ export const AllEventsTabContent = ({
     try {
       if (bulkConfirm === 'delete') await api.bulkDelete(ids)
       else if (bulkConfirm === 'non-concert') await api.bulkMarkNonConcert(ids)
+      else if (bulkConfirm === 'mark-as-concert')
+        await api.bulkMarkAsConcert(ids)
       else await api.bulkUnverify(ids)
       setBulkConfirm(null)
       refresh()
@@ -329,6 +332,16 @@ export const AllEventsTabContent = ({
 
   const selectionCount = selectedIds.size
   const bulkEnabled = Boolean(api)
+  // Mark-as-concert is only valid when every selected row is currently
+  // hidden — flipping a visible row "to concert" is a no-op. We compute
+  // this against the rendered page of events; the BulkDock disables the
+  // affordance with a tooltip explaining why when the selection includes
+  // visible rows. (#809)
+  const selectedEvents = events.filter((event) => selectedIds.has(event.id))
+  const canMarkAsConcert =
+    selectionCount > 0 &&
+    selectedEvents.length === selectionCount &&
+    selectedEvents.every((event) => event.hiddenFromConsumer === true)
 
   const bulkDock = bulkEnabled && (
     <BulkDock
@@ -336,6 +349,8 @@ export const AllEventsTabContent = ({
       pending={bulkPending}
       onUnverify={() => setBulkConfirm('unverify')}
       onMarkNonConcert={() => setBulkConfirm('non-concert')}
+      onMarkAsConcert={() => setBulkConfirm('mark-as-concert')}
+      canMarkAsConcert={canMarkAsConcert}
       onDelete={() => setBulkConfirm('delete')}
       onClear={clearSelection}
     />
@@ -364,6 +379,16 @@ export const AllEventsTabContent = ({
         copy={BULK_COPY.bulkUnverifyConfirm}
         count={selectionCount}
         accent="var(--signal)"
+        confirmVariant="outline"
+        pending={bulkPending}
+        onCancel={() => setBulkConfirm(null)}
+        onConfirm={handleBulkConfirm}
+      />
+    ) : bulkConfirm === 'mark-as-concert' ? (
+      <BulkConfirmModal
+        copy={BULK_COPY.bulkMarkAsConcertConfirm}
+        count={selectionCount}
+        accent="var(--success)"
         confirmVariant="outline"
         pending={bulkPending}
         onCancel={() => setBulkConfirm(null)}

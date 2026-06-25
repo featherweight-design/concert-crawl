@@ -1342,10 +1342,13 @@ export const ADMIN_COPY = {
         selectedCount: (count: number) => `${count} selected`,
         sendBackToReview: 'Send back to review',
         markNonConcert: 'Mark non-concert',
+        markAsConcert: 'Mark as concert',
         delete: (count: number) => `Delete ${count}`,
         clear: 'Clear',
         rowAriaLabel: 'Select event',
         selectAllAriaLabel: 'Select all events on the page',
+        markAsConcertDisabledTooltip:
+          'Mark as concert only applies to hidden events. Deselect any visible rows to enable.',
       },
       bulkDeleteConfirm: {
         eyebrow: 'destructive action · bulk',
@@ -1367,6 +1370,13 @@ export const ADMIN_COPY = {
         heading: (count: number) => `Mark ${count} events as non-concert?`,
         body: 'All selected events are hidden from every consumer-facing surface. You can flip individual events back from the editor.',
         confirm: (count: number) => `Mark ${count} non-concert`,
+        cancel: 'Cancel',
+        eyebrow: 'classification · bulk',
+      },
+      bulkMarkAsConcertConfirm: {
+        heading: (count: number) => `Mark ${count} events as concert?`,
+        body: 'All selected events reappear on every consumer-facing surface within one router-refresh cycle. The LLM-flagged-for-review pill stays in place — the bit reflects the classifier, not your verdict.',
+        confirm: (count: number) => `Mark ${count} as concert`,
         cancel: 'Cancel',
         eyebrow: 'classification · bulk',
       },

@@ -1,6 +1,6 @@
 'use client'
 
-import { Flag, RefreshCw, Trash2, X } from 'lucide-react'
+import { Eye, Flag, RefreshCw, Trash2, X } from 'lucide-react'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { AdminButton } from '@/components/admin/primitives'
 
@@ -10,6 +10,13 @@ export interface BulkDockProps {
   count: number
   onUnverify: () => void
   onMarkNonConcert: () => void
+  onMarkAsConcert: () => void
+  // Mark-as-concert only makes sense for hidden rows. Parent computes this
+  // from the selection — true when every selected row has
+  // hiddenFromConsumer=true. When false, the button stays visible but
+  // disabled with an explanatory tooltip so admins understand why it's
+  // not clickable rather than wondering where the affordance went. (#809)
+  canMarkAsConcert: boolean
   onDelete: () => void
   onClear: () => void
   pending?: boolean
@@ -19,6 +26,8 @@ export const BulkDock = ({
   count,
   onUnverify,
   onMarkNonConcert,
+  onMarkAsConcert,
+  canMarkAsConcert,
   onDelete,
   onClear,
   pending = false,
@@ -93,6 +102,20 @@ export const BulkDock = ({
       >
         {COPY.markNonConcert}
       </AdminButton>
+      <span
+        title={canMarkAsConcert ? undefined : COPY.markAsConcertDisabledTooltip}
+      >
+        <AdminButton
+          type="button"
+          variant="ghost"
+          size="sm"
+          icon={Eye}
+          onClick={onMarkAsConcert}
+          disabled={pending || !canMarkAsConcert}
+        >
+          {COPY.markAsConcert}
+        </AdminButton>
+      </span>
       <AdminButton
         type="button"
         variant="danger"

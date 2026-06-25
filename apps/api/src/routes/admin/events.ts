@@ -871,6 +871,45 @@ eventsAdminRouter.post(
   },
 )
 
+// POST /v1/admin/events/bulk/mark-as-concert — set hiddenFromConsumer=false
+// (the inverse of bulk/mark-non-concert; surfaced via the classification
+// review queue chip in the All Events bulk dock, issue #809). Does NOT
+// touch is_concert_review_needed — that flag reflects the LLM's view,
+// not the admin's resolution, per the classification-review-queue spec.
+eventsAdminRouter.post(
+  '/bulk/mark-as-concert',
+  zValidator('json', bulkIdsSchema, (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid input' }, 422)
+    }
+  }),
+  async (ctx) => {
+    const { ids } = ctx.req.valid('json')
+    const actor = getAuthUser(ctx)
+
+    const count = await db.transaction(async (tx) => {
+      const updated = await tx
+        .update(events)
+        .set({ hiddenFromConsumer: false, updatedAt: new Date() })
+        .where(inArray(events.id, ids))
+        .returning({ id: events.id })
+      if (updated.length > 0) {
+        await tx.insert(auditLog).values(
+          updated.map((row) => ({
+            actorId: actor.userId,
+            action: 'event.bulk_mark_as_concert',
+            targetId: row.id,
+            metadata: null,
+          })),
+        )
+      }
+      return updated.length
+    })
+
+    return ctx.json({ success: true, data: { count } })
+  },
+)
+
 // POST /v1/admin/events/bulk/delete — permanent removal with typed-DELETE gate.
 eventsAdminRouter.post(
   '/bulk/delete',

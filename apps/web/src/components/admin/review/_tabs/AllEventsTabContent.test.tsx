@@ -56,6 +56,7 @@ const buildApiMock = (overrides: Partial<AllEventsApi> = {}): AllEventsApi => ({
   deleteEvent: vi.fn().mockResolvedValue(undefined),
   bulkUnverify: vi.fn().mockResolvedValue(undefined),
   bulkMarkNonConcert: vi.fn().mockResolvedValue(undefined),
+  bulkMarkAsConcert: vi.fn().mockResolvedValue(undefined),
   bulkDelete: vi.fn().mockResolvedValue(undefined),
   ...overrides,
 })
@@ -371,6 +372,110 @@ describe('AllEventsTabContent', () => {
       fireEvent.click(within(dialog).getByText('Mark 2 non-concert'))
       await waitFor(() => {
         expect(api.bulkMarkNonConcert).toHaveBeenCalledWith(['evt-a', 'evt-b'])
+      })
+    })
+
+    it('Mark as concert is enabled when all selected rows are hidden (#809)', async () => {
+      mockApiGet
+        .mockResolvedValueOnce(
+          counted([
+            buildEvent({
+              id: 'evt-a',
+              title: 'Hidden A',
+              artist: 'A',
+              hiddenFromConsumer: true,
+            }),
+            buildEvent({
+              id: 'evt-b',
+              title: 'Hidden B',
+              artist: 'B',
+              hiddenFromConsumer: true,
+            }),
+          ]),
+        )
+        .mockResolvedValueOnce(counted([]))
+      const api = buildApiMock()
+      renderWithClient(
+        <AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />,
+      )
+      await waitFor(() => {
+        expect(screen.getByText('Hidden A')).toBeTruthy()
+      })
+      fireEvent.click(screen.getByLabelText('Select all events on the page'))
+      const dock = screen.getByRole('region', { name: 'Bulk actions' })
+      const button = within(dock)
+        .getByText('Mark as concert')
+        .closest('button') as HTMLButtonElement | null
+      expect(button?.disabled).toBe(false)
+    })
+
+    it('Mark as concert is disabled when any selected row is visible (#809)', async () => {
+      mockApiGet
+        .mockResolvedValueOnce(
+          counted([
+            buildEvent({
+              id: 'evt-a',
+              title: 'Hidden A',
+              artist: 'A',
+              hiddenFromConsumer: true,
+            }),
+            buildEvent({
+              id: 'evt-b',
+              title: 'Visible B',
+              artist: 'B',
+              hiddenFromConsumer: false,
+            }),
+          ]),
+        )
+        .mockResolvedValueOnce(counted([]))
+      const api = buildApiMock()
+      renderWithClient(
+        <AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />,
+      )
+      await waitFor(() => {
+        expect(screen.getByText('Hidden A')).toBeTruthy()
+      })
+      fireEvent.click(screen.getByLabelText('Select all events on the page'))
+      const dock = screen.getByRole('region', { name: 'Bulk actions' })
+      const button = within(dock)
+        .getByText('Mark as concert')
+        .closest('button') as HTMLButtonElement | null
+      expect(button?.disabled).toBe(true)
+    })
+
+    it('Mark as concert confirm calls api.bulkMarkAsConcert with selected ids (#809)', async () => {
+      mockApiGet
+        .mockResolvedValueOnce(
+          counted([
+            buildEvent({
+              id: 'evt-a',
+              title: 'Hidden A',
+              artist: 'A',
+              hiddenFromConsumer: true,
+            }),
+            buildEvent({
+              id: 'evt-b',
+              title: 'Hidden B',
+              artist: 'B',
+              hiddenFromConsumer: true,
+            }),
+          ]),
+        )
+        .mockResolvedValueOnce(counted([]))
+      const api = buildApiMock()
+      renderWithClient(
+        <AllEventsTabContent isDesktop onRowClick={() => {}} api={api} />,
+      )
+      await waitFor(() => {
+        expect(screen.getByText('Hidden A')).toBeTruthy()
+      })
+      fireEvent.click(screen.getByLabelText('Select all events on the page'))
+      const dock = screen.getByRole('region', { name: 'Bulk actions' })
+      fireEvent.click(within(dock).getByText('Mark as concert'))
+      const dialog = await screen.findByRole('dialog')
+      fireEvent.click(within(dialog).getByText('Mark 2 as concert'))
+      await waitFor(() => {
+        expect(api.bulkMarkAsConcert).toHaveBeenCalledWith(['evt-a', 'evt-b'])
       })
     })
 

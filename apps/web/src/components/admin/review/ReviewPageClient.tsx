@@ -563,6 +563,13 @@ export const ReviewPageClient = ({
         ids,
       })
     },
+    bulkMarkAsConcert: async (ids: string[]) => {
+      const token = await getToken()
+      if (!token) throw new ApiError(401, 'Unauthorized')
+      await apiClient.post('/v1/admin/events/bulk/mark-as-concert', token, {
+        ids,
+      })
+    },
     bulkDelete: async (ids: string[]) => {
       const token = await getToken()
       if (!token) throw new ApiError(401, 'Unauthorized')
