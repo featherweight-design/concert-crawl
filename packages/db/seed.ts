@@ -2195,7 +2195,7 @@ async function seed() {
                 sourceCategory: 'resale',
                 status: 'corroborated',
                 corroborationCount: 2,
-                note: 'Stubhub/SeatGeek floor was $100 day-of, climbed all afternoon.',
+                note: 'SeatGeek floor was $100 day-of, climbed all afternoon.',
                 createdAt: popularityOlderish,
                 updatedAt: popularityOlderish,
               },
@@ -3920,7 +3920,7 @@ async function seed() {
             sourceCategory: 'resale' as const,
             status: 'pending' as const,
             corroborationCount: 1,
-            note: 'Stubhub listing, no fees yet.',
+            note: 'SeatGeek listing, no fees yet.',
             createdAt: veryRecentDatePr4,
             updatedAt: veryRecentDatePr4,
           })
