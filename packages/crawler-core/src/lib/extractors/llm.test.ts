@@ -23,6 +23,11 @@ function makeAnthropicResponse(
     cache_read_input_tokens: 0,
     cache_creation_input_tokens: 0,
   },
+  stop_reason:
+    | 'end_turn'
+    | 'max_tokens'
+    | 'tool_use'
+    | 'stop_sequence' = 'tool_use',
 ) {
   return {
     content: [
@@ -34,6 +39,7 @@ function makeAnthropicResponse(
       },
     ],
     usage,
+    stop_reason,
   }
 }
 
@@ -319,5 +325,57 @@ describe('extractWithLlm', () => {
     expect(systemText).toContain('reviewNeeded')
     expect(systemText).toContain('ambiguous')
     expect(systemText).toContain('PRESIDENT')
+  })
+
+  // Output-budget regression guards. The Red Rocks went-dark incident on
+  // 2026-06-25 was caused by the prior 16384-token cap clipping a 148-event
+  // tool call mid-emit. These three tests lock in the new budget and the
+  // truncation-detection log so a silent regression of this exact shape
+  // cannot recur without an obvious test failure.
+
+  it('requests at least 32K output tokens (Red Rocks 148-event regression guard)', async () => {
+    mockCreate.mockResolvedValue(makeAnthropicResponse([]))
+    await extractWithLlm('<html>test</html>', SOURCE_URL)
+
+    const call = mockCreate.mock.calls[0]?.[0]
+    expect(call.max_tokens).toBeGreaterThanOrEqual(32_000)
+  })
+
+  it("logs 'llm.output_truncated' when stop_reason is max_tokens", async () => {
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    mockCreate.mockResolvedValue(
+      makeAnthropicResponse(
+        [],
+        {
+          input_tokens: 50_000,
+          output_tokens: 32_000,
+          cache_read_input_tokens: 0,
+          cache_creation_input_tokens: 0,
+        },
+        'max_tokens',
+      ),
+    )
+
+    await extractWithLlm('<html>large venue page</html>', SOURCE_URL)
+
+    const truncatedLog = consoleSpy.mock.calls
+      .map((args) => String(args[0]))
+      .find((line) => line.includes('llm.output_truncated'))
+    expect(truncatedLog).toBeDefined()
+    expect(truncatedLog).toContain('"outputTokens":32000')
+    consoleSpy.mockRestore()
+  })
+
+  it("does NOT log 'llm.output_truncated' on a healthy tool_use stop", async () => {
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    mockCreate.mockResolvedValue(makeAnthropicResponse([]))
+
+    await extractWithLlm('<html>small page</html>', SOURCE_URL)
+
+    const truncatedLog = consoleSpy.mock.calls
+      .map((args) => String(args[0]))
+      .find((line) => line.includes('llm.output_truncated'))
+    expect(truncatedLog).toBeUndefined()
+    consoleSpy.mockRestore()
   })
 })

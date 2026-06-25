@@ -29,6 +29,23 @@ const ToolInputSchema = z.object({
 
 const MODEL = 'claude-haiku-4-5-20251001'
 
+// Output token budget for the save_events tool call. Haiku 4.5 supports
+// up to 64K output. The prior cap of 16384 was hit silently by Red Rocks
+// (148 events × ~6 required fields per event + descriptions) on 2026-06-25:
+// Anthropic returned `stop_reason: 'max_tokens'` mid-tool-call, the SDK
+// surfaced a truncated tool input where `events` was undefined, Zod
+// rejected, and the crawl reported `success` + 0 events with no error.
+// 32K buys ~6 months of catalog growth for the largest current venues
+// without pushing on the model cap.
+const MAX_OUTPUT_TOKENS = 32_000
+
+// Input character cap on the user-message HTML. Haiku 4.5 has a 200K
+// input context; the prior 50K cap was tight enough that yesterday's
+// successful Red Rocks crawl only saw ~half of the rendered event grid
+// in its input window. Bumping to 200K lets the cleaned HTML (post tag
+// strip) reach the model in full for all currently-tracked venues.
+const MAX_INPUT_HTML_CHARS = 200_000
+
 // Shared canonical rule set for isConcert classification. Used by both
 // the live crawler SYSTEM_PROMPT below and the one-shot non-concert
 // backfill script's classifier prompt so the two stay in lockstep.
@@ -159,7 +176,7 @@ function cleanHtml(html: string): string {
     .replace(/<[^>]+>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
-    .substring(0, 50_000)
+    .substring(0, MAX_INPUT_HTML_CHARS)
 }
 
 export async function extractWithLlm(
@@ -171,7 +188,7 @@ export async function extractWithLlm(
 
   const response = await client.messages.create({
     model: MODEL,
-    max_tokens: 16384,
+    max_tokens: MAX_OUTPUT_TOKENS,
     tools: [SAVE_EVENTS_TOOL],
     tool_choice: { type: 'tool', name: 'save_events' },
     system: [
@@ -195,6 +212,24 @@ export async function extractWithLlm(
     outputTokens: usage.output_tokens,
     cacheReadTokens: usage.cache_read_input_tokens ?? 0,
     cacheWriteTokens: usage.cache_creation_input_tokens ?? 0,
+  }
+
+  // Output truncation surfaces as `stop_reason: 'max_tokens'`. The SDK
+  // still returns a tool_use block, but its `input` JSON is incomplete,
+  // so the Zod check below fails with a confusing schema error rather
+  // than the actual cause. Log the truncation distinctly so the next
+  // time the catalog outgrows MAX_OUTPUT_TOKENS the signal is obvious
+  // (e.g. dashboard counts of 'llm.output_truncated') instead of silent
+  // zero-event runs.
+  if (response.stop_reason === 'max_tokens') {
+    console.log(
+      JSON.stringify({
+        event: 'llm.output_truncated',
+        sourceUrl,
+        maxOutputTokens: MAX_OUTPUT_TOKENS,
+        outputTokens: usage.output_tokens,
+      }),
+    )
   }
 
   const toolUseBlock = response.content.find((b) => b.type === 'tool_use')
