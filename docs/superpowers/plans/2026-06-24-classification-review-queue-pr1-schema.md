@@ -51,39 +51,53 @@ All remaining tasks for PR 1 run inside `.worktrees/feat-classification-review-s
 
 **Files:**
 - Create: `packages/db/migrations/0042_events_is_concert_review_needed.sql`
+- Create: `apps/api/src/test/migration-0042.integration.test.ts`
 - Modify: `packages/db/migrations/meta/_journal.json` (append 0042 entry)
 - Modify: `packages/db/src/schema/events.ts:75-78` (add column accessor next to `hiddenFromConsumer`)
 
 **Interfaces:**
 - Produces: `events.isConcertReviewNeeded` Drizzle column of type `boolean`, NOT NULL, default `false`. Available via `import { events } from '@concert-crawl/db'` → `events.isConcertReviewNeeded`.
 
-- [ ] **Step 1: Write the failing schema test**
+- [ ] **Step 1: Write the failing migration integration test**
 
-Add to `packages/db/src/schema.test.ts` (locate the existing `events` table assertions; add this in the same `describe` block):
+Create `apps/api/src/test/migration-0042.integration.test.ts`. Follows the pattern of `apps/api/src/test/migration-0040.integration.test.ts` — exercises the schema produced by the migration directly via information_schema queries. The `packages/db/src/schema.test.ts` file is a pure unit test of exports (no DB connection); structural migration tests live in `apps/api/src/test/` per repo convention.
 
 ```typescript
-it('events has is_concert_review_needed column with NOT NULL DEFAULT FALSE', async () => {
-  const result = await db.execute<{
-    column_name: string
-    data_type: string
-    is_nullable: string
-    column_default: string | null
-  }>(
-    sql`SELECT column_name, data_type, is_nullable, column_default
+import { describe, expect, it } from 'vitest'
+import { sql } from 'drizzle-orm'
+import { db } from '@concert-crawl/db'
+
+// Migration 0042 — events.is_concert_review_needed column. Exercises the
+// schema produced by the migration directly via information_schema so
+// structural regressions are caught even if the surface area routes around
+// the new column.
+
+describe('migration 0042 — events.is_concert_review_needed', () => {
+  it('adds is_concert_review_needed column with NOT NULL DEFAULT FALSE', async () => {
+    const rows = await db.execute<{
+      column_name: string
+      data_type: string
+      is_nullable: string
+      column_default: string | null
+    }>(sql`
+      SELECT column_name, data_type, is_nullable, column_default
         FROM information_schema.columns
-        WHERE table_name = 'events' AND column_name = 'is_concert_review_needed'`,
-  )
-  expect(result.rows).toHaveLength(1)
-  expect(result.rows[0]?.data_type).toBe('boolean')
-  expect(result.rows[0]?.is_nullable).toBe('NO')
-  expect(result.rows[0]?.column_default).toBe('false')
+       WHERE table_name = 'events' AND column_name = 'is_concert_review_needed'
+    `)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.data_type).toBe('boolean')
+    expect(rows[0]?.is_nullable).toBe('NO')
+    expect(rows[0]?.column_default).toBe('false')
+  })
 })
 ```
+
+Note: `db.execute(sql\`...\`)` returns the rows array directly (see `apps/api/src/routes/admin/contests.migration.integration.test.ts:21-49` for the canonical pattern). It does NOT return `{ rows: [...] }` — the Drizzle/Neon shape repo-wide is a bare array.
 
 - [ ] **Step 2: Run the test, verify it fails**
 
 ```bash
-pnpm --filter @concert-crawl/db test schema.test
+pnpm --filter @concert-crawl/api test migration-0042
 ```
 
 Expected: FAIL — column does not exist.
@@ -151,10 +165,10 @@ In `packages/db/src/schema/events.ts`, after the `hiddenFromConsumer` column (li
 
 ```bash
 pnpm db:migrate
-pnpm --filter @concert-crawl/db test schema.test
+pnpm --filter @concert-crawl/api test migration-0042
 ```
 
-Expected: migration applies cleanly, schema test PASSES.
+Expected: migration applies cleanly, integration test PASSES.
 
 - [ ] **Step 7: Commit**
 
@@ -162,7 +176,7 @@ Expected: migration applies cleanly, schema test PASSES.
 git add packages/db/migrations/0042_events_is_concert_review_needed.sql \
         packages/db/migrations/meta/_journal.json \
         packages/db/src/schema/events.ts \
-        packages/db/src/schema.test.ts
+        apps/api/src/test/migration-0042.integration.test.ts
 git commit -m "feat(db): add events.is_concert_review_needed column"
 ```
 
@@ -608,7 +622,7 @@ In `packages/crawler-core/src/crawl.ts`, find lines 638-644 (the `hiddenFromCons
             // the one-way promotion pattern for `artist` and `verified`
             // already in this file.
             hiddenFromConsumer: event.isConcert === false,
-            // LLM-classifier uncertainty signal (#788). INSERT-only — the
+            // LLM-classifier uncertainty signal. INSERT-only — the
             // onConflictDoUpdate `set` clause below intentionally excludes
             // this column so re-crawls don't churn the value. The one-shot
             // backfill script is the only post-INSERT writer.

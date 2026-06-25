@@ -64,7 +64,7 @@ All remaining tasks for PR 3 run inside this worktree.
 In `apps/api/src/routes/admin/events.integration.test.ts`, add a new `describe` block after the existing `PR 6 — DELETE loosened + PATCH hiddenFromConsumer` block (around line 1009):
 
 ```typescript
-describe('GET /v1/admin/events — view=hidden-flagged-for-review (#788)', () => {
+describe('GET /v1/admin/events — view=hidden-flagged-for-review', () => {
   beforeEach(() => {
     setAdminAuth()
     return clearTables()
@@ -156,7 +156,7 @@ Expected: FAIL — `view` param not recognized, `isConcertReviewNeeded` not in p
 In `apps/api/src/routes/admin/events.ts`, modify `listQuerySchema` around line 96. After the `missing` field, add:
 
 ```typescript
-  // Composite view enum (#788). When 'hidden-flagged-for-review',
+  // Composite view enum. When 'hidden-flagged-for-review',
   // scopes the list to hidden_from_consumer=true AND
   // is_concert_review_needed=true — the admin classification review
   // queue. Single combined param (rather than two orthogonal
@@ -431,7 +431,7 @@ git commit -m "feat(web): AllEventsFilters flagged round-trip + AllEvent isConce
 - Modify: `apps/web/src/components/admin/definitions/copy.ts`
 
 **Interfaces:**
-- Produces: new copy keys under `editor.classification` (markAsConcertTitle, markAsConcertBody, markAsConcertButton, markNonConcertButton, reviewNeededPillLabel, markAsConcertConfirm, markNonConcertConfirm), under `editor.dangerZone` (`markNonConcert` removed; verify it's not used elsewhere first), and under `review.allEvents.filters` (`flaggedChip*`).
+- Produces: new copy keys under `editor.classification` (`markAsConcertTitle`, `markAsConcertBody`, `markAsConcertButton`, `markNonConcertButton`, `reviewNeededPillLabel`, `markAsConcertConfirm`) and under `review.allEvents.filters` (`flaggedChip*`). The existing `review.allEvents.nonConcertConfirm` is reused as-is for the Mark-non-concert confirm (`EventConfirmModal` already routes the `'non-concert'` kind there). The dead `editor.dangerZone.markNonConcert` key is removed in task 3.7 — see the note on Step 2 below.
 
 - [ ] **Step 1: Locate the existing `editor.classification` block**
 
@@ -457,18 +457,15 @@ It's at `apps/web/src/components/admin/definitions/copy.ts:1226-1233`.
       markAsConcertBody:
         'Republishes this event to every consumer-facing surface. Use this when the classifier wrongly hid a real concert.',
       markAsConcertButton: 'Mark as concert',
-      // Confirm-modal copy
+      // Confirm-modal copy. Mark-non-concert reuses the existing
+      // review.allEvents.nonConcertConfirm block — EventConfirmModal
+      // already routes the 'non-concert' kind there (see task 3.5),
+      // and the copy is what we'd otherwise be duplicating. Only the
+      // inverse direction needs a new block.
       markAsConcertConfirm: {
         heading: 'Mark as concert?',
         body: 'The event re-appears on every consumer-facing surface within one router refresh cycle. You can flip it back later if the classification was wrong.',
         confirm: 'Mark as concert',
-        cancel: 'Cancel',
-        eyebrow: 'classification',
-      },
-      markNonConcertConfirm: {
-        heading: 'Mark as non-concert?',
-        body: 'The event stays in the catalog but is hidden from every consumer-facing surface. You can flip this back later if the classification was wrong.',
-        confirm: 'Mark non-concert',
         cancel: 'Cancel',
         eyebrow: 'classification',
       },

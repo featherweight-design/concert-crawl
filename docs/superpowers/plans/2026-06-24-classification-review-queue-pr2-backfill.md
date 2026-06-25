@@ -138,7 +138,7 @@ Create `scripts/2026-06-24-isconcert-review-needed-backfill-helpers.ts`:
 
 ```typescript
 /**
- * Pure helpers for the isConcert-review-needed backfill script (#788).
+ * Pure helpers for the isConcert-review-needed backfill script.
  * Extracted so the test file can import them without pulling in the
  * Anthropic SDK or @concert-crawl/db. Mirrors the structure of
  * scripts/2026-06-19-non-concert-backfill-helpers.ts.
@@ -385,7 +385,7 @@ Create `scripts/2026-06-24-isconcert-review-needed-backfill.ts`:
 ```typescript
 /**
  * One-shot backfill that populates events.is_concert_review_needed on
- * currently-hidden events (#788). Reads every hidden, non-terminal event
+ * currently-hidden events. Reads every hidden, non-terminal event
  * with date >= today (Denver tz), sends them through Haiku in batches,
  * and either:
  *   - Default: writes a dry-run CSV to ./dry-run-isconcert-review-needed-<ts>.csv
@@ -446,11 +446,12 @@ export async function runBackfill(opts: {
 }): Promise<BackfillSummary> {
   // Denver-tz "today" mirrors the admin events route + crawl.ts so the
   // backfill window doesn't shift around UTC midnight relative to what
-  // admins see in the UI.
+  // admins see in the UI. db.execute returns the rows array directly (see
+  // contests.migration.integration.test.ts:21-49) — not { rows: [...] }.
   const todayRows = await db.execute<{ today: string }>(
     sql`SELECT to_char((NOW() AT TIME ZONE 'America/Denver')::date, 'YYYY-MM-DD') AS today`,
   )
-  const today = todayRows.rows[0]?.today
+  const today = todayRows[0]?.today
   if (!today) throw new Error('Could not determine Denver-tz today')
 
   const rows = await db
