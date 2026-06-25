@@ -334,4 +334,33 @@ describe('EventEditorClient — classification', () => {
       expect(mockRouterRefresh).toHaveBeenCalled()
     })
   })
+
+  it('disables Mark non-concert when the form has unsaved edits', () => {
+    // Classification flip PATCHes + router.refresh()es, which would discard
+    // any unsaved StatusSection edits. Guard: button disabled while dirty.
+    render(<EventEditorClient event={SAMPLE} />)
+    // Dirty the form by toggling a lifecycle status
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelled' }))
+    expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy()
+    expect(
+      (
+        screen.getByRole('button', {
+          name: 'Mark non-concert',
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true)
+  })
+
+  it('disables Mark as concert when the form has unsaved edits', () => {
+    render(<EventEditorClient event={HIDDEN_FLAGGED} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelled' }))
+    expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy()
+    expect(
+      (
+        screen.getByRole('button', {
+          name: 'Mark as concert',
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true)
+  })
 })

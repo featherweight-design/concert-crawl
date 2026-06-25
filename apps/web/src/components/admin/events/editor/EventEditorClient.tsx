@@ -274,7 +274,11 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
         isConcertReviewNeeded={event.isConcertReviewNeeded}
         onMarkNonConcert={() => setPendingClassification('mark-non-concert')}
         onMarkAsConcert={() => setPendingClassification('mark-as-concert')}
-        disabled={saving || classificationPending}
+        // Disable while the draft is dirty: confirming a classification flip
+        // PATCHes hiddenFromConsumer and calls router.refresh(), which would
+        // discard any in-progress edits in StatusSection/etc. Admin must
+        // Save or Discard the dirty edits first.
+        disabled={saving || classificationPending || dirty}
       />
       <StatusSection
         event={event}

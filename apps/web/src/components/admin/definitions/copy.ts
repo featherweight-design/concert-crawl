@@ -1226,7 +1226,6 @@ export const ADMIN_COPY = {
       reviewNeededPillLabel: 'LLM flagged for review',
       reviewNeededPillTooltip:
         'The classifier had reasonable doubt about whether this is a concert.',
-      visibilityTitle: 'Visible to consumers',
       // Mark non-concert (shown when hiddenFromConsumer=false)
       markNonConcertTitle: 'Mark as non-concert',
       markNonConcertBodyBefore: 'Adds the ',
