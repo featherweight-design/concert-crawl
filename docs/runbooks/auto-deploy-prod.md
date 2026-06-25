@@ -145,6 +145,16 @@ After stage 1 has been stable through a handful of merges:
 
 After the first auto-deploy from stage 2 succeeds:
 
+**Prerequisites** (verify before flipping the switch — the smoke workflow hard-fails its preflight step if any are missing):
+
+- `production` environment **variables**: `RENDER_SERVICE_ID_API`, `RENDER_SERVICE_ID_CRAWLER_TRIGGERS`, `RENDER_SERVICE_ID_CRAWLER_DAILY`. Plus `PROD_URL` + `PROD_API_URL` at repo level. Plus `ADMIN_EMAIL` at repo level (or production env — either resolves under `environment: production`).
+- `production` environment **secrets**: `RENDER_API_TOKEN`, `RESEND_API_KEY` (optional — graceful-degrades to a `::warning::` if missing).
+- Repo-level **secrets**: `E2E_TEST_USER_EMAIL`, `E2E_TEST_USER_PASSWORD`, `SENTRY_DSN_SMOKE`.
+
+All of these are already provisioned if you're past Stage 2 of `production-launch.md`. The smoke workflow's preflight step prints a clean "Missing X" list if any are absent, so an arming attempt without all prerequisites fails fast and visibly.
+
+**Enable:**
+
 1. Set `PROD_SMOKE_RECONCILER_ENABLED=true` in repo variables (Settings → Variables → Actions). The smoke workflow defaults to off so it stays inert during the migration window.
 2. Trigger a small no-op merge to `main`.
 3. Watch `Prod smoke (after Render auto-deploy)` run end-to-end: wait → install → smoke → green.
@@ -172,21 +182,21 @@ After the first auto-deploy from stage 2 succeeds:
 
 ### `production` environment — Variables (Settings → Environments → production)
 
-| Variable                             | Required by                | Notes                                                                                                                                                  |
-| ------------------------------------ | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `RENDER_SERVICE_ID_API`              | deploy-prod, rollback-prod | **new** — prod API service ID (visible in Render dashboard URL, e.g. `srv-abc123`). Used for the deploy POST, `render-wait-for-live.sh`, and rollback. |
-| `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | deploy-prod, rollback-prod | **new** — prod crawler triggers cron service ID. Used by deploy-prod's API POST and rollback.                                                          |
-| `RENDER_SERVICE_ID_CRAWLER_DAILY`    | deploy-prod, rollback-prod | **new** — prod crawler daily cron service ID. Same.                                                                                                    |
-| `ADMIN_EMAIL`                        | deploy-prod (rollback job) | **optional** — address that receives an auto-rollback notification when smoke fails. Falls back to a `::warning::` annotation only when unset.         |
+| Variable                             | Required by                                                  | Notes                                                                                                                                                                                                                                 |
+| ------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RENDER_SERVICE_ID_API`              | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod | prod API service ID (visible in Render dashboard URL, e.g. `srv-abc123`). Used for the smoke workflow's `render-wait-for-live.sh` + `render-rollback.sh`, the manual deploy POST, and rollback.                                       |
+| `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod | prod crawler triggers cron service ID. Used by smoke's rollback step (auto-skips for crons), deploy-prod's API POST, and rollback-prod.                                                                                               |
+| `RENDER_SERVICE_ID_CRAWLER_DAILY`    | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod | prod crawler daily cron service ID. Same.                                                                                                                                                                                             |
+| `ADMIN_EMAIL`                        | prod-smoke-after-deploy, deploy-prod (manual)                | **optional** — address that receives an auto-rollback notification when smoke fails. Falls back to a `::warning::` annotation only when unset. Currently at repo level — see `production-launch.md` for the move-to-env-scope option. |
 
 Service IDs live in the `production` environment (not at the repo level) so they are scoped to prod-only workflow runs and stay aligned with `production-launch.md`. The `deploy-prod.yml` and `rollback-prod.yml` jobs use `environment: production` and read them as `vars.RENDER_SERVICE_ID_*`.
 
 ### `production` environment — Secrets (Settings → Environments → production)
 
-| Secret             | Required by                | Notes                                                                                                                                                                                                        |
-| ------------------ | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `RENDER_API_TOKEN` | deploy-prod, rollback-prod | **new** — Render → Account Settings → API Keys → generate a token with deploy + read permissions. Consumed by the deploy POST in deploy-prod, by `render-wait-for-live.sh`, and by `render-rollback.sh`.     |
-| `RESEND_API_KEY`   | deploy-prod (rollback job) | **optional** — same Resend API key the API + crawler already use. When set together with `ADMIN_EMAIL`, the rollback job emails the admin from `alerts@concertcrawl.app`. Missing → warning annotation only. |
+| Secret             | Required by                                                  | Notes                                                                                                                                                                                                                       |
+| ------------------ | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RENDER_API_TOKEN` | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod | Render → Account Settings → API Keys → generate a token with deploy + read permissions. Consumed by the smoke workflow's `render-wait-for-live.sh` + `render-rollback.sh`, the manual deploy POST, and `rollback-prod.yml`. |
+| `RESEND_API_KEY`   | prod-smoke-after-deploy, deploy-prod (manual)                | **optional** — same Resend API key the API + crawler already use. When set together with `ADMIN_EMAIL`, the rollback path emails the admin from `alerts@concertcrawl.app`. Missing → warning annotation only.               |
 
 No per-service `RENDER_DEPLOY_HOOK_*` secrets are needed: the deploy POST uses the Render API directly with `RENDER_API_TOKEN` + the service IDs above. Render Cron Jobs don't expose a Deploy Hook UI anyway (confirmed 2026-06-23), so the hook-based approach couldn't have covered the two crawler crons.
 

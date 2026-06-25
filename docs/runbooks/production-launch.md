@@ -323,10 +323,11 @@ No per-service `RENDER_DEPLOY_HOOK_*` secrets are needed — the manual deploy p
 | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `SENTRY_ENVIRONMENT`                 | `production`                                                                                                                                                                                                   |
 | `LOG_LEVEL`                          | `info`                                                                                                                                                                                                         |
-| `ADMIN_EMAIL`                        | Pre-provisioned                                                                                                                                                                                                |
 | `RENDER_SERVICE_ID_API`              | Render → `concert-crawl-api` → service ID from the dashboard URL (`srv-...`). Consumed by `prod-smoke-after-deploy.yml` (wait + rollback), the manual `deploy-prod.yml` escape hatch, and `rollback-prod.yml`. |
 | `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | Service ID for `concert-crawl-crawler-triggers`. Consumed by `prod-smoke-after-deploy.yml`, `deploy-prod.yml`, and `rollback-prod.yml`.                                                                        |
 | `RENDER_SERVICE_ID_CRAWLER_DAILY`    | Service ID for `concert-crawl-crawler-daily`. Same callers as above.                                                                                                                                           |
+
+> Note: `ADMIN_EMAIL` is at the **repo level** in current operational state (see the Repository-level variables table below) and is consumed by `vars.ADMIN_EMAIL` from workflows scoped to `environment: production`. Hugh — if you want to scope it to the `production` environment instead for tighter PII exposure, move the value via Settings → Environments → production → Variables and delete the repo-level entry; all three prod-touching workflows already declare `environment: production` so they'll resolve it from the env scope. Strictly an operator hygiene change; not blocking.
 
 ### Repository-level secrets (Settings → Secrets → Actions)
 

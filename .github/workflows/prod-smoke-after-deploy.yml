@@ -82,8 +82,6 @@ jobs:
     # rollback job. Without this, `vars.RENDER_SERVICE_ID_*` and the
     # related secrets would not resolve at runtime.
     environment: production
-    outputs:
-      assertions_failed: ${{ steps.evaluate_smoke.outputs.assertions_failed }}
     steps:
       # Fail loud on the wrong branch for manual dispatches. Mirrors
       # deploy-prod.yml / rollback-prod.yml / staging-smoke.yml — a
