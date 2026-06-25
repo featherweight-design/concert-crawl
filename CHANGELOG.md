@@ -1,3 +1,15 @@
+# [1.81.0](https://github.com/HartiganHM/concert-crawl/compare/v1.80.0...v1.81.0) (2026-06-25)
+
+
+### Features
+
+* **deploy-prod:** accept optional timeout arg + distinct timeout exit code ([bf144b6](https://github.com/HartiganHM/concert-crawl/commit/bf144b63fc68f4dc8e0c59e089911715419dbec9)), closes [#786](https://github.com/HartiganHM/concert-crawl/issues/786)
+* **deploy-prod:** add push-triggered prod smoke + rollback workflow ([424af6c](https://github.com/HartiganHM/concert-crawl/commit/424af6c9d2e3381a14bed31c53823149d459712b)), closes [#786](https://github.com/HartiganHM/concert-crawl/issues/786)
+* **deploy-prod:** address Copilot review round 1 on PR [#796](https://github.com/HartiganHM/concert-crawl/issues/796) ([589cc56](https://github.com/HartiganHM/concert-crawl/commit/589cc569b40d5daf42ac7b326aaca17b8bbbd77b)), closes [#786](https://github.com/HartiganHM/concert-crawl/issues/786)
+* **deploy-prod:** address Copilot review round 2 on PR [#796](https://github.com/HartiganHM/concert-crawl/issues/796) ([d8be974](https://github.com/HartiganHM/concert-crawl/commit/d8be9740bb81be42d26a863006f58e10409f964e)), closes [#786](https://github.com/HartiganHM/concert-crawl/issues/786)
+* **deploy-prod:** address Copilot review round 3 on PR [#796](https://github.com/HartiganHM/concert-crawl/issues/796) ([dbad9bb](https://github.com/HartiganHM/concert-crawl/commit/dbad9bbf61481e41507b9409798b048b70a579b5)), closes [#786](https://github.com/HartiganHM/concert-crawl/issues/786)
+* **deploy-prod:** drop workflow_run trigger; keep manual escape hatch ([ed3854c](https://github.com/HartiganHM/concert-crawl/commit/ed3854c8c35b0768ee6bd40fb632d2539eff96e2)), closes [#779](https://github.com/HartiganHM/concert-crawl/issues/779) [#786](https://github.com/HartiganHM/concert-crawl/issues/786)
+
 # [1.80.0](https://github.com/HartiganHM/concert-crawl/compare/v1.79.0...v1.80.0) (2026-06-25)
 
 
