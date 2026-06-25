@@ -4001,35 +4001,32 @@ async function seed() {
         evU &&
         !(await pr4EventCompletedByUser(evU.id, FAKE_USER_IDS.notyourgf))
       ) {
-        const resaleHeadline = await db
-          .insert(priceSubmissions)
-          .values({
-            eventId: evU.id,
-            userId: FAKE_USER_IDS.sam,
-            priceMin: '95.00',
-            priceMax: '140.00',
-            tier: 'GA' as const,
-            vendor: 'SeatGeek' as const,
-            howFound: 'saw_listing' as const,
-            sourceCategory: 'resale' as const,
-            status: 'corroborated' as const,
-            corroborationCount: 3,
-            note: 'SeatGeek listings ranged from $95 to $140 face. No box office number yet.',
-            createdAt: olderDatePr4,
-            updatedAt: olderDatePr4,
-          })
-          .returning()
-        if (resaleHeadline[0]) {
+        const resaleHeadline = await pr4UpsertSubmission({
+          eventId: evU.id,
+          userId: FAKE_USER_IDS.sam,
+          priceMin: '95.00',
+          priceMax: '140.00',
+          tier: 'GA' as const,
+          vendor: 'SeatGeek' as const,
+          howFound: 'saw_listing' as const,
+          sourceCategory: 'resale' as const,
+          status: 'corroborated' as const,
+          corroborationCount: 3,
+          note: 'SeatGeek listings ranged from $95 to $140 face. No box office number yet.',
+          createdAt: olderDatePr4,
+          updatedAt: olderDatePr4,
+        })
+        if (resaleHeadline) {
           await db
             .insert(submissionConfirms)
             .values([
               {
-                submissionId: resaleHeadline[0].id,
+                submissionId: resaleHeadline.id,
                 userId: FAKE_USER_IDS.kai,
                 method: 'same-vendor' as const,
               },
               {
-                submissionId: resaleHeadline[0].id,
+                submissionId: resaleHeadline.id,
                 userId: FAKE_USER_IDS.phishfan42,
                 method: 'same-vendor' as const,
               },
@@ -4224,40 +4221,37 @@ async function seed() {
       // --- W: mixed-tier (GA corroborated headline, Reserved pending-only) ---
       // End-of-block marker: jess's Reserved pending (last insert in block).
       if (evW && !(await pr4EventCompletedByUser(evW.id, FAKE_USER_IDS.jess))) {
-        const wGaHeadline = await db
-          .insert(priceSubmissions)
-          .values({
-            eventId: evW.id,
-            userId: FAKE_USER_IDS.marco,
-            priceMin: '42.00',
-            priceMax: '52.00',
-            tier: 'GA' as const,
-            vendor: 'AXS' as const,
-            howFound: 'bought_myself' as const,
-            sourceCategory: 'standard' as const,
-            status: 'corroborated' as const,
-            corroborationCount: 4,
-            note: 'AXS GA pre-sale opened at $42 face.',
-            createdAt: olderDatePr4,
-            updatedAt: olderDatePr4,
-          })
-          .returning()
-        if (wGaHeadline[0]) {
+        const wGaHeadline = await pr4UpsertSubmission({
+          eventId: evW.id,
+          userId: FAKE_USER_IDS.marco,
+          priceMin: '42.00',
+          priceMax: '52.00',
+          tier: 'GA' as const,
+          vendor: 'AXS' as const,
+          howFound: 'bought_myself' as const,
+          sourceCategory: 'standard' as const,
+          status: 'corroborated' as const,
+          corroborationCount: 4,
+          note: 'AXS GA pre-sale opened at $42 face.',
+          createdAt: olderDatePr4,
+          updatedAt: olderDatePr4,
+        })
+        if (wGaHeadline) {
           await db
             .insert(submissionConfirms)
             .values([
               {
-                submissionId: wGaHeadline[0].id,
+                submissionId: wGaHeadline.id,
                 userId: FAKE_USER_IDS.taylor,
                 method: 'same-vendor' as const,
               },
               {
-                submissionId: wGaHeadline[0].id,
+                submissionId: wGaHeadline.id,
                 userId: FAKE_USER_IDS.phishfan42,
                 method: 'same-vendor' as const,
               },
               {
-                submissionId: wGaHeadline[0].id,
+                submissionId: wGaHeadline.id,
                 userId: FAKE_USER_IDS.denvermusic,
                 method: 'same-vendor' as const,
               },
@@ -4321,45 +4315,42 @@ async function seed() {
       // --- X: multi-tier reports caption (GA tier with N > 1 reports) --------
       // End-of-block marker: lola's 4th additional GA report (last insert).
       if (evX && !(await pr4EventCompletedByUser(evX.id, FAKE_USER_IDS.lola))) {
-        const xGaHeadline = await db
-          .insert(priceSubmissions)
-          .values({
-            eventId: evX.id,
-            userId: FAKE_USER_IDS.riley,
-            priceMin: '38.00',
-            priceMax: '46.00',
-            tier: 'GA' as const,
-            vendor: 'AXS' as const,
-            howFound: 'bought_myself' as const,
-            sourceCategory: 'standard' as const,
-            status: 'corroborated' as const,
-            corroborationCount: 5,
-            note: 'GA opened at $38 on AXS, capped at $46 with fees.',
-            createdAt: olderDatePr4,
-            updatedAt: olderDatePr4,
-          })
-          .returning()
-        if (xGaHeadline[0]) {
+        const xGaHeadline = await pr4UpsertSubmission({
+          eventId: evX.id,
+          userId: FAKE_USER_IDS.riley,
+          priceMin: '38.00',
+          priceMax: '46.00',
+          tier: 'GA' as const,
+          vendor: 'AXS' as const,
+          howFound: 'bought_myself' as const,
+          sourceCategory: 'standard' as const,
+          status: 'corroborated' as const,
+          corroborationCount: 5,
+          note: 'GA opened at $38 on AXS, capped at $46 with fees.',
+          createdAt: olderDatePr4,
+          updatedAt: olderDatePr4,
+        })
+        if (xGaHeadline) {
           await db
             .insert(submissionConfirms)
             .values([
               {
-                submissionId: xGaHeadline[0].id,
+                submissionId: xGaHeadline.id,
                 userId: FAKE_USER_IDS.amy,
                 method: 'same-vendor' as const,
               },
               {
-                submissionId: xGaHeadline[0].id,
+                submissionId: xGaHeadline.id,
                 userId: FAKE_USER_IDS.taylor,
                 method: 'same-vendor' as const,
               },
               {
-                submissionId: xGaHeadline[0].id,
+                submissionId: xGaHeadline.id,
                 userId: FAKE_USER_IDS.phishfan42,
                 method: 'same-vendor' as const,
               },
               {
-                submissionId: xGaHeadline[0].id,
+                submissionId: xGaHeadline.id,
                 userId: FAKE_USER_IDS.notyourgf,
                 method: 'same-vendor' as const,
               },
@@ -4370,76 +4361,81 @@ async function seed() {
         // Several additional GA submissions — different submitters, mix of
         // pending + corroborated. Drives reportsByTier well above 1 so the
         // caption shows "· N reports" and the feed feels populated.
-        await db
-          .insert(priceSubmissions)
-          .values([
-            {
-              eventId: evX.id,
-              userId: FAKE_USER_IDS.jess,
-              priceMin: '38.00',
-              priceMax: '48.00',
-              tier: 'GA' as const,
-              vendor: 'Ticketmaster' as const,
-              howFound: 'saw_listing' as const,
-              sourceCategory: 'standard' as const,
-              status: 'pending' as const,
-              corroborationCount: 1,
-              note: 'Same GA tier, slightly higher with fees on Ticketmaster.',
-              createdAt: olderishDatePr4,
-              updatedAt: olderishDatePr4,
-            },
-            {
-              eventId: evX.id,
-              userId: FAKE_USER_IDS.sam,
-              priceMin: '40.00',
-              priceMax: null,
-              tier: 'GA' as const,
-              vendor: 'AXS' as const,
-              howFound: 'saw_listing' as const,
-              sourceCategory: 'standard' as const,
-              status: 'pending' as const,
-              corroborationCount: 1,
-              createdAt: olderishDatePr4,
-              updatedAt: olderishDatePr4,
-            },
-            {
-              eventId: evX.id,
-              userId: FAKE_USER_IDS.mtncreature,
-              priceMin: '38.00',
-              priceMax: '44.00',
-              tier: 'GA' as const,
-              vendor: 'AXS' as const,
-              howFound: 'bought_myself' as const,
-              sourceCategory: 'standard' as const,
-              // Kept as pending here (instead of corroborated) so the row
-              // stays consistent without splitting this batch insert to
-              // wire a confirm. The "· N reports" caption counts ALL
-              // submissions for the tier regardless of status, so this
-              // still feeds the reports-caption test target.
-              status: 'pending' as const,
-              corroborationCount: 1,
-              note: 'Bought two for $38 each — same AXS GA tier.',
-              createdAt: olderishDatePr4,
-              updatedAt: olderishDatePr4,
-            },
-            // Fresh pending — last 24h, drives the live-feel.
-            {
-              eventId: evX.id,
-              userId: FAKE_USER_IDS.lola,
-              priceMin: '42.00',
-              priceMax: null,
-              tier: 'GA' as const,
-              vendor: 'SeatGeek' as const,
-              howFound: 'saw_listing' as const,
-              sourceCategory: 'resale' as const,
-              status: 'pending' as const,
-              corroborationCount: 1,
-              note: 'SeatGeek showed $42 just now — could be a flip.',
-              createdAt: veryRecentDatePr4,
-              updatedAt: veryRecentDatePr4,
-            },
-          ])
-          .onConflictDoNothing()
+        // Routed through pr4UpsertSubmission individually (instead of one
+        // batch insert) so a partial-rerun crash doesn't duplicate rows —
+        // .onConflictDoNothing() is a no-op here because price_submissions
+        // has no (event_id, user_id) unique constraint covering these.
+        const xAdditionalSubmissions: NewPriceSubmission[] = [
+          {
+            eventId: evX.id,
+            userId: FAKE_USER_IDS.jess,
+            priceMin: '38.00',
+            priceMax: '48.00',
+            tier: 'GA' as const,
+            vendor: 'Ticketmaster' as const,
+            howFound: 'saw_listing' as const,
+            sourceCategory: 'standard' as const,
+            status: 'pending' as const,
+            corroborationCount: 1,
+            note: 'Same GA tier, slightly higher with fees on Ticketmaster.',
+            createdAt: olderishDatePr4,
+            updatedAt: olderishDatePr4,
+          },
+          {
+            eventId: evX.id,
+            userId: FAKE_USER_IDS.sam,
+            priceMin: '40.00',
+            priceMax: null,
+            tier: 'GA' as const,
+            vendor: 'AXS' as const,
+            howFound: 'saw_listing' as const,
+            sourceCategory: 'standard' as const,
+            status: 'pending' as const,
+            corroborationCount: 1,
+            createdAt: olderishDatePr4,
+            updatedAt: olderishDatePr4,
+          },
+          {
+            eventId: evX.id,
+            userId: FAKE_USER_IDS.mtncreature,
+            priceMin: '38.00',
+            priceMax: '44.00',
+            tier: 'GA' as const,
+            vendor: 'AXS' as const,
+            howFound: 'bought_myself' as const,
+            sourceCategory: 'standard' as const,
+            // Kept as pending here (instead of corroborated) so the row
+            // stays consistent without splitting to wire a confirm. The
+            // "· N reports" caption counts ALL submissions for the tier
+            // regardless of status, so this still feeds the
+            // reports-caption test target.
+            status: 'pending' as const,
+            corroborationCount: 1,
+            note: 'Bought two for $38 each — same AXS GA tier.',
+            createdAt: olderishDatePr4,
+            updatedAt: olderishDatePr4,
+          },
+          // Fresh pending — last 24h, drives the live-feel. lola is the
+          // end-of-block marker (last natural-key check at top of block).
+          {
+            eventId: evX.id,
+            userId: FAKE_USER_IDS.lola,
+            priceMin: '42.00',
+            priceMax: null,
+            tier: 'GA' as const,
+            vendor: 'SeatGeek' as const,
+            howFound: 'saw_listing' as const,
+            sourceCategory: 'resale' as const,
+            status: 'pending' as const,
+            corroborationCount: 1,
+            note: 'SeatGeek showed $42 just now — could be a flip.',
+            createdAt: veryRecentDatePr4,
+            updatedAt: veryRecentDatePr4,
+          },
+        ]
+        for (const submission of xAdditionalSubmissions) {
+          await pr4UpsertSubmission(submission)
+        }
         console.warn(
           'PR4 Event X: inserted GA corroborated headline + 4 additional GA reports (mix of pending + corroborated).',
         )
