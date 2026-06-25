@@ -140,6 +140,36 @@ describe('extractWithLlm', () => {
     expect(systemText).toContain('current year')
   })
 
+  it('system prompt names R&B ONLY LIVE as an explicit non-concert anti-example (#810)', async () => {
+    mockCreate.mockResolvedValue(makeAnthropicResponse([]))
+    await extractWithLlm('<html>test</html>', SOURCE_URL)
+    const call = mockCreate.mock.calls[0]?.[0]
+    const systemText: string = call.system[0].text
+    expect(systemText).toContain('R&B ONLY LIVE')
+  })
+
+  it('system prompt carves out recurring-residency dance nights as non-concerts (#810)', async () => {
+    mockCreate.mockResolvedValue(makeAnthropicResponse([]))
+    await extractWithLlm('<html>test</html>', SOURCE_URL)
+    const call = mockCreate.mock.calls[0]?.[0]
+    const systemText: string = call.system[0].text
+    // Editorial intent (Hugh): touring artists yes, recurring residencies no.
+    expect(systemText).toContain('Swing Nights Lindy Jam')
+    expect(systemText).toContain('recurring local-residency')
+    expect(systemText).toContain(
+      'touring artists, not weekly venue programming',
+    )
+  })
+
+  it('system prompt contains the LIVE-in-brand-name rule with named-artist contrast (#810)', async () => {
+    mockCreate.mockResolvedValue(makeAnthropicResponse([]))
+    await extractWithLlm('<html>test</html>', SOURCE_URL)
+    const call = mockCreate.mock.calls[0]?.[0]
+    const systemText: string = call.system[0].text
+    expect(systemText).toContain('Wynonna Judd Live')
+    expect(systemText).toMatch(/LIVE.+in-person experience/)
+  })
+
   it('drops empty-string doorsTime and showTime fields', async () => {
     const mockEvents = [
       {

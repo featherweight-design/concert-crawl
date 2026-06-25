@@ -41,15 +41,19 @@ export const IS_CONCERT_RULES = `isConcert=true: named musician(s) performing li
 - "Feat." / "Featuring" / "with" billings naming a real performer — the named act IS performing live (e.g. "Open House Feat. DJ Sliink")
 - pride parties, kick-off parties, after-parties, pre-parties when the headline name is a real touring DJ/musician — they are performing the event, not just being themed around (e.g. "Denver Pride Kick Off Party - Honey Dijon", "Ball Arena After Party - Carl Cox")
 - multi-band tours and festival brands where bands play live (e.g. "Taste of Chaos", "Warped Tour")
-- dance nights backed by a live band (swing, jazz, salsa nights where musicians play)
+- live-band dance nights ONLY when the billing names a specific touring artist or band as the headliner (e.g. "Big Bad Voodoo Daddy Swing Night" → concert). Recurring local-residency dance nights — even with a house band — are NOT concerts (see below).
 
 isConcert=false: non-performance events at music venues. Includes:
 - themed dance parties driven by recorded music, where the title's named entity is the THEME / inspiration (whose recordings get played) rather than the performer — e.g. "Liv, Laugh, Love: Olivia Rodrigo Dance Party" (recorded Olivia Rodrigo tracks; she is not performing). Contrast with "Honey Dijon" at a kick-off party (Honey Dijon IS performing live = concert).
+- recurring local-residency dance nights — e.g. "Swing Nights Lindy Jam", "Tuesday Salsa Social", "Bachata Night". Even when a house band plays, the concert calendar is built around touring artists, not weekly venue programming. If the title is a recurring brand without a specific touring artist named, it's NOT a concert.
 - bingo (e.g. "BASS BINGO – Wooli Edition!" — Wooli is the theme, the event is bingo)
-- trivia, comedy, film/movie screenings (e.g. "Film on the Rocks: Sinners"), karaoke, listening parties
-- private events, transportation/logistics (e.g. "Bus To Show Pickup Spot"), markets, fitness ("Yoga on the Rocks"), charity walks/runs ("9/11 Stair Climb"), spoken-word/poetry readings, wellness lectures, drag shows (lip-sync, not live singing)
+- trivia, comedy, film/movie screenings (e.g. "Film on the Rocks: Sinners", "Film on the Rocks: Jurassic Park"), karaoke, listening parties
+- private events, transportation/logistics (e.g. "Bus To Show Pickup Spot"), markets, fitness ("Yoga on the Rocks"), charity walks/runs ("9/11 Stair Climb", "Run the Rocks"), spoken-word/poetry readings, wellness lectures, drag shows (lip-sync, not live singing)
+- DJ-driven recurring-brand events where "LIVE" in the title means "in-person experience" rather than live music — e.g. "R&B ONLY LIVE - 18+", "House Party - Sweaty 2010s Rager", "Bearracuda - 18+", "Bop To The Top - 18+", "Broadway Rave - 18+", "Hard Candy - 18+", "Gimme Gimme Disco - 18+".
 
-Disambiguation rule: when a title contains the name of a real touring artist/DJ AND a specific billing/event framing phrase ("Kick Off Party", "After Party", "Pre-Party", "Feat.", "Featuring", "Presents", "with"), default to TRUE (concert) — the artist is the headliner. The standalone phrase "Dance Party" does NOT trigger this rule — it's the signature of a recorded-music theme night (e.g. "Olivia Rodrigo Dance Party"). Only treat as FALSE when the artist's name is clearly being used as a theme (their recordings being played back by unnamed DJs), as with "Olivia Rodrigo Dance Party" or "BASS BINGO – Wooli Edition".`
+Disambiguation rule: when a title contains the name of a real touring artist/DJ AND a specific billing/event framing phrase ("Kick Off Party", "After Party", "Pre-Party", "Feat.", "Featuring", "Presents", "with"), default to TRUE (concert) — the artist is the headliner. The standalone phrase "Dance Party" does NOT trigger this rule — it's the signature of a recorded-music theme night (e.g. "Olivia Rodrigo Dance Party"). Only treat as FALSE when the artist's name is clearly being used as a theme (their recordings being played back by unnamed DJs), as with "Olivia Rodrigo Dance Party" or "BASS BINGO – Wooli Edition".
+
+"LIVE" rule: "LIVE" inside a recurring DJ-driven brand name does NOT signal live music — it means "in-person experience". "R&B ONLY LIVE - 18+" is NOT a concert. "Wynonna Judd Live" IS a concert. The difference is whether a specific touring artist's name is paired with "Live". When in doubt about a "_____ LIVE" title with no named touring artist, default to FALSE.`
 
 // Optional add-on appended to IS_CONCERT_RULES in contexts that ACCEPT and
 // EMIT reviewNeeded (the live crawler's save_events tool + PR 2's
