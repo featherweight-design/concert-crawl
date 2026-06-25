@@ -101,7 +101,7 @@ When the user successfully claims Founder, the payment-success path lands them i
 When a user encounters a Premium-only feature on a non-Premium tier:
 
 - **Active affordances** (visible UI elements that exist on the page even for Free users — Watching heart, Following button, Calendar export button): **visible-locked**. Render with a small lock + "Premium" chip. Tap opens the paywall surface.
-- **Background features** (no UI affordance discoverable without explanation — Spotify sync, Alerts, Price-drop alerts): **hidden**. They don't render as locked because there's no native surface to lock; they're configuration-level features that don't belong scattered as upsell prompts across the consumer UI.
+- **Background features** (no UI affordance discoverable without explanation — Spotify sync, Alerts, Price drop alerts): **hidden**. They don't render as locked because there's no native surface to lock; they're configuration-level features that don't belong scattered as upsell prompts across the consumer UI.
 
 Reasoning: hybrid gating preserves Premium discovery where it's natural (the user already shows intent by tapping the heart) without cluttering Free with lock-chips on features they have no context for.
 
@@ -147,18 +147,18 @@ Cell value semantics:
 | Feature              | logged-out             | free            | supporter       | premium        | founder        | gifted         |
 | -------------------- | ---------------------- | --------------- | --------------- | -------------- | -------------- | -------------- |
 | **Watching** (heart) | tier-picker-on-tap     | paywall-on-tap  | paywall-on-tap  | visible-active | visible-active | visible-active |
-| **History** (attended) | tier-picker-on-tap   | paywall-on-tap  | paywall-on-tap  | visible-active | visible-active | visible-active |
+| **Concert history** (attended) | tier-picker-on-tap | paywall-on-tap | paywall-on-tap | visible-active | visible-active | visible-active |
 | **Calendar export**  | tier-picker-on-tap     | paywall-on-tap  | paywall-on-tap  | visible-active | visible-active | visible-active |
 | **Following** (artists) | tier-picker-on-tap  | paywall-on-tap  | paywall-on-tap  | visible-active | visible-active | visible-active |
 | **Alerts** (push/email) | hidden              | hidden          | hidden          | visible-active | visible-active | visible-active |
 | **Spotify sync**     | hidden                 | hidden          | hidden          | visible-active | visible-active | visible-active |
-| **Price-drop alerts** | hidden                | hidden          | hidden          | visible-active | visible-active | visible-active |
+| **Price drop alerts** | hidden                | hidden          | hidden          | visible-active | visible-active | visible-active |
 
 **Supporter rationale.** Supporter is a $2/mo "thank you for keeping us alive" gesture. The reward is the Supporter badge, the eyebrow on the Plan card, and the warm feeling of supporting the project — not premium feature unlocks. If Supporter unlocked any Premium feature, the Premium tier's $5 ask becomes harder to justify. The matrix encodes this deliberately.
 
 **Supersedes Beta-to-Launch tier assignments.** This brief moves **Concert history** and **Calendar export** from Supporter to Premium-and-up. The Beta-to-Launch spec's *Premium Features* table (`docs/superpowers/specs/2026-05-09-beta-to-launch-design.md`) is updated in lockstep in this PR so the two docs stay aligned. Future readers should treat this brief as the source of truth on tier assignments.
 
-**Logged-out rationale.** Logged-out users see the active affordances *visible-locked* (same as Free), but tap routes to the full picker instead of the mini sheet. This is the locked "tiered ask" mechanic — every premium affordance is also a tier-picker entry point. Background features (Spotify sync, Alerts, Price-drop) stay hidden — they have no on-page affordance to lock against.
+**Logged-out rationale.** Logged-out users see the active affordances *visible-locked* (same as Free), but tap routes to the full picker instead of the mini sheet. This is the locked "tiered ask" mechanic — every premium affordance is also a tier-picker entry point. Background features (Spotify sync, Alerts, Price drop alerts) stay hidden — they have no on-page affordance to lock against.
 
 ### 7. "Coming soon" — deliberate non-treatment
 
