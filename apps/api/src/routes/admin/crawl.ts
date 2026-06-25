@@ -38,7 +38,14 @@ const alertMetadataSchema = z.object({
 // per page; surfacing alerts for those rows never needs more than a few
 // hundred unread notifications. Without this cap a growing unread inbox
 // would slow down every admin Crawl History page view.
-const ACTIVE_ALERT_SCAN_LIMIT = 500
+//
+// When hasAlert=true the scan is also the WHERE clause for the
+// crawl_runs query, so a too-small cap can drop older alerts off the
+// end of the scan and make the "Show alerts only" filter look stale.
+// We bump the cap in that mode — the cost is amortized because we'd be
+// reading the rows anyway to satisfy the filter.
+const ACTIVE_ALERT_SCAN_LIMIT_DEFAULT = 500
+const ACTIVE_ALERT_SCAN_LIMIT_FILTERED = 5000
 
 function parseAlertMetadata(
   raw: string | null,
@@ -219,7 +226,11 @@ crawlAdminRouter.get(
       // newest-first is also the intuitive choice (most recent alert
       // is the operator's likely concern).
       .orderBy(desc(notifications.createdAt))
-      .limit(ACTIVE_ALERT_SCAN_LIMIT)
+      .limit(
+        hasAlert
+          ? ACTIVE_ALERT_SCAN_LIMIT_FILTERED
+          : ACTIVE_ALERT_SCAN_LIMIT_DEFAULT,
+      )
     // Defensive guard: anything other than a row array (unexpected DB
     // driver state, a test mock that didn't override this path) collapses
     // to "no alerts" rather than throwing and 500-ing the whole list.

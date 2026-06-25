@@ -16,10 +16,14 @@ interface StatusBadgeProps {
    */
   title?: string
   /**
-   * Forwarded to the inner span along with role="img" so the accessible
-   * name is reliably exposed to screen readers. Plain `<span>` defaults
-   * to role="generic" which many assistive techs ignore for aria-label
-   * — adding role="img" makes the announcement consistent. Optional.
+   * Forwarded to the inner span. Optional. We deliberately don't
+   * override the implicit role — adding role="img" on a text badge
+   * causes screen readers to announce it as a graphic, which is
+   * semantically wrong. Accessible-name exposure on aria-label-decorated
+   * spans is widely-supported in modern AT despite the implicit
+   * role="generic"; if support gaps appear we'd promote to a role with
+   * named accessibility semantics (e.g. role="status") rather than
+   * misrepresent the element as an image.
    */
   'aria-label'?: string
 }
@@ -40,7 +44,7 @@ export const StatusBadge = ({
   return (
     <span
       {...(title !== undefined && { title })}
-      {...(ariaLabel !== undefined && { 'aria-label': ariaLabel, role: 'img' })}
+      {...(ariaLabel !== undefined && { 'aria-label': ariaLabel })}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
