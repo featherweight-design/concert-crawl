@@ -5,7 +5,7 @@ Generated 2026-06-24 via `design-review` skill — Agent 2 verification + Agent 
 ## Verification flow
 
 1. **Agent 2 (verify)** — two passes against the property table + state coverage table. Returned 4 visual gaps + 6 state-reachability gaps.
-2. **User triage** — explicit directive: NO DEFERRALS. Finalize the feature in totality. All 9 gaps slated for fix in this PR.
+2. **User triage** — explicit directive: NO DEFERRALS. Finalize the feature in totality. All 10 gaps (4 visual + 6 state-reachability) slated for fix in this PR.
 3. **Implementation** — fixes landed across 7 commits (530a2e0b → 4eaffd81). One judgment call surfaced: `lastAdminActionKind` pill was already on `DisputedPriceCard` (Task 12), so Fix 2 extended the same surface to `PendingCardB` for per-tier counter pending.
 4. **Agent 3 (confirm)** — checked only the previously-flagged items. Verdict: **0 gaps remain.**
 

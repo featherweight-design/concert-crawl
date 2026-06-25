@@ -1151,8 +1151,10 @@ export function EventDetailPriceBlock({
     }
   }
 
-  // priceDecision.kind === 'no-price-empty' / 'noop' / 'legacy' — fall through
-  // to the existing legacy branches below.
+  // priceDecision.kind === 'no-price-empty' — fall through to the existing
+  // legacy branches below. (Any input the decision tree doesn't match for —
+  // e.g. priceByTier null + non-soldout + no resale link other than the
+  // explicit no-price-empty case — also falls through to the legacy if-tree.)
 
   // ── 1. Pending sold-out report ──────────────────────────────────
   if (pendingSoldOutReport !== null) {

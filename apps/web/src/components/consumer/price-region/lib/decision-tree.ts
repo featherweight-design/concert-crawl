@@ -17,8 +17,13 @@ import type {
   TicketLink,
 } from '@concert-crawl/types'
 
+// PriceRegionDecision enumerates ONLY the kinds `decidePriceRegion` actually
+// returns today. The orchestrator falls through to its existing legacy
+// branches whenever none of these match — there's no explicit `'noop'` or
+// `'legacy'` kind because the orchestrator already encodes the "no
+// priceByTier handling, run the legacy if-tree" case as the absence of a
+// decision-tree match.
 export type PriceRegionDecision =
-  | { kind: 'noop' } // server-rendered PriceDisplay handles it
   | {
       kind: 'sold-out-resale'
       resaleLink: TicketLink
@@ -62,7 +67,6 @@ export type PriceRegionDecision =
       priceByTier: TierPriceBlock[]
     }
   | { kind: 'multi-tier-shipped'; priceByTier: TierPriceBlock[] }
-  | { kind: 'legacy' } // priceByTier null → existing flat-field code path
 
 export interface PriceRegionInput {
   event: Pick<
