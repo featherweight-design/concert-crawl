@@ -343,39 +343,45 @@ describe('extractWithLlm', () => {
 
   it("logs 'llm.output_truncated' when stop_reason is max_tokens", async () => {
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-    mockCreate.mockResolvedValue(
-      makeAnthropicResponse(
-        [],
-        {
-          input_tokens: 50_000,
-          output_tokens: 32_000,
-          cache_read_input_tokens: 0,
-          cache_creation_input_tokens: 0,
-        },
-        'max_tokens',
-      ),
-    )
+    try {
+      mockCreate.mockResolvedValue(
+        makeAnthropicResponse(
+          [],
+          {
+            input_tokens: 50_000,
+            output_tokens: 32_000,
+            cache_read_input_tokens: 0,
+            cache_creation_input_tokens: 0,
+          },
+          'max_tokens',
+        ),
+      )
 
-    await extractWithLlm('<html>large venue page</html>', SOURCE_URL)
+      await extractWithLlm('<html>large venue page</html>', SOURCE_URL)
 
-    const truncatedLog = consoleSpy.mock.calls
-      .map((args) => String(args[0]))
-      .find((line) => line.includes('llm.output_truncated'))
-    expect(truncatedLog).toBeDefined()
-    expect(truncatedLog).toContain('"outputTokens":32000')
-    consoleSpy.mockRestore()
+      const truncatedLog = consoleSpy.mock.calls
+        .map((args) => String(args[0]))
+        .find((line) => line.includes('llm.output_truncated'))
+      expect(truncatedLog).toBeDefined()
+      expect(truncatedLog).toContain('"outputTokens":32000')
+    } finally {
+      consoleSpy.mockRestore()
+    }
   })
 
   it("does NOT log 'llm.output_truncated' on a healthy tool_use stop", async () => {
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-    mockCreate.mockResolvedValue(makeAnthropicResponse([]))
+    try {
+      mockCreate.mockResolvedValue(makeAnthropicResponse([]))
 
-    await extractWithLlm('<html>small page</html>', SOURCE_URL)
+      await extractWithLlm('<html>small page</html>', SOURCE_URL)
 
-    const truncatedLog = consoleSpy.mock.calls
-      .map((args) => String(args[0]))
-      .find((line) => line.includes('llm.output_truncated'))
-    expect(truncatedLog).toBeUndefined()
-    consoleSpy.mockRestore()
+      const truncatedLog = consoleSpy.mock.calls
+        .map((args) => String(args[0]))
+        .find((line) => line.includes('llm.output_truncated'))
+      expect(truncatedLog).toBeUndefined()
+    } finally {
+      consoleSpy.mockRestore()
+    }
   })
 })

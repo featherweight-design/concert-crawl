@@ -227,7 +227,7 @@ export async function extractWithLlm(
         event: 'llm.output_truncated',
         sourceUrl,
         maxOutputTokens: MAX_OUTPUT_TOKENS,
-        outputTokens: usage.output_tokens,
+        outputTokens: tokenUsage.outputTokens,
       }),
     )
   }
