@@ -19,7 +19,7 @@ drive state · theme (all 9) · Founder window live.
 | `monetization-tier-states.jsx` | `R5_TIERS` (feature bullets re-cut to §6), `<TierStateCard>`, `<TierPicker state variant/>` (all 6 states), `<GiftedThankYou>`. |
 | `monetization-founder-gifted.jsx` | `<FounderRaceLoser>` (§3.2), `<FounderClaimTakeover>` (§3.3), `<GiftedPlanCardDesktop/Mobile>` (§4), `<SeatMeter>`. |
 | `monetization-entitlements.jsx` | `<EntitlementsMatrix variant/>` — the §6 table, desktop full + mobile compact, with legend. |
-| `theme-context.jsx` | **All 9 themes** merged (base 3 + 5 genre + drip's `accent-2`). Lets Tweaks verify cross-theme parity on every new surface. |
+| `theme-context.jsx` | **All 9 themes** merged (base 3 + 6 genre + drip's `accent-2`). Lets Tweaks verify cross-theme parity on every new surface. |
 | `monetization-shared.jsx`, `ios-frame.jsx`, `design-canvas.jsx`, `tweaks-panel.jsx` | Verbatim copies of the canonical deps. |
 
 ---
