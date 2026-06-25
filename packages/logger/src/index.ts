@@ -31,7 +31,7 @@ export function createLogger(name: string): Logger {
   return pino({ name, level }, transport)
 }
 
-// Operational-failure reporter: emits a structured stdout log AND forwards
+// Operational-failure reporter: emits a structured stderr log AND forwards
 // to Sentry. Crawler/API code historically called
 // `console.log(JSON.stringify({event: '...', ...}))` directly for operational
 // failures (LLM tool-call invalidation, email send errors, alert pipeline
@@ -43,10 +43,15 @@ export function createLogger(name: string): Logger {
 // caused 0-event extractions for hours was invisible in Sentry.
 //
 // `reportFailure` is the new canonical helper for those callsites. Severity
-// 'error' fires `Sentry.captureMessage(event, { level: 'error', extra })`;
-// severity 'warn' fires the same with `level: 'warning'`. The stdout log
-// shape is preserved (existing `{event, ...extra}` JSON line) so log-search
-// dashboards and alert rules built on the old pattern keep working.
+// 'error' fires `Sentry.captureMessage(event, { level: 'error', extra })`
+// and writes the JSON line via `console.error`; severity 'warn' fires the
+// same with `level: 'warning'` and writes via `console.warn`. Both console
+// methods write to stderr in Node — the severity distinction is preserved
+// via the explicit `severity` field on the JSON payload (log-search
+// consumers can filter on that) and via the console method itself (some
+// log routers / Pino-style aggregators distinguish on method, not stream).
+// The structured `{event, ...extra}` JSON shape is preserved verbatim so
+// existing search dashboards and alert rules keep working.
 //
 // Sentry.captureMessage is a no-op when Sentry has not been initialized in
 // the current process (e.g. local dev, unit tests), so callers do not need
@@ -63,17 +68,16 @@ export interface FailureReport {
 }
 
 export function reportFailure(report: FailureReport): void {
-  // Console side (stderr): preserve the historic structured-log JSON
-  // shape and standardize the stream to stderr regardless of which
-  // console method the callsite used to call. Severity drives the
-  // method choice — 'error' → console.error, 'warn' → console.warn —
-  // so dashboards / routers that distinguish severity can still do so
-  // by stream-level filter, and tooling that scans stderr for both is
-  // unaffected. (Some prior callsites used console.log for errors,
-  // which was a stdout/stderr inconsistency this helper resolves.)
-  // The 'severity' field is also included in the JSON payload so
-  // log-search consumers can distinguish without re-deriving from
-  // the event name.
+  // Console side: preserve the historic structured-log JSON shape and
+  // standardize on stderr regardless of which console method the original
+  // callsite used. Severity drives the method choice — 'error' →
+  // console.error, 'warn' → console.warn — so routers / Pino-style log
+  // aggregators that distinguish on console method (rather than stream)
+  // can still tier severity, and the explicit `severity` field on the
+  // JSON payload covers the rest (log-search filters, dashboards). Both
+  // console.warn and console.error write to stderr in Node, so this is
+  // NOT a stdout-vs-stderr distinction; the prior comment wording on
+  // that was wrong.
   const json = JSON.stringify(report)
   if (report.severity === 'error') {
     console.error(json)
