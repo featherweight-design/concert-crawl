@@ -68,30 +68,57 @@ export interface FailureReport {
 }
 
 export function reportFailure(report: FailureReport): void {
-  // Console side: preserve the historic structured-log JSON shape and
-  // standardize on stderr regardless of which console method the original
-  // callsite used. Severity drives the method choice — 'error' →
-  // console.error, 'warn' → console.warn — so routers / Pino-style log
-  // aggregators that distinguish on console method (rather than stream)
-  // can still tier severity, and the explicit `severity` field on the
-  // JSON payload covers the rest (log-search filters, dashboards). Both
-  // console.warn and console.error write to stderr in Node, so this is
-  // NOT a stdout-vs-stderr distinction; the prior comment wording on
-  // that was wrong.
-  const json = JSON.stringify(report)
-  if (report.severity === 'error') {
-    console.error(json)
-  } else {
-    console.warn(json)
+  // Console side: preserve the historic structured-log JSON shape. The
+  // helper standardizes onto stderr — callsites that previously used
+  // `console.log` (stdout) now route through `console.error`; callsites
+  // that used `console.warn` keep the same stream. Both methods write to
+  // stderr in Node, so the severity distinction is NOT a stdout-vs-stderr
+  // distinction — it's encoded in the console method (warn vs error,
+  // which Pino-style log aggregators can tier on) and in the explicit
+  // `severity` field on the JSON payload (which log-search filters and
+  // dashboards key off). The stdout→stderr migration is the only behavior
+  // change for previously-`console.log` callsites; downstream consumers
+  // keyed on the structured `event:` field are unaffected.
+  //
+  // This function is called from failure-handling paths — including
+  // `catch` blocks — so it must never throw. JSON.stringify can fail on
+  // circular references or BigInt values in `extra`, and the Sentry SDK
+  // can in principle raise; both are wrapped so a logging failure cannot
+  // mask the original error.
+  const { event, severity, ...extra } = report
+  try {
+    let json: string
+    try {
+      json = JSON.stringify(report)
+    } catch {
+      // Fall back to a minimal payload that's guaranteed to serialize.
+      // We lose `extra` here but preserve the event identifier so the
+      // original failure is still visible in logs/dashboards.
+      json = JSON.stringify({ event, severity, extraSerializationFailed: true })
+    }
+    if (severity === 'error') {
+      console.error(json)
+    } else {
+      console.warn(json)
+    }
+  } catch {
+    // console.error/warn themselves shouldn't throw, but if the runtime
+    // is hostile (e.g. console patched to throw in tests) we still
+    // refuse to propagate.
   }
 
   // Sentry side: forward as a captureMessage. The 'severity' and 'event'
   // fields are unpacked off the extra payload because they're already
   // represented in the message + level; everything else flows as 'extra'
-  // context (visible on the Sentry issue page).
-  const { event, severity, ...extra } = report
-  Sentry.captureMessage(event, {
-    level: severity === 'error' ? 'error' : 'warning',
-    extra,
-  })
+  // context (visible on the Sentry issue page). Sentry.captureMessage
+  // is a no-op when Sentry isn't initialized but is wrapped defensively
+  // in case the SDK ever raises — see the no-throw contract above.
+  try {
+    Sentry.captureMessage(event, {
+      level: severity === 'error' ? 'error' : 'warning',
+      extra,
+    })
+  } catch {
+    // Swallow per the no-throw contract.
+  }
 }

@@ -145,4 +145,48 @@ describe('reportFailure', () => {
     expect(errorSpy).toHaveBeenCalledOnce()
     expect(captureMessageSpy).toHaveBeenCalledOnce()
   })
+
+  // reportFailure is called from catch blocks; throwing here would mask
+  // the original error and could crash long-running processes (crawler
+  // crons). Both paths — JSON.stringify on circular `extra` AND Sentry
+  // SDK errors — must be swallowed.
+  it('does not throw when extra contains a circular reference', () => {
+    const circular: Record<string, unknown> = { name: 'cycle' }
+    circular.self = circular
+
+    expect(() =>
+      reportFailure({
+        event: 'llm.invalid_tool_input',
+        severity: 'error',
+        cyclic: circular,
+      }),
+    ).not.toThrow()
+
+    // Fallback payload still emits so the event identifier survives.
+    expect(errorSpy).toHaveBeenCalledOnce()
+    const logged = errorSpy.mock.calls[0]?.[0] as string
+    expect(logged).toContain('"event":"llm.invalid_tool_input"')
+    expect(logged).toContain('"extraSerializationFailed":true')
+    // Sentry call still happens — extra is sent as-is (Sentry's own
+    // serializer handles or rejects it).
+    expect(captureMessageSpy).toHaveBeenCalledOnce()
+  })
+
+  it('does not throw when Sentry.captureMessage itself raises', () => {
+    captureMessageSpy.mockImplementationOnce(() => {
+      throw new Error('Sentry SDK transport failure')
+    })
+
+    expect(() =>
+      reportFailure({
+        event: 'llm.no_tool_use',
+        severity: 'warn',
+        sourceUrl: 'https://example.com',
+      }),
+    ).not.toThrow()
+
+    // The stderr log still happens — failing Sentry must not silence
+    // the local structured log.
+    expect(warnSpy).toHaveBeenCalledOnce()
+  })
 })
