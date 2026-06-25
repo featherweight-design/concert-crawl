@@ -146,7 +146,7 @@ Also extend `apps/api/src/test/helpers/seed.ts` `seedEvent` defaults to accept `
 - [ ] **Step 2: Run tests, verify they fail**
 
 ```bash
-pnpm --filter @concert-crawl/api test events.integration
+pnpm --filter @concert-crawl/api test:integration events.integration
 ```
 
 Expected: FAIL — `view` param not recognized, `isConcertReviewNeeded` not in projection.
@@ -229,7 +229,7 @@ In `apps/api/src/routes/admin/events.ts`, find the list `baseSelect` (around lin
 - [ ] **Step 6: Run tests, verify they pass**
 
 ```bash
-pnpm --filter @concert-crawl/api test events.integration
+pnpm --filter @concert-crawl/api test:integration events.integration
 ```
 
 Expected: PASS.
@@ -294,7 +294,7 @@ describe('AllEventsFilters — flagged chip round-trip', () => {
 - [ ] **Step 2: Run tests, verify they fail**
 
 ```bash
-pnpm --filter web test filters.test
+pnpm --filter @concert-crawl/web test filters.test
 ```
 
 Expected: FAIL — `flagged` not in `AllEventsFilters`.
@@ -409,7 +409,7 @@ In `countActiveFilters`:
 - [ ] **Step 5: Run tests, verify they pass**
 
 ```bash
-pnpm --filter web test filters.test
+pnpm --filter @concert-crawl/web test filters.test
 ```
 
 Expected: PASS.
@@ -487,7 +487,7 @@ In `apps/web/src/components/admin/definitions/copy.ts`, inside `review.allEvents
 - [ ] **Step 4: Typecheck**
 
 ```bash
-pnpm --filter web typecheck
+pnpm --filter @concert-crawl/web typecheck
 ```
 
 Expected: PASS. (The new keys are additive; nothing has been removed yet.)
@@ -539,7 +539,7 @@ describe('EventConfirmModal — mark-as-concert kind', () => {
 - [ ] **Step 2: Run, verify failure**
 
 ```bash
-pnpm --filter web test EventConfirmModal.test
+pnpm --filter @concert-crawl/web test EventConfirmModal.test
 ```
 
 Expected: FAIL — `'mark-as-concert'` is not assignable to `ConfirmKind`.
@@ -583,7 +583,7 @@ export const EventConfirmModal = ({
 - [ ] **Step 4: Run tests**
 
 ```bash
-pnpm --filter web test EventConfirmModal.test
+pnpm --filter @concert-crawl/web test EventConfirmModal.test
 ```
 
 Expected: PASS.
@@ -713,7 +713,7 @@ Also update the existing "renders all five numbered sections" + "renders the Dan
 - [ ] **Step 2: Run, verify failure**
 
 ```bash
-pnpm --filter web test EventEditorClient.test
+pnpm --filter @concert-crawl/web test EventEditorClient.test
 ```
 
 Expected: FAIL — `EditorEvent` is missing the new fields; `ClassificationSection` is read-only.
@@ -1157,7 +1157,7 @@ Add to the projection / mapping:
 - [ ] **Step 6: Run the test suite**
 
 ```bash
-pnpm --filter web test EventEditorClient.test
+pnpm --filter @concert-crawl/web test EventEditorClient.test
 ```
 
 Expected: all PASS.
@@ -1177,6 +1177,8 @@ git commit -m "feat(web): wire ClassificationSection + DangerZoneSection refacto
 
 **Files:**
 - Modify: `apps/web/src/components/admin/review/all/EventsFilterBar.tsx`
+- Modify: `apps/web/src/components/admin/review/all/EventsFilterBar.test.tsx`
+- Modify: `apps/web/src/components/admin/review/_tabs/AllEventsTabContent.tsx`
 
 **Interfaces:**
 - Consumes: copy from task 3.4 (`flaggedChipLabel`, `flaggedChipAriaLabel`).
@@ -1227,7 +1229,7 @@ describe('EventsFilterBar — flagged chip', () => {
 - [ ] **Step 2: Run, verify fail**
 
 ```bash
-pnpm --filter web test EventsFilterBar.test
+pnpm --filter @concert-crawl/web test EventsFilterBar.test
 ```
 
 Expected: FAIL — chip not rendered.
@@ -1278,7 +1280,7 @@ In `apps/web/src/components/admin/review/all/EventsFilterBar.tsx`, add a chip ro
 - [ ] **Step 4: Verify test passes**
 
 ```bash
-pnpm --filter web test EventsFilterBar.test
+pnpm --filter @concert-crawl/web test EventsFilterBar.test
 ```
 
 - [ ] **Step 5: Update the empty-state copy in `AllEventsTabContent`**
@@ -1385,11 +1387,11 @@ PR 3 of 3 for the classification review queue (spec: `docs/superpowers/specs/202
 
 ## Test plan
 
-- [ ] `pnpm --filter web test EventEditorClient.test` — section refactor + both flows
-- [ ] `pnpm --filter web test EventConfirmModal.test`
-- [ ] `pnpm --filter web test EventsFilterBar.test`
-- [ ] `pnpm --filter web test filters.test`
-- [ ] `pnpm --filter @concert-crawl/api test events.integration` — view filter + projection
+- [ ] `pnpm --filter @concert-crawl/web test EventEditorClient.test` — section refactor + both flows
+- [ ] `pnpm --filter @concert-crawl/web test EventConfirmModal.test`
+- [ ] `pnpm --filter @concert-crawl/web test EventsFilterBar.test`
+- [ ] `pnpm --filter @concert-crawl/web test filters.test`
+- [ ] `pnpm --filter @concert-crawl/api test:integration events.integration` — view filter + projection
 - [ ] Manual walk-through (described in task 3.10): chip toggle → hidden+flagged row → editor → Mark-as-concert → event re-appears in consumer surface
 
 ## Env vars

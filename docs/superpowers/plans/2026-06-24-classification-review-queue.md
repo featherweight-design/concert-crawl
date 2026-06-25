@@ -33,7 +33,7 @@ Apply to every sub-plan. Sub-plans link back here rather than repeating.
 - **Migration timestamp:** new journal `when` must be **greater than 1782604800000** (the value for 0041, the highest existing entry). If `pnpm drizzle-kit generate` writes a smaller value because today's epoch is already less than that, hand-edit the journal entry to `1782691200000` (1 day after 0041).
 - **Expand-only schema:** the new column must ship with `NOT NULL DEFAULT FALSE` so the deploy is a no-op on existing rows and the code rollback is sufficient.
 - **Crawler-frozen invariant:** the column is crawler-frozen on UPDATE (only INSERT + backfill write it). Admin actions never touch it.
-- **No type casts:** new fields cross system boundaries via Zod `safeParse` only (per `feedback_no_type_casting`).
+- **No type casts in production code:** new fields cross system boundaries via Zod `safeParse` only (per `feedback_no_type_casting`). Scope: `apps/{api,web,crawler}` and `packages/*`. One-shot `scripts/*` are exempt and follow the lighter `cls as { eventId: unknown }` pattern established by `scripts/2026-06-19-non-concert-backfill.ts:288-289` — runtime type checks first, narrow cast after, throw on shape mismatch.
 - **Single-character vars banned:** ESLint blocks identifiers shorter than 2 chars (e.g. `err` not `e`, `ctx` not `c`).
 - **Customer-facing copy lives in `ADMIN_COPY`** (per `feedback_definitions_copy_rule`) — every new string lands in `apps/web/src/components/admin/definitions/copy.ts`.
 - **Worktree required:** every PR's branch lives in `.worktrees/<branch>`. Copy `apps/{web,api,crawler}/.env.local` into the worktree immediately after `git worktree add`.
@@ -71,10 +71,11 @@ Apply to every sub-plan. Sub-plans link back here rather than repeating.
 |---|---|---|
 | `apps/api/src/routes/admin/events.ts` | Modify | Add `view` query enum; thread into the where clause; include `isConcertReviewNeeded` in list + detail projections (~lines 96-130, 255-280, 332-346, 446-480) |
 | `apps/api/src/routes/admin/events.integration.test.ts` | Modify | Cover `view=hidden-flagged-for-review` scoping + projection field |
-| `apps/web/src/components/admin/definitions/copy.ts` | Modify | Add `editor.classification.{markAsConcert*, reviewNeededPill}`, `review.allEvents.{flaggedChip, flaggedConfirm}`; remove `editor.dangerZone.markNonConcert` |
+| `apps/web/src/components/admin/definitions/copy.ts` | Modify | Add `editor.classification.{markAsConcert*, reviewNeededPill*}`, `review.allEvents.filters.flaggedChip*`; remove `editor.dangerZone.markNonConcert` (in task 3.7) |
 | `apps/web/src/components/admin/review/all/filters.ts` | Modify | Add `flagged: boolean` to `AllEventsFilters`, serialize/parse as `view=hidden-flagged-for-review` |
 | `apps/web/src/components/admin/review/all/filters.test.ts` | Modify | Cover new round-trip parse/serialize cases |
-| `apps/web/src/components/admin/review/all/EventsFilterBar.tsx` | Modify | Render flagged-for-review chip with count + empty-state copy |
+| `apps/web/src/components/admin/review/all/EventsFilterBar.tsx` | Modify | Render flagged-for-review chip |
+| `apps/web/src/components/admin/review/_tabs/AllEventsTabContent.tsx` | Modify | Empty-state copy when chip is active + zero rows |
 | `apps/web/src/components/admin/review/all/EventConfirmModal.tsx` | Modify | Add `'mark-as-concert'` to `ConfirmKind` + COPY routing |
 | `apps/web/src/components/admin/review/all/types.ts` | Modify | Add `hiddenFromConsumer: boolean` + `isConcertReviewNeeded: boolean` to `AllEvent` |
 | `apps/web/src/components/admin/events/editor/sections/ClassificationSection.tsx` | Modify | Become interactive: render Mark-non-concert OR Mark-as-concert button + flag pill |

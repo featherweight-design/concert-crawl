@@ -127,7 +127,7 @@ describe('isconcert-review-needed-backfill — formatCsvRow', () => {
 - [ ] **Step 2: Run the tests, verify they fail**
 
 ```bash
-pnpm vitest run scripts/2026-06-24-isconcert-review-needed-backfill.test
+pnpm test:scripts scripts/2026-06-24-isconcert-review-needed-backfill.test
 ```
 
 Expected: FAIL — helper module does not exist.
@@ -222,7 +222,7 @@ export function formatCsvRow(result: ClassificationResult): string {
 - [ ] **Step 4: Run the tests, verify they pass**
 
 ```bash
-pnpm vitest run scripts/2026-06-24-isconcert-review-needed-backfill.test
+pnpm test:scripts scripts/2026-06-24-isconcert-review-needed-backfill.test
 ```
 
 Expected: PASS.
@@ -373,7 +373,7 @@ describe('isconcert-review-needed-backfill — classifyBatch', () => {
 - [ ] **Step 2: Run the test, verify it fails**
 
 ```bash
-pnpm vitest run scripts/2026-06-24-isconcert-review-needed-backfill.test
+pnpm test:scripts scripts/2026-06-24-isconcert-review-needed-backfill.test
 ```
 
 Expected: FAIL — `./2026-06-24-isconcert-review-needed-backfill.js` does not exist.
@@ -742,7 +742,7 @@ if (isCli) {
 - [ ] **Step 4: Run the tests, verify they pass**
 
 ```bash
-pnpm vitest run scripts/2026-06-24-isconcert-review-needed-backfill.test
+pnpm test:scripts scripts/2026-06-24-isconcert-review-needed-backfill.test
 ```
 
 Expected: PASS.
@@ -812,7 +812,7 @@ Estimated LLM cost: ~$0.05 per env (130 hidden events × ~300 tokens × Haiku).
 
 ## Test plan
 
-- [ ] `pnpm vitest run scripts/2026-06-24-isconcert-review-needed-backfill.test` (helpers + classifyBatch with mocked SDK)
+- [ ] `pnpm test:scripts scripts/2026-06-24-isconcert-review-needed-backfill.test` (helpers + classifyBatch with mocked SDK)
 - [ ] Local dry-run produces a non-throwing CSV
 - [ ] Staging dry-run CSV looks reasonable (manual review)
 - [ ] Staging `--commit` writes only the review-needed flag (psql spot-check on a few rows)

@@ -97,7 +97,7 @@ Note: `db.execute(sql\`...\`)` returns the rows array directly (see `apps/api/sr
 - [ ] **Step 2: Run the test, verify it fails**
 
 ```bash
-pnpm --filter @concert-crawl/api test migration-0042
+pnpm --filter @concert-crawl/api test:integration migration-0042
 ```
 
 Expected: FAIL — column does not exist.
@@ -165,7 +165,7 @@ In `packages/db/src/schema/events.ts`, after the `hiddenFromConsumer` column (li
 
 ```bash
 pnpm db:migrate
-pnpm --filter @concert-crawl/api test migration-0042
+pnpm --filter @concert-crawl/api test:integration migration-0042
 ```
 
 Expected: migration applies cleanly, integration test PASSES.
@@ -605,7 +605,7 @@ it('UPDATE path leaves is_concert_review_needed alone (crawler-frozen)', async (
 - [ ] **Step 2: Run the tests, verify they fail**
 
 ```bash
-pnpm --filter @concert-crawl/crawler-core test crawl.integration
+pnpm --filter @concert-crawl/crawler-core test:integration crawl.integration
 ```
 
 Expected: FAIL — `isConcertReviewNeeded` not present in INSERT values.
@@ -634,7 +634,7 @@ Confirm that the `onConflictDoUpdate` `set` clause at lines 667-688 does NOT inc
 - [ ] **Step 4: Run the tests, verify they pass**
 
 ```bash
-pnpm --filter @concert-crawl/crawler-core test crawl.integration
+pnpm --filter @concert-crawl/crawler-core test:integration crawl.integration
 ```
 
 Expected: all three new tests PASS.
@@ -693,9 +693,9 @@ PR 1 of 3 for the classification review queue (spec: `docs/superpowers/specs/202
 
 ## Test plan
 
-- [ ] `pnpm --filter @concert-crawl/db test schema.test` (column shape)
-- [ ] `pnpm --filter @concert-crawl/crawler-core test llm.test` (Zod round-trip + tool schema + prompt)
-- [ ] `pnpm --filter @concert-crawl/crawler-core test crawl.integration` (INSERT writes column, UPDATE doesn't)
+- [ ] `pnpm --filter @concert-crawl/api test:integration migration-0042` (column shape)
+- [ ] `pnpm --filter @concert-crawl/crawler-core test llm.test` (Zod round-trip + tool schema + prompt — unit, so default `test`)
+- [ ] `pnpm --filter @concert-crawl/crawler-core test:integration crawl.integration` (INSERT writes column, UPDATE doesn't)
 - [ ] Trigger a venue crawl via staging admin > venue trigger button after deploy; verify a new event row has `is_concert_review_needed` populated (true or false depending on LLM)
 
 ## Env vars
