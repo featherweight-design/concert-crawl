@@ -214,6 +214,10 @@ just list recent deploys and POST `/rollback`, nothing else.
 
 **For the auto-rollback path** (smoke → rollback inside `prod-smoke-after-deploy.yml`): the cleanest way to verify the wiring without breaking real prod is to temporarily point `PROD_API_URL` at a bogus hostname, then `workflow_dispatch` the **Prod smoke (after Render auto-deploy)** workflow. The wait step exits success (Render is still live on the real SHA), the smoke step fails against the bogus URL, the rollback steps fire (API rolls back; the two crons emit warnings — see "Caveat on cron service rollback"), and Render shows a new deploy on the API service matching the previous-prior commit SHA. Restore `PROD_API_URL` afterward.
 
+### Sanity-checking the wait + preflight without a real deploy
+
+A bare `workflow_dispatch` (no env tweaks) when Render is NOT on the dispatched SHA exercises the preflight + wait paths only — Playwright never runs. The wait polls Render for `github.sha` (current main HEAD) and times out at 300s because Render won't move to that SHA without a push. Expected outcome: workflow ends `success` with a `::warning: Smoke skipped` annotation, total wall-clock ~6–7 min (5-min wait + ~1.5 min runner setup). This validates `environment: production` secret resolution + the preflight + the 124-exit-code benign-skip branch without exercising the actual smoke or rollback. Useful as a first sanity check after enabling the kill switch or rotating any of the required secrets.
+
 **For the manual rollback path:** invoke **Rollback Production (manual)** with `workflow_dispatch` and a `reason` value. The script rolls back to the prior live deploy on each service. Use this exact path for any incident response that doesn't originate from a freshly-deployed smoke failure.
 
 ## Limitations and known gaps
