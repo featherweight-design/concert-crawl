@@ -9,13 +9,14 @@ import { CCMark } from '@/components/brand/cc-mark'
 import { SPNumberField } from '../SPNumberField'
 import { ChipGroup } from '../ChipGroup'
 import { validateSubmission, type SubmissionInput } from '@/lib/sp-policy'
-import type {
-  Tier,
-  Vendor,
-  HowFound,
-  PriceSubmission,
-  SourceCategory,
-  SubmissionWithMeta,
+import {
+  deriveSourceCategory,
+  type Tier,
+  type Vendor,
+  type HowFound,
+  type PriceSubmission,
+  type SourceCategory,
+  type SubmissionWithMeta,
 } from '@concert-crawl/types'
 
 // Derive the API-required `howFound` from the new `sourceCategory` field.
@@ -25,6 +26,19 @@ import type {
 // + resale collapse to saw_listing because the form no longer asks "how".
 const howFoundForSource = (source: SourceCategory): HowFound =>
   source === 'boxoffice' ? 'bought_myself' : 'saw_listing'
+
+// Pick the sourceCategory to pre-fill on the Edit form. Prefer the explicit
+// row value when present; otherwise derive from (vendor, howFound) using the
+// shared API helper so a row submitted at the box office doesn't get
+// misrepresented as 'standard' just because PR 3 backfill hadn't run yet.
+// `deriveSourceCategory` only emits 'boxoffice' or 'standard' — a resale
+// row will fall to 'standard', which the user can correct manually in the
+// edit form.
+const fallbackSourceCategory = (
+  submission: Pick<PriceSubmission, 'sourceCategory' | 'vendor' | 'howFound'>,
+): SourceCategory =>
+  submission.sourceCategory ??
+  deriveSourceCategory(submission.vendor, submission.howFound)
 
 // Vendor auto-fill when source = boxoffice. Keeps the VenueBoxOffice enum
 // value for the API (contract-PR drops the value later); consumer display
@@ -250,15 +264,18 @@ export function SubmitPriceModal({
             setExistingSubmission(body.data.userSubmission)
             if (openInEditMode) {
               // Skip the "Already in." screen — go straight to the edit form.
-              // sourceCategory from the existing row drives the floor label;
-              // when null (legacy rows), default to 'standard'.
+              // sourceCategory from the existing row drives the floor label.
+              // For legacy rows where sourceCategory is null, derive it from
+              // (vendor, howFound) via the shared helper so a box-office
+              // submission isn't misrepresented as 'standard'.
               setFormState({
                 floor: body.data.userSubmission.priceMin,
                 ceiling: body.data.userSubmission.priceMax ?? '',
                 tier: body.data.userSubmission.tier,
                 vendor: body.data.userSubmission.vendor,
-                sourceCategory:
-                  body.data.userSubmission.sourceCategory ?? 'standard',
+                sourceCategory: fallbackSourceCategory(
+                  body.data.userSubmission,
+                ),
               })
               setIsEditMode(true)
               setModalState('form')
@@ -560,10 +577,11 @@ export function SubmitPriceModal({
                 ceiling: existingSubmission.priceMax ?? '',
                 tier: existingSubmission.tier,
                 vendor: existingSubmission.vendor,
-                // Legacy rows may have a null sourceCategory; default to
-                // 'standard' so the form still renders a floor label and the
-                // validator doesn't immediately complain about a missing pick.
-                sourceCategory: existingSubmission.sourceCategory ?? 'standard',
+                // Legacy rows may have a null sourceCategory; derive from
+                // (vendor, howFound) via the shared helper so a box-office
+                // submission isn't misrepresented as 'standard' just because
+                // PR 3 backfill hadn't run for that row.
+                sourceCategory: fallbackSourceCategory(existingSubmission),
               })
             }
             setFieldErrors({})
