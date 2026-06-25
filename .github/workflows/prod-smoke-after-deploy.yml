@@ -318,9 +318,15 @@ jobs:
 
           if [ -z "${RESEND_API_KEY:-}" ] || [ -z "${ADMIN_EMAIL:-}" ]; then
             missing=()
-            [ -z "${RESEND_API_KEY:-}" ] && missing+=("RESEND_API_KEY (secret)")
-            [ -z "${ADMIN_EMAIL:-}" ] && missing+=("ADMIN_EMAIL (variable)")
-            echo "::warning title=Admin email skipped::Missing ${missing[*]} — admin not notified of auto-rollback. Set via Settings → Environments → production."
+            # Per-value paths so an operator during an incident goes to
+            # the right page: RESEND_API_KEY is a production-environment
+            # secret; ADMIN_EMAIL is a repo-level variable (operationally
+            # — see docs/runbooks/production-launch.md, the production-env
+            # docs note its move-to-env-scope is an open hygiene option).
+            [ -z "${RESEND_API_KEY:-}" ] && missing+=("RESEND_API_KEY (set via Settings → Environments → production → Secrets)")
+            [ -z "${ADMIN_EMAIL:-}" ] && missing+=("ADMIN_EMAIL (set via Settings → Secrets and variables → Actions → Variables)")
+            echo "::warning title=Admin email skipped::Missing config — admin not notified of auto-rollback. Details below."
+            printf '  - %s\n' "${missing[@]}"
             exit 0
           fi
 
