@@ -8,8 +8,8 @@
 --
 -- Expand-only: NOT NULL DEFAULT FALSE so no existing row changes behavior
 -- on rollout. Rolling back the code is sufficient if abort is needed —
--- the column stays in place with no data loss. No partial index pre-
--- emptively; at ~3K events the chip's hidden_from_consumer=true AND
+-- the column stays in place with no data loss. No partial index up front;
+-- at ~3K events the chip's hidden_from_consumer=true AND
 -- is_concert_review_needed=true scan is small. Revisit at ~10K corpus.
 
 ALTER TABLE events

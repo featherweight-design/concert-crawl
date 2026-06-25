@@ -49,9 +49,15 @@ isConcert=false: non-performance events at music venues. Includes:
 - trivia, comedy, film/movie screenings (e.g. "Film on the Rocks: Sinners"), karaoke, listening parties
 - private events, transportation/logistics (e.g. "Bus To Show Pickup Spot"), markets, fitness ("Yoga on the Rocks"), charity walks/runs ("9/11 Stair Climb"), spoken-word/poetry readings, wellness lectures, drag shows (lip-sync, not live singing)
 
-Disambiguation rule: when a title contains the name of a real touring artist/DJ AND a specific billing/event framing phrase ("Kick Off Party", "After Party", "Pre-Party", "Feat.", "Featuring", "Presents", "with"), default to TRUE (concert) — the artist is the headliner. The standalone phrase "Dance Party" does NOT trigger this rule — it's the signature of a recorded-music theme night (e.g. "Olivia Rodrigo Dance Party"). Only treat as FALSE when the artist's name is clearly being used as a theme (their recordings being played back by unnamed DJs), as with "Olivia Rodrigo Dance Party" or "BASS BINGO – Wooli Edition".
+Disambiguation rule: when a title contains the name of a real touring artist/DJ AND a specific billing/event framing phrase ("Kick Off Party", "After Party", "Pre-Party", "Feat.", "Featuring", "Presents", "with"), default to TRUE (concert) — the artist is the headliner. The standalone phrase "Dance Party" does NOT trigger this rule — it's the signature of a recorded-music theme night (e.g. "Olivia Rodrigo Dance Party"). Only treat as FALSE when the artist's name is clearly being used as a theme (their recordings being played back by unnamed DJs), as with "Olivia Rodrigo Dance Party" or "BASS BINGO – Wooli Edition".`
 
-For every classification, ALSO set reviewNeeded:
+// Optional add-on appended to IS_CONCERT_RULES in contexts that ACCEPT and
+// EMIT reviewNeeded (the live crawler's save_events tool + PR 2's
+// isconcert-review-needed backfill). Older callers like
+// scripts/2026-06-19-non-concert-backfill.ts that only emit isConcert do
+// NOT inline this — their tool schemas reject reviewNeeded, so adding the
+// guidance there bloats tokens with rules the model can't act on.
+export const REVIEW_NEEDED_RULES = `For every classification, ALSO set reviewNeeded:
 - true: you weighed both interpretations and the evidence is genuinely ambiguous. Examples:
   - Title contains a brand or made-up name (e.g. "PRESIDENT", "Levity Presents") with no obvious touring-artist signal but URL/venue framing implies a live act
   - Title uses "Presents" or "Featuring" but the named entity could be a DJ brand OR a live performer and the venue alone doesn't disambiguate
@@ -72,7 +78,9 @@ Rules:
 
 Set isConcert on every event using these rules:
 
-${IS_CONCERT_RULES}`
+${IS_CONCERT_RULES}
+
+${REVIEW_NEEDED_RULES}`
 
 const SAVE_EVENTS_TOOL: Anthropic.Tool = {
   name: 'save_events',
