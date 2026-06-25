@@ -179,3 +179,35 @@ describe('EventsFilterBar', () => {
     expect(screen.queryByRole('button', { name: 'Clear all' })).toBeNull()
   })
 })
+
+describe('EventsFilterBar — flagged chip', () => {
+  it('renders the Hidden — flagged for review chip', () => {
+    setup()
+    expect(
+      screen.getByRole('button', {
+        name: 'Toggle hidden-and-flagged-for-review filter',
+      }),
+    ).toBeTruthy()
+  })
+
+  it('toggles filters.flagged when clicked', () => {
+    const { onChange } = setup()
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Toggle hidden-and-flagged-for-review filter',
+      }),
+    )
+    expect(onChange).toHaveBeenCalledWith({
+      ...EMPTY_FILTERS,
+      flagged: true,
+    })
+  })
+
+  it('reflects the active state with aria-pressed=true', () => {
+    setup({ ...EMPTY_FILTERS, flagged: true })
+    const chip = screen.getByRole('button', {
+      name: 'Toggle hidden-and-flagged-for-review filter',
+    })
+    expect(chip.getAttribute('aria-pressed')).toBe('true')
+  })
+})

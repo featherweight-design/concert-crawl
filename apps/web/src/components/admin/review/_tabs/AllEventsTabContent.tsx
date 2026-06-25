@@ -85,7 +85,7 @@ const Skeleton = () => (
   </div>
 )
 
-const EmptyState = () => (
+const EmptyState = ({ flagged }: { flagged: boolean }) => (
   <div
     style={{
       padding: '48px 32px',
@@ -103,19 +103,23 @@ const EmptyState = () => (
         marginBottom: 8,
       }}
     >
-      {ADMIN_COPY.review.allEvents.empty.heading}
+      {flagged
+        ? ADMIN_COPY.review.allEvents.filters.flaggedChipEmpty
+        : ADMIN_COPY.review.allEvents.empty.heading}
     </div>
-    <div
-      style={{
-        fontSize: 14,
-        color: 'var(--fg-muted)',
-        lineHeight: 1.5,
-        maxWidth: 420,
-        margin: '0 auto',
-      }}
-    >
-      {ADMIN_COPY.review.allEvents.empty.body}
-    </div>
+    {!flagged && (
+      <div
+        style={{
+          fontSize: 14,
+          color: 'var(--fg-muted)',
+          lineHeight: 1.5,
+          maxWidth: 420,
+          margin: '0 auto',
+        }}
+      >
+        {ADMIN_COPY.review.allEvents.empty.body}
+      </div>
+    )}
   </div>
 )
 
@@ -413,7 +417,7 @@ export const AllEventsTabContent = ({
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {filterBar}
-        <EmptyState />
+        <EmptyState flagged={filters.flagged} />
       </div>
     )
 
