@@ -908,12 +908,17 @@ export async function crawlVenue(
       const notificationBody = shouldAutoPause
         ? `${newFailureCount} consecutive failures for ${venue.name} — venue auto-paused`
         : `${newFailureCount} consecutive failures for ${venue.name}`
+      // Include crawlRunId in metadata so admin UI can surface an alert
+      // badge on the specific row whose extraction tipped consecutive_failures
+      // to >=3 (see #804). event_count_dropped notifications have stored
+      // crawlRunId since their introduction; this brings crawl.failed to
+      // parity.
       await db.insert(notifications).values({
         type: 'admin_alert',
         category: 'crawl.failed',
         title: `Crawl failing: ${venue.name}`,
         body: notificationBody,
-        metadata: JSON.stringify({ venueId }),
+        metadata: JSON.stringify({ venueId, crawlRunId: id }),
       })
 
       if (shouldAutoPause) {

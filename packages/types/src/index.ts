@@ -241,6 +241,16 @@ export interface CrawlRun {
   llmCostUsd?: number | null
   venueName?: string | null
   startedAt?: string | null
+  // Surfaces an unread admin_alert notification of category
+  // 'crawl.event_count_dropped' or 'crawl.failed' that points at this run.
+  // The admin UI renders a badge alongside the status pill so a "Success"
+  // row that triggered the went-dark alert is no longer silent (#804).
+  activeAlert?: ActiveCrawlAlert | null
+}
+
+export interface ActiveCrawlAlert {
+  notificationId: string
+  category: 'crawl.event_count_dropped' | 'crawl.failed'
 }
 
 // Event — represents the JSON-serialized API response shape.

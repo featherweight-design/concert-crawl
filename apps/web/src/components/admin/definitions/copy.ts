@@ -510,6 +510,8 @@ export const ADMIN_COPY = {
     empty: 'No crawl runs yet.',
     noValue: '—',
     timeSuffix: 'MT',
+    alertBadgeTitle:
+      'An unread admin alert is associated with this crawl run. Mark the notification as read to clear this badge.',
   },
 
   crawlStatusTable: {

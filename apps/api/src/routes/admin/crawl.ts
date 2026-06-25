@@ -1,8 +1,14 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { and, eq, desc, asc, inArray } from 'drizzle-orm'
-import { db, venues, crawlRuns, crawlTriggers } from '@concert-crawl/db'
+import { and, eq, desc, asc, inArray, isNull } from 'drizzle-orm'
+import {
+  db,
+  venues,
+  crawlRuns,
+  crawlTriggers,
+  notifications,
+} from '@concert-crawl/db'
 import { getAuthUser } from '../../middleware/auth.js'
 import type { AdminVariables } from './index.js'
 
@@ -11,6 +17,31 @@ const venueIdSchema = z.object({
 })
 const crawlRunIdSchema = z.object({ id: z.string().uuid('id must be a UUID') })
 const triggerIdSchema = z.object({ id: z.string().uuid('id must be a UUID') })
+
+// Subset of notification.metadata shape this route cares about (#804).
+// Validated via Zod so a malformed metadata field doesn't poison the badge
+// query — invalid rows just fall through to "no alert" instead of throwing.
+const alertMetadataSchema = z.object({
+  crawlRunId: z.string().uuid().optional(),
+})
+
+interface ActiveCrawlAlert {
+  notificationId: string
+  category: 'crawl.event_count_dropped' | 'crawl.failed'
+}
+
+function parseAlertMetadata(
+  raw: string | null,
+): z.infer<typeof alertMetadataSchema> | null {
+  if (!raw) return null
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    const result = alertMetadataSchema.safeParse(parsed)
+    return result.success ? result.data : null
+  } catch {
+    return null
+  }
+}
 
 export const crawlAdminRouter = new Hono<AdminVariables>()
 
@@ -161,7 +192,62 @@ crawlAdminRouter.get(
       .orderBy(desc(crawlRuns.createdAt))
       .limit(limit)
 
-    return ctx.json({ success: true, data: dbRuns })
+    // Surface unread alerts that belong to any returned crawl run (#804).
+    // Notification → crawl_run linkage lives in metadata.crawlRunId (a JSON
+    // string column), so the cheapest correct join is to fetch the small
+    // candidate set in JS and group by id. We scope to the two categories
+    // a crawl row would surface (`crawl.event_count_dropped` for went-dark/
+    // sharp-drop, `crawl.failed` for the consecutive-failure path) and only
+    // pull unread ones — once an operator marks the notification read, the
+    // badge clears.
+    const alertsByRunId = new Map<string, ActiveCrawlAlert>()
+    if (dbRuns.length > 0) {
+      const runIds = dbRuns.map((run) => run.id)
+      const rawAlerts = await db
+        .select({
+          id: notifications.id,
+          category: notifications.category,
+          metadata: notifications.metadata,
+          createdAt: notifications.createdAt,
+        })
+        .from(notifications)
+        .where(
+          and(
+            eq(notifications.type, 'admin_alert'),
+            inArray(notifications.category, [
+              'crawl.event_count_dropped',
+              'crawl.failed',
+            ]),
+            isNull(notifications.readAt),
+          ),
+        )
+      // Defensive guard: anything other than a row array (unexpected DB
+      // driver state, a test mock that didn't override this path) collapses
+      // to "no alerts" rather than throwing and 500-ing the whole list.
+      const candidateAlerts = Array.isArray(rawAlerts) ? rawAlerts : []
+
+      for (const alert of candidateAlerts) {
+        const meta = parseAlertMetadata(alert.metadata)
+        if (!meta?.crawlRunId) continue
+        if (!runIds.includes(meta.crawlRunId)) continue
+        const category = alert.category as ActiveCrawlAlert['category']
+        // First match wins; multiple unread alerts on the same row would be
+        // unusual and the operator's clearing one is enough to retest.
+        if (!alertsByRunId.has(meta.crawlRunId)) {
+          alertsByRunId.set(meta.crawlRunId, {
+            notificationId: alert.id,
+            category,
+          })
+        }
+      }
+    }
+
+    const data = dbRuns.map((run) => ({
+      ...run,
+      activeAlert: alertsByRunId.get(run.id) ?? null,
+    }))
+
+    return ctx.json({ success: true, data })
   },
 )
 

@@ -14,6 +14,7 @@ vi.mock('drizzle-orm', () => ({
   desc: vi.fn(),
   asc: vi.fn(),
   inArray: vi.fn(),
+  isNull: vi.fn(),
 }))
 
 vi.mock('@concert-crawl/db', () => ({
@@ -34,6 +35,7 @@ vi.mock('@concert-crawl/db', () => ({
   venues: {},
   crawlRuns: {},
   crawlTriggers: {},
+  notifications: {},
   auditLog: {},
   inviteCodes: {},
 }))
@@ -322,22 +324,137 @@ describe('Admin crawl routes', () => {
       expect(res.status).toBe(400)
     })
 
+    // Helper: queue the two `where`-call impls for one request through
+    // /runs. The route fires `where` twice — first inside the crawl_runs
+    // chain (needs to return the db proxy so .orderBy/.limit can chain),
+    // then inside the notifications scan (whose await resolves to the row
+    // list). `mockImplementationOnce` consumes in queue order, so the
+    // first impl serves crawl_runs and the second serves notifications.
+    function queueRunsThenAlerts(
+      db: typeof import('@concert-crawl/db').db,
+      crawlRunRows: unknown[],
+      notificationRows: unknown[],
+    ): void {
+      vi.mocked(
+        db.select().from().leftJoin().where().orderBy().limit,
+      ).mockResolvedValueOnce(crawlRunRows)
+      vi.mocked(db.select().from().where)
+        .mockImplementationOnce(() => db as never)
+        .mockImplementationOnce(
+          () => Promise.resolve(notificationRows) as never,
+        )
+    }
+
     it('returns list of crawl runs for a venue', async () => {
       adminAuth()
       const { db } = await import('@concert-crawl/db')
-      vi.mocked(
-        db.select().from().leftJoin().where().orderBy().limit,
-      ).mockResolvedValueOnce([mockCrawlRun])
+      queueRunsThenAlerts(db, [mockCrawlRun], [])
       const res = await createApp().request(
         `/v1/admin/crawl/runs?venueId=${VENUE_ID}`,
       )
       expect(res.status).toBe(200)
       const body = (await res.json()) as {
         success: boolean
-        data: (typeof mockCrawlRun)[]
+        data: (typeof mockCrawlRun & { activeAlert: unknown })[]
       }
       expect(body.success).toBe(true)
       expect(Array.isArray(body.data)).toBe(true)
+      expect(body.data[0]?.activeAlert).toBeNull()
+    })
+
+    // #804: when an unread admin_alert notification points at a returned
+    // crawl_run via metadata.crawlRunId, the row surfaces it as activeAlert
+    // so the admin UI can render a Went-dark / Failing badge alongside the
+    // Success status pill.
+    it('attaches activeAlert when an unread notification matches a returned crawl run', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      const NOTIF_ID = '00000000-0000-0000-0000-0000000000aa'
+      queueRunsThenAlerts(
+        db,
+        [mockCrawlRun],
+        [
+          {
+            id: NOTIF_ID,
+            category: 'crawl.event_count_dropped',
+            metadata: JSON.stringify({ venueId: VENUE_ID, crawlRunId: RUN_ID }),
+            createdAt: new Date(),
+          },
+        ],
+      )
+      const res = await createApp().request(
+        `/v1/admin/crawl/runs?venueId=${VENUE_ID}`,
+      )
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as {
+        success: boolean
+        data: {
+          id: string
+          activeAlert: { notificationId: string; category: string } | null
+        }[]
+      }
+      expect(body.data[0]?.activeAlert).toEqual({
+        notificationId: NOTIF_ID,
+        category: 'crawl.event_count_dropped',
+      })
+    })
+
+    it('ignores notifications whose metadata.crawlRunId does not match any returned run', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      queueRunsThenAlerts(
+        db,
+        [mockCrawlRun],
+        [
+          {
+            id: '00000000-0000-0000-0000-0000000000bb',
+            category: 'crawl.failed',
+            metadata: JSON.stringify({
+              venueId: VENUE_ID,
+              crawlRunId: '00000000-0000-0000-0000-0000000000ff', // unrelated
+            }),
+            createdAt: new Date(),
+          },
+        ],
+      )
+      const res = await createApp().request(
+        `/v1/admin/crawl/runs?venueId=${VENUE_ID}`,
+      )
+      const body = (await res.json()) as {
+        data: { activeAlert: unknown }[]
+      }
+      expect(body.data[0]?.activeAlert).toBeNull()
+    })
+
+    it('tolerates malformed notification.metadata without crashing the list', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      queueRunsThenAlerts(
+        db,
+        [mockCrawlRun],
+        [
+          {
+            id: '00000000-0000-0000-0000-0000000000cc',
+            category: 'crawl.failed',
+            metadata: 'not-json-{', // malformed
+            createdAt: new Date(),
+          },
+          {
+            id: '00000000-0000-0000-0000-0000000000dd',
+            category: 'crawl.failed',
+            metadata: null, // missing entirely
+            createdAt: new Date(),
+          },
+        ],
+      )
+      const res = await createApp().request(
+        `/v1/admin/crawl/runs?venueId=${VENUE_ID}`,
+      )
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as {
+        data: { activeAlert: unknown }[]
+      }
+      expect(body.data[0]?.activeAlert).toBeNull()
     })
   })
 })

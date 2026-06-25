@@ -11,7 +11,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { CRAWL_STATUS_BADGES } from './definitions/constants'
+import {
+  CRAWL_ALERT_BADGES,
+  CRAWL_STATUS_BADGES,
+} from './definitions/constants'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 async function fetchCrawlHistory(venueId: string): Promise<CrawlRun[]> {
@@ -76,6 +79,9 @@ export const CrawlHistoryTable = async ({
                 run.status !== 'in_progress'
                   ? CRAWL_STATUS_BADGES[run.status]
                   : null
+              const alertConfig = run.activeAlert
+                ? CRAWL_ALERT_BADGES[run.activeAlert.category]
+                : null
 
               return (
                 <TableRow key={run.id}>
@@ -84,13 +90,23 @@ export const CrawlHistoryTable = async ({
                     {ADMIN_COPY.crawlHistoryTable.timeSuffix}
                   </TableCell>
                   <TableCell>
-                    {badgeConfig ? (
-                      <Badge variant={badgeConfig.variant}>
-                        {badgeConfig.label}
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary">In Progress</Badge>
-                    )}
+                    <span className="inline-flex flex-wrap items-center gap-1.5">
+                      {badgeConfig ? (
+                        <Badge variant={badgeConfig.variant}>
+                          {badgeConfig.label}
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">In Progress</Badge>
+                      )}
+                      {alertConfig && (
+                        <Badge
+                          variant={alertConfig.variant}
+                          title={ADMIN_COPY.crawlHistoryTable.alertBadgeTitle}
+                        >
+                          {alertConfig.label}
+                        </Badge>
+                      )}
+                    </span>
                   </TableCell>
                   <TableCell>
                     {run.extractionStrategyUsed ??
