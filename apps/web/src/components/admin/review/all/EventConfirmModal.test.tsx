@@ -1,12 +1,9 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
-import { afterEach } from 'vitest'
+import { afterEach, describe, it, expect, vi } from 'vitest'
+import { cleanup, render, screen } from '@testing-library/react'
 import { EventConfirmModal } from './EventConfirmModal'
 
-afterEach(() => {
-  cleanup()
-})
+afterEach(cleanup)
 
 describe('EventConfirmModal — mark-as-concert kind', () => {
   it('renders the Mark as concert confirm copy', () => {

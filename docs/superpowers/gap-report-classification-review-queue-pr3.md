@@ -5,7 +5,7 @@
 
 Scope of this PR: PR 3 of 3. PR 1 (schema + LLM signal + crawler INSERT) and PR 2 (backfill script) are out of scope here — each tracked separately.
 
-## IMPLEMENTED (10)
+## IMPLEMENTED (13)
 
 - API `view=hidden-flagged-for-review` query param — `apps/api/src/routes/admin/events.ts` (listQuerySchema + where-clause branch). Returns rows where `hidden_from_consumer=true AND is_concert_review_needed=true`.
 - API list projection includes `isConcertReviewNeeded` — `apps/api/src/routes/admin/events.ts` (baseSelect, ~line 268).
