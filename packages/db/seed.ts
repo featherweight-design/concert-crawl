@@ -1,4 +1,4 @@
-import { and, count, desc, eq, isNull, sql } from 'drizzle-orm'
+import { and, count, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm'
 import { deriveSourceCategory } from '@concert-crawl/types'
 import { db } from './src/client.js'
 import {
@@ -3612,7 +3612,7 @@ async function seed() {
   // downstream submissions block would otherwise leave the seed declaring
   // "PR4 done" with no submissions on those events. The end-of-block
   // marker forces a re-run in that case; the per-event idempotency guard
-  // (`pr4EventHasSubmissions` below) prevents inserting duplicates on the
+  // (`pr4EventCompletedByUser` / `pr4EventCompletedByCounter` below) skips
   // events that already finished.
   const PR4_EXPECTED_COUNT = 9
   const pr4Count = await db
@@ -3847,20 +3847,78 @@ async function seed() {
 
       // Per-event idempotency: price_submissions has no unique constraint
       // beyond the primary key (UUID), so the `.onConflictDoNothing()` calls
-      // below cannot dedupe partial re-runs. Instead, before each event's
-      // submission insert block, check whether that event already has any
-      // submissions; if so, the block already ran and we skip it. This
-      // recovers cleanly when the outer guard re-triggers (e.g. events
-      // inserted but downstream submissions crashed mid-block).
-      const pr4EventHasSubmissions = async (
+      // below cannot dedupe partial re-runs. Each event's insert block has
+      // a designated END-OF-BLOCK marker — the last submission it writes —
+      // and we skip the block only when that marker is present. This is
+      // narrower than "any submissions exist": if a previous run inserted
+      // the headline but crashed before the counter for evY, the marker
+      // (the counter) is absent, so the block re-runs and the missing tail
+      // gets inserted. We accept a small duplication risk on rows that
+      // landed before the crash — but those are tightly scoped to the few
+      // pre-marker inserts in each block.
+      //
+      // Y is special: its end-of-block row is the counter (carries
+      // disputedSubmissionId). For U/V/W/X the marker is the last
+      // submitter on that event (scoped by eventId so a handle like `lola`
+      // shared across V/X disambiguates per event).
+      const pr4EventCompletedByUser = async (
+        eventId: string,
+        finalUserId: string,
+      ): Promise<boolean> => {
+        const rows = await db
+          .select({ id: priceSubmissions.id })
+          .from(priceSubmissions)
+          .where(
+            and(
+              eq(priceSubmissions.eventId, eventId),
+              eq(priceSubmissions.userId, finalUserId),
+            ),
+          )
+          .limit(1)
+        return rows.length > 0
+      }
+      const pr4EventCompletedByCounter = async (
         eventId: string,
       ): Promise<boolean> => {
         const rows = await db
           .select({ id: priceSubmissions.id })
           .from(priceSubmissions)
-          .where(eq(priceSubmissions.eventId, eventId))
+          .where(
+            and(
+              eq(priceSubmissions.eventId, eventId),
+              isNotNull(priceSubmissions.disputedSubmissionId),
+            ),
+          )
           .limit(1)
         return rows.length > 0
+      }
+
+      // Per-row idempotent insert — used inside each event's submission
+      // block so re-running the block (after the outer marker said "redo")
+      // doesn't duplicate rows that already landed. The seed uses each
+      // (eventId, userId) combo at most once per event, so the pair is a
+      // safe natural key. Returns the existing row when present, or the
+      // newly-inserted row otherwise.
+      const pr4UpsertSubmission = async (
+        row: NewPriceSubmission,
+      ): Promise<{ id: string } | null> => {
+        if (!row.eventId || !row.userId) return null
+        const existing = await db
+          .select({ id: priceSubmissions.id })
+          .from(priceSubmissions)
+          .where(
+            and(
+              eq(priceSubmissions.eventId, row.eventId),
+              eq(priceSubmissions.userId, row.userId),
+            ),
+          )
+          .limit(1)
+        if (existing.length > 0) return existing[0] ?? null
+        const inserted = await db
+          .insert(priceSubmissions)
+          .values(row)
+          .returning({ id: priceSubmissions.id })
+        return inserted[0] ?? null
       }
 
       // --- Sold-out reports for Q + R (drives priceStatus='soldout' in API) ---
@@ -3878,10 +3936,13 @@ async function seed() {
       ]
       for (const target of soldOutReportTargets) {
         if (!target.event) continue
-        // Idempotency: events.event_reports has a partial-unique index on
-        // (event_id) WHERE status='sold-out' AND resolved_at IS NULL, plus
-        // we wouldn't want duplicate "promoted" reports per event either.
-        // Skip the insert if a sold-out report for this event already exists.
+        // Idempotency: event_reports has a partial-unique index on
+        // (event_id) WHERE status='sold-out' AND resolved_at IS NOT NULL
+        // AND resolution='promoted' (see migration 0032) — one "active
+        // promoted" sold-out report per event. We insert with
+        // resolved_at = pastDatePr4 + resolution = 'promoted', so a
+        // re-run without this guard hits the unique index. Skip if the
+        // active-promoted row already exists.
         const existingReport = await db
           .select({ id: eventReports.id })
           .from(eventReports)
@@ -3925,7 +3986,11 @@ async function seed() {
       }
 
       // --- U: resale-only single-tier headline -------------------------------
-      if (evU && !(await pr4EventHasSubmissions(evU.id))) {
+      // End-of-block marker: notyourgf's fresh pending (last insert in block).
+      if (
+        evU &&
+        !(await pr4EventCompletedByUser(evU.id, FAKE_USER_IDS.notyourgf))
+      ) {
         const resaleHeadline = await db
           .insert(priceSubmissions)
           .values({
@@ -4009,7 +4074,8 @@ async function seed() {
       }
 
       // --- V: multi-source mixed (GA boxoffice + GA resale alt + VIP boxoffice)
-      if (evV && !(await pr4EventHasSubmissions(evV.id))) {
+      // End-of-block marker: lola's fresh pending GA (last insert in block).
+      if (evV && !(await pr4EventCompletedByUser(evV.id, FAKE_USER_IDS.lola))) {
         const vGaBoxoffice = await db
           .insert(priceSubmissions)
           .values({
@@ -4135,7 +4201,8 @@ async function seed() {
       }
 
       // --- W: mixed-tier (GA corroborated headline, Reserved pending-only) ---
-      if (evW && !(await pr4EventHasSubmissions(evW.id))) {
+      // End-of-block marker: jess's Reserved pending (last insert in block).
+      if (evW && !(await pr4EventCompletedByUser(evW.id, FAKE_USER_IDS.jess))) {
         const wGaHeadline = await db
           .insert(priceSubmissions)
           .values({
@@ -4224,7 +4291,8 @@ async function seed() {
       }
 
       // --- X: multi-tier reports caption (GA tier with N > 1 reports) --------
-      if (evX && !(await pr4EventHasSubmissions(evX.id))) {
+      // End-of-block marker: lola's 4th additional GA report (last insert).
+      if (evX && !(await pr4EventCompletedByUser(evX.id, FAKE_USER_IDS.lola))) {
         const xGaHeadline = await db
           .insert(priceSubmissions)
           .values({
@@ -4348,46 +4416,47 @@ async function seed() {
       // Corroborated headline + counter submission whose
       // lastAdminActionKind='defer' → PendingCardB renders "Admin requested
       // more info" pill, and the dispute-affordance hiding rule kicks in.
-      if (evY && !(await pr4EventHasSubmissions(evY.id))) {
-        const yHeadline = await db
-          .insert(priceSubmissions)
-          .values({
-            eventId: evY.id,
-            userId: FAKE_USER_IDS.riley,
-            priceMin: '125.00',
-            priceMax: '165.00',
-            tier: 'GA' as const,
-            vendor: 'AXS' as const,
-            howFound: 'bought_myself' as const,
-            sourceCategory: 'standard' as const,
-            status: 'corroborated' as const,
-            corroborationCount: 5,
-            note: 'Bought on AXS day-of-sale. GA was $125 face + $40 fees.',
-            createdAt: olderDatePr4,
-            updatedAt: olderDatePr4,
-          })
-          .returning()
-        if (yHeadline[0]) {
+      // End-of-block marker: the counter (disputedSubmissionId IS NOT NULL).
+      // Sub-inserts use pr4UpsertSubmission so a previous run that inserted
+      // the headline but crashed before the counter doesn't duplicate the
+      // headline on re-run (Copilot R5 specifically called this case out).
+      if (evY && !(await pr4EventCompletedByCounter(evY.id))) {
+        const yHeadline = await pr4UpsertSubmission({
+          eventId: evY.id,
+          userId: FAKE_USER_IDS.riley,
+          priceMin: '125.00',
+          priceMax: '165.00',
+          tier: 'GA' as const,
+          vendor: 'AXS' as const,
+          howFound: 'bought_myself' as const,
+          sourceCategory: 'standard' as const,
+          status: 'corroborated' as const,
+          corroborationCount: 5,
+          note: 'Bought on AXS day-of-sale. GA was $125 face + $40 fees.',
+          createdAt: olderDatePr4,
+          updatedAt: olderDatePr4,
+        })
+        if (yHeadline) {
           await db
             .insert(submissionConfirms)
             .values([
               {
-                submissionId: yHeadline[0].id,
+                submissionId: yHeadline.id,
                 userId: FAKE_USER_IDS.amy,
                 method: 'same-vendor' as const,
               },
               {
-                submissionId: yHeadline[0].id,
+                submissionId: yHeadline.id,
                 userId: FAKE_USER_IDS.marco,
                 method: 'same-vendor' as const,
               },
               {
-                submissionId: yHeadline[0].id,
+                submissionId: yHeadline.id,
                 userId: FAKE_USER_IDS.denvermusic,
                 method: 'same-vendor' as const,
               },
               {
-                submissionId: yHeadline[0].id,
+                submissionId: yHeadline.id,
                 userId: FAKE_USER_IDS.bouldergrrl,
                 method: 'same-vendor' as const,
               },
@@ -4398,27 +4467,24 @@ async function seed() {
           // more info (lastAdminActionKind='defer', lastAdminActionAt=past).
           // Counter comes from jordan_m (different from the headline submitter
           // and the confirmers) so the dispute reads like a real disagreement.
-          await db
-            .insert(priceSubmissions)
-            .values({
-              eventId: evY.id,
-              userId: FAKE_USER_IDS.jordan_m,
-              priceMin: '155.00',
-              priceMax: '195.00',
-              tier: 'GA' as const,
-              vendor: 'AXS' as const,
-              howFound: 'saw_listing' as const,
-              sourceCategory: 'standard' as const,
-              status: 'pending' as const,
-              corroborationCount: 1,
-              disputedSubmissionId: yHeadline[0].id,
-              lastAdminActionAt: pastDatePr4,
-              lastAdminActionKind: 'defer' as const,
-              note: 'GA showed $155+ later in the week — might be a different tier or pricing tier change.',
-              createdAt: olderishDatePr4,
-              updatedAt: olderishDatePr4,
-            })
-            .onConflictDoNothing()
+          await pr4UpsertSubmission({
+            eventId: evY.id,
+            userId: FAKE_USER_IDS.jordan_m,
+            priceMin: '155.00',
+            priceMax: '195.00',
+            tier: 'GA' as const,
+            vendor: 'AXS' as const,
+            howFound: 'saw_listing' as const,
+            sourceCategory: 'standard' as const,
+            status: 'pending' as const,
+            corroborationCount: 1,
+            disputedSubmissionId: yHeadline.id,
+            lastAdminActionAt: pastDatePr4,
+            lastAdminActionKind: 'defer' as const,
+            note: 'GA showed $155+ later in the week — might be a different tier or pricing tier change.',
+            createdAt: olderishDatePr4,
+            updatedAt: olderishDatePr4,
+          })
         }
         console.warn(
           'PR4 Event Y: inserted GA headline + counter (jordan_m) with admin defer.',
