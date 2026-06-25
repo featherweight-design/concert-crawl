@@ -209,6 +209,12 @@ export function SubmitPriceModal({
     setFieldErrors({})
     setFieldWarnings({})
     setRaceToast(null)
+    // Reset the per-session error + existing-submission state on every open.
+    // Without this, a previous session's withdraw-error or alreadySubmitted
+    // payload could leak into a fresh session and surface the wrong error
+    // copy (e.g. withdraw-specific message after a submit failure).
+    setWithdrawError(null)
+    setExistingSubmission(null)
     // Reset the form on each open. Without this, the modal — which stays
     // mounted across open/close — would carry over the previous tier
     // selection, defeating the `preselectedTier` from the "+ Add VIP" loop
@@ -758,7 +764,7 @@ export function SubmitPriceModal({
           )}
 
           <ChipGroup
-            label={CONSUMER_COPY.submitPrice.form.tierLabel}
+            label={CONSUMER_COPY.submitPriceV2.tierLabel}
             options={TIER_OPTIONS}
             value={formState.tier}
             onChange={(val) => setFormState((prev) => ({ ...prev, tier: val }))}
@@ -766,7 +772,7 @@ export function SubmitPriceModal({
           />
 
           <ChipGroup
-            label={CONSUMER_COPY.submitPrice.form.vendorLabel}
+            label={CONSUMER_COPY.submitPriceV2.vendorLabel}
             options={VENDOR_OPTIONS}
             value={formState.vendor}
             onChange={(val) =>
