@@ -3221,6 +3221,543 @@ async function seed() {
     console.warn('Phase 8.5 K–P test events already seeded, skipping.')
   }
 
+  // -----------------------------------------------------------------------
+  // PR4 events Q–Y: consumer UI states from PR #788 (price-source-consumer-ui).
+  // Each event lights up at least one branch of
+  // apps/web/src/components/consumer/price-region/lib/decision-tree.ts so a
+  // dev can run `pnpm db:seed` and click through every new component + state.
+  // -----------------------------------------------------------------------
+  const pr4Count = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(eventsTable)
+    .where(sql`title LIKE '[PR4]%'`)
+  const hasPr4 = (pr4Count[0]?.count ?? 0) > 0
+
+  if (!hasPr4) {
+    const allVenuesPr4 = await db.select().from(venues)
+    const findVenue = (slug: string) =>
+      allVenuesPr4.find((vn) => vn.slug === slug) ?? allVenuesPr4[0]
+
+    const venueBluebird = findVenue('bluebird-theater')
+    const venueHiDive = findVenue('hi-dive')
+    const venueLarimer = findVenue('larimer-lounge')
+    const venueMarquis = findVenue('marquis-theater')
+    const venueGothic = findVenue('gothic-theatre')
+    const venueMission = findVenue('mission-ballroom')
+    const venueFillmore = findVenue('fillmore-auditorium')
+    const venueOgden = findVenue('ogden-theatre')
+    const venueRedRocks = findVenue('red-rocks-amphitheatre')
+
+    if (
+      !venueBluebird ||
+      !venueHiDive ||
+      !venueLarimer ||
+      !venueMarquis ||
+      !venueGothic ||
+      !venueMission ||
+      !venueFillmore ||
+      !venueOgden ||
+      !venueRedRocks
+    ) {
+      console.warn('PR4: no venues found — skipping.')
+    } else {
+      const pr4EventRows = [
+        // Q — Sold out with resale ticketLink (decision-tree: sold-out-resale).
+        // Lights up SoldOutPriceCard + FaceValueCard + resale ProvenanceCTA.
+        {
+          venueId: venueBluebird.id,
+          title: '[PR4] Sold Out Resale',
+          artist: '[PR4] Sold Out Resale Artist',
+          date: '2026-07-25',
+          showTime: '20:00',
+          status: 'upcoming' as const,
+          verified: false,
+          ticketLinks: [
+            {
+              kind: 'resale' as const,
+              vendor: 'StubHub',
+              url: 'https://www.stubhub.com/example-resale',
+            },
+          ],
+        },
+        // R — Sold out with no ticketLinks (decision-tree: sold-out-contribute,
+        // §9 Q1 lock). Lights up SoldOutPriceCard variant='no-listing' +
+        // ContributeFaceValueCard.
+        {
+          venueId: venueHiDive.id,
+          title: '[PR4] Sold Out Contribute',
+          artist: '[PR4] Sold Out Contribute Artist',
+          date: '2026-08-01',
+          showTime: '20:00',
+          status: 'upcoming' as const,
+          verified: false,
+          ticketLinks: null,
+        },
+        // S — No priceByTier + resale ticketLink (decision-tree: no-price-resale).
+        // Lights up PriceDisplay no-price + FaceValueCard variant='no-price' +
+        // ProvenanceCTA outline.
+        {
+          venueId: venueLarimer.id,
+          title: '[PR4] No Price Resale',
+          artist: '[PR4] No Price Resale Artist',
+          date: '2026-08-08',
+          showTime: '20:00',
+          status: 'upcoming' as const,
+          verified: false,
+          ticketLinks: [
+            {
+              kind: 'resale' as const,
+              vendor: 'SeatGeek',
+              url: 'https://seatgeek.com/example-resale',
+            },
+          ],
+        },
+        // T — No priceByTier + no ticketLinks (decision-tree: no-price-empty,
+        // §9 Q2-eng lock). Falls through to legacy NoPriceCard only.
+        {
+          venueId: venueMarquis.id,
+          title: '[PR4] No Price Empty',
+          artist: '[PR4] No Price Empty Artist',
+          date: '2026-08-15',
+          showTime: '20:00',
+          status: 'upcoming' as const,
+          verified: false,
+          ticketLinks: null,
+        },
+        // U — Resale-only headline (decision-tree: resale-headline, state #3).
+        // Single tier with sourceCategory='resale' and NO boxoffice/standard
+        // alternate anywhere. Routes to MultiTierLiveCard kind='resale' +
+        // show-level FaceValueCard.
+        {
+          venueId: venueGothic.id,
+          title: '[PR4] Resale Headline',
+          artist: '[PR4] Resale Headline Artist',
+          date: '2026-08-22',
+          showTime: '20:00',
+          status: 'upcoming' as const,
+          verified: false,
+          ticketLinks: [
+            {
+              kind: 'resale' as const,
+              vendor: 'StubHub',
+              url: 'https://www.stubhub.com/example-resale-headline',
+            },
+          ],
+        },
+        // V — Multi-source mixed (decision-tree: multi-source-mixed, state #5).
+        // GA tier has BOTH a boxoffice headline AND a resale alternate (same
+        // tier). VIP tier adds a second tier so priceByTier.length > 1.
+        {
+          venueId: venueMission.id,
+          title: '[PR4] Multi Source Mixed',
+          artist: '[PR4] Multi Source Mixed Artist',
+          date: '2026-08-29',
+          showTime: '20:00',
+          status: 'upcoming' as const,
+          verified: false,
+          priceSource: 'community' as const,
+          ticketLinks: [
+            {
+              kind: 'primary' as const,
+              vendor: 'AXS',
+              url: 'https://www.axs.com/example-primary',
+            },
+          ],
+        },
+        // W — Mixed-tier (decision-tree: mixed-tier, state #6). GA has a
+        // corroborated headline; Reserved has only pending submissions.
+        {
+          venueId: venueFillmore.id,
+          title: '[PR4] Mixed Tier',
+          artist: '[PR4] Mixed Tier Artist',
+          date: '2026-09-05',
+          showTime: '20:00',
+          status: 'upcoming' as const,
+          verified: false,
+          priceSource: 'community' as const,
+        },
+        // X — Multi-tier reports caption (state #19). GA tier has 3+ total
+        // submissions (corroborated + pending) so reports > 1 → meta line shows
+        // "· N reports".
+        {
+          venueId: venueOgden.id,
+          title: '[PR4] Reports Caption',
+          artist: '[PR4] Reports Caption Artist',
+          date: '2026-09-12',
+          showTime: '20:00',
+          status: 'upcoming' as const,
+          verified: false,
+          priceSource: 'community' as const,
+        },
+        // Y — Admin defer engagement pill (state #18). GA has a corroborated
+        // headline + a counter submission whose lastAdminActionKind='defer' →
+        // PendingCardB shows "Admin requested more info" pill.
+        {
+          venueId: venueRedRocks.id,
+          title: '[PR4] Admin Defer',
+          artist: '[PR4] Admin Defer Artist',
+          date: '2026-09-19',
+          showTime: '20:00',
+          status: 'upcoming' as const,
+          verified: false,
+          priceSource: 'community' as const,
+        },
+      ]
+
+      const insertedPr4 = await db
+        .insert(eventsTable)
+        .values(pr4EventRows)
+        .returning()
+      console.warn(`Inserted ${insertedPr4.length} PR4 test events.`)
+
+      const pr4Event = (suffix: string) =>
+        insertedPr4.find((ev) => ev.title === `[PR4] ${suffix}`)
+
+      const evQ = pr4Event('Sold Out Resale')
+      const evR = pr4Event('Sold Out Contribute')
+      const evU = pr4Event('Resale Headline')
+      const evV = pr4Event('Multi Source Mixed')
+      const evW = pr4Event('Mixed Tier')
+      const evX = pr4Event('Reports Caption')
+      const evY = pr4Event('Admin Defer')
+      // Events S, T intentionally have no price submissions (no-price states).
+
+      // --- Sold-out reports for Q + R (drives priceStatus='soldout' in API) ---
+      const pastDatePr4 = new Date(Date.now() - 2 * 86_400_000)
+      const soldOutReportTargets = [
+        { event: evQ, reporter: FAKE_USER_IDS.marco, label: 'Q' },
+        { event: evR, reporter: FAKE_USER_IDS.taylor, label: 'R' },
+      ]
+      for (const target of soldOutReportTargets) {
+        if (!target.event) continue
+        const insertedReport = await db
+          .insert(eventReports)
+          .values({
+            eventId: target.event.id,
+            reporterId: target.reporter,
+            status: 'sold-out' as const,
+            evidenceMethod: 'venue_site' as const,
+            resolvedAt: pastDatePr4,
+            resolution: 'promoted' as const,
+          })
+          .returning()
+        if (insertedReport[0]) {
+          await db
+            .insert(eventReportConfirms)
+            .values([
+              { reportId: insertedReport[0].id, userId: FAKE_USER_IDS.amy },
+              { reportId: insertedReport[0].id, userId: FAKE_USER_IDS.riley },
+              { reportId: insertedReport[0].id, userId: FAKE_USER_IDS.jess },
+            ])
+            .onConflictDoNothing()
+        }
+        console.warn(
+          `PR4 Event ${target.label}: inserted promoted sold-out report + 3 confirms.`,
+        )
+      }
+
+      // --- U: resale-only single-tier headline -------------------------------
+      if (evU) {
+        const resaleHeadline = await db
+          .insert(priceSubmissions)
+          .values({
+            eventId: evU.id,
+            userId: FAKE_USER_IDS.sam,
+            priceMin: '95.00',
+            priceMax: '140.00',
+            tier: 'GA' as const,
+            vendor: 'SeatGeek' as const,
+            howFound: 'saw_listing' as const,
+            sourceCategory: 'resale' as const,
+            status: 'corroborated' as const,
+            corroborationCount: 2,
+            note: 'StubHub listings ranged from $95 to $140 face. No box office number yet.',
+          })
+          .returning()
+        if (resaleHeadline[0]) {
+          await db
+            .insert(submissionConfirms)
+            .values({
+              submissionId: resaleHeadline[0].id,
+              userId: FAKE_USER_IDS.kai,
+              method: 'same-vendor' as const,
+            })
+            .onConflictDoNothing()
+        }
+        console.warn('PR4 Event U: inserted resale-only headline (GA).')
+      }
+
+      // --- V: multi-source mixed (GA boxoffice + GA resale alt + VIP boxoffice)
+      if (evV) {
+        const vGaBoxoffice = await db
+          .insert(priceSubmissions)
+          .values({
+            eventId: evV.id,
+            userId: FAKE_USER_IDS.riley,
+            priceMin: '32.00',
+            priceMax: null,
+            tier: 'GA' as const,
+            vendor: 'VenueBoxOffice' as const,
+            howFound: 'at_the_venue' as const,
+            sourceCategory: 'boxoffice' as const,
+            status: 'corroborated' as const,
+            corroborationCount: 2,
+            note: 'Walked up to Mission box office — GA was $32 even, no fees.',
+          })
+          .returning()
+        if (vGaBoxoffice[0]) {
+          await db
+            .insert(submissionConfirms)
+            .values({
+              submissionId: vGaBoxoffice[0].id,
+              userId: FAKE_USER_IDS.amy,
+              method: 'box-office' as const,
+            })
+            .onConflictDoNothing()
+        }
+
+        // Same tier (GA), resale alternate — surfaces as TierAlternate in
+        // the same block under "Or pay for convenience".
+        await db
+          .insert(priceSubmissions)
+          .values({
+            eventId: evV.id,
+            userId: FAKE_USER_IDS.sam,
+            priceMin: '52.00',
+            priceMax: '78.00',
+            tier: 'GA' as const,
+            vendor: 'Ticketmaster' as const,
+            howFound: 'saw_listing' as const,
+            sourceCategory: 'resale' as const,
+            status: 'corroborated' as const,
+            corroborationCount: 2,
+            note: 'Ticketmaster Verified Resale showed $52-78. Useful if you do not want to wait for the line.',
+          })
+          .onConflictDoNothing()
+
+        // VIP tier — separate boxoffice headline so priceByTier.length > 1.
+        const vVipBoxoffice = await db
+          .insert(priceSubmissions)
+          .values({
+            eventId: evV.id,
+            userId: FAKE_USER_IDS.jess,
+            priceMin: '85.00',
+            priceMax: null,
+            tier: 'VIP' as const,
+            vendor: 'VenueBoxOffice' as const,
+            howFound: 'at_the_venue' as const,
+            sourceCategory: 'boxoffice' as const,
+            status: 'corroborated' as const,
+            corroborationCount: 2,
+          })
+          .returning()
+        if (vVipBoxoffice[0]) {
+          await db
+            .insert(submissionConfirms)
+            .values({
+              submissionId: vVipBoxoffice[0].id,
+              userId: FAKE_USER_IDS.marco,
+              method: 'box-office' as const,
+            })
+            .onConflictDoNothing()
+        }
+        console.warn(
+          'PR4 Event V: inserted GA boxoffice + GA resale alt + VIP boxoffice.',
+        )
+      }
+
+      // --- W: mixed-tier (GA corroborated headline, Reserved pending-only) ---
+      if (evW) {
+        const wGaHeadline = await db
+          .insert(priceSubmissions)
+          .values({
+            eventId: evW.id,
+            userId: FAKE_USER_IDS.marco,
+            priceMin: '42.00',
+            priceMax: '52.00',
+            tier: 'GA' as const,
+            vendor: 'AXS' as const,
+            howFound: 'bought_myself' as const,
+            sourceCategory: 'standard' as const,
+            status: 'corroborated' as const,
+            corroborationCount: 2,
+          })
+          .returning()
+        if (wGaHeadline[0]) {
+          await db
+            .insert(submissionConfirms)
+            .values({
+              submissionId: wGaHeadline[0].id,
+              userId: FAKE_USER_IDS.taylor,
+              method: 'same-vendor' as const,
+            })
+            .onConflictDoNothing()
+        }
+
+        // Reserved tier — pending-only, no headline. Drives the per-tier
+        // "pending · N/2" tell on MixedTierCard's Reserved row.
+        await db
+          .insert(priceSubmissions)
+          .values({
+            eventId: evW.id,
+            userId: FAKE_USER_IDS.jess,
+            priceMin: '78.00',
+            priceMax: '95.00',
+            tier: 'Reserved' as const,
+            vendor: 'Ticketmaster' as const,
+            howFound: 'saw_listing' as const,
+            sourceCategory: 'standard' as const,
+            status: 'pending' as const,
+            corroborationCount: 1,
+            note: 'Reserved seating showed $78-95 on Ticketmaster — one more fan needs to confirm.',
+          })
+          .onConflictDoNothing()
+        console.warn(
+          'PR4 Event W: inserted GA corroborated + Reserved pending (mixed-tier).',
+        )
+      }
+
+      // --- X: multi-tier reports caption (GA tier with N > 1 reports) --------
+      if (evX) {
+        const xGaHeadline = await db
+          .insert(priceSubmissions)
+          .values({
+            eventId: evX.id,
+            userId: FAKE_USER_IDS.riley,
+            priceMin: '38.00',
+            priceMax: '46.00',
+            tier: 'GA' as const,
+            vendor: 'AXS' as const,
+            howFound: 'bought_myself' as const,
+            sourceCategory: 'standard' as const,
+            status: 'corroborated' as const,
+            corroborationCount: 3,
+          })
+          .returning()
+        if (xGaHeadline[0]) {
+          await db
+            .insert(submissionConfirms)
+            .values([
+              {
+                submissionId: xGaHeadline[0].id,
+                userId: FAKE_USER_IDS.amy,
+                method: 'same-vendor' as const,
+              },
+              {
+                submissionId: xGaHeadline[0].id,
+                userId: FAKE_USER_IDS.taylor,
+                method: 'same-vendor' as const,
+              },
+            ])
+            .onConflictDoNothing()
+        }
+
+        // Two additional pending GA submissions so the API's reportsByTier
+        // count for GA = 3 → MultiTierLiveCard meta line appends "· 3 reports".
+        await db
+          .insert(priceSubmissions)
+          .values([
+            {
+              eventId: evX.id,
+              userId: FAKE_USER_IDS.jess,
+              priceMin: '38.00',
+              priceMax: '48.00',
+              tier: 'GA' as const,
+              vendor: 'Ticketmaster' as const,
+              howFound: 'saw_listing' as const,
+              sourceCategory: 'standard' as const,
+              status: 'pending' as const,
+              corroborationCount: 1,
+              note: 'Same GA tier, slightly higher with fees on Ticketmaster.',
+            },
+            {
+              eventId: evX.id,
+              userId: FAKE_USER_IDS.sam,
+              priceMin: '40.00',
+              priceMax: null,
+              tier: 'GA' as const,
+              vendor: 'AXS' as const,
+              howFound: 'saw_listing' as const,
+              sourceCategory: 'standard' as const,
+              status: 'pending' as const,
+              corroborationCount: 1,
+            },
+          ])
+          .onConflictDoNothing()
+        console.warn(
+          'PR4 Event X: inserted GA corroborated + 2 pending (reports=3).',
+        )
+      }
+
+      // --- Y: admin defer engagement pill ------------------------------------
+      // Corroborated headline + counter submission whose
+      // lastAdminActionKind='defer' → PendingCardB renders "Admin requested
+      // more info" pill, and the dispute-affordance hiding rule kicks in.
+      if (evY) {
+        const yHeadline = await db
+          .insert(priceSubmissions)
+          .values({
+            eventId: evY.id,
+            userId: FAKE_USER_IDS.riley,
+            priceMin: '125.00',
+            priceMax: '165.00',
+            tier: 'GA' as const,
+            vendor: 'AXS' as const,
+            howFound: 'bought_myself' as const,
+            sourceCategory: 'standard' as const,
+            status: 'corroborated' as const,
+            corroborationCount: 3,
+            note: 'Bought on AXS day-of-sale. GA was $125 face + $40 fees.',
+          })
+          .returning()
+        if (yHeadline[0]) {
+          await db
+            .insert(submissionConfirms)
+            .values([
+              {
+                submissionId: yHeadline[0].id,
+                userId: FAKE_USER_IDS.amy,
+                method: 'same-vendor' as const,
+              },
+              {
+                submissionId: yHeadline[0].id,
+                userId: FAKE_USER_IDS.marco,
+                method: 'same-vendor' as const,
+              },
+            ])
+            .onConflictDoNothing()
+
+          // Counter submission against the headline — admin has deferred for
+          // more info (lastAdminActionKind='defer', lastAdminActionAt=past).
+          await db
+            .insert(priceSubmissions)
+            .values({
+              eventId: evY.id,
+              userId: FAKE_USER_IDS.sam,
+              priceMin: '155.00',
+              priceMax: '195.00',
+              tier: 'GA' as const,
+              vendor: 'AXS' as const,
+              howFound: 'saw_listing' as const,
+              sourceCategory: 'standard' as const,
+              status: 'pending' as const,
+              corroborationCount: 1,
+              disputedSubmissionId: yHeadline[0].id,
+              lastAdminActionAt: pastDatePr4,
+              lastAdminActionKind: 'defer' as const,
+              note: 'GA showed $155+ later in the week — might be a different tier or pricing tier change.',
+            })
+            .onConflictDoNothing()
+        }
+        console.warn(
+          'PR4 Event Y: inserted GA headline + counter with admin defer.',
+        )
+      }
+    }
+  } else {
+    console.warn('PR4 test events already seeded, skipping.')
+  }
+
   process.exit(0)
 }
 
