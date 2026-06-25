@@ -76,6 +76,16 @@ export const events = pgTable(
     hiddenFromConsumer: boolean('hidden_from_consumer')
       .notNull()
       .default(false),
+    // LLM-classifier uncertainty signal for the isConcert predicate. Set
+    // by the crawler INSERT path when the LLM emits reviewNeeded=true;
+    // crawler-frozen on UPDATE. Written symmetrically (both true and
+    // false isConcert classifications) but only the hidden-and-flagged
+    // slice surfaces in the admin UI today. The one-shot backfill script
+    // (scripts/2026-06-24-isconcert-review-needed-backfill.ts) is the
+    // only post-INSERT writer. Admin actions never touch this column.
+    isConcertReviewNeeded: boolean('is_concert_review_needed')
+      .notNull()
+      .default(false),
     setlist: jsonb('setlist'),
     sourceUrl: text('source_url'),
     sourceHash: text('source_hash'),
