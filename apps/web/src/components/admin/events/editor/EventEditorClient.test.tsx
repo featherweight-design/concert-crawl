@@ -59,6 +59,14 @@ const SAMPLE: EditorEvent = {
   venueId: 'venue-1',
   venueName: 'Mission Ballroom',
   isSoldOut: false,
+  hiddenFromConsumer: false,
+  isConcertReviewNeeded: false,
+}
+
+const HIDDEN_FLAGGED: EditorEvent = {
+  ...SAMPLE,
+  hiddenFromConsumer: true,
+  isConcertReviewNeeded: true,
 }
 
 beforeEach(() => {
@@ -225,28 +233,7 @@ describe('EventEditorClient', () => {
   it('renders the Danger zone section', () => {
     render(<EventEditorClient event={SAMPLE} />)
     expect(screen.getByText('Danger zone')).toBeTruthy()
-    expect(
-      screen.getByRole('button', { name: 'Mark non-concert' }),
-    ).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Delete event…' })).toBeTruthy()
-  })
-
-  it('PATCHes hiddenFromConsumer when confirming Mark non-concert', async () => {
-    render(<EventEditorClient event={SAMPLE} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Mark non-concert' }))
-    const dialog = await screen.findByRole('dialog')
-    fireEvent.click(
-      within(dialog).getByRole('button', { name: 'Mark non-concert' }),
-    )
-    await waitFor(() => {
-      expect(mockApiPatch).toHaveBeenCalledTimes(1)
-    })
-    const [url, , body] = mockApiPatch.mock.calls[0] ?? []
-    expect(url).toBe('/v1/admin/events/evt-1')
-    expect(body).toEqual({ hiddenFromConsumer: true })
-    await waitFor(() => {
-      expect(mockRouterRefresh).toHaveBeenCalled()
-    })
   })
 
   it('DELETEs and redirects when confirming Delete event', async () => {
@@ -274,5 +261,77 @@ describe('EventEditorClient', () => {
     const dialog = await screen.findByRole('dialog')
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
     expect(mockApiDelete).not.toHaveBeenCalled()
+  })
+})
+
+describe('EventEditorClient — classification', () => {
+  it('renders Mark non-concert in Classification section when visible', () => {
+    render(<EventEditorClient event={SAMPLE} />)
+    // Button now lives in the Classification section, not Danger zone
+    const buttons = screen.getAllByRole('button', { name: 'Mark non-concert' })
+    expect(buttons.length).toBe(1)
+  })
+
+  it('Danger zone shows only Merge + Delete (no Mark non-concert)', () => {
+    render(<EventEditorClient event={SAMPLE} />)
+    expect(screen.getByText('Danger zone')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Delete event…' })).toBeTruthy()
+    // Verify the Danger zone region itself does NOT contain Mark non-concert
+    const dangerHeading = screen.getByText('Danger zone')
+    const dangerSection =
+      dangerHeading.closest('[data-section]') ?? dangerHeading.parentElement
+    if (dangerSection) {
+      expect(
+        within(dangerSection as HTMLElement).queryByRole('button', {
+          name: 'Mark non-concert',
+        }),
+      ).toBeNull()
+    }
+  })
+
+  it('PATCHes hiddenFromConsumer=true when confirming Mark non-concert from Classification', async () => {
+    render(<EventEditorClient event={SAMPLE} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Mark non-concert' }))
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Mark non-concert' }),
+    )
+    await waitFor(() => {
+      expect(mockApiPatch).toHaveBeenCalledTimes(1)
+    })
+    const [url, , body] = mockApiPatch.mock.calls[0] ?? []
+    expect(url).toBe('/v1/admin/events/evt-1')
+    expect(body).toEqual({ hiddenFromConsumer: true })
+    await waitFor(() => {
+      expect(mockRouterRefresh).toHaveBeenCalled()
+    })
+  })
+
+  it('renders Mark as concert + review-needed pill when hidden and flagged', () => {
+    render(<EventEditorClient event={HIDDEN_FLAGGED} />)
+    expect(screen.getByRole('button', { name: 'Mark as concert' })).toBeTruthy()
+    expect(screen.getByText('LLM flagged for review')).toBeTruthy()
+    // Mark non-concert should NOT render when already hidden
+    expect(
+      screen.queryByRole('button', { name: 'Mark non-concert' }),
+    ).toBeNull()
+  })
+
+  it('PATCHes hiddenFromConsumer=false when confirming Mark as concert', async () => {
+    render(<EventEditorClient event={HIDDEN_FLAGGED} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Mark as concert' }))
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Mark as concert' }),
+    )
+    await waitFor(() => {
+      expect(mockApiPatch).toHaveBeenCalledTimes(1)
+    })
+    const [url, , body] = mockApiPatch.mock.calls[0] ?? []
+    expect(url).toBe('/v1/admin/events/evt-1')
+    expect(body).toEqual({ hiddenFromConsumer: false })
+    await waitFor(() => {
+      expect(mockRouterRefresh).toHaveBeenCalled()
+    })
   })
 })
