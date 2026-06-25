@@ -341,6 +341,30 @@ describe('extractWithLlm', () => {
     expect(call.max_tokens).toBeGreaterThanOrEqual(32_000)
   })
 
+  it('passes more than the legacy 50K char cap to the model (input-window regression guard)', async () => {
+    // The pre-2026-06-25 cleanHtml cap of 50K chars was clipping the
+    // event list on large venues before the model ever saw it; the
+    // Red Rocks crawl that succeeded the day before only saw ~half of
+    // the rendered grid. This guard locks the post-fix budget by feeding
+    // 150K chars of synthetic text content and asserting that what
+    // reaches the user message is substantially larger than the old cap.
+    mockCreate.mockResolvedValue(makeAnthropicResponse([]))
+    // 150_000 'x' characters wrapped in a single span so the tag-strip
+    // pass leaves the bulk of the content intact for the substring step.
+    const bulkText = 'x'.repeat(150_000)
+    const largeHtml = `<html><body><span>${bulkText}</span></body></html>`
+
+    await extractWithLlm(largeHtml, SOURCE_URL)
+
+    const call = mockCreate.mock.calls[0]?.[0]
+    const userContent: string = call.messages[0].content
+    // The legacy 50K cap would have truncated bulkText. The new 200K cap
+    // should let nearly all of it through; we assert "more than the old
+    // cap" to keep the test stable against minor cleanHtml tweaks.
+    const bulkInUserMsg = (userContent.match(/x/g) ?? []).length
+    expect(bulkInUserMsg).toBeGreaterThan(50_000)
+  })
+
   it("logs 'llm.output_truncated' when stop_reason is max_tokens", async () => {
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
     try {
