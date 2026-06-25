@@ -3825,7 +3825,7 @@ async function seed() {
       const existingPr4 = await db
         .select()
         .from(eventsTable)
-        .where(sql`title LIKE '[PR4]%'`)
+        .where(like(eventsTable.title, '[PR4]%'))
       const existingPr4Titles = new Set(existingPr4.map((ev) => ev.title))
       const newPr4EventRows = pr4EventRows.filter(
         (row) => !existingPr4Titles.has(row.title),
@@ -4545,6 +4545,23 @@ async function seed() {
             )
             .returning({ id: priceSubmissions.id })
           if (counterUpdated.length === 0) {
+            // Clear any OTHER pending counter on this headline before
+            // inserting ours. Migration 0041 enforces a partial UNIQUE
+            // on (disputed_submission_id) WHERE status='pending', so a
+            // pending counter from a different user (e.g. left over
+            // from a stale seed run or an admin test) would crash the
+            // INSERT below. counterUpdated being 0 already proves
+            // jordan_m has no row, so deleting "all pending counters
+            // for this headline" is safe — it won't touch the row
+            // we'd want to keep.
+            await db
+              .delete(priceSubmissions)
+              .where(
+                and(
+                  eq(priceSubmissions.disputedSubmissionId, yHeadline.id),
+                  eq(priceSubmissions.status, 'pending'),
+                ),
+              )
             await db.insert(priceSubmissions).values({
               eventId: evY.id,
               userId: FAKE_USER_IDS.jordan_m,
