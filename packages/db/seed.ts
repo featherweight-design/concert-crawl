@@ -3845,22 +3845,25 @@ async function seed() {
       const evY = pr4Event('Admin Defer')
       // Events S, T intentionally have no price submissions (no-price states).
 
-      // Per-event idempotency: price_submissions has no unique constraint
-      // beyond the primary key (UUID), so the `.onConflictDoNothing()` calls
-      // below cannot dedupe partial re-runs. Each event's insert block has
-      // a designated END-OF-BLOCK marker — the last submission it writes —
-      // and we skip the block only when that marker is present. This is
-      // narrower than "any submissions exist": if a previous run inserted
-      // the headline but crashed before the counter for evY, the marker
-      // (the counter) is absent, so the block re-runs and the missing tail
-      // gets inserted. We accept a small duplication risk on rows that
-      // landed before the crash — but those are tightly scoped to the few
-      // pre-marker inserts in each block.
+      // Per-event idempotency: price_submissions DOES have some partial
+      // unique indexes (migration 0040: one corroborated boxoffice row per
+      // (event,tier,source_category); 0041: one pending counter per
+      // disputed_submission_id), but neither of those covers the full set
+      // of (event,user,tier,vendor) combos this seed inserts. So
+      // `.onConflictDoNothing()` cannot dedupe arbitrary partial re-runs
+      // on its own.
       //
-      // Y is special: its end-of-block row is the counter (carries
-      // disputedSubmissionId). For U/V/W/X the marker is the last
-      // submitter on that event (scoped by eventId so a handle like `lola`
-      // shared across V/X disambiguates per event).
+      // Strategy: each event's insert block has a designated END-OF-BLOCK
+      // marker — the last submission it writes — and we skip the block
+      // when that marker is present. This is narrower than "any
+      // submissions exist": if a previous run inserted the headline but
+      // crashed before the counter for evY, the marker (the counter) is
+      // absent, so the block re-runs. Inside Y's block (the case most
+      // likely to crash partially — only 2 rows), each insert uses
+      // pr4UpsertSubmission for true per-row idempotency on (eventId,
+      // userId). U/V/W/X's marker is the last submitter on that event;
+      // tighter per-row idempotency for those blocks could land in a
+      // follow-up if partial crashes turn out to be an issue in practice.
       const pr4EventCompletedByUser = async (
         eventId: string,
         finalUserId: string,
@@ -3943,6 +3946,11 @@ async function seed() {
         // resolved_at = pastDatePr4 + resolution = 'promoted', so a
         // re-run without this guard hits the unique index. Skip if the
         // active-promoted row already exists.
+        // Match the unique-index predicate EXACTLY — status='sold-out' AND
+        // resolved_at IS NOT NULL AND resolution='promoted'. A narrower
+        // check is intentional: an unresolved (resolved_at=NULL) or
+        // non-promoted sold-out report should NOT cause us to skip
+        // inserting the promoted row that drives PR4 sold-out UI states.
         const existingReport = await db
           .select({ id: eventReports.id })
           .from(eventReports)
@@ -3950,12 +3958,14 @@ async function seed() {
             and(
               eq(eventReports.eventId, target.event.id),
               eq(eventReports.status, 'sold-out'),
+              isNotNull(eventReports.resolvedAt),
+              eq(eventReports.resolution, 'promoted'),
             ),
           )
           .limit(1)
         if (existingReport.length > 0) {
           console.warn(
-            `PR4 Event ${target.label}: sold-out report already present, skipping.`,
+            `PR4 Event ${target.label}: promoted sold-out report already present, skipping.`,
           )
           continue
         }
