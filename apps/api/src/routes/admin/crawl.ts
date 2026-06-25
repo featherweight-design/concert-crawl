@@ -9,6 +9,7 @@ import {
   crawlTriggers,
   notifications,
 } from '@concert-crawl/db'
+import type { ActiveCrawlAlert } from '@concert-crawl/types'
 import { getAuthUser } from '../../middleware/auth.js'
 import type { AdminVariables } from './index.js'
 
@@ -25,10 +26,11 @@ const alertMetadataSchema = z.object({
   crawlRunId: z.string().uuid().optional(),
 })
 
-interface ActiveCrawlAlert {
-  notificationId: string
-  category: 'crawl.event_count_dropped' | 'crawl.failed'
-}
+// Cap the unread-notification scan. The list endpoint defaults to 10 runs
+// per page; surfacing alerts for those rows never needs more than a few
+// hundred unread notifications. Without this cap a growing unread inbox
+// would slow down every admin Crawl History page view.
+const ACTIVE_ALERT_SCAN_LIMIT = 500
 
 function parseAlertMetadata(
   raw: string | null,
@@ -157,17 +159,25 @@ crawlAdminRouter.get(
   },
 )
 
-// GET /v1/admin/crawl/runs?venueId=:id&limit=10 — list crawl runs (optionally filtered by venue)
+// GET /v1/admin/crawl/runs?venueId=:id&limit=10&hasAlert=true — list crawl
+// runs (optionally filtered by venue and/or to only those with an active
+// admin_alert pointing at them). hasAlert is the surface that satisfies
+// #804's "find suspicious runs quickly" workflow without forcing operators
+// to scan the full list.
 const listQuerySchema = z.object({
   venueId: z.string().uuid().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(10),
+  hasAlert: z
+    .union([z.literal('true'), z.literal('false')])
+    .optional()
+    .transform((value) => value === 'true'),
 })
 
 crawlAdminRouter.get(
   '/runs',
   zValidator('query', listQuerySchema),
   async (ctx) => {
-    const { venueId, limit } = ctx.req.valid('query')
+    const { venueId, limit, hasAlert } = ctx.req.valid('query')
 
     const dbRuns = await db
       .select({
@@ -202,7 +212,9 @@ crawlAdminRouter.get(
     // badge clears.
     const alertsByRunId = new Map<string, ActiveCrawlAlert>()
     if (dbRuns.length > 0) {
-      const runIds = dbRuns.map((run) => run.id)
+      // Set lookup keeps the inner check O(1) regardless of how many
+      // candidate alerts come back from the notifications scan.
+      const runIdSet = new Set(dbRuns.map((run) => run.id))
       const rawAlerts = await db
         .select({
           id: notifications.id,
@@ -221,6 +233,12 @@ crawlAdminRouter.get(
             isNull(notifications.readAt),
           ),
         )
+        // Newest-first + bounded scan. Without explicit ordering the
+        // "first match wins" tie-break below would be non-deterministic;
+        // newest-first is also the intuitive choice (most recent alert
+        // is the operator's likely concern).
+        .orderBy(desc(notifications.createdAt))
+        .limit(ACTIVE_ALERT_SCAN_LIMIT)
       // Defensive guard: anything other than a row array (unexpected DB
       // driver state, a test mock that didn't override this path) collapses
       // to "no alerts" rather than throwing and 500-ing the whole list.
@@ -229,7 +247,7 @@ crawlAdminRouter.get(
       for (const alert of candidateAlerts) {
         const meta = parseAlertMetadata(alert.metadata)
         if (!meta?.crawlRunId) continue
-        if (!runIds.includes(meta.crawlRunId)) continue
+        if (!runIdSet.has(meta.crawlRunId)) continue
         const category = alert.category as ActiveCrawlAlert['category']
         // First match wins; multiple unread alerts on the same row would be
         // unusual and the operator's clearing one is enough to retest.
@@ -242,10 +260,19 @@ crawlAdminRouter.get(
       }
     }
 
-    const data = dbRuns.map((run) => ({
+    const annotated = dbRuns.map((run) => ({
       ...run,
       activeAlert: alertsByRunId.get(run.id) ?? null,
     }))
+
+    // hasAlert=true narrows the list to suspicious runs only — the
+    // "find quickly" workflow from #804. We do this in JS rather than
+    // SQL so the same notifications scan answers both questions
+    // (which rows have alerts + what those alerts are) without a
+    // second join.
+    const data = hasAlert
+      ? annotated.filter((run) => run.activeAlert !== null)
+      : annotated
 
     return ctx.json({ success: true, data })
   },

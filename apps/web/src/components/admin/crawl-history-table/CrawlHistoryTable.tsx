@@ -15,33 +15,52 @@ import {
   CRAWL_ALERT_BADGES,
   CRAWL_STATUS_BADGES,
 } from './definitions/constants'
+import { CrawlHistoryFilter } from './CrawlHistoryFilter'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
-async function fetchCrawlHistory(venueId: string): Promise<CrawlRun[]> {
+async function fetchCrawlHistory(
+  venueId: string,
+  hasAlert: boolean,
+): Promise<CrawlRun[]> {
   const { getToken } = await auth()
   const token = await getToken()
   if (!token) throw new Error('Not authenticated')
 
-  return apiClient.get<CrawlRun[]>(
-    `/v1/admin/crawl/runs?venueId=${venueId}&limit=10`,
-    token,
-  )
+  const query = new URLSearchParams({ venueId, limit: '10' })
+  if (hasAlert) query.set('hasAlert', 'true')
+  return apiClient.get<CrawlRun[]>(`/v1/admin/crawl/runs?${query}`, token)
 }
 
 interface CrawlHistoryTableProps {
   venueId: string
+  // When true, only crawl runs with an active admin alert are returned.
+  // Driven by the "Show alerts only" filter — surfaced as a URL search
+  // param so the server component re-renders without client state (#804).
+  hasAlert?: boolean
+  // Base path the filter's "Show all" / "Show alerts only" links point at.
+  // The consumer page knows its own route; the component doesn't assume.
+  // Defaults to the current path with the query stripped, derived by the
+  // consumer.
+  basePath?: string
 }
 
 export const CrawlHistoryTable = async ({
   venueId,
+  hasAlert = false,
+  basePath,
 }: CrawlHistoryTableProps) => {
-  const runs = await fetchCrawlHistory(venueId)
+  const runs = await fetchCrawlHistory(venueId, hasAlert)
 
   return (
     <section aria-label={ADMIN_COPY.crawlHistoryTable.heading}>
-      <h2 className="text-lg font-semibold mb-3">
-        {ADMIN_COPY.crawlHistoryTable.heading}
-      </h2>
+      <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+        <h2 className="text-lg font-semibold">
+          {ADMIN_COPY.crawlHistoryTable.heading}
+        </h2>
+        {basePath !== undefined && (
+          <CrawlHistoryFilter basePath={basePath} hasAlert={hasAlert} />
+        )}
+      </div>
       {runs.length === 0 ? (
         <p className="text-sm text-fg-muted">
           {ADMIN_COPY.crawlHistoryTable.empty}
@@ -102,6 +121,9 @@ export const CrawlHistoryTable = async ({
                         <Badge
                           variant={alertConfig.variant}
                           title={ADMIN_COPY.crawlHistoryTable.alertBadgeTitle}
+                          aria-label={
+                            ADMIN_COPY.crawlHistoryTable.alertBadgeAriaLabel
+                          }
                         >
                           {alertConfig.label}
                         </Badge>

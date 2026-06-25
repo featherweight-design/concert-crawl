@@ -324,25 +324,20 @@ describe('Admin crawl routes', () => {
       expect(res.status).toBe(400)
     })
 
-    // Helper: queue the two `where`-call impls for one request through
-    // /runs. The route fires `where` twice — first inside the crawl_runs
-    // chain (needs to return the db proxy so .orderBy/.limit can chain),
-    // then inside the notifications scan (whose await resolves to the row
-    // list). `mockImplementationOnce` consumes in queue order, so the
-    // first impl serves crawl_runs and the second serves notifications.
+    // Helper: queue the two terminal `.limit()` mocks for one request
+    // through /runs. Both the crawl_runs chain and the notifications
+    // scan end in `.orderBy().limit()`, so the same `limit` mock handles
+    // both — first call (crawl_runs) consumes the first queued value,
+    // second call (notifications) consumes the second. The intermediate
+    // `where()` and `orderBy()` calls use the default `mockReturnThis()`.
     function queueRunsThenAlerts(
       db: typeof import('@concert-crawl/db').db,
       crawlRunRows: unknown[],
       notificationRows: unknown[],
     ): void {
-      vi.mocked(
-        db.select().from().leftJoin().where().orderBy().limit,
-      ).mockResolvedValueOnce(crawlRunRows)
-      vi.mocked(db.select().from().where)
-        .mockImplementationOnce(() => db as never)
-        .mockImplementationOnce(
-          () => Promise.resolve(notificationRows) as never,
-        )
+      vi.mocked(db.select().from().leftJoin().where().orderBy().limit)
+        .mockResolvedValueOnce(crawlRunRows)
+        .mockResolvedValueOnce(notificationRows)
     }
 
     it('returns list of crawl runs for a venue', async () => {
@@ -454,6 +449,63 @@ describe('Admin crawl routes', () => {
       const body = (await res.json()) as {
         data: { activeAlert: unknown }[]
       }
+      expect(body.data[0]?.activeAlert).toBeNull()
+    })
+
+    // #804: hasAlert=true narrows the response to suspicious runs only.
+    // Operator-facing "find quickly" workflow without scanning the full
+    // list.
+    it('hasAlert=true returns only runs whose activeAlert is non-null', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      const RUN_WITH_ALERT = '00000000-0000-0000-0000-0000000000e1'
+      const RUN_NO_ALERT = '00000000-0000-0000-0000-0000000000e2'
+      queueRunsThenAlerts(
+        db,
+        [
+          { ...mockCrawlRun, id: RUN_WITH_ALERT },
+          { ...mockCrawlRun, id: RUN_NO_ALERT },
+        ],
+        [
+          {
+            id: '00000000-0000-0000-0000-0000000000aa',
+            category: 'crawl.event_count_dropped',
+            metadata: JSON.stringify({
+              venueId: VENUE_ID,
+              crawlRunId: RUN_WITH_ALERT,
+            }),
+            createdAt: new Date(),
+          },
+        ],
+      )
+      const res = await createApp().request(
+        `/v1/admin/crawl/runs?venueId=${VENUE_ID}&hasAlert=true`,
+      )
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as {
+        data: { id: string; activeAlert: unknown }[]
+      }
+      expect(body.data).toHaveLength(1)
+      expect(body.data[0]?.id).toBe(RUN_WITH_ALERT)
+      expect(body.data[0]?.activeAlert).not.toBeNull()
+    })
+
+    it('hasAlert=false returns the full list including runs with no alert', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      queueRunsThenAlerts(
+        db,
+        [{ ...mockCrawlRun, id: RUN_ID }],
+        [], // no unread notifications
+      )
+      const res = await createApp().request(
+        `/v1/admin/crawl/runs?venueId=${VENUE_ID}&hasAlert=false`,
+      )
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as {
+        data: { id: string; activeAlert: unknown }[]
+      }
+      expect(body.data).toHaveLength(1)
       expect(body.data[0]?.activeAlert).toBeNull()
     })
   })

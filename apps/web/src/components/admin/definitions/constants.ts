@@ -13,13 +13,20 @@ export const CRAWL_STATUS_BADGES: Record<CrawlStatus, CrawlStatusBadgeConfig> =
 
 // Additive alert pill rendered alongside the status pill when an unread
 // admin_alert notification points at this crawl_run (#804). Lets an operator
-// see at a glance that a "Success" row actually tripped the went-dark check.
+// see at a glance that a "Success" row actually tripped the went-dark check
+// or a 3-failure consecutive auto-pause.
+//
+// The 'crawl.event_count_dropped' category covers BOTH "went dark" (0
+// events) and "dropped sharply" (non-zero but well below baseline) — the
+// notification body distinguishes the two. The badge label is therefore
+// neutral ("Event drop") so it reads correctly for both cases; operators
+// open the notification for the specific severity + numbers.
 export const CRAWL_ALERT_BADGES: Record<
   ActiveCrawlAlert['category'],
   CrawlStatusBadgeConfig
 > = {
   'crawl.event_count_dropped': {
-    label: 'Went dark',
+    label: 'Event drop',
     variant: 'destructive',
   },
   'crawl.failed': {

@@ -512,6 +512,11 @@ export const ADMIN_COPY = {
     timeSuffix: 'MT',
     alertBadgeTitle:
       'An unread admin alert is associated with this crawl run. Mark the notification as read to clear this badge.',
+    alertBadgeAriaLabel:
+      'This crawl run has an unread admin alert. Visit the notifications inbox for details.',
+    filterShowAll: 'Show all',
+    filterAlertsOnly: 'Show alerts only',
+    filterAriaLabel: 'Filter crawl history by active alert state',
   },
 
   crawlStatusTable: {
