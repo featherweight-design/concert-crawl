@@ -243,11 +243,14 @@ export interface CrawlRun {
   startedAt?: string | null
   // Surfaces an unread admin_alert notification of category
   // 'crawl.event_count_dropped' (covers both went-dark and sharp-drop)
-  // or 'crawl.failed' (consecutive-failure auto-pause) that points at
-  // this run. The admin UI renders a badge alongside the status pill so a
-  // "Success" row that tripped the event-count alert is no longer silent
-  // (#804). `severity` lets the badge distinguish "Went dark" from
-  // "Dropped sharply" without round-tripping the notification body.
+  // or 'crawl.failed' (any run that brings a venue's consecutive failure
+  // count to >=3 — auto-pause is the specific case where the count hits
+  // exactly 3 on a non-blocked venue, but the alert fires on every
+  // subsequent failure too) that points at this run. The admin UI
+  // renders a badge alongside the status pill so a "Success" row that
+  // tripped the event-count alert is no longer silent (#804). `severity`
+  // lets the badge distinguish "Went dark" from "Dropped sharply"
+  // without round-tripping the notification body.
   activeAlert?: ActiveCrawlAlert | null
 }
 
