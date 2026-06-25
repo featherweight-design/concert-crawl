@@ -1,4 +1,14 @@
-import { and, count, desc, eq, isNotNull, isNull, like, sql } from 'drizzle-orm'
+import {
+  and,
+  count,
+  desc,
+  eq,
+  isNotNull,
+  isNull,
+  like,
+  ne,
+  sql,
+} from 'drizzle-orm'
 import { deriveSourceCategory } from '@concert-crawl/types'
 import { db } from './src/client.js'
 import {
@@ -4532,8 +4542,25 @@ async function seed() {
           // pr4EventCompletedByCounter marker correctly reports incomplete
           // and re-triggers this block — but a plain upsert helper would
           // find the existing (eventId, userId) row and short-circuit
-          // without restoring it to pending+defer. UPDATE first; INSERT
-          // only when no row exists.
+          // without restoring it to pending+defer. Pre-clear stranger
+          // pending counters → UPDATE jordan_m's row → INSERT if missing.
+          //
+          // Migration 0041 enforces a partial UNIQUE on
+          // (disputed_submission_id) WHERE status='pending'. Both the
+          // UPDATE-to-pending and the INSERT-when-missing can violate it
+          // if a pending counter from a *different* user (e.g. left over
+          // from a stale seed run or admin test) exists for this
+          // headline. Clear those rows first; the `ne(userId, jordan_m)`
+          // guard preserves jordan_m's row for the UPDATE branch.
+          await db
+            .delete(priceSubmissions)
+            .where(
+              and(
+                eq(priceSubmissions.disputedSubmissionId, yHeadline.id),
+                eq(priceSubmissions.status, 'pending'),
+                ne(priceSubmissions.userId, FAKE_USER_IDS.jordan_m),
+              ),
+            )
           const counterUpdated = await db
             .update(priceSubmissions)
             .set({
@@ -4559,23 +4586,6 @@ async function seed() {
             )
             .returning({ id: priceSubmissions.id })
           if (counterUpdated.length === 0) {
-            // Clear any OTHER pending counter on this headline before
-            // inserting ours. Migration 0041 enforces a partial UNIQUE
-            // on (disputed_submission_id) WHERE status='pending', so a
-            // pending counter from a different user (e.g. left over
-            // from a stale seed run or an admin test) would crash the
-            // INSERT below. counterUpdated being 0 already proves
-            // jordan_m has no row, so deleting "all pending counters
-            // for this headline" is safe — it won't touch the row
-            // we'd want to keep.
-            await db
-              .delete(priceSubmissions)
-              .where(
-                and(
-                  eq(priceSubmissions.disputedSubmissionId, yHeadline.id),
-                  eq(priceSubmissions.status, 'pending'),
-                ),
-              )
             await db.insert(priceSubmissions).values({
               eventId: evY.id,
               userId: FAKE_USER_IDS.jordan_m,
