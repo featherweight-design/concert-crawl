@@ -46,29 +46,51 @@ describe('createLogger', () => {
 })
 
 describe('reportFailure', () => {
-  let consoleSpy: ReturnType<typeof vi.spyOn>
+  let errorSpy: ReturnType<typeof vi.spyOn>
+  let warnSpy: ReturnType<typeof vi.spyOn>
+  let logSpy: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
     captureMessageSpy.mockClear()
-    consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
   })
 
   afterEach(() => {
-    consoleSpy.mockRestore()
+    errorSpy.mockRestore()
+    warnSpy.mockRestore()
+    logSpy.mockRestore()
   })
 
-  it('writes a structured JSON log to stdout matching the report shape', () => {
+  it("severity 'error' writes via console.error (stderr) with the report payload", () => {
     reportFailure({
       event: 'llm.invalid_tool_input',
       severity: 'error',
       sourceUrl: 'https://example.com/events',
     })
 
-    expect(consoleSpy).toHaveBeenCalledOnce()
-    const logged = JSON.parse(String(consoleSpy.mock.calls[0]?.[0]))
+    expect(errorSpy).toHaveBeenCalledOnce()
+    expect(warnSpy).not.toHaveBeenCalled()
+    expect(logSpy).not.toHaveBeenCalled()
+    const logged = JSON.parse(String(errorSpy.mock.calls[0]?.[0]))
     expect(logged.event).toBe('llm.invalid_tool_input')
     expect(logged.severity).toBe('error')
     expect(logged.sourceUrl).toBe('https://example.com/events')
+  })
+
+  it("severity 'warn' writes via console.warn (stderr) — preserves prior stream semantics", () => {
+    reportFailure({
+      event: 'email.misconfigured',
+      severity: 'warn',
+      varName: 'ADMIN_URL',
+    })
+
+    expect(warnSpy).toHaveBeenCalledOnce()
+    expect(errorSpy).not.toHaveBeenCalled()
+    expect(logSpy).not.toHaveBeenCalled()
+    const logged = JSON.parse(String(warnSpy.mock.calls[0]?.[0]))
+    expect(logged.severity).toBe('warn')
   })
 
   it("forwards severity 'error' to Sentry as level 'error' with extra context", () => {
@@ -111,16 +133,16 @@ describe('reportFailure', () => {
     expect(options.extra).toEqual({ sourceUrl: 'https://example.com' })
   })
 
-  it('still emits the stdout log even when Sentry forwarding is the primary intent', () => {
+  it('emits both the stderr log and the Sentry capture for the same call', () => {
     // Preserves backward compatibility with operators / dashboards that
-    // grep stdout for these structured events.
+    // grep stderr for these structured events.
     reportFailure({
       event: 'crawl.event_count_alert.error',
       severity: 'error',
       venueId: 'venue-9',
     })
 
-    expect(consoleSpy).toHaveBeenCalledOnce()
+    expect(errorSpy).toHaveBeenCalledOnce()
     expect(captureMessageSpy).toHaveBeenCalledOnce()
   })
 })

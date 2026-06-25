@@ -45,7 +45,7 @@ describe('sendCrawlFailureEmail', () => {
 
   it('skips sending + logs warning when RESEND_API_KEY is not set', async () => {
     delete process.env.RESEND_API_KEY
-    const warnSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     try {
       const { sendCrawlFailureEmail } = await import('./email.js')
       await sendCrawlFailureEmail({
@@ -67,7 +67,7 @@ describe('sendCrawlFailureEmail', () => {
 
   it('skips sending + logs warning when ADMIN_EMAIL is not set', async () => {
     delete process.env.ADMIN_EMAIL
-    const warnSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     try {
       const { sendCrawlFailureEmail } = await import('./email.js')
       await sendCrawlFailureEmail({
@@ -159,7 +159,7 @@ describe('sendEventCountDropEmail', () => {
 
   it('skips sending + logs warning when RESEND_API_KEY is missing', async () => {
     delete process.env.RESEND_API_KEY
-    const warnSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     try {
       const { sendEventCountDropEmail } = await import('./email.js')
       await sendEventCountDropEmail({
@@ -392,7 +392,7 @@ describe('admin crawl URL construction', () => {
   // a diagnostic so the operator can fix it.
   it('falls back to prod default + logs when ADMIN_URL is malformed', async () => {
     process.env.ADMIN_URL = 'not a url'
-    const warnSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     try {
       const { sendEventCountDropEmail } = await import('./email.js')
       await sendEventCountDropEmail({
@@ -425,7 +425,7 @@ describe('admin crawl URL construction', () => {
   it('warns when ADMIN_URL is unset in a non-prod env', async () => {
     process.env.SENTRY_ENVIRONMENT = 'staging'
     delete process.env.ADMIN_URL
-    const warnSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     try {
       const { sendEventCountDropEmail } = await import('./email.js')
       await sendEventCountDropEmail({
@@ -450,7 +450,7 @@ describe('admin crawl URL construction', () => {
   it('does NOT warn when ADMIN_URL is unset in production (default is correct)', async () => {
     process.env.SENTRY_ENVIRONMENT = 'production'
     delete process.env.ADMIN_URL
-    const warnSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     try {
       const { sendEventCountDropEmail } = await import('./email.js')
       await sendEventCountDropEmail({

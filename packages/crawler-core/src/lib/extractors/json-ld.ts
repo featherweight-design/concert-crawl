@@ -191,11 +191,15 @@ export function extractJsonLd(
       events.push(
         ...extractEventsFromParsed(parsed, sourceUrl, effectiveTimeZone),
       )
-    } catch {
+    } catch (err) {
+      // Include the parse error so Sentry issues are actionable. Without
+      // it, the event groups by sourceUrl alone and gives no clue what
+      // shape the malformed JSON-LD took.
       reportFailure({
         event: 'json-ld.parse_error',
         severity: 'warn',
         sourceUrl,
+        error: err instanceof Error ? err.message : String(err),
       })
     }
   }
