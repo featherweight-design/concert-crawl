@@ -287,7 +287,7 @@ Use the same variable set on `concert-crawl-api-staging`, `concert-crawl-crawler
 
 ## Step 9 — GitHub Environment Secrets and Variables
 
-GitHub Actions workflows use a mix of **environment-scoped** secrets (e.g. `deploy-staging.yml` reads from the `staging` GH environment) and **repository-level** secrets/vars (e.g. `staging-e2e.yml`, `smoke.yml`). The split below reflects that — don't drop env-scoped secrets thinking they're duplicates of repo-level ones.
+GitHub Actions workflows use a mix of **environment-scoped** secrets (e.g. `deploy-prod.yml` + `prod-smoke-after-deploy.yml` read from the `production` GH environment) and **repository-level** secrets/vars (e.g. `staging-smoke.yml`, `staging-e2e.yml`, `smoke.yml`). The split below reflects that — don't drop env-scoped secrets thinking they're duplicates of repo-level ones.
 
 GitHub → repository → **Settings** → **Environments**.
 
@@ -353,7 +353,7 @@ No per-service `RENDER_DEPLOY_HOOK_*` secrets are needed — the manual deploy p
 | `PROD_API_URL`                  | `https://concert-crawl-api.onrender.com`                                                                                                                                                                                               |
 | `STAGING_URL`                   | `https://staging.concertcrawl.app`                                                                                                                                                                                                     |
 | `STAGING_API_URL`               | `https://concert-crawl-api-staging.onrender.com`. Consumed by `staging-smoke.yml`.                                                                                                                                                     |
-| `RENDER_SERVICE_ID_API_STAGING` | Render → `concert-crawl-api-staging` → service ID from the dashboard URL (`srv-...`). Consumed by `deploy-staging.yml` (deploy POST) and `staging-smoke.yml` (via `render-wait-for-live.sh`).                                          |
+| `RENDER_SERVICE_ID_API_STAGING` | Render → `concert-crawl-api-staging` → service ID from the dashboard URL (`srv-...`). Consumed by `staging-smoke.yml` via `render-wait-for-live.sh` to wait for Render to deploy the pushed SHA before smoking.                        |
 | `ADMIN_EMAIL`                   | Pre-provisioned                                                                                                                                                                                                                        |
 
 ---

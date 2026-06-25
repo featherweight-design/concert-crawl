@@ -1,158 +1,170 @@
 name: Staging Smoke Tests
 
-# Runs the smoke suite against the staging environment after a successful
-# staging deploy. Acts as the gate for the auto-prod-deploy workflow:
-# `deploy-prod.yml` triggers on the success of this workflow.
+# Triggered on every push to main. Waits up to 5 min for Render to
+# deploy github.sha to the staging API service, then runs the
+# Playwright smoke suite against staging.
 #
-# Disabled by default. Flip `STAGING_SMOKE_ENABLED` repo variable to `true`
-# to turn on. See docs/runbooks/auto-deploy-prod.md.
+# Post-#786 model: staging is a parallel canary, not a pre-prod gate.
+# This workflow alerts on regressions in deployed staging code but does
+# NOT block prod deploys (prod auto-deploys in parallel on the same
+# push to main). The pre-merge gate is CI on the PR; prod has its own
+# post-deploy smoke + auto-rollback in prod-smoke-after-deploy.yml.
+#
+# Mirrors prod-smoke-after-deploy.yml's structure for symmetry, with
+# two intentional differences:
+#   1. No rollback path — staging failures are alerts, not auto-
+#      actions. The GHA workflow-failure email is the primary signal.
+#   2. No Resend admin email — same reason. Staging failures don't
+#      page; they show up in the operator's GH notifications.
+#
+# Disabled by default. Flip STAGING_SMOKE_ENABLED to 'true' to arm.
+# workflow_dispatch bypasses the kill switch so manual operator
+# intervention always works.
 
 on:
-  workflow_run:
-    workflows: [Deploy to Staging]
-    types: [completed]
+  push:
     branches: [main]
   workflow_dispatch:
 
-# Shared with deploy-staging.yml so the smoke suite cannot run against
-# a moving staging target — a new staging deploy from a later merge
-# would otherwise be able to start while this smoke job is still
-# executing, leaving Playwright pointed at a different commit than the
-# one we checked out locally.
+# Concurrency group dedicated to staging. cancel-in-progress: false
+# means a queued smoke waits for the running one rather than being
+# replaced — protects against a stale Render build being smoked
+# against a moving target if two pushes land in quick succession.
 concurrency:
   group: staging-pipeline
   cancel-in-progress: false
 
-# Scope GITHUB_TOKEN to least privilege — this workflow only checks out
-# the repo and POSTs nothing back to GitHub.
+# Scope GITHUB_TOKEN to least privilege. This workflow only checks
+# out the repo and reads Render's API + the staging URLs.
 permissions:
   contents: read
 
 jobs:
   smoke:
-    name: Playwright smoke (staging)
+    name: Wait for Render staging API, smoke staging
     runs-on: ubuntu-latest
-    # 25 min: render-wait-for-live polls for up to 10 min, plus pnpm
-    # install + Playwright browser install (cold cache can take a few
-    # minutes), plus the smoke run itself. 15 min was tight — a
-    # legitimately slow staging deploy could time the job out and
-    # spuriously block prod promotion.
+    # 25 min: 5 min Render wait + ~3 min pnpm/Playwright install
+    # (cold cache) + ~10 min smoke worst case. 25 leaves headroom
+    # for a slow staging Render build.
     timeout-minutes: 25
-    # Kill switch + branch guard:
-    #   - STAGING_SMOKE_ENABLED kill switch.
-    #   - workflow_dispatch is allowed only from `main` so a feature
-    #     branch cannot run a modified workflow with repo secrets
-    #     (RENDER_API_TOKEN, SENTRY_DSN_SMOKE) via the Actions UI's
-    #     branch picker.
-    # When off, the job skips and the workflow concludes `success`.
-    # That is fine: deploy-prod.yml gates separately on
-    # STAGING_SMOKE_ENABLED, so a skipped staging-smoke does not
-    # trigger prod deploys.
+    # Kill-switch gate for push-triggered runs, with an explicit
+    # workflow_dispatch bypass so manual operator intervention always
+    # works — including during a migration window or when the smoke
+    # suite is being iterated on. Mirrors prod-smoke-after-deploy.yml's
+    # pattern.
     if: |
-      vars.STAGING_SMOKE_ENABLED == 'true' &&
-      (github.event_name != 'workflow_dispatch' ||
-       github.ref == 'refs/heads/main')
+      vars.STAGING_SMOKE_ENABLED == 'true' ||
+      github.event_name == 'workflow_dispatch'
     steps:
-      # Propagate upstream failure as job failure (not silent skip).
-      # A workflow_run-triggered workflow whose only job is gated `if:
-      # false` ends with conclusion `success`, which would let downstream
-      # `deploy-prod.yml` trigger even though the upstream Deploy to
-      # Staging failed. Exiting non-zero here makes this workflow
-      # actually FAIL when the upstream did, so downstream gates on
-      # `workflow_run.conclusion == 'success'` short-circuit correctly.
-      - name: Propagate upstream Deploy to Staging conclusion
+      # Fail loud on the wrong branch for manual dispatches. Mirrors
+      # deploy-prod.yml / prod-smoke-after-deploy.yml / rollback-prod.yml
+      # — a job-level `if:` filter would silently skip and could show
+      # as `success`, which would let a feature-branch dispatch look
+      # idle while in fact nothing ran. Without this guard, a feature
+      # branch could dispatch this workflow with main's secrets bound
+      # to feature-branch Playwright code.
+      - name: Refuse workflow_dispatch from non-main ref
         if: |
-          github.event_name == 'workflow_run' &&
-          github.event.workflow_run.conclusion != 'success'
+          github.event_name == 'workflow_dispatch' &&
+          github.ref != 'refs/heads/main'
         run: |
-          echo "Upstream Deploy to Staging concluded: ${{ github.event.workflow_run.conclusion }}"
-          echo "Refusing to smoke a staging build that didn't deploy."
+          echo "✗ Refusing to smoke staging from ref '${{ github.ref }}'."
+          echo "  Manual staging-smoke dispatches must come from main."
+          echo "  Use the workflow_dispatch UI's branch picker to select main, then re-dispatch."
           exit 1
 
-      # Pin the checkout to the SHA that triggered the upstream
-      # deploy-staging run. Without this, actions/checkout fetches default
-      # branch HEAD, which can drift if a new commit lands while this
-      # workflow is queued — and we'd then smoke a different revision
-      # than the one actually deployed to staging.
-      #
-      # fetch-depth=20 (was 1) so the SHA-drift guard below can walk
-      # past any [skip ci] release commits that have landed on main
-      # between deploy-staging completion and this workflow running.
-      # Without the depth, `git log` on a non-checked-out ancestor
-      # would fail and the walk would not see the release commit
-      # chain. 20 is comfortably beyond any realistic case.
-      - name: Checkout
+      # Pin checkout to github.sha — the SHA that just landed on main.
+      # The Playwright code we run must match the SHA Render is
+      # building. If main has moved by the time this job starts (rare
+      # but possible during a fast-follow merge), the wait below would
+      # eventually time out because Render is building a newer SHA;
+      # we exit gracefully then.
+      - name: Checkout pushed SHA
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-          fetch-depth: 20
+          ref: ${{ github.sha }}
 
-      # SHA-drift guard: refuse to smoke if `main` has advanced past
-      # the deployable code that deploy-staging acted on. If the
-      # workflow_run was queued (runner backlog) and `main` moved
-      # before this fired, we'd be smoking against a Render build that
-      # doesn't match the code we checked out here. Refuse cleanly
-      # rather than burning the render-wait-for-live timeout. Same
-      # gate logic exists in deploy-prod.
-      #
-      # The check resolves BOTH UPSTREAM_SHA and main_sha through
-      # `resolve-deployable-sha.sh` (walks past `[skip ci]` ancestors)
-      # before comparing. This handles every combination of release
-      # commit position — see deploy-prod.yml's mirror of this step
-      # for the full case analysis (#777).
-      - name: Verify upstream SHA is still main HEAD
-        if: github.event_name == 'workflow_run'
+      # Preflight on every fail-fast prerequisite for this job:
+      # Render API + staging service ID + smoke URLs + Playwright
+      # globalSetup credentials (E2E_TEST_USER_*) + the Sentry DSN
+      # consumed by smoke. A missing value surfaces as a clear
+      # "Missing X" message rather than as an opaque Playwright
+      # globalSetup failure or a Sentry transport error several
+      # minutes into the run.
+      - name: Verify required config
         env:
-          UPSTREAM_SHA: ${{ github.event.workflow_run.head_sha }}
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+          E2E_TEST_USER_EMAIL: ${{ secrets.E2E_TEST_USER_EMAIL }}
+          E2E_TEST_USER_PASSWORD: ${{ secrets.E2E_TEST_USER_PASSWORD }}
+          SENTRY_DSN_SMOKE: ${{ secrets.SENTRY_DSN_SMOKE }}
         run: |
-          # Fetch main so the walk can see commits that landed after
-          # our pinned checkout (which is at UPSTREAM_SHA, an ancestor).
-          # Read main_sha from the just-fetched ref rather than a
-          # separate API call — using `git rev-parse origin/main` is
-          # atomic with the fetch, so there's no race where main
-          # advances between the fetch and the resolution that would
-          # leave the resolver looking at a commit it doesn't have
-          # locally.
-          git fetch origin main --depth=20
-          main_sha=$(git rev-parse origin/main)
-          # See deploy-prod.yml for why this explicit UPSTREAM_SHA
-          # fetch is needed.
-          git fetch origin "$UPSTREAM_SHA" --depth=20 2>/dev/null || true
-          upstream_deployable=$(bash .github/scripts/resolve-deployable-sha.sh "$UPSTREAM_SHA")
-          main_deployable=$(bash .github/scripts/resolve-deployable-sha.sh "$main_sha")
-          if [ "$upstream_deployable" != "$main_deployable" ]; then
-            echo "Refusing to smoke staging — main advanced after deploy-staging started."
-            echo "  Upstream deploy-staging ran against:       $UPSTREAM_SHA"
-            echo "    → resolves to deployable:                $upstream_deployable"
-            echo "  Current main HEAD:                         $main_sha"
-            echo "    → resolves to deployable:                $main_deployable"
-            echo ""
-            echo "The next merge's pipeline will deploy and smoke the latest code."
+          missing=()
+          [ -z "$RENDER_API_TOKEN" ] && missing+=("RENDER_API_TOKEN (secret)")
+          [ -z "${{ vars.RENDER_SERVICE_ID_API_STAGING }}" ] && missing+=("RENDER_SERVICE_ID_API_STAGING (variable)")
+          [ -z "${{ vars.STAGING_URL }}" ] && missing+=("STAGING_URL (variable)")
+          [ -z "${{ vars.STAGING_API_URL }}" ] && missing+=("STAGING_API_URL (variable)")
+          [ -z "$E2E_TEST_USER_EMAIL" ] && missing+=("E2E_TEST_USER_EMAIL (secret)")
+          [ -z "$E2E_TEST_USER_PASSWORD" ] && missing+=("E2E_TEST_USER_PASSWORD (secret)")
+          [ -z "$SENTRY_DSN_SMOKE" ] && missing+=("SENTRY_DSN_SMOKE (secret)")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "✗ Missing required configuration:"
+            printf '  - %s\n' "${missing[@]}"
             exit 1
           fi
-          if [ "$UPSTREAM_SHA" = "$main_sha" ] && [ "$UPSTREAM_SHA" = "$upstream_deployable" ]; then
-            echo "Upstream SHA $UPSTREAM_SHA matches current main HEAD; proceeding."
-          elif [ "$UPSTREAM_SHA" = "$upstream_deployable" ]; then
-            echo "Upstream SHA $UPSTREAM_SHA matches deployable ancestor of main HEAD"
-            echo "(HEAD $main_sha is a [skip ci] release commit); proceeding."
+
+      # Wait for Render staging API to be live on github.sha. 300s =
+      # 5 min, same as prod-smoke. Staging API typically deploys in
+      # ~2 min on Render (same build profile as prod).
+      #
+      # The script exits 0 on live, 124 on timeout (benign — likely
+      # a fast-follow merge superseded this deploy or [skip ci]
+      # release commit suppressed the auto-deploy), and 1 on hard
+      # error (jq missing, auth/network failure, no live deploy
+      # found, malformed service ID). We branch explicitly on those
+      # codes so a real failure can't silently get bucketed as
+      # benign-skip. `set +e` lets us inspect $? without the runner-
+      # level non-zero handling kicking in.
+      - name: Wait for staging API to be live on pushed SHA
+        id: wait_for_live
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+        run: |
+          set +e
+          bash .github/scripts/render-wait-for-live.sh \
+            "${{ vars.RENDER_SERVICE_ID_API_STAGING }}" \
+            "${{ github.sha }}" \
+            300
+          exit_code=$?
+          set -e
+          echo "exit_code=${exit_code}" >> "$GITHUB_OUTPUT"
+          if [ "${exit_code}" -eq 0 ]; then
+            echo "should_smoke=true" >> "$GITHUB_OUTPUT"
+            echo "✓ Render staging API is live on ${{ github.sha }}; proceeding to smoke."
+          elif [ "${exit_code}" -eq 124 ]; then
+            echo "should_smoke=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Smoke skipped::Render staging API did not reach live on ${{ github.sha }} within 5 min. Most likely cause: a fast-follow merge superseded this deploy. The next push's smoke run will validate the latest deployable code."
           else
-            echo "Upstream SHA $UPSTREAM_SHA and main HEAD $main_sha both resolve to deployable"
-            echo "ancestor $upstream_deployable; proceeding."
+            echo "::error title=Wait-for-live failed::render-wait-for-live.sh exited ${exit_code} (not a timeout). Failing the job — nothing was smoked. Check Render API status + RENDER_API_TOKEN."
+            exit "${exit_code}"
           fi
 
       - name: Setup pnpm
+        if: steps.wait_for_live.outputs.should_smoke == 'true'
         uses: pnpm/action-setup@v6
 
       - name: Setup Node.js
+        if: steps.wait_for_live.outputs.should_smoke == 'true'
         uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: 'pnpm'
 
       - name: Install dependencies
+        if: steps.wait_for_live.outputs.should_smoke == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Cache Playwright browsers
+        if: steps.wait_for_live.outputs.should_smoke == 'true'
         uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
@@ -160,109 +172,26 @@ jobs:
           restore-keys: playwright-${{ runner.os }}-
 
       - name: Install Playwright browsers
+        if: steps.wait_for_live.outputs.should_smoke == 'true'
         run: pnpm --filter @concert-crawl/e2e install-browsers
 
-      # Resolve which SHA render-wait-for-live should look for.
-      #
-      # workflow_run path: wait for the upstream CI's head_sha — that's
-      #   the commit deploy-staging acted on, so it's the commit Render
-      #   should be live on. The drift guard above has already verified
-      #   this is the most-recent deployable ancestor of current main.
-      #
-      # workflow_dispatch path: github.sha is current main HEAD, which
-      #   could be a `chore(release): X.Y.Z [skip ci]` commit that
-      #   semantic-release just landed. deploy-staging is CI-triggered
-      #   so it never fired for that [skip ci] commit, and Render will
-      #   never be live on it — naively waiting for github.sha would
-      #   poll until the 10-min timeout. Walk past [skip ci] ancestors
-      #   to the most recent commit Render actually built.
-      - name: Resolve render-wait target SHA
-        id: wait_target
-        env:
-          DISPATCH_SHA: ${{ github.sha }}
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_run" ]; then
-            target="${{ github.event.workflow_run.head_sha }}"
-            echo "workflow_run: waiting for upstream CI head_sha = ${target}"
-          else
-            # Walk past [skip ci] from github.sha — NOT from current
-            # origin/main HEAD. github.sha is the commit we actually
-            # checked out for this run (so the Playwright code matches);
-            # origin/main may have advanced since dispatch. Resolving
-            # from github.sha keeps the deployed-SHA and test-code in
-            # lockstep — the smoke validates whatever Render built from
-            # the same commit we're running tests from.
-            #
-            # Checkout above has fetch-depth=20 so the walk has parents.
-            target=$(bash .github/scripts/resolve-deployable-sha.sh "${DISPATCH_SHA}")
-            if [ "${DISPATCH_SHA}" != "$target" ]; then
-              echo "workflow_dispatch: github.sha ${DISPATCH_SHA} is a [skip ci] commit;"
-              echo "                   waiting for deployable ancestor ${target} instead"
-            else
-              echo "workflow_dispatch: waiting for github.sha = ${target}"
-            fi
-          fi
-          echo "sha=${target}" >> "$GITHUB_OUTPUT"
-
-      # Wait for the staging API to be live on the resolved SHA before
-      # smoking. Render's deploy hooks return immediately and Render
-      # keeps the prior build serving traffic until the new one is
-      # healthy — a naive /v1/health probe returns 200 against the OLD
-      # build during that window, so smoking right after the hook
-      # could pass against unchanged code and silently defeat the
-      # staging gate.
-      #
-      # render-wait-for-live.sh polls the Render API for the deploy of
-      # the specific commit SHA to reach `live` status (up to 10 min).
-      - name: Wait for staging API deploy to be live on new SHA
-        env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-        run: |
-          if [ -z "${{ vars.RENDER_SERVICE_ID_API_STAGING }}" ]; then
-            echo "RENDER_SERVICE_ID_API_STAGING repo variable is empty or unset."
-            echo "Set it via Settings → Variables → Actions before enabling staging-smoke."
-            exit 1
-          fi
-          bash .github/scripts/render-wait-for-live.sh \
-            "${{ vars.RENDER_SERVICE_ID_API_STAGING }}" \
-            "${{ steps.wait_target.outputs.sha }}"
-
-      # Preflight check on the Playwright env vars. STAGING_URL goes to
-      # the Playwright base URL; STAGING_API_URL goes to the smoke
-      # spec's API helper. If either is empty, Playwright would treat
-      # the empty string as a value and Playwright would try to fetch
-      # malformed URLs — fail fast with a clear message instead.
-      - name: Verify Playwright env vars are configured
-        run: |
-          missing=()
-          [ -z "${{ vars.STAGING_URL }}" ] && missing+=("STAGING_URL")
-          [ -z "${{ vars.STAGING_API_URL }}" ] && missing+=("STAGING_API_URL")
-          if [ ${#missing[@]} -gt 0 ]; then
-            echo "Missing repo variables: ${missing[*]}"
-            echo "Set them via Settings → Variables → Actions."
-            exit 1
-          fi
-
+      # Run smoke against staging. Sentry events tagged as `staging`
+      # so they don't pollute the production environment in dashboards
+      # or alert rules.
       - name: Run smoke tests against staging
+        if: steps.wait_for_live.outputs.should_smoke == 'true'
         run: pnpm --filter @concert-crawl/e2e test:smoke
         env:
           PLAYWRIGHT_SMOKE_BASE_URL: ${{ vars.STAGING_URL }}
           PLAYWRIGHT_API_URL: ${{ vars.STAGING_API_URL }}
-          # Smoke globalSetup signs in via Clerk before any spec runs
-          # so the suite can exercise auth-gated routes (/events,
-          # /venues, /admin). Without these, sign-in is skipped and
-          # every gated spec fails downstream — middleware redirects
-          # to `/`.
           E2E_TEST_USER_EMAIL: ${{ secrets.E2E_TEST_USER_EMAIL }}
           E2E_TEST_USER_PASSWORD: ${{ secrets.E2E_TEST_USER_PASSWORD }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN_SMOKE }}
-          # Tag Sentry events as `staging` so they don't pollute the
-          # production environment in dashboards or alert rules.
           SENTRY_ENVIRONMENT: staging
 
       - name: Upload failure artifacts
-        uses: actions/upload-artifact@v7
         if: failure()
+        uses: actions/upload-artifact@v7
         with:
           name: staging-smoke-failure-${{ github.run_id }}
           path: apps/e2e/test-results/

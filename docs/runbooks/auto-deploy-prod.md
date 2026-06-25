@@ -1,6 +1,6 @@
 # Auto-Deploy Production — Runbook
 
-This runbook covers prod deploys via Render's native git auto-deploy plus the push-triggered smoke + rollback workflow that gates them.
+This runbook covers prod deploys via Render's native git auto-deploy plus the push-triggered smoke + rollback workflow that gates them. The same push-triggered pattern is used for staging-smoke (no rollback path; see `staging-smoke.yml`).
 
 Two repo configurations gate the pipeline; see the "Enabling the pipeline" section below.
 
@@ -9,31 +9,39 @@ Two repo configurations gate the pipeline; see the "Enabling the pipeline" secti
 ```
 push to main
    │
-   ├──► CI ──► Deploy to Staging ──► Staging Smoke
+   ├──► CI (gate on PR; advisory on push)
    │
-   ├──► Render git auto-deploy
-   │       ├──► concert-crawl-api
-   │       ├──► concert-crawl-crawler-triggers
-   │       └──► concert-crawl-crawler-daily
+   ├──► Render git auto-deploy — staging services
+   │       ├──► concert-crawl-api-staging
+   │       ├──► concert-crawl-crawler-triggers-staging
+   │       └──► concert-crawl-crawler-daily-staging (suspended; intentional)
    │              │
    │              ▼
-   │      (Render builds + serves)
+   │      Staging Smoke Tests
+   │              │  waits up to 5 min for Render staging API to be live on github.sha
+   │              ▼
+   │      Playwright smoke against staging (alert-only — no rollback)
    │
-   └──► Prod smoke (after Render auto-deploy)
-              │  waits up to 5 min for Render to be live on github.sha
-              ▼
-        Playwright smoke against prod
-              ├──► success: workflow ends green
-              └──► failure: render-rollback.sh + Resend admin email
+   └──► Render git auto-deploy — prod services
+           ├──► concert-crawl-api
+           ├──► concert-crawl-crawler-triggers
+           └──► concert-crawl-crawler-daily
+                  │
+                  ▼
+          Prod smoke (after Render auto-deploy)
+                  │  waits up to 5 min for Render prod API to be live on github.sha
+                  ▼
+          Playwright smoke against prod
+                  ├──► success: workflow ends green
+                  └──► failure: render-rollback.sh + Resend admin email
 ```
 
-Render's git integration handles prod deploys directly — there is no GH Actions chain from CI → Deploy-staging → Staging-smoke → Deploy-prod anymore. The four-deep `workflow_run` chain that hit GitHub's 3-level depth cap is gone.
+Render's git integration handles BOTH staging and prod deploys directly — there is no GH Actions chain. Staging and prod build + smoke in parallel. The pre-merge gate is CI on the PR; post-merge, staging-smoke is a canary (alert-only) and prod-smoke is the safety net (auto-rollback). If we ever scale past solo, GitHub merge queue is the upgrade path for a true pre-prod gate.
 
 | Workflow                              | Path                                            | Trigger                            | Kill switch                     |
 | ------------------------------------- | ----------------------------------------------- | ---------------------------------- | ------------------------------- |
 | CI                                    | `.github/workflows/ci.yml`                      | push to `main`, PRs                | (always on)                     |
-| Deploy to Staging                     | `.github/workflows/deploy-staging.yml`          | CI success                         | (always on)                     |
-| Staging Smoke Tests                   | `.github/workflows/staging-smoke.yml`           | Deploy to Staging success          | `STAGING_SMOKE_ENABLED`         |
+| Staging Smoke Tests                   | `.github/workflows/staging-smoke.yml`           | push to `main` + workflow_dispatch | `STAGING_SMOKE_ENABLED`         |
 | Prod smoke (after Render auto-deploy) | `.github/workflows/prod-smoke-after-deploy.yml` | push to `main` + workflow_dispatch | `PROD_SMOKE_RECONCILER_ENABLED` |
 | Deploy to Production (manual)         | `.github/workflows/deploy-prod.yml`             | `workflow_dispatch` only           | `AUTO_DEPLOY_PROD_ENABLED`      |
 | Rollback Production (manual)          | `.github/workflows/rollback-prod.yml`           | `workflow_dispatch` only           | (always available)              |
@@ -169,16 +177,16 @@ All of these are already provisioned if you're past Stage 2 of `production-launc
 
 ### Repository variables (Settings → Variables → Actions)
 
-| Variable                        | Required by                   | Notes                                                                                                                                                                                                     |
-| ------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `STAGING_URL`                   | staging-smoke                 | already present — `https://staging.concertcrawl.app`                                                                                                                                                      |
-| `STAGING_API_URL`               | staging-smoke                 | **new** — `https://concert-crawl-api-staging.onrender.com`                                                                                                                                                |
-| `RENDER_SERVICE_ID_API_STAGING` | deploy-staging, staging-smoke | **new** — staging API service ID (e.g. `srv-abc123`). Used by `deploy-staging.yml` (deploy POST) and `render-wait-for-live.sh` (waits for the new deploy to be live)                                      |
-| `PROD_URL`                      | deploy-prod (smoke job)       | already present                                                                                                                                                                                           |
-| `PROD_API_URL`                  | deploy-prod (smoke job)       | already present                                                                                                                                                                                           |
-| `STAGING_SMOKE_ENABLED`         | staging-smoke                 | **new** — default `false`; set to `true` in Stage 1                                                                                                                                                       |
-| `AUTO_DEPLOY_PROD_ENABLED`      | deploy-prod (manual)          | default `false`; set to `true` to keep the manual `deploy-prod.yml` escape hatch usable. Under the post-#786 model, the normal deploy path runs through Render's git auto-deploy, NOT this workflow.      |
-| `PROD_SMOKE_RECONCILER_ENABLED` | prod-smoke-after-deploy       | **new** — default `false`; set to `true` in Stage 3. Gates the push-triggered prod smoke + rollback workflow. `workflow_dispatch` bypasses this kill switch so manual operator intervention always works. |
+| Variable                        | Required by             | Notes                                                                                                                                                                                                     |
+| ------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `STAGING_URL`                   | staging-smoke           | already present — `https://staging.concertcrawl.app`                                                                                                                                                      |
+| `STAGING_API_URL`               | staging-smoke           | **new** — `https://concert-crawl-api-staging.onrender.com`                                                                                                                                                |
+| `RENDER_SERVICE_ID_API_STAGING` | staging-smoke           | staging API service ID (e.g. `srv-abc123`). Used by `staging-smoke.yml` via `render-wait-for-live.sh` to wait for Render to deploy the pushed SHA before smoking.                                         |
+| `PROD_URL`                      | deploy-prod (smoke job) | already present                                                                                                                                                                                           |
+| `PROD_API_URL`                  | deploy-prod (smoke job) | already present                                                                                                                                                                                           |
+| `STAGING_SMOKE_ENABLED`         | staging-smoke           | **new** — default `false`; set to `true` in Stage 1                                                                                                                                                       |
+| `AUTO_DEPLOY_PROD_ENABLED`      | deploy-prod (manual)    | default `false`; set to `true` to keep the manual `deploy-prod.yml` escape hatch usable. Under the post-#786 model, the normal deploy path runs through Render's git auto-deploy, NOT this workflow.      |
+| `PROD_SMOKE_RECONCILER_ENABLED` | prod-smoke-after-deploy | **new** — default `false`; set to `true` in Stage 3. Gates the push-triggered prod smoke + rollback workflow. `workflow_dispatch` bypasses this kill switch so manual operator intervention always works. |
 
 ### `production` environment — Variables (Settings → Environments → production)
 
