@@ -325,25 +325,32 @@ describe('Admin crawl routes', () => {
     })
 
     // Helper: queue the two terminal `.limit()` mocks for one request
-    // through /runs. Both the crawl_runs chain and the notifications
-    // scan end in `.orderBy().limit()`, so the same `limit` mock handles
-    // both — first call (crawl_runs) consumes the first queued value,
-    // second call (notifications) consumes the second. The intermediate
+    // through /runs. Both the notifications scan and the crawl_runs chain
+    // end in `.orderBy().limit()`, so the same `limit` mock handles both.
+    //
+    // After the PR #812 round-3 refactor, the route runs the notifications
+    // scan FIRST (its result is used to scope the crawl_runs query when
+    // hasAlert=true) and the crawl_runs query SECOND. The intermediate
     // `where()` and `orderBy()` calls use the default `mockReturnThis()`.
-    function queueRunsThenAlerts(
+    //
+    // For hasAlert=true with no matching notifications, the route short-
+    // circuits before the crawl_runs query — callers can pass an empty
+    // `crawlRunRows` and the second mockResolvedValueOnce is harmlessly
+    // ignored.
+    function queueAlertsThenRuns(
       db: typeof import('@concert-crawl/db').db,
-      crawlRunRows: unknown[],
       notificationRows: unknown[],
+      crawlRunRows: unknown[],
     ): void {
       vi.mocked(db.select().from().leftJoin().where().orderBy().limit)
-        .mockResolvedValueOnce(crawlRunRows)
         .mockResolvedValueOnce(notificationRows)
+        .mockResolvedValueOnce(crawlRunRows)
     }
 
     it('returns list of crawl runs for a venue', async () => {
       adminAuth()
       const { db } = await import('@concert-crawl/db')
-      queueRunsThenAlerts(db, [mockCrawlRun], [])
+      queueAlertsThenRuns(db, [], [mockCrawlRun])
       const res = await createApp().request(
         `/v1/admin/crawl/runs?venueId=${VENUE_ID}`,
       )
@@ -365,9 +372,8 @@ describe('Admin crawl routes', () => {
       adminAuth()
       const { db } = await import('@concert-crawl/db')
       const NOTIF_ID = '00000000-0000-0000-0000-0000000000aa'
-      queueRunsThenAlerts(
+      queueAlertsThenRuns(
         db,
-        [mockCrawlRun],
         [
           {
             id: NOTIF_ID,
@@ -380,6 +386,7 @@ describe('Admin crawl routes', () => {
             createdAt: new Date(),
           },
         ],
+        [mockCrawlRun],
       )
       const res = await createApp().request(
         `/v1/admin/crawl/runs?venueId=${VENUE_ID}`,
@@ -410,9 +417,8 @@ describe('Admin crawl routes', () => {
       adminAuth()
       const { db } = await import('@concert-crawl/db')
       const NOTIF_ID = '00000000-0000-0000-0000-0000000000a1'
-      queueRunsThenAlerts(
+      queueAlertsThenRuns(
         db,
-        [mockCrawlRun],
         [
           {
             id: NOTIF_ID,
@@ -421,6 +427,7 @@ describe('Admin crawl routes', () => {
             createdAt: new Date(),
           },
         ],
+        [mockCrawlRun],
       )
       const res = await createApp().request(
         `/v1/admin/crawl/runs?venueId=${VENUE_ID}`,
@@ -439,9 +446,8 @@ describe('Admin crawl routes', () => {
       adminAuth()
       const { db } = await import('@concert-crawl/db')
       const NOTIF_ID = '00000000-0000-0000-0000-0000000000a2'
-      queueRunsThenAlerts(
+      queueAlertsThenRuns(
         db,
-        [mockCrawlRun],
         [
           {
             id: NOTIF_ID,
@@ -454,6 +460,7 @@ describe('Admin crawl routes', () => {
             createdAt: new Date(),
           },
         ],
+        [mockCrawlRun],
       )
       const res = await createApp().request(
         `/v1/admin/crawl/runs?venueId=${VENUE_ID}`,
@@ -470,9 +477,8 @@ describe('Admin crawl routes', () => {
     it('ignores notifications whose metadata.crawlRunId does not match any returned run', async () => {
       adminAuth()
       const { db } = await import('@concert-crawl/db')
-      queueRunsThenAlerts(
+      queueAlertsThenRuns(
         db,
-        [mockCrawlRun],
         [
           {
             id: '00000000-0000-0000-0000-0000000000bb',
@@ -484,6 +490,7 @@ describe('Admin crawl routes', () => {
             createdAt: new Date(),
           },
         ],
+        [mockCrawlRun],
       )
       const res = await createApp().request(
         `/v1/admin/crawl/runs?venueId=${VENUE_ID}`,
@@ -497,9 +504,8 @@ describe('Admin crawl routes', () => {
     it('tolerates malformed notification.metadata without crashing the list', async () => {
       adminAuth()
       const { db } = await import('@concert-crawl/db')
-      queueRunsThenAlerts(
+      queueAlertsThenRuns(
         db,
-        [mockCrawlRun],
         [
           {
             id: '00000000-0000-0000-0000-0000000000cc',
@@ -514,6 +520,7 @@ describe('Admin crawl routes', () => {
             createdAt: new Date(),
           },
         ],
+        [mockCrawlRun],
       )
       const res = await createApp().request(
         `/v1/admin/crawl/runs?venueId=${VENUE_ID}`,
@@ -532,13 +539,12 @@ describe('Admin crawl routes', () => {
       adminAuth()
       const { db } = await import('@concert-crawl/db')
       const RUN_WITH_ALERT = '00000000-0000-0000-0000-0000000000e1'
-      const RUN_NO_ALERT = '00000000-0000-0000-0000-0000000000e2'
-      queueRunsThenAlerts(
+      // The post-PR #812-round-3 refactor scopes the crawl_runs query by
+      // the alerted run-id set, so the DB returns only the alerted run.
+      // The mock can't actually evaluate the SQL `IN`, so it has to return
+      // the expected filtered result directly.
+      queueAlertsThenRuns(
         db,
-        [
-          { ...mockCrawlRun, id: RUN_WITH_ALERT },
-          { ...mockCrawlRun, id: RUN_NO_ALERT },
-        ],
         [
           {
             id: '00000000-0000-0000-0000-0000000000aa',
@@ -550,6 +556,7 @@ describe('Admin crawl routes', () => {
             createdAt: new Date(),
           },
         ],
+        [{ ...mockCrawlRun, id: RUN_WITH_ALERT }],
       )
       const res = await createApp().request(
         `/v1/admin/crawl/runs?venueId=${VENUE_ID}&hasAlert=true`,
@@ -563,13 +570,71 @@ describe('Admin crawl routes', () => {
       expect(body.data[0]?.activeAlert).not.toBeNull()
     })
 
+    // PR #812 round 3 regression: previously the route fetched the top-N
+    // crawl_runs from SQL FIRST and then JS-filtered by activeAlert. That
+    // meant `hasAlert=true&limit=10` could return an empty list even when
+    // older runs (rank 11+) had unread alerts. After the refactor the
+    // notifications scan runs first and the crawl_runs query is scoped
+    // by the alerted id set, so older alerted runs surface correctly.
+    it('hasAlert=true surfaces older alerted runs outside the natural top-N window', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      const OLD_ALERTED_RUN = '00000000-0000-0000-0000-0000000000e3'
+      queueAlertsThenRuns(
+        db,
+        [
+          {
+            id: '00000000-0000-0000-0000-0000000000ab',
+            category: 'crawl.event_count_dropped',
+            metadata: JSON.stringify({
+              venueId: VENUE_ID,
+              crawlRunId: OLD_ALERTED_RUN,
+              severity: 'went_dark',
+            }),
+            createdAt: new Date('2026-06-22T00:00:00Z'),
+          },
+        ],
+        // The scoped crawl_runs query returns the old alerted run
+        // because the SQL IN clause includes its id — even though it's
+        // not in the chronologically newest top-N.
+        [{ ...mockCrawlRun, id: OLD_ALERTED_RUN }],
+      )
+      const res = await createApp().request(
+        `/v1/admin/crawl/runs?venueId=${VENUE_ID}&hasAlert=true&limit=10`,
+      )
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as {
+        data: { id: string; activeAlert: { severity: string | null } | null }[]
+      }
+      expect(body.data).toHaveLength(1)
+      expect(body.data[0]?.id).toBe(OLD_ALERTED_RUN)
+      expect(body.data[0]?.activeAlert?.severity).toBe('went_dark')
+    })
+
+    // hasAlert=true short-circuits before the crawl_runs query when no
+    // notifications match — saves a query and avoids an empty `IN ()` SQL
+    // clause that some drivers reject.
+    it('hasAlert=true returns [] without querying crawl_runs when no unread alerts exist', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      vi.mocked(
+        db.select().from().leftJoin().where().orderBy().limit,
+      ).mockResolvedValueOnce([])
+      const res = await createApp().request(
+        `/v1/admin/crawl/runs?venueId=${VENUE_ID}&hasAlert=true`,
+      )
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as { data: unknown[] }
+      expect(body.data).toEqual([])
+    })
+
     it('hasAlert=false returns the full list including runs with no alert', async () => {
       adminAuth()
       const { db } = await import('@concert-crawl/db')
-      queueRunsThenAlerts(
+      queueAlertsThenRuns(
         db,
-        [{ ...mockCrawlRun, id: RUN_ID }],
         [], // no unread notifications
+        [{ ...mockCrawlRun, id: RUN_ID }],
       )
       const res = await createApp().request(
         `/v1/admin/crawl/runs?venueId=${VENUE_ID}&hasAlert=false`,

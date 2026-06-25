@@ -183,6 +183,87 @@ crawlAdminRouter.get(
   async (ctx) => {
     const { venueId, limit, hasAlert } = ctx.req.valid('query')
 
+    // Scan unread admin_alert notifications first when we'll need them.
+    // We always do this when hasAlert=true (because the alert set determines
+    // which crawl_runs to return), and also do it when hasAlert is unset so
+    // the list rows that match can carry the badge. Scope is the two
+    // categories a crawl row surfaces (`crawl.event_count_dropped` for
+    // went-dark/sharp-drop, `crawl.failed` for the consecutive-failure path)
+    // and only unread rows — once an operator clears the notification,
+    // the badge clears too.
+    const rawAlerts = await db
+      .select({
+        id: notifications.id,
+        category: notifications.category,
+        metadata: notifications.metadata,
+        createdAt: notifications.createdAt,
+      })
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.type, 'admin_alert'),
+          inArray(notifications.category, [
+            'crawl.event_count_dropped',
+            'crawl.failed',
+          ]),
+          isNull(notifications.readAt),
+        ),
+      )
+      // Newest-first + bounded scan. Without explicit ordering the
+      // "first match wins" tie-break below would be non-deterministic;
+      // newest-first is also the intuitive choice (most recent alert
+      // is the operator's likely concern).
+      .orderBy(desc(notifications.createdAt))
+      .limit(ACTIVE_ALERT_SCAN_LIMIT)
+    // Defensive guard: anything other than a row array (unexpected DB
+    // driver state, a test mock that didn't override this path) collapses
+    // to "no alerts" rather than throwing and 500-ing the whole list.
+    const candidateAlerts = Array.isArray(rawAlerts) ? rawAlerts : []
+
+    // Pre-build the runId → ActiveCrawlAlert map. We do this before fetching
+    // crawl_runs because when hasAlert=true we use this map to scope the
+    // crawl_runs query — otherwise `hasAlert=true&limit=10` could return an
+    // empty list even when older runs have unread alerts, because they fell
+    // outside the first 10 rows by createdAt.
+    const alertsByRunId = new Map<string, ActiveCrawlAlert>()
+    for (const alert of candidateAlerts) {
+      const meta = parseAlertMetadata(alert.metadata)
+      if (!meta?.crawlRunId) continue
+      const category = alert.category as ActiveCrawlAlert['category']
+      // First match wins; multiple unread alerts on the same row would be
+      // unusual and the operator's clearing one is enough to retest.
+      if (!alertsByRunId.has(meta.crawlRunId)) {
+        alertsByRunId.set(meta.crawlRunId, {
+          notificationId: alert.id,
+          category,
+          // severity is only meaningful for 'crawl.event_count_dropped';
+          // for 'crawl.failed' (and older event-count rows that predate
+          // the field) it's null so the UI falls back to a neutral label.
+          severity:
+            category === 'crawl.event_count_dropped' && meta.severity
+              ? meta.severity
+              : null,
+        })
+      }
+    }
+
+    // When hasAlert=true, restrict the crawl_runs query to ids we know
+    // have an unread alert. This makes the "Show alerts only" filter look
+    // back beyond the natural top-N window — a venue alerted three days
+    // ago is still surfaced even if many newer runs have happened since.
+    const alertedRunIds = Array.from(alertsByRunId.keys())
+    const whereClauses = [
+      venueId !== undefined ? eq(crawlRuns.venueId, venueId) : undefined,
+      hasAlert ? inArray(crawlRuns.id, alertedRunIds) : undefined,
+    ].filter((clause): clause is NonNullable<typeof clause> => Boolean(clause))
+
+    // hasAlert=true with no matching ids → short-circuit; the inArray with
+    // an empty array would be invalid SQL on some drivers and we already
+    // know the answer is "no rows".
+    if (hasAlert && alertedRunIds.length === 0) {
+      return ctx.json({ success: true, data: [] })
+    }
+
     const dbRuns = await db
       .select({
         id: crawlRuns.id,
@@ -202,88 +283,14 @@ crawlAdminRouter.get(
       })
       .from(crawlRuns)
       .leftJoin(venues, eq(crawlRuns.venueId, venues.id))
-      .where(venueId !== undefined ? eq(crawlRuns.venueId, venueId) : undefined)
+      .where(whereClauses.length > 0 ? and(...whereClauses) : undefined)
       .orderBy(desc(crawlRuns.createdAt))
       .limit(limit)
 
-    // Surface unread alerts that belong to any returned crawl run (#804).
-    // Notification → crawl_run linkage lives in metadata.crawlRunId (a JSON
-    // string column), so the cheapest correct join is to fetch the small
-    // candidate set in JS and group by id. We scope to the two categories
-    // a crawl row would surface (`crawl.event_count_dropped` for went-dark/
-    // sharp-drop, `crawl.failed` for the consecutive-failure path) and only
-    // pull unread ones — once an operator marks the notification read, the
-    // badge clears.
-    const alertsByRunId = new Map<string, ActiveCrawlAlert>()
-    if (dbRuns.length > 0) {
-      // Set lookup keeps the inner check O(1) regardless of how many
-      // candidate alerts come back from the notifications scan.
-      const runIdSet = new Set(dbRuns.map((run) => run.id))
-      const rawAlerts = await db
-        .select({
-          id: notifications.id,
-          category: notifications.category,
-          metadata: notifications.metadata,
-          createdAt: notifications.createdAt,
-        })
-        .from(notifications)
-        .where(
-          and(
-            eq(notifications.type, 'admin_alert'),
-            inArray(notifications.category, [
-              'crawl.event_count_dropped',
-              'crawl.failed',
-            ]),
-            isNull(notifications.readAt),
-          ),
-        )
-        // Newest-first + bounded scan. Without explicit ordering the
-        // "first match wins" tie-break below would be non-deterministic;
-        // newest-first is also the intuitive choice (most recent alert
-        // is the operator's likely concern).
-        .orderBy(desc(notifications.createdAt))
-        .limit(ACTIVE_ALERT_SCAN_LIMIT)
-      // Defensive guard: anything other than a row array (unexpected DB
-      // driver state, a test mock that didn't override this path) collapses
-      // to "no alerts" rather than throwing and 500-ing the whole list.
-      const candidateAlerts = Array.isArray(rawAlerts) ? rawAlerts : []
-
-      for (const alert of candidateAlerts) {
-        const meta = parseAlertMetadata(alert.metadata)
-        if (!meta?.crawlRunId) continue
-        if (!runIdSet.has(meta.crawlRunId)) continue
-        const category = alert.category as ActiveCrawlAlert['category']
-        // First match wins; multiple unread alerts on the same row would be
-        // unusual and the operator's clearing one is enough to retest.
-        if (!alertsByRunId.has(meta.crawlRunId)) {
-          alertsByRunId.set(meta.crawlRunId, {
-            notificationId: alert.id,
-            category,
-            // severity is only meaningful for 'crawl.event_count_dropped';
-            // for 'crawl.failed' (and older event-count rows that predate
-            // the field) it's null so the UI falls back to a neutral label.
-            severity:
-              category === 'crawl.event_count_dropped' && meta.severity
-                ? meta.severity
-                : null,
-          })
-        }
-      }
-    }
-
-    const annotated = dbRuns.map((run) => ({
+    const data = dbRuns.map((run) => ({
       ...run,
       activeAlert: alertsByRunId.get(run.id) ?? null,
     }))
-
-    // hasAlert=true narrows the list to suspicious runs only — the
-    // "find quickly" workflow from #804. We do this in JS rather than
-    // SQL so the same notifications scan answers both questions
-    // (which rows have alerts + what those alerts are) without a
-    // second join.
-    const data = hasAlert
-      ? annotated.filter((run) => run.activeAlert !== null)
-      : annotated
 
     return ctx.json({ success: true, data })
   },

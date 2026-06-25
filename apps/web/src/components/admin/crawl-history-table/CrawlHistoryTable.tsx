@@ -121,9 +121,12 @@ export const CrawlHistoryTable = async ({
                         <Badge
                           variant={alertConfig.variant}
                           title={ADMIN_COPY.crawlHistoryTable.alertBadgeTitle}
-                          aria-label={
-                            ADMIN_COPY.crawlHistoryTable.alertBadgeAriaLabel
-                          }
+                          // Prepend the visible label so screen readers
+                          // announce the specific failure mode ("Went dark"
+                          // / "Failing"). Without the label, aria-label
+                          // overrides the inner span text and the assistive
+                          // announcement loses the specific severity.
+                          aria-label={`${alertConfig.label}. ${ADMIN_COPY.crawlHistoryTable.alertBadgeAriaLabel}`}
                         >
                           {alertConfig.label}
                         </Badge>
