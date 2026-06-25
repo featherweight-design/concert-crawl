@@ -63,13 +63,17 @@ export interface FailureReport {
 }
 
 export function reportFailure(report: FailureReport): void {
-  // Stdout side: preserve the historic structured-log shape AND the prior
-  // stream semantics — warn-severity events used to land via console.warn
-  // (stderr on Node), error-severity via console.error. Some log routers
-  // / aggregators key off the stream; defaulting everything to console.log
-  // (stdout) would silently change operational behavior. The 'severity'
-  // field is also included in the JSON payload so log-search consumers
-  // can distinguish without re-deriving from the event name.
+  // Console side (stderr): preserve the historic structured-log JSON
+  // shape and standardize the stream to stderr regardless of which
+  // console method the callsite used to call. Severity drives the
+  // method choice — 'error' → console.error, 'warn' → console.warn —
+  // so dashboards / routers that distinguish severity can still do so
+  // by stream-level filter, and tooling that scans stderr for both is
+  // unaffected. (Some prior callsites used console.log for errors,
+  // which was a stdout/stderr inconsistency this helper resolves.)
+  // The 'severity' field is also included in the JSON payload so
+  // log-search consumers can distinguish without re-deriving from
+  // the event name.
   const json = JSON.stringify(report)
   if (report.severity === 'error') {
     console.error(json)
