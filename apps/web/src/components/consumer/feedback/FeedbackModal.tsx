@@ -55,10 +55,27 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
   // this, re-attaching the same file after a discard doesn't fire onChange
   // because the input's value never changed.
   const fileInputRef = useRef<HTMLInputElement>(null)
+  // Holds the pending reset() timer scheduled by handleClose so a quick
+  // reopen can cancel it before it fires and wipes a freshly-restored
+  // draft (#834 Copilot R3 — race condition: timer fires 300ms after
+  // close, user reopens within that window, useEffect hydrates draft,
+  // then timer fires and resets state).
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const clearFileInput = useCallback(() => {
     if (fileInputRef.current) fileInputRef.current.value = ''
   }, [])
+
+  const cancelPendingReset = useCallback(() => {
+    if (resetTimerRef.current !== null) {
+      clearTimeout(resetTimerRef.current)
+      resetTimerRef.current = null
+    }
+  }, [])
+
+  // Cleanup the timer on unmount so an in-flight reset doesn't fire
+  // against an unmounted component.
+  useEffect(() => cancelPendingReset, [cancelPendingReset])
 
   // Hydrate from a saved draft whenever the modal opens (false→true).
   // This is the only place we read from localStorage so we don't fight
@@ -67,6 +84,9 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     const justOpened = open && !prevOpenRef.current
     prevOpenRef.current = open
     if (!justOpened) return
+    // Cancel any pending close-reset timer so it can't fire mid-hydration
+    // and wipe the draft we just restored (#834 Copilot R3).
+    cancelPendingReset()
     const draft = loadDraft()
     if (!draft) return
     setCategory(draft.category)
@@ -78,7 +98,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     // If the modal was previously closed mid-error/success, ensure we
     // land back on the form when rehydrating so the user sees the draft.
     setState('form')
-  }, [open])
+  }, [open, cancelPendingReset])
 
   const handleScreenshotChange = useCallback((file: File | null) => {
     if (!file) {
@@ -116,8 +136,14 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
 
   const handleClose = useCallback(() => {
     onClose()
-    setTimeout(reset, 300)
-  }, [onClose, reset])
+    // Replace any pending reset so a rapid close/reopen/close sequence
+    // can't queue multiple resets that fire after a draft hydration.
+    cancelPendingReset()
+    resetTimerRef.current = setTimeout(() => {
+      resetTimerRef.current = null
+      reset()
+    }, 300)
+  }, [cancelPendingReset, onClose, reset])
 
   // Issue #830: "Save and come back" — persist the current draft to
   // localStorage, then close. Reopening the modal will rehydrate it.
