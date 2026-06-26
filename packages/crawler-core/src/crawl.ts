@@ -685,12 +685,14 @@ export async function crawlVenue(
             targetWhere: eq(events.status, 'upcoming'),
             set: {
               title: sql`excluded.title`,
-              // canonical_title is the dedup key — keeping it in the set
-              // clause is intentional: a future crawl whose canonicalized
-              // title still matches the existing row but whose source title
-              // text differs slightly (case, whitespace) should adopt the
-              // new title without recomputing the canonical (which already
-              // matched per the ON CONFLICT target).
+              // canonical_title is the dedup key — the ON CONFLICT matched
+              // because incoming canonical_title equaled the existing row's
+              // canonical_title, so writing `excluded.canonical_title` here
+              // is a no-op on the stored value. The set entry exists to
+              // document the lock-step invariant: any future code path that
+              // updates `title` MUST also update `canonical_title`. The pair
+              // is load-bearing for dedup; drift would silently break the
+              // ON CONFLICT match on subsequent crawls.
               canonicalTitle: sql`excluded.canonical_title`,
               // canonical_artist is no longer a dedup key but DOES still
               // get written (column kept for search/display per #821). We
