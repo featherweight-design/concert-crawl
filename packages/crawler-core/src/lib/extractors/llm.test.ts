@@ -1,11 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+// The crawler switched from `messages.create()` to `messages.stream()` to
+// satisfy the SDK's "must stream when max_tokens could exceed 10 min" gate
+// (see llm.ts). The mock pretends to stream but drives straight to a
+// `finalMessage()` resolution — `mockCreate` records the params we'd
+// otherwise inspect off `create()` and returns the response the existing
+// tests configured via `.mockResolvedValue(...)`.
 const mockCreate = vi.fn()
 
 vi.mock('@anthropic-ai/sdk', () => ({
   default: vi.fn().mockImplementation(
     class {
-      messages = { create: mockCreate }
+      messages = {
+        stream: (params: unknown) => ({
+          finalMessage: async () => mockCreate(params),
+        }),
+      }
     },
   ),
 }))

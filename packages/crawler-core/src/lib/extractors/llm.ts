@@ -187,7 +187,17 @@ export async function extractWithLlm(
   const client = new Anthropic()
   const cleanedHtml = cleanHtml(html)
 
-  const response = await client.messages.create({
+  // Use the streaming API. The Anthropic SDK rejects non-streaming
+  // requests when `max_tokens` is large enough that the generation
+  // could exceed 10 minutes — the prior `messages.create()` call started
+  // hitting that ceiling once we bumped MAX_OUTPUT_TOKENS to 32_000 in
+  // #806 (error: "Streaming is required for operations that may take
+  // longer than 10 minutes"). The crawler doesn't need token-by-token
+  // streaming behavior, so we drive the stream to completion with
+  // `finalMessage()`, which returns the same assembled `Message` shape
+  // (`content`, `stop_reason`, `usage`) that `messages.create()` did —
+  // no downstream logic has to change.
+  const stream = client.messages.stream({
     model: MODEL,
     max_tokens: MAX_OUTPUT_TOKENS,
     tools: [SAVE_EVENTS_TOOL],
@@ -206,6 +216,7 @@ export async function extractWithLlm(
       },
     ],
   })
+  const response = await stream.finalMessage()
 
   const usage = response.usage
   const tokenUsage = {
