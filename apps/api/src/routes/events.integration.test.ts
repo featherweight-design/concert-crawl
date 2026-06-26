@@ -1302,10 +1302,10 @@ describe('GET /v1/events/:id/related — integration (#833)', () => {
     expect(res.status).toBe(404)
   })
 
-  // PR #837 Copilot R1 — lock down the two remaining source-event
-  // exclusion paths so a future refactor of the source-event WHERE
-  // clause can't silently leak related panels for stale or detached
-  // events.
+  // Lock down the two remaining source-event exclusion paths so a future
+  // refactor of the source-event WHERE clause can't silently leak related
+  // panels for stale (firstMissingAt) or detached (venueId=null) events.
+  // The hidden-from-consumer case is covered just above.
   it('returns 404 when the source event is flagged firstMissingAt', async () => {
     const venue = await seedVenue({
       name: 'Stale Source Venue',
