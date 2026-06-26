@@ -42,24 +42,10 @@
  * conflicts justify it.
  */
 
-// Latin Extended characters that don't decompose into base + combining mark
-// under NFD. Mirrors the SQL translate() char map in
-// 0031_event_canonical_artist.sql so canonical values computed by this
-// function match the canonical values the migration wrote for existing rows.
-// Without this step, e.g. "Eivør" canonicalizes to "eivør" here but the
-// existing DB row has canonical "eivor" — the crawler's ON CONFLICT
-// (canonical_artist) target misses on re-crawl, and the legacy partial
-// unique index on (venue_id, date, artist) fires with a duplicate-key
-// violation, failing the entire batch INSERT.
-//
-// Scope is intentionally narrow (just Ø/ø) — those are the only chars in
-// the migration's translate() set that are NOT decomposable via NFD. Wider
-// Latin Extended coverage (Ł, Æ, ß, Þ, etc.) is tracked separately so any
-// expansion can update both this map and the migration's char map together.
-const LATIN_EXTENDED_MAP: Record<string, string> = {
-  Ø: 'O',
-  ø: 'o',
-}
+import {
+  LATIN_EXTENDED_MAP,
+  LATIN_EXTENDED_REGEX,
+} from './latin-extended-map.js'
 
 const SEPARATORS = [
   ' & ',
@@ -83,10 +69,11 @@ export function canonicalizeArtist(artist: string): string {
   // Handles diacritics that are stored as base + combining mark.
   const decomposed = artist.normalize('NFD').replace(/\p{M}/gu, '')
 
-  // Handle the Latin Extended characters that don't decompose via NFD
-  // (currently just Ø/ø — see LATIN_EXTENDED_MAP).
+  // Handle the Latin Extended characters that don't decompose via NFD.
+  // Map + regex live in latin-extended-map.ts so canonicalizeArtist and
+  // canonicalizeTitle share the same set — see #648 follow-up.
   const stripped = decomposed.replace(
-    /[Øø]/g,
+    LATIN_EXTENDED_REGEX,
     (char) => LATIN_EXTENDED_MAP[char] ?? char,
   )
 

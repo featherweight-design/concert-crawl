@@ -38,19 +38,10 @@
  * legitimate titles like "New York, New York".
  */
 
-// Latin Extended characters that don't decompose into base + combining mark
-// under NFD. Must stay in sync with the SQL `translate()` char map in the
-// migration that backfills canonical_title — drift here causes silent
-// ON CONFLICT misses (see CLAUDE.md memory on the 2026-06-17 Ø/ø incident).
-//
-// Scope is intentionally narrow (just Ø/ø) — the only chars in the
-// migration's translate() set that are NOT decomposable via NFD. Wider Latin
-// Extended coverage (Ł, Æ, ß, Þ, etc.) is tracked as #648 and would update
-// both this map and the migration's char map together.
-const LATIN_EXTENDED_MAP: Record<string, string> = {
-  Ø: 'O',
-  ø: 'o',
-}
+import {
+  LATIN_EXTENDED_MAP,
+  LATIN_EXTENDED_REGEX,
+} from './latin-extended-map.js'
 
 export function canonicalizeTitle(title: string): string {
   if (typeof title !== 'string' || title.length === 0) {
@@ -61,8 +52,10 @@ export function canonicalizeTitle(title: string): string {
   const decomposed = title.normalize('NFD').replace(/\p{M}/gu, '')
 
   // Handle the Latin Extended characters that don't decompose via NFD.
+  // Map + regex live in latin-extended-map.ts so canonicalizeArtist and
+  // canonicalizeTitle share the same set — see #648 follow-up.
   const stripped = decomposed.replace(
-    /[Øø]/g,
+    LATIN_EXTENDED_REGEX,
     (char) => LATIN_EXTENDED_MAP[char] ?? char,
   )
 

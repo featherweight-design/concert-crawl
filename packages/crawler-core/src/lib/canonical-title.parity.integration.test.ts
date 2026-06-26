@@ -76,9 +76,9 @@ describe('canonical_title — SQL backfill / JS function parity', () => {
     // Inline the exact SQL expression from migration 0043. If the
     // migration's normalization changes, copy the new expression here
     // and update PARITY_INPUTS with any new edge cases.
-    // Drizzle's db.execute over postgres-js returns the rows array
-    // directly (postgres-js's RowList<Row>). Each row is an object with the
-    // selected columns; the SELECT here yields exactly one row.
+    // Drizzle's db.execute<T> over postgres-js returns the rows array as a
+    // RowList<T>, which is iterable + indexable like a regular array. No
+    // double-cast needed — the SELECT here yields exactly one row.
     const rows = await db.execute<{ canonical: string }>(sql`
       SELECT trim(
         regexp_replace(
@@ -97,8 +97,7 @@ describe('canonical_title — SQL backfill / JS function parity', () => {
       ) AS canonical
     `)
 
-    const sqlCanonical = (rows as unknown as { canonical: string }[])[0]
-      ?.canonical
+    const sqlCanonical = rows[0]?.canonical
     const jsCanonical = canonicalizeTitle(input)
 
     expect(sqlCanonical).toBe(jsCanonical)
