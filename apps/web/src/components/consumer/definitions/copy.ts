@@ -329,6 +329,8 @@ export const CONSUMER_COPY = {
         message: 'Saved draft restored.',
         discardLabel: 'Discard draft',
         discardAriaLabel: 'Discard saved draft',
+        saveFailed:
+          "Couldn't save your draft — your text is still here. Try sending now, or save again.",
       },
     },
   },

@@ -47,7 +47,8 @@ restore on open (with a discard affordance), clear on successful submit.
   message + category survive across simulated error → retry.
 - **#830 fix** — added `saveDraft` + `loadDraft` + `clearDraft` helpers
   in `lib/feedback-draft.ts` with SSR-safe `typeof window` guard,
-  72-hour TTL, JSON Zod parse for integrity. On `open` going false→true
+  72-hour TTL, and a runtime type guard (`isFeedbackDraft`) on rehydrate
+  for integrity. On `open` going false→true
   the modal hydrates from a saved draft, shows a "Saved draft restored"
   banner with a "Discard draft" button. On "Save and come back" the
   current form state is persisted then modal closes. On successful

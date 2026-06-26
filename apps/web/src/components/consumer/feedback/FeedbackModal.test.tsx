@@ -206,4 +206,36 @@ describe('FeedbackModal — Save and come back persists draft (#830)', () => {
     expect(screen.queryByText(/Saved draft restored/i)).toBeNull()
     expect(localStorage.getItem(FEEDBACK_DRAFT_KEY)).toBeNull()
   })
+
+  // Copilot R1 — saveAndCloseLater previously closed the modal even when
+  // saveDraft threw (quota / privacy mode), silently destroying the user's
+  // inputs while the button promised a save. Surface the failure inline
+  // and keep the modal open so the user can copy their text or retry.
+  it('shows an inline alert and keeps the modal open when saveDraft fails', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response('boom', { status: 500 }) as unknown as Response,
+      )
+    const setItemMock = vi
+      .spyOn(Storage.prototype, 'setItem')
+      .mockImplementation(() => {
+        throw new Error('QuotaExceededError')
+      })
+
+    const onClose = vi.fn()
+    render(<FeedbackModal open={true} onClose={onClose} />)
+    fillCategoryAndMessage('important note')
+    await submitAndWait()
+
+    const saveBtn = screen.getByRole('button', { name: /Save and come back/i })
+    fireEvent.click(saveBtn)
+
+    expect(onClose).not.toHaveBeenCalled()
+    expect(screen.getByRole('alert')).toBeTruthy()
+    expect(screen.getByText(/Couldn't save your draft/i)).toBeTruthy()
+
+    setItemMock.mockRestore()
+    fetchMock.mockRestore()
+  })
 })

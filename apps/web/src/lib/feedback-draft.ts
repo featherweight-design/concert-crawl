@@ -28,7 +28,18 @@ export interface FeedbackDraft {
 }
 
 function isBrowser(): boolean {
-  return typeof window !== 'undefined' && typeof localStorage !== 'undefined'
+  if (typeof window === 'undefined') return false
+  try {
+    // Property access on `localStorage` can throw in sandboxed iframes
+    // and strict privacy modes (e.g. Safari ITP with cross-site storage
+    // blocked). The `typeof` check alone isn't enough — the engine
+    // evaluates the operand which trips the SecurityError. Wrapping in
+    // try/catch preserves the SSR-safe short-circuit contract.
+    return typeof localStorage !== 'undefined'
+  } catch (err) {
+    console.warn('feedback-draft: localStorage access blocked', err)
+    return false
+  }
 }
 
 function isRecord(val: unknown): val is Record<string, unknown> {

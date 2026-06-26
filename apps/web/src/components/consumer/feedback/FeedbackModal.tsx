@@ -45,7 +45,20 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
   // Banner shown when a previously-saved draft was rehydrated on open.
   // User can dismiss via "Discard draft" which also clears localStorage.
   const [draftRestored, setDraftRestored] = useState(false)
+  // True when saveAndCloseLater hit a storage failure (quota / privacy mode).
+  // Surfaces an inline message in the error state so we never silently
+  // close while the button promised the draft was saved.
+  const [draftSaveFailed, setDraftSaveFailed] = useState(false)
   const prevOpenRef = useRef(false)
+  // Lifted from FormFields so discardDraft / reset can clear the underlying
+  // <input type="file"> value when the screenshot state goes away. Without
+  // this, re-attaching the same file after a discard doesn't fire onChange
+  // because the input's value never changed.
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const clearFileInput = useCallback(() => {
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }, [])
 
   // Hydrate from a saved draft whenever the modal opens (false→true).
   // This is the only place we read from localStorage so we don't fight
@@ -87,7 +100,9 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     setMsgError(false)
     setScreenshot(null)
     setDraftRestored(false)
-  }, [])
+    setDraftSaveFailed(false)
+    clearFileInput()
+  }, [clearFileInput])
 
   // Issue #829: return from the error state back to the form WITHOUT
   // wiping category/message/screenshot so the user can correct + retry.
@@ -102,9 +117,17 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
 
   // Issue #830: "Save and come back" — persist the current draft to
   // localStorage, then close. Reopening the modal will rehydrate it.
+  // If saveDraft fails (quota exceeded, storage disabled, privacy mode)
+  // we keep the modal open and surface the failure inline so the user's
+  // inputs aren't silently discarded by the subsequent close.
   const saveAndCloseLater = useCallback(() => {
-    saveDraft({ category, message, screenshot })
-    handleClose()
+    const saved = saveDraft({ category, message, screenshot })
+    if (saved) {
+      setDraftSaveFailed(false)
+      handleClose()
+    } else {
+      setDraftSaveFailed(true)
+    }
   }, [category, handleClose, message, screenshot])
 
   const discardDraft = useCallback(() => {
@@ -115,7 +138,8 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     setScreenshot(null)
     setCatError(false)
     setMsgError(false)
-  }, [])
+    clearFileInput()
+  }, [clearFileInput])
 
   const handleSubmit = useCallback(async () => {
     const catInvalid = !category
@@ -261,6 +285,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
           <ErrorState
             onRetry={returnToForm}
             onSaveForLater={saveAndCloseLater}
+            saveFailed={draftSaveFailed}
           />
         )}
         {showForm && (
@@ -277,6 +302,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
             onScreenshotChange={handleScreenshotChange}
             draftRestored={draftRestored}
             onDiscardDraft={discardDraft}
+            fileInputRef={fileInputRef}
           />
         )}
       </div>
@@ -312,6 +338,7 @@ interface FormProps {
   onScreenshotChange: (file: File | null) => void
   draftRestored: boolean
   onDiscardDraft: () => void
+  fileInputRef: React.RefObject<HTMLInputElement | null>
 }
 
 function FormFields({
@@ -327,9 +354,9 @@ function FormFields({
   onScreenshotChange,
   draftRestored,
   onDiscardDraft,
+  fileInputRef,
 }: FormProps) {
   const disabled = state === 'loading'
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -713,11 +740,15 @@ function SuccessState({
 function ErrorState({
   onRetry,
   onSaveForLater,
+  saveFailed,
 }: {
   // Primary action — return to the form WITHOUT clearing inputs (#829).
   onRetry: () => void
   // Secondary action — persist the draft to localStorage then close (#830).
   onSaveForLater: () => void
+  // True when the most recent saveForLater attempt failed; surfaces an
+  // inline notice so the user knows the draft wasn't persisted.
+  saveFailed: boolean
 }) {
   return (
     <div
@@ -752,6 +783,23 @@ function ErrorState({
       >
         {CONSUMER_COPY.feedback.modal.error.body}
       </div>
+      {saveFailed && (
+        <div
+          role="alert"
+          style={{
+            fontSize: 13,
+            color: 'var(--warning)',
+            lineHeight: 1.5,
+            letterSpacing: '-0.005em',
+            padding: '8px 12px',
+            borderRadius: 8,
+            border: '1px solid var(--warning)',
+            background: 'color-mix(in oklab, var(--warning) 8%, transparent)',
+          }}
+        >
+          {CONSUMER_COPY.feedback.modal.draftBanner.saveFailed}
+        </div>
+      )}
       <div
         style={{
           display: 'flex',
