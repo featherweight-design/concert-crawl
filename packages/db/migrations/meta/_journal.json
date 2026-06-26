@@ -302,6 +302,13 @@
       "when": 1782691200000,
       "tag": "0042_events_is_concert_review_needed",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1782777600000,
+      "tag": "0043_event_canonical_title",
+      "breakpoints": true
     }
   ]
 }

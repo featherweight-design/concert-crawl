@@ -98,6 +98,16 @@ export const events = pgTable(
     // index on (venue_id, date, canonical_artist) WHERE status = 'upcoming'
     // backs the crawler's ON CONFLICT target (see migration 0035).
     canonicalArtist: text('canonical_artist').notNull().default(''),
+    // Normalized title identifier used to collapse the case where the LLM
+    // extracts different `artist` substrings from the same compound title
+    // across crawl runs (e.g. "BPM BINGO!" vs "Dombresky" vs "Dombresky /
+    // Walker & Royce" — same listing, six rows). See
+    // packages/crawler-core/src/lib/canonical-title.ts for the rules.
+    // Populated by the crawler on every upsert. The follow-up index swap
+    // will switch the crawler's ON CONFLICT target from
+    // (venue_id, date, canonical_artist) to (venue_id, date, canonical_title)
+    // — tracked by issue #821.
+    canonicalTitle: text('canonical_title').notNull().default(''),
     // Stale-event detection (issue #607). lastSeenAt is bumped to NOW() on
     // every successful crawl run that returns this event row. firstMissingAt
     // is set to NOW() on the first successful crawl that *should* have
@@ -128,6 +138,9 @@ export const events = pgTable(
     artistIdx: index('events_artist_idx').on(table.artist),
     canonicalArtistIdx: index('events_canonical_artist_idx').on(
       table.canonicalArtist,
+    ),
+    canonicalTitleIdx: index('events_canonical_title_idx').on(
+      table.canonicalTitle,
     ),
     // Both unique indexes are partial WHERE status='upcoming' so admin
     // status overrides (cancelled, postponed) sit outside the constraint

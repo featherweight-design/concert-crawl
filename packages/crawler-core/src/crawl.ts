@@ -28,6 +28,7 @@ import {
   type CrossVenueCandidate,
 } from './lib/cross-venue-filter.js'
 import { canonicalizeArtist } from './lib/canonical-artist.js'
+import { canonicalizeTitle } from './lib/canonical-title.js'
 import { hashPage, hashEvent } from './lib/hash.js'
 import { deriveTicketLinks } from './lib/ticket-links/index.js'
 import type { NormalizedEvent, TokenUsage } from './types.js'
@@ -510,6 +511,7 @@ export async function crawlVenue(
         .map((event) => ({
           ...event,
           canonicalArtist: canonicalizeArtist(event.artist),
+          canonicalTitle: canonicalizeTitle(event.title),
           sourceHash: hashEvent({
             title: event.title,
             artist: event.artist,
@@ -611,6 +613,7 @@ export async function crawlVenue(
             title: event.title,
             artist: event.artist,
             canonicalArtist: event.canonicalArtist,
+            canonicalTitle: event.canonicalTitle,
             date: event.date,
             doorsTime:
               event.doorsTime && event.doorsTime !== ''
@@ -672,6 +675,13 @@ export async function crawlVenue(
             targetWhere: eq(events.status, 'upcoming'),
             set: {
               title: sql`excluded.title`,
+              // canonical_title stays in lock-step with title — derived
+              // value, must not drift from its source. Important once the
+              // ON CONFLICT target swap in the #821 follow-up PR makes
+              // canonical_title load-bearing for dedup; stale values here
+              // would cause subsequent crawls to miss conflict on rows the
+              // canonical_artist match path had already updated.
+              canonicalTitle: sql`excluded.canonical_title`,
               // artist intentionally NOT updated — once the winner row is
               // established (either via the consolidation backfill or the
               // first crawl after this PR ships), its artist string stays.
