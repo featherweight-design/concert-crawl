@@ -145,6 +145,7 @@ describe('crawlVenue — stale-event detection (#607)', () => {
         title: 'Artist A Live',
         artist: 'Artist A',
         canonicalArtist: 'artist a',
+        canonicalTitle: 'artist a live',
         date: dateA,
         status: 'upcoming',
         lastSeenAt: oldSeenAt,
@@ -155,6 +156,7 @@ describe('crawlVenue — stale-event detection (#607)', () => {
         title: 'Artist B Live',
         artist: 'Artist B',
         canonicalArtist: 'artist b',
+        canonicalTitle: 'artist b live',
         date: dateB,
         status: 'upcoming',
         lastSeenAt: oldSeenAt,
@@ -213,6 +215,7 @@ describe('crawlVenue — stale-event detection (#607)', () => {
         title: 'Artist A Live',
         artist: 'Artist A',
         canonicalArtist: 'artist a',
+        canonicalTitle: 'artist a live',
         date: dateA,
         status: 'upcoming',
         lastSeenAt: oldSeenAt,
@@ -223,6 +226,7 @@ describe('crawlVenue — stale-event detection (#607)', () => {
         title: 'Artist B Live',
         artist: 'Artist B',
         canonicalArtist: 'artist b',
+        canonicalTitle: 'artist b live',
         date: dateB,
         status: 'upcoming',
         lastSeenAt: oldSeenAt,
@@ -288,6 +292,7 @@ describe('crawlVenue — stale-event detection (#607)', () => {
         title: 'Artist A Live',
         artist: 'Artist A',
         canonicalArtist: 'artist a',
+        canonicalTitle: 'artist a live',
         date: dateA,
         status: 'upcoming',
         lastSeenAt: oldSeenAt,
@@ -298,6 +303,7 @@ describe('crawlVenue — stale-event detection (#607)', () => {
         title: 'Artist B Live',
         artist: 'Artist B',
         canonicalArtist: 'artist b',
+        canonicalTitle: 'artist b live',
         date: dateB,
         status: 'upcoming',
         lastSeenAt: oldSeenAt,
@@ -331,40 +337,52 @@ describe('crawlVenue — stale-event detection (#607)', () => {
   })
 })
 
-describe('crawlVenue — canonical-artist upsert key (#608 Track A)', () => {
-  it('matches existing rows by canonical_artist so artist-string drift across crawls collapses to one row', async () => {
-    // Regression test for the prod incident on 2026-06-17: Red Rocks crawl
-    // stamped 265 false-positive first_missing_at because the LLM extracted
-    // "Wynonna Judd" but the DB row was stored as "Wynonna Judd & Melissa
-    // Etheridge". Same canonical, different artist string → upsert missed
-    // → last_seen_at stayed stale → Pass 2 flagged it missing.
+describe('crawlVenue — canonical-title upsert key (#821)', () => {
+  it('matches existing rows by canonical_title so LLM artist-substring drift across crawls collapses to one row', async () => {
+    // Regression test for issue #821: prod had 47% dupe rate on hidden
+    // events because the LLM extracted non-deterministic artist substrings
+    // from compound titles across crawl runs. Example from prod (Larimer
+    // 7/31): "BPM BINGO! Dombresky / Walker & Royce Edition" produced six
+    // rows under canonical_artist dedup because each crawl picked a
+    // different artist substring (BPM BINGO! / BPM BINGO / Dombresky /
+    // Dombresky / Walker & Royce / Dombresky, Walker & Royce / ...).
     //
-    // Post-Track-A: the canonical_artist key on the upsert + the partial
-    // UNIQUE index in 0034 collapse both extractions to a single row.
+    // Post-#821: the canonical_title key on the upsert + the partial
+    // UNIQUE index in 0044 collapse all artist-substring variants of the
+    // same listing to a single row.
     const venue = await seedTestVenue()
     const showDate = futureDate(14)
 
     const oldSeenAt = new Date(Date.now() - 24 * 60 * 60 * 1000)
     await db.insert(events).values({
       venueId: venue.id,
-      title: 'Wynonna Judd & Melissa Etheridge with the Colorado Symphony',
-      artist: 'Wynonna Judd & Melissa Etheridge',
-      canonicalArtist: 'wynonna judd',
+      title: 'BPM BINGO! Dombresky / Walker & Royce Edition',
+      artist: 'BPM BINGO!',
+      canonicalArtist: 'bpm bingo!',
+      canonicalTitle: 'bpm bingo! dombresky / walker & royce edition',
       date: showDate,
       status: 'upcoming',
       lastSeenAt: oldSeenAt,
       firstMissingAt: null,
     })
 
-    // Crawl extracts the show under a shorter artist string — what tripped
-    // the prod incident.
+    // Re-crawl extracts the same listing but the LLM picks a different
+    // artist substring — what produced the prod dupes.
     mockFetchPage.mockResolvedValue({
       html: HTML_BASE,
       httpStatus: 200,
       finalUrl: venue.url,
     })
     mockExtractWithLlm.mockResolvedValue({
-      events: [makeEvent('Wynonna Judd', showDate, venue.url)],
+      events: [
+        {
+          title: 'BPM BINGO! Dombresky / Walker & Royce Edition',
+          artist: 'Dombresky',
+          date: showDate,
+          confidence: 0.9,
+          sourceUrl: venue.url,
+        },
+      ],
       usage: { inputTokens: 100, outputTokens: 50 },
     })
 
@@ -372,33 +390,34 @@ describe('crawlVenue — canonical-artist upsert key (#608 Track A)', () => {
     const run = await crawlVenue(venue.id, mockBrowser)
     expect(run.status).toBe('success')
 
-    const wynonnaRows = await db
+    const rows = await db
       .select()
       .from(events)
       .where(
         and(
           eq(events.venueId, venue.id),
-          eq(events.canonicalArtist, 'wynonna judd'),
+          eq(
+            events.canonicalTitle,
+            'bpm bingo! dombresky / walker & royce edition',
+          ),
         ),
       )
 
-    // ONE row, not two — the partial UNIQUE index and the canonical-artist
-    // upsert key collapse "Wynonna Judd" → existing "Wynonna Judd & Melissa
-    // Etheridge" row.
-    expect(wynonnaRows).toHaveLength(1)
+    // ONE row, not two — the partial UNIQUE index and the canonical-title
+    // upsert key collapse "Dombresky" → existing "BPM BINGO!" row.
+    expect(rows).toHaveLength(1)
 
-    // Pass 1 found the row by canonical_artist — last_seen_at advanced and
-    // first_missing_at stayed NULL. Without the canonical-artist match this
-    // would be the 265-false-positive scenario.
-    expect(wynonnaRows[0]!.lastSeenAt.getTime()).toBeGreaterThanOrEqual(
-      beforeCrawl,
-    )
-    expect(wynonnaRows[0]!.firstMissingAt).toBeNull()
+    // Pass 1 found the row by canonical_title — last_seen_at advanced and
+    // first_missing_at stayed NULL. Without the canonical-title match this
+    // would re-flag the row as missing on every extraction that chose a
+    // different artist substring.
+    expect(rows[0]!.lastSeenAt.getTime()).toBeGreaterThanOrEqual(beforeCrawl)
+    expect(rows[0]!.firstMissingAt).toBeNull()
 
-    // The artist field intentionally stays at the original "& Melissa
-    // Etheridge" form — the ON CONFLICT SET clause doesn't update artist
-    // so it doesn't flip between extractions.
-    expect(wynonnaRows[0]!.artist).toBe('Wynonna Judd & Melissa Etheridge')
+    // The artist field intentionally stays at the original "BPM BINGO!"
+    // form — the ON CONFLICT SET clause doesn't update artist so it
+    // doesn't flip between extractions.
+    expect(rows[0]!.artist).toBe('BPM BINGO!')
   })
 })
 
@@ -787,6 +806,7 @@ describe('crawlVenue — non-concert auto-classification (#696)', () => {
       title: 'Originally Misclassified Show',
       artist: 'Test Artist',
       canonicalArtist: 'test artist',
+      canonicalTitle: 'originally misclassified show',
       date: dateA,
       status: 'upcoming',
       hiddenFromConsumer: true,
@@ -801,8 +821,13 @@ describe('crawlVenue — non-concert auto-classification (#696)', () => {
     mockExtractWithLlm.mockResolvedValue({
       events: [
         {
-          title: 'Originally Misclassified Show — Updated',
-          artist: 'Test Artist',
+          // Same title as the seeded row so canonical_title matches and the
+          // upsert hits the UPDATE branch (where the hidden_from_consumer
+          // preservation rule lives). artist deliberately different — the
+          // real-world admin-override case is a re-crawl that resurfaces
+          // the same listing under a slightly different LLM-picked artist.
+          title: 'Originally Misclassified Show',
+          artist: 'Test Artist Featured',
           date: dateA,
           confidence: 0.95,
           sourceUrl: venue.url,
@@ -827,9 +852,10 @@ describe('crawlVenue — non-concert auto-classification (#696)', () => {
       .from(events)
       .where(eq(events.venueId, venue.id))
 
-    // Admin override sticks; title updates as normal mutable field
+    // Admin override sticks across re-crawl; the UPDATE branch's `set`
+    // clause does not include hidden_from_consumer.
     expect(row?.hiddenFromConsumer).toBe(true)
-    expect(row?.title).toBe('Originally Misclassified Show — Updated')
+    expect(row?.title).toBe('Originally Misclassified Show')
   })
 
   it('INSERT path sets is_concert_review_needed=true when LLM returns reviewNeeded=true', async () => {
@@ -925,6 +951,7 @@ describe('crawlVenue — non-concert auto-classification (#696)', () => {
       title: 'Borderline Show',
       artist: 'Borderline Artist',
       canonicalArtist: 'borderline artist',
+      canonicalTitle: 'borderline show',
       date: dateA,
       status: 'upcoming',
       isConcertReviewNeeded: true,
@@ -939,7 +966,10 @@ describe('crawlVenue — non-concert auto-classification (#696)', () => {
     mockExtractWithLlm.mockResolvedValue({
       events: [
         {
-          title: 'Borderline Show — Updated',
+          // Same title as the seeded row so canonical_title matches and
+          // the upsert hits the UPDATE branch (where the
+          // isConcertReviewNeeded preservation rule lives).
+          title: 'Borderline Show',
           artist: 'Borderline Artist',
           date: dateA,
           confidence: 0.95,
@@ -967,7 +997,7 @@ describe('crawlVenue — non-concert auto-classification (#696)', () => {
       .where(eq(events.venueId, venue.id))
 
     expect(row?.isConcertReviewNeeded).toBe(true) // crawler-frozen
-    expect(row?.title).toBe('Borderline Show — Updated') // mutable fields update normally
+    expect(row?.title).toBe('Borderline Show') // unchanged across re-crawl
   })
 })
 

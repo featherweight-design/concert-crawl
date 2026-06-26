@@ -495,6 +495,7 @@ describe('crawlVenue — event-level sourceHash', () => {
       title: METALLICA_EVENT.title,
       artist: METALLICA_EVENT.artist,
       canonicalArtist: 'metallica',
+      canonicalTitle: 'metallica live',
       date: METALLICA_EVENT.date,
       sourceHash: null,
       verified: true,
@@ -524,20 +525,24 @@ describe('crawlVenue — event-level sourceHash', () => {
 })
 
 describe('crawlVenue — intra-batch deduplication', () => {
-  it('inserts only one row when LLM returns duplicate (artist, date) pairs', async () => {
+  it('inserts only one row when LLM returns the same listing with different artist substrings (#821)', async () => {
     const venue = seedVenue()
     mockFetchPage.mockResolvedValue({
       html: HTML_V1,
       httpStatus: 200,
       finalUrl: venue.websiteUrl,
     })
-    // LLM returns the same artist+date twice (a realistic hallucination for
-    // large venue event pages). Without deduplication this triggers:
-    // "ON CONFLICT DO UPDATE command cannot affect row a second time"
+    // The real #821 case: LLM returns the same listing twice within a
+    // single extraction batch, picking different artist substrings from
+    // the same compound title each time (e.g. "BPM BINGO!" once,
+    // "Dombresky" the next). Without canonical_title dedup these would
+    // both reach the upsert with different canonical_artist values and
+    // trigger the partial UNIQUE on canonical_title with "cannot affect
+    // row a second time."
     mockExtractWithLlm.mockResolvedValue({
       events: [
         METALLICA_EVENT,
-        { ...METALLICA_EVENT, title: 'Metallica Live (duplicate)' },
+        { ...METALLICA_EVENT, artist: 'Metallica & Mammoth WVH' },
       ],
       usage: { inputTokens: 200, outputTokens: 100 },
     })

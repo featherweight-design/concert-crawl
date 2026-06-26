@@ -98,15 +98,13 @@ export const events = pgTable(
     // index on (venue_id, date, canonical_artist) WHERE status = 'upcoming'
     // backs the crawler's ON CONFLICT target (see migration 0035).
     canonicalArtist: text('canonical_artist').notNull().default(''),
-    // Normalized title identifier used to collapse the case where the LLM
-    // extracts different `artist` substrings from the same compound title
-    // across crawl runs (e.g. "BPM BINGO!" vs "Dombresky" vs "Dombresky /
-    // Walker & Royce" — same listing, six rows). See
-    // packages/crawler-core/src/lib/canonical-title.ts for the rules.
-    // Populated by the crawler on every upsert. The follow-up index swap
-    // will switch the crawler's ON CONFLICT target from
-    // (venue_id, date, canonical_artist) to (venue_id, date, canonical_title)
-    // — tracked by issue #821.
+    // Normalized title identifier — backs the crawler's ON CONFLICT target.
+    // Closes the gap where the LLM extracts different `artist` substrings
+    // from the same compound title across crawl runs (e.g. "BPM BINGO!" vs
+    // "Dombresky" vs "Dombresky / Walker & Royce" — same listing, six rows
+    // under canonical_artist dedup). See
+    // packages/crawler-core/src/lib/canonical-title.ts for the rules and
+    // migration 0044 for the partial UNIQUE index swap (#821).
     canonicalTitle: text('canonical_title').notNull().default(''),
     // Stale-event detection (issue #607). lastSeenAt is bumped to NOW() on
     // every successful crawl run that returns this event row. firstMissingAt
@@ -142,20 +140,22 @@ export const events = pgTable(
     canonicalTitleIdx: index('events_canonical_title_idx').on(
       table.canonicalTitle,
     ),
-    // Both unique indexes are partial WHERE status='upcoming' so admin
-    // status overrides (cancelled, postponed) sit outside the constraint
-    // and relists produce a new upcoming row alongside the cancelled one.
-    // The canonical_artist index backs the crawler's ON CONFLICT target;
-    // the artist index is kept for historical query patterns but no longer
-    // enforces global uniqueness. Migration 0035 dropped + recreated the
-    // legacy artist index as partial on the same predicate.
-    venueDateArtistIdx: uniqueIndex('events_venue_date_artist_idx')
-      .on(table.venueId, table.date, table.artist)
-      .where(sql`status = 'upcoming'`),
-    venueDateCanonicalArtistIdx: uniqueIndex(
-      'events_venue_date_canonical_artist_idx',
+    // Partial UNIQUE on (venue_id, date, canonical_title) WHERE
+    // status='upcoming' — backs the crawler's ON CONFLICT target. Replaces
+    // the canonical_artist + artist unique indexes from #608 because the
+    // LLM extracts non-deterministic artist substrings from compound titles
+    // across crawl runs (see #821 root-cause analysis). Title is the stable
+    // substring (LLM transcribes verbatim from the page) while artist is
+    // the LLM's interpretation of which substring represents the headliner.
+    //
+    // Status overrides (cancelled, postponed) sit outside this index so
+    // relists at the same venue/date produce a new upcoming row alongside
+    // the cancelled one. canonical_artist remains on the table as a
+    // search/display column with the non-unique btree index above.
+    venueDateCanonicalTitleIdx: uniqueIndex(
+      'events_venue_date_canonical_title_idx',
     )
-      .on(table.venueId, table.date, table.canonicalArtist)
+      .on(table.venueId, table.date, table.canonicalTitle)
       .where(sql`status = 'upcoming'`),
   }),
 )

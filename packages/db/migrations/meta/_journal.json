@@ -309,6 +309,13 @@
       "when": 1782777600000,
       "tag": "0043_event_canonical_title",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1782864000000,
+      "tag": "0044_event_canonical_title_unique",
+      "breakpoints": true
     }
   ]
 }

@@ -499,24 +499,23 @@ export async function crawlVenue(
     // Upsert events — insert on first crawl, update mutable fields on re-crawl
     let eventsInserted = 0
     let eventsUpdated = 0
-    // Track (canonical_artist, date) pairs we've actually upserted this run so
+    // Track (canonical_title, date) pairs we've actually upserted this run so
     // the stale-event detection below can refresh last_seen_at for them.
     // Includes both the freshly-inserted and the already-existed-with-unchanged-hash
     // cases — "seen" means "the venue's page still advertised this show",
-    // independent of whether we touched the DB row. Keyed by canonical_artist
-    // (not raw artist) so an extraction of "Wynonna Judd" matches a DB row
-    // stored as "Wynonna Judd & Melissa Etheridge" — without that, Pass 2
-    // below would stamp the row missing on every crawl that produced a
-    // different artist-string variant.
-    const seenEventCoords: { canonicalArtist: string; date: string }[] = []
+    // independent of whether we touched the DB row. Keyed by canonical_title
+    // (not raw title) so minor case/whitespace variation in the LLM's title
+    // transcription doesn't cause Pass 2 below to stamp the row missing.
+    const seenEventCoords: { canonicalTitle: string; date: string }[] = []
     if (normalizedEvents.length > 0) {
       // Compute sourceHash for each extracted event, then deduplicate by
-      // (canonical_artist, date) — LLM extraction can return the same show
-      // twice under slightly different artist strings ("Ziggy Marley" and
-      // "Ziggy Marley & Stephen Marley"). Deduping by raw artist here would
-      // let both variants through, then the ON CONFLICT against the partial
-      // UNIQUE index on canonical_artist would fail with "cannot affect row
-      // a second time."
+      // (canonical_title, date). LLM extraction can return the same listing
+      // twice with slightly different artist-substring choices on compound
+      // titles ("BPM BINGO!" vs "Dombresky" vs "Dombresky / Walker & Royce"
+      // for one Larimer 7/31 row — see #821). Both rows would survive a
+      // canonical_artist-keyed dedup and then the ON CONFLICT against the
+      // partial UNIQUE on canonical_title would fail with "cannot affect
+      // row a second time."
       const seenEventKeys = new Set<string>()
       const eventsWithHashes = normalizedEvents
         .map((event) => ({
@@ -532,19 +531,19 @@ export async function crawlVenue(
           }),
         }))
         .filter((evt) => {
-          const key = `${evt.canonicalArtist}|${evt.date}`
+          const key = `${evt.canonicalTitle}|${evt.date}`
           if (seenEventKeys.has(key)) return false
           seenEventKeys.add(key)
           return true
         })
 
       // Load existing UPCOMING events for this venue to compare hashes.
-      // Keyed by canonical_artist so a re-extraction of "Wynonna Judd"
-      // hits the row stored as "Wynonna Judd & Melissa Etheridge" — same
-      // canonical, same show.
+      // Keyed by canonical_title so a re-extraction with a different
+      // LLM-chosen artist substring hits the row stored under the same
+      // listing's first extraction.
       //
       // status='upcoming' filter mirrors the ON CONFLICT target's predicate
-      // (the partial UNIQUE index in 0034). Without it, an admin-cancelled
+      // (the partial UNIQUE index in 0044). Without it, an admin-cancelled
       // row would still appear in existingMap — and a fresh extraction of
       // the same show would be incorrectly classified as an update (when
       // it should INSERT a new upcoming row alongside the cancelled one),
@@ -552,7 +551,7 @@ export async function crawlVenue(
       // changes on rows the admin has already cancelled.
       const existingRows = await db
         .select({
-          canonicalArtist: events.canonicalArtist,
+          canonicalTitle: events.canonicalTitle,
           date: events.date,
           title: events.title,
           sourceHash: events.sourceHash,
@@ -563,13 +562,13 @@ export async function crawlVenue(
 
       const existingMap = new Map(
         existingRows.map(
-          (row) => [`${row.canonicalArtist}|${row.date}`, row] as const,
+          (row) => [`${row.canonicalTitle}|${row.date}`, row] as const,
         ),
       )
 
       // Notify admin when a verified event's source data has changed
       const changedVerified = eventsWithHashes.filter((evt) => {
-        const existing = existingMap.get(`${evt.canonicalArtist}|${evt.date}`)
+        const existing = existingMap.get(`${evt.canonicalTitle}|${evt.date}`)
         return (
           existing &&
           existing.verified === true &&
@@ -596,14 +595,14 @@ export async function crawlVenue(
       // the upsert path is skipped because every hash matched.
       for (const evt of eventsWithHashes) {
         seenEventCoords.push({
-          canonicalArtist: evt.canonicalArtist,
+          canonicalTitle: evt.canonicalTitle,
           date: evt.date,
         })
       }
 
       // Only upsert events that are new or have changed content
       const eventsToUpsert = eventsWithHashes.filter((evt) => {
-        const existing = existingMap.get(`${evt.canonicalArtist}|${evt.date}`)
+        const existing = existingMap.get(`${evt.canonicalTitle}|${evt.date}`)
         if (!existing) return true // new event
         return (
           existing.sourceHash === null || existing.sourceHash !== evt.sourceHash
@@ -665,7 +664,7 @@ export async function crawlVenue(
         })
 
         for (const evt of eventsToUpsert) {
-          if (existingMap.has(`${evt.canonicalArtist}|${evt.date}`)) {
+          if (existingMap.has(`${evt.canonicalTitle}|${evt.date}`)) {
             eventsUpdated++
           } else {
             eventsInserted++
@@ -676,28 +675,34 @@ export async function crawlVenue(
           .insert(events)
           .values(eventValues)
           .onConflictDoUpdate({
-            // Conflict target is the partial UNIQUE index added in 0034 —
-            // (venue_id, date, canonical_artist) WHERE status='upcoming'.
+            // Conflict target is the partial UNIQUE index added in 0044 —
+            // (venue_id, date, canonical_title) WHERE status='upcoming'.
             // targetWhere mirrors the partial index predicate so Postgres
             // can identify the index for ON CONFLICT resolution. Status
             // overrides (cancelled, postponed) sit outside this index and
             // won't be touched by future crawls.
-            target: [events.venueId, events.date, events.canonicalArtist],
+            target: [events.venueId, events.date, events.canonicalTitle],
             targetWhere: eq(events.status, 'upcoming'),
             set: {
               title: sql`excluded.title`,
-              // canonical_title stays in lock-step with title — derived
-              // value, must not drift from its source. Important once the
-              // ON CONFLICT target swap in the #821 follow-up PR makes
-              // canonical_title load-bearing for dedup; stale values here
-              // would cause subsequent crawls to miss conflict on rows the
-              // canonical_artist match path had already updated.
+              // canonical_title is the dedup key — keeping it in the set
+              // clause is intentional: a future crawl whose canonicalized
+              // title still matches the existing row but whose source title
+              // text differs slightly (case, whitespace) should adopt the
+              // new title without recomputing the canonical (which already
+              // matched per the ON CONFLICT target).
               canonicalTitle: sql`excluded.canonical_title`,
+              // canonical_artist is no longer a dedup key but DOES still
+              // get written (column kept for search/display per #821). We
+              // also update it here so it tracks artist-substring drift
+              // over crawl runs — the row's canonical_artist will represent
+              // whichever artist substring the most recent crawl picked.
+              canonicalArtist: sql`excluded.canonical_artist`,
               // artist intentionally NOT updated — once the winner row is
-              // established (either via the consolidation backfill or the
-              // first crawl after this PR ships), its artist string stays.
-              // Otherwise the field flips between extractions ("Wynonna
-              // Judd" one day, "Wynonna Judd & Melissa Etheridge" the next).
+              // established (either via the #821 consolidation backfill or
+              // the first crawl after this PR ships), its artist string
+              // stays. Otherwise the field flips between extractions
+              // ("BPM BINGO!" one day, "Dombresky" the next).
               doorsTime: sql`excluded.doors_time`,
               showTime: sql`excluded.show_time`,
               ticketUrl: sql`excluded.ticket_url`,
@@ -722,10 +727,11 @@ export async function crawlVenue(
     // when we never got a clean read of the venue's page.
     //
     // Pass 1: for every event the crawl actually saw, refresh last_seen_at
-    // and clear first_missing_at. Matched by (venue_id, date, canonical_artist)
-    // to mirror the upsert's ON CONFLICT target — without that, a "Wynonna
-    // Judd" extraction wouldn't match a "Wynonna Judd & Melissa Etheridge"
-    // DB row and Pass 2 below would stamp it missing.
+    // and clear first_missing_at. Matched by (venue_id, date, canonical_title)
+    // to mirror the upsert's ON CONFLICT target — without that, a re-crawl
+    // that picked a different LLM artist substring for the same listing
+    // would fail to match the existing DB row here and Pass 2 below would
+    // stamp it missing on every artist-substring variation.
     //
     // Pass 2: for every venue event that should have shown up (upcoming,
     // date >= today) but didn't (last_seen_at < this run's start), stamp
@@ -744,8 +750,8 @@ export async function crawlVenue(
           and(
             eq(events.venueId, venueId),
             // status='upcoming' mirrors the ON CONFLICT target's predicate
-            // and the partial UNIQUE index in 0034. Without it, a cancelled
-            // row sharing (venue, date, canonical_artist) with a freshly-
+            // and the partial UNIQUE index in 0044. Without it, a cancelled
+            // row sharing (venue, date, canonical_title) with a freshly-
             // upserted upcoming row would also get last_seen_at refreshed
             // and first_missing_at cleared — but cancelled rows are by
             // definition outside the crawler's seen-state upkeep.
@@ -754,7 +760,7 @@ export async function crawlVenue(
               ...seenEventCoords.map((coord) =>
                 and(
                   eq(events.date, coord.date),
-                  eq(events.canonicalArtist, coord.canonicalArtist),
+                  eq(events.canonicalTitle, coord.canonicalTitle),
                 ),
               ),
             ),
