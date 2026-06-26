@@ -1652,12 +1652,6 @@ export function EventDetailPriceBlock({
                 ),
               )
             } else {
-              const diffDays = Math.floor(
-                (new Date(event.date).getTime() - Date.now()) /
-                  (1000 * 60 * 60 * 24),
-              )
-              const isImminent =
-                diffDays >= 0 && diffDays <= SP_POLICY.imminentThresholdDays
               setLocalSubmissions((prev) => [
                 ...prev,
                 {
@@ -1672,9 +1666,11 @@ export function EventDetailPriceBlock({
                   submitterHandle: null,
                   submittedAt: new Date().toISOString(),
                   confirmsCount: 0,
-                  confirmsNeeded: isImminent
-                    ? SP_POLICY.confirmsRequiredImminent
-                    : SP_POLICY.confirmsRequired,
+                  // Use the shared helper so the local-submission
+                  // optimistic row picks up the UTC-midnight-correct
+                  // imminent-policy denominator (#835 Copilot R5 — same
+                  // class of bug as R4 at the corroboration sites).
+                  confirmsNeeded: corroborationConfirmsRequired(event.date),
                   isSubmitter: true,
                 },
               ])
@@ -1837,12 +1833,6 @@ export function EventDetailPriceBlock({
                 ),
               )
             } else {
-              const diffDays = Math.floor(
-                (new Date(event.date).getTime() - Date.now()) /
-                  (1000 * 60 * 60 * 24),
-              )
-              const isImminent =
-                diffDays >= 0 && diffDays <= SP_POLICY.imminentThresholdDays
               setLocalSubmissions((prev) => [
                 ...prev,
                 {
@@ -1857,9 +1847,11 @@ export function EventDetailPriceBlock({
                   submitterHandle: null,
                   submittedAt: new Date().toISOString(),
                   confirmsCount: 0,
-                  confirmsNeeded: isImminent
-                    ? SP_POLICY.confirmsRequiredImminent
-                    : SP_POLICY.confirmsRequired,
+                  // Use the shared helper so the local-submission
+                  // optimistic row picks up the UTC-midnight-correct
+                  // imminent-policy denominator (#835 Copilot R5 — same
+                  // class of bug as R4 at the corroboration sites).
+                  confirmsNeeded: corroborationConfirmsRequired(event.date),
                   isSubmitter: true,
                 },
               ])
