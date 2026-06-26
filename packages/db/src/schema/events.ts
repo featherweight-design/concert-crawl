@@ -93,10 +93,13 @@ export const events = pgTable(
     extractionStrategy: text('extraction_strategy'),
     // Normalized artist identifier used to collapse artist-string variants of
     // the same show (e.g. "Earl Sweatshirt" vs "Earl Sweatshirt & MIKE"). See
-    // packages/crawler-core/src/lib/canonical-artist.ts for the canonicalization
-    // rules. Populated by the crawler on every upsert. The partial UNIQUE
-    // index on (venue_id, date, canonical_artist) WHERE status = 'upcoming'
-    // backs the crawler's ON CONFLICT target (see migration 0035).
+    // packages/crawler-core/src/lib/canonical-artist.ts for the rules.
+    // Populated by the crawler on every upsert (INSERT + UPDATE) so the
+    // field tracks artist-substring drift across crawl runs. NO LONGER the
+    // dedup key — that role moved to canonical_title in migration 0044
+    // (#821). The non-unique btree index above is kept for search relevance
+    // and for the eventual artist-history feature; this column is otherwise
+    // descriptive metadata, not a load-bearing constraint surface.
     canonicalArtist: text('canonical_artist').notNull().default(''),
     // Normalized title identifier — backs the crawler's ON CONFLICT target.
     // Closes the gap where the LLM extracts different `artist` substrings

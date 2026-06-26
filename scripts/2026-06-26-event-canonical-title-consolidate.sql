@@ -54,6 +54,12 @@
 -- stop and investigate. canonical_title is conservative (no separator split),
 -- but a careless title-only rule could over-merge — sanity check the count
 -- against the prod audit numbers in #821.
+--
+-- Restricted to status='upcoming' to match the partial UNIQUE index's
+-- predicate. Cancelled/postponed rows sit outside the UNIQUE constraint by
+-- design (relists at the same venue/date produce a new upcoming row
+-- alongside the cancelled one) — merging them with upcoming relists would
+-- silently delete admin status overrides.
 
 SELECT
   v.name AS venue,
@@ -65,6 +71,7 @@ FROM (
     COUNT(*) OVER (PARTITION BY e.venue_id, e.date, e.canonical_title) AS cluster_size
   FROM events e
   WHERE e.canonical_title <> ''
+    AND e.status = 'upcoming'
 ) clustered
 JOIN venues v ON v.id = clustered.venue_id
 GROUP BY v.id, v.name
@@ -155,6 +162,10 @@ WITH ranked AS (
     COUNT(*) OVER (PARTITION BY e.venue_id, e.date, e.canonical_title) AS cluster_size
   FROM events e
   WHERE e.canonical_title <> ''
+    -- Scope to the partial UNIQUE index's predicate. Cancelled/postponed
+    -- rows sit outside the constraint by design (admin status override +
+    -- upcoming relist case) and must not be touched by consolidation.
+    AND e.status = 'upcoming'
 )
 SELECT id, venue_id, date, canonical_title, (rn = 1) AS is_winner, cluster_size
 FROM ranked
@@ -164,17 +175,32 @@ CREATE INDEX ON consolidate_clusters (id);
 CREATE INDEX ON consolidate_clusters (venue_id, date, canonical_title);
 
 -- Sidecar table — survives the transaction. 7-day rollback window.
--- TRUNCATE on re-run so we keep a single canonical pre-consolidation view
--- (re-INSERT during rollback would otherwise fail on events.id PK conflicts).
+-- TRUNCATE+INSERT is GATED on `consolidate_clusters` being non-empty so an
+-- accidental DO_EXECUTE=1 re-run after consolidation has already completed
+-- doesn't silently wipe the existing rollback window. The DO block reads
+-- the cluster count once and skips the snapshot work entirely if there are
+-- no losers to capture.
 CREATE TABLE IF NOT EXISTS events_consolidate_821 (LIKE events INCLUDING ALL);
 ALTER TABLE events_consolidate_821 ADD COLUMN IF NOT EXISTS snapshot_at timestamptz;
-TRUNCATE events_consolidate_821;
 
-INSERT INTO events_consolidate_821
-SELECT e.*, NOW()
-FROM events e
-JOIN consolidate_clusters cc ON cc.id = e.id
-WHERE cc.is_winner = false;
+DO $snapshot$
+DECLARE
+  loser_count int;
+BEGIN
+  SELECT COUNT(*) INTO loser_count FROM consolidate_clusters WHERE is_winner = false;
+  IF loser_count = 0 THEN
+    RAISE NOTICE 'SNAPSHOT skipped — no duplicate clusters to capture (re-run after a successful consolidation?). Existing events_consolidate_821 rollback window preserved.';
+  ELSE
+    TRUNCATE events_consolidate_821;
+    INSERT INTO events_consolidate_821
+    SELECT e.*, NOW()
+    FROM events e
+    JOIN consolidate_clusters cc ON cc.id = e.id
+    WHERE cc.is_winner = false;
+    RAISE NOTICE 'SNAPSHOT captured % loser rows into events_consolidate_821.', loser_count;
+  END IF;
+END;
+$snapshot$;
 
 ------------------------------------------------------------------------
 -- 3. DRY-RUN — per-cluster projection for human review

@@ -418,6 +418,12 @@ describe('crawlVenue — canonical-title upsert key (#821)', () => {
     // form — the ON CONFLICT SET clause doesn't update artist so it
     // doesn't flip between extractions.
     expect(rows[0]!.artist).toBe('BPM BINGO!')
+
+    // canonical_artist DOES update on re-crawl — the set clause includes
+    // it so the column tracks the most recent LLM artist-substring choice
+    // (#821 contract). This pins that intended drift-tracking behavior;
+    // without the set clause this would still read 'bpm bingo!'.
+    expect(rows[0]!.canonicalArtist).toBe('dombresky')
   })
 })
 
