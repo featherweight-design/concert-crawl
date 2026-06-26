@@ -1,3 +1,13 @@
+## [1.85.1](https://github.com/HartiganHM/concert-crawl/compare/v1.85.0...v1.85.1) (2026-06-26)
+
+
+### Bug Fixes
+
+* **web:** feedback modal — preserve notes, persist drafts, multi-submit ([9727d9e](https://github.com/HartiganHM/concert-crawl/commit/9727d9eceb0e38e70823942631247790a75d4cc8)), closes [#828](https://github.com/HartiganHM/concert-crawl/issues/828) [#829](https://github.com/HartiganHM/concert-crawl/issues/829) [#830](https://github.com/HartiganHM/concert-crawl/issues/830) [#829](https://github.com/HartiganHM/concert-crawl/issues/829) [#830](https://github.com/HartiganHM/concert-crawl/issues/830) [#828](https://github.com/HartiganHM/concert-crawl/issues/828)
+* **web:** r1 — address Copilot review round 1 on PR [#834](https://github.com/HartiganHM/concert-crawl/issues/834) ([f1a3ce2](https://github.com/HartiganHM/concert-crawl/commit/f1a3ce2aba0cc7afaa655e2dc9347ff34e30dfb9))
+* **web:** r2 — address Copilot review round 2 on PR [#834](https://github.com/HartiganHM/concert-crawl/issues/834) ([b2fc6a2](https://github.com/HartiganHM/concert-crawl/commit/b2fc6a25a39040d223daf5d348c004e59f124b78))
+* **web:** r3 — address Copilot review round 3 on PR [#834](https://github.com/HartiganHM/concert-crawl/issues/834) ([80e88f1](https://github.com/HartiganHM/concert-crawl/commit/80e88f169489952bf1a1537aeb2a266621d65aa5)), closes [#830](https://github.com/HartiganHM/concert-crawl/issues/830)
+
 # [1.85.0](https://github.com/HartiganHM/concert-crawl/compare/v1.84.1...v1.85.0) (2026-06-26)
 
 
