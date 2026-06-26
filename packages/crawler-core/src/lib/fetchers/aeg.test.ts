@@ -106,6 +106,10 @@ describe('aegFetcher.fetch', () => {
 
     const first = result.events[0]!
     expect(first.title).toBeTruthy()
+    // AEG ships the canonical headline directly — no LLM-style decoration —
+    // so `rawTitle` mirrors `title` and the cross-venue filter sees the
+    // same string regardless of extractor (#826).
+    expect(first.rawTitle).toBe(first.title)
     expect(first.artist).toBeTruthy()
     expect(first.date).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     expect(first.showTime).toMatch(/^\d{2}:\d{2}:\d{2}$/)

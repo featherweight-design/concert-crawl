@@ -228,8 +228,13 @@ function normalize(
   // tsconfig sets `exactOptionalPropertyTypes: true`, so we can't pass
   // `field: undefined` for `field?: string`.
   const description = eventDescription(event.title, event.description)
+  const title = eventTitle(event.title)
   return {
-    title: eventTitle(event.title),
+    title,
+    // Platform JSON ships AEG's own canonical headline — no LLM-style
+    // decoration. Mirroring `title` into `rawTitle` keeps the cross-venue
+    // filter's input contract uniform across extractors (#826).
+    rawTitle: title,
     artist: headliner,
     date,
     showTime,

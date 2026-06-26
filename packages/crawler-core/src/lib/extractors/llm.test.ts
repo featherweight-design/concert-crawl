@@ -62,6 +62,7 @@ describe('extractWithLlm', () => {
     const mockEvents = [
       {
         title: 'Jazz Night',
+        rawTitle: 'Jazz Night',
         artist: 'Miles Davis Tribute',
         date: '2026-08-15',
         confidence: 0.95,
@@ -190,6 +191,7 @@ describe('extractWithLlm', () => {
     const mockEvents = [
       {
         title: 'Late Show',
+        rawTitle: 'Late Show',
         artist: 'Night Owls',
         date: '2026-10-01',
         doorsTime: '',
@@ -212,6 +214,7 @@ describe('extractWithLlm', () => {
     const mockEvents = [
       {
         title: 'Miles Davis Tribute',
+        rawTitle: 'Miles Davis Tribute',
         artist: 'Miles Davis Tribute',
         date: '2026-08-15',
         confidence: 0.95,
@@ -228,6 +231,7 @@ describe('extractWithLlm', () => {
     const mockEvents = [
       {
         title: 'BASS BINGO – Wooli Edition!',
+        rawTitle: 'BASS BINGO – Wooli Edition!',
         artist: 'Wooli',
         date: '2026-06-18',
         confidence: 0.9,
@@ -248,6 +252,7 @@ describe('extractWithLlm', () => {
     const mockEvents = [
       {
         title: 'Open Mic Night',
+        rawTitle: 'Open Mic Night',
         artist: 'Various',
         date: '2026-08-15',
         confidence: 0.7,
@@ -264,6 +269,7 @@ describe('extractWithLlm', () => {
     const mockEvents = [
       {
         title: 'PRESIDENT: North American Campaign 2026',
+        rawTitle: 'PRESIDENT: North American Campaign 2026',
         artist: 'PRESIDENT',
         date: '2026-08-15',
         confidence: 0.7,
@@ -281,6 +287,7 @@ describe('extractWithLlm', () => {
     const mockEvents = [
       {
         title: 'Wynonna Judd Live',
+        rawTitle: 'Wynonna Judd Live',
         artist: 'Wynonna Judd',
         date: '2026-08-15',
         confidence: 0.95,
@@ -298,6 +305,7 @@ describe('extractWithLlm', () => {
     const mockEvents = [
       {
         title: 'Open Mic',
+        rawTitle: 'Open Mic',
         artist: 'Various',
         date: '2026-08-15',
         confidence: 0.6,
@@ -324,6 +332,84 @@ describe('extractWithLlm', () => {
       description: expect.stringContaining('reasonable doubt'),
     })
     expect(itemSchema.required).toContain('reviewNeeded')
+  })
+
+  // rawTitle was added to plumb the unmodified source headline through to
+  // the cross-venue presale filter — the LLM strips "AT MISSION BALLROOM"
+  // when populating the cleaned `title`, dropping the marker the filter
+  // needs. See issue #826.
+  it('SAVE_EVENTS_TOOL declares rawTitle as a required string with a verbatim-copy description (#826)', async () => {
+    mockCreate.mockResolvedValue(makeAnthropicResponse([]))
+    await extractWithLlm('<html>test</html>', SOURCE_URL)
+
+    const call = mockCreate.mock.calls[0]?.[0]
+    const tool = call.tools[0]
+    const itemSchema = tool.input_schema.properties.events.items
+    expect(itemSchema.properties.rawTitle).toEqual({
+      type: 'string',
+      description: expect.stringContaining('verbatim'),
+    })
+    // The description must spell out the specific decoration the LLM
+    // tends to drop, since "verbatim" alone hasn't been enough in past
+    // crawls (Cervantes 2026-06-26 incident — see #826).
+    expect(itemSchema.properties.rawTitle.description).toContain(
+      'AT MISSION BALLROOM',
+    )
+    expect(itemSchema.required).toContain('rawTitle')
+  })
+
+  it('system prompt instructs the LLM to preserve the verbatim source headline in rawTitle (#826)', async () => {
+    mockCreate.mockResolvedValue(makeAnthropicResponse([]))
+    await extractWithLlm('<html>test</html>', SOURCE_URL)
+
+    const call = mockCreate.mock.calls[0]?.[0]
+    const systemText: string = call.system[0].text
+    expect(systemText).toContain('rawTitle')
+    expect(systemText).toContain('verbatim')
+    expect(systemText).toContain('AT MISSION BALLROOM')
+  })
+
+  it('returns rawTitle on extracted events when the LLM emits it (#826)', async () => {
+    const mockEvents = [
+      {
+        title: 'AEG Presents Connor Price & Nic D',
+        rawTitle: 'Connor Price & Nic D AT MISSION BALLROOM',
+        artist: 'Connor Price & Nic D',
+        date: '2026-08-15',
+        confidence: 0.9,
+        isConcert: true,
+        reviewNeeded: false,
+      },
+    ]
+    mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents))
+    const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
+    expect(result.events).toHaveLength(1)
+    expect(result.events[0]?.rawTitle).toBe(
+      'Connor Price & Nic D AT MISSION BALLROOM',
+    )
+    expect(result.events[0]?.title).toBe('AEG Presents Connor Price & Nic D')
+  })
+
+  it('rejects an LLM tool call that omits rawTitle (Zod required-field guard)', async () => {
+    // Anthropic enforces required tool-schema fields, but the Zod check is
+    // the defense-in-depth: if the model ever ships a malformed call (or
+    // a future SDK change relaxes enforcement), we must reject the whole
+    // batch rather than silently dropping rawTitle and breaking the
+    // cross-venue filter on every subsequent row.
+    const mockEvents = [
+      {
+        title: 'No rawTitle here',
+        // rawTitle intentionally omitted
+        artist: 'Nobody',
+        date: '2026-08-15',
+        confidence: 0.5,
+        isConcert: true,
+        reviewNeeded: false,
+      },
+    ]
+    mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents))
+    const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
+    expect(result.events).toHaveLength(0)
   })
 
   it('system prompt instructs the LLM to set reviewNeeded for borderline cases', async () => {

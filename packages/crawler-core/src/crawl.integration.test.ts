@@ -71,6 +71,7 @@ async function seedTestVenue(): Promise<{ id: string; url: string }> {
 
 interface ExtractedEvent {
   title: string
+  rawTitle: string
   artist: string
   date: string
   doorsTime: string | undefined
@@ -85,8 +86,11 @@ function makeEvent(
   date: string,
   sourceUrl: string,
 ): ExtractedEvent {
+  const title = `${artist} Live`
   return {
-    title: `${artist} Live`,
+    title,
+    // Match what the LLM extractor populates — see issue #826.
+    rawTitle: title,
     artist,
     date,
     doorsTime: undefined,

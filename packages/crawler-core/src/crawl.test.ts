@@ -686,6 +686,7 @@ describe('crawlVenue — cross-venue presale filter (#605)', () => {
       events: [
         {
           title: 'Earl Sweatshirt AT OGDEN THEATRE',
+          rawTitle: 'Earl Sweatshirt AT OGDEN THEATRE',
           artist: 'Earl Sweatshirt',
           date: '2026-08-15',
           doorsTime: undefined,
@@ -703,6 +704,95 @@ describe('crawlVenue — cross-venue presale filter (#605)', () => {
 
     expect(run.status).toBe('success')
     expect(run.eventsInserted).toBe(1)
+  })
+
+  // Regression test for the 2026-06-26 Cervantes Mission-Ballroom duplicate
+  // incident (issue #826). The LLM extractor strips listing decoration
+  // when populating `title` ("AEG Presents Connor Price & Nic D AT MISSION
+  // BALLROOM" → "AEG Presents Connor Price & Nic D"), dropping the
+  // "AT MISSION BALLROOM" marker the cross-venue filter regex needs. The
+  // fix plumbs the unmodified source headline through as `rawTitle` and
+  // feeds THAT into the filter. This test asserts the filter still drops
+  // the row when only `rawTitle` carries the marker.
+  it('drops the row when only rawTitle carries the AT-marker (LLM stripped title) — #826', async () => {
+    const sourceVenue = seedVenue({
+      name: "Cervantes' Masterpiece Ballroom",
+      slug: 'cervantes-masterpiece-ballroom',
+    })
+    const targetVenueId = crypto.randomUUID()
+    const candidates = [
+      {
+        id: targetVenueId,
+        slug: 'mission-ballroom',
+        name: 'Mission Ballroom',
+      },
+    ]
+
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: sourceVenue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        {
+          // Cleaned title — what the LLM put on `title` after stripping the
+          // venue suffix + combining with the "AEG Presents" subhead.
+          title: 'AEG Presents Connor Price & Nic D',
+          // Verbatim source headline — what was actually in the Cervantes
+          // events page. The cross-venue filter sees THIS.
+          rawTitle: 'Connor Price & Nic D AT MISSION BALLROOM',
+          artist: 'Connor Price & Nic D',
+          date: '2026-08-15',
+          doorsTime: undefined,
+          showTime: undefined,
+          ticketUrl: 'https://cervantes.example.com/tickets',
+          sourceUrl: sourceVenue.websiteUrl,
+          confidence: 0.9,
+        },
+      ],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    const run = await crawlVenue(
+      sourceVenue.id,
+      mockBrowser,
+      undefined,
+      candidates,
+    )
+
+    expect(run.status).toBe('success')
+    expect(run.eventsInserted).toBe(0)
+
+    const sourceRows = await db
+      .select()
+      .from(events)
+      .where(eq(events.venueId, sourceVenue.id))
+    expect(sourceRows).toHaveLength(0)
+
+    // Log payload includes BOTH the cleaned title AND the raw title for
+    // audit triage — operators inspecting the skip log need to see what
+    // the LLM produced vs what the source page actually said.
+    const skipLogs = logSpy.mock.calls
+      .map((args) => args[0])
+      .filter(
+        (line): line is string =>
+          typeof line === 'string' && line.includes('crawler.skip_cross_venue'),
+      )
+      .map((line) => JSON.parse(line) as Record<string, unknown>)
+
+    expect(skipLogs).toHaveLength(1)
+    expect(skipLogs[0]).toMatchObject({
+      event: 'crawler.skip_cross_venue',
+      sourceVenueSlug: sourceVenue.slug,
+      matchedVenueSlug: 'mission-ballroom',
+      title: 'AEG Presents Connor Price & Nic D',
+      rawTitle: 'Connor Price & Nic D AT MISSION BALLROOM',
+    })
+
+    logSpy.mockRestore()
   })
 })
 

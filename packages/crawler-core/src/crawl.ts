@@ -466,9 +466,18 @@ export async function crawlVenue(
     // Cross-venue presale filter — drop "Artist AT OTHER VENUE" rows so the
     // host venue's crawl owns the canonical row (see issue #605). Emits a
     // structured log per skip for auditability.
+    //
+    // Feed `rawTitle` (the verbatim source headline) into the filter, not the
+    // cleaned `title`. The LLM extractor strips listing decoration like
+    // "AEG Presents Connor Price & Nic D AT MISSION BALLROOM" down to
+    // "AEG Presents Connor Price & Nic D" when populating `title`, dropping
+    // the exact "AT MISSION BALLROOM" marker the regex needs. Structured-data
+    // + platform-JSON extractors set `rawTitle = title`, so the fallback is a
+    // no-op for them but keeps any path that ever skips setting rawTitle safe.
+    // See issue #826.
     const normalizedEvents = extraction.normalizedEvents.filter((evt) => {
       const match = detectCrossVenuePresale({
-        title: evt.title,
+        title: evt.rawTitle ?? evt.title,
         sourceVenueId: venueId,
         candidates: crossVenueCandidates,
       })
@@ -480,6 +489,7 @@ export async function crawlVenue(
           sourceVenueSlug: venue.slug,
           matchedVenueSlug: match.matchedVenueSlug,
           title: evt.title,
+          rawTitle: evt.rawTitle,
         }),
       )
       return false

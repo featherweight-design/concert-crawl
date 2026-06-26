@@ -102,6 +102,11 @@ function mapToNormalizedEvent(
 
   const event: NormalizedEvent = {
     title: name,
+    // JSON-LD structured data is already the source's own canonical
+    // headline — no LLM-style decoration is ever added. Mirroring
+    // `title` into `rawTitle` keeps the cross-venue filter's input
+    // contract uniform across extractors (#826).
+    rawTitle: name,
     artist: artist || name,
     date,
     sourceUrl,

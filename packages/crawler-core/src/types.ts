@@ -1,5 +1,16 @@
 export interface NormalizedEvent {
   title: string
+  /**
+   * EXACT verbatim copy of the source listing's headline string, byte-for-byte
+   * unmodified. The LLM extractor in particular tends to strip listing
+   * decoration ("AEG Presents", "AT MISSION BALLROOM") when populating
+   * `title`; those decorations are exactly what the cross-venue presale
+   * filter (`detectCrossVenuePresale`, issue #605) needs to detect that the
+   * listing names a different host venue. Set `rawTitle = title` from
+   * structured-data and platform-JSON extractors — they never decorate.
+   * See issue #826.
+   */
+  rawTitle: string
   artist: string
   date: string
   doorsTime?: string

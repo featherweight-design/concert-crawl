@@ -13,6 +13,10 @@ const isoDateSchema = z
 
 const NormalizedEventSchema = z.object({
   title: z.string(),
+  // EXACT source-headline copy used by the cross-venue presale filter to
+  // detect "Artist AT OTHER VENUE" markers. See issue #826 and the
+  // matching property on `NormalizedEvent` in ../../types.ts.
+  rawTitle: z.string(),
   artist: z.string(),
   date: isoDateSchema,
   doorsTime: z.string().nullable().optional(),
@@ -97,6 +101,7 @@ Rules:
 - If artist is unclear, use the event title as the artist
 - Pass an empty events array if no events are found
 - When a date has no year, infer it using today's date (provided in the user message): if the month/day is today or in the future within the current year, use the current year; if the month/day has already passed this year, use next year
+- rawTitle must be the EXACT verbatim copy of the event card's headline string from the page, byte-for-byte. Do NOT combine with subheads (e.g. "AEG Presents"), do NOT strip venue suffixes (e.g. "AT MISSION BALLROOM"), do NOT normalize or clean. The "title" field may be cleaned/combined, but rawTitle must be the unmodified source string. Downstream cross-venue routing depends on this
 
 Set isConcert on every event using these rules:
 
@@ -117,6 +122,11 @@ const SAVE_EVENTS_TOOL: Anthropic.Tool = {
           type: 'object',
           properties: {
             title: { type: 'string', description: 'Full event/show title' },
+            rawTitle: {
+              type: 'string',
+              description:
+                "EXACT verbatim copy of the event card's headline/title string from the page, byte-for-byte. Do not clean, combine with subheads, strip venue suffixes (e.g. 'AT MISSION BALLROOM'), or normalize. Downstream cross-venue routing depends on this being the unmodified source string.",
+            },
             artist: {
               type: 'string',
               description: 'Main performing artist or band name',
@@ -155,6 +165,7 @@ const SAVE_EVENTS_TOOL: Anthropic.Tool = {
           },
           required: [
             'title',
+            'rawTitle',
             'artist',
             'date',
             'confidence',
@@ -266,6 +277,7 @@ export async function extractWithLlm(
 
   const events = parsed.data.events.map((evt) => ({
     title: evt.title,
+    rawTitle: evt.rawTitle,
     artist: evt.artist,
     date: evt.date,
     confidence: evt.confidence,

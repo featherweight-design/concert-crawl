@@ -22,6 +22,9 @@ describe('extractJsonLd', () => {
     const events = extractJsonLd(html, SOURCE_URL)
     expect(events).toHaveLength(1)
     expect(events[0]?.title).toBe('Metallica Live')
+    // JSON-LD never decorates titles — `rawTitle` mirrors `title` so the
+    // cross-venue filter sees the same string regardless of extractor (#826).
+    expect(events[0]?.rawTitle).toBe('Metallica Live')
     expect(events[0]?.artist).toBe('Metallica')
     expect(events[0]?.date).toBe('2026-08-15')
     expect(events[0]?.confidence).toBe(1.0)
