@@ -106,8 +106,12 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
 
   // Issue #829: return from the error state back to the form WITHOUT
   // wiping category/message/screenshot so the user can correct + retry.
+  // Also clears draftSaveFailed (#834 Copilot R2) — otherwise a user who
+  // hit a save failure, returned to the form, then hit another submit
+  // error would still see the stale "Couldn't save your draft" alert.
   const returnToForm = useCallback(() => {
     setState('form')
+    setDraftSaveFailed(false)
   }, [])
 
   const handleClose = useCallback(() => {
@@ -975,6 +979,13 @@ function DraftRestoredBanner({
   onDiscard: () => void
   disabled: boolean
 }) {
+  // Keyboard focus visibility (#834 Copilot R2). The previous `all: 'unset'`
+  // wiped the browser's default focus outline and there's no app-wide
+  // :focus-visible style covering this surface — keyboard users couldn't see
+  // where focus landed. Inline state mirrors :focus-visible behaviour
+  // (focus from keyboard only) without dragging in a CSS-module just for
+  // one button.
+  const [focusVisible, setFocusVisible] = useState(false)
   return (
     <div
       role="status"
@@ -1005,16 +1016,34 @@ function DraftRestoredBanner({
         onClick={onDiscard}
         disabled={disabled}
         aria-label={CONSUMER_COPY.feedback.modal.draftBanner.discardAriaLabel}
+        onFocus={(ev) => {
+          // matches() guards against jsdom (test env) where the pseudo
+          // selector is unimplemented — keep the focus ring visible there
+          // rather than dropping it silently.
+          const target = ev.currentTarget
+          const matchesFn = target.matches.bind(target)
+          let visible = true
+          try {
+            visible = matchesFn(':focus-visible')
+          } catch {
+            visible = true
+          }
+          setFocusVisible(visible)
+        }}
+        onBlur={() => setFocusVisible(false)}
+        onPointerDown={() => setFocusVisible(false)}
         style={{
-          all: 'unset',
           cursor: disabled ? 'default' : 'pointer',
           fontFamily: 'var(--font-ui)',
           fontSize: 12,
           fontWeight: 700,
           color: 'var(--fg-muted)',
+          background: 'transparent',
           padding: '4px 8px',
           borderRadius: 6,
           border: '1px solid var(--border)',
+          outline: 'none',
+          boxShadow: focusVisible ? '0 0 0 2px var(--signal)' : 'none',
           opacity: disabled ? 0.5 : 1,
         }}
       >

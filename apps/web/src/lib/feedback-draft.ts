@@ -106,7 +106,15 @@ export function loadDraft(now: number = Date.now()): FeedbackDraft | null {
     }
     return parsed
   } catch (err) {
+    // JSON.parse threw (truncated/invalid payload) or some other read
+    // failure. Purge the bad entry so reopening the modal doesn't log
+    // the same error indefinitely (#834 Copilot R2).
     console.error('feedback-draft: failed to load draft', err)
+    try {
+      localStorage.removeItem(FEEDBACK_DRAFT_KEY)
+    } catch (removeErr) {
+      console.warn('feedback-draft: failed to purge corrupt entry', removeErr)
+    }
     return null
   }
 }

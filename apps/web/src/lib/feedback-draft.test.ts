@@ -66,6 +66,9 @@ describe('loadDraft', () => {
   it('discards corrupt entries', () => {
     localStorage.setItem(FEEDBACK_DRAFT_KEY, '{not json')
     expect(loadDraft()).toBeNull()
+    // #834 Copilot R2 — JSON.parse failures used to leave the bad entry in
+    // place, causing every modal open to log the same error. Now purged.
+    expect(localStorage.getItem(FEEDBACK_DRAFT_KEY)).toBeNull()
   })
 
   it('discards entries that fail schema validation', () => {
