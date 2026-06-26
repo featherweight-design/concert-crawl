@@ -1530,9 +1530,14 @@ export function EventDetailPriceBlock({
                 ? { handle: activeCorroboration.submitterHandle, url: '' }
                 : null,
               submittedAt: activeCorroboration.submittedAt,
-              // Submitter counts as observation #1 (#831). Same helper used on
-              // the PendingCardB this sheet was opened from.
-              confirms: displayConfirms(activeCorroboration.confirmsCount),
+              // Submitter counts as observation #1 (#831); also fold in the
+              // optimistic localConfirms boost so reopening the sheet after a
+              // successful corroboration shows the same count as the
+              // PendingCardB it was opened from (#834 Copilot R1).
+              confirms: displayConfirms(
+                activeCorroboration.confirmsCount,
+                localConfirms[activeCorroboration.id] ?? 0,
+              ),
               needed: activeCorroboration.confirmsNeeded,
               note: activeCorroboration.note,
               submissionId: activeCorroboration.id,
