@@ -1,3 +1,15 @@
+# [1.85.0](https://github.com/HartiganHM/concert-crawl/compare/v1.84.1...v1.85.0) (2026-06-26)
+
+
+### Bug Fixes
+
+* **crawler-core:** r1 — extend SQL backfill to strip combining marks ([951fb18](https://github.com/HartiganHM/concert-crawl/commit/951fb18ca095aa3b80c72c3fe245545b7a3c0a1f))
+
+
+### Features
+
+* **crawler-core:** canonical_title infrastructure for [#821](https://github.com/HartiganHM/concert-crawl/issues/821) ([2c95657](https://github.com/HartiganHM/concert-crawl/commit/2c95657df4fb236ab007ea6955350ca7225b09b4)), closes [#608](https://github.com/HartiganHM/concert-crawl/issues/608)
+
 ## [1.84.1](https://github.com/HartiganHM/concert-crawl/compare/v1.84.0...v1.84.1) (2026-06-26)
 
 
