@@ -41,6 +41,13 @@ const PARITY_INPUTS: { label: string; input: string }[] = [
   { label: 'Ø (precomposed, not NFD-decomposable)', input: 'Eivør Live' },
   { label: 'standalone Ø', input: 'Mötorhead Ø' },
 
+  // Pre-decomposed input — base char + combining mark already split apart
+  // (some upstream copy-paste / clipboard chains produce this). PR #822 R1
+  // case from Copilot: JS strips the combining mark via /\p{M}/, SQL must
+  // also strip via the NFD pass + combining-marks range or output diverges.
+  { label: 'pre-decomposed e + combining acute', input: 'Beyoncé Live' },
+  { label: 'pre-decomposed o + combining umlaut', input: 'Mötley Crüe' },
+
   // Punctuation preservation — title-specific characters that signal event
   // structure and must round-trip through canonicalization.
   { label: 'exclamation', input: 'BPM BINGO!' },
@@ -77,7 +84,10 @@ describe('canonical_title — SQL backfill / JS function parity', () => {
         regexp_replace(
           lower(
             translate(
-              ${input}::text,
+              regexp_replace(
+                normalize(${input}::text, NFD),
+                '[̀-ͯ]', '', 'g'
+              ),
               'ÀÁÂÃÄÅàáâãäåÈÉÊËèéêëÌÍÎÏìíîïÒÓÔÕÖØòóôõöøÙÚÛÜùúûüÝýÿÑñÇçŸŠšŽž',
               'AAAAAAaaaaaaEEEEeeeeIIIIiiiiOOOOOOooooooUUUUuuuuYyyNnCcYSsZz'
             )

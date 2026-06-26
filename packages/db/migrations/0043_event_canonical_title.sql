@@ -18,22 +18,36 @@ ALTER TABLE events
 --> statement-breakpoint
 
 -- Backfill existing rows. Mirrors the JS canonicalizeTitle function:
---   1. Strip a curated set of Latin diacritics via translate()
---      (same char set as canonical_artist's backfill — must stay in sync
---       with LATIN_EXTENDED_MAP in canonical-title.ts).
---   2. Lowercase.
---   3. Collapse whitespace runs to a single space.
---   4. Trim.
+--   1. NFD-normalize and strip combining marks — matches the JS
+--      `String.prototype.normalize('NFD').replace(/\p{M}/gu, '')` step
+--      so a decomposed input like "Beyonce" + combining acute
+--      canonicalizes to "beyonce" on both sides.
+--   2. translate() the remaining precomposed Latin Extended characters
+--      (Ø/ø today, the #648 set when that lands) — must stay in sync
+--      with LATIN_EXTENDED_MAP in canonical-title.ts.
+--   3. Lowercase.
+--   4. Collapse whitespace runs to a single space.
+--   5. Trim.
 --
 -- Deliberately does NOT split on separators the way canonical_artist's
 -- backfill does — titles legitimately use & / + ft. tokens to convey event
 -- structure and the dedup signal lives in keeping them intact.
+--
+-- Postgres `normalize(text, 'NFD')` is available from PG13 and produces
+-- the same decomposition as JS NFD. The combining-mark strip uses the
+-- explicit U+0300–U+036F (Combining Diacritical Marks block) range
+-- because Postgres POSIX regex doesn't support the Unicode
+-- `\p{Mark}` shorthand; this range covers every diacritic produced by
+-- NFD-decomposing the Latin Extended characters we ever see in event
+-- titles. Wider Combining Marks blocks (U+1AB0–U+1AFF, U+1DC0–U+1DFF,
+-- U+20D0–U+20FF, U+FE20–U+FE2F) are not in our data and adding them
+-- pre-emptively would mean the parity test has to grow with them.
 UPDATE events
 SET canonical_title = trim(
   regexp_replace(
     lower(
       translate(
-        title,
+        regexp_replace(normalize(title, NFD), '[̀-ͯ]', '', 'g'),
         'ÀÁÂÃÄÅàáâãäåÈÉÊËèéêëÌÍÎÏìíîïÒÓÔÕÖØòóôõöøÙÚÛÜùúûüÝýÿÑñÇçŸŠšŽž',
         'AAAAAAaaaaaaEEEEeeeeIIIIiiiiOOOOOOooooooUUUUuuuuYyyNnCcYSsZz'
       )
