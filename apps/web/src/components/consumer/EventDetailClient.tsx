@@ -695,10 +695,14 @@ export function EventDetailPriceBlock({
         // Submitter counts as observation #1 (#831). The API surfaces
         // `confirmsCount` as non-submitter confirms, so fold the submitter
         // back in before rendering "pending · X/Y".
+        // When firstPending is null the tier has no submission yet — show 0
+        // confirms, not the submitter-observation baseline. The submitter
+        // bump only applies once a real pending submission exists (#835
+        // Copilot R2).
         confirms:
           firstPending != null
             ? displayConfirms(firstPending.confirmsCount)
-            : SUBMITTER_OBSERVATION,
+            : 0,
         needed: firstPending?.confirmsNeeded ?? SP_POLICY.confirmsRequired,
       }
     })
@@ -873,11 +877,13 @@ export function EventDetailPriceBlock({
           kind: pendingKind,
           pending: true as const,
           // Submitter counts as observation #1 (#831). See displayConfirms()
-          // doc at the top of this file.
+          // doc at the top of this file. When firstPending is null the tier
+          // has no submission — show 0 confirms, not the submitter baseline
+          // (#835 Copilot R2).
           confirms:
             firstPending != null
               ? displayConfirms(firstPending.confirmsCount)
-              : SUBMITTER_OBSERVATION,
+              : 0,
           needed: firstPending?.confirmsNeeded ?? SP_POLICY.confirmsRequired,
         }
       })
