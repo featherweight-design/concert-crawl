@@ -1,10 +1,10 @@
-# Monetization · Subscription Lifecycle + Management (#780 · Round 1)
+# Monetization · Subscription Lifecycle + Management (#780 · Round 2)
 
 > Extends `design_handoff_monetization/` (original Plan card + payment) and sits on
 > top of `design_handoff_monetization_tier_states/` (#781 — locked tier picker,
 > atoms, 9-theme tokens, Sour Patch voice). **Nothing from #781 is redesigned.**
 > This round adds Plan-card lifecycle variants + the net-new management surfaces.
-> Status: **first pass, ready for Hugh's review.**
+> Status: **R2 — both R1 audit findings closed; 🟢 Green verdict in `READINESS.md`.**
 
 Open `Subscription Lifecycle.html` and toggle **Tweaks** in the toolbar to drive
 the Section 0 live Plan card across lifecycle state · tier · trial day · all 9

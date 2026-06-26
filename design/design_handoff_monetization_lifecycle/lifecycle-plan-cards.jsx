@@ -155,8 +155,8 @@ function getLifecycleContent(user) {
       tier: "supporter", accent: "var(--accent)",
       eyebrowRest: `$2 / MONTH · RENEWS ${periodEnd.toUpperCase()}`,
       headline: "$2 a month. Thanks.",
-      body: "Concert history, calendar export, and the Supporter badge are switched on. You're chipping in for the stuff we run on existing infrastructure.",
-      punchline: "—— Want the alerts too? Premium's a tap away.",
+      body: "Supporter is badge-only — no Premium unlocks. You're chipping in for the stuff we run on existing infrastructure, and the badge says so.",
+      punchline: "—— Want the history, follows, and alerts too? Premium's a tap away.",
       ctas: [ { label: "Manage subscription", kind: "primary" } ],
     };
   }

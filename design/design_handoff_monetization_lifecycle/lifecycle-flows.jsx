@@ -170,8 +170,11 @@ function CancelFlow({ variant = "mobile", tier = "premium", periodEnd = "Jul 15"
 // ════════════════════════════════════════════════════════════
 function ChangesDisclosure() {
   const [open, setOpen] = React.useState(false);
-  const stays = ["Concert history — every show you've logged", "Calendar export — Apple + Google", "Supporter badge on your profile"];
-  const off = ["Following artists", "New-show alerts", "Price-drop alerts", "Spotify sync"];
+  // Supporter is badge-only per the #781 §6 matrix — Concert history, Calendar
+  // export, Following, alerts, Spotify sync are ALL Premium-only. Watching
+  // stays because the R6 amendment moved it to Free for signed-in users.
+  const stays = ["Watching — your saved shows (Free, never purged)", "Supporter badge on your profile"];
+  const off = ["Concert history — every show you've logged", "Calendar export — Apple + Google", "Following artists", "New-show alerts", "Price-drop alerts", "Spotify sync"];
   return (
     <div style={{
       borderRadius: 12, border: "1px solid var(--border)", background: "var(--surface-1)", overflow: "hidden",

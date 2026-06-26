@@ -213,8 +213,9 @@ function TweaksPanel({ title = 'Tweaks', children }) {
 
   React.useEffect(() => {
     const onMsg = (e) => {
-      // Origin gate: only honor protocol messages from our embedding host, so an
-      // unrelated frame can't toggle edit mode in an embedded prototype.
+      // Sender gate: only honor protocol messages from our embedding host
+      // window, so an unrelated frame can't toggle edit mode in an embedded
+      // prototype. (Gates on event.source, the posting window.)
       if (e.source !== window.parent) return;
       const t = e?.data?.type;
       if (t === '__activate_edit_mode') setOpen(true);
