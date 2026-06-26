@@ -71,10 +71,30 @@ const displayConfirms = (
 // imminent-show bump (SP_POLICY.confirmsRequiredImminent) is applied
 // consistently. Hard-coding `needed: 2` on legacy paths was diverging
 // from the rest of the price block — see #835 Copilot R3.
+//
+// Date math mirrors the server-side `isImminentEvent()` in
+// apps/api/src/lib/time.ts: both sides pin to UTC midnight (event.date is
+// a YYYY-MM-DD string in the events.date column) so a same-day evening
+// show — which `new Date(eventDate) - Date.now()` would round to -1 once
+// the day starts in UTC — stays imminent. Keeping the client and server
+// in sync avoids the trust strip rendering "1 of 2" while the server
+// enforces 3-confirm imminent policy (#835 Copilot R4).
 function corroborationConfirmsRequired(eventDate: string): number {
-  const diffDays = Math.floor(
-    (new Date(eventDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+  const parts = eventDate.split('-').map(Number)
+  const year = parts[0]
+  const month = parts[1]
+  const day = parts[2]
+  if (year == null || month == null || day == null) {
+    return SP_POLICY.confirmsRequired
+  }
+  const eventMs = Date.UTC(year, month - 1, day)
+  const now = new Date()
+  const todayMs = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate(),
   )
+  const diffDays = (eventMs - todayMs) / (1000 * 60 * 60 * 24)
   const isImminent =
     diffDays >= 0 && diffDays <= SP_POLICY.imminentThresholdDays
   return isImminent
