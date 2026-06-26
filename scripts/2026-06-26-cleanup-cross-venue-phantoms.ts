@@ -66,6 +66,27 @@ import { canonicalizeTitle } from '../packages/crawler-core/src/lib/canonical-ti
 // a deliberate audit, not a string-match accident.
 const CERVANTES_SOURCE_URL = 'https://cervantesmasterpiece.com/events/'
 
+// Strip "X Presents " / "X Present " promoter prefixes before pairing.
+// The 2026-06-26 phantom rows had titles like "AEG Presents Connor Price
+// & Nic D" while the canonical Mission row was just "Connor Price & Nic
+// D" — without stripping these, canonicalizeTitle would produce different
+// keys and the cleanup would miss every paired row. The regex anchors at
+// start-of-string and stops at the first "Presents " / "Present "
+// occurrence so legitimate uses of the word later in a title (rare) are
+// left intact. Multi-promoter strings ("Cervantes' & River Beats Present
+// SHIFT…") are handled because we don't restrict the chars between ^ and
+// the keyword. Applied to BOTH sides of the pair so the canonical row's
+// rare "X Presents" prefix wouldn't desync the match either.
+const PROMOTER_PREFIX = /^[^,]{1,60}?\sPresents?\s+/i
+
+function stripPromoterPrefix(title: string): string {
+  return title.replace(PROMOTER_PREFIX, '')
+}
+
+function pairingKey(date: string, title: string): string {
+  return `${date}|${canonicalizeTitle(stripPromoterPrefix(title))}`
+}
+
 interface PhantomCandidate {
   /** The Cervantes-stored phantom row. */
   phantomId: string
@@ -140,12 +161,16 @@ export async function runCleanup(opts: {
     `Loaded ${cervantesRows.length} Cervantes rows sourced from ${CERVANTES_SOURCE_URL}`,
   )
 
-  // Build per-(date, canonical-title) match key. Recompute canonical title
-  // from the live title so a row written before canonical_title was wired
-  // up still matches its sibling at the host venue.
+  // Build per-(date, promoter-stripped canonical-title) match key.
+  // Recompute the key from the live title so a row written before
+  // canonical_title was wired up still matches its sibling at the host
+  // venue. See pairingKey() — promoter prefixes ("AEG Presents …",
+  // "Cervantes' & River Beats Present …") are stripped before
+  // canonicalization so the Cervantes phantom row and the canonical row
+  // at the host venue end up with matching keys (Copilot R1 on #826).
   const cervantesByKey = new Map<string, (typeof cervantesRows)[number]>()
   for (const row of cervantesRows) {
-    const matchKey = `${row.date}|${canonicalizeTitle(row.title)}`
+    const matchKey = pairingKey(row.date, row.title)
     // If multiple Cervantes rows collide on the same key (shouldn't happen
     // post-#608 but defend against it), keep the first one — the duplicate
     // is itself a phantom that will get caught on the next run.
@@ -210,7 +235,7 @@ export async function runCleanup(opts: {
 
   const candidates: PhantomCandidate[] = []
   for (const sibling of siblingRows) {
-    const matchKey = `${sibling.date}|${canonicalizeTitle(sibling.title)}`
+    const matchKey = pairingKey(sibling.date, sibling.title)
     const phantom = cervantesByKey.get(matchKey)
     if (!phantom) continue
     // Skip if we've already paired this phantom (a Cervantes row could in
@@ -337,9 +362,13 @@ export async function runCleanup(opts: {
     await db.transaction(async (tx) => {
       // 5a. user_events — dedupe per (user_id, canonical) before redirecting.
       //     If a user already watched both phantom and canonical rows, the
-      //     UNIQUE index on (user_id, event_id) would reject the UPDATE.
-      //     Keep the most-recent-created row and delete the rest, then
-      //     redirect any surviving phantom-pointing rows to the canonical.
+      //     UNIQUE index on (user_id, event_id) would reject the redirect
+      //     UPDATE. The user already has a watch on the canonical event
+      //     either way, so always delete the phantom-side row in that case
+      //     regardless of which created_at is newer (Copilot R2 on #826:
+      //     the prior `>=` clause left the phantom row in place when the
+      //     phantom watch was newer, then the UPDATE below tripped the
+      //     unique index).
       const dupeUserRows = await tx.execute<{ id: string }>(
         sql`
           SELECT ue_phantom.id
@@ -349,7 +378,6 @@ export async function runCleanup(opts: {
               SELECT 1 FROM ${userEvents} AS ue_canonical
               WHERE ue_canonical.event_id = ${cand.canonicalId}
                 AND ue_canonical.user_id = ue_phantom.user_id
-                AND ue_canonical.created_at >= ue_phantom.created_at
             )
         `,
       )
