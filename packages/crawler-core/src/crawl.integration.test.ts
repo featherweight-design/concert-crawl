@@ -827,12 +827,15 @@ describe('crawlVenue — non-concert auto-classification (#696)', () => {
     mockExtractWithLlm.mockResolvedValue({
       events: [
         {
-          // Same title as the seeded row so canonical_title matches and the
+          // Title differs by case/whitespace only — canonicalizeTitle()
+          // collapses both to "originally misclassified show", so the
           // upsert hits the UPDATE branch (where the hidden_from_consumer
-          // preservation rule lives). artist deliberately different — the
-          // real-world admin-override case is a re-crawl that resurfaces
-          // the same listing under a slightly different LLM-picked artist.
-          title: 'Originally Misclassified Show',
+          // preservation rule lives). This exercises the "raw title
+          // changes without canonical_title changing" case: the stored
+          // title should adopt the new variant while admin overrides stay
+          // sticky. artist also deliberately different to mirror the
+          // real-world LLM artist-substring drift.
+          title: 'ORIGINALLY  Misclassified Show',
           artist: 'Test Artist Featured',
           date: dateA,
           confidence: 0.95,
@@ -858,10 +861,12 @@ describe('crawlVenue — non-concert auto-classification (#696)', () => {
       .from(events)
       .where(eq(events.venueId, venue.id))
 
-    // Admin override sticks across re-crawl; the UPDATE branch's `set`
+    // Admin override sticks across re-crawl — the UPDATE branch's `set`
     // clause does not include hidden_from_consumer.
     expect(row?.hiddenFromConsumer).toBe(true)
-    expect(row?.title).toBe('Originally Misclassified Show')
+    // Raw title updates to the new variant — title IS in the set clause,
+    // and minor case/whitespace drift is normal across crawl runs.
+    expect(row?.title).toBe('ORIGINALLY  Misclassified Show')
   })
 
   it('INSERT path sets is_concert_review_needed=true when LLM returns reviewNeeded=true', async () => {
@@ -972,10 +977,13 @@ describe('crawlVenue — non-concert auto-classification (#696)', () => {
     mockExtractWithLlm.mockResolvedValue({
       events: [
         {
-          // Same title as the seeded row so canonical_title matches and
-          // the upsert hits the UPDATE branch (where the
-          // isConcertReviewNeeded preservation rule lives).
-          title: 'Borderline Show',
+          // Title differs by case/whitespace only — canonicalizeTitle()
+          // collapses both to "borderline show", so the upsert hits the
+          // UPDATE branch (where the isConcertReviewNeeded preservation
+          // rule lives). Exercises the "raw title changes without
+          // canonical_title changing" case alongside the crawler-frozen
+          // assertion below.
+          title: '  Borderline SHOW  ',
           artist: 'Borderline Artist',
           date: dateA,
           confidence: 0.95,
@@ -1003,7 +1011,9 @@ describe('crawlVenue — non-concert auto-classification (#696)', () => {
       .where(eq(events.venueId, venue.id))
 
     expect(row?.isConcertReviewNeeded).toBe(true) // crawler-frozen
-    expect(row?.title).toBe('Borderline Show') // unchanged across re-crawl
+    // Raw title updates to the new case/whitespace variant — title IS in
+    // the UPDATE branch's set clause, and minor drift is normal.
+    expect(row?.title).toBe('  Borderline SHOW  ')
   })
 })
 
