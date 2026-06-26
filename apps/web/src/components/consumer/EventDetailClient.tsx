@@ -67,6 +67,21 @@ const displayConfirms = (
   localConfirmsBoost = 0,
 ): number => apiConfirmsCount + SUBMITTER_OBSERVATION + localConfirmsBoost
 
+// Resolves the corroboration-policy denominator from event.date so the
+// imminent-show bump (SP_POLICY.confirmsRequiredImminent) is applied
+// consistently. Hard-coding `needed: 2` on legacy paths was diverging
+// from the rest of the price block — see #835 Copilot R3.
+function corroborationConfirmsRequired(eventDate: string): number {
+  const diffDays = Math.floor(
+    (new Date(eventDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+  )
+  const isImminent =
+    diffDays >= 0 && diffDays <= SP_POLICY.imminentThresholdDays
+  return isImminent
+    ? SP_POLICY.confirmsRequiredImminent
+    : SP_POLICY.confirmsRequired
+}
+
 // ── Shared types ─────────────────────────────────────────────────────
 
 export interface EventDetailSharedProps {
@@ -1683,9 +1698,11 @@ export function EventDetailPriceBlock({
           submittedAt={event.priceObservedAt ?? new Date().toISOString()}
           // Submitter counts as observation #1 (#831). API doesn't surface
           // confirmsCount on this legacy path, so the floor for a fresh
-          // pending row is the submitter alone.
+          // pending row is the submitter alone. `needed` is derived from
+          // the policy + event date so imminent shows render the right
+          // denominator (#835 Copilot R3).
           confirms={SUBMITTER_OBSERVATION}
-          needed={2}
+          needed={corroborationConfirmsRequired(event.date)}
           view="other"
           onConfirm={() => setLegacyCorroborationOpen(true)}
           onWithdraw={() => {
@@ -1708,9 +1725,11 @@ export function EventDetailPriceBlock({
                 : null,
               submittedAt: event.priceObservedAt ?? new Date().toISOString(),
               // Submitter counts as observation #1 (#831). Sheet stays in
-              // sync with the card above.
+              // sync with the card above — same policy-derived denominator
+              // so legacy imminent shows match the rest of the price block
+              // (#835 Copilot R3).
               confirms: SUBMITTER_OBSERVATION,
-              needed: 2,
+              needed: corroborationConfirmsRequired(event.date),
               // The submission ID is not yet surfaced in EventDetailResponse.
               // This is a placeholder until the API exposes it.
               submissionId: '',
