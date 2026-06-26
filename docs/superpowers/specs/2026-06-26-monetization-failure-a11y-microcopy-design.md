@@ -40,20 +40,20 @@ Stripe handles dunning automatically over a 7-day window after the renewal charg
 
 - **Plan card past-due variant** — warning-toned eyebrow ("Heads up — your card got declined"), body explains the 7-day window in plain terms ("You've got a week before Premium pauses"), primary CTA `Update card` opens the Stripe portal (matches #780 hybrid management split where "Change payment method" is portal-bound). Tier badge + price stay in their normal locations.
 - **Top-of-app banner** — thin strip across consumer surfaces (browse, event detail, settings — Design judges placement), same chrome pattern as #780's day-13 banner but warning-toned. Direction: "Your card got declined — give it a refresh?" + CTA `Update card` (→ Stripe portal) + dismiss X.
-- **State:** `past_due_banner_dismissed_at` (timestamp, nullable). Per-session scope — dismissed banner re-renders on the next session open (unlike day-13 banner's per-trial-expiry persistence). Rationale: past-due is a recurring active alert during dunning; gentler nudge cadence than the trial-end's one-shot moment.
+- **State:** `past_due_banner_dismissed_at` (timestamp, nullable) plus `session_started_at` (timestamp, set on each new session open per eng's session-start logic in #775). **Show predicate:** `subscription.status = "past_due" AND (past_due_banner_dismissed_at IS NULL OR past_due_banner_dismissed_at < session_started_at)`. Dismissal sets `past_due_banner_dismissed_at = now` and the predicate fails for the rest of the session; on the next session open, `session_started_at` advances past the dismissal timestamp and the predicate flips true again. Rationale: past-due is a recurring active alert during dunning; gentler nudge cadence than the trial-end's one-shot moment, but more persistent than day-13's per-trial-expiry single-fire.
 - **No takeover during the dunning window.** Past-due is a quiet-but-persistent signal, not an interrupt. If the 7 days expire and the user rolls to Free, that's the existing post-cancel-grace Free state from #780.
 
 ### 2. Decline reason granularity — 5 user-facing categories
 
-Stripe gives us 20+ `decline_code` values per failed charge. We collapse them into **5 user-actionable categories**, each with bespoke copy + a next-action affordance. Eng infra (#775) owns the `decline_code` → category mapping.
+Stripe gives us 20+ `decline_code` values on failed charges, **plus** a separate class of errors (network failures, request timeouts, Stripe API errors) that don't carry a `decline_code` at all. We collapse all of these into **5 user-actionable categories**, each with bespoke copy + a next-action affordance. Eng infra (#775) owns the mapping: categories 1–4 map from `decline_code` on card-decline cases; category 5 maps from non-decline error sources (network, timeout, Stripe API error).
 
-| Category | When it fires (examples) | Next action affordance |
-|---|---|---|
-| **Insufficient funds** | `insufficient_funds` | Retry in place |
-| **Expired or incorrect card details** | `expired_card`, `incorrect_cvc`, `incorrect_number`, `invalid_expiry_month`, `invalid_expiry_year` | Retry in place (Stripe Elements re-renders empty) |
-| **Issuer declined** | `do_not_honor`, `generic_decline`, `card_velocity_exceeded`, `currency_not_supported`, most catch-all declines | Try a different card (reset in place) |
-| **Fraud block** | `fraudulent`, `stolen_card`, `lost_card`, `pickup_card`, `restricted_card` | Try a different card — **no retry on same card affordance**. One-line contact-bank guidance ("It's worth a quick call to your bank") — not a CTA. |
-| **Network / timeout** | network failure, Stripe-side timeout, request_timeout | `Try again` (in-place retry) + auto-retry-suggestion microcopy ("If this keeps happening, give it a minute and try again") |
+| Category key | When it fires (examples) | Source | Next action affordance |
+|---|---|---|---|
+| `insufficient_funds` | `insufficient_funds` | `decline_code` | Retry in place |
+| `expired_or_incorrect_card` | `expired_card`, `incorrect_cvc`, `incorrect_number`, `invalid_expiry_month`, `invalid_expiry_year` | `decline_code` | Retry in place (Stripe Elements re-renders empty) |
+| `issuer_declined` | `do_not_honor`, `generic_decline`, `card_velocity_exceeded`, `currency_not_supported`, most catch-all declines | `decline_code` | Try a different card (reset in place) |
+| `fraud_block` | `fraudulent`, `stolen_card`, `lost_card`, `pickup_card`, `restricted_card` | `decline_code` | Try a different card — **no retry on same card affordance**. One-line contact-bank guidance ("It's worth a quick call to your bank") — not a CTA. |
+| `network_timeout` | network failure, request timeout, Stripe API error (5xx, gateway timeout) | error type / HTTP status (no `decline_code`) | `Try again` (in-place retry) + auto-retry-suggestion microcopy ("If this keeps happening, give it a minute and try again") |
 
 **Voice rule across all 5:** Sour Patch — honest, not whiny, not blamey. Never surface the literal `decline_code` value. **Never use the word "fraud" in user-facing copy** for the fraud-block category — that's hostile to legit users whose bank flagged something they don't know about. Frame as "Card flagged for review" or similar.
 
@@ -86,7 +86,7 @@ Surfaces in scope + the key a11y concerns per:
 
 | Surface | Owner round | Key annotations |
 |---|---|---|
-| **Tier picker — desktop matrix** | #781 | Reading order: tier name → price → tagline → features → CTA, column-by-column LTR. Render as semantic `<table>` with proper row/column headers (not a CSS grid of divs). `aria-current="page"` on the current-plan column. |
+| **Tier picker — desktop matrix** | #781 | Reading order: tier name → price → tagline → features → CTA, column-by-column LTR. Render as semantic `<table>` with proper row/column headers (not a CSS grid of divs). `aria-current="true"` (NOT `page` — `page` implies navigation; `true` is the generic "current item" marker) on the current-plan column header, plus a visually-hidden "Current plan" label inside that header for screen-reader clarity. |
 | **Tier picker — mobile accordion** | #781 R6 | `aria-expanded` + `aria-controls` already shipped. Add: `role="group"` on the accordion container, `aria-label` per row, focus moves to expanded content on open. |
 | **Scarcity rail (Founder countdown)** | #781 | `aria-live="polite"` on seat count (NOT assertive — count updates shouldn't interrupt). Visually-hidden sentence pattern: "Founder seats remaining: 47 of 100. Window closes in 3 days." |
 | **Mini paywall sheet** (Free→Premium upsell) | #781 R6 | `role="dialog"` + `aria-modal="true"` + focus trap. Focus returns to the locked affordance that opened it on close. |
@@ -118,7 +118,7 @@ Sits immediately above the primary CTA (`Go Premium`, `Pay`, etc.) on the Paymen
 
 **Structure:**
 
-- (a) **ToS / Privacy / refund-policy links** — direction: "By going Premium, you agree to our [Terms](#) & [Privacy](#)." Refund policy linked separately or appended.
+- (a) **ToS / Privacy / refund-policy links** — direction: "By going Premium, you agree to our [Terms](/legal/terms) & [Privacy](/legal/privacy)." Refund policy linked separately or appended once the route lands — `/legal/refund` doesn't exist yet and needs to be added either as a standalone page or as a section inside `/legal/terms` (Design or Hugh's call on which; route owned by the legal/microcopy work, not this brief).
 - (b) **Auto-renew disclosure** — required in CA, NY, and several EU jurisdictions per the original spec. Direction: "Auto-renews monthly. Cancel anytime."
 - (c) **SCA-region notice** — conditional. Only renders for users in EU/UK/relevant regions. Direction: "Your bank may ask to confirm this." Region detection owned by #775.
 
@@ -207,7 +207,7 @@ These remain locked from prior briefs and apply to #782's surfaces:
 The handoff README's "Decisions log" section should record these calls — they're the inputs Design works from:
 
 - Past-due UX = Plan card variant + dismissible per-session top-of-app banner (`past_due_banner_dismissed_at`).
-- Decline reason granularity = 5 user-facing categories (insufficient-funds / expired-or-incorrect-card / issuer-declined / fraud-block / network-timeout). Stripe `decline_code` → category mapping owned by #775.
+- Decline reason granularity = 5 user-facing categories: `insufficient_funds`, `expired_or_incorrect_card`, `issuer_declined`, `fraud_block`, `network_timeout`. Card-decline categories (1–4) map from Stripe `decline_code`; `network_timeout` maps from non-decline error sources (network failure, request timeout, Stripe API error). Mapping owned by #775.
 - Retry shape = hybrid (in-place reset for active payment flow, Stripe portal for past-due context, fraud-block has no retry-same-card path).
 - Price-change policy = grandfather everyone forever. No price increases on existing Supporter / Premium / Founder users, ever. Tier cards add a price-promise microcopy line.
 - A11y scope = full sweep across every monetization surface from #781, #780, and #782.
