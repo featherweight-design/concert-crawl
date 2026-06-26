@@ -530,6 +530,15 @@ export async function crawlVenue(
             showTime: event.showTime ?? null,
           }),
         }))
+        // Defensive: drop any event whose title canonicalizes to '' before
+        // the dedup-by-(canonicalTitle, date) filter below. Distinct events
+        // on the same date whose extractor emitted empty/whitespace-only
+        // titles would otherwise collapse to a single ('|YYYY-MM-DD') key
+        // and the subsequent upsert would risk a UNIQUE violation against
+        // events_venue_date_canonical_title_idx. canonicalizeTitle returns
+        // '' for empty / non-string / whitespace-only input, so this guard
+        // covers all the malformed-extractor cases at once. (#821 R3)
+        .filter((evt) => evt.canonicalTitle !== '')
         .filter((evt) => {
           const key = `${evt.canonicalTitle}|${evt.date}`
           if (seenEventKeys.has(key)) return false

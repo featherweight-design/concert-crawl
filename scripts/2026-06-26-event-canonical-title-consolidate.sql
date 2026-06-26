@@ -374,12 +374,15 @@ DECLARE
   reports_orphans      int;
 BEGIN
   -- 8a. No surviving (venue_id, date, canonical_title) duplicates among
-  -- status='upcoming' rows. Non-upcoming rows (cancelled, postponed) sit
-  -- outside the future UNIQUE index's predicate so we don't validate them.
+  -- status='upcoming' rows. Mirrors the partial UNIQUE index's predicate
+  -- exactly — the index does NOT exclude empty canonical_title, so neither
+  -- does this check. Two upcoming rows with canonical_title='' on the same
+  -- (venue, date) would still violate the index and so must be caught here.
+  -- Non-upcoming rows (cancelled, postponed) sit outside the index's
+  -- predicate by design and are not validated.
   SELECT COUNT(*) INTO surviving_dups FROM (
     SELECT 1 FROM events
-    WHERE canonical_title <> ''
-      AND status = 'upcoming'
+    WHERE status = 'upcoming'
     GROUP BY venue_id, date, canonical_title
     HAVING COUNT(*) > 1
   ) dups;
