@@ -98,7 +98,7 @@ function DesignCanvas({ children, minScale, maxScale, style }) {
     if (!didRead.current) return;
     if (skipNextWrite.current) { skipNextWrite.current = false; return; }
     const t = setTimeout(() => {
-      window.omelette?.writeFile(DC_STATE_FILE, JSON.stringify({ sections: state.sections })).catch(() => {});
+      window.omelette?.writeFile(DC_STATE_FILE, JSON.stringify({ sections: state.sections }))?.catch(() => {});
     }, 250);
     return () => clearTimeout(t);
   }, [state.sections]);
