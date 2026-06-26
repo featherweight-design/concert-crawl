@@ -534,15 +534,34 @@ describe('crawlVenue — intra-batch deduplication', () => {
     })
     // The real #821 case: LLM returns the same listing twice within a
     // single extraction batch, picking different artist substrings from
-    // the same compound title each time (e.g. "BPM BINGO!" once,
-    // "Dombresky" the next). Without canonical_title dedup these would
-    // both reach the upsert with different canonical_artist values and
-    // trigger the partial UNIQUE on canonical_title with "cannot affect
-    // row a second time."
+    // the same compound title each time. The artist strings must
+    // canonicalize to DIFFERENT canonical_artist values — otherwise the
+    // old canonical_artist-keyed dedup would have collapsed them too
+    // and the test wouldn't actually exercise the #821 behavior.
+    //
+    // Here: title is stable ("BPM BINGO! Dombresky / Walker & Royce"),
+    // canonicalizeTitle preserves it whole → same canonical_title for
+    // both. But canonicalizeArtist splits on " & " so "BPM BINGO!" and
+    // "Dombresky" produce distinct canonical_artist values ("bpm bingo!"
+    // vs "dombresky"). Pre-#821 these would have produced two rows;
+    // post-#821 canonical_title dedups them to one.
+    const sharedTitle = 'BPM BINGO! Dombresky / Walker & Royce Edition'
     mockExtractWithLlm.mockResolvedValue({
       events: [
-        METALLICA_EVENT,
-        { ...METALLICA_EVENT, artist: 'Metallica & Mammoth WVH' },
+        {
+          title: sharedTitle,
+          artist: 'BPM BINGO!',
+          date: '2026-08-15',
+          confidence: 0.9,
+          sourceUrl: 'https://test-venue.example.com',
+        },
+        {
+          title: sharedTitle,
+          artist: 'Dombresky',
+          date: '2026-08-15',
+          confidence: 0.9,
+          sourceUrl: 'https://test-venue.example.com',
+        },
       ],
       usage: { inputTokens: 200, outputTokens: 100 },
     })

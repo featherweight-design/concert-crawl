@@ -55,27 +55,38 @@
 -- but a careless title-only rule could over-merge — sanity check the count
 -- against the prod audit numbers in #821.
 --
--- Restricted to status='upcoming' to match the partial UNIQUE index's
--- predicate. Cancelled/postponed rows sit outside the UNIQUE constraint by
--- design (relists at the same venue/date produce a new upcoming row
--- alongside the cancelled one) — merging them with upcoming relists would
--- silently delete admin status overrides.
+-- Restricted to status='upcoming' (and no other filter) so the report
+-- mirrors the partial UNIQUE index's predicate exactly. Cancelled/postponed
+-- rows sit outside the UNIQUE constraint by design (relists at the same
+-- venue/date produce a new upcoming row alongside the cancelled one).
+-- Empty canonical_title rows ARE included — the index does not exclude
+-- them, so if there are empty-title duplicates the migration build would
+-- fail and we want them surfaced here too.
+--
+-- Uses GROUP BY (not a windowed COUNT(*) OVER) so dup_cluster_count is
+-- the number of clusters and rows_to_consolidate is (rows - clusters).
+-- The windowed-cluster_size version inherited from the #608 script
+-- counted rows instead of clusters and multiplied rows_to_consolidate
+-- by cluster_size.
 
-SELECT
-  v.name AS venue,
-  COUNT(*) FILTER (WHERE cluster_size > 1) AS dup_cluster_count,
-  SUM(cluster_size - 1) FILTER (WHERE cluster_size > 1) AS rows_to_consolidate
-FROM (
+WITH clusters AS (
   SELECT
     e.venue_id,
-    COUNT(*) OVER (PARTITION BY e.venue_id, e.date, e.canonical_title) AS cluster_size
+    e.date,
+    e.canonical_title,
+    COUNT(*) AS cluster_size
   FROM events e
-  WHERE e.canonical_title <> ''
-    AND e.status = 'upcoming'
-) clustered
-JOIN venues v ON v.id = clustered.venue_id
+  WHERE e.status = 'upcoming'
+  GROUP BY e.venue_id, e.date, e.canonical_title
+  HAVING COUNT(*) > 1
+)
+SELECT
+  v.name AS venue,
+  COUNT(*) AS dup_cluster_count,
+  SUM(cluster_size - 1) AS rows_to_consolidate
+FROM clusters c
+JOIN venues v ON v.id = c.venue_id
 GROUP BY v.id, v.name
-HAVING COUNT(*) FILTER (WHERE cluster_size > 1) > 0
 ORDER BY rows_to_consolidate DESC;
 
 ------------------------------------------------------------------------
@@ -161,11 +172,14 @@ WITH ranked AS (
     ) AS rn,
     COUNT(*) OVER (PARTITION BY e.venue_id, e.date, e.canonical_title) AS cluster_size
   FROM events e
-  WHERE e.canonical_title <> ''
-    -- Scope to the partial UNIQUE index's predicate. Cancelled/postponed
-    -- rows sit outside the constraint by design (admin status override +
-    -- upcoming relist case) and must not be touched by consolidation.
-    AND e.status = 'upcoming'
+  -- Scope to the partial UNIQUE index's predicate exactly. Cancelled/
+  -- postponed rows sit outside the constraint by design (admin status
+  -- override + upcoming relist case) and must not be touched by
+  -- consolidation. Empty canonical_title rows ARE included — the index
+  -- doesn't exclude empty strings, so if there are upcoming rows with
+  -- duplicate (venue_id, date, canonical_title='') the migration build
+  -- would still fail and we must collapse them here too.
+  WHERE e.status = 'upcoming'
 )
 SELECT id, venue_id, date, canonical_title, (rn = 1) AS is_winner, cluster_size
 FROM ranked
