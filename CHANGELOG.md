@@ -1,3 +1,10 @@
+## [1.84.1](https://github.com/HartiganHM/concert-crawl/compare/v1.84.0...v1.84.1) (2026-06-26)
+
+
+### Bug Fixes
+
+* **crawler:** switch LLM extractor to streaming — SDK requires it past 32K max_tokens ([2ac396c](https://github.com/HartiganHM/concert-crawl/commit/2ac396c12d37b3641595359cb2627897232ea096)), closes [#806](https://github.com/HartiganHM/concert-crawl/issues/806)
+
 # [1.84.0](https://github.com/HartiganHM/concert-crawl/compare/v1.83.0...v1.84.0) (2026-06-25)
 
 
