@@ -53,6 +53,20 @@ import { decidePriceRegion } from '@/components/consumer/price-region/lib/decisi
 // from this session's submitted tiers (Q4-eng lock).
 const TIER_ENUM: ReadonlyArray<Tier> = ['GA', 'Reserved', 'VIP', 'Pit', 'Lawn']
 
+// Submitter counts as observation #1 in the 1/2 corroboration model — see
+// price_submissions.corroboration_count default in migration 0040, and
+// apps/api/src/routes/price-submission-confirms.ts which surfaces
+// `confirmsCount` as count-of-non-submitter-confirms (corroborationCount - 1).
+// Every UI surface that renders "X of Y confirmed" or "pending · X/Y" must
+// add +1 to fold the submitter back in, or the strip lies "0 of 2 confirmed"
+// the moment after a user submits (issue #831). Centralised here so the
+// math can't drift between call sites again.
+const SUBMITTER_OBSERVATION = 1
+const displayConfirms = (
+  apiConfirmsCount: number,
+  localConfirmsBoost = 0,
+): number => apiConfirmsCount + SUBMITTER_OBSERVATION + localConfirmsBoost
+
 // ── Shared types ─────────────────────────────────────────────────────
 
 export interface EventDetailSharedProps {
@@ -678,7 +692,13 @@ export function EventDetailPriceBlock({
           : {}),
         kind: null as null,
         pending: true as const,
-        confirms: firstPending?.confirmsCount ?? 0,
+        // Submitter counts as observation #1 (#831). The API surfaces
+        // `confirmsCount` as non-submitter confirms, so fold the submitter
+        // back in before rendering "pending · X/Y".
+        confirms:
+          firstPending != null
+            ? displayConfirms(firstPending.confirmsCount)
+            : SUBMITTER_OBSERVATION,
         needed: firstPending?.confirmsNeeded ?? SP_POLICY.confirmsRequired,
       }
     })
@@ -852,7 +872,12 @@ export function EventDetailPriceBlock({
             : {}),
           kind: pendingKind,
           pending: true as const,
-          confirms: firstPending?.confirmsCount ?? 0,
+          // Submitter counts as observation #1 (#831). See displayConfirms()
+          // doc at the top of this file.
+          confirms:
+            firstPending != null
+              ? displayConfirms(firstPending.confirmsCount)
+              : SUBMITTER_OBSERVATION,
           needed: firstPending?.confirmsNeeded ?? SP_POLICY.confirmsRequired,
         }
       })
@@ -923,7 +948,9 @@ export function EventDetailPriceBlock({
           ? { handle: firstPending.submitterHandle, url: '' }
           : null,
         submittedAt: firstPending.submittedAt,
-        confirms: firstPending.confirmsCount,
+        // Submitter counts as observation #1 (#831). Helper folds the
+        // submitter into the API's non-submitter `confirmsCount`.
+        confirms: displayConfirms(firstPending.confirmsCount),
         needed: firstPending.confirmsNeeded,
         view: firstPending.isSubmitter ? 'submitter' : 'other',
         note: firstPending.note,
@@ -997,7 +1024,10 @@ export function EventDetailPriceBlock({
                 ? { handle: activeAtt.pending.submitterHandle, url: '' }
                 : null,
               submittedAt: activeAtt.pending.submittedAt,
-              confirms: activeAtt.pending.confirmsCount + 1,
+              // Submitter counts as observation #1 (#831). Same helper as
+              // the strip on the PendingCardB this sheet was opened from —
+              // keeping the count in sync between card and sheet.
+              confirms: displayConfirms(activeAtt.pending.confirmsCount),
               needed: activeAtt.pending.confirmsNeeded,
               note: activeAtt.pending.note,
               submissionId: activeAtt.pending.id,
@@ -1329,14 +1359,22 @@ export function EventDetailPriceBlock({
     const visibleSubs = localSubmissions
 
     // If any submission has met the API's promotion threshold, render as live.
-    // Compare actual confirm rows (server confirmsCount + this session's
-    // localConfirms) against confirmsNeeded — matches price-submission-confirms.ts
-    // promotion logic so the UI never flips to live while the server is still pending.
+    // Compare actual observations (submitter as #1 + non-submitter confirms +
+    // this session's localConfirms) against confirmsNeeded — matches
+    // price-submission-confirms.ts promotion logic which compares
+    // corroboration_count (default 1 for the submitter) against
+    // confirmsRequired. Without folding the submitter in, the UI would still
+    // render pending after the server already promoted (#831).
     const confirmedSub = visibleSubs.find(
       (sub) =>
-        sub.confirmsCount + (localConfirms[sub.id] ?? 0) >= sub.confirmsNeeded,
+        displayConfirms(sub.confirmsCount, localConfirms[sub.id] ?? 0) >=
+        sub.confirmsNeeded,
     )
     if (confirmedSub != null) {
+      // PriceDisplay's `priceConfirmsCount` renders "N fans confirmed" — that
+      // copy means non-submitter peers, so DON'T fold the submitter in here
+      // (separate from the X/Y trust-strip semantic the displayConfirms()
+      // helper covers).
       const confirmsDisplay =
         confirmedSub.confirmsCount + (localConfirms[confirmedSub.id] ?? 0)
       return (
@@ -1403,7 +1441,13 @@ export function EventDetailPriceBlock({
     }
 
     const pendingCardProps = visibleSubs.map((sub) => {
-      const displayConfirms = sub.confirmsCount + (localConfirms[sub.id] ?? 0)
+      // Submitter counts as observation #1 (#831). Helper folds the submitter
+      // into the API's non-submitter `confirmsCount`; `localConfirms[id]` is
+      // this session's optimistic boost from clicking "Confirm price".
+      const subConfirms = displayConfirms(
+        sub.confirmsCount,
+        localConfirms[sub.id] ?? 0,
+      )
       const isBoxOffice = sub.vendor === 'VenueBoxOffice'
       const viewKind: 'other' | 'submitter' | 'self-locked' = sub.isSubmitter
         ? 'submitter'
@@ -1418,7 +1462,7 @@ export function EventDetailPriceBlock({
           ? { handle: sub.submitterHandle, url: '' }
           : null,
         submittedAt: sub.submittedAt,
-        confirms: displayConfirms,
+        confirms: subConfirms,
         needed: sub.confirmsNeeded,
         view: viewKind,
         counterPointer: counterPointerFor(sub.tier),
@@ -1486,7 +1530,9 @@ export function EventDetailPriceBlock({
                 ? { handle: activeCorroboration.submitterHandle, url: '' }
                 : null,
               submittedAt: activeCorroboration.submittedAt,
-              confirms: activeCorroboration.confirmsCount + 1,
+              // Submitter counts as observation #1 (#831). Same helper used on
+              // the PendingCardB this sheet was opened from.
+              confirms: displayConfirms(activeCorroboration.confirmsCount),
               needed: activeCorroboration.confirmsNeeded,
               note: activeCorroboration.note,
               submissionId: activeCorroboration.id,
@@ -1624,7 +1670,10 @@ export function EventDetailPriceBlock({
               : null
           }
           submittedAt={event.priceObservedAt ?? new Date().toISOString()}
-          confirms={0}
+          // Submitter counts as observation #1 (#831). API doesn't surface
+          // confirmsCount on this legacy path, so the floor for a fresh
+          // pending row is the submitter alone.
+          confirms={SUBMITTER_OBSERVATION}
           needed={2}
           view="other"
           onConfirm={() => setLegacyCorroborationOpen(true)}
@@ -1647,7 +1696,9 @@ export function EventDetailPriceBlock({
                 ? { handle: event.priceSubmitterHandle, url: '' }
                 : null,
               submittedAt: event.priceObservedAt ?? new Date().toISOString(),
-              confirms: 0,
+              // Submitter counts as observation #1 (#831). Sheet stays in
+              // sync with the card above.
+              confirms: SUBMITTER_OBSERVATION,
               needed: 2,
               // The submission ID is not yet surfaced in EventDetailResponse.
               // This is a placeholder until the API exposes it.

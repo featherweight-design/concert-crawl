@@ -645,4 +645,92 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     expect(mockRouterRefresh).toHaveBeenCalledTimes(1)
     fetchMock.mockRestore()
   })
+
+  // Regression — issue #831. The submitter counts as observation #1 in the
+  // 1/2 corroboration model (price_submissions.corroboration_count defaults
+  // to 1 — see migration 0040). The API surfaces `confirmsCount` as
+  // non-submitter confirms (excludes the submitter), so the UI must add +1
+  // before rendering "X of Y confirmed" or the strip lies "0 of 2" the
+  // moment after a user submits.
+  it('STATE #7 all-tiers-pending: pending submission with confirmsCount=0 renders "1 of 2 confirmed" (submitter counts as #1, #831)', () => {
+    const ga = makeTierBlock({
+      tier: 'GA',
+      headline: null,
+      pending: [
+        {
+          id: 'p-ga',
+          priceMin: '40',
+          priceMax: null,
+          vendor: 'AXS',
+          howFound: 'saw_listing',
+          sourceCategory: 'standard',
+          note: null,
+          submitterHandle: 'me',
+          submittedAt: '2026-06-22T00:00:00Z',
+          confirmsCount: 0,
+          confirmsNeeded: 2,
+          isSubmitter: true,
+        },
+      ],
+    })
+    const event = buildBaseEvent({ priceByTier: [ga] })
+    render(
+      <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
+    )
+    // The strip header reads "{confirms} of {needed} confirmed". Submitter
+    // counts as observation #1 → must read "1 of 2" not "0 of 2".
+    expect(screen.getByText(/1\s+of\s+2\s+confirmed/i)).toBeDefined()
+    expect(screen.queryByText(/0\s+of\s+2\s+confirmed/i)).toBeNull()
+  })
+
+  // Regression — issue #831. Same bug in the mixed-tier branch (a pending-only
+  // sibling tier renders via TierAlternateRow's "pending · {N}/{needed}" tell).
+  it('mixed-tier: pending-only sibling tier renders "pending · 1/2" not "pending · 0/2" (submitter counts as #1, #831)', () => {
+    const headlineBlock = makeTierBlock({
+      tier: 'GA',
+      headline: {
+        submissionId: 's1',
+        priceMin: '25',
+        priceMax: null,
+        vendor: 'VenueBoxOffice',
+        sourceCategory: 'boxoffice',
+        submitterHandle: 'alex',
+        observedAt: '2026-06-21T00:00:00Z',
+        approvedAt: '2026-06-21T01:00:00Z',
+        approvalKind: 'fan',
+        confirmsCount: 1,
+      },
+      alternates: [],
+      pending: [],
+    })
+    const pendingOnlyBlock = makeTierBlock({
+      tier: 'VIP',
+      headline: null,
+      pending: [
+        {
+          id: 'p-vip',
+          priceMin: '90',
+          priceMax: null,
+          vendor: 'AXS',
+          howFound: 'saw_listing',
+          sourceCategory: 'standard',
+          note: null,
+          submitterHandle: 'me',
+          submittedAt: '2026-06-22T00:00:00Z',
+          confirmsCount: 0,
+          confirmsNeeded: 2,
+          isSubmitter: true,
+        },
+      ],
+    })
+    const event = buildBaseEvent({
+      priceByTier: [headlineBlock, pendingOnlyBlock],
+    })
+    render(
+      <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
+    )
+    // TierAlternateRow renders "pending · {confirms}/{needed}".
+    expect(screen.getByText(/pending · 1\/2/i)).toBeDefined()
+    expect(screen.queryByText(/pending · 0\/2/i)).toBeNull()
+  })
 })
