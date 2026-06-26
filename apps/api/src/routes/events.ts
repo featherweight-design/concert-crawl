@@ -920,9 +920,12 @@ eventsRouter.get('/:id/related', async (ctx) => {
   }
 
   // Slim same-venue query — mirrors the list endpoint shape but skips the
-  // priceByTier batch + vendor lookup. The related panel's EventCard will
-  // fall back to the legacy ticketPriceMin/priceSource/priceVendor chip
-  // (already on the events row, no extra cost) when priceByTier is null.
+  // priceByTier batch + the price_submissions-based priceVendor lookup
+  // the list endpoint runs. The related panel's EventCard renders without
+  // the vendor pill (priceVendor is intentionally undefined here) and
+  // falls back to the ticketPriceMin/priceSource fields that ARE on the
+  // events row. Keeping the related payload slim is the whole point —
+  // the panel is decorative, not the primary price surface.
   const relatedConditions: SQL[] = [
     eq(events.venueId, sourceEvent.venueId),
     inArray(events.status, ['upcoming', 'cancelled', 'postponed']),

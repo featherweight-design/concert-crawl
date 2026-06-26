@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
@@ -7,6 +7,7 @@ vi.mock('@hono/clerk-auth', () => ({
   getAuth: () => null,
 }))
 
+import { events } from '@concert-crawl/db'
 import { createApp } from '../app.js'
 import { testDb } from '../test/helpers/db.js'
 import {
@@ -1296,6 +1297,46 @@ describe('GET /v1/events/:id/related — integration (#833)', () => {
       date: '2027-06-15',
       hiddenFromConsumer: true,
     })
+
+    const res = await app.request(`/v1/events/${source.id}/related`)
+    expect(res.status).toBe(404)
+  })
+
+  // PR #837 Copilot R1 — lock down the two remaining source-event
+  // exclusion paths so a future refactor of the source-event WHERE
+  // clause can't silently leak related panels for stale or detached
+  // events.
+  it('returns 404 when the source event is flagged firstMissingAt', async () => {
+    const venue = await seedVenue({
+      name: 'Stale Source Venue',
+      slug: 'stale-source-venue',
+    })
+    const source = await seedEvent(venue.id, {
+      artist: 'Stale Source',
+      date: '2027-06-15',
+      firstMissingAt: new Date('2026-06-26T09:00:00Z'),
+    })
+
+    const res = await app.request(`/v1/events/${source.id}/related`)
+    expect(res.status).toBe(404)
+  })
+
+  it('returns 404 when the source event has venueId = null (draft / unassigned)', async () => {
+    const venue = await seedVenue({
+      name: 'Detached Source Venue',
+      slug: 'detached-source-venue',
+    })
+    const source = await seedEvent(venue.id, {
+      artist: 'Detached Source',
+      date: '2027-06-15',
+    })
+    // Drop the venue association directly — the route can't group related
+    // shows by venue when there's no venue to group by, so it must 404
+    // rather than match every venueless event in the system.
+    await testDb
+      .update(events)
+      .set({ venueId: null })
+      .where(eq(events.id, source.id))
 
     const res = await app.request(`/v1/events/${source.id}/related`)
     expect(res.status).toBe(404)
