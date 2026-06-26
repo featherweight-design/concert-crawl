@@ -467,21 +467,16 @@ export async function crawlVenue(
     // host venue's crawl owns the canonical row (see issue #605). Emits a
     // structured log per skip for auditability.
     //
-    // Feed `rawTitle` (the verbatim source headline) into the filter, not the
-    // cleaned `title`. The LLM extractor strips listing decoration like
+    // Feed `rawTitle` (the verbatim source headline) into the filter, not
+    // the cleaned `title`. The LLM extractor strips listing decoration like
     // "AEG Presents Connor Price & Nic D AT MISSION BALLROOM" down to
     // "AEG Presents Connor Price & Nic D" when populating `title`, dropping
-    // the exact "AT MISSION BALLROOM" marker the regex needs. Structured-data
-    // + platform-JSON extractors set `rawTitle = title`, so the fallback is a
-    // no-op for them but keeps any path that ever skips setting rawTitle safe.
+    // the exact "AT MISSION BALLROOM" marker the regex needs. `rawTitle` is
+    // required on NormalizedEvent and is populated by every extractor (LLM
+    // tool schema; JSON-LD and platform JSON mirror title into rawTitle at
+    // the extractor seam) so the filter always sees the verbatim string.
     // See issue #826.
     const normalizedEvents = extraction.normalizedEvents.filter((evt) => {
-      // rawTitle is a required field on NormalizedEvent and is populated
-      // by every extractor (LLM emits it verbatim per its tool schema;
-      // JSON-LD / platform JSON mirror title into rawTitle at the
-      // extractor seam). The fallback to evt.title was redundant and
-      // implied rawTitle might be missing at runtime — dropped per #836
-      // Copilot R3.
       const match = detectCrossVenuePresale({
         title: evt.rawTitle,
         sourceVenueId: venueId,

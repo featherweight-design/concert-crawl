@@ -422,8 +422,11 @@ export async function runCleanup(opts: {
       // 5b. Delete the phantom. FK rows are reassigned by this point so
       //     CASCADE has nothing to chase.
       await tx.delete(events).where(eq(events.id, cand.phantomId))
-      deletedCount += 1
     })
+    // Increment AFTER db.transaction() resolves so a rollback or commit
+    // failure doesn't leave the in-memory count out of sync with the DB
+    // (#836 Copilot R4).
+    deletedCount += 1
     console.log(
       `Reassigned + deleted phantom ${cand.phantomId} → canonical ${cand.canonicalId}`,
     )
