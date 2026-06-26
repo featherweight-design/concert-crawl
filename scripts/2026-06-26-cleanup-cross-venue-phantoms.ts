@@ -192,7 +192,10 @@ export async function runCleanup(opts: {
         priceRetrievalLog: 0,
       },
       phantomsDeleted: 0,
-      committed: opts.commit,
+      // committed=false on no-op early-return paths even if --commit was
+      // passed. The summary should reflect whether writes actually
+      // happened, not the flag the operator set (#836 Copilot R5).
+      committed: false,
     }
   }
 
@@ -278,7 +281,10 @@ export async function runCleanup(opts: {
         priceRetrievalLog: 0,
       },
       phantomsDeleted: 0,
-      committed: opts.commit,
+      // committed=false on no-op early-return paths even if --commit was
+      // passed. The summary should reflect whether writes actually
+      // happened, not the flag the operator set (#836 Copilot R5).
+      committed: false,
     }
   }
 
