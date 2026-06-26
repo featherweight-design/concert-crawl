@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Failure States, A11y & Microcopy (#782)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="monetization-shared.jsx"></script>
+<script type="text/babel" src="microcopy.jsx"></script>
+<script type="text/babel" src="monetization-payment.jsx"></script>
+<script type="text/babel" src="lifecycle-plan-cards.jsx"></script>
+<script type="text/babel" src="past-due.jsx"></script>
+<script type="text/babel" src="failure-surfaces.jsx"></script>
+<script type="text/babel" src="a11y.jsx"></script>
+
+<script type="text/babel">
+const { ThemeProvider } = window;
+const { DesignCanvas, DCSection, DCArtboard } = window;
+const { IOSDevice } = window;
+const { MMark, MonoEyebrow, Scrim, TierBadge, TIERS } = window;
+const { PaymentSurface } = window;
+const { LegalBlock, BottomMonoRail, PricePromiseLine } = window;
+const { LifecyclePlanCard } = window;
+const { PastDueBanner } = window;
+const { FailureSurface, ChallengeMount, FAILURE_CONFIG } = window;
+const { AnnotatedFailure, AnnotatedChallenge, AnnotatedPastDue, A11yBackTable, SRScript, BACK_ANNOTATION_ROWS, SR_SCRIPTS } = window;
+
+const PHONE_W = 402, PHONE_H = 874;
+const DESK_W = 1240, DESK_H = 860;
+
+// ── phone scene: a dimmed "Go Premium" page behind + scrim ──
+function CheckoutBehind() {
+  return (
+    <div style={{ width: "100%", height: "100%", background: "var(--bg)", color: "var(--fg)", fontFamily: "Inter, system-ui", padding: "60px 16px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <MMark size={22}/>
+        <div style={{ fontWeight: 800, fontSize: 15, letterSpacing: "-0.02em" }}>concert<span style={{ color: "var(--accent)" }}>crawl.</span></div>
+      </div>
+      <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: "-0.03em", marginTop: 8 }}>Go Premium</div>
+      <div style={{ height: 1, background: "var(--border)" }}/>
+      {[0,1,2].map(i => <div key={i} style={{ height: 56, borderRadius: 12, background: "var(--surface-1)", border: "1px solid var(--border)" }}/>)}
+    </div>
+  );
+}
+function PhoneSheet({ theme = "electric", bare = false, children }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <IOSDevice width={PHONE_W} height={PHONE_H} dark={theme !== "light"}>
+        {bare ? children : (
+          <div style={{ position: "relative", width: "100%", height: "100%" }}>
+            <CheckoutBehind/>
+            <Scrim/>
+            {children}
+          </div>
+        )}
+      </IOSDevice>
+    </ThemeProvider>
+  );
+}
+
+// ── desktop chrome + modal scene ──
+function DesktopChrome({ theme = "electric", url = "concertcrawl.app/go-premium", height = DESK_H, children }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <div style={{ width: DESK_W, height, position: "relative", background: "var(--bg)", overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 36, background: "var(--surface-1)", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", padding: "0 14px", gap: 8, zIndex: 5 }}>
+          {[0,1,2].map(i => <span key={i} style={{ width: 11, height: 11, borderRadius: 6, background: ["#FF7A8A","#FFD27A","#7BFFB0"][i], opacity: 0.7 }}/>)}
+          <div style={{ flex: 1 }}/>
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "var(--fg-subtle)", letterSpacing: "0.06em" }}>{url}</div>
+          <div style={{ flex: 1 }}/>
+        </div>
+        <div style={{ position: "absolute", inset: "36px 0 0 0" }}>{children}</div>
+      </div>
+    </ThemeProvider>
+  );
+}
+function CheckoutBehindDesktop() {
+  return (
+    <div style={{ width: "100%", height: "100%", background: "var(--bg)", color: "var(--fg)", fontFamily: "Inter, system-ui", padding: "34px 60px", display: "flex", flexDirection: "column", gap: 18 }}>
+      <div style={{ fontSize: 40, fontWeight: 900, letterSpacing: "-0.035em" }}>Go Premium</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+        {[0,1,2,3].map(i => <div key={i} style={{ height: 320, borderRadius: 14, background: "var(--surface-1)", border: "1px solid var(--border)" }}/>)}
+      </div>
+    </div>
+  );
+}
+function DesktopModalScene({ theme = "electric", height = DESK_H, url, children }) {
+  return (
+    <DesktopChrome theme={theme} height={height} url={url}>
+      <div style={{ position: "absolute", inset: 0, opacity: 0.5 }}><CheckoutBehindDesktop/></div>
+      <Scrim/>
+      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: 28 }}>{children}</div>
+    </DesktopChrome>
+  );
+}
+
+// ── settings · plan rail stage (for the past-due plan card) ──
+function PlanStage({ theme = "electric", wide = false, children }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>
+      <div style={{ width: "100%", height: "100%", background: "var(--bg)", color: "var(--fg)", fontFamily: "Inter, system-ui", padding: wide ? "30px 34px" : "22px 18px", display: "flex", flexDirection: "column", gap: 14, overflow: "hidden" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <MMark size={wide ? 22 : 20}/>
+          <MonoEyebrow size={wide ? 10 : 9} letterSpacing="0.18em">SETTINGS · PLAN</MonoEyebrow>
+        </div>
+        <div style={{ flex: 1, display: "flex", alignItems: "flex-start" }}>{children}</div>
+      </div>
+    </ThemeProvider>
+  );
+}
+
+// ── browse mock (for the past-due banner context) ──
+function BrowseBody({ topPad = 8 }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: `${topPad}px 16px 16px` }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <MMark size={22}/>
+          <div style={{ fontWeight: 800, fontSize: 15, letterSpacing: "-0.02em" }}>concert<span style={{ color: "var(--accent)" }}>crawl.</span></div>
+        </div>
+        <div style={{ width: 30, height: 30, borderRadius: 30, background: "var(--signal)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--fg-on-accent)", fontWeight: 900, fontSize: 13 }}>H</div>
+      </div>
+      <div style={{ fontSize: 24, fontWeight: 900, letterSpacing: "-0.03em", marginTop: 2 }}>Tonight near you</div>
+      {["Sleep Token · Fillmore","Habstrakt · 1015","Jamie xx · Midway"].map((s, i) => (
+        <div key={i} style={{ display: "flex", gap: 12, padding: 10, borderRadius: 12, background: "var(--surface-1)", border: "1px solid var(--border)" }}>
+          <div style={{ width: 54, height: 54, borderRadius: 9, background: `linear-gradient(135deg, color-mix(in oklch, var(--accent) 30%, var(--surface-2)), color-mix(in oklch, var(--signal) 24%, var(--surface-2)))`, flexShrink: 0 }}/>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 5, justifyContent: "center" }}>
+            <div style={{ fontWeight: 800, fontSize: 14 }}>{s.split(" · ")[0]}</div>
+            <MonoEyebrow size={9}>{s.split(" · ")[1].toUpperCase()} · JUN 28</MonoEyebrow>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+function BannerPhone({ theme = "electric", inline = false }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <IOSDevice width={PHONE_W} height={PHONE_H} dark={theme !== "light"}>
+        <div style={{ width: "100%", height: "100%", background: "var(--bg)", color: "var(--fg)", fontFamily: "Inter, system-ui", display: "flex", flexDirection: "column" }}>
+          <div style={{ height: 44 }}/>
+          {!inline && <PastDueBanner variant="mobile"/>}
+          {inline ? (
+            <div style={{ flex: 1, overflow: "hidden" }}>
+              <BrowseBody topPad={8}/>
+              <div style={{ padding: "0 16px" }}><PastDueBanner variant="mobile" inline/></div>
+            </div>
+          ) : (
+            <div style={{ flex: 1, overflow: "hidden" }}><BrowseBody topPad={12}/></div>
+          )}
+        </div>
+      </IOSDevice>
+    </ThemeProvider>
+  );
+}
+function BannerDesktop({ theme = "electric" }) {
+  return (
+    <DesktopChrome theme={theme} url="concertcrawl.app/browse" height={620}>
+      <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>
+        <div style={{ width: "100%", height: "100%", background: "var(--bg)", color: "var(--fg)", display: "flex", flexDirection: "column" }}>
+          <PastDueBanner variant="desktop"/>
+          <div style={{ padding: "16px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+              <MMark size={24}/>
+              <div style={{ fontWeight: 800, fontSize: 16, letterSpacing: "-0.02em" }}>concert<span style={{ color: "var(--accent)" }}>crawl.</span></div>
+            </div>
+            <div style={{ width: 32, height: 32, borderRadius: 32, background: "var(--signal)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--fg-on-accent)", fontWeight: 900, fontSize: 13 }}>H</div>
+          </div>
+          <div style={{ flex: 1, padding: "20px 28px", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, alignContent: "start" }}>
+            {[0,1,2,3,4,5].map(i => (
+              <div key={i} style={{ borderRadius: 12, overflow: "hidden", background: "var(--surface-1)", border: "1px solid var(--border)" }}>
+                <div style={{ height: 96, background: `linear-gradient(135deg, color-mix(in oklch, var(--accent) 28%, var(--surface-2)), color-mix(in oklch, var(--signal) 22%, var(--surface-2)))` }}/>
+                <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ fontWeight: 800, fontSize: 14 }}>{["Sleep Token","Habstrakt","Jamie xx","Four Tet","Floating Points","Bonobo"][i]}</div>
+                  <MonoEyebrow size={9}>FILLMORE · JUN 28</MonoEyebrow>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </ThemeProvider>
+    </DesktopChrome>
+  );
+}
+
+// ── tier card mock (to show the price-promise line in place) ──
+function TierCardMock({ tierKey = "premium", theme = "electric" }) {
+  const tier = TIERS.find(t => t.key === tierKey);
+  const isPrem = tierKey === "premium";
+  const isFounder = tierKey === "founder";
+  const accent = isFounder ? "var(--accent)" : isPrem ? "var(--signal)" : "var(--accent)";
+  return (
+    <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>
+      <div style={{ width: "100%", height: "100%", background: "var(--bg)", padding: 22, display: "flex", alignItems: "flex-start", justifyContent: "center" }}>
+        <div style={{
+          width: 300, borderRadius: 16, padding: "18px 18px 20px",
+          background: isFounder ? "linear-gradient(150deg, color-mix(in oklch, var(--accent) 12%, var(--bg-elevated)), color-mix(in oklch, var(--signal) 8%, var(--bg-elevated)))" : "var(--bg-elevated)",
+          border: `1px solid ${isPrem ? "color-mix(in oklch, var(--signal) 45%, var(--border-strong))" : isFounder ? "color-mix(in oklch, var(--accent) 45%, var(--border-strong))" : "var(--border-strong)"}`,
+          color: "var(--fg)", fontFamily: "Inter, system-ui", display: "flex", flexDirection: "column", gap: 13,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontWeight: 900, fontSize: 22, letterSpacing: "-0.02em" }}>{tier.name}</span>
+            <TierBadge tier={tierKey} size="sm"/>
+          </div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+            <span style={{ fontWeight: 900, fontSize: 30, letterSpacing: "-0.04em" }}>{tier.priceText}</span>
+            <MonoEyebrow size={9}>{tier.priceUnit}</MonoEyebrow>
+          </div>
+          <div style={{ fontWeight: 600, fontSize: 12.5, color: "var(--fg-muted)" }}>{tier.tagline}</div>
+          {/* price-promise line — the #782 microcopy addition */}
+          <PricePromiseLine tier={tierKey} size="sm"/>
+          <div style={{ display: "flex", flexDirection: "column", gap: 7, marginTop: 2 }}>
+            {tier.features.slice(0, 3).map((f, i) => (
+              <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                <svg width="13" height="13" viewBox="0 0 14 14" style={{ marginTop: 2, color: accent, flexShrink: 0 }}><path d="M2.5 7.5 L5.5 10.5 L11.5 3.5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <span style={{ fontSize: 12.5, fontWeight: 500, color: "var(--fg)" }}>{f.text}</span>
+              </div>
+            ))}
+          </div>
+          <button style={{ all: "unset", cursor: "pointer", textAlign: "center", marginTop: 4, padding: "11px 14px", borderRadius: 11, background: accent, color: "var(--fg-on-accent)", fontWeight: 800, fontSize: 13.5 }}>{tier.cta}</button>
+        </div>
+      </div>
+    </ThemeProvider>
+  );
+}
+
+// ── microcopy spec stage (standalone legal block + bottom rail) ──
+function MicrocopyStage({ theme = "electric", scaRegion = false }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>
+      <div style={{ width: "100%", height: "100%", background: "var(--bg)", color: "var(--fg)", fontFamily: "Inter, system-ui", padding: "26px 26px", display: "flex", flexDirection: "column", gap: 18 }}>
+        <div>
+          <MonoEyebrow size={10} color="var(--signal)" letterSpacing="0.16em">ABOVE-CTA LEGAL BLOCK</MonoEyebrow>
+          <div style={{ fontSize: 12.5, color: "var(--fg-muted)", marginTop: 4 }}>{scaRegion ? "SCA-region user — third row present" : "Default — two rows"}</div>
+        </div>
+        <div style={{ padding: "14px 16px", borderRadius: 12, background: "var(--surface-1)", border: "1px solid var(--border)" }}>
+          <LegalBlock scaRegion={scaRegion}/>
+          <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
+            <button style={{ all: "unset", cursor: "pointer", textAlign: "center", display: "block", width: "100%", padding: "13px", borderRadius: 12, background: "var(--signal)", color: "var(--fg-on-accent)", fontWeight: 800, fontSize: 14 }}>Start free trial</button>
+            <div style={{ marginTop: 8 }}><BottomMonoRail/></div>
+          </div>
+        </div>
+      </div>
+    </ThemeProvider>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Tweaks — drive the live preview
+// ─────────────────────────────────────────────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "electric",
+  "surface": "failure",
+  "category": "issuer_declined",
+  "challenge": "3ds",
+  "tier": "premium",
+  "trial": false,
+  "scaRegion": false
+}/*EDITMODE-END*/;
+
+const { TweaksPanel, useTweaks, TweakSection, TweakSelect, TweakToggle } = window;
+const THEME_OPTS = window.CC_THEME_KEYS.map(k => ({ value: k, label: window.CC_THEMES[k].label }));
+
+function FlowTweaks() {
+  const [t, setT] = useTweaks(TWEAK_DEFAULTS);
+  return (
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Surface">
+        <TweakSelect label="Show" value={t.surface} onChange={(v)=>setT("surface",v)} options={[
+          { value: "failure",   label: "Payment failure" },
+          { value: "challenge", label: "3DS / SCA mount" },
+          { value: "payment",   label: "Payment + microcopy" },
+          { value: "pastdue",   label: "Past-due Plan card" },
+        ]}/>
+        <TweakSelect label="Failure category" value={t.category} onChange={(v)=>setT("category",v)} options={[
+          { value: "insufficient_funds",        label: "Insufficient funds" },
+          { value: "expired_or_incorrect_card", label: "Expired / incorrect card" },
+          { value: "issuer_declined",           label: "Issuer declined" },
+          { value: "fraud_block",               label: "Card flagged (fraud block)" },
+          { value: "network_timeout",           label: "Network / timeout" },
+        ]}/>
+        <TweakSelect label="Challenge kind" value={t.challenge} onChange={(v)=>setT("challenge",v)} options={[
+          { value: "3ds", label: "3DS challenge" },
+          { value: "sca", label: "SCA challenge" },
+        ]}/>
+      </TweakSection>
+      <TweakSection label="Context">
+        <TweakSelect label="Tier" value={t.tier} onChange={(v)=>setT("tier",v)} options={[
+          { value: "premium",   label: "Premium" },
+          { value: "supporter", label: "Supporter" },
+          { value: "founder",   label: "Founder" },
+        ]}/>
+        <TweakToggle label="Trial conversion" value={t.trial} onChange={(v)=>setT("trial",v)}/>
+        <TweakToggle label="SCA region (legal block)" value={t.scaRegion} onChange={(v)=>setT("scaRegion",v)}/>
+      </TweakSection>
+      <TweakSection label="Theme">
+        <TweakSelect label="Theme (all 9)" value={t.theme} onChange={(v)=>setT("theme",v)} options={THEME_OPTS}/>
+      </TweakSection>
+    </TweaksPanel>
+  );
+}
+function LiveMobile() {
+  const [t] = useTweaks(TWEAK_DEFAULTS);
+  let surface;
+  if (t.surface === "challenge") surface = <ChallengeMount kind={t.challenge} variant="mobile" tierKey={t.tier}/>;
+  else if (t.surface === "payment") surface = <PaymentSurface variant="mobile" state="form" tierKey={t.tier} trial={t.trial} scaRegion={t.scaRegion}/>;
+  else if (t.surface === "pastdue") return <PlanStage theme={t.theme}><LifecyclePlanCard user={{ tier: t.tier, lifecycle: "past-due", periodEnd: "Jul 15" }} variant="mobile"/></PlanStage>;
+  else surface = <FailureSurface category={t.category} variant="mobile" tierKey={t.tier} trial={t.trial}/>;
+  return <PhoneSheet theme={t.theme}>{surface}</PhoneSheet>;
+}
+function LiveDesktop() {
+  const [t] = useTweaks(TWEAK_DEFAULTS);
+  if (t.surface === "pastdue") return <PlanStage theme={t.theme} wide><div style={{ width: "100%", maxWidth: 620 }}><LifecyclePlanCard user={{ tier: t.tier, lifecycle: "past-due", periodEnd: "Jul 15" }} variant="desktop"/></div></PlanStage>;
+  let surface;
+  if (t.surface === "challenge") surface = <ChallengeMount kind={t.challenge} variant="desktop" tierKey={t.tier}/>;
+  else if (t.surface === "payment") surface = <PaymentSurface variant="desktop" state="form" tierKey={t.tier} trial={t.trial} scaRegion={t.scaRegion}/>;
+  else surface = <FailureSurface category={t.category} variant="desktop" tierKey={t.tier} trial={t.trial}/>;
+  return <DesktopModalScene theme={t.theme}>{surface}</DesktopModalScene>;
+}
+
+// failure category list (order)
+const CATS = ["insufficient_funds","expired_or_incorrect_card","issuer_declined","fraud_block","network_timeout"];
+const CAT_LABEL = {
+  insufficient_funds: "Insufficient funds",
+  expired_or_incorrect_card: "Expired / incorrect card",
+  issuer_declined: "Issuer declined",
+  fraud_block: "Card flagged",
+  network_timeout: "Network / timeout",
+};
+
+// ─────────────────────────────────────────────────────────────
+function App() {
+  return (
+    <>
+      <DesignCanvas
+        title="Monetization · Failure States, A11y & Microcopy"
+        subtitle="#782 · Round 1 · 5 payment-failure surfaces + 3DS/SCA challenge mounts · past-due Plan card variant + banner · required microcopy (legal block, trust rail, price-promise) · full a11y annotation sweep across #781 / #780 / #782 + 3 screen-reader walkthroughs. Sits on the locked monetization system. Sour Patch voice, token-only across all 9 themes, mobile + desktop parity."
+      >
+        {/* 0 · LIVE */}
+        <DCSection id="live" title="0 · Live preview" subtitle="Drive surface · failure category · challenge kind · tier · trial · SCA region · theme (all 9) from the Tweaks panel (toggle it on in the toolbar). Failure surfaces are role=alertdialog; the forward action always stays --signal even though the messaging is --danger.">
+          <DCArtboard id="live-mobile" label="Mobile · responds to Tweaks" width={PHONE_W} height={PHONE_H}><LiveMobile/></DCArtboard>
+          <DCArtboard id="live-desktop" label="Desktop · responds to Tweaks" width={DESK_W} height={DESK_H}><LiveDesktop/></DCArtboard>
+        </DCSection>
+
+        {/* 1 · FAILURE SURFACES · MOBILE */}
+        <DCSection id="fail-mobile" title="1 · Payment failure surfaces · mobile"
+          subtitle="Five user-actionable categories (#775 maps Stripe decline_code → these). Blunt + honest headlines ('Your bank said no'); --danger messaging, --signal action. 'Card flagged' never says fraud and has no retry-same-card. Network/timeout keeps the entered card and just re-submits.">
+          {CATS.map(cat => (
+            <DCArtboard key={cat} id={"fm-" + cat} label={CAT_LABEL[cat]} width={PHONE_W} height={PHONE_H}>
+              <PhoneSheet theme="electric"><FailureSurface category={cat} variant="mobile" tierKey="premium"/></PhoneSheet>
+            </DCArtboard>
+          ))}
+        </DCSection>
+
+        {/* 2 · FAILURE SURFACES · DESKTOP */}
+        <DCSection id="fail-desktop" title="2 · Payment failure surfaces · desktop"
+          subtitle="Same five categories as the desktop modal. Tapping the forward action resets the PaymentSurface in place (Stripe Elements re-renders) — active-flow retry per the hybrid rule.">
+          {CATS.map(cat => (
+            <DCArtboard key={cat} id={"fd-" + cat} label={CAT_LABEL[cat]} width={DESK_W} height={DESK_H}>
+              <DesktopModalScene theme="electric"><FailureSurface category={cat} variant="desktop" tierKey="premium"/></DesktopModalScene>
+            </DCArtboard>
+          ))}
+        </DCSection>
+
+        {/* 3 · CHALLENGE MOUNTS */}
+        <DCSection id="challenge" title="3 · 3DS / SCA challenge mounts"
+          subtitle="Chrome AROUND Stripe's challenge iframe — Stripe owns everything inside the dashed frame. 3DS = generic step-up; SCA = the EU strong-auth variant (always present for SCA-region users). Honest 'we never see it' framing; clear 'don't close this window'.">
+          <DCArtboard id="ch-3ds-m" label="3DS · mobile" width={PHONE_W} height={PHONE_H}>
+            <PhoneSheet theme="electric"><ChallengeMount kind="3ds" variant="mobile" tierKey="premium"/></PhoneSheet>
+          </DCArtboard>
+          <DCArtboard id="ch-3ds-d" label="3DS · desktop" width={DESK_W} height={DESK_H}>
+            <DesktopModalScene theme="electric"><ChallengeMount kind="3ds" variant="desktop" tierKey="premium"/></DesktopModalScene>
+          </DCArtboard>
+          <DCArtboard id="ch-sca-m" label="SCA · mobile" width={PHONE_W} height={PHONE_H}>
+            <PhoneSheet theme="electric"><ChallengeMount kind="sca" variant="mobile" tierKey="premium"/></PhoneSheet>
+          </DCArtboard>
+          <DCArtboard id="ch-sca-d" label="SCA · desktop" width={DESK_W} height={DESK_H}>
+            <DesktopModalScene theme="electric"><ChallengeMount kind="sca" variant="desktop" tierKey="premium"/></DesktopModalScene>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 4 · PAST-DUE PLAN CARD */}
+        <DCSection id="pastdue-card" title="4 · Past-due Plan card variant"
+          subtitle="Deferred from #780 §8. Warning-toned (eyebrow / border / status rail); tier badge + price stay in their normal spots. Primary 'Update card' is portal-bound (↗) per #780's hybrid split — it sits ALONGSIDE 'Manage subscription', doesn't replace it. The card tone is --warning; the action button stays --signal.">
+          <DCArtboard id="pd-mobile" label="Mobile · Settings · Plan" width={PHONE_W} height={620}>
+            <PlanStage theme="electric"><LifecyclePlanCard user={{ tier: "premium", lifecycle: "past-due", periodEnd: "Jul 15" }} variant="mobile"/></PlanStage>
+          </DCArtboard>
+          <DCArtboard id="pd-desktop" label="Desktop · Settings · Plan" width={760} height={460}>
+            <PlanStage theme="electric" wide><div style={{ width: "100%", maxWidth: 620 }}><LifecyclePlanCard user={{ tier: "premium", lifecycle: "past-due", periodEnd: "Jul 15" }} variant="desktop"/></div></PlanStage>
+          </DCArtboard>
+          <DCArtboard id="pd-supporter" label="Mobile · Supporter past-due" width={PHONE_W} height={620}>
+            <PlanStage theme="electric"><LifecyclePlanCard user={{ tier: "supporter", lifecycle: "past-due", periodEnd: "Jul 15" }} variant="mobile"/></PlanStage>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 5 · PAST-DUE BANNER */}
+        <DCSection id="pastdue-banner" title="5 · Past-due top-of-app banner"
+          subtitle="Matches #780's day-13 banner chrome exactly — pinned strip (primary) + inline inset variant — but --warning-toned with a card-alert glyph and a portal-bound 'Update card'. Per-session dismissible (recurring active alert during dunning), and suppressed while the user is inside an active payment flow.">
+          <DCArtboard id="pb-mobile" label="Mobile · pinned strip · browse" width={PHONE_W} height={PHONE_H}>
+            <BannerPhone theme="electric"/>
+          </DCArtboard>
+          <DCArtboard id="pb-desktop" label="Desktop · pinned strip · browse" width={DESK_W} height={620}>
+            <BannerDesktop theme="electric"/>
+          </DCArtboard>
+          <DCArtboard id="pb-inline" label="Mobile · inline variant" width={PHONE_W} height={PHONE_H}>
+            <BannerPhone theme="electric" inline/>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 6 · MICROCOPY */}
+        <DCSection id="microcopy" title="6 · Required microcopy"
+          subtitle="Above-CTA legal block = stacked mono micro-rows (Terms / Privacy / Refund · auto-renew · conditional SCA notice) — legally sufficient, not loud. No 'subject to change' disclaimer (it would undercut the grandfather promise). Bottom rail = trust signaling, refined. Price-promise line on every paid tier card.">
+          <DCArtboard id="mc-default" label="Legal block + trust rail · default" width={PHONE_W} height={460}>
+            <MicrocopyStage theme="electric"/>
+          </DCArtboard>
+          <DCArtboard id="mc-sca" label="Legal block · SCA region (3rd row)" width={PHONE_W} height={460}>
+            <MicrocopyStage theme="electric" scaRegion/>
+          </DCArtboard>
+          <DCArtboard id="mc-payment" label="In context · Payment surface (SCA region)" width={PHONE_W} height={PHONE_H}>
+            <PhoneSheet theme="electric"><PaymentSurface variant="mobile" state="form" tierKey="premium" trial scaRegion/></PhoneSheet>
+          </DCArtboard>
+          <DCArtboard id="mc-promise-sup" label="Price-promise · Supporter" width={344} height={420}>
+            <TierCardMock tierKey="supporter" theme="electric"/>
+          </DCArtboard>
+          <DCArtboard id="mc-promise-prem" label="Price-promise · Premium" width={344} height={440}>
+            <TierCardMock tierKey="premium" theme="electric"/>
+          </DCArtboard>
+          <DCArtboard id="mc-promise-found" label="Price-promise · Founder" width={344} height={420}>
+            <TierCardMock tierKey="founder" theme="electric"/>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 7 · A11Y OVERLAYS · #782 SURFACES */}
+        <DCSection id="a11y-overlays" title="7 · A11y annotations · #782 surfaces"
+          subtitle="Numbered callout overlays on the net-new surfaces (Hugh's hybrid call). Failure surfaces = role=alertdialog + assertive headline + focus to the action + Esc-to-picker. Challenge mounts = role=dialog around Stripe's iframe. Past-due banner = polite region. WCAG AA is the bar.">
+          <DCArtboard id="a11y-fail" label="Failure surface · annotated" width={1040} height={760}>
+            <AnnotatedFailure theme="electric" category="issuer_declined"/>
+          </DCArtboard>
+          <DCArtboard id="a11y-fraud" label="Card-flagged · annotated (no retry-same-card)" width={1040} height={760}>
+            <AnnotatedFailure theme="electric" category="fraud_block"/>
+          </DCArtboard>
+          <DCArtboard id="a11y-3ds" label="3DS challenge mount · annotated" width={1040} height={760}>
+            <AnnotatedChallenge theme="electric" kind="3ds"/>
+          </DCArtboard>
+          <DCArtboard id="a11y-pastdue" label="Past-due banner · annotated" width={DESK_W} height={420}>
+            <AnnotatedPastDue theme="electric"/>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 8 · A11Y BACK-ANNOTATION TABLE */}
+        <DCSection id="a11y-table" title="8 · A11y back-annotation · #781 + #780 surfaces"
+          subtitle="Spec table covering every locked surface from prior rounds — role / focus / live-region / key notes — so eng integrates WCAG AA across the whole monetization flow in one pass. (The #782 surfaces are annotated visually in §7.)">
+          <DCArtboard id="a11y-back" label="Back-annotation matrix" width={1320} height={720}>
+            <A11yBackTable theme="electric" title="A11y spec · tier picker → lifecycle surfaces (#781 + #780)" rows={BACK_ANNOTATION_ROWS}/>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 9 · SR WALKTHROUGHS */}
+        <DCSection id="sr-scripts" title="9 · Screen-reader walkthrough scripts"
+          subtitle="Numbered narrations for the three highest-complexity surfaces — the wide matrix, the multi-field payment surface, and the trial-ended takeover. Inline beside the flow for cross-reference (Design's call). Eng integrates the patterns; these scripts are the acceptance bar.">
+          <DCArtboard id="sr-matrix" label="Tier matrix · desktop" width={560} height={560}>
+            <ThemeProvider theme="electric" style={{ width: "100%", height: "100%" }}>
+              <div style={{ width: "100%", height: "100%", background: "var(--bg)", padding: "26px 28px", overflow: "auto" }}><SRScript {...SR_SCRIPTS.matrix}/></div>
+            </ThemeProvider>
+          </DCArtboard>
+          <DCArtboard id="sr-payment" label="Payment surface" width={560} height={620}>
+            <ThemeProvider theme="electric" style={{ width: "100%", height: "100%" }}>
+              <div style={{ width: "100%", height: "100%", background: "var(--bg)", padding: "26px 28px", overflow: "auto" }}><SRScript {...SR_SCRIPTS.payment}/></div>
+            </ThemeProvider>
+          </DCArtboard>
+          <DCArtboard id="sr-takeover" label="Trial-ended takeover" width={560} height={560}>
+            <ThemeProvider theme="electric" style={{ width: "100%", height: "100%" }}>
+              <div style={{ width: "100%", height: "100%", background: "var(--bg)", padding: "26px 28px", overflow: "auto" }}><SRScript {...SR_SCRIPTS.takeover}/></div>
+            </ThemeProvider>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 10 · THEME PARITY */}
+        <DCSection id="parity" title="10 · Theme parity"
+          subtitle="Token-only proof — failure / challenge / past-due across Light + high-contrast genre themes. var(--danger) for failures, var(--warning) for past-due; flip all 9 in Tweaks to verify the rest.">
+          <DCArtboard id="par-fail-light" label="Issuer declined · Light" width={PHONE_W} height={PHONE_H}>
+            <PhoneSheet theme="light"><FailureSurface category="issuer_declined" variant="mobile" tierKey="premium"/></PhoneSheet>
+          </DCArtboard>
+          <DCArtboard id="par-fraud-pulse" label="Card flagged · Pulse" width={PHONE_W} height={PHONE_H}>
+            <PhoneSheet theme="pulse"><FailureSurface category="fraud_block" variant="mobile" tierKey="premium"/></PhoneSheet>
+          </DCArtboard>
+          <DCArtboard id="par-pastcard-forge" label="Past-due Plan card · Forge" width={PHONE_W} height={620}>
+            <PlanStage theme="forge"><LifecyclePlanCard user={{ tier: "premium", lifecycle: "past-due", periodEnd: "Jul 15" }} variant="mobile"/></PlanStage>
+          </DCArtboard>
+          <DCArtboard id="par-banner-drip" label="Past-due banner · Drip" width={DESK_W} height={620}>
+            <BannerDesktop theme="drip"/>
+          </DCArtboard>
+          <DCArtboard id="par-3ds-bluenote" label="3DS mount · Blue Note" width={PHONE_W} height={PHONE_H}>
+            <PhoneSheet theme="bluenote"><ChallengeMount kind="3ds" variant="mobile" tierKey="premium"/></PhoneSheet>
+          </DCArtboard>
+        </DCSection>
+
+      </DesignCanvas>
+      <FlowTweaks/>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
