@@ -877,6 +877,102 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   })
 })
 
+// GET /v1/events/:id/related — slim list of other upcoming events at the same
+// venue. Keyed by event id (not venue slug) so the consumer event detail page
+// can fetch related shows in parallel with /v1/events/:id and
+// /v1/events/:id/reports rather than waiting on a serial round-trip to resolve
+// the venue slug first (#833).
+//
+// Payload is intentionally slim:
+//   - same columns as the public list endpoint (so EventCard can render),
+//   - BUT no priceByTier aggregation. The per-tier batch query is O(events ×
+//     submissions) and is the dominant cost on Red Rocks-sized venues
+//     (148 events × N submissions per event). The related panel only needs
+//     the basic card chrome; EventCard's legacy chip fallback (ticketPriceMin
+//     + priceSource + priceVendor) renders correctly without priceByTier.
+//
+// Returns up to 3 events excluding the source event, ordered by date asc.
+eventsRouter.get('/:id/related', async (ctx) => {
+  const rawId = ctx.req.param('id')
+  const parsed = uuidSchema.safeParse(rawId)
+  if (!parsed.success)
+    return ctx.json({ success: false, error: 'Event not found' }, 404)
+  const eventId = parsed.data
+
+  const [sourceEvent] = await db
+    .select({ venueId: events.venueId })
+    .from(events)
+    .where(
+      and(
+        eq(events.id, eventId),
+        eq(events.hiddenFromConsumer, false),
+        isNull(events.firstMissingAt),
+      ),
+    )
+    .limit(1)
+
+  if (!sourceEvent || sourceEvent.venueId === null) {
+    // venueId is nullable on the events row (draft events or admin-entered
+    // rows pending venue assignment). Without a venue we have nothing to
+    // group related shows by — treat the same as "not found" rather than
+    // returning every venueless event in the system.
+    return ctx.json({ success: false, error: 'Event not found' }, 404)
+  }
+
+  // Slim same-venue query — mirrors the list endpoint shape but skips the
+  // priceByTier batch + vendor lookup. The related panel's EventCard will
+  // fall back to the legacy ticketPriceMin/priceSource/priceVendor chip
+  // (already on the events row, no extra cost) when priceByTier is null.
+  const relatedConditions: SQL[] = [
+    eq(events.venueId, sourceEvent.venueId),
+    inArray(events.status, ['upcoming', 'cancelled', 'postponed']),
+    gte(events.date, todayInTimezone('UTC')),
+    eq(events.hiddenFromConsumer, false),
+    isNull(events.firstMissingAt),
+    sql`${events.id} != ${eventId}`,
+  ]
+
+  const relatedRows = await db
+    .select({
+      id: events.id,
+      venueId: events.venueId,
+      title: events.title,
+      artist: events.artist,
+      date: events.date,
+      doorsTime: events.doorsTime,
+      showTime: events.showTime,
+      ticketUrl: events.ticketUrl,
+      ticketLinks: events.ticketLinks,
+      ticketPriceMin: events.ticketPriceMin,
+      ticketPriceMax: events.ticketPriceMax,
+      priceSource: events.priceSource,
+      description: events.description,
+      imageUrl: events.imageUrl,
+      genre: events.genre,
+      status: events.status,
+      confidenceScore: events.confidenceScore,
+      verified: events.verified,
+      sourceUrl: events.sourceUrl,
+      createdAt: events.createdAt,
+      updatedAt: events.updatedAt,
+      venue: {
+        id: venues.id,
+        name: venues.name,
+        slug: venues.slug,
+        city: venues.city,
+        timezone: venues.timezone,
+        websiteUrl: venues.websiteUrl,
+      },
+    })
+    .from(events)
+    .innerJoin(venues, eq(events.venueId, venues.id))
+    .where(and(...relatedConditions))
+    .orderBy(asc(events.date), asc(events.showTime))
+    .limit(3)
+
+  return ctx.json({ success: true, data: { data: relatedRows } })
+})
+
 // POST /v1/events/:id/watch — opt in to watching
 eventsRouter.post('/:id/watch', clerkMiddleware(), async (ctx) => {
   const authInfo = getAuth(ctx)

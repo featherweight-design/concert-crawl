@@ -1117,3 +1117,204 @@ describe('GET /v1/events/genres', () => {
     expect(body.data).toContain('rock')
   })
 })
+
+describe('GET /v1/events/:id/related — integration (#833)', () => {
+  beforeEach(async () => {
+    await clearTables()
+  })
+
+  it('returns up to 3 other upcoming events at the same venue, excluding source', async () => {
+    const venue = await seedVenue({ name: 'Red Rocks', slug: 'red-rocks' })
+    const source = await seedEvent(venue.id, {
+      artist: 'Source Artist',
+      date: '2027-06-15',
+    })
+    await seedEvent(venue.id, { artist: 'Sibling One', date: '2027-06-16' })
+    await seedEvent(venue.id, { artist: 'Sibling Two', date: '2027-06-17' })
+    await seedEvent(venue.id, { artist: 'Sibling Three', date: '2027-06-18' })
+    await seedEvent(venue.id, { artist: 'Sibling Four', date: '2027-06-19' })
+
+    const res = await app.request(`/v1/events/${source.id}/related`)
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { data: Array<{ id: string; artist: string }> }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.data).toHaveLength(3)
+    const ids = body.data.data.map((row) => row.id)
+    expect(ids).not.toContain(source.id)
+  })
+
+  it('does not include events from other venues', async () => {
+    const venueA = await seedVenue({ name: 'Venue A', slug: 'venue-a-rel' })
+    const venueB = await seedVenue({ name: 'Venue B', slug: 'venue-b-rel' })
+    const source = await seedEvent(venueA.id, {
+      artist: 'Source Artist',
+      date: '2027-06-15',
+    })
+    await seedEvent(venueA.id, { artist: 'Same Venue', date: '2027-06-16' })
+    await seedEvent(venueB.id, { artist: 'Other Venue', date: '2027-06-17' })
+
+    const res = await app.request(`/v1/events/${source.id}/related`)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { data: Array<{ artist: string }> }
+    }
+    expect(body.data.data).toHaveLength(1)
+    expect(body.data.data[0]?.artist).toBe('Same Venue')
+  })
+
+  it('returns a slim payload (no priceByTier aggregation, no enrichment)', async () => {
+    const venue = await seedVenue({ name: 'Slim Venue', slug: 'slim-venue' })
+    const source = await seedEvent(venue.id, {
+      artist: 'Source Artist',
+      date: '2027-06-15',
+      priceSource: 'community',
+    })
+    const sibling = await seedEvent(venue.id, {
+      artist: 'Sibling',
+      date: '2027-06-16',
+      priceSource: 'community',
+    })
+    const profile = await seedUserProfile('user-slim', { handle: 'fan' })
+    // Seed a corroborated submission on the sibling — the list endpoint
+    // would surface this via priceByTier. The related endpoint must NOT.
+    await seedPriceSubmission(sibling.id, profile.userId, {
+      tier: 'GA',
+      vendor: 'VenueBoxOffice',
+      howFound: 'at_the_venue',
+      sourceCategory: 'boxoffice',
+      priceMin: '40',
+      status: 'corroborated',
+    })
+
+    const res = await app.request(`/v1/events/${source.id}/related`)
+    const body = (await res.json()) as {
+      success: boolean
+      data: {
+        data: Array<{
+          id: string
+          artist: string
+          title: string
+          date: string
+          imageUrl: string | null
+          venue: { slug: string; name: string }
+          priceByTier?: unknown
+          priceVendor?: unknown
+        }>
+      }
+    }
+    expect(body.data.data).toHaveLength(1)
+    const row = body.data.data[0]
+    expect(row?.artist).toBe('Sibling')
+    expect(row?.venue.slug).toBe('slim-venue')
+    expect(row?.venue.name).toBe('Slim Venue')
+    // Slim payload — priceByTier and priceVendor must NOT be present.
+    expect(row?.priceByTier).toBeUndefined()
+    expect(row?.priceVendor).toBeUndefined()
+  })
+
+  it('excludes hiddenFromConsumer events from the related list', async () => {
+    const venue = await seedVenue({ name: 'Hide Venue', slug: 'hide-venue' })
+    const source = await seedEvent(venue.id, {
+      artist: 'Source',
+      date: '2027-06-15',
+    })
+    await seedEvent(venue.id, {
+      artist: 'Hidden Sibling',
+      date: '2027-06-16',
+      hiddenFromConsumer: true,
+    })
+    await seedEvent(venue.id, {
+      artist: 'Visible Sibling',
+      date: '2027-06-17',
+    })
+
+    const res = await app.request(`/v1/events/${source.id}/related`)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { data: Array<{ artist: string }> }
+    }
+    expect(body.data.data).toHaveLength(1)
+    expect(body.data.data[0]?.artist).toBe('Visible Sibling')
+  })
+
+  it('excludes events flagged first_missing_at from the related list', async () => {
+    const venue = await seedVenue({
+      name: 'Missing Venue',
+      slug: 'missing-venue',
+    })
+    const source = await seedEvent(venue.id, {
+      artist: 'Source',
+      date: '2027-06-15',
+    })
+    await seedEvent(venue.id, {
+      artist: 'Stale Sibling',
+      date: '2027-06-16',
+      firstMissingAt: new Date('2026-06-17T09:00:00Z'),
+    })
+    await seedEvent(venue.id, {
+      artist: 'Visible Sibling',
+      date: '2027-06-17',
+    })
+
+    const res = await app.request(`/v1/events/${source.id}/related`)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { data: Array<{ artist: string }> }
+    }
+    expect(body.data.data).toHaveLength(1)
+    expect(body.data.data[0]?.artist).toBe('Visible Sibling')
+  })
+
+  it('returns 404 for an unknown event id', async () => {
+    const res = await app.request(
+      '/v1/events/00000000-0000-0000-0000-000000000000/related',
+    )
+    expect(res.status).toBe(404)
+    const body = (await res.json()) as { success: boolean; error: string }
+    expect(body.success).toBe(false)
+    expect(body.error).toBe('Event not found')
+  })
+
+  it('returns 404 for a non-UUID id', async () => {
+    const res = await app.request('/v1/events/not-a-uuid/related')
+    expect(res.status).toBe(404)
+    const body = (await res.json()) as { success: boolean; error: string }
+    expect(body.success).toBe(false)
+    expect(body.error).toBe('Event not found')
+  })
+
+  it('returns 404 when the source event is hidden from consumers', async () => {
+    const venue = await seedVenue({
+      name: 'Hidden Source Venue',
+      slug: 'hidden-source-venue',
+    })
+    const source = await seedEvent(venue.id, {
+      artist: 'Hidden Source',
+      date: '2027-06-15',
+      hiddenFromConsumer: true,
+    })
+
+    const res = await app.request(`/v1/events/${source.id}/related`)
+    expect(res.status).toBe(404)
+  })
+
+  it('returns an empty list when the venue has no other upcoming events', async () => {
+    const venue = await seedVenue({ name: 'Solo Venue', slug: 'solo-venue' })
+    const source = await seedEvent(venue.id, {
+      artist: 'Only Show',
+      date: '2027-06-15',
+    })
+
+    const res = await app.request(`/v1/events/${source.id}/related`)
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { data: unknown[] }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.data).toHaveLength(0)
+  })
+})

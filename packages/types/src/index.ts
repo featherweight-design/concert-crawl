@@ -572,6 +572,16 @@ export interface EventsListResponse {
   offset: number
 }
 
+// Related-events response (issue #833). Returned by GET /v1/events/:id/related.
+// Slim payload — same shape as EventsListResponse.data but priceByTier is never
+// populated (the per-tier batch query is the dominant cost on Red Rocks-sized
+// venues, and the related panel doesn't need it). The consumer event detail
+// page calls this in parallel with /v1/events/:id and /v1/events/:id/reports
+// so the related fetch no longer blocks on resolving the venue slug first.
+export interface EventsRelatedResponse {
+  data: EventWithVenue[]
+}
+
 // VenuePublic — public-facing venue shape (subset of Venue, no crawl internals)
 export interface VenuePublic {
   id: string

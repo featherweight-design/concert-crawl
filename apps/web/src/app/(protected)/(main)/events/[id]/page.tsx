@@ -6,7 +6,7 @@ import type {
   EventDetailResponse,
   EventReport,
   EventWithVenue,
-  EventsListResponse,
+  EventsRelatedResponse,
 } from '@concert-crawl/types'
 import { publicApiClient, apiClient } from '@/lib/api'
 import { fetchEventReports } from '@/lib/events'
@@ -59,15 +59,26 @@ async function fetchReports(
   }
 }
 
-async function fetchRelated(
-  venueSlug: string,
-  excludeId: string,
+// fetchRelatedById hits the id-keyed related endpoint so the call can run in
+// parallel with fetchEvent / fetchReports — it no longer has to wait for
+// fetchEvent to return event.venue.slug first. Closes #833 (event detail >30s
+// loads on Red Rocks). The API endpoint resolves event id → venue id and
+// returns a slim payload (no priceByTier aggregation) so it stays fast even
+// on Red Rocks-sized venues.
+async function fetchRelatedById(
+  eventId: string,
+  token: string | null,
 ): Promise<EventWithVenue[]> {
   try {
-    const result = await publicApiClient.get<EventsListResponse>(
-      `/v1/events?venueSlug=${encodeURIComponent(venueSlug)}&limit=4&offset=0`,
-    )
-    return result.data.filter((ev) => ev.id !== excludeId).slice(0, 3)
+    const result = token
+      ? await apiClient.get<EventsRelatedResponse>(
+          `/v1/events/${eventId}/related`,
+          token,
+        )
+      : await publicApiClient.get<EventsRelatedResponse>(
+          `/v1/events/${eventId}/related`,
+        )
+    return result.data
   } catch {
     return []
   }
@@ -80,13 +91,17 @@ export default async function EventDetailPage({
   const { getToken, userId } = await auth()
   const token = await getToken()
 
-  const [event, reports] = await Promise.all([
+  // Parallel fetch — closes #833. Previously fetchRelated ran serially after
+  // fetchEvent because it needed event.venue.slug to query the list endpoint.
+  // The new id-keyed /v1/events/:id/related resolves the venue server-side, so
+  // all three round-trips run concurrently and the page load drops by one
+  // full Vercel→Render hop (~400-700ms warm, much more on cold start).
+  const [event, reports, related] = await Promise.all([
     fetchEvent(id, token),
     fetchReports(id, token),
+    fetchRelatedById(id, token),
   ])
   if (!event) notFound()
-
-  const related = await fetchRelated(event.venue.slug, event.id)
 
   const showTime = formatShowTime(event.showTime)
   const doorsTime = formatShowTime(event.doorsTime)
