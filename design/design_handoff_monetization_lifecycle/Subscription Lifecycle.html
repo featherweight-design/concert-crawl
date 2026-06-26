@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Subscription Lifecycle + Management (#780)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="monetization-shared.jsx"></script>
+<script type="text/babel" src="monetization-tier-states.jsx"></script>
+<script type="text/babel" src="lifecycle-plan-cards.jsx"></script>
+<script type="text/babel" src="lifecycle-manage.jsx"></script>
+<script type="text/babel" src="lifecycle-flows.jsx"></script>
+<script type="text/babel" src="lifecycle-deletion.jsx"></script>
+<script type="text/babel" src="lifecycle-takeover.jsx"></script>
+
+<script type="text/babel">
+const { ThemeProvider } = window;
+const { DesignCanvas, DCSection, DCArtboard } = window;
+const { IOSDevice } = window;
+const { MMark, MonoEyebrow, Scrim } = window;
+const { LifecyclePlanCard } = window;
+const { ManageSheet } = window;
+const { CancelFlow, DowngradeFlow, UpgradeFlow, ChangesDisclosure } = window;
+const { DeleteWarningSheet, DeleteConfirmSheet } = window;
+const { TrialEndedTakeover, DayThirteenBanner } = window;
+
+const PHONE_W = 402, PHONE_H = 874;
+const DESK_W = 1240, DESK_H = 860;
+
+// ── lightweight themed "Settings · Plan" stage (for the card matrix) ──
+function PlanStage({ theme = "electric", wide = false, label = "SETTINGS · PLAN", children }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>
+      <div style={{
+        width: "100%", height: "100%", background: "var(--bg)", color: "var(--fg)",
+        fontFamily: "Inter, system-ui", padding: wide ? "30px 34px" : "22px 18px",
+        display: "flex", flexDirection: "column", gap: 14, overflow: "hidden",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <MMark size={wide ? 22 : 20}/>
+          <MonoEyebrow size={wide ? 10 : 9} letterSpacing="0.18em">{label}</MonoEyebrow>
+        </div>
+        <div style={{ flex: 1, display: "flex", alignItems: "flex-start" }}>{children}</div>
+      </div>
+    </ThemeProvider>
+  );
+}
+
+// ── phone scene with a settings page-behind + scrim (for sheets) ──
+function SettingsBehind({ scene = "settings" }) {
+  return (
+    <div style={{ width: "100%", height: "100%", background: "var(--bg)", color: "var(--fg)", fontFamily: "Inter, system-ui", padding: "60px 16px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <MMark size={22}/>
+        <div style={{ fontWeight: 800, fontSize: 15, letterSpacing: "-0.02em" }}>concert<span style={{ color: "var(--accent)" }}>crawl.</span></div>
+      </div>
+      <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: "-0.03em", marginTop: 8 }}>{scene === "settings" ? "Settings" : "Sleep Token"}</div>
+      <div style={{ height: 1, background: "var(--border)" }}/>
+      {[0,1,2,3].map(i => <div key={i} style={{ height: 46, borderRadius: 10, background: "var(--surface-1)", border: "1px solid var(--border)" }}/>)}
+    </div>
+  );
+}
+function PhoneSheet({ theme = "electric", scene = "settings", bare = false, children }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <IOSDevice width={PHONE_W} height={PHONE_H} dark={theme !== "light"}>
+        {bare ? children : (
+          <div style={{ position: "relative", width: "100%", height: "100%" }}>
+            <SettingsBehind scene={scene}/>
+            <Scrim/>
+            {children}
+          </div>
+        )}
+      </IOSDevice>
+    </ThemeProvider>
+  );
+}
+
+// ── desktop chrome + modal scene ──
+function DesktopChrome({ theme = "electric", url = "concertcrawl.app/settings/plan", height = DESK_H, children }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <div style={{ width: DESK_W, height, position: "relative", background: "var(--bg)", overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 36, background: "var(--surface-1)", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", padding: "0 14px", gap: 8, zIndex: 5 }}>
+          {[0,1,2].map(i => <span key={i} style={{ width: 11, height: 11, borderRadius: 6, background: ["#FF7A8A","#FFD27A","#7BFFB0"][i], opacity: 0.7 }}/>)}
+          <div style={{ flex: 1 }}/>
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "var(--fg-subtle)", letterSpacing: "0.06em" }}>{url}</div>
+          <div style={{ flex: 1 }}/>
+        </div>
+        <div style={{ position: "absolute", inset: "36px 0 0 0" }}>{children}</div>
+      </div>
+    </ThemeProvider>
+  );
+}
+function DesktopSettingsMock({ wide = true }) {
+  return (
+    <div style={{ width: "100%", height: "100%", display: "grid", gridTemplateColumns: "240px 1fr", background: "var(--bg)", color: "var(--fg)", fontFamily: "Inter, system-ui" }}>
+      <div style={{ borderRight: "1px solid var(--border)", padding: "20px 16px", display: "flex", flexDirection: "column", gap: 14, background: "var(--surface-1)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <MMark size={24}/>
+          <div style={{ fontWeight: 800, letterSpacing: "-0.02em" }}>concert<span style={{ color: "var(--accent)" }}>crawl.</span></div>
+        </div>
+        {["Profile","Plan","My submissions","Appearance","Account","Danger zone"].map((l, i) => (
+          <div key={i} style={{ fontSize: 13, color: l === "Plan" ? "var(--fg)" : (l === "Danger zone" ? "var(--danger)" : "var(--fg-muted)"), fontWeight: l === "Plan" ? 700 : 500 }}>{l}</div>
+        ))}
+      </div>
+      <div style={{ padding: "30px 36px", display: "flex", flexDirection: "column", gap: 16 }}>
+        <div style={{ fontSize: 38, fontWeight: 900, letterSpacing: "-0.035em" }}>Plan</div>
+        <div style={{ height: 120, borderRadius: 12, background: "var(--surface-1)", border: "1px solid var(--border)" }}/>
+      </div>
+    </div>
+  );
+}
+function DesktopModalScene({ theme = "electric", height = DESK_H, url, children }) {
+  return (
+    <DesktopChrome theme={theme} height={height} url={url}>
+      <div style={{ position: "absolute", inset: 0, opacity: 0.5 }}><DesktopSettingsMock/></div>
+      <Scrim/>
+      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: 28 }}>{children}</div>
+    </DesktopChrome>
+  );
+}
+
+// ── browse mock (for the day-13 banner context) ──
+function BrowseBody({ topPad = 8 }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: `${topPad}px 16px 16px` }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <MMark size={22}/>
+          <div style={{ fontWeight: 800, fontSize: 15, letterSpacing: "-0.02em" }}>concert<span style={{ color: "var(--accent)" }}>crawl.</span></div>
+        </div>
+        <div style={{ width: 30, height: 30, borderRadius: 30, background: "var(--signal)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--fg-on-accent)", fontWeight: 900, fontSize: 13 }}>H</div>
+      </div>
+      <div style={{ fontSize: 24, fontWeight: 900, letterSpacing: "-0.03em", marginTop: 2 }}>Tonight near you</div>
+      {["Sleep Token · Fillmore","Habstrakt · 1015","Jamie xx · Midway"].map((s, i) => (
+        <div key={i} style={{ display: "flex", gap: 12, padding: 10, borderRadius: 12, background: "var(--surface-1)", border: "1px solid var(--border)" }}>
+          <div style={{ width: 54, height: 54, borderRadius: 9, background: `linear-gradient(135deg, color-mix(in oklch, var(--accent) 30%, var(--surface-2)), color-mix(in oklch, var(--signal) 24%, var(--surface-2)))`, flexShrink: 0 }}/>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 5, justifyContent: "center" }}>
+            <div style={{ fontWeight: 800, fontSize: 14 }}>{s.split(" · ")[0]}</div>
+            <MonoEyebrow size={9}>{s.split(" · ")[1].toUpperCase()} · JUN 28</MonoEyebrow>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+function BannerPhone({ theme = "electric", inline = false }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <IOSDevice width={PHONE_W} height={PHONE_H} dark={theme !== "light"}>
+        <div style={{ width: "100%", height: "100%", background: "var(--bg)", color: "var(--fg)", fontFamily: "Inter, system-ui", display: "flex", flexDirection: "column" }}>
+          <div style={{ height: 44 }}/>
+          {!inline && <DayThirteenBanner variant="mobile"/>}
+          {inline ? (
+            <div style={{ flex: 1, overflow: "hidden" }}>
+              <BrowseBody topPad={8}/>
+              <div style={{ padding: "0 16px" }}><DayThirteenBanner variant="mobile" inline/></div>
+            </div>
+          ) : (
+            <div style={{ flex: 1, overflow: "hidden" }}><BrowseBody topPad={12}/></div>
+          )}
+        </div>
+      </IOSDevice>
+    </ThemeProvider>
+  );
+}
+function BannerDesktop({ theme = "electric", inline = false }) {
+  return (
+    <DesktopChrome theme={theme} url="concertcrawl.app/browse" height={620}>
+      <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>
+        <div style={{ width: "100%", height: "100%", background: "var(--bg)", color: "var(--fg)", display: "flex", flexDirection: "column" }}>
+          {!inline && <DayThirteenBanner variant="desktop"/>}
+          <div style={{ padding: "16px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+              <MMark size={24}/>
+              <div style={{ fontWeight: 800, fontSize: 16, letterSpacing: "-0.02em", fontFamily: "Inter, system-ui" }}>concert<span style={{ color: "var(--accent)" }}>crawl.</span></div>
+            </div>
+            <div style={{ width: 32, height: 32, borderRadius: 32, background: "var(--signal)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--fg-on-accent)", fontWeight: 900, fontSize: 13 }}>H</div>
+          </div>
+          {inline && <div style={{ padding: "14px 28px 0" }}><DayThirteenBanner variant="desktop" inline/></div>}
+          <div style={{ flex: 1, padding: "20px 28px", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, alignContent: "start", fontFamily: "Inter, system-ui" }}>
+            {[0,1,2,3,4,5].map(i => (
+              <div key={i} style={{ borderRadius: 12, overflow: "hidden", background: "var(--surface-1)", border: "1px solid var(--border)" }}>
+                <div style={{ height: 96, background: `linear-gradient(135deg, color-mix(in oklch, var(--accent) 28%, var(--surface-2)), color-mix(in oklch, var(--signal) 22%, var(--surface-2)))` }}/>
+                <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ fontWeight: 800, fontSize: 14 }}>{["Sleep Token","Habstrakt","Jamie xx","Four Tet","Floating Points","Bonobo"][i]}</div>
+                  <MonoEyebrow size={9}>FILLMORE · JUN 28</MonoEyebrow>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </ThemeProvider>
+    </DesktopChrome>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Tweaks — drive the live Plan card preview
+// ─────────────────────────────────────────────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "electric",
+  "lifecycle": "trial",
+  "tier": "premium",
+  "trialPhase": "ends-tomorrow",
+  "decayed": false
+}/*EDITMODE-END*/;
+
+const { TweaksPanel, useTweaks, TweakSection, TweakSelect, TweakToggle } = window;
+const THEME_OPTS = window.CC_THEME_KEYS.map(k => ({ value: k, label: window.CC_THEMES[k].label }));
+
+function userFrom(t) {
+  return { tier: t.tier, lifecycle: t.lifecycle, trialPhase: t.trialPhase, trialDay: 6, periodEnd: "Jul 15", decayed: t.decayed };
+}
+function FlowTweaks() {
+  const [t, setT] = useTweaks(TWEAK_DEFAULTS);
+  return (
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Lifecycle state">
+        <TweakSelect label="State" value={t.lifecycle} onChange={(v)=>setT("lifecycle",v)} options={[
+          { value: "active",             label: "Active (paid)" },
+          { value: "trial",              label: "Premium trial" },
+          { value: "cancel-grace",       label: "Cancel-grace" },
+          { value: "post-cancel-grace",  label: "Post-cancel-grace · Free" },
+          { value: "post-trial-expired", label: "Post-trial-expired · Free" },
+        ]}/>
+        <TweakSelect label="Tier (when active)" value={t.tier} onChange={(v)=>setT("tier",v)} options={[
+          { value: "premium",   label: "Premium" },
+          { value: "supporter", label: "Supporter" },
+          { value: "founder",   label: "Founder" },
+        ]}/>
+        <TweakSelect label="Trial day (when trial)" value={t.trialPhase} onChange={(v)=>setT("trialPhase",v)} options={[
+          { value: "early",         label: "Day 1–12" },
+          { value: "ends-tomorrow", label: "Day 13 · ends tomorrow" },
+          { value: "ends-today",    label: "Day 14 · ends today" },
+        ]}/>
+        <TweakToggle label="Eyebrow decayed (>30d)" value={t.decayed} onChange={(v)=>setT("decayed",v)}/>
+      </TweakSection>
+      <TweakSection label="Theme">
+        <TweakSelect label="Theme (all 9)" value={t.theme} onChange={(v)=>setT("theme",v)} options={THEME_OPTS}/>
+      </TweakSection>
+    </TweaksPanel>
+  );
+}
+function LiveMobile() {
+  const [t] = useTweaks(TWEAK_DEFAULTS);
+  return <PlanStage theme={t.theme}><LifecyclePlanCard user={userFrom(t)} variant="mobile"/></PlanStage>;
+}
+function LiveDesktop() {
+  const [t] = useTweaks(TWEAK_DEFAULTS);
+  return <PlanStage theme={t.theme} wide><div style={{ width: "100%", maxWidth: 620 }}><LifecyclePlanCard user={userFrom(t)} variant="desktop"/></div></PlanStage>;
+}
+
+// ── plan-card variant matrix data ──
+const MVARIANTS = [
+  { id: "active-premium",   label: "Active · Premium",            user: { tier: "premium",   lifecycle: "active" } },
+  { id: "active-supporter", label: "Active · Supporter",          user: { tier: "supporter", lifecycle: "active" } },
+  { id: "active-founder",   label: "Active · Founder",            user: { tier: "founder",   lifecycle: "active" } },
+  { id: "trial-early",      label: "Trial · day 1–12",            user: { tier: "premium", lifecycle: "trial", trialPhase: "early", trialDay: 6 } },
+  { id: "trial-d13",        label: "Trial · day 13 · ends tomorrow", user: { tier: "premium", lifecycle: "trial", trialPhase: "ends-tomorrow" } },
+  { id: "trial-d14",        label: "Trial · day 14 · ends today", user: { tier: "premium", lifecycle: "trial", trialPhase: "ends-today" } },
+  { id: "cancel-grace",     label: "Cancel-grace · until Jul 15", user: { tier: "premium", lifecycle: "cancel-grace" } },
+  { id: "postgrace",        label: "Post-cancel-grace · Free (context)", user: { lifecycle: "post-cancel-grace" } },
+  { id: "postgrace-decay",  label: "Post-cancel-grace · Free (decayed)", user: { lifecycle: "post-cancel-grace", decayed: true } },
+  { id: "post-trial",       label: "Post-trial-expired · Free",   user: { lifecycle: "post-trial-expired" } },
+];
+const CARD_M_H = 620, CARD_D_W = 760, CARD_D_H = 480;
+
+// ─────────────────────────────────────────────────────────────
+function App() {
+  return (
+    <>
+      <DesignCanvas
+        title="Monetization · Subscription Lifecycle + Management"
+        subtitle="#780 · Round 1 · Plan card lifecycle variants · Manage sheet · cancel / downgrade / upgrade flows · account-deletion (warning + confirm-twice) · trial-ended takeover · day-13 banner. Sits on #781's locked tier picker & atoms. Sour Patch voice, token-only across all 9 themes, mobile + desktop parity."
+      >
+        {/* 0 · LIVE */}
+        <DCSection id="live" title="0 · Live preview — Plan card" subtitle="Drive the lifecycle state · tier · trial day · theme (all 9) from the Tweaks panel (toggle it on in the toolbar). The Plan card is the spine of this round — every other surface is reached from it.">
+          <DCArtboard id="live-mobile" label="Mobile · responds to Tweaks" width={PHONE_W} height={560}><LiveMobile/></DCArtboard>
+          <DCArtboard id="live-desktop" label="Desktop · responds to Tweaks" width={760} height={480}><LiveDesktop/></DCArtboard>
+        </DCSection>
+
+        {/* 1 · PLAN CARD VARIANTS · MOBILE */}
+        <DCSection id="cards-mobile" title="1 · Plan card variants · mobile"
+          subtitle="The full lifecycle matrix in the mobile Settings · Plan rail. Trial day-13/14 get the signal emphasis rail + countdown; cancel-grace winds down with an 'auto-renew off' status; the two Free states carry a come-back eyebrow that decays after ~30 days (Design's call) to plain Free.">
+          {MVARIANTS.map(v => (
+            <DCArtboard key={v.id} id={"cm-" + v.id} label={v.label} width={PHONE_W} height={CARD_M_H}>
+              <PlanStage theme="electric"><LifecyclePlanCard user={v.user} variant="mobile"/></PlanStage>
+            </DCArtboard>
+          ))}
+        </DCSection>
+
+        {/* 2 · PLAN CARD VARIANTS · DESKTOP */}
+        <DCSection id="cards-desktop" title="2 · Plan card variants · desktop"
+          subtitle="Same matrix on the desktop Settings · Plan card. CTAs sit inline; 'Manage subscription' opens the in-app Manage sheet (§3). Active Founder keeps its locked-$3 glow from #781.">
+          {MVARIANTS.map(v => (
+            <DCArtboard key={v.id} id={"cd-" + v.id} label={v.label} width={CARD_D_W} height={CARD_D_H}>
+              <PlanStage theme="electric" wide><div style={{ width: "100%", maxWidth: 620 }}><LifecyclePlanCard user={v.user} variant="desktop"/></div></PlanStage>
+            </DCArtboard>
+          ))}
+        </DCSection>
+
+        {/* 3 · MANAGE SHEET */}
+        <DCSection id="manage" title="3 · Manage subscription sheet"
+          subtitle="Opens from the active Plan card's 'Manage subscription' CTA. Design's call: two groups — in-app actions (change plan / cancel) up top where our voice + retention live, then Stripe-portal tooling, each row tagged with a 'Stripe ↗' chip. Honesty rail: 'Stripe handles cards · we never see them.'">
+          <DCArtboard id="manage-mobile" label="Mobile · bottom sheet" width={PHONE_W} height={PHONE_H}>
+            <PhoneSheet theme="electric"><ManageSheet variant="mobile" tier="premium"/></PhoneSheet>
+          </DCArtboard>
+          <DCArtboard id="manage-desktop" label="Desktop · modal" width={DESK_W} height={DESK_H}>
+            <DesktopModalScene theme="electric"><ManageSheet variant="desktop" tier="premium"/></DesktopModalScene>
+          </DCArtboard>
+          <DCArtboard id="manage-supporter" label="Mobile · Supporter context" width={PHONE_W} height={PHONE_H}>
+            <PhoneSheet theme="electric"><ManageSheet variant="mobile" tier="supporter"/></PhoneSheet>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 4 · CANCEL FLOW */}
+        <DCSection id="cancel" title="4 · Cancel flow"
+          subtitle="Single-screen confirmation with a light retention nudge (brief). Date breakdown → keep Premium until Jul 15, no charge, 90-day data safety. The nudge leads with price (Supporter's $2) + a small 'what switches off' line, with a one-tap path into the downgrade flow. Confirm = 'Cancel subscription'; the prominent button keeps them.">
+          <DCArtboard id="cancel-mobile" label="Mobile · bottom sheet" width={PHONE_W} height={PHONE_H}>
+            <PhoneSheet theme="electric"><CancelFlow variant="mobile"/></PhoneSheet>
+          </DCArtboard>
+          <DCArtboard id="cancel-desktop" label="Desktop · modal" width={DESK_W} height={DESK_H}>
+            <DesktopModalScene theme="electric"><CancelFlow variant="desktop"/></DesktopModalScene>
+          </DCArtboard>
+          <DCArtboard id="cancel-supporter" label="Mobile · Supporter (thinner — no down-sell)" width={PHONE_W} height={PHONE_H}>
+            <PhoneSheet theme="electric"><CancelFlow variant="mobile" tier="supporter"/></PhoneSheet>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 5 · DOWNGRADE */}
+        <DCSection id="downgrade" title="5 · Downgrade · Premium → Supporter"
+          subtitle="Immediate switch + Stripe-style credit. Proration math shown plainly ('$2.50 from your unused Premium days → next bill'). Data handling (Design's call): a calm one-liner — 'your history, follows & alerts stay safe for 90 days' — that EXPANDS into a full 'Here's what changes' list (stays-on vs switches-off). The expanded state is shown in the third artboard.">
+          <DCArtboard id="down-mobile" label="Mobile · bottom sheet · disclosure collapsed" width={PHONE_W} height={PHONE_H}>
+            <PhoneSheet theme="electric"><DowngradeFlow variant="mobile"/></PhoneSheet>
+          </DCArtboard>
+          <DCArtboard id="down-desktop" label="Desktop · modal" width={DESK_W} height={DESK_H}>
+            <DesktopModalScene theme="electric"><DowngradeFlow variant="desktop"/></DesktopModalScene>
+          </DCArtboard>
+          <DCArtboard id="down-disclosure" label="Detail · 'Here's what changes' expanded" width={460} height={520}>
+            <ThemeProvider theme="electric" style={{ width: "100%", height: "100%" }}>
+              <div style={{ width: "100%", height: "100%", background: "var(--bg)", padding: 22, display: "flex", alignItems: "flex-start" }}>
+                <div style={{ width: "100%" }}><ChangesDisclosure/></div>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 6 · UPGRADE */}
+        <DCSection id="upgrade" title="6 · Upgrade · Supporter → Premium"
+          subtitle="Immediate unlock + prorated charge ('$3.25 covers the rest of this cycle, then $5/mo'). What-unlocks list so the value is concrete. Confirm CTA carries the number so there's no surprise.">
+          <DCArtboard id="up-mobile" label="Mobile · bottom sheet" width={PHONE_W} height={PHONE_H}>
+            <PhoneSheet theme="electric"><UpgradeFlow variant="mobile"/></PhoneSheet>
+          </DCArtboard>
+          <DCArtboard id="up-desktop" label="Desktop · modal" width={DESK_W} height={DESK_H}>
+            <DesktopModalScene theme="electric"><UpgradeFlow variant="desktop"/></DesktopModalScene>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 7 · ACCOUNT DELETION */}
+        <DCSection id="deletion" title="7 · Account deletion while subscribed"
+          subtitle="Two sheets (brief §7). Sheet 1: warning + dual CTAs — a 'Cancel subscription only' off-ramp (keeps the account + grace path) and the 'Delete account' danger advance. Voice (Design's call): mostly plain with one small wry line ('no restore-from-trash'); deleting cancels the sub immediately, no grace. Sheet 2: type-email-to-confirm — the button is live, it unlocks only on an exact match. Gifted users get adjusted body copy.">
+          <DCArtboard id="del1-mobile" label="Sheet 1 · warning · mobile" width={PHONE_W} height={PHONE_H}>
+            <PhoneSheet theme="electric" scene="settings"><DeleteWarningSheet variant="mobile"/></PhoneSheet>
+          </DCArtboard>
+          <DCArtboard id="del1-desktop" label="Sheet 1 · warning · desktop" width={DESK_W} height={DESK_H}>
+            <DesktopModalScene theme="electric" url="concertcrawl.app/settings/account"><DeleteWarningSheet variant="desktop"/></DesktopModalScene>
+          </DCArtboard>
+          <DCArtboard id="del2-mobile" label="Sheet 2 · confirm-twice · mobile (type to unlock)" width={PHONE_W} height={PHONE_H}>
+            <PhoneSheet theme="electric" scene="settings"><DeleteConfirmSheet variant="mobile"/></PhoneSheet>
+          </DCArtboard>
+          <DCArtboard id="del2-desktop" label="Sheet 2 · confirm-twice · desktop" width={DESK_W} height={DESK_H}>
+            <DesktopModalScene theme="electric" url="concertcrawl.app/settings/account"><DeleteConfirmSheet variant="desktop"/></DesktopModalScene>
+          </DCArtboard>
+          <DCArtboard id="del1-gifted" label="Sheet 1 · Gifted (lifetime) variant · mobile" width={PHONE_W} height={PHONE_H}>
+            <PhoneSheet theme="electric" scene="settings"><DeleteWarningSheet variant="mobile" gifted/></PhoneSheet>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 8 · TRIAL-ENDED TAKEOVER */}
+        <DCSection id="takeover" title="8 · Trial-ended takeover"
+          subtitle="Full-bleed, dismissible. Fires on the next session after the trial expired (single-fire per expiry — eng owns the trigger). 'Trial's done. Pick a lane.' over the LOCKED #781 tier picker (mobile tap-to-expand / desktop card row). Dismiss returns the user to wherever they were headed; they can keep browsing Free.">
+          <DCArtboard id="take-mobile" label="Mobile · full-bleed" width={PHONE_W} height={PHONE_H}>
+            <PhoneSheet theme="electric" bare><TrialEndedTakeover variant="mobile" founderKind="open-many"/></PhoneSheet>
+          </DCArtboard>
+          <DCArtboard id="take-desktop" label="Desktop · full-bleed" width={DESK_W} height={DESK_H}>
+            <DesktopChrome theme="electric" url="concertcrawl.app"><TrialEndedTakeover variant="desktop" founderKind="open-many"/></DesktopChrome>
+          </DCArtboard>
+          <DCArtboard id="take-mobile-closed" label="Mobile · Founder window closed (3 tiers)" width={PHONE_W} height={PHONE_H}>
+            <PhoneSheet theme="electric" bare><TrialEndedTakeover variant="mobile" founderKind="closed"/></PhoneSheet>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 9 · DAY-13 BANNER */}
+        <DCSection id="banner" title="9 · Day-13 'ends tomorrow' banner"
+          subtitle="Compact, dismissible, fires in the ends-tomorrow window across consumer surfaces; once dismissed it doesn't re-fire for that trial expiry (eng owns persistence). Design's call: primary placement is a thin strip pinned above the app bar; an inline variant (rounded inset under the bar) is provided for surfaces where a pinned strip is too heavy.">
+          <DCArtboard id="ban-mobile" label="Mobile · pinned strip · browse" width={PHONE_W} height={PHONE_H}>
+            <BannerPhone theme="electric"/>
+          </DCArtboard>
+          <DCArtboard id="ban-desktop" label="Desktop · pinned strip · browse" width={DESK_W} height={620}>
+            <BannerDesktop theme="electric"/>
+          </DCArtboard>
+          <DCArtboard id="ban-mobile-inline" label="Mobile · inline variant" width={PHONE_W} height={PHONE_H}>
+            <BannerPhone theme="electric" inline/>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 10 · THEME PARITY */}
+        <DCSection id="parity" title="10 · Theme parity"
+          subtitle="Token-only proof — key lifecycle surfaces across Light + a high-contrast genre theme. Every color reads from var(--*); flip all 9 in the Tweaks panel to verify the rest.">
+          <DCArtboard id="par-grace-light" label="Cancel-grace card · Light" width={PHONE_W} height={CARD_M_H}>
+            <PlanStage theme="light"><LifecyclePlanCard user={{ tier: "premium", lifecycle: "cancel-grace" }} variant="mobile"/></PlanStage>
+          </DCArtboard>
+          <DCArtboard id="par-d13-pulse" label="Trial day-13 card · Pulse" width={PHONE_W} height={CARD_M_H}>
+            <PlanStage theme="pulse"><LifecyclePlanCard user={{ tier: "premium", lifecycle: "trial", trialPhase: "ends-tomorrow" }} variant="mobile"/></PlanStage>
+          </DCArtboard>
+          <DCArtboard id="par-cancel-light" label="Cancel flow · Light" width={PHONE_W} height={PHONE_H}>
+            <PhoneSheet theme="light"><CancelFlow variant="mobile"/></PhoneSheet>
+          </DCArtboard>
+          <DCArtboard id="par-manage-forge" label="Manage sheet · Forge" width={PHONE_W} height={PHONE_H}>
+            <PhoneSheet theme="forge"><ManageSheet variant="mobile" tier="premium"/></PhoneSheet>
+          </DCArtboard>
+          <DCArtboard id="par-take-drip" label="Trial-ended takeover · Drip" width={DESK_W} height={DESK_H}>
+            <DesktopChrome theme="drip" url="concertcrawl.app"><TrialEndedTakeover variant="desktop" founderKind="open-many"/></DesktopChrome>
+          </DCArtboard>
+        </DCSection>
+
+      </DesignCanvas>
+      <FlowTweaks/>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
