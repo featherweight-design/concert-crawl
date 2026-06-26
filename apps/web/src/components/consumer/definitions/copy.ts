@@ -325,6 +325,11 @@ export const CONSUMER_COPY = {
         successCode: '200 · OK',
         errorCode: 'ERR · 503',
       },
+      draftBanner: {
+        message: 'Saved draft restored.',
+        discardLabel: 'Discard draft',
+        discardAriaLabel: 'Discard saved draft',
+      },
     },
   },
 

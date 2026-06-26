@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { usePathname } from 'next/navigation'
 import { useAuth, useUser } from '@clerk/nextjs'
 import { useTheme } from '@/theme/ThemeProvider'
 import { CCMark } from '@/components/brand/cc-mark'
 import { ModalShell } from '@/components/consumer/modal-shell'
+import { clearDraft, loadDraft, saveDraft } from '@/lib/feedback-draft'
 
 type FeedbackCategory = 'bug' | 'idea' | 'praise' | 'other'
 type ModalState = 'form' | 'loading' | 'success' | 'error'
@@ -41,6 +42,30 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     name: string
     dataUrl: string
   } | null>(null)
+  // Banner shown when a previously-saved draft was rehydrated on open.
+  // User can dismiss via "Discard draft" which also clears localStorage.
+  const [draftRestored, setDraftRestored] = useState(false)
+  const prevOpenRef = useRef(false)
+
+  // Hydrate from a saved draft whenever the modal opens (false→true).
+  // This is the only place we read from localStorage so we don't fight
+  // with the user's in-progress typing.
+  useEffect(() => {
+    const justOpened = open && !prevOpenRef.current
+    prevOpenRef.current = open
+    if (!justOpened) return
+    const draft = loadDraft()
+    if (!draft) return
+    setCategory(draft.category)
+    setMessage(draft.message)
+    setScreenshot(draft.screenshot)
+    setCatError(false)
+    setMsgError(false)
+    setDraftRestored(true)
+    // If the modal was previously closed mid-error/success, ensure we
+    // land back on the form when rehydrating so the user sees the draft.
+    setState('form')
+  }, [open])
 
   const handleScreenshotChange = useCallback((file: File | null) => {
     if (!file) {
@@ -61,12 +86,36 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
     setCatError(false)
     setMsgError(false)
     setScreenshot(null)
+    setDraftRestored(false)
+  }, [])
+
+  // Issue #829: return from the error state back to the form WITHOUT
+  // wiping category/message/screenshot so the user can correct + retry.
+  const returnToForm = useCallback(() => {
+    setState('form')
   }, [])
 
   const handleClose = useCallback(() => {
     onClose()
     setTimeout(reset, 300)
   }, [onClose, reset])
+
+  // Issue #830: "Save and come back" — persist the current draft to
+  // localStorage, then close. Reopening the modal will rehydrate it.
+  const saveAndCloseLater = useCallback(() => {
+    saveDraft({ category, message, screenshot })
+    handleClose()
+  }, [category, handleClose, message, screenshot])
+
+  const discardDraft = useCallback(() => {
+    clearDraft()
+    setDraftRestored(false)
+    setCategory(null)
+    setMessage('')
+    setScreenshot(null)
+    setCatError(false)
+    setMsgError(false)
+  }, [])
 
   const handleSubmit = useCallback(async () => {
     const catInvalid = !category
@@ -110,6 +159,9 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
         }),
       })
       if (!res.ok) throw new Error(`${res.status}`)
+      // Successful submission invalidates any saved draft.
+      clearDraft()
+      setDraftRestored(false)
       setState('success')
     } catch (err) {
       console.error('Feedback submission failed', err)
@@ -206,7 +258,10 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
           <SuccessState onClose={handleClose} onReset={reset} />
         )}
         {state === 'error' && (
-          <ErrorState onReset={reset} onClose={handleClose} />
+          <ErrorState
+            onRetry={returnToForm}
+            onSaveForLater={saveAndCloseLater}
+          />
         )}
         {showForm && (
           <FormFields
@@ -220,6 +275,8 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
             ctxData={ctxData}
             screenshot={screenshot}
             onScreenshotChange={handleScreenshotChange}
+            draftRestored={draftRestored}
+            onDiscardDraft={discardDraft}
           />
         )}
       </div>
@@ -253,6 +310,8 @@ interface FormProps {
   ctxData: CtxData
   screenshot: ScreenshotValue | null
   onScreenshotChange: (file: File | null) => void
+  draftRestored: boolean
+  onDiscardDraft: () => void
 }
 
 function FormFields({
@@ -266,12 +325,17 @@ function FormFields({
   ctxData,
   screenshot,
   onScreenshotChange,
+  draftRestored,
+  onDiscardDraft,
 }: FormProps) {
   const disabled = state === 'loading'
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      {draftRestored && (
+        <DraftRestoredBanner onDiscard={onDiscardDraft} disabled={disabled} />
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <h2
           style={{
@@ -647,11 +711,13 @@ function SuccessState({
 }
 
 function ErrorState({
-  onReset,
-  onClose,
+  onRetry,
+  onSaveForLater,
 }: {
-  onReset: () => void
-  onClose: () => void
+  // Primary action — return to the form WITHOUT clearing inputs (#829).
+  onRetry: () => void
+  // Secondary action — persist the draft to localStorage then close (#830).
+  onSaveForLater: () => void
 }) {
   return (
     <div
@@ -694,10 +760,10 @@ function ErrorState({
           marginTop: 4,
         }}
       >
-        <SubmitButton onClick={onReset}>
+        <SubmitButton onClick={onRetry}>
           {CONSUMER_COPY.feedback.modal.error.primaryAction}
         </SubmitButton>
-        <SecondaryButton onClick={onClose}>
+        <SecondaryButton onClick={onSaveForLater}>
           {CONSUMER_COPY.feedback.modal.error.secondaryAction}
         </SecondaryButton>
       </div>
@@ -853,6 +919,62 @@ function ContextDisclosure({ ctx }: { ctx: CtxData }) {
 }
 
 // ── Primitive atoms ───────────────────────────────────────────────────────
+
+function DraftRestoredBanner({
+  onDiscard,
+  disabled,
+}: {
+  onDiscard: () => void
+  disabled: boolean
+}) {
+  return (
+    <div
+      role="status"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '10px 14px',
+        borderRadius: 10,
+        border: '1px solid var(--border-strong)',
+        background: 'color-mix(in oklab, var(--signal) 8%, var(--surface-1))',
+      }}
+    >
+      <span
+        style={{
+          flex: 1,
+          fontFamily: 'var(--font-ui)',
+          fontSize: 13,
+          fontWeight: 600,
+          color: 'var(--fg)',
+          letterSpacing: '-0.005em',
+        }}
+      >
+        {CONSUMER_COPY.feedback.modal.draftBanner.message}
+      </span>
+      <button
+        type="button"
+        onClick={onDiscard}
+        disabled={disabled}
+        aria-label={CONSUMER_COPY.feedback.modal.draftBanner.discardAriaLabel}
+        style={{
+          all: 'unset',
+          cursor: disabled ? 'default' : 'pointer',
+          fontFamily: 'var(--font-ui)',
+          fontSize: 12,
+          fontWeight: 700,
+          color: 'var(--fg-muted)',
+          padding: '4px 8px',
+          borderRadius: 6,
+          border: '1px solid var(--border)',
+          opacity: disabled ? 0.5 : 1,
+        }}
+      >
+        {CONSUMER_COPY.feedback.modal.draftBanner.discardLabel}
+      </button>
+    </div>
+  )
+}
 
 function Eyebrow({
   children,

@@ -43,11 +43,16 @@ feedbackRouter.post('/', async (ctx) => {
     )
   }
 
-  // Rate-limit only valid submissions so a malformed body doesn't burn the user's hourly token.
+  // Rate-limit only valid submissions so a malformed body doesn't burn
+  // the user's hourly token. Cap at 10/hour per user — beta testers
+  // routinely batch-file 2-5 bugs/ideas after a single session, and the
+  // earlier 1/hour cap blocked everything after the first submission
+  // (issue #828). 10/hour still throttles obvious abuse while leaving
+  // real beta-feedback flows headroom.
   const { allowed, retryAfterMs } = checkRateLimit(
     `feedback:${authInfo.userId}`,
-    1,
-    60 * 60 * 1000, // 1 per hour
+    10,
+    60 * 60 * 1000,
   )
   if (!allowed) {
     const retryAfterSec = Math.ceil(retryAfterMs / 1000)

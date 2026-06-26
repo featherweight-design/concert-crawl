@@ -162,9 +162,11 @@ describe('POST /v1/feedback', () => {
     expect(goodRes.status).toBe(201)
   })
 
-  it('returns 429 on second submission within the hour', async () => {
-    // Use a unique userId per test run to avoid in-memory rate-limit store pollution
-    const userId = `rate-limit-user-${Date.now()}`
+  it('allows multiple submissions in the same session up to the cap (#828)', async () => {
+    // Regression for #828: previously the rate limit was 1/hour and the
+    // second submission failed with 429. Now beta testers can file
+    // multiple items back-to-back up to the 10/hour cap.
+    const userId = `multi-submit-user-${Date.now()}`
     setAuth(userId)
 
     const payload = {
@@ -185,7 +187,37 @@ describe('POST /v1/feedback', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...payload, message: 'Second report' }),
     })
-    expect(secondRes.status).toBe(429)
-    expect(Number(secondRes.headers.get('Retry-After'))).toBeGreaterThan(0)
+    expect(secondRes.status).toBe(201)
+  })
+
+  it('returns 429 once the per-hour cap is exhausted', async () => {
+    // Use a unique userId per test run to avoid in-memory rate-limit store pollution
+    const userId = `rate-limit-user-${Date.now()}`
+    setAuth(userId)
+
+    const payload = {
+      category: 'bug',
+      message: 'report',
+      pageUrl: '/events',
+    }
+
+    // Burn through all 10 allowed submissions.
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const res = await app.request('/v1/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, message: `report ${attempt}` }),
+      })
+      expect(res.status).toBe(201)
+    }
+
+    // 11th must be rejected with Retry-After.
+    const overflowRes = await app.request('/v1/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...payload, message: 'one too many' }),
+    })
+    expect(overflowRes.status).toBe(429)
+    expect(Number(overflowRes.headers.get('Retry-After'))).toBeGreaterThan(0)
   })
 })
