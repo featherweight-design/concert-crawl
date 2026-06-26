@@ -131,6 +131,9 @@ export async function runCleanup(opts: {
   // though the innerJoin filters NULLs in practice, we narrow the select
   // type by re-asserting non-nullness from the join — a `venueId` that
   // didn't match a venue row wouldn't appear in an inner-join result.
+  // canonicalTitle column is intentionally not selected: pairingKey()
+  // recomputes from `title` (with promoter-prefix strip) so the column's
+  // stale value can't desync the match (#836 Copilot R3).
   const cervantesRowsRaw = await db
     .select({
       id: events.id,
@@ -139,7 +142,6 @@ export async function runCleanup(opts: {
       date: events.date,
       venueId: events.venueId,
       venueName: venues.name,
-      canonicalTitle: events.canonicalTitle,
     })
     .from(events)
     .innerJoin(venues, eq(events.venueId, venues.id))
@@ -203,6 +205,10 @@ export async function runCleanup(opts: {
     new Set(Array.from(cervantesByKey.values()).map((row) => row.venueId)),
   )
 
+  // Same rationale as the Cervantes-side query — pairingKey recomputes
+  // from `title`, so `events.canonical_title` would only add wire weight
+  // and confuse with PhantomCandidate.canonicalTitle (the canonical row's
+  // verbatim title, not the column).
   const siblingRowsRaw = await db
     .select({
       id: events.id,
@@ -211,7 +217,6 @@ export async function runCleanup(opts: {
       date: events.date,
       venueId: events.venueId,
       venueName: venues.name,
-      canonicalTitle: events.canonicalTitle,
     })
     .from(events)
     .innerJoin(venues, eq(events.venueId, venues.id))

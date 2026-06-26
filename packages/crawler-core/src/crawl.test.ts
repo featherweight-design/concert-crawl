@@ -579,6 +579,7 @@ describe('crawlVenue — cross-venue presale filter (#605)', () => {
       events: [
         {
           title: 'Earl Sweatshirt & MIKE AT OGDEN THEATRE',
+          rawTitle: 'Earl Sweatshirt & MIKE AT OGDEN THEATRE',
           artist: 'Earl Sweatshirt',
           date: '2026-08-15',
           doorsTime: undefined,

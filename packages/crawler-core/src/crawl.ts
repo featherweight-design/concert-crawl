@@ -476,8 +476,14 @@ export async function crawlVenue(
     // no-op for them but keeps any path that ever skips setting rawTitle safe.
     // See issue #826.
     const normalizedEvents = extraction.normalizedEvents.filter((evt) => {
+      // rawTitle is a required field on NormalizedEvent and is populated
+      // by every extractor (LLM emits it verbatim per its tool schema;
+      // JSON-LD / platform JSON mirror title into rawTitle at the
+      // extractor seam). The fallback to evt.title was redundant and
+      // implied rawTitle might be missing at runtime — dropped per #836
+      // Copilot R3.
       const match = detectCrossVenuePresale({
-        title: evt.rawTitle ?? evt.title,
+        title: evt.rawTitle,
         sourceVenueId: venueId,
         candidates: crossVenueCandidates,
       })
