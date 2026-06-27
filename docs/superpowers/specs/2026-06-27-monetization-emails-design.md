@@ -40,7 +40,7 @@ Per #783's "Deliverables we expect" + this brief's amendments:
 |---|---|---|---|---|
 | `welcome_paid` | New subscription confirmed | Casual + warm | Yes — Premium / Supporter / Founder | Acknowledges the price they paid + what's unlocked for their tier. Founder version adds the badge / seat number. |
 | `welcome_gifted` | Gift redeemed by recipient | Casual + warm | Single template | Names the gifter ("from {gifter_name}"), states the gift duration end date, sets expectations for what happens when the gift wraps. |
-| `renewal_receipt_monthly` | Monthly renewal charge succeeds | Formal-leaning (tax record) | Single template w/ tier var | Designed with template variables (`{period_label}`, `{amount}`, `{tier_name}`, `{period_end}`) such that an annual variant is a copy-change away. **No separate annual template ships this cycle.** |
+| `renewal_receipt_monthly` | Monthly renewal charge succeeds | Formal-leaning (tax record) | Single template w/ tier var | Designed with template variables (`{period_label}`, `{amount}`, `{tier_name}`, `{period_end}`, `{charge_date}`, `{customer_id}`, `{stripe_receipt_url}`) such that an annual variant is a copy-change away. The tax-record block in §4 surfaces `{amount}` + `{charge_date}` + `{tier_name}` + `{customer_id}` + `{stripe_receipt_url}`. **No separate annual template ships this cycle.** |
 | `dunning_1_card_declined` | Renewal charge fails (Day 0) | Casual + helpful | Single template w/ tier var | Tone matches #782's failure surfaces — honest, not blamey. Primary CTA → Stripe portal. References the 7-day window. |
 | `dunning_2_still_declined` | Stripe retry fails (Day 3–4) | Casual + slightly more urgent | Single template w/ tier var | Same shape as dunning_1, escalated tone. "Heads up — we're still trying to get this through." |
 | `dunning_3_final_warning` | Final retry fails (Day 7) | Honest + direct | Single template w/ tier var | "Your card hasn't cleared — `{tier_name}` pauses tomorrow if we can't get a fresh one." No false urgency, no shame. |
@@ -86,7 +86,7 @@ Total: **10 templates** (welcome_paid counts as 1 template w/ 3 tier visual vari
 - Mobile-first: 320px baseline, `max-width: 600px` container, `@media (max-width: 600px)` adjusts to single-column / larger touch targets.
 - Token vocabulary does NOT apply to email (clients strip CSS vars). Use a constrained inline palette: brand primary, neutral text gray, warning amber for dunning, success green for receipts. Document the email-only palette in the handoff.
 - Logo: PNG (SVG support is spotty), retina-tagged, hosted on the CDN.
-- Footer block: legal address + unsubscribe link (transactional emails are exempt from CAN-SPAM unsubscribe requirements, but include a "manage emails" link that lands on `/settings/notifications` for trust).
+- Footer block: legal address + "manage emails" link landing on `/settings/notifications`. Transactional emails are exempt from CAN-SPAM unsubscribe requirements, but the manage-emails link is a trust signal (and a real preference center for users who want to mute non-billing notifications later).
 
 ### 6. Subject line + preheader conventions
 
@@ -144,7 +144,7 @@ The handoff README's "Decisions log" section should record these calls — they'
 - Template inventory = 10 transactional emails per the §1 table. Annual receipt deferred to a future copy-pass; periodic gift check-in skipped as out-of-scope marketing.
 - Voice split = Sour Patch default; receipts skew slightly more formal for tax-record use; dunning sequence escalates linearly without shame.
 - Format = HTML + plain-text fallback, inline styles only, table-based layout, mobile-first responsive, constrained inline palette (tokens don't apply to email).
-- Per-tier variation = welcome_paid is a template family with 4 visual variants (Premium / Supporter / Founder / gifted).
+- Per-tier variation = `welcome_paid` is a template family with 3 tier visual variants (Premium / Supporter / Founder); `welcome_gifted` is a separate template.
 - Subject + preheader specified per template; no `[Concert Crawl]` prefix; no emojis; preheader extends rather than fills.
 - Cancellation ack is warm + gracious with no win-back hook. Win-back is a separate template, ships in basic single-email shape only.
 - Footer block = legal address + "manage emails" link → `/settings/notifications` (trust signal, not CAN-SPAM compliance).
