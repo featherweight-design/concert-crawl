@@ -1,3 +1,15 @@
+## [1.85.3](https://github.com/HartiganHM/concert-crawl/compare/v1.85.2...v1.85.3) (2026-06-27)
+
+
+### Bug Fixes
+
+* **web:** r1 — fold localConfirms boost into CorroborationSheet (PR [#835](https://github.com/HartiganHM/concert-crawl/issues/835)) ([7fdbcc4](https://github.com/HartiganHM/concert-crawl/commit/7fdbcc446b05e6af7a4954215e893c014b63b2e8)), closes [#7](https://github.com/HartiganHM/concert-crawl/issues/7)
+* **web:** r2 — address Copilot review round 2 on PR [#835](https://github.com/HartiganHM/concert-crawl/issues/835) ([2b9e8ea](https://github.com/HartiganHM/concert-crawl/commit/2b9e8ea3922dd8c8bd4cb2c2a5cdec651b8853ab)), closes [#3](https://github.com/HartiganHM/concert-crawl/issues/3) [#6](https://github.com/HartiganHM/concert-crawl/issues/6)
+* **web:** r3 — derive corroboration `needed` from SP_POLICY (PR [#835](https://github.com/HartiganHM/concert-crawl/issues/835)) ([0e0527b](https://github.com/HartiganHM/concert-crawl/commit/0e0527bcbbf1166d20e320f3031da13579251586))
+* **web:** r4 — pin corroboration date math to UTC midnight (PR [#835](https://github.com/HartiganHM/concert-crawl/issues/835)) ([8264e56](https://github.com/HartiganHM/concert-crawl/commit/8264e5624f3c30825261d86b83f6ff2f1ac29de4))
+* **web:** r5 — collapse remaining isImminent sites onto shared helper (PR [#835](https://github.com/HartiganHM/concert-crawl/issues/835)) ([5b0e24e](https://github.com/HartiganHM/concert-crawl/commit/5b0e24ea5607fdc17d451a75a55b6110ee929f67))
+* **web:** submitter counts as observation [#1](https://github.com/HartiganHM/concert-crawl/issues/1) in price confirms strip ([#831](https://github.com/HartiganHM/concert-crawl/issues/831)) ([f545c08](https://github.com/HartiganHM/concert-crawl/commit/f545c08555bb18cd721056df393d2ee19159c677))
+
 ## [1.85.2](https://github.com/HartiganHM/concert-crawl/compare/v1.85.1...v1.85.2) (2026-06-27)
 
 
