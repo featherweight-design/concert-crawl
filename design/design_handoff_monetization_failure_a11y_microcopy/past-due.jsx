@@ -20,6 +20,11 @@
 
 function PastDueBanner({ variant = "mobile", inline = false }) {
   const wide = variant === "desktop";
+  // Local dismiss state so the canvas can demonstrate the "dismissible per
+  // session" behavior. Production wires this to the predicate documented in
+  // the header (past_due_banner_dismissed_at vs session_started_at).
+  const [dismissed, setDismissed] = React.useState(false);
+  if (dismissed) return null;
   return (
     <div
       role="region"
@@ -65,7 +70,7 @@ function PastDueBanner({ variant = "mobile", inline = false }) {
           <path d="M3 9 L9 3 M4.5 3 H9 V7.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       </button>
-      <button aria-label="Dismiss payment notice" style={{
+      <button aria-label="Dismiss payment notice" onClick={() => setDismissed(true)} style={{
         all: "unset", cursor: "pointer", flexShrink: 0,
         width: 26, height: 26, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center",
         color: "var(--fg-subtle)",
