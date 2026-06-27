@@ -91,7 +91,7 @@ export async function runBackfill(opts: {
     .from(events)
     .leftJoin(venues, eq(events.venueId, venues.id))
     .where(
-      sql`${events.description} ~* '</?[a-z]' OR ${events.description} ~ '&[a-zA-Z]+;' OR ${events.description} ~ '&#[0-9a-fA-F]+;'`,
+      sql`${events.description} ~* '</?[a-z]' OR ${events.description} ~ '&[a-zA-Z]+;' OR ${events.description} ~* '&#x?[0-9a-fA-F]+;'`,
     )
 
   console.log(`Loaded ${candidates.length} candidate rows from events.`)

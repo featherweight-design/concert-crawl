@@ -154,4 +154,20 @@ describe('stripDescriptionHtml', () => {
     )
     expect(stripDescriptionHtml('arrow &lt;-- here')).toBe('arrow <-- here')
   })
+
+  // #844 Copilot R2 — entity-escaped HTML tags (e.g. `&lt;p&gt;Hello&lt;/p&gt;`)
+  // used to survive the pipeline because the prior order stripped tags
+  // BEFORE decoding entities, leaving literal `<p>` tags in the output.
+  // Decoding first promotes the entities to real tags so the block-strip
+  // catches them.
+  it('strips entity-escaped block tags after decoding (e.g. &lt;p&gt;)', () => {
+    expect(stripDescriptionHtml('&lt;p&gt;Hello&lt;/p&gt;')).toBe('Hello')
+    expect(
+      stripDescriptionHtml('&lt;p&gt;One&lt;/p&gt;&lt;p&gt;Two&lt;/p&gt;'),
+    ).toBe('One\n\nTwo')
+  })
+
+  it('decodes uppercase hex entities (&#X...;)', () => {
+    expect(stripDescriptionHtml('Foo &#X2014; Bar')).toBe('Foo — Bar')
+  })
 })

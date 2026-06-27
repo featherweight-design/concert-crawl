@@ -68,7 +68,9 @@ const NAMED_ENTITIES: Record<string, string> = {
   nbsp: ' ',
 }
 const NAMED_ENTITY_RE = /&([a-zA-Z]+);/g
-const NUMERIC_ENTITY_RE = /&#(x?)([0-9a-fA-F]+);/g
+// Case-insensitive `x`/`X` prefix for hex entities — both `&#x2014;` and
+// `&#X2014;` appear in the wild (#844 Copilot R2).
+const NUMERIC_ENTITY_RE = /&#(x?)([0-9a-fA-F]+);/gi
 
 function decodeEntities(input: string): string {
   return input
@@ -101,31 +103,37 @@ function decodeEntities(input: string): string {
 export function stripDescriptionHtml(html: string): string {
   if (!html) return ''
 
-  // 1. Block boundaries → newlines. Closing tag emits `\n\n` (paragraph
+  // 1. Decode entities FIRST so any entity-encoded markup (e.g.
+  //    `&lt;p&gt;Hello&lt;/p&gt;` from feeds that double-encoded their
+  //    HTML) is promoted to real tags BEFORE the tag-stripping passes
+  //    below — otherwise the literal `<p>` tags would survive in the
+  //    output (#844 Copilot R2).
+  //
+  //    The KNOWN_TAG whitelist in step 3 means an entity that decodes
+  //    to a non-tag construct (e.g. `&lt;heart&gt;` → `<heart>`) is
+  //    still preserved as user content, so this reorder doesn't break
+  //    the round-trip / idempotency contract from R1.
+  let out = decodeEntities(html)
+
+  // 2. Block boundaries → newlines. Closing tag emits `\n\n` (paragraph
   //    break); opening tag drops to empty so adjacent `</p><p>` doesn't
   //    gain a stray third newline before step 4 normalizes. The step-4
   //    `\n{3,}` collapse and per-line trim handle nested cases (`<ul><li>
   //    …</li></ul>`) and consecutive empty blocks. `<br>` is a single
   //    line break, not a paragraph break — matches the HTML rendering
   //    semantics consumers would have seen in a browser.
-  let out = html
+  out = out
     .replace(BR_TAG, '\n')
     .replace(PARAGRAPH_CLOSING, '\n\n')
     .replace(TIGHT_CLOSING, '\n')
     .replace(BLOCK_OPENING, '')
 
-  // 2. Strip remaining KNOWN HTML tags (inline: <strong>, <a>, <span>,
+  // 3. Strip remaining KNOWN HTML tags (inline: <strong>, <a>, <span>,
   //    table cells, less-common block elements). Unknown angle-bracketed
-  //    content like "<heart>" is preserved so idempotency holds after
-  //    entity decode in step 3 promotes `&lt;heart&gt;` to literal
-  //    angle brackets (#844 Copilot R1).
+  //    content like "<heart>" is preserved so idempotency holds — the
+  //    whitelist is the safety net that lets us decode entities first
+  //    without eating legitimate user content (#844 Copilot R1+R2).
   out = out.replace(KNOWN_TAG, '')
-
-  // 3. Decode entities AFTER tag stripping so an entity that encodes a
-  //    less-than sign doesn't accidentally get treated as a tag opener
-  //    in step 2 (the entity escape is what kept it from being a tag in
-  //    the source).
-  out = decodeEntities(out)
 
   // 4. Whitespace cleanup.
   //    - Collapse runs of spaces / tabs (within a single line).
