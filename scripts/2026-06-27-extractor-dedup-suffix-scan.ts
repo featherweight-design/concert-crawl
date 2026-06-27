@@ -11,18 +11,31 @@
  * `extractWithLlm`) prevents new rows from landing in this state. This
  * script applies the same cleanup to historical rows.
  *
+ * Architecture: two-stage filter.
+ *   Stage 1 (SQL prefilter): narrow the candidate set efficiently in-DB
+ *     using a Postgres regex (`~*` with `[[:<:]]` / `[[:>:]]` word-
+ *     boundary anchors) that approximates the JS rule. This is a perf
+ *     optimization — it keeps the JS pass from streaming every events
+ *     row through the helper.
+ *   Stage 2 (JS source of truth): re-run every prefilter hit through
+ *     `stripDuplicatedTrailingWord` and trust its verdict. The
+ *     `cleaned === row.title` short-circuit below absorbs cases where
+ *     the SQL was looser than the JS (regex drift is possible — they
+ *     are separate string literals — so this defends against it rather
+ *     than asserting it cannot happen).
+ *
  * What it does:
- *   1. SELECT every `events` row whose `title` matches the duplicated-
- *      trailing-word pattern in Postgres (`~*` for case-insensitive
- *      regex, with `[[:<:]]` / `[[:>:]]` word-boundary anchors).
+ *   1. Run the SQL prefilter to load candidate rows.
  *   2. For each candidate, recompute the cleaned title in JS via the
- *      same `stripDuplicatedTrailingWord` helper the extractor now uses,
- *      so the SQL filter and the runtime fix can never drift.
+ *      same `stripDuplicatedTrailingWord` helper the extractor uses,
+ *      and only treat rows where JS actually rewrites as dirty.
  *   3. Per-row dry-run output: event id, venue name, date, current
  *      title, proposed cleaned title — for operator spot-check.
  *   4. With --apply: snapshot dirty rows to `events_851_backup` (created
  *      if missing) so a 7-day rollback is one DELETE+INSERT away, then
- *      UPDATE the live rows.
+ *      UPDATE the live rows. Snapshot + update for each row run inside
+ *      a single transaction so a concurrent-edit skip or a transient
+ *      DB error doesn't leave a snapshot row whose UPDATE never landed.
  *
  * Run:
  *   pnpm tsx scripts/2026-06-27-extractor-dedup-suffix-scan.ts           # dry-run
@@ -176,26 +189,53 @@ export async function runBackfill(opts: {
   // window, .returning() yields zero rows and we log + skip rather than
   // overwriting fresher content (mirrors the pattern used by the #827
   // strip-description-html backfill).
+  //
+  // Each row's snapshot INSERT + UPDATE run inside a single transaction
+  // (PR #853 R1). Without the transaction, a concurrent-edit skip or a
+  // transient DB error between the two statements would leave a
+  // `events_851_backup` row whose UPDATE never landed — `rowsSnapshotted`
+  // in the summary would then overstate what was actually changed, and
+  // an operator using the snapshot for rollback would touch rows the
+  // script never updated. Inside `db.transaction`, throwing rolls back
+  // both the INSERT and the UPDATE; an optimistic-lock miss throws
+  // `ConcurrentEditSkip` so the snapshot is rolled back too. In-memory
+  // counters are bumped only after `db.transaction` resolves so a
+  // commit-time failure can't leave them out of sync with the DB
+  // (mirrors the pattern in scripts/2026-06-26-cleanup-cross-venue-
+  // phantoms.ts).
   let updatedCount = 0
   let snapshottedCount = 0
   let skippedCount = 0
+  class ConcurrentEditSkip extends Error {}
   for (const row of dirty) {
-    await db.execute(
-      sql`INSERT INTO events_851_backup (event_id, title_before, title_after)
-          VALUES (${row.id}, ${row.before}, ${row.after})`,
-    )
-    snapshottedCount += 1
+    try {
+      await db.transaction(async (tx) => {
+        await tx.execute(
+          sql`INSERT INTO events_851_backup (event_id, title_before, title_after)
+              VALUES (${row.id}, ${row.before}, ${row.after})`,
+        )
 
-    const updated = await db
-      .update(events)
-      .set({ title: row.after })
-      .where(and(eq(events.id, row.id), eq(events.title, row.before)))
-      .returning({ id: events.id })
-    if (updated.length === 0) {
-      console.log(`Skipped ${row.id} — title changed between scan and update`)
-      skippedCount += 1
-      continue
+        const updated = await tx
+          .update(events)
+          .set({ title: row.after })
+          .where(and(eq(events.id, row.id), eq(events.title, row.before)))
+          .returning({ id: events.id })
+        if (updated.length === 0) {
+          // Throwing inside `db.transaction` rolls back the snapshot
+          // INSERT above so the backup table stays in lockstep with
+          // what actually changed.
+          throw new ConcurrentEditSkip()
+        }
+      })
+    } catch (err) {
+      if (err instanceof ConcurrentEditSkip) {
+        console.log(`Skipped ${row.id} — title changed between scan and update`)
+        skippedCount += 1
+        continue
+      }
+      throw err
     }
+    snapshottedCount += 1
     updatedCount += 1
   }
 
