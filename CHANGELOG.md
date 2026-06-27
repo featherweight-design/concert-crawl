@@ -1,3 +1,19 @@
+# [1.86.0](https://github.com/HartiganHM/concert-crawl/compare/v1.85.4...v1.86.0) (2026-06-27)
+
+
+### Bug Fixes
+
+* **crawler-core:** r1 — address Copilot review round 1 on PR [#824](https://github.com/HartiganHM/concert-crawl/issues/824) ([bb32ee2](https://github.com/HartiganHM/concert-crawl/commit/bb32ee2a85c8cfe07abb1c7ad140ba7976487d92)), closes [#649](https://github.com/HartiganHM/concert-crawl/issues/649)
+* **crawler-core:** r2 — correct misleading comment on canonical_title set entry ([c0aacd1](https://github.com/HartiganHM/concert-crawl/commit/c0aacd13d94b04a9bc2409d7275a59f753718e44))
+* **crawler-core:** r3 — drop empty-canonical filter in VALIDATE; guard empty title in crawler dedup ([ec0a857](https://github.com/HartiganHM/concert-crawl/commit/ec0a857b730d0faa194ce2a48e9209a5c49fbd84))
+* **crawler-core:** r4 — DIAGNOSE counts clusters; include empty-canonical rows; tighten dedup test ([f7a6958](https://github.com/HartiganHM/concert-crawl/commit/f7a69589c75ca5ecef2f3dea37fbd8ff72fedd64)), closes [#608](https://github.com/HartiganHM/concert-crawl/issues/608) [#821](https://github.com/HartiganHM/concert-crawl/issues/821) [pre-#821](https://github.com/pre-/issues/821) [#821](https://github.com/HartiganHM/concert-crawl/issues/821)
+* **crawler-core:** r5 — exercise canonical_title-preserving title drift in UPDATE-path tests ([60104ad](https://github.com/HartiganHM/concert-crawl/commit/60104ad457a5a3c9d390a9404b7d5997c1eab3c7)), closes [#825](https://github.com/HartiganHM/concert-crawl/issues/825) [#649](https://github.com/HartiganHM/concert-crawl/issues/649)
+
+
+### Features
+
+* **crawler-core:** swap dedup key to canonical_title ([#821](https://github.com/HartiganHM/concert-crawl/issues/821) contract) ([5771945](https://github.com/HartiganHM/concert-crawl/commit/57719458dc65eef8d45c85376610007dddd26f86)), closes [#822](https://github.com/HartiganHM/concert-crawl/issues/822) [#608](https://github.com/HartiganHM/concert-crawl/issues/608) [#608](https://github.com/HartiganHM/concert-crawl/issues/608) [#822](https://github.com/HartiganHM/concert-crawl/issues/822)
+
 ## [1.85.4](https://github.com/HartiganHM/concert-crawl/compare/v1.85.3...v1.85.4) (2026-06-27)
 
 
