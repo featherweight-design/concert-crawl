@@ -144,6 +144,36 @@ describe('aegFetcher.fetch', () => {
     expect(target!.description).toContain('The Other Side Tour')
   })
 
+  it('strips HTML from the AEG description field before composing (#827)', async () => {
+    // Gothic prod incident shape: AEG's `description` ships RHP-CMS HTML
+    // (`<p>` tags + entities). Before #827 this leaked through to
+    // `events.description` and the consumer UI rendered the literal
+    // `<p>` markers as text. After the fix, only plain text should
+    // survive — supporting/tour fields remain plain as well, and
+    // composition preserves the blank-line separator between sections.
+    const parsed = JSON.parse(BLUEBIRD_FIXTURE) as { events: AegEvent[] }
+    const htmlEvent = {
+      ...parsed.events[0]!,
+      description:
+        '<p>NPR&#039;s Tiny Desk Contest is back on the road in 2026!</p><p>This year&#039;s winner is Cure For Paranoia.</p>',
+    }
+    const synthetic = JSON.stringify({
+      meta: { total: 1 },
+      events: [htmlEvent],
+    })
+    mockFetchOk(synthetic)
+
+    const result = await aegFetcher.fetch(makeVenue(), { crawlDelayMs: 0 })
+    expect(result.events.length).toBe(1)
+    const desc = result.events[0]!.description!
+    expect(desc).not.toMatch(/<p>/i)
+    expect(desc).not.toMatch(/&#039;/)
+    expect(desc).toContain(
+      "NPR's Tiny Desk Contest is back on the road in 2026!",
+    )
+    expect(desc).toContain("This year's winner is Cure For Paranoia.")
+  })
+
   it('filters inactive events', async () => {
     // Synthesize a payload with one active + one inactive event
     const parsed = JSON.parse(BLUEBIRD_FIXTURE) as { events: AegEvent[] }

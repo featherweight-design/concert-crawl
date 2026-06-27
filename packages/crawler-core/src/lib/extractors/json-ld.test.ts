@@ -120,6 +120,45 @@ describe('extractJsonLd', () => {
     expect(event.imageUrl).toBeUndefined()
   })
 
+  it('strips HTML from the schema.org description field (#827)', () => {
+    // schema.org `Event.description` commonly carries CMS-authored HTML
+    // (RHP, Squarespace). Before #827 the markup was stored verbatim and
+    // the consumer surface — which renders description as plain text —
+    // displayed the literal `<p>` tags. Stripping at the extractor
+    // keeps the DB plaintext and the consumer render a safe no-escape.
+    const html = makeHtml({
+      '@context': 'https://schema.org',
+      '@type': 'Event',
+      name: 'HTML Description Event',
+      startDate: '2026-08-22',
+      performer: { name: 'Test Band' },
+      description:
+        '<p>NPR&#039;s Tiny Desk Contest is back on the road in 2026!</p><p>This year&#039;s winner is Cure For Paranoia.</p>',
+    })
+    const events = extractJsonLd(html, SOURCE_URL)
+    expect(events).toHaveLength(1)
+    const desc = events[0]!.description!
+    expect(desc).not.toMatch(/<p>/i)
+    expect(desc).not.toMatch(/&#039;/)
+    expect(desc).toContain(
+      "NPR's Tiny Desk Contest is back on the road in 2026!",
+    )
+  })
+
+  it('omits description entirely when source is HTML that strips to empty (#827)', () => {
+    const html = makeHtml({
+      '@context': 'https://schema.org',
+      '@type': 'Event',
+      name: 'Empty HTML Description',
+      startDate: '2026-08-23',
+      performer: { name: 'Empty Band' },
+      description: '<p>   </p><p></p>',
+    })
+    const events = extractJsonLd(html, SOURCE_URL)
+    expect(events).toHaveLength(1)
+    expect(events[0]!.description).toBeUndefined()
+  })
+
   it('handles malformed JSON-LD gracefully', () => {
     const html = `<html><head>
       <script type="application/ld+json">{ invalid json }</script>

@@ -1,5 +1,6 @@
 import { reportFailure } from '@concert-crawl/logger'
 import type { NormalizedEvent } from '../../types.js'
+import { stripDescriptionHtml } from '../strip-description-html.js'
 
 const EVENT_TYPES = new Set(['Event', 'MusicEvent'])
 
@@ -97,8 +98,15 @@ function mapToNormalizedEvent(
       ? extractTimeOnly(obj['doorTime'], timeZone)
       : undefined
   const ticketUrl = typeof obj['url'] === 'string' ? obj['url'] : undefined
-  const description =
+  // schema.org `Event.description` is commonly populated with HTML from
+  // the venue's CMS (RHP, Squarespace, etc.). Strip at the extractor
+  // boundary so the DB stores plain text and the consumer surface stays
+  // a safe no-escape read (#827).
+  const rawDescription =
     typeof obj['description'] === 'string' ? obj['description'] : undefined
+  const description = rawDescription
+    ? stripDescriptionHtml(rawDescription) || undefined
+    : undefined
 
   const event: NormalizedEvent = {
     title: name,

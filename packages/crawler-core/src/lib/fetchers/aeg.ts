@@ -24,6 +24,7 @@ import { z } from 'zod'
 import type { Venue } from '@concert-crawl/db'
 import { createLogger } from '@concert-crawl/logger'
 import type { NormalizedEvent } from '../../types.js'
+import { stripDescriptionHtml } from '../strip-description-html.js'
 import type { PlatformFetcher, PlatformFetchResult } from './index.js'
 
 const logger = createLogger('aeg-fetcher')
@@ -178,10 +179,20 @@ function eventDescription(
   // information AEG breaks out into separate fields. The bare LLM-path
   // description tends to embed this; preserving it here keeps the
   // `events.description` column consistent across extraction sources.
+  //
+  // AEG's `description` field commonly ships RHP-CMS HTML (e.g. Gothic
+  // shard 37 surfaced `<p>`-wrapped prose that leaked through to the
+  // consumer UI in #827). Strip HTML BEFORE composition so the joined
+  // result is uniformly plain text — `tour` and `supportingText` are
+  // already plain. An empty post-strip description is treated as absent
+  // so we don't emit a trailing blank-line separator.
   const parts: string[] = []
   if (title.tour) parts.push(title.tour)
   if (title.supportingText) parts.push(`Supporting: ${title.supportingText}`)
-  if (description) parts.push(description)
+  if (description) {
+    const cleanDescription = stripDescriptionHtml(description)
+    if (cleanDescription) parts.push(cleanDescription)
+  }
   if (parts.length === 0) return undefined
   return parts.join('\n\n')
 }

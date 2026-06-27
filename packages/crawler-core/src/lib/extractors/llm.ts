@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod'
 import { reportFailure } from '@concert-crawl/logger'
 import type { LLMResult } from '../../types.js'
+import { stripDescriptionHtml } from '../strip-description-html.js'
 
 const isoDateSchema = z
   .string()
@@ -275,22 +276,32 @@ export async function extractWithLlm(
     return { events: [], usage: tokenUsage }
   }
 
-  const events = parsed.data.events.map((evt) => ({
-    title: evt.title,
-    rawTitle: evt.rawTitle,
-    artist: evt.artist,
-    date: evt.date,
-    confidence: evt.confidence,
-    sourceUrl,
-    ...(evt.doorsTime != null &&
-      evt.doorsTime !== '' && { doorsTime: evt.doorsTime }),
-    ...(evt.showTime != null &&
-      evt.showTime !== '' && { showTime: evt.showTime }),
-    ...(evt.ticketUrl != null && { ticketUrl: evt.ticketUrl }),
-    ...(evt.description != null && { description: evt.description }),
-    ...(evt.isConcert != null && { isConcert: evt.isConcert }),
-    ...(evt.reviewNeeded != null && { reviewNeeded: evt.reviewNeeded }),
-  }))
+  const events = parsed.data.events.map((evt) => {
+    // Defense in depth against HTML leaking into the description field
+    // (#827). The system prompt already asks for plain text, but Gothic
+    // / RHP CMS pages sometimes prompt the model with `<p>`-wrapped
+    // copy and Haiku passes it through verbatim. Stripping at the
+    // extractor boundary keeps the DB free of markup regardless of what
+    // the model decides to do.
+    const description =
+      evt.description != null ? stripDescriptionHtml(evt.description) : null
+    return {
+      title: evt.title,
+      rawTitle: evt.rawTitle,
+      artist: evt.artist,
+      date: evt.date,
+      confidence: evt.confidence,
+      sourceUrl,
+      ...(evt.doorsTime != null &&
+        evt.doorsTime !== '' && { doorsTime: evt.doorsTime }),
+      ...(evt.showTime != null &&
+        evt.showTime !== '' && { showTime: evt.showTime }),
+      ...(evt.ticketUrl != null && { ticketUrl: evt.ticketUrl }),
+      ...(description != null && description !== '' && { description }),
+      ...(evt.isConcert != null && { isConcert: evt.isConcert }),
+      ...(evt.reviewNeeded != null && { reviewNeeded: evt.reviewNeeded }),
+    }
+  })
 
   console.log(
     JSON.stringify({
