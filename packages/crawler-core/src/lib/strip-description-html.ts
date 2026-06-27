@@ -66,6 +66,16 @@ const NAMED_ENTITIES: Record<string, string> = {
   quot: '"',
   apos: "'",
   nbsp: ' ',
+  // Punctuation entities seen in real AEG / RHP-CMS feeds. Without these
+  // a curly-quote description (e.g. "NPR&rsquo;s Tiny Desk") leaks as a
+  // literal `&rsquo;` to consumers (#844 Copilot R3).
+  rsquo: '’', // right single quote ’
+  lsquo: '‘', // left single quote  ‘
+  ldquo: '“', // left double quote  “
+  rdquo: '”', // right double quote ”
+  ndash: '–', // en dash –
+  mdash: '—', // em dash —
+  hellip: '…', // ellipsis …
 }
 const NAMED_ENTITY_RE = /&([a-zA-Z]+);/g
 // Case-insensitive `x`/`X` prefix for hex entities — both `&#x2014;` and

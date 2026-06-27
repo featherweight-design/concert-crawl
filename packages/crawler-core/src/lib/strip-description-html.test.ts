@@ -170,4 +170,21 @@ describe('stripDescriptionHtml', () => {
   it('decodes uppercase hex entities (&#X...;)', () => {
     expect(stripDescriptionHtml('Foo &#X2014; Bar')).toBe('Foo — Bar')
   })
+
+  // #844 Copilot R3 — AEG / RHP-CMS feeds routinely include punctuation
+  // entities for curly quotes, dashes, and ellipses. Without explicit
+  // decode entries these leaked through to consumers as literal
+  // `&rsquo;`-style strings.
+  it('decodes common punctuation entities seen in AEG feeds', () => {
+    expect(stripDescriptionHtml('NPR&rsquo;s Tiny Desk')).toBe(
+      'NPR’s Tiny Desk',
+    )
+    expect(stripDescriptionHtml('&lsquo;quoted&rsquo;')).toBe('‘quoted’')
+    expect(stripDescriptionHtml('&ldquo;album&rdquo; release')).toBe(
+      '“album” release',
+    )
+    expect(stripDescriptionHtml('Doors 7&ndash;9pm')).toBe('Doors 7–9pm')
+    expect(stripDescriptionHtml('Show&mdash;preview')).toBe('Show—preview')
+    expect(stripDescriptionHtml('Loading&hellip;')).toBe('Loading…')
+  })
 })

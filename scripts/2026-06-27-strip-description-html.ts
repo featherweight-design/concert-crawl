@@ -31,15 +31,19 @@
  *
  * Against staging/prod set DATABASE_URL accordingly.
  *
- * Idempotent: re-running after --commit is a no-op — the cleaned rows
- * have no known HTML tags and no entity-shaped substrings, so they fail
- * the WHERE filter on subsequent runs.
+ * Idempotent: re-running after --commit is a no-op. The candidate
+ * WHERE filter narrows the scan, but the real idempotency guarantee
+ * comes from the per-row before/after comparison — a cleaned row that
+ * STILL contains an angle-bracket token like `<heart>` (preserved as
+ * user content per the helper's known-tag whitelist) survives the
+ * filter on the next run, falls through `cleaned === row.description`,
+ * and is NOT marked dirty (#844 Copilot R3).
  *
  * Read-only by default. Dry-run takes no row-level locks.
  */
 
 import { pathToFileURL } from 'node:url'
-import { eq, sql } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { db, events, venues } from '@concert-crawl/db'
 // Relative source import (not package barrel) so this one-shot script
 // runs against a clean checkout without requiring a prior
@@ -51,6 +55,10 @@ export interface BackfillSummary {
   rowsScanned: number
   rowsDirty: number
   rowsUpdated: number
+  // Dirty rows whose description was modified by another process between
+  // the initial SELECT and the optimistic-locked UPDATE — operator should
+  // re-run to pick them up if still dirty.
+  rowsSkippedConcurrentEdit: number
   committed: boolean
 }
 
@@ -117,6 +125,7 @@ export async function runBackfill(opts: {
       rowsScanned: candidates.length,
       rowsDirty: 0,
       rowsUpdated: 0,
+      rowsSkippedConcurrentEdit: 0,
       // committed=false on no-op early-return paths even if --commit was
       // passed — the summary reflects whether writes actually happened,
       // not the flag the operator set.
@@ -149,6 +158,7 @@ export async function runBackfill(opts: {
       rowsScanned: candidates.length,
       rowsDirty: dirty.length,
       rowsUpdated: 0,
+      rowsSkippedConcurrentEdit: 0,
       committed: false,
     }
   }
@@ -157,22 +167,40 @@ export async function runBackfill(opts: {
   // multi-row CASE WHEN) keep the log line up at the same granularity
   // as the dry-run and let a transient failure mid-batch stop the run
   // cleanly without leaving the audit log out of sync with the DB.
+  //
+  // Optimistic-lock the WHERE on the original description so a
+  // concurrent crawler / admin edit between the initial SELECT and the
+  // UPDATE doesn't get silently clobbered. If the row's description
+  // changed in the window, .returning() yields zero rows and we log +
+  // skip rather than overwriting fresher content (#844 Copilot R3).
   let updatedCount = 0
+  let skippedCount = 0
   for (const row of dirty) {
-    await db
+    const updated = await db
       .update(events)
       .set({ description: row.after })
-      .where(eq(events.id, row.id))
+      .where(and(eq(events.id, row.id), eq(events.description, row.before)))
+      .returning({ id: events.id })
+    if (updated.length === 0) {
+      console.log(
+        `Skipped ${row.id} — description changed between scan and update`,
+      )
+      skippedCount += 1
+      continue
+    }
     updatedCount += 1
   }
 
   console.log('---')
-  console.log(`Committed. Updated ${updatedCount} rows.`)
+  console.log(
+    `Committed. Updated ${updatedCount} rows. Skipped ${skippedCount} rows (concurrent edit).`,
+  )
 
   return {
     rowsScanned: candidates.length,
     rowsDirty: dirty.length,
     rowsUpdated: updatedCount,
+    rowsSkippedConcurrentEdit: skippedCount,
     committed: true,
   }
 }
