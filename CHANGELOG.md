@@ -1,3 +1,16 @@
+## [1.85.4](https://github.com/HartiganHM/concert-crawl/compare/v1.85.3...v1.85.4) (2026-06-27)
+
+
+### Bug Fixes
+
+* **api:** r1 — clarify priceVendor scope + cover source-event edge cases (PR [#837](https://github.com/HartiganHM/concert-crawl/issues/837)) ([9e70dab](https://github.com/HartiganHM/concert-crawl/commit/9e70dab5837aa370cea0d0d246ab66004a9a8e8f)), closes [#833](https://github.com/HartiganHM/concert-crawl/issues/833)
+* **api:** r2 — reword test comment to describe behavior, not PR (PR [#837](https://github.com/HartiganHM/concert-crawl/issues/837)) ([f3d9728](https://github.com/HartiganHM/concert-crawl/commit/f3d9728dc3cba2461daaaccb930ad148f75fcb73))
+
+
+### Performance Improvements
+
+* **api/web:** parallelize event detail fetchRelated via id-keyed endpoint ([#833](https://github.com/HartiganHM/concert-crawl/issues/833)) ([e138c79](https://github.com/HartiganHM/concert-crawl/commit/e138c79f4e15bc83c129f52b3c41399aa2cb8f5c))
+
 ## [1.85.3](https://github.com/HartiganHM/concert-crawl/compare/v1.85.2...v1.85.3) (2026-06-27)
 
 
