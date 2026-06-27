@@ -30,12 +30,33 @@ test.describe('unauthenticated access', () => {
     expect(location).not.toMatch(/\/events\/non-existent-id/)
   })
 
-  test('public browse page is accessible without auth', async ({ page }) => {
-    await page.goto('/events')
+  test('truly-public route loads without auth (legal terms)', async ({
+    page,
+  }) => {
+    // `/legal/terms` is in the middleware's `isAlwaysPublic` matcher; it
+    // should render without any redirect. The old version of this test
+    // pointed at `/events`, which lives under `(protected)` and now
+    // correctly redirects via the edge gate — testing it as "public" was
+    // inconsistent with the canonical auth surface (#845 Copilot R2).
+    await page.goto('/legal/terms')
     await page.waitForLoadState('networkidle')
 
-    await expect(page).toHaveTitle(/concert crawl/i)
-    expect(page.url()).toMatch(/\/events/)
+    expect(page.url()).toMatch(/\/legal\/terms/)
+    expect(page.url()).not.toMatch(/sign-in/)
+  })
+
+  test('protected /events redirects unauthenticated requests', async ({
+    request,
+  }) => {
+    // Mirror of the `/events/:id` redirect assertion above but for the
+    // list route — locks down both the detail and index branches of the
+    // (protected) /events tree.
+    const response = await request.get('/events', { maxRedirects: 0 })
+
+    expect(response.status()).toBe(307)
+    const location = response.headers()['location']
+    expect(location).toBeTruthy()
+    expect(location).not.toMatch(/\/events$/)
   })
 })
 
