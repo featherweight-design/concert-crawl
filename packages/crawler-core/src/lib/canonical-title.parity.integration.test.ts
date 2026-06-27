@@ -4,19 +4,31 @@ import { db } from '@concert-crawl/db'
 import { canonicalizeTitle } from './canonical-title.js'
 
 /**
- * Parity test for canonical_title — confirms that the SQL normalization in
- * the migration backfill produces byte-identical output to the JS
- * canonicalizeTitle function on a curated set of inputs.
+ * Parity test for canonical_title — confirms that the SQL normalization
+ * used to recompute canonical_title in backfills produces byte-identical
+ * output to the JS canonicalizeTitle function on a curated set of inputs.
  *
  * Why this exists: see CLAUDE.md memory `feedback_migration_js_parity` on
- * the 2026-06-17 Ø/ø incident. Migration backfills shared columns must
- * match runtime JS output exactly, or ON CONFLICT lookups miss silently
- * once the index swap lands. This test pins the contract so any drift
- * surfaces immediately rather than at next prod re-crawl.
+ * the 2026-06-17 Ø/ø incident. Backfills that touch the same column the
+ * runtime crawler writes must match JS output exactly, or ON CONFLICT
+ * lookups miss silently. This test pins the contract so any drift
+ * surfaces immediately rather than at the next prod re-crawl.
  *
- * Runs the same SQL expression used by migration 0043 against a literal
- * value (no test table needed). If 0043's char set ever changes, this
- * test's PARITY_SQL must change with it.
+ * The SQL expression below is the canonical reference for "what SQL has
+ * to look like to match canonicalizeTitle today". Migration 0043 is
+ * frozen at the original (pre-#850) rule set — the in-flight #850
+ * backfill recomputes via the JS function (no new SQL backfill exists
+ * yet). When the next migration adds a fresh SQL backfill it MUST copy
+ * the expression below verbatim.
+ *
+ * The SQL ordering matches canonicalizeTitle's JS ordering exactly:
+ *   1. Markdown bold first (`**...**`, `__...__`), italic next
+ *      (`*...*`, `_..._`). Two-char markers run before single-char so
+ *      the italic pass doesn't half-strip a bold pair.
+ *   2. NFD + strip combining marks.
+ *   3. Latin Extended translate() — matches LATIN_EXTENDED_MAP.
+ *   4. Strip apostrophe variants (curly + straight).
+ *   5. Lowercase, collapse whitespace, trim.
  */
 
 // Curated edge-case inputs the SQL backfill and JS function must agree on.
@@ -69,32 +81,94 @@ const PARITY_INPUTS: { label: string; input: string }[] = [
     label: 'feat. billing',
     input: 'Yoi Toki – A Future Funk/Vaporwave Party ft. Saint Pepsi',
   },
+
+  // Issue #850 — Markdown emphasis markers stripped, inner text kept.
+  // Both forms (`**...**`, `__...__`, `*...*`, `_..._`) and a real prod
+  // dupe shape (Swing Nights Lindy Jam trailing-annotation pattern).
+  { label: 'Markdown bold **', input: 'Foo **Bar**' },
+  { label: 'Markdown bold __', input: 'Foo __Bar__' },
+  { label: 'Markdown italic *', input: 'Foo *Bar*' },
+  { label: 'Markdown italic _', input: 'Foo _Bar_' },
+  {
+    label: 'real-prod trailing-annotation bold',
+    input: 'Swing Nights Lindy Jam **TUESDAY 7/14**',
+  },
+
+  // Issue #850 — apostrophe variants stripped. All forms canonicalize
+  // identically to the apostrophe-less variant.
+  { label: 'curly right apostrophe', input: 'Earl Sweatshirt’s SICK! Tour' },
+  { label: 'curly left apostrophe', input: 'Rock‘8 Roll' },
+  { label: 'high-reversed-9 apostrophe', input: 'Don‛t Stop' },
+  { label: 'straight apostrophe', input: "Zed's Dead" },
+  {
+    label: 'real-prod apostrophe dupe',
+    input: 'BASS BINGO – Road to Zed’s Dead Jamboree!',
+  },
 ]
 
 describe('canonical_title — SQL backfill / JS function parity', () => {
   it.each(PARITY_INPUTS)('matches on: $label', async ({ input }) => {
-    // Inline the exact SQL expression from migration 0043. If the
-    // migration's normalization changes, copy the new expression here
-    // and update PARITY_INPUTS with any new edge cases.
+    // Canonical reference SQL — must produce byte-identical output to
+    // canonicalizeTitle. When the next backfill migration runs, copy
+    // this expression verbatim. Order of operations matches the JS
+    // function exactly.
+    //
     // Drizzle's db.execute<T> over postgres-js returns the rows array as a
     // RowList<T>, which is iterable + indexable like a regular array. No
     // double-cast needed — the SELECT here yields exactly one row.
+    //
+    // Markdown stripping uses regexp_replace with a backref (`\1`) to
+    // keep the inner text. The inner group uses POSIX `[^*]+` for `*`
+    // markers and `[^_]+` for `_` markers — non-greedy quantifiers and
+    // `.+?` aren't supported by Postgres' POSIX regex engine, so an
+    // exclude-the-marker character class is the equivalent. Two-char
+    // markers strip first (so single-char passes don't see the bold
+    // pair); the 'g' flag runs each substitution across every match in
+    // the title.
+    //
+    // Apostrophes (curly + straight) are stripped via translate() with
+    // an empty replacement set — translate() drops any char in the
+    // `from` argument that has no matching position in `to`.
     const rows = await db.execute<{ canonical: string }>(sql`
-      SELECT trim(
-        regexp_replace(
-          lower(
-            translate(
+      WITH
+        md_stripped AS (
+          SELECT regexp_replace(
+            regexp_replace(
               regexp_replace(
-                normalize(${input}::text, NFD),
-                '[̀-ͯ]', '', 'g'
+                regexp_replace(
+                  ${input}::text,
+                  '\\*\\*([^*]+)\\*\\*', '\\1', 'g'
+                ),
+                '__([^_]+)__', '\\1', 'g'
               ),
-              'ÀÁÂÃÄÅàáâãäåÈÉÊËèéêëÌÍÎÏìíîïÒÓÔÕÖØòóôõöøÙÚÛÜùúûüÝýÿÑñÇçŸŠšŽž',
-              'AAAAAAaaaaaaEEEEeeeeIIIIiiiiOOOOOOooooooUUUUuuuuYyyNnCcYSsZz'
-            )
-          ),
-          '\\s+', ' ', 'g'
+              '\\*([^*]+)\\*', '\\1', 'g'
+            ),
+            '_([^_]+)_', '\\1', 'g'
+          ) AS val
+        ),
+        nfd AS (
+          SELECT regexp_replace(
+            normalize(val, NFD),
+            '[̀-ͯ]', '', 'g'
+          ) AS val
+          FROM md_stripped
+        ),
+        latin AS (
+          SELECT translate(
+            val,
+            'ÀÁÂÃÄÅàáâãäåÈÉÊËèéêëÌÍÎÏìíîïÒÓÔÕÖØòóôõöøÙÚÛÜùúûüÝýÿÑñÇçŸŠšŽž',
+            'AAAAAAaaaaaaEEEEeeeeIIIIiiiiOOOOOOooooooUUUUuuuuYyyNnCcYSsZz'
+          ) AS val
+          FROM nfd
+        ),
+        apos AS (
+          SELECT translate(val, '''‘’‛', '') AS val
+          FROM latin
         )
+      SELECT trim(
+        regexp_replace(lower(val), '\\s+', ' ', 'g')
       ) AS canonical
+      FROM apos
     `)
 
     const sqlCanonical = rows[0]?.canonical

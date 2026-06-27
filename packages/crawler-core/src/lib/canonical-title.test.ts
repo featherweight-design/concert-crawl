@@ -79,9 +79,13 @@ describe('canonicalizeTitle', () => {
       expect(canonicalizeTitle('M.I.A. Tour')).toBe('m.i.a. tour')
     })
 
-    it('preserves apostrophes', () => {
+    it('strips apostrophes (see issue #850)', () => {
+      // Apostrophes are deliberately removed in canonicalization so that
+      // LLM transcription variants like "Zed's" vs "Zeds" collapse to the
+      // same dedup key. See the dedicated "issue #850 — apostrophe
+      // normalization" block below.
       expect(canonicalizeTitle('Earl Sweatshirt’s SICK! Tour')).toBe(
-        'earl sweatshirt’s sick! tour',
+        'earl sweatshirts sick! tour',
       )
     })
   })
@@ -156,6 +160,121 @@ describe('canonicalizeTitle', () => {
         'BPM BINGO! Dombresky / Walker & Royce Edition Edition',
       )
       expect(clean).not.toBe(typo)
+    })
+  })
+
+  describe('issue #850 — Markdown emphasis markers', () => {
+    // Real prod dupes (PR #824 follow-up audit): the LLM occasionally
+    // wraps annotations in Markdown bold (`**TUESDAY 7/14**`). The
+    // markers themselves are not content — they're styling that leaked
+    // through verbatim. Strip the markers but preserve the inner text
+    // so "Beyoncé **World Tour**" doesn't collapse to "beyonce".
+
+    it('strips ** bold markers and preserves inner text', () => {
+      expect(canonicalizeTitle('Foo **Bar**')).toBe('foo bar')
+      expect(canonicalizeTitle('**Hello** World')).toBe('hello world')
+    })
+
+    it('strips __ bold markers and preserves inner text', () => {
+      expect(canonicalizeTitle('Foo __Bar__')).toBe('foo bar')
+    })
+
+    it('strips * italic markers and preserves inner text', () => {
+      expect(canonicalizeTitle('Foo *Bar*')).toBe('foo bar')
+    })
+
+    it('strips _ italic markers and preserves inner text', () => {
+      expect(canonicalizeTitle('Foo _Bar_')).toBe('foo bar')
+    })
+
+    it('strips markers from the trailing annotation pattern observed in prod', () => {
+      // Lindy Jam recurring listing — the LLM extracts the same headline
+      // but one variant includes a bold trailing annotation.
+      // Note: this collapses the MARKERS but the inner text "tuesday 7/14"
+      // remains, so the two forms are still NOT equal. This is intentional:
+      // stripping the inner annotation text entirely would discard real
+      // content in titles like "Beyoncé **World Tour**". The residual
+      // prefix-suffix dupes get manually merged via the admin UI (#820).
+      const withMarkers = canonicalizeTitle(
+        'Swing Nights Lindy Jam **TUESDAY 7/14**',
+      )
+      const withoutMarkers = canonicalizeTitle(
+        'Swing Nights Lindy Jam TUESDAY 7/14',
+      )
+      expect(withMarkers).toBe(withoutMarkers)
+      expect(withMarkers).toBe('swing nights lindy jam tuesday 7/14')
+    })
+
+    it('collapses cross-marker variants of the same annotated title', () => {
+      // Same headline, different LLM passes emit the annotation with vs
+      // without markers. Both forms must collapse to the same canonical.
+      const variants = [
+        "Cervantes' Comedy Presents Kristin Key **Early Show**",
+        "Cervantes' Comedy Presents Kristin Key Early Show",
+        "Cervantes' Comedy Presents Kristin Key __Early Show__",
+        "Cervantes' Comedy Presents Kristin Key *Early Show*",
+      ]
+      const canonicals = variants.map(canonicalizeTitle)
+      expect(new Set(canonicals).size).toBe(1)
+    })
+
+    it('handles markers wrapping content mid-title without dropping content', () => {
+      // Defensive: if a future title uses bold for the artist, stripping
+      // the whole **...** group (markers + inner) would lose the artist.
+      // Verify inner text is preserved.
+      const canonical = canonicalizeTitle('**Beyoncé** World Tour')
+      expect(canonical).toBe('beyonce world tour')
+    })
+  })
+
+  describe('issue #850 — apostrophe normalization', () => {
+    // Real prod dupe (PR #824 follow-up audit): Larimer's Bass Bingo
+    // listing exists as both `zeds dead jamboree!` and `zed's dead
+    // jamboree!`. Curly + straight + omitted apostrophes all collapse.
+
+    it('normalizes curly right single quotation mark (U+2019) to straight', () => {
+      // The two strings differ only in U+2019 vs U+0027. Post-normalize
+      // both forms must collapse — they go through the same strip path.
+      const curly = canonicalizeTitle('Earl Sweatshirt’s SICK! Tour')
+      const straight = canonicalizeTitle("Earl Sweatshirt's SICK! Tour")
+      expect(curly).toBe(straight)
+    })
+
+    it('normalizes curly left single quotation mark (U+2018) to straight', () => {
+      const curly = canonicalizeTitle('Rock‘8 Roll')
+      const straight = canonicalizeTitle("Rock'8 Roll")
+      expect(curly).toBe(straight)
+    })
+
+    it('normalizes single high-reversed-9 quotation mark (U+201B) to straight', () => {
+      const reversed = canonicalizeTitle('Don‛t Stop')
+      const straight = canonicalizeTitle("Don't Stop")
+      expect(reversed).toBe(straight)
+    })
+
+    it('strips standalone apostrophes so "zeds" and "zeds" collapse', () => {
+      // The Larimer Bass Bingo dupe — one LLM pass typed `zed's`, the
+      // other typed `zeds`. With apostrophe-strip in the normalizer
+      // both forms collapse.
+      const withApos = canonicalizeTitle(
+        'BASS BINGO – Road to Zed’s Dead Jamboree!',
+      )
+      const withoutApos = canonicalizeTitle(
+        'BASS BINGO – Road to Zeds Dead Jamboree!',
+      )
+      expect(withApos).toBe(withoutApos)
+    })
+
+    it('collapses all three apostrophe variants for the same title', () => {
+      const variants = [
+        "Zed's Dead",
+        'Zed’s Dead',
+        'Zed‘s Dead',
+        'Zed‛s Dead',
+        'Zeds Dead',
+      ]
+      const canonicals = variants.map(canonicalizeTitle)
+      expect(new Set(canonicals).size).toBe(1)
     })
   })
 })
