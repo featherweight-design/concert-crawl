@@ -1,5 +1,3 @@
-import { redirect } from 'next/navigation'
-import { auth } from '@clerk/nextjs/server'
 import LandingClientShell from './_components/LandingClientShell'
 import { publicApiClient, ApiError } from '@/lib/api'
 import type { EventsListResponse } from '@concert-crawl/types'
@@ -124,12 +122,16 @@ async function fetchHeroShows(): Promise<LandingShow[]> {
   }
 }
 
-export const revalidate = 3600
+// ISR window: 5 minutes (#842). The crawler triggers every 10 min, so a 5-min
+// window always catches new events within one cycle. The logged-in redirect to
+// /events lives in middleware.ts — keeping it out of this server component is
+// what makes the page ISR-eligible (calling auth() / cookies() here would force
+// Next.js to render dynamically on every request). If a future change adds
+// user-personalized rendering, split it into an ISR shell + a Client Component
+// island rather than dropping ISR entirely.
+export const revalidate = 300
 
 export default async function LandingPage() {
-  const { userId } = await auth()
-  if (userId) redirect('/events')
-
   const shows = await fetchHeroShows()
   return <LandingClientShell shows={shows} />
 }

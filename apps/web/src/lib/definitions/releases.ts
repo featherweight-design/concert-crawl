@@ -28,7 +28,12 @@ export const RELEASES: Release[] = [
   {
     version: 'v0.6.1-beta',
     date: 'Jun 26, 2026',
+    headline: 'The site got faster — landing page and sign-in both.',
     items: [
+      {
+        kind: 'changed',
+        text: 'Denver landing page now serves a cached snapshot that refreshes every five minutes — first paint is near-instant, even on a cold visit.',
+      },
       {
         kind: 'changed',
         text: 'Sign-in redirects now happen at the edge instead of bouncing through a server function. Cold-start protected pages should feel noticeably snappier when you (or anyone) lands on one without being signed in.',

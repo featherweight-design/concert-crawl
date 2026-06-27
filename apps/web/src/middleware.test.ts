@@ -53,7 +53,7 @@ describe('middleware — returning-user redirect (#80)', () => {
     expect(result).toBeUndefined()
   })
 
-  it('does not redirect authenticated user with invite cookie from /', async () => {
+  it('redirects authenticated user from / to /events (#842)', async () => {
     const { default: middleware } = await import('./middleware')
 
     const req = new NextRequest('http://localhost/', {
@@ -62,7 +62,21 @@ describe('middleware — returning-user redirect (#80)', () => {
 
     const result = await (middleware as Function)(makeAuth('user_123'), req)
 
-    // Authenticated user on a non-preAuth route → no redirect
+    // Logged-in users never see the marketing landing — middleware redirects
+    // them to /events so the page itself stays ISR-eligible (no auth() call
+    // in the server component).
+    expect(result).not.toBeUndefined()
+    expect(result.headers.get('location')).toContain('/events')
+  })
+
+  it('does not redirect authenticated user on non-/ public routes', async () => {
+    const { default: middleware } = await import('./middleware')
+
+    const req = new NextRequest('http://localhost/legal/privacy')
+
+    const result = await (middleware as Function)(makeAuth('user_123'), req)
+
+    // Authenticated user on a non-preAuth, non-/ public route → no redirect
     expect(result).toBeUndefined()
   })
 })

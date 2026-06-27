@@ -24,8 +24,11 @@ export default clerkMiddleware(async (auth, req) => {
   const { userId } = await auth()
 
   // Authenticated users skip directly to the app; no reason to see pre-auth pages
+  // or the marketing landing. Redirecting from `/` here (rather than in the page
+  // server component) keeps the landing route eligible for ISR — calling auth()
+  // inside the page would force dynamic rendering. See #842.
   if (userId) {
-    if (isPreAuth(req)) {
+    if (isPreAuth(req) || req.nextUrl.pathname === '/') {
       return NextResponse.redirect(new URL('/events', req.url))
     }
     return
