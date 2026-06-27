@@ -14,9 +14,11 @@
  * historical rows already in the DB.
  *
  * What it does:
- *   1. Pull every `events` row whose `description` contains an `<` or
- *      `>` (cheap WHERE filter — almost all clean descriptions don't
- *      contain angle brackets, so the candidate set is tightly scoped).
+ *   1. Pull every `events` row whose `description` contains either an
+ *      HTML tag (`</?` followed by a letter) or an HTML entity (`&NAME;`
+ *      / `&#DDDD;`). The filter deliberately excludes bare `&` so
+ *      legitimate text like "Band & Friends" doesn't widen the
+ *      candidate set (#844 Copilot R1).
  *   2. For each row: run `stripDescriptionHtml`. If the cleaned output
  *      differs from the current value, mark it dirty.
  *   3. Per-row dry-run output: event id, venue name, title, before/after
@@ -30,8 +32,8 @@
  * Against staging/prod set DATABASE_URL accordingly.
  *
  * Idempotent: re-running after --commit is a no-op — the cleaned rows
- * no longer contain `<` or `>` (entities are decoded, tags stripped),
- * so they fail the WHERE filter on subsequent runs.
+ * have no known HTML tags and no entity-shaped substrings, so they fail
+ * the WHERE filter on subsequent runs.
  *
  * Read-only by default. Dry-run takes no row-level locks.
  */
@@ -72,12 +74,13 @@ export async function runBackfill(opts: {
   commit: boolean
 }): Promise<BackfillSummary> {
   // Pull candidates: descriptions that look like they might contain HTML
-  // markup or numeric entities. The `<` / `>` filter catches `<p>`,
-  // `<br>`, `<div>`, etc.; the `&` filter catches `&amp;` / `&#039;` /
-  // `&nbsp;` cases where the source HTML was entity-encoded plaintext.
-  // The JS-side `stripDescriptionHtml` then decides per-row whether the
-  // candidate is actually dirty. Pulling both at the SQL layer keeps the
-  // candidate set tight without a JS-side scan of the full events table.
+  // markup or numeric entities. The tag filter matches `</?` followed by
+  // a letter (catches `<p>`, `<br>`, `<div>`, `</span>`, …) but skips
+  // plain text like "<3" or "<-arrow". The entity filter requires `&`
+  // to be followed by alphanumerics + a semicolon, so legitimate text
+  // like "Band & Friends" doesn't widen the candidate set (#844 Copilot
+  // R1). The JS-side `stripDescriptionHtml` then decides per-row whether
+  // the candidate is actually dirty.
   const candidates = await db
     .select({
       id: events.id,
@@ -87,7 +90,9 @@ export async function runBackfill(opts: {
     })
     .from(events)
     .leftJoin(venues, eq(events.venueId, venues.id))
-    .where(sql`${events.description} ~ '[<>&]'`)
+    .where(
+      sql`${events.description} ~* '</?[a-z]' OR ${events.description} ~ '&[a-zA-Z]+;' OR ${events.description} ~ '&#[0-9a-fA-F]+;'`,
+    )
 
   console.log(`Loaded ${candidates.length} candidate rows from events.`)
 

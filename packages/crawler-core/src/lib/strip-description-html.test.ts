@@ -133,4 +133,25 @@ describe('stripDescriptionHtml', () => {
       'real content',
     )
   })
+
+  // #844 Copilot R1 — entity decode in step 3 can promote `&lt;heart&gt;`
+  // to literal `<heart>` in the output. The remaining-tag strip in step 2
+  // must NOT then delete `<heart>` on a subsequent pass, since it isn't
+  // a known HTML tag — it's plausible user content (ASCII-art emoji,
+  // lyrics, etc.). Restricting step 2 to a known-tag whitelist preserves
+  // the round-trip / idempotency contract for this class of input.
+  it("preserves angle-bracketed text that isn't a known HTML tag", () => {
+    const input = 'love &lt;heart&gt; you'
+    const once = stripDescriptionHtml(input)
+    expect(once).toBe('love <heart> you')
+    const twice = stripDescriptionHtml(once)
+    expect(twice).toBe(once)
+  })
+
+  it('preserves common non-HTML angle-bracket text like <3 / <- after decode', () => {
+    expect(stripDescriptionHtml('feeling &lt;3 tonight')).toBe(
+      'feeling <3 tonight',
+    )
+    expect(stripDescriptionHtml('arrow &lt;-- here')).toBe('arrow <-- here')
+  })
 })

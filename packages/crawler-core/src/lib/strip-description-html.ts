@@ -31,12 +31,30 @@ const TIGHT_CLOSING = /<\/(li|tr)\s*>/gi
 const BLOCK_OPENING = /<(p|div|li|tr|ul|ol|h[1-6]|blockquote)(\s[^>]*)?>/gi
 const BR_TAG = /<br\s*\/?>/gi
 
-// Greedy tag strip for anything left over after the block-level pass.
-// Conservative — won't gracefully handle `<script>` content, but the
-// extractors that feed this helper have already gone through `cleanHtml`
-// (LLM path) or only see `schema.org` text (JSON-LD path), so script
-// blocks shouldn't reach us.
-const ANY_TAG = /<[^>]+>/g
+// Whitelist of inline + uncommon block tag names that may survive the
+// block-level pass above. Restricting the "remaining tag" strip to
+// KNOWN HTML element names protects the round-trip / idempotency
+// contract: plain text like "<heart>" (which can appear in event
+// descriptions, especially after entity decoding lifts `&lt;heart&gt;`
+// out) is left alone rather than being silently deleted on a re-run
+// (#844 Copilot R1).
+//
+// Script / style content is intentionally NOT in this list — the
+// extractors that feed us have already stripped those, and silently
+// stripping just `<script>`/`</script>` while leaving JS/CSS in the
+// text would be worse than the current behavior of leaving the markup
+// intact for a human to notice.
+// Includes `ul` and `ol` so their CLOSING tags (e.g. `</ul>`) get
+// stripped — opening tags are already handled by BLOCK_OPENING above,
+// but the closings would otherwise survive (block-pass only matches
+// closings for p/div/h*/blockquote and tight closings for li/tr).
+const KNOWN_HTML_TAG_NAMES =
+  'a|abbr|address|article|aside|b|bdi|bdo|caption|cite|code|data|dd|' +
+  'details|dfn|dialog|dl|dt|em|figcaption|figure|footer|header|hr|i|' +
+  'img|kbd|main|mark|nav|ol|picture|pre|q|rp|rt|ruby|s|samp|section|' +
+  'small|source|span|strong|sub|summary|sup|table|tbody|td|tfoot|th|' +
+  'thead|time|u|ul|var|wbr'
+const KNOWN_TAG = new RegExp(`<\\/?(?:${KNOWN_HTML_TAG_NAMES})\\b[^>]*>`, 'gi')
 
 // HTML entities — both named and numeric. Decoded BEFORE whitespace
 // collapse so that a `&nbsp;` that re-expands to U+00A0 still gets
@@ -96,8 +114,12 @@ export function stripDescriptionHtml(html: string): string {
     .replace(TIGHT_CLOSING, '\n')
     .replace(BLOCK_OPENING, '')
 
-  // 2. Any remaining tag (inline: <strong>, <a>, <span>, etc.) → empty.
-  out = out.replace(ANY_TAG, '')
+  // 2. Strip remaining KNOWN HTML tags (inline: <strong>, <a>, <span>,
+  //    table cells, less-common block elements). Unknown angle-bracketed
+  //    content like "<heart>" is preserved so idempotency holds after
+  //    entity decode in step 3 promotes `&lt;heart&gt;` to literal
+  //    angle brackets (#844 Copilot R1).
+  out = out.replace(KNOWN_TAG, '')
 
   // 3. Decode entities AFTER tag stripping so an entity that encodes a
   //    less-than sign doesn't accidentally get treated as a tag opener
