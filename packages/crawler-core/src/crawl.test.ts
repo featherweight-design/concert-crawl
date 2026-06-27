@@ -19,6 +19,7 @@ import {
   DEBUG_CAPTURE_CHUNK_CHARS,
   DEBUG_CAPTURE_MAX_CHARS,
 } from './crawl.js'
+import { hashEvent } from './lib/hash.js'
 
 const mockBrowser = {} as Browser
 
@@ -525,6 +526,99 @@ describe('crawlVenue — event-level sourceHash', () => {
       .from(notifications)
       .where(eq(notifications.category, 'crawl.verified_event_changed'))
     expect(allAlerts).toHaveLength(0)
+  })
+
+  it('does NOT fire crawl.verified_event_changed when only the LLM-picked artist substring drifts (#825)', async () => {
+    // Production regression: hashEvent used to include `artist`, so a
+    // re-crawl that picked a different headliner substring out of the same
+    // compound title (e.g. "BPM BINGO!" → "Dombresky / Walker & Royce" for
+    // the listing "BPM BINGO! Dombresky / Walker & Royce Edition") would
+    // shift the stored sourceHash and trip the verified-event-changed alert
+    // even though title/date/doors/show were identical.
+    //
+    // hashEvent now ignores artist (covered by the unit test in hash.test.ts);
+    // this is the crawlVenue-level end-to-end guard that the notification
+    // path agrees. Pre-#825 this assertion would fail: the seeded row's
+    // sourceHash (computed via the new signature, no artist) would NOT match
+    // the freshly computed hash (which would have included artist) and the
+    // changedVerified filter would emit an admin alert.
+    const venue = seedVenue()
+    const sharedTitle = 'BPM BINGO! Dombresky / Walker & Royce Edition'
+    const sharedDate = '2026-08-15'
+
+    // Seed an existing verified row with sourceHash computed under the new
+    // (post-#825) signature — title/date/doors/show only, no artist.
+    const seededHash = hashEvent({
+      title: sharedTitle,
+      date: sharedDate,
+      doorsTime: null,
+      showTime: null,
+    })
+    stores.events.push({
+      id: crypto.randomUUID(),
+      venueId: venue.id,
+      title: sharedTitle,
+      artist: 'BPM BINGO!',
+      canonicalArtist: 'bpm bingo!',
+      canonicalTitle: sharedTitle.toLowerCase(),
+      date: sharedDate,
+      doorsTime: null,
+      showTime: null,
+      sourceHash: seededHash,
+      verified: true,
+      status: 'upcoming',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+    // Re-crawl returns the SAME listing — title/date/doors/show unchanged —
+    // but the LLM picks a different artist substring out of the compound title.
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        {
+          title: sharedTitle,
+          rawTitle: sharedTitle,
+          artist: 'Dombresky / Walker & Royce',
+          date: sharedDate,
+          doorsTime: undefined,
+          showTime: undefined,
+          ticketUrl: 'https://test-venue.example.com/tickets',
+          sourceUrl: 'https://test-venue.example.com',
+          confidence: 0.95,
+        },
+      ],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    // No verified-event-changed alert should fire — artist drift is not a
+    // user-visible change and hashEvent ignores it now.
+    const allAlerts = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.category, 'crawl.verified_event_changed'))
+    expect(allAlerts).toHaveLength(0)
+
+    // And because the hash matched, the row should NOT have been queued for
+    // upsert — the existing seeded row is the only one with this title.
+    // (The in-memory db mock's onConflictDoUpdate is a no-op append, so we
+    // detect an unwanted upsert by counting rows with this canonical_title.)
+    const venueRowsWithTitle = stores.events.filter(
+      (row: { venueId: string; canonicalTitle: string }) =>
+        row.venueId === venue.id &&
+        row.canonicalTitle === sharedTitle.toLowerCase(),
+    )
+    expect(venueRowsWithTitle).toHaveLength(1)
+    // And the seeded artist stays put — the artist-frozen rule from #824
+    // (artist intentionally NOT in onConflictDoUpdate.set) means even an
+    // accidental upsert would preserve it.
+    expect(venueRowsWithTitle[0].artist).toBe('BPM BINGO!')
   })
 })
 
