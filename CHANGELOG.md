@@ -1,3 +1,10 @@
+## [1.87.1](https://github.com/HartiganHM/concert-crawl/compare/v1.87.0...v1.87.1) (2026-06-27)
+
+
+### Performance Improvements
+
+* **web:** isr landing + browse with 5-min revalidate ([#842](https://github.com/HartiganHM/concert-crawl/issues/842)) ([db42881](https://github.com/HartiganHM/concert-crawl/commit/db42881fd088c3b29d5cc7fd1ecc61c9f1fcd80c))
+
 # [1.87.0](https://github.com/HartiganHM/concert-crawl/compare/v1.86.0...v1.87.0) (2026-06-27)
 
 
