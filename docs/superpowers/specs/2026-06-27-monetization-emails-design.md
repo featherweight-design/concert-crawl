@@ -7,7 +7,7 @@
 **Related:**
 
 - **Readiness Review:** `design/design_handoff_monetization/READINESS.md` (🔴 Red verdict, 2026-06-24) — items 4, 6, 11
-- **Eng infra prerequisite:** [#775](https://github.com/HartiganHM/concert-crawl/issues/775) (Resend template registration, subscription-state event triggers, dunning timer, card-expiry timer, gift-ending timer)
+- **Eng infra prerequisites:** [#775](https://github.com/HartiganHM/concert-crawl/issues/775) (subscription-state event triggers, dunning timer, card-expiry timer, gift-ending timer) + [#849](https://github.com/HartiganHM/concert-crawl/issues/849) (Resend infrastructure ownership — orphaned by the closed [#773](https://github.com/HartiganHM/concert-crawl/issues/773); recommended resolution is folding into #775)
 - **Sister addenda:** [#781](https://github.com/HartiganHM/concert-crawl/issues/781) (tier picker + entitlements matrix — ✅ done), [#780](https://github.com/HartiganHM/concert-crawl/issues/780) (lifecycle + management — ✅ done), [#782](https://github.com/HartiganHM/concert-crawl/issues/782) (failure states + a11y + microcopy — ✅ done)
 - **Adjacent:** [#794](https://github.com/HartiganHM/concert-crawl/issues/794) (Track 2 — logged-out broader UX)
 - **Source briefs:** `docs/superpowers/specs/2026-06-24-monetization-tier-states-entitlements-design.md` (#781) + `docs/superpowers/specs/2026-06-25-monetization-lifecycle-design.md` (#780) + `docs/superpowers/specs/2026-06-26-monetization-failure-a11y-microcopy-design.md` (#782)
@@ -19,22 +19,22 @@
 
 This brief locks the pre-Design decisions for the #783 email touchpoint addendum: which transactional templates we design now (vs. defer), the per-tier copy variation pattern, the voice split between casual and formal-leaning templates, dunning sequence cadence, gift-flow scope, and the HTML / plain-text deliverable shape Resend requires.
 
-This is a **design brief**, not an eng spec. Resend template registration, subscription-state event listeners, dunning timer wiring, card-expiry pre-warning timers, and gift-ending timers all belong to #775. The in-app surfaces these emails reference (past-due banner, plan card variants, failure surfaces, takeover, day-13 banner) are locked in #780 / #782. Tier vocabulary, entitlements matrix, and price points are locked in #781.
+This is a **design brief**, not an eng spec. Subscription-state event listeners, dunning timer wiring, card-expiry pre-warning timers, and gift-ending timers all belong to #775. Resend template registration / SDK wiring is tracked in #849 — orphaned by the closure of #773, recommended resolution is folding into #775 since it bundles naturally with the subscription-state events #775 already owns. The in-app surfaces these emails reference (past-due banner, plan card variants, failure surfaces, takeover, day-13 banner) are locked in #780 / #782. Tier vocabulary, entitlements matrix, and price points are locked in #781.
 
 ## What Design will produce from this brief
 
 Per #783's "Deliverables we expect" + this brief's amendments:
 
-1. Hi-fi HTML templates (with plain-text fallback) for the 8 transactional emails in §1.
+1. Hi-fi HTML templates (with plain-text fallback) for the 10 transactional emails in §1.
 2. Per-template copy lock — subject line, preheader, body, footer.
 3. Voice decisions log: when casual, when formal-leaning, and how to handle the gradient inside the dunning sequence.
 4. Plain-text fallback for every template.
-5. Per-tier variation for welcome emails (Premium / Supporter / Founder + gifted) — 4 visual variants of the same template family.
+5. Per-tier variation for paid-welcome emails (`welcome_paid`) — 3 visual variants (Premium / Supporter / Founder) within one template family. Gifted welcome (`welcome_gifted`) is a separate template with its own visual treatment.
 6. Mobile-first responsive HTML email design (320px baseline → ~600px max-width).
 
 ## Locked decisions
 
-### 1. Template inventory — 8 transactional emails
+### 1. Template inventory — 10 transactional emails
 
 | Key | Trigger (#775 owns) | Voice tilt | Per-tier? | Notes |
 |---|---|---|---|---|
@@ -81,8 +81,9 @@ Total: **10 templates** (welcome_paid counts as 1 template w/ 3 tier visual vari
 **Locked:**
 
 - Every template ships HTML + plain-text fallback. Resend requires it; many corporate filters demand it.
-- HTML: inline-styles only (no `<style>` blocks — Gmail strips them; Outlook ignores them). Table-based layout for cross-client safety.
-- Mobile-first: 320px baseline, `max-width: 600px` container, responsive via `@media (max-width: 600px)` inline-styles where supported (Gmail iOS / web honor them; Outlook desktop doesn't — design degrades gracefully to single-column).
+- HTML layout: **inline styles for all base layout** (Gmail strips most `<style>` blocks; Outlook desktop ignores or partially supports them). Table-based structure for cross-client safety.
+- HTML responsiveness: **a single small `<style>` block in `<head>` for media queries** — the standard email pattern. Clients that honor it (Apple Mail, Gmail iOS, Gmail web for the same account-domain, most modern webmail) get the responsive treatment; clients that strip it (Gmail web cross-domain in some configs, Outlook desktop) fall through to the inline single-column layout. **Design degrades gracefully** — desktop layout is also legible on narrow viewports without the media query.
+- Mobile-first: 320px baseline, `max-width: 600px` container, `@media (max-width: 600px)` adjusts to single-column / larger touch targets.
 - Token vocabulary does NOT apply to email (clients strip CSS vars). Use a constrained inline palette: brand primary, neutral text gray, warning amber for dunning, success green for receipts. Document the email-only palette in the handoff.
 - Logo: PNG (SVG support is spotty), retina-tagged, hosted on the CDN.
 - Footer block: legal address + unsubscribe link (transactional emails are exempt from CAN-SPAM unsubscribe requirements, but include a "manage emails" link that lands on `/settings/notifications` for trust).
@@ -102,19 +103,20 @@ Examples (Design refines exact copy):
 
 ### 7. Per-tier visual variation for welcome emails
 
-**Locked:** `welcome_paid` is one template family with **4 tier-coded visual variants** (Premium / Supporter / Founder / gifted-welcome). Variation surface:
+**Locked:** `welcome_paid` is one template family with **3 tier-coded visual variants** (Premium / Supporter / Founder). `welcome_gifted` is a separate template (different surface, different copy goals) — covered separately below. Variation surface for `welcome_paid`:
 
 - Color accent shifts per tier (matches the tier card accents from #781 — Premium signal, Supporter warm, Founder badge).
 - Headline copy acknowledges the tier name + price paid.
 - Body unlock list mirrors the entitlements matrix from #781.
-- Founder variant adds the seat number ("You're #N of 50") + the lifetime founder badge in the header.
-- Gifted variant names the gifter + states the gift end date, primary CTA → "Add a card for when this wraps" (soft, not pushy).
+- Founder variant adds the seat number ("You're #N of 100") + the lifetime founder badge in the header — matches the locked "Founder #N of 100" formatting from #781 (post-claim takeover).
+
+**`welcome_gifted`:** Names the gifter + states the gift end date. Primary CTA → "Add a card for when this wraps" (soft, not pushy — first nudge toward conversion). Distinct from `welcome_paid` because the audience is different (recipient hasn't transacted), the conversion clock is different (gift-end vs renewal-cycle), and the body unlock list points forward to the wrap-up moment.
 
 ## What's NOT in this brief
 
 | Concern | Owner |
 |---|---|
-| Resend template registration, sender domain, API integration | #775 |
+| Resend template registration, sender domain, API integration | **Currently unowned** — #775 disclaims this via the now-closed #773. Tracked in [#849](https://github.com/HartiganHM/concert-crawl/issues/849) (recommended resolution: fold into #775 since Resend triggers bundle with the subscription-state event listeners it already owns). |
 | Subscription-state event triggers (which webhook fires which template) | #775 |
 | Dunning timer (when dunning_2, dunning_3 fire) + card-expiry pre-warning timer + gift-ending timer | #775 |
 | `decline_code` → dunning template variable mapping | #775 (mapping); brief just locks the 3-email cadence shape |
