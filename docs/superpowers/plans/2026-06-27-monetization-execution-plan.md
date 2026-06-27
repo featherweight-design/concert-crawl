@@ -45,9 +45,11 @@ opens_at        timestamptz NULL       -- NULL pre-launch; set to NOW() on launc
 seats_total     integer    NOT NULL    -- 100 (locked per #781)
 seats_remaining integer    NOT NULL    -- starts at 100; decrements atomically per claim
 window_days     integer    NOT NULL    -- 30 (locked per #781 — "First 100 or 30 days")
+closes_at       timestamptz GENERATED ALWAYS AS
+                  (opens_at + make_interval(days => window_days)) STORED
 ```
 
-`closes_at` is computed as `opens_at + (window_days || ' days')::interval`.
+`closes_at` is a Postgres stored generated column derived from `opens_at + window_days`. It propagates NULL while `opens_at IS NULL` (which is what we want pre-launch), is queryable in WHERE clauses without recomputation, and can never drift out of sync because the source columns are the only inputs. Extending the window means updating `window_days` (or, more rarely, `opens_at`) — `closes_at` recomputes automatically.
 
 ### Pre-launch state (`opens_at IS NULL`)
 
@@ -78,7 +80,7 @@ RETURNING seats_remaining;
 
 - UI flips Founder tier card to "Window closed — Premium or Supporter remain available" or similar (Design copy, Phase 3).
 - Server-side gate fires on every Founder checkout attempt with `410 Founder window closed`.
-- No automated reopening — if we want to extend, admin updates `window_days` or `closes_at` directly with audit logging.
+- No automated reopening — if we want to extend, admin updates `window_days` (or, in the rare case of needing to shift the start, `opens_at`) with audit logging. `closes_at` recomputes automatically as a generated column.
 
 ### Why this works for "build ahead, trigger at launch"
 
@@ -354,5 +356,6 @@ Not a PR — an operational sequence. Run when Hugh decides we go.
 - **Design pipeline workflow:** `docs/superpowers/design-pipeline.md`
 - **Beta-to-launch plan:** `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md`
 - **Original Readiness Review:** `design/design_handoff_monetization/READINESS.md` (🔴 Red verdict — all 11 items addressed across the four design briefs)
-- **Render workspace** (Stripe-relevant infra): `~/.claude/projects/.../memory/reference_render_workspace.md`
-- **Neon DB access** (schema migrations): `~/.claude/projects/.../memory/reference_neon_db_access.md`
+- **DB rollback runbook:** `docs/runbooks/db-rollback.md` (relevant for Phase 2 schema migrations)
+- **Production launch runbook:** `docs/runbooks/production-launch.md` (env-var tables for Vercel / Render / GitHub Actions secrets — Phase 2 + Phase 6 reference)
+- **Auto-deploy prod runbook:** `docs/runbooks/auto-deploy-prod.md` (deploy pipeline behavior — Phase 7 launch sequence reference)
