@@ -1,4 +1,4 @@
-# Monetization · Failure States, A11y & Microcopy (#782 · Round 1)
+# Monetization · Failure States, A11y & Microcopy (#782 · Round 2)
 
 > Extends `design_handoff_monetization/` (PaymentSurface + Plan card) and sits on
 > top of `design_handoff_monetization_tier_states/` (#781 — locked picker/matrix/
@@ -6,7 +6,7 @@
 > day-13 banner, takeover). **Nothing from #781 or #780 is redesigned.** This round
 > adds the failure edge-cases, the past-due surfaces, the required microcopy, and a
 > full a11y annotation sweep.
-> Status: **first pass, ready for Hugh's review.**
+> Status: **R2 closure landed (R1 tier-name swap applied across `lifecycle-plan-cards.jsx`). Readiness Review verdict: 🟢 Green.**
 
 Open `Failure States + A11y + Microcopy.html` and toggle **Tweaks** in the toolbar
 to drive the §0 live preview (surface · failure category · challenge kind · tier ·

@@ -213,8 +213,9 @@ function TweaksPanel({ title = 'Tweaks', children }) {
 
   React.useEffect(() => {
     const onMsg = (e) => {
-      // Origin gate: only honor protocol messages from our embedding host, so an
-      // unrelated frame can't toggle edit mode in an embedded prototype.
+      // Source check: only honor protocol messages from our embedding host, so
+      // an unrelated frame can't toggle edit mode in an embedded prototype.
+      // (Source-based, not origin-based — sufficient for reviewer-only tooling.)
       if (e.source !== window.parent) return;
       const t = e?.data?.type;
       if (t === '__activate_edit_mode') setOpen(true);
@@ -309,7 +310,7 @@ function TweakToggle({ label, value, onChange }) {
     <div className="twk-row twk-row-h">
       <div className="twk-lbl"><span>{label}</span></div>
       <button type="button" className="twk-toggle" data-on={value ? '1' : '0'}
-              role="switch" aria-checked={!!value}
+              role="switch" aria-checked={!!value} aria-label={label}
               onClick={() => onChange(!value)}><i /></button>
     </div>
   );
@@ -430,7 +431,7 @@ function TweakColor({ label, value, onChange }) {
   return (
     <div className="twk-row twk-row-h">
       <div className="twk-lbl"><span>{label}</span></div>
-      <input type="color" className="twk-swatch" value={value}
+      <input type="color" className="twk-swatch" value={value} aria-label={label}
              onChange={(e) => onChange(e.target.value)} />
     </div>
   );

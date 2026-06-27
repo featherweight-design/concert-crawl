@@ -242,6 +242,12 @@ function FailureSurface({
     "aria-describedby": descId,
   };
 
+  // autoFocusPrimary is hardwired false here because this is a static design
+  // canvas — the surfaces re-mount on every Tweaks toggle and autofocus would
+  // steal focus from the reviewer's scroll position / control panel. The
+  // production implementation MUST move focus to the primary action on mount
+  // (see a11y.jsx §7 + the spec at
+  // docs/superpowers/specs/2026-06-26-monetization-failure-a11y-microcopy-design.md).
   if (variant === "mobile") {
     return (
       <SheetChrome height="86%">
