@@ -10,7 +10,7 @@
 
 ## Purpose
 
-Monetization is the largest pending feature in the Concert Crawl roadmap and the highest-rigor build (`project_monetization_high_rigor.md`). It touches schema, payment infra, UI surfaces across multiple flows, email, admin tooling, and a launch-day operational sequence. This plan stitches together the four merged design briefs + the still-to-write eng infra spec into one ordered execution path an agent (or a human) can work down.
+Monetization is the largest pending feature in the Concert Crawl roadmap and the highest-rigor build. It touches schema, payment infra, UI surfaces across multiple flows, email, admin tooling, and a launch-day operational sequence. This plan stitches together the four merged design briefs + the still-to-write eng infra spec into one ordered execution path an agent (or a human) can work down.
 
 This is a **roadmap / sequencing doc**, not an implementation plan. Per-PR implementation plans live separately in `docs/superpowers/plans/` and are written using `superpowers:writing-plans` at the start of each PR. This doc tells you which PR to write next, what depends on what, and how the Founder timer mechanism works.
 
