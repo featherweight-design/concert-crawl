@@ -524,7 +524,6 @@ export async function crawlVenue(
           canonicalTitle: canonicalizeTitle(event.title),
           sourceHash: hashEvent({
             title: event.title,
-            artist: event.artist,
             date: event.date,
             doorsTime: event.doorsTime ?? null,
             showTime: event.showTime ?? null,

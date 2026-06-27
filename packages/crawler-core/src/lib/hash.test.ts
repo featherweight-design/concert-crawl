@@ -36,7 +36,6 @@ describe('hashPage', () => {
 describe('hashEvent', () => {
   const base = {
     title: 'Metallica Live',
-    artist: 'Metallica',
     date: '2026-08-15',
     doorsTime: '19:00',
     showTime: '20:00',
@@ -72,10 +71,32 @@ describe('hashEvent', () => {
     )
   })
 
+  it('ignores artist-only drift across crawls (regression for #825)', () => {
+    // The crawler used to include `artist` in the hash, but the LLM picks
+    // artist substrings differently across crawls even when the listing did
+    // not change — causing false `crawl.verified_event_changed` alerts.
+    // hashEvent must only depend on (title, date, doorsTime, showTime).
+    const withFullArtist = hashEvent({
+      ...base,
+      // @ts-expect-error — extra property should be ignored by hashEvent
+      artist: 'Metallica',
+    })
+    const withTrimmedArtist = hashEvent({
+      ...base,
+      // @ts-expect-error — extra property should be ignored by hashEvent
+      artist: 'Metallica (with Pantera)',
+    })
+    expect(withFullArtist).toBe(withTrimmedArtist)
+    // And both must equal the canonical no-artist hash.
+    expect(withFullArtist).toBe(hashEvent(base))
+  })
+
   it('avoids field boundary collisions (delimiter)', () => {
-    // Without a delimiter, 'ab'+'c' would hash the same as 'a'+'bc'
-    const a = hashEvent({ ...base, title: 'ab', artist: 'c' })
-    const b = hashEvent({ ...base, title: 'a', artist: 'bc' })
-    expect(a).not.toBe(b)
+    // Without a delimiter, 'ab'+'c' would hash the same as 'a'+'bc'.
+    // Exercise the collision-detection contract with two remaining fields
+    // (title + date) now that artist is no longer part of the hash.
+    const collisionA = hashEvent({ ...base, title: 'ab', date: 'c' })
+    const collisionB = hashEvent({ ...base, title: 'a', date: 'bc' })
+    expect(collisionA).not.toBe(collisionB)
   })
 })

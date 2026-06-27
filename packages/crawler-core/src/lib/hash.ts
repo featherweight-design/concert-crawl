@@ -9,14 +9,17 @@ export function hashPage(html: string): string {
 
 export function hashEvent(fields: {
   title: string
-  artist: string
   date: string
   doorsTime?: string | null
   showTime?: string | null
 }): string {
+  // Note: `artist` is intentionally excluded. The LLM picks artist
+  // substrings differently across crawls even when the underlying listing
+  // hasn't changed; including it produces false `crawl.verified_event_changed`
+  // notifications (#825). The hash now covers (title, date, doorsTime,
+  // showTime) — the user-visible fields that define a listing.
   const str = [
     fields.title,
-    fields.artist,
     fields.date,
     fields.doorsTime ?? '',
     fields.showTime ?? '',
