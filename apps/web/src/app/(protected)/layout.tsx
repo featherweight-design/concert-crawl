@@ -1,5 +1,3 @@
-import { auth } from '@clerk/nextjs/server'
-import { redirect } from 'next/navigation'
 import { FeedbackEdgeTabGate } from '@/components/consumer/feedback'
 import { OnboardingThemeFlush } from '@/components/auth/OnboardingThemeFlush'
 import { FeatureDropPillGate } from '@/components/consumer/release-notes/FeatureDropPillGate'
@@ -8,15 +6,10 @@ interface ProtectedLayoutProps {
   children: React.ReactNode
 }
 
-export default async function ProtectedLayout({
-  children,
-}: ProtectedLayoutProps) {
-  const { userId } = await auth()
-
-  if (!userId) {
-    redirect('/sign-in')
-  }
-
+// Auth gating is handled by edge middleware (apps/web/src/middleware.ts) — any
+// unauthenticated request to a (protected) route is 307-redirected at the POP
+// before this server component runs. See #841.
+export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
   return (
     <>
       {children}

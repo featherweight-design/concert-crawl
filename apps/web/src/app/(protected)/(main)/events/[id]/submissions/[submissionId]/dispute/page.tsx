@@ -8,11 +8,12 @@ interface DisputePageProps {
   params: Promise<{ id: string; submissionId: string }>
 }
 
+// Auth gating handled by edge middleware (apps/web/src/middleware.ts); this
+// page only runs for authenticated users (#841). The token-null guard remains
+// because getToken() can transiently return null during session refresh.
 export default async function DisputePage({ params }: DisputePageProps) {
   const { id, submissionId } = await params
-  const { userId, getToken } = await auth()
-  if (!userId) redirect('/sign-in')
-
+  const { getToken } = await auth()
   const token = await getToken()
   if (!token) redirect('/sign-in')
 

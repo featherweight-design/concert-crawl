@@ -66,3 +66,38 @@ describe('middleware — returning-user redirect (#80)', () => {
     expect(result).toBeUndefined()
   })
 })
+
+describe('middleware — edge auth gate (#841)', () => {
+  it('blocks unauthenticated request to a (protected) route via auth.protect', async () => {
+    const { default: middleware } = await import('./middleware')
+
+    const req = new NextRequest('http://localhost/events/abc-123')
+    const stub = makeAuth(null)
+
+    // auth.protect throws on unauthenticated — middleware lets it bubble. In
+    // production Clerk catches that throw at the edge and emits a 307 to the
+    // configured unauthenticatedUrl. Here we just assert the protection path
+    // was exercised (i.e. the request was NOT allowed to fall through).
+    await expect((middleware as Function)(stub, req)).rejects.toThrow(
+      /unauthorized/i,
+    )
+  })
+
+  it('lets unauthenticated request to a public route through without protect', async () => {
+    const { default: middleware } = await import('./middleware')
+
+    const req = new NextRequest('http://localhost/legal/terms')
+    const result = await (middleware as Function)(makeAuth(null), req)
+
+    expect(result).toBeUndefined()
+  })
+
+  it('lets authenticated request to a (protected) route through without redirect', async () => {
+    const { default: middleware } = await import('./middleware')
+
+    const req = new NextRequest('http://localhost/events/abc-123')
+    const result = await (middleware as Function)(makeAuth('user_123'), req)
+
+    expect(result).toBeUndefined()
+  })
+})

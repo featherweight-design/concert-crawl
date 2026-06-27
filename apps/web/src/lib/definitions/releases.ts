@@ -26,6 +26,16 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.6.1-beta',
+    date: 'Jun 26, 2026',
+    items: [
+      {
+        kind: 'changed',
+        text: 'Sign-in redirects now happen at the edge instead of bouncing through a server function. Cold-start protected pages should feel noticeably snappier when you (or anyone) lands on one without being signed in.',
+      },
+    ],
+  },
+  {
     version: 'v0.6.0-beta',
     date: 'Jun 24, 2026',
     headline: "Resale isn't face value — and now we make that obvious.",
