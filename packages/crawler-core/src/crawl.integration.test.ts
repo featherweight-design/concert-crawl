@@ -377,6 +377,7 @@ describe('crawlVenue — canonical-title upsert key (#821)', () => {
       events: [
         {
           title: 'BPM BINGO! Dombresky / Walker & Royce Edition',
+          rawTitle: 'BPM BINGO! Dombresky / Walker & Royce Edition',
           artist: 'Dombresky',
           date: showDate,
           confidence: 0.9,
@@ -836,6 +837,7 @@ describe('crawlVenue — non-concert auto-classification (#696)', () => {
           // sticky. artist also deliberately different to mirror the
           // real-world LLM artist-substring drift.
           title: 'ORIGINALLY  Misclassified Show',
+          rawTitle: 'ORIGINALLY  Misclassified Show',
           artist: 'Test Artist Featured',
           date: dateA,
           confidence: 0.95,
@@ -984,6 +986,7 @@ describe('crawlVenue — non-concert auto-classification (#696)', () => {
           // canonical_title changing" case alongside the crawler-frozen
           // assertion below.
           title: '  Borderline SHOW  ',
+          rawTitle: '  Borderline SHOW  ',
           artist: 'Borderline Artist',
           date: dateA,
           confidence: 0.95,

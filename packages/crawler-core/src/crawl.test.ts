@@ -217,6 +217,10 @@ const HTML_WITH_JSON_LD = `<html><head><script type="application/ld+json">{"@con
 
 const METALLICA_EVENT = {
   title: 'Metallica Live',
+  // rawTitle mirrors the LLM-stripped title since this is a unit-test
+  // fixture; the cross-venue presale filter (#826) cares about
+  // pre-strip listing decoration we don't simulate here.
+  rawTitle: 'Metallica Live',
   artist: 'Metallica',
   date: '2026-08-15',
   doorsTime: undefined,
@@ -550,6 +554,7 @@ describe('crawlVenue — intra-batch deduplication', () => {
       events: [
         {
           title: sharedTitle,
+          rawTitle: sharedTitle,
           artist: 'BPM BINGO!',
           date: '2026-08-15',
           confidence: 0.9,
@@ -557,6 +562,7 @@ describe('crawlVenue — intra-batch deduplication', () => {
         },
         {
           title: sharedTitle,
+          rawTitle: sharedTitle,
           artist: 'Dombresky',
           date: '2026-08-15',
           confidence: 0.9,
