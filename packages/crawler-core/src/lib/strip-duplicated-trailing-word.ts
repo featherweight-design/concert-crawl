@@ -36,16 +36,31 @@
  * require to be byte-for-byte verbatim from the source page.
  */
 
-// `\b(\w+)\s+\1\s*$/i`
-//   \b      — word boundary so we capture a whole token
-//   (\w+)   — the trailing word (letters / digits / underscores)
-//   \s+     — one-or-more whitespace separating the two occurrences
-//             (rules out comma-separated repeats like "New York, New York"
-//             and hyphen-joined repeats like "Edition-Edition")
-//   \1      — backreference to the captured token (case-insensitive via /i)
-//   \s*$    — optional trailing whitespace, then end-of-string
-//             (the end-anchor is what keeps "Hello Hello World" intact)
-const DUPLICATED_TRAILING_WORD_REGEX = /\b(\w+)\s+\1\s*$/i
+// `(^|[^\p{L}\p{M}\p{N}_])([\p{L}\p{M}\p{N}_]+)\s+\2\s*$/iu`
+//   (^|[^...])  — Unicode-aware word boundary: either start-of-string, or
+//                  a character that is NOT a letter / mark / number / `_`.
+//                  This replaces `\b`, which in JS is ASCII-only and would
+//                  miss Unicode-letter titles like "Beyoncé Beyoncé".
+//                  Captured (group 1) so the replace can put the boundary
+//                  character back; the backreference uses group 2.
+//   ([\p{L}\p{M}\p{N}_]+)
+//                — the trailing word, made of Unicode letters (\p{L}),
+//                  combining marks (\p{M}, for accented forms split into
+//                  base + diacritic), Unicode digits (\p{N}), and `_`.
+//                  Captures the token (group 2) for the `\2` backreference.
+//   \s+         — one-or-more whitespace separating the two occurrences
+//                  (rules out comma-separated repeats like "New York,
+//                  New York" and hyphen-joined repeats like
+//                  "Edition-Edition").
+//   \2          — backreference to the captured token (case-insensitive
+//                  via /i).
+//   \s*$        — optional trailing whitespace, then end-of-string
+//                  (the end-anchor is what keeps "Hello Hello World"
+//                  intact).
+//   /iu         — `u` enables Unicode mode (required for \p{...}); `i`
+//                  keeps the duplicate match case-insensitive.
+const DUPLICATED_TRAILING_WORD_REGEX =
+  /(^|[^\p{L}\p{M}\p{N}_])([\p{L}\p{M}\p{N}_]+)\s+\2\s*$/iu
 
 export function stripDuplicatedTrailingWord(title: string): string {
   if (typeof title !== 'string' || title.length === 0) {
@@ -56,5 +71,10 @@ export function stripDuplicatedTrailingWord(title: string): string {
   // (not "Edition") — the bug class is a single trailing duplication, and
   // iterating would risk eating a legitimate stylistic adjacent repeat
   // that the single-pass regex deliberately tolerates.
-  return title.replace(DUPLICATED_TRAILING_WORD_REGEX, '$1')
+  //
+  // Replacement preserves group 1 (the boundary char, or empty if the
+  // match started at the beginning of the string) and group 2 (the
+  // first-occurrence word, in its original casing). The trailing repeat
+  // + separating whitespace are dropped.
+  return title.replace(DUPLICATED_TRAILING_WORD_REGEX, '$1$2')
 }

@@ -75,12 +75,33 @@ describe('stripDuplicatedTrailingWord', () => {
     )
   })
 
-  it('matches word characters only (digits, underscores included; punctuation excluded)', () => {
-    // \w in the regex means [A-Za-z0-9_]. A trailing token like
-    // "2026 2026" should collapse; "!!! !!!" should not (no word chars).
+  it('matches word characters (Unicode letters / digits / marks / underscore; punctuation excluded)', () => {
+    // The regex's word class is \p{L}\p{M}\p{N}_, so Unicode digits like
+    // "2026 2026" collapse; "!!! !!!" does not (no word chars).
     expect(stripDuplicatedTrailingWord('Festival 2026 2026')).toBe(
       'Festival 2026',
     )
     expect(stripDuplicatedTrailingWord('Wow !!! !!!')).toBe('Wow !!! !!!')
+  })
+
+  // --- Unicode-letter regression coverage (PR #853 R1) ---------------------
+  // Original regex used \w / \b, which are ASCII-only in JS — Unicode-letter
+  // titles like "Beyoncé Beyoncé" or "Eivør Eivør" would have slipped past
+  // the dedup. The /iu Unicode-property variant fixes that.
+  it('collapses a duplicated trailing word with accented Unicode letters (Beyoncé)', () => {
+    expect(stripDuplicatedTrailingWord('Beyoncé Beyoncé')).toBe('Beyoncé')
+  })
+
+  it('collapses a duplicated trailing word containing non-ASCII letters (Eivør)', () => {
+    expect(stripDuplicatedTrailingWord('Eivør Eivør')).toBe('Eivør')
+  })
+
+  it('collapses a Unicode-letter trailing word inside a longer title', () => {
+    // Mirrors the BPM BINGO shape but with a Unicode-letter trailing word
+    // — confirms the Unicode-aware boundary (the colon + space before the
+    // captured word) works the same as it would for an ASCII word.
+    expect(stripDuplicatedTrailingWord('Live at Ogden: Beyoncé Beyoncé')).toBe(
+      'Live at Ogden: Beyoncé',
+    )
   })
 })
