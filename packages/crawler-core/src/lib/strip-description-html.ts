@@ -108,9 +108,11 @@ function decodeEntities(input: string): string {
  * - Named + numeric entities decode to their characters.
  * - Inline whitespace collapses to single spaces.
  * - Output is trimmed; already-clean text round-trips unchanged.
- * - Falsy input (null/undefined/empty) returns `''` without throwing.
+ * - Falsy input (null/undefined/empty) returns `''` without throwing —
+ *   the parameter type accepts null/undefined so callers don't need
+ *   casts or `@ts-expect-error` guards (#844 Copilot R4).
  */
-export function stripDescriptionHtml(html: string): string {
+export function stripDescriptionHtml(html: string | null | undefined): string {
   if (!html) return ''
 
   // 1. Decode entities FIRST so any entity-encoded markup (e.g.

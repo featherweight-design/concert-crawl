@@ -201,7 +201,12 @@ export async function runBackfill(opts: {
     rowsDirty: dirty.length,
     rowsUpdated: updatedCount,
     rowsSkippedConcurrentEdit: skippedCount,
-    committed: true,
+    // `committed` reflects whether writes actually happened. If every
+    // dirty row was skipped by the optimistic lock (concurrent edits),
+    // updatedCount is 0 and we report committed=false even though
+    // --commit was passed — matches the semantics applied on the no-op
+    // early-return paths above (#844 Copilot R4, same shape as #836 R5).
+    committed: updatedCount > 0,
   }
 }
 

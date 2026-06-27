@@ -7,12 +7,9 @@ describe('stripDescriptionHtml', () => {
   })
 
   it('returns empty string for null-like input safely', () => {
-    // The helper is typed as (html: string) — but defensive callers will
-    // pass through undefined/null via the description-optional chain. The
-    // function must not throw on falsy input.
-    // @ts-expect-error — exercising defensive runtime behaviour
+    // The helper accepts (string | null | undefined) so callers can pass
+    // through `events.description` (nullable) directly without a cast.
     expect(stripDescriptionHtml(null)).toBe('')
-    // @ts-expect-error — exercising defensive runtime behaviour
     expect(stripDescriptionHtml(undefined)).toBe('')
   })
 
