@@ -1,3 +1,14 @@
+## [1.85.2](https://github.com/HartiganHM/concert-crawl/compare/v1.85.1...v1.85.2) (2026-06-27)
+
+
+### Bug Fixes
+
+* **crawler-core:** preserve raw title for cross-venue filter ([#826](https://github.com/HartiganHM/concert-crawl/issues/826)) ([9e39afe](https://github.com/HartiganHM/concert-crawl/commit/9e39afed55e0251a09bb75d85664574418b29148)), closes [#605](https://github.com/HartiganHM/concert-crawl/issues/605)
+* r3 — address Copilot review round 3 on PR [#836](https://github.com/HartiganHM/concert-crawl/issues/836) ([387a743](https://github.com/HartiganHM/concert-crawl/commit/387a743040d0cdece7950bfd02b5e3c89f5b254a)), closes [#1](https://github.com/HartiganHM/concert-crawl/issues/1)
+* r4 — consolidate cross-venue comment + move deletedCount outside tx (PR [#836](https://github.com/HartiganHM/concert-crawl/issues/836)) ([ad4803b](https://github.com/HartiganHM/concert-crawl/commit/ad4803b9653ac8191a46a647c056f569c7310353))
+* **scripts:** r1+r2 — cleanup script promoter-prefix pairing + user_events dedupe (PR [#836](https://github.com/HartiganHM/concert-crawl/issues/836)) ([626afb8](https://github.com/HartiganHM/concert-crawl/commit/626afb8dbc6ce71308c6fc38ff5379b2d5610410)), closes [#826](https://github.com/HartiganHM/concert-crawl/issues/826)
+* **scripts:** r5 — committed=false on no-op early-return paths (PR [#836](https://github.com/HartiganHM/concert-crawl/issues/836)) ([a2b6ea1](https://github.com/HartiganHM/concert-crawl/commit/a2b6ea18037f9156361301a2d1ff44a21ef88052))
+
 ## [1.85.1](https://github.com/HartiganHM/concert-crawl/compare/v1.85.0...v1.85.1) (2026-06-26)
 
 
