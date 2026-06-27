@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { reportFailure } from '@concert-crawl/logger'
 import type { LLMResult } from '../../types.js'
 import { stripDescriptionHtml } from '../strip-description-html.js'
+import { stripDuplicatedTrailingWord } from '../strip-duplicated-trailing-word.js'
 
 const isoDateSchema = z
   .string()
@@ -285,8 +286,14 @@ export async function extractWithLlm(
     // the model decides to do.
     const description =
       evt.description != null ? stripDescriptionHtml(evt.description) : null
+    // Defense in depth against the LLM duplicating a trailing word in
+    // the cleaned title (#851 — BPM BINGO "...Edition Edition" prod
+    // shape). Applied to `title` ONLY. `rawTitle` is intentionally NOT
+    // cleaned: the system prompt and the cross-venue presale filter
+    // (#826) require it to be byte-for-byte verbatim from the source.
+    const title = stripDuplicatedTrailingWord(evt.title)
     return {
-      title: evt.title,
+      title,
       rawTitle: evt.rawTitle,
       artist: evt.artist,
       date: evt.date,

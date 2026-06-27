@@ -491,6 +491,37 @@ describe('extractWithLlm', () => {
     }
   })
 
+  // #851: BPM BINGO prod incident. Haiku occasionally duplicates a
+  // trailing word in `title`. We strip it at the extractor boundary so
+  // the malformed string never reaches the DB. rawTitle stays verbatim
+  // because the cross-venue presale filter (#826) and the system-prompt
+  // contract both depend on byte-for-byte source fidelity.
+  it('cleans a duplicated trailing word from the extracted title (#851)', async () => {
+    const mockEvents = [
+      {
+        title: 'BPM BINGO! Dombresky / Walker & Royce Edition Edition',
+        rawTitle: 'BPM BINGO! Dombresky / Walker & Royce Edition Edition',
+        artist: 'Dombresky / Walker & Royce',
+        date: '2026-09-12',
+        confidence: 0.85,
+        isConcert: false,
+        reviewNeeded: false,
+      },
+    ]
+    mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents))
+
+    const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
+
+    expect(result.events).toHaveLength(1)
+    expect(result.events[0]?.title).toBe(
+      'BPM BINGO! Dombresky / Walker & Royce Edition',
+    )
+    // rawTitle MUST stay verbatim — see #826 cross-venue routing contract.
+    expect(result.events[0]?.rawTitle).toBe(
+      'BPM BINGO! Dombresky / Walker & Royce Edition Edition',
+    )
+  })
+
   it("does NOT log 'llm.output_truncated' on a healthy tool_use stop", async () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     try {
