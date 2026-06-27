@@ -1,3 +1,19 @@
+# [1.87.0](https://github.com/HartiganHM/concert-crawl/compare/v1.86.0...v1.87.0) (2026-06-27)
+
+
+### Bug Fixes
+
+* **crawler-core:** strip HTML from event description at extraction ([#827](https://github.com/HartiganHM/concert-crawl/issues/827)) ([eae2034](https://github.com/HartiganHM/concert-crawl/commit/eae20341558a59b7bae52c66bd4d95c6a4e62e87))
+* r1 — address Copilot review round 1 on PR [#844](https://github.com/HartiganHM/concert-crawl/issues/844) ([ff6de63](https://github.com/HartiganHM/concert-crawl/commit/ff6de63ef850bc274b7d37ce1512d73144630845))
+* r2 — address Copilot review round 2 on PR [#844](https://github.com/HartiganHM/concert-crawl/issues/844) ([086c2af](https://github.com/HartiganHM/concert-crawl/commit/086c2afc5a881a2eeaf5b1d909b50649bec908f6)), closes [#x2014](https://github.com/HartiganHM/concert-crawl/issues/x2014) [#X2014](https://github.com/HartiganHM/concert-crawl/issues/X2014)
+* r3 — address Copilot review round 3 on PR [#844](https://github.com/HartiganHM/concert-crawl/issues/844) ([761bfa2](https://github.com/HartiganHM/concert-crawl/commit/761bfa224a70793a589e290ba98436db53fca137))
+* r4 — address Copilot review round 4 on PR [#844](https://github.com/HartiganHM/concert-crawl/issues/844) (final) ([4293614](https://github.com/HartiganHM/concert-crawl/commit/4293614743adbc0197328aa1fa069411a3e47315))
+
+
+### Features
+
+* **web:** move Clerk auth gate to Edge Middleware ([#841](https://github.com/HartiganHM/concert-crawl/issues/841)) ([3b0993c](https://github.com/HartiganHM/concert-crawl/commit/3b0993c465364465d38e30ad4771c7a679b13e92))
+
 # [1.86.0](https://github.com/HartiganHM/concert-crawl/compare/v1.85.4...v1.86.0) (2026-06-27)
 
 
