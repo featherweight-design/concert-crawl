@@ -199,10 +199,18 @@ function preview(value: string, max = 80): string {
 // patch-source bug Copilot flagged in PR #855 R4.
 
 /** Mergeable field map: patch key (camelCase) → column name (snake_case).
- * Single source of truth for both buildWinnerPatch and
- * buildCoalesceAssignments so the two stay in lockstep. Typed via
- * Record<PatchKey, string> so iterating its keys yields PatchKey
- * directly — no `as` cast needed inside buildCoalesceAssignments. */
+ *
+ * Single source of truth for the entire merge pipeline. Both
+ * buildWinnerPatch and buildCoalesceAssignments derive their field list
+ * from `Object.keys(MERGEABLE_FIELD_COLUMNS)` (see
+ * `MERGEABLE_PATCH_KEYS` below), so adding a new mergeable field is a
+ * one-line change here — every downstream helper picks it up
+ * automatically. PR #855 R5 collapsed the previous two hand-maintained
+ * `PatchKey[]` lists into this derived constant after Copilot flagged
+ * the drift risk.
+ *
+ * Typed via Record<PatchKey, string> so the keys are statically known
+ * to be PatchKey — no `as` cast needed inside the helpers. */
 type PatchKey = keyof Required<ClusterPlan['winnerPatch']>
 const MERGEABLE_FIELD_COLUMNS: Record<PatchKey, string> = {
   description: 'description',
@@ -213,6 +221,17 @@ const MERGEABLE_FIELD_COLUMNS: Record<PatchKey, string> = {
   ticketPriceMin: 'ticket_price_min',
   ticketPriceMax: 'ticket_price_max',
 }
+
+/** Iteration order for the merge helpers, derived from
+ * `MERGEABLE_FIELD_COLUMNS` so the two helpers cannot drift. The cast
+ * is sound: `MERGEABLE_FIELD_COLUMNS` is typed `Record<PatchKey, string>`
+ * declared inline above with exactly the PatchKey union as its key set,
+ * so Object.keys returns exactly PatchKey strings at runtime — TS just
+ * widens to string[]. Exported so the test suite can assert both
+ * helpers operate on the exact same field set. */
+export const MERGEABLE_PATCH_KEYS = Object.keys(
+  MERGEABLE_FIELD_COLUMNS,
+) as PatchKey[]
 
 /**
  * Build SQL fragments of the form `col = COALESCE(col, $patch)` for
@@ -229,18 +248,10 @@ function buildCoalesceAssignments(
   patch: ClusterPlan['winnerPatch'],
 ): ReturnType<typeof sql>[] {
   const out: ReturnType<typeof sql>[] = []
-  // Object.keys is typed as string[], so wrap in a typed helper that
-  // walks PatchKey explicitly. Avoids an `as` cast on the iteration.
-  const patchKeys: PatchKey[] = [
-    'description',
-    'imageUrl',
-    'ticketUrl',
-    'doorsTime',
-    'showTime',
-    'ticketPriceMin',
-    'ticketPriceMax',
-  ]
-  for (const patchKey of patchKeys) {
+  // Iterates `MERGEABLE_PATCH_KEYS` so this helper and buildWinnerPatch
+  // are guaranteed to share the same field set — adding a column to
+  // MERGEABLE_FIELD_COLUMNS picks up in both helpers automatically.
+  for (const patchKey of MERGEABLE_PATCH_KEYS) {
     const value = patch[patchKey]
     if (value === undefined) continue
     const columnName = MERGEABLE_FIELD_COLUMNS[patchKey]
@@ -259,19 +270,10 @@ export function buildWinnerPatch(
   losers: RowWithCanonical[],
 ): ClusterPlan['winnerPatch'] {
   const patch: ClusterPlan['winnerPatch'] = {}
-  // Same key list used by buildCoalesceAssignments — defining it as a
-  // PatchKey[] (rather than Object.keys + cast) means TypeScript catches
-  // any drift between the two helpers at compile time.
-  const fields: PatchKey[] = [
-    'description',
-    'imageUrl',
-    'ticketUrl',
-    'doorsTime',
-    'showTime',
-    'ticketPriceMin',
-    'ticketPriceMax',
-  ]
-  for (const field of fields) {
+  // Iterates `MERGEABLE_PATCH_KEYS` (derived from MERGEABLE_FIELD_COLUMNS)
+  // so this helper and buildCoalesceAssignments cannot drift — both
+  // walk the exact same field set in the same order.
+  for (const field of MERGEABLE_PATCH_KEYS) {
     if (winner[field] !== null) continue
     for (const loser of losers) {
       const value = loser[field]

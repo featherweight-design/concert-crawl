@@ -7,6 +7,10 @@ import {
   type UserEventRow,
   type WinnerPriorityRow,
 } from './2026-06-27-canonicalize-markdown-apostrophes-helpers.js'
+import {
+  MERGEABLE_PATCH_KEYS,
+  buildWinnerPatch,
+} from './2026-06-27-canonicalize-markdown-apostrophes.js'
 
 const WINNER = 'winner-event'
 const LOSER_A = 'loser-a'
@@ -314,6 +318,94 @@ describe('sortBucketByWinnerPriority', () => {
     const inputBefore = input.map((row) => row.id)
     sortBucketByWinnerPriority(input)
     expect(input.map((row) => row.id)).toEqual(inputBefore)
+  })
+})
+
+describe('MERGEABLE_PATCH_KEYS / buildWinnerPatch (single-source-of-truth contract)', () => {
+  // Regression target: PR #855 R5 — `patchKeys` was previously hand-
+  // maintained inside both buildWinnerPatch and buildCoalesceAssignments,
+  // so adding a column to MERGEABLE_FIELD_COLUMNS without updating both
+  // lists would silently leave that field out of the merge. The fix
+  // derives the iteration order from MERGEABLE_FIELD_COLUMNS keys via
+  // MERGEABLE_PATCH_KEYS. This test pins that contract so a regression
+  // surfaces immediately.
+
+  // Minimal RowWithCanonical-shaped factory for the test. Only the
+  // mergeable fields matter to buildWinnerPatch's behavior; the rest are
+  // shape-only filler so the structural type check passes.
+  function makeWinnerRow(
+    overrides: Partial<Record<string, string | null>> = {},
+  ) {
+    return {
+      id: 'winner',
+      venueId: 'venue-1',
+      venueName: 'Venue 1',
+      date: '2026-07-01',
+      status: 'upcoming' as const,
+      title: 'title',
+      storedCanonical: 'title',
+      computedCanonical: 'title',
+      confidenceScore: '0.9',
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+      // All mergeable fields null by default — buildWinnerPatch will
+      // attempt to fill every one of them from losers.
+      description: null,
+      imageUrl: null,
+      ticketUrl: null,
+      doorsTime: null,
+      showTime: null,
+      ticketPriceMin: null,
+      ticketPriceMax: null,
+      ...overrides,
+    }
+  }
+
+  it('exposes a stable, non-empty patch-key set', () => {
+    // If this fails, MERGEABLE_FIELD_COLUMNS shrank or its key derivation
+    // broke. Both downstream helpers depend on this set being correct.
+    expect(MERGEABLE_PATCH_KEYS.length).toBeGreaterThan(0)
+    expect(new Set(MERGEABLE_PATCH_KEYS).size).toBe(MERGEABLE_PATCH_KEYS.length)
+  })
+
+  it('buildWinnerPatch fills EVERY MERGEABLE_PATCH_KEY when winner is null and a loser has a value', () => {
+    // Construct a loser that has a non-null value for every mergeable
+    // field. buildWinnerPatch should produce a patch with the same key
+    // set as MERGEABLE_PATCH_KEYS — proving the helper walks the
+    // single-source-of-truth list (not a separate hand-maintained one)
+    // and would automatically pick up any future fields added to
+    // MERGEABLE_FIELD_COLUMNS.
+    const winner = makeWinnerRow()
+    const loserOverrides: Partial<Record<string, string | null>> = {}
+    for (const key of MERGEABLE_PATCH_KEYS) {
+      loserOverrides[key] = `loser-${key}`
+    }
+    const loser = makeWinnerRow({
+      id: 'loser',
+      ...loserOverrides,
+    })
+    const patch = buildWinnerPatch(winner, [loser])
+    expect(Object.keys(patch).sort()).toEqual([...MERGEABLE_PATCH_KEYS].sort())
+    for (const key of MERGEABLE_PATCH_KEYS) {
+      expect(patch[key]).toBe(`loser-${key}`)
+    }
+  })
+
+  it('buildWinnerPatch returns empty patch when winner has values for every mergeable field', () => {
+    // Inverse case — pinning that the iteration short-circuits per-field
+    // when the winner is already populated, so the patch stays bounded
+    // to the actual gaps.
+    const winnerOverrides: Partial<Record<string, string | null>> = {}
+    for (const key of MERGEABLE_PATCH_KEYS) {
+      winnerOverrides[key] = `winner-${key}`
+    }
+    const winner = makeWinnerRow(winnerOverrides)
+    const loserOverrides: Partial<Record<string, string | null>> = {}
+    for (const key of MERGEABLE_PATCH_KEYS) {
+      loserOverrides[key] = `loser-${key}`
+    }
+    const loser = makeWinnerRow({ id: 'loser', ...loserOverrides })
+    const patch = buildWinnerPatch(winner, [loser])
+    expect(Object.keys(patch)).toEqual([])
   })
 })
 
