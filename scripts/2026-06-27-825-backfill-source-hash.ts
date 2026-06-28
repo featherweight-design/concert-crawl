@@ -35,12 +35,19 @@
  *
  * What it does:
  *   1. Selects every `events` row where `verified = true`,
- *      `status = 'upcoming'`, and `date >= CURRENT_DATE`. Past events
- *      are excluded because they never get re-crawled; touching them is
- *      wasted work and write risk. `verified = false` rows are also
- *      excluded — the changedVerified notification path only fires for
- *      `verified = true` rows, so unverified rows don't need preemptive
- *      backfill.
+ *      `status = 'upcoming'`, and `date >= today (Denver tz)`. Past
+ *      events are excluded because they never get re-crawled; touching
+ *      them is wasted work and write risk. `verified = false` rows are
+ *      also excluded — the changedVerified notification path only fires
+ *      for `verified = true` rows, so unverified rows don't need
+ *      preemptive backfill. The "today" comparison uses Denver-local
+ *      date (not Postgres `CURRENT_DATE`) to match the crawler's
+ *      `DENVER_TODAY` filter in packages/crawler-core/src/crawl.ts —
+ *      otherwise a run during the UTC-midnight → Denver-midnight window
+ *      (6–7h, depending on DST) would skip same-day Denver events that
+ *      the crawler still considers upcoming, leaving exactly the rows
+ *      that can still fire false `crawl.verified_event_changed` alerts
+ *      at old-format hashes.
  *   2. For each row, recomputes `sourceHash` under the new format using
  *      the `hashEvent` helper from packages/crawler-core/src/lib/hash.ts.
  *   3. Compares to the row's current `source_hash`:
@@ -113,6 +120,17 @@ export async function runBackfill(opts: {
   //    verified rows on future dates that the crawler re-encounters —
   //    everything else is out of scope and updating it is wasted work
   //    plus needless write risk.
+  //
+  //    "Today" must use Denver-local date, not Postgres CURRENT_DATE.
+  //    Mirrors `DENVER_TODAY` in packages/crawler-core/src/crawl.ts:147,
+  //    which the crawler uses to decide which rows it'll re-encounter.
+  //    If this script ran around UTC midnight with CURRENT_DATE, the
+  //    candidate set would advance ~6–7h before Denver's midnight and
+  //    miss same-day Denver events that the crawler still considers
+  //    upcoming — leaving exactly the rows that can still fire false
+  //    `crawl.verified_event_changed` alerts at old-format hashes. Keep
+  //    this literal in sync with crawl.ts:147.
+  const denverToday = sql`(NOW() AT TIME ZONE 'America/Denver')::date`
   const candidates: CandidateRow[] = await db
     .select({
       id: events.id,
@@ -127,12 +145,12 @@ export async function runBackfill(opts: {
       and(
         eq(events.verified, true),
         eq(events.status, 'upcoming'),
-        gte(events.date, sql`CURRENT_DATE`),
+        gte(events.date, denverToday),
       ),
     )
 
   console.log(
-    `Loaded ${candidates.length} candidate rows (verified=true, status=upcoming, date>=today).`,
+    `Loaded ${candidates.length} candidate rows (verified=true, status=upcoming, date>=today Denver tz).`,
   )
 
   // 2. Compute new-format hash per row; partition into noop vs dirty.
