@@ -23,8 +23,11 @@ import { canonicalizeTitle } from './canonical-title.js'
  *
  * The SQL ordering matches canonicalizeTitle's JS ordering exactly:
  *   1. Markdown bold first (`**...**`, `__...__`), italic next
- *      (`*...*`, `_..._`). Two-char markers run before single-char so
- *      the italic pass doesn't half-strip a bold pair.
+ *      (`*...*`, `_..._`), inner group `(.+?)` with Postgres AREs'
+ *      lazy quantifier so the SQL matches JS's `([\s\S]+?)` byte-for-
+ *      byte (including emphasized spans whose inner text contains a
+ *      marker char). Two-char markers run before single-char so the
+ *      italic pass doesn't half-strip a bold pair.
  *   2. NFD + strip combining marks.
  *   3. Latin Extended translate() — matches LATIN_EXTENDED_MAP.
  *   4. Strip apostrophe variants (curly + straight).
@@ -94,6 +97,14 @@ const PARITY_INPUTS: { label: string; input: string }[] = [
     input: 'Swing Nights Lindy Jam **TUESDAY 7/14**',
   },
 
+  // Marker char inside emphasized span — the bold pair contains a
+  // standalone `*` / `_` inside its inner text. JS uses lazy `[\s\S]+?`
+  // which matches happily; SQL used to use `[^*]+` exclude-the-marker
+  // and silently diverged here. After moving SQL to `.+?` these pin the
+  // parity contract.
+  { label: 'bold with inner *', input: 'Foo **bar*baz** qux' },
+  { label: 'bold with inner _', input: 'Foo __bar_baz__ qux' },
+
   // Issue #850 — apostrophe variants stripped. All forms canonicalize
   // identically to the apostrophe-less variant.
   { label: 'curly right apostrophe', input: 'Earl Sweatshirt’s SICK! Tour' },
@@ -118,13 +129,17 @@ describe('canonical_title — SQL backfill / JS function parity', () => {
     // double-cast needed — the SELECT here yields exactly one row.
     //
     // Markdown stripping uses regexp_replace with a backref (`\1`) to
-    // keep the inner text. The inner group uses POSIX `[^*]+` for `*`
-    // markers and `[^_]+` for `_` markers — non-greedy quantifiers and
-    // `.+?` aren't supported by Postgres' POSIX regex engine, so an
-    // exclude-the-marker character class is the equivalent. Two-char
-    // markers strip first (so single-char passes don't see the bold
-    // pair); the 'g' flag runs each substitution across every match in
-    // the title.
+    // keep the inner text. Postgres' Advanced Regular Expressions
+    // (AREs) do support non-greedy quantifiers (`+?`), so the inner
+    // group `(.+?)` is the byte-equivalent of JS's `([\s\S]+?)` —
+    // `.` matches any char including newline by default in AREs, and
+    // `+?` is lazy. Earlier revisions of this test used `[^*]+` / `[^_]+`
+    // exclude-the-marker character classes, but that diverged from JS on
+    // inputs where the inner text itself contained the marker char (e.g.
+    // `**foo*bar**` → JS keeps `foo*bar`, exclude-class SQL didn't match
+    // at all). Switching to `.+?` closes the gap. Two-char markers
+    // strip first (so single-char passes don't see the bold pair); the
+    // 'g' flag runs each substitution across every match in the title.
     //
     // Apostrophes (curly + straight) are stripped via translate() with
     // an empty replacement set — translate() drops any char in the
@@ -137,13 +152,13 @@ describe('canonical_title — SQL backfill / JS function parity', () => {
               regexp_replace(
                 regexp_replace(
                   ${input}::text,
-                  '\\*\\*([^*]+)\\*\\*', '\\1', 'g'
+                  '\\*\\*(.+?)\\*\\*', '\\1', 'g'
                 ),
-                '__([^_]+)__', '\\1', 'g'
+                '__(.+?)__', '\\1', 'g'
               ),
-              '\\*([^*]+)\\*', '\\1', 'g'
+              '\\*(.+?)\\*', '\\1', 'g'
             ),
-            '_([^_]+)_', '\\1', 'g'
+            '_(.+?)_', '\\1', 'g'
           ) AS val
         ),
         nfd AS (
