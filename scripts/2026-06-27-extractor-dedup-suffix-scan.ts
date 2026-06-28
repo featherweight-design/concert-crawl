@@ -85,15 +85,40 @@ interface DirtyRow {
   after: string
 }
 
+// Postgres-side prefilter regex (Stage 1 in the two-stage filter described
+// above). Declared as a `String.raw` template so backslashes survive the
+// JS string literal untouched and Postgres receives the regex verbatim.
+//
+// Without `String.raw` the JS parser eats unrecognized escapes: `\m`
+// becomes `m`, `\1` becomes the legacy octal `\x01` (char code 1, and a
+// syntax error in strict mode), and so on — Postgres then gets a garbled
+// regex that silently matches nothing, and the candidate scan becomes a
+// no-op. PR #853 R2 fix.
+//
+// Anchors:
+//   `\m`             — Postgres word-start boundary (modern syntax;
+//                      replaces the deprecated `[[:<:]]` form).
+//   `([[:alnum:]_]+)`— capture the word using POSIX char class (locale-
+//                      aware on UTF-8 databases) plus `_`. Not byte-
+//                      identical to the JS helper's
+//                      `[\p{L}\p{M}\p{N}_]+` — Postgres regex has no
+//                      Unicode property escapes — but the docstring at the
+//                      top of this file already positions SQL as a
+//                      prefilter (false-positives OK, JS is source of
+//                      truth via the `cleaned === row.title` short-
+//                      circuit), so byte-equivalence is not required.
+//   `[[:space:]]+`   — one-or-more whitespace separating the two
+//                      occurrences.
+//   `\1`             — backreference to the captured word.
+//   `[[:space:]]*$`  — optional trailing whitespace, then end-of-string,
+//                      mirroring the JS `\s*$` anchor.
+//
+// Operator on the query is `~*` (case-insensitive POSIX regex match).
+export const SQL_PREFILTER_REGEX = String.raw`\m([[:alnum:]_]+)[[:space:]]+\1[[:space:]]*$`
+
 export async function runBackfill(opts: {
   apply: boolean
 }): Promise<BackfillSummary> {
-  // Postgres-side filter: trailing duplicated word, case-insensitive,
-  // separated by whitespace only. `[[:<:]]` / `[[:>:]]` are POSIX word-
-  // boundary anchors (the regex equivalent of `\b` in JS). `(\w+)`
-  // captures the word; `\s+\1` requires it to repeat after whitespace;
-  // `\s*$` anchors at end-of-string with optional trailing whitespace,
-  // mirroring the JS regex in strip-duplicated-trailing-word.ts.
   const candidates = await db
     .select({
       id: events.id,
@@ -103,7 +128,7 @@ export async function runBackfill(opts: {
     })
     .from(events)
     .leftJoin(venues, eq(events.venueId, venues.id))
-    .where(sql`${events.title} ~* '[[:<:]](\w+)[[:>:]]\s+\1\s*$'`)
+    .where(sql`${events.title} ~* ${SQL_PREFILTER_REGEX}`)
 
   console.log(`Loaded ${candidates.length} candidate rows from events.`)
 
