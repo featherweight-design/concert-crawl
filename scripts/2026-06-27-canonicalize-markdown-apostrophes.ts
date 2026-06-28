@@ -22,9 +22,14 @@
  *      idempotent rather than accumulating duplicate snapshots.
  *   2. RECOMPUTE — for every row whose newly-computed canonical_title
  *      differs from what's stored, plan an UPDATE.
- *   3. COLLAPSE — identify clusters where the recompute would create
+ *   3. COLLAPSE — identify clusters where the new normalizer creates
  *      a (venue_id, date, canonical_title) collision among upcoming
- *      rows. Pick a winner deterministically:
+ *      rows. Only clusters where AT LEAST ONE row's canonical_title
+ *      would change under the new normalizer are processed —
+ *      pre-existing collisions where every row already shares the same
+ *      stored canonical_title are explicitly out of scope for this PR
+ *      (see PR #855 Copilot R3 / selectCollapseClusters docstring).
+ *      Pick a winner deterministically:
  *        a. highest confidence_score (NULLs sort last)
  *        b. earliest created_at as tiebreak
  *        c. lowest id as final stable tiebreak
@@ -84,6 +89,7 @@ import { canonicalizeTitle } from '../packages/crawler-core/src/lib/canonical-ti
 import {
   chunk,
   planUserEventDedup,
+  selectCollapseClusters,
   type UserEventRow,
 } from './2026-06-27-canonicalize-markdown-apostrophes-helpers.js'
 
@@ -154,7 +160,11 @@ export interface BackfillSummary {
   rowsRecomputed: number
   /** Standalone recomputes (no collision with another row). */
   rowsRecomputedStandalone: number
-  /** Collapse clusters identified. */
+  /** Collapse clusters identified. Only counts buckets where the new
+   * normalizer would change at least one row's canonical_title; pre-
+   * existing (venue_id, date, canonical_title) collisions where every
+   * row already has matching canonical_title are intentionally skipped
+   * (see selectCollapseClusters / PR #855 R3). */
   collapseClustersFound: number
   /** Loser rows that would be deleted post-collapse. */
   collapseLosers: number
@@ -284,14 +294,30 @@ export async function runBackfill(opts: {
     upcomingByKey.set(key, bucket)
   }
 
+  // Tighten cluster construction so this script only processes
+  // collisions the new normalizer is responsible for. A bucket where
+  // every row already has the same stored canonical_title is a
+  // pre-existing dupe (residual from #821 / earlier cleanup gaps) and
+  // would silently widen this script's blast radius beyond what the
+  // filename + PR title claim. See helpers/selectCollapseClusters for
+  // the full Copilot R3 rationale.
+  const qualifyingClusters = selectCollapseClusters(upcomingByKey)
+  const skippedPreExistingClusters =
+    [...upcomingByKey.values()].filter((bucket) => bucket.length >= 2).length -
+    qualifyingClusters.size
+  if (skippedPreExistingClusters > 0) {
+    console.log(
+      `Skipped ${skippedPreExistingClusters} pre-existing collision cluster(s) — every row's canonical already matches the new normalizer (out of scope for #850).`,
+    )
+  }
+
   const collapseClusters: ClusterPlan[] = []
   const recomputeOnly: RecomputeOnly[] = []
   const handledRowIds = new Set<string>()
 
-  for (const [key, bucket] of upcomingByKey) {
-    if (bucket.length < 2) continue
-    // This bucket has a collision under the new normalization. Pick a
-    // winner deterministically, treat the rest as losers.
+  for (const [key, bucket] of qualifyingClusters) {
+    // This bucket has a collision the new normalization is responsible
+    // for. Pick a winner deterministically, treat the rest as losers.
     const winner = pickWinner(bucket)
     const losers = bucket.filter((row) => row.id !== winner.id)
     collapseClusters.push({

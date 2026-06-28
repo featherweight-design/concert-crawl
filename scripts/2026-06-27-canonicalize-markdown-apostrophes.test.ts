@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   chunk,
   planUserEventDedup,
+  selectCollapseClusters,
   type UserEventRow,
 } from './2026-06-27-canonicalize-markdown-apostrophes-helpers.js'
 
@@ -126,6 +127,90 @@ describe('planUserEventDedup', () => {
     )
     expect(plan.rowIdsToRedirect).toEqual(['row-aaa'])
     expect(plan.rowIdsToDelete).toEqual(['row-zzz'])
+  })
+})
+
+describe('selectCollapseClusters', () => {
+  // Minimal row shape — just enough fields for the helper to evaluate
+  // "did the new normalizer change anything in this bucket?". Mirrors
+  // the structural CanonicalChangeRow interface.
+  function makeBucketRow(stored: string, computed: string) {
+    return { storedCanonical: stored, computedCanonical: computed }
+  }
+
+  it('returns an empty map for empty input', () => {
+    const out = selectCollapseClusters(new Map())
+    expect(out.size).toBe(0)
+  })
+
+  it('skips single-row buckets (no collision precondition)', () => {
+    const buckets = new Map([
+      ['venue-1|2026-07-01|x', [makeBucketRow('old-canonical', 'x')]],
+    ])
+    const out = selectCollapseClusters(buckets)
+    expect(out.size).toBe(0)
+  })
+
+  it("skips clusters where no row's canonical_title would change", () => {
+    // Pre-existing collision: both rows already share the same stored
+    // canonical AND the new normalizer would produce the same value.
+    // Out of scope for #850 — would be silently swept otherwise.
+    const buckets = new Map([
+      [
+        'venue-1|2026-07-01|x',
+        [makeBucketRow('x', 'x'), makeBucketRow('x', 'x')],
+      ],
+    ])
+    const out = selectCollapseClusters(buckets)
+    expect(out.size).toBe(0)
+  })
+
+  it('processes clusters where at least one row recomputes to a new canonical', () => {
+    // The script's target case: row A's stored canonical was the old
+    // (unnormalized) variant, row B's was already the normalized form.
+    // The new normalizer would change A's canonical → they collide.
+    const bucket = [
+      makeBucketRow('zeds dead jamboree!', 'zeds dead jamboree!'),
+      makeBucketRow("zed's dead jamboree!", 'zeds dead jamboree!'),
+    ]
+    const buckets = new Map([
+      ['venue-1|2026-07-01|zeds dead jamboree!', bucket],
+    ])
+    const out = selectCollapseClusters(buckets)
+    expect(out.size).toBe(1)
+    expect(out.get('venue-1|2026-07-01|zeds dead jamboree!')).toBe(bucket)
+  })
+
+  it('processes clusters where every row recomputes (both stored values stale)', () => {
+    // Edge case: both rows had the old un-normalized stored canonical
+    // AND both recompute to the same new value. Still in scope —
+    // the new normalizer is what produces the collision.
+    const bucket = [
+      makeBucketRow('old-a', 'new-x'),
+      makeBucketRow('old-b', 'new-x'),
+    ]
+    const buckets = new Map([['venue-1|2026-07-01|new-x', bucket]])
+    const out = selectCollapseClusters(buckets)
+    expect(out.size).toBe(1)
+  })
+
+  it('keeps qualifying clusters and skips pre-existing ones in a mixed input', () => {
+    // Realistic mix: one cluster the new normalizer creates, one
+    // pre-existing dupe. Helper must keep the first and skip the
+    // second.
+    const qualifying = [
+      makeBucketRow('old-stored', 'new-x'),
+      makeBucketRow('new-x', 'new-x'),
+    ]
+    const preExisting = [makeBucketRow('y', 'y'), makeBucketRow('y', 'y')]
+    const buckets = new Map<string, ReturnType<typeof makeBucketRow>[]>([
+      ['venue-1|2026-07-01|new-x', qualifying],
+      ['venue-1|2026-07-02|y', preExisting],
+    ])
+    const out = selectCollapseClusters(buckets)
+    expect(out.size).toBe(1)
+    expect(out.has('venue-1|2026-07-01|new-x')).toBe(true)
+    expect(out.has('venue-1|2026-07-02|y')).toBe(false)
   })
 })
 

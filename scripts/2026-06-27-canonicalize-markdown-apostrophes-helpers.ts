@@ -3,12 +3,18 @@
  * scripts/2026-06-27-canonicalize-markdown-apostrophes.ts so the dedupe
  * logic can be unit-tested without a live DB.
  *
- * The two helpers here back Copilot R1 review feedback on PR #855:
- *   - planUserEventDedup: handles the multi-loser-watches-by-same-user
+ * Helpers here back Copilot review feedback on PR #855:
+ *   - planUserEventDedup (R1): handles the multi-loser-watches-by-same-user
  *     case the original SQL missed (it would have hit the UNIQUE
  *     (user_id, event_id) index mid-redirect).
- *   - chunk: batches a flat array into fixed-size sublists so the
+ *   - chunk (R1): batches a flat array into fixed-size sublists so the
  *     snapshot INSERT stays under Postgres' bind-parameter ceiling.
+ *   - selectCollapseClusters (R3): filters cluster construction down to
+ *     buckets that contain at least one row whose canonical_title would
+ *     change under the new normalizer. Keeps the script's blast radius
+ *     bounded to the PR's stated scope — pre-existing
+ *     (venue_id, date, canonical_title) collisions where no row's
+ *     canonical_title would change are NOT this script's responsibility.
  */
 
 /**
@@ -135,6 +141,56 @@ export function chunk<T>(items: T[], size: number): T[][] {
   const out: T[][] = []
   for (let offset = 0; offset < items.length; offset += size) {
     out.push(items.slice(offset, offset + size))
+  }
+  return out
+}
+
+/**
+ * Minimum row shape selectCollapseClusters needs to filter clusters down
+ * to the ones this script is actually responsible for. Defined as a
+ * structural minimum so the script's richer row type (with FK fields,
+ * confidence_score, etc.) flows in without an explicit cast.
+ */
+export interface CanonicalChangeRow {
+  storedCanonical: string
+  computedCanonical: string
+}
+
+/**
+ * Filter a list of collision buckets (clusters grouped by
+ * (venue_id, date, computedCanonical)) down to the ones this script is
+ * responsible for.
+ *
+ * A cluster qualifies when:
+ *   1. It contains at least 2 rows (the collision precondition), AND
+ *   2. At least one row's `computedCanonical !== storedCanonical` — i.e.
+ *      the new normalizer is what created (or contributes to) this
+ *      collision.
+ *
+ * Pre-existing (venue_id, date, canonical_title) collisions where every
+ * row already has the same stored canonical_title are NOT this script's
+ * responsibility. They represent residual dupes from earlier cleanup
+ * passes (e.g. #821 gaps) and would only be silently swept under this
+ * script's filename if we collapsed every collision unconditionally.
+ * If those need attention they should get a separate, explicitly-scoped
+ * cleanup operation. See PR #855 Copilot R3 for the discussion that
+ * tightened this filter.
+ *
+ * Generic over the row type so the script's full RowWithCanonical
+ * structure flows through without losing fields the cluster planner
+ * needs (winner selection, FK reassignment, merge patch, etc.).
+ */
+export function selectCollapseClusters<TRow extends CanonicalChangeRow>(
+  bucketsByKey: Map<string, TRow[]>,
+): Map<string, TRow[]> {
+  const out = new Map<string, TRow[]>()
+  for (const [key, bucket] of bucketsByKey) {
+    if (bucket.length < 2) continue
+    const hasNormalizerChange = bucket.some(
+      (row) => row.computedCanonical !== row.storedCanonical,
+    )
+    if (!hasNormalizerChange) continue
+    out.set(key, bucket)
   }
   return out
 }
