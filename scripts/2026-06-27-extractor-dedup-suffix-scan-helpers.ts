@@ -13,7 +13,10 @@
  *     used as Stage 1 of the two-stage filter. The regression test
  *     in 2026-06-27-extractor-dedup-suffix-scan.test.ts pins the
  *     literal-backslash invariant (`\m`, `\1`) that was broken in
- *     R1 by accidental JS escape-sequence interpretation.
+ *     R1 by accidental JS escape-sequence interpretation. R8 widened
+ *     the captured word from `[[:alnum:]_]+` to `[^[:space:]]+` so
+ *     real duplicates containing non-alnum Unicode (combining marks,
+ *     etc.) aren't filtered out before the JS source-of-truth pass.
  *   - BACKUP_TABLE_DDL / BACKUP_TABLE_PK_BACKFILL_DDL /
  *     BACKUP_UPSERT_SQL (R8): pin the backup-table schema (PRIMARY
  *     KEY on event_id) and the upsert shape (preserve title_before
@@ -36,25 +39,28 @@
 // Anchors:
 //   `\m`             — Postgres word-start boundary (modern syntax;
 //                      replaces the deprecated `[[:<:]]` form).
-//   `([[:alnum:]_]+)`— capture the word using POSIX char class
-//                      (locale-aware on UTF-8 databases) plus `_`.
-//                      Not byte-identical to the JS helper's
-//                      `[\p{L}\p{M}\p{N}_]+` — Postgres regex has
-//                      no Unicode property escapes — but the
-//                      docstring at the top of the script already
-//                      positions SQL as a prefilter (false-positives
-//                      OK, JS is source of truth via the
-//                      `cleaned === row.title` short-circuit), so
-//                      byte-equivalence is not required.
+//   `([^[:space:]]+)`— capture the trailing "word" as a run of
+//                      non-whitespace characters. Widened from
+//                      `[[:alnum:]_]+` in R8 because the narrower
+//                      POSIX class misses real duplicates the JS
+//                      helper would clean (e.g. tokens containing
+//                      combining marks or other non-alnum Unicode
+//                      forms depending on the DB collation). Since
+//                      SQL is only a prefilter (false positives OK),
+//                      a wider non-whitespace token is the correct
+//                      direction — false positives get discarded at
+//                      the JS layer via the `cleaned === row.title`
+//                      short-circuit. The JS helper remains the
+//                      source of truth.
 //   `[[:space:]]+`   — one-or-more whitespace separating the two
 //                      occurrences.
-//   `\1`             — backreference to the captured word.
+//   `\1`             — backreference to the captured token.
 //   `[[:space:]]*$`  — optional trailing whitespace, then end-of-
 //                      string, mirroring the JS `\s*$` anchor.
 //
 // Operator on the query is `~*` (case-insensitive POSIX regex
 // match).
-export const SQL_PREFILTER_REGEX = String.raw`\m([[:alnum:]_]+)[[:space:]]+\1[[:space:]]*$`
+export const SQL_PREFILTER_REGEX = String.raw`\m([^[:space:]]+)[[:space:]]+\1[[:space:]]*$`
 
 // Backup-table schema, used by the script on first --apply
 // (PR #853 R8). PRIMARY KEY on `event_id` guarantees at most one

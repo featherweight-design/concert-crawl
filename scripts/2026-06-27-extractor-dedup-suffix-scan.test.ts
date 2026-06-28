@@ -40,8 +40,19 @@ describe('extractor-dedup-suffix-scan — SQL_PREFILTER_REGEX', () => {
     expect(SQL_PREFILTER_REGEX).not.toContain(String.fromCharCode(1))
   })
 
-  it('uses POSIX character classes for word + whitespace', () => {
-    expect(SQL_PREFILTER_REGEX).toContain('[[:alnum:]_]+')
+  it('uses a non-whitespace POSIX class for the captured token', () => {
+    // R8 widened the captured "word" from `[[:alnum:]_]+` to
+    // `[^[:space:]]+` so the prefilter can't drop real duplicates
+    // containing non-alnum Unicode (combining marks, etc.). False
+    // positives are absorbed by the JS `cleaned === row.title`
+    // short-circuit downstream.
+    expect(SQL_PREFILTER_REGEX).toContain('([^[:space:]]+)')
+    // The narrower R6 shape must never be reintroduced — operators
+    // would silently miss duplicates the JS helper would clean.
+    expect(SQL_PREFILTER_REGEX).not.toContain('[[:alnum:]_]+')
+  })
+
+  it('uses POSIX character classes for whitespace separators', () => {
     expect(SQL_PREFILTER_REGEX).toContain('[[:space:]]+')
     expect(SQL_PREFILTER_REGEX).toContain('[[:space:]]*')
   })
@@ -66,7 +77,7 @@ describe('extractor-dedup-suffix-scan — SQL_PREFILTER_REGEX', () => {
     // it (vs. silently drifting from the JS helper in
     // strip-duplicated-trailing-word.ts).
     expect(SQL_PREFILTER_REGEX).toBe(
-      '\\m([[:alnum:]_]+)[[:space:]]+\\1[[:space:]]*$',
+      '\\m([^[:space:]]+)[[:space:]]+\\1[[:space:]]*$',
     )
   })
 })
