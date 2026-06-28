@@ -20,6 +20,7 @@ import {
   DEBUG_CAPTURE_MAX_CHARS,
 } from './crawl.js'
 import { hashEvent } from './lib/hash.js'
+import { canonicalizeTitle } from './lib/canonical-title.js'
 
 const mockBrowser = {} as Browser
 
@@ -560,7 +561,7 @@ describe('crawlVenue — event-level sourceHash', () => {
       title: sharedTitle,
       artist: 'BPM BINGO!',
       canonicalArtist: 'bpm bingo!',
-      canonicalTitle: sharedTitle.toLowerCase(),
+      canonicalTitle: canonicalizeTitle(sharedTitle),
       date: sharedDate,
       doorsTime: null,
       showTime: null,
@@ -612,7 +613,7 @@ describe('crawlVenue — event-level sourceHash', () => {
     const venueRowsWithTitle = stores.events.filter(
       (row: { venueId: string; canonicalTitle: string }) =>
         row.venueId === venue.id &&
-        row.canonicalTitle === sharedTitle.toLowerCase(),
+        row.canonicalTitle === canonicalizeTitle(sharedTitle),
     )
     expect(venueRowsWithTitle).toHaveLength(1)
     // And the seeded artist stays put — the artist-frozen rule from #824
