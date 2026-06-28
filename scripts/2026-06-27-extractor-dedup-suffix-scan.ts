@@ -75,6 +75,15 @@ import { db, events, venues } from '@concert-crawl/db'
 // `.js` suffix back to the `.ts` source. Mirrors the import shape used
 // by scripts/2026-06-27-strip-description-html.ts.
 import { stripDuplicatedTrailingWord } from '../packages/crawler-core/src/lib/strip-duplicated-trailing-word.js'
+// Pulled out into a DB-free helper module so the regex regression test
+// can import the constant without also pulling in `@concert-crawl/db`,
+// which constructs a Postgres client at module load (PR #853 R6).
+import { SQL_PREFILTER_REGEX } from './2026-06-27-extractor-dedup-suffix-scan-helpers.js'
+
+// Re-export so existing call sites that imported from this module
+// continue to work. The canonical declaration now lives in
+// 2026-06-27-extractor-dedup-suffix-scan-helpers.ts.
+export { SQL_PREFILTER_REGEX }
 
 export interface BackfillSummary {
   rowsScanned: number
@@ -98,37 +107,6 @@ interface DirtyRow {
   before: string
   after: string
 }
-
-// Postgres-side prefilter regex (Stage 1 in the two-stage filter described
-// above). Declared as a `String.raw` template so backslashes survive the
-// JS string literal untouched and Postgres receives the regex verbatim.
-//
-// Without `String.raw` the JS parser eats unrecognized escapes: `\m`
-// becomes `m`, `\1` becomes the legacy octal `\x01` (char code 1, and a
-// syntax error in strict mode), and so on — Postgres then gets a garbled
-// regex that silently matches nothing, and the candidate scan becomes a
-// no-op. #851 fix.
-//
-// Anchors:
-//   `\m`             — Postgres word-start boundary (modern syntax;
-//                      replaces the deprecated `[[:<:]]` form).
-//   `([[:alnum:]_]+)`— capture the word using POSIX char class (locale-
-//                      aware on UTF-8 databases) plus `_`. Not byte-
-//                      identical to the JS helper's
-//                      `[\p{L}\p{M}\p{N}_]+` — Postgres regex has no
-//                      Unicode property escapes — but the docstring at the
-//                      top of this file already positions SQL as a
-//                      prefilter (false-positives OK, JS is source of
-//                      truth via the `cleaned === row.title` short-
-//                      circuit), so byte-equivalence is not required.
-//   `[[:space:]]+`   — one-or-more whitespace separating the two
-//                      occurrences.
-//   `\1`             — backreference to the captured word.
-//   `[[:space:]]*$`  — optional trailing whitespace, then end-of-string,
-//                      mirroring the JS `\s*$` anchor.
-//
-// Operator on the query is `~*` (case-insensitive POSIX regex match).
-export const SQL_PREFILTER_REGEX = String.raw`\m([[:alnum:]_]+)[[:space:]]+\1[[:space:]]*$`
 
 export async function runBackfill(opts: {
   apply: boolean

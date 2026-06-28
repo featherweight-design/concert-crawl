@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { SQL_PREFILTER_REGEX } from './2026-06-27-extractor-dedup-suffix-scan.js'
+// Import from the DB-free helper module (not the script itself), so
+// the test doesn't pull in `@concert-crawl/db` — which constructs a
+// Postgres client at module load and would leak an open handle even
+// though no query runs (PR #853 R6).
+import { SQL_PREFILTER_REGEX } from './2026-06-27-extractor-dedup-suffix-scan-helpers.js'
 
 // Regression test for #851 — the Postgres prefilter regex was
 // previously declared as a plain JS template literal containing `\w`,
