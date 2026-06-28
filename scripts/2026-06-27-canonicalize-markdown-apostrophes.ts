@@ -81,6 +81,16 @@ import {
 // `pnpm build --filter=@concert-crawl/crawler-core`. tsx resolves the
 // `.js` suffix back to the `.ts` source.
 import { canonicalizeTitle } from '../packages/crawler-core/src/lib/canonical-title.js'
+import {
+  chunk,
+  planUserEventDedup,
+  type UserEventRow,
+} from './2026-06-27-canonicalize-markdown-apostrophes-helpers.js'
+
+// Postgres' bind-parameter ceiling is 65,535 and query size grows linearly
+// with params. 1000 rows per snapshot INSERT keeps each statement well
+// under both limits with headroom for additional per-row params.
+const SNAPSHOT_BATCH_SIZE = 1000
 
 // Sidecar table for 7-day rollback. Mirrors events_consolidate_821 from
 // scripts/2026-06-26-event-canonical-title-consolidate.sql.
@@ -425,31 +435,42 @@ export async function runBackfill(opts: {
   await db.execute(sql`TRUNCATE ${sql.identifier(BACKUP_TABLE)}`)
   // INSERT only the columns events has — snapshot_at gets the column
   // default. Using SELECT * would mismatch the column count.
-  await db.execute(sql`
-    INSERT INTO ${sql.identifier(BACKUP_TABLE)}
-      (id, venue_id, title, artist, date, doors_time, show_time, ticket_url,
-       ticket_links, ticket_price_min, ticket_price_max, price_source,
-       pipeline_exhausted_at, description, image_url, genre, status,
-       confidence_score, verified, hidden_from_consumer,
-       is_concert_review_needed, setlist, source_url, source_hash,
-       extraction_strategy, canonical_artist, canonical_title,
-       last_seen_at, first_missing_at, created_at, updated_at)
-    SELECT
-      id, venue_id, title, artist, date, doors_time, show_time, ticket_url,
-      ticket_links, ticket_price_min, ticket_price_max, price_source,
-      pipeline_exhausted_at, description, image_url, genre, status,
-      confidence_score, verified, hidden_from_consumer,
-      is_concert_review_needed, setlist, source_url, source_hash,
-      extraction_strategy, canonical_artist, canonical_title,
-      last_seen_at, first_missing_at, created_at, updated_at
-    FROM events
-    WHERE id IN (${sql.join(
-      Array.from(idsToSnapshot).map((id) => sql`${id}::uuid`),
-      sql`, `,
-    )})
-  `)
+  //
+  // Chunked by SNAPSHOT_BATCH_SIZE so a large recompute set doesn't
+  // build one giant `WHERE id IN (...)` that blows past Postgres'
+  // bind-parameter ceiling (65,535) before any cleanup runs. Each batch
+  // is an independent INSERT; partial progress is acceptable here
+  // because the cluster transactions below are the actual atomic units.
+  const snapshotBatches = chunk(Array.from(idsToSnapshot), SNAPSHOT_BATCH_SIZE)
+  let snapshotInserted = 0
+  for (const batch of snapshotBatches) {
+    await db.execute(sql`
+      INSERT INTO ${sql.identifier(BACKUP_TABLE)}
+        (id, venue_id, title, artist, date, doors_time, show_time, ticket_url,
+         ticket_links, ticket_price_min, ticket_price_max, price_source,
+         pipeline_exhausted_at, description, image_url, genre, status,
+         confidence_score, verified, hidden_from_consumer,
+         is_concert_review_needed, setlist, source_url, source_hash,
+         extraction_strategy, canonical_artist, canonical_title,
+         last_seen_at, first_missing_at, created_at, updated_at)
+      SELECT
+        id, venue_id, title, artist, date, doors_time, show_time, ticket_url,
+        ticket_links, ticket_price_min, ticket_price_max, price_source,
+        pipeline_exhausted_at, description, image_url, genre, status,
+        confidence_score, verified, hidden_from_consumer,
+        is_concert_review_needed, setlist, source_url, source_hash,
+        extraction_strategy, canonical_artist, canonical_title,
+        last_seen_at, first_missing_at, created_at, updated_at
+      FROM events
+      WHERE id IN (${sql.join(
+        batch.map((id) => sql`${id}::uuid`),
+        sql`, `,
+      )})
+    `)
+    snapshotInserted += batch.length
+  }
   console.log(
-    `SNAPSHOT captured ${idsToSnapshot.size} rows into ${BACKUP_TABLE}.`,
+    `SNAPSHOT captured ${snapshotInserted} rows into ${BACKUP_TABLE} (${snapshotBatches.length} batch(es) of up to ${SNAPSHOT_BATCH_SIZE}).`,
   )
 
   // 4b. APPLY — process collapse clusters first so the winner update
@@ -469,35 +490,45 @@ export async function runBackfill(opts: {
     await db.transaction(async (tx) => {
       const loserIds = plan.losers.map((loser) => loser.id)
 
-      // FK reassignment — user_events first (UNIQUE on (user_id, event_id)
-      // means we must dedupe per-user before redirecting). If a user
-      // already watches the winner, drop their loser-side watch rather
-      // than try to redirect it (the redirect would violate the unique
-      // index). Mirrors the pattern from
-      // scripts/2026-06-26-event-canonical-title-consolidate.sql §5a.
-      const dupUserRows = await tx.execute<{ id: string }>(sql`
-        SELECT ue_loser.id
-        FROM ${userEvents} AS ue_loser
-        WHERE ue_loser.event_id IN (${sql.join(
-          loserIds.map((id) => sql`${id}::uuid`),
-          sql`, `,
-        )})
-          AND EXISTS (
-            SELECT 1 FROM ${userEvents} AS ue_winner
-            WHERE ue_winner.event_id = ${plan.winner.id}::uuid
-              AND ue_winner.user_id = ue_loser.user_id
-          )
-      `)
-      const dupIds = dupUserRows.map((row) => row.id)
-      if (dupIds.length > 0) {
-        await tx.delete(userEvents).where(inArray(userEvents.id, dupIds))
+      // FK reassignment — user_events first. UNIQUE(user_id, event_id)
+      // means we must dedupe per-user across (winner ∪ losers) before
+      // redirecting, NOT just where a winner-side row already exists.
+      // If a user has watch rows on losers A and B (neither on winner W),
+      // a naive `UPDATE event_id=W WHERE event_id IN (A,B)` sets A→W
+      // first, then violates UNIQUE(user,W) when redirecting B. The
+      // plan keeps exactly one row per user (winner-side preferred,
+      // otherwise the earliest loser-side row) and deletes the rest;
+      // remaining loser rows are then collision-free to redirect.
+      const clusterEventIds = [plan.winner.id, ...loserIds]
+      const userEventRowsForCluster = await tx
+        .select({
+          id: userEvents.id,
+          userId: userEvents.userId,
+          eventId: userEvents.eventId,
+          createdAt: userEvents.createdAt,
+        })
+        .from(userEvents)
+        .where(inArray(userEvents.eventId, clusterEventIds))
+
+      const userEventRowsTyped: UserEventRow[] = userEventRowsForCluster
+      const dedupPlan = planUserEventDedup(userEventRowsTyped, plan.winner.id)
+
+      if (dedupPlan.rowIdsToDelete.length > 0) {
+        await tx
+          .delete(userEvents)
+          .where(inArray(userEvents.id, dedupPlan.rowIdsToDelete))
       }
-      const ueResult = await tx
-        .update(userEvents)
-        .set({ eventId: plan.winner.id })
-        .where(inArray(userEvents.eventId, loserIds))
-        .returning({ id: userEvents.id })
-      fkCounts.userEvents += ueResult.length
+      // Only redirect the rows the plan explicitly promoted — any
+      // surplus loser rows for that user were already deleted above,
+      // so this UPDATE is collision-free under the unique index.
+      if (dedupPlan.rowIdsToRedirect.length > 0) {
+        const ueResult = await tx
+          .update(userEvents)
+          .set({ eventId: plan.winner.id })
+          .where(inArray(userEvents.id, dedupPlan.rowIdsToRedirect))
+          .returning({ id: userEvents.id })
+        fkCounts.userEvents += ueResult.length
+      }
 
       const erResult = await tx
         .update(eventReports)
