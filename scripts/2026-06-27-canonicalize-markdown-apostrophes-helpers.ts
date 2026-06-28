@@ -157,6 +157,52 @@ export interface CanonicalChangeRow {
 }
 
 /**
+ * Minimum row shape sortBucketByWinnerPriority needs to order a collapse
+ * bucket by the same comparator used for winner selection. Structural so
+ * the script's richer row type flows in without a cast.
+ */
+export interface WinnerPriorityRow {
+  id: string
+  confidenceScore: string | null
+  createdAt: Date
+}
+
+/**
+ * Sort a collapse bucket by the same comparator pickWinner uses:
+ *   1. confidence_score DESC (NULL last)
+ *   2. created_at ASC
+ *   3. id ASC (stable final tiebreak)
+ *
+ * Why this helper exists: PR #855 R4 flagged that buildWinnerPatch was
+ * non-deterministic when multiple losers had values for the same
+ * mergeable field — the SELECT had no ORDER BY, so Postgres' row order
+ * decided which loser's value won the patch. Sorting the whole bucket
+ * with the winner comparator and using `bucket.slice(1)` for losers
+ * means patch sources are tried in priority order: higher-confidence
+ * losers contribute first, tiebroken by earliest created_at.
+ *
+ * Returns a new sorted array; does not mutate input.
+ */
+export function sortBucketByWinnerPriority<TRow extends WinnerPriorityRow>(
+  rows: TRow[],
+): TRow[] {
+  return [...rows].sort((left, right) => {
+    // confidence_score: NULL sorts last (worst), otherwise higher wins.
+    const leftScore =
+      left.confidenceScore === null ? -Infinity : Number(left.confidenceScore)
+    const rightScore =
+      right.confidenceScore === null ? -Infinity : Number(right.confidenceScore)
+    if (leftScore !== rightScore) return rightScore - leftScore
+    // created_at ASC: earlier row wins.
+    const leftCreated = left.createdAt.getTime()
+    const rightCreated = right.createdAt.getTime()
+    if (leftCreated !== rightCreated) return leftCreated - rightCreated
+    // id ASC stable final tiebreak.
+    return left.id.localeCompare(right.id)
+  })
+}
+
+/**
  * Filter a list of collision buckets (clusters grouped by
  * (venue_id, date, computedCanonical)) down to the ones this script is
  * responsible for.

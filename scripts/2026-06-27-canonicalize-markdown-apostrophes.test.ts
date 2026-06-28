@@ -3,7 +3,9 @@ import {
   chunk,
   planUserEventDedup,
   selectCollapseClusters,
+  sortBucketByWinnerPriority,
   type UserEventRow,
+  type WinnerPriorityRow,
 } from './2026-06-27-canonicalize-markdown-apostrophes-helpers.js'
 
 const WINNER = 'winner-event'
@@ -211,6 +213,107 @@ describe('selectCollapseClusters', () => {
     expect(out.size).toBe(1)
     expect(out.has('venue-1|2026-07-01|new-x')).toBe(true)
     expect(out.has('venue-1|2026-07-02|y')).toBe(false)
+  })
+})
+
+describe('sortBucketByWinnerPriority', () => {
+  // Comparator under test:
+  //   1. confidence_score DESC (NULL last)
+  //   2. created_at ASC
+  //   3. id ASC
+  //
+  // Regression target: PR #855 R4 — losers (bucket.slice(1) after this
+  // sort) must come out in deterministic priority order so
+  // buildWinnerPatch picks higher-confidence losers' values first.
+
+  function makeRow(
+    id: string,
+    confidenceScore: string | null,
+    createdAt: Date,
+  ): WinnerPriorityRow {
+    return { id, confidenceScore, createdAt }
+  }
+
+  it('returns rows in confidence_score DESC order, NULL last', () => {
+    const sorted = sortBucketByWinnerPriority([
+      makeRow('low', '0.5', new Date('2026-01-01T00:00:00Z')),
+      makeRow('null', null, new Date('2026-01-01T00:00:00Z')),
+      makeRow('high', '0.9', new Date('2026-01-01T00:00:00Z')),
+    ])
+    expect(sorted.map((row) => row.id)).toEqual(['high', 'low', 'null'])
+  })
+
+  it('tiebreaks equal confidence_score by created_at ASC', () => {
+    const sorted = sortBucketByWinnerPriority([
+      makeRow('later', '0.9', new Date('2026-01-02T00:00:00Z')),
+      makeRow('earlier', '0.9', new Date('2026-01-01T00:00:00Z')),
+    ])
+    expect(sorted.map((row) => row.id)).toEqual(['earlier', 'later'])
+  })
+
+  it('tiebreaks equal confidence_score AND created_at by id ASC', () => {
+    const sameTime = new Date('2026-01-01T00:00:00Z')
+    const sorted = sortBucketByWinnerPriority([
+      makeRow('zzz', '0.9', sameTime),
+      makeRow('aaa', '0.9', sameTime),
+    ])
+    expect(sorted.map((row) => row.id)).toEqual(['aaa', 'zzz'])
+  })
+
+  it('preserves loser priority order — the #855 R4 bug', () => {
+    // Three-row bucket: one winner + two losers with conflicting
+    // mergeable-field values. After this sort:
+    //   sorted[0] = winner (conf 0.95)
+    //   sorted[1] = higher-confidence loser (conf 0.8)
+    //   sorted[2] = lower-confidence loser (conf 0.3)
+    //
+    // Pre-R4 the inline `bucket.filter(id !== winner.id)` left losers
+    // in whatever order Postgres returned them, so a downstream
+    // buildWinnerPatch could pick the conf=0.3 loser's value over the
+    // conf=0.8 loser's for the same field. This test locks the order
+    // independent of input ordering.
+    const sorted = sortBucketByWinnerPriority([
+      // intentionally scrambled input order
+      makeRow('low-conf-loser', '0.3', new Date('2026-01-01T00:00:00Z')),
+      makeRow('winner', '0.95', new Date('2026-01-01T00:00:00Z')),
+      makeRow('high-conf-loser', '0.8', new Date('2026-01-01T00:00:00Z')),
+    ])
+    expect(sorted.map((row) => row.id)).toEqual([
+      'winner',
+      'high-conf-loser',
+      'low-conf-loser',
+    ])
+    // The slice(1) losers are also deterministic — higher-conf first.
+    expect(sorted.slice(1).map((row) => row.id)).toEqual([
+      'high-conf-loser',
+      'low-conf-loser',
+    ])
+  })
+
+  it('is stable when called repeatedly on the same input', () => {
+    // Different scrambles of the same logical bucket all sort to the
+    // same output — guards against the bug where Postgres' return
+    // order leaked into the plan and made two operator machines
+    // generate different patches for the same data.
+    const rowSet = [
+      makeRow('a', '0.7', new Date('2026-01-01T00:00:00Z')),
+      makeRow('b', '0.9', new Date('2026-01-02T00:00:00Z')),
+      makeRow('c', null, new Date('2026-01-01T00:00:00Z')),
+      makeRow('d', '0.5', new Date('2026-01-03T00:00:00Z')),
+    ]
+    const sortedA = sortBucketByWinnerPriority(rowSet)
+    const sortedB = sortBucketByWinnerPriority([...rowSet].reverse())
+    expect(sortedA.map((row) => row.id)).toEqual(sortedB.map((row) => row.id))
+  })
+
+  it('does not mutate the input array', () => {
+    const input = [
+      makeRow('a', '0.7', new Date('2026-01-01T00:00:00Z')),
+      makeRow('b', '0.9', new Date('2026-01-02T00:00:00Z')),
+    ]
+    const inputBefore = input.map((row) => row.id)
+    sortBucketByWinnerPriority(input)
+    expect(input.map((row) => row.id)).toEqual(inputBefore)
   })
 })
 

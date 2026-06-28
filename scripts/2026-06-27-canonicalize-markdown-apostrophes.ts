@@ -17,9 +17,12 @@
  * What this script does:
  *   1. SNAPSHOT — copy every row whose canonical_title would change
  *      under the new normalizer into events_canonicalize_850_backup
- *      (7-day rollback window per the #821 pattern). The sidecar
- *      table is TRUNCATE+INSERTed each run so re-execution is
- *      idempotent rather than accumulating duplicate snapshots.
+ *      (7-day rollback window per the #821 pattern). Each snapshot row
+ *      carries a `snapshot_at` timestamp and a `run_id` UUID; runs
+ *      APPEND (not TRUNCATE) so partial-progress retries do not wipe
+ *      the only rollback record for clusters already applied in a
+ *      prior run. Rows older than 7 days are pruned at the start of
+ *      every --commit run so the table stays bounded.
  *   2. RECOMPUTE — for every row whose newly-computed canonical_title
  *      differs from what's stored, plan an UPDATE.
  *   3. COLLAPSE — identify clusters where the new normalizer creates
@@ -55,8 +58,11 @@
  *   DATABASE_URL=$NEON_STAGING_DIRECT pnpm tsx scripts/2026-06-27-canonicalize-markdown-apostrophes.ts
  *
  * Idempotent: re-running after --commit is a no-op (recompute matches
- * stored value, plan is empty, snapshot table refreshed but contains
- * zero rows).
+ * stored value, plan is empty). When the plan is empty the script early-
+ * returns BEFORE touching the snapshot table — this is intentional so
+ * the previous run's snapshot keeps its 7-day rollback window. Snapshot
+ * rows older than 7 days are pruned at the START of every --commit run
+ * (see Comment 3 below), so a stale window never grows unbounded.
  *
  * Read-only by default. Dry-run takes no row-level locks on shared
  * tables.
@@ -71,6 +77,7 @@
  */
 
 import { pathToFileURL } from 'node:url'
+import { randomUUID } from 'node:crypto'
 import { and, eq, inArray, sql } from 'drizzle-orm'
 import {
   db,
@@ -90,6 +97,7 @@ import {
   chunk,
   planUserEventDedup,
   selectCollapseClusters,
+  sortBucketByWinnerPriority,
   type UserEventRow,
 } from './2026-06-27-canonicalize-markdown-apostrophes-helpers.js'
 
@@ -185,34 +193,45 @@ function preview(value: string, max = 80): string {
   return `${value.slice(0, max - 3)}...`
 }
 
-/** Deterministic winner pick: highest confidence_score (numeric, NULL last),
- * then earliest created_at, then lowest id. */
-function pickWinner(rows: RowWithCanonical[]): RowWithCanonical {
-  return [...rows].sort((left, right) => {
-    // confidence_score: NULL sorts last (worst), otherwise higher wins.
-    const leftScore =
-      left.confidenceScore === null ? -Infinity : Number(left.confidenceScore)
-    const rightScore =
-      right.confidenceScore === null ? -Infinity : Number(right.confidenceScore)
-    if (leftScore !== rightScore) return rightScore - leftScore
-    // created_at ASC: earlier row wins.
-    const leftCreated = left.createdAt.getTime()
-    const rightCreated = right.createdAt.getTime()
-    if (leftCreated !== rightCreated) return leftCreated - rightCreated
-    // id ASC stable final tiebreak.
-    return left.id.localeCompare(right.id)
-  })[0]!
+// Winner selection lives in the helpers module as sortBucketByWinnerPriority
+// — sorting the full bucket (rather than just picking [0]) lets losers
+// inherit the same deterministic order, which fixes the non-deterministic
+// patch-source bug Copilot flagged in PR #855 R4.
+
+/** Mergeable field map: patch key (camelCase) → column name (snake_case).
+ * Single source of truth for both buildWinnerPatch and
+ * buildCoalesceAssignments so the two stay in lockstep. Typed via
+ * Record<PatchKey, string> so iterating its keys yields PatchKey
+ * directly — no `as` cast needed inside buildCoalesceAssignments. */
+type PatchKey = keyof Required<ClusterPlan['winnerPatch']>
+const MERGEABLE_FIELD_COLUMNS: Record<PatchKey, string> = {
+  description: 'description',
+  imageUrl: 'image_url',
+  ticketUrl: 'ticket_url',
+  doorsTime: 'doors_time',
+  showTime: 'show_time',
+  ticketPriceMin: 'ticket_price_min',
+  ticketPriceMax: 'ticket_price_max',
 }
 
-/** For each mergeable field, prefer winner's value; fall back to the first
- * non-null loser. Output is a patch object containing only fields where the
- * winner is currently null AND at least one loser has a value. */
-function buildWinnerPatch(
-  winner: RowWithCanonical,
-  losers: RowWithCanonical[],
-): ClusterPlan['winnerPatch'] {
-  const patch: ClusterPlan['winnerPatch'] = {}
-  const fields = [
+/**
+ * Build SQL fragments of the form `col = COALESCE(col, $patch)` for
+ * every field present in the patch. Wrapping each assignment in
+ * COALESCE narrows the merge to "fill the gaps only" — values written
+ * by the crawler/admin between scan and commit are preserved. See PR
+ * #855 R4 for the race-window rationale.
+ *
+ * Returned as an array of sql fragments; the caller joins them with
+ * sql.join. Empty array if the patch is empty (no mergeable values
+ * available from losers).
+ */
+function buildCoalesceAssignments(
+  patch: ClusterPlan['winnerPatch'],
+): ReturnType<typeof sql>[] {
+  const out: ReturnType<typeof sql>[] = []
+  // Object.keys is typed as string[], so wrap in a typed helper that
+  // walks PatchKey explicitly. Avoids an `as` cast on the iteration.
+  const patchKeys: PatchKey[] = [
     'description',
     'imageUrl',
     'ticketUrl',
@@ -220,7 +239,38 @@ function buildWinnerPatch(
     'showTime',
     'ticketPriceMin',
     'ticketPriceMax',
-  ] as const
+  ]
+  for (const patchKey of patchKeys) {
+    const value = patch[patchKey]
+    if (value === undefined) continue
+    const columnName = MERGEABLE_FIELD_COLUMNS[patchKey]
+    out.push(
+      sql`${sql.identifier(columnName)} = COALESCE(${sql.identifier(columnName)}, ${value})`,
+    )
+  }
+  return out
+}
+
+/** For each mergeable field, prefer winner's value; fall back to the first
+ * non-null loser. Output is a patch object containing only fields where the
+ * winner is currently null AND at least one loser has a value. */
+export function buildWinnerPatch(
+  winner: RowWithCanonical,
+  losers: RowWithCanonical[],
+): ClusterPlan['winnerPatch'] {
+  const patch: ClusterPlan['winnerPatch'] = {}
+  // Same key list used by buildCoalesceAssignments — defining it as a
+  // PatchKey[] (rather than Object.keys + cast) means TypeScript catches
+  // any drift between the two helpers at compile time.
+  const fields: PatchKey[] = [
+    'description',
+    'imageUrl',
+    'ticketUrl',
+    'doorsTime',
+    'showTime',
+    'ticketPriceMin',
+    'ticketPriceMax',
+  ]
   for (const field of fields) {
     if (winner[field] !== null) continue
     for (const loser of losers) {
@@ -317,9 +367,20 @@ export async function runBackfill(opts: {
 
   for (const [key, bucket] of qualifyingClusters) {
     // This bucket has a collision the new normalization is responsible
-    // for. Pick a winner deterministically, treat the rest as losers.
-    const winner = pickWinner(bucket)
-    const losers = bucket.filter((row) => row.id !== winner.id)
+    // for. Sort the whole bucket with the winner comparator
+    // (confidence_score DESC, created_at ASC, id ASC) so:
+    //   - winner = sorted[0] (highest priority)
+    //   - losers = sorted.slice(1) IN PRIORITY ORDER, so
+    //     buildWinnerPatch consults higher-confidence losers first
+    //     when filling the winner's null fields.
+    // Pre-R4 this used pickWinner + filter, which left losers in
+    // Postgres' arbitrary return order — buildWinnerPatch could pick a
+    // patch source from a lower-confidence loser before a higher-
+    // confidence one when both had a value for the same field. Sorting
+    // the full bucket once makes the entire merge plan deterministic.
+    const sorted = sortBucketByWinnerPriority(bucket)
+    const winner = sorted[0]!
+    const losers = sorted.slice(1)
     collapseClusters.push({
       key,
       venueName: winner.venueName,
@@ -386,9 +447,11 @@ export async function runBackfill(opts: {
   //     that's a loser in a collapse cluster (losers are about to be
   //     deleted). The collapse-cluster winner is also snapshotted so
   //     rollback can restore the original mergeable fields if the merge
-  //     patch turns out to be wrong. Sidecar table is recreated each
-  //     run; TRUNCATE on every invocation so re-execution refreshes the
-  //     window rather than accumulating stale snapshots.
+  //     patch turns out to be wrong. Each row is stamped with
+  //     `snapshot_at` (defaults to NOW()) and `run_id` (per-invocation
+  //     UUID); see the block further down for the prune-then-append
+  //     write strategy that preserves partial-progress snapshots across
+  //     retries (PR #855 R4).
   const idsToSnapshot = new Set<string>()
   for (const { row } of recomputeOnly) idsToSnapshot.add(row.id)
   for (const plan of collapseClusters) {
@@ -450,10 +513,24 @@ export async function runBackfill(opts: {
 
   // CREATE TABLE LIKE captures column types but not constraints (so a
   // foreign key to venues.id can't break the snapshot if a venue is
-  // later deleted). The snapshot_at column is operator metadata for the
-  // 7-day rollback window — query
-  //   SELECT * FROM events_canonicalize_850_backup WHERE snapshot_at > NOW() - INTERVAL '7 days'
-  // to confirm a rollback is still possible.
+  // later deleted). Operator metadata columns:
+  //   - snapshot_at: when this row was snapshotted (7-day rollback window)
+  //   - run_id: groups rows snapshotted by the same script invocation, so
+  //     a partial-progress retry can be reasoned about as
+  //     `WHERE run_id = '...'` rather than mixed with prior runs.
+  //
+  // PR #855 R4 changed the write strategy from TRUNCATE+INSERT (every
+  // run) to PRUNE-OLDER-THAN-7-DAYS + APPEND. The old approach silently
+  // wiped the only rollback record for clusters applied by a prior
+  // partial run — a script crash mid-cluster meant the operator could
+  // see the partial damage but no longer had the pre-change state to
+  // restore from. Appending preserves every snapshot still inside the
+  // 7-day window across retries; the prune step keeps the table bounded.
+  //
+  // Rollback example:
+  //   SELECT * FROM events_canonicalize_850_backup
+  //   WHERE snapshot_at > NOW() - INTERVAL '7 days'
+  //     AND run_id = '<the failing run>';
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS ${sql.identifier(BACKUP_TABLE)}
       (LIKE events INCLUDING DEFAULTS)
@@ -462,9 +539,36 @@ export async function runBackfill(opts: {
     ALTER TABLE ${sql.identifier(BACKUP_TABLE)}
       ADD COLUMN IF NOT EXISTS snapshot_at timestamptz NOT NULL DEFAULT NOW()
   `)
-  await db.execute(sql`TRUNCATE ${sql.identifier(BACKUP_TABLE)}`)
+  await db.execute(sql`
+    ALTER TABLE ${sql.identifier(BACKUP_TABLE)}
+      ADD COLUMN IF NOT EXISTS run_id uuid NOT NULL DEFAULT gen_random_uuid()
+  `)
+  // Prune rows older than the 7-day rollback window BEFORE inserting
+  // new snapshots so the table stays bounded across many runs. Anything
+  // newer than 7 days is preserved — including partial-progress
+  // snapshots from a prior failed --commit run.
+  const pruneResult = await db.execute(sql`
+    DELETE FROM ${sql.identifier(BACKUP_TABLE)}
+    WHERE snapshot_at < NOW() - INTERVAL '7 days'
+  `)
+  // postgres-js exposes `rowCount` on the command tag for DML returns.
+  const prunedCount =
+    typeof pruneResult === 'object' &&
+    pruneResult !== null &&
+    'count' in pruneResult &&
+    typeof pruneResult.count === 'number'
+      ? pruneResult.count
+      : 0
+  if (prunedCount > 0) {
+    console.log(`Pruned ${prunedCount} snapshot row(s) older than 7 days.`)
+  }
+  // Stamp every row written by this invocation with a single run_id so
+  // operators can scope queries (rollback, audit) to this run.
+  const runId = randomUUID()
+  console.log(`Snapshot run_id = ${runId}`)
   // INSERT only the columns events has — snapshot_at gets the column
-  // default. Using SELECT * would mismatch the column count.
+  // default, run_id is bound per row. Using SELECT * would mismatch the
+  // column count.
   //
   // Chunked by SNAPSHOT_BATCH_SIZE so a large recompute set doesn't
   // build one giant `WHERE id IN (...)` that blows past Postgres'
@@ -482,7 +586,7 @@ export async function runBackfill(opts: {
          confidence_score, verified, hidden_from_consumer,
          is_concert_review_needed, setlist, source_url, source_hash,
          extraction_strategy, canonical_artist, canonical_title,
-         last_seen_at, first_missing_at, created_at, updated_at)
+         last_seen_at, first_missing_at, created_at, updated_at, run_id)
       SELECT
         id, venue_id, title, artist, date, doors_time, show_time, ticket_url,
         ticket_links, ticket_price_min, ticket_price_max, price_source,
@@ -490,7 +594,8 @@ export async function runBackfill(opts: {
         confidence_score, verified, hidden_from_consumer,
         is_concert_review_needed, setlist, source_url, source_hash,
         extraction_strategy, canonical_artist, canonical_title,
-        last_seen_at, first_missing_at, created_at, updated_at
+        last_seen_at, first_missing_at, created_at, updated_at,
+        ${runId}::uuid
       FROM events
       WHERE id IN (${sql.join(
         batch.map((id) => sql`${id}::uuid`),
@@ -500,7 +605,7 @@ export async function runBackfill(opts: {
     snapshotInserted += batch.length
   }
   console.log(
-    `SNAPSHOT captured ${snapshotInserted} rows into ${BACKUP_TABLE} (${snapshotBatches.length} batch(es) of up to ${SNAPSHOT_BATCH_SIZE}).`,
+    `SNAPSHOT captured ${snapshotInserted} rows into ${BACKUP_TABLE} (${snapshotBatches.length} batch(es) of up to ${SNAPSHOT_BATCH_SIZE}, run_id=${runId}).`,
   )
 
   // 4b. APPLY — process collapse clusters first so the winner update
@@ -585,13 +690,34 @@ export async function runBackfill(opts: {
       await tx.delete(events).where(inArray(events.id, loserIds))
 
       // Update winner: new canonical + merge patch.
-      await tx
-        .update(events)
-        .set({
-          canonicalTitle: plan.newCanonical,
-          ...plan.winnerPatch,
-        })
-        .where(eq(events.id, plan.winner.id))
+      //
+      // Merge patch fields use COALESCE(existing, $patch) so the backfill
+      // only fills columns still NULL at write time. PR #855 R4 flagged
+      // that winnerPatch is computed from the initial scan but applied
+      // minutes later — if the crawler (or an admin) wrote into one of
+      // the patch's target fields between scan and commit, a plain
+      // overwrite would silently clobber that newer value. COALESCE
+      // turns the merge into "fill the gaps only," which is what
+      // operators expect from a cleanup script.
+      //
+      // canonical_title is NOT wrapped: the whole point of the script
+      // is to overwrite it. The optimistic-lock pattern on standalone
+      // recomputes (further down) protects the standalone-path
+      // canonical_title write — collapse-cluster winners have their
+      // canonical_title rewritten unconditionally as part of the
+      // deduplication invariant.
+      const patchAssignments = sql.join(
+        [
+          sql`canonical_title = ${plan.newCanonical}`,
+          ...buildCoalesceAssignments(plan.winnerPatch),
+        ],
+        sql`, `,
+      )
+      await tx.execute(sql`
+        UPDATE events
+        SET ${patchAssignments}
+        WHERE id = ${plan.winner.id}::uuid
+      `)
     })
     updatedCount += 1
     deletedCount += plan.losers.length
