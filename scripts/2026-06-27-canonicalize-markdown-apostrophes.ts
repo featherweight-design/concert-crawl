@@ -57,12 +57,14 @@
  *
  *   DATABASE_URL=$NEON_STAGING_DIRECT pnpm tsx scripts/2026-06-27-canonicalize-markdown-apostrophes.ts
  *
- * Idempotent: re-running after --commit is a no-op (recompute matches
- * stored value, plan is empty). When the plan is empty the script early-
- * returns BEFORE touching the snapshot table — this is intentional so
- * the previous run's snapshot keeps its 7-day rollback window. Snapshot
- * rows older than 7 days are pruned at the START of every --commit run
- * (see Comment 3 below), so a stale window never grows unbounded.
+ * Idempotent: re-running after --commit is a no-op for the events table
+ * (recompute matches stored value, plan is empty). Snapshot-table
+ * maintenance still runs on every --commit invocation: snapshot rows
+ * older than 7 days are pruned BEFORE the no-op early-return check
+ * (PR #855 R5), so a stale rollback window never accumulates even when
+ * the recompute itself has nothing to write. Snapshots newer than 7
+ * days are preserved across runs so a partial-progress retry never
+ * loses its only rollback record.
  *
  * Read-only by default. Dry-run takes no row-level locks on shared
  * tables.
@@ -493,6 +495,68 @@ export async function runBackfill(opts: {
     }
   }
 
+  // Ensure the snapshot table + operator metadata columns exist before
+  // any DELETE/INSERT runs against them. All three statements are
+  // idempotent (IF NOT EXISTS).
+  //
+  // CREATE TABLE LIKE captures column types but not constraints (so a
+  // foreign key to venues.id can't break the snapshot if a venue is
+  // later deleted). Operator metadata columns:
+  //   - snapshot_at: when this row was snapshotted (7-day rollback window)
+  //   - run_id: groups rows snapshotted by the same script invocation, so
+  //     a partial-progress retry can be reasoned about as
+  //     `WHERE run_id = '...'` rather than mixed with prior runs.
+  //
+  // PR #855 R4 changed the write strategy from TRUNCATE+INSERT (every
+  // run) to PRUNE-OLDER-THAN-7-DAYS + APPEND. The old approach silently
+  // wiped the only rollback record for clusters applied by a prior
+  // partial run — a script crash mid-cluster meant the operator could
+  // see the partial damage but no longer had the pre-change state to
+  // restore from. Appending preserves every snapshot still inside the
+  // 7-day window across retries; the prune step keeps the table bounded.
+  //
+  // PR #855 R5 moved the prune step ABOVE the no-op early-return check
+  // (further down) so the table stays bounded even on a run that
+  // recomputes to a no-op. Snapshots cleanup is unconditional on every
+  // --commit invocation; the DELETE is cheap and idempotent.
+  //
+  // Rollback example:
+  //   SELECT * FROM events_canonicalize_850_backup
+  //   WHERE snapshot_at > NOW() - INTERVAL '7 days'
+  //     AND run_id = '<the failing run>';
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS ${sql.identifier(BACKUP_TABLE)}
+      (LIKE events INCLUDING DEFAULTS)
+  `)
+  await db.execute(sql`
+    ALTER TABLE ${sql.identifier(BACKUP_TABLE)}
+      ADD COLUMN IF NOT EXISTS snapshot_at timestamptz NOT NULL DEFAULT NOW()
+  `)
+  await db.execute(sql`
+    ALTER TABLE ${sql.identifier(BACKUP_TABLE)}
+      ADD COLUMN IF NOT EXISTS run_id uuid NOT NULL DEFAULT gen_random_uuid()
+  `)
+  // Prune rows older than the 7-day rollback window unconditionally on
+  // every --commit run so the table stays bounded even when the recompute
+  // is a no-op (otherwise stale rows would never get cleaned up). Anything
+  // newer than 7 days is preserved — including partial-progress
+  // snapshots from a prior failed --commit run.
+  const pruneResult = await db.execute(sql`
+    DELETE FROM ${sql.identifier(BACKUP_TABLE)}
+    WHERE snapshot_at < NOW() - INTERVAL '7 days'
+  `)
+  // postgres-js exposes `rowCount` on the command tag for DML returns.
+  const prunedCount =
+    typeof pruneResult === 'object' &&
+    pruneResult !== null &&
+    'count' in pruneResult &&
+    typeof pruneResult.count === 'number'
+      ? pruneResult.count
+      : 0
+  if (prunedCount > 0) {
+    console.log(`Pruned ${prunedCount} snapshot row(s) older than 7 days.`)
+  }
+
   if (idsToSnapshot.size === 0) {
     console.log('Nothing to do — no canonical_title changes detected.')
     return {
@@ -513,57 +577,6 @@ export async function runBackfill(opts: {
     }
   }
 
-  // CREATE TABLE LIKE captures column types but not constraints (so a
-  // foreign key to venues.id can't break the snapshot if a venue is
-  // later deleted). Operator metadata columns:
-  //   - snapshot_at: when this row was snapshotted (7-day rollback window)
-  //   - run_id: groups rows snapshotted by the same script invocation, so
-  //     a partial-progress retry can be reasoned about as
-  //     `WHERE run_id = '...'` rather than mixed with prior runs.
-  //
-  // PR #855 R4 changed the write strategy from TRUNCATE+INSERT (every
-  // run) to PRUNE-OLDER-THAN-7-DAYS + APPEND. The old approach silently
-  // wiped the only rollback record for clusters applied by a prior
-  // partial run — a script crash mid-cluster meant the operator could
-  // see the partial damage but no longer had the pre-change state to
-  // restore from. Appending preserves every snapshot still inside the
-  // 7-day window across retries; the prune step keeps the table bounded.
-  //
-  // Rollback example:
-  //   SELECT * FROM events_canonicalize_850_backup
-  //   WHERE snapshot_at > NOW() - INTERVAL '7 days'
-  //     AND run_id = '<the failing run>';
-  await db.execute(sql`
-    CREATE TABLE IF NOT EXISTS ${sql.identifier(BACKUP_TABLE)}
-      (LIKE events INCLUDING DEFAULTS)
-  `)
-  await db.execute(sql`
-    ALTER TABLE ${sql.identifier(BACKUP_TABLE)}
-      ADD COLUMN IF NOT EXISTS snapshot_at timestamptz NOT NULL DEFAULT NOW()
-  `)
-  await db.execute(sql`
-    ALTER TABLE ${sql.identifier(BACKUP_TABLE)}
-      ADD COLUMN IF NOT EXISTS run_id uuid NOT NULL DEFAULT gen_random_uuid()
-  `)
-  // Prune rows older than the 7-day rollback window BEFORE inserting
-  // new snapshots so the table stays bounded across many runs. Anything
-  // newer than 7 days is preserved — including partial-progress
-  // snapshots from a prior failed --commit run.
-  const pruneResult = await db.execute(sql`
-    DELETE FROM ${sql.identifier(BACKUP_TABLE)}
-    WHERE snapshot_at < NOW() - INTERVAL '7 days'
-  `)
-  // postgres-js exposes `rowCount` on the command tag for DML returns.
-  const prunedCount =
-    typeof pruneResult === 'object' &&
-    pruneResult !== null &&
-    'count' in pruneResult &&
-    typeof pruneResult.count === 'number'
-      ? pruneResult.count
-      : 0
-  if (prunedCount > 0) {
-    console.log(`Pruned ${prunedCount} snapshot row(s) older than 7 days.`)
-  }
   // Stamp every row written by this invocation with a single run_id so
   // operators can scope queries (rollback, audit) to this run.
   const runId = randomUUID()
