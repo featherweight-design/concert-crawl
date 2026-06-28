@@ -545,7 +545,8 @@ export async function runBackfill(opts: {
     DELETE FROM ${sql.identifier(BACKUP_TABLE)}
     WHERE snapshot_at < NOW() - INTERVAL '7 days'
   `)
-  // postgres-js exposes `rowCount` on the command tag for DML returns.
+  // postgres-js exposes `count` on the result for DML returns
+  // (the `pg` package uses `rowCount` — postgres-js does not).
   const prunedCount =
     typeof pruneResult === 'object' &&
     pruneResult !== null &&
