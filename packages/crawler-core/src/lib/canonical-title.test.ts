@@ -232,27 +232,27 @@ describe('canonicalizeTitle', () => {
     // listing exists as both `zeds dead jamboree!` and `zed's dead
     // jamboree!`. Curly + straight + omitted apostrophes all collapse.
 
-    it('normalizes curly right single quotation mark (U+2019) to straight', () => {
-      // The two strings differ only in U+2019 vs U+0027. Post-normalize
-      // both forms must collapse — they go through the same strip path.
+    it('strips curly right single quotation mark (U+2019) like straight apostrophes', () => {
+      // The two strings differ only in U+2019 vs U+0027. Both variants are
+      // stripped outright, so both forms collapse to the same canonical.
       const curly = canonicalizeTitle('Earl Sweatshirt’s SICK! Tour')
       const straight = canonicalizeTitle("Earl Sweatshirt's SICK! Tour")
       expect(curly).toBe(straight)
     })
 
-    it('normalizes curly left single quotation mark (U+2018) to straight', () => {
+    it('strips curly left single quotation mark (U+2018) like straight apostrophes', () => {
       const curly = canonicalizeTitle('Rock‘8 Roll')
       const straight = canonicalizeTitle("Rock'8 Roll")
       expect(curly).toBe(straight)
     })
 
-    it('normalizes single high-reversed-9 quotation mark (U+201B) to straight', () => {
+    it('strips single high-reversed-9 quotation mark (U+201B) like straight apostrophes', () => {
       const reversed = canonicalizeTitle('Don‛t Stop')
       const straight = canonicalizeTitle("Don't Stop")
       expect(reversed).toBe(straight)
     })
 
-    it('strips standalone apostrophes so "zeds" and "zeds" collapse', () => {
+    it('strips standalone apostrophes so "zed\'s" and "zeds" collapse', () => {
       // The Larimer Bass Bingo dupe — one LLM pass typed `zed's`, the
       // other typed `zeds`. With apostrophe-strip in the normalizer
       // both forms collapse.

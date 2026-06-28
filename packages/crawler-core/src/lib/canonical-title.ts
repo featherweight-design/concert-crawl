@@ -26,11 +26,13 @@
  *   2. NFD normalize + strip combining marks (diacritics).
  *   3. Map Latin Extended characters that don't decompose into base +
  *      combining mark — same LATIN_EXTENDED_MAP as canonical-artist.ts.
- *   4. Normalize apostrophe variants (curly U+2018, U+2019, U+201B and
- *      straight U+0027) and then STRIP all apostrophes outright. The strip
- *      step is what collapses real prod dupes like "Zed's Dead" vs "Zeds
- *      Dead" — without it the curly→straight pass alone still produces
- *      two distinct canonicals. See issue #850.
+ *   4. Strip ALL apostrophe variants (curly U+2018, U+2019, U+201B and
+ *      straight U+0027) outright in a single pass — the regex character
+ *      class matches all four code points and replaces them with the
+ *      empty string. This is what collapses real prod dupes like "Zed's
+ *      Dead" vs "Zeds Dead". A curly→straight normalization step alone
+ *      would still produce two distinct canonicals ("zed's" vs "zeds");
+ *      stripping is what closes the gap. See issue #850.
  *   5. Lowercase.
  *   6. Collapse runs of whitespace to a single space.
  *   7. Trim.
