@@ -45,10 +45,23 @@
  * Against staging/prod set DATABASE_URL accordingly (e.g.
  * `DATABASE_URL=$NEON_STAGING_DIRECT pnpm tsx scripts/...`).
  *
- * Idempotent. Re-running after --apply is a no-op: a previously-cleaned
- * row no longer matches the candidate filter, and any row that survives
- * the filter but is unchanged by the JS helper falls through the
- * `cleaned === row.title` short-circuit.
+ * Single-pass cleanup matching the extractor's per-crawl behavior.
+ * `stripDuplicatedTrailingWord` is intentionally single-pass — it removes
+ * one duplicated trailing word per call so that legitimate repeated tokens
+ * (e.g. an artist literally named "Hello Hello") aren't collapsed away.
+ * This script mirrors that contract: each --apply run strips exactly one
+ * duplicated trailing word per dirty row. For pathological titles with
+ * 3+ repeated trailing words (e.g. "Edition Edition Edition" → "Edition
+ * Edition" → "Edition"), operators may need to re-run --apply until the
+ * candidate scan returns zero rows ("idempotent in the limit"). This
+ * matches what the extractor would do across N consecutive crawls of the
+ * same listing.
+ *
+ * In the common case (a single duplicated trailing word, which is what
+ * #851 was filed for), one --apply pass is sufficient and re-running is a
+ * no-op: a previously-cleaned row no longer matches the candidate filter,
+ * and any row that survives the filter but is unchanged by the JS helper
+ * falls through the `cleaned === row.title` short-circuit.
  *
  * Read-only by default. Dry-run takes no row-level locks.
  */
