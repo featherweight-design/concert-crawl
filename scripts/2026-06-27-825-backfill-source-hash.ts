@@ -2,7 +2,7 @@
  * Concert Crawl — one-time source_hash backfill for the hashEvent
  * cutover (#825).
  *
- * PR #852 drops `artist` from `hashEvent`. The new hash format is
+ * #825 drops `artist` from `hashEvent`. The new hash format is
  * `(title, date, doorsTime, showTime)`. Every existing `events` row in
  * staging/prod has its `source_hash` computed under the OLD format
  * (with `artist`), so after the crawler deploys with the new code the
@@ -16,8 +16,8 @@
  *
  * Sequencing — read this before running:
  *
- *   1. Merge PR #852 → triggers deploy of new hashEvent code to API +
- *      crawler.
+ *   1. Merge the #825 PR → triggers deploy of new hashEvent code to
+ *      API + crawler.
  *   2. Wait for staging API + crawler to redeploy. The crawler must be
  *      running the new hashEvent before this script runs — otherwise
  *      the next crawl re-writes the rows backfilled with new-format
