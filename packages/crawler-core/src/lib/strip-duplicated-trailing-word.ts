@@ -63,8 +63,13 @@ const DUPLICATED_TRAILING_WORD_REGEX =
   /(^|[^\p{L}\p{M}\p{N}_])([\p{L}\p{M}\p{N}_]+)\s+\2\s*$/iu
 
 export function stripDuplicatedTrailingWord(title: string): string {
+  // Mirror the non-string guard shape used by canonicalizeTitle /
+  // canonicalizeArtist (see canonical-title.ts:46-49): return '' rather
+  // than the input so the declared `string` return type holds at runtime
+  // even when an upstream caller bypasses TypeScript and passes
+  // null / undefined / a number.
   if (typeof title !== 'string' || title.length === 0) {
-    return title
+    return ''
   }
 
   // Single pass. "Edition Edition Edition" collapses to "Edition Edition"

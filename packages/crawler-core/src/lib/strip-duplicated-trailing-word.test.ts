@@ -49,6 +49,23 @@ describe('stripDuplicatedTrailingWord', () => {
     expect(stripDuplicatedTrailingWord('')).toBe('')
   })
 
+  it('returns empty string for non-string input (matches canonicalizeTitle / canonicalizeArtist convention)', () => {
+    // The signature is `(title: string): string`, but if an upstream caller
+    // bypasses TypeScript and hands us null / undefined / a number, the
+    // declared return type must still hold. canonical-title.ts:46-49 and
+    // canonical-artist.ts return '' for non-string input — mirror that
+    // contract here (PR #853 R3).
+    // Casts are local to the test so we can exercise the runtime guard;
+    // production callers should never hit this path.
+    const helper = stripDuplicatedTrailingWord as unknown as (
+      title: unknown,
+    ) => string
+    expect(helper(null)).toBe('')
+    expect(helper(undefined)).toBe('')
+    expect(helper(42)).toBe('')
+    expect(helper({})).toBe('')
+  })
+
   it('tolerates extra trailing whitespace before applying the match', () => {
     // The extractor mapping passes title verbatim from the LLM output;
     // an accidentally-trailing space shouldn't gate the cleanup.
