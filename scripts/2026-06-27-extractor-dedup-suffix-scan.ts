@@ -33,15 +33,23 @@
  *   3. Per-row dry-run output: event id, venue name, date, current
  *      title, proposed cleaned title — for operator spot-check.
  *   4. With --apply: snapshot dirty rows to `events_851_backup` (created
- *      if missing) so a 7-day rollback is a single UPDATE away —
+ *      if missing, PRIMARY KEY on `event_id`) so a 7-day rollback is a
+ *      single deterministic UPDATE away —
  *      `UPDATE events SET title = b.title_before FROM events_851_backup b
  *      WHERE events.id = b.event_id` restores the pre-script titles
  *      (the backup table stores (event_id, title_before, title_after,
  *      snapshotted_at) — enough to restore titles, not to recreate full
- *      event rows). Then UPDATE the live rows. Snapshot + update for
- *      each row run inside a single transaction so a concurrent-edit
- *      skip or a transient DB error doesn't leave a snapshot row whose
- *      UPDATE never landed.
+ *      event rows). The PRIMARY KEY guarantees at most one snapshot row
+ *      per event_id, so the rollback UPDATE is unambiguous even after
+ *      multiple --apply passes (see "Single-pass cleanup" below). On a
+ *      conflict, the snapshot upsert preserves the original
+ *      `title_before` (the rollback target) and refreshes
+ *      `title_after` + `snapshotted_at` — so re-runs against "Edition
+ *      Edition Edition" → "Edition Edition" → "Edition" still roll back
+ *      to the original three-word title in one statement. Then UPDATE
+ *      the live rows. Snapshot + update for each row run inside a single
+ *      transaction so a concurrent-edit skip or a transient DB error
+ *      doesn't leave a snapshot row whose UPDATE never landed.
  *
  * Run:
  *   pnpm tsx scripts/2026-06-27-extractor-dedup-suffix-scan.ts           # dry-run
@@ -80,10 +88,16 @@ import { db, events, venues } from '@concert-crawl/db'
 // `.js` suffix back to the `.ts` source. Mirrors the import shape used
 // by scripts/2026-06-27-strip-description-html.ts.
 import { stripDuplicatedTrailingWord } from '../packages/crawler-core/src/lib/strip-duplicated-trailing-word.js'
-// Pulled out into a DB-free helper module so the regex regression test
-// can import the constant without also pulling in `@concert-crawl/db`,
-// which constructs a Postgres client at module load (PR #853 R6).
-import { SQL_PREFILTER_REGEX } from './2026-06-27-extractor-dedup-suffix-scan-helpers.js'
+// Pulled out into a DB-free helper module so the SQL-shape regression
+// tests can import the constants without also pulling in
+// `@concert-crawl/db`, which constructs a Postgres client at module
+// load (PR #853 R6, expanded in R8 for the backup-table DDL +
+// upsert).
+import {
+  BACKUP_TABLE_DDL,
+  BACKUP_TABLE_PK_BACKFILL_DDL,
+  SQL_PREFILTER_REGEX,
+} from './2026-06-27-extractor-dedup-suffix-scan-helpers.js'
 
 export interface BackfillSummary {
   rowsScanned: number
@@ -188,17 +202,27 @@ export async function runBackfill(opts: {
   // Snapshot table: `events_851_backup`. Created here on first --apply
   // (idempotent CREATE IF NOT EXISTS) with the columns we'd need for a
   // 7-day rollback — id + the before/after pair + when the script ran.
-  // Per-row INSERTs match the per-row UPDATE granularity so a transient
-  // failure mid-batch leaves the snapshot and the live table consistent
-  // with each other.
-  await db.execute(
-    sql`CREATE TABLE IF NOT EXISTS events_851_backup (
-      event_id uuid NOT NULL,
-      title_before text NOT NULL,
-      title_after text NOT NULL,
-      snapshotted_at timestamptz NOT NULL DEFAULT now()
-    )`,
-  )
+  // PRIMARY KEY on `event_id` guarantees at most one snapshot row per
+  // event so the rollback UPDATE is deterministic even across multiple
+  // --apply passes (PR #853 R8). Per-row INSERT ... ON CONFLICT below
+  // matches the per-row UPDATE granularity so a transient failure
+  // mid-batch leaves the snapshot and the live table consistent with
+  // each other.
+  // DDL bodies live in the helper module so the SQL-shape regression
+  // tests can assert their structure without importing the DB client
+  // (PR #853 R8). `sql.raw` emits the string verbatim — the DDL has
+  // no parameters so this is safe.
+  await db.execute(sql.raw(BACKUP_TABLE_DDL))
+
+  // Self-heal: if the table was created by an earlier run of this
+  // script (before the PK was added in R8), the CREATE IF NOT EXISTS
+  // above is a no-op and the legacy table is still PK-less. Add the
+  // constraint idempotently — `ADD CONSTRAINT IF NOT EXISTS` is not
+  // valid for PRIMARY KEY in Postgres, so the helper SQL guards with
+  // a catalog lookup. If the table already has any PK (this run's or
+  // a previous one's), this is a no-op; otherwise it locks the table
+  // briefly to add the constraint. Safe to run on every --apply.
+  await db.execute(sql.raw(BACKUP_TABLE_PK_BACKFILL_DDL))
 
   // Optimistic-lock the UPDATE on the original title so a concurrent
   // crawler / admin edit between the initial SELECT and the UPDATE
@@ -227,9 +251,23 @@ export async function runBackfill(opts: {
   for (const row of dirty) {
     try {
       await db.transaction(async (tx) => {
+        // UPSERT keyed on event_id (PR #853 R8). On conflict, preserve
+        // the original `title_before` (the rollback target — set on the
+        // first --apply pass and never overwritten) and refresh
+        // `title_after` + `snapshotted_at` so the snapshot reflects the
+        // latest cleanup pass. This keeps multi-pass cleanup of
+        // pathological titles (e.g. "Edition Edition Edition" → "Edition
+        // Edition" → "Edition") rolling back to the original three-word
+        // title in a single deterministic UPDATE. The structural
+        // invariant (which columns refresh, which preserve) is pinned
+        // by `BACKUP_UPSERT_SQL` in the helper module and asserted in
+        // the regression test.
         await tx.execute(
           sql`INSERT INTO events_851_backup (event_id, title_before, title_after)
-              VALUES (${row.id}, ${row.before}, ${row.after})`,
+              VALUES (${row.id}, ${row.before}, ${row.after})
+              ON CONFLICT (event_id) DO UPDATE SET
+                title_after = EXCLUDED.title_after,
+                snapshotted_at = now()`,
         )
 
         const updated = await tx
