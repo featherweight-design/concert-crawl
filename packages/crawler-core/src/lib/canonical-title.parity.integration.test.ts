@@ -105,6 +105,15 @@ const PARITY_INPUTS: { label: string; input: string }[] = [
   { label: 'bold with inner *', input: 'Foo **bar*baz** qux' },
   { label: 'bold with inner _', input: 'Foo __bar_baz__ qux' },
 
+  // Newline inside emphasized span — JS's `[\s\S]+?` matches across
+  // newlines unconditionally; Postgres `.` only matches newline when
+  // the `s` (DOTALL) flag is set. Without `s` on the regexp_replace
+  // calls, SQL would leave `**bar\nbaz**` intact and only the
+  // whitespace-collapse pass would touch it, diverging from JS which
+  // strips the markers before whitespace collapse. Pins the `s` flag
+  // contract per PR #855 R2.
+  { label: 'bold spanning newline', input: 'Foo **bar\nbaz** qux' },
+
   // Issue #850 — apostrophe variants stripped. All forms canonicalize
   // identically to the apostrophe-less variant.
   { label: 'curly right apostrophe', input: 'Earl Sweatshirt’s SICK! Tour' },
@@ -131,15 +140,20 @@ describe('canonical_title — SQL backfill / JS function parity', () => {
     // Markdown stripping uses regexp_replace with a backref (`\1`) to
     // keep the inner text. Postgres' Advanced Regular Expressions
     // (AREs) do support non-greedy quantifiers (`+?`), so the inner
-    // group `(.+?)` is the byte-equivalent of JS's `([\s\S]+?)` —
-    // `.` matches any char including newline by default in AREs, and
-    // `+?` is lazy. Earlier revisions of this test used `[^*]+` / `[^_]+`
-    // exclude-the-marker character classes, but that diverged from JS on
-    // inputs where the inner text itself contained the marker char (e.g.
-    // `**foo*bar**` → JS keeps `foo*bar`, exclude-class SQL didn't match
-    // at all). Switching to `.+?` closes the gap. Two-char markers
-    // strip first (so single-char passes don't see the bold pair); the
-    // 'g' flag runs each substitution across every match in the title.
+    // group `(.+?)` matches JS's lazy `([\s\S]+?)` semantics via the
+    // `s` flag (Postgres regex DOTALL — `.` matches newline). Without
+    // the `s` flag, an emphasized span that wraps a newline silently
+    // diverges from JS, which intentionally uses `[\s\S]+?` to match
+    // across newlines. Earlier revisions of this test used `[^*]+` /
+    // `[^_]+` exclude-the-marker character classes, but that diverged
+    // from JS on inputs where the inner text itself contained the
+    // marker char (e.g. `**foo*bar**` → JS keeps `foo*bar`,
+    // exclude-class SQL didn't match at all). Switching to `.+?` plus
+    // the `s` flag closes both gaps. Two-char markers strip first (so
+    // single-char passes don't see the bold pair); the `g` flag runs
+    // each substitution across every match in the title; the `s` flag
+    // ensures `.` covers newlines so the parity contract holds for
+    // emphasized spans that wrap across lines.
     //
     // Apostrophes (curly + straight) are stripped via translate() with
     // an empty replacement set — translate() drops any char in the
@@ -152,13 +166,13 @@ describe('canonical_title — SQL backfill / JS function parity', () => {
               regexp_replace(
                 regexp_replace(
                   ${input}::text,
-                  '\\*\\*(.+?)\\*\\*', '\\1', 'g'
+                  '\\*\\*(.+?)\\*\\*', '\\1', 'gs'
                 ),
-                '__(.+?)__', '\\1', 'g'
+                '__(.+?)__', '\\1', 'gs'
               ),
-              '\\*(.+?)\\*', '\\1', 'g'
+              '\\*(.+?)\\*', '\\1', 'gs'
             ),
-            '_(.+?)_', '\\1', 'g'
+            '_(.+?)_', '\\1', 'gs'
           ) AS val
         ),
         nfd AS (
