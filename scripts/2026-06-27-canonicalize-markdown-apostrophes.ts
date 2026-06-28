@@ -144,9 +144,13 @@ interface RecomputeOnly {
 
 export interface BackfillSummary {
   rowsScanned: number
-  /** Rows whose canonical_title recomputed to a different value. Includes
-   * both standalone recomputes AND rows that become part of a collapse
-   * cluster (winner + losers). */
+  /** Rows where computedCanonical !== storedCanonical — i.e. the recompute
+   * produced a different canonical_title than what's stored. Note this
+   * counts the change, not the cluster: a row that gets pulled into a
+   * collapse cluster but whose own canonical didn't change (e.g. the
+   * winner whose stored canonical already matches the new value) is NOT
+   * counted here. See rowsRecomputedStandalone + collapseClustersFound
+   * + collapseLosers for cluster-shape breakdowns. */
   rowsRecomputed: number
   /** Standalone recomputes (no collision with another row). */
   rowsRecomputedStandalone: number
