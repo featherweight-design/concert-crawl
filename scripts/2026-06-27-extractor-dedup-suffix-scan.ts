@@ -13,10 +13,11 @@
  *
  * Architecture: two-stage filter.
  *   Stage 1 (SQL prefilter): narrow the candidate set efficiently in-DB
- *     using a Postgres regex (`~*` with `[[:<:]]` / `[[:>:]]` word-
- *     boundary anchors) that approximates the JS rule. This is a perf
- *     optimization — it keeps the JS pass from streaming every events
- *     row through the helper.
+ *     using a Postgres regex (`~*` anchored with `\m` — the modern
+ *     Postgres word-start boundary, plus an end-of-string anchor `$`
+ *     for the trailing edge) that approximates the JS rule. This is a
+ *     perf optimization — it keeps the JS pass from streaming every
+ *     events row through the helper.
  *   Stage 2 (JS source of truth): re-run every prefilter hit through
  *     `stripDuplicatedTrailingWord` and trust its verdict. The
  *     `cleaned === row.title` short-circuit below absorbs cases where
