@@ -33,10 +33,15 @@
  *   3. Per-row dry-run output: event id, venue name, date, current
  *      title, proposed cleaned title — for operator spot-check.
  *   4. With --apply: snapshot dirty rows to `events_851_backup` (created
- *      if missing) so a 7-day rollback is one DELETE+INSERT away, then
- *      UPDATE the live rows. Snapshot + update for each row run inside
- *      a single transaction so a concurrent-edit skip or a transient
- *      DB error doesn't leave a snapshot row whose UPDATE never landed.
+ *      if missing) so a 7-day rollback is a single UPDATE away —
+ *      `UPDATE events SET title = b.title_before FROM events_851_backup b
+ *      WHERE events.id = b.event_id` restores the pre-script titles
+ *      (the backup table stores (event_id, title_before, title_after,
+ *      snapshotted_at) — enough to restore titles, not to recreate full
+ *      event rows). Then UPDATE the live rows. Snapshot + update for
+ *      each row run inside a single transaction so a concurrent-edit
+ *      skip or a transient DB error doesn't leave a snapshot row whose
+ *      UPDATE never landed.
  *
  * Run:
  *   pnpm tsx scripts/2026-06-27-extractor-dedup-suffix-scan.ts           # dry-run
@@ -79,11 +84,6 @@ import { stripDuplicatedTrailingWord } from '../packages/crawler-core/src/lib/st
 // can import the constant without also pulling in `@concert-crawl/db`,
 // which constructs a Postgres client at module load (PR #853 R6).
 import { SQL_PREFILTER_REGEX } from './2026-06-27-extractor-dedup-suffix-scan-helpers.js'
-
-// Re-export so existing call sites that imported from this module
-// continue to work. The canonical declaration now lives in
-// 2026-06-27-extractor-dedup-suffix-scan-helpers.ts.
-export { SQL_PREFILTER_REGEX }
 
 export interface BackfillSummary {
   rowsScanned: number
