@@ -54,7 +54,7 @@ describe('stripDuplicatedTrailingWord', () => {
     // bypasses TypeScript and hands us null / undefined / a number, the
     // declared return type must still hold. canonical-title.ts:46-49 and
     // canonical-artist.ts return '' for non-string input — mirror that
-    // contract here (PR #853 R3).
+    // contract here (#851).
     // Casts are local to the test so we can exercise the runtime guard;
     // production callers should never hit this path.
     const helper = stripDuplicatedTrailingWord as unknown as (
@@ -101,7 +101,7 @@ describe('stripDuplicatedTrailingWord', () => {
     expect(stripDuplicatedTrailingWord('Wow !!! !!!')).toBe('Wow !!! !!!')
   })
 
-  // --- Unicode-letter regression coverage (PR #853 R1) ---------------------
+  // --- Unicode-letter regression coverage (#851) ---------------------------
   // Original regex used \w / \b, which are ASCII-only in JS — Unicode-letter
   // titles like "Beyoncé Beyoncé" or "Eivør Eivør" would have slipped past
   // the dedup. The /iu Unicode-property variant fixes that.

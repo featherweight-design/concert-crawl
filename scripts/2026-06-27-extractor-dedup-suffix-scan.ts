@@ -94,7 +94,7 @@ interface DirtyRow {
 // becomes `m`, `\1` becomes the legacy octal `\x01` (char code 1, and a
 // syntax error in strict mode), and so on — Postgres then gets a garbled
 // regex that silently matches nothing, and the candidate scan becomes a
-// no-op. PR #853 R2 fix.
+// no-op. #851 fix.
 //
 // Anchors:
 //   `\m`             — Postgres word-start boundary (modern syntax;
@@ -217,7 +217,7 @@ export async function runBackfill(opts: {
   // strip-description-html backfill).
   //
   // Each row's snapshot INSERT + UPDATE run inside a single transaction
-  // (PR #853 R1). Without the transaction, a concurrent-edit skip or a
+  // (#851). Without the transaction, a concurrent-edit skip or a
   // transient DB error between the two statements would leave a
   // `events_851_backup` row whose UPDATE never landed — `rowsSnapshotted`
   // in the summary would then overstate what was actually changed, and

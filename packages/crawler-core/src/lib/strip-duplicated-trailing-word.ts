@@ -9,7 +9,7 @@
  *
  * Root cause: Claude Haiku's `title` output occasionally duplicates the
  * final word. The two variants survive PR #821's title-based dedup because
- * `canonicalize_title` correctly produces two different keys — they ARE
+ * `canonicalizeTitle` correctly produces two different keys — they ARE
  * different strings, just one is malformed.
  *
  * Fix at the extractor boundary, not at the canonicalize layer.

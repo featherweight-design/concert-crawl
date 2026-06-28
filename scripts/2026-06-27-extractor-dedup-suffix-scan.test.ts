@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { SQL_PREFILTER_REGEX } from './2026-06-27-extractor-dedup-suffix-scan.js'
 
-// Regression test for PR #853 R2 — the Postgres prefilter regex was
+// Regression test for #851 — the Postgres prefilter regex was
 // previously declared as a plain JS template literal containing `\w`,
 // `\s`, and `\1`. None of those are valid JS escape sequences, so the
 // backslashes were silently dropped (and `\1` became the legacy octal
