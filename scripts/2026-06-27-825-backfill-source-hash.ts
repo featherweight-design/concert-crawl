@@ -6,7 +6,7 @@
  * `(title, date, doorsTime, showTime)`. Every existing `events` row in
  * staging/prod has its `source_hash` computed under the OLD format
  * (with `artist`), so after the crawler deploys with the new code the
- * first crawl will see `existing.sourceHash !== newHashEvent(...)` for
+ * first crawl will see `existing.sourceHash !== hashEvent(...)` for
  * every still-upcoming verified row — firing up to ~965 false
  * `crawl.verified_event_changed` notifications in prod even when the
  * underlying listings didn't change. Copilot's R1 review flagged this
@@ -56,9 +56,9 @@
  * bad row rolls back independently. Mirrors the pattern from
  * scripts/2026-06-26-cleanup-cross-venue-phantoms.ts.
  *
- * Read-only by default. Dry-run takes no row-level locks; the only
- * shared object it touches is `CREATE TABLE IF NOT EXISTS` for the
- * backup table, which is itself idempotent.
+ * Read-only by default. Dry-run takes no row-level locks and creates no
+ * objects — the backup table is created only in the `--commit` path via
+ * `CREATE TABLE IF NOT EXISTS`, which is itself idempotent.
  *
  * Idempotent: re-running after a successful --commit is a no-op. The
  * second pass sees every row already at the new-format hash and falls
