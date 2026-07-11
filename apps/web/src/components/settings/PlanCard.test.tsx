@@ -30,6 +30,7 @@ describe('PlanCard', () => {
       />,
     )
     expect(screen.getByText(PLAN_CARD_COPY.pastDue.tagline)).toBeTruthy()
+    expect(screen.getByText(PLAN_CARD_COPY.pastDue.subline)).toBeTruthy()
     expect(screen.queryByText(PLAN_CARD_COPY.founder.tagline)).toBeNull()
   })
 
@@ -60,6 +61,21 @@ describe('PlanCard', () => {
     render(<PlanCard planState={basePlanState} />)
     expect(screen.getByText(PLAN_CARD_COPY.free.tagline)).toBeTruthy()
     expect(screen.queryByText(PLAN_CARD_COPY.paid.tagline)).toBeNull()
+  })
+
+  it('renders the trial card with copy-sourced CTAs and the shared plan label', () => {
+    render(
+      <PlanCard
+        planState={{
+          ...basePlanState,
+          onTrial: true,
+          trialEndsAt: new Date(Date.now() + 3 * 86400000).toISOString(),
+        }}
+      />,
+    )
+    expect(screen.getByText(PLAN_CARD_COPY.trial.addCardCta)).toBeTruthy()
+    expect(screen.getByText(PLAN_CARD_COPY.trial.stayFreeCta)).toBeTruthy()
+    expect(screen.getByText(PLAN_CARD_COPY.yourPlanLabel)).toBeTruthy()
   })
 
   it('shows the free card for logged-out', () => {

@@ -68,7 +68,7 @@ export function PlanCard({ planState }: PlanCardProps) {
                 letterSpacing: '0.10em',
               }}
             >
-              your plan
+              {SETTINGS_COPY.planCard.yourPlanLabel}
             </span>
           </div>
           <div className="flex flex-col gap-1.5">
@@ -91,7 +91,7 @@ export function PlanCard({ planState }: PlanCardProps) {
                 letterSpacing: '-0.005em',
               }}
             >
-              Update payment to keep Plus features.
+              {SETTINGS_COPY.planCard.pastDue.subline}
             </span>
           </div>
           <div className="mt-1 flex gap-2">
@@ -140,7 +140,7 @@ export function PlanCard({ planState }: PlanCardProps) {
                 letterSpacing: '0.10em',
               }}
             >
-              {SETTINGS_COPY.planCard.founder.yourPlanLabel}
+              {SETTINGS_COPY.planCard.yourPlanLabel}
             </span>
           </div>
           <div className="flex flex-col gap-1.5">
@@ -200,7 +200,7 @@ export function PlanCard({ planState }: PlanCardProps) {
                 letterSpacing: '0.10em',
               }}
             >
-              your plan
+              {SETTINGS_COPY.planCard.yourPlanLabel}
             </span>
           </div>
           <div className="flex flex-col gap-1.5">
@@ -232,14 +232,14 @@ export function PlanCard({ planState }: PlanCardProps) {
               className="rounded-xl px-4 py-2.5 text-[13px] font-bold"
               style={{ background: 'var(--signal)', color: 'var(--bg)' }}
             >
-              Add a card
+              {SETTINGS_COPY.planCard.trial.addCardCta}
             </button>
             <button
               type="button"
               className="rounded-xl border border-border px-4 py-2.5 text-[13px] font-bold text-fg"
               style={{ background: 'var(--surface-2)' }}
             >
-              Stay free
+              {SETTINGS_COPY.planCard.trial.stayFreeCta}
             </button>
           </div>
         </div>
@@ -261,7 +261,7 @@ export function PlanCard({ planState }: PlanCardProps) {
                 letterSpacing: '0.10em',
               }}
             >
-              your plan
+              {SETTINGS_COPY.planCard.yourPlanLabel}
             </span>
           </div>
           <div className="flex flex-col gap-1.5">
@@ -309,7 +309,7 @@ export function PlanCard({ planState }: PlanCardProps) {
               letterSpacing: '0.10em',
             }}
           >
-            your plan
+            {SETTINGS_COPY.planCard.yourPlanLabel}
           </span>
         </div>
         <div className="flex flex-col gap-1.5">

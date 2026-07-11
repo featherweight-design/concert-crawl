@@ -826,9 +826,9 @@ export const CONSUMER_COPY = {
     cityPlaceholder: 'Denver',
     cityHint: 'Never shown publicly.',
     planCard: {
+      yourPlanLabel: 'Your plan',
       founder: {
         badge: 'Founder',
-        yourPlanLabel: 'Your plan',
         tagline: 'Free for life.',
         body: 'You showed up during the private beta, so you keep Concert Crawl free, forever. No card needed.',
         subline: 'Yes, even when we charge new users.',
@@ -847,10 +847,13 @@ export const CONSUMER_COPY = {
         badge: 'Trial',
         tagline: 'days remaining',
         subline: 'Upgrade to keep your access.',
+        addCardCta: 'Add a card',
+        stayFreeCta: 'Stay free',
       },
       pastDue: {
         badge: 'Past due',
         tagline: 'Payment failed.',
+        subline: 'Update payment to keep Plus features.',
         cta: 'Update billing →',
       },
     },

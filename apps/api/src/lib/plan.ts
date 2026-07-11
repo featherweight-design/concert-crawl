@@ -5,7 +5,7 @@ import type { PlanState, SubscriptionStatus } from '@concert-crawl/types'
 import { PREMIUM_ROLES, isRole } from '@concert-crawl/types'
 import { apiLogger } from './logger.js'
 
-type SubscriptionTier = 'free' | 'premium' | 'supporter' | 'founder'
+type SubscriptionTier = (typeof subscriptions.$inferSelect)['tier']
 
 export interface PlanDerivationInput {
   userId: string | null
