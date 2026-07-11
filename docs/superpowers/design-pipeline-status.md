@@ -3,7 +3,7 @@
 Living tracker of every design-track ticket + its position in the two-stage pipeline (brief → handoff → build). Updated as items move between stages.
 
 > **Pipeline workflow reference:** `docs/superpowers/design-pipeline.md`
-> **Persona + locked decisions:** `~/.claude/projects/-Users-huey-Projects-concert-crawl/memory/feedback_design_track_persona.md`
+> **Persona + locked decisions:** `memory:feedback_design_track_persona` — this lives outside the repo in Claude's per-project memory store (not repo-browsable); referenced here by filename convention used across other docs.
 > **Sister trackers:** `docs/superpowers/progress.md` (phase tracker), `docs/runbooks/` (ops runbooks)
 
 ---
@@ -123,4 +123,4 @@ For context on session-start "what's the state of the project" reads. Full histo
 - Small ops adjustments (branch renames, worktree cleanup)
 - Anything already covered by `progress.md`'s substantive-only rule
 
-**Concurrent-edit hygiene:** the "recently shipped" table is append-only at the top; the in-flight tables are edited when state changes. Rebase-friendly on merge.
+**Concurrent-edit hygiene:** new entries in the "Recently shipped" table go at the **top** of the table (newest-first, so the most recent context is at eye level). In-flight tables are edited in place when state changes. Rebase-friendly on merge.
