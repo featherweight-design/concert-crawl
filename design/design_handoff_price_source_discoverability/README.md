@@ -138,6 +138,17 @@ Reviewed against the codebase (Claude Code, 2026-06-17). **All 9 eng decisions a
 
 ### Out of scope (per eng): admin contest-review UI (#697), DisputeForm redesign, #639 more-in-genre, price-history drawer (admin-only v1), tier-taxonomy change.
 
+### Post-sign-off decisions
+
+One interaction rule was locked **after** the 2026-06-17 eng sign-off. It's not part of the numbered eng-decision list above because it wasn't in that review — but PR 4 (`#788`, Consumer UI, merged 2026-06-25) implemented it, and it should live here so future readers don't have to reverse-engineer it from `EventDetailClient.tsx`.
+
+**Dispute affordance hidden when a pending counter exists** (locked 2026-06-23, shipped in PR #788).
+
+- **The rule.** When `priceByTier[tier].counterSubmission` is non-null, the Consumer UI does **not** render the "Saw a different number? Let us know →" link for that tier. Users engage with the existing counter through the shipped `PendingCardB` confirm/wait affordance instead.
+- **Why.** Schema-enforced 1-counter-per-parent via the partial unique index `price_submissions_pending_counter_unique_idx` (`WHERE status='pending' AND disputed_submission_id IS NOT NULL`) — a second dispute submit hits a 409 at the DB. Better to hide the entry point than let a user fill out a multi-field form that will fail.
+- **Race case.** For the narrow window where a counter is filed between page load and submit, PR #788 also ships defensive 409 handling in the submit hook (toast: *"Another challenge was just filed — refresh to see it."*).
+- **Where in code.** `apps/web/src/components/consumer/EventDetailClient.tsx` — search for `counterSubmission != null` / `counterSubmission == null` guards.
+
 ### Review round 3 — beta-feedback follow-up
 
 1. **Resale examples now use Ticketmaster** in all design mocks (SeatGeek references removed from illustrations). The shipped vendor enum and UI surfaces still include SeatGeek — this round is about which vendor design picks for *illustrative* purposes, not about the supported set.
