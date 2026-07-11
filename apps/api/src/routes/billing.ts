@@ -74,7 +74,10 @@ export const evaluateFounderGates = (
   if (window.opensAt === null || window.opensAt.getTime() > now.getTime()) {
     return { ok: false, status: 403, code: 'founder_window_not_open' }
   }
-  if (window.closesAt !== null && window.closesAt.getTime() < now.getTime()) {
+  // <= matches the atomic claim's gt(closesAt, now): a request exactly at
+  // the boundary is closed here rather than failing the claim with a
+  // misleading founder_seats_exhausted.
+  if (window.closesAt !== null && window.closesAt.getTime() <= now.getTime()) {
     return { ok: false, status: 410, code: 'founder_window_closed' }
   }
   if (window.seatsRemaining <= 0) {
@@ -225,6 +228,7 @@ export const createBillingRouter = (
         .set({ seatsRemaining: sql`${founderWindow.seatsRemaining} - 1` })
         .where(
           and(
+            eq(founderWindow.id, 1),
             gt(founderWindow.seatsRemaining, 0),
             isNotNull(founderWindow.opensAt),
             lte(founderWindow.opensAt, now),

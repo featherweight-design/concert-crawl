@@ -6,6 +6,7 @@ import {
   planPriceAction,
   type ProvisionPriceSpec,
 } from './stripe-provision-helpers.js'
+import { runProvision, type ProvisionStripeClient } from './stripe-provision.js'
 
 const SUPPORTER: ProvisionPriceSpec = {
   lookupKey: 'supporter_monthly',
@@ -127,5 +128,42 @@ describe('planPriceAction', () => {
       SUPPORTER,
     )
     expect(result.action).toBe('mismatch')
+  })
+})
+
+describe('runProvision', () => {
+  it('fails loudly when multiple active prices share a lookup_key', async () => {
+    const stripeStub: ProvisionStripeClient = {
+      prices: {
+        list: async () => ({
+          data: [
+            {
+              id: 'price_a',
+              unit_amount: 200,
+              currency: 'usd',
+              recurring: { interval: 'month' },
+            },
+            {
+              id: 'price_b',
+              unit_amount: 200,
+              currency: 'usd',
+              recurring: { interval: 'month' },
+            },
+          ],
+        }),
+        create: async () => {
+          throw new Error('should not create when the list is ambiguous')
+        },
+      },
+      products: {
+        create: async () => {
+          throw new Error('should not create when the list is ambiguous')
+        },
+      },
+    }
+
+    await expect(
+      runProvision({ mode: 'test', commit: false }, stripeStub),
+    ).rejects.toThrow(/MULTIPLE ACTIVE PRICES.*price_a, price_b/)
   })
 })

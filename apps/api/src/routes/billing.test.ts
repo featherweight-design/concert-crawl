@@ -49,6 +49,12 @@ describe('evaluateFounderGates', () => {
     ).toEqual({ ok: false, status: 410, code: 'founder_window_closed' })
   })
 
+  it('returns 410 founder_window_closed when closesAt is exactly now (boundary)', () => {
+    expect(evaluateFounderGates({ ...openWindow, closesAt: NOW }, NOW)).toEqual(
+      { ok: false, status: 410, code: 'founder_window_closed' },
+    )
+  })
+
   it('returns 410 founder_seats_exhausted when no seats remain', () => {
     expect(
       evaluateFounderGates({ ...openWindow, seatsRemaining: 0 }, NOW),

@@ -100,6 +100,16 @@ export async function runProvision(
       lookup_keys: [spec.lookupKey],
       active: true,
     })
+    if (listed.data.length > 1) {
+      // Multiple active prices sharing one lookup_key means Stripe state has
+      // drifted from what this script provisions — planning against an
+      // arbitrary data[0] could no-op or mismatch against the wrong price.
+      throw new Error(
+        `MULTIPLE ACTIVE PRICES for lookup_key "${spec.lookupKey}" ` +
+          `(${listed.data.map((price) => price.id).join(', ')}) — ` +
+          'expected at most one. Investigate the Stripe dashboard before re-running.',
+      )
+    }
     const existingRaw = listed.data[0] ?? null
     const existing: ExistingPriceSummary | null = existingRaw
       ? {
