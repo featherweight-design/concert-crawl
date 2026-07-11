@@ -34,7 +34,7 @@ This is a **design brief**, not an eng spec. OAuth provider path (Clerk vs. dire
 ## What Design will produce from this brief
 
 1. **Connect flow surfaces** — first-run entry point (Settings? profile shelf? bottom-drawer prompt?), Clerk/Spotify OAuth redirect chrome (Spotify branding + our "we never see your password" honesty rail), post-connect success state.
-2. **Auto-watch opt-in modal** — fires once, immediately after connect success. Copy, options ("Yes, watch matching shows" / "Just highlight them / no auto-watch"), dismissal. Design owns shape + timing.
+2. **Auto-watch opt-in modal** — fires once, immediately after connect success. Two explicit choices: "Yes, auto-watch matching shows" vs. "Just highlight them (no auto-watch)". Dismissal (X or tap-outside) is treated as equivalent to highlight-only — the connected baseline. Design owns shape + timing + exact copy.
 3. **"You follow" highlight treatment** across event surfaces (browse card, hero card, event detail). **Includes the browse card hierarchy audit** — prune, group, or restructure to make room for the new signal without adding noise.
 4. **Settings > Connections surface** — connected state (which Spotify account, when last synced, how many artists we're tracking), on-demand "Refresh my taste" button, disconnect action, disconnect confirmation dialog.
 5. **Discovery surface (Premium-gated)** — layout for "Denver shows based on your taste." Dedicated tab? Section on browse? Feed on a new tab? Design's call.
@@ -58,7 +58,7 @@ Everyone can connect Spotify. Free users get passive highlighting on browse/deta
 
 **Free tier gets:**
 - Passive "you follow this artist" signal on browse cards + event detail (Design owns the visual — badge, glyph, color, size)
-- One-time opt-in modal at connect: "Want me to auto-watch every Denver show by artists you follow?" Yes / No / Just highlight
+- One-time opt-in modal at connect with two explicit choices: auto-watch matching shows, OR highlight-only (no auto-watch). Dismissal defaults to highlight-only — the connected baseline is never in doubt. Design owns exact copy + affordance shape.
 - Auto-watch (if opted-in) reuses the shipped Watching mechanism — no net-new state, no schema change
 
 **Fallback shape:** if the opt-in modal feels intrusive during handoff iteration, drop it entirely and default to passive-highlighting-only. Auto-watch stays as a Settings toggle instead. Design's call during iteration.
@@ -116,7 +116,7 @@ When the user disconnects (or Spotify revokes us externally):
 - **Responsive:** 320px mobile baseline → desktop. Connect flow + modal + Settings must be usable on the tightest phone width.
 - **A11y:** WCAG AA. Keyboard-operable connect flow. Screen-reader phrasing for the "you follow" signal (decision Design owns — decorative, list metadata, or trust marker). Auto-watch modal traps focus, escape closes.
 - **Token-only colors** across all 9 themes. New surfaces get token treatments — if a new "connected" accent is needed, it's a token, not a hardcoded hex. Spotify green is a brand color and can appear (e.g., on the connect button) but should be paired with our tokens for adjacent chrome.
-- **Voice — Sour Patch Kids**, warm-permissive throughout. Never phrasings that read as "we're watching what you listen to" — always "here's what you told Spotify you love." The auto-watch modal wants a light, offered-not-imposed tone.
+- **Voice — Sour Patch Kids**, warm-permissive throughout. Never use phrasing that reads as "we're watching what you listen to" — always "here's what you told Spotify you love." The auto-watch modal wants a light, offered-not-imposed tone.
 - **Copy** — every string in `apps/web/src/components/consumer/**/definitions/copy.ts` (or a `spotify/definitions/copy.ts` scope). Artist names, Spotify account username, dates, and counts are data. Everything else is copy.
 - **Mobile + desktop parity** — visual differences fine, behavioral asymmetry not.
 - **Preserves existing surfaces:** the "you follow" signal is additive; it doesn't restructure browse/detail beyond the browse-card audit called out in §2 above. Watching state stays as-is. FilterBar's `filterWhen` control stays as-is.
