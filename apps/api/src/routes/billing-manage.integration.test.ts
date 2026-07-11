@@ -200,6 +200,77 @@ describe('POST /v1/billing/checkout-abandon', () => {
     })
   })
 
+  it('re-attempts the seat restore on retry after a partial failure (canceled + never paid)', async () => {
+    // Simulates: a prior abandon call cancelled at Stripe but crashed before
+    // restoring the seat. The retry sees status 'canceled' and must still
+    // restore the never-paid founder claim.
+    setAuth('user_wh_1')
+    const fake = createFakeWebhookStripe()
+    fake.subscriptionsById.set(
+      'sub_wh_1',
+      makeSubscriptionObject({
+        status: 'canceled',
+        metadata: { userId: 'user_wh_1', founderSeatNumber: '51' },
+      }),
+    )
+    const app = buildApp(fake)
+
+    const res = await postJson(app, '/v1/billing/checkout-abandon', {
+      subscriptionId: 'sub_wh_1',
+    })
+    expect(res.status).toBe(200)
+    const body: { data: { cancelled: boolean } } = await res.json()
+    expect(body.data.cancelled).toBe(false)
+    // No second cancel call — Stripe already has it canceled.
+    expect(fake.cancelledSubscriptionIds).toHaveLength(0)
+    expect(await readSeatsRemaining()).toBe(51)
+
+    const restores = await testDb
+      .select()
+      .from(subscriptionEvents)
+      .where(eq(subscriptionEvents.type, 'founder_seat_restored'))
+    expect(restores).toHaveLength(1)
+    expect(restores[0]?.metadata).toMatchObject({
+      subscriptionId: 'sub_wh_1',
+      seatNumber: 51,
+      reason: 'checkout_abandoned',
+    })
+  })
+
+  it('does NOT restore the seat for a paid-then-cancelled founder subscription', async () => {
+    setAuth('user_wh_1')
+    // A subscription_created event means payment landed at least once —
+    // the founder seat stays consumed even after cancellation.
+    await testDb.insert(subscriptionEvents).values({
+      userId: 'user_wh_1',
+      type: 'subscription_created',
+      metadata: { subscriptionId: 'sub_wh_1' },
+    })
+    const fake = createFakeWebhookStripe()
+    fake.subscriptionsById.set(
+      'sub_wh_1',
+      makeSubscriptionObject({
+        status: 'canceled',
+        metadata: { userId: 'user_wh_1', founderSeatNumber: '51' },
+      }),
+    )
+    const app = buildApp(fake)
+
+    const res = await postJson(app, '/v1/billing/checkout-abandon', {
+      subscriptionId: 'sub_wh_1',
+    })
+    expect(res.status).toBe(200)
+    const body: { data: { cancelled: boolean } } = await res.json()
+    expect(body.data.cancelled).toBe(false)
+    expect(await readSeatsRemaining()).toBe(50)
+
+    const restores = await testDb
+      .select()
+      .from(subscriptionEvents)
+      .where(eq(subscriptionEvents.type, 'founder_seat_restored'))
+    expect(restores).toHaveLength(0)
+  })
+
   it('cancels a non-founder incomplete subscription without touching seats', async () => {
     setAuth('user_wh_1')
     const fake = createFakeWebhookStripe()

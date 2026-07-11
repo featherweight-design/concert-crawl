@@ -16,6 +16,7 @@ import { stripeSubscriptionSchema } from '../lib/stripe-webhook-schemas.js'
 import {
   parseFounderSeatNumber,
   restoreFounderSeat,
+  subscriptionNeverPaid,
 } from '../lib/founder-seats.js'
 import { apiLogger } from '../lib/logger.js'
 
@@ -112,6 +113,28 @@ export const createBillingManageRouter = (
       // payment landed or Stripe already expired it — the webhook paths own
       // those transitions; repeat abandon calls land here and stay 200.
       if (snapshot.status !== 'incomplete') {
+        // Retry safety: a prior abandon call may have cancelled the
+        // subscription and then crashed before restoring the seat. For
+        // terminal never-paid claims, re-attempt the (idempotent per claim)
+        // restore instead of returning early — otherwise a partial failure
+        // leaves the seat permanently held.
+        if (
+          snapshot.status === 'canceled' ||
+          snapshot.status === 'incomplete_expired'
+        ) {
+          const seatNumber = parseFounderSeatNumber(snapshot.metadata)
+          if (
+            seatNumber !== null &&
+            (await subscriptionNeverPaid(subscriptionId))
+          ) {
+            await restoreFounderSeat({
+              userId,
+              subscriptionId,
+              seatNumber,
+              reason: 'checkout_abandoned',
+            })
+          }
+        }
         return ctx.json({ success: true, data: { cancelled: false } })
       }
 

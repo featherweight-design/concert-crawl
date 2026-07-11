@@ -9,15 +9,16 @@
 //
 // Contract: 400 on missing/invalid signature; 200 on handled AND on
 // duplicate; 500 only on genuine processing failure (Stripe retries).
-// Idempotency per Part 1 Decision 4: INSERT into processed_stripe_events
-// first; the handler runs only when the insert lands. On handler failure the
-// idempotency row is removed so Stripe's retry re-processes instead of
+// Idempotency per Part 1 Decision 4: the processed_stripe_events insert and
+// every handler write share ONE transaction — the insert lands first (a
+// conflict is a duplicate short-circuit), and a handler failure rolls the
+// row back atomically so Stripe's retry re-processes instead of
 // short-circuiting as a duplicate.
 
 import { Hono } from 'hono'
-import { eq } from 'drizzle-orm'
 import { db, processedStripeEvents } from '@concert-crawl/db'
 import type { BillingStripeClient, StripeVerifiedEvent } from '../lib/stripe.js'
+import type { DbExecutor } from '../lib/db-executor.js'
 import {
   handleInvoicePaymentFailed,
   handleInvoicePaymentSucceeded,
@@ -82,41 +83,35 @@ export const createStripeWebhooksRouter = (
       return ctx.json({ success: false, error: 'Invalid signature' }, 400)
     }
 
-    // Idempotency (Part 1 Decision 4): insert-first; a conflict means the
-    // event was already processed — 200 duplicate short-circuit.
-    const inserted = await db
-      .insert(processedStripeEvents)
-      .values({ eventId: event.id, type: event.type })
-      .onConflictDoNothing()
-      .returning({ eventId: processedStripeEvents.eventId })
-    if (inserted.length === 0) {
-      apiLogger.info(
-        { stripeEventId: event.id, type: event.type },
-        'stripe-webhooks: duplicate event — already processed',
-      )
-      return ctx.json({ success: true, duplicate: true })
-    }
-
+    // Idempotency (Part 1 Decision 4): insert-first, in the SAME transaction
+    // as the handler's writes. A conflict means the event was already
+    // processed (200 duplicate short-circuit); a handler throw rolls the
+    // idempotency row back with everything else, so Stripe's retry
+    // re-processes — no separate cleanup step that could itself fail.
     try {
-      await dispatchEvent(event, getStripe)
+      const outcome = await db.transaction(async (tx) => {
+        const inserted = await tx
+          .insert(processedStripeEvents)
+          .values({ eventId: event.id, type: event.type })
+          .onConflictDoNothing()
+          .returning({ eventId: processedStripeEvents.eventId })
+        if (inserted.length === 0) return 'duplicate'
+        await dispatchEvent(event, getStripe, tx)
+        return 'handled'
+      })
+      if (outcome === 'duplicate') {
+        apiLogger.info(
+          { stripeEventId: event.id, type: event.type },
+          'stripe-webhooks: duplicate event — already processed',
+        )
+        return ctx.json({ success: true, duplicate: true })
+      }
       return ctx.json({ success: true })
     } catch (err) {
       apiLogger.error(
         { err, stripeEventId: event.id, type: event.type },
-        'stripe-webhooks: event processing failed',
+        'stripe-webhooks: event processing failed — rolled back, Stripe will retry',
       )
-      // Remove the idempotency row so Stripe's retry re-processes rather
-      // than short-circuiting as a duplicate.
-      try {
-        await db
-          .delete(processedStripeEvents)
-          .where(eq(processedStripeEvents.eventId, event.id))
-      } catch (cleanupErr) {
-        apiLogger.error(
-          { err: cleanupErr, stripeEventId: event.id },
-          'stripe-webhooks: failed to release idempotency row after processing failure',
-        )
-      }
       return ctx.json({ success: false, error: 'Processing failed' }, 500)
     }
   })
@@ -127,8 +122,13 @@ export const createStripeWebhooksRouter = (
 const dispatchEvent = async (
   event: StripeVerifiedEvent,
   getStripe: () => BillingStripeClient,
+  dbClient: DbExecutor,
 ): Promise<void> => {
-  const handlerContext = { stripe: getStripe(), stripeEventId: event.id }
+  const handlerContext = {
+    stripe: getStripe(),
+    stripeEventId: event.id,
+    dbClient,
+  }
   switch (event.type) {
     case 'checkout.session.completed':
       // Not used — no hosted Checkout in this architecture (Decision 2).

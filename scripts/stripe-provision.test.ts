@@ -270,6 +270,7 @@ describe('runWebhookProvision', () => {
               enabled_events: [...WEBHOOK_ENABLED_EVENTS],
             },
           ],
+          has_more: false,
         }),
         create: async () => {
           createCalls += 1
@@ -300,6 +301,7 @@ describe('runWebhookProvision', () => {
               enabled_events: ['invoice.payment_succeeded'],
             },
           ],
+          has_more: false,
         }),
         create: async () => {
           throw new Error('should not create/mutate a drifted endpoint')
@@ -320,7 +322,7 @@ describe('runWebhookProvision', () => {
     const stripeStub: ProvisionStripeClient = {
       ...unusedPricesAndProducts,
       webhookEndpoints: {
-        list: async () => ({ data: [] }),
+        list: async () => ({ data: [], has_more: false }),
         create: async () => {
           createCalls += 1
           return { id: 'we_new', secret: 'whsec_x' }
@@ -345,7 +347,7 @@ describe('runWebhookProvision', () => {
     const stripeStub: ProvisionStripeClient = {
       ...unusedPricesAndProducts,
       webhookEndpoints: {
-        list: async () => ({ data: [] }),
+        list: async () => ({ data: [], has_more: false }),
         create: async (params) => {
           createdParams.push(params)
           return { id: 'we_new', secret: 'whsec_new_secret' }
@@ -364,5 +366,50 @@ describe('runWebhookProvision', () => {
     expect(createdParams[0]?.enabled_events).toEqual([
       ...WEBHOOK_ENABLED_EVENTS,
     ])
+  })
+
+  it('finds a matching endpoint beyond the first page (paginates, no duplicate create)', async () => {
+    const pageOne = Array.from({ length: 100 }, (_, idx) => ({
+      id: `we_other_${idx}`,
+      url: `https://other.example.com/hook-${idx}`,
+      enabled_events: [...WEBHOOK_ENABLED_EVENTS],
+    }))
+    const listCalls: { limit: number; starting_after?: string }[] = []
+    let createCalls = 0
+    const stripeStub: ProvisionStripeClient = {
+      ...unusedPricesAndProducts,
+      webhookEndpoints: {
+        list: async (params) => {
+          listCalls.push(params)
+          if (params.starting_after === undefined) {
+            return { data: pageOne, has_more: true }
+          }
+          return {
+            data: [
+              {
+                id: 'we_page_two',
+                url: HOOK_URL,
+                enabled_events: [...WEBHOOK_ENABLED_EVENTS],
+              },
+            ],
+            has_more: false,
+          }
+        },
+        create: async () => {
+          createCalls += 1
+          throw new Error('should not create a duplicate for a page-2 match')
+        },
+      },
+    }
+
+    const summary = await runWebhookProvision(
+      { mode: 'test', commit: true, url: HOOK_URL },
+      stripeStub,
+    )
+    expect(summary.action).toBe('noop')
+    expect(summary.endpointId).toBe('we_page_two')
+    expect(createCalls).toBe(0)
+    expect(listCalls).toHaveLength(2)
+    expect(listCalls[1]?.starting_after).toBe('we_other_99')
   })
 })

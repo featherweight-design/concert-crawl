@@ -15,6 +15,7 @@
 
 import { and, eq, lt, sql } from 'drizzle-orm'
 import { db, founderWindow, subscriptionEvents } from '@concert-crawl/db'
+import type { DbExecutor } from './db-executor.js'
 import { apiLogger } from './logger.js'
 
 export type SeatRestoreReason =
@@ -36,9 +37,10 @@ export interface SeatRestoreInput {
 
 export const restoreFounderSeat = async (
   input: SeatRestoreInput,
+  dbClient: DbExecutor = db,
 ): Promise<SeatRestoreOutcome> => {
   // Idempotency: at most one restore per claiming subscription.
-  const [existingRestore] = await db
+  const [existingRestore] = await dbClient
     .select({ id: subscriptionEvents.id })
     .from(subscriptionEvents)
     .where(
@@ -57,7 +59,7 @@ export const restoreFounderSeat = async (
   }
 
   // Guarded increment — seats never exceed seatsTotal.
-  const restored = await db
+  const restored = await dbClient
     .update(founderWindow)
     .set({ seatsRemaining: sql`${founderWindow.seatsRemaining} + 1` })
     .where(
@@ -78,7 +80,7 @@ export const restoreFounderSeat = async (
     return 'seats_already_full'
   }
 
-  await db.insert(subscriptionEvents).values({
+  await dbClient.insert(subscriptionEvents).values({
     userId: input.userId,
     type: 'founder_seat_restored',
     stripeEventId: input.stripeEventId ?? null,
@@ -97,6 +99,28 @@ export const restoreFounderSeat = async (
     'founder-seats: seat restored',
   )
   return 'restored'
+}
+
+/**
+ * True when the subscription never produced a paid invoice — no
+ * subscription_created audit event carries its ID. Gates seat restoration:
+ * paid-then-cancelled Founders keep their lifetime claim (§3.2).
+ */
+export const subscriptionNeverPaid = async (
+  subscriptionId: string,
+  dbClient: DbExecutor = db,
+): Promise<boolean> => {
+  const [paidEvent] = await dbClient
+    .select({ id: subscriptionEvents.id })
+    .from(subscriptionEvents)
+    .where(
+      and(
+        eq(subscriptionEvents.type, 'subscription_created'),
+        sql`${subscriptionEvents.metadata}->>'subscriptionId' = ${subscriptionId}`,
+      ),
+    )
+    .limit(1)
+  return paidEvent === undefined
 }
 
 /**

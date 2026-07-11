@@ -8,14 +8,14 @@
 // (Stripe must not 500-retry-loop on unmatchable events); genuine processing
 // failures throw so the route 500s and Stripe retries.
 
-import { and, eq, sql } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import {
-  db,
   subscriptions,
   subscriptionEvents,
   userBilling,
 } from '@concert-crawl/db'
 import type { BillingStripeClient } from './stripe.js'
+import type { DbExecutor } from './db-executor.js'
 import {
   epochSecondsToDate,
   resolveInvoiceSubscriptionId,
@@ -25,7 +25,11 @@ import {
   type StripeSubscriptionSnapshot,
 } from './stripe-webhook-schemas.js'
 import { mapDeclineCategory } from './decline-category.js'
-import { parseFounderSeatNumber, restoreFounderSeat } from './founder-seats.js'
+import {
+  parseFounderSeatNumber,
+  restoreFounderSeat,
+  subscriptionNeverPaid,
+} from './founder-seats.js'
 import { apiLogger } from './logger.js'
 
 export type DbSubscriptionStatus =
@@ -87,6 +91,11 @@ export const dunningStageForAttempt = (attemptCount: number): 1 | 2 | 3 => {
 interface HandlerContext {
   stripe: BillingStripeClient
   stripeEventId: string
+  /**
+   * Transaction handle from the webhook route — every handler write shares
+   * the idempotency insert's transaction so a failure rolls back atomically.
+   */
+  dbClient: DbExecutor
 }
 
 const parseSubscriptionSnapshot = (
@@ -111,16 +120,17 @@ const parseSubscriptionSnapshot = (
  */
 const resolveUserId = async (
   snapshot: StripeSubscriptionSnapshot,
+  dbClient: DbExecutor,
 ): Promise<string | null> => {
   const metadataUserId = snapshot.metadata?.['userId']
   if (metadataUserId) return metadataUserId
-  const [bySubscription] = await db
+  const [bySubscription] = await dbClient
     .select({ userId: subscriptions.userId })
     .from(subscriptions)
     .where(eq(subscriptions.stripeSubscriptionId, snapshot.id))
     .limit(1)
   if (bySubscription) return bySubscription.userId
-  const [byCustomer] = await db
+  const [byCustomer] = await dbClient
     .select({ userId: subscriptions.userId })
     .from(subscriptions)
     .where(eq(subscriptions.stripeCustomerId, snapshot.customer))
@@ -148,6 +158,7 @@ const mirrorSubscription = async (
   userId: string,
   snapshot: StripeSubscriptionSnapshot,
   status: DbSubscriptionStatus,
+  dbClient: DbExecutor,
 ): Promise<void> => {
   const item = firstItem(snapshot)
   const tier = tierFromSnapshot(snapshot)
@@ -155,14 +166,14 @@ const mirrorSubscription = async (
   const currentPeriodEnd = epochSecondsToDate(item?.current_period_end)
   const cancelAtPeriodEnd = snapshot.cancel_at_period_end ?? false
 
-  const [existing] = await db
+  const [existing] = await dbClient
     .select({ id: subscriptions.id })
     .from(subscriptions)
     .where(eq(subscriptions.userId, userId))
     .limit(1)
 
   if (existing) {
-    await db
+    await dbClient
       .update(subscriptions)
       .set({
         stripeCustomerId: snapshot.customer,
@@ -186,7 +197,7 @@ const mirrorSubscription = async (
     )
     return
   }
-  await db.insert(subscriptions).values({
+  await dbClient.insert(subscriptions).values({
     userId,
     stripeCustomerId: snapshot.customer,
     stripeSubscriptionId: snapshot.id,
@@ -224,7 +235,7 @@ export const handleInvoicePaymentSucceeded = async (
     await ctx.stripe.subscriptions.retrieve(subscriptionId),
     'invoice.payment_succeeded',
   )
-  const userId = await resolveUserId(snapshot)
+  const userId = await resolveUserId(snapshot, ctx.dbClient)
   if (userId === null) {
     apiLogger.warn(
       { stripeEventId: ctx.stripeEventId, subscriptionId },
@@ -240,11 +251,11 @@ export const handleInvoicePaymentSucceeded = async (
       'invoice.payment_succeeded: unexpected Stripe status mapped to past_due',
     )
   }
-  await mirrorSubscription(userId, snapshot, status)
+  await mirrorSubscription(userId, snapshot, status, ctx.dbClient)
 
   const isFirstInvoice = invoice.billing_reason === 'subscription_create'
   const seatNumber = parseFounderSeatNumber(snapshot.metadata)
-  await db.insert(subscriptionEvents).values({
+  await ctx.dbClient.insert(subscriptionEvents).values({
     userId,
     type: isFirstInvoice ? 'subscription_created' : 'renewal_succeeded',
     stripeEventId: ctx.stripeEventId,
@@ -257,7 +268,7 @@ export const handleInvoicePaymentSucceeded = async (
   })
 
   // Re-upgrade clears the 90-day preserve-then-purge clock (#780 §5).
-  await db
+  await ctx.dbClient
     .update(userBilling)
     .set({ premiumDataExpiresAt: null, updatedAt: new Date() })
     .where(eq(userBilling.userId, userId))
@@ -299,7 +310,7 @@ export const handleInvoicePaymentFailed = async (
     await ctx.stripe.subscriptions.retrieve(subscriptionId),
     'invoice.payment_failed',
   )
-  const userId = await resolveUserId(snapshot)
+  const userId = await resolveUserId(snapshot, ctx.dbClient)
   if (userId === null) {
     apiLogger.warn(
       { stripeEventId: ctx.stripeEventId, subscriptionId },
@@ -308,17 +319,17 @@ export const handleInvoicePaymentFailed = async (
     return
   }
 
-  const [existingRow] = await db
+  const [existingRow] = await ctx.dbClient
     .select({ status: subscriptions.status })
     .from(subscriptions)
     .where(eq(subscriptions.userId, userId))
     .limit(1)
   const firstPastDueTransition = existingRow?.status !== 'past_due'
 
-  await mirrorSubscription(userId, snapshot, 'past_due')
+  await mirrorSubscription(userId, snapshot, 'past_due', ctx.dbClient)
 
   const attemptCount = invoice.attempt_count ?? 1
-  await db.insert(subscriptionEvents).values({
+  await ctx.dbClient.insert(subscriptionEvents).values({
     userId,
     type: 'payment_failed',
     stripeEventId: ctx.stripeEventId,
@@ -330,7 +341,7 @@ export const handleInvoicePaymentFailed = async (
     },
   })
   if (firstPastDueTransition) {
-    await db.insert(subscriptionEvents).values({
+    await ctx.dbClient.insert(subscriptionEvents).values({
       userId,
       type: 'past_due_entered',
       stripeEventId: ctx.stripeEventId,
@@ -348,7 +359,7 @@ export const handleSubscriptionUpdated = async (
     rawObject,
     'customer.subscription.updated',
   )
-  const userId = await resolveUserId(snapshot)
+  const userId = await resolveUserId(snapshot, ctx.dbClient)
   if (userId === null) {
     apiLogger.warn(
       { stripeEventId: ctx.stripeEventId, subscriptionId: snapshot.id },
@@ -366,7 +377,7 @@ export const handleSubscriptionUpdated = async (
   }
 
   // Cancel-schedule flips are detected against our mirror, read pre-update.
-  const [existingRow] = await db
+  const [existingRow] = await ctx.dbClient
     .select({ cancelAtPeriodEnd: subscriptions.cancelAtPeriodEnd })
     .from(subscriptions)
     .where(eq(subscriptions.userId, userId))
@@ -374,10 +385,10 @@ export const handleSubscriptionUpdated = async (
   const previousCancelFlag = existingRow?.cancelAtPeriodEnd ?? false
   const nextCancelFlag = snapshot.cancel_at_period_end ?? false
 
-  await mirrorSubscription(userId, snapshot, status)
+  await mirrorSubscription(userId, snapshot, status, ctx.dbClient)
 
   if (!previousCancelFlag && nextCancelFlag) {
-    await db.insert(subscriptionEvents).values({
+    await ctx.dbClient.insert(subscriptionEvents).values({
       userId,
       type: 'cancel_scheduled',
       stripeEventId: ctx.stripeEventId,
@@ -385,7 +396,7 @@ export const handleSubscriptionUpdated = async (
     })
   }
   if (previousCancelFlag && !nextCancelFlag) {
-    await db.insert(subscriptionEvents).values({
+    await ctx.dbClient.insert(subscriptionEvents).values({
       userId,
       type: 'resubscribed',
       stripeEventId: ctx.stripeEventId,
@@ -398,13 +409,16 @@ export const handleSubscriptionUpdated = async (
   if (snapshot.status === 'incomplete_expired') {
     const seatNumber = parseFounderSeatNumber(snapshot.metadata)
     if (seatNumber !== null) {
-      await restoreFounderSeat({
-        userId,
-        subscriptionId: snapshot.id,
-        seatNumber,
-        reason: 'incomplete_expired',
-        stripeEventId: ctx.stripeEventId,
-      })
+      await restoreFounderSeat(
+        {
+          userId,
+          subscriptionId: snapshot.id,
+          seatNumber,
+          reason: 'incomplete_expired',
+          stripeEventId: ctx.stripeEventId,
+        },
+        ctx.dbClient,
+      )
     }
   }
 }
@@ -418,7 +432,7 @@ export const handleSubscriptionDeleted = async (
     rawObject,
     'customer.subscription.deleted',
   )
-  const userId = await resolveUserId(snapshot)
+  const userId = await resolveUserId(snapshot, ctx.dbClient)
   if (userId === null) {
     apiLogger.warn(
       { stripeEventId: ctx.stripeEventId, subscriptionId: snapshot.id },
@@ -427,16 +441,16 @@ export const handleSubscriptionDeleted = async (
     return
   }
 
-  const [existingRow] = await db
+  const [existingRow] = await ctx.dbClient
     .select({ tier: subscriptions.tier })
     .from(subscriptions)
     .where(eq(subscriptions.userId, userId))
     .limit(1)
   const tier = existingRow?.tier ?? tierFromSnapshot(snapshot)
 
-  await mirrorSubscription(userId, snapshot, 'cancelled')
+  await mirrorSubscription(userId, snapshot, 'cancelled', ctx.dbClient)
 
-  await db.insert(subscriptionEvents).values({
+  await ctx.dbClient.insert(subscriptionEvents).values({
     userId,
     type: 'cancel_completed',
     stripeEventId: ctx.stripeEventId,
@@ -445,28 +459,19 @@ export const handleSubscriptionDeleted = async (
 
   // Never-paid check BEFORE any premium-data clock: a subscription with no
   // subscription_created audit event never produced a paid invoice.
-  const [paidEvent] = await db
-    .select({ id: subscriptionEvents.id })
-    .from(subscriptionEvents)
-    .where(
-      and(
-        eq(subscriptionEvents.type, 'subscription_created'),
-        sql`${subscriptionEvents.metadata}->>'subscriptionId' = ${snapshot.id}`,
-      ),
-    )
-    .limit(1)
-  const neverPaid = paidEvent === undefined
-
-  if (neverPaid) {
+  if (await subscriptionNeverPaid(snapshot.id, ctx.dbClient)) {
     const seatNumber = parseFounderSeatNumber(snapshot.metadata)
     if (seatNumber !== null) {
-      await restoreFounderSeat({
-        userId,
-        subscriptionId: snapshot.id,
-        seatNumber,
-        reason: 'never_paid_deleted',
-        stripeEventId: ctx.stripeEventId,
-      })
+      await restoreFounderSeat(
+        {
+          userId,
+          subscriptionId: snapshot.id,
+          seatNumber,
+          reason: 'never_paid_deleted',
+          stripeEventId: ctx.stripeEventId,
+        },
+        ctx.dbClient,
+      )
     }
     return
   }
@@ -475,7 +480,7 @@ export const handleSubscriptionDeleted = async (
   // (#780 §5). Supporter never held premium data; nothing to preserve.
   if (tier !== null && PREMIUM_AND_UP.includes(tier)) {
     const premiumDataExpiresAt = new Date(Date.now() + NINETY_DAYS_MS)
-    await db
+    await ctx.dbClient
       .insert(userBilling)
       .values({ userId, premiumDataExpiresAt })
       .onConflictDoUpdate({
@@ -507,7 +512,7 @@ export const handlePaymentIntentFailed = async (
   const customerId = paymentIntent.customer ?? null
   let userId: string | null = null
   if (customerId !== null) {
-    const [byCustomer] = await db
+    const [byCustomer] = await ctx.dbClient
       .select({ userId: subscriptions.userId })
       .from(subscriptions)
       .where(eq(subscriptions.stripeCustomerId, customerId))
@@ -528,7 +533,7 @@ export const handlePaymentIntentFailed = async (
 
   // No state change — the client surface owns the retry UX. The raw
   // decline_code lands in metadata only (never rendered to users).
-  await db.insert(subscriptionEvents).values({
+  await ctx.dbClient.insert(subscriptionEvents).values({
     userId,
     type: 'payment_failed',
     stripeEventId: ctx.stripeEventId,

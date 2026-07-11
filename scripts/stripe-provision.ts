@@ -84,8 +84,9 @@ export interface ProvisionStripeClient {
     create(params: { name: string }): Promise<{ id: string }>
   }
   webhookEndpoints: {
-    list(params: { limit: number }): Promise<{
+    list(params: { limit: number; starting_after?: string }): Promise<{
       data: { id: string; url: string; enabled_events: string[] }[]
+      has_more: boolean
     }>
     create(params: {
       url: string
@@ -213,8 +214,22 @@ export async function runWebhookProvision(
   opts: { mode: ProvisionMode; commit: boolean; url: string },
   stripe: ProvisionStripeClient,
 ): Promise<WebhookProvisionSummary> {
-  const listed = await stripe.webhookEndpoints.list({ limit: 100 })
-  const existing = listed.data.find((endpoint) => endpoint.url === opts.url)
+  // Paginate the full endpoint list — a match beyond the first page must
+  // still be found, or we'd register a duplicate endpoint for the same URL.
+  const allEndpoints: { id: string; url: string; enabled_events: string[] }[] =
+    []
+  let startingAfter: string | undefined
+  let hasMore = true
+  while (hasMore) {
+    const page = await stripe.webhookEndpoints.list({
+      limit: 100,
+      ...(startingAfter !== undefined ? { starting_after: startingAfter } : {}),
+    })
+    allEndpoints.push(...page.data)
+    hasMore = page.has_more && page.data.length > 0
+    startingAfter = page.data[page.data.length - 1]?.id
+  }
+  const existing = allEndpoints.find((endpoint) => endpoint.url === opts.url)
 
   if (existing) {
     const desired = [...WEBHOOK_ENABLED_EVENTS].sort()
