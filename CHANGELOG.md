@@ -1,3 +1,16 @@
+# [1.101.0](https://github.com/HartiganHM/concert-crawl/compare/v1.100.0...v1.101.0) (2026-07-11)
+
+
+### Bug Fixes
+
+* **web:** copilot round 1 — lazy matchmedia init avoids first-paint flash ([108b0c0](https://github.com/HartiganHM/concert-crawl/commit/108b0c0bf464e5d47e4696382e4b903614a0a811))
+* **web:** plan-card past-due shell gaps vs design table (pr 4.3) ([b8a2be5](https://github.com/HartiganHM/concert-crawl/commit/b8a2be5fe6a826413a194e4536eaa82cfdb2d5e2))
+
+
+### Features
+
+* **web:** past-due pinned banner + payment-flow suppression (pr 4.3) ([c9cd0f3](https://github.com/HartiganHM/concert-crawl/commit/c9cd0f39636f04c0d1eb8127f1c6a90af29b0ae6))
+
 # [1.100.0](https://github.com/HartiganHM/concert-crawl/compare/v1.99.0...v1.100.0) (2026-07-11)
 
 
