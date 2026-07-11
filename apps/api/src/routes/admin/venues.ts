@@ -112,7 +112,14 @@ const updateVenueSchema = createVenueSchema
     // are validated here (not a Postgres enum) so new adapters only touch
     // application code.
     platform: z.enum(['aeg']).nullable().optional(),
-    platformVenueId: z.string().trim().min(1).nullable().optional(),
+    // Empty/whitespace strings normalize to null (clear intent), matching
+    // the other nullable string fields in this schema.
+    platformVenueId: z
+      .string()
+      .trim()
+      .nullable()
+      .optional()
+      .transform((val) => (val === '' ? null : val)),
   })
   .refine(
     // When the payload sets platform non-null, platformVenueId must ride
@@ -439,26 +446,32 @@ venuesAdminRouter.patch(
 
     // The schema refine only sees the payload; this guards the merged
     // result against orphaned state (id without platform, or platform
-    // losing its id via a partial PATCH).
-    if (nextPlatform === null && nextPlatformVenueId !== null) {
-      return ctx.json(
-        {
-          success: false,
-          error: 'platformVenueId requires platform to be set',
-          field: 'platformVenueId',
-        },
-        400,
-      )
-    }
-    if (nextPlatform !== null && nextPlatformVenueId === null) {
-      return ctx.json(
-        {
-          success: false,
-          error: 'platformVenueId is required when platform is set',
-          field: 'platformVenueId',
-        },
-        400,
-      )
+    // losing its id via a partial PATCH). Only enforced when the payload
+    // touches platform fields — unrelated PATCHes (verify, pause, rename)
+    // must not start failing on venues with pre-existing orphaned state.
+    const touchesPlatformFields =
+      body.platform !== undefined || body.platformVenueId !== undefined
+    if (touchesPlatformFields) {
+      if (nextPlatform === null && nextPlatformVenueId !== null) {
+        return ctx.json(
+          {
+            success: false,
+            error: 'platformVenueId requires platform to be set',
+            field: 'platformVenueId',
+          },
+          400,
+        )
+      }
+      if (nextPlatform !== null && nextPlatformVenueId === null) {
+        return ctx.json(
+          {
+            success: false,
+            error: 'platformVenueId is required when platform is set',
+            field: 'platformVenueId',
+          },
+          400,
+        )
+      }
     }
 
     const [updated] = await db

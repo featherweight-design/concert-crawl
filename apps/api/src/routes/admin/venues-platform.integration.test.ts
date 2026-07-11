@@ -150,6 +150,23 @@ describe('PATCH /v1/admin/venues/:id — platform routing (#721)', () => {
     expect(persisted?.platformVenueId).toBe('89')
   })
 
+  it('allows unrelated PATCHes on venues with pre-existing orphaned platform state', async () => {
+    setAuth('admin')
+    // Orphaned legacy state: id without platform, seeded directly
+    const venue = await seedVenue({
+      name: 'Legacy Venue',
+      slug: 'legacy-venue',
+      platformVenueId: '89',
+    })
+
+    const res = await app.request(`/v1/admin/venues/${venue.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Legacy Venue Renamed' }),
+    })
+    expect(res.status).toBe(200)
+  })
+
   it('rejects whitespace-only platformVenueId', async () => {
     setAuth('admin')
     const venue = await seedVenue({ name: 'AEG Venue', slug: 'aeg-venue' })
