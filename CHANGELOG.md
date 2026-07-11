@@ -1,3 +1,15 @@
+## [1.87.3](https://github.com/HartiganHM/concert-crawl/compare/v1.87.2...v1.87.3) (2026-07-11)
+
+
+### Bug Fixes
+
+* **crawler-core:** [#851](https://github.com/HartiganHM/concert-crawl/issues/851) return '' for non-string input (PR [#853](https://github.com/HartiganHM/concert-crawl/issues/853) R3) ([4efc54d](https://github.com/HartiganHM/concert-crawl/commit/4efc54d28dde722458cca80e857d5468dd245fe2))
+* **crawler-core:** [#851](https://github.com/HartiganHM/concert-crawl/issues/851) strip duplicated trailing word from LLM-extracted titles ([6ed1dd9](https://github.com/HartiganHM/concert-crawl/commit/6ed1dd976c2ce58c783c25f35f99070b71e78b2c)), closes [#826](https://github.com/HartiganHM/concert-crawl/issues/826)
+* **crawler-core:** [#851](https://github.com/HartiganHM/concert-crawl/issues/851) use Unicode-aware regex in strip-duplicated-trailing-word (PR [#853](https://github.com/HartiganHM/concert-crawl/issues/853) R1) ([7ff1489](https://github.com/HartiganHM/concert-crawl/commit/7ff14890bed7130dade3f688d240da7587d3511c))
+* **scripts:** [#851](https://github.com/HartiganHM/concert-crawl/issues/851) add PK + upsert to events_851_backup for deterministic rollback (PR [#853](https://github.com/HartiganHM/concert-crawl/issues/853) R8) ([c48fb9c](https://github.com/HartiganHM/concert-crawl/commit/c48fb9cd4c46ccf69f38b25abd0ebbb1431d7a66))
+* **scripts:** [#851](https://github.com/HartiganHM/concert-crawl/issues/851) escape backslashes in Postgres regex prefilter (PR [#853](https://github.com/HartiganHM/concert-crawl/issues/853) R2) ([4157463](https://github.com/HartiganHM/concert-crawl/commit/4157463b238a8d6b2a0694c8667d12a9617d292e))
+* **scripts:** [#851](https://github.com/HartiganHM/concert-crawl/issues/851) widen SQL prefilter to non-whitespace token (PR [#853](https://github.com/HartiganHM/concert-crawl/issues/853) R8) ([1255186](https://github.com/HartiganHM/concert-crawl/commit/12551868165456d8720898741238171573ac3721))
+
 ## [1.87.2](https://github.com/HartiganHM/concert-crawl/compare/v1.87.1...v1.87.2) (2026-07-11)
 
 
