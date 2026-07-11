@@ -204,6 +204,25 @@ describe('GET /v1/admin/costs/daily', () => {
     ])
     expect(body.data.totalUsd).toBe(3.01)
   })
+
+  it('sums the total from unrounded day aggregates so sub-cent days still count', async () => {
+    adminAuth()
+    await queueDailyRows([
+      { date: '2026-07-09', costUsd: 0.004 },
+      { date: '2026-07-10', costUsd: 0.004 },
+    ])
+    const res = await createApp().request('/v1/admin/costs/daily?days=2')
+    const body = (await res.json()) as {
+      data: { days: { date: string; costUsd: number }[]; totalUsd: number }
+    }
+    // Each day rounds to $0.00 for display, but the total is computed from
+    // the unrounded aggregates: 0.008 → $0.01, not $0.00.
+    expect(body.data.days).toEqual([
+      { date: '2026-07-09', costUsd: 0 },
+      { date: '2026-07-10', costUsd: 0 },
+    ])
+    expect(body.data.totalUsd).toBe(0.01)
+  })
 })
 
 describe('GET /v1/admin/costs/top-venues', () => {
@@ -324,5 +343,28 @@ describe('GET /v1/admin/costs/top-venues', () => {
     }
     expect(body.data.venues).toHaveLength(1)
     expect(body.data.venues[0]?.venueId).toBe(VENUE_A)
+  })
+
+  it('sums totals and shares from unrounded venue aggregates', async () => {
+    adminAuth()
+    await queueTopVenueRows([
+      { venueId: VENUE_A, name: 'Bluebird Theater', costUsd: 0.004 },
+      { venueId: VENUE_B, name: 'Gothic Theatre', costUsd: 0.004 },
+      { venueId: VENUE_C, name: 'Larimer Lounge', costUsd: 0.004 },
+      { venueId: VENUE_D, name: 'Hi-Dive', costUsd: 0.004 },
+    ])
+    const res = await createApp().request('/v1/admin/costs/top-venues')
+    const body = (await res.json()) as {
+      data: {
+        venues: { costUsd: number; pct: number }[]
+        totalUsd: number
+      }
+    }
+    // Per-venue display rounds to $0.00, but the total and pct shares come
+    // from the unrounded aggregates: 0.016 → $0.02, four equal 25% shares.
+    expect(body.data.totalUsd).toBe(0.02)
+    expect(body.data.venues).toHaveLength(4)
+    expect(body.data.venues[0]).toMatchObject({ costUsd: 0, pct: 25 })
+    expect(body.data.venues[3]).toMatchObject({ costUsd: 0, pct: 25 })
   })
 })

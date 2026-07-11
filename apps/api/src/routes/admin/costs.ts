@@ -40,7 +40,14 @@ export const mountainDateString = (date: Date): string =>
 // never convert these strings back through a timezone.
 export const listWindowDates = (days: number, endDate: string): string[] => {
   const [year, month, day] = endDate.split('-').map(Number)
-  if (year === undefined || month === undefined || day === undefined) {
+  if (
+    year === undefined ||
+    month === undefined ||
+    day === undefined ||
+    !Number.isFinite(year) ||
+    !Number.isFinite(month) ||
+    !Number.isFinite(day)
+  ) {
     return [endDate]
   }
   const endUtcMs = Date.UTC(year, month - 1, day)
@@ -93,15 +100,18 @@ costsAdminRouter.get(
       .where(sql`${mtDayBucket()} >= ${windowStart}::date`)
       .groupBy(mtDayBucket())
 
+    // Per-run costs are fractions of a cent, so the window total sums the
+    // unrounded aggregates and rounds once — summing rounded day buckets
+    // would undercount (or zero out) real spend.
     const costsByDate = new Map(
-      rows.map((row) => [row.date, roundUsd(Number(row.costUsd))]),
+      rows.map((row) => [row.date, Number(row.costUsd)]),
     )
     const dayBuckets = windowDates.map((date) => ({
       date,
-      costUsd: costsByDate.get(date) ?? 0,
+      costUsd: roundUsd(costsByDate.get(date) ?? 0),
     }))
     const totalUsd = roundUsd(
-      dayBuckets.reduce((sum, bucket) => sum + bucket.costUsd, 0),
+      rows.reduce((sum, row) => sum + Number(row.costUsd), 0),
     )
 
     const data: AdminDailyCosts = { days: dayBuckets, totalUsd }
@@ -136,30 +146,37 @@ costsAdminRouter.get(
       .having(sql`coalesce(sum(${crawlRuns.llmCostUsd}), 0) > 0`)
       .orderBy(desc(costSum))
 
+    // Keep per-venue aggregates unrounded for totals and pct shares —
+    // per-run costs are fractions of a cent, and rounding before summing
+    // undercounts. Rounding happens once per response value.
     const ranked = rows.map((row) => ({
       venueId: row.venueId,
       name: row.name ?? UNKNOWN_VENUE_NAME,
-      costUsd: roundUsd(Number(row.costUsd)),
+      costUsd: Number(row.costUsd),
     }))
-    const totalUsd = roundUsd(
-      ranked.reduce((sum, venue) => sum + venue.costUsd, 0),
-    )
+    const rawTotal = ranked.reduce((sum, venue) => sum + venue.costUsd, 0)
+    const totalUsd = roundUsd(rawTotal)
     const shareOfTotal = (costUsd: number): number =>
-      totalUsd > 0 ? Math.round((costUsd / totalUsd) * 100) : 0
+      rawTotal > 0 ? Math.round((costUsd / rawTotal) * 100) : 0
 
     const topVenues: TopSpendVenue[] = ranked
       .slice(0, TOP_VENUES_LIMIT)
-      .map((venue) => ({ ...venue, pct: shareOfTotal(venue.costUsd) }))
+      .map((venue) => ({
+        ...venue,
+        costUsd: roundUsd(venue.costUsd),
+        pct: shareOfTotal(venue.costUsd),
+      }))
 
     const remainder = ranked.slice(TOP_VENUES_LIMIT)
     if (remainder.length > 0) {
-      const othersCost = roundUsd(
-        remainder.reduce((sum, venue) => sum + venue.costUsd, 0),
+      const othersCost = remainder.reduce(
+        (sum, venue) => sum + venue.costUsd,
+        0,
       )
       topVenues.push({
         venueId: null,
         name: '(others)',
-        costUsd: othersCost,
+        costUsd: roundUsd(othersCost),
         pct: shareOfTotal(othersCost),
       })
     }
