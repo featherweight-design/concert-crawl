@@ -1,3 +1,10 @@
+## [1.87.5](https://github.com/HartiganHM/concert-crawl/compare/v1.87.4...v1.87.5) (2026-07-11)
+
+
+### Bug Fixes
+
+* **crawler-core:** [#863](https://github.com/HartiganHM/concert-crawl/issues/863) rawTitle cross-check saves legitimate trailing repeats ([de3d9e0](https://github.com/HartiganHM/concert-crawl/commit/de3d9e06728a1f3646b3100a3ca67beb47e0e732)), closes [#851](https://github.com/HartiganHM/concert-crawl/issues/851) [#853](https://github.com/HartiganHM/concert-crawl/issues/853)
+
 ## [1.87.4](https://github.com/HartiganHM/concert-crawl/compare/v1.87.3...v1.87.4) (2026-07-11)
 
 
