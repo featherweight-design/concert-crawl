@@ -20,24 +20,31 @@ ALTER TYPE subscription_status ADD VALUE IF NOT EXISTS 'incomplete_expired';
 --> statement-breakpoint
 
 -- 3. subscription_event_type — new audit enum (spec §5), exactly 16 values.
-CREATE TYPE subscription_event_type AS ENUM (
-  'checkout_started',
-  'subscription_created',
-  'renewal_succeeded',
-  'payment_failed',
-  'past_due_entered',
-  'cancel_scheduled',
-  'resubscribed',
-  'cancel_completed',
-  'upgraded',
-  'downgraded',
-  'founder_claimed',
-  'founder_seat_restored',
-  'trial_ended',
-  'gift_granted',
-  'gift_revoked',
-  'data_purged'
-);
+--    Postgres has no CREATE TYPE IF NOT EXISTS; the DO block swallows
+--    duplicate_object so a partially-applied migration can be re-run safely
+--    (the other statements here are already idempotent).
+DO $$ BEGIN
+  CREATE TYPE subscription_event_type AS ENUM (
+    'checkout_started',
+    'subscription_created',
+    'renewal_succeeded',
+    'payment_failed',
+    'past_due_entered',
+    'cancel_scheduled',
+    'resubscribed',
+    'cancel_completed',
+    'upgraded',
+    'downgraded',
+    'founder_claimed',
+    'founder_seat_restored',
+    'trial_ended',
+    'gift_granted',
+    'gift_revoked',
+    'data_purged'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 --> statement-breakpoint
 
 -- 4. subscriptions additions (spec §2) + one-live-row-per-user uniqueness.

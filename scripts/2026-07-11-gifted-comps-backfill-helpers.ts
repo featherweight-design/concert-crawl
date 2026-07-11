@@ -6,9 +6,10 @@
  */
 
 /**
- * Type guard over a Clerk user's `publicMetadata` (unknown at the system
- * boundary — no `as` casts, per CLAUDE.md). True iff the metadata carries
- * the hand-set beta gifting marker `plan: 'premium_gifted'`.
+ * Predicate over a Clerk user's `publicMetadata` (unknown at the system
+ * boundary — narrowed via `in`-operator checks, no `as` casts, per
+ * CLAUDE.md). True iff the metadata carries the hand-set beta gifting
+ * marker `plan: 'premium_gifted'`.
  */
 export const hasGiftedPlanMetadata = (publicMetadata: unknown): boolean => {
   if (typeof publicMetadata !== 'object' || publicMetadata === null) {
