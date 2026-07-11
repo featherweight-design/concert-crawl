@@ -19,4 +19,13 @@ export const LIFECYCLE_NUDGES_COPY = {
     cta: 'Go Premium',
     dismissAria: 'Dismiss trial reminder',
   },
+  // Past-due banner (#775, PR 4.3) — strings verbatim from the design
+  // property table (docs/superpowers/design-tables/past-due-surfaces.md).
+  pastDueBanner: {
+    headline: 'Your card got declined',
+    sub: '— give it a refresh?',
+    cta: 'Update card',
+    dismissAria: 'Dismiss payment notice',
+    regionAria: 'Payment notice',
+  },
 } as const

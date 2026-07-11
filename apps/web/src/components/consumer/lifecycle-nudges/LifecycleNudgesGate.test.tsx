@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 let pathname = '/'
@@ -15,6 +15,7 @@ beforeEach(() => {
   mockFetchMe.mockResolvedValue(meResponse())
   mockDismissNudge.mockResolvedValue(undefined)
   mockMarkTrialTakeoverShown.mockResolvedValue(undefined)
+  mockNavigateToPortalSession.mockResolvedValue(undefined)
 })
 
 const mockGetToken = vi.fn()
@@ -40,6 +41,12 @@ vi.mock('@/lib/billing', () => ({
   dismissNudge: (token: string, nudge: string) =>
     mockDismissNudge(token, nudge),
   markTrialTakeoverShown: (token: string) => mockMarkTrialTakeoverShown(token),
+}))
+
+const mockNavigateToPortalSession = vi.fn()
+vi.mock('@/lib/portal-navigation', () => ({
+  navigateToPortalSession: (getToken: () => Promise<string | null>) =>
+    mockNavigateToPortalSession(getToken),
 }))
 
 // The presentational surfaces have their own suites — the gate tests only
@@ -79,7 +86,35 @@ vi.mock('./DayThirteenBanner', () => ({
   ),
 }))
 
+vi.mock('./PastDueBanner', () => ({
+  PastDueBanner: ({
+    variant,
+    onDismiss,
+    onUpdateCard,
+    updateCardPending,
+  }: {
+    variant: string
+    onDismiss: () => void
+    onUpdateCard: () => void
+    updateCardPending?: boolean
+  }) => (
+    <div
+      data-testid="mock-past-due-banner"
+      data-variant={variant}
+      data-pending={updateCardPending ? 'true' : 'false'}
+    >
+      <button type="button" onClick={onDismiss}>
+        mock-past-due-dismiss
+      </button>
+      <button type="button" onClick={onUpdateCard}>
+        mock-past-due-update-card
+      </button>
+    </div>
+  ),
+}))
+
 import { LifecycleNudgesGate } from './LifecycleNudgesGate'
+import { beginPaymentFlow } from '@/components/consumer/tier-picker/lib/payment-flow-signal'
 import { SESSION_STARTED_AT_KEY } from './definitions/constants'
 import { PLAN_SETTINGS_ROUTE } from '@/components/consumer/tier-picker/definitions/constants'
 
@@ -221,10 +256,97 @@ describe('LifecycleNudgesGate', () => {
     )
   })
 
-  it('renders nothing for past-due (PR 4.3 surface) or no flags', async () => {
-    mockFetchMe.mockResolvedValue(meResponse({ showPastDueBanner: true }))
+  it('renders nothing when no flags are set', async () => {
     const { container } = render(<LifecycleNudgesGate />)
     await waitFor(() => expect(mockFetchMe).toHaveBeenCalled())
     expect(container.firstChild).toBeNull()
+  })
+
+  it('shows the pinned past-due banner when flagged', async () => {
+    mockFetchMe.mockResolvedValue(meResponse({ showPastDueBanner: true }))
+    render(<LifecycleNudgesGate />)
+    await waitFor(() =>
+      expect(screen.getByTestId('mock-past-due-banner')).toBeTruthy(),
+    )
+    expect(screen.getByTestId('mock-past-due-banner').dataset.variant).toBe(
+      'pinned',
+    )
+    expect(mockMarkTrialTakeoverShown).not.toHaveBeenCalled()
+  })
+
+  it('takeover wins over the past-due banner when both flags are set', async () => {
+    mockFetchMe.mockResolvedValue(
+      meResponse({ showTrialEndedTakeover: true, showPastDueBanner: true }),
+    )
+    render(<LifecycleNudgesGate />)
+    await waitFor(() =>
+      expect(screen.getByTestId('mock-takeover')).toBeTruthy(),
+    )
+    expect(screen.queryByTestId('mock-past-due-banner')).toBeNull()
+  })
+
+  it('past-due dismiss hides it immediately and posts the dismissal', async () => {
+    mockFetchMe.mockResolvedValue(meResponse({ showPastDueBanner: true }))
+    render(<LifecycleNudgesGate />)
+    await waitFor(() =>
+      expect(screen.getByTestId('mock-past-due-banner')).toBeTruthy(),
+    )
+    fireEvent.click(screen.getByText('mock-past-due-dismiss'))
+    expect(screen.queryByTestId('mock-past-due-banner')).toBeNull()
+    await waitFor(() =>
+      expect(mockDismissNudge).toHaveBeenCalledWith('test-token', 'past-due'),
+    )
+  })
+
+  it('update card navigates to the billing portal', async () => {
+    mockFetchMe.mockResolvedValue(meResponse({ showPastDueBanner: true }))
+    render(<LifecycleNudgesGate />)
+    await waitFor(() =>
+      expect(screen.getByTestId('mock-past-due-banner')).toBeTruthy(),
+    )
+    fireEvent.click(screen.getByText('mock-past-due-update-card'))
+    await waitFor(() =>
+      expect(mockNavigateToPortalSession).toHaveBeenCalledTimes(1),
+    )
+    expect(screen.getByTestId('mock-past-due-banner').dataset.pending).toBe(
+      'true',
+    )
+  })
+
+  it('update card re-enables the CTA when portal navigation fails', async () => {
+    mockNavigateToPortalSession.mockRejectedValue(new Error('portal down'))
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined)
+    mockFetchMe.mockResolvedValue(meResponse({ showPastDueBanner: true }))
+    render(<LifecycleNudgesGate />)
+    await waitFor(() =>
+      expect(screen.getByTestId('mock-past-due-banner')).toBeTruthy(),
+    )
+    fireEvent.click(screen.getByText('mock-past-due-update-card'))
+    await waitFor(() =>
+      expect(screen.getByTestId('mock-past-due-banner').dataset.pending).toBe(
+        'false',
+      ),
+    )
+    expect(consoleError).toHaveBeenCalled()
+    consoleError.mockRestore()
+  })
+
+  it('suppresses the past-due banner while a payment flow is active and re-shows it on release', async () => {
+    mockFetchMe.mockResolvedValue(meResponse({ showPastDueBanner: true }))
+    render(<LifecycleNudgesGate />)
+    await waitFor(() =>
+      expect(screen.getByTestId('mock-past-due-banner')).toBeTruthy(),
+    )
+    let releasePaymentFlow: () => void = () => undefined
+    act(() => {
+      releasePaymentFlow = beginPaymentFlow()
+    })
+    expect(screen.queryByTestId('mock-past-due-banner')).toBeNull()
+    act(() => {
+      releasePaymentFlow()
+    })
+    expect(screen.getByTestId('mock-past-due-banner')).toBeTruthy()
   })
 })

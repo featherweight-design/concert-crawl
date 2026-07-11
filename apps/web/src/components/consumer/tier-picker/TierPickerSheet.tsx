@@ -20,6 +20,7 @@ import { createCheckoutSession, abandonCheckout } from '@/lib/billing'
 import { navigateToPortalSession } from '@/lib/portal-navigation'
 import { TIER_PICKER_COPY } from './definitions/copy'
 import { visibleTiers, defaultExpandedTier } from './lib/visible-tiers'
+import { beginPaymentFlow } from './lib/payment-flow-signal'
 import { scarcityRailData } from './lib/scarcity'
 import { TierCardDesktop } from './TierCardDesktop'
 import { TierRowMobile } from './TierRowMobile'
@@ -188,6 +189,14 @@ export const TierPickerSheet = ({
   const [checkout, setCheckout] = useState<CheckoutContext | null>(null)
   const [pendingTier, setPendingTier] = useState<TierKey | null>(null)
   const [errorText, setErrorText] = useState<string | null>(null)
+
+  // While the embedded checkout (card entry) is mounted, mark an active
+  // payment flow so the past-due banner suppresses itself (PR 4.3).
+  useEffect(() => {
+    if (!open || checkout === null) return
+    const releasePaymentFlow = beginPaymentFlow()
+    return releasePaymentFlow
+  }, [open, checkout])
 
   // Bumped on close to invalidate any createCheckoutSession still in
   // flight — a session resolving after dismissal must be abandoned (the
