@@ -24,7 +24,7 @@ export interface PlanDerivationInput {
 // Statuses that keep the paid tier live. past_due stays paid through the
 // 7-day dunning window (#782 §1); the webhook flips it to cancelled at
 // dunning exhaustion, which falls through to free on next derivation.
-const LIVE_STATUSES: readonly SubscriptionStatus[] = [
+export const LIVE_STATUSES: readonly SubscriptionStatus[] = [
   'active',
   'past_due',
   'trialing',

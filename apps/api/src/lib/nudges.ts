@@ -7,6 +7,8 @@
 
 import type { SubscriptionStatus } from '@concert-crawl/types'
 
+import { LIVE_STATUSES } from './plan.js'
+
 const HOUR_MS = 60 * 60 * 1000
 const DAY_13_WINDOW_START_MS = 48 * HOUR_MS // trialEndsAt − 48h (inclusive)
 const DAY_13_WINDOW_END_MS = 24 * HOUR_MS // trialEndsAt − 24h (exclusive)
@@ -27,9 +29,17 @@ export interface NudgeFlags {
   showPastDueBanner: boolean
 }
 
+// Nudges that push a trial user toward converting are suppressed once a live
+// subscription exists — plan derivation retains trialEndsAt alongside a live
+// subscription, so the timestamps alone can't distinguish a converted user.
+const hasLiveSubscription = (input: NudgeEvaluationInput): boolean =>
+  input.subscriptionStatus !== null &&
+  LIVE_STATUSES.includes(input.subscriptionStatus)
+
 // Trial-ended takeover: single-fire per trial expiry — a shownAt stamped
 // before a NEW trialEndsAt re-arms the takeover (#780 §2).
 const evaluateTrialEndedTakeover = (input: NudgeEvaluationInput): boolean => {
+  if (hasLiveSubscription(input)) return false
   if (input.trialEndsAt === null) return false
   if (input.trialEndsAt.getTime() >= input.now.getTime()) return false
   return (
@@ -42,6 +52,7 @@ const evaluateTrialEndedTakeover = (input: NudgeEvaluationInput): boolean => {
 // stamped before the window opened belongs to a prior trial and re-shows
 // (#780 §6).
 const evaluateDayThirteenBanner = (input: NudgeEvaluationInput): boolean => {
+  if (hasLiveSubscription(input)) return false
   if (input.trialEndsAt === null) return false
   const windowStart = input.trialEndsAt.getTime() - DAY_13_WINDOW_START_MS
   const windowEnd = input.trialEndsAt.getTime() - DAY_13_WINDOW_END_MS

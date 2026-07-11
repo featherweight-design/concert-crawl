@@ -392,6 +392,18 @@ describe('GET /v1/users/me — lifecycle nudge flags + founder window', () => {
     expect(body.data.showDayThirteenBanner).toBe(false)
   })
 
+  it('suppresses the takeover and day-13 banner for a user with a live subscription', async () => {
+    setAuth()
+    await seedSubscription('user_test123', { status: 'active' })
+    await testDb.insert(userBilling).values({
+      userId: 'user_test123',
+      trialEndsAt: new Date(Date.now() - DAY_MS),
+    })
+    const body = await fetchMe()
+    expect(body.data.showTrialEndedTakeover).toBe(false)
+    expect(body.data.showDayThirteenBanner).toBe(false)
+  })
+
   it('shows the past-due banner for past_due with no dismissal', async () => {
     setAuth()
     await seedSubscription('user_test123', { status: 'past_due' })

@@ -74,6 +74,32 @@ describe('showTrialEndedTakeover', () => {
     )
     expect(flags.showTrialEndedTakeover).toBe(true)
   })
+
+  it.each(['active', 'past_due', 'trialing'] as const)(
+    'is suppressed by a live subscription (status=%s) even after trial expiry',
+    (status) => {
+      const flags = evaluateNudgeFlags(
+        baseInput({
+          trialEndsAt: hoursFromNow(-1),
+          subscriptionStatus: status,
+        }),
+      )
+      expect(flags.showTrialEndedTakeover).toBe(false)
+    },
+  )
+
+  it.each(['cancelled', 'incomplete'] as const)(
+    'is NOT suppressed by a non-live subscription (status=%s)',
+    (status) => {
+      const flags = evaluateNudgeFlags(
+        baseInput({
+          trialEndsAt: hoursFromNow(-1),
+          subscriptionStatus: status,
+        }),
+      )
+      expect(flags.showTrialEndedTakeover).toBe(true)
+    },
+  )
 })
 
 describe('showDayThirteenBanner', () => {
@@ -140,6 +166,32 @@ describe('showDayThirteenBanner', () => {
     )
     expect(flags.showDayThirteenBanner).toBe(true)
   })
+
+  it.each(['active', 'past_due', 'trialing'] as const)(
+    'is suppressed by a live subscription (status=%s) even inside the window',
+    (status) => {
+      const flags = evaluateNudgeFlags(
+        baseInput({
+          trialEndsAt: hoursFromNow(36),
+          subscriptionStatus: status,
+        }),
+      )
+      expect(flags.showDayThirteenBanner).toBe(false)
+    },
+  )
+
+  it.each(['cancelled', 'incomplete'] as const)(
+    'is NOT suppressed by a non-live subscription (status=%s)',
+    (status) => {
+      const flags = evaluateNudgeFlags(
+        baseInput({
+          trialEndsAt: hoursFromNow(36),
+          subscriptionStatus: status,
+        }),
+      )
+      expect(flags.showDayThirteenBanner).toBe(true)
+    },
+  )
 })
 
 describe('showPastDueBanner', () => {
