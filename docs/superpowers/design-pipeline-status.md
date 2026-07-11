@@ -25,11 +25,15 @@ Living tracker of every design-track ticket + its position in the two-stage pipe
 
 ## 🟢 Ready for implementation (2-stage design complete, Green)
 
-Design brief has landed AND the visual handoff is signed off Green. Awaiting an eng plan PR to open.
+Design brief has landed AND the visual handoff is signed off Green. Awaiting an eng-planning agent to write the implementation plan.
 
-**Currently empty.** The monetization vertical (previously here) moved into active build 2026-07-11 — see `docs/superpowers/progress.md` and the execution plan (PR #854). Phases 1 → 3.2 already merged (PRs #873, #878, #879, #880, #885, #886); Phases 3.3 → 7 remaining.
+| # / vertical | Brief | Handoff | Verdict | Notes |
+|---|---|---|---|---|
+| **#642** Calendar month/week jump picker | PR #862 (2026-07-10) | `design/design_handoff_calendar_jump_picker/` | 🟢 Green (PR #894, 2026-07-11) — one-pass audit, all 4 R-rounds Low/Nit floor | Design nailed the light-brainstorm scope in one pass. Ready for eng-planning agent. |
 
-When 🟡 Yellow items flip Green after Design addenda land, they move here (unless eng picks them up first, in which case they skip straight into build tracking).
+The monetization vertical (previously here) moved into active build 2026-07-11 — see `docs/superpowers/progress.md` and the execution plan (PR #854). Phases 1 → 3.2 already merged (PRs #873, #878, #879, #880, #885, #886); Phases 3.3 → 7 remaining.
+
+When 🟡 Yellow items flip Green after Design addenda land, they move here.
 
 ---
 
@@ -52,8 +56,8 @@ Design brief has merged; Claude Design needs to produce the hi-fi handoff (mocks
 
 | Rank | Ticket | Brief PR | Path to eng handoff | Why this rank |
 |---|---|---|---|---|
-| 1 | **#642** Calendar month/week jump picker | PR #862 | Design → mini-month grid mocks + affordances + a11y → audit → build (UI-only, no data-layer changes) | Smallest scope. Pattern locked (tappable header → grid). No schema / API / crawler changes required. Once Design ships, eng builds against existing WeekStrip data model. |
-| 2 | **#643** Supporting artists title separator | PR #869 | Design → separator + tour name + overflow treatments → audit → build (**+ eng data-layer work**: `supportingArtists: string[]` + `tourName: string | null` extracted at crawl time via LLM prompt + Event schema + shared type + backfill posture) | Larger surface — Design owns separator character / tour name treatment / overflow / a11y, eng owns crawler-core LLM prompt update + Event schema expand + backfill. Two independent workstreams merge. |
+| 1 | **#643** Supporting artists title separator | PR #869 | Design → separator + tour name + overflow treatments → audit → build (**+ eng data-layer work**: `supportingArtists: string[]` + `tourName: string | null` extracted at crawl time via LLM prompt + Event schema + shared type + backfill posture) | Larger surface — Design owns separator character / tour name treatment / overflow / a11y, eng owns crawler-core LLM prompt update + Event schema expand + backfill. Two independent workstreams merge. |
+| 2 | **#763** Spotify sync connect flow | PR #893 (2026-07-11) | Design → connect flow + auto-watch opt-in modal + "you follow" highlight + Settings > Connections + Discovery surface + weekly digest email + push alert copy + taste-informed filter + empty/failure states → audit → build | Big Track 2 surface — 7 locked decisions across free/premium tier split. Also asks Design for a **browse card hierarchy audit** (mobile is dense). Sequencing deps flagged in brief: #737 (push alerts) + #783 email family (digest). |
 
 **Maintenance note:** when Design produces the handoff, move to 🎨 (audit in flight) → then 🟡 / 🟢 based on verdict.
 
@@ -69,9 +73,7 @@ _Currently empty — the two most recent audits landed 2026-07-11 (both in 🟡 
 
 ## 🚦 Paused (mid-brainstorm)
 
-| # | Stage | Notes | Resume when |
-|---|---|---|---|
-| **#763** Spotify sync connect flow | Brainstorm paused mid-stream | Was in-flight before the monetization vertical took priority | Hugh's next design session |
+_Currently empty — #763 Spotify brainstorm completed 2026-07-11, brief merged (PR #893), moved to 📐 above._
 
 ---
 
@@ -102,7 +104,12 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 | Shipped | # | What |
 |---|---|---|
-| 2026-07-11 | — | This tracker doc refreshed post-#775 close + 📐 state added (PR TBD — this PR) |
+| 2026-07-11 | — | This tracker doc refreshed post-#894 audit + #893 Spotify brief (PR TBD — this PR) |
+| 2026-07-11 | — | `design/design_handoff_calendar_jump_picker/READINESS.md` merged (PR #894) — 🟢 Green verdict, one-pass, ready for eng-planning |
+| 2026-07-11 | #763 | Spotify sync design brief (PR #893) — full 7-question brainstorm; 7 locked decisions; Free tier + Premium 4-feature suite |
+| 2026-07-11 | — | Design-track persona: added Scope section (design vs eng-planning boundary) + handoff-prompts-in-terminal rule (memory-only) |
+| 2026-07-11 | — | Plan PRs #890 (#642) + #891 (#643) closed — violated persona scope (design should not write eng plans) |
+| 2026-07-11 | — | Design pipeline tracker refreshed with 📐 state + post-#775 (PR #888) |
 | 2026-07-11 | #849 | Resend infra ownership resolved (folded into #775) |
 | 2026-07-11 | #775 | Monetization eng infra spec + PRs 2.1 → 3.2 shipped (spec PR #873; build PRs #878/#879/#880/#885/#886) — see progress.md |
 | 2026-07-11 | — | Design pipeline tracker refreshed post-audit-batch (PR #882) |
@@ -127,10 +134,10 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 ## 📋 Immediate TODOs
 
-- [ ] **#763 Spotify sync brainstorm** — Hugh's next design session (resume mid-brainstorm)
+- [ ] **#642 eng plan** — Green audit landed. Eng-planning agent picks up, writes implementation plan against `design/design_handoff_calendar_jump_picker/`.
+- [ ] **#643 + #763 Design handoffs** — brief Claude Design (prompts from persona pattern; terminal output for copy-paste)
 - [ ] **concert_history + shareable_cards Yellow → Green** — light Design addenda to close the flagged blockers, then re-review. Note: concert_history's Supporter-tier dependency is largely resolved now that #775 shipped (schema expand PR #878 already landed) — its blockers are down to the `attending_at` schema call + the Passport scope boundary.
-- [ ] **#642 + #643 Design handoffs** — brief Claude Design when ready to produce the hi-fi handoffs
-- [ ] **Once #763 lands:** pick next Track 2 ticket per priority order (#762 Who else is watching → #764 Venue first-timer → #506 Admin Venue Form → #794 Logged-out UX)
+- [ ] **Backlog priority order** (after #763 handoff work): #762 Who else is watching → #764 Venue first-timer → #506 Admin Venue Form → #794 Logged-out UX
 
 ---
 
