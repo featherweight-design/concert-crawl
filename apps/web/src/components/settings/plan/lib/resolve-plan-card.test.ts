@@ -320,4 +320,28 @@ describe('resolvePlanCard — free contexts', () => {
     expect(content.chip).toBe(PLAN_CARD_COPY.freePostCancel.chip('Jul 5'))
     expect(content.ctas[0]?.action).toBe('tier-picker')
   })
+
+  it('post-cancel copy is tier-neutral (the API drops the previous tier)', () => {
+    // Any cancelled paid tier (supporter/premium/founder) collapses to
+    // plan 'free' + status 'cancelled', so the card must not name Premium.
+    const content = resolvePlanCard(
+      state({
+        plan: 'free',
+        status: 'cancelled',
+        currentPeriodEnd: '2026-07-05T07:00:00Z',
+      }),
+      NOW,
+    )
+    const surfaces = [
+      content.chip,
+      content.eyebrow,
+      content.headline,
+      content.body,
+      content.punchline,
+      ...content.ctas.map((cta) => cta.label),
+    ]
+    for (const text of surfaces) {
+      expect(text ?? '').not.toMatch(/premium|supporter|founder/i)
+    }
+  })
 })

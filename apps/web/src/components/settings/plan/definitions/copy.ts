@@ -142,15 +142,17 @@ export const PLAN_CARD_COPY = {
   },
 
   freePostCancel: {
+    // PlanState doesn't carry the previous paid tier (the API collapses any
+    // cancelled tier to plan 'free'), so this copy must stay tier-neutral.
     chip: (endedAt: string | null) =>
-      endedAt ? `Was premium · ${endedAt}` : 'Was premium',
+      endedAt ? `Plan ended · ${endedAt}` : 'Plan ended',
     eyebrow: 'Back on Free',
     headline: "You're on Free now.",
     body: (endedAt: string | null) =>
-      (endedAt ? `Premium wrapped on ${endedAt}. ` : 'Premium wrapped. ') +
+      (endedAt ? `Your plan wrapped on ${endedAt}. ` : 'Your plan wrapped. ') +
       'Browsing, saved shows, and submitting prices are still yours — always. The alerts, follows, and history are napping.',
     punchline: "—— Door's open. Your follows are safe for 90 days.",
-    cta: 'Go Premium again',
+    cta: 'Rejoin a plan',
   },
 
   freeChip: 'Free',

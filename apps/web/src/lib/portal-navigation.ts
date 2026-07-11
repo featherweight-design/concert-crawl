@@ -4,7 +4,7 @@
 // Callers own their pending/error UI state; throws on missing auth or
 // session failure so each surface can present its own copy.
 
-import { createPortalSession } from './billing'
+import { createPortalSession } from '@/lib/billing'
 
 export async function navigateToPortalSession(
   getToken: () => Promise<string | null>,

@@ -3,7 +3,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const mockCreatePortalSession = vi.fn()
-vi.mock('./billing', () => ({
+vi.mock('@/lib/billing', () => ({
   createPortalSession: (token: string) => mockCreatePortalSession(token),
 }))
 
