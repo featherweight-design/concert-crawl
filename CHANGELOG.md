@@ -1,3 +1,18 @@
+# [1.96.0](https://github.com/HartiganHM/concert-crawl/compare/v1.95.0...v1.96.0) (2026-07-11)
+
+
+### Bug Fixes
+
+* **admin:** [#889](https://github.com/HartiganHM/concert-crawl/issues/889) R1 — restore ghost-button focus ring, wire pager loading to isFetching ([23a6d67](https://github.com/HartiganHM/concert-crawl/commit/23a6d67b4eaf8838593419839fc0514376ac7d7a))
+* missing auth token rejects for retry; entitlement denials log at debug ([fb54c10](https://github.com/HartiganHM/concert-crawl/commit/fb54c106bea51dc64bd22d0dbaf2c729d2e75401))
+* **web:** scope plan-state query key by userId; fail closed when plan resolves null ([d27f741](https://github.com/HartiganHM/concert-crawl/commit/d27f741295cc5b6eacad0fc5b5e38a7c235e8984))
+
+
+### Features
+
+* **admin:** [#757](https://github.com/HartiganHM/concert-crawl/issues/757) [#758](https://github.com/HartiganHM/concert-crawl/issues/758) [#759](https://github.com/HartiganHM/concert-crawl/issues/759) disputes queue polish — relative time, sort/scope toggles, pagination ([a549a48](https://github.com/HartiganHM/concert-crawl/commit/a549a4899beb4bc504958b4c9700000e962e5435))
+* entitlement gating primitives across consumer surfaces (PR 3.3) ([1ae7cb1](https://github.com/HartiganHM/concert-crawl/commit/1ae7cb1b2dd650714577b55fd721c0a1f4846f9c))
+
 # [1.95.0](https://github.com/HartiganHM/concert-crawl/compare/v1.94.0...v1.95.0) (2026-07-11)
 
 
