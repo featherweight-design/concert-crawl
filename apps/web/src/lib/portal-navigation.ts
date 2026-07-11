@@ -12,5 +12,12 @@ export async function navigateToPortalSession(
   const token = await getToken()
   if (!token) throw new Error('Not authenticated')
   const { url } = await createPortalSession(token)
-  window.location.assign(url)
+  // Defense-in-depth: only follow an absolute https URL — a relative,
+  // malformed, or non-https (e.g. javascript:) value from the API must
+  // never reach window.location.assign.
+  const parsed = new URL(url)
+  if (parsed.protocol !== 'https:') {
+    throw new Error('Portal session returned a non-HTTPS URL')
+  }
+  window.location.assign(parsed.toString())
 }
