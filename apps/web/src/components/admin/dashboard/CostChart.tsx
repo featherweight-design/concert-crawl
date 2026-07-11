@@ -139,8 +139,11 @@ export const CostChart = ({ days, ariaLabel }: CostChartProps) => {
         )}
       </svg>
       {hoverDay && (
+        // Visual-only affordance: the day detail duplicates data already
+        // summarized by the chart's aria-label, and a live region here would
+        // announce continuously as the pointer moves.
         <div
-          role="status"
+          aria-hidden="true"
           style={{
             position: 'absolute',
             top: 0,

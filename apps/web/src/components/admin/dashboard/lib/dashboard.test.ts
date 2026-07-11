@@ -495,6 +495,12 @@ describe('formatCostTooltip', () => {
       'JUL 8 · $1.50',
     )
   })
+
+  it('keeps 4-decimal precision for sub-$1 days', () => {
+    expect(formatCostTooltip({ date: '2026-07-08', costUsd: 0.42 })).toBe(
+      'JUL 8 · $0.4200',
+    )
+  })
 })
 
 // --- toStatusRow ---
