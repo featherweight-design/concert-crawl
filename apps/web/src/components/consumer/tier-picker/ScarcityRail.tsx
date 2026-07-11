@@ -16,7 +16,12 @@ const railEyebrowStyle = (color: string): React.CSSProperties => ({
 })
 
 export const ScarcityRail = ({ rail }: { rail: ScarcityRailData }) => {
-  const pct = (rail.seatsClaimed / rail.seatsTotal) * 100
+  // Clamp so bad backend data (0 total, claimed > total) can't render an
+  // Infinity/NaN or >100% bar width.
+  const pct =
+    rail.seatsTotal > 0
+      ? Math.min(100, Math.max(0, (rail.seatsClaimed / rail.seatsTotal) * 100))
+      : 0
   const tone = rail.hot ? 'var(--accent)' : 'var(--signal)'
 
   return (
