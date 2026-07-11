@@ -9,6 +9,9 @@ import { apiLogger } from '../lib/logger.js'
 
 const uuidSchema = z.string().uuid()
 
+// Watching is FREE for all signed-in plans (locked decision, #781 R6 —
+// ENTITLEMENTS_MATRIX.watching). Do NOT add a requireFeature() gate here;
+// auth is the only requirement.
 export const watchingRouter = new Hono()
 
 watchingRouter.use('*', clerkMiddleware())

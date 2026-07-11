@@ -17,6 +17,7 @@
     "@anthropic-ai/sdk": "^0.111.0",
     "@clerk/backend": "^2.33.5",
     "@concert-crawl/db": "workspace:*",
+    "@concert-crawl/entitlements": "workspace:*",
     "@concert-crawl/logger": "workspace:*",
     "@concert-crawl/price-pipeline": "workspace:*",
     "@concert-crawl/types": "workspace:*",

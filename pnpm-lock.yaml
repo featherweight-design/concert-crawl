@@ -89,6 +89,9 @@ importers:
       '@concert-crawl/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@concert-crawl/entitlements':
+        specifier: workspace:*
+        version: link:../../packages/entitlements
       '@concert-crawl/logger':
         specifier: workspace:*
         version: link:../../packages/logger
@@ -242,6 +245,9 @@ importers:
       '@clerk/nextjs':
         specifier: ^7.5.13
         version: 7.5.13(next@15.5.20(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@concert-crawl/entitlements':
+        specifier: workspace:*
+        version: link:../../packages/entitlements
       '@concert-crawl/types':
         specifier: workspace:*
         version: link:../../packages/types

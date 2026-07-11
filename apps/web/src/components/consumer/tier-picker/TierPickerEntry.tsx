@@ -2,8 +2,9 @@
 
 // Settings entry point for the tier picker — a quiet "Compare plans"
 // affordance under the PlanCard (both mobile SettingsRoute and desktop
-// SettingsRouteDesktop mount it for behavioral parity). Full feature
-// gating (`lockedSurface` wiring across locked features) is PR 3.3.
+// SettingsRouteDesktop mount it for behavioral parity). Feature gating
+// primitives live in @/lib/queries/use-entitlement (client) and the API's
+// requireFeature() middleware (server) — see PR 3.3.
 
 import { useState } from 'react'
 import type { PlanState } from '@concert-crawl/types'
