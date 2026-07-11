@@ -10,17 +10,20 @@ Add the CostPanel to the admin dashboard: a 30-day LLM spend area chart with bud
 plus a top-spend-by-venue ranked list, backed by two new read-only admin endpoints. Rebase the
 existing "LLM cost" StatCard onto the same data so both surfaces agree.
 
-## Locked decisions (from READINESS.md)
+## Decisions
 
-| Decision | Resolution |
-| --- | --- |
-| Chart implementation | Mock's dependency-free SVG (`CostChart`), token-only. No Recharts. |
-| Budget source | Keep `LLM_BUDGET_USD` constant. No `app_config` table (KISS). |
-| Spend window | Rolling 30 days, not calendar-month. No "resets" copy. |
-| Panel placement | Between `AttentionFeed` and the "Crawl health · today" panel. |
-| StatCard cost figure | Rebased on the daily-costs endpoint (30-day total), replacing the last-20-runs sum. |
-| "Open billing ›" action | **Dropped.** No in-app billing surface exists; an external Anthropic console link from the dashboard adds little. Panel title carries the wow badge only. |
-| Day bucketing | Group by America/Denver day boundaries (timestamps stored UTC). |
+Rows marked **READINESS** were locked by the readiness audit; rows marked **this plan** were
+left open/recommended by READINESS.md and are resolved here.
+
+| Decision | Resolution | Locked by |
+| --- | --- | --- |
+| Chart implementation | Mock's dependency-free SVG (`CostChart`), token-only. No Recharts. | READINESS |
+| Budget source | Keep `LLM_BUDGET_USD` constant. No `app_config` table (KISS). | READINESS |
+| Day bucketing | Group by America/Denver day boundaries (timestamps stored UTC). | READINESS |
+| Spend window | Rolling 30 days, not calendar-month. No "resets" copy. | this plan |
+| Panel placement | Between `AttentionFeed` and the "Crawl health · today" panel. | this plan |
+| StatCard cost figure | Rebased on the daily-costs endpoint (30-day total), replacing the last-20-runs sum. | this plan |
+| "Open billing ›" action | **Dropped.** No in-app billing surface exists; an external Anthropic console link from the dashboard adds little. Panel title carries the wow badge only. | this plan |
 
 ## Task 1 — API: costs admin router
 
@@ -32,7 +35,9 @@ GET-only, so the existing audit-log middleware skips it automatically.
 
 - Zod query schema: `days` optional, coerced number, int, min 1, max 90, default 30.
 - Drizzle aggregation over `crawl_runs`: sum `llm_cost_usd` grouped by MT-local day via
-  `sql<string>` day-bucket expression (`(created_at AT TIME ZONE 'America/Denver')::date`) —
+  `sql<string>` day-bucket expression
+  (`` sql`(${crawlRuns.createdAt} AT TIME ZONE 'America/Denver')::date` `` — qualified column
+  reference, safe under joins/aliases) —
   a parameterized Drizzle `sql` fragment, consistent with the "Drizzle only" rule.
 - Response: `{ success: true, data: { days: Array<{ date: string; costUsd: number }>, totalUsd: number } }`.
   Zero-fill missing days server-side so the chart never has gaps.
