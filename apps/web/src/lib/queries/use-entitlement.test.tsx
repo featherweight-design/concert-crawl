@@ -8,8 +8,13 @@ import type { PlanState, UserPlan } from '@concert-crawl/types'
 
 const mockGetToken = vi.fn()
 let signedIn: boolean | undefined = true
+let currentUserId: string | null = 'user_test'
 vi.mock('@clerk/nextjs', () => ({
-  useAuth: () => ({ getToken: mockGetToken, isSignedIn: signedIn }),
+  useAuth: () => ({
+    getToken: mockGetToken,
+    isSignedIn: signedIn,
+    userId: currentUserId,
+  }),
 }))
 
 const mockFetchMe = vi.fn()
@@ -52,6 +57,7 @@ describe('useEntitlement', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     signedIn = true
+    currentUserId = 'user_test'
     mockGetToken.mockResolvedValue('test-token')
   })
 
@@ -122,12 +128,25 @@ describe('useEntitlement', () => {
     expect(result.current.active).toBe(false)
     expect(result.current.surface).toBeNull()
   })
+
+  it('fails closed with the logged-out surface when signed in but no token resolves', async () => {
+    signedIn = true
+    mockGetToken.mockResolvedValue(null)
+    const { result } = renderHook(() => useEntitlement('concert-history'), {
+      wrapper: withProvider(),
+    })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.active).toBe(false)
+    expect(result.current.surface).toBe('tier-picker-on-tap')
+    expect(mockFetchMe).not.toHaveBeenCalled()
+  })
 })
 
 describe('usePlanState', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     signedIn = true
+    currentUserId = 'user_test'
     mockGetToken.mockResolvedValue('test-token')
   })
 
@@ -138,5 +157,27 @@ describe('usePlanState', () => {
     })
     await waitFor(() => expect(result.current.data?.plan).toBe('founder'))
     expect(mockFetchMe).toHaveBeenCalledWith('test-token')
+  })
+
+  it('does not serve the previous account plan state after a user switch', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+
+    currentUserId = 'user_a'
+    setProfilePlan(planState('premium', { status: 'active' }))
+    const { result, rerender } = renderHook(() => usePlanState(), { wrapper })
+    await waitFor(() => expect(result.current.data?.plan).toBe('premium'))
+
+    // Same long-lived QueryClient, different signed-in user: user A's cached
+    // plan must not be served under user B's key.
+    currentUserId = 'user_b'
+    setProfilePlan(planState('free'))
+    rerender()
+    expect(result.current.data?.plan).not.toBe('premium')
+    await waitFor(() => expect(result.current.data?.plan).toBe('free'))
   })
 })

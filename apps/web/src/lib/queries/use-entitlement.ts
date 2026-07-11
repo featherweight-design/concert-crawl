@@ -42,9 +42,19 @@ export function useEntitlement(feature: PremiumFeature): EntitlementResult {
     : LOGGED_OUT_STATE
 
   if (state === null) {
-    // Signed in but plan state not yet fetched (query disabled returns
-    // isPending forever, so gate on isSignedIn above first).
-    return { isLoading: isPending, active: false, surface: null }
+    if (isPending) {
+      // Signed in but plan state not yet fetched (query disabled returns
+      // isPending forever, so gate on isSignedIn above first).
+      return { isLoading: true, active: false, surface: null }
+    }
+    // Signed in but the fetch settled without a PlanState (token race or
+    // fetch error). Fail closed with the logged-out surface so callers always
+    // have routable UX once loading ends — never a null surface at rest.
+    return {
+      isLoading: false,
+      active: false,
+      surface: lockedSurface(LOGGED_OUT_STATE, feature),
+    }
   }
 
   return {
