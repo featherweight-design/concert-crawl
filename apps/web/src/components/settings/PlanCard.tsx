@@ -43,6 +43,71 @@ export function PlanCard({ planState }: PlanCardProps) {
   const { plan, roleComped, status, onTrial, trialEndsAt } = planState
   const trialDaysRemaining = trialDaysRemainingFrom(trialEndsAt)
 
+  // Dunning outranks celebration — a founder whose payment is failing must
+  // see the warning, so this branch runs before the celebratory card.
+  if (status === 'past_due') {
+    return (
+      <div
+        className="rounded-2xl border p-5"
+        style={{
+          borderColor: 'var(--danger)',
+          background: 'var(--surface-1)',
+        }}
+      >
+        <div className="flex flex-col gap-2.5">
+          <div className="flex items-center gap-2">
+            <PlanPill
+              label={SETTINGS_COPY.planCard.pastDue.badge}
+              tone="danger"
+            />
+            <span
+              className="font-bold uppercase text-fg-subtle"
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 10,
+                letterSpacing: '0.10em',
+              }}
+            >
+              your plan
+            </span>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span
+              className="text-fg"
+              style={{
+                fontSize: 24,
+                fontWeight: 900,
+                letterSpacing: '-0.025em',
+                lineHeight: 1.1,
+              }}
+            >
+              {SETTINGS_COPY.planCard.pastDue.tagline}
+            </span>
+            <span
+              className="text-fg-muted"
+              style={{
+                fontSize: 13.5,
+                lineHeight: 1.5,
+                letterSpacing: '-0.005em',
+              }}
+            >
+              Update payment to keep Plus features.
+            </span>
+          </div>
+          <div className="mt-1 flex gap-2">
+            <button
+              type="button"
+              className="rounded-xl px-4 py-2.5 text-[13px] font-bold"
+              style={{ background: 'var(--signal)', color: 'var(--bg)' }}
+            >
+              {SETTINGS_COPY.planCard.pastDue.cta}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (roleComped || plan === 'founder' || plan === 'gifted') {
     return (
       <div
@@ -118,69 +183,6 @@ export function PlanCard({ planState }: PlanCardProps) {
     )
   }
 
-  if (status === 'past_due') {
-    return (
-      <div
-        className="rounded-2xl border p-5"
-        style={{
-          borderColor: 'var(--danger)',
-          background: 'var(--surface-1)',
-        }}
-      >
-        <div className="flex flex-col gap-2.5">
-          <div className="flex items-center gap-2">
-            <PlanPill
-              label={SETTINGS_COPY.planCard.pastDue.badge}
-              tone="danger"
-            />
-            <span
-              className="font-bold uppercase text-fg-subtle"
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 10,
-                letterSpacing: '0.10em',
-              }}
-            >
-              your plan
-            </span>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <span
-              className="text-fg"
-              style={{
-                fontSize: 24,
-                fontWeight: 900,
-                letterSpacing: '-0.025em',
-                lineHeight: 1.1,
-              }}
-            >
-              {SETTINGS_COPY.planCard.pastDue.tagline}
-            </span>
-            <span
-              className="text-fg-muted"
-              style={{
-                fontSize: 13.5,
-                lineHeight: 1.5,
-                letterSpacing: '-0.005em',
-              }}
-            >
-              Update payment to keep Plus features.
-            </span>
-          </div>
-          <div className="mt-1 flex gap-2">
-            <button
-              type="button"
-              className="rounded-xl px-4 py-2.5 text-[13px] font-bold"
-              style={{ background: 'var(--signal)', color: 'var(--bg)' }}
-            >
-              {SETTINGS_COPY.planCard.pastDue.cta}
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   if (onTrial) {
     return (
       <div className="rounded-2xl border border-border bg-surface-1 p-5">
@@ -245,7 +247,52 @@ export function PlanCard({ planState }: PlanCardProps) {
     )
   }
 
-  // paid
+  if (plan === 'free' || plan === 'logged-out') {
+    return (
+      <div className="rounded-2xl border border-border bg-surface-1 p-5">
+        <div className="flex flex-col gap-2.5">
+          <div className="flex items-center gap-2">
+            <PlanPill label={SETTINGS_COPY.planCard.free.badge} tone="signal" />
+            <span
+              className="font-bold uppercase text-fg-subtle"
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 10,
+                letterSpacing: '0.10em',
+              }}
+            >
+              your plan
+            </span>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span
+              className="text-fg"
+              style={{
+                fontSize: 24,
+                fontWeight: 900,
+                letterSpacing: '-0.025em',
+                lineHeight: 1.1,
+              }}
+            >
+              {SETTINGS_COPY.planCard.free.tagline}
+            </span>
+            <span
+              className="text-fg-muted"
+              style={{
+                fontSize: 13.5,
+                lineHeight: 1.5,
+                letterSpacing: '-0.005em',
+              }}
+            >
+              {SETTINGS_COPY.planCard.free.subline}
+            </span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // paid (supporter / premium)
   return (
     <div
       className="rounded-2xl border p-5"

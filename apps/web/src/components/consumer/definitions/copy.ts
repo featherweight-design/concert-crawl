@@ -838,6 +838,11 @@ export const CONSUMER_COPY = {
         tagline: 'Supporting Concert Crawl.',
         subline: 'Thank you.',
       },
+      free: {
+        badge: 'Free',
+        tagline: 'On the house.',
+        subline: 'Browse every show, watch what you like.',
+      },
       trial: {
         badge: 'Trial',
         tagline: 'days remaining',

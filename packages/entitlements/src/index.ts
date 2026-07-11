@@ -109,8 +109,10 @@ export const canUseFeature = (
   ENTITLEMENTS_MATRIX[feature][state.plan] === 'visible-active'
 
 // UX routing for the false case — what the renderer shows on locked taps.
-// roleComped never reaches a locked surface (canUseFeature is true first).
+// roleComped short-circuits to 'visible-active' so callers that skip the
+// canUseFeature pre-check can never route a comped user to a locked surface.
 export const lockedSurface = (
   state: PlanStateLike,
   feature: PremiumFeature,
-): EntitlementCell => ENTITLEMENTS_MATRIX[feature][state.plan]
+): EntitlementCell =>
+  state.roleComped ? 'visible-active' : ENTITLEMENTS_MATRIX[feature][state.plan]

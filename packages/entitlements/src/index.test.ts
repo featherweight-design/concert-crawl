@@ -133,4 +133,13 @@ describe('lockedSurface', () => {
       EXPECTED_CELLS[feature][plan],
     )
   })
+
+  it.each(allCombos)(
+    'roleComped never routes %s × %s to a locked surface',
+    (feature, plan) => {
+      expect(lockedSurface({ plan, roleComped: true }, feature)).toBe(
+        'visible-active',
+      )
+    },
+  )
 })
