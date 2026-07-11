@@ -247,6 +247,49 @@ describe('invoice.payment_succeeded', () => {
     expect(billingRow?.premiumDataExpiresAt).toBeNull()
   })
 
+  it('does NOT clear a pending purge clock on a supporter payment (#780 §5)', async () => {
+    // A premium→supporter downgrade starts the 90-day purge clock; the
+    // user's ongoing supporter payments must not cancel it.
+    const purgeAt = new Date('2099-01-01T00:00:00Z')
+    const fake = createFakeWebhookStripe()
+    fake.subscriptionsById.set(
+      'sub_wh_1',
+      makeSubscriptionObject({
+        items: {
+          data: [
+            {
+              price: { id: 'price_supporter', lookup_key: 'supporter_monthly' },
+              current_period_end: PERIOD_END_SECONDS,
+            },
+          ],
+        },
+      }),
+    )
+    const app = buildWebhookApp(fake)
+    await testDb.insert(userBilling).values({
+      userId: 'user_wh_1',
+      premiumDataExpiresAt: purgeAt,
+    })
+
+    const res = await postSignedEvent(
+      app,
+      makeEvent(
+        'invoice.payment_succeeded',
+        makeInvoiceObject({ billing_reason: 'subscription_cycle' }),
+      ),
+    )
+    expect(res.status).toBe(200)
+
+    const events = await listEvents('user_wh_1')
+    expect(events.map((row) => row.type)).toEqual(['renewal_succeeded'])
+
+    const [billingRow] = await testDb
+      .select()
+      .from(userBilling)
+      .where(eq(userBilling.userId, 'user_wh_1'))
+    expect(billingRow?.premiumDataExpiresAt?.getTime()).toBe(purgeAt.getTime())
+  })
+
   it('skips (200) an invoice with no subscription pointer', async () => {
     const app = buildWebhookApp(createFakeWebhookStripe())
     const res = await postSignedEvent(

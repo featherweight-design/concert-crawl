@@ -255,6 +255,7 @@ export const handleInvoicePaymentSucceeded = async (
 
   const isFirstInvoice = invoice.billing_reason === 'subscription_create'
   const seatNumber = parseFounderSeatNumber(snapshot.metadata)
+  const tier = tierFromSnapshot(snapshot)
   await ctx.dbClient.insert(subscriptionEvents).values({
     userId,
     type: isFirstInvoice ? 'subscription_created' : 'renewal_succeeded',
@@ -262,16 +263,21 @@ export const handleInvoicePaymentSucceeded = async (
     metadata: {
       subscriptionId,
       invoiceId: invoice.id ?? null,
-      tier: tierFromSnapshot(snapshot),
+      tier,
       ...(seatNumber !== null ? { seatNumber } : {}),
     },
   })
 
-  // Re-upgrade clears the 90-day preserve-then-purge clock (#780 §5).
-  await ctx.dbClient
-    .update(userBilling)
-    .set({ premiumDataExpiresAt: null, updatedAt: new Date() })
-    .where(eq(userBilling.userId, userId))
+  // Re-upgrade to premium-and-up clears the 90-day preserve-then-purge clock
+  // (#780 §5). Supporter payments must NOT clear it — a premium→supporter
+  // downgrade starts the clock (§5.3), and the user's premium data still
+  // purges after 90 days while they pay for supporter.
+  if (tier !== null && PREMIUM_AND_UP.includes(tier)) {
+    await ctx.dbClient
+      .update(userBilling)
+      .set({ premiumDataExpiresAt: null, updatedAt: new Date() })
+      .where(eq(userBilling.userId, userId))
+  }
 }
 
 /** invoice.payment_failed (spec §1.5 row 3). */
