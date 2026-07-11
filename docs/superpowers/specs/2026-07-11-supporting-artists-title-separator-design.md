@@ -83,7 +83,7 @@ Same visual pattern, sized appropriately per surface.
 
 These are decisions Design owns inside the locked frame:
 
-- **Separator character/pattern** — slash `/`, middot `·`, comma with oxford `,`, line break, `w/`, or something else. Consider readability at 12px (the current openers line size) and screen-reader phrasing.
+- **Separator character/pattern** — slash `/`, middot `·`, comma with Oxford `,`, line break, `w/`, or something else. Consider readability at 12px (the current openers line size) and screen-reader phrasing.
 - **Tour name treatment** — inline segment with its own visual weight? Separate second line? Prefixed with a symbol / italic / different color token?
 - **Overflow at 4+ openers on 320px `EventCard`** — count-collapse ("+N more"), wrap-to-two-lines, ellipsize with hover reveal, marquee — Design call based on what reads as "there's more here" without breaking the card's grid rhythm.
 - **Single-opener special case** — does the same pattern hold, or does one-opener get a distinct micro-treatment?
