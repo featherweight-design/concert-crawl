@@ -1,3 +1,17 @@
+# [1.95.0](https://github.com/HartiganHM/concert-crawl/compare/v1.94.0...v1.95.0) (2026-07-11)
+
+
+### Bug Fixes
+
+* **web:** r1 — a11y focus/live-region fixes + in-flight checkout dismiss race ([f0a42da](https://github.com/HartiganHM/concert-crawl/commit/f0a42dac75699bda0a863fa29fe3975277e345a2))
+* **web:** r2 — confirmPayment return_url + founder-window 10s poll ([65d8bca](https://github.com/HartiganHM/concert-crawl/commit/65d8bca8f3cbfd12fbcd8045e16bc48a2fbfe845))
+* **web:** r3 — clamp scarcity rail width; add PR number to progress row ([9cb263d](https://github.com/HartiganHM/concert-crawl/commit/9cb263da2a345fa48f7d96787f5aef8e0d6726a9))
+
+
+### Features
+
+* **web+api:** tier picker UI — six-state picker + embedded checkout (PR 3.2) ([00b1731](https://github.com/HartiganHM/concert-crawl/commit/00b1731f6155c1bf523dbf6707083b64f5f7ddaa))
+
 # [1.94.0](https://github.com/HartiganHM/concert-crawl/compare/v1.93.0...v1.94.0) (2026-07-11)
 
 
