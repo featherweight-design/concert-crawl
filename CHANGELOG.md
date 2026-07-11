@@ -1,3 +1,14 @@
+## [1.87.4](https://github.com/HartiganHM/concert-crawl/compare/v1.87.3...v1.87.4) (2026-07-11)
+
+
+### Bug Fixes
+
+* **crawler-core:** [#850](https://github.com/HartiganHM/concert-crawl/issues/850) canonicalize strips markdown markers and normalizes apostrophes ([65ffc57](https://github.com/HartiganHM/concert-crawl/commit/65ffc572cbb5c8f3bc75f225d06fbb4a0cab4b71)), closes [#824](https://github.com/HartiganHM/concert-crawl/issues/824)
+* **scripts:** [#850](https://github.com/HartiganHM/concert-crawl/issues/850) handle multi-loser user_events + chunk snapshot INSERT (PR [#855](https://github.com/HartiganHM/concert-crawl/issues/855) R1) ([c4d4c91](https://github.com/HartiganHM/concert-crawl/commit/c4d4c913882d9b882ae87a2c5d6c946fefecade8))
+* **scripts:** [#850](https://github.com/HartiganHM/concert-crawl/issues/850) only collapse clusters where new normalizer changes canonical (PR [#855](https://github.com/HartiganHM/concert-crawl/issues/855) R3) ([5f10252](https://github.com/HartiganHM/concert-crawl/commit/5f1025203a12a2c7bcc8747c8b9e90a40b8994c3)), closes [#821](https://github.com/HartiganHM/concert-crawl/issues/821)
+* **scripts:** [#850](https://github.com/HartiganHM/concert-crawl/issues/850) PR [#855](https://github.com/HartiganHM/concert-crawl/issues/855) R4 — deterministic losers, snapshot preserve, COALESCE merge ([709843e](https://github.com/HartiganHM/concert-crawl/commit/709843e3f5c940153ab94198a9503118e8f9a226))
+* **scripts:** [#850](https://github.com/HartiganHM/concert-crawl/issues/850) prune snapshots before no-op early return (PR [#855](https://github.com/HartiganHM/concert-crawl/issues/855) R5) ([0836c1f](https://github.com/HartiganHM/concert-crawl/commit/0836c1fe9df4ed4ef0365c945a4452cd7c2db8e5))
+
 ## [1.87.3](https://github.com/HartiganHM/concert-crawl/compare/v1.87.2...v1.87.3) (2026-07-11)
 
 
