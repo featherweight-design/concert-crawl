@@ -316,6 +316,13 @@
       "when": 1782864000000,
       "tag": "0044_event_canonical_title_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1782950400000,
+      "tag": "0045_monetization_schema_expand",
+      "breakpoints": true
     }
   ]
 }
