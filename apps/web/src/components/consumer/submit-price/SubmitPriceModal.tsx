@@ -97,6 +97,43 @@ function isPriceSubmissionResponse(
   return true
 }
 
+interface BatchRowError {
+  index: number
+  tier: string | null
+  error: string
+}
+
+type BatchSubmissionResponse =
+  | { success: true; data: PriceSubmission[] }
+  | { success?: false; error?: string; errors?: BatchRowError[] }
+
+function isBatchRowError(value: unknown): value is BatchRowError {
+  return (
+    isObject(value) &&
+    typeof value['index'] === 'number' &&
+    (value['tier'] === null || typeof value['tier'] === 'string') &&
+    typeof value['error'] === 'string'
+  )
+}
+
+function isBatchSubmissionResponse(
+  value: unknown,
+): value is BatchSubmissionResponse {
+  if (!isObject(value)) return false
+  if (value['success'] === true) {
+    return Array.isArray(value['data']) && value['data'].every(isObject)
+  }
+  // Non-success arm: every field the handler reads must be well-typed when
+  // present. A bare `{}` is still valid — an `ok` response with an empty
+  // body lands on the success view, matching the single-POST behavior.
+  const errorOk =
+    value['error'] === undefined || typeof value['error'] === 'string'
+  const errorsOk =
+    value['errors'] === undefined ||
+    (Array.isArray(value['errors']) && value['errors'].every(isBatchRowError))
+  return errorOk && errorsOk
+}
+
 type SubmissionsListResponse = {
   success: boolean
   data: {
@@ -124,6 +161,17 @@ type ModalState =
   | 'error'
   | 'alreadySubmitted'
 
+export interface SubmitPriceResult {
+  isEdit: boolean
+  id: string
+  priceMin: string
+  priceMax: string | null
+  tier: string
+  vendor: string
+  howFound: string
+  sourceCategory: SourceCategory | null
+}
+
 interface SubmitPriceModalProps {
   open: boolean
   onClose: () => void
@@ -136,16 +184,7 @@ interface SubmitPriceModalProps {
   // can correct it). Used by EventDetailClient when the user clicks "+ Add
   // <tier>" on MTAddTierSuccess.
   preselectedTier?: Tier | null
-  onSuccess?: (result: {
-    isEdit: boolean
-    id: string
-    priceMin: string
-    priceMax: string | null
-    tier: string
-    vendor: string
-    howFound: string
-    sourceCategory: SourceCategory | null
-  }) => void
+  onSuccess?: (results: SubmitPriceResult[]) => void
   onWithdrawSuccess?: (submissionId: string) => void
 }
 
@@ -228,11 +267,6 @@ export function SubmitPriceModal({
   const [panelWarnings, setPanelWarnings] = useState<
     Array<Partial<Record<string, string>>>
   >([{}])
-  // 409 race toast — surfaces when the API returns 409 because another fan
-  // raced a counter ahead of us. Per memory:project_pr4_dispute_affordance_hiding
-  // the toast says "Another challenge was just filed — refresh to see it."
-  // (copy at CONSUMER_COPY.priceRegion.disputeRace409Toast).
-  const [raceToast, setRaceToast] = useState<string | null>(null)
   const [existingSubmission, setExistingSubmission] =
     useState<PriceSubmission | null>(null)
   const [withdrawError, setWithdrawError] = useState<'network' | 'api' | null>(
@@ -246,7 +280,6 @@ export function SubmitPriceModal({
     setBundleErrors({})
     setPanelErrors([{}])
     setPanelWarnings([{}])
-    setRaceToast(null)
     // Reset the per-session error + existing-submission state on every open.
     // Without this, a previous session's withdraw-error or alreadySubmitted
     // payload could leak into a fresh session and surface the wrong error
@@ -347,54 +380,70 @@ export function SubmitPriceModal({
     }))
 
   const handleSubmit = useCallback(async () => {
-    const firstPanel = panels[0] ?? emptyPanel()
-    const validation = validateSubmission({
-      floor: firstPanel.floor,
-      ceiling: firstPanel.ceiling,
-      tier: firstPanel.tier,
-      vendor: bundleState.vendor,
-      sourceCategory: bundleState.sourceCategory,
-    })
-    const {
-      sourceCategory: sourceCatError,
-      vendor: vendorError,
-      ...rowErrors
-    } = validation.errors
-    setBundleErrors({
-      ...(sourceCatError !== undefined
-        ? { sourceCategory: sourceCatError }
-        : {}),
-      ...(vendorError !== undefined ? { vendor: vendorError } : {}),
-    })
-    setPanelErrors([rowErrors])
-    setPanelWarnings([validation.warnings])
-    if (!validation.valid) return
+    // Validate every panel through the shared single-submission validator,
+    // injecting the bundle-level fields into each panel's input. Bundle-field
+    // errors (sourceCategory, vendor) are hoisted out of the per-panel maps so
+    // they render once at the top of the form.
+    const nextPanelErrors: Array<Partial<Record<string, string>>> = []
+    const nextPanelWarnings: Array<Partial<Record<string, string>>> = []
+    const nextBundleErrors: Partial<Record<string, string>> = {}
+    let allValid = true
+    for (const panel of panels) {
+      const validation = validateSubmission({
+        floor: panel.floor,
+        ceiling: panel.ceiling,
+        tier: panel.tier,
+        vendor: bundleState.vendor,
+        sourceCategory: bundleState.sourceCategory,
+      })
+      const {
+        sourceCategory: sourceError,
+        vendor: vendorError,
+        ...rowErrors
+      } = validation.errors
+      if (sourceError) nextBundleErrors['sourceCategory'] = sourceError
+      if (vendorError) nextBundleErrors['vendor'] = vendorError
+      nextPanelErrors.push(rowErrors)
+      nextPanelWarnings.push(validation.warnings)
+      if (!validation.valid) allValid = false
+    }
+    setPanelErrors(nextPanelErrors)
+    setPanelWarnings(nextPanelWarnings)
+    setBundleErrors(nextBundleErrors)
+    if (!allValid) return
 
-    // validateSubmission guarantees these are non-null but does NOT verify
-    // enum membership — the runtime isTier/isVendor/isSourceCategory guards
-    // below cover that gap. We re-check both pieces at runtime instead of
-    // `as` casts (CLAUDE.md: type-safety is the first line of defence; casts
-    // are a last resort). If we somehow slipped through validation, fail
-    // loudly here rather than send malformed data to the API.
+    // Runtime enum guards — validateSubmission guarantees non-null but not
+    // enum membership (no `as` casts per CLAUDE.md).
     if (
       bundleState.sourceCategory === null ||
-      firstPanel.tier === null ||
-      !isTier(firstPanel.tier) ||
       bundleState.vendor === null ||
       !isVendor(bundleState.vendor)
     ) {
       console.error(
-        'Submit reached non-null guard with invalid required fields',
-        { bundleState, firstPanel },
+        'Submit reached non-null guard with invalid bundle fields',
+        bundleState,
       )
       setModalState('error')
       return
     }
     const sourceCategory: SourceCategory = bundleState.sourceCategory
-    const tier: Tier = firstPanel.tier
+
+    const tierRows: Array<{ tier: Tier; priceMin: number; priceMax?: number }> =
+      []
+    for (const panel of panels) {
+      if (panel.tier === null || !isTier(panel.tier)) {
+        console.error('Submit reached non-null guard with invalid tier', panel)
+        setModalState('error')
+        return
+      }
+      tierRows.push({
+        tier: panel.tier,
+        priceMin: Number(panel.floor),
+        ...(panel.ceiling ? { priceMax: Number(panel.ceiling) } : {}),
+      })
+    }
 
     setModalState('submitting')
-    setRaceToast(null)
     try {
       const token = await getToken()
       if (!token) {
@@ -402,20 +451,21 @@ export function SubmitPriceModal({
         return
       }
 
-      // Vendor auto-fills to VenueBoxOffice when source = boxoffice; otherwise
-      // use what the chip group resolved to (now narrowed via isVendor).
       const vendor: Vendor =
         sourceCategory === 'boxoffice'
           ? VENDOR_BOXOFFICE_AUTOFILL
           : bundleState.vendor
       const howFound: HowFound = howFoundForSource(sourceCategory)
 
-      // Edit mode → PATCH the existing submission instead of POST a new one.
-      // PATCH does not yet accept sourceCategory; the API re-derives it from
-      // (vendor, howFound) only when the existing row has NULL. Submitting
-      // vendor+howFound that match the new sourceCategory keeps the row
-      // consistent with the form choice without needing a schema change.
+      // Edit mode → PATCH the existing single submission (spec §4: editing
+      // never converts a single into a bundle; the form is locked to one
+      // panel in edit mode).
       if (isEditMode && existingSubmission) {
+        const firstPanel = tierRows[0]
+        if (!firstPanel) {
+          setModalState('error')
+          return
+        }
         const res = await fetch(
           `${API_URL}/v1/submissions/${existingSubmission.id}`,
           {
@@ -425,11 +475,11 @@ export function SubmitPriceModal({
               Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({
-              floor: Number(firstPanel.floor),
-              ...(firstPanel.ceiling
-                ? { ceiling: Number(firstPanel.ceiling) }
+              floor: firstPanel.priceMin,
+              ...(firstPanel.priceMax != null
+                ? { ceiling: firstPanel.priceMax }
                 : {}),
-              tier,
+              tier: firstPanel.tier,
               vendor,
               howFound,
             }),
@@ -445,26 +495,26 @@ export function SubmitPriceModal({
             (!patchResponse.success && patchResponse.error) || 'Edit failed',
           )
         }
-        onSuccess?.({
-          isEdit: true,
-          id: existingSubmission.id,
-          priceMin: String(firstPanel.floor),
-          priceMax: firstPanel.ceiling ? String(firstPanel.ceiling) : null,
-          tier,
-          vendor,
-          howFound,
-          // Server preserves an explicit sourceCategory on PATCH and only
-          // re-derives it when the existing row has NULL (legacy backfill
-          // scenarios). Either way, surface whatever the server returns so
-          // the local state mirrors the row.
-          sourceCategory: patchResponse.data.sourceCategory,
-        })
+        onSuccess?.([
+          {
+            isEdit: true,
+            id: existingSubmission.id,
+            priceMin: String(firstPanel.priceMin),
+            priceMax:
+              firstPanel.priceMax != null ? String(firstPanel.priceMax) : null,
+            tier: firstPanel.tier,
+            vendor,
+            howFound,
+            sourceCategory: patchResponse.data.sourceCategory,
+          },
+        ])
         setModalState('success')
         return
       }
 
+      // Bundle POST — one atomic request, all rows or none (spec §2).
       const res = await fetch(
-        `${API_URL}/v1/events/${eventId}/price-submissions`,
+        `${API_URL}/v1/events/${eventId}/price-submissions/batch`,
         {
           method: 'POST',
           headers: {
@@ -472,55 +522,59 @@ export function SubmitPriceModal({
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            priceMin: Number(firstPanel.floor),
-            priceMax: firstPanel.ceiling
-              ? Number(firstPanel.ceiling)
-              : undefined,
-            tier,
             vendor,
             howFound,
             sourceCategory,
+            tiers: tierRows,
           }),
         },
       )
       const rawResponse: unknown = await res.json()
-      if (!isPriceSubmissionResponse(rawResponse)) {
+      if (!isBatchSubmissionResponse(rawResponse)) {
         throw new Error('Submission failed (invalid response shape)')
       }
-      const responseData = rawResponse
       if (!res.ok) {
-        if (res.status === 409) {
-          // 409 has two flavors today:
-          //   (a) "already submitted" — the response carries a `submission`
-          //       payload; route to the alreadySubmitted view.
-          //   (b) counter race — no submission attached. Surface the race
-          //       toast and return to the form so the user can refresh.
-          if (!responseData.success && responseData.submission) {
-            setExistingSubmission(responseData.submission)
-            setModalState('alreadySubmitted')
-            return
-          }
-          setRaceToast(CONSUMER_COPY.priceRegion.disputeRace409Toast)
+        const rowErrors =
+          rawResponse.success !== true ? (rawResponse.errors ?? []) : []
+        if (res.status === 422 && rowErrors.length > 0) {
+          // Per-row 422 → annotate the exact panel and stay on the form with
+          // every value intact (spec §3: atomic rejection never wipes input).
+          setPanelErrors((prev) => {
+            const next = prev.map((panelError) => ({ ...panelError }))
+            for (const rowError of rowErrors) {
+              const target = next[rowError.index]
+              if (!target) continue
+              target['tier'] =
+                rowError.error === 'already_submitted'
+                  ? CONSUMER_COPY.submitPriceV2.multiTier.errorAlreadySubmitted.replace(
+                      '{tier}',
+                      rowError.tier ?? '',
+                    )
+                  : rowError.error
+            }
+            return next
+          })
           setModalState('form')
           return
         }
         throw new Error(
-          (!responseData.success && responseData.error) || 'Submission failed',
+          (rawResponse.success !== true && rawResponse.error) ||
+            'Submission failed',
         )
       }
-      if (responseData.success) {
-        onSuccess?.({
-          isEdit: false,
-          id: responseData.data.id,
-          priceMin: responseData.data.priceMin,
-          priceMax: responseData.data.priceMax,
-          tier: responseData.data.tier,
-          vendor: responseData.data.vendor,
-          howFound: responseData.data.howFound,
-          // Server derives sourceCategory at insert time (boxoffice vs
-          // standard heuristic) — preserve it for the local optimistic state.
-          sourceCategory: responseData.data.sourceCategory,
-        })
+      if (rawResponse.success === true) {
+        onSuccess?.(
+          rawResponse.data.map((row) => ({
+            isEdit: false,
+            id: row.id,
+            priceMin: row.priceMin,
+            priceMax: row.priceMax,
+            tier: row.tier,
+            vendor: row.vendor,
+            howFound: row.howFound,
+            sourceCategory: row.sourceCategory,
+          })),
+        )
       }
       setModalState('success')
     } catch (err) {
@@ -762,28 +816,6 @@ export function SubmitPriceModal({
               <em>pending</em> until 2 fans confirm.
             </p>
           </div>
-
-          {/* 409 race toast (re-displays the form so the user can retry) */}
-          {raceToast !== null && (
-            <div
-              role="status"
-              aria-live="polite"
-              style={{
-                borderRadius: 8,
-                background:
-                  'color-mix(in oklab, var(--warning) 12%, var(--surface-2))',
-                border:
-                  '1px solid color-mix(in oklab, var(--warning) 40%, var(--border))',
-                padding: '10px 12px',
-                fontFamily: 'var(--font-ui)',
-                fontSize: 12,
-                color: 'var(--warning)',
-                lineHeight: 1.5,
-              }}
-            >
-              {raceToast}
-            </div>
-          )}
 
           {/* Source-category — provenance FIRST (Q2-lock: where is this from?) */}
           <ChipGroup

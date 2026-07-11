@@ -207,7 +207,7 @@ describe('SubmitPriceModal — success state', () => {
 })
 
 describe('SubmitPriceModal — payload shape', () => {
-  it('POST body includes sourceCategory + derived howFound; no standalone howFound chip-group field', async () => {
+  it('POST body uses the batch shape: bundle fields + tiers array', async () => {
     let postBody: unknown
     let callCount = 0
     global.fetch = vi
@@ -228,17 +228,20 @@ describe('SubmitPriceModal — payload shape', () => {
         }
         return Promise.resolve({
           ok: true,
+          status: 201,
           json: async () => ({
             success: true,
-            data: {
-              id: 'sub-new',
-              priceMin: '32',
-              priceMax: null,
-              tier: 'GA',
-              vendor: 'VenueBoxOffice',
-              howFound: 'bought_myself',
-              sourceCategory: 'boxoffice',
-            },
+            data: [
+              {
+                id: 'sub-new',
+                priceMin: '32',
+                priceMax: null,
+                tier: 'GA',
+                vendor: 'VenueBoxOffice',
+                howFound: 'bought_myself',
+                sourceCategory: 'boxoffice',
+              },
+            ],
           }),
         })
       })
@@ -255,49 +258,8 @@ describe('SubmitPriceModal — payload shape', () => {
     expect(body['howFound']).toBe('bought_myself')
     // boxoffice auto-fills vendor to VenueBoxOffice (API value preserved)
     expect(body['vendor']).toBe('VenueBoxOffice')
-  })
-})
-
-describe('SubmitPriceModal — 409 race toast', () => {
-  it('surfaces the disputeRace409Toast and returns to form when 409 has no `submission` payload', async () => {
-    let callCount = 0
-    global.fetch = vi.fn().mockImplementation(() => {
-      callCount++
-      if (callCount === 1) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            success: true,
-            data: { alreadySubmitted: false, userSubmission: null },
-          }),
-        })
-      }
-      // 409 without `submission` body → race-case (counter conflict)
-      return Promise.resolve({
-        ok: false,
-        status: 409,
-        json: async () => ({
-          success: false,
-          error:
-            'Another challenge is already pending against this submission.',
-        }),
-      })
-    })
-
-    render(<SubmitPriceModal {...defaultProps} />)
-    await fillForm()
-    fireEvent.click(screen.getByText('Submit price'))
-    await waitFor(() =>
-      expect(
-        screen.getByText(
-          'Another challenge was just filed — refresh to see it.',
-        ),
-      ).toBeTruthy(),
-    )
-    // Form is still visible (not transitioned to alreadySubmitted)
-    expect(screen.queryByText('Already in.')).toBeNull()
-    // Source field still on screen — confirms we returned to 'form'
-    expect(screen.getByText("Where's this price from?")).toBeTruthy()
+    // batch shape: per-tier rows in a `tiers` array
+    expect(body['tiers']).toEqual([{ tier: 'GA', priceMin: 32 }])
   })
 })
 
@@ -392,70 +354,28 @@ describe('SubmitPriceModal — alreadySubmitted state', () => {
     expect(screen.getByText('Withdraw')).toBeTruthy()
   })
 
-  it('transitions to alreadySubmitted on 409 from POST when `submission` payload is included', async () => {
-    let callCount = 0
-    global.fetch = vi.fn().mockImplementation(() => {
-      callCount++
-      if (callCount === 1) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            success: true,
-            data: { alreadySubmitted: false, userSubmission: null },
-          }),
-        })
-      }
-      // 409 WITH `submission` body — the "already submitted" flavor, not the
-      // race-case. Per PR 4 the race-case (empty 409 body) now surfaces
-      // disputeRace409Toast and stays on form; see "409 race toast" describe.
-      return Promise.resolve({
-        ok: false,
-        status: 409,
-        json: async () => ({
-          submission: {
-            id: 'sub-existing',
-            priceMin: '40',
-            priceMax: null,
-            tier: 'GA',
-            vendor: 'AXS',
-          },
-        }),
-      })
-    })
-
-    render(<SubmitPriceModal {...defaultProps} />)
-    await fillForm()
-    fireEvent.click(screen.getByText('Submit price'))
-    await waitFor(() => expect(screen.getByText('Already in.')).toBeTruthy())
-  })
-
-  it('sets existingSubmission from 409 body and Withdraw succeeds → modal closes', async () => {
+  it('sets existingSubmission from initial GET check and Withdraw succeeds - modal closes', async () => {
     const onClose = vi.fn()
     let callCount = 0
     global.fetch = vi.fn().mockImplementation(() => {
       callCount++
       if (callCount === 1) {
-        // Initial check: no existing submission
+        // Initial check: already submitted — reaches alreadySubmitted view
         return Promise.resolve({
           ok: true,
           json: async () => ({
             success: true,
-            data: { alreadySubmitted: false, userSubmission: null },
-          }),
-        })
-      }
-      if (callCount === 2) {
-        // POST returns 409 with submission data
-        return Promise.resolve({
-          ok: false,
-          status: 409,
-          json: async () => ({
-            submission: {
-              id: 'sub-409',
-              priceMin: '55',
-              priceMax: null,
-              tier: 'GA',
-              vendor: 'AXS',
+            data: {
+              alreadySubmitted: true,
+              userSubmission: {
+                id: 'sub-409',
+                priceMin: '55',
+                priceMax: null,
+                tier: 'GA',
+                vendor: 'AXS',
+                howFound: 'saw_listing',
+                sourceCategory: 'standard',
+              },
             },
           }),
         })
@@ -468,9 +388,6 @@ describe('SubmitPriceModal — alreadySubmitted state', () => {
     })
 
     render(<SubmitPriceModal {...defaultProps} onClose={onClose} />)
-    await fillForm()
-
-    fireEvent.click(screen.getByText('Submit price'))
     await waitFor(() => expect(screen.getByText('Already in.')).toBeTruthy())
     expect(screen.getByText(/\$55/)).toBeTruthy()
 
@@ -483,27 +400,22 @@ describe('SubmitPriceModal — alreadySubmitted state', () => {
     global.fetch = vi.fn().mockImplementation(() => {
       callCount++
       if (callCount === 1) {
-        // Initial check: no existing submission
+        // Initial check: already submitted — reaches alreadySubmitted view
         return Promise.resolve({
           ok: true,
           json: async () => ({
             success: true,
-            data: { alreadySubmitted: false, userSubmission: null },
-          }),
-        })
-      }
-      if (callCount === 2) {
-        // POST returns 409 with submission data
-        return Promise.resolve({
-          ok: false,
-          status: 409,
-          json: async () => ({
-            submission: {
-              id: 'sub-409',
-              priceMin: '55',
-              priceMax: null,
-              tier: 'GA',
-              vendor: 'AXS',
+            data: {
+              alreadySubmitted: true,
+              userSubmission: {
+                id: 'sub-409',
+                priceMin: '55',
+                priceMax: null,
+                tier: 'GA',
+                vendor: 'AXS',
+                howFound: 'saw_listing',
+                sourceCategory: 'standard',
+              },
             },
           }),
         })
@@ -517,9 +429,6 @@ describe('SubmitPriceModal — alreadySubmitted state', () => {
     })
 
     render(<SubmitPriceModal {...defaultProps} />)
-    await fillForm()
-
-    fireEvent.click(screen.getByText('Submit price'))
     await waitFor(() => expect(screen.getByText('Already in.')).toBeTruthy())
 
     fireEvent.click(screen.getByText('Withdraw'))
@@ -528,7 +437,7 @@ describe('SubmitPriceModal — alreadySubmitted state', () => {
     )
     expect(screen.getByText('Try again')).toBeTruthy()
     // Should show a non-network-specific error for a 403
-    expect(screen.queryByText(/Couldn't reach the server/)).toBeNull()
+    expect(screen.queryByText(/Couldn’t reach the server/)).toBeNull()
   })
 })
 
@@ -635,5 +544,207 @@ describe('SubmitPriceModal — edit mode constraints (#832)', () => {
     // Prefilled floor from the existing submission
     const floorInput = screen.getByLabelText(/Floor/i)
     expect((floorInput as HTMLInputElement).value).toBe('45')
+  })
+})
+
+describe('SubmitPriceModal — batch submit (#832)', () => {
+  it('POSTs the bundle to the /batch endpoint and calls onSuccess with the row array', async () => {
+    const onSuccess = vi.fn()
+    let postUrl = ''
+    let postBody: unknown
+    let callCount = 0
+    global.fetch = vi
+      .fn()
+      .mockImplementation((url: string, init?: RequestInit) => {
+        callCount++
+        if (callCount === 1) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              success: true,
+              data: { alreadySubmitted: false, userSubmission: null },
+            }),
+          })
+        }
+        postUrl = url
+        if (init?.body) postBody = JSON.parse(init.body as string)
+        return Promise.resolve({
+          ok: true,
+          status: 201,
+          json: async () => ({
+            success: true,
+            data: [
+              {
+                id: 'sub-ga',
+                priceMin: '32',
+                priceMax: null,
+                tier: 'GA',
+                vendor: 'VenueBoxOffice',
+                howFound: 'bought_myself',
+                sourceCategory: 'boxoffice',
+              },
+              {
+                id: 'sub-vip',
+                priceMin: '120',
+                priceMax: null,
+                tier: 'VIP',
+                vendor: 'VenueBoxOffice',
+                howFound: 'bought_myself',
+                sourceCategory: 'boxoffice',
+              },
+            ],
+          }),
+        })
+      })
+
+    render(<SubmitPriceModal {...defaultProps} onSuccess={onSuccess} />)
+    await fillForm() // panel 0: boxoffice + GA + floor 32
+    fireEvent.click(screen.getByText('+ Add another tier'))
+    // Panel 1: VIP + floor 120. Two VIP chips exist (one per panel);
+    // pick the second (panel 1's) to avoid clicking panel 0's already-used row.
+    const vipChips = screen.getAllByText('VIP')
+    fireEvent.click(vipChips[1]!)
+    const floorInputs = screen.getAllByLabelText(/Face value/i)
+    fireEvent.change(floorInputs[1]!, { target: { value: '120' } })
+
+    fireEvent.click(screen.getByText('Submit 2 tiers'))
+    await waitFor(() => expect(screen.getByText('Got it.')).toBeTruthy())
+
+    expect(postUrl).toContain('/v1/events/evt-1/price-submissions/batch')
+    const body = postBody as Record<string, unknown>
+    expect(body['vendor']).toBe('VenueBoxOffice')
+    expect(body['howFound']).toBe('bought_myself')
+    expect(body['sourceCategory']).toBe('boxoffice')
+    expect(body['tiers']).toEqual([
+      { tier: 'GA', priceMin: 32 },
+      { tier: 'VIP', priceMin: 120 },
+    ])
+    expect(onSuccess).toHaveBeenCalledTimes(1)
+    const results = onSuccess.mock.calls[0]![0] as Array<{
+      isEdit: boolean
+      tier: string
+    }>
+    expect(results).toHaveLength(2)
+    expect(results[0]).toMatchObject({ isEdit: false, tier: 'GA' })
+    expect(results[1]).toMatchObject({ isEdit: false, tier: 'VIP' })
+  })
+
+  it('renders a 422 already_submitted error inline on the right panel, keeping form values intact', async () => {
+    let callCount = 0
+    global.fetch = vi.fn().mockImplementation(() => {
+      callCount++
+      if (callCount === 1) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            success: true,
+            data: { alreadySubmitted: false, userSubmission: null },
+          }),
+        })
+      }
+      return Promise.resolve({
+        ok: false,
+        status: 422,
+        json: async () => ({
+          success: false,
+          errors: [{ index: 0, tier: 'GA', error: 'already_submitted' }],
+        }),
+      })
+    })
+
+    render(<SubmitPriceModal {...defaultProps} />)
+    await fillForm()
+    fireEvent.click(screen.getByText('Submit price'))
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          'You already submitted a GA price — edit it from the event page.',
+        ),
+      ).toBeTruthy(),
+    )
+    // Atomic rejection never wipes input (spec §3): form still visible with values
+    expect(screen.getByText("Where's this price from?")).toBeTruthy()
+    const floorInput = screen.getByLabelText(/Face value/i) as HTMLInputElement
+    expect(floorInput.value).toBe('32')
+    // NOT routed to the alreadySubmitted view
+    expect(screen.queryByText('Already in.')).toBeNull()
+  })
+})
+
+describe('SubmitPriceModal — edit mode PATCH (#832)', () => {
+  it('edit mode PATCHes the existing submission and calls onSuccess with a single-element array', async () => {
+    const onSuccess = vi.fn()
+    let patchMethod = ''
+    let patchUrl = ''
+    let callCount = 0
+    global.fetch = vi
+      .fn()
+      .mockImplementation((url: string, init?: RequestInit) => {
+        callCount++
+        if (callCount === 1) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              success: true,
+              data: {
+                alreadySubmitted: true,
+                userSubmission: {
+                  id: 'sub-1',
+                  priceMin: '45',
+                  priceMax: null,
+                  tier: 'GA',
+                  vendor: 'AXS',
+                  howFound: 'saw_listing',
+                  sourceCategory: 'standard',
+                },
+              },
+            }),
+          })
+        }
+        patchMethod = init?.method ?? ''
+        patchUrl = url
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            success: true,
+            data: {
+              id: 'sub-1',
+              priceMin: '50',
+              priceMax: null,
+              tier: 'GA',
+              vendor: 'AXS',
+              howFound: 'saw_listing',
+              sourceCategory: 'standard',
+            },
+          }),
+        })
+      })
+
+    render(
+      <SubmitPriceModal
+        {...defaultProps}
+        openInEditMode
+        onSuccess={onSuccess}
+      />,
+    )
+    await waitFor(() => expect(screen.getByText('Save changes')).toBeTruthy())
+    const floorInput = screen.getByLabelText(/Floor/i)
+    fireEvent.change(floorInput, { target: { value: '50' } })
+    fireEvent.click(screen.getByText('Save changes'))
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1))
+
+    expect(patchMethod).toBe('PATCH')
+    expect(patchUrl).toContain('/v1/submissions/sub-1')
+    const results = onSuccess.mock.calls[0]![0] as Array<{
+      isEdit: boolean
+      id: string
+      priceMin: string
+    }>
+    expect(results).toHaveLength(1)
+    expect(results[0]).toMatchObject({
+      isEdit: true,
+      id: 'sub-1',
+      priceMin: '50',
+    })
   })
 })
