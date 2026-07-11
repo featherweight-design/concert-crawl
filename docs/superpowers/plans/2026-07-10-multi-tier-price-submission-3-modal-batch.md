@@ -280,6 +280,7 @@ function isBatchRowError(value: unknown): value is BatchRowError {
   return (
     isObject(value) &&
     typeof value['index'] === 'number' &&
+    (value['tier'] === null || typeof value['tier'] === 'string') &&
     typeof value['error'] === 'string'
   )
 }
@@ -291,10 +292,15 @@ function isBatchSubmissionResponse(
   if (value['success'] === true) {
     return Array.isArray(value['data']) && value['data'].every(isObject)
   }
-  if ('errors' in value && value['errors'] !== undefined) {
-    return Array.isArray(value['errors']) && value['errors'].every(isBatchRowError)
-  }
-  return true
+  // Non-success arm: every field the handler reads must be well-typed when
+  // present. A bare `{}` is still valid — an `ok` response with an empty
+  // body lands on the success view, matching the single-POST behavior.
+  const errorOk =
+    value['error'] === undefined || typeof value['error'] === 'string'
+  const errorsOk =
+    value['errors'] === undefined ||
+    (Array.isArray(value['errors']) && value['errors'].every(isBatchRowError))
+  return errorOk && errorsOk
 }
 ```
 

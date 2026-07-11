@@ -19,7 +19,7 @@ Beta feedback (2026-06-26 prod test): "no multi-tier price submission (GA+VIP)."
 | 1 | Product shape | Single-form **bundle** submission is the primary flow; the existing one-tier "trickle" flow stays clean and unchanged |
 | 2 | Corroboration | **Per-tier confirms** — each tier row corroborates independently, exactly as single submissions do today |
 | 3 | UI pattern | **Single form with "Add another tier"** — one modal, repeatable tier panels |
-| 4 | API shape | **New atomic batch endpoint** — one request, one transaction, all rows or none |
+| 4 | API shape | **New atomic batch endpoint** — one request, one atomic insert, all rows or none |
 
 ---
 
@@ -49,7 +49,7 @@ POST /v1/events/:eventId/price-submissions/batch
 ```jsonc
 {
   "vendor": "VenueBoxOffice",          // shared across all rows
-  "howFound": "at_the_venue",          // shared
+  "howFound": "at_the_venue",          // shared; API accepts any HowFound value — the web client derives 'bought_myself' for boxoffice via howFoundForSource
   "sourceCategory": "boxoffice",       // shared, optional (derived when absent, same as single POST)
   "note": "posted at the window",      // shared, optional, max 280, moderated once
   "tiers": [
@@ -63,7 +63,7 @@ POST /v1/events/:eventId/price-submissions/batch
   - `tiers`: array, min 1, max 10, tiers must be unique within the request.
   - Each row reuses the existing per-row field rules from `submissionBodySchema` (price floor/ceiling ranges, `priceMax >= priceMin` refinement).
   - Bundle-level fields reuse the existing enums. `disputedSubmissionId` is **not** accepted — counters stay single-row through the existing endpoint.
-- **Atomicity:** all rows insert in one Drizzle transaction. Any per-row failure (duplicate pending tier, moderation reject, price out of range) rolls back the whole batch.
+- **Atomicity:** all rows insert via a single multi-row INSERT — one statement is inherently atomic (all rows land or none), so no explicit `db.transaction` wrapper is needed. Any per-row failure (duplicate pending tier, moderation reject, price out of range) rejects the whole batch before the insert runs.
 - **Errors:** `422` with a per-row error list so the UI can annotate the exact panel:
 
 ```jsonc

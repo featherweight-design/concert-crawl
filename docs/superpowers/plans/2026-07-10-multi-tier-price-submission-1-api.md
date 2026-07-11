@@ -98,6 +98,9 @@ function clearAuth(): void {
   authState.current = null
 }
 
+// The API accepts any HowFound value regardless of vendor — 'at_the_venue'
+// here exercises that. (The web client happens to derive 'bought_myself' for
+// boxoffice via howFoundForSource; the endpoint does not enforce pairing.)
 const BATCH_BODY = {
   vendor: 'VenueBoxOffice',
   howFound: 'at_the_venue',
@@ -400,7 +403,9 @@ priceSubmissionsRouter.post(
       body.sourceCategory ?? deriveSourceCategory(body.vendor, body.howFound)
 
     // Atomicity: a single multi-row INSERT is one implicit transaction —
-    // all rows land or none do (spec §2 "one request, one transaction").
+    // all rows land or none do (spec §2 "one request, one atomic insert").
+    // No explicit db.transaction wrapper: it adds nothing to a single
+    // statement, and doesn't fix the check-then-insert TOCTOU either.
     const created = await db
       .insert(priceSubmissions)
       .values(
