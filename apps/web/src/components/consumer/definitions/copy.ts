@@ -1141,5 +1141,17 @@ export const CONSUMER_COPY = {
     vendorOptionDICE: 'DICE',
     vendorOptionEventbrite: 'Eventbrite',
     vendorAutoFilledNote: 'Auto-filled because source is box office',
+    // Multi-tier bundle form (#832). {tier} and {count} are replaced at the
+    // call site with .replace() — no i18n framework in play.
+    multiTier: {
+      addTierButton: '+ Add another tier',
+      panelFallbackHeading: 'Another tier',
+      // {tier} = the panel's tier name, or panelFallbackHeading when unset.
+      removeTierAriaLabel: 'Remove {tier}',
+      submitButtonMulti: 'Submit {count} tiers',
+      submitButtonEdit: 'Save changes',
+      errorAlreadySubmitted:
+        'You already submitted a {tier} price — edit it from the event page.',
+    },
   },
 } as const

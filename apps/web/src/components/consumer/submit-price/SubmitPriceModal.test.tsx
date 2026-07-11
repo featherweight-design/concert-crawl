@@ -531,3 +531,108 @@ describe('SubmitPriceModal — alreadySubmitted state', () => {
     expect(screen.queryByText(/Couldn't reach the server/)).toBeNull()
   })
 })
+
+describe('SubmitPriceModal — multi-tier panels (#832)', () => {
+  it('starts with one panel and no remove control', async () => {
+    render(<SubmitPriceModal {...defaultProps} />)
+    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy())
+    expect(screen.getAllByText('Tier')).toHaveLength(1)
+    expect(screen.queryByLabelText(/^Remove /)).toBeNull()
+    expect(screen.getByText('+ Add another tier')).toBeTruthy()
+  })
+
+  it('"+ Add another tier" appends a panel and updates the submit label', async () => {
+    render(<SubmitPriceModal {...defaultProps} />)
+    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy())
+    fireEvent.click(screen.getByText('+ Add another tier'))
+    expect(screen.getAllByText('Tier')).toHaveLength(2)
+    expect(screen.getByText('Submit 2 tiers')).toBeTruthy()
+    expect(screen.queryByText('Submit price')).toBeNull()
+    // Both panels now show a remove control
+    expect(screen.getAllByLabelText(/^Remove /)).toHaveLength(2)
+  })
+
+  it('a tier chosen in one panel is disabled in the other panel', async () => {
+    render(<SubmitPriceModal {...defaultProps} />)
+    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy())
+    fireEvent.click(screen.getByText('GA')) // select GA in panel 0
+    fireEvent.click(screen.getByText('+ Add another tier'))
+    const gaChips = screen
+      .getAllByText('GA')
+      .map((node) => node.closest('button'))
+    expect(gaChips).toHaveLength(2)
+    expect(gaChips[0]?.disabled).toBe(false) // own selection stays active
+    expect(gaChips[1]?.disabled).toBe(true) // other panel's GA greyed out
+  })
+
+  it('removing a panel re-enables its tier elsewhere and restores the single-panel label', async () => {
+    render(<SubmitPriceModal {...defaultProps} />)
+    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy())
+    fireEvent.click(screen.getByText('GA'))
+    fireEvent.click(screen.getByText('+ Add another tier'))
+    // Panel 0 is the GA panel -> its remove control is labeled "Remove GA"
+    fireEvent.click(screen.getByLabelText('Remove GA'))
+    expect(screen.getAllByText('Tier')).toHaveLength(1)
+    expect(screen.getByText('Submit price')).toBeTruthy()
+    const gaButton = screen.getByText('GA').closest('button')
+    expect(gaButton?.disabled).toBe(false)
+    expect(screen.queryByLabelText(/^Remove /)).toBeNull()
+  })
+
+  it('hides the add-tier button once all 5 tiers have panels', async () => {
+    render(<SubmitPriceModal {...defaultProps} />)
+    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy())
+    for (let clickCount = 0; clickCount < 4; clickCount++) {
+      fireEvent.click(screen.getByText('+ Add another tier'))
+    }
+    expect(screen.getAllByText('Tier')).toHaveLength(5)
+    expect(screen.queryByText('+ Add another tier')).toBeNull()
+  })
+
+  it('bundle fields (source, vendor) render once, above the tier panels', async () => {
+    render(<SubmitPriceModal {...defaultProps} />)
+    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy())
+    fireEvent.click(screen.getByText('+ Add another tier'))
+    expect(screen.getAllByText("Where's this price from?")).toHaveLength(1)
+    expect(screen.getAllByText('Vendor')).toHaveLength(1)
+    // Vendor (bundle-level) must precede the first Tier group in DOM order
+    const vendorLabel = screen.getByText('Vendor')
+    const firstTierLabel = screen.getAllByText('Tier')[0]!
+    const orderPosition = vendorLabel.compareDocumentPosition(firstTierLabel)
+    expect(orderPosition & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+})
+
+describe('SubmitPriceModal — edit mode constraints (#832)', () => {
+  it('edit mode locks the tier, hides add-tier, and labels the button "Save changes"', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: {
+          alreadySubmitted: true,
+          userSubmission: {
+            id: 'sub-1',
+            priceMin: '45',
+            priceMax: null,
+            tier: 'GA',
+            vendor: 'AXS',
+            howFound: 'saw_listing',
+            sourceCategory: 'standard',
+          },
+        },
+      }),
+    })
+    render(<SubmitPriceModal {...defaultProps} openInEditMode />)
+    await waitFor(() => expect(screen.getByText('Save changes')).toBeTruthy())
+    expect(screen.queryByText('+ Add another tier')).toBeNull()
+    expect(screen.queryByLabelText(/^Remove /)).toBeNull()
+    const gaButton = screen.getByText('GA').closest('button')
+    const vipButton = screen.getByText('VIP').closest('button')
+    expect(gaButton?.disabled).toBe(true)
+    expect(vipButton?.disabled).toBe(true)
+    // Prefilled floor from the existing submission
+    const floorInput = screen.getByLabelText(/Floor/i)
+    expect((floorInput as HTMLInputElement).value).toBe('45')
+  })
+})

@@ -8,7 +8,7 @@ import { ModalShell } from '@/components/consumer/modal-shell'
 import { CCMark } from '@/components/brand/cc-mark'
 import { SPNumberField } from '../SPNumberField'
 import { ChipGroup } from '../ChipGroup'
-import { validateSubmission, type SubmissionInput } from '@/lib/sp-policy'
+import { validateSubmission } from '@/lib/sp-policy'
 import {
   deriveSourceCategory,
   type Tier,
@@ -174,6 +174,26 @@ const SOURCE_CATEGORY_OPTIONS = [
   { value: 'resale', label: 'Resale' },
 ]
 
+// One repeatable tier panel of the bundle form (#832). Bundle-level fields
+// (sourceCategory, vendor) live in BundleFieldsState — asked once, shared by
+// every row on submit.
+interface TierPanelState {
+  tier: string | null
+  floor: string
+  ceiling: string
+}
+
+interface BundleFieldsState {
+  sourceCategory: SourceCategory | null
+  vendor: string | null
+}
+
+const emptyPanel = (tier: Tier | null = null): TierPanelState => ({
+  tier,
+  floor: '',
+  ceiling: '',
+})
+
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? ''
 
 export function SubmitPriceModal({
@@ -192,24 +212,27 @@ export function SubmitPriceModal({
 
   const [modalState, setModalState] = useState<ModalState>('loading-check')
   const [isEditMode, setIsEditMode] = useState(false)
-  const [formState, setFormState] = useState<SubmissionInput>({
-    floor: '',
-    ceiling: '',
-    tier: preselectedTier,
-    vendor: null,
+  const [bundleState, setBundleState] = useState<BundleFieldsState>({
     sourceCategory: null,
+    vendor: null,
   })
+  const [panels, setPanels] = useState<TierPanelState[]>([
+    emptyPanel(preselectedTier),
+  ])
+  const [bundleErrors, setBundleErrors] = useState<
+    Partial<Record<string, string>>
+  >({})
+  const [panelErrors, setPanelErrors] = useState<
+    Array<Partial<Record<string, string>>>
+  >([{}])
+  const [panelWarnings, setPanelWarnings] = useState<
+    Array<Partial<Record<string, string>>>
+  >([{}])
   // 409 race toast — surfaces when the API returns 409 because another fan
   // raced a counter ahead of us. Per memory:project_pr4_dispute_affordance_hiding
   // the toast says "Another challenge was just filed — refresh to see it."
   // (copy at CONSUMER_COPY.priceRegion.disputeRace409Toast).
   const [raceToast, setRaceToast] = useState<string | null>(null)
-  const [fieldErrors, setFieldErrors] = useState<
-    Partial<Record<string, string>>
-  >({})
-  const [fieldWarnings, setFieldWarnings] = useState<
-    Partial<Record<string, string>>
-  >({})
   const [existingSubmission, setExistingSubmission] =
     useState<PriceSubmission | null>(null)
   const [withdrawError, setWithdrawError] = useState<'network' | 'api' | null>(
@@ -220,8 +243,9 @@ export function SubmitPriceModal({
     if (!open) return
     setModalState('loading-check')
     setIsEditMode(false)
-    setFieldErrors({})
-    setFieldWarnings({})
+    setBundleErrors({})
+    setPanelErrors([{}])
+    setPanelWarnings([{}])
     setRaceToast(null)
     // Reset the per-session error + existing-submission state on every open.
     // Without this, a previous session's withdraw-error or alreadySubmitted
@@ -234,13 +258,8 @@ export function SubmitPriceModal({
     // selection, defeating the `preselectedTier` from the "+ Add VIP" loop
     // in MTAddTierSuccess (Q4-eng session flow). The edit-mode branch below
     // overwrites these with the existing submission's values.
-    setFormState({
-      floor: '',
-      ceiling: '',
-      tier: preselectedTier,
-      vendor: null,
-      sourceCategory: null,
-    })
+    setBundleState({ sourceCategory: null, vendor: null })
+    setPanels([emptyPanel(preselectedTier)])
 
     const checkExisting = async () => {
       try {
@@ -268,15 +287,19 @@ export function SubmitPriceModal({
               // For legacy rows where sourceCategory is null, derive it from
               // (vendor, howFound) via the shared helper so a box-office
               // submission isn't misrepresented as 'standard'.
-              setFormState({
-                floor: body.data.userSubmission.priceMin,
-                ceiling: body.data.userSubmission.priceMax ?? '',
-                tier: body.data.userSubmission.tier,
+              setBundleState({
                 vendor: body.data.userSubmission.vendor,
                 sourceCategory: fallbackSourceCategory(
                   body.data.userSubmission,
                 ),
               })
+              setPanels([
+                {
+                  tier: body.data.userSubmission.tier,
+                  floor: body.data.userSubmission.priceMin,
+                  ceiling: body.data.userSubmission.priceMax ?? '',
+                },
+              ])
               setIsEditMode(true)
               setModalState('form')
             } else {
@@ -293,10 +316,58 @@ export function SubmitPriceModal({
     void checkExisting()
   }, [open, eventId, getToken, openInEditMode, preselectedTier])
 
+  const addPanel = () => {
+    setPanels((prev) => [...prev, emptyPanel()])
+    setPanelErrors((prev) => [...prev, {}])
+    setPanelWarnings((prev) => [...prev, {}])
+  }
+
+  const removePanel = (panelIndex: number) => {
+    setPanels((prev) => prev.filter((_row, idx) => idx !== panelIndex))
+    setPanelErrors((prev) => prev.filter((_row, idx) => idx !== panelIndex))
+    setPanelWarnings((prev) => prev.filter((_row, idx) => idx !== panelIndex))
+  }
+
+  const updatePanel = (panelIndex: number, patch: Partial<TierPanelState>) => {
+    setPanels((prev) =>
+      prev.map((panel, idx) =>
+        idx === panelIndex ? { ...panel, ...patch } : panel,
+      ),
+    )
+  }
+
+  // Tiers already selected in OTHER panels are disabled — the same tier can
+  // never appear twice in a bundle (mirrors the API's uniqueness refine).
+  const tierOptionsForPanel = (panelIndex: number) =>
+    TIER_OPTIONS.map((option) => ({
+      ...option,
+      disabled: panels.some(
+        (panel, idx) => idx !== panelIndex && panel.tier === option.value,
+      ),
+    }))
+
   const handleSubmit = useCallback(async () => {
-    const validation = validateSubmission(formState)
-    setFieldErrors(validation.errors)
-    setFieldWarnings(validation.warnings)
+    const firstPanel = panels[0] ?? emptyPanel()
+    const validation = validateSubmission({
+      floor: firstPanel.floor,
+      ceiling: firstPanel.ceiling,
+      tier: firstPanel.tier,
+      vendor: bundleState.vendor,
+      sourceCategory: bundleState.sourceCategory,
+    })
+    const {
+      sourceCategory: sourceCatError,
+      vendor: vendorError,
+      ...rowErrors
+    } = validation.errors
+    setBundleErrors({
+      ...(sourceCatError !== undefined
+        ? { sourceCategory: sourceCatError }
+        : {}),
+      ...(vendorError !== undefined ? { vendor: vendorError } : {}),
+    })
+    setPanelErrors([rowErrors])
+    setPanelWarnings([validation.warnings])
     if (!validation.valid) return
 
     // validateSubmission guarantees these are non-null but does NOT verify
@@ -306,21 +377,21 @@ export function SubmitPriceModal({
     // are a last resort). If we somehow slipped through validation, fail
     // loudly here rather than send malformed data to the API.
     if (
-      formState.sourceCategory === null ||
-      formState.tier === null ||
-      !isTier(formState.tier) ||
-      formState.vendor === null ||
-      !isVendor(formState.vendor)
+      bundleState.sourceCategory === null ||
+      firstPanel.tier === null ||
+      !isTier(firstPanel.tier) ||
+      bundleState.vendor === null ||
+      !isVendor(bundleState.vendor)
     ) {
       console.error(
         'Submit reached non-null guard with invalid required fields',
-        formState,
+        { bundleState, firstPanel },
       )
       setModalState('error')
       return
     }
-    const sourceCategory: SourceCategory = formState.sourceCategory
-    const tier: Tier = formState.tier
+    const sourceCategory: SourceCategory = bundleState.sourceCategory
+    const tier: Tier = firstPanel.tier
 
     setModalState('submitting')
     setRaceToast(null)
@@ -336,7 +407,7 @@ export function SubmitPriceModal({
       const vendor: Vendor =
         sourceCategory === 'boxoffice'
           ? VENDOR_BOXOFFICE_AUTOFILL
-          : formState.vendor
+          : bundleState.vendor
       const howFound: HowFound = howFoundForSource(sourceCategory)
 
       // Edit mode → PATCH the existing submission instead of POST a new one.
@@ -354,9 +425,9 @@ export function SubmitPriceModal({
               Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({
-              floor: Number(formState.floor),
-              ...(formState.ceiling
-                ? { ceiling: Number(formState.ceiling) }
+              floor: Number(firstPanel.floor),
+              ...(firstPanel.ceiling
+                ? { ceiling: Number(firstPanel.ceiling) }
                 : {}),
               tier,
               vendor,
@@ -377,8 +448,8 @@ export function SubmitPriceModal({
         onSuccess?.({
           isEdit: true,
           id: existingSubmission.id,
-          priceMin: String(formState.floor),
-          priceMax: formState.ceiling ? String(formState.ceiling) : null,
+          priceMin: String(firstPanel.floor),
+          priceMax: firstPanel.ceiling ? String(firstPanel.ceiling) : null,
           tier,
           vendor,
           howFound,
@@ -401,8 +472,10 @@ export function SubmitPriceModal({
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            priceMin: Number(formState.floor),
-            priceMax: formState.ceiling ? Number(formState.ceiling) : undefined,
+            priceMin: Number(firstPanel.floor),
+            priceMax: firstPanel.ceiling
+              ? Number(firstPanel.ceiling)
+              : undefined,
             tier,
             vendor,
             howFound,
@@ -454,7 +527,15 @@ export function SubmitPriceModal({
       console.error('Price submission failed', err)
       setModalState('error')
     }
-  }, [formState, isEditMode, existingSubmission, getToken, eventId, onSuccess])
+  }, [
+    panels,
+    bundleState,
+    isEditMode,
+    existingSubmission,
+    getToken,
+    eventId,
+    onSuccess,
+  ])
 
   const handleWithdraw = useCallback(async () => {
     if (!existingSubmission) return
@@ -522,9 +603,18 @@ export function SubmitPriceModal({
     </div>
   )
 
+  const submitLabel = isEditMode
+    ? CONSUMER_COPY.submitPriceV2.multiTier.submitButtonEdit
+    : panels.length > 1
+      ? CONSUMER_COPY.submitPriceV2.multiTier.submitButtonMulti.replace(
+          '{count}',
+          String(panels.length),
+        )
+      : CONSUMER_COPY.submitPrice.form.submitButton
+
   const footer = showForm ? (
     <SubmitButton loading={modalState === 'submitting'} onClick={handleSubmit}>
-      {CONSUMER_COPY.submitPrice.form.submitButton}
+      {submitLabel}
     </SubmitButton>
   ) : undefined
 
@@ -572,20 +662,21 @@ export function SubmitPriceModal({
           submission={existingSubmission}
           onEdit={() => {
             if (existingSubmission) {
-              setFormState({
-                floor: existingSubmission.priceMin,
-                ceiling: existingSubmission.priceMax ?? '',
-                tier: existingSubmission.tier,
+              setBundleState({
                 vendor: existingSubmission.vendor,
-                // Legacy rows may have a null sourceCategory; derive from
-                // (vendor, howFound) via the shared helper so a box-office
-                // submission isn't misrepresented as 'standard' just because
-                // PR 3 backfill hadn't run for that row.
                 sourceCategory: fallbackSourceCategory(existingSubmission),
               })
+              setPanels([
+                {
+                  tier: existingSubmission.tier,
+                  floor: existingSubmission.priceMin,
+                  ceiling: existingSubmission.priceMax ?? '',
+                },
+              ])
             }
-            setFieldErrors({})
-            setFieldWarnings({})
+            setBundleErrors({})
+            setPanelErrors([{}])
+            setPanelWarnings([{}])
             setIsEditMode(true)
             setModalState('form')
           }}
@@ -698,9 +789,9 @@ export function SubmitPriceModal({
           <ChipGroup
             label={CONSUMER_COPY.submitPriceV2.sourceLabel}
             options={SOURCE_CATEGORY_OPTIONS}
-            value={formState.sourceCategory}
+            value={bundleState.sourceCategory}
             onChange={(val) =>
-              setFormState((prev) => {
+              setBundleState((prev) => {
                 // ChipGroup is generic; narrow to the SourceCategory enum
                 // (ignore the change if somehow an out-of-enum value arrives).
                 if (!isSourceCategory(val)) return prev
@@ -725,7 +816,7 @@ export function SubmitPriceModal({
                 }
               })
             }
-            error={fieldErrors['sourceCategory']}
+            error={bundleErrors['sourceCategory']}
             req
             // Edit mode: PATCH /v1/submissions/:id intentionally preserves
             // any non-null sourceCategory on the existing row and does not
@@ -736,83 +827,25 @@ export function SubmitPriceModal({
             disabled={isEditMode}
           />
 
-          {/* Floor + Ceiling — floor label is dynamic per source.
-              Property table §3 "Number row" calls for `display: flex; gap: 12`
-              (each child flex: 1 keeps equal-width columns identical to the
-              prior 1fr 1fr grid). */}
-          <div style={{ display: 'flex', gap: 12 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <SPNumberField
-                id="sp-floor"
-                label={
-                  formState.sourceCategory === 'boxoffice'
-                    ? CONSUMER_COPY.submitPriceV2.floorLabelBoxoffice
-                    : formState.sourceCategory === 'resale'
-                      ? CONSUMER_COPY.submitPriceV2.floorLabelResale
-                      : CONSUMER_COPY.submitPriceV2.floorLabelStandard
-                }
-                value={formState.floor}
-                onChange={(val) =>
-                  setFormState((prev) => ({ ...prev, floor: val }))
-                }
-                placeholder={CONSUMER_COPY.submitPriceV2.floorPlaceholder}
-                required
-                error={fieldErrors['floor']}
-                warning={fieldWarnings['floor']}
-              />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <SPNumberField
-                id="sp-ceiling"
-                label={CONSUMER_COPY.submitPriceV2.ceilingLabel}
-                value={formState.ceiling}
-                onChange={(val) =>
-                  setFormState((prev) => ({ ...prev, ceiling: val }))
-                }
-                placeholder={CONSUMER_COPY.submitPriceV2.ceilingPlaceholder}
-                error={fieldErrors['ceiling']}
-              />
-            </div>
-          </div>
-          {formState.sourceCategory === 'boxoffice' && (
-            <p
-              style={{
-                margin: '-12px 0 0 0',
-                fontFamily: 'var(--font-mono)',
-                fontSize: 10,
-                color: 'var(--fg-subtle)',
-                letterSpacing: '0.04em',
-              }}
-            >
-              {CONSUMER_COPY.submitPriceV2.floorHintBoxoffice}
-            </p>
-          )}
-
-          <ChipGroup
-            label={CONSUMER_COPY.submitPriceV2.tierLabel}
-            options={TIER_OPTIONS}
-            value={formState.tier}
-            onChange={(val) => setFormState((prev) => ({ ...prev, tier: val }))}
-            error={fieldErrors['tier']}
-          />
-
+          {/* Vendor — moved above tier panels so bundle-level fields precede
+              per-panel fields in DOM order. */}
           <ChipGroup
             label={CONSUMER_COPY.submitPriceV2.vendorLabel}
             options={VENDOR_OPTIONS}
-            value={formState.vendor}
+            value={bundleState.vendor}
             onChange={(val) =>
-              setFormState((prev) => ({ ...prev, vendor: val }))
+              setBundleState((prev) => ({ ...prev, vendor: val }))
             }
-            error={fieldErrors['vendor']}
+            error={bundleErrors['vendor']}
             req
             // When source=boxoffice, the vendor auto-fills to VenueBoxOffice
             // and handleSubmit unconditionally overrides any other choice.
             // Lock the chips so the UI selection and the submitted payload
             // can't diverge (e.g. "AXS" shown while payload sends "Venue").
-            disabled={formState.sourceCategory === 'boxoffice'}
+            disabled={bundleState.sourceCategory === 'boxoffice'}
           />
-          {formState.sourceCategory === 'boxoffice' &&
-            formState.vendor === VENDOR_BOXOFFICE_AUTOFILL && (
+          {bundleState.sourceCategory === 'boxoffice' &&
+            bundleState.vendor === VENDOR_BOXOFFICE_AUTOFILL && (
               <p
                 style={{
                   margin: '-12px 0 0 0',
@@ -825,6 +858,152 @@ export function SubmitPriceModal({
                 {CONSUMER_COPY.submitPriceV2.vendorAutoFilledNote}
               </p>
             )}
+
+          {/* Tier panels — repeatable per-tier rows */}
+          {panels.map((panel, panelIndex) => (
+            <div
+              key={panelIndex}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 18,
+                ...(panelIndex > 0
+                  ? { borderTop: '1px solid var(--border)', paddingTop: 18 }
+                  : {}),
+              }}
+            >
+              {panels.length > 1 && !isEditMode && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  {panelIndex > 0 ? (
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: 'var(--fg-subtle)',
+                        letterSpacing: '0.14em',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      {panel.tier ??
+                        CONSUMER_COPY.submitPriceV2.multiTier
+                          .panelFallbackHeading}
+                    </span>
+                  ) : (
+                    <span />
+                  )}
+                  <button
+                    type="button"
+                    aria-label={CONSUMER_COPY.submitPriceV2.multiTier.removeTierAriaLabel.replace(
+                      '{tier}',
+                      panel.tier ??
+                        CONSUMER_COPY.submitPriceV2.multiTier
+                          .panelFallbackHeading,
+                    )}
+                    onClick={() => removePanel(panelIndex)}
+                    style={{
+                      all: 'unset',
+                      cursor: 'pointer',
+                      width: 24,
+                      height: 24,
+                      borderRadius: 6,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'var(--fg-muted)',
+                      border: '1px solid var(--border)',
+                    }}
+                  >
+                    <CloseIcon />
+                  </button>
+                </div>
+              )}
+
+              <ChipGroup
+                label={CONSUMER_COPY.submitPriceV2.tierLabel}
+                options={tierOptionsForPanel(panelIndex)}
+                value={panel.tier}
+                onChange={(val) => updatePanel(panelIndex, { tier: val })}
+                error={panelErrors[panelIndex]?.['tier']}
+                // Edit mode never converts a single into a bundle — tier is locked
+                // (spec §4). The PATCH endpoint identifies the row; changing tier is
+                // still possible via the API but the bundle form disallows it.
+                disabled={isEditMode}
+              />
+
+              <div style={{ display: 'flex', gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <SPNumberField
+                    id={`sp-floor-${panelIndex}`}
+                    label={
+                      bundleState.sourceCategory === 'boxoffice'
+                        ? CONSUMER_COPY.submitPriceV2.floorLabelBoxoffice
+                        : bundleState.sourceCategory === 'resale'
+                          ? CONSUMER_COPY.submitPriceV2.floorLabelResale
+                          : CONSUMER_COPY.submitPriceV2.floorLabelStandard
+                    }
+                    value={panel.floor}
+                    onChange={(val) => updatePanel(panelIndex, { floor: val })}
+                    placeholder={CONSUMER_COPY.submitPriceV2.floorPlaceholder}
+                    required
+                    error={panelErrors[panelIndex]?.['floor']}
+                    warning={panelWarnings[panelIndex]?.['floor']}
+                  />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <SPNumberField
+                    id={`sp-ceiling-${panelIndex}`}
+                    label={CONSUMER_COPY.submitPriceV2.ceilingLabel}
+                    value={panel.ceiling}
+                    onChange={(val) =>
+                      updatePanel(panelIndex, { ceiling: val })
+                    }
+                    placeholder={CONSUMER_COPY.submitPriceV2.ceilingPlaceholder}
+                    error={panelErrors[panelIndex]?.['ceiling']}
+                  />
+                </div>
+              </div>
+              {bundleState.sourceCategory === 'boxoffice' && (
+                <p
+                  style={{
+                    margin: '-12px 0 0 0',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 10,
+                    color: 'var(--fg-subtle)',
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  {CONSUMER_COPY.submitPriceV2.floorHintBoxoffice}
+                </p>
+              )}
+            </div>
+          ))}
+
+          {!isEditMode && panels.length < TIER_OPTIONS.length && (
+            <button
+              type="button"
+              onClick={addPanel}
+              style={{
+                all: 'unset',
+                cursor: 'pointer',
+                alignSelf: 'flex-start',
+                fontFamily: 'var(--font-ui)',
+                fontSize: 13,
+                fontWeight: 700,
+                color: 'var(--signal)',
+                letterSpacing: '-0.005em',
+                padding: '4px 0',
+              }}
+            >
+              {CONSUMER_COPY.submitPriceV2.multiTier.addTierButton}
+            </button>
+          )}
 
           <p
             style={{
