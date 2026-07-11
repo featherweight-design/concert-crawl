@@ -87,12 +87,13 @@ export const ContestsTabContent: FC = () => {
     [pagination.pageSize, pushParams, searchParams],
   )
 
-  const { data, isPending, isError, refetch } = useReviewContestsQuery({
-    limit: pagination.pageSize,
-    offset: (pagination.page - 1) * pagination.pageSize,
-    sort: sortOrder,
-    includeArchived: showAll,
-  })
+  const { data, isPending, isFetching, isError, refetch } =
+    useReviewContestsQuery({
+      limit: pagination.pageSize,
+      offset: (pagination.page - 1) * pagination.pageSize,
+      sort: sortOrder,
+      includeArchived: showAll,
+    })
 
   if (isPending) {
     return (
@@ -173,7 +174,10 @@ export const ContestsTabContent: FC = () => {
         onPageSizeChange={(next) =>
           onPaginationChange({ page: 1, pageSize: next })
         }
-        loading={isPending}
+        // isPending can't be true here (the loading branch returns above);
+        // isFetching covers background refetches — e.g. post-mutation
+        // invalidation — while the pager is on screen (PR #889 R1).
+        loading={isFetching}
         itemLabel={REVIEW_CONTEST_COPY.queue.paginationItemLabel}
       />
     ) : undefined

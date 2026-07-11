@@ -42,12 +42,14 @@ const result = (
   overrides: Partial<{
     data: ReviewContestsResult | undefined
     isPending: boolean
+    isFetching: boolean
     isError: boolean
     refetch: () => void
   }> = {},
 ) => ({
   data: undefined,
   isPending: false,
+  isFetching: false,
   isError: false,
   refetch: () => {},
   ...overrides,

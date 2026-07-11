@@ -136,6 +136,10 @@ const GhostButton: FC<{
       onMouseLeave={() => setHover(false)}
       style={{
         all: 'unset',
+        // `all: unset` also wipes the UA focus ring; revert restores the
+        // browser's native :focus-visible outline so keyboard users get a
+        // visible affordance (PR #889 R1).
+        outline: 'revert',
         cursor: 'pointer',
         boxSizing: 'border-box',
         display: 'inline-flex',
