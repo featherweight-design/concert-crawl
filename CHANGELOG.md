@@ -1,3 +1,21 @@
+# [1.98.0](https://github.com/HartiganHM/concert-crawl/compare/v1.97.1...v1.98.0) (2026-07-11)
+
+
+### Bug Fixes
+
+* **admin:** [#897](https://github.com/HartiganHM/concert-crawl/issues/897) R1 — guard merged platform state, trim venue ID, local probe short-circuit ([98fecea](https://github.com/HartiganHM/concert-crawl/commit/98feceaa189b56dc005e4443142d955aa7b38633))
+* **admin:** [#897](https://github.com/HartiganHM/concert-crawl/issues/897) R10 — probe candidate mirrors PATCH clear-on-null semantics ([a673228](https://github.com/HartiganHM/concert-crawl/commit/a6732284a557c863ab748a359dd2e7222532ec94))
+* **admin:** [#897](https://github.com/HartiganHM/concert-crawl/issues/897) R2 — normalize whitespace probe ID to null, tighten probe test assertion ([b6af144](https://github.com/HartiganHM/concert-crawl/commit/b6af144341fbcd7398c754631c5f78255e2af10d))
+* **admin:** [#897](https://github.com/HartiganHM/concert-crawl/issues/897) R3 — scope orphan guard to platform-touching PATCHes, normalize empty ID to null ([66f87e6](https://github.com/HartiganHM/concert-crawl/commit/66f87e604ef8264a5928bba6d80178b37217de2b))
+* **admin:** [#897](https://github.com/HartiganHM/concert-crawl/issues/897) R5 — reset probe result when the venue ID input changes ([06dd377](https://github.com/HartiganHM/concert-crawl/commit/06dd377172788ac68550d9ae5eefcd5221988cb5))
+* **admin:** [#897](https://github.com/HartiganHM/concert-crawl/issues/897) R6 — thread timeoutMs through platform fetcher, 15s probe abort ([184c3b4](https://github.com/HartiganHM/concert-crawl/commit/184c3b4c9eea4fac8335e992ae5c4d2fe629766b))
+* **admin:** [#897](https://github.com/HartiganHM/concert-crawl/issues/897) R8 — broaden missing_config diagnosis to cover unregistered platforms ([9b84738](https://github.com/HartiganHM/concert-crawl/commit/9b84738ca470f26afb9ab911a21a8497e7610461))
+
+
+### Features
+
+* **admin:** [#721](https://github.com/HartiganHM/concert-crawl/issues/721) [#665](https://github.com/HartiganHM/concert-crawl/issues/665) venue platform routing — edit platform fields + probe endpoint ([17ab624](https://github.com/HartiganHM/concert-crawl/commit/17ab6248c30c777ef9322c180e4a8acf07c45710))
+
 ## [1.97.1](https://github.com/HartiganHM/concert-crawl/compare/v1.97.0...v1.97.1) (2026-07-11)
 
 
