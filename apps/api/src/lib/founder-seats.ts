@@ -46,11 +46,21 @@ export const restoreFounderSeat = async (
   // could both increment. When dbClient is already a transaction (webhook
   // paths) this nests as a savepoint and the lock holds to outer commit.
   dbClient.transaction(async (tx) => {
-    await tx
+    const [windowRow] = await tx
       .select({ id: founderWindow.id })
       .from(founderWindow)
       .where(eq(founderWindow.id, 1))
       .for('update')
+    if (!windowRow) {
+      // Configuration problem (migration/seed), not seat-accounting drift —
+      // log it as such instead of falling through to a misleading
+      // seats_already_full.
+      apiLogger.error(
+        { subscriptionId: input.subscriptionId, reason: input.reason },
+        'founder-seats: restore skipped — founder_window singleton row missing',
+      )
+      return 'seats_already_full'
+    }
 
     // Idempotency: at most one restore per claiming subscription.
     const [existingRestore] = await tx

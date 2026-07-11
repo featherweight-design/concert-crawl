@@ -41,8 +41,12 @@ export const HANDLED_STRIPE_EVENTS = [
   'payment_method.attached',
 ] as const
 
-const readWebhookSecretFromEnv = (): string | null =>
-  process.env['STRIPE_WEBHOOK_SECRET'] ?? null
+// Present-but-empty is as unconfigured as absent — an empty secret would
+// fail every signature check with a 400, silently stopping Stripe retries.
+const readWebhookSecretFromEnv = (): string | null => {
+  const secret = process.env['STRIPE_WEBHOOK_SECRET']
+  return secret !== undefined && secret.length > 0 ? secret : null
+}
 
 export const createStripeWebhooksRouter = (
   getStripe: () => BillingStripeClient,

@@ -82,4 +82,22 @@ describe('restoreFounderSeat under concurrency', () => {
       .where(eq(subscriptionEvents.type, 'founder_seat_restored'))
     expect(restores).toHaveLength(5)
   })
+
+  it('reports a missing founder_window row without writing a restore event', async () => {
+    await testDb.execute(sql`TRUNCATE founder_window`)
+
+    const outcome = await restoreFounderSeat({
+      userId: 'user_no_window',
+      subscriptionId: 'sub_no_window',
+      seatNumber: 1,
+      reason: 'checkout_abandoned',
+    })
+    expect(outcome).toBe('seats_already_full')
+
+    const restores = await testDb
+      .select()
+      .from(subscriptionEvents)
+      .where(eq(subscriptionEvents.type, 'founder_seat_restored'))
+    expect(restores).toHaveLength(0)
+  })
 })
