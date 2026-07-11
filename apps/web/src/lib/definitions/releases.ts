@@ -26,6 +26,21 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.8.1-beta',
+    date: 'Jul 11, 2026',
+    headline: 'Settings finally tells you what plan you’re on. In detail.',
+    items: [
+      {
+        kind: 'changed',
+        text: 'The plan card in Settings got a full redesign — it now knows exactly where you stand: active plan, trial countdown, winding-down after a cancel, even a payment-failed heads-up with a one-tap card fix.',
+      },
+      {
+        kind: 'added',
+        text: 'Manage subscription — paid plans get a button that drops you straight into billing management (update card, cancel, the works).',
+      },
+    ],
+  },
+  {
     version: 'v0.8.0-beta',
     date: 'Jul 11, 2026',
     headline: 'Plans exist now. Beta folks: yours is already paid for.',

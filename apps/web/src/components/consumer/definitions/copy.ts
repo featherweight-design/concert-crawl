@@ -825,38 +825,6 @@ export const CONSUMER_COPY = {
     },
     cityPlaceholder: 'Denver',
     cityHint: 'Never shown publicly.',
-    planCard: {
-      yourPlanLabel: 'Your plan',
-      founder: {
-        badge: 'Founder',
-        tagline: 'Free for life.',
-        body: 'You showed up during the private beta, so you keep Concert Crawl free, forever. No card needed.',
-        subline: 'Yes, even when we charge new users.',
-      },
-      paid: {
-        badge: 'Supporter',
-        tagline: 'Supporting Concert Crawl.',
-        subline: 'Thank you.',
-      },
-      free: {
-        badge: 'Free',
-        tagline: 'On the house.',
-        subline: 'Browse every show, watch what you like.',
-      },
-      trial: {
-        badge: 'Trial',
-        tagline: 'days remaining',
-        subline: 'Upgrade to keep your access.',
-        addCardCta: 'Add a card',
-        stayFreeCta: 'Stay free',
-      },
-      pastDue: {
-        badge: 'Past due',
-        tagline: 'Payment failed.',
-        subline: 'Update payment to keep Plus features.',
-        cta: 'Update billing →',
-      },
-    },
     dangerZone: {
       signOut: 'Sign out',
       signOutSubtitle: "Burn your tokens. We'll remember you.",

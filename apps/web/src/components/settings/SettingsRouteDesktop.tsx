@@ -6,8 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import { useClerk, useUser } from '@clerk/nextjs'
 import { Avatar } from './Avatar'
 import { CredChip } from './CredChip'
-import { PlanCard } from './PlanCard'
-import { TierPickerEntry } from '@/components/consumer/tier-picker'
+import { PlanPanel } from './plan'
 import { ThemePickerInline } from './ThemePickerInline'
 import { MySubmissionsList } from './MySubmissionsList'
 import { DangerZone } from './DangerZone'
@@ -346,8 +345,7 @@ export function SettingsRouteDesktop({
                     What you&apos;re paying us. (Spoiler: nothing.)
                   </p>
                 </div>
-                <PlanCard planState={profile.planState} />
-                <TierPickerEntry planState={profile.planState} />
+                <PlanPanel planState={profile.planState} />
               </div>
             )}
 
