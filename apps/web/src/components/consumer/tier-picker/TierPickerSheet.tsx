@@ -9,7 +9,7 @@
 // the embedded Stripe checkout; dismissing mid-checkout fires the
 // best-effort abandon call (eng infra spec Part 2 §1.3).
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@clerk/nextjs'
@@ -179,13 +179,18 @@ export const TierPickerSheet = ({
   const [pendingTier, setPendingTier] = useState<TierKey | null>(null)
   const [errorText, setErrorText] = useState<string | null>(null)
 
-  const abandonInFlight = useCallback(
-    (context: CheckoutContext) => {
+  // Bumped on close to invalidate any createCheckoutSession still in
+  // flight — a session resolving after dismissal must be abandoned (the
+  // incomplete subscription holds a founder seat), never shown on reopen.
+  const checkoutActionRef = useRef(0)
+
+  const abandonSubscription = useCallback(
+    (subscriptionId: string) => {
       void (async () => {
         try {
           const token = await getToken()
           if (!token) return
-          await abandonCheckout(token, context.subscriptionId)
+          await abandonCheckout(token, subscriptionId)
         } catch (err) {
           // Best-effort — the webhook path covers clients that vanish.
           console.error('tier-picker: checkout-abandon failed', err)
@@ -196,16 +201,18 @@ export const TierPickerSheet = ({
   )
 
   const close = useCallback(() => {
-    if (checkout !== null) abandonInFlight(checkout)
+    checkoutActionRef.current += 1
+    if (checkout !== null) abandonSubscription(checkout.subscriptionId)
     setCheckout(null)
     setErrorText(null)
+    setPendingTier(null)
     onClose()
-  }, [checkout, abandonInFlight, onClose])
+  }, [checkout, abandonSubscription, onClose])
 
   const backToTiers = useCallback(() => {
-    if (checkout !== null) abandonInFlight(checkout)
+    if (checkout !== null) abandonSubscription(checkout.subscriptionId)
     setCheckout(null)
-  }, [checkout, abandonInFlight])
+  }, [checkout, abandonSubscription])
 
   const selectTier = useCallback(
     (tierKey: TierKey, cta: TierCta) => {
@@ -232,12 +239,19 @@ export const TierPickerSheet = ({
         return
       }
       if (cta.action === 'checkout' && isPaidTier(tierKey)) {
+        const actionId = (checkoutActionRef.current += 1)
         void (async () => {
           setPendingTier(tierKey)
           try {
             const token = await getToken()
             if (!token) throw new Error('Not authenticated')
             const session = await createCheckoutSession(token, tierKey)
+            if (checkoutActionRef.current !== actionId) {
+              // Dismissed while the request was in flight — release the
+              // seat the incomplete subscription is holding.
+              abandonSubscription(session.subscriptionId)
+              return
+            }
             setCheckout({
               tierKey,
               clientSecret: session.clientSecret,
@@ -245,14 +259,15 @@ export const TierPickerSheet = ({
             })
           } catch (err) {
             console.error('tier-picker: checkout-session failed', err)
-            setErrorText(TIER_PICKER_COPY.checkout.startError)
+            if (checkoutActionRef.current === actionId)
+              setErrorText(TIER_PICKER_COPY.checkout.startError)
           } finally {
-            setPendingTier(null)
+            if (checkoutActionRef.current === actionId) setPendingTier(null)
           }
         })()
       }
     },
-    [getToken, router],
+    [getToken, router, abandonSubscription],
   )
 
   const completeCheckout = useCallback(() => {

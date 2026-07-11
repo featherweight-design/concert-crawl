@@ -198,7 +198,10 @@ export const GiftedThankYou = ({
       type="button"
       onClick={onDiscover}
       style={{
-        all: 'unset',
+        // No `all: 'unset'` — it would strip the UA focus outline and make
+        // the only interactive control here invisible to keyboard users.
+        background: 'transparent',
+        fontFamily: 'inherit',
         cursor: 'pointer',
         textAlign: 'center',
         padding: '12px 16px',

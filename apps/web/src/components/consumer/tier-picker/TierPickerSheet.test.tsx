@@ -217,6 +217,21 @@ describe('TierPickerSheet — visibility and states', () => {
     expect(screen.getByText(TIER_PICKER_COPY.gifted.title)).toBeTruthy()
   })
 
+  it('scarcity rail is a polite live region for screen readers', () => {
+    renderSheet(planState('free'))
+    const rail = screen.getByTestId('scarcity-rail')
+    expect(rail.getAttribute('role')).toBe('status')
+    expect(rail.getAttribute('aria-live')).toBe('polite')
+  })
+
+  it('gifted discovery button keeps UA focus styles (no all:unset reset)', () => {
+    renderSheet(planState('gifted', { roleComped: true }))
+    const discover = screen.getByRole('button', {
+      name: TIER_PICKER_COPY.gifted.discover,
+    })
+    expect(discover.style.getPropertyValue('all')).toBe('')
+  })
+
   it('gifted discovery button closes the sheet back to the app', () => {
     const onClose = renderSheet(planState('gifted', { roleComped: true }))
     fireEvent.click(
@@ -339,6 +354,40 @@ describe('TierPickerSheet — checkout flow', () => {
     expect(onClose).toHaveBeenCalled()
     expect(mockRefresh).toHaveBeenCalled()
     expect(mockAbandonCheckout).not.toHaveBeenCalled()
+  })
+
+  it('dismissing while the session request is in flight abandons it and never shows checkout', async () => {
+    let resolveSession: (value: {
+      clientSecret: string
+      subscriptionId: string
+    }) => void = () => {}
+    mockCreateCheckoutSession.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveSession = resolve
+        }),
+    )
+    const onClose = renderSheet(planState('free'))
+    fireEvent.click(
+      screen.getByRole('button', { name: TIER_PICKER_COPY.cta.startTrial }),
+    )
+    await waitFor(() => expect(mockCreateCheckoutSession).toHaveBeenCalled())
+
+    // Dismiss the sheet before the session request resolves.
+    fireEvent.click(screen.getByTestId('modal-scrim'))
+    expect(onClose).toHaveBeenCalled()
+
+    resolveSession({
+      clientSecret: 'cs_test_secret',
+      subscriptionId: 'sub_test_1',
+    })
+    await waitFor(() =>
+      expect(mockAbandonCheckout).toHaveBeenCalledWith(
+        'test-token',
+        'sub_test_1',
+      ),
+    )
+    expect(screen.queryByTestId('checkout-panel')).toBeNull()
   })
 
   it('checkout-session failure surfaces the start error and stays on the grid', async () => {

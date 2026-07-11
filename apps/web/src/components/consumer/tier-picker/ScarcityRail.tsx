@@ -22,6 +22,8 @@ export const ScarcityRail = ({ rail }: { rail: ScarcityRailData }) => {
   return (
     <div
       data-testid="scarcity-rail"
+      role="status"
+      aria-live="polite"
       style={{ display: 'flex', flexDirection: 'column', gap: 6 }}
     >
       <div
