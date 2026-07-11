@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Calendar Jump Picker (#642)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="monetization-shared.jsx"></script>
+<script type="text/babel" src="calendar-picker.jsx"></script>
+<script type="text/babel" src="calendar-surfaces.jsx"></script>
+<script type="text/babel" src="picker-a11y.jsx"></script>
+
+<script type="text/babel">
+const { ThemeProvider, CC_THEME_KEYS, CC_THEMES } = window;
+const { DesignCanvas, DCSection, DCArtboard } = window;
+const { IOSDevice } = window;
+const { MMark, MonoEyebrow } = window;
+const { WeekStripHeader, JumpPicker, CalSurfaceMobile, CalSurfaceDesktop, cjpWeekOf, cjpMonthLabelFor } = window;
+const { AnnotatedPicker, KeyboardMap, SRWalkthrough } = window;
+
+const PHONE_W = 390, PHONE_H = 810;
+const NARROW_W = 320, NARROW_H = 780;
+const DESK_W = 1180, DESK_H = 720;
+
+// ── stages ───────────────────────────────────────────────────
+function PhoneStage({ theme = "electric", width = PHONE_W, height = PHONE_H, children }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <IOSDevice width={width} height={height} dark={theme !== "light"}>{children}</IOSDevice>
+    </ThemeProvider>
+  );
+}
+// bare themed panel (for the header-cue detail + picker-only + parity grids)
+function Stage({ theme = "electric", pad = 22, align = "flex-start", justify = "center", children }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>
+      <div style={{ width: "100%", height: "100%", background: "var(--bg)", padding: pad, display: "flex", alignItems: align, justifyContent: justify, boxSizing: "border-box" }}>
+        {children}
+      </div>
+    </ThemeProvider>
+  );
+}
+// header-cue detail — just the app title row + WeekStripHeader (rest state)
+function CueDetail({ theme = "electric", cueStyle = "chip" }) {
+  const week = cjpWeekOf("2026-04-28");
+  return (
+    <Stage theme={theme} align="flex-start" justify="stretch" pad={18}>
+      <div style={{ width: "100%", color: "var(--fg)", fontFamily: "Inter, system-ui" }}>
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", padding: "0 6px 12px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <span style={{ fontWeight: 800, fontSize: 22, letterSpacing: "-0.03em" }}>What's on?</span>
+            <MonoEyebrow size={9.5} color="var(--fg-muted)" letterSpacing="0.06em">Denver, CO</MonoEyebrow>
+          </div>
+          <div style={{ display: "flex", height: 30, borderRadius: 8, overflow: "hidden", border: "1px solid var(--border-strong)" }}>
+            {["list", "cal"].map((v) => (
+              <div key={v} style={{ padding: "0 11px", display: "flex", alignItems: "center", fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", background: v === "cal" ? "var(--signal)" : "transparent", color: v === "cal" ? "var(--fg-on-accent)" : "var(--fg-muted)" }}>{v}</div>
+            ))}
+          </div>
+        </div>
+        <WeekStripHeader week={week} selectedISO="2026-04-28" monthLabel="April 2026" cueStyle={cueStyle} open={false} />
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
+          <MonoEyebrow size={9} color="var(--signal)" letterSpacing="0.14em">↑ tap month · year to jump</MonoEyebrow>
+        </div>
+      </div>
+    </Stage>
+  );
+}
+
+// ── Tweaks ───────────────────────────────────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "electric",
+  "cueStyle": "chip",
+  "indicators": "dots",
+  "closing": "both",
+  "weekendEmphasis": true,
+  "anim": "scale"
+}/*EDITMODE-END*/;
+
+const { TweaksPanel, useTweaks, TweakSection, TweakSelect, TweakRadio, TweakToggle } = window;
+const THEME_OPTS = CC_THEME_KEYS.map((k) => ({ value: k, label: CC_THEMES[k].label }));
+
+function PickerTweaks() {
+  const [t, setT] = useTweaks(TWEAK_DEFAULTS);
+  return (
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Open design calls">
+        <TweakRadio label="Header cue" value={t.cueStyle} onChange={(v) => setT("cueStyle", v)}
+          options={[{ value: "chip", label: "Chip" }, { value: "caret", label: "Caret" }, { value: "underline", label: "Underline" }]} />
+        <TweakRadio label="Indicators" value={t.indicators} onChange={(v) => setT("indicators", v)}
+          options={[{ value: "dots", label: "Dots" }, { value: "heat", label: "Heat" }, { value: "none", label: "None" }]} />
+        <TweakRadio label="Closing" value={t.closing} onChange={(v) => setT("closing", v)}
+          options={[{ value: "both", label: "Both" }, { value: "scrim", label: "Scrim" }, { value: "x", label: "X" }]} />
+        <TweakToggle label="Weekend emphasis" value={t.weekendEmphasis} onChange={(v) => setT("weekendEmphasis", v)} />
+        <TweakSelect label="Open animation" value={t.anim} onChange={(v) => setT("anim", v)}
+          options={[{ value: "scale", label: "Scale from cue" }, { value: "slide", label: "Slide down" }, { value: "fade", label: "Fade" }]} />
+      </TweakSection>
+      <TweakSection label="Theme">
+        <TweakSelect label="Theme (all 9)" value={t.theme} onChange={(v) => setT("theme", v)} options={THEME_OPTS} />
+      </TweakSection>
+    </TweaksPanel>
+  );
+}
+function LiveMobile() {
+  const [t] = useTweaks(TWEAK_DEFAULTS);
+  return (
+    <PhoneStage theme={t.theme}>
+      <CalSurfaceMobile key={t.anim} initialSelected="2026-06-27" initialOpen pickerView={{ y: 2026, m: 5 }}
+        cueStyle={t.cueStyle} indicators={t.indicators} closing={t.closing} weekendEmphasis={t.weekendEmphasis} anim={t.anim} />
+    </PhoneStage>
+  );
+}
+function LiveDesktop() {
+  const [t] = useTweaks(TWEAK_DEFAULTS);
+  return (
+    <ThemeProvider theme={t.theme} style={{ width: DESK_W, height: DESK_H }}>
+      <div style={{ width: DESK_W, height: DESK_H }} key={t.anim}>
+        <CalSurfaceDesktop initialSelected="2026-06-27" initialOpen pickerView={{ y: 2026, m: 5 }}
+          cueStyle={t.cueStyle} indicators={t.indicators} closing={t.closing} weekendEmphasis={t.weekendEmphasis} anim={t.anim} />
+      </div>
+    </ThemeProvider>
+  );
+}
+
+const CUES = [
+  { id: "chip", label: "A · Chip (recommended)", note: "surface-2 fill + border + caret. Reads clearly as a control; caret flips on open." },
+  { id: "caret", label: "B · Caret only", note: "text + caret, no chrome. Quietest — leans on the caret alone to signal tappable." },
+  { id: "underline", label: "C · Dotted underline", note: "editorial hint. Underline can read as a link, not a menu — weaker affordance." },
+];
+const INDIC = [
+  { id: "dots", label: "A · Dots (recommended)", note: "one accent dot on days with shows — matches the WeekStrip dot. Binary, calm." },
+  { id: "heat", label: "B · Heat-map", note: "cell tint scales with show count. Density at a glance; busier grid." },
+  { id: "none", label: "C · None", note: "pure navigation. Cleanest, but hides where the action is before you land." },
+];
+
+function App() {
+  return (
+    <>
+      <DesignCanvas
+        title="Calendar · Jump Picker"
+        subtitle="#642 · Track 2 · Round 1 — tappable month/year header → mini-month grid so a user can reach a specific future weekend without nudging the WeekStrip chevrons day-by-day. Calendar surface only; two-mode nav preserved (chevrons page the week, the picker jumps). Sour Patch voice, token-only across all 9 themes, mobile 320 + desktop parity, WCAG AA. Every open design call is a live Tweak — flip them in the toolbar."
+      >
+        {/* 0 · LIVE */}
+        <DCSection id="live" title="0 · Live preview" subtitle="Drive every open design call — header cue · event indicators · closing · weekend emphasis · animation · theme (all 9) — from the Tweaks panel. Both mockups show the picker jumped forward to the target weekend (Sat Jun 27).">
+          <DCArtboard id="live-m" label="Mobile · responds to Tweaks" width={PHONE_W} height={PHONE_H}><LiveMobile/></DCArtboard>
+          <DCArtboard id="live-d" label="Desktop · responds to Tweaks" width={DESK_W} height={DESK_H}><LiveDesktop/></DCArtboard>
+        </DCSection>
+
+        {/* 1 · HEADER AT REST */}
+        <DCSection id="rest" title="1 · Header at rest — the interactive cue"
+          subtitle="What makes the month/year read as 'tap me'? Three treatments. Recommendation: the chip — it's unmistakably a control, and the caret gives a menu affordance (not a link). The ± week chevrons stay flanking so the old fast-path survives.">
+          {CUES.map((c) => (
+            <DCArtboard key={c.id} id={"rest-" + c.id} label={c.label} width={PHONE_W} height={230}>
+              <CueDetail theme="electric" cueStyle={c.id}/>
+            </DCArtboard>
+          ))}
+          <DCArtboard id="rest-desktop" label="Desktop · chip at rest" width={DESK_W} height={330}>
+            <ThemeProvider theme="electric" style={{ width: DESK_W, height: 330 }}>
+              <div style={{ width: DESK_W, height: 330 }}><CalSurfaceDesktop cueStyle="chip"/></div>
+            </ThemeProvider>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 2 · PICKER OPEN */}
+        <DCSection id="open" title="2 · Picker open"
+          subtitle="Mini-month grid anchored in the header. Mobile 320 baseline + 390, plus desktop popover. Today carries a ring + accent; the selected weekend is filled with signal; ◂ ▸ page months inside the forward window; 'Today' resets in one tap.">
+          <DCArtboard id="open-320" label="Mobile · 320 baseline" width={NARROW_W} height={NARROW_H}>
+            <PhoneStage theme="electric" width={NARROW_W} height={NARROW_H}>
+              <CalSurfaceMobile initialSelected="2026-06-27" initialOpen pickerView={{ y: 2026, m: 5 }} anim="fade"/>
+            </PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="open-390" label="Mobile · 390" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric">
+              <CalSurfaceMobile initialSelected="2026-06-27" initialOpen pickerView={{ y: 2026, m: 5 }} anim="fade"/>
+            </PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="open-desktop" label="Desktop · popover anchored to cue" width={DESK_W} height={DESK_H}>
+            <ThemeProvider theme="electric" style={{ width: DESK_W, height: DESK_H }}>
+              <div style={{ width: DESK_W, height: DESK_H }}>
+                <CalSurfaceDesktop initialSelected="2026-06-27" initialOpen pickerView={{ y: 2026, m: 5 }} anim="fade"/>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 3 · THE JUMP */}
+        <DCSection id="jump" title="3 · The jump — before → after"
+          subtitle="The core job: land on a future weekend in two taps, not ten chevron nudges. Left: parked on this week (Apr). Right: picker paged to June, Sat 27 selected, day list updated.">
+          <DCArtboard id="jump-before" label="Before · this week (Apr 28)" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><CalSurfaceMobile initialSelected="2026-04-28"/></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="jump-open" label="Jump · paged to June" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><CalSurfaceMobile initialSelected="2026-04-28" initialOpen pickerView={{ y: 2026, m: 5 }} anim="fade"/></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="jump-after" label="After · Sat Jun 27 selected" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><CalSurfaceMobile initialSelected="2026-06-27"/></PhoneStage>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 4 · EVENT INDICATORS */}
+        <DCSection id="indicators" title="4 · Event indicators in the grid — Design's call"
+          subtitle="How much show-density to surface inside the jump grid. Recommendation: dots — quiet, matches the WeekStrip, and enough to steer toward a live weekend. Heat-map is available when density matters; none keeps it purely navigational.">
+          {INDIC.map((v) => (
+            <DCArtboard key={v.id} id={"ind-" + v.id} label={v.label} width={332} height={430}>
+              <Stage theme="electric" align="flex-start" justify="center" pad={16}>
+                <JumpPicker initialY={2026} initialM={5} selectedISO="2026-06-27" indicators={v.id} closing="both" weekendEmphasis anim="fade" width={300}/>
+              </Stage>
+            </DCArtboard>
+          ))}
+        </DCSection>
+
+        {/* 5 · WEEKEND EMPHASIS + CLOSING */}
+        <DCSection id="detail" title="5 · Weekend emphasis · closing affordance"
+          subtitle="The beta complaint was specifically about future weekends, so weekends get a faint column tint (any day still selectable). Closing: recommend all three paths — tap-scrim, X, Esc — so no one's trapped. Compared side by side.">
+          <DCArtboard id="wk-on" label="Weekend tint · ON (recommended)" width={332} height={430}>
+            <Stage theme="electric" pad={16}><JumpPicker initialY={2026} initialM={5} selectedISO="2026-06-27" indicators="dots" weekendEmphasis anim="fade" width={300}/></Stage>
+          </DCArtboard>
+          <DCArtboard id="wk-off" label="Weekend tint · OFF" width={332} height={430}>
+            <Stage theme="electric" pad={16}><JumpPicker initialY={2026} initialM={5} selectedISO="2026-06-27" indicators="dots" weekendEmphasis={false} anim="fade" width={300}/></Stage>
+          </DCArtboard>
+          <DCArtboard id="close-x" label="Closing · X present (both / X)" width={332} height={430}>
+            <Stage theme="electric" pad={16}><JumpPicker initialY={2026} initialM={5} selectedISO="2026-06-27" indicators="dots" closing="both" weekendEmphasis anim="fade" width={300}/></Stage>
+          </DCArtboard>
+          <DCArtboard id="close-scrim" label="Closing · scrim + Esc only (no X)" width={332} height={430}>
+            <Stage theme="electric" pad={16}><JumpPicker initialY={2026} initialM={5} selectedISO="2026-06-27" indicators="dots" closing="scrim" weekendEmphasis anim="fade" width={300}/></Stage>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 6 · EMPTY MONTH */}
+        <DCSection id="empty" title="6 · Empty-month treatment — Design's call"
+          subtitle="A month with zero shows on sale (here: December). Recommendation: keep the grid live and selectable — the user might still want the date — and drop a Sour Patch line so it doesn't feel broken. Days stay tappable; only the density signal is absent.">
+          <DCArtboard id="empty-picker" label="Empty month · 'Crickets in Dec. Try later.'" width={332} height={430}>
+            <Stage theme="electric" pad={16}><JumpPicker initialY={2026} initialM={11} selectedISO="2026-06-27" indicators="dots" weekendEmphasis anim="fade" width={300}/></Stage>
+          </DCArtboard>
+          <DCArtboard id="empty-day" label="Empty day · list context" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><CalSurfaceMobile initialSelected="2026-04-29"/></PhoneStage>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 7 · A11Y */}
+        <DCSection id="a11y" title="7 · Accessibility — WCAG AA"
+          subtitle="Numbered callouts on the open picker, the full keyboard model (arrow-nav a single grid tab-stop), and the screen-reader walkthrough for reaching a future weekend. Focus returns to the cue on every close.">
+          <DCArtboard id="a11y-pins" label="Annotated picker · roles + focus" width={860} height={470}><AnnotatedPicker theme="electric"/></DCArtboard>
+          <DCArtboard id="a11y-keys" label="Keyboard model" width={720} height={430}><KeyboardMap theme="electric"/></DCArtboard>
+          <DCArtboard id="a11y-sr" label="Screen-reader walkthrough" width={720} height={470}><SRWalkthrough theme="electric"/></DCArtboard>
+        </DCSection>
+
+        {/* 8 · THEME PARITY */}
+        <DCSection id="parity" title="8 · Theme parity — all 9, token-only"
+          subtitle="The open picker rendered in every shipped theme. Every color reads from var(--*); selected = --signal, today ring = --accent, dots = --accent. Flip the live preview in Tweaks to sanity-check the surfaces too.">
+          {CC_THEME_KEYS.map((k) => (
+            <DCArtboard key={k} id={"par-" + k} label={CC_THEMES[k].label} width={332} height={430}>
+              <Stage theme={k} pad={16}><JumpPicker initialY={2026} initialM={5} selectedISO="2026-06-27" indicators="dots" weekendEmphasis anim="fade" width={300}/></Stage>
+            </DCArtboard>
+          ))}
+        </DCSection>
+
+      </DesignCanvas>
+      <PickerTweaks/>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
