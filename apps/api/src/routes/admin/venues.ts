@@ -514,6 +514,10 @@ venuesAdminRouter.patch(
   },
 )
 
+// A hung platform CDN connection must not pin an API worker slot — the
+// probe aborts and reports fetch_error after this window.
+const PROBE_TIMEOUT_MS = 15_000
+
 const probePlatformSchema = z.object({
   platform: z.enum(['aeg']).nullable().optional(),
   // Whitespace-only would pass the fetcher's truthy canHandle() check and
@@ -569,7 +573,10 @@ venuesAdminRouter.post(
       }
       const startedAt = Date.now()
       try {
-        const result = await fetcher.fetch(candidate, { crawlDelayMs: 0 })
+        const result = await fetcher.fetch(candidate, {
+          crawlDelayMs: 0,
+          timeoutMs: PROBE_TIMEOUT_MS,
+        })
         return {
           ok: true,
           eventsFound: result.events.length,

@@ -276,7 +276,11 @@ function originFromVenueUrl(websiteUrl: string): string {
   return `${parsed.protocol}//${parsed.host}`
 }
 
-async function fetchAegBlob(url: string, origin: string): Promise<unknown> {
+async function fetchAegBlob(
+  url: string,
+  origin: string,
+  timeoutMs?: number,
+): Promise<unknown> {
   const response = await fetch(url, {
     headers: {
       // AEG's blob CORS layer checks Origin. We pass each venue's own
@@ -286,6 +290,9 @@ async function fetchAegBlob(url: string, origin: string): Promise<unknown> {
       'User-Agent': USER_AGENT,
       Accept: 'application/json',
     },
+    // A hung CDN connection must not pin the caller (the admin probe
+    // endpoint holds an API worker slot while this resolves).
+    signal: timeoutMs !== undefined ? AbortSignal.timeout(timeoutMs) : null,
   })
   if (!response.ok) {
     throw new AegFetchError(
@@ -299,7 +306,7 @@ async function fetchAegBlob(url: string, origin: string): Promise<unknown> {
 
 async function aegFetch(
   venue: Venue,
-  opts: { crawlDelayMs: number },
+  opts: { crawlDelayMs: number; timeoutMs?: number },
 ): Promise<PlatformFetchResult> {
   if (!venue.platformVenueId) {
     // Dispatcher's canHandle() should have caught this, but be defensive.
@@ -318,7 +325,11 @@ async function aegFetch(
   if (opts.crawlDelayMs > 0) {
     await new Promise((resolve) => setTimeout(resolve, opts.crawlDelayMs))
   }
-  const raw = await fetchAegBlob(url, originFromVenueUrl(venue.websiteUrl))
+  const raw = await fetchAegBlob(
+    url,
+    originFromVenueUrl(venue.websiteUrl),
+    opts.timeoutMs,
+  )
   const parseResult = AegResponseSchema.safeParse(raw)
   if (!parseResult.success) {
     throw new AegSchemaError(

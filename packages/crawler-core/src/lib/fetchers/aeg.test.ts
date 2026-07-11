@@ -96,6 +96,25 @@ describe('aegFetcher.fetch', () => {
     expect(result.sourceUrl).toBe(calledUrl)
   })
 
+  it('passes an abort signal when timeoutMs is set, none otherwise', async () => {
+    // Fresh Response per call — a shared Response body can only be read once
+    fetchSpy.mockImplementation(async () => {
+      return new Response(BLUEBIRD_FIXTURE, {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    })
+    const venue = makeVenue({ platformVenueId: '2' })
+
+    await aegFetcher.fetch(venue, { crawlDelayMs: 0, timeoutMs: 15_000 })
+    const withTimeoutInit = fetchSpy.mock.calls[0]?.[1]
+    expect(withTimeoutInit?.signal).toBeInstanceOf(AbortSignal)
+
+    await aegFetcher.fetch(venue, { crawlDelayMs: 0 })
+    const withoutTimeoutInit = fetchSpy.mock.calls[1]?.[1]
+    expect(withoutTimeoutInit?.signal).toBeNull()
+  })
+
   it('normalizes the Bluebird fixture into NormalizedEvent rows', async () => {
     mockFetchOk(BLUEBIRD_FIXTURE)
     const result = await aegFetcher.fetch(makeVenue(), { crawlDelayMs: 0 })

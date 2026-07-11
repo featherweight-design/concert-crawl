@@ -35,7 +35,7 @@ export interface PlatformFetcher {
   canHandle(venue: Venue): boolean
   fetch(
     venue: Venue,
-    opts: { crawlDelayMs: number },
+    opts: { crawlDelayMs: number; timeoutMs?: number },
   ): Promise<PlatformFetchResult>
 }
 

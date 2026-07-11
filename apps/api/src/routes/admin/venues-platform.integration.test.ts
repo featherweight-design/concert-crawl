@@ -367,7 +367,7 @@ describe('POST /v1/admin/venues/:id/probe-platform — integration (#665)', () =
     // Dry-run: fetch called with zero crawl delay, saved config as candidate
     expect(fetchMock).toHaveBeenCalledWith(
       expect.objectContaining({ platform: 'aeg', platformVenueId: '89' }),
-      { crawlDelayMs: 0 },
+      { crawlDelayMs: 0, timeoutMs: 15_000 },
     )
     expect(dispatchMock).toHaveBeenCalledWith(
       expect.objectContaining({ platform: 'aeg', platformVenueId: '89' }),
