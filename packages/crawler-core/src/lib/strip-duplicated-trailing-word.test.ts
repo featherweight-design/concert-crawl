@@ -121,4 +121,68 @@ describe('stripDuplicatedTrailingWord', () => {
       'Live at Ogden: Beyoncé',
     )
   })
+
+  // --- rawTitle cross-check (#863) ------------------------------------------
+  // "Bow Wow Wow" false positive: a legitimate title can end in a real
+  // repeated word. rawTitle is byte-for-byte verbatim from the source page,
+  // so if the doubled pair appears there too, the repeat is real — not an
+  // LLM glitch — and must be kept.
+  it('keeps a trailing repeat that also appears in rawTitle (Bow Wow Wow, #863)', () => {
+    const title =
+      'Thomas Dolby & The Lost Toy People, A Flock of Seagulls Bow Wow Wow'
+    expect(stripDuplicatedTrailingWord(title, title)).toBe(title)
+  })
+
+  it('strips when rawTitle contains the word only once (glitch confirmed)', () => {
+    expect(
+      stripDuplicatedTrailingWord(
+        'BPM BINGO! Dombresky / Walker & Royce Edition Edition',
+        'BPM BINGO! Dombresky / Walker & Royce Edition',
+      ),
+    ).toBe('BPM BINGO! Dombresky / Walker & Royce Edition')
+  })
+
+  it('strips when rawTitle is omitted (back-compat with single-arg callers)', () => {
+    expect(
+      stripDuplicatedTrailingWord(
+        'BPM BINGO! Dombresky / Walker & Royce Edition Edition',
+      ),
+    ).toBe('BPM BINGO! Dombresky / Walker & Royce Edition')
+  })
+
+  it('matches the doubled pair in rawTitle case-insensitively', () => {
+    expect(
+      stripDuplicatedTrailingWord('Set Times: Wow Wow', 'set times: WOW wow'),
+    ).toBe('Set Times: Wow Wow')
+  })
+
+  it('tolerates differing whitespace between the pair in rawTitle', () => {
+    expect(
+      stripDuplicatedTrailingWord('Set Times: Wow Wow', 'Set Times: Wow  Wow'),
+    ).toBe('Set Times: Wow Wow')
+  })
+
+  it('requires whole-word matches in rawTitle (no substring false negatives)', () => {
+    // rawTitle "Edition Editions" does NOT contain the pair "Edition
+    // Edition" as whole words — the glitch strip must still apply.
+    expect(
+      stripDuplicatedTrailingWord('Edition Edition', 'Edition Editions'),
+    ).toBe('Edition')
+    // Same for a prefix inside a longer word ("Reedition").
+    expect(
+      stripDuplicatedTrailingWord('Edition Edition', 'Reedition Edition'),
+    ).toBe('Edition')
+  })
+
+  it('strips when rawTitle is present but lacks the doubled pair entirely', () => {
+    expect(stripDuplicatedTrailingWord('Show Show', 'Totally Different')).toBe(
+      'Show',
+    )
+  })
+
+  it('keeps a Unicode trailing repeat confirmed by rawTitle', () => {
+    expect(
+      stripDuplicatedTrailingWord('Duran Duran', 'An Evening with Duran Duran'),
+    ).toBe('Duran Duran')
+  })
 })

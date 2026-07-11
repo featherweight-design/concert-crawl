@@ -34,10 +34,7 @@ function makeAnthropicResponse(
     cache_creation_input_tokens: 0,
   },
   stop_reason:
-    | 'end_turn'
-    | 'max_tokens'
-    | 'tool_use'
-    | 'stop_sequence' = 'tool_use',
+    'end_turn' | 'max_tokens' | 'tool_use' | 'stop_sequence' = 'tool_use',
 ) {
   return {
     content: [
@@ -495,12 +492,14 @@ describe('extractWithLlm', () => {
   // trailing word in `title`. We strip it at the extractor boundary so
   // the malformed string never reaches the DB. rawTitle stays verbatim
   // because the cross-venue presale filter (#826) and the system-prompt
-  // contract both depend on byte-for-byte source fidelity.
+  // contract both depend on byte-for-byte source fidelity — and (#863)
+  // it doubles as the cross-check ground truth: the glitch shape is
+  // title duplicated while rawTitle stays clean.
   it('cleans a duplicated trailing word from the extracted title (#851)', async () => {
     const mockEvents = [
       {
         title: 'BPM BINGO! Dombresky / Walker & Royce Edition Edition',
-        rawTitle: 'BPM BINGO! Dombresky / Walker & Royce Edition Edition',
+        rawTitle: 'BPM BINGO! Dombresky / Walker & Royce Edition',
         artist: 'Dombresky / Walker & Royce',
         date: '2026-09-12',
         confidence: 0.85,
@@ -518,8 +517,35 @@ describe('extractWithLlm', () => {
     )
     // rawTitle MUST stay verbatim — see #826 cross-venue routing contract.
     expect(result.events[0]?.rawTitle).toBe(
-      'BPM BINGO! Dombresky / Walker & Royce Edition Edition',
+      'BPM BINGO! Dombresky / Walker & Royce Edition',
     )
+  })
+
+  // #863: Bow Wow Wow false positive. A legitimate title can genuinely
+  // end in a repeated word — rawTitle is byte-for-byte from the source
+  // page, so when the doubled pair appears there too, the repeat is real
+  // and the extractor must NOT strip it.
+  it('keeps a trailing repeat confirmed by rawTitle (#863)', async () => {
+    const billTitle =
+      'Thomas Dolby & The Lost Toy People, A Flock of Seagulls Bow Wow Wow'
+    const mockEvents = [
+      {
+        title: billTitle,
+        rawTitle: billTitle,
+        artist: 'Thomas Dolby',
+        date: '2026-10-03',
+        confidence: 0.9,
+        isConcert: true,
+        reviewNeeded: false,
+      },
+    ]
+    mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents))
+
+    const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
+
+    expect(result.events).toHaveLength(1)
+    expect(result.events[0]?.title).toBe(billTitle)
+    expect(result.events[0]?.rawTitle).toBe(billTitle)
   })
 
   it("does NOT log 'llm.output_truncated' on a healthy tool_use stop", async () => {

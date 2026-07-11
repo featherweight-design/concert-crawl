@@ -290,8 +290,11 @@ export async function extractWithLlm(
     // the cleaned title (#851 — BPM BINGO "...Edition Edition" prod
     // shape). Applied to `title` ONLY. `rawTitle` is intentionally NOT
     // cleaned: the system prompt and the cross-venue presale filter
-    // (#826) require it to be byte-for-byte verbatim from the source.
-    const title = stripDuplicatedTrailingWord(evt.title)
+    // (#826) require it to be byte-for-byte verbatim from the source —
+    // which is exactly why it's passed as the cross-check (#863): a
+    // repeat that also appears verbatim on the page (e.g. the band
+    // "Bow Wow Wow") is real and must not be stripped.
+    const title = stripDuplicatedTrailingWord(evt.title, evt.rawTitle)
     return {
       title,
       rawTitle: evt.rawTitle,

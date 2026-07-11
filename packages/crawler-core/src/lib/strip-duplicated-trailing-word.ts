@@ -31,6 +31,17 @@
  * (mid-string) untouched, while cleaning the exact LLM-glitch shape from
  * #851.
  *
+ * rawTitle cross-check (#863): the tight rule above still false-positived
+ * on legitimate titles that genuinely end in a repeated word — a real
+ * Mission Ballroom bill ends in the band name "Bow Wow Wow", which the
+ * regex would truncate to "Bow Wow". Because `rawTitle` is byte-for-byte
+ * verbatim from the source page, it is the ground truth for whether the
+ * repeat is real: if the doubled pair also appears in rawTitle (whole-word,
+ * case-insensitive, any whitespace between), the source itself says the
+ * repeat is intentional and the strip is skipped. Only when rawTitle lacks
+ * the pair — or no rawTitle is provided — is the trailing repeat treated
+ * as an LLM duplication glitch.
+ *
  * Only applied to the cleaned `title` field. NEVER applied to `rawTitle`,
  * which the system prompt and downstream cross-venue routing (#826)
  * require to be byte-for-byte verbatim from the source page.
@@ -62,7 +73,13 @@
 const DUPLICATED_TRAILING_WORD_REGEX =
   /(^|[^\p{L}\p{M}\p{N}_])([\p{L}\p{M}\p{N}_]+)\s+\2\s*$/iu
 
-export function stripDuplicatedTrailingWord(title: string): string {
+const UNICODE_WORD_CLASS = '[\\p{L}\\p{M}\\p{N}_]'
+const NON_UNICODE_WORD_CLASS = '[^\\p{L}\\p{M}\\p{N}_]'
+
+export function stripDuplicatedTrailingWord(
+  title: string,
+  rawTitle?: string,
+): string {
   // Mirror the non-string guard shape used by canonicalizeTitle /
   // canonicalizeArtist (see canonical-title.ts:46-49): return '' rather
   // than the input so the declared `string` return type holds at runtime
@@ -70,6 +87,28 @@ export function stripDuplicatedTrailingWord(title: string): string {
   // null / undefined / a number.
   if (typeof title !== 'string' || title.length === 0) {
     return ''
+  }
+
+  const match = title.match(DUPLICATED_TRAILING_WORD_REGEX)
+  if (!match) {
+    return title
+  }
+
+  // rawTitle cross-check (#863): if the verbatim source title also contains
+  // the doubled pair as whole words, the repeat is real (e.g. the band
+  // "Bow Wow Wow") — keep the title untouched. The word token is drawn from
+  // the same [\p{L}\p{M}\p{N}_]+ class as the main regex, so it cannot
+  // contain regex metacharacters and needs no escaping. Whole-word guards
+  // on both sides prevent substring false negatives ("Edition Editions").
+  if (typeof rawTitle === 'string' && rawTitle.length > 0) {
+    const word = match[2]
+    const doubledPairInRawTitle = new RegExp(
+      `(?:^|${NON_UNICODE_WORD_CLASS})${word}\\s+${word}(?!${UNICODE_WORD_CLASS})`,
+      'iu',
+    )
+    if (doubledPairInRawTitle.test(rawTitle)) {
+      return title
+    }
   }
 
   // Single pass. "Edition Edition Edition" collapses to "Edition Edition"
