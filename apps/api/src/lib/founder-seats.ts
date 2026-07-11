@@ -38,68 +38,81 @@ export interface SeatRestoreInput {
 export const restoreFounderSeat = async (
   input: SeatRestoreInput,
   dbClient: DbExecutor = db,
-): Promise<SeatRestoreOutcome> => {
-  // Idempotency: at most one restore per claiming subscription.
-  const [existingRestore] = await dbClient
-    .select({ id: subscriptionEvents.id })
-    .from(subscriptionEvents)
-    .where(
-      and(
-        eq(subscriptionEvents.type, 'founder_seat_restored'),
-        sql`${subscriptionEvents.metadata}->>'subscriptionId' = ${input.subscriptionId}`,
-      ),
-    )
-    .limit(1)
-  if (existingRestore) {
+): Promise<SeatRestoreOutcome> =>
+  // A transaction with a FOR UPDATE lock on the singleton window row
+  // serializes concurrent restores for the same claim (an abandon call can
+  // race the incomplete_expired/deleted webhooks) — without it, the
+  // idempotency pre-check below is check-then-act racy and two callers
+  // could both increment. When dbClient is already a transaction (webhook
+  // paths) this nests as a savepoint and the lock holds to outer commit.
+  dbClient.transaction(async (tx) => {
+    await tx
+      .select({ id: founderWindow.id })
+      .from(founderWindow)
+      .where(eq(founderWindow.id, 1))
+      .for('update')
+
+    // Idempotency: at most one restore per claiming subscription.
+    const [existingRestore] = await tx
+      .select({ id: subscriptionEvents.id })
+      .from(subscriptionEvents)
+      .where(
+        and(
+          eq(subscriptionEvents.type, 'founder_seat_restored'),
+          sql`${subscriptionEvents.metadata}->>'subscriptionId' = ${input.subscriptionId}`,
+        ),
+      )
+      .limit(1)
+    if (existingRestore) {
+      apiLogger.info(
+        { subscriptionId: input.subscriptionId, reason: input.reason },
+        'founder-seats: seat already restored for this claim — skipping',
+      )
+      return 'already_restored'
+    }
+
+    // Guarded increment — seats never exceed seatsTotal.
+    const restored = await tx
+      .update(founderWindow)
+      .set({ seatsRemaining: sql`${founderWindow.seatsRemaining} + 1` })
+      .where(
+        and(
+          eq(founderWindow.id, 1),
+          lt(founderWindow.seatsRemaining, founderWindow.seatsTotal),
+        ),
+      )
+      .returning({ seatsRemaining: founderWindow.seatsRemaining })
+    if (restored.length === 0) {
+      // Nothing incremented — the window is already at seatsTotal, which
+      // means seat accounting drifted somewhere. Loud log, no event write
+      // (nothing was restored).
+      apiLogger.error(
+        { subscriptionId: input.subscriptionId, reason: input.reason },
+        'founder-seats: restore skipped — seats_remaining already at seats_total',
+      )
+      return 'seats_already_full'
+    }
+
+    await tx.insert(subscriptionEvents).values({
+      userId: input.userId,
+      type: 'founder_seat_restored',
+      stripeEventId: input.stripeEventId ?? null,
+      metadata: {
+        subscriptionId: input.subscriptionId,
+        seatNumber: input.seatNumber,
+        reason: input.reason,
+      },
+    })
     apiLogger.info(
-      { subscriptionId: input.subscriptionId, reason: input.reason },
-      'founder-seats: seat already restored for this claim — skipping',
+      {
+        subscriptionId: input.subscriptionId,
+        seatNumber: input.seatNumber,
+        reason: input.reason,
+      },
+      'founder-seats: seat restored',
     )
-    return 'already_restored'
-  }
-
-  // Guarded increment — seats never exceed seatsTotal.
-  const restored = await dbClient
-    .update(founderWindow)
-    .set({ seatsRemaining: sql`${founderWindow.seatsRemaining} + 1` })
-    .where(
-      and(
-        eq(founderWindow.id, 1),
-        lt(founderWindow.seatsRemaining, founderWindow.seatsTotal),
-      ),
-    )
-    .returning({ seatsRemaining: founderWindow.seatsRemaining })
-  if (restored.length === 0) {
-    // Nothing incremented — the window is already at seatsTotal, which means
-    // seat accounting drifted somewhere. Loud log, no event write (nothing
-    // was restored).
-    apiLogger.error(
-      { subscriptionId: input.subscriptionId, reason: input.reason },
-      'founder-seats: restore skipped — seats_remaining already at seats_total',
-    )
-    return 'seats_already_full'
-  }
-
-  await dbClient.insert(subscriptionEvents).values({
-    userId: input.userId,
-    type: 'founder_seat_restored',
-    stripeEventId: input.stripeEventId ?? null,
-    metadata: {
-      subscriptionId: input.subscriptionId,
-      seatNumber: input.seatNumber,
-      reason: input.reason,
-    },
+    return 'restored'
   })
-  apiLogger.info(
-    {
-      subscriptionId: input.subscriptionId,
-      seatNumber: input.seatNumber,
-      reason: input.reason,
-    },
-    'founder-seats: seat restored',
-  )
-  return 'restored'
-}
 
 /**
  * True when the subscription never produced a paid invoice — no
