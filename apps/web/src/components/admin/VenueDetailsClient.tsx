@@ -3,13 +3,18 @@
 import { useState, useRef, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import type { VenueWithCrawlHealth } from '@concert-crawl/types'
+import type {
+  PlatformProbeResult,
+  VenuePlatform,
+  VenueWithCrawlHealth,
+} from '@concert-crawl/types'
 import {
   updateVenue,
   pauseVenue,
   activateVenue,
   setVenueFeatured,
   generateVenueAbout,
+  probeVenuePlatform,
 } from '@/lib/actions/venues'
 import {
   AdminButton,
@@ -71,6 +76,24 @@ function strategyKind(
   if (strategy === 'structured_data') return 'signal'
   if (strategy === 'llm') return 'accent'
   return 'neutral'
+}
+
+// Platform probe (#665) — single-POST status machine, mirroring
+// OpsToolsSection's test-email pattern (idle | pending | done | error).
+type ProbeStatus =
+  | { kind: 'idle' }
+  | { kind: 'pending' }
+  | { kind: 'done'; result: PlatformProbeResult }
+  | { kind: 'error'; message: string }
+
+const probeReasonLabel = (
+  reason: 'missing_config' | 'fetch_error' | 'schema_error',
+): string => {
+  const reasons =
+    ADMIN_COPY.venueDetailsClient.fields.platformRouting.probe.reasons
+  if (reason === 'missing_config') return reasons.missingConfig
+  if (reason === 'schema_error') return reasons.schemaError
+  return reasons.fetchError
 }
 
 // ── VD Primitives ─────────────────────────────────────────────
@@ -503,6 +526,12 @@ export function VenueDetailsClient({ venue }: Props) {
   const [extractionStrategyVal, setExtractionStrategyVal] = useState<
     'structured_data' | 'llm' | 'manual' | null
   >(venue.extractionStrategy ?? null)
+  const [platformVal, setPlatformVal] = useState<VenuePlatform | null>(
+    venue.platform ?? null,
+  )
+  const [platformVenueIdVal, setPlatformVenueIdVal] = useState(
+    venue.platformVenueId ?? '',
+  )
   const [debugCaptureHtmlVal, setDebugCaptureHtmlVal] = useState(
     venue.debugCaptureHtml,
   )
@@ -535,6 +564,10 @@ export function VenueDetailsClient({ venue }: Props) {
     ...(extractionStrategyVal !== (venue.extractionStrategy ?? null)
       ? ['Strategy']
       : []),
+    ...(platformVal !== (venue.platform ?? null) ? ['Platform'] : []),
+    ...(platformVenueIdVal !== (venue.platformVenueId ?? '')
+      ? ['Platform venue ID']
+      : []),
     ...(debugCaptureHtmlVal !== venue.debugCaptureHtml
       ? ['Debug capture']
       : []),
@@ -551,9 +584,10 @@ export function VenueDetailsClient({ venue }: Props) {
     'idle' | 'saving' | 'saved' | 'error'
   >('idle')
   const [saveError, setSaveError] = useState<string | null>(null)
-  const [fieldErrors, setFieldErrors] = useState<{ slug?: string | undefined }>(
-    {},
-  )
+  const [fieldErrors, setFieldErrors] = useState<{
+    slug?: string | undefined
+    platformVenueId?: string | undefined
+  }>({})
 
   // Responsive breakpoint
   const [isMobile, setIsMobile] = useState(false)
@@ -579,6 +613,36 @@ export function VenueDetailsClient({ venue }: Props) {
   const [generateError, setGenerateError] = useState<string | undefined>()
   const [capacityGenerated, setCapacityGenerated] = useState(false)
   const [neighborhoodGenerated, setNeighborhoodGenerated] = useState(false)
+
+  // Platform probe state (#665)
+  const [probeStatus, setProbeStatus] = useState<ProbeStatus>({ kind: 'idle' })
+
+  const runPlatformProbe = async () => {
+    setProbeStatus({ kind: 'pending' })
+    try {
+      const result = await probeVenuePlatform(venue.id, {
+        platform: platformVal,
+        platformVenueId: platformVenueIdVal.trim() || null,
+      })
+      if (!result.success || !result.data) {
+        setProbeStatus({
+          kind: 'error',
+          message:
+            result.error ??
+            ADMIN_COPY.venueDetailsClient.fields.platformRouting.probe
+              .requestFailed,
+        })
+        return
+      }
+      setProbeStatus({ kind: 'done', result: result.data })
+    } catch (err) {
+      console.error('probeVenuePlatform failed', err)
+      setProbeStatus({
+        kind: 'error',
+        message: err instanceof Error ? err.message : String(err),
+      })
+    }
+  }
 
   async function handleGenerateAbout() {
     setGenerateState('loading')
@@ -634,6 +698,9 @@ export function VenueDetailsClient({ venue }: Props) {
     setPriceUrlVal(venue.priceUrl ?? '')
     setCrawlModeVal(venue.crawlMode ?? null)
     setExtractionStrategyVal(venue.extractionStrategy ?? null)
+    setPlatformVal(venue.platform ?? null)
+    setPlatformVenueIdVal(venue.platformVenueId ?? '')
+    setProbeStatus({ kind: 'idle' })
     setDebugCaptureHtmlVal(venue.debugCaptureHtml)
     setCapacityVal(venue.capacity != null ? String(venue.capacity) : '')
     setVenueTypeVal(venue.venueType ?? '')
@@ -654,6 +721,19 @@ export function VenueDetailsClient({ venue }: Props) {
   async function handleSave() {
     setSaveError(null)
     setFieldErrors({})
+
+    // Client-side guard mirroring the API's Zod refine: a platform without
+    // a venue ID is an unroutable config, so block the save inline.
+    if (platformVal !== null && platformVenueIdVal.trim() === '') {
+      setFieldErrors({
+        platformVenueId:
+          ADMIN_COPY.venueDetailsClient.fields.platformRouting.platformVenueId
+            .requiredError,
+      })
+      setSaveState('error')
+      return
+    }
+
     setSaveState('saving')
 
     const formData = new FormData()
@@ -671,6 +751,8 @@ export function VenueDetailsClient({ venue }: Props) {
     }
     formData.set('crawlMode', crawlModeVal ?? '')
     formData.set('extractionStrategy', extractionStrategyVal ?? '')
+    formData.set('platform', platformVal ?? '')
+    formData.set('platformVenueId', platformVenueIdVal.trim())
     formData.set('debugCaptureHtml', String(debugCaptureHtmlVal))
     formData.set('capacity', capacityVal.trim())
     formData.set('venueType', venueTypeVal.trim())
@@ -1337,6 +1419,170 @@ export function VenueDetailsClient({ venue }: Props) {
           >
             {/* Left column */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Platform routing (#721/#665) — sits BEFORE Extraction
+                  Strategy because it overrides it when set */}
+              <VDField
+                label={
+                  ADMIN_COPY.venueDetailsClient.fields.platformRouting.platform
+                    .label
+                }
+                htmlFor="edit-venue-platform"
+                description={
+                  ADMIN_COPY.venueDetailsClient.fields.platformRouting.help
+                }
+              >
+                <VDSelect
+                  id="edit-venue-platform"
+                  value={platformVal ?? ''}
+                  disabled={isDisabled}
+                  onChange={(evt) => {
+                    const nextPlatform =
+                      evt.target.value === 'aeg' ? 'aeg' : null
+                    setPlatformVal(nextPlatform)
+                    if (nextPlatform === null) setPlatformVenueIdVal('')
+                    setProbeStatus({ kind: 'idle' })
+                    setFieldErrors((prev) => ({
+                      ...prev,
+                      platformVenueId: undefined,
+                    }))
+                  }}
+                >
+                  <option value="">
+                    {
+                      ADMIN_COPY.venueDetailsClient.fields.platformRouting
+                        .platform.auto
+                    }
+                  </option>
+                  <option value="aeg">
+                    {
+                      ADMIN_COPY.venueDetailsClient.fields.platformRouting
+                        .platform.aeg
+                    }
+                  </option>
+                </VDSelect>
+              </VDField>
+
+              {platformVal !== null && (
+                <VDField
+                  label={
+                    ADMIN_COPY.venueDetailsClient.fields.platformRouting
+                      .platformVenueId.label
+                  }
+                  htmlFor="edit-venue-platform-venue-id"
+                  hint={
+                    ADMIN_COPY.venueDetailsClient.fields.platformRouting
+                      .platformVenueId.aegHint
+                  }
+                  {...(fieldErrors.platformVenueId
+                    ? { error: fieldErrors.platformVenueId }
+                    : {})}
+                >
+                  <VDInput
+                    id="edit-venue-platform-venue-id"
+                    value={platformVenueIdVal}
+                    placeholder={
+                      ADMIN_COPY.venueDetailsClient.fields.platformRouting
+                        .platformVenueId.placeholder
+                    }
+                    disabled={isDisabled}
+                    hasError={Boolean(fieldErrors.platformVenueId)}
+                    onChange={(evt) => {
+                      setPlatformVenueIdVal(evt.target.value)
+                      setFieldErrors((prev) => ({
+                        ...prev,
+                        platformVenueId: undefined,
+                      }))
+                    }}
+                    style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                  />
+                </VDField>
+              )}
+
+              {/* Probe platform fetch — dry-run of the CURRENT form values */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ alignSelf: 'flex-start' }}>
+                  <AdminButton
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    disabled={
+                      isDisabled ||
+                      probeStatus.kind === 'pending' ||
+                      platformVal === null
+                    }
+                    onClick={() => void runPlatformProbe()}
+                  >
+                    {probeStatus.kind === 'pending'
+                      ? ADMIN_COPY.venueDetailsClient.fields.platformRouting
+                          .probe.buttonPending
+                      : ADMIN_COPY.venueDetailsClient.fields.platformRouting
+                          .probe.button}
+                  </AdminButton>
+                </div>
+                {probeStatus.kind === 'done' && probeStatus.result.ok && (
+                  <div
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 11,
+                      color: 'var(--success)',
+                      lineHeight: 1.5,
+                      overflowWrap: 'anywhere',
+                    }}
+                  >
+                    {
+                      ADMIN_COPY.venueDetailsClient.fields.platformRouting.probe
+                        .okPrefix
+                    }{' '}
+                    {probeStatus.result.eventsFound}{' '}
+                    {
+                      ADMIN_COPY.venueDetailsClient.fields.platformRouting.probe
+                        .okEvents
+                    }{' '}
+                    {probeStatus.result.fetchLatencyMs}ms ·{' '}
+                    {
+                      ADMIN_COPY.venueDetailsClient.fields.platformRouting.probe
+                        .okSource
+                    }{' '}
+                    {probeStatus.result.sourceUrl}
+                  </div>
+                )}
+                {probeStatus.kind === 'done' && !probeStatus.result.ok && (
+                  <div
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 11,
+                      color: 'var(--warning)',
+                      lineHeight: 1.5,
+                      overflowWrap: 'anywhere',
+                    }}
+                  >
+                    {
+                      ADMIN_COPY.venueDetailsClient.fields.platformRouting.probe
+                        .failedPrefix
+                    }{' '}
+                    {probeReasonLabel(probeStatus.result.reason)} —{' '}
+                    {probeStatus.result.error}
+                  </div>
+                )}
+                {probeStatus.kind === 'error' && (
+                  <div
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 11,
+                      color: 'var(--danger)',
+                      lineHeight: 1.5,
+                      overflowWrap: 'anywhere',
+                    }}
+                  >
+                    {
+                      ADMIN_COPY.venueDetailsClient.fields.platformRouting.probe
+                        .requestFailed
+                    }
+                    : {probeStatus.message}
+                  </div>
+                )}
+              </div>
+
               {/* Extraction strategy */}
               <VDField
                 label={
@@ -1351,10 +1597,7 @@ export function VenueDetailsClient({ venue }: Props) {
                   onChange={(evt) =>
                     setExtractionStrategyVal(
                       (evt.target.value || null) as
-                        | 'structured_data'
-                        | 'llm'
-                        | 'manual'
-                        | null,
+                        'structured_data' | 'llm' | 'manual' | null,
                     )
                   }
                 >

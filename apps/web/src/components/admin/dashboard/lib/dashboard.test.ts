@@ -71,6 +71,8 @@ function makeVenue(overrides: Partial<Venue> = {}): Venue {
     ticketVendor: null,
     debugCaptureHtml: false,
     crawlMode: null,
+    platform: null,
+    platformVenueId: null,
     address: null,
     capacity: null,
     venueType: null,

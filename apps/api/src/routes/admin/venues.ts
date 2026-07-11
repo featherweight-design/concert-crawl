@@ -4,6 +4,8 @@ import { z } from 'zod'
 import Anthropic from '@anthropic-ai/sdk'
 import { db, venues, events, crawlRuns } from '@concert-crawl/db'
 import { and, avg, count, desc, eq, gte, isNotNull, ne, not } from 'drizzle-orm'
+import { dispatch, AegSchemaError } from '@concert-crawl/crawler-core/fetchers'
+import type { PlatformProbeResult } from '@concert-crawl/types'
 import { getAuthUser } from '../../middleware/auth.js'
 import { apiLogger } from '../../lib/logger.js'
 import { detectTicketVendor } from '../../lib/detect-ticket-vendor.js'
@@ -87,24 +89,45 @@ const createVenueSchema = z.object({
     }),
 })
 
-const updateVenueSchema = createVenueSchema.partial().extend({
-  active: z.boolean().optional(),
-  verified: z.boolean().optional(),
-  verifiedBy: z.string().max(200).nullable().optional(),
-  crawlMode: z.enum(['http', 'browser']).nullable().optional(),
-  featured: z.boolean().optional(),
-  priceUrl: z
-    .string()
-    .url()
-    .nullable()
-    .optional()
-    .transform((val) => (val?.trim() === '' ? null : val)),
-  extractionStrategy: z
-    .enum(['structured_data', 'llm', 'manual'])
-    .nullable()
-    .optional(),
-  debugCaptureHtml: z.boolean().optional(),
-})
+const updateVenueSchema = createVenueSchema
+  .partial()
+  .extend({
+    active: z.boolean().optional(),
+    verified: z.boolean().optional(),
+    verifiedBy: z.string().max(200).nullable().optional(),
+    crawlMode: z.enum(['http', 'browser']).nullable().optional(),
+    featured: z.boolean().optional(),
+    priceUrl: z
+      .string()
+      .url()
+      .nullable()
+      .optional()
+      .transform((val) => (val?.trim() === '' ? null : val)),
+    extractionStrategy: z
+      .enum(['structured_data', 'llm', 'manual'])
+      .nullable()
+      .optional(),
+    debugCaptureHtml: z.boolean().optional(),
+    // Per-platform fetcher dispatch (#623 / #721 / #665). platform values
+    // are validated here (not a Postgres enum) so new adapters only touch
+    // application code.
+    platform: z.enum(['aeg']).nullable().optional(),
+    platformVenueId: z.string().min(1).nullable().optional(),
+  })
+  .refine(
+    // When the payload sets platform non-null, platformVenueId must ride
+    // along in the SAME payload as a non-empty string. Requiring it in the
+    // payload (rather than accepting a previously-saved value) keeps the
+    // rule simple and the admin UI always sends both together.
+    (body) =>
+      body.platform == null ||
+      (typeof body.platformVenueId === 'string' &&
+        body.platformVenueId.length > 0),
+    {
+      message: 'platformVenueId is required when platform is set',
+      path: ['platformVenueId'],
+    },
+  )
 
 export const venuesAdminRouter = new Hono<AdminVariables>()
 
@@ -397,17 +420,140 @@ venuesAdminRouter.patch(
         .where(and(eq(venues.featured, true), not(eq(venues.id, id))))
     }
 
+    // Clear-on-null (#721 wins over #665 here — the two issues diverged on
+    // whether clearing platform should orphan platformVenueId): when the
+    // payload sets platform to null, force platformVenueId to null in the
+    // same update even if the payload didn't mention it. A stale shard id
+    // with no platform would silently re-activate if platform is re-set.
+    const platformClearFields =
+      body.platform === null ? { platformVenueId: null } : {}
+
     const [updated] = await db
       .update(venues)
-      .set({ ...body, ...verificationFields, updatedAt: new Date() })
+      .set({
+        ...body,
+        ...platformClearFields,
+        ...verificationFields,
+        updatedAt: new Date(),
+      })
       .where(eq(venues.id, id))
       .returning()
 
-    ctx.set('auditAction', 'venue.update')
+    // Distinct audit action when platform routing changed, with a
+    // before/after snapshot — this config redirects the crawler entirely,
+    // so we want the change trail to be greppable.
+    const nextPlatform =
+      body.platform !== undefined ? body.platform : existing.platform
+    const nextPlatformVenueId =
+      body.platform === null
+        ? null
+        : body.platformVenueId !== undefined
+          ? body.platformVenueId
+          : existing.platformVenueId
+    const platformChanged =
+      nextPlatform !== existing.platform ||
+      nextPlatformVenueId !== existing.platformVenueId
+
+    if (platformChanged) {
+      ctx.set('auditAction', 'venue.platform_changed')
+      ctx.set('auditMeta', {
+        before: {
+          platform: existing.platform,
+          platformVenueId: existing.platformVenueId,
+        },
+        after: {
+          platform: nextPlatform,
+          platformVenueId: nextPlatformVenueId,
+        },
+      })
+    } else {
+      ctx.set('auditAction', 'venue.update')
+    }
     ctx.set('auditTargetId', id)
     ctx.set('auditActorId', getAuthUser(ctx).userId)
 
     return ctx.json({ success: true, data: updated })
+  },
+)
+
+const probePlatformSchema = z.object({
+  platform: z.enum(['aeg']).nullable().optional(),
+  platformVenueId: z.string().nullable().optional(),
+})
+
+// POST /v1/admin/venues/:id/probe-platform — dry-run a platform fetch (#665)
+// Probes the proposed platform config from the body when provided, else the
+// venue's saved config. Nothing is written: no crawl_runs row, no events —
+// the admin gets a { ok, ... } diagnosis envelope with HTTP 200 either way.
+venuesAdminRouter.post(
+  '/:id/probe-platform',
+  zValidator('json', probePlatformSchema),
+  async (ctx) => {
+    const { id } = ctx.req.param()
+    const body = ctx.req.valid('json')
+
+    const [venue] = await db.select().from(venues).where(eq(venues.id, id))
+    if (!venue) {
+      return ctx.json({ success: false, error: 'Venue not found' }, 404)
+    }
+
+    // Overlay proposed config (when present in the payload) on the saved
+    // venue row. `undefined` means "not proposed — use saved"; `null` means
+    // "proposed as cleared".
+    const probedPlatform =
+      body.platform !== undefined ? body.platform : venue.platform
+    const probedPlatformVenueId =
+      body.platformVenueId !== undefined
+        ? body.platformVenueId
+        : venue.platformVenueId
+    const candidate = {
+      ...venue,
+      platform: probedPlatform,
+      platformVenueId: probedPlatformVenueId,
+    }
+
+    const probeResult = await (async (): Promise<PlatformProbeResult> => {
+      const fetcher = dispatch(candidate)
+      if (!fetcher) {
+        return {
+          ok: false,
+          reason: 'missing_config',
+          error:
+            'No platform fetcher matches this config — platform is unset or platformVenueId is missing',
+        }
+      }
+      const startedAt = Date.now()
+      try {
+        const result = await fetcher.fetch(candidate, { crawlDelayMs: 0 })
+        return {
+          ok: true,
+          eventsFound: result.events.length,
+          fetchLatencyMs: Date.now() - startedAt,
+          sourceUrl: result.sourceUrl,
+        }
+      } catch (err) {
+        apiLogger.warn(
+          { err, venueId: id, platform: probedPlatform },
+          'probe-platform: platform fetch failed',
+        )
+        const message = err instanceof Error ? err.message : String(err)
+        if (err instanceof AegSchemaError) {
+          return { ok: false, reason: 'schema_error', error: message }
+        }
+        return { ok: false, reason: 'fetch_error', error: message }
+      }
+    })()
+
+    ctx.set('auditAction', 'venue.platform_probe')
+    ctx.set('auditTargetId', id)
+    ctx.set('auditActorId', getAuthUser(ctx).userId)
+    ctx.set('auditMeta', {
+      platform: probedPlatform,
+      platformVenueId: probedPlatformVenueId,
+      outcome: probeResult.ok ? 'ok' : probeResult.reason,
+    })
+
+    return ctx.json({ success: true, data: probeResult })
   },
 )
 

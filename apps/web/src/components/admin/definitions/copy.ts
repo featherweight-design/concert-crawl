@@ -688,6 +688,36 @@ export const ADMIN_COPY = {
         openTitle: 'Open ticket URL',
         placeholder: 'https://...',
       },
+      platformRouting: {
+        heading: 'Platform routing',
+        help: 'Platform routing overrides Extraction Strategy — when a platform is set, events come from the platform feed instead of the crawl cascade.',
+        platform: {
+          label: 'Platform',
+          auto: 'Auto (no platform)',
+          aeg: 'AEG',
+        },
+        platformVenueId: {
+          label: 'Platform venue ID',
+          aegHint:
+            "Events.json shard ID from aegwebprod.blob.core.windows.net/json/events/<shardId>/events.json — find this in the venue's calendar page HTML.",
+          placeholder: 'e.g. 89',
+          requiredError: 'Platform venue ID is required when a platform is set',
+        },
+        probe: {
+          button: 'Probe platform fetch',
+          buttonPending: 'Probing…',
+          okPrefix: 'Probe OK —',
+          okEvents: 'events found in',
+          okSource: 'source:',
+          failedPrefix: 'Probe failed —',
+          reasons: {
+            missingConfig: 'missing config (set a platform + venue ID first)',
+            fetchError: 'fetch error',
+            schemaError: 'platform response did not match expected schema',
+          },
+          requestFailed: 'Probe request failed',
+        },
+      },
       extractionStrategy: {
         label: 'Extraction strategy',
         auto: '— Auto —',

@@ -3,7 +3,11 @@
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { revalidatePath } from 'next/cache'
 import { apiClient, ApiError } from '@/lib/api'
-import type { Venue } from '@concert-crawl/types'
+import type {
+  PlatformProbeResult,
+  Venue,
+  VenuePlatform,
+} from '@concert-crawl/types'
 
 async function getToken(): Promise<string> {
   const { getToken } = await auth()
@@ -191,6 +195,22 @@ export async function updateVenue(
     const debugCaptureHtml =
       debugCaptureHtmlRaw !== null ? debugCaptureHtmlRaw === 'true' : undefined
 
+    // Platform routing (#721/#665). Empty string means "Auto (no platform)".
+    // When platform is null the API force-clears platformVenueId anyway, but
+    // send null explicitly so the payload states the full intent.
+    const platformRaw = formData.get('platform')
+    const platform: VenuePlatform | null | undefined =
+      platformRaw === 'aeg' ? 'aeg' : platformRaw === null ? undefined : null
+    const platformVenueIdRaw = formData.get('platformVenueId')
+    const platformVenueIdTrimmed =
+      platformVenueIdRaw !== null ? String(platformVenueIdRaw).trim() : ''
+    const platformVenueId =
+      platform === undefined
+        ? undefined
+        : platform === null || platformVenueIdTrimmed === ''
+          ? null
+          : platformVenueIdTrimmed
+
     await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
       name: formData.get('name'),
       slug: formData.get('slug'),
@@ -211,6 +231,8 @@ export async function updateVenue(
       priceUrl,
       extractionStrategy,
       debugCaptureHtml,
+      platform,
+      platformVenueId,
     })
     revalidatePath('/admin/venues')
     revalidatePath(`/admin/venues/${id}`)
@@ -351,6 +373,35 @@ export async function generateVenueAbout(
       err && typeof err === 'object' && 'message' in err
         ? String((err as { message: unknown }).message)
         : 'Generation failed'
+    return { success: false, error: message }
+  }
+}
+
+export interface ProbeVenuePlatformResult {
+  success: boolean
+  data?: PlatformProbeResult
+  error?: string
+}
+
+// Dry-run probe of a proposed platform config (#665). Passes the CURRENT
+// form values so admins can validate before saving; nothing is persisted.
+export async function probeVenuePlatform(
+  id: string,
+  proposed: {
+    platform: VenuePlatform | null
+    platformVenueId: string | null
+  },
+): Promise<ProbeVenuePlatformResult> {
+  const token = await getToken()
+  try {
+    const data = await apiClient.post<PlatformProbeResult>(
+      `/v1/admin/venues/${id}/probe-platform`,
+      token,
+      proposed,
+    )
+    return { success: true, data }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Probe request failed'
     return { success: false, error: message }
   }
 }

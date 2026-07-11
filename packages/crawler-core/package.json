@@ -9,6 +9,10 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./fetchers": {
+      "types": "./dist/fetchers.d.ts",
+      "import": "./dist/fetchers.js"
     }
   },
   "scripts": {

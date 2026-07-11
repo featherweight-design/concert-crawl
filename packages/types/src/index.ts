@@ -157,6 +157,26 @@ export type FeedbackCategory = 'bug' | 'idea' | 'praise' | 'other'
 // Subscription tiers
 export type SubscriptionTier = 'free' | 'premium'
 
+// VenuePlatform — per-platform fetcher dispatch (#623). Widen the union
+// as new platform adapters land in packages/crawler-core.
+export type VenuePlatform = 'aeg'
+
+// PlatformProbeResult — dry-run outcome of POST /v1/admin/venues/:id/probe-platform.
+// Returned inside the standard { success: true, data } envelope with HTTP 200
+// for BOTH ok:true and ok:false — a failed probe is a successful diagnosis.
+export type PlatformProbeResult =
+  | {
+      ok: true
+      eventsFound: number
+      fetchLatencyMs: number
+      sourceUrl: string
+    }
+  | {
+      ok: false
+      reason: 'missing_config' | 'fetch_error' | 'schema_error'
+      error: string
+    }
+
 // Venue — represents the JSON-serialized API response shape.
 // Date fields are ISO 8601 strings because fetch().json() cannot revive Date objects.
 export interface Venue {
@@ -185,6 +205,8 @@ export interface Venue {
   ticketVendor: TicketVendor | null
   debugCaptureHtml: boolean
   crawlMode: 'http' | 'browser' | null
+  platform: VenuePlatform | null
+  platformVenueId: string | null
   address: string | null
   capacity: number | null
   venueType: string | null
