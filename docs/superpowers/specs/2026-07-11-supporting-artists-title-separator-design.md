@@ -26,7 +26,7 @@ This brief locks the decisions for restoring visible structure to the "everythin
   Files: `apps/web/src/components/consumer/event-card/EventCard.tsx`, `apps/web/src/components/consumer/hero-event-card/HeroEventCard.tsx`, `apps/web/src/app/(protected)/(main)/events/[id]/page.tsx`.
 
 - **The frontend cannot insert sensible separators today** — `title` is one flat string mixing openers and tour name. Any string-parsing hack in the UI would be fragile against real-world venue formatting (e.g., an opener whose name contains a slash, or a tour name that reads like a subtitle).
-- Structured supporting-artist data is required for the fix to be correct. The engineering work extracts openers into their own field at crawl-extraction time (LLM prompt + Event schema + shared type). The build PR will spec the data-layer shape; this brief locks the visual + interaction call.
+- Structured supporting-artist data is required for the fix to be correct. The engineering work extracts openers into their own field at crawl-extraction time (LLM prompt + Event schema + shared type). The build PR will spec the data-layer shape; this brief locks the **technical scoping** (what data is required, what surfaces are in scope, what's out of scope), while the visual + interaction shape — separator character, "with", overflow ("+3 more" vs "…"), touch behavior — is what Design owns per the "Open for Design to call" section below.
 - **Related ticket:** [#84 Support Act Spotlight](https://github.com/HartiganHM/concert-crawl/issues/84) — future feature that makes openers clickable and linkable to artist pages. This brief should not preclude that follow-on but does not need to design it either.
 
 ## Locked decisions
@@ -63,7 +63,7 @@ Same visual pattern, sized appropriately per surface.
 - **Responsive:** 320px mobile baseline → desktop. The `EventCard` in browse at 320px is the tightest surface and drives the overflow treatment.
 - **A11y:** WCAG AA. Screen readers should announce the openers as a list, not a run-on string. Truncation with a count needs an accessible label ("plus 3 more openers").
 - **Token-only colors** across all 9 themes. If Design introduces a new type/muted color for the openers line, it needs a token (no hardcoded hex).
-- **Copy pattern:** artist names + tour names are **data, not copy** (per `feedback_definitions_copy_rule.md`). Any surrounding scaffolding strings ("with", "presenting", "+N more") DO go in `apps/web/src/components/consumer/**/definitions/copy.ts`.
+- **Copy pattern:** artist names + tour names are **data, not copy** (per `memory:feedback_definitions_copy_rule` — Claude's per-project memory note, outside the repo). Any surrounding scaffolding strings ("with", "presenting", "+N more") DO go in `apps/web/src/components/consumer/definitions/copy.ts`.
 - **Data assumption:** the build PR ships `supportingArtists: string[]` on `Event` (order-preserved, headliner excluded) plus a nullable `tourName: string | null` field extracted from the current `title` mash-up. Design can assume both are available; if either field's shape needs to differ for the visual to work, that's a decision to surface in R1.
 - **No new dependencies expected** — separator rendering is CSS/JSX; no picker/list library needed.
 - **Backfill posture:** existing events keep their current `title` string until the next crawl re-extracts. The UI should render sensibly during the transition (fall back to raw `title` when `supportingArtists` is empty but `title !== artist`). The build PR calls the exact fallback shape.
