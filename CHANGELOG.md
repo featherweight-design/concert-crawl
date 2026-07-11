@@ -1,3 +1,18 @@
+# [1.92.0](https://github.com/HartiganHM/concert-crawl/compare/v1.91.0...v1.92.0) (2026-07-11)
+
+
+### Bug Fixes
+
+* **api:** r1 — tx-atomic webhook idempotency, abandon retry restore, pagination ([0d1b868](https://github.com/HartiganHM/concert-crawl/commit/0d1b868de2380b3d86e2e08e303a3e95c4153f71))
+* **api:** r2 — supporter payments must not clear the premium-data purge clock ([aba4a5e](https://github.com/HartiganHM/concert-crawl/commit/aba4a5e21f8f04dc4c9bbfddee3225901e12dbaa))
+* **api:** r3 — serialize founder seat restores with a window-row lock ([7a0258d](https://github.com/HartiganHM/concert-crawl/commit/7a0258dd43bfbd62e3bb339aade8a83b2aa15711))
+* **api:** r4 — empty webhook secret is unconfigured; distinct missing-window log ([b0ed670](https://github.com/HartiganHM/concert-crawl/commit/b0ed6709279c902abedd4d464e842da72cfa8611))
+
+
+### Features
+
+* **api:** stripe webhooks, checkout-abandon + portal session, seat restore (PR 2.3) ([82f9480](https://github.com/HartiganHM/concert-crawl/commit/82f9480c070d2f94778a9d7cae04b60b641e0b8e))
+
 # [1.91.0](https://github.com/HartiganHM/concert-crawl/compare/v1.90.0...v1.91.0) (2026-07-11)
 
 
