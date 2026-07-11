@@ -77,7 +77,11 @@ export function SettingsRoute({
         {/* Plan */}
         <div className="px-4">
           <SectionLabel>{SETTINGS_COPY.planSection}</SectionLabel>
-          <PlanPanel planState={profile.planState} scaRegion={scaRegion} />
+          <PlanPanel
+            planState={profile.planState}
+            scaRegion={scaRegion}
+            variant="mobile"
+          />
         </div>
 
         {/* Appearance */}

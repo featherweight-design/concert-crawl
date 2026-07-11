@@ -9,7 +9,10 @@ import { useState } from 'react'
 import type { PlanState } from '@concert-crawl/types'
 import { TierPickerSheet } from '@/components/consumer/tier-picker'
 import { TIER_PICKER_COPY } from '@/components/consumer/tier-picker/definitions/copy'
-import { usePlanOpenParam } from '@/components/consumer/tier-picker/lib/use-plan-open-param'
+import {
+  usePlanOpenParam,
+  type PlanOpenVariant,
+} from '@/components/consumer/tier-picker/lib/use-plan-open-param'
 import { PlanCard } from './PlanCard'
 import { resolvePlanCard } from './lib/resolve-plan-card'
 import { usePortalNavigation } from './lib/use-portal-navigation'
@@ -18,9 +21,11 @@ import type { PlanCardCta } from './definitions/types'
 export const PlanPanel = ({
   planState,
   scaRegion,
+  variant,
 }: {
   planState: PlanState
   scaRegion: boolean
+  variant?: PlanOpenVariant
 }) => {
   const [pickerOpen, setPickerOpen] = useState(false)
   const { openPortal, portalPending, portalError, clearPortalError } =
@@ -29,9 +34,9 @@ export const PlanPanel = ({
 
   // Lifecycle nudge CTAs land on /me?plan=open (PR 4.2) — auto-open the
   // picker, then strip the param. Both PlanPanel mounts (mobile + desktop
-  // trees) run this; the hidden tree's fixed sheet is display:none'd by
-  // its CSS-hidden ancestor, so only the visible one paints.
-  usePlanOpenParam(() => setPickerOpen(true))
+  // trees) run this; the variant gate ensures only the viewport-matching
+  // instance opens its sheet.
+  usePlanOpenParam(() => setPickerOpen(true), variant)
 
   const dispatchCta = (cta: PlanCardCta) => {
     if (cta.action === 'portal') {

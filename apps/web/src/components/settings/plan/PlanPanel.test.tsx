@@ -45,6 +45,7 @@ const mockReplace = vi.fn()
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: mockReplace }),
   usePathname: () => '/me',
+  useSearchParams: () => new URLSearchParams(window.location.search),
 }))
 
 const mockCreatePortalSession = vi.fn()

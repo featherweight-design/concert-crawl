@@ -10,20 +10,26 @@ import { useState } from 'react'
 import type { PlanState } from '@concert-crawl/types'
 import { TIER_PICKER_COPY } from './definitions/copy'
 import { TierPickerSheet } from './TierPickerSheet'
-import { usePlanOpenParam } from './lib/use-plan-open-param'
+import {
+  usePlanOpenParam,
+  type PlanOpenVariant,
+} from './lib/use-plan-open-param'
 
 export const TierPickerEntry = ({
   planState,
   scaRegion,
+  variant,
 }: {
   planState: PlanState
   scaRegion: boolean
+  variant?: PlanOpenVariant
 }) => {
   const [open, setOpen] = useState(false)
 
   // Lifecycle nudge CTAs land on /me?plan=open (PR 4.2) — auto-open the
-  // picker, then strip the param.
-  usePlanOpenParam(() => setOpen(true))
+  // picker, then strip the param. The variant gate keeps concurrent
+  // mobile/desktop mounts from both opening.
+  usePlanOpenParam(() => setOpen(true), variant)
 
   return (
     <>

@@ -350,6 +350,7 @@ export function SettingsRouteDesktop({
                 <PlanPanel
                   planState={profile.planState}
                   scaRegion={scaRegion}
+                  variant="desktop"
                 />
               </div>
             )}
