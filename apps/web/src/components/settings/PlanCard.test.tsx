@@ -78,6 +78,19 @@ describe('PlanCard', () => {
     expect(screen.getByText(PLAN_CARD_COPY.yourPlanLabel)).toBeTruthy()
   })
 
+  it('renders 0 days remaining, not NaN, for an unparseable trialEndsAt', () => {
+    render(
+      <PlanCard
+        planState={{
+          ...basePlanState,
+          onTrial: true,
+          trialEndsAt: 'not-a-date',
+        }}
+      />,
+    )
+    expect(screen.getByText(`0 ${PLAN_CARD_COPY.trial.tagline}`)).toBeTruthy()
+  })
+
   it('shows the free card for logged-out', () => {
     render(<PlanCard planState={{ ...basePlanState, plan: 'logged-out' }} />)
     expect(screen.getByText(PLAN_CARD_COPY.free.tagline)).toBeTruthy()

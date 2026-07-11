@@ -11,8 +11,9 @@ const MS_PER_DAY = 86400000
 
 const trialDaysRemainingFrom = (trialEndsAt: string | null): number => {
   if (!trialEndsAt) return 0
-  const remainingMs = new Date(trialEndsAt).getTime() - Date.now()
-  return Math.max(0, Math.ceil(remainingMs / MS_PER_DAY))
+  const endsAtMs = new Date(trialEndsAt).getTime()
+  if (Number.isNaN(endsAtMs)) return 0
+  return Math.max(0, Math.ceil((endsAtMs - Date.now()) / MS_PER_DAY))
 }
 
 function PlanPill({ label, tone }: { label: string; tone: string }) {
