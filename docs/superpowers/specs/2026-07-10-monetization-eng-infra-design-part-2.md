@@ -140,7 +140,7 @@ const claimed = await db
   .returning({ seatsRemaining: founderWindow.seatsRemaining })
 ```
 
-Empty result ⇒ race lost or window closed ⇒ 410 (the #781 "Just missed it" surface). Non-empty ⇒ seat number = `seatsTotal - seatsRemaining` (e.g. 100 − 62 = seat #38), stamped into the Stripe subscription `metadata.founderSeatNumber` + the `founder_claimed` event. The claim happens **before** subscription creation; the seat is held by the `incomplete` subscription.
+The §3.3 gates run **before** this UPDATE, so window-not-open/closed cases are already rejected with their distinct error codes; an empty result here therefore means the seat race was lost (seats exhausted between gate check and decrement) ⇒ 410 `founder_seats_exhausted` (the #781 "Just missed it" surface). Non-empty ⇒ seat number = `seatsTotal - seatsRemaining` (e.g. 100 − 62 = seat #38), stamped into the Stripe subscription `metadata.founderSeatNumber` + the `founder_claimed` event. The claim happens **before** subscription creation; the seat is held by the `incomplete` subscription.
 
 ### 3.2 Seat restoration
 
@@ -174,7 +174,7 @@ Out of scope for implementation here (execution-plan Phases 6–7 own the admin 
 
 ### 4.1 Existing base + sender strategy
 
-`resend` SDK is already installed in `apps/api`; `concertcrawl.app` already sends (`alerts@`, `noreply@`) — sender domain, DKIM/SPF/DMARC are live. Billing mail gets a dedicated address: **`billing@concertcrawl.app`**, display name "Concert Crawl" (reuses the verified domain; no new DNS). Reply-to: `hugh@featherweight.design` until a support address exists (matches #782's contact-support direction).
+`resend` SDK is already installed in `apps/api`; `concertcrawl.app` already sends (`alerts@`, `noreply@`) — sender domain, DKIM/SPF/DMARC are live. Billing mail gets a dedicated address: **`billing@concertcrawl.app`**, display name "Concert Crawl" (reuses the verified domain; no new DNS). Reply-to: `support@concertcrawl.app` — a role address on the verified domain (forwards to Hugh's inbox via Cloudflare Email Routing; rotatable later without template changes), matching #782's contact-support direction.
 
 ### 4.2 Template module shape
 
