@@ -30,7 +30,7 @@ Beta feedback (2026-06-26 prod test): "no multi-tier price submission (GA+VIP)."
 Constraints that already exist and continue to hold:
 
 - `submission_tier` enum: `GA | Reserved | VIP | Pit | Lawn` — a bundle can contain at most 5 tiers in practice (API caps at 10 for forward headroom, but the tier-uniqueness rule binds first).
-- One pending submission per `(event, user, tier)` — enforced by the duplicate check in the batch handler (same check the single-row POST performs today).
+- One pending submission per `(event, user, tier)` — enforced by the duplicate check in the batch handler. Note this is a deliberate relaxation of today's single-row POST, which rejects on any pending submission per `(event, user)` regardless of tier (apps/api/src/routes/price-submissions.ts:343–353). Multi-tier is only possible because the batch handler checks per-tier; after a batch, a user may have multiple pending rows for one event (one per tier). The single POST's stricter check is unchanged.
 - `price_submissions_event_tier_boxoffice_uniq` partial unique index (one corroborated box-office row per event+tier) is unaffected — batch rows insert as `status = 'pending'`.
 
 No bundle/group ID column. Rows in a bundle are not linked after insert; the bundle is an ephemeral submission-time concept only. If a future feature needs bundle grouping (e.g. "edit whole bundle"), that is a new expand-phase column then — not now (KISS).
@@ -71,6 +71,8 @@ POST /v1/events/:eventId/price-submissions/batch
   "success": false,
   "errors": [
     { "index": 1, "tier": "VIP", "error": "already_submitted" }
+    // `tier` is string | null — null when the row is malformed enough that
+    // the tier itself failed Zod validation
   ]
 }
 ```
@@ -86,7 +88,7 @@ POST /v1/events/:eventId/price-submissions/batch
 
 `SubmitPriceModal` (apps/web/src/components/consumer/submit-price/) becomes the bundle form:
 
-- **Bundle-level fields** (asked once, top of form): where the price is from (`sourceCategory`), vendor, how found, optional note.
+- **Bundle-level fields** (asked once, top of form): where the price is from (`sourceCategory`) and vendor — matching today's form exactly. `howFound` is **derived** from `sourceCategory` via `howFoundForSource` (never asked directly), and the API's optional `note` field is **not exposed in the shipped UI** (API-only for now). Implementers must not add either as a form field.
 - **Per-tier panels**: each panel = tier picker + price (min, optional max).
   - "Add another tier" button appends a panel (cap 10; realistically capped at 5 by tier uniqueness).
   - The tier picker in each panel **disables tiers already selected** in other panels.
