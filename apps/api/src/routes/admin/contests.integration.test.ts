@@ -324,6 +324,169 @@ describe('GET /v1/admin/contests/prices', () => {
     expect(body.data.limit).toBe(2)
     expect(body.data.offset).toBe(1)
   })
+
+  // #758 — sort=filed-at-desc reverses the default oldest-first order.
+  it('sorts newest first when sort=filed-at-desc', async () => {
+    setAdminAuth()
+    const venue = await seedVenue({
+      name: 'Desc Venue',
+      slug: 'contest-desc-venue',
+    })
+    const eventA = await seedEvent(venue.id, {
+      date: '2027-09-01',
+      title: 'Desc Show A',
+      artist: 'Desc Artist A',
+    })
+    const eventB = await seedEvent(venue.id, {
+      date: '2027-09-02',
+      title: 'Desc Show B',
+      artist: 'Desc Artist B',
+    })
+    const parentA = await seedPriceSubmission(eventA.id, 'desc-parent-a', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      status: 'disputed',
+    })
+    const parentB = await seedPriceSubmission(eventB.id, 'desc-parent-b', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '50',
+      status: 'disputed',
+    })
+    await seedPriceSubmission(eventA.id, 'desc-chal-a', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '55',
+      status: 'pending',
+      disputedSubmissionId: parentA.id,
+      createdAt: new Date('2027-01-01T00:00:00Z'),
+    })
+    await seedPriceSubmission(eventB.id, 'desc-chal-b', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '60',
+      status: 'pending',
+      disputedSubmissionId: parentB.id,
+      createdAt: new Date('2027-02-01T00:00:00Z'),
+    })
+
+    const res = await app.request(
+      '/v1/admin/contests/prices?sort=filed-at-desc',
+      { headers: ADMIN_HEADERS },
+    )
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { items: Array<{ contestId: string }> }
+    }
+    expect(body.data.items).toHaveLength(2)
+    // Newest contest first
+    expect(body.data.items[0]?.contestId).toBe(parentB.id)
+    expect(body.data.items[1]?.contestId).toBe(parentA.id)
+  })
+
+  // #758 — includeArchived=true widens the scope from open contests
+  // (pending counters) to all contest history; each row carries the
+  // counter's actual status so the UI badge stays honest.
+  it('surfaces non-pending counters with their status when includeArchived=true', async () => {
+    setAdminAuth()
+    const venue = await seedVenue({
+      name: 'Archive Venue',
+      slug: 'contest-archive-venue',
+    })
+    const eventA = await seedEvent(venue.id, {
+      date: '2027-10-01',
+      title: 'Archive Show A',
+      artist: 'Archive Artist A',
+    })
+    const eventB = await seedEvent(venue.id, {
+      date: '2027-10-02',
+      title: 'Archive Show B',
+      artist: 'Archive Artist B',
+    })
+    const parentA = await seedPriceSubmission(eventA.id, 'arch-parent-a', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      status: 'disputed',
+    })
+    const parentB = await seedPriceSubmission(eventB.id, 'arch-parent-b', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '50',
+      status: 'corroborated',
+    })
+    // Open contest — pending counter
+    await seedPriceSubmission(eventA.id, 'arch-chal-a', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '55',
+      status: 'pending',
+      disputedSubmissionId: parentA.id,
+      createdAt: new Date('2027-01-01T00:00:00Z'),
+    })
+    // Resolved contest — archived counter (parent won)
+    const archivedCounter = await seedPriceSubmission(
+      eventB.id,
+      'arch-chal-b',
+      {
+        tier: 'GA',
+        vendor: 'AXS',
+        sourceCategory: 'standard',
+        priceMin: '60',
+        status: 'archived',
+        disputedSubmissionId: parentB.id,
+        createdAt: new Date('2027-02-01T00:00:00Z'),
+      },
+    )
+
+    // Default scope excludes the archived counter and doesn't count it.
+    const openRes = await app.request('/v1/admin/contests/prices', {
+      headers: ADMIN_HEADERS,
+    })
+    expect(openRes.status).toBe(200)
+    const openBody = (await openRes.json()) as {
+      success: boolean
+      data: {
+        items: Array<{ contestId: string; counter: { status: string } }>
+        total: number
+      }
+    }
+    expect(openBody.data.items).toHaveLength(1)
+    expect(openBody.data.items[0]?.contestId).toBe(parentA.id)
+    expect(openBody.data.items[0]?.counter.status).toBe('pending')
+    expect(openBody.data.total).toBe(1)
+
+    // Widened scope surfaces both, with honest counter statuses.
+    const allRes = await app.request(
+      '/v1/admin/contests/prices?includeArchived=true',
+      { headers: ADMIN_HEADERS },
+    )
+    expect(allRes.status).toBe(200)
+    const allBody = (await allRes.json()) as {
+      success: boolean
+      data: {
+        items: Array<{
+          contestId: string
+          counter: { id: string; status: string }
+        }>
+        total: number
+      }
+    }
+    expect(allBody.data.items).toHaveLength(2)
+    expect(allBody.data.total).toBe(2)
+    expect(allBody.data.items[0]?.counter.status).toBe('pending')
+    expect(allBody.data.items[1]?.counter.id).toBe(archivedCounter.id)
+    expect(allBody.data.items[1]?.counter.status).toBe('archived')
+  })
 })
 
 describe('GET /v1/admin/contests/prices/:contestId', () => {

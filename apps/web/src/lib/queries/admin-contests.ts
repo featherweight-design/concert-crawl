@@ -29,9 +29,26 @@ import { reviewQueryKeys } from './use-admin-review'
 
 export const adminContestsKeys = {
   all: ['admin-contests'] as const,
-  list: () => [...adminContestsKeys.all, 'list'] as const,
+  list: (params?: ReviewContestsParams) =>
+    params === undefined
+      ? ([...adminContestsKeys.all, 'list'] as const)
+      : ([...adminContestsKeys.all, 'list', params] as const),
   detail: (contestId: string) =>
     [...adminContestsKeys.all, 'detail', contestId] as const,
+}
+
+// Sort values mirror the API's `sort` query enum (see
+// apps/api/src/routes/admin/contests.ts listQuerySchema). filed-at-asc is
+// the server default and stays the UI default (#758).
+export type ContestSortOrder = 'filed-at-asc' | 'filed-at-desc'
+
+export interface ReviewContestsParams {
+  limit?: number
+  offset?: number
+  sort?: ContestSortOrder
+  // Widens the list from open contests (pending counters only) to all
+  // contest history — the "All disputes" toggle (#758).
+  includeArchived?: boolean
 }
 
 // ───── Response types — match the wire shape exactly ─────────────────────────
@@ -72,6 +89,11 @@ export interface PriceContestRow {
     confirms: { fans: number; admin: number }
     observedAt: string
     note: string | null
+    // Counter row status — 'pending' on every open contest (the default
+    // list scope filters on it); other values surface only when the
+    // "All disputes" scope widens the query (#758). Drives the counter
+    // cell's status badge.
+    status: 'pending' | 'corroborated' | 'disputed' | 'stale' | 'archived'
   }
   filedAt: string
 }
@@ -162,16 +184,29 @@ export interface DeferContestInput {
 
 // List: open price contests (counter status='pending' AND
 // disputedSubmissionId IS NOT NULL — see API list-endpoint comment for why
-// the query pivots on the counter row, not the parent's status).
-export const useReviewContestsQuery = () => {
+// the query pivots on the counter row, not the parent's status). Optional
+// params thread pagination (#759) and sort / all-history scope (#758)
+// through to the API; omitted params fall back to the server defaults
+// (limit=20, offset=0, filed-at-asc, open contests only).
+export const useReviewContestsQuery = (params?: ReviewContestsParams) => {
   const { getToken } = useAuth()
   return useQuery({
-    queryKey: adminContestsKeys.list(),
+    queryKey: adminContestsKeys.list(params),
     queryFn: async (): Promise<ReviewContestsResult> => {
       const token = await getToken()
       if (!token) throw new Error('Not authenticated')
+      const search = new URLSearchParams()
+      if (params?.limit !== undefined) search.set('limit', String(params.limit))
+      if (params?.offset !== undefined) {
+        search.set('offset', String(params.offset))
+      }
+      if (params?.sort !== undefined) search.set('sort', params.sort)
+      if (params?.includeArchived) search.set('includeArchived', 'true')
+      const query = search.toString()
       return apiClient.get<ReviewContestsResult>(
-        '/v1/admin/contests/prices',
+        query
+          ? `/v1/admin/contests/prices?${query}`
+          : '/v1/admin/contests/prices',
         token,
       )
     },

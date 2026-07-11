@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { type FC, type ReactNode } from 'react'
+import { type FC, type ReactNode, useState } from 'react'
+import { RelTime } from '@/components/admin/primitives'
 import { REVIEW_CONTEST_COPY } from './definitions/copy'
 import { formatPriceRange } from './lib/format-price-range'
 // Type lives in the query module — hooks own the API contract, components
@@ -19,6 +20,17 @@ interface PriceDisputesQueueProps {
   // pulls from `counts.priceContests` (the same true total), so reading
   // `total` here keeps the two surfaces in agreement.
   total: number
+  // Header ghost buttons (#758). Optional so the queue can render without
+  // the affordances (e.g. embedded previews / existing tests); the
+  // Contests tab always wires them. Each button renders only when its
+  // handler is provided.
+  sortDirection?: 'asc' | 'desc'
+  onSortToggle?: () => void
+  showAllDisputes?: boolean
+  onShowAllToggle?: () => void
+  // Pagination footer slot (#759) — rendered inside the panel below the
+  // table so the footer inherits the panel's border radius / overflow.
+  footer?: ReactNode
 }
 
 // Inter font stack repeated across the panel + cells. Pulled out so the
@@ -53,7 +65,22 @@ const PALETTES = {
     bg: 'color-mix(in oklab, oklch(0.62 0.12 240) 16%, transparent)',
     bd: 'color-mix(in oklab, oklch(0.62 0.12 240) 40%, transparent)',
   },
+  // Muted pill for non-pending counter statuses (archived / stale /
+  // corroborated / disputed) surfaced by the "All disputes" scope (#758).
+  // Not in the design source — the queue design only shows open contests —
+  // so it reuses the token mix pattern with the muted foreground.
+  neutral: {
+    fg: 'var(--fg-muted)',
+    bg: 'color-mix(in oklab, var(--fg-muted) 12%, transparent)',
+    bd: 'color-mix(in oklab, var(--fg-muted) 30%, transparent)',
+  },
 } as const
+
+// Counter-status → badge palette. Pending keeps the design's azure pill;
+// everything else (only reachable via the all-history scope) goes neutral.
+const counterBadgeKind = (
+  status: PriceContestRow['counter']['status'],
+): BadgeKind => (status === 'pending' ? 'azure' : 'neutral')
 
 type BadgeKind = keyof typeof PALETTES
 
@@ -87,9 +114,61 @@ const StatusBadge: FC<{ kind: BadgeKind; children: string }> = ({
   )
 }
 
+// Ghost button — mirrors `AdminBtn` variant="ghost" from the design source
+// (admin-queues.jsx ~line 90): transparent background + border, fg-muted
+// text, size sm (h 28 / px 10 / fs 12). The pressed state (All disputes
+// active, or hover) lifts the text to full foreground so the toggle state
+// is visible without inventing a filled variant the design doesn't have.
+const GhostButton: FC<{
+  children: string
+  onClick: () => void
+  ariaLabel: string
+  pressed?: boolean
+}> = ({ children, onClick, ariaLabel, pressed }) => {
+  const [hover, setHover] = useState(false)
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={ariaLabel}
+      aria-pressed={pressed}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        all: 'unset',
+        cursor: 'pointer',
+        boxSizing: 'border-box',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        height: 28,
+        padding: '0 10px',
+        borderRadius: 7,
+        background: 'transparent',
+        color: pressed || hover ? 'var(--fg)' : 'var(--fg-muted)',
+        border: `1px solid ${pressed ? 'var(--border-strong)' : 'transparent'}`,
+        fontFamily: INTER,
+        fontWeight: 600,
+        fontSize: 12,
+        letterSpacing: '-0.005em',
+        whiteSpace: 'nowrap',
+        transition: 'color .12s, border-color .12s',
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+
 export const PriceDisputesQueue: FC<PriceDisputesQueueProps> = ({
   items,
   total,
+  sortDirection = 'asc',
+  onSortToggle,
+  showAllDisputes = false,
+  onShowAllToggle,
+  footer,
 }) => {
   // Auto-hide on empty — design property table §1 line 15. The tab pill
   // (separate ReviewTabs surface) still shows (0); this panel renders
@@ -137,12 +216,32 @@ export const PriceDisputesQueue: FC<PriceDisputesQueueProps> = ({
             {REVIEW_CONTEST_COPY.queue.countBadge(total)}
           </StatusBadge>
         </div>
-        {/*
-          Sort + All-disputes ghost buttons are LOCKED to deferred per spec
-          §7.8 (sort = filed-at asc, no UI affordance for v1). When the
-          follow-up PR adds them, slot the buttons in here on the right
-          side of the header (flex space-between leaves room).
-        */}
+        {/* Sort + All-disputes ghost buttons (#758) — design source
+            admin-queues.jsx `action` slot. Each renders only when its
+            handler is wired (the Contests tab always wires both). */}
+        {(onSortToggle || onShowAllToggle) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {onSortToggle && (
+              <GhostButton
+                onClick={onSortToggle}
+                ariaLabel={REVIEW_CONTEST_COPY.queue.sortButtonAriaLabel(
+                  sortDirection,
+                )}
+              >
+                {REVIEW_CONTEST_COPY.queue.sortButton(sortDirection)}
+              </GhostButton>
+            )}
+            {onShowAllToggle && (
+              <GhostButton
+                onClick={onShowAllToggle}
+                pressed={showAllDisputes}
+                ariaLabel={REVIEW_CONTEST_COPY.queue.allDisputesAriaLabel}
+              >
+                {REVIEW_CONTEST_COPY.queue.allDisputesButton}
+              </GhostButton>
+            )}
+          </div>
+        )}
       </header>
       <table
         // Table chrome — design property table §1 line 38, design
@@ -177,10 +276,14 @@ export const PriceDisputesQueue: FC<PriceDisputesQueueProps> = ({
         </thead>
         <tbody>
           {items.map((row) => (
-            <PriceDisputesQueueRow key={row.contestId} row={row} />
+            // Keyed on the COUNTER id, not contestId (= parent id): the
+            // all-history scope can surface multiple resolved counters
+            // against the same parent, and contestId would collide.
+            <PriceDisputesQueueRow key={row.counter.id} row={row} />
           ))}
         </tbody>
       </table>
+      {footer}
     </section>
   )
 }
@@ -314,18 +417,19 @@ const PriceDisputesQueueRow: FC<{ row: PriceContestRow }> = ({ row }) => {
         </div>
       </DataCell>
 
-      {/* Counter cell — design property table §2 lines 75–80. Price + azure
-          pending badge + attribution line. The counter is by definition
-          status='pending' (queue query filters on that), so the badge
-          renders unconditionally. */}
+      {/* Counter cell — design property table §2 lines 75–80. Price +
+          status badge + attribution line. On the default scope the badge
+          is always the azure "pending" pill (the list query filters on
+          it); the all-history scope (#758) surfaces resolved counters,
+          whose statuses render as neutral pills. */}
       <DataCell>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <PriceRangeText
             floor={row.counter.priceMin}
             ceiling={row.counter.priceMax}
           />
-          <StatusBadge kind="azure">
-            {REVIEW_CONTEST_COPY.queue.badges.pending}
+          <StatusBadge kind={counterBadgeKind(row.counter.status)}>
+            {REVIEW_CONTEST_COPY.queue.badges[row.counter.status]}
           </StatusBadge>
         </div>
         <div
@@ -344,22 +448,22 @@ const PriceDisputesQueueRow: FC<{ row: PriceContestRow }> = ({ row }) => {
         </div>
       </DataCell>
 
-      {/* Filed cell — design property table §2 lines 81–83. Renders the
-          raw ISO string for now; v1 spec is "ISO timestamp; relative
-          time polish is follow-up". The mono/letterSpacing font keeps
-          the typography pinned for when RelTime swaps in. */}
+      {/* Filed cell — design property table §2 lines 81–83, relative time
+          per the design source's example values ("1h ago", "2d ago") —
+          #757. RelTime (shared admin primitive) renders the <time> element
+          and owns the fg-muted color + tabular-nums; the wrapping span
+          pins the rest of the typography (mono 10 / 0.04em) so the cell
+          matches the pre-swap design table values. */}
       <DataCell>
-        <time
-          dateTime={row.filedAt}
+        <span
           style={{
             fontFamily: MONO,
             fontSize: 10,
-            color: 'var(--fg-muted)',
             letterSpacing: '0.04em',
           }}
         >
-          {row.filedAt}
-        </time>
+          <RelTime iso={row.filedAt} />
+        </span>
       </DataCell>
 
       {/* Action cell — design property table §2 lines 84–93. Outline-style

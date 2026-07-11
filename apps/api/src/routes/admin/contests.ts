@@ -21,6 +21,21 @@ export const contestsAdminRouter = new Hono<AdminVariables>()
 const listQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
   offset: z.coerce.number().int().min(0).optional().default(0),
+  // Spec §6.1 locked v1 sort to filedAt ASC; #758 amends that with an
+  // explicit toggle (the admin queue's "Sort: filed-at" ghost button).
+  // ASC stays the default so v1 deep-links keep their meaning.
+  sort: z
+    .enum(['filed-at-asc', 'filed-at-desc'])
+    .optional()
+    .default('filed-at-asc'),
+  // #758 "All disputes" toggle — false (default) keeps the v1 behavior
+  // (pending counters only = open contests); true widens to all contest
+  // history (archived / corroborated / stale counters included).
+  includeArchived: z
+    .enum(['true', 'false'])
+    .optional()
+    .default('false')
+    .transform((val) => val === 'true'),
 })
 
 // GET /v1/admin/contests/prices — paginated open price contests
@@ -40,7 +55,17 @@ contestsAdminRouter.get(
     }
   }),
   async (ctx) => {
-    const { limit, offset } = ctx.req.valid('query')
+    const { limit, offset, sort, includeArchived } = ctx.req.valid('query')
+
+    // Both the page query and the total count must apply the same filter,
+    // or the pager's "X–Y of TOTAL" readout drifts from the rows shown.
+    const listWhere = includeArchived
+      ? isNotNull(priceSubmissions.disputedSubmissionId)
+      : and(
+          eq(priceSubmissions.status, 'pending'),
+          isNotNull(priceSubmissions.disputedSubmissionId),
+        )
+    const direction = sort === 'filed-at-desc' ? desc : asc
 
     // parentAlias = the disputed parent submission (self-join target).
     const parentAlias = alias(priceSubmissions, 'parent')
@@ -81,6 +106,9 @@ contestsAdminRouter.get(
         // counter attribution text per design table §2. corroborationCount on
         // a pending counter starts at 1 (submitter = observation #1).
         counterCorroborationCount: priceSubmissions.corroborationCount,
+        // Surfaced so the queue's counter badge can reflect non-pending
+        // statuses when includeArchived widens the scope (#758).
+        counterStatus: priceSubmissions.status,
         filedAt: priceSubmissions.createdAt,
       })
       .from(priceSubmissions)
@@ -90,13 +118,11 @@ contestsAdminRouter.get(
       )
       .innerJoin(events, eq(events.id, parentAlias.eventId))
       .innerJoin(venues, eq(venues.id, events.venueId))
-      .where(
-        and(
-          eq(priceSubmissions.status, 'pending'),
-          isNotNull(priceSubmissions.disputedSubmissionId),
-        ),
+      .where(listWhere)
+      .orderBy(
+        direction(priceSubmissions.createdAt),
+        direction(priceSubmissions.id),
       )
-      .orderBy(asc(priceSubmissions.createdAt), asc(priceSubmissions.id))
       .limit(limit)
       .offset(offset)
 
@@ -179,6 +205,7 @@ contestsAdminRouter.get(
         },
         observedAt: row.counterObservedAt.toISOString(),
         note: row.counterNote ?? null,
+        status: row.counterStatus,
       },
       filedAt: row.filedAt.toISOString(),
     }))
@@ -190,12 +217,7 @@ contestsAdminRouter.get(
     const [totalRow] = await db
       .select({ value: sql<number>`count(*)::int` })
       .from(priceSubmissions)
-      .where(
-        and(
-          eq(priceSubmissions.status, 'pending'),
-          isNotNull(priceSubmissions.disputedSubmissionId),
-        ),
-      )
+      .where(listWhere)
 
     return ctx.json({
       success: true,

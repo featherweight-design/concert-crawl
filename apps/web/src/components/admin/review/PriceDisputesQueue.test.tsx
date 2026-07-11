@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { PriceDisputesQueue } from './PriceDisputesQueue'
 import type { PriceContestRow } from '@/lib/queries/admin-contests'
 
@@ -35,6 +35,7 @@ const mockRow = (
     confirms: { fans: 1, admin: 0 },
     observedAt: '2026-06-22T00:00:00Z',
     note: 'Face moved to $65 after openers announced.',
+    status: 'pending',
   },
   filedAt: '2026-06-22T00:00:00Z',
   ...overrides,
@@ -222,6 +223,96 @@ describe('PriceDisputesQueue', () => {
     expect(links[0]?.getAttribute('href')).toBe('/admin/review/contests/aaa')
     expect(links[1]?.getAttribute('href')).toBe('/admin/review/contests/bbb')
     expect(links[2]?.getAttribute('href')).toBe('/admin/review/contests/ccc')
+  })
+
+  // #757 — Filed cell renders a relative timestamp via the RelTime
+  // primitive. RTL's act runs effects synchronously, so the label is
+  // populated on first render.
+  it('renders the Filed cell as a relative time', () => {
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60_000).toISOString()
+    render(
+      <PriceDisputesQueue
+        items={[mockRow({ filedAt: fiveMinutesAgo })]}
+        total={1}
+      />,
+    )
+    expect(screen.getByText(/5m ago/)).toBeTruthy()
+  })
+
+  // #758 — counter badge is status-honest: non-pending statuses (only
+  // reachable via the all-disputes scope) render their own label instead
+  // of a lying azure "pending" pill.
+  it('renders the counter status badge from counter.status', () => {
+    render(
+      <PriceDisputesQueue
+        items={[
+          mockRow({
+            counter: { ...mockRow().counter, status: 'archived' },
+          }),
+        ]}
+        total={1}
+      />,
+    )
+    expect(screen.getByText(/archived/i)).toBeTruthy()
+    expect(screen.queryByText(/pending/i)).toBeNull()
+  })
+
+  // #758 — header ghost buttons render only when their handlers are
+  // wired (the Contests tab always wires them; older callers don't).
+  it('does not render the header ghost buttons when handlers are absent', () => {
+    render(<PriceDisputesQueue items={[mockRow({})]} total={1} />)
+    expect(
+      screen.queryByRole('button', { name: /sorted by filed date/i }),
+    ).toBeNull()
+    expect(
+      screen.queryByRole('button', { name: /dispute history/i }),
+    ).toBeNull()
+  })
+
+  it('fires onSortToggle when the sort ghost button is clicked', () => {
+    const onSortToggle = vi.fn()
+    render(
+      <PriceDisputesQueue
+        items={[mockRow({})]}
+        total={1}
+        sortDirection="asc"
+        onSortToggle={onSortToggle}
+        showAllDisputes={false}
+        onShowAllToggle={() => {}}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /oldest first/i }))
+    expect(onSortToggle).toHaveBeenCalledTimes(1)
+  })
+
+  it('fires onShowAllToggle and reflects pressed state on the All disputes button', () => {
+    const onShowAllToggle = vi.fn()
+    render(
+      <PriceDisputesQueue
+        items={[mockRow({})]}
+        total={1}
+        sortDirection="asc"
+        onSortToggle={() => {}}
+        showAllDisputes={true}
+        onShowAllToggle={onShowAllToggle}
+      />,
+    )
+    const button = screen.getByRole('button', { name: /dispute history/i })
+    expect(button.getAttribute('aria-pressed')).toBe('true')
+    fireEvent.click(button)
+    expect(onShowAllToggle).toHaveBeenCalledTimes(1)
+  })
+
+  // #759 — footer slot renders inside the panel (below the table).
+  it('renders the footer node when provided', () => {
+    render(
+      <PriceDisputesQueue
+        items={[mockRow({})]}
+        total={1}
+        footer={<div data-testid="queue-footer">pager</div>}
+      />,
+    )
+    expect(screen.getByTestId('queue-footer')).toBeTruthy()
   })
 
   // Column headers — design property table §1 line 38.

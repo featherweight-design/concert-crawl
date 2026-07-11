@@ -11,7 +11,19 @@ import type { ReviewContestsResult } from '@/lib/queries/admin-contests'
 // has its own coverage via admin-contests.test.tsx (Task 16).
 const mockUseReviewContestsQuery = vi.fn()
 vi.mock('@/lib/queries/admin-contests', () => ({
-  useReviewContestsQuery: () => mockUseReviewContestsQuery(),
+  useReviewContestsQuery: (...args: unknown[]) =>
+    mockUseReviewContestsQuery(...args),
+}))
+
+// URL state (#758/#759) comes from next/navigation — the tab derives
+// pagination/sort/scope from the search params and pushes updates via
+// router.push. `mockSearch` is mutated per-test to simulate deep links.
+const mockPush = vi.fn()
+let mockSearch = ''
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: mockPush }),
+  usePathname: () => '/admin/review',
+  useSearchParams: () => new URLSearchParams(mockSearch),
 }))
 
 import { ContestsTabContent } from './ContestsTabContent'
@@ -45,6 +57,8 @@ describe('ContestsTabContent', () => {
   beforeEach(() => {
     cleanup()
     mockUseReviewContestsQuery.mockReset()
+    mockPush.mockReset()
+    mockSearch = ''
   })
 
   it('renders a status loading banner while the query is pending', () => {
@@ -114,6 +128,7 @@ describe('ContestsTabContent', () => {
                 confirms: { fans: 1, admin: 0 },
                 observedAt: '2026-06-22T00:00:00Z',
                 note: null,
+                status: 'pending',
               },
               filedAt: '2026-06-22T00:00:00Z',
             },
@@ -145,5 +160,48 @@ describe('ContestsTabContent', () => {
     )
     const { container } = renderTab(<ContestsTabContent />)
     expect(container.textContent ?? '').toBe('')
+  })
+
+  // #758/#759 — with a bare URL the query receives the server defaults:
+  // first page at pageSize 20, oldest-first, open contests only.
+  it('calls the query with default params when the URL has no state', () => {
+    mockUseReviewContestsQuery.mockReturnValue(
+      result({ data: { items: [], total: 0, limit: 20, offset: 0 } }),
+    )
+    renderTab(<ContestsTabContent />)
+    expect(mockUseReviewContestsQuery).toHaveBeenCalledWith({
+      limit: 20,
+      offset: 0,
+      sort: 'filed-at-asc',
+      includeArchived: false,
+    })
+  })
+
+  // #758/#759 — deep-linked URL state (page/pageSize/sort/disputes) is
+  // parsed into the query params: page 3 at size 50 → offset 100.
+  it('derives query params from the URL search params', () => {
+    mockSearch = 'page=3&pageSize=50&sort=filed-at-desc&disputes=all'
+    mockUseReviewContestsQuery.mockReturnValue(
+      result({ data: { items: [], total: 0, limit: 50, offset: 100 } }),
+    )
+    renderTab(<ContestsTabContent />)
+    expect(mockUseReviewContestsQuery).toHaveBeenCalledWith({
+      limit: 50,
+      offset: 100,
+      sort: 'filed-at-desc',
+      includeArchived: true,
+    })
+  })
+
+  // #759 — items=[] but total>0 (deep link past the last page). The queue
+  // auto-hides, but the bare pager must render so its clamp-sync effect
+  // can push the URL back to a real page.
+  it('renders the bare pagination footer when items is empty but total > 0', () => {
+    mockSearch = 'page=99'
+    mockUseReviewContestsQuery.mockReturnValue(
+      result({ data: { items: [], total: 42, limit: 20, offset: 1960 } }),
+    )
+    renderTab(<ContestsTabContent />)
+    expect(screen.getByRole('navigation', { name: 'Pagination' })).toBeTruthy()
   })
 })

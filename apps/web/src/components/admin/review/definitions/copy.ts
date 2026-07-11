@@ -32,11 +32,36 @@ export const REVIEW_CONTEST_COPY = {
       actions: '',
     },
 
+    // Header ghost buttons (design source admin-queues.jsx — AdminBtn
+    // variant="ghost" pair on the panel's action side). #758 lifted the
+    // spec §7.8 deferral: sort toggles filed-at direction, scope toggles
+    // open-contests-only vs. all contest history.
+    sortButton: (direction: 'asc' | 'desc'): string =>
+      `Sort: filed-at ${direction === 'asc' ? '↑' : '↓'}`,
+    sortButtonAriaLabel: (direction: 'asc' | 'desc'): string =>
+      direction === 'asc'
+        ? 'Sorted by filed date, oldest first. Activate to show newest first.'
+        : 'Sorted by filed date, newest first. Activate to show oldest first.',
+    allDisputesButton: 'All disputes',
+    allDisputesAriaLabel:
+      'Toggle between open disputes only and all dispute history',
+
+    // Pagination footer (#759) — the shared Pagination primitive owns its
+    // own labels (ADMIN_COPY.pagination); this is just the noun it renders
+    // in the "No {itemLabel}" empty readout.
+    paginationItemLabel: 'disputes',
+
     // Row badges (design §2 — original.kind === "boxoffice" gold pill,
-    // counter cell pending azure pill)
+    // counter cell status pill). The counter badge is azure "pending" on
+    // every open contest; the other statuses only surface when the
+    // "All disputes" scope widens the list (#758).
     badges: {
       boxOffice: 'box office',
       pending: 'pending',
+      corroborated: 'corroborated',
+      disputed: 'disputed',
+      stale: 'stale',
+      archived: 'archived',
     },
 
     // Row attribution lines ("{handle} · {n} confirms")
