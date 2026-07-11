@@ -103,6 +103,22 @@ describe('CheckoutPanel — legal block (#782 §6.1)', () => {
     expect(hrefs).toContain('/legal/terms#refunds')
   })
 
+  it('opens legal links in a new tab with noopener noreferrer', () => {
+    renderPanel()
+    const legalHrefs = [
+      '/legal/terms',
+      '/legal/privacy',
+      '/legal/terms#refunds',
+    ]
+    for (const link of screen.getAllByRole('link')) {
+      const href = link.getAttribute('href')
+      if (href !== null && legalHrefs.includes(href)) {
+        expect(link.getAttribute('target')).toBe('_blank')
+        expect(link.getAttribute('rel')).toBe('noopener noreferrer')
+      }
+    }
+  })
+
   it('renders the auto-renew line', () => {
     renderPanel()
     expect(

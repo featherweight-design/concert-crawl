@@ -73,7 +73,7 @@ const LegalLink = ({ href, children }: { href: string; children: string }) => (
   <Link
     href={href}
     target="_blank"
-    rel="noopener"
+    rel="noopener noreferrer"
     style={{
       color: 'var(--signal)',
       textDecoration: 'underline',
