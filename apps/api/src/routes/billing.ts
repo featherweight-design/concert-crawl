@@ -117,7 +117,8 @@ export const resolveClientSecret = (
   if (typeof confirmationSecret !== 'object' || confirmationSecret === null) {
     return null
   }
-  return confirmationSecret.client_secret
+  const clientSecret = confirmationSecret.client_secret
+  return typeof clientSecret === 'string' ? clientSecret : null
 }
 
 export const createBillingRouter = (

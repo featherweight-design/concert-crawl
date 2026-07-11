@@ -100,6 +100,15 @@ describe('resolveClientSecret', () => {
     expect(resolveClientSecret({ id: 'sub_1' })).toBeNull()
   })
 
+  it('returns null when client_secret is not a string (unexpected shape)', () => {
+    expect(
+      resolveClientSecret({
+        id: 'sub_1',
+        latest_invoice: { confirmation_secret: { client_secret: null } },
+      }),
+    ).toBeNull()
+  })
+
   it('returns null when confirmation_secret is missing or null', () => {
     expect(resolveClientSecret({ id: 'sub_1', latest_invoice: {} })).toBeNull()
     expect(

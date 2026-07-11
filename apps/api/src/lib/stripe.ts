@@ -22,7 +22,7 @@ export interface StripeCustomerCreateResult {
 // exists; the Payment Element client secret is surfaced via the invoice's
 // confirmation_secret (same PaymentIntent client_secret value).
 export interface StripeInvoiceConfirmationSecret {
-  client_secret: string
+  client_secret: string | null
 }
 
 export interface StripeSubscriptionCreateResult {
@@ -76,7 +76,15 @@ export const getStripeClient = (): BillingStripeClient => {
     if (!secretKey) {
       throw new Error('STRIPE_SECRET_KEY is not set')
     }
-    cachedClient = new Stripe(secretKey, { apiVersion: STRIPE_API_VERSION })
+    // maxNetworkRetries makes the SDK retry transport failures with an
+    // auto-generated idempotency key, so a subscription created just before
+    // a dropped response is returned (not duplicated) on retry — without
+    // this, such a failure would restore a founder seat the incomplete
+    // subscription still holds.
+    cachedClient = new Stripe(secretKey, {
+      apiVersion: STRIPE_API_VERSION,
+      maxNetworkRetries: 2,
+    })
   }
   return cachedClient
 }
