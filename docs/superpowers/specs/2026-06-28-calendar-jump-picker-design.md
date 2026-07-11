@@ -16,7 +16,7 @@ This is a **calendar-surface-only** addition. FilterBar's own date control (`fil
 ## App context
 
 - The calendar surface (`apps/web/src/components/consumer/calendar-view/CalendarView.tsx`) renders a 7-day `WeekStrip` (`apps/web/src/components/consumer/week-strip/WeekStrip.tsx`) with prev/next chev arrows.
-- Navigation is server-routed via `weekOffset` (and `selectedDate`) query params; each chev tap is a full SSR navigation. The brief preserves that model — design can proceed without prescribing fetch shape.
+- Two navigation modes in play: **week paging** is server-routed via `weekOffset` Link hrefs (each chev tap is a full SSR navigation; chev hrefs intentionally omit `selectedDate`); **day selection within a loaded week** is client-side (`window.history.replaceState` updates `selectedDate` without a navigation). The brief preserves both modes — Design can proceed without prescribing fetch shape.
 - Fetch is bounded per-week (100 events max). A month grid that displays event indicators would change the fetch model; the brief flags this as a deliberate downstream consideration (see "Open for Design to call") rather than blocking the picker on a fetch redesign.
 - Empty-day arrow-navigation skip behavior is tracked separately in [#636](https://github.com/HartiganHM/concert-crawl/issues/636) and not in scope here. The picker should align with whatever pattern lands in #636 when both surfaces meet.
 
@@ -49,8 +49,8 @@ The picker lives in the calendar surface (`CalendarView` / `WeekStrip` header). 
 - **A11y:** WCAG AA. Picker should be operable via keyboard alone — arrow keys to navigate days, Enter/Space to select, Escape to close. Screen-reader walkthrough: month change announces; selected day announces with day name + date.
 - **Token-only colors** across all 9 themes.
 - **Preserves other filters:** when a date is picked, search query / venue filter / any other active filter is preserved. The picker only changes the date axis.
-- **Navigation:** picker tap should produce the same URL state as if the user had clicked through to that week with the chevs — same `weekOffset` / `selectedDate` shape. This is a UI-only addition; existing routing stays unchanged.
-- **No new dependencies preferred:** the grid should be hand-built or use the shadcn `Calendar` primitive if it fits the visual treatment Design lands on. Date math currently uses native `Date`; introducing `date-fns` for the grid is acceptable if the picker math becomes load-bearing, but it should be the build PR's call, not a design constraint.
+- **Navigation:** picker tap outcomes should match the existing two-mode model — a day in the currently loaded week is a client-side `selectedDate` update via `replaceState` (matches today's day-tap behavior in the WeekStrip); a day in a different week is a full navigation to that `weekOffset` (matches today's chev behavior). Unlike the chev hrefs, the picker knows the exact target day, so its navigation URL can include both `weekOffset` and `selectedDate` when crossing weeks — that's a picker-specific refinement, not a chev-behavior change.
+- **No new dependencies required:** the grid should be hand-built. Neither shadcn `Calendar` nor `react-day-picker` are currently in the repo, so pulling either in is a real dependency add (not a "already have it" shortcut). Date math today uses native `Date`; if the picker math becomes load-bearing, adding `date-fns` in the build PR is acceptable but should be justified in that PR rather than assumed here.
 
 ## What's NOT in this brief
 
