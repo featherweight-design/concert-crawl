@@ -13,6 +13,8 @@ import { usersRouter } from './users.js'
 import { watchingRouter } from './watching.js'
 import { feedbackRouter } from './feedback.js'
 import { searchRouter } from './search.js'
+import { createBillingRouter } from './billing.js'
+import { getStripeClient } from '../lib/stripe.js'
 
 export function registerRoutes(app: Hono) {
   app.route('/v1/health', healthRouter)
@@ -29,4 +31,5 @@ export function registerRoutes(app: Hono) {
   app.route('/v1/watching', watchingRouter)
   app.route('/v1/feedback', feedbackRouter)
   app.route('/v1/search', searchRouter)
+  app.route('/v1/billing', createBillingRouter(getStripeClient))
 }
