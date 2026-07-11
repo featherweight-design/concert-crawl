@@ -27,15 +27,16 @@ Design brief has landed AND the visual handoff / brief is signed off. Awaiting a
 
 | # / vertical | Design brief | Handoff | Verdict | Build unblocked? | Notes |
 |---|---|---|---|---|---|
-| **Monetization vertical** (#780, #781, #782, #783) — tier picker, lifecycle, failure states + a11y + microcopy, email touchpoints | PRs #817, #813, #823, #846 | 4 handoffs (`design_handoff_monetization_*/`) | 4 × 🟢 Green | **No** — gated on **#775 eng infra spec** + **#849 Resend ownership resolution** | Execution plan PR #854 lays out 8 phases / 19 PRs + Founder build-ahead trick |
-| **#642** Calendar month/week jump picker | PR #862 | (Direct brief; no handoff cycle needed — awaiting Claude Design when Hugh briefs) | 🟢 brief-locked | **Yes** | Small addition to WeekStrip; picker shape locked |
+| **Monetization vertical** (#780, #781, #782, #783) — tier picker, lifecycle, failure states + a11y + microcopy, email touchpoints | PRs #817, #813, #823, #846 | 4 handoffs (`design/design_handoff_monetization_*/`) | 4 × 🟢 Green | **No** — gated on **#775 eng infra spec** + **#849 Resend ownership resolution** | Execution plan PR #854 lays out 8 phases / 19 PRs + Founder build-ahead trick |
+
+**Note:** #642 (Calendar jump picker) has a brief but no handoff yet — Design hasn't picked it up. It's not 2-stage complete, so it lives in "🎨 In flight" below (stage: brief locked, awaiting Design pickup), not here.
 
 **Note:** #752 (price-source dispute-affordance rule) is a shipped feature — it lives in the "✅ Recently shipped" table below, not here. Only 🟢 (design ready, build not started) entries belong in this table.
 
 **Track 1 handoffs awaiting Readiness Review** (audit in flight, not yet in 🟢 above):
 
-- `design_handoff_concert_history/` — audit dispatched 2026-07-11 (sub-agent)
-- `design_handoff_shareable_cards/` — audit dispatched 2026-07-11 (sub-agent)
+- `design/design_handoff_concert_history/` — audit dispatched 2026-07-11 (sub-agent)
+- `design/design_handoff_shareable_cards/` — audit dispatched 2026-07-11 (sub-agent)
 
 ---
 
@@ -45,8 +46,9 @@ Currently active. May be an audit, a brainstorm, or a brief being drafted.
 
 | Task | Stage | Owner | Notes |
 |---|---|---|---|
-| **`design_handoff_concert_history/` Track 1 audit** | Audit in progress | Sub-agent (autonomous) | Verdict TBD; will land as `READINESS.md` + PR |
-| **`design_handoff_shareable_cards/` Track 1 audit** | Audit in progress | Sub-agent (autonomous) | Verdict TBD; will land as `READINESS.md` + PR |
+| **#642** Calendar month/week jump picker | Brief locked; awaiting Claude Design pickup | Hugh briefs when ready | PR #862 (brief merged 2026-07-10); no handoff cycle started yet |
+| **`design/design_handoff_concert_history/` Track 1 audit** | Audit in progress | Sub-agent (autonomous) | Verdict TBD; will land as `READINESS.md` + PR |
+| **`design/design_handoff_shareable_cards/` Track 1 audit** | Audit in progress | Sub-agent (autonomous) | Verdict TBD; will land as `READINESS.md` + PR |
 | **#643** Supporting artists title separator | Assessing (fix vs brief) | Sub-agent (autonomous) | Small beta-feedback ticket; sub-agent decides shape then ships |
 | **This tracker doc** | Being written 2026-07-11 | Main session | Merges when this PR clears Copilot review |
 
