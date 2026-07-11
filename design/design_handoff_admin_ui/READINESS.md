@@ -44,11 +44,12 @@ strict subset and can ship first, as its issue notes.
   `GET /v1/admin/costs/top-venues?days=30`. Straightforward Drizzle `groupBy` aggregations;
   follow existing admin route conventions (AdminVariables, Zod query validation, audit-log
   exempt — read-only).
-- **Day bucketing:** timestamps are UTC; daily buckets should use America/Denver day boundaries
-  per the store-UTC/display-MT decision.
+- **Day bucketing:** all DB timestamps are stored UTC and converted at the display layer
+  (see "Timezones" in `CLAUDE.md` Architecture Decisions). For user-facing daily buckets this
+  means grouping by America/Denver day boundaries, not UTC dates.
 - ⚠️ **`app_config` does not exist.** Issue #112 says "budget stored in `app_config`" but there
   is no such table. Current budget is a hardcoded `LLM_BUDGET_USD = 20` constant in
-  `apps/web/.../dashboard/lib/dashboard.ts`. Per the KISS rule (exhaust existing fields first),
+  `apps/web/src/components/admin/dashboard/lib/dashboard.ts`. Per the KISS rule (exhaust existing fields first),
   keep the constant and skip the table — building `app_config` for one value is not justified.
   Plan PR should state this explicitly.
 
@@ -58,7 +59,8 @@ strict subset and can ship first, as its issue notes.
 - **No chart library needed.** Issue #112 suggests "Recharts or similar," but the mock's
   `CostChart` is a ~25-line dependency-free SVG using only tokens, and the codebase already has
   the same pattern in the `Sparkline` primitive. Build the mock's SVG; do not add Recharts.
-- Copy rule applies: all panel strings land in `components/admin/definitions/copy.ts`.
+- Copy rule applies: all panel strings land in
+  `apps/web/src/components/admin/definitions/copy.ts`.
 
 ### ♿ Cross-cutting
 
