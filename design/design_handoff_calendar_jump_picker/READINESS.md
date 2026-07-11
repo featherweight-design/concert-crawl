@@ -1,10 +1,10 @@
 # Readiness Review — Calendar Jump Picker (#642 · Round 1)
 
 **Verdict:** 🟢 Green — ready for plan PR
-**Audited:** 2026-06-26
+**Audited:** 2026-07-11
 **Auditor:** Claude (autonomous Track 2 Readiness Review, single round)
 **Audited handoff:** `design/design_handoff_calendar_jump_picker/` (Round 1)
-**Source brief:** `docs/superpowers/specs/2026-06-28-calendar-jump-picker-design.md` (merged 2026-06-28)
+**Source brief:** `docs/superpowers/specs/2026-06-28-calendar-jump-picker-design.md` (authored 2026-06-28, merged 2026-07-11 via PR [#862](https://github.com/HartiganHM/concert-crawl/pull/862))
 **Related ticket(s):** [#642](https://github.com/HartiganHM/concert-crawl/issues/642) — Calendar surface jump picker (beta-feedback, phase: beta). Related-but-separate: [#636](https://github.com/HartiganHM/concert-crawl/issues/636) (empty-day arrow-nav skip; the picker aligns with whatever pattern lands there).
 **Plan PR target:** `docs/superpowers/plans/<date>-calendar-jump-picker-implementation-plan.md` per `docs/superpowers/design-pipeline.md`.
 
@@ -12,7 +12,7 @@
 
 Design nailed the light-brainstorm scope in one pass. Every "Open for Design to call" item from the brief lands with a clear recommendation + rationale (star-marked in the README's table). The two-mode nav lock from the brief — chevrons keep SSR week-paging, picker writes both `weekOffset` + `selectedDate` when crossing weeks — is honored verbatim (per `README.md` §"Two-mode nav — preserved"). All 9 themes render token-only in §8 of the canvas (`CC_THEME_KEYS.map` iteration in `Calendar Jump Picker.html:268-272`). Mobile 320 baseline + desktop parity is real behavioral parity, not just visual copies — both surfaces share the same `WeekStripHeader` + `JumpPicker` components, same close paths, same keyboard model. A11y wiring is real in the JSX itself (`role="dialog"` + `aria-haspopup` + `aria-expanded` on cue + `role="grid"` on the day grid), not annotation-only.
 
-R1 verdict is Green with three small observations — all Low/Nit, none blocking a plan PR — captured in the "Open observations" section below. No R2 needed.
+R1 verdict is Green with four small observations — all Low/Nit, none blocking a plan PR — captured in the "Open observations" section below. No R2 needed.
 
 ## Per-dimension findings
 
