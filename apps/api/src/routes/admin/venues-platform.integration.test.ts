@@ -273,6 +273,40 @@ describe('POST /v1/admin/venues/:id/probe-platform — integration (#665)', () =
     expect(audit?.metadata).toMatchObject({ outcome: 'missing_config' })
   })
 
+  it('normalizes whitespace-only platformVenueId to a cleared proposal', async () => {
+    setAuth('admin')
+    dispatchMock.mockReturnValue(null)
+    const venue = await seedVenue({
+      name: 'AEG Venue',
+      slug: 'aeg-venue',
+      platform: 'aeg',
+      platformVenueId: '89',
+    })
+
+    const res = await app.request(
+      `/v1/admin/venues/${venue.id}/probe-platform`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform: 'aeg', platformVenueId: '   ' }),
+      },
+    )
+    expect(res.status).toBe(200)
+
+    const body = (await res.json()) as {
+      success: boolean
+      data: { ok: boolean; reason?: string }
+    }
+    expect(body.data.ok).toBe(false)
+    expect(body.data.reason).toBe('missing_config')
+
+    // The fetcher dispatch saw null, not '   ' — the whitespace never
+    // reached canHandle()
+    expect(dispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({ platformVenueId: null }),
+    )
+  })
+
   it('returns ok with eventsFound and sourceUrl on success', async () => {
     setAuth('admin')
     const fetchMock = vi.fn().mockResolvedValue({

@@ -241,7 +241,11 @@ describe('VenueDetailsClient — platform routing (#721 #665)', () => {
     resolveProbe({ success: true, data: okResult })
 
     await waitFor(() => {
-      expect(screen.getByText(/12/)).toBeTruthy()
+      expect(
+        screen.getByText((content) =>
+          content.includes(`12 ${PLATFORM_COPY.probe.okEvents} 250ms`),
+        ),
+      ).toBeTruthy()
     })
     expect(
       screen.getByText(

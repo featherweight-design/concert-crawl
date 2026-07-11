@@ -503,7 +503,14 @@ venuesAdminRouter.patch(
 
 const probePlatformSchema = z.object({
   platform: z.enum(['aeg']).nullable().optional(),
-  platformVenueId: z.string().nullable().optional(),
+  // Whitespace-only would pass the fetcher's truthy canHandle() check and
+  // turn a missing_config diagnosis into a doomed fetch — normalize to null.
+  platformVenueId: z
+    .string()
+    .trim()
+    .nullable()
+    .optional()
+    .transform((val) => (val === '' ? null : val)),
 })
 
 // POST /v1/admin/venues/:id/probe-platform — dry-run a platform fetch (#665)
