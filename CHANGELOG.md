@@ -1,3 +1,10 @@
+## [1.92.1](https://github.com/HartiganHM/concert-crawl/compare/v1.92.0...v1.92.1) (2026-07-11)
+
+
+### Bug Fixes
+
+* **admin:** [#874](https://github.com/HartiganHM/concert-crawl/issues/874) align shared primitives with design mock, 4-decimal cost precision ([43be140](https://github.com/HartiganHM/concert-crawl/commit/43be140b4cc7054bbe28fb28248e6a2854356220))
+
 # [1.92.0](https://github.com/HartiganHM/concert-crawl/compare/v1.91.0...v1.92.0) (2026-07-11)
 
 
