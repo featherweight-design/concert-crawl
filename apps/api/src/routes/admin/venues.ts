@@ -551,10 +551,15 @@ venuesAdminRouter.post(
     // "proposed as cleared".
     const probedPlatform =
       body.platform !== undefined ? body.platform : venue.platform
+    // Mirror the PATCH route's clear-on-null semantics: a null platform
+    // clears the venue ID too, so the probe (and its audit metadata) never
+    // describes an orphaned { platform: null, platformVenueId } state.
     const probedPlatformVenueId =
-      body.platformVenueId !== undefined
-        ? body.platformVenueId
-        : venue.platformVenueId
+      probedPlatform === null
+        ? null
+        : body.platformVenueId !== undefined
+          ? body.platformVenueId
+          : venue.platformVenueId
     const candidate = {
       ...venue,
       platform: probedPlatform,

@@ -324,6 +324,40 @@ describe('POST /v1/admin/venues/:id/probe-platform — integration (#665)', () =
     )
   })
 
+  it('clears the saved platformVenueId when probing platform: null', async () => {
+    setAuth('admin')
+    dispatchMock.mockReturnValue(null)
+    const venue = await seedVenue({
+      name: 'AEG Venue',
+      slug: 'aeg-venue',
+      platform: 'aeg',
+      platformVenueId: '89',
+    })
+
+    const res = await app.request(
+      `/v1/admin/venues/${venue.id}/probe-platform`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform: null }),
+      },
+    )
+    expect(res.status).toBe(200)
+
+    const body = (await res.json()) as {
+      success: boolean
+      data: { ok: boolean; reason?: string }
+    }
+    expect(body.data.ok).toBe(false)
+    expect(body.data.reason).toBe('missing_config')
+
+    // Clear-on-null mirrors the PATCH route: the candidate never carries
+    // the saved venue ID alongside a cleared platform
+    expect(dispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({ platform: null, platformVenueId: null }),
+    )
+  })
+
   it('returns ok with eventsFound and sourceUrl on success', async () => {
     setAuth('admin')
     const fetchMock = vi.fn().mockResolvedValue({
