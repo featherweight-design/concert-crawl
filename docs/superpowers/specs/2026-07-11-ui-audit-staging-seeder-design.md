@@ -17,7 +17,7 @@ Two root causes:
 
 1. **No systematic sweep.** Manual QA covers the routes and states a human
    happens to visit. There is no repeatable pass over route × viewport ×
-   interaction-state.
+   interaction state.
 2. **Staging is barren.** Staging has almost no user-shaped data, so even a
    sweep would render empty states. Hugh currently hand-seeds data for every
    manual test session, which is tedious and non-reproducible.
@@ -28,7 +28,8 @@ Two root causes:
   immediately balk at: horizontal overflow, clipped/unreadable text wrapping,
   overlapping elements, broken images, crushed tap targets.
 - Findings reviewed by Hugh **before** any GitHub issues are opened; approved
-  findings become labeled issues with screenshots, pickupable by another agent.
+  findings become labeled issues with screenshots, ready for another agent to
+  pick up.
 - Staging populated with prod-like data via one idempotent command — useful for
   the audit, manual testing, demos, and E2E depth.
 
