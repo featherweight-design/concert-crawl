@@ -14,9 +14,15 @@ import { watchingRouter } from './watching.js'
 import { feedbackRouter } from './feedback.js'
 import { searchRouter } from './search.js'
 import { createBillingRouter } from './billing.js'
+import { createBillingManageRouter } from './billing-manage.js'
+import { createStripeWebhooksRouter } from './stripe-webhooks.js'
 import { getStripeClient } from '../lib/stripe.js'
 
 export function registerRoutes(app: Hono) {
+  // Mounted FIRST and with no Clerk/audit middleware — Stripe signature
+  // verification needs the raw body and the request is not user-initiated
+  // (eng infra spec Part 2 §1.5).
+  app.route('/v1/webhooks/stripe', createStripeWebhooksRouter(getStripeClient))
   app.route('/v1/health', healthRouter)
   app.route('/v1/admin', adminRouter)
   app.route('/v1/events', eventsRouter)
@@ -32,4 +38,5 @@ export function registerRoutes(app: Hono) {
   app.route('/v1/feedback', feedbackRouter)
   app.route('/v1/search', searchRouter)
   app.route('/v1/billing', createBillingRouter(getStripeClient))
+  app.route('/v1/billing', createBillingManageRouter(getStripeClient))
 }

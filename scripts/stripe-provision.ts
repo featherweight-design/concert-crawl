@@ -30,15 +30,25 @@
  * `--mode test | live` is a labeled sanity check against the key prefix
  * (sk_test_/sk_live_) — a mismatched key/mode pair aborts before any call.
  *
- * Webhook endpoint registration (`--webhooks`) ships in PR 2.3.
+ * Webhook endpoint registration (spec §1.5, PR 2.3):
+ *
+ *   STRIPE_SECRET_KEY=sk_test_... tsx scripts/stripe-provision.ts \
+ *     --mode test --webhooks https://api.example.com/v1/webhooks/stripe --commit
+ *
+ * Idempotent per URL — an already-registered endpoint is a logged no-op
+ * (with an enabled_events drift warning); creation prints the signing
+ * secret ONCE (it is not retrievable later — place it as
+ * STRIPE_WEBHOOK_SECRET immediately).
  */
 
 import { pathToFileURL } from 'node:url'
 import Stripe from 'stripe'
 import {
   PROVISION_PRICES,
+  WEBHOOK_ENABLED_EVENTS,
   assertKeyMatchesMode,
   parseMode,
+  parseWebhooksUrl,
   planPriceAction,
   type ExistingPriceSummary,
   type ProvisionMode,
@@ -72,6 +82,16 @@ export interface ProvisionStripeClient {
   }
   products: {
     create(params: { name: string }): Promise<{ id: string }>
+  }
+  webhookEndpoints: {
+    list(params: { limit: number }): Promise<{
+      data: { id: string; url: string; enabled_events: string[] }[]
+    }>
+    create(params: {
+      url: string
+      enabled_events: string[]
+      description: string
+    }): Promise<{ id: string; secret?: string | null }>
   }
 }
 
@@ -173,6 +193,101 @@ export async function runProvision(
   return summary
 }
 
+export interface WebhookProvisionSummary {
+  mode: ProvisionMode
+  committed: boolean
+  url: string
+  action: 'noop' | 'created' | 'would_create'
+  endpointId: string | null
+  /** False when an existing endpoint's enabled_events drifted from ours. */
+  eventsInSync: boolean
+}
+
+/**
+ * Idempotent webhook endpoint registration (spec §1.5). Registration is
+ * keyed on the exact URL: present → no-op (drift in enabled_events is a
+ * loud warning, never an auto-fix); absent → create with exactly the
+ * handled event set and print the signing secret ONCE.
+ */
+export async function runWebhookProvision(
+  opts: { mode: ProvisionMode; commit: boolean; url: string },
+  stripe: ProvisionStripeClient,
+): Promise<WebhookProvisionSummary> {
+  const listed = await stripe.webhookEndpoints.list({ limit: 100 })
+  const existing = listed.data.find((endpoint) => endpoint.url === opts.url)
+
+  if (existing) {
+    const desired = [...WEBHOOK_ENABLED_EVENTS].sort()
+    const actual = [...existing.enabled_events].sort()
+    const eventsInSync =
+      desired.length === actual.length &&
+      desired.every((eventType, idx) => eventType === actual[idx])
+    if (!eventsInSync) {
+      console.warn(
+        `[warn] endpoint ${existing.id} enabled_events drifted from the handled set — ` +
+          `expected [${desired.join(', ')}], found [${actual.join(', ')}]. ` +
+          'Update it in the Stripe dashboard (this script never mutates existing endpoints).',
+      )
+    }
+    console.log(
+      `[noop] webhook endpoint already registered for ${opts.url} → ${existing.id}`,
+    )
+    return {
+      mode: opts.mode,
+      committed: opts.commit,
+      url: opts.url,
+      action: 'noop',
+      endpointId: existing.id,
+      eventsInSync,
+    }
+  }
+
+  if (!opts.commit) {
+    console.log(
+      `[dry-run] would register webhook endpoint ${opts.url} with ` +
+        `${WEBHOOK_ENABLED_EVENTS.length} enabled events. Re-run with --commit to apply.`,
+    )
+    return {
+      mode: opts.mode,
+      committed: false,
+      url: opts.url,
+      action: 'would_create',
+      endpointId: null,
+      eventsInSync: true,
+    }
+  }
+
+  const created = await stripe.webhookEndpoints.create({
+    url: opts.url,
+    enabled_events: [...WEBHOOK_ENABLED_EVENTS],
+    description: 'Concert Crawl API webhooks (scripts/stripe-provision.ts)',
+  })
+  console.log(`[created] webhook endpoint ${opts.url} → ${created.id}`)
+  if (created.secret) {
+    // The signing secret is only returned at creation — surface it exactly
+    // once with placement instructions (spec §9: Render API service env).
+    console.log('---')
+    console.log(
+      'Signing secret (shown ONCE, not retrievable later — set it as',
+      'STRIPE_WEBHOOK_SECRET on the API service now):',
+    )
+    console.log(created.secret)
+  } else {
+    console.warn(
+      '[warn] Stripe did not return a signing secret — reveal it from the',
+      'dashboard (Developers → Webhooks → endpoint → Signing secret).',
+    )
+  }
+  return {
+    mode: opts.mode,
+    committed: true,
+    url: opts.url,
+    action: 'created',
+    endpointId: created.id,
+    eventsInSync: true,
+  }
+}
+
 // CLI entrypoint guard so the module can be imported by a test without
 // auto-running — same shape as the sibling scripts.
 const invokedUrl = process.argv[1]
@@ -182,10 +297,15 @@ if (invokedUrl && import.meta.url === invokedUrl) {
   try {
     const mode = parseMode(process.argv)
     const commit = process.argv.includes('--commit')
+    const webhooksUrl = parseWebhooksUrl(process.argv)
     const secretKey = process.env['STRIPE_SECRET_KEY'] ?? ''
     assertKeyMatchesMode(secretKey, mode)
     const stripe = new Stripe(secretKey, { apiVersion: STRIPE_API_VERSION })
-    runProvision({ mode, commit }, stripe)
+    const run: Promise<ProvisionSummary | WebhookProvisionSummary> =
+      webhooksUrl !== null
+        ? runWebhookProvision({ mode, commit, url: webhooksUrl }, stripe)
+        : runProvision({ mode, commit }, stripe)
+    run
       .then((summary) => {
         console.log('---')
         console.log(JSON.stringify(summary, null, 2))

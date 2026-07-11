@@ -84,6 +84,60 @@ export const assertKeyMatchesMode = (
   }
 }
 
+/**
+ * The exact enabled_events set for the webhook endpoint (eng infra spec
+ * Part 2 §1.5). Kept in lockstep with HANDLED_STRIPE_EVENTS in
+ * apps/api/src/routes/stripe-webhooks.ts — both sides pin the same literal
+ * list in their unit tests, so drift fails a test on whichever side moved.
+ */
+export const WEBHOOK_ENABLED_EVENTS: readonly string[] = [
+  'checkout.session.completed',
+  'invoice.payment_succeeded',
+  'invoice.payment_failed',
+  'customer.subscription.updated',
+  'customer.subscription.deleted',
+  'payment_intent.payment_failed',
+  'customer.updated',
+  'payment_method.attached',
+]
+
+/**
+ * Resolves the optional `--webhooks <url>` argument (both `--webhooks url`
+ * and `--webhooks=url` forms). Returns null when the flag is absent; throws
+ * when the flag is present without a valid https URL.
+ */
+export const parseWebhooksUrl = (argv: readonly string[]): string | null => {
+  let value: string | null = null
+  let flagSeen = false
+  for (let idx = 0; idx < argv.length; idx += 1) {
+    const arg = argv[idx]
+    if (arg === '--webhooks') {
+      flagSeen = true
+      value = argv[idx + 1] ?? null
+      break
+    }
+    if (arg?.startsWith('--webhooks=')) {
+      flagSeen = true
+      value = arg.slice('--webhooks='.length)
+      break
+    }
+  }
+  if (!flagSeen) return null
+  if (!value || value.startsWith('--')) {
+    throw new Error('--webhooks requires a URL argument')
+  }
+  let parsed: URL
+  try {
+    parsed = new URL(value)
+  } catch (err) {
+    throw new Error(`--webhooks URL is not a valid URL: ${String(err)}`)
+  }
+  if (parsed.protocol !== 'https:') {
+    throw new Error('--webhooks URL must be https (Stripe requirement)')
+  }
+  return value
+}
+
 export interface ExistingPriceSummary {
   id: string
   unitAmount: number | null

@@ -1,12 +1,27 @@
 import { describe, it, expect } from 'vitest'
 import {
   PROVISION_PRICES,
+  WEBHOOK_ENABLED_EVENTS,
   assertKeyMatchesMode,
   parseMode,
+  parseWebhooksUrl,
   planPriceAction,
   type ProvisionPriceSpec,
 } from './stripe-provision-helpers.js'
-import { runProvision, type ProvisionStripeClient } from './stripe-provision.js'
+import {
+  runProvision,
+  runWebhookProvision,
+  type ProvisionStripeClient,
+} from './stripe-provision.js'
+
+const unusedWebhookEndpoints: ProvisionStripeClient['webhookEndpoints'] = {
+  list: async () => {
+    throw new Error('webhookEndpoints.list not used in this test')
+  },
+  create: async () => {
+    throw new Error('webhookEndpoints.create not used in this test')
+  },
+}
 
 const SUPPORTER: ProvisionPriceSpec = {
   lookupKey: 'supporter_monthly',
@@ -160,10 +175,194 @@ describe('runProvision', () => {
           throw new Error('should not create when the list is ambiguous')
         },
       },
+      webhookEndpoints: unusedWebhookEndpoints,
     }
 
     await expect(
       runProvision({ mode: 'test', commit: false }, stripeStub),
     ).rejects.toThrow(/MULTIPLE ACTIVE PRICES.*price_a, price_b/)
+  })
+})
+
+describe('WEBHOOK_ENABLED_EVENTS', () => {
+  it('pins the exact handled event set (lockstep with the API router)', () => {
+    // Mirrors HANDLED_STRIPE_EVENTS in apps/api/src/routes/stripe-webhooks.ts,
+    // which pins the same literals in its own suite — drift fails one side.
+    expect([...WEBHOOK_ENABLED_EVENTS]).toEqual([
+      'checkout.session.completed',
+      'invoice.payment_succeeded',
+      'invoice.payment_failed',
+      'customer.subscription.updated',
+      'customer.subscription.deleted',
+      'payment_intent.payment_failed',
+      'customer.updated',
+      'payment_method.attached',
+    ])
+  })
+})
+
+describe('parseWebhooksUrl', () => {
+  it('returns null when the flag is absent', () => {
+    expect(parseWebhooksUrl(['--mode', 'test'])).toBeNull()
+  })
+
+  it('parses space and equals forms', () => {
+    expect(
+      parseWebhooksUrl([
+        '--webhooks',
+        'https://api.example.com/v1/webhooks/stripe',
+      ]),
+    ).toBe('https://api.example.com/v1/webhooks/stripe')
+    expect(
+      parseWebhooksUrl([
+        '--webhooks=https://api.example.com/v1/webhooks/stripe',
+      ]),
+    ).toBe('https://api.example.com/v1/webhooks/stripe')
+  })
+
+  it('throws when the flag has no URL', () => {
+    expect(() => parseWebhooksUrl(['--webhooks'])).toThrow(/URL/)
+    expect(() => parseWebhooksUrl(['--webhooks', '--commit'])).toThrow(/URL/)
+  })
+
+  it('throws on a non-https URL', () => {
+    expect(() =>
+      parseWebhooksUrl(['--webhooks', 'http://api.example.com/hook']),
+    ).toThrow(/https/)
+    expect(() => parseWebhooksUrl(['--webhooks', 'not-a-url'])).toThrow(
+      /valid URL/,
+    )
+  })
+})
+
+describe('runWebhookProvision', () => {
+  const HOOK_URL = 'https://api.example.com/v1/webhooks/stripe'
+
+  const unusedPricesAndProducts: Pick<
+    ProvisionStripeClient,
+    'prices' | 'products'
+  > = {
+    prices: {
+      list: async () => {
+        throw new Error('prices.list not used in this test')
+      },
+      create: async () => {
+        throw new Error('prices.create not used in this test')
+      },
+    },
+    products: {
+      create: async () => {
+        throw new Error('products.create not used in this test')
+      },
+    },
+  }
+
+  it('no-ops when the endpoint URL is already registered', async () => {
+    let createCalls = 0
+    const stripeStub: ProvisionStripeClient = {
+      ...unusedPricesAndProducts,
+      webhookEndpoints: {
+        list: async () => ({
+          data: [
+            {
+              id: 'we_existing',
+              url: HOOK_URL,
+              enabled_events: [...WEBHOOK_ENABLED_EVENTS],
+            },
+          ],
+        }),
+        create: async () => {
+          createCalls += 1
+          throw new Error('should not create an already-registered endpoint')
+        },
+      },
+    }
+
+    const summary = await runWebhookProvision(
+      { mode: 'test', commit: true, url: HOOK_URL },
+      stripeStub,
+    )
+    expect(summary.action).toBe('noop')
+    expect(summary.endpointId).toBe('we_existing')
+    expect(summary.eventsInSync).toBe(true)
+    expect(createCalls).toBe(0)
+  })
+
+  it('flags enabled_events drift on an existing endpoint without mutating it', async () => {
+    const stripeStub: ProvisionStripeClient = {
+      ...unusedPricesAndProducts,
+      webhookEndpoints: {
+        list: async () => ({
+          data: [
+            {
+              id: 'we_drifted',
+              url: HOOK_URL,
+              enabled_events: ['invoice.payment_succeeded'],
+            },
+          ],
+        }),
+        create: async () => {
+          throw new Error('should not create/mutate a drifted endpoint')
+        },
+      },
+    }
+
+    const summary = await runWebhookProvision(
+      { mode: 'test', commit: true, url: HOOK_URL },
+      stripeStub,
+    )
+    expect(summary.action).toBe('noop')
+    expect(summary.eventsInSync).toBe(false)
+  })
+
+  it('dry-run reports would_create without calling create', async () => {
+    let createCalls = 0
+    const stripeStub: ProvisionStripeClient = {
+      ...unusedPricesAndProducts,
+      webhookEndpoints: {
+        list: async () => ({ data: [] }),
+        create: async () => {
+          createCalls += 1
+          return { id: 'we_new', secret: 'whsec_x' }
+        },
+      },
+    }
+
+    const summary = await runWebhookProvision(
+      { mode: 'test', commit: false, url: HOOK_URL },
+      stripeStub,
+    )
+    expect(summary.action).toBe('would_create')
+    expect(createCalls).toBe(0)
+  })
+
+  it('creates the endpoint with exactly the handled event set on --commit', async () => {
+    const createdParams: {
+      url: string
+      enabled_events: string[]
+      description: string
+    }[] = []
+    const stripeStub: ProvisionStripeClient = {
+      ...unusedPricesAndProducts,
+      webhookEndpoints: {
+        list: async () => ({ data: [] }),
+        create: async (params) => {
+          createdParams.push(params)
+          return { id: 'we_new', secret: 'whsec_new_secret' }
+        },
+      },
+    }
+
+    const summary = await runWebhookProvision(
+      { mode: 'test', commit: true, url: HOOK_URL },
+      stripeStub,
+    )
+    expect(summary.action).toBe('created')
+    expect(summary.endpointId).toBe('we_new')
+    expect(createdParams).toHaveLength(1)
+    expect(createdParams[0]?.url).toBe(HOOK_URL)
+    expect(createdParams[0]?.enabled_events).toEqual([
+      ...WEBHOOK_ENABLED_EVENTS,
+    ])
   })
 })

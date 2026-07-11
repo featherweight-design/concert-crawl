@@ -44,6 +44,14 @@ export interface StripeSubscriptionCreateParams {
   metadata: Record<string, string>
 }
 
+// Minimal verified-event shape — the payload object is `unknown` on purpose;
+// handlers Zod-parse the slice of each event they consume (boundary data).
+export interface StripeVerifiedEvent {
+  id: string
+  type: string
+  data: { object: unknown }
+}
+
 export interface BillingStripeClient {
   customers: {
     create(params: {
@@ -60,6 +68,25 @@ export interface BillingStripeClient {
     create(
       params: StripeSubscriptionCreateParams,
     ): Promise<StripeSubscriptionCreateResult>
+    // Returns `unknown` — webhook/abandon paths Zod-parse the snapshot they
+    // consume (boundary data never trusted structurally).
+    retrieve(subscriptionId: string): Promise<unknown>
+    cancel(subscriptionId: string): Promise<unknown>
+  }
+  billingPortal: {
+    sessions: {
+      create(params: {
+        customer: string
+        return_url: string
+      }): Promise<{ url: string }>
+    }
+  }
+  webhooks: {
+    constructEvent(
+      rawBody: string,
+      signatureHeader: string,
+      webhookSecret: string,
+    ): StripeVerifiedEvent
   }
 }
 
