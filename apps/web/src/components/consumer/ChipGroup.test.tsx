@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import { ChipGroup } from './ChipGroup'
 
 afterEach(() => {
@@ -57,5 +57,47 @@ describe('ChipGroup', () => {
     )
     const asterisk = screen.getByText('*')
     expect(asterisk.getAttribute('aria-hidden')).toBe('true')
+  })
+})
+
+describe('ChipGroup — per-option disabled', () => {
+  const OPTIONS = [
+    { value: 'GA', label: 'GA' },
+    { value: 'VIP', label: 'VIP', disabled: true },
+  ]
+
+  it('disables only the flagged option and swallows its clicks', () => {
+    const onChange = vi.fn()
+    render(
+      <ChipGroup
+        label="Tier"
+        options={OPTIONS}
+        value={null}
+        onChange={onChange}
+      />,
+    )
+    const gaButton = screen.getByText('GA').closest('button')
+    const vipButton = screen.getByText('VIP').closest('button')
+    expect(gaButton?.disabled).toBe(false)
+    expect(vipButton?.disabled).toBe(true)
+    fireEvent.click(vipButton!)
+    expect(onChange).not.toHaveBeenCalled()
+    fireEvent.click(gaButton!)
+    expect(onChange).toHaveBeenCalledWith('GA')
+  })
+
+  it('group-level disabled still disables every option', () => {
+    const onChange = vi.fn()
+    render(
+      <ChipGroup
+        label="Tier"
+        options={[{ value: 'GA', label: 'GA' }]}
+        value={null}
+        onChange={onChange}
+        disabled
+      />,
+    )
+    const gaButton = screen.getByText('GA').closest('button')
+    expect(gaButton?.disabled).toBe(true)
   })
 })

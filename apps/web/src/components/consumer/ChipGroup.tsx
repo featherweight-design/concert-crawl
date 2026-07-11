@@ -3,6 +3,9 @@
 interface ChipOption {
   value: string
   label: string
+  // Disable a single chip while its siblings stay interactive. Used by the
+  // multi-tier submit form to grey out tiers already chosen in another panel.
+  disabled?: boolean
 }
 
 interface ChipGroupProps {
@@ -58,16 +61,17 @@ export function ChipGroup({
       <div className="flex flex-wrap gap-2">
         {options.map((opt) => {
           const isActive = value === opt.value
+          const isDisabled = disabled || opt.disabled
           return (
             <button
               key={opt.value}
               type="button"
               aria-pressed={isActive}
-              disabled={disabled}
+              disabled={isDisabled}
               onClick={() => onChange(opt.value)}
               className={[
                 'px-3 py-1.5 rounded-full text-sm font-medium border transition-colors',
-                disabled
+                isDisabled
                   ? 'border-border text-fg-muted cursor-not-allowed opacity-60'
                   : isActive
                     ? 'border-signal text-signal bg-signal/10'
