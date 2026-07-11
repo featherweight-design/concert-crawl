@@ -232,10 +232,12 @@ describe('POST /v1/events/:id/price-submissions', () => {
     expect(res.status).toBe(409)
   })
 
-  it('returns 429 when user submits within 24h (non-pending submission exists)', async () => {
+  it('allows a follow-up submission when under the 3-act limit (#876)', async () => {
     setAuth()
+    // One recent non-pending act — under the limit, so the follow-up lands.
     await seedPriceSubmission(eventId, 'user_abc123', {
       status: 'corroborated',
+      tier: 'Lawn',
     })
     const res = await app.request(`/v1/events/${eventId}/price-submissions`, {
       method: 'POST',
@@ -245,7 +247,55 @@ describe('POST /v1/events/:id/price-submissions', () => {
       },
       body: JSON.stringify(TEST_BODY),
     })
+    expect(res.status).toBe(201)
+  })
+
+  it('returns 429 after 3 contribution acts within 24h (#876)', async () => {
+    setAuth()
+    // Three distinct acts (distinct createdAt) inside the window. Non-pending
+    // so the 409 pending check does not fire first.
+    const now = Date.now()
+    const tiers = ['Lawn', 'Pit', 'Reserved'] as const
+    for (const [idx, tier] of tiers.entries()) {
+      await seedPriceSubmission(eventId, 'user_abc123', {
+        status: 'corroborated',
+        tier,
+        createdAt: new Date(now - (idx + 1) * 60 * 1000),
+      })
+    }
+    const res = await app.request(`/v1/events/${eventId}/price-submissions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
+      body: JSON.stringify(TEST_BODY),
+    })
     expect(res.status).toBe(429)
+    const body = (await res.json()) as { success: boolean; error: string }
+    expect(body.error).toBe('Rate limit: 3 submissions per event per 24h')
+  })
+
+  it('serializes concurrent submissions — exactly one lands (#876 TOCTOU)', async () => {
+    setAuth()
+    const fire = () =>
+      app.request(`/v1/events/${eventId}/price-submissions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-token',
+        },
+        body: JSON.stringify(TEST_BODY),
+      })
+    const responses = await Promise.all([fire(), fire(), fire()])
+    const statuses = responses.map((res) => res.status).sort()
+    expect(statuses).toEqual([201, 409, 409])
+
+    const rows = await testDb
+      .select({ id: priceSubmissions.id })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.eventId, eventId))
+    expect(rows).toHaveLength(1)
   })
 })
 
@@ -274,6 +324,52 @@ describe('GET /v1/events/:id/price-submissions', () => {
     expect(typeof body.data.submissions[0]?.confirms).toBe('number')
     expect(body.data.alreadySubmitted).toBe(false)
     expect(body.data.userSubmission).toBeNull()
+  })
+
+  it('reports submissionsRemaining for the caller (#876)', async () => {
+    await clearTables()
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id)
+
+    // Anonymous caller gets the full allowance.
+    clearAuth()
+    const anonRes = await app.request(
+      `/v1/events/${event.id}/price-submissions`,
+    )
+    const anonBody = (await anonRes.json()) as {
+      data: { submissionsRemaining: number }
+    }
+    expect(anonBody.data.submissionsRemaining).toBe(3)
+
+    // Two recent acts (distinct createdAt) → 1 remaining. Includes a stale
+    // row: staleness hides a price from display but the contribution act
+    // still counts against the window, mirroring the POST 429 check.
+    const now = Date.now()
+    await seedPriceSubmission(event.id, 'user_abc123', {
+      status: 'corroborated',
+      tier: 'Lawn',
+      createdAt: new Date(now - 60 * 1000),
+    })
+    await seedPriceSubmission(event.id, 'user_abc123', {
+      status: 'stale',
+      tier: 'Pit',
+      createdAt: new Date(now - 2 * 60 * 1000),
+    })
+    // Outside the 24h window — must not count.
+    await seedPriceSubmission(event.id, 'user_abc123', {
+      status: 'corroborated',
+      tier: 'Reserved',
+      createdAt: new Date(now - 48 * 60 * 60 * 1000),
+    })
+    setAuth()
+    const authRes = await app.request(
+      `/v1/events/${event.id}/price-submissions`,
+      { headers: { Authorization: 'Bearer test-token' } },
+    )
+    const authBody = (await authRes.json()) as {
+      data: { submissionsRemaining: number }
+    }
+    expect(authBody.data.submissionsRemaining).toBe(1)
   })
 
   it('filters out stale submissions', async () => {

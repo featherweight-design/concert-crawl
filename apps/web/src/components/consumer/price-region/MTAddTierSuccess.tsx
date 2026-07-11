@@ -12,6 +12,9 @@ export interface MTAddTierSuccessProps {
   submittedPrice: number
   submittedSourceCategory: SourceCategory
   remainingTiers: ReadonlyArray<Tier>
+  // #876 — caller has no contribution acts left for this event today; hide
+  // the add-tier pills and show the come-back-tomorrow line instead.
+  limitReached?: boolean
   onAddTier: (tier: Tier) => void
   onDone: () => void
 }
@@ -26,6 +29,7 @@ export const MTAddTierSuccess = ({
   submittedPrice,
   submittedSourceCategory,
   remainingTiers,
+  limitReached = false,
   onAddTier,
   onDone,
 }: MTAddTierSuccessProps) => (
@@ -95,7 +99,20 @@ export const MTAddTierSuccess = ({
       </div>
     </div>
 
-    {remainingTiers.length > 0 && (
+    {limitReached && (
+      <div
+        style={{
+          fontFamily: 'Inter, system-ui',
+          fontSize: 12,
+          color: 'var(--fg-muted)',
+          lineHeight: 1.5,
+        }}
+      >
+        {copy.limitReachedLine}
+      </div>
+    )}
+
+    {!limitReached && remainingTiers.length > 0 && (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <Eyebrow>{copy.addAnotherEyebrow}</Eyebrow>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

@@ -244,7 +244,7 @@ export const CONSUMER_COPY = {
     },
     alreadySubmitted: {
       heading: 'Already in.',
-      limitNote: 'You can submit one price per show every 24h.',
+      limitNote: 'You can submit up to three times per show every 24h.',
       editButton: 'Edit submission',
       withdrawButton: 'Withdraw',
     },
@@ -1075,6 +1075,11 @@ export const CONSUMER_COPY = {
       helperLine:
         'Each tier is its own quick submission — only add the ones you actually saw.',
       doneButton: 'Done',
+      // Shown instead of the add-tier pills when the caller has used all
+      // contribution acts for this event today (#876). Deliberately vague —
+      // must NOT claim "you've submitted all tiers/sources."
+      limitReachedLine:
+        "That's your three for this show today. If prices change, come back tomorrow.",
       // Per copy-rule — SourceCategory enum → label string used inside bodyTemplate.
       sourceLabels: {
         boxoffice: 'box office',

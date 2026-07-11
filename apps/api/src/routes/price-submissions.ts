@@ -80,6 +80,61 @@ const batchBodySchema = z
     { message: 'Tiers must be unique within a batch.', path: ['tiers'] },
   )
 
+const RATE_LIMIT_ERROR = `Rate limit: ${SP_POLICY.rateLimitMaxSubmissions} submissions per event per ${SP_POLICY.rateLimitHours}h`
+
+// Executor type covering both the root db handle and a transaction handle,
+// so countRecentActs can run inside the advisory-locked transactions below.
+type DbExecutor =
+  typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0]
+
+// Serializes concurrent submission attempts for one (user, event) pair. The
+// check-then-insert sequences below are racy across API processes without
+// it (TOCTOU): two simultaneous requests can both pass the pending/rate
+// checks and both insert. A transaction-scoped advisory lock keyed on the
+// pair makes the second request wait until the first commits, so its checks
+// see the first insert. Lock scope is per-pair, so unrelated submissions
+// never contend.
+const acquireSubmissionLock = async (
+  tx: DbExecutor,
+  eventId: string,
+  userId: string,
+): Promise<void> => {
+  await tx.execute(
+    // Two-int variant: separate 32-bit hashes per key part collide far less
+    // than one hash of the concatenated pair. A collision only costs
+    // needless serialization, never correctness.
+    sql`SELECT pg_advisory_xact_lock(hashtext(${eventId}), hashtext(${userId}))`,
+  )
+}
+
+// One "contribution act" = one distinct created_at per (user, event) inside
+// the 24h window (#876). All rows of a batch bundle land in one multi-row
+// INSERT and share one statement_timestamp(), so a bundle counts as ONE act
+// without any schema linkage. Counts every status (incl. stale) — the limit
+// is about contribution frequency, not row visibility.
+const countRecentActs = async (
+  eventId: string,
+  userId: string,
+  executor: DbExecutor = db,
+): Promise<number> => {
+  const cutoff = new Date(
+    Date.now() - SP_POLICY.rateLimitHours * 60 * 60 * 1000,
+  )
+  const [row] = await executor
+    .select({
+      acts: sql<number>`COUNT(DISTINCT ${priceSubmissions.createdAt})::int`,
+    })
+    .from(priceSubmissions)
+    .where(
+      and(
+        eq(priceSubmissions.eventId, eventId),
+        eq(priceSubmissions.userId, userId),
+        gt(priceSubmissions.createdAt, cutoff),
+      ),
+    )
+  return row ? Number(row.acts) : 0
+}
+
 export const priceSubmissionsRouter = new Hono()
 
 if (process.env.REQUIRE_BETA_AUTH === 'true') {
@@ -156,11 +211,21 @@ priceSubmissionsRouter.get('/:id/price-submissions', clerkAuth, async (ctx) => {
         ) ?? null)
       : null
 
+  // #876 — how many contribution acts the caller has left for this event.
+  // Separate count query: the list above excludes stale rows, but stale acts
+  // still consume allowance. Anonymous callers get the full allowance.
+  const actsUsed = userId != null ? await countRecentActs(eventId, userId) : 0
+  const submissionsRemaining = Math.max(
+    0,
+    SP_POLICY.rateLimitMaxSubmissions - actsUsed,
+  )
+
   return ctx.json({
     success: true,
     data: {
       submissions,
       alreadySubmitted: recentSubmission != null,
+      submissionsRemaining,
       userSubmission,
     },
   })
@@ -378,79 +443,101 @@ priceSubmissionsRouter.post(
     }
 
     // Non-counter path (no disputedSubmissionId) — fresh submission attempt.
+    // Check-then-insert runs inside an advisory-locked transaction so
+    // concurrent requests for the same (user, event) serialize; the HTTP
+    // status is mapped from the outcome after commit.
+    type SingleOutcome =
+      | {
+          kind: 'already_submitted'
+          submission: typeof priceSubmissions.$inferSelect
+        }
+      | { kind: 'rate_limited' }
+      // .returning() types its rows as possibly-undefined under
+      // noUncheckedIndexedAccess; pass that through unchanged (the previous
+      // non-transactional code did the same).
+      | {
+          kind: 'created'
+          submission: typeof priceSubmissions.$inferSelect | undefined
+        }
 
-    // 409 — existing pending submission
-    const existing = await db
-      .select()
-      .from(priceSubmissions)
-      .where(
-        and(
-          eq(priceSubmissions.eventId, eventId),
-          eq(priceSubmissions.userId, userId),
-          eq(priceSubmissions.status, 'pending'),
-        ),
-      )
-      .limit(1)
-    if (existing.length > 0) {
+    const outcome = await db.transaction<SingleOutcome>(async (tx) => {
+      await acquireSubmissionLock(tx, eventId, userId)
+
+      // 409 — existing pending submission
+      const existing = await tx
+        .select()
+        .from(priceSubmissions)
+        .where(
+          and(
+            eq(priceSubmissions.eventId, eventId),
+            eq(priceSubmissions.userId, userId),
+            eq(priceSubmissions.status, 'pending'),
+          ),
+        )
+        .limit(1)
+      const [existingRow] = existing
+      if (existingRow) {
+        return { kind: 'already_submitted', submission: existingRow }
+      }
+
+      // 429 — rate limit: SP_POLICY.rateLimitMaxSubmissions contribution
+      // acts per (user, event) per 24h (#876).
+      const actsUsed = await countRecentActs(eventId, userId, tx)
+      if (actsUsed >= SP_POLICY.rateLimitMaxSubmissions) {
+        return { kind: 'rate_limited' }
+      }
+
+      const [created] = await tx
+        .insert(priceSubmissions)
+        .values({
+          eventId,
+          userId,
+          priceMin: String(body.priceMin),
+          priceMax: body.priceMax != null ? String(body.priceMax) : null,
+          tier: body.tier,
+          vendor: body.vendor,
+          howFound: body.howFound,
+          // During the expand phase older clients omit sourceCategory.
+          // Derive it from (vendor, howFound) via the shared helper so the
+          // partial unique index + boxoffice staleness exemption apply
+          // immediately instead of waiting for a later backfill.
+          sourceCategory:
+            body.sourceCategory ??
+            deriveSourceCategory(body.vendor, body.howFound),
+          // Submitter counts as observation #1 (1/2 confirmation model).
+          // The DB default is also 1 — explicit value here is defensive
+          // against default drift and easier to spot in code review.
+          corroborationCount: 1,
+          note: body.note ?? null,
+          disputedSubmissionId: null,
+          // statement_timestamp(), not the defaultNow() transaction-start
+          // time: two concurrent transactions can share a start timestamp
+          // even though the advisory lock serializes them, and identical
+          // created_at values would undercount as one act in the
+          // COUNT(DISTINCT created_at) rate check. The INSERT statement runs
+          // after the lock is acquired, so its timestamp is strictly later
+          // than any previously committed serialized act.
+          createdAt: sql`statement_timestamp()`,
+        })
+        .returning()
+
+      return { kind: 'created', submission: created }
+    })
+
+    if (outcome.kind === 'already_submitted') {
       return ctx.json(
         {
           success: false,
           error: 'Already submitted',
-          submission: existing[0],
+          submission: outcome.submission,
         },
         409,
       )
     }
-
-    // 429 — rate limit: 1 submission per user per event per 24h
-    const cutoff = new Date(
-      Date.now() - SP_POLICY.rateLimitHours * 60 * 60 * 1000,
-    )
-    const recent = await db
-      .select()
-      .from(priceSubmissions)
-      .where(
-        and(
-          eq(priceSubmissions.eventId, eventId),
-          eq(priceSubmissions.userId, userId),
-          gt(priceSubmissions.createdAt, cutoff),
-        ),
-      )
-      .limit(1)
-    if (recent.length > 0) {
-      return ctx.json(
-        { success: false, error: 'Rate limit: 1 submission per 24h' },
-        429,
-      )
+    if (outcome.kind === 'rate_limited') {
+      return ctx.json({ success: false, error: RATE_LIMIT_ERROR }, 429)
     }
-
-    const [created] = await db
-      .insert(priceSubmissions)
-      .values({
-        eventId,
-        userId,
-        priceMin: String(body.priceMin),
-        priceMax: body.priceMax != null ? String(body.priceMax) : null,
-        tier: body.tier,
-        vendor: body.vendor,
-        howFound: body.howFound,
-        // During the expand phase older clients omit sourceCategory. Derive
-        // it from (vendor, howFound) via the shared helper so the partial
-        // unique index + boxoffice staleness exemption apply immediately
-        // instead of waiting for a later backfill.
-        sourceCategory:
-          body.sourceCategory ??
-          deriveSourceCategory(body.vendor, body.howFound),
-        // Submitter counts as observation #1 (1/2 confirmation model). The
-        // DB default is also 1 — explicit value here is defensive against
-        // default drift and easier to spot in code review.
-        corroborationCount: 1,
-        note: body.note ?? null,
-        disputedSubmissionId: null,
-      })
-      .returning()
-
-    return ctx.json({ success: true, data: created }, 201)
+    return ctx.json({ success: true, data: outcome.submission }, 201)
   },
 )
 
@@ -509,84 +596,112 @@ priceSubmissionsRouter.post(
       }
     }
 
-    // 422 — one pending submission per (event, user, tier). The single POST
-    // checks per (event, user); the batch contract is per-tier (spec §1
-    // locked decision) so a user with a pending GA can still not double-GA
-    // but the error names the exact panel to fix.
-    const pendingRows = await db
-      .select({ tier: priceSubmissions.tier })
-      .from(priceSubmissions)
-      .where(
-        and(
-          eq(priceSubmissions.eventId, eventId),
-          eq(priceSubmissions.userId, userId),
-          eq(priceSubmissions.status, 'pending'),
-        ),
-      )
-    const pendingTiers = new Set(pendingRows.map((row) => row.tier))
-    const duplicateErrors = body.tiers.flatMap((row, rowIndex) =>
-      pendingTiers.has(row.tier)
-        ? [{ index: rowIndex, tier: row.tier, error: 'already_submitted' }]
-        : [],
-    )
-    if (duplicateErrors.length > 0) {
-      return ctx.json({ success: false, errors: duplicateErrors }, 422)
-    }
-
-    // 429 — the batch is ONE rate-limit hit (one act of contribution). Same
-    // window query as the single POST; a batch inside the window is blocked
-    // as a unit, and a successful batch starts the window.
-    const cutoff = new Date(
-      Date.now() - SP_POLICY.rateLimitHours * 60 * 60 * 1000,
-    )
-    const recent = await db
-      .select({ id: priceSubmissions.id })
-      .from(priceSubmissions)
-      .where(
-        and(
-          eq(priceSubmissions.eventId, eventId),
-          eq(priceSubmissions.userId, userId),
-          gt(priceSubmissions.createdAt, cutoff),
-        ),
-      )
-      .limit(1)
-    if (recent.length > 0) {
-      return ctx.json(
-        { success: false, error: 'Rate limit: 1 submission per 24h' },
-        429,
-      )
-    }
-
     // Shared bundle-level derivation — identical for every row, mirroring
     // the single POST's expand-phase fallback.
     const sourceCategory =
       body.sourceCategory ?? deriveSourceCategory(body.vendor, body.howFound)
 
-    // Atomicity: a single multi-row INSERT is one implicit transaction —
-    // all rows land or none do (spec §2 "one request, one atomic insert").
-    // No explicit db.transaction wrapper: it adds nothing to a single
-    // statement, and doesn't fix the check-then-insert TOCTOU either.
-    const created = await db
-      .insert(priceSubmissions)
-      .values(
-        body.tiers.map((row) => ({
-          eventId,
-          userId,
-          priceMin: String(row.priceMin),
-          priceMax: row.priceMax != null ? String(row.priceMax) : null,
-          tier: row.tier,
-          vendor: body.vendor,
-          howFound: body.howFound,
-          sourceCategory,
-          // Submitter counts as observation #1 (1/2 confirmation model),
-          // same as the single POST.
-          corroborationCount: 1,
-          note: body.note ?? null,
-          disputedSubmissionId: null,
-        })),
-      )
-      .returning()
+    // Check-then-insert runs inside an advisory-locked transaction (same
+    // TOCTOU fix as the single POST) so concurrent batches for the same
+    // (user, event) serialize. The multi-row INSERT stays atomic — all rows
+    // land or none do (spec §2 "one request, one atomic insert") — the
+    // wrapper adds serialization, not atomicity.
+    type BatchOutcome =
+      | {
+          kind: 'duplicate_tiers'
+          errors: { index: number; tier: string; error: string }[]
+        }
+      | { kind: 'rate_limited' }
+      | {
+          kind: 'created'
+          rows: (typeof priceSubmissions.$inferSelect)[]
+          actsUsed: number
+        }
 
-    return ctx.json({ success: true, data: created }, 201)
+    const outcome = await db.transaction<BatchOutcome>(async (tx) => {
+      await acquireSubmissionLock(tx, eventId, userId)
+
+      // 422 — one pending submission per (event, user, tier). The single
+      // POST checks per (event, user); the batch contract is per-tier (spec
+      // §1 locked decision) so a user with a pending GA can still not
+      // double-GA but the error names the exact panel to fix.
+      const pendingRows = await tx
+        .select({ tier: priceSubmissions.tier })
+        .from(priceSubmissions)
+        .where(
+          and(
+            eq(priceSubmissions.eventId, eventId),
+            eq(priceSubmissions.userId, userId),
+            eq(priceSubmissions.status, 'pending'),
+          ),
+        )
+      const pendingTiers = new Set(pendingRows.map((row) => row.tier))
+      const duplicateErrors = body.tiers.flatMap((row, rowIndex) =>
+        pendingTiers.has(row.tier)
+          ? [{ index: rowIndex, tier: row.tier, error: 'already_submitted' }]
+          : [],
+      )
+      if (duplicateErrors.length > 0) {
+        return { kind: 'duplicate_tiers', errors: duplicateErrors }
+      }
+
+      // 429 — the batch is ONE rate-limit hit (one contribution act) no
+      // matter how many tier rows it inserts. Same distinct-createdAt count
+      // as the single POST (#876); a batch over the limit is blocked as a
+      // unit.
+      const actsUsed = await countRecentActs(eventId, userId, tx)
+      if (actsUsed >= SP_POLICY.rateLimitMaxSubmissions) {
+        return { kind: 'rate_limited' }
+      }
+
+      const created = await tx
+        .insert(priceSubmissions)
+        .values(
+          body.tiers.map((row) => ({
+            eventId,
+            userId,
+            priceMin: String(row.priceMin),
+            priceMax: row.priceMax != null ? String(row.priceMax) : null,
+            tier: row.tier,
+            vendor: body.vendor,
+            howFound: body.howFound,
+            sourceCategory,
+            // Submitter counts as observation #1 (1/2 confirmation model),
+            // same as the single POST.
+            corroborationCount: 1,
+            note: body.note ?? null,
+            disputedSubmissionId: null,
+            // statement_timestamp(), same rationale as the single POST: the
+            // defaultNow() transaction-start time can collide across
+            // lock-serialized concurrent transactions and undercount acts.
+            // It is constant for every row of this one multi-row INSERT, so
+            // the bundle still counts as exactly ONE distinct-createdAt act.
+            createdAt: sql`statement_timestamp()`,
+          })),
+        )
+        .returning()
+
+      return { kind: 'created', rows: created, actsUsed }
+    })
+
+    if (outcome.kind === 'duplicate_tiers') {
+      return ctx.json({ success: false, errors: outcome.errors }, 422)
+    }
+    if (outcome.kind === 'rate_limited') {
+      return ctx.json({ success: false, error: RATE_LIMIT_ERROR }, 429)
+    }
+
+    // submissionsRemaining lets the success surface (MTAddTierSuccess) gate
+    // its add-tier pills without a follow-up GET (#876). This bundle just
+    // consumed one act on top of actsUsed.
+    const submissionsRemaining = Math.max(
+      0,
+      SP_POLICY.rateLimitMaxSubmissions - (outcome.actsUsed + 1),
+    )
+
+    return ctx.json(
+      { success: true, data: outcome.rows, submissionsRemaining },
+      201,
+    )
   },
 )

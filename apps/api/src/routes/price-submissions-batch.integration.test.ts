@@ -277,31 +277,100 @@ describe('POST /v1/events/:id/price-submissions/batch', () => {
     expect(dbRows).toHaveLength(0)
   })
 
-  it('blocks the batch as a unit when the rate-limit window is active', async () => {
+  it('allows a batch when the caller is under the 3-act limit (#876)', async () => {
     setAuth()
-    // Recent submission (any tier/status) inside the 24h window.
+    // One recent act inside the window — 2 of 3 acts still available.
     await seedPriceSubmission(eventId, 'user_abc123', {
       tier: 'Lawn',
       status: 'corroborated',
       createdAt: new Date(),
     })
     const res = await postBatch(BATCH_BODY)
+    expect(res.status).toBe(201)
+  })
+
+  it('blocks the batch as a unit after 3 contribution acts within 24h (#876)', async () => {
+    setAuth()
+    const now = Date.now()
+    // Three acts with distinct createdAt values inside the 24h window.
+    await seedPriceSubmission(eventId, 'user_abc123', {
+      tier: 'Lawn',
+      status: 'corroborated',
+      createdAt: new Date(now - 1 * 60 * 1000),
+    })
+    await seedPriceSubmission(eventId, 'user_abc123', {
+      tier: 'Pit',
+      status: 'corroborated',
+      createdAt: new Date(now - 2 * 60 * 1000),
+    })
+    await seedPriceSubmission(eventId, 'user_abc123', {
+      tier: 'Reserved',
+      status: 'stale',
+      createdAt: new Date(now - 3 * 60 * 1000),
+    })
+    const res = await postBatch(BATCH_BODY)
     expect(res.status).toBe(429)
+    const body = (await res.json()) as { error: string }
+    expect(body.error).toBe('Rate limit: 3 submissions per event per 24h')
     const dbRows = await testDb
       .select()
       .from(priceSubmissions)
       .where(eq(priceSubmissions.eventId, eventId))
-    expect(dbRows).toHaveLength(1)
+    expect(dbRows).toHaveLength(3)
   })
 
-  it('successful batch starts the rate-limit window — an immediate second batch is blocked', async () => {
+  it('counts a multi-tier batch as ONE act and reports submissionsRemaining (#876)', async () => {
     setAuth()
-    const first = await postBatch(BATCH_BODY)
+    const first = await postBatch(BATCH_BODY) // 2 tiers, 1 act
     expect(first.status).toBe(201)
+    const firstBody = (await first.json()) as { submissionsRemaining: number }
+    expect(firstBody.submissionsRemaining).toBe(2)
+
     const second = await postBatch({
       ...BATCH_BODY,
       tiers: [{ tier: 'Reserved', priceMin: 80 }],
     })
-    expect(second.status).toBe(429)
+    expect(second.status).toBe(201)
+    const secondBody = (await second.json()) as { submissionsRemaining: number }
+    expect(secondBody.submissionsRemaining).toBe(1)
+
+    const third = await postBatch({
+      ...BATCH_BODY,
+      tiers: [{ tier: 'Pit', priceMin: 95 }],
+    })
+    expect(third.status).toBe(201)
+    const thirdBody = (await third.json()) as { submissionsRemaining: number }
+    expect(thirdBody.submissionsRemaining).toBe(0)
+
+    // Fourth act exceeds the limit.
+    const fourth = await postBatch({
+      ...BATCH_BODY,
+      tiers: [{ tier: 'Lawn', priceMin: 25 }],
+    })
+    expect(fourth.status).toBe(429)
+  })
+
+  it('serializes concurrent batches at the limit boundary — one 201, one 429 (#876 TOCTOU)', async () => {
+    setAuth()
+    const now = Date.now()
+    // Two acts already used — exactly one act remains.
+    await seedPriceSubmission(eventId, 'user_abc123', {
+      tier: 'Lawn',
+      status: 'corroborated',
+      createdAt: new Date(now - 1 * 60 * 1000),
+    })
+    await seedPriceSubmission(eventId, 'user_abc123', {
+      tier: 'Reserved',
+      status: 'corroborated',
+      createdAt: new Date(now - 2 * 60 * 1000),
+    })
+    // Disjoint tiers so the per-tier pending check cannot be what blocks the
+    // loser — only the act count can.
+    const [first, second] = await Promise.all([
+      postBatch({ ...BATCH_BODY, tiers: [{ tier: 'GA', priceMin: 45 }] }),
+      postBatch({ ...BATCH_BODY, tiers: [{ tier: 'Pit', priceMin: 95 }] }),
+    ])
+    const statuses = [first.status, second.status].sort()
+    expect(statuses).toEqual([201, 429])
   })
 })

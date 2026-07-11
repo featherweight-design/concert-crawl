@@ -110,6 +110,68 @@ describe('MTAddTierSuccess', () => {
     expect(onDone).toHaveBeenCalledTimes(1)
   })
 
+  it('limitReached hides add-tier pills and shows exhausted copy instead (#876)', () => {
+    render(
+      <MTAddTierSuccess
+        submittedTier="GA"
+        submittedPrice={25}
+        submittedSourceCategory="boxoffice"
+        remainingTiers={['Reserved', 'VIP']}
+        limitReached
+        onAddTier={() => {}}
+        onDone={() => {}}
+      />,
+    )
+    expect(screen.queryByText('This show has more than one tier?')).toBeNull()
+    expect(screen.queryByText('Add reserved')).toBeNull()
+    expect(screen.queryByText('Add vip')).toBeNull()
+    expect(
+      screen.getByText(
+        "That's your three for this show today. If prices change, come back tomorrow.",
+      ),
+    ).toBeDefined()
+    expect(screen.getByText('Done')).toBeDefined()
+  })
+
+  it('limitReached omitted keeps pills when tiers remain (#876)', () => {
+    render(
+      <MTAddTierSuccess
+        submittedTier="GA"
+        submittedPrice={25}
+        submittedSourceCategory="boxoffice"
+        remainingTiers={['Reserved']}
+        onAddTier={() => {}}
+        onDone={() => {}}
+      />,
+    )
+    expect(screen.getByText('This show has more than one tier?')).toBeDefined()
+    expect(screen.getByText('Add reserved')).toBeDefined()
+    expect(
+      screen.queryByText(
+        "That's your three for this show today. If prices change, come back tomorrow.",
+      ),
+    ).toBeNull()
+  })
+
+  it('limitReached with no remaining tiers shows exhausted copy, not silence (#876)', () => {
+    render(
+      <MTAddTierSuccess
+        submittedTier="GA"
+        submittedPrice={25}
+        submittedSourceCategory="boxoffice"
+        remainingTiers={[]}
+        limitReached
+        onAddTier={() => {}}
+        onDone={() => {}}
+      />,
+    )
+    expect(
+      screen.getByText(
+        "That's your three for this show today. If prices change, come back tomorrow.",
+      ),
+    ).toBeDefined()
+  })
+
   it('source category labels render correctly for standard and resale', () => {
     const { container, rerender } = render(
       <MTAddTierSuccess

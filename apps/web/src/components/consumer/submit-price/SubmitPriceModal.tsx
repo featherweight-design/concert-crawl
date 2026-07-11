@@ -104,7 +104,9 @@ interface BatchRowError {
 }
 
 type BatchSubmissionResponse =
-  | { success: true; data: PriceSubmission[] }
+  // submissionsRemaining (#876): acts left for this (user, event) after this
+  // batch. Optional for deploy skew — an older API omits it.
+  | { success: true; data: PriceSubmission[]; submissionsRemaining?: number }
   | { success?: false; error?: string; errors?: BatchRowError[] }
 
 function isBatchRowError(value: unknown): value is BatchRowError {
@@ -121,7 +123,14 @@ function isBatchSubmissionResponse(
 ): value is BatchSubmissionResponse {
   if (!isObject(value)) return false
   if (value['success'] === true) {
-    return Array.isArray(value['data']) && value['data'].every(isObject)
+    const remainingOk =
+      value['submissionsRemaining'] === undefined ||
+      typeof value['submissionsRemaining'] === 'number'
+    return (
+      Array.isArray(value['data']) &&
+      value['data'].every(isObject) &&
+      remainingOk
+    )
   }
   // Non-success arm: every field the handler reads must be well-typed when
   // present. A bare `{}` is still valid — an `ok` response with an empty
@@ -139,6 +148,9 @@ type SubmissionsListResponse = {
   data: {
     alreadySubmitted: boolean
     userSubmission: SubmissionWithMeta | null
+    // #876 — acts left in the 24h window. Optional for deploy skew: when an
+    // older API omits it, the modal falls back to the alreadySubmitted gate.
+    submissionsRemaining?: number
   }
 }
 
@@ -150,6 +162,12 @@ function isSubmissionsListResponse(
   const data = value['data']
   if (!isObject(data)) return false
   if (typeof data['alreadySubmitted'] !== 'boolean') return false
+  if (
+    data['submissionsRemaining'] !== undefined &&
+    typeof data['submissionsRemaining'] !== 'number'
+  ) {
+    return false
+  }
   return true
 }
 
@@ -184,7 +202,12 @@ interface SubmitPriceModalProps {
   // can correct it). Used by EventDetailClient when the user clicks "+ Add
   // <tier>" on MTAddTierSuccess.
   preselectedTier?: Tier | null
-  onSuccess?: (results: SubmitPriceResult[]) => void
+  // submissionsRemaining is only known on the batch path (#876); edit/PATCH
+  // doesn't consume a contribution act, so it passes undefined.
+  onSuccess?: (
+    results: SubmitPriceResult[],
+    submissionsRemaining?: number,
+  ) => void
   onWithdrawSuccess?: (submissionId: string) => void
 }
 
@@ -317,33 +340,44 @@ export function SubmitPriceModal({
             return
           }
           const body = raw
-          if (body.data.alreadySubmitted && body.data.userSubmission) {
+          if (body.data.userSubmission) {
             setExistingSubmission(body.data.userSubmission)
-            if (openInEditMode) {
-              // Skip the "Already in." screen — go straight to the edit form.
-              // sourceCategory from the existing row drives the floor label.
-              // For legacy rows where sourceCategory is null, derive it from
-              // (vendor, howFound) via the shared helper so a box-office
-              // submission isn't misrepresented as 'standard'.
-              setBundleState({
-                vendor: body.data.userSubmission.vendor,
-                sourceCategory: fallbackSourceCategory(
-                  body.data.userSubmission,
-                ),
-              })
-              setPanels([
-                {
-                  ...emptyPanel(),
-                  tier: body.data.userSubmission.tier,
-                  floor: body.data.userSubmission.priceMin,
-                  ceiling: body.data.userSubmission.priceMax ?? '',
-                },
-              ])
-              setIsEditMode(true)
-              setModalState('form')
-            } else {
-              setModalState('alreadySubmitted')
-            }
+          }
+          if (openInEditMode && body.data.userSubmission) {
+            // Skip the "Already in." screen — go straight to the edit form.
+            // sourceCategory from the existing row drives the floor label.
+            // For legacy rows where sourceCategory is null, derive it from
+            // (vendor, howFound) via the shared helper so a box-office
+            // submission isn't misrepresented as 'standard'.
+            setBundleState({
+              vendor: body.data.userSubmission.vendor,
+              sourceCategory: fallbackSourceCategory(body.data.userSubmission),
+            })
+            setPanels([
+              {
+                ...emptyPanel(),
+                tier: body.data.userSubmission.tier,
+                floor: body.data.userSubmission.priceMin,
+                ceiling: body.data.userSubmission.priceMax ?? '',
+              },
+            ])
+            setIsEditMode(true)
+            setModalState('form')
+            return
+          }
+          // #876 — up to 3 contribution acts per (user, event)/24h. When the
+          // API reports acts remaining, gate on that: a pending submission no
+          // longer blocks follow-ups. Older APIs omit the field → fall back
+          // to alreadySubmitted alone: it also covers recent corroborated
+          // rows (where userSubmission is null), which the old API would
+          // 429 on a fresh POST. The exhausted screen's edit/withdraw
+          // actions are separately conditional on a pending submission.
+          const exhausted =
+            body.data.submissionsRemaining !== undefined
+              ? body.data.submissionsRemaining <= 0
+              : body.data.alreadySubmitted
+          if (exhausted) {
+            setModalState('alreadySubmitted')
             return
           }
         }
@@ -580,6 +614,7 @@ export function SubmitPriceModal({
             howFound: row.howFound,
             sourceCategory: row.sourceCategory,
           })),
+          rawResponse.submissionsRemaining,
         )
       }
       setModalState('success')
@@ -1226,21 +1261,23 @@ function AlreadySubmittedState({
       >
         {CONSUMER_COPY.submitPrice.alreadySubmitted.limitNote}
       </p>
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 6,
-          marginTop: 4,
-        }}
-      >
-        <PrimaryButton onClick={onEdit}>
-          {CONSUMER_COPY.submitPrice.alreadySubmitted.editButton}
-        </PrimaryButton>
-        <GhostButton onClick={onWithdraw}>
-          {CONSUMER_COPY.submitPrice.alreadySubmitted.withdrawButton}
-        </GhostButton>
-      </div>
+      {submission && (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+            marginTop: 4,
+          }}
+        >
+          <PrimaryButton onClick={onEdit}>
+            {CONSUMER_COPY.submitPrice.alreadySubmitted.editButton}
+          </PrimaryButton>
+          <GhostButton onClick={onWithdraw}>
+            {CONSUMER_COPY.submitPrice.alreadySubmitted.withdrawButton}
+          </GhostButton>
+        </div>
+      )}
     </div>
   )
 }

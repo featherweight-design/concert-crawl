@@ -671,6 +671,173 @@ describe('SubmitPriceModal — batch submit (#832)', () => {
   })
 })
 
+describe('SubmitPriceModal — per-event rate limit (#876)', () => {
+  it('shows the form when submissionsRemaining > 0 even with a pending submission', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: {
+          alreadySubmitted: true,
+          userSubmission: {
+            id: 'sub-1',
+            priceMin: '45',
+            priceMax: null,
+            tier: 'GA',
+            vendor: 'AXS',
+            howFound: 'saw_listing',
+            sourceCategory: 'standard',
+          },
+          submissionsRemaining: 2,
+        },
+      }),
+    })
+
+    render(<SubmitPriceModal {...defaultProps} />)
+    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy())
+    expect(screen.queryByText('Already in.')).toBeNull()
+  })
+
+  it('shows the exhausted view when submissionsRemaining is 0, without edit/withdraw when no submission returned', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: {
+          alreadySubmitted: false,
+          userSubmission: null,
+          submissionsRemaining: 0,
+        },
+      }),
+    })
+
+    render(<SubmitPriceModal {...defaultProps} />)
+    await waitFor(() => expect(screen.getByText('Already in.')).toBeTruthy())
+    expect(screen.queryByText('Edit submission')).toBeNull()
+    expect(screen.queryByText('Withdraw')).toBeNull()
+  })
+
+  it('exhausted view keeps edit/withdraw when a pending submission exists', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: {
+          alreadySubmitted: true,
+          userSubmission: {
+            id: 'sub-1',
+            priceMin: '45',
+            priceMax: null,
+            tier: 'GA',
+            vendor: 'AXS',
+            howFound: 'saw_listing',
+            sourceCategory: 'standard',
+          },
+          submissionsRemaining: 0,
+        },
+      }),
+    })
+
+    render(<SubmitPriceModal {...defaultProps} />)
+    await waitFor(() => expect(screen.getByText('Already in.')).toBeTruthy())
+    expect(screen.getByText('Edit submission')).toBeTruthy()
+    expect(screen.getByText('Withdraw')).toBeTruthy()
+  })
+
+  it('falls back to the old alreadySubmitted gate when submissionsRemaining is absent', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: {
+          alreadySubmitted: true,
+          userSubmission: {
+            id: 'sub-1',
+            priceMin: '45',
+            priceMax: null,
+            tier: 'GA',
+            vendor: 'AXS',
+            howFound: 'saw_listing',
+            sourceCategory: 'standard',
+          },
+        },
+      }),
+    })
+
+    render(<SubmitPriceModal {...defaultProps} />)
+    await waitFor(() => expect(screen.getByText('Already in.')).toBeTruthy())
+  })
+
+  it('fallback gates on alreadySubmitted alone — corroborated-only user (no pending) still sees the exhausted view', async () => {
+    // Deploy skew: older API omits submissionsRemaining and only returns
+    // userSubmission for pending rows. A recent corroborated submission
+    // still sets alreadySubmitted=true, and the old API would 429 a new
+    // POST — so the form must not show.
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: {
+          alreadySubmitted: true,
+          userSubmission: null,
+        },
+      }),
+    })
+
+    render(<SubmitPriceModal {...defaultProps} />)
+    await waitFor(() => expect(screen.getByText('Already in.')).toBeTruthy())
+    // No pending row → no edit/withdraw actions.
+    expect(screen.queryByText('Edit submission')).toBeNull()
+    expect(screen.queryByText('Withdraw')).toBeNull()
+  })
+
+  it('passes submissionsRemaining from the batch 201 to onSuccess', async () => {
+    const onSuccess = vi.fn()
+    let callCount = 0
+    global.fetch = vi.fn().mockImplementation(() => {
+      callCount++
+      if (callCount === 1) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            success: true,
+            data: {
+              alreadySubmitted: false,
+              userSubmission: null,
+              submissionsRemaining: 3,
+            },
+          }),
+        })
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 201,
+        json: async () => ({
+          success: true,
+          data: [
+            {
+              id: 'sub-ga',
+              priceMin: '32',
+              priceMax: null,
+              tier: 'GA',
+              vendor: 'VenueBoxOffice',
+              howFound: 'bought_myself',
+              sourceCategory: 'boxoffice',
+            },
+          ],
+          submissionsRemaining: 2,
+        }),
+      })
+    })
+
+    render(<SubmitPriceModal {...defaultProps} onSuccess={onSuccess} />)
+    await fillForm()
+    fireEvent.click(screen.getByText('Submit price'))
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1))
+    expect(onSuccess.mock.calls[0]![1]).toBe(2)
+  })
+})
+
 describe('SubmitPriceModal — edit mode PATCH (#832)', () => {
   it('edit mode PATCHes the existing submission and calls onSuccess with a single-element array', async () => {
     const onSuccess = vi.fn()

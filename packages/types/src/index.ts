@@ -132,6 +132,11 @@ export const SP_POLICY = {
   confirmsRequiredImminent: 3,
   imminentThresholdDays: 6,
   rateLimitHours: 24,
+  // Max contribution acts per (user, event) inside the rateLimitHours window
+  // (#876). A batch bundle counts as ONE act regardless of how many tier rows
+  // it inserts. 3 mirrors the three source categories — enough to cover an
+  // event's box office, standard, and resale prices in one day.
+  rateLimitMaxSubmissions: 3,
   outlierLowFactor: 0.4,
   outlierHighFactor: 2.5,
 } as const
@@ -362,6 +367,10 @@ export interface SubmissionWithMeta extends PriceSubmission {
 export interface SubmissionListResponse {
   submissions: SubmissionWithMeta[]
   alreadySubmitted: boolean
+  // How many contribution acts the caller has left for this event inside the
+  // 24h window (#876) — SP_POLICY.rateLimitMaxSubmissions minus acts used.
+  // 0 means the next POST would 429. Anonymous callers get the full allowance.
+  submissionsRemaining: number
   userSubmission: SubmissionWithMeta | null
 }
 

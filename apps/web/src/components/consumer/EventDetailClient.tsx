@@ -408,6 +408,9 @@ export function EventDetailPriceBlock({
     tier: Tier
     price: number
     sourceCategory: SourceCategory
+    // #876 — acts left after this submit; 0 hides the add-tier pills.
+    // undefined (older API) keeps the pills.
+    submissionsRemaining: number | undefined
   } | null>(null)
   // Pre-populates the tier picker when the user clicks "+ Add <tier>" on
   // MTAddTierSuccess. SubmitPriceModal accepts this as an optional prop and
@@ -516,27 +519,36 @@ export function EventDetailPriceBlock({
   // joins the session set so the add-tier pills exclude all of them. Falls
   // back to GA when a tier comes back non-canonical so the picker still
   // shows something useful.
-  const handleSubmitSuccess = useCallback((results: SubmitPriceResult[]) => {
-    const newRows = results.filter((row) => !row.isEdit)
-    const firstRow = newRows[0]
-    if (!firstRow) return
-    const submittedTiers = newRows.map((row): Tier =>
-      isTierValue(row.tier) ? row.tier : 'GA',
-    )
-    const firstTier: Tier = isTierValue(firstRow.tier) ? firstRow.tier : 'GA'
-    const price = Math.round(parseFloat(firstRow.priceMin))
-    const sourceCategory: SourceCategory = firstRow.sourceCategory ?? 'standard'
-    setSubmittedThisSession((prev) => {
-      const next = new Set(prev)
-      for (const tier of submittedTiers) {
-        next.add(tier)
-      }
-      return next
-    })
-    setSubmitSuccessPayload({ tier: firstTier, price, sourceCategory })
-    setSubmitPriceOpen(false)
-    setPreselectedTier(null)
-  }, [])
+  const handleSubmitSuccess = useCallback(
+    (results: SubmitPriceResult[], submissionsRemaining?: number) => {
+      const newRows = results.filter((row) => !row.isEdit)
+      const firstRow = newRows[0]
+      if (!firstRow) return
+      const submittedTiers = newRows.map((row): Tier =>
+        isTierValue(row.tier) ? row.tier : 'GA',
+      )
+      const firstTier: Tier = isTierValue(firstRow.tier) ? firstRow.tier : 'GA'
+      const price = Math.round(parseFloat(firstRow.priceMin))
+      const sourceCategory: SourceCategory =
+        firstRow.sourceCategory ?? 'standard'
+      setSubmittedThisSession((prev) => {
+        const next = new Set(prev)
+        for (const tier of submittedTiers) {
+          next.add(tier)
+        }
+        return next
+      })
+      setSubmitSuccessPayload({
+        tier: firstTier,
+        price,
+        sourceCategory,
+        submissionsRemaining,
+      })
+      setSubmitPriceOpen(false)
+      setPreselectedTier(null)
+    },
+    [],
+  )
 
   // Submit-success surface — Submit-success state #1 (post-submit add-tier).
   // The MTAddTierSuccess follow-up is a GLOBAL after-submit affordance:
@@ -555,6 +567,10 @@ export function EventDetailPriceBlock({
           remainingTiers={TIER_ENUM.filter(
             (tier) => !submittedThisSession.has(tier),
           )}
+          limitReached={
+            submitSuccessPayload.submissionsRemaining !== undefined &&
+            submitSuccessPayload.submissionsRemaining <= 0
+          }
           onAddTier={(tier) => {
             setSubmitSuccessPayload(null)
             setPreselectedTier(tier)
