@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.104.2",
+    "@anthropic-ai/sdk": "^0.111.0",
     "@clerk/backend": "^2.33.5",
     "@concert-crawl/db": "workspace:*",
     "@concert-crawl/logger": "workspace:*",
@@ -23,24 +23,24 @@
     "@hono/clerk-auth": "^2.0.0",
     "@hono/node-server": "^2.0.8",
     "@hono/zod-validator": "^0.8.0",
-    "@sentry/hono": "^10.58.0",
+    "@sentry/hono": "^10.65.0",
     "bad-words": "^4.0.0",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.12.28",
-    "resend": "^6.12.4",
+    "resend": "^6.17.2",
     "zod": "^3.22.0"
   },
   "devDependencies": {
     "@concert-crawl/config": "workspace:*",
     "@concert-crawl/crawler-core": "workspace:*",
     "@types/bad-words": "^3.0.3",
-    "@types/node": "^26.0.0",
-    "@typescript-eslint/eslint-plugin": "^8.61.0",
+    "@types/node": "^26.1.1",
+    "@typescript-eslint/eslint-plugin": "^8.63.0",
     "@typescript-eslint/parser": "^8.60.0",
     "eslint": "^9.39.4",
     "postgres": "^3.4.9",
-    "tsx": "^4.22.4",
+    "tsx": "^4.23.0",
     "typescript": "^5.0.0",
     "vite": "^6.0.0",
     "vitest": "^4.1.10"

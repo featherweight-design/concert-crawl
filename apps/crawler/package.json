@@ -11,8 +11,8 @@
   },
   "devDependencies": {
     "@concert-crawl/config": "workspace:*",
-    "@types/node": "^26.0.0",
-    "tsx": "^4.22.4",
+    "@types/node": "^26.1.1",
+    "tsx": "^4.23.0",
     "typescript": "^5.0.0",
     "vitest": "^4.1.10",
     "vite": "^6.0.0"
@@ -23,7 +23,7 @@
     "playwright": "^1.61.1",
     "@concert-crawl/db": "workspace:*",
     "@concert-crawl/logger": "workspace:*",
-    "@sentry/node": "^10.58.0",
+    "@sentry/node": "^10.65.0",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2"
   }

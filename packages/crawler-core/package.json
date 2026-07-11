@@ -19,18 +19,18 @@
     "test:all": "vitest run && vitest run --config vitest.integration.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.104.2",
+    "@anthropic-ai/sdk": "^0.111.0",
     "@concert-crawl/db": "workspace:*",
     "@concert-crawl/logger": "workspace:*",
     "@concert-crawl/types": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "playwright": "^1.61.1",
-    "resend": "^6.12.4",
+    "resend": "^6.17.2",
     "zod": "^3.22.0"
   },
   "devDependencies": {
     "@concert-crawl/config": "workspace:*",
-    "@types/node": "^26.0.0",
+    "@types/node": "^26.1.1",
     "postgres": "^3.4.9",
     "typescript": "^5.0.0",
     "vitest": "^4.1.10",
