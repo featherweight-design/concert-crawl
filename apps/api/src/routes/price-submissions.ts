@@ -43,6 +43,43 @@ const submissionBodySchema = z
     path: ['priceMax'],
   })
 
+// Batch bundle schema (#832). Per-row rules mirror submissionBodySchema's
+// price fields exactly; bundle-level fields are shared across every row.
+// disputedSubmissionId is deliberately NOT accepted — counters stay
+// single-row through the existing endpoint.
+const batchTierRowSchema = z
+  .object({
+    priceMin: z.number().int().min(SP_POLICY.floorMin).max(SP_POLICY.floorMax),
+    priceMax: z.number().int().min(1).max(SP_POLICY.ceilingMax).optional(),
+    tier: z.enum(['GA', 'Reserved', 'VIP', 'Pit', 'Lawn']),
+  })
+  .refine((data) => !data.priceMax || data.priceMax >= data.priceMin, {
+    message: "Ceiling can't be below floor.",
+    path: ['priceMax'],
+  })
+
+const batchBodySchema = z
+  .object({
+    vendor: z.enum([
+      'AXS',
+      'Ticketmaster',
+      'SeatGeek',
+      'DICE',
+      'Eventbrite',
+      'VenueBoxOffice',
+    ]),
+    howFound: z.enum(['bought_myself', 'saw_listing', 'at_the_venue']),
+    sourceCategory: z.enum(['boxoffice', 'standard', 'resale']).optional(),
+    note: z.string().max(280).optional(),
+    tiers: z.array(batchTierRowSchema).min(1).max(10),
+  })
+  .strict()
+  .refine(
+    (data) =>
+      new Set(data.tiers.map((row) => row.tier)).size === data.tiers.length,
+    { message: 'Tiers must be unique within a batch.', path: ['tiers'] },
+  )
+
 export const priceSubmissionsRouter = new Hono()
 
 if (process.env.REQUIRE_BETA_AUTH === 'true') {
@@ -129,7 +166,10 @@ priceSubmissionsRouter.get('/:id/price-submissions', clerkAuth, async (ctx) => {
   })
 })
 
-// POST /v1/events/:id/price-submissions — authenticated users submit price data
+// POST /v1/events/:id/price-submissions — authenticated users submit price data.
+// @deprecated for the consumer submit form — SubmitPriceModal now posts to
+// the /batch sibling below (#832). Kept for old clients and because the
+// counter flow (disputedSubmissionId) depends on it. Do not remove.
 priceSubmissionsRouter.post(
   '/:id/price-submissions',
   clerkAuth,
@@ -408,6 +448,83 @@ priceSubmissionsRouter.post(
         note: body.note ?? null,
         disputedSubmissionId: null,
       })
+      .returning()
+
+    return ctx.json({ success: true, data: created }, 201)
+  },
+)
+
+// POST /v1/events/:id/price-submissions/batch — atomic multi-tier bundle
+// (#832). A bundle of N tiers inserts as N ordinary pending rows in one
+// statement: all rows or none. Rows are NOT linked after insert — the
+// bundle is an ephemeral submission-time concept only (spec §1).
+priceSubmissionsRouter.post(
+  '/:id/price-submissions/batch',
+  clerkAuth,
+  requireAuth,
+  zValidator('json', batchBodySchema, (result, ctx) => {
+    if (!result.success) {
+      // Surface per-row Zod failures as {index, tier, error} items so the
+      // UI can annotate the exact tier panel (spec §2 error contract).
+      // Issues outside tiers[<n>] (bundle-level fields, uniqueness refine)
+      // stay in `details` only.
+      const rowErrors = result.error.issues.flatMap((issue) => {
+        const [rootKey, rowIndex] = issue.path
+        if (rootKey !== 'tiers' || typeof rowIndex !== 'number') return []
+        return [{ index: rowIndex, tier: null, error: issue.message }]
+      })
+      return ctx.json(
+        {
+          success: false,
+          error: 'Invalid input',
+          errors: rowErrors,
+          details: result.error.flatten(),
+        },
+        422,
+      )
+    }
+  }),
+  async (ctx) => {
+    const { id: eventId } = ctx.req.param()
+    const { userId } = getAuthUser(ctx)
+    const body = ctx.req.valid('json')
+
+    const [event] = await db
+      .select({ id: events.id })
+      .from(events)
+      .where(and(eq(events.id, eventId), eq(events.hiddenFromConsumer, false)))
+      .limit(1)
+    if (!event)
+      return ctx.json({ success: false, error: 'Event not found' }, 404)
+
+    // Shared bundle-level derivation — identical for every row, mirroring
+    // the single POST's expand-phase fallback.
+    const sourceCategory =
+      body.sourceCategory ?? deriveSourceCategory(body.vendor, body.howFound)
+
+    // Atomicity: a single multi-row INSERT is one implicit transaction —
+    // all rows land or none do (spec §2 "one request, one atomic insert").
+    // No explicit db.transaction wrapper: it adds nothing to a single
+    // statement, and doesn't fix the check-then-insert TOCTOU either.
+    const created = await db
+      .insert(priceSubmissions)
+      .values(
+        body.tiers.map((row) => ({
+          eventId,
+          userId,
+          priceMin: String(row.priceMin),
+          priceMax: row.priceMax != null ? String(row.priceMax) : null,
+          tier: row.tier,
+          vendor: body.vendor,
+          howFound: body.howFound,
+          sourceCategory,
+          // Submitter counts as observation #1 (1/2 confirmation model),
+          // same as the single POST.
+          corroborationCount: 1,
+          note: body.note ?? null,
+          disputedSubmissionId: null,
+        })),
+      )
       .returning()
 
     return ctx.json({ success: true, data: created }, 201)
