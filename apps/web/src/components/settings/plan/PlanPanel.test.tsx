@@ -160,6 +160,57 @@ describe('PlanPanel — manage subscription (paid plans)', () => {
     expect(consoleSpy).toHaveBeenCalled()
     consoleSpy.mockRestore()
   })
+
+  it('opening the compare-plans entry clears a stale portal error', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    mockCreatePortalSession.mockRejectedValue(new Error('boom'))
+    render(
+      <PlanPanel planState={state({ plan: 'premium', status: 'active' })} />,
+    )
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: PLAN_CARD_COPY.activePremium.manageCta,
+      }),
+    )
+    await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy())
+    fireEvent.click(
+      screen.getByRole('button', { name: TIER_PICKER_COPY.entry.compare }),
+    )
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(pickerOpenState()).toBe('true')
+    consoleSpy.mockRestore()
+  })
+
+  it('a pending portal CTA is disabled and drops the pointer cursor', async () => {
+    let resolvePortal: (value: { url: string }) => void = () => {}
+    mockCreatePortalSession.mockImplementation(
+      () =>
+        new Promise<{ url: string }>((resolve) => {
+          resolvePortal = resolve
+        }),
+    )
+    const assignSpy = vi.fn()
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: { ...window.location, assign: assignSpy },
+    })
+    render(
+      <PlanPanel planState={state({ plan: 'premium', status: 'active' })} />,
+    )
+    const manageButton = screen.getByRole('button', {
+      name: PLAN_CARD_COPY.activePremium.manageCta,
+    })
+    expect(manageButton.style.cursor).toBe('pointer')
+    fireEvent.click(manageButton)
+    await waitFor(() =>
+      expect(manageButton.hasAttribute('disabled')).toBe(true),
+    )
+    expect(manageButton.style.cursor).toBe('default')
+    resolvePortal({ url: 'https://stripe.test/portal' })
+    await waitFor(() =>
+      expect(assignSpy).toHaveBeenCalledWith('https://stripe.test/portal'),
+    )
+  })
 })
 
 describe('PlanPanel — lifecycle states', () => {

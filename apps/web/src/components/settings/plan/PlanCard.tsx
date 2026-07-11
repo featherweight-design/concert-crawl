@@ -216,40 +216,43 @@ export const PlanCard = ({
 
       {/* CTAs — mobile stacks, desktop inline */}
       <div className="mt-1.5 flex flex-col flex-wrap gap-2.5 sm:flex-row">
-        {content.ctas.map((cta) => (
-          <button
-            key={cta.label}
-            type="button"
-            disabled={ctaPending && cta.action === 'portal'}
-            onClick={() => onCtaClick(cta)}
-            className="w-full rounded-[10px] px-4 py-[11px] text-center text-[13.5px] transition-opacity disabled:opacity-60 sm:w-auto"
-            style={{
-              cursor: 'pointer',
-              background:
-                cta.kind === 'primary'
-                  ? content.founderGradient
-                    ? 'linear-gradient(135deg, var(--signal), color-mix(in oklch, var(--accent) 60%, var(--signal)))'
-                    : ctaAccent
-                  : 'transparent',
-              color:
-                cta.kind === 'primary'
-                  ? 'var(--fg-on-accent)'
-                  : 'var(--fg-muted)',
-              border:
-                cta.kind === 'primary'
-                  ? '1px solid transparent'
-                  : '1px solid var(--border-strong)',
-              fontWeight: 700,
-              letterSpacing: '-0.005em',
-              boxShadow:
-                cta.kind === 'primary' && cta.glow
-                  ? `0 0 22px color-mix(in oklch, ${content.founderGradient ? 'var(--accent)' : ctaAccent} 32%, transparent)`
-                  : 'none',
-            }}
-          >
-            {cta.label}
-          </button>
-        ))}
+        {content.ctas.map((cta) => {
+          const isDisabled = ctaPending && cta.action === 'portal'
+          return (
+            <button
+              key={cta.label}
+              type="button"
+              disabled={isDisabled}
+              onClick={() => onCtaClick(cta)}
+              className="w-full rounded-[10px] px-4 py-[11px] text-center text-[13.5px] transition-opacity disabled:opacity-60 sm:w-auto"
+              style={{
+                cursor: isDisabled ? 'default' : 'pointer',
+                background:
+                  cta.kind === 'primary'
+                    ? content.founderGradient
+                      ? 'linear-gradient(135deg, var(--signal), color-mix(in oklch, var(--accent) 60%, var(--signal)))'
+                      : ctaAccent
+                    : 'transparent',
+                color:
+                  cta.kind === 'primary'
+                    ? 'var(--fg-on-accent)'
+                    : 'var(--fg-muted)',
+                border:
+                  cta.kind === 'primary'
+                    ? '1px solid transparent'
+                    : '1px solid var(--border-strong)',
+                fontWeight: 700,
+                letterSpacing: '-0.005em',
+                boxShadow:
+                  cta.kind === 'primary' && cta.glow
+                    ? `0 0 22px color-mix(in oklch, ${content.founderGradient ? 'var(--accent)' : ctaAccent} 32%, transparent)`
+                    : 'none',
+              }}
+            >
+              {cta.label}
+            </button>
+          )
+        })}
       </div>
     </section>
   )

@@ -56,7 +56,10 @@ export const PlanPanel = ({ planState }: { planState: PlanState }) => {
 
       <button
         type="button"
-        onClick={() => setPickerOpen(true)}
+        onClick={() => {
+          clearPortalError()
+          setPickerOpen(true)
+        }}
         className="mt-2 w-full rounded-[10px] border border-border bg-surface-1 px-4 py-3 text-left transition-colors hover:border-border-strong"
         style={{ cursor: 'pointer' }}
       >

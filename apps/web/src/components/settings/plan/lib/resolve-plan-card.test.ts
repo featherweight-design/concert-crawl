@@ -286,6 +286,26 @@ describe('resolvePlanCard — free contexts', () => {
     expect(content.ctas[0]?.action).toBe('tier-picker')
   })
 
+  it('future trialEndsAt on a free plan falls through to the plain free card', () => {
+    const content = resolvePlanCard(
+      state({
+        plan: 'free',
+        trialEndsAt: new Date(NOW.getTime() + 3 * DAY_MS).toISOString(),
+      }),
+      NOW,
+    )
+    expect(content.variant).toBe('free')
+    expect(content.headline).toBe(PLAN_CARD_COPY.free.headline)
+  })
+
+  it('unparseable trialEndsAt on a free plan falls through to the plain free card', () => {
+    const content = resolvePlanCard(
+      state({ plan: 'free', trialEndsAt: 'not-a-date' }),
+      NOW,
+    )
+    expect(content.variant).toBe('free')
+  })
+
   it('cancelled subscription rolls to the post-cancel context', () => {
     const content = resolvePlanCard(
       state({

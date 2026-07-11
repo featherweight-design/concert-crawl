@@ -55,6 +55,11 @@ const utcMidnightOf = (date: Date): number => {
   return Date.UTC(year ?? 1970, (month ?? 1) - 1, day ?? 1)
 }
 
+const isPastTimestamp = (iso: string, now: Date): boolean => {
+  const date = new Date(iso)
+  return !Number.isNaN(date.getTime()) && date.getTime() <= now.getTime()
+}
+
 const trialDaysRemaining = (trialEndsAt: string | null, now: Date): number => {
   if (!trialEndsAt) return 0
   const endsAt = new Date(trialEndsAt)
@@ -306,7 +311,14 @@ export const resolvePlanCard = (
       ctas: [{ label: copy.cta, kind: 'primary', action: 'tier-picker' }],
     }
   }
-  if (plan === 'free' && trialEndsAt !== null) {
+  // Post-trial context only applies once the trial has actually ended; a
+  // future (or unparseable) trialEndsAt on a free plan is inconsistent
+  // state and falls through to the plain free card.
+  if (
+    plan === 'free' &&
+    trialEndsAt !== null &&
+    isPastTimestamp(trialEndsAt, now)
+  ) {
     const copy = PLAN_CARD_COPY.freePostTrial
     const endedAt = formatPeriodEnd(trialEndsAt)
     return {
