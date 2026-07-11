@@ -26,6 +26,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.7.0-beta',
+    date: 'Jul 10, 2026',
+    headline: 'Standing at the box office? Submit every tier you can see.',
+    items: [
+      {
+        kind: 'added',
+        text: 'Multi-tier price submission — hit "Add another tier" in the submit form to send GA, VIP, and friends in one go. Each tier still gets its own trust mark and its own fan confirmations.',
+      },
+    ],
+  },
+  {
     version: 'v0.6.1-beta',
     date: 'Jun 26, 2026',
     headline: 'The site got faster — landing page and sign-in both.',
