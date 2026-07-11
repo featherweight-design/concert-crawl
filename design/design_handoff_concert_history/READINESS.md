@@ -62,7 +62,7 @@ Design's shape is right. Every open item in "Open questions for eng" is thoughtf
     'free', 'premium',
   ])
   ```
-  The whole locked/paywall path in `<HistoryLocked>` gates on Supporter. Monetization locked matrix (persona §Locked decisions) puts Supporter at $2/mo with Concert History as the marquee perk. Concert History **cannot ship** until the monetization migration adds `supporter` + `founder` to this enum. Sequencing gate.
+  The whole locked/paywall path in `<HistoryLocked>` gates on Supporter. Monetization locked matrix (persona §Locked decisions) puts Supporter at $2/mo with Concert History as the marquee perk. Concert History **cannot ship** until the monetization migration adds `supporter` to this enum. Note: Founder is currently modeled as a `founder: boolean` column on the `subscriptions` table (`packages/db/src/schema/commerce.ts:27`), not an enum value — whether that stays as a boolean flag or gets promoted into `subscription_tier` is a #775 spec decision, not a hard gate for this handoff. Sequencing gate.
 - ✅ `dateLabel`, `showTime` pre-formatted on the row — Design is treating date formatting as data, not copy, per project convention.
 - ✅ Every color / animation / rotation is deterministic from stable inputs (`h_accentFor(artist)`, `h_glyphFor(artist)`, show-id hash for rotation). Same artist → same stamp forever. No runtime randomness. Server-side rendering safe.
 - 🟡 Passport `handle="hugh"` default is a placeholder — eng needs the real handle field from the user record. Not a Design gap; just flagging.
