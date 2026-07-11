@@ -86,7 +86,7 @@ Session-bootstrap payload additions (existing `GET /v1/users/me`): full `PlanSta
 | `customer.subscription.updated`                | Mirror `status`, `cancel_at_period_end`, price/tier, period bounds. `incomplete_expired`: founder seat restore §3.2. `cancel_at_period_end` flips: `cancel_scheduled` / resubscribe events                                                                                                                                                                                                                    |
 | `customer.subscription.deleted`                | Status → `cancelled`, `cancel_completed` event, `cancellation_ack` email (skipped if deletion came from account-deletion — flagged via subscription metadata), set `premiumDataExpiresAt = now + 90d` for premium-and-up tiers (#780 §5), founder seat restore if subscription never had a paid invoice (§3.2)                                                                                                |
 | `payment_intent.payment_failed`                | Log + `payment_failed` event with decline category (§1.6) for funnel analytics. No state change — the client surface owns the retry UX                                                                                                                                                                                                                                                                        |
-| `customer.updated` / `payment_method.attached` | Refresh cached card metadata used by the card-expiry timer (§5.2)                                                                                                                                                                                                                                                                                                                                             |
+| `customer.updated` / `payment_method.attached` | Refresh cached card metadata used by the card-expiry timer (§5.1)                                                                                                                                                                                                                                                                                                                                             |
 
 Live-mode + test-mode endpoints are registered separately (one `STRIPE_WEBHOOK_SECRET` per mode, per environment — env-var matrix §9). Registration happens via a checked-in script (`scripts/stripe-provision.ts --webhooks`) targeting `https://<api-host>/v1/webhooks/stripe`.
 
@@ -203,16 +203,16 @@ Plain TS string-template functions (table-based HTML, inline styles, single `<he
 
 ### 4.4 Trigger map (all 10 #783 templates)
 
-| Template                                                                           | Trigger                                                              | Dedupe key                                        |
-| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------- |
-| `welcome_paid`                                                                     | `invoice.payment_succeeded`, `billing_reason: subscription_create`   | `sub:{subscriptionId}`                            |
-| `welcome_gifted`                                                                   | Admin gift-grant flow (gifted_comps insert)                          | `gift:{giftId}`                                   |
-| `renewal_receipt_monthly`                                                          | `invoice.payment_succeeded`, renewal reasons                         | `invoice:{invoiceId}`                             |
-| `dunning_1_card_declined` / `dunning_2_still_declined` / `dunning_3_final_warning` | `invoice.payment_failed` attempt_count 1 / 2 / ≥3 (§2 webhook table) | `invoice:{invoiceId}:attempt:{n}`                 |
-| `card_expiring_soon`                                                               | Daily job §5.2 — 30/14/7 days before card expiry                     | `{cardFingerprint}:{expMonth}-{expYear}:{window}` |
-| `cancellation_ack`                                                                 | `customer.subscription.deleted` (not account-deletion)               | `sub:{subscriptionId}`                            |
-| `gifting_ending_notice`                                                            | Daily job — `gifted_comps.expiresAt` within 7 days                   | `gift:{giftId}`                                   |
-| `winback`                                                                          | Daily job — 60 days post-cancel (`cancel_completed` + no new sub)    | `sub:{subscriptionId}`                            |
+| Template                                                                           | Trigger                                                                | Dedupe key                                        |
+| ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------- |
+| `welcome_paid`                                                                     | `invoice.payment_succeeded`, `billing_reason: subscription_create`     | `sub:{subscriptionId}`                            |
+| `welcome_gifted`                                                                   | Admin gift-grant flow (gifted_comps insert)                            | `gift:{giftId}`                                   |
+| `renewal_receipt_monthly`                                                          | `invoice.payment_succeeded`, renewal reasons                           | `invoice:{invoiceId}`                             |
+| `dunning_1_card_declined` / `dunning_2_still_declined` / `dunning_3_final_warning` | `invoice.payment_failed` attempt_count 1 / 2 / ≥3 (§1.5 webhook table) | `invoice:{invoiceId}:attempt:{n}`                 |
+| `card_expiring_soon`                                                               | Daily job §5.1 — 30/14/7 days before card expiry                       | `{cardFingerprint}:{expMonth}-{expYear}:{window}` |
+| `cancellation_ack`                                                                 | `customer.subscription.deleted` (not account-deletion)                 | `sub:{subscriptionId}`                            |
+| `gifting_ending_notice`                                                            | Daily job — `gifted_comps.expiresAt` within 7 days                     | `gift:{giftId}`                                   |
+| `winback`                                                                          | Daily job — 60 days post-cancel (`cancel_completed` + no new sub)      | `sub:{subscriptionId}`                            |
 
 Winback day-60 is this spec's call (execution plan allowed 30–90); single-shot per subscription.
 
