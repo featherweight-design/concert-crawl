@@ -618,6 +618,21 @@ export function VenueDetailsClient({ venue }: Props) {
   const [probeStatus, setProbeStatus] = useState<ProbeStatus>({ kind: 'idle' })
 
   const runPlatformProbe = async () => {
+    // A platform without a venue ID can only ever come back missing_config —
+    // short-circuit locally instead of burning a round-trip.
+    if (platformVal !== null && platformVenueIdVal.trim() === '') {
+      setProbeStatus({
+        kind: 'done',
+        result: {
+          ok: false,
+          reason: 'missing_config',
+          error:
+            ADMIN_COPY.venueDetailsClient.fields.platformRouting.platformVenueId
+              .requiredError,
+        },
+      })
+      return
+    }
     setProbeStatus({ kind: 'pending' })
     try {
       const result = await probeVenuePlatform(venue.id, {

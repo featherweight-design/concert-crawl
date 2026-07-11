@@ -281,6 +281,30 @@ describe('VenueDetailsClient — platform routing (#721 #665)', () => {
     expect(screen.getByText(/AEG feed returned 503/)).toBeTruthy()
   })
 
+  it('short-circuits to missing_config without a request when the ID is empty', async () => {
+    render(
+      <VenueDetailsClient
+        venue={buildVenue({ platform: 'aeg', platformVenueId: null })}
+      />,
+    )
+
+    fireEvent.click(probeButton())
+
+    await waitFor(() => {
+      expect(
+        screen.getByText((content) =>
+          content.includes(PLATFORM_COPY.probe.reasons.missingConfig),
+        ),
+      ).toBeTruthy()
+    })
+    expect(
+      screen.getByText((content) =>
+        content.includes(PLATFORM_COPY.platformVenueId.requiredError),
+      ),
+    ).toBeTruthy()
+    expect(mockProbeVenuePlatform).not.toHaveBeenCalled()
+  })
+
   it('renders the request-failed message when the action itself fails', async () => {
     mockProbeVenuePlatform.mockResolvedValue({
       success: false,

@@ -112,7 +112,7 @@ const updateVenueSchema = createVenueSchema
     // are validated here (not a Postgres enum) so new adapters only touch
     // application code.
     platform: z.enum(['aeg']).nullable().optional(),
-    platformVenueId: z.string().min(1).nullable().optional(),
+    platformVenueId: z.string().trim().min(1).nullable().optional(),
   })
   .refine(
     // When the payload sets platform non-null, platformVenueId must ride
@@ -428,6 +428,39 @@ venuesAdminRouter.patch(
     const platformClearFields =
       body.platform === null ? { platformVenueId: null } : {}
 
+    const nextPlatform =
+      body.platform !== undefined ? body.platform : existing.platform
+    const nextPlatformVenueId =
+      body.platform === null
+        ? null
+        : body.platformVenueId !== undefined
+          ? body.platformVenueId
+          : existing.platformVenueId
+
+    // The schema refine only sees the payload; this guards the merged
+    // result against orphaned state (id without platform, or platform
+    // losing its id via a partial PATCH).
+    if (nextPlatform === null && nextPlatformVenueId !== null) {
+      return ctx.json(
+        {
+          success: false,
+          error: 'platformVenueId requires platform to be set',
+          field: 'platformVenueId',
+        },
+        400,
+      )
+    }
+    if (nextPlatform !== null && nextPlatformVenueId === null) {
+      return ctx.json(
+        {
+          success: false,
+          error: 'platformVenueId is required when platform is set',
+          field: 'platformVenueId',
+        },
+        400,
+      )
+    }
+
     const [updated] = await db
       .update(venues)
       .set({
@@ -442,14 +475,6 @@ venuesAdminRouter.patch(
     // Distinct audit action when platform routing changed, with a
     // before/after snapshot — this config redirects the crawler entirely,
     // so we want the change trail to be greppable.
-    const nextPlatform =
-      body.platform !== undefined ? body.platform : existing.platform
-    const nextPlatformVenueId =
-      body.platform === null
-        ? null
-        : body.platformVenueId !== undefined
-          ? body.platformVenueId
-          : existing.platformVenueId
     const platformChanged =
       nextPlatform !== existing.platform ||
       nextPlatformVenueId !== existing.platformVenueId

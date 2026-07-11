@@ -105,6 +105,63 @@ describe('PATCH /v1/admin/venues/:id — platform routing (#721)', () => {
     expect(res.status).toBe(400)
   })
 
+  it('rejects platformVenueId alone when the venue has no platform', async () => {
+    setAuth('admin')
+    const venue = await seedVenue({ name: 'AEG Venue', slug: 'aeg-venue' })
+
+    const res = await app.request(`/v1/admin/venues/${venue.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platformVenueId: '89' }),
+    })
+    expect(res.status).toBe(400)
+
+    const [persisted] = await testDb
+      .select({ platformVenueId: venues.platformVenueId })
+      .from(venues)
+      .where(eq(venues.id, venue.id))
+    expect(persisted?.platformVenueId).toBeNull()
+  })
+
+  it('rejects clearing platformVenueId while platform stays set', async () => {
+    setAuth('admin')
+    const venue = await seedVenue({
+      name: 'AEG Venue',
+      slug: 'aeg-venue',
+      platform: 'aeg',
+      platformVenueId: '89',
+    })
+
+    const res = await app.request(`/v1/admin/venues/${venue.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platformVenueId: null }),
+    })
+    expect(res.status).toBe(400)
+
+    const [persisted] = await testDb
+      .select({
+        platform: venues.platform,
+        platformVenueId: venues.platformVenueId,
+      })
+      .from(venues)
+      .where(eq(venues.id, venue.id))
+    expect(persisted?.platform).toBe('aeg')
+    expect(persisted?.platformVenueId).toBe('89')
+  })
+
+  it('rejects whitespace-only platformVenueId', async () => {
+    setAuth('admin')
+    const venue = await seedVenue({ name: 'AEG Venue', slug: 'aeg-venue' })
+
+    const res = await app.request(`/v1/admin/venues/${venue.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform: 'aeg', platformVenueId: '   ' }),
+    })
+    expect(res.status).toBe(400)
+  })
+
   it('clears platformVenueId when platform is set to null', async () => {
     setAuth('admin')
     const venue = await seedVenue({
