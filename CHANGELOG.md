@@ -1,3 +1,21 @@
+# [1.89.0](https://github.com/HartiganHM/concert-crawl/compare/v1.88.0...v1.89.0) (2026-07-11)
+
+
+### Bug Fixes
+
+* **web:** r1 — stable uid keys for tier panels instead of array index ([aae7105](https://github.com/HartiganHM/concert-crawl/commit/aae710558f7c1e7b4095d19f2a73c76728403adb))
+* **web:** restore panel tier label and use role-based test query ([1e3ffd9](https://github.com/HartiganHM/concert-crawl/commit/1e3ffd90aa5934eef1894c6f4024c08ebabb9e96))
+
+
+### Features
+
+* **api:** atomic batch price-submission endpoint for [#832](https://github.com/HartiganHM/concert-crawl/issues/832) — schema + happy path ([31cd801](https://github.com/HartiganHM/concert-crawl/commit/31cd801de4b96a6ee59e4f8cee1afeb785dff56c))
+* **api:** batch endpoint per-tier conflict, moderation, and rate-limit guards ([7d97bc8](https://github.com/HartiganHM/concert-crawl/commit/7d97bc86f0acf2419d9c0c33c6af3d556bfef498))
+* **web:** eventDetailClient consumes batch submit results array for [#832](https://github.com/HartiganHM/concert-crawl/issues/832) ([433f4f2](https://github.com/HartiganHM/concert-crawl/commit/433f4f22c319edf41ebefd3874af794703628447))
+* **web:** multi-tier panel UI in SubmitPriceModal for [#832](https://github.com/HartiganHM/concert-crawl/issues/832) ([d88065b](https://github.com/HartiganHM/concert-crawl/commit/d88065b5d392c83f8a7d9c37a291b26b9a841870))
+* **web:** per-option disabled flag on ChipGroup for multi-tier panels ([7904cc6](https://github.com/HartiganHM/concert-crawl/commit/7904cc6ec977f769366342a7477a521329263016))
+* **web:** wire SubmitPriceModal to the atomic batch endpoint with per-panel 422 errors ([7e22bda](https://github.com/HartiganHM/concert-crawl/commit/7e22bda0c7755a5825a9cae6617b8c401c877732))
+
 # [1.88.0](https://github.com/HartiganHM/concert-crawl/compare/v1.87.5...v1.88.0) (2026-07-11)
 
 
