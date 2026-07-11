@@ -1,3 +1,18 @@
+# [1.90.0](https://github.com/HartiganHM/concert-crawl/compare/v1.89.0...v1.90.0) (2026-07-11)
+
+
+### Bug Fixes
+
+* **db:** r1 — re-run-safe CREATE TYPE via duplicate_object guard; docstring accuracy ([6cc10c4](https://github.com/HartiganHM/concert-crawl/commit/6cc10c4e7333b15afa78f2307fe9e0027c717a62))
+* **scripts:** r2 — redact email local-part in backfill operator logs ([6abd1e9](https://github.com/HartiganHM/concert-crawl/commit/6abd1e9cc1cf4202be6c3488998d5af8dacc7126))
+* **scripts:** r3 — committed flag reflects commit-mode invocation per sibling convention ([2759467](https://github.com/HartiganHM/concert-crawl/commit/2759467b158ec6c56be592e6e480f96d20624f58))
+* **scripts:** r4 — let gifted_comps.created_at default to row insertion time ([8ec78a4](https://github.com/HartiganHM/concert-crawl/commit/8ec78a4367edf2a47069bfb394b81287ac24322f))
+
+
+### Features
+
+* **db:** monetization schema expand (execution plan PR 2.1) ([b911303](https://github.com/HartiganHM/concert-crawl/commit/b911303012d4fec73c0cb825e3f0974cd1ac9127))
+
 # [1.89.0](https://github.com/HartiganHM/concert-crawl/compare/v1.88.0...v1.89.0) (2026-07-11)
 
 
