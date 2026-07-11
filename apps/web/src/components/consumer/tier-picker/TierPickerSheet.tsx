@@ -16,11 +16,8 @@ import { useAuth } from '@clerk/nextjs'
 import type { PlanState } from '@concert-crawl/types'
 import { ModalShell } from '@/components/consumer/modal-shell'
 import { useFounderWindow } from '@/lib/queries/use-founder-window'
-import {
-  createCheckoutSession,
-  abandonCheckout,
-  createPortalSession,
-} from '@/lib/billing'
+import { createCheckoutSession, abandonCheckout } from '@/lib/billing'
+import { navigateToPortalSession } from '@/lib/portal-navigation'
 import { TIER_PICKER_COPY } from './definitions/copy'
 import { visibleTiers, defaultExpandedTier } from './lib/visible-tiers'
 import { scarcityRailData } from './lib/scarcity'
@@ -225,10 +222,7 @@ export const TierPickerSheet = ({
         void (async () => {
           setPendingTier(tierKey)
           try {
-            const token = await getToken()
-            if (!token) throw new Error('Not authenticated')
-            const { url } = await createPortalSession(token)
-            window.location.assign(url)
+            await navigateToPortalSession(getToken)
           } catch (err) {
             console.error('tier-picker: portal-session failed', err)
             setErrorText(TIER_PICKER_COPY.errors.portal)

@@ -75,6 +75,8 @@ vi.mock('@/lib/queries/use-founder-window', () => ({
 const mockCreateCheckoutSession = vi.fn()
 const mockAbandonCheckout = vi.fn()
 const mockCreatePortalSession = vi.fn()
+// Mocked at the network boundary only — the real shared
+// navigateToPortalSession (lib/portal-navigation) runs end-to-end.
 vi.mock('@/lib/billing', () => ({
   createCheckoutSession: (token: string, tier: string) =>
     mockCreateCheckoutSession(token, tier),

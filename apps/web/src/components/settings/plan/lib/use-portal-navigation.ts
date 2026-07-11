@@ -6,7 +6,7 @@
 
 import { useCallback, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
-import { createPortalSession } from '@/lib/billing'
+import { navigateToPortalSession } from '@/lib/portal-navigation'
 import { PLAN_CARD_COPY } from '../definitions/copy'
 
 interface PortalNavigation {
@@ -26,10 +26,7 @@ export const usePortalNavigation = (): PortalNavigation => {
       setPortalPending(true)
       setPortalError(null)
       try {
-        const token = await getToken()
-        if (!token) throw new Error('Not authenticated')
-        const { url } = await createPortalSession(token)
-        window.location.assign(url)
+        await navigateToPortalSession(getToken)
       } catch (err) {
         console.error('plan-panel: portal-session failed', err)
         setPortalError(PLAN_CARD_COPY.errors.portal)

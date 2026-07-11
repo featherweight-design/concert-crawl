@@ -41,6 +41,8 @@ vi.mock('@clerk/nextjs', () => ({
 }))
 
 const mockCreatePortalSession = vi.fn()
+// Mocked at the network boundary only — the real shared
+// navigateToPortalSession (lib/portal-navigation) runs end-to-end.
 vi.mock('@/lib/billing', () => ({
   createPortalSession: (token: string) => mockCreatePortalSession(token),
 }))

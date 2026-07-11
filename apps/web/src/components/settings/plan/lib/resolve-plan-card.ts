@@ -47,12 +47,23 @@ const calendarDayFormatter = new Intl.DateTimeFormat('en-CA', {
   timeZone: DISPLAY_TIME_ZONE,
 })
 
+// formatToParts (matching lib/time.ts localDateString) instead of parsing
+// the formatted string — locale output is not a stable parse target.
 const utcMidnightOf = (date: Date): number => {
-  const [year, month, day] = calendarDayFormatter
-    .format(date)
-    .split('-')
-    .map(Number)
-  return Date.UTC(year ?? 1970, (month ?? 1) - 1, day ?? 1)
+  const parts = calendarDayFormatter.formatToParts(date)
+  const partValue = (type: 'year' | 'month' | 'day'): number => {
+    const part = parts.find((candidate) => candidate.type === type)
+    return part ? Number(part.value) : NaN
+  }
+  const year = partValue('year')
+  const month = partValue('month')
+  const day = partValue('day')
+  if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) {
+    // Callers NaN-guard their inputs; this only trips on an Intl anomaly.
+    // Fall back to the raw instant so day-diffs stay finite, never NaN.
+    return date.getTime()
+  }
+  return Date.UTC(year, month - 1, day)
 }
 
 const isPastTimestamp = (iso: string, now: Date): boolean => {
