@@ -26,37 +26,37 @@ This spec settles every engineering-infrastructure question the four monetizatio
 
 ## Decisions log (the calls this spec makes)
 
-| # | Decision | Choice | Rationale |
-|---|---|---|---|
-| 1 | Founder window schema shape | Dedicated singleton `founder_window` table (single row), not a generic config table | Generated `closes_at` column + atomic seat decrement want typed columns; a generic key/value config table can't express either |
-| 2 | Payment surface architecture | **Embedded Payment Element** (server creates subscription with `payment_behavior: 'default_incomplete'`, client confirms in our surface) — NOT hosted Stripe Checkout redirect | #782's five in-app failure surfaces and #781's "we render the container, summary rail, totals, and result states" lock require us to own the payment UI and see `decline_code`s client-side. A hosted-Checkout redirect would render Stripe's UI and swallow declines. This supersedes the execution plan's "returns Stripe checkout URL" wording for PR 2.2; endpoint name (`POST /v1/billing/checkout-session`) is kept |
-| 3 | Customer portal pattern | Stripe-hosted portal (new tab) | Locked by #780's hybrid management split — portal owns tooling-heavy ops (card change, invoices, billing email, tax) |
-| 4 | Webhook idempotency | `processed_stripe_events` table; `INSERT … ON CONFLICT DO NOTHING` on the Stripe event ID; handler runs only when the insert lands | DB-backed, survives deploys/restarts, one round trip; same pattern as the execution plan sketch |
-| 5 | Resend ownership | Folded into #775 (this spec, Part 2) per #849's recommended resolution | Email triggers are webhook/timer events this spec already owns |
-| 6 | Trial storage | **Our DB, not Stripe.** `user_billing.trial_ends_at` set at account creation; no Stripe object exists until the user adds a card | Beta-to-Launch locks "14-day free trial of Premium at signup, no credit card required" — Stripe can't model a card-less trial subscription |
-| 7 | Trial ↔ UserPlan mapping | Trial users derive `plan = 'premium'` with a separate `onTrial` descriptor (`trialEndsAt` rides along); no 7th plan value | #781 locked exactly 6 states; #780's Plan card variants key off `tier=premium, on_trial=true` |
-| 8 | Downgrade credit storage | Stripe customer balance is the source of truth; no `downgrade_credit_balance` DB column | Stripe already tracks proration credit; duplicating it invites drift (KISS — exhaust existing fields first) |
-| 9 | Session-start marker for the past-due banner | Client-side session marker (web `sessionStorage`), not a persisted `session_started_at` column | The predicate only needs "dismissed before this session started"; persisting per-session rows adds writes for no queryable value |
-| 10 | Gifted source of truth | `gifted_comps` DB table (source of truth, queryable by timers) + Clerk `publicMetadata.plan = 'premium_gifted'` mirror (JWT-fast reads) | Timers (gift-ending notice) need SQL over all gifted users; `derivePlan` needs a zero-DB-hop check. Grant/revoke flows write both |
-| 11 | Dunning email cadence driver | Stripe Smart Retries configured to retry at ~day 3–4 and day 7; `invoice.payment_failed` webhook `attempt_count` maps to dunning_1/2/3 | Stripe already owns the retry clock; a parallel DB timer would drift from actual retry events. Fallback sweep in the daily billing job catches missed webhooks |
-| 12 | Analytics stack | PostHog (`posthog-js` on web, `posthog-node` in API for webhook-driven events) — wired in execution-plan Phase 6 (PR 6.2), event names locked here (Part 2 §8) | Beta-to-Launch already names PostHog; nothing else is wired today |
-| 13 | Where nudge-dismissal state lives | New `user_billing` table (one row per user), not `subscriptions` | Trial + banner state must exist for users with **no** subscription row (card-less trial); subscriptions table stays a pure Stripe mirror |
-| 14 | Stripe products/prices provisioning | Checked-in idempotent script (`lookup_key`-based upsert, both modes), never hand-created in the dashboard | Reproducible across test/live; amounts verified in cents against #781's locked pricing |
+| #   | Decision                                     | Choice                                                                                                                                                                         | Rationale                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| --- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Founder window schema shape                  | Dedicated singleton `founder_window` table (single row), not a generic config table                                                                                            | Generated `closes_at` column + atomic seat decrement want typed columns; a generic key/value config table can't express either                                                                                                                                                                                                                                                                                            |
+| 2   | Payment surface architecture                 | **Embedded Payment Element** (server creates subscription with `payment_behavior: 'default_incomplete'`, client confirms in our surface) — NOT hosted Stripe Checkout redirect | #782's five in-app failure surfaces and #781's "we render the container, summary rail, totals, and result states" lock require us to own the payment UI and see `decline_code`s client-side. A hosted-Checkout redirect would render Stripe's UI and swallow declines. This supersedes the execution plan's "returns Stripe checkout URL" wording for PR 2.2; endpoint name (`POST /v1/billing/checkout-session`) is kept |
+| 3   | Customer portal pattern                      | Stripe-hosted portal (new tab)                                                                                                                                                 | Locked by #780's hybrid management split — portal owns tooling-heavy ops (card change, invoices, billing email, tax)                                                                                                                                                                                                                                                                                                      |
+| 4   | Webhook idempotency                          | `processed_stripe_events` table; `INSERT … ON CONFLICT DO NOTHING` on the Stripe event ID; handler runs only when the insert lands                                             | DB-backed, survives deploys/restarts, one round trip; same pattern as the execution plan sketch                                                                                                                                                                                                                                                                                                                           |
+| 5   | Resend ownership                             | Folded into #775 (this spec, Part 2) per #849's recommended resolution                                                                                                         | Email triggers are webhook/timer events this spec already owns                                                                                                                                                                                                                                                                                                                                                            |
+| 6   | Trial storage                                | **Our DB, not Stripe.** `user_billing.trialEndsAt` set at account creation; no Stripe object exists until the user adds a card                                                 | Beta-to-Launch locks "14-day free trial of Premium at signup, no credit card required" — Stripe can't model a card-less trial subscription                                                                                                                                                                                                                                                                                |
+| 7   | Trial ↔ UserPlan mapping                     | Trial users derive `plan = 'premium'` with a separate `onTrial` descriptor (`trialEndsAt` rides along); no 7th plan value                                                      | #781 locked exactly 6 states; #780's Plan card variants key off `tier=premium, on_trial=true`                                                                                                                                                                                                                                                                                                                             |
+| 8   | Downgrade credit storage                     | Stripe customer balance is the source of truth; no `downgrade_credit_balance` DB column                                                                                        | Stripe already tracks proration credit; duplicating it invites drift (KISS — exhaust existing fields first)                                                                                                                                                                                                                                                                                                               |
+| 9   | Session-start marker for the past-due banner | Client-side session marker (web `sessionStorage`), not a persisted `session_started_at` column                                                                                 | The predicate only needs "dismissed before this session started"; persisting per-session rows adds writes for no queryable value                                                                                                                                                                                                                                                                                          |
+| 10  | Gifted source of truth                       | `gifted_comps` DB table (source of truth, queryable by timers) + Clerk `publicMetadata.plan = 'premium_gifted'` mirror (JWT-fast reads)                                        | Timers (gift-ending notice) need SQL over all gifted users; `derivePlan` needs a zero-DB-hop check. Grant/revoke flows write both                                                                                                                                                                                                                                                                                         |
+| 11  | Dunning email cadence driver                 | Stripe Smart Retries configured to retry at ~day 3–4 and day 7; `invoice.payment_failed` webhook `attempt_count` maps to dunning_1/2/3                                         | Stripe already owns the retry clock; a parallel DB timer would drift from actual retry events. Fallback sweep in the daily billing job catches missed webhooks                                                                                                                                                                                                                                                            |
+| 12  | Analytics stack                              | PostHog (`posthog-js` on web, `posthog-node` in API for webhook-driven events) — wired in execution-plan Phase 6 (PR 6.2), event names locked here (Part 2 §8)                 | Beta-to-Launch already names PostHog; nothing else is wired today                                                                                                                                                                                                                                                                                                                                                         |
+| 13  | Where nudge-dismissal state lives            | New `user_billing` table (one row per user), not `subscriptions`                                                                                                               | Trial + banner state must exist for users with **no** subscription row (card-less trial); subscriptions table stays a pure Stripe mirror                                                                                                                                                                                                                                                                                  |
+| 14  | Stripe products/prices provisioning          | Checked-in idempotent script (`lookup_key`-based upsert, both modes), never hand-created in the dashboard                                                                      | Reproducible across test/live; amounts verified in cents against #781's locked pricing                                                                                                                                                                                                                                                                                                                                    |
 
 ## Current state (verified 2026-07-10)
 
-| Item | Location | State |
-|---|---|---|
-| `subscription_tier` pgEnum | `packages/db/src/schema/commerce.ts` | `['free', 'premium']` |
-| `subscription_status` pgEnum | same | `['active', 'cancelled', 'past_due']` |
-| `subscriptions` table | same | `id, userId, stripeCustomerId, stripeSubscriptionId, tier, founder (bool), status, currentPeriodEnd, createdAt, updatedAt` |
-| `UserPlan` type | `packages/types/src/index.ts` | `'founder' \| 'paid' \| 'trial' \| 'past-due'` — replaced wholesale by this spec |
-| `derivePlan` | `apps/api/src/routes/users.ts` | Returns `'founder'` for everyone without a subscription row |
-| `PREMIUM_ROLES` | `packages/types/src/index.ts` | `['admin', 'sub_admin', 'promoter', 'beta']` — role-holders currently short-circuit to `'founder'` |
-| Stripe SDK | — | Not installed anywhere; `STRIPE_SECRET_KEY` placeholder exists in `apps/api/.env.example` |
-| Resend SDK | `apps/api` | **Already installed** (`resend`); `sendAdminAlertEmail` + `sendInviteCodeEmail` in `apps/api/src/lib/email.ts`; sends from `alerts@concertcrawl.app` / `noreply@concertcrawl.app` |
-| Analytics | — | No PostHog wiring (privacy-policy copy mentions it only) |
-| Latest migration | `packages/db/migrations/meta/_journal.json` | `0044_event_canonical_title_unique`, `when: 1782864000000` — every new migration timestamp must exceed this |
+| Item                         | Location                                    | State                                                                                                                                                                             |
+| ---------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `subscription_tier` pgEnum   | `packages/db/src/schema/commerce.ts`        | `['free', 'premium']`                                                                                                                                                             |
+| `subscription_status` pgEnum | same                                        | `['active', 'cancelled', 'past_due']`                                                                                                                                             |
+| `subscriptions` table        | same                                        | `id, userId, stripeCustomerId, stripeSubscriptionId, tier, founder (bool), status, currentPeriodEnd, createdAt, updatedAt`                                                        |
+| `UserPlan` type              | `packages/types/src/index.ts`               | `'founder' \| 'paid' \| 'trial' \| 'past-due'` — replaced wholesale by this spec                                                                                                  |
+| `derivePlan`                 | `apps/api/src/routes/users.ts`              | Returns `'founder'` for everyone without a subscription row                                                                                                                       |
+| `PREMIUM_ROLES`              | `packages/types/src/index.ts`               | `['admin', 'sub_admin', 'promoter', 'beta']` — role-holders currently short-circuit to `'founder'`                                                                                |
+| Stripe SDK                   | —                                           | Not installed anywhere; `STRIPE_SECRET_KEY` placeholder exists in `apps/api/.env.example`                                                                                         |
+| Resend SDK                   | `apps/api`                                  | **Already installed** (`resend`); `sendAdminAlertEmail` + `sendInviteCodeEmail` in `apps/api/src/lib/email.ts`; sends from `alerts@concertcrawl.app` / `noreply@concertcrawl.app` |
+| Analytics                    | —                                           | No PostHog wiring (privacy-policy copy mentions it only)                                                                                                                          |
+| Latest migration             | `packages/db/migrations/meta/_journal.json` | `0044_event_canonical_title_unique`, `when: 1782864000000` — every new migration timestamp must exceed this                                                                       |
 
 ## Schema expansion
 
@@ -75,11 +75,11 @@ subscription_status: ['active', 'cancelled', 'past_due']
 
 ### 2. `subscriptions` table additions
 
-| Column | Type | Default | Purpose |
-|---|---|---|---|
-| `cancelAtPeriodEnd` | boolean, not null | `false` | Mirror of Stripe `cancel_at_period_end`; drives the Cancel-grace Plan card variant (#780 §3) |
-| `stripePriceId` | text, nullable | — | The active price (lookup-key-resolved); lets us render tier + amount without a Stripe round trip |
-| `currentPeriodStart` | timestamptz, nullable | — | With `currentPeriodEnd`, supports proration disclosure math rendering |
+| Column               | Type                  | Default | Purpose                                                                                          |
+| -------------------- | --------------------- | ------- | ------------------------------------------------------------------------------------------------ |
+| `cancelAtPeriodEnd`  | boolean, not null     | `false` | Mirror of Stripe `cancel_at_period_end`; drives the Cancel-grace Plan card variant (#780 §3)     |
+| `stripePriceId`      | text, nullable        | —       | The active price (lookup-key-resolved); lets us render tier + amount without a Stripe round trip |
+| `currentPeriodStart` | timestamptz, nullable | —       | With `currentPeriodEnd`, supports proration disclosure math rendering                            |
 
 Existing `stripeCustomerId` / `stripeSubscriptionId` columns are reused as-is. The vestigial `founder` boolean stays (expand/contract) but is no longer read once `tier = 'founder'` exists; the contract migration removes it post-launch.
 
@@ -89,15 +89,15 @@ Existing `stripeCustomerId` / `stripeSubscriptionId` columns are reused as-is. T
 
 Billing-adjacent user state that must exist **without** a subscription row (Decision 13).
 
-| Column | Type | Default | Purpose |
-|---|---|---|---|
-| `userId` | text, PK | — | Clerk user ID |
-| `trialEndsAt` | timestamptz, nullable | — | Set to `account_created_at + 14 days` on first touch (see below). NULL for pre-monetization accounts that already consumed beta gifting |
-| `lastTrialEndedShownAt` | timestamptz, nullable | — | Trial-ended takeover single-fire predicate (#780 §2) |
-| `dayThirteenBannerDismissedAt` | timestamptz, nullable | — | Day-13 banner single-fire-per-trial-expiry predicate (#780 §6) |
-| `pastDueBannerDismissedAt` | timestamptz, nullable | — | Past-due banner per-session predicate (#782 §1) |
-| `premiumDataExpiresAt` | timestamptz, nullable | — | 90-day preserve-then-purge clock (#780 §5); set on effective downgrade date, cleared on re-upgrade |
-| `createdAt` / `updatedAt` | timestamptz, not null | now | Standard |
+| Column                         | Type                  | Default | Purpose                                                                                                                                 |
+| ------------------------------ | --------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `userId`                       | text, PK              | —       | Clerk user ID                                                                                                                           |
+| `trialEndsAt`                  | timestamptz, nullable | —       | Set to `account_created_at + 14 days` on first touch (see below). NULL for pre-monetization accounts that already consumed beta gifting |
+| `lastTrialEndedShownAt`        | timestamptz, nullable | —       | Trial-ended takeover single-fire predicate (#780 §2)                                                                                    |
+| `dayThirteenBannerDismissedAt` | timestamptz, nullable | —       | Day-13 banner single-fire-per-trial-expiry predicate (#780 §6)                                                                          |
+| `pastDueBannerDismissedAt`     | timestamptz, nullable | —       | Past-due banner per-session predicate (#782 §1)                                                                                         |
+| `premiumDataExpiresAt`         | timestamptz, nullable | —       | 90-day preserve-then-purge clock (#780 §5); set on effective downgrade date, cleared on re-upgrade                                      |
+| `createdAt` / `updatedAt`      | timestamptz, not null | now     | Standard                                                                                                                                |
 
 **Row creation:** lazily upserted the first time any billing read/write path touches the user (the `GET /v1/users/me` plan derivation ensures it). `trialEndsAt` seeding rule: set only for users created **after** monetization ships (`user created_at >= MONETIZATION_LIVE_AT` constant); existing beta users are gifted and never see a trial. The exact cutover constant is set in the PR that ships the migration.
 
@@ -113,15 +113,15 @@ All three predicates are evaluated server-side in the session-bootstrap payload 
 
 Per the execution-plan mechanism, verbatim:
 
-| Column | Type | Constraint |
-|---|---|---|
-| `id` | integer, PK | `CHECK (id = 1)` — enforces singleton |
-| `opensAt` | timestamptz, nullable | **NULL until launch day.** Flipping it is a HARD PAUSE / Hugh-only action |
-| `seatsTotal` | integer, not null | Seeded `100` (locked, #781) |
-| `seatsRemaining` | integer, not null | Seeded `100`; `CHECK (seats_remaining >= 0)` |
-| `seatsRemainingTest` | integer, not null | Seeded `100`; decremented only by the admin simulate-claim path (Part 2 §3.4) — never by real claims |
-| `windowDays` | integer, not null | Seeded `30` (locked, #781 — "First 100 or 30 days") |
-| `closesAt` | timestamptz, generated | `GENERATED ALWAYS AS (opens_at + make_interval(days => window_days)) STORED` — propagates NULL while `opensAt` is NULL |
+| Column               | Type                   | Constraint                                                                                                             |
+| -------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `id`                 | integer, PK            | `CHECK (id = 1)` — enforces singleton                                                                                  |
+| `opensAt`            | timestamptz, nullable  | **NULL until launch day.** Flipping it is a HARD PAUSE / Hugh-only action                                              |
+| `seatsTotal`         | integer, not null      | Seeded `100` (locked, #781)                                                                                            |
+| `seatsRemaining`     | integer, not null      | Seeded `100`; `CHECK (seats_remaining >= 0)`                                                                           |
+| `seatsRemainingTest` | integer, not null      | Seeded `100`; decremented only by the admin simulate-claim path (Part 2 §3.4) — never by real claims                   |
+| `windowDays`         | integer, not null      | Seeded `30` (locked, #781 — "First 100 or 30 days")                                                                    |
+| `closesAt`           | timestamptz, generated | `GENERATED ALWAYS AS (opens_at + make_interval(days => window_days)) STORED` — propagates NULL while `opensAt` is NULL |
 
 Drizzle expresses the generated column via `.generatedAlwaysAs(sql`...`)`; the raw expression lives in the migration file (allowed — migrations are the raw-SQL exception). Seed row inserted in the same migration.
 
@@ -129,22 +129,22 @@ Drizzle expresses the generated column via `.generatedAlwaysAs(sql`...`)`; the r
 
 Append-only audit trail for every subscription state change (#775 scope + execution-plan rollback strategy depends on it).
 
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid, PK | |
-| `userId` | text, not null, indexed | |
-| `type` | pgEnum `subscription_event_type` | `['checkout_started', 'subscription_created', 'renewal_succeeded', 'payment_failed', 'past_due_entered', 'cancel_scheduled', 'cancel_completed', 'upgraded', 'downgraded', 'founder_claimed', 'founder_seat_restored', 'trial_ended', 'gift_granted', 'gift_revoked', 'data_purged']` |
-| `stripeEventId` | text, nullable | Correlates to the webhook that produced it (NULL for app-originated events like trial_ended) |
-| `metadata` | jsonb, nullable | Tier from/to, amount, decline category, seat number, etc. |
-| `createdAt` | timestamptz, not null | |
+| Column          | Type                             | Notes                                                                                                                                                                                                                                                                                 |
+| --------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`            | uuid, PK                         |                                                                                                                                                                                                                                                                                       |
+| `userId`        | text, not null, indexed          |                                                                                                                                                                                                                                                                                       |
+| `type`          | pgEnum `subscription_event_type` | `['checkout_started', 'subscription_created', 'renewal_succeeded', 'payment_failed', 'past_due_entered', 'cancel_scheduled', 'cancel_completed', 'upgraded', 'downgraded', 'founder_claimed', 'founder_seat_restored', 'trial_ended', 'gift_granted', 'gift_revoked', 'data_purged']` |
+| `stripeEventId` | text, nullable                   | Correlates to the webhook that produced it (NULL for app-originated events like trial_ended)                                                                                                                                                                                          |
+| `metadata`      | jsonb, nullable                  | Tier from/to, amount, decline category, seat number, etc.                                                                                                                                                                                                                             |
+| `createdAt`     | timestamptz, not null            |                                                                                                                                                                                                                                                                                       |
 
 ### 6. New table: `processed_stripe_events` (webhook idempotency)
 
-| Column | Type | Notes |
-|---|---|---|
-| `eventId` | text, PK | Stripe event ID (`evt_…`) |
-| `type` | text, not null | For observability |
-| `processedAt` | timestamptz, not null | |
+| Column        | Type                  | Notes                     |
+| ------------- | --------------------- | ------------------------- |
+| `eventId`     | text, PK              | Stripe event ID (`evt_…`) |
+| `type`        | text, not null        | For observability         |
+| `processedAt` | timestamptz, not null |                           |
 
 Handler contract: `INSERT … ON CONFLICT DO NOTHING RETURNING event_id`; if no row returns, the event was already processed — respond 200 and skip. Rows older than 90 days are pruned by the daily billing job (Stripe retries never reach that far back).
 
@@ -152,15 +152,15 @@ Handler contract: `INSERT … ON CONFLICT DO NOTHING RETURNING event_id`; if no 
 
 Source of truth for gifted Premium (Decision 10).
 
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid, PK | |
-| `userId` | text, not null, unique | |
-| `grantedBy` | text, not null | Admin Clerk ID (audit) |
-| `expiresAt` | timestamptz, nullable | NULL = lifetime (beta cohort). Non-null gifts drive `gifting_ending_notice` (#783) |
-| `redeemedAt` | timestamptz, nullable | For future gift-link flows; beta grants set it = createdAt |
-| `revokedAt` | timestamptz, nullable | Soft revoke; derivePlan treats revoked/expired as absent |
-| `createdAt` | timestamptz, not null | |
+| Column       | Type                   | Notes                                                                              |
+| ------------ | ---------------------- | ---------------------------------------------------------------------------------- |
+| `id`         | uuid, PK               |                                                                                    |
+| `userId`     | text, not null, unique |                                                                                    |
+| `grantedBy`  | text, not null         | Admin Clerk ID (audit)                                                             |
+| `expiresAt`  | timestamptz, nullable  | NULL = lifetime (beta cohort). Non-null gifts drive `gifting_ending_notice` (#783) |
+| `redeemedAt` | timestamptz, nullable  | For future gift-link flows; beta grants set it = createdAt                         |
+| `revokedAt`  | timestamptz, nullable  | Soft revoke; derivePlan treats revoked/expired as absent                           |
+| `createdAt`  | timestamptz, not null  |                                                                                    |
 
 Existing beta users (Clerk `publicMetadata.plan = 'premium_gifted'`, set by hand) are backfilled into this table by a one-off script in the same PR; Clerk metadata remains the JWT-fast mirror and is written by the admin grant/revoke flow going forward. **Precedence rule:** if the table and Clerk metadata disagree, the table wins and the mirror is repaired on next derivation (logged).
 
@@ -170,23 +170,23 @@ Defined here for completeness; behavior specced in Part 2 §4.
 
 `email_send_log` — transactional-send idempotency + audit:
 
-| Column | Type | Notes |
-|---|---|---|
-| `id` | uuid, PK | |
-| `templateKey` | text, not null | One of the 10 #783 template keys |
-| `userId` | text, not null | |
-| `dedupeKey` | text, not null | e.g. `dunning_1:{invoiceId}`, `card_expiring_soon:30:{cardFingerprint}:{expMonth}-{expYear}` — **unique index on (`templateKey`, `dedupeKey`)** |
-| `resendId` | text, nullable | Resend message ID on success |
-| `status` | text, not null | `sent` / `failed` / `suppressed` (kill switch) |
-| `createdAt` | timestamptz, not null | |
+| Column        | Type                  | Notes                                                                                                                                           |
+| ------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`          | uuid, PK              |                                                                                                                                                 |
+| `templateKey` | text, not null        | One of the 10 #783 template keys                                                                                                                |
+| `userId`      | text, not null        |                                                                                                                                                 |
+| `dedupeKey`   | text, not null        | e.g. `dunning_1:{invoiceId}`, `card_expiring_soon:30:{cardFingerprint}:{expMonth}-{expYear}` — **unique index on (`templateKey`, `dedupeKey`)** |
+| `resendId`    | text, nullable        | Resend message ID on success                                                                                                                    |
+| `status`      | text, not null        | `sent` / `failed` / `suppressed` (kill switch)                                                                                                  |
+| `createdAt`   | timestamptz, not null |                                                                                                                                                 |
 
 `email_template_config` — per-template kill switch (execution-plan rollback strategy):
 
-| Column | Type | Notes |
-|---|---|---|
-| `templateKey` | text, PK | |
-| `enabled` | boolean, not null, default true | Admin-flippable; disabled templates log `suppressed` sends |
-| `updatedAt` | timestamptz, not null | |
+| Column        | Type                            | Notes                                                      |
+| ------------- | ------------------------------- | ---------------------------------------------------------- |
+| `templateKey` | text, PK                        |                                                            |
+| `enabled`     | boolean, not null, default true | Admin-flippable; disabled templates log `suppressed` sends |
+| `updatedAt`   | timestamptz, not null           |                                                            |
 
 Seeded with all 10 keys, enabled.
 
@@ -213,21 +213,16 @@ Replaces `apps/api/src/routes/users.ts:derivePlan` wholesale. New home: `package
 
 ```ts
 export type UserPlan =
-  | 'logged-out'
-  | 'free'
-  | 'supporter'
-  | 'premium'
-  | 'founder'
-  | 'gifted'
+  'logged-out' | 'free' | 'supporter' | 'premium' | 'founder' | 'gifted'
 
 export interface PlanState {
   plan: UserPlan
-  onTrial: boolean            // true ⇒ plan === 'premium' via trial (Decision 7)
-  trialEndsAt: string | null  // ISO; non-null while trial is live or recently ended
+  onTrial: boolean // true ⇒ plan === 'premium' via trial (Decision 7)
+  trialEndsAt: string | null // ISO; non-null while trial is live or recently ended
   status: SubscriptionStatus | null // Stripe-mirrored status; null when no subscription row
   cancelAtPeriodEnd: boolean
   currentPeriodEnd: string | null
-  roleComped: boolean         // PREMIUM_ROLES holder — full entitlements, picker shows "You're in already"
+  roleComped: boolean // PREMIUM_ROLES holder — full entitlements, picker shows "You're in already"
 }
 ```
 
@@ -272,25 +267,25 @@ export type PremiumFeature =
   | 'price-drop-alerts'
 
 export type EntitlementCell =
-  | 'visible-active'
-  | 'paywall-on-tap'
-  | 'tier-picker-on-tap'
-  | 'hidden'
+  'visible-active' | 'paywall-on-tap' | 'tier-picker-on-tap' | 'hidden'
 
-export const ENTITLEMENTS_MATRIX: Record<PremiumFeature, Record<UserPlan, EntitlementCell>>
+export const ENTITLEMENTS_MATRIX: Record<
+  PremiumFeature,
+  Record<UserPlan, EntitlementCell>
+>
 ```
 
 Matrix content (verbatim from #781 §6, including the R6 Watching-is-Free amendment):
 
-| Feature | logged-out | free | supporter | premium | founder | gifted |
-|---|---|---|---|---|---|---|
-| watching | tier-picker-on-tap | visible-active | visible-active | visible-active | visible-active | visible-active |
-| concert-history | tier-picker-on-tap | paywall-on-tap | paywall-on-tap | visible-active | visible-active | visible-active |
-| calendar-export | tier-picker-on-tap | paywall-on-tap | paywall-on-tap | visible-active | visible-active | visible-active |
-| following | tier-picker-on-tap | paywall-on-tap | paywall-on-tap | visible-active | visible-active | visible-active |
-| alerts | hidden | hidden | hidden | visible-active | visible-active | visible-active |
-| spotify-sync | hidden | hidden | hidden | visible-active | visible-active | visible-active |
-| price-drop-alerts | hidden | hidden | hidden | visible-active | visible-active | visible-active |
+| Feature           | logged-out         | free           | supporter      | premium        | founder        | gifted         |
+| ----------------- | ------------------ | -------------- | -------------- | -------------- | -------------- | -------------- |
+| watching          | tier-picker-on-tap | visible-active | visible-active | visible-active | visible-active | visible-active |
+| concert-history   | tier-picker-on-tap | paywall-on-tap | paywall-on-tap | visible-active | visible-active | visible-active |
+| calendar-export   | tier-picker-on-tap | paywall-on-tap | paywall-on-tap | visible-active | visible-active | visible-active |
+| following         | tier-picker-on-tap | paywall-on-tap | paywall-on-tap | visible-active | visible-active | visible-active |
+| alerts            | hidden             | hidden         | hidden         | visible-active | visible-active | visible-active |
+| spotify-sync      | hidden             | hidden         | hidden         | visible-active | visible-active | visible-active |
+| price-drop-alerts | hidden             | hidden         | hidden         | visible-active | visible-active | visible-active |
 
 API (per #781 §6's entitlement-vs-UX-routing split):
 
