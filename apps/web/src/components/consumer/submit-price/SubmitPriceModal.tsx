@@ -217,6 +217,8 @@ const SOURCE_CATEGORY_OPTIONS = [
 // (sourceCategory, vendor) live in BundleFieldsState — asked once, shared by
 // every row on submit.
 interface TierPanelState {
+  /** Stable identity for React keys — panels can be removed from the middle of the list. */
+  uid: number
   tier: string | null
   floor: string
   ceiling: string
@@ -227,7 +229,10 @@ interface BundleFieldsState {
   vendor: string | null
 }
 
+let nextPanelUid = 0
+
 const emptyPanel = (tier: Tier | null = null): TierPanelState => ({
+  uid: nextPanelUid++,
   tier,
   floor: '',
   ceiling: '',
@@ -328,6 +333,7 @@ export function SubmitPriceModal({
               })
               setPanels([
                 {
+                  ...emptyPanel(),
                   tier: body.data.userSubmission.tier,
                   floor: body.data.userSubmission.priceMin,
                   ceiling: body.data.userSubmission.priceMax ?? '',
@@ -722,6 +728,7 @@ export function SubmitPriceModal({
               })
               setPanels([
                 {
+                  ...emptyPanel(),
                   tier: existingSubmission.tier,
                   floor: existingSubmission.priceMin,
                   ceiling: existingSubmission.priceMax ?? '',
@@ -894,7 +901,7 @@ export function SubmitPriceModal({
           {/* Tier panels — repeatable per-tier rows */}
           {panels.map((panel, panelIndex) => (
             <div
-              key={panelIndex}
+              key={panel.uid}
               style={{
                 display: 'flex',
                 flexDirection: 'column',
