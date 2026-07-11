@@ -1,3 +1,10 @@
+## [1.97.1](https://github.com/HartiganHM/concert-crawl/compare/v1.97.0...v1.97.1) (2026-07-11)
+
+
+### Bug Fixes
+
+* raise per-event submission limit to 3 acts/24h ([#876](https://github.com/HartiganHM/concert-crawl/issues/876)) ([#895](https://github.com/HartiganHM/concert-crawl/issues/895)) ([3b8ebea](https://github.com/HartiganHM/concert-crawl/commit/3b8ebea029eeee5e3314a8a62f971b265ecc3968))
+
 # [1.97.0](https://github.com/HartiganHM/concert-crawl/compare/v1.96.0...v1.97.0) (2026-07-11)
 
 
