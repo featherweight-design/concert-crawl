@@ -1,0 +1,126 @@
+# Readiness Review — Shareable Cards (IdentityArt)
+
+**Verdict:** 🟡 Yellow — one Design pass to close the tier-gate + anonymous-URL questions, one small handoff cleanup, and then a plan PR is fine
+**Audited:** 2026-06-26
+**Auditor:** Claude (autonomous Track 1 gate — pre-existing handoff, merged 2026-05-09)
+**Audited handoff:** `design/design_handoff_shareable_cards/` (committed `58eb5b80`, 2026-05-09)
+**Related tickets:**
+- [#92](https://github.com/HartiganHM/concert-crawl/issues/92) — Design: Shareable event card (**closed**, delivered by this handoff)
+- [#72](https://github.com/HartiganHM/concert-crawl/issues/72) — Shareable show cards (IdentityArt) (**open**, this is the build ticket)
+- [#85](https://github.com/HartiganHM/concert-crawl/issues/85) — Concert passport (**open, launch phase**, out of scope here)
+- [#99](https://github.com/HartiganHM/concert-crawl/issues/99) — Venue passport card (**open, launch phase**, out of scope here)
+
+**Plan PR target:** `docs/superpowers/plans/<date>-shareable-cards-implementation-plan.md`. **Blocked** on two Design-owned clarifications (below) before opening — small addendum, not a full re-pass.
+
+## Summary 🎯
+
+This is one of Design's cleaner riso experiments — the Poster direction is confident, the layout math is spelled out per ratio, the drop-Receipt/drop-Stub/drop-Watching-composite call is decisive, and the mint contract is small and hashable. The dev-facing README is also tight: three ratios, three consumer themes, one direction, exact typography ladders, an explicit "strip these code paths" list.
+
+The two blockers are both **cross-cutting**: a **tier-gate call** for share (undesigned; monetization vertical landed six weeks *after* this handoff and has no share-related entitlement) and an **anonymous-view infrastructure decision** for the OG image / `/share/:eventId/:ratio.png` route (the event page today lives under `(protected)/(main)`, so the shared link's landing surface has to be defined). Neither requires a full brief re-pass — a light addendum will resolve both.
+
+Plus one small handoff cleanup: the README references a `POSTER_TAGLINES` constant that doesn't exist in `share-cards.jsx`; the taglines are actually inlined as `event.snark` on fixture data. Eng will need clear guidance on where the string bank lives.
+
+## Per-dimension findings
+
+### 🗺️ Scope clarity
+
+- ✅ Purpose is crisp — image cards a fan posts to invite friends or flex an upcoming show. One direction (Riso Poster), three aspect ratios (story / square / link), one trigger surface (Event Detail hero, third scrim-pill).
+- ✅ Explicit **drop list** in "What to build" + "Out of scope": Receipt, Stub, Watching-composite, QR overlay, mint-serial overlay, branded-short-link overlay. That's exemplary discipline — dropped concepts still live in `share-cards.jsx` and `share-trigger.jsx`, and the README tells eng to strip them.
+- ✅ Mint contract cleanly separates rendered visual (`serial` / `mintedAt` not drawn) from metadata (present for future "my past shares" history if it ships). Good deferral hygiene.
+- 🟡 **Sequencing / gating undesigned.** README doesn't state who can generate a share card. Anonymous unsigned-in visitors? Free-tier users? Supporter+? Given monetization landed after this handoff, this is a legitimate gap, not a Design oversight — but it needs a call before build. See Decisions log below.
+
+### 🎭 State coverage
+
+- ✅ Three state pills wired end-to-end: `going`, `soldout`, `drop`. Each has its own tagline override in fixture data and pill color mapping in `share-cards.jsx::StatePill.colors`.
+- ✅ Three aspect ratios × three consumer themes = **9 rendering variants**. `SC_RATIOS` locks the pixel dimensions (1080×1920, 1080×1080, 1200×628 — note the README says 1200×630 for `link` but the code says 628, a 2-pixel drift that only matters if OG spec requires exact-630).
+- ✅ Anonymous-user handling documented in "Open questions" #1: currently the signature line is dropped. **Confirm-or-flip decision needed** (see Decisions log).
+- 🟡 **Watching state pill exists in code but never appears on the shipped direction.** `stateLabel()` handles `watching` and `tonight` states + `StatePill.colors` has entries for both. Since Watching-composite was dropped and Riso Poster is the only direction, `watching` state pill has no surface — dead code eng should strip along with the Receipt/Stub paths. (Not a spec gap; just noting for the "strip during implementation" list.)
+- 🟡 **No error/empty state.** What happens if identity-art fails to hash-derive a palette (impossible in prod but defensively)? What if the user's `@handle` is `null` mid-render? The `showSig` guard covers `mint.by` being falsy, so the mechanical path is defensive. The visual path (top-half art + bottom scrim) hasn't been shown against a "no palette" fallback. Low priority.
+
+### 🔌 Data contract
+
+- ✅ Event fixture shape (`SHARE_EVENTS.callboy`, `.geese`, `.amyl`) maps cleanly to shipped `EventWithVenue`: `artist`, `venue`, `city`, `date`, `showTime`, `state` (needs derivation), `pricePill` (needs derivation from `priceByTier`). Eng will need small selector functions but no new schema.
+- ✅ `mintMeta(event, user, serial)` correctly documents cache key as `(eventId, userId, contentHash)`. Content hash inputs are `event.id`, `user.id`, `event.state` — that's the correct minimum set (state changes the pill + tagline, so it must invalidate).
+- ✅ Rendering pipeline shape (§5) is architecturally clean: `GET /share/:eventId/:ratio.png?u=:userId` → 302 to cached blob, HTML-to-PNG via headless Chromium. **Uses existing crawler Chromium** (Playwright already installed in the crawler package). No new dep.
+- 🔴 **Data-contract-vs-README drift on tagline copy.** README line 67 says "keep verbatim from `share-cards.jsx::POSTER_TAGLINES`". No such constant exists in the file. Tagline copy is actually stored on **fixture event data** as `event.snark` (`shareable-data.jsx:28,45,62`) and rendered via `"{event.snark}"` in `PosterCard`. This will break eng: they'll go looking for `POSTER_TAGLINES`, find nothing, and either invent a new constant or hardcode strings. Design needs to specify **where the tagline bank actually lives** — one option: a `POSTER_TAGLINES` constant keyed by `state` (`{ going: "...", soldout: "...", drop: "..." }`). This also intersects with `feedback_definitions_copy_rule` (all customer-facing strings in `definitions/copy.ts`), so the answer is likely "eng owns a `consumer.share.poster.taglines` copy map with three keys".
+- 🟡 **Anonymous URL contract undefined.** `?u=:userId` in the OG route implies always-signed sharing. But #85 (concert passport) and #99 (venue passport) will need shared URLs viewable by *anyone*, and OG image previews (SMS / Slack / iMessage) fire from unauthenticated crawlers. If the event detail landing page stays under `(protected)/(main)`, an SMS-preview click lands on `/sign-in`. Is that the intended UX? Alternative: a public `/e/:eventId` route or letting `/events/:id` be reachable unauth. See Decisions log.
+
+### 🧱 Codebase fit
+
+- ✅ **Identity art already exists** at `apps/web/src/components/consumer/identity-art/IdentityArt.tsx` (`ia_isDark`, `identityFor`, hash-derived palettes) — the design's `window.identityFor(...)` and `window.ia_isDark(...)` calls in `share-cards.jsx` line up 1:1. No reinvention.
+- ✅ **`--scrim` token exists** and is used across the codebase (27 files). BackButton at `apps/web/src/components/consumer/event-detail/BackButton.tsx:29` already uses `top-14` (56 px) + `background: var(--scrim)` + `h-9 w-9` — that's the exact `ScrimPill` atom from the handoff. Adding Save + Share as siblings is a small edit, not a new pattern.
+- ✅ **Token-only colors** across state pills, scrim, wordmark: `var(--accent)`, `var(--warning)`, `var(--success)`, `var(--signal)`, `var(--fg)`, `var(--fg-on-accent)`, `var(--fg-muted)`, `var(--fg-subtle)`, `var(--border)`, `var(--bg)`, `var(--bg-elevated, var(--bg))`. All present in `globals.css`.
+- ✅ **Riso Poster reads `identityFor().palette.ink` and `.bg` directly, then computes `paperRgb()` for the scrim gradient.** This bypasses theme tokens deliberately (per Phase 7.5: identity art palette is theme-independent). That's correct — but note eng will need to lift `identityFor` and `ia_isDark` out of the component and into a shared util if the poster renderer runs server-side. They're already exported from `IdentityArt.tsx`, so fine.
+- 🟡 **Theme scope limited to 3, but the app now has 9 themes.** README §4 names only `electric` / `jade` / `light`. Since the poster's paper scrim + fg/border swaps only affect the **bottom half** and identity art is theme-independent, this is likely fine in practice — but Design should confirm whether the 6 later themes (Pulse, Forge, Blue Note, Drip, Cedar, Gloss) need any per-theme paper-scrim tuning or if the token contract auto-adapts.
+- 🟡 **Customer-facing copy hardcoded in JSX.** `"I'm going"`, `"Sold out"`, `"Price drop"`, wordmark strings, taglines — all inline. Plan PR must externalize per `feedback_definitions_copy_rule`. Not a Design gap; standard convention violation carried by all handoffs.
+
+### ♿ Cross-cutting
+
+- 🟡 **No a11y annotations on the share sheet.** Bottom sheet has grabber, direction switcher, live preview, destinations row, mint-signature toggle — but no `role="dialog"`, no `aria-label`, no focus-trap notes, no screen-reader script. The Event Detail scrim-pill has `aria-label="Share"` (good), but everything downstream is unannotated. Compare to #782's `AnnotatedFailure` / `AnnotatedChallenge` composites — that's the bar Design set on more recent handoffs. Plan PR needs to fill this in during build.
+- 🟡 **Rendered image alt text unspecified.** `GET /share/:eventId/:ratio.png` returns a PNG — what does the `<img alt>` say when embedded in a post preview? Standard OG behavior lets the platform decide, but the event page's own `og:image` tag needs `og:image:alt`. Design call: full tagline + artist + venue vs. minimal `"{artist} at {venue}, {date}"`. Recommend the latter.
+- ✅ **Mobile-first.** Event Detail hero is 390 px wide (iPhone 14/15 Pro). ScrimPills at 36 × 36 px hit tap-target minimum. Bottom sheet slides from bottom edge in familiar iOS pattern. **Desktop parity, however, is unaddressed** — MockEventDetailHero has no desktop variant. That's OK if we treat share as a mobile-first affordance (most sharing happens on phones), but the desktop event detail page needs at least a placement decision. Per `feedback_mobile_desktop_parity`, this is a hard rule — plan PR must ship both surfaces. Design should confirm the desktop trigger placement (assumption: same top-right scrim-pill row, matches BackButton pattern on desktop layouts).
+- 🟡 **No analytics events spec'd.** Share sheet open/close, direction preview (moot with only Riso Poster), destination-picker click, actual share completion (per-destination). Owned by eng infra / plan PR.
+
+### ⏰ Drift from reality
+
+- ⏰ **Handoff is 7 weeks old and pre-dates the monetization vertical.** #781 (tier picker + entitlements matrix) locked 2026-06-24 and does NOT list shareable cards in any tier's feature bullets. The handoff assumes share is universally available — but that's a policy question the monetization vertical never got to answer. Diffed the tier features (`design/design_handoff_monetization/monetization-shared.jsx` §features arrays for Free / Supporter / Premium / Founder / Gifted): **zero share-related entitlements**. Silent drift. Not Design's fault (order of operations), but a decision is needed.
+- ⏰ **Fixture events are LA / NY / Brooklyn.** App is Denver-focused. Not a spec bug — fixtures — but eng should use Denver venues in the implementation storybook / preview environment for coherent brand voice.
+- ⏰ **README says `link` = 1200×630 (line 24) but code says 1200×628 (`SC_RATIOS.link.h`).** OG spec is technically flexible (Facebook/Meta recommends 1.91:1 aspect ratio, no strict pixel requirement), but if we're claiming a spec number, pick one. Recommend the code (628 = closer to the 1.91:1 float 627.9); update README.
+- 🟡 **Sound-effect drift on brand voice.** The `going` tagline (`"found this one on Concert Crawl. see you in the pit."`) is warm, Sour-Patch-adjacent. Sold-out and drop taglines are sharper (`"you snoozed. now you're refreshing stubhub at 2am like the rest of us."`, `"price dropped $9. so did my dignity, but that's unrelated."`). Both work as *user-composed* posts but neither is quite the Sour Patch voice #782 locked (honest + slight cheek, never blamey). "You snoozed" comes closest to blamey — Design should confirm whether these ship verbatim or whether Hugh gets a voice pass at build time. Not a blocker; just a voice-review checkpoint.
+
+### 📝 Decision log
+
+Two "Open questions" from the README + three implicit decisions surfaced during audit. **Two of these five block plan PR.**
+
+| # | Question | Blocking? | Recommendation (Design still owns final call) |
+|---|---|---|---|
+| 1 | Anonymous handle policy — drop the signature line vs. render `@anonymous`? | 🟢 no | README default (drop) is fine. `@anonymous` reads passive-aggressive; anonymous-sharer = no line. |
+| 2 | Short domain — `concertcrawl.app/e/...` vs. `cc.show/...`? | 🟢 no | Only matters if we add a CTA URL line, and we're not. Kick to launch phase. |
+| 3 | **Tier gate for share** — who can generate a share card? | 🔴 **YES** | Recommend Free (Watching is Free per #781 R6; sharing amplifies Watching virality). But this is Design/Hugh's call, not audit's. |
+| 4 | **Anonymous URL contract** — where does an OG-preview click *land*? Event page today is `(protected)/(main)`. | 🔴 **YES** | Recommend adding a `public: true` variant for the event detail route (or a `/e/:id` public route), with paywall/sign-in appearing on secondary actions (Watch, Get Tickets). Sharing is fundamentally about reaching non-users; landing them on `/sign-in` breaks the loop. |
+| 5 | Tagline source-of-truth — README says `POSTER_TAGLINES`, code says `event.snark`. | 🟡 handoff cleanup | Design should confirm the tagline bank shape — most likely `{ going, soldout, drop }` keyed by state, ultimately living in `definitions/copy.ts`. |
+
+## Deliberate exclusions (from handoff, unchanged)
+
+- Receipt direction, Stub direction (dropped, code paths still present — strip)
+- Watching-list composite card (entire concept dropped)
+- QR code overlay (removed as Tweak)
+- Mint serial overlay (`#0247/999`) (dropped)
+- Branded short link / `/e/<slug>` overlay on the card (wordmark-only)
+- #85 Concert passport + #99 Venue passport — separate launch-phase tickets
+
+## Decisions inherited (from adjacent locked matrices)
+
+- **Watching is Free** (#781 R6 amendment) — reinforces the recommendation to keep sharing on the Free tier if Watching drives share adoption.
+- **All 9 themes render token-only colors** — the paper-scrim math in `PosterCard` uses raw `identityFor().palette.bg` (theme-independent per Phase 7.5), so this constraint is naturally honored for the top half. Bottom-half scrim + fg/border reads from tokens, so 9-theme parity is likely automatic.
+- **Concert history requires explicit "I'm going" action** separate from watch record (per `project_concert_history_attending.md`) — the `state: "going"` on a share card should map to the user having explicitly marked attendance, not to their watch status. Small semantic distinction, but tag-line accuracy depends on it.
+- **Sour Patch voice on failure/paid touchpoints** (#782) — recommended as a light voice pass on the three shipped taglines during build.
+
+## Open observations (no addendum required)
+
+- The mock `MockEventDetailHero` at `share-trigger.jsx:72` is a faithful recreation of Event Detail v2 — small differences from shipped code (e.g., `Watching` chip states, `Going rate` price block). Eng should treat the *shipped* Event Detail as source-of-truth and add the third scrim-pill in-place, not rebuild from the mock.
+- The `WatchingComposite` component at `share-trigger.jsx:473` is thoroughly built for a concept the README explicitly drops. It's fine to leave as commented reference for #85 concert passport, but plan PR must not accidentally ship it.
+- The 2-pixel `link` height drift (README 630 vs. code 628) doesn't need Design attention; eng should just pick the code value and move on.
+
+## What Design needs to add (light addendum)
+
+Two blocking items (#3 and #4 above) plus the tagline-bank shape (#5). Recommend a **~30-min direct-write addendum** in the working tree that:
+
+1. States the tier gate for share generation (recommendation: Free).
+2. States the OG-preview landing UX (recommendation: public `/e/:id` mirror route or `public: true` variant of `/events/:id`; paywall on Watch/Get Tickets, not the page shell).
+3. Names the tagline constant + shape (recommendation: `POSTER_TAGLINES = { going, soldout, drop }` keyed by state, destined for `apps/web/src/components/consumer/definitions/copy.ts`).
+
+Non-blocking items (a11y annotations, desktop trigger placement, analytics events, alt text on rendered PNG) can be resolved during plan PR review — they're standard build-phase decisions and don't need a fresh Design round.
+
+## Next step
+
+**Design:** add the three-item addendum above (working-tree only per `feedback_handoff_iterate_before_commit` until this Yellow closes to Green).
+
+**Then:** plan PR opens at `docs/superpowers/plans/<date>-shareable-cards-implementation-plan.md`. First-round scope should carve out:
+
+- The tier-gate + public-event-route infra changes as a **prerequisite PR** (or a PR-0 in the plan).
+- Card renderer + mint contract + Chromium PNG pipeline as PR-1.
+- Event Detail hero third scrim-pill + share sheet + destinations wiring as PR-2.
+- OG meta on the event page + rendered-image alt text + a11y annotations as PR-3.
+
+This verdict follows `docs/superpowers/design-pipeline.md` — Track 1 pre-existing-handoff audit gate.
