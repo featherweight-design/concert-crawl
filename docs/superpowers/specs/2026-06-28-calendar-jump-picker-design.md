@@ -11,7 +11,7 @@
 
 A beta-feedback user (friend, 2026-06-17) flagged that the calendar surface's only navigation affordance is the prev/next-week chevrons. Reaching a specific future weekend — "that festival weekend in August" — costs 8+ clicks. This brief locks the decisions for adding a jump picker to the calendar surface that lets users reach any target date in one action.
 
-This is a **calendar-surface-only** addition. FilterBar's existing date controls (`selectedDate`, `from`) stay as-is. If a "shared date picker pattern across the app" need surfaces later, it's a separate ticket.
+This is a **calendar-surface-only** addition. FilterBar's own date control (`filterWhen`) stays as-is; the calendar view's own `selectedDate` param is what the picker writes to. If a shared date-picker pattern across the app becomes worth pursuing later, that's a separate ticket.
 
 ## App context
 
