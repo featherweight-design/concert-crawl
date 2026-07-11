@@ -27,9 +27,10 @@ Design brief has landed AND the visual handoff / brief is signed off. Awaiting a
 
 | # / vertical | Design brief | Handoff | Verdict | Build unblocked? | Notes |
 |---|---|---|---|---|---|
-| **Monetization vertical** (#780, #781, #782, #783) — tier picker, lifecycle, failure states + a11y + microcopy, email touchpoints | PRs #817, #813, #823, #846 | 4 handoffs (`design_handoff_monetization_*/`) | 4 × 🟢 Green | ⚠️ Gated on **#775 eng infra spec** + **#849 Resend ownership resolution** | Execution plan PR #854 lays out 8 phases / 19 PRs + Founder build-ahead trick |
-| **#642** Calendar month/week jump picker | PR #862 | (Direct brief; no handoff cycle needed — awaiting Claude Design when Hugh briefs) | 🟢 brief-locked | ✅ Ready | Small addition to WeekStrip; picker shape locked |
-| **#752** Price-source dispute-affordance hiding rule | PR #865 (doc addendum) | Already shipped in PR #788 (Consumer UI) | ✅ Shipped | n/a | Feature was already built; PR #865 documents the rule in the handoff README |
+| **Monetization vertical** (#780, #781, #782, #783) — tier picker, lifecycle, failure states + a11y + microcopy, email touchpoints | PRs #817, #813, #823, #846 | 4 handoffs (`design_handoff_monetization_*/`) | 4 × 🟢 Green | **No** — gated on **#775 eng infra spec** + **#849 Resend ownership resolution** | Execution plan PR #854 lays out 8 phases / 19 PRs + Founder build-ahead trick |
+| **#642** Calendar month/week jump picker | PR #862 | (Direct brief; no handoff cycle needed — awaiting Claude Design when Hugh briefs) | 🟢 brief-locked | **Yes** | Small addition to WeekStrip; picker shape locked |
+
+**Note:** #752 (price-source dispute-affordance rule) is a shipped feature — it lives in the "✅ Recently shipped" table below, not here. Only 🟢 (design ready, build not started) entries belong in this table.
 
 **Track 1 handoffs awaiting Readiness Review** (audit in flight, not yet in 🟢 above):
 
