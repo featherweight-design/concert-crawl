@@ -14,7 +14,7 @@ The handoff is **design-complete and internally coherent.** Three surfaces (Goin
 
 **Why Yellow, not Green:** three cross-cutting concerns need Hugh's explicit call before a plan PR can open — none of them are Design's fault, all of them are load-bearing for the build.
 
-1. **📦 Data-contract sequencing.** The handoff assumes `goingMarkedAt: string | null` as a per-row timestamp. Today's `user_events.status` enum is `['going', 'interested', 'watching']` — a single mutually-exclusive status field with no timestamp for the going commitment specifically. The plan PR needs to pick: (a) add an `attending_at` timestamp column and let `status` drive both watching + going through separate rows, or (b) split into `user_event_attendance` per the memory. Either is fine; Design doesn't get to decide, but the plan can't proceed without a decision.
+1. **📦 Data-contract sequencing.** The handoff assumes `goingMarkedAt: string | null` as a per-row timestamp. Today's `user_events.status` enum is `['going', 'interested', 'watching']` — a single mutually-exclusive status field with no timestamp for the going commitment specifically. Also, the current `userEventUniqueIdx` enforces one row per `(userId, eventId)`, so "watching + going" cannot be two separate rows. The plan PR needs to pick: (a) add an `attending_at` timestamp column to the existing single row and derive `going` from `attending_at != null` (keeps the unique index; the `status` enum can stay watching-focused), or (b) split into a new `user_event_attendance` table with its own `(user_id, event_id)` — decoupling the concerns entirely. Either is fine; Design doesn't get to decide, but the plan can't proceed without a decision.
 2. **💳 Supporter tier doesn't exist yet.** `subscription_tier` enum is `['free', 'premium']` — no `supporter`, no `founder`. The whole locked/paywall path in the handoff assumes Supporter as the gate. The monetization vertical brief locks Supporter at $2/mo and Concert History as the marquee Supporter perk. Concert History cannot ship until the monetization DB migration lands. This is a **sequencing hard-block**, not a Design change.
 3. **🎫 Passport card scope boundary.** The handoff draws `<PassportCard>` in full detail (compact 320×500 + share 1080×1080). A separate `design_handoff_shareable_cards/` folder exists. Design + eng need to confirm whether Passport is (a) owned by *this* build (History's stretch surface, ships with it) or (b) owned by shareable-cards (History gets a `<PassportTeaser>` link only, full card ships later). The handoff hedges — Passport is labeled "Stretch" but drawn to full fidelity.
 
@@ -50,7 +50,7 @@ Design's shape is right. Every open item in "Open questions for eng" is thoughtf
   export const userEventStatusEnum = pgEnum('user_event_status', [
     'going', 'interested', 'watching',
   ])
-  // status: userEventStatusEnum('status').notNull(),  // single mutually-exclusive value per (userId, eventId)
+  status: userEventStatusEnum('status').notNull(),  // single mutually-exclusive value per (userId, eventId) via userEventUniqueIdx
   ```
   The handoff's model is orthogonal (a user can be both watching AND going for the same show, at different times). Today's schema forces one status per row via `userEventUniqueIdx: uniqueIndex('user_events_user_event_idx').on(table.userId, table.eventId)`. Plan PR must land a migration that either:
   - **(a)** adds `attending_at timestamptz nullable` to `user_events` and keeps `watching` as `status`, with going as a `attending_at != null` predicate, OR
@@ -94,7 +94,7 @@ Design's shape is right. Every open item in "Open questions for eng" is thoughtf
 - ✅ **Monetization locked matrix honored** on the Supporter tier — Concert History + Calendar export are correctly named as Supporter-tier features (matches persona §Locked decisions Watching-is-Free amendment where Attending / History / Alerts = paid tier).
 - 🟡 **Tier vocabulary mismatch in `<HistoryLocked>` PerkRow list** — the locked card lists three perks (Concert history / Calendar export / Passport card). The monetization locked matrix has Supporter as concert history + calendar export; Passport card is Premium-ish territory (shareable summary sits alongside "Watchparty invites" and other social features). Ask: does the Supporter tier include Passport share, or does Passport belong to Premium? Track 1 audit flag; a Hugh call.
 - ✅ Voice: Sour Patch anchors preserved — "Nothing's behind you yet." (empty), "Keep the nights." (locked headline), "Still going? In 4 days." (nudge), "You went · Oct 14, 2026" (past-yes), "Didn't make it" (past-no). No slang, no whining, honest.
-- ✅ **Calendar-export mechanism reference** — README §Open Q2 defers `.ics` feed vs. point-in-time download to eng. Sensible; both need infra (subscribeable feed URL vs. one-shot generate). Plan PR must pick one for v1.
+- ✅ **Calendar-export mechanism reference** — README §Open Q2 defers `.ics` feed vs. point-in-time download to eng. Sensible; both need infra (subscribable feed URL vs. one-shot generate). Plan PR must pick one for v1.
 - ✅ Retroactive "I went actually" affordance is drawn as `<GoingPostShowState>` but explicitly deferred to a settings micro-action. Doesn't leak into v1 primary surfaces.
 
 ### 📝 Decision log
