@@ -1,3 +1,17 @@
+# [1.97.0](https://github.com/HartiganHM/concert-crawl/compare/v1.96.0...v1.97.0) (2026-07-11)
+
+
+### Bug Fixes
+
+* **web:** address Copilot r1 on [#892](https://github.com/HartiganHM/concert-crawl/issues/892) — post-trial time gate, stale portal error, disabled cursor ([ea0285f](https://github.com/HartiganHM/concert-crawl/commit/ea0285f1618a58bc2edecdefce35e9071f289a44))
+* **web:** r3 — validate portal URL is absolute https before window.location.assign ([0fb15eb](https://github.com/HartiganHM/concert-crawl/commit/0fb15eb893e50095d4b43389b29336941f0fae78))
+* **web:** r4 — tier-neutral post-cancel copy, standardize @/lib/billing import ([819ab2d](https://github.com/HartiganHM/concert-crawl/commit/819ab2d56d66a39f08d8f6af887f556e7b06ba4c))
+
+
+### Features
+
+* **web:** settings plan page — lifecycle card, manage CTA, past-due variant (PR 3.4) ([b0c839c](https://github.com/HartiganHM/concert-crawl/commit/b0c839c4eb23ce01fed798032d56107d3c7e07bf))
+
 # [1.96.0](https://github.com/HartiganHM/concert-crawl/compare/v1.95.0...v1.96.0) (2026-07-11)
 
 
