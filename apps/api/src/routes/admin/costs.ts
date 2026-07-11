@@ -62,8 +62,11 @@ const roundUsd = (value: number): number => Math.round(value * 100) / 100
 // invokes drizzle's `sql` tag — several route test suites mock 'drizzle-orm'
 // with only the operators they use, and a module-level fragment would throw
 // at import time in those suites.
+// MT_TIME_ZONE is inlined as a literal (not a bind parameter) because the
+// fragment appears in both SELECT and GROUP BY — separate bind params would
+// break Postgres's structural GROUP BY expression matching.
 const mtDayBucket = () =>
-  sql`(${crawlRuns.createdAt} AT TIME ZONE 'America/Denver')::date`
+  sql`(${crawlRuns.createdAt} AT TIME ZONE ${sql.raw(`'${MT_TIME_ZONE}'`)})::date`
 
 export const costsAdminRouter = new Hono<AdminVariables>()
 

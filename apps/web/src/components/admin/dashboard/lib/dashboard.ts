@@ -20,11 +20,13 @@ export function computeWowTrend(days: DailyCost[]): CostTrend | undefined {
   const recent = sumWindow(days.slice(-7))
   const prior = sumWindow(days.slice(-14, -7))
   if (prior <= 0) return undefined
+  // dir/good derive from the rounded delta so the badge tone always matches
+  // the displayed percentage (a +0.4% true change displays as 0% and is good).
   const pctChange = Math.round(((recent - prior) / prior) * 100)
   return {
-    dir: recent > prior ? 'up' : 'down',
+    dir: pctChange > 0 ? 'up' : 'down',
     text: `${pctChange > 0 ? '+' : ''}${pctChange}%`,
-    good: recent <= prior,
+    good: pctChange <= 0,
   }
 }
 

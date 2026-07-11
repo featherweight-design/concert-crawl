@@ -77,14 +77,16 @@ async function fetchDashboardData(token: string) {
     apiClient
       .get<AdminDailyCosts>('/v1/admin/costs/daily?days=30', token)
       .catch((err: unknown) => {
-        console.error('Failed to load daily LLM costs', err)
-        return { days: [], totalUsd: 0 }
+        throw new Error(
+          `Failed to load daily LLM costs: ${err instanceof Error ? err.message : String(err)}`,
+        )
       }),
     apiClient
       .get<AdminTopSpend>('/v1/admin/costs/top-venues?days=30', token)
       .catch((err: unknown) => {
-        console.error('Failed to load top LLM spend venues', err)
-        return { venues: [], totalUsd: 0 }
+        throw new Error(
+          `Failed to load top LLM spend venues: ${err instanceof Error ? err.message : String(err)}`,
+        )
       }),
   ])
   return {
