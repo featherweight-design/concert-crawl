@@ -464,10 +464,11 @@ export function EventDetailPriceBlock({
   // as optimistic PendingSubItems.
   const applySubmissionResults = useCallback(
     (results: SubmitPriceResult[]) => {
-      for (const result of results) {
-        if (result.isEdit) {
-          setLocalSubmissions((prev) =>
-            prev.map((sub) =>
+      setLocalSubmissions((prev) => {
+        let next = prev
+        for (const result of results) {
+          if (result.isEdit) {
+            next = next.map((sub) =>
               sub.id === result.id
                 ? {
                     ...sub,
@@ -478,32 +479,33 @@ export function EventDetailPriceBlock({
                     howFound: result.howFound,
                   }
                 : sub,
-            ),
-          )
-        } else {
-          setLocalSubmissions((prev) => [
-            ...prev,
-            {
-              id: result.id,
-              priceMin: result.priceMin,
-              priceMax: result.priceMax,
-              tier: result.tier,
-              vendor: result.vendor,
-              howFound: result.howFound,
-              sourceCategory: result.sourceCategory,
-              note: null,
-              submitterHandle: null,
-              submittedAt: new Date().toISOString(),
-              confirmsCount: 0,
-              // Use the shared helper so the local-submission optimistic row
-              // picks up the UTC-midnight-correct imminent-policy denominator
-              // (#835 Copilot R5).
-              confirmsNeeded: corroborationConfirmsRequired(event.date),
-              isSubmitter: true,
-            },
-          ])
+            )
+          } else {
+            next = [
+              ...next,
+              {
+                id: result.id,
+                priceMin: result.priceMin,
+                priceMax: result.priceMax,
+                tier: result.tier,
+                vendor: result.vendor,
+                howFound: result.howFound,
+                sourceCategory: result.sourceCategory,
+                note: null,
+                submitterHandle: null,
+                submittedAt: new Date().toISOString(),
+                confirmsCount: 0,
+                // Use the shared helper so the local-submission optimistic row
+                // picks up the UTC-midnight-correct imminent-policy denominator
+                // (#835 Copilot R5).
+                confirmsNeeded: corroborationConfirmsRequired(event.date),
+                isSubmitter: true,
+              },
+            ]
+          }
         }
-      }
+        return next
+      })
     },
     [event.date],
   )
