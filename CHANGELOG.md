@@ -1,3 +1,18 @@
+# [1.91.0](https://github.com/HartiganHM/concert-crawl/compare/v1.90.0...v1.91.0) (2026-07-11)
+
+
+### Bug Fixes
+
+* **api:** r1 — closesAt boundary, singleton claim constraint, multi-price loud fail ([288fd2a](https://github.com/HartiganHM/concert-crawl/commit/288fd2a809f377e24d321c2586c3b2515529ab6d))
+* **api:** r2 — per-user pending-claim 409, no restore post-create, multi-price guard at checkout ([f66f116](https://github.com/HartiganHM/concert-crawl/commit/f66f116a0e25a711ca949e1816193beb238f14f7))
+* **api:** r3 — runtime string check on client_secret, maxNetworkRetries for safe Stripe retries ([6e35ba0](https://github.com/HartiganHM/concert-crawl/commit/6e35ba0b0ab1bc291c810c45a56129cdfb42acfe))
+* **api:** r4 — merge duplicate drizzle-orm imports in billing integration test ([75a0c22](https://github.com/HartiganHM/concert-crawl/commit/75a0c223eb1ae2b021628bd56f75e6ae614e815f))
+
+
+### Features
+
+* **api:** add Stripe checkout-session + founder atomic claim (PR 2.2) ([cbdc993](https://github.com/HartiganHM/concert-crawl/commit/cbdc9934e617c76ba018b95e5c282a57021085dc))
+
 # [1.90.0](https://github.com/HartiganHM/concert-crawl/compare/v1.89.0...v1.90.0) (2026-07-11)
 
 
