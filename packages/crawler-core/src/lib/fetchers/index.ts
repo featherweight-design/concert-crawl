@@ -9,9 +9,10 @@
 // described. See aeg.ts for details.)
 
 import type { Venue } from '@concert-crawl/db'
+import type { VenuePlatform } from '@concert-crawl/types'
 import type { NormalizedEvent } from '../../types.js'
 
-export type VenuePlatform = 'aeg'
+export type { VenuePlatform } from '@concert-crawl/types'
 
 export interface PlatformFetchResult {
   events: NormalizedEvent[]
