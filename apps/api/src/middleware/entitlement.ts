@@ -17,15 +17,10 @@ export interface EntitlementVariables {
 
 // Shape of the custom claims added by our Clerk JWT template:
 //   { "metadata": "{{user.public_metadata}}" }
-// (same boundary contract as middleware/role.ts). loadPlanState re-validates
-// the payload; this parse only needs to safely extract the object.
+// Only extracts the metadata claim — loadPlanState owns validating its
+// contents, so duplicating its field schema here would just drift.
 const claimsSchema = z.object({
-  metadata: z
-    .object({
-      role: z.string().optional(),
-      plan: z.string().optional(),
-    })
-    .optional(),
+  metadata: z.unknown(),
 })
 
 // requireFeature — server-side entitlement gate for paid features.
@@ -43,8 +38,10 @@ export function requireFeature(
       return ctx.json({ success: false, error: 'Unauthorized' }, 401)
     }
 
+    // Pass the raw claim through — loadPlanState accepts unknown and
+    // handles missing/invalid metadata at its own boundary.
     const claims = claimsSchema.safeParse(auth.sessionClaims)
-    const metadata = claims.success ? (claims.data.metadata ?? {}) : {}
+    const metadata = claims.success ? claims.data.metadata : undefined
 
     const planState = await loadPlanState(auth.userId, metadata)
 

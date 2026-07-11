@@ -6,7 +6,7 @@ const { authState, planStateRef } = vi.hoisted(() => ({
   authState: {
     current: null as {
       userId: string
-      sessionClaims: { metadata?: { role?: string } }
+      sessionClaims: { metadata?: unknown }
     } | null,
   },
   planStateRef: { current: null as PlanState | null },
@@ -168,5 +168,30 @@ describe('requireFeature', () => {
     expect(loadPlanStateMock).toHaveBeenCalledWith('user_test123', {
       role: 'beta',
     })
+  })
+
+  it('passes non-conforming metadata through untouched — loadPlanState owns validation', async () => {
+    authState.current = {
+      userId: 'user_test123',
+      sessionClaims: {
+        metadata: { role: 'beta', plan: 'legacy', futureKey: 42 },
+      },
+    }
+    setPlan({ plan: 'free', roleComped: true })
+    const app = buildApp('concert-history')
+    await app.request('/probe')
+    expect(loadPlanStateMock).toHaveBeenCalledWith('user_test123', {
+      role: 'beta',
+      plan: 'legacy',
+      futureKey: 42,
+    })
+  })
+
+  it('passes undefined metadata when the claim is absent', async () => {
+    authState.current = { userId: 'user_test123', sessionClaims: {} }
+    setPlan({ plan: 'free', roleComped: true })
+    const app = buildApp('concert-history')
+    await app.request('/probe')
+    expect(loadPlanStateMock).toHaveBeenCalledWith('user_test123', undefined)
   })
 })
