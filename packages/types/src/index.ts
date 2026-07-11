@@ -735,6 +735,7 @@ export interface FounderWindowView {
 export interface CheckoutSessionResponse {
   clientSecret: string
   subscriptionId: string
+  founderSeatNumber: number | null // null for non-founder tiers
 }
 
 // User-facing role — separate from auth Role (admin/sub_admin/user)
@@ -757,6 +758,12 @@ export interface UserProfileResponse {
   joined: string // formatted "Apr 2026"
   submissionCount: number
   cred: number // lifetime cumulative confirmed-submission count
+  // Lifecycle nudge flags + founder window snapshot — evaluated
+  // server-side (eng infra spec Part 2 §6).
+  showTrialEndedTakeover: boolean
+  showDayThirteenBanner: boolean
+  showPastDueBanner: boolean
+  founderWindow: FounderWindowView
 }
 
 // Single submission row as returned by GET /v1/users/me/submissions

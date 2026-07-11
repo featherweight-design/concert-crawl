@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import {
   db,
+  founderWindow,
   userProfiles,
   userRoles,
   priceSubmissions,
@@ -15,6 +16,7 @@ import {
 import { createClerkClient } from '@clerk/backend'
 import type {
   DisplayRole,
+  FounderWindowView,
   RoleBadge,
   SubmissionDisplayStatus,
   UserProfileResponse,
@@ -23,7 +25,9 @@ import type {
   Tier,
 } from '@concert-crawl/types'
 import { apiLogger } from '../lib/logger.js'
-import { loadPlanState } from '../lib/plan.js'
+import { evaluateNudgeFlags } from '../lib/nudges.js'
+import { loadPlanContext } from '../lib/plan.js'
+import { resolveFounderWindowView } from './billing-founder-window.js'
 
 export const usersRouter = new Hono()
 
@@ -81,6 +85,36 @@ function formatJoined(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
 }
 
+// Optional narrowing input for the past-due banner predicate — invalid or
+// missing values fall back to null rather than 400.
+const sessionStartedAtSchema = z.string().datetime({ offset: true })
+
+// The profile surface must not 500 over a billing read — a missing
+// founder_window singleton falls back to the pre-launch view.
+const FOUNDER_WINDOW_FALLBACK: FounderWindowView = {
+  state: 'pre-launch',
+  seatsTotal: 100,
+  closesAt: null,
+}
+
+async function loadFounderWindowView(now: Date): Promise<FounderWindowView> {
+  try {
+    const [windowRow] = await db
+      .select()
+      .from(founderWindow)
+      .where(eq(founderWindow.id, 1))
+      .limit(1)
+    if (!windowRow) {
+      apiLogger.error({}, 'users/me: founder_window singleton row missing')
+      return FOUNDER_WINDOW_FALLBACK
+    }
+    return resolveFounderWindowView(windowRow, now)
+  } catch (err) {
+    apiLogger.error({ err }, 'users/me: founder_window read failed')
+    return FOUNDER_WINDOW_FALLBACK
+  }
+}
+
 // GET /v1/users/me
 usersRouter.get('/me', async (ctx) => {
   const auth = getAuth(ctx)
@@ -95,7 +129,33 @@ usersRouter.get('/me', async (ctx) => {
     .where(eq(userProfiles.userId, auth.userId))
     .limit(1)
 
-  const planState = await loadPlanState(auth.userId, clerkUser.publicMetadata)
+  const planContext = await loadPlanContext(
+    auth.userId,
+    clerkUser.publicMetadata,
+  )
+  const { planState } = planContext
+
+  const parsedSessionStartedAt = sessionStartedAtSchema.safeParse(
+    ctx.req.query('sessionStartedAt'),
+  )
+  const sessionStartedAt = parsedSessionStartedAt.success
+    ? new Date(parsedSessionStartedAt.data)
+    : null
+
+  const now = new Date()
+  const nudgeFlags = evaluateNudgeFlags({
+    trialEndsAt: planContext.trialEndsAt,
+    lastTrialEndedShownAt: planContext.nudgeTimestamps.lastTrialEndedShownAt,
+    dayThirteenBannerDismissedAt:
+      planContext.nudgeTimestamps.dayThirteenBannerDismissedAt,
+    pastDueBannerDismissedAt:
+      planContext.nudgeTimestamps.pastDueBannerDismissedAt,
+    subscriptionStatus: planState.status,
+    sessionStartedAt,
+    now,
+  })
+
+  const founderWindowView = await loadFounderWindowView(now)
 
   const [submissionCountRow] = await db
     .select({ value: count() })
@@ -139,6 +199,10 @@ usersRouter.get('/me', async (ctx) => {
     ),
     submissionCount: submissionCountRow?.value ?? 0,
     cred: credRow?.priceCredScore ?? 0,
+    showTrialEndedTakeover: nudgeFlags.showTrialEndedTakeover,
+    showDayThirteenBanner: nudgeFlags.showDayThirteenBanner,
+    showPastDueBanner: nudgeFlags.showPastDueBanner,
+    founderWindow: founderWindowView,
   }
 
   return ctx.json({ success: true, data: response })

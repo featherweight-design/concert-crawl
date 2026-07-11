@@ -6,8 +6,16 @@ import type {
 import type { ThemeName } from '@/theme/themes'
 import { apiClient } from './api'
 
-export async function fetchMe(token: string): Promise<UserProfileResponse> {
-  return apiClient.get<UserProfileResponse>('/v1/users/me', token)
+export async function fetchMe(
+  token: string,
+  // ISO timestamp for the browser-session marker (spec Decision 9) — the
+  // API uses it to evaluate the per-session lifecycle nudge flags.
+  sessionStartedAt?: string,
+): Promise<UserProfileResponse> {
+  const query = sessionStartedAt
+    ? `?sessionStartedAt=${encodeURIComponent(sessionStartedAt)}`
+    : ''
+  return apiClient.get<UserProfileResponse>(`/v1/users/me${query}`, token)
 }
 
 export async function patchMe(

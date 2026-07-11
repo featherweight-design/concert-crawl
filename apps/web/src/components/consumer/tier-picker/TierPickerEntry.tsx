@@ -10,6 +10,7 @@ import { useState } from 'react'
 import type { PlanState } from '@concert-crawl/types'
 import { TIER_PICKER_COPY } from './definitions/copy'
 import { TierPickerSheet } from './TierPickerSheet'
+import { usePlanOpenParam } from './lib/use-plan-open-param'
 
 export const TierPickerEntry = ({
   planState,
@@ -19,6 +20,10 @@ export const TierPickerEntry = ({
   scaRegion: boolean
 }) => {
   const [open, setOpen] = useState(false)
+
+  // Lifecycle nudge CTAs land on /me?plan=open (PR 4.2) — auto-open the
+  // picker, then strip the param.
+  usePlanOpenParam(() => setOpen(true))
 
   return (
     <>

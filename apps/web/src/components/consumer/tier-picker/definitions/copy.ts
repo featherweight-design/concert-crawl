@@ -162,6 +162,22 @@ export const TIER_PICKER_COPY = {
     compare: 'Compare plans →',
     ariaLabel: 'Tier picker',
   },
+  // Founder post-claim seat reveal (#781 §3.3, design table Table 2).
+  founderClaim: {
+    eyebrow: 'Founder · claimed',
+    seatCode: (seat: number, total: number) => `${seat}/${total}`,
+    seatLabel: 'Your seat',
+    seatNumber: (seat: number) => `#${seat}`,
+    seatTotal: (total: number) => `of ${total}`,
+    headline: 'Founder. Locked in.',
+    body: "You got in before the rest. $3 a month for as long as you're here — even when everyone else is paying double.",
+    priceStamp: '$3',
+    priceStampUnit: '/mo',
+    priceStampEyebrow: 'Locked forever',
+    cta: 'Take me in.',
+    footerHint: 'Routing you to Settings · Plan',
+    ariaLabel: 'Founder seat claimed',
+  },
   errors: {
     portal: "Couldn't open subscription management. Try again in a moment.",
   },

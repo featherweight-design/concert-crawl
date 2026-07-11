@@ -63,3 +63,18 @@ export const TIER_DEFINITIONS: Record<TierKey, TierDefinition> = {
     pricePromise: TIER_PICKER_COPY.card.pricePromise.founder,
   },
 }
+
+// URL affordance for auto-opening the tier picker on the Settings · Plan
+// surface (`/me?plan=open`) — used by the lifecycle takeover / day-13
+// banner routing (PR 4.2) and stripped after firing.
+export const PLAN_OPEN_PARAM = 'plan'
+export const PLAN_OPEN_VALUE = 'open'
+export const PLAN_SETTINGS_ROUTE = `/me?${PLAN_OPEN_PARAM}=${PLAN_OPEN_VALUE}`
+
+// Full-bleed takeover surfaces sit above all app chrome: app bar/bottom
+// nav z-40, feature-drop pill z-80, ModalShell scrim/dialog 90/100.
+export const FULL_BLEED_TAKEOVER_Z_INDEX = 110
+
+// Founder seat count fallback when the founder-window payload is
+// unavailable at claim time (eng infra spec Part 2 §1.4 default).
+export const FOUNDER_SEATS_TOTAL_FALLBACK = 100

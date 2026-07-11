@@ -1,6 +1,7 @@
 import { FeedbackEdgeTabGate } from '@/components/consumer/feedback'
 import { OnboardingThemeFlush } from '@/components/auth/OnboardingThemeFlush'
 import { FeatureDropPillGate } from '@/components/consumer/release-notes/FeatureDropPillGate'
+import { LifecycleNudgesGate } from '@/components/consumer/lifecycle-nudges'
 
 interface ProtectedLayoutProps {
   children: React.ReactNode
@@ -16,6 +17,7 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
       <FeedbackEdgeTabGate />
       <FeatureDropPillGate />
       <OnboardingThemeFlush />
+      <LifecycleNudgesGate />
     </>
   )
 }

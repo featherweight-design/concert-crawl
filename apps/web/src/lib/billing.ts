@@ -28,6 +28,23 @@ export async function abandonCheckout(
   })
 }
 
+export type DismissableNudge = 'day13' | 'past-due'
+
+export async function dismissNudge(
+  token: string,
+  nudge: DismissableNudge,
+): Promise<void> {
+  await apiClient.post<void>('/v1/billing/nudges/dismiss', token, { nudge })
+}
+
+export async function markTrialTakeoverShown(token: string): Promise<void> {
+  await apiClient.post<void>(
+    '/v1/billing/nudges/trial-takeover-shown',
+    token,
+    {},
+  )
+}
+
 export async function createPortalSession(
   token: string,
 ): Promise<{ url: string }> {

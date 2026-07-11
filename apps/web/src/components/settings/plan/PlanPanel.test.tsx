@@ -40,6 +40,13 @@ vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: mockGetToken }),
 }))
 
+// PlanPanel now runs usePlanOpenParam (PR 4.2) which needs the app router.
+const mockReplace = vi.fn()
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: mockReplace }),
+  usePathname: () => '/me',
+}))
+
 const mockCreatePortalSession = vi.fn()
 // Mocked at the network boundary only — the real shared
 // navigateToPortalSession (lib/portal-navigation) runs end-to-end.
@@ -106,6 +113,14 @@ describe('PlanPanel — free upgrade path', () => {
         name: PLAN_CARD_COPY.activePremium.manageCta,
       }),
     ).toBeNull()
+  })
+
+  it('?plan=open auto-opens the picker and strips the param (PR 4.2)', () => {
+    window.history.replaceState(null, '', '/me?plan=open')
+    render(<PlanPanel planState={state()} scaRegion />)
+    expect(pickerOpenState()).toBe('true')
+    expect(mockReplace).toHaveBeenCalledWith('/me', { scroll: false })
+    window.history.replaceState(null, '', '/')
   })
 
   it('the compare-plans entry opens the tier picker for every state', () => {

@@ -26,6 +26,21 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.8.2-beta',
+    date: 'Jul 11, 2026',
+    headline: 'Trials end. We’ll say so — once — and get out of the way.',
+    items: [
+      {
+        kind: 'added',
+        text: 'Day-13 heads-up — a thin banner on your last trial day, in case you want to lock Premium in before it lapses. One tap dismisses it for good.',
+      },
+      {
+        kind: 'added',
+        text: 'When the trial wraps, your next visit gets a single pick-a-lane screen with the full plan lineup. Choose one or keep browsing on Free — we won’t show it twice.',
+      },
+    ],
+  },
+  {
     version: 'v0.8.1-beta',
     date: 'Jul 11, 2026',
     headline: 'Settings finally tells you what plan you’re on. In detail.',

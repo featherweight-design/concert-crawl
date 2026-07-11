@@ -9,6 +9,7 @@ import { useState } from 'react'
 import type { PlanState } from '@concert-crawl/types'
 import { TierPickerSheet } from '@/components/consumer/tier-picker'
 import { TIER_PICKER_COPY } from '@/components/consumer/tier-picker/definitions/copy'
+import { usePlanOpenParam } from '@/components/consumer/tier-picker/lib/use-plan-open-param'
 import { PlanCard } from './PlanCard'
 import { resolvePlanCard } from './lib/resolve-plan-card'
 import { usePortalNavigation } from './lib/use-portal-navigation'
@@ -25,6 +26,12 @@ export const PlanPanel = ({
   const { openPortal, portalPending, portalError, clearPortalError } =
     usePortalNavigation()
   const content = resolvePlanCard(planState)
+
+  // Lifecycle nudge CTAs land on /me?plan=open (PR 4.2) — auto-open the
+  // picker, then strip the param. Both PlanPanel mounts (mobile + desktop
+  // trees) run this; the hidden tree's fixed sheet is display:none'd by
+  // its CSS-hidden ancestor, so only the visible one paints.
+  usePlanOpenParam(() => setPickerOpen(true))
 
   const dispatchCta = (cta: PlanCardCta) => {
     if (cta.action === 'portal') {

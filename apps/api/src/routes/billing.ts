@@ -382,7 +382,11 @@ export const createBillingRouter = (
 
       return ctx.json({
         success: true,
-        data: { clientSecret, subscriptionId: createdSubscription.id },
+        data: {
+          clientSecret,
+          subscriptionId: createdSubscription.id,
+          founderSeatNumber,
+        },
       })
     } catch (err) {
       apiLogger.error(

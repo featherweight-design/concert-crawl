@@ -16,6 +16,7 @@ import { searchRouter } from './search.js'
 import { createBillingRouter } from './billing.js'
 import { createBillingManageRouter } from './billing-manage.js'
 import { createFounderWindowRouter } from './billing-founder-window.js'
+import { createBillingNudgesRouter } from './billing-nudges.js'
 import { createStripeWebhooksRouter } from './stripe-webhooks.js'
 import { getStripeClient } from '../lib/stripe.js'
 
@@ -41,4 +42,5 @@ export function registerRoutes(app: Hono) {
   app.route('/v1/billing', createBillingRouter(getStripeClient))
   app.route('/v1/billing', createBillingManageRouter(getStripeClient))
   app.route('/v1/billing', createFounderWindowRouter())
+  app.route('/v1/billing', createBillingNudgesRouter())
 }

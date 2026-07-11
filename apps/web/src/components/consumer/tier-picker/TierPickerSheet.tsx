@@ -25,6 +25,7 @@ import { TierCardDesktop } from './TierCardDesktop'
 import { TierRowMobile } from './TierRowMobile'
 import { GiftedThankYou } from './GiftedThankYou'
 import { CheckoutPanel } from './CheckoutPanel'
+import { FounderClaimTakeover } from './FounderClaimTakeover'
 import type { PickerState, TierCta, TierKey } from './definitions/types'
 
 const HEADER_COPY = TIER_PICKER_COPY.header
@@ -42,6 +43,14 @@ interface CheckoutContext {
   tierKey: Exclude<TierKey, 'free'>
   clientSecret: string
   subscriptionId: string
+  // Seat reserved by the incomplete founder subscription (null for
+  // non-founder tiers) — drives the post-claim reveal (#781 §3.3).
+  founderSeatNumber: number | null
+}
+
+interface FounderClaim {
+  seatNumber: number
+  seatsTotal: number
 }
 
 const pickerStateFrom = (planState: PlanState): PickerState =>
@@ -254,6 +263,7 @@ export const TierPickerSheet = ({
               tierKey,
               clientSecret: session.clientSecret,
               subscriptionId: session.subscriptionId,
+              founderSeatNumber: session.founderSeatNumber,
             })
           } catch (err) {
             console.error('tier-picker: checkout-session failed', err)
@@ -268,10 +278,30 @@ export const TierPickerSheet = ({
     [getToken, router, abandonSubscription],
   )
 
+  // Founder post-claim seat reveal (#781 §3.3) — replaces the sheet after
+  // a successful founder checkout instead of closing straight away.
+  const [claim, setClaim] = useState<FounderClaim | null>(null)
+
   const completeCheckout = useCallback(() => {
+    if (checkout?.tierKey === 'founder' && checkout.founderSeatNumber !== null)
+      setClaim({
+        seatNumber: checkout.founderSeatNumber,
+        seatsTotal: windowView.seatsTotal,
+      })
     setCheckout(null)
+    if (
+      checkout?.tierKey !== 'founder' ||
+      checkout.founderSeatNumber === null
+    ) {
+      onClose()
+      // Webhooks drive PlanState; a refresh picks up the new plan.
+      router.refresh()
+    }
+  }, [checkout, windowView.seatsTotal, onClose, router])
+
+  const finishClaim = useCallback(() => {
+    setClaim(null)
     onClose()
-    // Webhooks drive PlanState; a refresh picks up the new plan.
     router.refresh()
   }, [onClose, router])
 
@@ -286,6 +316,16 @@ export const TierPickerSheet = ({
     ? TIER_PICKER_COPY.gifted.code
     : HEADER_COPY.tiersCode(tiers.length)
   const tone = loggedOut || gifted ? 'var(--accent)' : 'var(--signal)'
+
+  if (claim !== null)
+    return (
+      <FounderClaimTakeover
+        variant={isMobile ? 'mobile' : 'desktop'}
+        seatNumber={claim.seatNumber}
+        seatsTotal={claim.seatsTotal}
+        onDone={finishClaim}
+      />
+    )
 
   return (
     <ModalShell

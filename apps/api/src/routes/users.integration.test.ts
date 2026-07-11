@@ -34,7 +34,12 @@ vi.mock('@clerk/backend', () => ({
 
 import { sql } from 'drizzle-orm'
 import { z } from 'zod'
-import { giftedComps, subscriptions, userBilling } from '@concert-crawl/db'
+import {
+  founderWindow,
+  giftedComps,
+  subscriptions,
+  userBilling,
+} from '@concert-crawl/db'
 import { createApp } from '../app.js'
 import {
   clearTables,
@@ -79,15 +84,45 @@ const planStateBodySchema = z.object({
       roleComped: z.boolean(),
     }),
     roleBadge: z.string().nullable(),
+    showTrialEndedTakeover: z.boolean(),
+    showDayThirteenBanner: z.boolean(),
+    showPastDueBanner: z.boolean(),
+    founderWindow: z.object({
+      state: z.enum(['pre-launch', 'open', 'closed']),
+      seatsTotal: z.number(),
+      seatsRemaining: z.number().optional(),
+      closesAt: z.string().nullable(),
+    }),
   }),
 })
 
-async function fetchMe(): Promise<z.infer<typeof planStateBodySchema>> {
-  const res = await app.request('/v1/users/me', {
+async function fetchMe(
+  query = '',
+): Promise<z.infer<typeof planStateBodySchema>> {
+  const res = await app.request(`/v1/users/me${query}`, {
     headers: { Authorization: 'Bearer test' },
   })
   expect(res.status).toBe(200)
   return planStateBodySchema.parse(await res.json())
+}
+
+// closesAt is a generated column (opensAt + windowDays) — never written.
+const FOUNDER_WINDOW_DEFAULTS = {
+  opensAt: null as Date | null,
+  seatsTotal: 100,
+  seatsRemaining: 100,
+  seatsRemainingTest: 100,
+  windowDays: 30,
+}
+
+async function setFounderWindow(
+  overrides: Partial<typeof FOUNDER_WINDOW_DEFAULTS> = {},
+): Promise<void> {
+  const values = { ...FOUNDER_WINDOW_DEFAULTS, ...overrides }
+  await testDb
+    .insert(founderWindow)
+    .values({ id: 1, ...values })
+    .onConflictDoUpdate({ target: founderWindow.id, set: values })
 }
 
 function setAuth(userId = 'user_test123'): void {
@@ -297,6 +332,136 @@ describe('GET /v1/users/me', () => {
     }
     expect(body.success).toBe(true)
     expect(body.data.roleBadge).toBeNull()
+  })
+})
+
+describe('GET /v1/users/me — lifecycle nudge flags + founder window', () => {
+  const DAY_MS = 86400000
+  const HOUR_MS = 3600000
+
+  beforeEach(async () => {
+    clearAuth()
+    clerkState.role = 'user'
+    clerkState.plan = undefined
+    await clearTables()
+    await clearBillingTables()
+    await setFounderWindow()
+  })
+
+  it('shows the trial-ended takeover when the trial expired and was never shown', async () => {
+    setAuth()
+    await testDb.insert(userBilling).values({
+      userId: 'user_test123',
+      trialEndsAt: new Date(Date.now() - DAY_MS),
+    })
+    const body = await fetchMe()
+    expect(body.data.showTrialEndedTakeover).toBe(true)
+    expect(body.data.showDayThirteenBanner).toBe(false)
+  })
+
+  it('does not re-show the takeover once shown after expiry', async () => {
+    setAuth()
+    await testDb.insert(userBilling).values({
+      userId: 'user_test123',
+      trialEndsAt: new Date(Date.now() - DAY_MS),
+      lastTrialEndedShownAt: new Date(Date.now() - HOUR_MS),
+    })
+    const body = await fetchMe()
+    expect(body.data.showTrialEndedTakeover).toBe(false)
+  })
+
+  it('shows the day-13 banner inside the 48h→24h window', async () => {
+    setAuth()
+    await testDb.insert(userBilling).values({
+      userId: 'user_test123',
+      trialEndsAt: new Date(Date.now() + 36 * HOUR_MS),
+    })
+    const body = await fetchMe()
+    expect(body.data.showDayThirteenBanner).toBe(true)
+    expect(body.data.showTrialEndedTakeover).toBe(false)
+  })
+
+  it('hides the day-13 banner when dismissed during this trial window', async () => {
+    setAuth()
+    await testDb.insert(userBilling).values({
+      userId: 'user_test123',
+      trialEndsAt: new Date(Date.now() + 36 * HOUR_MS),
+      dayThirteenBannerDismissedAt: new Date(Date.now() - HOUR_MS),
+    })
+    const body = await fetchMe()
+    expect(body.data.showDayThirteenBanner).toBe(false)
+  })
+
+  it('shows the past-due banner for past_due with no dismissal', async () => {
+    setAuth()
+    await seedSubscription('user_test123', { status: 'past_due' })
+    const body = await fetchMe()
+    expect(body.data.showPastDueBanner).toBe(true)
+  })
+
+  it('hides the past-due banner when dismissed after the supplied sessionStartedAt', async () => {
+    setAuth()
+    await seedSubscription('user_test123', { status: 'past_due' })
+    const sessionStartedAt = new Date(Date.now() - 2 * HOUR_MS)
+    await testDb.insert(userBilling).values({
+      userId: 'user_test123',
+      pastDueBannerDismissedAt: new Date(Date.now() - HOUR_MS),
+    })
+    const body = await fetchMe(
+      `?sessionStartedAt=${encodeURIComponent(sessionStartedAt.toISOString())}`,
+    )
+    expect(body.data.showPastDueBanner).toBe(false)
+  })
+
+  it('shows the past-due banner when the dismissal predates the supplied sessionStartedAt', async () => {
+    setAuth()
+    await seedSubscription('user_test123', { status: 'past_due' })
+    const sessionStartedAt = new Date(Date.now() - HOUR_MS)
+    await testDb.insert(userBilling).values({
+      userId: 'user_test123',
+      pastDueBannerDismissedAt: new Date(Date.now() - 2 * HOUR_MS),
+    })
+    const body = await fetchMe(
+      `?sessionStartedAt=${encodeURIComponent(sessionStartedAt.toISOString())}`,
+    )
+    expect(body.data.showPastDueBanner).toBe(true)
+  })
+
+  it('ignores an invalid sessionStartedAt instead of returning 400', async () => {
+    setAuth()
+    await seedSubscription('user_test123', { status: 'past_due' })
+    await testDb.insert(userBilling).values({
+      userId: 'user_test123',
+      pastDueBannerDismissedAt: new Date(Date.now() - HOUR_MS),
+    })
+    // Invalid ⇒ treated as absent ⇒ any dismissal suppresses.
+    const body = await fetchMe('?sessionStartedAt=not-a-date')
+    expect(body.data.showPastDueBanner).toBe(false)
+  })
+
+  it('returns the founder window snapshot', async () => {
+    setAuth()
+    const opensAt = new Date(Date.now() - DAY_MS)
+    await setFounderWindow({ opensAt, seatsRemaining: 42 })
+    const body = await fetchMe()
+    // closesAt is generated: opensAt + windowDays (30).
+    expect(body.data.founderWindow).toEqual({
+      state: 'open',
+      seatsTotal: 100,
+      seatsRemaining: 42,
+      closesAt: new Date(opensAt.getTime() + 30 * DAY_MS).toISOString(),
+    })
+  })
+
+  it('falls back to a pre-launch founder window when the singleton row is missing', async () => {
+    setAuth()
+    await testDb.execute(sql`TRUNCATE founder_window`)
+    const body = await fetchMe()
+    expect(body.data.founderWindow).toEqual({
+      state: 'pre-launch',
+      seatsTotal: 100,
+      closesAt: null,
+    })
   })
 })
 

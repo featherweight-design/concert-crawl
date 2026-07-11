@@ -33,6 +33,7 @@ beforeEach(() => {
   mockCreateCheckoutSession.mockResolvedValue({
     clientSecret: 'cs_test_secret',
     subscriptionId: 'sub_test_1',
+    founderSeatNumber: null,
   })
   mockAbandonCheckout.mockResolvedValue(undefined)
   mockCreatePortalSession.mockResolvedValue({
@@ -366,6 +367,7 @@ describe('TierPickerSheet — checkout flow', () => {
     let resolveSession: (value: {
       clientSecret: string
       subscriptionId: string
+      founderSeatNumber: number | null
     }) => void = () => {}
     mockCreateCheckoutSession.mockImplementation(
       () =>
@@ -386,6 +388,7 @@ describe('TierPickerSheet — checkout flow', () => {
     resolveSession({
       clientSecret: 'cs_test_secret',
       subscriptionId: 'sub_test_1',
+      founderSeatNumber: null,
     })
     await waitFor(() =>
       expect(mockAbandonCheckout).toHaveBeenCalledWith(
@@ -410,6 +413,57 @@ describe('TierPickerSheet — checkout flow', () => {
     )
     expect(screen.queryByTestId('checkout-panel')).toBeNull()
     consoleSpy.mockRestore()
+  })
+})
+
+describe('TierPickerSheet — founder post-claim takeover', () => {
+  it('successful founder checkout shows the seat reveal instead of closing', async () => {
+    mockCreateCheckoutSession.mockResolvedValue({
+      clientSecret: 'cs_test_secret',
+      subscriptionId: 'sub_test_1',
+      founderSeatNumber: 38,
+    })
+    const onClose = renderSheet(planState('free'))
+    fireEvent.click(
+      screen.getByRole('button', { name: TIER_PICKER_COPY.cta.claimFounder }),
+    )
+    await waitFor(() =>
+      expect(screen.getByTestId('checkout-panel')).toBeTruthy(),
+    )
+    fireEvent.click(screen.getByText('mock-success'))
+
+    // Takeover replaces the sheet; nothing closes yet.
+    expect(screen.getByTestId('founder-claim-takeover')).toBeTruthy()
+    expect(screen.getByTestId('founder-claim-seat-number').textContent).toBe(
+      TIER_PICKER_COPY.founderClaim.seatNumber(38),
+    )
+    expect(
+      screen.getByText(TIER_PICKER_COPY.founderClaim.seatTotal(100)),
+    ).toBeTruthy()
+    expect(onClose).not.toHaveBeenCalled()
+    expect(mockRefresh).not.toHaveBeenCalled()
+
+    // The single CTA hands control back: close + refresh.
+    fireEvent.click(
+      screen.getByRole('button', { name: TIER_PICKER_COPY.founderClaim.cta }),
+    )
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(mockRefresh).toHaveBeenCalledTimes(1)
+    expect(mockAbandonCheckout).not.toHaveBeenCalled()
+  })
+
+  it('non-founder checkout success is unchanged — closes without a takeover', async () => {
+    const onClose = renderSheet(planState('free'))
+    fireEvent.click(
+      screen.getByRole('button', { name: TIER_PICKER_COPY.cta.startTrial }),
+    )
+    await waitFor(() =>
+      expect(screen.getByTestId('checkout-panel')).toBeTruthy(),
+    )
+    fireEvent.click(screen.getByText('mock-success'))
+    expect(screen.queryByTestId('founder-claim-takeover')).toBeNull()
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(mockRefresh).toHaveBeenCalledTimes(1)
   })
 })
 

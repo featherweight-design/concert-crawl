@@ -204,7 +204,11 @@ interface ErrorBody {
 
 interface SuccessBody {
   success: boolean
-  data: { clientSecret: string; subscriptionId: string }
+  data: {
+    clientSecret: string
+    subscriptionId: string
+    founderSeatNumber: number | null
+  }
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -333,6 +337,7 @@ describe('POST /v1/billing/checkout-session', () => {
     expect(body.success).toBe(true)
     expect(body.data.clientSecret).toBe('pi_secret_1')
     expect(body.data.subscriptionId).toBe('sub_fake_1')
+    expect(body.data.founderSeatNumber).toBeNull()
 
     // Stripe customer created with the Clerk userId in metadata.
     expect(fake.customersCreated).toHaveLength(1)
@@ -474,6 +479,8 @@ describe('POST /v1/billing/checkout-session', () => {
 
     const res = await postCheckout(app, { tier: 'founder' })
     expect(res.status).toBe(200)
+    const body: SuccessBody = await res.json()
+    expect(body.data.founderSeatNumber).toBe(1)
 
     const windowRow = await readFounderWindow()
     expect(windowRow.seatsRemaining).toBe(99)

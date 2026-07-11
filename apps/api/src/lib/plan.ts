@@ -96,12 +96,25 @@ const publicMetadataSchema = z.object({
   plan: z.string().optional(),
 })
 
-// Loads DB context and derives PlanState for an authenticated user.
-// publicMetadata is Clerk's untyped payload — parsed at the boundary.
-export async function loadPlanState(
+// Nudge-predicate timestamps from user_billing, as Dates so callers never
+// reparse the PlanState ISO strings (eng infra spec Part 2 §6; PR 4.2).
+export interface PlanContext {
+  planState: PlanState
+  trialEndsAt: Date | null
+  nudgeTimestamps: {
+    lastTrialEndedShownAt: Date | null
+    dayThirteenBannerDismissedAt: Date | null
+    pastDueBannerDismissedAt: Date | null
+  }
+}
+
+// Loads DB context and derives PlanState + nudge timestamps for an
+// authenticated user. publicMetadata is Clerk's untyped payload — parsed at
+// the boundary.
+export async function loadPlanContext(
   userId: string,
   publicMetadata: unknown,
-): Promise<PlanState> {
+): Promise<PlanContext> {
   const parsedMetadata = publicMetadataSchema.safeParse(publicMetadata)
   const metadata = parsedMetadata.success ? parsedMetadata.data : {}
 
@@ -125,7 +138,12 @@ export async function loadPlanState(
       .where(eq(subscriptions.userId, userId))
       .limit(1),
     db
-      .select({ trialEndsAt: userBilling.trialEndsAt })
+      .select({
+        trialEndsAt: userBilling.trialEndsAt,
+        lastTrialEndedShownAt: userBilling.lastTrialEndedShownAt,
+        dayThirteenBannerDismissedAt: userBilling.dayThirteenBannerDismissedAt,
+        pastDueBannerDismissedAt: userBilling.pastDueBannerDismissedAt,
+      })
       .from(userBilling)
       .where(eq(userBilling.userId, userId))
       .limit(1),
@@ -144,12 +162,32 @@ export async function loadPlanState(
     )
   }
 
-  return derivePlanState({
+  const planState = derivePlanState({
     userId,
     role: metadata.role,
     giftedComp: giftRow ?? null,
     subscription: subRow ?? null,
-    billing: billingRow ?? null,
+    billing: billingRow ? { trialEndsAt: billingRow.trialEndsAt } : null,
     now,
   })
+
+  return {
+    planState,
+    trialEndsAt: billingRow?.trialEndsAt ?? null,
+    nudgeTimestamps: {
+      lastTrialEndedShownAt: billingRow?.lastTrialEndedShownAt ?? null,
+      dayThirteenBannerDismissedAt:
+        billingRow?.dayThirteenBannerDismissedAt ?? null,
+      pastDueBannerDismissedAt: billingRow?.pastDueBannerDismissedAt ?? null,
+    },
+  }
+}
+
+// Thin wrapper — existing callers only need the derived PlanState.
+export async function loadPlanState(
+  userId: string,
+  publicMetadata: unknown,
+): Promise<PlanState> {
+  const context = await loadPlanContext(userId, publicMetadata)
+  return context.planState
 }
