@@ -170,15 +170,15 @@ Defined here for completeness; behavior specced in Part 2 §4.
 
 `email_send_log` — transactional-send idempotency + audit:
 
-| Column        | Type                  | Notes                                                                                                                                           |
-| ------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`          | uuid, PK              |                                                                                                                                                 |
-| `templateKey` | text, not null        | One of the 10 #783 template keys                                                                                                                |
-| `userId`      | text, not null        |                                                                                                                                                 |
-| `dedupeKey`   | text, not null        | e.g. `dunning_1:{invoiceId}`, `card_expiring_soon:30:{cardFingerprint}:{expMonth}-{expYear}` — **unique index on (`templateKey`, `dedupeKey`)** |
-| `resendId`    | text, nullable        | Resend message ID on success                                                                                                                    |
-| `status`      | text, not null        | `sent` / `failed` / `suppressed` (kill switch)                                                                                                  |
-| `createdAt`   | timestamptz, not null |                                                                                                                                                 |
+| Column        | Type                  | Notes                                                                                                                                                                              |
+| ------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`          | uuid, PK              |                                                                                                                                                                                    |
+| `templateKey` | text, not null        | One of the 10 #783 template keys                                                                                                                                                   |
+| `userId`      | text, not null        |                                                                                                                                                                                    |
+| `dedupeKey`   | text, not null        | e.g. `invoice:{invoiceId}:attempt:1`, `{cardFingerprint}:{expMonth}-{expYear}:30` (full per-template key shapes in Part 2 §4.4) — **unique index on (`templateKey`, `dedupeKey`)** |
+| `resendId`    | text, nullable        | Resend message ID on success                                                                                                                                                       |
+| `status`      | text, not null        | `sent` / `failed` / `suppressed` (kill switch)                                                                                                                                     |
+| `createdAt`   | timestamptz, not null |                                                                                                                                                                                    |
 
 `email_template_config` — per-template kill switch (execution-plan rollback strategy):
 

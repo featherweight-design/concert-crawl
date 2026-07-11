@@ -133,7 +133,7 @@ const claimed = await db
     and(
       gt(founderWindow.seatsRemaining, 0),
       isNotNull(founderWindow.opensAt),
-      lt(founderWindow.opensAt, now),
+      lte(founderWindow.opensAt, now),
       gt(founderWindow.closesAt, now),
     ),
   )
@@ -196,7 +196,7 @@ Plain TS string-template functions (table-based HTML, inline styles, single `<he
 
 `sendTransactionalEmail({ templateKey, userId, dedupeKey, vars })` in `apps/api/src/lib/email.ts` (alongside the existing helpers):
 
-1. Kill switch: `email_template_config.enabled = false` ⇒ log + record `suppressed` ⇒ return.
+1. Kill switch: look up the `email_template_config` row for **this** `templateKey`; if its `enabled = false` ⇒ log + record `suppressed` ⇒ return (the table is per-template, Part 1 schema).
 2. Idempotency: insert `email_send_log` (`ON CONFLICT` on `templateKey+dedupeKey` ⇒ already sent ⇒ return).
 3. Resolve recipient email from Clerk.
 4. `resend.emails.send(...)` — failure logs the error (every catch logs) and updates the row to `failed`; a `failed` row's dedupe key blocks silent duplicates, and the daily job retries rows `failed` < 24h old (max 3 attempts, tracked in row metadata).
