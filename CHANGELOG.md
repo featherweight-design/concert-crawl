@@ -1,3 +1,15 @@
+# [1.93.0](https://github.com/HartiganHM/concert-crawl/compare/v1.92.1...v1.93.0) (2026-07-11)
+
+
+### Bug Fixes
+
+* **admin:** [#881](https://github.com/HartiganHM/concert-crawl/issues/881) PR [#884](https://github.com/HartiganHM/concert-crawl/issues/884) R1 — visual-only tooltip, sub-$1 precision test ([9014c9c](https://github.com/HartiganHM/concert-crawl/commit/9014c9cb6f9fe6cf1d5fd804bb1e70e52ef07e5b))
+
+
+### Features
+
+* **admin:** [#881](https://github.com/HartiganHM/concert-crawl/issues/881) hover/tap tooltip on the LLM spend chart ([348ca89](https://github.com/HartiganHM/concert-crawl/commit/348ca8924634499fa50dd4d4f84d6ebe482de790))
+
 ## [1.92.1](https://github.com/HartiganHM/concert-crawl/compare/v1.92.0...v1.92.1) (2026-07-11)
 
 
