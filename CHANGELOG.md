@@ -1,3 +1,11 @@
+## [1.87.2](https://github.com/HartiganHM/concert-crawl/compare/v1.87.1...v1.87.2) (2026-07-11)
+
+
+### Bug Fixes
+
+* **crawler-core:** [#825](https://github.com/HartiganHM/concert-crawl/issues/825) drop artist from hashEvent to silence false changedVerified alerts ([f33afad](https://github.com/HartiganHM/concert-crawl/commit/f33afad36be71b2bd30bac5ac93b5967225ee79c)), closes [#824](https://github.com/HartiganHM/concert-crawl/issues/824)
+* **scripts:** [#825](https://github.com/HartiganHM/concert-crawl/issues/825) use Denver-local date in backfill candidate filter (PR [#852](https://github.com/HartiganHM/concert-crawl/issues/852) R4) ([e01be96](https://github.com/HartiganHM/concert-crawl/commit/e01be96cbb92f65879d824ca650694aacb0d0856))
+
 ## [1.87.1](https://github.com/HartiganHM/concert-crawl/compare/v1.87.0...v1.87.1) (2026-06-27)
 
 
