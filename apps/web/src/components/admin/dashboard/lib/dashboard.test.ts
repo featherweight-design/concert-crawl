@@ -430,12 +430,10 @@ describe('computeWowTrend', () => {
     expect(trend?.text).toBe('0%')
   })
 
-  it('handles a series shorter than 14 days', () => {
-    // 10 days: prior window is only days 1-3 of the series
+  it('returns undefined for a series shorter than two full weeks', () => {
+    // 10 days: the prior window would be partial (3 days) and mislead
     const days = makeDays([1, 1, 1, 2, 2, 2, 2, 2, 2, 2])
-    const trend = computeWowTrend(days)
-    // prior = 3, recent = 14 → +367%
-    expect(trend).toEqual({ dir: 'up', text: '+367%', good: false })
+    expect(computeWowTrend(days)).toBeUndefined()
   })
 })
 

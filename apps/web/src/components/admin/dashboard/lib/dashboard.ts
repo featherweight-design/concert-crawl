@@ -12,9 +12,12 @@ export interface CostTrend {
 
 // Week-over-week delta from the daily-costs series: last 7 days vs the prior
 // 7. `days` is the zero-filled, oldest→newest series from
-// GET /v1/admin/costs/daily. Undefined when the prior window has no spend —
-// a percentage against $0 is meaningless, so callers omit the badge/trend.
+// GET /v1/admin/costs/daily. Undefined when the series is shorter than two
+// full weeks (a partial prior window would mislead) or when the prior window
+// has no spend — a percentage against $0 is meaningless. Callers omit the
+// badge/trend in both cases.
 export function computeWowTrend(days: DailyCost[]): CostTrend | undefined {
+  if (days.length < 14) return undefined
   const sumWindow = (window: DailyCost[]) =>
     window.reduce((sum, day) => sum + day.costUsd, 0)
   const recent = sumWindow(days.slice(-7))

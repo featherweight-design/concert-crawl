@@ -97,7 +97,9 @@ costsAdminRouter.get(
         costUsd: sql<number>`coalesce(sum(${crawlRuns.llmCostUsd}), 0)`,
       })
       .from(crawlRuns)
-      .where(sql`${mtDayBucket()} >= ${windowStart}::date`)
+      .where(
+        sql`${mtDayBucket()} between ${windowStart}::date and ${today}::date`,
+      )
       .groupBy(mtDayBucket())
 
     // Per-run costs are fractions of a cent, so the window total sums the
@@ -141,7 +143,9 @@ costsAdminRouter.get(
       })
       .from(crawlRuns)
       .leftJoin(venues, eq(crawlRuns.venueId, venues.id))
-      .where(sql`${mtDayBucket()} >= ${windowStart}::date`)
+      .where(
+        sql`${mtDayBucket()} between ${windowStart}::date and ${today}::date`,
+      )
       .groupBy(crawlRuns.venueId, venues.name)
       .having(sql`coalesce(sum(${crawlRuns.llmCostUsd}), 0) > 0`)
       .orderBy(desc(costSum))
