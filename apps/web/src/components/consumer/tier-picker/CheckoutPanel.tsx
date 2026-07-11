@@ -45,6 +45,9 @@ const CheckoutForm = ({
     try {
       const result = await stripe.confirmPayment({
         elements,
+        // Card payments confirm in-surface, but redirect-based methods in
+        // the Payment Element require a return_url or confirmation fails.
+        confirmParams: { return_url: window.location.href },
         redirect: 'if_required',
       })
       if (result.error) {
