@@ -25,18 +25,18 @@ vi.mock('@/components/consumer/PriceDisplay', () => ({
 }))
 // SubmitPriceModal would mount + fetch on render; stub it so we can
 // drive onSuccess directly from the test surface when needed.
-let latestModalOnSuccess:
-  | ((result: {
-      isEdit: boolean
-      id: string
-      priceMin: string
-      priceMax: string | null
-      tier: string
-      vendor: string
-      howFound: string
-      sourceCategory: 'boxoffice' | 'standard' | 'resale' | null
-    }) => void)
-  | null = null
+// Shape mirrors SubmitPriceResult exported from SubmitPriceModal (#832).
+interface ModalSuccessRow {
+  isEdit: boolean
+  id: string
+  priceMin: string
+  priceMax: string | null
+  tier: string
+  vendor: string
+  howFound: string
+  sourceCategory: 'boxoffice' | 'standard' | 'resale' | null
+}
+let latestModalOnSuccess: ((results: ModalSuccessRow[]) => void) | null = null
 // CorroborationSheet renders a portal-mounted modal; stub it so we can
 // detect open=true purely from the rendered DOM without dragging in the
 // real sheet's tree.
@@ -47,16 +47,7 @@ vi.mock('@/components/consumer/CorroborationSheet', () => ({
 vi.mock('@/components/consumer/submit-price/SubmitPriceModal', () => ({
   SubmitPriceModal: (props: {
     open: boolean
-    onSuccess?: (result: {
-      isEdit: boolean
-      id: string
-      priceMin: string
-      priceMax: string | null
-      tier: string
-      vendor: string
-      howFound: string
-      sourceCategory: 'boxoffice' | 'standard' | 'resale' | null
-    }) => void
+    onSuccess?: (results: ModalSuccessRow[]) => void
   }) => {
     latestModalOnSuccess = props.onSuccess ?? null
     return props.open ? <div data-testid="submit-price-modal-open" /> : null
@@ -431,16 +422,18 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     )
     expect(latestModalOnSuccess).not.toBeNull()
     await act(async () => {
-      latestModalOnSuccess?.({
-        isEdit: false,
-        id: 'sub-ga-1',
-        priceMin: '40',
-        priceMax: null,
-        tier: 'GA',
-        vendor: 'VenueBoxOffice',
-        howFound: 'bought_myself',
-        sourceCategory: 'boxoffice',
-      })
+      latestModalOnSuccess?.([
+        {
+          isEdit: false,
+          id: 'sub-ga-1',
+          priceMin: '40',
+          priceMax: null,
+          tier: 'GA',
+          vendor: 'VenueBoxOffice',
+          howFound: 'bought_myself',
+          sourceCategory: 'boxoffice',
+        },
+      ])
     })
     // MTAddTierSuccess headline copy template is `${tier} price is in. Thanks.`
     expect(screen.getByText('GA price is in. Thanks.')).toBeDefined()
@@ -457,16 +450,18 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     )
     expect(latestModalOnSuccess).not.toBeNull()
     await act(async () => {
-      latestModalOnSuccess?.({
-        isEdit: false,
-        id: 'sub-ga-1',
-        priceMin: '40',
-        priceMax: null,
-        tier: 'GA',
-        vendor: 'VenueBoxOffice',
-        howFound: 'bought_myself',
-        sourceCategory: 'boxoffice',
-      })
+      latestModalOnSuccess?.([
+        {
+          isEdit: false,
+          id: 'sub-ga-1',
+          priceMin: '40',
+          priceMax: null,
+          tier: 'GA',
+          vendor: 'VenueBoxOffice',
+          howFound: 'bought_myself',
+          sourceCategory: 'boxoffice',
+        },
+      ])
     })
     expect(screen.getByText('GA price is in. Thanks.')).toBeDefined()
   })
@@ -496,16 +491,18 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     )
     expect(latestModalOnSuccess).not.toBeNull()
     await act(async () => {
-      latestModalOnSuccess?.({
-        isEdit: false,
-        id: 'sub-vip-1',
-        priceMin: '40',
-        priceMax: null,
-        tier: 'VIP',
-        vendor: 'VenueBoxOffice',
-        howFound: 'bought_myself',
-        sourceCategory: 'boxoffice',
-      })
+      latestModalOnSuccess?.([
+        {
+          isEdit: false,
+          id: 'sub-vip-1',
+          priceMin: '40',
+          priceMax: null,
+          tier: 'VIP',
+          vendor: 'VenueBoxOffice',
+          howFound: 'bought_myself',
+          sourceCategory: 'boxoffice',
+        },
+      ])
     })
     expect(screen.getByText('VIP price is in. Thanks.')).toBeDefined()
   })
@@ -537,16 +534,18 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     // Drive a submit success via the stubbed modal's captured onSuccess.
     expect(latestModalOnSuccess).not.toBeNull()
     await act(async () => {
-      latestModalOnSuccess?.({
-        isEdit: false,
-        id: 'sub-vip-1',
-        priceMin: '120',
-        priceMax: null,
-        tier: 'VIP',
-        vendor: 'Ticketmaster',
-        howFound: 'saw_listing',
-        sourceCategory: 'standard',
-      })
+      latestModalOnSuccess?.([
+        {
+          isEdit: false,
+          id: 'sub-vip-1',
+          priceMin: '120',
+          priceMax: null,
+          tier: 'VIP',
+          vendor: 'Ticketmaster',
+          howFound: 'saw_listing',
+          sourceCategory: 'standard',
+        },
+      ])
     })
 
     // MTAddTierSuccess should render with "VIP" submitted.
@@ -562,6 +561,49 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     }
     // VIP pill must NOT appear.
     expect(screen.queryByText(/Add vip/i)).toBeNull()
+  })
+
+  it('batch submit success with 2 tiers → success card shows first tier, both tiers excluded from add-pills (#832)', async () => {
+    const event = buildBaseEvent({
+      priceStatus: 'soldout',
+      soldOutReport: null,
+      ticketLinks: null,
+    })
+    render(
+      <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
+    )
+    expect(latestModalOnSuccess).not.toBeNull()
+    await act(async () => {
+      latestModalOnSuccess?.([
+        {
+          isEdit: false,
+          id: 'sub-ga-1',
+          priceMin: '45',
+          priceMax: null,
+          tier: 'GA',
+          vendor: 'VenueBoxOffice',
+          howFound: 'bought_myself',
+          sourceCategory: 'boxoffice',
+        },
+        {
+          isEdit: false,
+          id: 'sub-vip-1',
+          priceMin: '120',
+          priceMax: '150',
+          tier: 'VIP',
+          vendor: 'VenueBoxOffice',
+          howFound: 'bought_myself',
+          sourceCategory: 'boxoffice',
+        },
+      ])
+    })
+    // MTAddTierSuccess headline reflects the FIRST submitted tier.
+    expect(screen.getByText('GA price is in. Thanks.')).toBeDefined()
+    // Both submitted tiers are locked out of the add-pill row...
+    expect(screen.queryByText(/Add ga/i)).toBeNull()
+    expect(screen.queryByText(/Add vip/i)).toBeNull()
+    // ...while an unsubmitted tier still offers a pill.
+    expect(screen.queryByText(/Add reserved/i)).not.toBeNull()
   })
 
   it('STATE #7 all-tiers-pending: clicking Confirm on a non-submitter card opens the CorroborationSheet', () => {

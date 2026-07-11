@@ -38,7 +38,10 @@ import { PriceDisplay } from '@/components/consumer/PriceDisplay'
 import { DisputedPriceCard } from '@/components/consumer/DisputedPriceCard'
 import { SoldOutPriceCard } from '@/components/consumer/SoldOutPriceCard'
 import { SubmitPriceCardCta } from '@/components/consumer/SubmitPriceCardCta'
-import { SubmitPriceModal } from '@/components/consumer/submit-price/SubmitPriceModal'
+import {
+  SubmitPriceModal,
+  type SubmitPriceResult,
+} from '@/components/consumer/submit-price/SubmitPriceModal'
 import {
   FaceValueCard,
   ContributeFaceValueCard,
@@ -52,6 +55,12 @@ import { decidePriceRegion } from '@/components/consumer/price-region/lib/decisi
 // All five canonical tiers — used by MTAddTierSuccess to derive `remainingTiers`
 // from this session's submitted tiers (Q4-eng lock).
 const TIER_ENUM: ReadonlyArray<Tier> = ['GA', 'Reserved', 'VIP', 'Pit', 'Lawn']
+
+// Widened read-only view of TIER_ENUM so the type guard can probe arbitrary
+// strings — `ReadonlyArray<Tier>.includes` rejects plain strings at the type
+// level, and an `as` cast is off the table (CLAUDE.md principle 6).
+const TIER_NAMES: ReadonlyArray<string> = TIER_ENUM
+const isTierValue = (value: string): value is Tier => TIER_NAMES.includes(value)
 
 // Submitter counts as observation #1 in the 1/2 corroboration model — see
 // price_submissions.corroboration_count default in migration 0040, and
@@ -449,39 +458,83 @@ export function EventDetailPriceBlock({
     [event.id, getToken, router],
   )
 
-  // Shared submit-success handler — used by every new decision-tree branch
-  // that owns a SubmitPriceModal. Captures tier + source for the post-submit
-  // MTAddTierSuccess card and updates the session "tiers I submitted" set
-  // for Q4-eng locking. Falls back to GA when tier comes back non-canonical
-  // so the picker still shows something useful.
-  const handleSubmitSuccess = useCallback(
-    (result: {
-      isEdit: boolean
-      id: string
-      priceMin: string
-      priceMax: string | null
-      tier: string
-      vendor: string
-      howFound: string
-      sourceCategory: SourceCategory | null
-    }) => {
-      if (result.isEdit) return
-      const tier: Tier = TIER_ENUM.includes(result.tier as Tier)
-        ? (result.tier as Tier)
-        : 'GA'
-      const price = Math.round(parseFloat(result.priceMin))
-      const sourceCategory: SourceCategory = result.sourceCategory ?? 'standard'
-      setSubmittedThisSession((prev) => {
-        const next = new Set(prev)
-        next.add(tier)
-        return next
-      })
-      setSubmitSuccessPayload({ tier, price, sourceCategory })
-      setSubmitPriceOpen(false)
-      setPreselectedTier(null)
+  // Optimistic localSubmissions updater shared by the two decision-tree
+  // branches that render pending-submission cards. A batch submit (#832)
+  // yields one row per tier — edits map-replace in place, new rows append
+  // as optimistic PendingSubItems.
+  const applySubmissionResults = useCallback(
+    (results: SubmitPriceResult[]) => {
+      for (const result of results) {
+        if (result.isEdit) {
+          setLocalSubmissions((prev) =>
+            prev.map((sub) =>
+              sub.id === result.id
+                ? {
+                    ...sub,
+                    priceMin: result.priceMin,
+                    priceMax: result.priceMax,
+                    tier: result.tier,
+                    vendor: result.vendor,
+                    howFound: result.howFound,
+                  }
+                : sub,
+            ),
+          )
+        } else {
+          setLocalSubmissions((prev) => [
+            ...prev,
+            {
+              id: result.id,
+              priceMin: result.priceMin,
+              priceMax: result.priceMax,
+              tier: result.tier,
+              vendor: result.vendor,
+              howFound: result.howFound,
+              sourceCategory: result.sourceCategory,
+              note: null,
+              submitterHandle: null,
+              submittedAt: new Date().toISOString(),
+              confirmsCount: 0,
+              // Use the shared helper so the local-submission optimistic row
+              // picks up the UTC-midnight-correct imminent-policy denominator
+              // (#835 Copilot R5).
+              confirmsNeeded: corroborationConfirmsRequired(event.date),
+              isSubmitter: true,
+            },
+          ])
+        }
+      }
     },
-    [],
+    [event.date],
   )
+
+  // Shared submit-success handler — used by every new decision-tree branch
+  // that owns a SubmitPriceModal. A batch submit (#832) returns one row per
+  // tier: the follow-up card shows the first row, and every submitted tier
+  // joins the session set so the add-tier pills exclude all of them. Falls
+  // back to GA when a tier comes back non-canonical so the picker still
+  // shows something useful.
+  const handleSubmitSuccess = useCallback((results: SubmitPriceResult[]) => {
+    const newRows = results.filter((row) => !row.isEdit)
+    const firstRow = newRows[0]
+    if (!firstRow) return
+    const submittedTiers = newRows.map((row): Tier =>
+      isTierValue(row.tier) ? row.tier : 'GA',
+    )
+    const firstTier: Tier = isTierValue(firstRow.tier) ? firstRow.tier : 'GA'
+    const price = Math.round(parseFloat(firstRow.priceMin))
+    const sourceCategory: SourceCategory = firstRow.sourceCategory ?? 'standard'
+    setSubmittedThisSession((prev) => {
+      const next = new Set(prev)
+      for (const tier of submittedTiers) {
+        next.add(tier)
+      }
+      return next
+    })
+    setSubmitSuccessPayload({ tier: firstTier, price, sourceCategory })
+    setSubmitPriceOpen(false)
+    setPreselectedTier(null)
+  }, [])
 
   // Submit-success surface — Submit-success state #1 (post-submit add-tier).
   // The MTAddTierSuccess follow-up is a GLOBAL after-submit affordance:
@@ -1635,47 +1688,7 @@ export function EventDetailPriceBlock({
           artist={event.artist}
           venueName={event.venue.name}
           date={event.date}
-          onSuccess={(result) => {
-            if (result.isEdit) {
-              setLocalSubmissions((prev) =>
-                prev.map((sub) =>
-                  sub.id === result.id
-                    ? {
-                        ...sub,
-                        priceMin: result.priceMin,
-                        priceMax: result.priceMax,
-                        tier: result.tier,
-                        vendor: result.vendor,
-                        howFound: result.howFound,
-                      }
-                    : sub,
-                ),
-              )
-            } else {
-              setLocalSubmissions((prev) => [
-                ...prev,
-                {
-                  id: result.id,
-                  priceMin: result.priceMin,
-                  priceMax: result.priceMax,
-                  tier: result.tier,
-                  vendor: result.vendor,
-                  howFound: result.howFound,
-                  sourceCategory: result.sourceCategory,
-                  note: null,
-                  submitterHandle: null,
-                  submittedAt: new Date().toISOString(),
-                  confirmsCount: 0,
-                  // Use the shared helper so the local-submission
-                  // optimistic row picks up the UTC-midnight-correct
-                  // imminent-policy denominator (#835 Copilot R5 — same
-                  // class of bug as R4 at the corroboration sites).
-                  confirmsNeeded: corroborationConfirmsRequired(event.date),
-                  isSubmitter: true,
-                },
-              ])
-            }
-          }}
+          onSuccess={applySubmissionResults}
           onWithdrawSuccess={(submissionId) => {
             setLocalSubmissions((prev) =>
               prev.filter((sub) => sub.id !== submissionId),
@@ -1816,47 +1829,7 @@ export function EventDetailPriceBlock({
           artist={event.artist}
           venueName={event.venue.name}
           date={event.date}
-          onSuccess={(result) => {
-            if (result.isEdit) {
-              setLocalSubmissions((prev) =>
-                prev.map((sub) =>
-                  sub.id === result.id
-                    ? {
-                        ...sub,
-                        priceMin: result.priceMin,
-                        priceMax: result.priceMax,
-                        tier: result.tier,
-                        vendor: result.vendor,
-                        howFound: result.howFound,
-                      }
-                    : sub,
-                ),
-              )
-            } else {
-              setLocalSubmissions((prev) => [
-                ...prev,
-                {
-                  id: result.id,
-                  priceMin: result.priceMin,
-                  priceMax: result.priceMax,
-                  tier: result.tier,
-                  vendor: result.vendor,
-                  howFound: result.howFound,
-                  sourceCategory: result.sourceCategory,
-                  note: null,
-                  submitterHandle: null,
-                  submittedAt: new Date().toISOString(),
-                  confirmsCount: 0,
-                  // Use the shared helper so the local-submission
-                  // optimistic row picks up the UTC-midnight-correct
-                  // imminent-policy denominator (#835 Copilot R5 — same
-                  // class of bug as R4 at the corroboration sites).
-                  confirmsNeeded: corroborationConfirmsRequired(event.date),
-                  isSubmitter: true,
-                },
-              ])
-            }
-          }}
+          onSuccess={applySubmissionResults}
           onWithdrawSuccess={(submissionId) => {
             setLocalSubmissions((prev) =>
               prev.filter((sub) => sub.id !== submissionId),
