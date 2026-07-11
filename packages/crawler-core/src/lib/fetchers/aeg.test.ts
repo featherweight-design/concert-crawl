@@ -112,7 +112,7 @@ describe('aegFetcher.fetch', () => {
 
     await aegFetcher.fetch(venue, { crawlDelayMs: 0 })
     const withoutTimeoutInit = fetchSpy.mock.calls[1]?.[1]
-    expect(withoutTimeoutInit?.signal).toBeNull()
+    expect(withoutTimeoutInit?.signal).toBeUndefined()
   })
 
   it('normalizes the Bluebird fixture into NormalizedEvent rows', async () => {

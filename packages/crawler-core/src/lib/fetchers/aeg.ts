@@ -292,7 +292,9 @@ async function fetchAegBlob(
     },
     // A hung CDN connection must not pin the caller (the admin probe
     // endpoint holds an API worker slot while this resolves).
-    signal: timeoutMs !== undefined ? AbortSignal.timeout(timeoutMs) : null,
+    ...(timeoutMs !== undefined
+      ? { signal: AbortSignal.timeout(timeoutMs) }
+      : {}),
   })
   if (!response.ok) {
     throw new AegFetchError(
