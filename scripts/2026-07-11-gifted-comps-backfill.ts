@@ -149,7 +149,6 @@ export async function runBackfill(opts: {
         grantedBy: opts.grantedBy,
         expiresAt: null,
         redeemedAt: candidate.createdAt,
-        createdAt: candidate.createdAt,
       })
       .onConflictDoNothing({ target: giftedComps.userId })
       .returning({ id: giftedComps.id })
