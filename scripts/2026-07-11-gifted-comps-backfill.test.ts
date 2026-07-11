@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   hasGiftedPlanMetadata,
+  redactEmail,
   resolveGrantedBy,
 } from './2026-07-11-gifted-comps-backfill-helpers.js'
 
@@ -31,6 +32,24 @@ describe('hasGiftedPlanMetadata', () => {
     expect(hasGiftedPlanMetadata(undefined)).toBe(false)
     expect(hasGiftedPlanMetadata('premium_gifted')).toBe(false)
     expect(hasGiftedPlanMetadata(42)).toBe(false)
+  })
+})
+
+describe('redactEmail', () => {
+  it('keeps the first character and domain only', () => {
+    expect(redactEmail('hugh@featherweight.design')).toBe(
+      'h***@featherweight.design',
+    )
+  })
+
+  it('handles single-character local parts', () => {
+    expect(redactEmail('a@example.com')).toBe('a***@example.com')
+  })
+
+  it('returns the sentinel for non-address inputs', () => {
+    expect(redactEmail('(no email)')).toBe('(no email)')
+    expect(redactEmail('@example.com')).toBe('(no email)')
+    expect(redactEmail('')).toBe('(no email)')
   })
 })
 

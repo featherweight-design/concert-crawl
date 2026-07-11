@@ -48,6 +48,7 @@ import { createClerkClient } from '@clerk/backend'
 import { db, giftedComps } from '@concert-crawl/db'
 import {
   hasGiftedPlanMetadata,
+  redactEmail,
   resolveGrantedBy,
 } from './2026-07-11-gifted-comps-backfill-helpers.js'
 
@@ -111,7 +112,7 @@ export async function runBackfill(opts: {
       [
         '---',
         `userId    = ${candidate.userId}`,
-        `email     = ${candidate.email}`,
+        `email     = ${redactEmail(candidate.email)}`,
         `createdAt = ${candidate.createdAt.toISOString()} (→ redeemedAt)`,
         `grantedBy = ${opts.grantedBy}`,
         'expiresAt = (null — lifetime gift)',

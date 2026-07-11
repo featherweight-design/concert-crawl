@@ -22,6 +22,18 @@ export const hasGiftedPlanMetadata = (publicMetadata: unknown): boolean => {
 }
 
 /**
+ * Redacts an email's local part for operator logs (keeps the first
+ * character + domain) so full addresses never land in terminal/CI logs.
+ */
+export const redactEmail = (email: string): string => {
+  const atIndex = email.indexOf('@')
+  if (atIndex <= 0) {
+    return '(no email)'
+  }
+  return `${email[0]}***@${email.slice(atIndex + 1)}`
+}
+
+/**
  * Resolves the `granted_by` audit value from CLI args. Accepts
  * `--granted-by=<clerkUserId>` (the admin running the backfill); falls back
  * to the literal 'backfill' when not provided, per eng infra spec Part 1 §7.
