@@ -77,7 +77,7 @@ POST /v1/events/:eventId/price-submissions/batch
 }
 ```
 
-- **Success:** `201` returning the full inserted submission rows (same shape as the GET list items) so the client can push them into local state without a refetch.
+- **Success:** `201` returning the full inserted submission rows as plain `PriceSubmission` objects — the same shape as the single POST's response, **not** the GET list's `SubmissionWithMeta` (no `confirms`/`byYou` fields). The client pushes them into local state without a refetch; meta fields are unnecessary for freshly inserted rows (confirms = 0, byYou = true by definition).
 - **Rate limiting:** one batch = **one** rate-limit hit (it is one act of contribution). The existing per-user recent-submission window applies to the batch as a unit; a batch is blocked if the user is inside the window, and a successful batch starts the window.
 
 ### Existing endpoints unchanged
