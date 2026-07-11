@@ -557,9 +557,10 @@ describe('SubmitPriceModal — multi-tier panels (#832)', () => {
     await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy())
     fireEvent.click(screen.getByText('GA')) // select GA in panel 0
     fireEvent.click(screen.getByText('+ Add another tier'))
+    // Target tier-picker chip buttons by role and exact name match (not panel headers)
     const gaChips = screen
-      .getAllByText('GA')
-      .map((node) => node.closest('button'))
+      .getAllByRole('button', { name: /^GA$/ })
+      .map((el) => el as HTMLButtonElement)
     expect(gaChips).toHaveLength(2)
     expect(gaChips[0]?.disabled).toBe(false) // own selection stays active
     expect(gaChips[1]?.disabled).toBe(true) // other panel's GA greyed out

@@ -880,24 +880,20 @@ export function SubmitPriceModal({
                     justifyContent: 'space-between',
                   }}
                 >
-                  {panelIndex > 0 ? (
-                    <span
-                      style={{
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: 'var(--fg-subtle)',
-                        letterSpacing: '0.14em',
-                        textTransform: 'uppercase',
-                      }}
-                    >
-                      {panel.tier ??
-                        CONSUMER_COPY.submitPriceV2.multiTier
-                          .panelFallbackHeading}
-                    </span>
-                  ) : (
-                    <span />
-                  )}
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: 'var(--fg-subtle)',
+                      letterSpacing: '0.14em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {panel.tier ??
+                      CONSUMER_COPY.submitPriceV2.multiTier
+                        .panelFallbackHeading}
+                  </span>
                   <button
                     type="button"
                     aria-label={CONSUMER_COPY.submitPriceV2.multiTier.removeTierAriaLabel.replace(
