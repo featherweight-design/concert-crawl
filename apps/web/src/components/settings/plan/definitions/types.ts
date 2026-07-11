@@ -11,6 +11,8 @@ export interface PlanCardCta {
   action: PlanCardAction
   /** Emphasized primary buttons carry the #780 glow treatment. */
   glow?: boolean
+  /** Portal-bound CTAs marked in the design with the ↗ arrow (#782). */
+  portalArrow?: boolean
 }
 
 /** Card accent tone → CSS variable. `warning` is the #782 past-due tone. */

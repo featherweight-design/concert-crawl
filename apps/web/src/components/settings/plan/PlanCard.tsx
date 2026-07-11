@@ -57,15 +57,17 @@ export const PlanCard = ({
   // Past-due keeps a warning shell but its action buttons stay signal (#782).
   const ctaAccent = content.tone === 'warning' ? 'var(--signal)' : accent
 
-  const borderMix = content.emphasis ? 70 : 45
-
   return (
     <section
       aria-label={PLAN_CARD_COPY.ariaLabel}
-      className="relative flex flex-col gap-[11px] overflow-hidden rounded-[14px] p-4 pb-[18px] sm:gap-3.5 sm:px-[22px] sm:pb-[22px] sm:pt-5"
+      className={`relative flex flex-col gap-[11px] overflow-hidden rounded-[14px] p-4 pb-[18px] [--pc-grad-stop:60%] sm:max-w-[620px] sm:gap-3.5 sm:px-[22px] sm:pb-[22px] sm:pt-5 sm:[--pc-grad-stop:55%] ${
+        content.emphasis
+          ? '[--pc-border-mix:70%]'
+          : '[--pc-border-mix:40%] sm:[--pc-border-mix:45%]'
+      }`}
       style={{
-        background: `radial-gradient(circle at 100% 0%, color-mix(in oklch, ${accent} 14%, transparent) 0%, transparent 58%), var(--bg-elevated)`,
-        border: `1px solid color-mix(in oklch, ${accent} ${borderMix}%, var(--border-strong))`,
+        background: `radial-gradient(circle at 100% 0%, color-mix(in oklch, ${accent} 14%, transparent) 0%, transparent var(--pc-grad-stop)), var(--bg-elevated)`,
+        border: `1px solid color-mix(in oklch, ${accent} var(--pc-border-mix), var(--border-strong))`,
         boxShadow: content.emphasis
           ? `0 0 0 1px color-mix(in oklch, ${accent} 22%, transparent), 0 24px 60px -42px color-mix(in oklch, ${accent} 55%, transparent)`
           : content.founderGradient
@@ -85,7 +87,16 @@ export const PlanCard = ({
       {/* eyebrow row */}
       <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
         {content.badgeTier ? (
-          <TierBadge tier={content.badgeTier} size="sm" />
+          // Design: badge size sm mobile / md desktop — TierBadge is not
+          // breakpoint-aware, so render both and toggle visibility.
+          <>
+            <span className="inline-flex sm:hidden">
+              <TierBadge tier={content.badgeTier} size="sm" />
+            </span>
+            <span className="hidden sm:inline-flex">
+              <TierBadge tier={content.badgeTier} size="md" />
+            </span>
+          </>
         ) : (
           <FreeChip />
         )}
@@ -138,10 +149,9 @@ export const PlanCard = ({
       </div>
 
       <h2
-        className="text-[22px] sm:text-[30px]"
+        className="text-[22px] tracking-[-0.025em] sm:text-[30px] sm:tracking-[-0.03em]"
         style={{
           fontWeight: 900,
-          letterSpacing: '-0.025em',
           lineHeight: 1.05,
           margin: 0,
         }}
@@ -149,12 +159,11 @@ export const PlanCard = ({
         {content.headline}
       </h2>
       <p
-        className="m-0 max-w-[520px] text-[13px] sm:text-[14.5px]"
+        className="m-0 text-[13px] leading-[1.45] sm:max-w-[520px] sm:text-[14.5px] sm:leading-[1.5]"
         style={{
           fontWeight: 500,
           color: 'var(--fg-muted)',
           letterSpacing: '-0.005em',
-          lineHeight: 1.5,
         }}
       >
         {content.body}
@@ -239,7 +248,7 @@ export const PlanCard = ({
                     : 'var(--fg-muted)',
                 border:
                   cta.kind === 'primary'
-                    ? '1px solid transparent'
+                    ? 'none'
                     : '1px solid var(--border-strong)',
                 fontWeight: 700,
                 letterSpacing: '-0.005em',
@@ -247,9 +256,39 @@ export const PlanCard = ({
                   cta.kind === 'primary' && cta.glow
                     ? `0 0 22px color-mix(in oklch, ${content.founderGradient ? 'var(--accent)' : ctaAccent} 32%, transparent)`
                     : 'none',
+                ...(cta.portalArrow
+                  ? {
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 7,
+                    }
+                  : {}),
               }}
             >
-              {cta.label}
+              {cta.portalArrow ? (
+                <>
+                  <span style={{ whiteSpace: 'nowrap' }}>{cta.label}</span>
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 12 12"
+                    aria-hidden
+                    style={{ opacity: 0.9 }}
+                  >
+                    <path
+                      d="M3 9 L9 3 M4.5 3 H9 V7.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </>
+              ) : (
+                cta.label
+              )}
             </button>
           )
         })}

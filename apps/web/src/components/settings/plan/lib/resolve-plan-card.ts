@@ -134,6 +134,7 @@ export const resolvePlanCard = (
           kind: 'primary',
           action: 'portal',
           glow: true,
+          portalArrow: true,
         },
         { label: copy.manageCta, kind: 'ghost', action: 'portal' },
       ],
