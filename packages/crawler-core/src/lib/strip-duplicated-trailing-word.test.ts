@@ -182,6 +182,15 @@ describe('stripDuplicatedTrailingWord', () => {
 
   it('keeps a Unicode trailing repeat confirmed by rawTitle', () => {
     expect(
+      stripDuplicatedTrailingWord(
+        'Beyoncé Beyoncé',
+        'Tribute Night: Beyoncé Beyoncé',
+      ),
+    ).toBe('Beyoncé Beyoncé')
+  })
+
+  it('keeps an ASCII trailing repeat confirmed by rawTitle (Duran Duran)', () => {
+    expect(
       stripDuplicatedTrailingWord('Duran Duran', 'An Evening with Duran Duran'),
     ).toBe('Duran Duran')
   })
