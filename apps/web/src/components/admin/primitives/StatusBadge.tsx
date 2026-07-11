@@ -48,20 +48,21 @@ export const StatusBadge = ({
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 5,
-        padding: isMono ? '2px 6px' : '3px 8px',
+        gap: 6,
+        padding: '2px 8px',
         borderRadius: 999,
-        fontSize: isMono ? 10 : 11,
-        fontWeight: isMono ? 600 : 600,
+        fontSize: 11,
+        fontWeight: 600,
         fontFamily: isMono
           ? "'JetBrains Mono', monospace"
           : "'Inter', sans-serif",
-        letterSpacing: isMono ? '0.02em' : '0.01em',
+        letterSpacing: isMono ? '0.04em' : '-0.005em',
         textTransform: isMono ? 'lowercase' : undefined,
         color: colors.fg,
         background: isOutline ? 'transparent' : colors.bg,
-        border: `1px solid ${isOutline ? colors.border : 'transparent'}`,
+        border: `1px solid ${colors.border}`,
         whiteSpace: 'nowrap',
+        lineHeight: '16px',
       }}
     >
       {dot && (

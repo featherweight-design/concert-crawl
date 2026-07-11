@@ -22,7 +22,7 @@ export const ProgressBar = ({
 }: ProgressBarProps) => {
   const clamped = Math.min(100, Math.max(0, value))
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
       <div
         style={{
           flex: 1,
@@ -38,6 +38,7 @@ export const ProgressBar = ({
             height: '100%',
             background: KIND_STROKE[kind],
             borderRadius: 999,
+            transition: 'width .25s ease',
           }}
         />
       </div>

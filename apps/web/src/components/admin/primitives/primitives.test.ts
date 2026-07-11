@@ -9,9 +9,10 @@ describe('formatCost', () => {
     expect(formatCost(28.7)).toBe('$28.70')
     expect(formatCost(28.74)).toBe('$28.74')
   })
-  it('formats sub-cent values rounded', () => {
-    expect(formatCost(0.001)).toBe('$0.00')
-    expect(formatCost(0.005)).toBe('$0.01')
+  it('formats sub-$1 values with 4 decimal places', () => {
+    expect(formatCost(0.001)).toBe('$0.0010')
+    expect(formatCost(0.005)).toBe('$0.0050')
+    expect(formatCost(0.42)).toBe('$0.4200')
   })
 })
 

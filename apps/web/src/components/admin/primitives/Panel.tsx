@@ -8,7 +8,7 @@ interface PanelProps {
 export const Panel = ({
   title,
   action,
-  padding = '16px',
+  padding = '18px',
   children,
 }: PanelProps) => (
   <div
@@ -25,11 +25,18 @@ export const Panel = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '10px 16px',
+          padding: '14px 18px',
           borderBottom: '1px solid var(--border)',
         }}
       >
-        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--fg)' }}>
+        <div
+          style={{
+            fontSize: 14,
+            fontWeight: 700,
+            color: 'var(--fg)',
+            letterSpacing: '-0.01em',
+          }}
+        >
           {title}
         </div>
         {action && <div>{action}</div>}

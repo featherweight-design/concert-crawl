@@ -188,21 +188,21 @@ describe('GET /v1/admin/costs/daily', () => {
     expect(body.data.totalUsd).toBe(2.5)
   })
 
-  it('rounds day costs and the total to cents', async () => {
+  it('rounds day costs and the total to 4 decimals', async () => {
     adminAuth()
     await queueDailyRows([
-      { date: '2026-07-09', costUsd: 1.006 },
-      { date: '2026-07-10', costUsd: 2.0049 },
+      { date: '2026-07-09', costUsd: 1.00062 },
+      { date: '2026-07-10', costUsd: 2.00049 },
     ])
     const res = await createApp().request('/v1/admin/costs/daily?days=2')
     const body = (await res.json()) as {
       data: { days: { date: string; costUsd: number }[]; totalUsd: number }
     }
     expect(body.data.days).toEqual([
-      { date: '2026-07-09', costUsd: 1.01 },
-      { date: '2026-07-10', costUsd: 2 },
+      { date: '2026-07-09', costUsd: 1.0006 },
+      { date: '2026-07-10', costUsd: 2.0005 },
     ])
-    expect(body.data.totalUsd).toBe(3.01)
+    expect(body.data.totalUsd).toBe(3.0011)
   })
 
   it('sums the total from unrounded day aggregates so sub-cent days still count', async () => {
@@ -215,13 +215,13 @@ describe('GET /v1/admin/costs/daily', () => {
     const body = (await res.json()) as {
       data: { days: { date: string; costUsd: number }[]; totalUsd: number }
     }
-    // Each day rounds to $0.00 for display, but the total is computed from
-    // the unrounded aggregates: 0.008 → $0.01, not $0.00.
+    // 4-decimal precision (#874): sub-cent days survive rounding, and the
+    // total is computed from the unrounded aggregates: 0.004 + 0.004 = 0.008.
     expect(body.data.days).toEqual([
-      { date: '2026-07-09', costUsd: 0 },
-      { date: '2026-07-10', costUsd: 0 },
+      { date: '2026-07-09', costUsd: 0.004 },
+      { date: '2026-07-10', costUsd: 0.004 },
     ])
-    expect(body.data.totalUsd).toBe(0.01)
+    expect(body.data.totalUsd).toBe(0.008)
   })
 })
 
@@ -360,11 +360,11 @@ describe('GET /v1/admin/costs/top-venues', () => {
         totalUsd: number
       }
     }
-    // Per-venue display rounds to $0.00, but the total and pct shares come
-    // from the unrounded aggregates: 0.016 → $0.02, four equal 25% shares.
-    expect(body.data.totalUsd).toBe(0.02)
+    // 4-decimal precision (#874): sub-cent venues survive rounding; the
+    // total and pct shares come from the unrounded aggregates.
+    expect(body.data.totalUsd).toBe(0.016)
     expect(body.data.venues).toHaveLength(4)
-    expect(body.data.venues[0]).toMatchObject({ costUsd: 0, pct: 25 })
-    expect(body.data.venues[3]).toMatchObject({ costUsd: 0, pct: 25 })
+    expect(body.data.venues[0]).toMatchObject({ costUsd: 0.004, pct: 25 })
+    expect(body.data.venues[3]).toMatchObject({ costUsd: 0.004, pct: 25 })
   })
 })

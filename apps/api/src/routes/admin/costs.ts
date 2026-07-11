@@ -61,7 +61,10 @@ export const listWindowDates = (days: number, endDate: string): string[] => {
   return dates
 }
 
-const roundUsd = (value: number): number => Math.round(value * 100) / 100
+// 4-decimal precision: per-run LLM costs are fractions of a cent, and
+// cent-rounding turned real sub-cent days into $0.00 (#874). The UI's
+// CostText renders 4 decimals below $1, so the API must carry them.
+const roundUsd = (value: number): number => Math.round(value * 10000) / 10000
 
 // Day-bucket expression shared by both endpoints: the MT-local calendar day
 // a run happened on. Qualified column reference, safe under joins/aliases.

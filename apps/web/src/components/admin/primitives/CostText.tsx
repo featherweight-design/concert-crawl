@@ -10,6 +10,8 @@ export const CostText = ({ value, dim }: CostTextProps) => (
     style={{
       fontFamily: "'JetBrains Mono', monospace",
       fontVariantNumeric: 'tabular-nums',
+      fontWeight: 500,
+      letterSpacing: '0.01em',
       color: value === 0 || dim ? 'var(--fg-subtle)' : 'var(--fg)',
     }}
   >
