@@ -11,7 +11,18 @@
 
 import { Hono } from 'hono'
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
-import { and, eq, gt, isNotNull, isNull, lt, lte, or, sql } from 'drizzle-orm'
+import {
+  and,
+  eq,
+  gt,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  lte,
+  or,
+  sql,
+} from 'drizzle-orm'
 import { z } from 'zod'
 import {
   db,
@@ -218,6 +229,40 @@ export const createBillingRouter = (
       )
     }
 
+    // 409 — one pending founder claim per user. Without this, repeated
+    // checkouts would let one user hold many seats via incomplete
+    // subscriptions; a held seat is only released by the §3.2 restoration
+    // paths (abandon endpoint / incomplete_expired webhook, PR 2.3).
+    if (tier === 'founder') {
+      const claimEvents = await db
+        .select({ type: subscriptionEvents.type })
+        .from(subscriptionEvents)
+        .where(
+          and(
+            eq(subscriptionEvents.userId, userId),
+            inArray(subscriptionEvents.type, [
+              'founder_claimed',
+              'founder_seat_restored',
+            ]),
+          ),
+        )
+      const claims = claimEvents.filter(
+        (event) => event.type === 'founder_claimed',
+      ).length
+      const restores = claimEvents.length - claims
+      if (claims > restores) {
+        return ctx.json(
+          {
+            success: false,
+            code: 'founder_claim_pending',
+            error:
+              'You already have a founder checkout in progress — finish or abandon it first',
+          },
+          409,
+        )
+      }
+    }
+
     // Founder atomic claim (spec §3.1) — single guarded UPDATE, before
     // subscription creation. An empty result means the seat race was lost
     // between the gate check and the decrement.
@@ -248,14 +293,22 @@ export const createBillingRouter = (
         )
       }
       founderSeatNumber = seatsTotal - claimedRow.seatsRemaining
-      await db.insert(subscriptionEvents).values({
-        userId,
-        type: 'founder_claimed',
-        metadata: { seatNumber: founderSeatNumber },
-      })
     }
 
+    // NULL until Stripe subscription creation succeeds — the catch below
+    // must NOT restore the founder seat once the incomplete subscription
+    // exists (it holds the seat; §3.2 restoration paths reconcile it).
+    let createdSubscription: StripeSubscriptionCreateResult | null = null
     try {
+      // Inside the try so a failed audit insert restores the claimed seat.
+      if (founderSeatNumber !== null) {
+        await db.insert(subscriptionEvents).values({
+          userId,
+          type: 'founder_claimed',
+          metadata: { seatNumber: founderSeatNumber },
+        })
+      }
+
       const stripe = getStripe()
 
       // Ensure a Stripe customer — reuse the ID from any prior subscription
@@ -273,6 +326,13 @@ export const createBillingRouter = (
         lookup_keys: [lookupKey],
         active: true,
       })
+      if (priceList.data.length > 1) {
+        // Multiple active prices on one lookup_key means Stripe state has
+        // drifted — charging an arbitrary data[0] risks incorrect billing.
+        throw new Error(
+          `Multiple active Stripe prices for lookup_key "${lookupKey}" — resolve the duplicate in the Stripe dashboard`,
+        )
+      }
       const price = priceList.data[0]
       if (!price) {
         throw new Error(
@@ -280,7 +340,7 @@ export const createBillingRouter = (
         )
       }
 
-      const subscription = await stripe.subscriptions.create({
+      createdSubscription = await stripe.subscriptions.create({
         customer: stripeCustomerId,
         items: [{ price: price.id }],
         payment_behavior: 'default_incomplete',
@@ -297,22 +357,31 @@ export const createBillingRouter = (
         },
       })
 
-      const clientSecret = resolveClientSecret(subscription)
+      const clientSecret = resolveClientSecret(createdSubscription)
       if (clientSecret === null) {
         throw new Error(
           'Stripe subscription create returned no confirmation client secret',
         )
       }
 
-      await db.insert(subscriptionEvents).values({
-        userId,
-        type: 'checkout_started',
-        metadata: { tier, subscriptionId: subscription.id },
-      })
+      // Best-effort audit — the checkout already succeeded, so a failed
+      // insert must not 500 a response the client can act on.
+      try {
+        await db.insert(subscriptionEvents).values({
+          userId,
+          type: 'checkout_started',
+          metadata: { tier, subscriptionId: createdSubscription.id },
+        })
+      } catch (auditErr) {
+        apiLogger.error(
+          { err: auditErr, userId, tier },
+          'checkout-session: checkout_started audit insert failed',
+        )
+      }
 
       return ctx.json({
         success: true,
-        data: { clientSecret, subscriptionId: subscription.id },
+        data: { clientSecret, subscriptionId: createdSubscription.id },
       })
     } catch (err) {
       apiLogger.error(
@@ -321,7 +390,19 @@ export const createBillingRouter = (
       )
       // A claimed founder seat must not leak when Stripe fails after the
       // claim — restore it (guarded so seats never exceed seatsTotal).
-      if (founderSeatNumber !== null) {
+      // Never restore once the incomplete subscription exists: it holds the
+      // seat, and incrementing here would oversell founder seats.
+      if (founderSeatNumber !== null && createdSubscription !== null) {
+        apiLogger.error(
+          {
+            userId,
+            seatNumber: founderSeatNumber,
+            subscriptionId: createdSubscription.id,
+          },
+          'checkout-session: post-create failure — seat held by incomplete subscription',
+        )
+      }
+      if (founderSeatNumber !== null && createdSubscription === null) {
         try {
           await db
             .update(founderWindow)

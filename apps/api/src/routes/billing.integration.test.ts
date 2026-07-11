@@ -21,7 +21,18 @@ const { authState } = vi.hoisted(() => ({
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>
     next(),
-  getAuth: () => authState.current,
+  // Header override lets concurrent requests act as distinct users (the
+  // module-level authState is shared across in-flight requests).
+  getAuth: (ctx: { req: { header: (name: string) => string | undefined } }) => {
+    const headerUser = ctx.req.header('x-test-user')
+    if (headerUser) {
+      return {
+        userId: headerUser,
+        sessionClaims: { metadata: { role: 'user' } },
+      }
+    }
+    return authState.current
+  },
 }))
 
 import { createBillingRouter } from './billing.js'
@@ -45,6 +56,8 @@ function clearAuth(): void {
 interface FakeStripeOptions {
   failSubscriptionCreate?: boolean
   emptyPriceList?: boolean
+  duplicatePriceList?: boolean
+  missingClientSecret?: boolean
 }
 
 interface FakeStripe {
@@ -67,6 +80,14 @@ function createFakeStripe(options: FakeStripeOptions = {}): FakeStripe {
     prices: {
       list: async (params) => {
         if (options.emptyPriceList) return { data: [] }
+        if (options.duplicatePriceList) {
+          return {
+            data: [
+              { id: `price_fake_${params.lookup_keys[0]}_a` },
+              { id: `price_fake_${params.lookup_keys[0]}_b` },
+            ],
+          }
+        }
         return { data: [{ id: `price_fake_${params.lookup_keys[0]}` }] }
       },
     },
@@ -77,6 +98,9 @@ function createFakeStripe(options: FakeStripeOptions = {}): FakeStripe {
         }
         subscriptionsCreated.push(params)
         const seq = subscriptionsCreated.length
+        if (options.missingClientSecret) {
+          return { id: `sub_fake_${seq}`, latest_invoice: 'in_unexpanded' }
+        }
         return {
           id: `sub_fake_${seq}`,
           latest_invoice: {
@@ -99,10 +123,17 @@ function buildApp(stripe: BillingStripeClient): Hono {
   return app
 }
 
-function postCheckout(app: Hono, body: unknown): Promise<Response> {
+function postCheckout(
+  app: Hono,
+  body: unknown,
+  asUser?: string,
+): Promise<Response> {
   return app.request('/v1/billing/checkout-session', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(asUser ? { 'x-test-user': asUser } : {}),
+    },
     body: JSON.stringify(body),
   })
 }
@@ -360,6 +391,78 @@ describe('POST /v1/billing/checkout-session', () => {
     expect(res.status).toBe(500)
   })
 
+  it('returns 500 when multiple active prices share the lookup key (no charge)', async () => {
+    setAuth('user_dup_price')
+    const fake = createFakeStripe({ duplicatePriceList: true })
+    const app = buildApp(fake.client)
+
+    const res = await postCheckout(app, { tier: 'supporter' })
+    expect(res.status).toBe(500)
+    expect(fake.subscriptionsCreated).toHaveLength(0)
+  })
+
+  it('returns 409 founder_claim_pending on a repeat checkout while a claim is held', async () => {
+    setAuth('user_founder_repeat')
+    await setFounderWindow({
+      opensAt: new Date(Date.now() - DAY_MS),
+      seatsTotal: 100,
+      seatsRemaining: 100,
+    })
+    const app = buildApp(createFakeStripe().client)
+
+    const first = await postCheckout(app, { tier: 'founder' })
+    expect(first.status).toBe(200)
+
+    const second = await postCheckout(app, { tier: 'founder' })
+    expect(second.status).toBe(409)
+    const body: ErrorBody = await second.json()
+    expect(body.code).toBe('founder_claim_pending')
+
+    // Exactly one seat held — the repeat call never reached the decrement.
+    const windowRow = await readFounderWindow()
+    expect(windowRow.seatsRemaining).toBe(99)
+  })
+
+  it('allows a fresh founder checkout after the held seat was restored', async () => {
+    setAuth('user_founder_after_restore')
+    await setFounderWindow({
+      opensAt: new Date(Date.now() - DAY_MS),
+      seatsTotal: 100,
+      seatsRemaining: 100,
+    })
+    // First attempt fails at Stripe → seat restored; retry must not 409.
+    const failApp = buildApp(
+      createFakeStripe({ failSubscriptionCreate: true }).client,
+    )
+    expect((await postCheckout(failApp, { tier: 'founder' })).status).toBe(500)
+
+    const okApp = buildApp(createFakeStripe().client)
+    const retry = await postCheckout(okApp, { tier: 'founder' })
+    expect(retry.status).toBe(200)
+  })
+
+  it('does NOT restore the seat when failure happens after subscription creation', async () => {
+    setAuth('user_founder_post_create')
+    await setFounderWindow({
+      opensAt: new Date(Date.now() - DAY_MS),
+      seatsTotal: 100,
+      seatsRemaining: 10,
+    })
+    const fake = createFakeStripe({ missingClientSecret: true })
+    const app = buildApp(fake.client)
+
+    const res = await postCheckout(app, { tier: 'founder' })
+    expect(res.status).toBe(500)
+    expect(fake.subscriptionsCreated).toHaveLength(1)
+
+    // The incomplete subscription holds the seat — restoring here would
+    // oversell (§3.2 restoration paths reconcile it instead).
+    const windowRow = await readFounderWindow()
+    expect(windowRow.seatsRemaining).toBe(9)
+    const events = await listEvents('user_founder_post_create')
+    expect(events.map((event) => event.type)).toEqual(['founder_claimed'])
+  })
+
   it('claims a founder seat atomically and stamps the seat number', async () => {
     setAuth('user_founder_ok')
     await setFounderWindow({
@@ -434,7 +537,8 @@ describe('POST /v1/billing/checkout-session', () => {
   })
 
   it('grants exactly N seats under concurrent claim pressure (atomic race)', async () => {
-    setAuth('user_founder_race')
+    // Distinct users per request — the per-user pending-claim 409 guard is
+    // covered separately; this test isolates the atomic decrement.
     await setFounderWindow({
       opensAt: new Date(Date.now() - DAY_MS),
       seatsTotal: 100,
@@ -443,8 +547,14 @@ describe('POST /v1/billing/checkout-session', () => {
     const fake = createFakeStripe()
     const app = buildApp(fake.client)
 
+    const raceUsers = Array.from(
+      { length: 10 },
+      (_unused, idx) => `user_founder_race_${idx}`,
+    )
     const responses = await Promise.all(
-      Array.from({ length: 10 }, () => postCheckout(app, { tier: 'founder' })),
+      raceUsers.map((raceUser) =>
+        postCheckout(app, { tier: 'founder' }, raceUser),
+      ),
     )
 
     const successes = responses.filter((res) => res.status === 200)
@@ -459,8 +569,12 @@ describe('POST /v1/billing/checkout-session', () => {
     const windowRow = await readFounderWindow()
     expect(windowRow.seatsRemaining).toBe(0)
 
-    const events = await listEvents('user_founder_race')
-    const claimed = events.filter((event) => event.type === 'founder_claimed')
+    const allEvents = (
+      await Promise.all(raceUsers.map((raceUser) => listEvents(raceUser)))
+    ).flat()
+    const claimed = allEvents.filter(
+      (event) => event.type === 'founder_claimed',
+    )
     expect(claimed).toHaveLength(3)
     const seatNumbers = claimed
       .map((event) =>
