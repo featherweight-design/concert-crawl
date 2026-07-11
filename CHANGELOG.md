@@ -1,3 +1,17 @@
+# [1.94.0](https://github.com/HartiganHM/concert-crawl/compare/v1.93.0...v1.94.0) (2026-07-11)
+
+
+### Bug Fixes
+
+* **web:** r1 — past-due outranks celebratory card; free plan card; lockedSurface roleComped ([ea47f64](https://github.com/HartiganHM/concert-crawl/commit/ea47f6433d139dce0e9c15572afb33d06e89356e))
+* **web:** r2 — centralize PlanCard copy; derive SubscriptionTier from Drizzle schema ([0de8c33](https://github.com/HartiganHM/concert-crawl/commit/0de8c335e2194340cf82c7e28a12e452cb59a7d8))
+* **web:** r3 — guard trialDaysRemainingFrom against unparseable trialEndsAt ([3cd7259](https://github.com/HartiganHM/concert-crawl/commit/3cd7259ccc4ecc9ae4c7c05a63c2a5d33ca14fca))
+
+
+### Features
+
+* **api:** derivePlan rewrite to six-plan PlanState + entitlements package (PR 3.1) ([e2c8c41](https://github.com/HartiganHM/concert-crawl/commit/e2c8c419a863cbfaebf320a999838e3b8489dceb))
+
 # [1.93.0](https://github.com/HartiganHM/concert-crawl/compare/v1.92.1...v1.93.0) (2026-07-11)
 
 
