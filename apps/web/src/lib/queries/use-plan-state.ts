@@ -18,11 +18,16 @@ export const planStateQueryKey = (userId: string | null | undefined) =>
 export function usePlanState() {
   const { getToken, isSignedIn, userId } = useAuth()
 
-  return useQuery<PlanState | null>({
+  return useQuery<PlanState>({
     queryKey: planStateQueryKey(userId),
     queryFn: async () => {
       const token = await getToken()
-      if (!token) return null
+      if (!token) {
+        // Throw rather than resolve null: a successful null would be cached
+        // as fresh for staleTime and pin entitlements locked for minutes
+        // after a transient token gap. An error lets React Query retry.
+        throw new Error('Auth token unavailable while fetching plan state')
+      }
       const profile = await fetchMe(token)
       return profile.planState
     },

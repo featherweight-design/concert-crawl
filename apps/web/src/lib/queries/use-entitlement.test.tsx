@@ -159,6 +159,23 @@ describe('usePlanState', () => {
     expect(mockFetchMe).toHaveBeenCalledWith('test-token')
   })
 
+  it('retries after a transient token gap instead of caching a locked state', async () => {
+    // A missing token must reject (so React Query retries), never resolve —
+    // a successful null would be cached as fresh for staleTime and pin
+    // entitlements locked for minutes after the token becomes available.
+    mockGetToken.mockResolvedValueOnce(null).mockResolvedValue('test-token')
+    setProfilePlan(planState('premium', { status: 'active' }))
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: 1, retryDelay: 0 } },
+    })
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+    const { result } = renderHook(() => usePlanState(), { wrapper })
+    await waitFor(() => expect(result.current.data?.plan).toBe('premium'))
+    expect(mockGetToken).toHaveBeenCalledTimes(2)
+  })
+
   it('does not serve the previous account plan state after a user switch', async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },

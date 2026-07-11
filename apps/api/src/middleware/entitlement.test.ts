@@ -23,6 +23,19 @@ vi.mock('../lib/plan.js', () => ({
   loadPlanState: loadPlanStateMock,
 }))
 
+const { debugLogMock, infoLogMock } = vi.hoisted(() => ({
+  debugLogMock: vi.fn(),
+  infoLogMock: vi.fn(),
+}))
+vi.mock('../lib/logger.js', () => ({
+  apiLogger: {
+    debug: debugLogMock,
+    info: infoLogMock,
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}))
+
 import {
   requireFeature,
   ENTITLEMENT_REQUIRED_CODE,
@@ -66,6 +79,20 @@ describe('requireFeature', () => {
     authState.current = null
     planStateRef.current = basePlanState
     loadPlanStateMock.mockClear()
+    debugLogMock.mockClear()
+    infoLogMock.mockClear()
+  })
+
+  it('logs denials at debug, not info (expected traffic must not flood prod logs)', async () => {
+    setAuth()
+    setPlan({ plan: 'free' })
+    const app = buildApp('concert-history')
+    await app.request('/probe')
+    expect(debugLogMock).toHaveBeenCalledWith(
+      expect.objectContaining({ feature: 'concert-history', plan: 'free' }),
+      'entitlement gate denied',
+    )
+    expect(infoLogMock).not.toHaveBeenCalled()
   })
 
   it('returns 401 when unauthenticated', async () => {
