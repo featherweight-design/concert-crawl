@@ -568,7 +568,7 @@ venuesAdminRouter.post(
           ok: false,
           reason: 'missing_config',
           error:
-            'No platform fetcher matches this config — platform is unset or platformVenueId is missing',
+            'No platform fetcher matches this config — platform is unset or unregistered, or platformVenueId is missing',
         }
       }
       const startedAt = Date.now()
