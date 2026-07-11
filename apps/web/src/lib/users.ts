@@ -8,8 +8,9 @@ import { apiClient } from './api'
 
 export async function fetchMe(
   token: string,
-  // ISO timestamp for the browser-session marker (spec Decision 9) — the
-  // API uses it to evaluate the per-session lifecycle nudge flags.
+  // ISO timestamp for the browser-session marker (spec Decision 9). The
+  // API only uses it to narrow the past-due banner predicate (per-session
+  // dismissal); the trial-ended takeover and day-13 banner ignore it.
   sessionStartedAt?: string,
 ): Promise<UserProfileResponse> {
   const query = sessionStartedAt

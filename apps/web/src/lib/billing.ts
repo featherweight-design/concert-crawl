@@ -28,11 +28,11 @@ export async function abandonCheckout(
   })
 }
 
-export type DismissableNudge = 'day13' | 'past-due'
+export type DismissibleNudge = 'day13' | 'past-due'
 
 export async function dismissNudge(
   token: string,
-  nudge: DismissableNudge,
+  nudge: DismissibleNudge,
 ): Promise<void> {
   await apiClient.post<void>('/v1/billing/nudges/dismiss', token, { nudge })
 }

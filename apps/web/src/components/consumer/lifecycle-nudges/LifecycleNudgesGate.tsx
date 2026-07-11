@@ -41,7 +41,7 @@ const readSessionMarker = (): string => {
 export const LifecycleNudgesGate = () => {
   const pathname = usePathname()
   const router = useRouter()
-  const { getToken } = useAuth()
+  const { getToken, isSignedIn } = useAuth()
 
   const [flags, setFlags] = useState<NudgeFlags | null>(null)
   const [dismissed, setDismissed] = useState(false)
@@ -51,12 +51,14 @@ export const LifecycleNudgesGate = () => {
   const hidden = pathname.startsWith('/admin')
 
   useEffect(() => {
-    if (hidden || fetchedRef.current) return
+    // isSignedIn gates before the ref locks — a mount while Clerk is still
+    // resolving (isSignedIn undefined/false) retries once sign-in lands
+    // instead of burning the once-per-mount fetch on a null token.
+    if (hidden || !isSignedIn || fetchedRef.current) return
     fetchedRef.current = true
     void (async () => {
       try {
         const token = await getToken()
-        // Signed-out (public pages under the shared shell) — no nudges.
         if (!token) return
         const marker = readSessionMarker()
         const me = await fetchMe(token, marker)
@@ -68,7 +70,7 @@ export const LifecycleNudgesGate = () => {
         console.error('Failed to load lifecycle nudge flags', err)
       }
     })()
-  }, [hidden, getToken])
+  }, [hidden, isSignedIn, getToken])
 
   const showTakeover =
     !hidden && !dismissed && flags !== null && flags.showTrialEndedTakeover

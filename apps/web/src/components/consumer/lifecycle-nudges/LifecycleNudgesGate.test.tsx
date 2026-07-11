@@ -4,9 +4,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 let pathname = '/'
+let isSignedIn = true
 
 beforeEach(() => {
   pathname = '/'
+  isSignedIn = true
   vi.clearAllMocks()
   window.sessionStorage.clear()
   mockGetToken.mockResolvedValue('test-token')
@@ -17,7 +19,7 @@ beforeEach(() => {
 
 const mockGetToken = vi.fn()
 vi.mock('@clerk/nextjs', () => ({
-  useAuth: () => ({ getToken: mockGetToken }),
+  useAuth: () => ({ getToken: mockGetToken, isSignedIn }),
 }))
 
 const mockPush = vi.fn()
@@ -101,6 +103,23 @@ describe('LifecycleNudgesGate', () => {
     await waitFor(() => expect(mockGetToken).toHaveBeenCalled())
     expect(mockFetchMe).not.toHaveBeenCalled()
     expect(container.firstChild).toBeNull()
+  })
+
+  it('does not fetch (or lock the ref) while signed out', () => {
+    isSignedIn = false
+    const { container } = render(<LifecycleNudgesGate />)
+    expect(mockGetToken).not.toHaveBeenCalled()
+    expect(mockFetchMe).not.toHaveBeenCalled()
+    expect(container.firstChild).toBeNull()
+  })
+
+  it('fetches once sign-in resolves after a signed-out mount', async () => {
+    isSignedIn = false
+    const { rerender } = render(<LifecycleNudgesGate />)
+    expect(mockFetchMe).not.toHaveBeenCalled()
+    isSignedIn = true
+    rerender(<LifecycleNudgesGate />)
+    await waitFor(() => expect(mockFetchMe).toHaveBeenCalledTimes(1))
   })
 
   it('renders nothing on admin routes', () => {
