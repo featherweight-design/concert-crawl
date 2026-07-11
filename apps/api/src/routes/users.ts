@@ -9,13 +9,11 @@ import {
   userProfiles,
   userRoles,
   priceSubmissions,
-  subscriptions,
   events,
   venues,
 } from '@concert-crawl/db'
 import { createClerkClient } from '@clerk/backend'
 import type {
-  UserPlan,
   DisplayRole,
   RoleBadge,
   SubmissionDisplayStatus,
@@ -24,8 +22,8 @@ import type {
   HandleAvailabilityResponse,
   Tier,
 } from '@concert-crawl/types'
-import { PREMIUM_ROLES } from '@concert-crawl/types'
 import { apiLogger } from '../lib/logger.js'
+import { loadPlanState } from '../lib/plan.js'
 
 export const usersRouter = new Hono()
 
@@ -73,17 +71,6 @@ const RESERVED_HANDLES = new Set([
 
 const HANDLE_REGEX = /^[a-z0-9_]+$/
 
-function derivePlan(
-  sub: { founder: boolean; tier: string; status: string } | undefined,
-): UserPlan {
-  if (!sub) return 'founder'
-  if (sub.founder) return 'founder'
-  if (sub.tier === 'premium' && sub.status === 'active') return 'paid'
-  if (sub.tier === 'premium' && sub.status === 'past_due') return 'past-due'
-  if (sub.tier === 'free' && sub.status === 'active') return 'trial'
-  return 'founder'
-}
-
 function mapStatus(dbStatus: string): SubmissionDisplayStatus {
   if (dbStatus === 'corroborated') return 'confirmed'
   if (dbStatus === 'disputed') return 'disputed'
@@ -108,15 +95,7 @@ usersRouter.get('/me', async (ctx) => {
     .where(eq(userProfiles.userId, auth.userId))
     .limit(1)
 
-  const [sub] = await db
-    .select({
-      founder: subscriptions.founder,
-      tier: subscriptions.tier,
-      status: subscriptions.status,
-    })
-    .from(subscriptions)
-    .where(eq(subscriptions.userId, auth.userId))
-    .limit(1)
+  const planState = await loadPlanState(auth.userId, clerkUser.publicMetadata)
 
   const [submissionCountRow] = await db
     .select({ value: count() })
@@ -136,12 +115,6 @@ usersRouter.get('/me', async (ctx) => {
   const displayRole: DisplayRole =
     authRole === 'admin' || authRole === 'sub_admin' ? 'staff' : 'fan'
 
-  // Role-first: privileged roles get full premium access regardless of subscription
-  const isPremiumRole = PREMIUM_ROLES.includes(
-    authRole as (typeof PREMIUM_ROLES)[number],
-  )
-  const plan: UserPlan = isPremiumRole ? 'founder' : derivePlan(sub)
-
   const roleBadge: RoleBadge | null =
     authRole === 'admin' || authRole === 'sub_admin'
       ? 'admin'
@@ -158,7 +131,7 @@ usersRouter.get('/me', async (ctx) => {
     city: profile?.city ?? null,
     avatarColor: profile?.avatarColor ?? null,
     theme: profile?.theme ?? 'electric',
-    plan,
+    planState,
     displayRole,
     roleBadge,
     joined: formatJoined(

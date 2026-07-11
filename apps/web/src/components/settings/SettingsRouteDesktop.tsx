@@ -22,12 +22,7 @@ import type {
 const SETTINGS_COPY = CONSUMER_COPY.settings
 
 type NavSection =
-  | 'profile'
-  | 'plan'
-  | 'appearance'
-  | 'submissions'
-  | 'account'
-  | 'danger'
+  'profile' | 'plan' | 'appearance' | 'submissions' | 'account' | 'danger'
 
 const NAV_ITEMS: { key: NavSection; label: string }[] = [
   { key: 'profile', label: 'Profile' },
@@ -350,7 +345,7 @@ export function SettingsRouteDesktop({
                     What you&apos;re paying us. (Spoiler: nothing.)
                   </p>
                 </div>
-                <PlanCard plan={profile.plan} />
+                <PlanCard planState={profile.planState} />
               </div>
             )}
 

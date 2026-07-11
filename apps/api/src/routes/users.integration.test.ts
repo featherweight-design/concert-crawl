@@ -7,7 +7,7 @@ const { authState, clerkState } = vi.hoisted(() => ({
       sessionClaims: { metadata?: { role?: string } }
     } | null,
   },
-  clerkState: { role: 'user' as string },
+  clerkState: { role: 'user' as string, plan: undefined as string | undefined },
 }))
 
 vi.mock('@hono/clerk-auth', () => ({
@@ -23,7 +23,7 @@ vi.mock('@clerk/backend', () => ({
       getUser: vi.fn().mockImplementation(() =>
         Promise.resolve({
           emailAddresses: [{ emailAddress: 'test@example.com' }],
-          publicMetadata: { role: clerkState.role },
+          publicMetadata: { role: clerkState.role, plan: clerkState.plan },
           createdAt: new Date('2026-04-01').getTime(),
         }),
       ),
@@ -32,6 +32,9 @@ vi.mock('@clerk/backend', () => ({
   }),
 }))
 
+import { sql } from 'drizzle-orm'
+import { z } from 'zod'
+import { giftedComps, subscriptions, userBilling } from '@concert-crawl/db'
 import { createApp } from '../app.js'
 import {
   clearTables,
@@ -40,8 +43,52 @@ import {
   seedPriceSubmission,
   seedUserProfile,
 } from '../test/helpers/seed.js'
+import { testDb } from '../test/helpers/db.js'
 
 const app = createApp()
+
+async function clearBillingTables(): Promise<void> {
+  await testDb.execute(sql`TRUNCATE subscriptions, gifted_comps, user_billing`)
+}
+
+async function seedSubscription(
+  userId: string,
+  overrides: Partial<typeof subscriptions.$inferInsert> = {},
+): Promise<void> {
+  await testDb.insert(subscriptions).values({
+    userId,
+    stripeCustomerId: `cus_${userId}`,
+    stripeSubscriptionId: `sub_${userId}`,
+    tier: 'premium',
+    status: 'active',
+    currentPeriodEnd: new Date(Date.now() + 30 * 86400000),
+    ...overrides,
+  })
+}
+
+const planStateBodySchema = z.object({
+  success: z.boolean(),
+  data: z.object({
+    planState: z.object({
+      plan: z.string(),
+      onTrial: z.boolean(),
+      trialEndsAt: z.string().nullable(),
+      status: z.string().nullable(),
+      cancelAtPeriodEnd: z.boolean(),
+      currentPeriodEnd: z.string().nullable(),
+      roleComped: z.boolean(),
+    }),
+    roleBadge: z.string().nullable(),
+  }),
+})
+
+async function fetchMe(): Promise<z.infer<typeof planStateBodySchema>> {
+  const res = await app.request('/v1/users/me', {
+    headers: { Authorization: 'Bearer test' },
+  })
+  expect(res.status).toBe(200)
+  return planStateBodySchema.parse(await res.json())
+}
 
 function setAuth(userId = 'user_test123'): void {
   authState.current = {
@@ -58,7 +105,9 @@ describe('GET /v1/users/me', () => {
   beforeEach(async () => {
     clearAuth()
     clerkState.role = 'user'
+    clerkState.plan = undefined
     await clearTables()
+    await clearBillingTables()
   })
 
   it('returns 401 without auth', async () => {
@@ -74,12 +123,108 @@ describe('GET /v1/users/me', () => {
     expect(res.status).toBe(200)
     const body = (await res.json()) as {
       success: boolean
-      data: { handle: null; theme: string; plan: string }
+      data: { handle: null; theme: string }
     }
     expect(body.success).toBe(true)
     expect(body.data.handle).toBeNull()
     expect(body.data.theme).toBe('electric')
-    expect(body.data.plan).toBe('founder')
+  })
+
+  it('derives free with no billing rows (no more implicit founder)', async () => {
+    setAuth()
+    const body = await fetchMe()
+    expect(body.data.planState).toEqual({
+      plan: 'free',
+      onTrial: false,
+      trialEndsAt: null,
+      status: null,
+      cancelAtPeriodEnd: false,
+      currentPeriodEnd: null,
+      roleComped: false,
+    })
+  })
+
+  it('derives gifted from a live gifted_comps row, before any subscription', async () => {
+    setAuth()
+    clerkState.plan = 'premium_gifted'
+    await testDb.insert(giftedComps).values({
+      userId: 'user_test123',
+      grantedBy: 'user_admin',
+    })
+    await seedSubscription('user_test123', { tier: 'supporter' })
+    const body = await fetchMe()
+    expect(body.data.planState.plan).toBe('gifted')
+  })
+
+  it('treats a revoked gift as absent', async () => {
+    setAuth()
+    await testDb.insert(giftedComps).values({
+      userId: 'user_test123',
+      grantedBy: 'user_admin',
+      revokedAt: new Date(),
+    })
+    const body = await fetchMe()
+    expect(body.data.planState.plan).toBe('free')
+  })
+
+  it('derives premium from an active premium subscription', async () => {
+    setAuth()
+    await seedSubscription('user_test123')
+    const body = await fetchMe()
+    expect(body.data.planState.plan).toBe('premium')
+    expect(body.data.planState.status).toBe('active')
+    expect(body.data.planState.onTrial).toBe(false)
+  })
+
+  it('keeps the founder plan while past_due (dunning window)', async () => {
+    setAuth()
+    await seedSubscription('user_test123', {
+      tier: 'founder',
+      status: 'past_due',
+    })
+    const body = await fetchMe()
+    expect(body.data.planState.plan).toBe('founder')
+    expect(body.data.planState.status).toBe('past_due')
+  })
+
+  it('falls through to free on a cancelled subscription', async () => {
+    setAuth()
+    await seedSubscription('user_test123', { status: 'cancelled' })
+    const body = await fetchMe()
+    expect(body.data.planState.plan).toBe('free')
+    expect(body.data.planState.status).toBe('cancelled')
+  })
+
+  it('derives premium with onTrial from a live user_billing trial', async () => {
+    setAuth()
+    await testDb.insert(userBilling).values({
+      userId: 'user_test123',
+      trialEndsAt: new Date(Date.now() + 7 * 86400000),
+    })
+    const body = await fetchMe()
+    expect(body.data.planState.plan).toBe('premium')
+    expect(body.data.planState.onTrial).toBe(true)
+    expect(body.data.planState.trialEndsAt).not.toBeNull()
+  })
+
+  it('derives free from an expired trial', async () => {
+    setAuth()
+    await testDb.insert(userBilling).values({
+      userId: 'user_test123',
+      trialEndsAt: new Date(Date.now() - 86400000),
+    })
+    const body = await fetchMe()
+    expect(body.data.planState.plan).toBe('free')
+    expect(body.data.planState.onTrial).toBe(false)
+  })
+
+  it('reports cancel-grace via cancelAtPeriodEnd with active status', async () => {
+    setAuth()
+    await seedSubscription('user_test123', { cancelAtPeriodEnd: true })
+    const body = await fetchMe()
+    expect(body.data.planState.plan).toBe('premium')
+    expect(body.data.planState.cancelAtPeriodEnd).toBe(true)
+    expect(body.data.planState.status).toBe('active')
   })
 
   it('returns saved handle when profile exists', async () => {
@@ -95,64 +240,49 @@ describe('GET /v1/users/me', () => {
     expect(body.data.handle).toBe('testuser')
   })
 
-  it('beta role grants founder plan and beta roleBadge', async () => {
+  it('beta role sets roleComped (not the founder plan) and beta roleBadge', async () => {
     clerkState.role = 'beta'
     setAuth()
-    const res = await app.request('/v1/users/me', {
-      headers: { Authorization: 'Bearer test' },
-    })
-    const body = (await res.json()) as {
-      success: boolean
-      data: { plan: string; roleBadge: string | null }
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.plan).toBe('founder')
+    const body = await fetchMe()
+    expect(body.data.planState.roleComped).toBe(true)
+    expect(body.data.planState.plan).toBe('free')
     expect(body.data.roleBadge).toBe('beta')
   })
 
-  it('promoter role grants founder plan and promoter roleBadge', async () => {
+  it('promoter role sets roleComped and promoter roleBadge', async () => {
     clerkState.role = 'promoter'
     setAuth()
-    const res = await app.request('/v1/users/me', {
-      headers: { Authorization: 'Bearer test' },
-    })
-    const body = (await res.json()) as {
-      success: boolean
-      data: { plan: string; roleBadge: string | null }
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.plan).toBe('founder')
+    const body = await fetchMe()
+    expect(body.data.planState.roleComped).toBe(true)
+    expect(body.data.planState.plan).toBe('free')
     expect(body.data.roleBadge).toBe('promoter')
   })
 
-  it('admin role grants founder plan and admin roleBadge', async () => {
+  it('admin role sets roleComped and admin roleBadge', async () => {
     clerkState.role = 'admin'
     setAuth()
-    const res = await app.request('/v1/users/me', {
-      headers: { Authorization: 'Bearer test' },
-    })
-    const body = (await res.json()) as {
-      success: boolean
-      data: { plan: string; roleBadge: string | null }
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.plan).toBe('founder')
+    const body = await fetchMe()
+    expect(body.data.planState.roleComped).toBe(true)
+    expect(body.data.planState.plan).toBe('free')
     expect(body.data.roleBadge).toBe('admin')
   })
 
-  it('sub_admin role grants founder plan and admin roleBadge', async () => {
+  it('sub_admin role sets roleComped and admin roleBadge', async () => {
     clerkState.role = 'sub_admin'
     setAuth()
-    const res = await app.request('/v1/users/me', {
-      headers: { Authorization: 'Bearer test' },
-    })
-    const body = (await res.json()) as {
-      success: boolean
-      data: { plan: string; roleBadge: string | null }
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.plan).toBe('founder')
+    const body = await fetchMe()
+    expect(body.data.planState.roleComped).toBe(true)
+    expect(body.data.planState.plan).toBe('free')
     expect(body.data.roleBadge).toBe('admin')
+  })
+
+  it('role-holder with a live subscription keeps roleComped and the paid tier', async () => {
+    clerkState.role = 'beta'
+    setAuth()
+    await seedSubscription('user_test123', { tier: 'founder' })
+    const body = await fetchMe()
+    expect(body.data.planState.roleComped).toBe(true)
+    expect(body.data.planState.plan).toBe('founder')
   })
 
   it('user role produces null roleBadge', async () => {

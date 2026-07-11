@@ -1,11 +1,18 @@
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import type { UserPlan } from '@concert-crawl/types'
+import type { PlanState } from '@concert-crawl/types'
 
 const SETTINGS_COPY = CONSUMER_COPY.settings
 
 interface PlanCardProps {
-  plan: UserPlan
-  trialDaysRemaining?: number
+  planState: PlanState
+}
+
+const MS_PER_DAY = 86400000
+
+const trialDaysRemainingFrom = (trialEndsAt: string | null): number => {
+  if (!trialEndsAt) return 0
+  const remainingMs = new Date(trialEndsAt).getTime() - Date.now()
+  return Math.max(0, Math.ceil(remainingMs / MS_PER_DAY))
 }
 
 function PlanPill({ label, tone }: { label: string; tone: string }) {
@@ -29,8 +36,14 @@ function PlanPill({ label, tone }: { label: string; tone: string }) {
   )
 }
 
-export function PlanCard({ plan, trialDaysRemaining }: PlanCardProps) {
-  if (plan === 'founder') {
+// Mechanical PlanState migration (PR 3.1) — variant routing only. The full
+// six-plan card redesign lands in PR 3.4 (#780). Gifted and role-comped
+// users keep the celebratory card they saw under the old founder default.
+export function PlanCard({ planState }: PlanCardProps) {
+  const { plan, roleComped, status, onTrial, trialEndsAt } = planState
+  const trialDaysRemaining = trialDaysRemainingFrom(trialEndsAt)
+
+  if (roleComped || plan === 'founder' || plan === 'gifted') {
     return (
       <div
         className="relative overflow-hidden rounded-2xl border p-5"
@@ -105,7 +118,7 @@ export function PlanCard({ plan, trialDaysRemaining }: PlanCardProps) {
     )
   }
 
-  if (plan === 'past-due') {
+  if (status === 'past_due') {
     return (
       <div
         className="rounded-2xl border p-5"
@@ -168,7 +181,7 @@ export function PlanCard({ plan, trialDaysRemaining }: PlanCardProps) {
     )
   }
 
-  if (plan === 'trial') {
+  if (onTrial) {
     return (
       <div className="rounded-2xl border border-border bg-surface-1 p-5">
         <div className="flex flex-col gap-2.5">
@@ -198,7 +211,7 @@ export function PlanCard({ plan, trialDaysRemaining }: PlanCardProps) {
                 lineHeight: 1.1,
               }}
             >
-              {trialDaysRemaining ?? 0} {SETTINGS_COPY.planCard.trial.tagline}
+              {trialDaysRemaining} {SETTINGS_COPY.planCard.trial.tagline}
             </span>
             <span
               className="text-fg-muted"

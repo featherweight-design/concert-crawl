@@ -75,7 +75,7 @@ export function SettingsRoute({
         {/* Plan */}
         <div className="px-4">
           <SectionLabel>{SETTINGS_COPY.planSection}</SectionLabel>
-          <PlanCard plan={profile.plan} />
+          <PlanCard planState={profile.planState} />
         </div>
 
         {/* Appearance */}

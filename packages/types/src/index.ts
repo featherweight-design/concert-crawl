@@ -660,8 +660,32 @@ export type UserTheme =
   | 'cedar'
   | 'gloss'
 
-// Plan state — founder is the beta default; paid/trial/past-due are post-beta
-export type UserPlan = 'founder' | 'paid' | 'trial' | 'past-due'
+// Six-plan model (eng infra spec Part 1, #781 §6). Mirrors the DB
+// subscription_tier enum plus the two non-tier states.
+export type UserPlan =
+  'logged-out' | 'free' | 'supporter' | 'premium' | 'founder' | 'gifted'
+
+// Mirrors the DB subscription_status enum (Stripe-mirrored statuses).
+export type SubscriptionStatus =
+  | 'active'
+  | 'cancelled'
+  | 'past_due'
+  | 'trialing'
+  | 'incomplete'
+  | 'incomplete_expired'
+
+// Derived plan state (eng infra spec Part 1, "derivePlan rewrite").
+// 'past-due' is not a plan — it's `status`. 'trial' is not a plan — it's
+// `onTrial` (Decision 7). Roles no longer masquerade as the founder plan.
+export interface PlanState {
+  plan: UserPlan
+  onTrial: boolean // true ⇒ plan === 'premium' via trial (Decision 7)
+  trialEndsAt: string | null // ISO; non-null while trial is live or recently ended
+  status: SubscriptionStatus | null // Stripe-mirrored status; null when no subscription row
+  cancelAtPeriodEnd: boolean
+  currentPeriodEnd: string | null
+  roleComped: boolean // PREMIUM_ROLES holder — full entitlements, picker shows "You're in already"
+}
 
 // User-facing role — separate from auth Role (admin/sub_admin/user)
 export type DisplayRole = 'fan' | 'crew' | 'artist' | 'staff'
@@ -677,7 +701,7 @@ export interface UserProfileResponse {
   city: string | null
   avatarColor: AvatarColor | null
   theme: UserTheme
-  plan: UserPlan
+  planState: PlanState
   displayRole: DisplayRole
   roleBadge: RoleBadge | null
   joined: string // formatted "Apr 2026"
