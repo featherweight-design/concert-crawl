@@ -26,6 +26,25 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.8.0-beta',
+    date: 'Jul 11, 2026',
+    headline: 'Plans exist now. Beta folks: yours is already paid for.',
+    items: [
+      {
+        kind: 'added',
+        text: 'Compare plans — a new tier picker in Settings lays out Free, Supporter, Premium, and the 100-seat Founder deal side by side. Whatever you pay, you pay; we won’t raise it on you.',
+      },
+      {
+        kind: 'added',
+        text: 'Checkout happens right in the picker — card form and all, no redirect to a Stripe-branded page and back.',
+      },
+      {
+        kind: 'added',
+        text: 'Beta members get lifetime Premium on us. Open the picker and it says as much — nothing to buy, nothing to cancel.',
+      },
+    ],
+  },
+  {
     version: 'v0.7.0-beta',
     date: 'Jul 10, 2026',
     headline: 'Standing at the box office? Submit every tier you can see.',

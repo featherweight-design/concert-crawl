@@ -687,6 +687,25 @@ export interface PlanState {
   roleComped: boolean // PREMIUM_ROLES holder — full entitlements, picker shows "You're in already"
 }
 
+// Founder launch-window state as exposed by GET /v1/billing/founder-window
+// (eng infra spec Part 2 §1.4). `seatsRemaining` is omitted pre-launch —
+// the scarcity number is not public before the window opens.
+export type FounderWindowState = 'pre-launch' | 'open' | 'closed'
+
+export interface FounderWindowView {
+  state: FounderWindowState
+  seatsTotal: number
+  seatsRemaining?: number
+  closesAt: string | null // ISO; null pre-launch
+}
+
+// POST /v1/billing/checkout-session success payload (eng infra spec Part 2
+// §1.3) — the Payment Element mounts against `clientSecret`.
+export interface CheckoutSessionResponse {
+  clientSecret: string
+  subscriptionId: string
+}
+
 // User-facing role — separate from auth Role (admin/sub_admin/user)
 export type DisplayRole = 'fan' | 'crew' | 'artist' | 'staff'
 

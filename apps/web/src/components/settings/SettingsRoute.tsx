@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ProfileHero } from './ProfileHero'
 import { AccountManagementRow } from './AccountManagementRow'
 import { PlanCard } from './PlanCard'
+import { TierPickerEntry } from '@/components/consumer/tier-picker'
 import { ThemePickerInline } from './ThemePickerInline'
 import { MySubmissionsList } from './MySubmissionsList'
 import { DangerZone } from './DangerZone'
@@ -76,6 +77,7 @@ export function SettingsRoute({
         <div className="px-4">
           <SectionLabel>{SETTINGS_COPY.planSection}</SectionLabel>
           <PlanCard planState={profile.planState} />
+          <TierPickerEntry planState={profile.planState} />
         </div>
 
         {/* Appearance */}

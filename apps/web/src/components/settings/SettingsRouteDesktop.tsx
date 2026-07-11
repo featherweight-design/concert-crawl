@@ -7,6 +7,7 @@ import { useClerk, useUser } from '@clerk/nextjs'
 import { Avatar } from './Avatar'
 import { CredChip } from './CredChip'
 import { PlanCard } from './PlanCard'
+import { TierPickerEntry } from '@/components/consumer/tier-picker'
 import { ThemePickerInline } from './ThemePickerInline'
 import { MySubmissionsList } from './MySubmissionsList'
 import { DangerZone } from './DangerZone'
@@ -346,6 +347,7 @@ export function SettingsRouteDesktop({
                   </p>
                 </div>
                 <PlanCard planState={profile.planState} />
+                <TierPickerEntry planState={profile.planState} />
               </div>
             )}
 

@@ -11,6 +11,8 @@ interface ModalShellProps {
   mobileFooter?: React.ReactNode
   children: React.ReactNode
   sheetHeight?: 'tall' | 'short'
+  /** Desktop modal width in px (default 520). Wide surfaces (tier picker) pass more. */
+  desktopWidth?: number
 }
 
 export function ModalShell({
@@ -22,6 +24,7 @@ export function ModalShell({
   mobileFooter,
   children,
   sheetHeight = 'tall',
+  desktopWidth = 520,
 }: ModalShellProps) {
   const [isMobile, setIsMobile] = useState(false)
 
@@ -142,7 +145,7 @@ export function ModalShell({
             left: '50%',
             transform: 'translate(-50%, -50%)',
             zIndex: 100,
-            width: 520,
+            width: desktopWidth,
             maxWidth: 'calc(100% - 64px)',
             maxHeight: 'calc(100% - 80px)',
             background: 'var(--bg-elevated)',

@@ -1,0 +1,54 @@
+import type { UserPlan } from '@concert-crawl/types'
+
+/** The four purchasable/renderable tiers in the picker. */
+export type TierKey = 'free' | 'supporter' | 'premium' | 'founder'
+
+/** Picker state vocabulary — six states per the design handoff (R5/R6). */
+export type PickerState = Exclude<UserPlan, 'gifted'> | 'gifted'
+
+export interface TierFeature {
+  text: string
+  /** "More coming ★" rows render dimmed with a star glyph. */
+  future?: boolean
+}
+
+export interface TierDefinition {
+  key: TierKey
+  name: string
+  priceText: string
+  priceUnit: string
+  tagline: string
+  rationale: string
+  features: TierFeature[]
+  /** Supporter's honest "no Premium unlocks" mono note. */
+  badgeOnlyNote?: string
+  /** Paid-tier price-promise microcopy (#782). Founder carries its own bullet. */
+  pricePromise?: string
+}
+
+export type CtaTone =
+  'signal' | 'founder' | 'ghost-accent' | 'ghost' | 'current'
+
+/** What tapping a CTA does. Flows not shipped yet render disabled. */
+export type CtaAction =
+  | 'checkout' // POST /v1/billing/checkout-session → embedded Payment Element
+  | 'manage' // POST /v1/billing/portal-session → Stripe portal
+  | 'sign-up' // route to /sign-up (logged-out)
+  | 'none' // disabled (current Free, founder-covers-premium, PR 4.5 flows)
+
+export interface TierCta {
+  label: string
+  tone: CtaTone
+  action: CtaAction
+  disabled: boolean
+}
+
+/** Scarcity-rail view model derived from the founder-window endpoint. */
+export interface ScarcityRailData {
+  seatsClaimed: number
+  seatsTotal: number
+  seatsLeft: number
+  daysLeft: number
+  hoursLeft: number
+  hot: boolean
+}
