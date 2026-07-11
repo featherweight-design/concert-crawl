@@ -1,3 +1,17 @@
+# [1.88.0](https://github.com/HartiganHM/concert-crawl/compare/v1.87.5...v1.88.0) (2026-07-11)
+
+
+### Bug Fixes
+
+* **admin:** [#875](https://github.com/HartiganHM/concert-crawl/issues/875) R1 — throw on cost fetch errors, rounded wow tone, tz constant ([ee55b7b](https://github.com/HartiganHM/concert-crawl/commit/ee55b7b8e4ee170907a4459b83af72ef30e207a5))
+* **admin:** [#875](https://github.com/HartiganHM/concert-crawl/issues/875) R3 — bound cost windows to today, guard partial wow windows ([ad94ee8](https://github.com/HartiganHM/concert-crawl/commit/ad94ee8837578b852ddb18de1f58d11f98fb7495))
+* **api:** [#875](https://github.com/HartiganHM/concert-crawl/issues/875) R2 — sum cost totals from unrounded aggregates, finite date guard ([d1a1634](https://github.com/HartiganHM/concert-crawl/commit/d1a1634df5d63c0041e274399431c86bf19fc30d))
+
+
+### Features
+
+* **admin:** dashboard LLM cost panel — 30-day chart + top spend by venue ([#112](https://github.com/HartiganHM/concert-crawl/issues/112)/[#114](https://github.com/HartiganHM/concert-crawl/issues/114)) ([d9e3826](https://github.com/HartiganHM/concert-crawl/commit/d9e382631ea73bebe21a3a886bd4f8405df87117)), closes [#874](https://github.com/HartiganHM/concert-crawl/issues/874)
+
 ## [1.87.5](https://github.com/HartiganHM/concert-crawl/compare/v1.87.4...v1.87.5) (2026-07-11)
 
 

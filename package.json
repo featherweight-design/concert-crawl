@@ -1,6 +1,6 @@
 {
   "name": "concert-crawl",
-  "version": "1.87.5",
+  "version": "1.88.0",
   "private": true,
   "scripts": {
     "dev": "pnpm db:migrate && turbo run dev",
