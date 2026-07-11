@@ -237,4 +237,71 @@ describe('POST /v1/events/:id/price-submissions/batch', () => {
     )
     expect(res.status).toBe(404)
   })
+
+  it('returns 422 {index, tier, already_submitted} when a tier is already pending, inserts zero rows (atomic)', async () => {
+    setAuth()
+    // Pending GA row by this user, older than the 24h rate-limit window so
+    // only the per-tier duplicate check fires (not the rate limit).
+    const staleCreatedAt = new Date(Date.now() - 48 * 60 * 60 * 1000)
+    await seedPriceSubmission(eventId, 'user_abc123', {
+      tier: 'GA',
+      status: 'pending',
+      createdAt: staleCreatedAt,
+    })
+    const res = await postBatch(BATCH_BODY) // tiers: GA (index 0) + VIP (index 1)
+    expect(res.status).toBe(422)
+    const body = (await res.json()) as { success: boolean; errors: RowError[] }
+    expect(body.success).toBe(false)
+    expect(body.errors).toEqual([
+      { index: 0, tier: 'GA', error: 'already_submitted' },
+    ])
+    // Atomicity: the valid VIP row must NOT have been inserted.
+    const dbRows = await testDb
+      .select()
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.eventId, eventId))
+    expect(dbRows).toHaveLength(1) // only the seeded GA row
+  })
+
+  it('rejects a bundle whose note fails moderation, inserts zero rows', async () => {
+    setAuth()
+    const res = await postBatch({
+      ...BATCH_BODY,
+      note: 'Contact me at admin@scam.com for better prices',
+    })
+    expect(res.status).toBe(422)
+    const dbRows = await testDb
+      .select()
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.eventId, eventId))
+    expect(dbRows).toHaveLength(0)
+  })
+
+  it('blocks the batch as a unit when the rate-limit window is active', async () => {
+    setAuth()
+    // Recent submission (any tier/status) inside the 24h window.
+    await seedPriceSubmission(eventId, 'user_abc123', {
+      tier: 'Lawn',
+      status: 'corroborated',
+      createdAt: new Date(),
+    })
+    const res = await postBatch(BATCH_BODY)
+    expect(res.status).toBe(429)
+    const dbRows = await testDb
+      .select()
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.eventId, eventId))
+    expect(dbRows).toHaveLength(1)
+  })
+
+  it('successful batch starts the rate-limit window — an immediate second batch is blocked', async () => {
+    setAuth()
+    const first = await postBatch(BATCH_BODY)
+    expect(first.status).toBe(201)
+    const second = await postBatch({
+      ...BATCH_BODY,
+      tiers: [{ tier: 'Reserved', priceMin: 80 }],
+    })
+    expect(second.status).toBe(429)
+  })
 })

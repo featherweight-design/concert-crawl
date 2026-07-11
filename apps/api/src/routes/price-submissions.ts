@@ -497,6 +497,66 @@ priceSubmissionsRouter.post(
     if (!event)
       return ctx.json({ success: false, error: 'Event not found' }, 404)
 
+    // Content moderation for the bundle-level note — moderated once, exactly
+    // like the single POST (spec §2: note is shared across all rows).
+    if (body.note) {
+      const modResult = moderateNote(body.note)
+      if (!modResult.ok) {
+        return ctx.json(
+          { success: false, error: modResult.reason ?? 'Note rejected.' },
+          422,
+        )
+      }
+    }
+
+    // 422 — one pending submission per (event, user, tier). The single POST
+    // checks per (event, user); the batch contract is per-tier (spec §1
+    // locked decision) so a user with a pending GA can still not double-GA
+    // but the error names the exact panel to fix.
+    const pendingRows = await db
+      .select({ tier: priceSubmissions.tier })
+      .from(priceSubmissions)
+      .where(
+        and(
+          eq(priceSubmissions.eventId, eventId),
+          eq(priceSubmissions.userId, userId),
+          eq(priceSubmissions.status, 'pending'),
+        ),
+      )
+    const pendingTiers = new Set(pendingRows.map((row) => row.tier))
+    const duplicateErrors = body.tiers.flatMap((row, rowIndex) =>
+      pendingTiers.has(row.tier)
+        ? [{ index: rowIndex, tier: row.tier, error: 'already_submitted' }]
+        : [],
+    )
+    if (duplicateErrors.length > 0) {
+      return ctx.json({ success: false, errors: duplicateErrors }, 422)
+    }
+
+    // 429 — the batch is ONE rate-limit hit (one act of contribution). Same
+    // window query as the single POST; a batch inside the window is blocked
+    // as a unit, and a successful batch starts the window.
+    const cutoff = new Date(
+      Date.now() - SP_POLICY.rateLimitHours * 60 * 60 * 1000,
+    )
+    const recent = await db
+      .select({ id: priceSubmissions.id })
+      .from(priceSubmissions)
+      .where(
+        and(
+          eq(priceSubmissions.eventId, eventId),
+          eq(priceSubmissions.userId, userId),
+          gt(priceSubmissions.createdAt, cutoff),
+        ),
+      )
+      .limit(1)
+    if (recent.length > 0) {
+      return ctx.json(
+        { success: false, error: 'Rate limit: 1 submission per 24h' },
+        429,
+      )
+    }
+
     // Shared bundle-level derivation — identical for every row, mirroring
     // the single POST's expand-phase fallback.
     const sourceCategory =
