@@ -115,7 +115,7 @@ When the user disconnects (or Spotify revokes us externally):
 
 - **Responsive:** 320px mobile baseline → desktop. Connect flow + modal + Settings must be usable on the tightest phone width.
 - **A11y:** WCAG AA. Keyboard-operable connect flow. Screen-reader phrasing for the "you follow" signal (decision Design owns — decorative, list metadata, or trust marker). Auto-watch modal traps focus, escape closes.
-- **Token-only colors** across all 9 themes. New surfaces get token treatments — if a new "connected" accent is needed, it's a token, not a hardcoded hex. Spotify green is a brand color and can appear (e.g., on the connect button) but should be paired with our tokens for adjacent chrome.
+- **Token-only colors** across all 9 themes. New surfaces get token treatments — if a new "connected" accent is needed, it's a token, not a hardcoded hex. Spotify green may appear on brand-fidelity surfaces (e.g., the connect button), but even it must be referenced via a named token (e.g., `--spotify-green` defined once in the token layer), NOT a hardcoded hex value in any component. All adjacent chrome uses our existing tokens.
 - **Voice — Sour Patch Kids**, warm-permissive throughout. Never use phrasing that reads as "we're watching what you listen to" — always "here's what you told Spotify you love." The auto-watch modal wants a light, offered-not-imposed tone.
 - **Copy** — every string in `apps/web/src/components/consumer/**/definitions/copy.ts` (or a `spotify/definitions/copy.ts` scope). Artist names, Spotify account username, dates, and counts are data. Everything else is copy.
 - **Mobile + desktop parity** — visual differences fine, behavioral asymmetry not.
@@ -143,7 +143,7 @@ These remain locked from prior work and apply here:
 
 - **Watching is FREE** (per #781 R6 amendment). Auto-watch reuses this — no premium gate on the Watching mechanism itself.
 - **Sour Patch Kids voice.** Warm + permissive on connect/modal; formal-leaning is inappropriate here (no tax records).
-- **9 themes token-only.** Spotify green appears on the connect button (brand fidelity) but paired with token treatments for adjacent chrome.
+- **9 themes token-only** — no hardcoded hex anywhere, including Spotify green (defined once as a named token like `--spotify-green` in the token layer; referenced by CSS var, never inline). Adjacent chrome uses existing tokens.
 - **Mobile + desktop parity.** Non-negotiable.
 - **Definitions / copy.ts.** All customer-facing strings externalized.
 - **Grandfather-forever price policy** (per #782). If Premium ships with Spotify features locked at Supporter tier, users who signed up at that price keep those features forever — never re-tiered.
