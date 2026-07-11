@@ -1,3 +1,15 @@
+# [1.99.0](https://github.com/HartiganHM/concert-crawl/compare/v1.98.0...v1.99.0) (2026-07-11)
+
+
+### Bug Fixes
+
+* **web:** add noreferrer to checkout legal links (review r1) ([afa87b9](https://github.com/HartiganHM/concert-crawl/commit/afa87b971c21d5a8acf1c10dbfb36290269c5c2c))
+
+
+### Features
+
+* **web:** checkout legal block, SCA notice, trust rail + refund anchor ([#782](https://github.com/HartiganHM/concert-crawl/issues/782) §6, PR 4.1) ([a2177a5](https://github.com/HartiganHM/concert-crawl/commit/a2177a535a12ed6dc49ebb83510c1556d1b23514))
+
 # [1.98.0](https://github.com/HartiganHM/concert-crawl/compare/v1.97.1...v1.98.0) (2026-07-11)
 
 
