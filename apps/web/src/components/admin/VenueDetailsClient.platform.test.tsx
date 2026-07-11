@@ -285,6 +285,43 @@ describe('VenueDetailsClient — platform routing (#721 #665)', () => {
     expect(screen.getByText(/AEG feed returned 503/)).toBeTruthy()
   })
 
+  it('clears a probe result when the venue ID input changes', async () => {
+    mockProbeVenuePlatform.mockResolvedValue({
+      success: true,
+      data: {
+        ok: true,
+        eventsFound: 12,
+        fetchLatencyMs: 250,
+        sourceUrl: 'https://aegwebprod.blob.core.windows.net/json/events/89',
+      },
+    })
+
+    render(
+      <VenueDetailsClient
+        venue={buildVenue({ platform: 'aeg', platformVenueId: '89' })}
+      />,
+    )
+
+    fireEvent.click(probeButton())
+    await waitFor(() => {
+      expect(
+        screen.getByText((content) =>
+          content.includes(`12 ${PLATFORM_COPY.probe.okEvents}`),
+        ),
+      ).toBeTruthy()
+    })
+
+    const idInput = platformVenueIdInput()
+    if (!idInput) throw new Error('Expected the venue ID input to render')
+    fireEvent.change(idInput, { target: { value: '90' } })
+
+    expect(
+      screen.queryByText((content) =>
+        content.includes(`12 ${PLATFORM_COPY.probe.okEvents}`),
+      ),
+    ).toBeNull()
+  })
+
   it('short-circuits to missing_config without a request when the ID is empty', async () => {
     render(
       <VenueDetailsClient

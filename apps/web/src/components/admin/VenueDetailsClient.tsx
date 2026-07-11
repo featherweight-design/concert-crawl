@@ -1503,6 +1503,9 @@ export function VenueDetailsClient({ venue }: Props) {
                     hasError={Boolean(fieldErrors.platformVenueId)}
                     onChange={(evt) => {
                       setPlatformVenueIdVal(evt.target.value)
+                      // A probe result describes the ID it was run against —
+                      // editing the ID makes it stale
+                      setProbeStatus({ kind: 'idle' })
                       setFieldErrors((prev) => ({
                         ...prev,
                         platformVenueId: undefined,
