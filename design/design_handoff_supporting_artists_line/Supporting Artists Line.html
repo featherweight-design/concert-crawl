@@ -143,7 +143,7 @@ function LivePhone() {
           onChange={(v) => setTweak("maxInline", v)} />
         <TweakSection label="State" />
         <TweakRadio label="Status" value={t.status}
-          options={[{ value: "none", label: "On" }, { value: "cancelled", label: "Canc." }, { value: "postponed", label: "Postp." }]}
+          options={[{ value: "none", label: "Live" }, { value: "cancelled", label: "Canc." }, { value: "postponed", label: "Postp." }]}
           onChange={(v) => setTweak("status", v)} />
         <TweakToggle label="Openers tappable (#84)" value={t.interactive}
           onChange={(v) => setTweak("interactive", v)} />

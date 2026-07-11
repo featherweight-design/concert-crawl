@@ -1,5 +1,5 @@
 // theme-context.jsx — Concert Crawl theme system (ALL 9 THEMES)
-// Round-5 merge: base 3 (electric/jade/light) + 5 genre themes shipped May 10
+// Round-5 merge: base 3 (electric/jade/light) + 6 genre themes shipped May 10
 // (pulse, forge, bluenote, drip, cedar, gloss). 9 total.
 //
 // Identical token vocabulary across every theme. Drip introduces ONE optional
