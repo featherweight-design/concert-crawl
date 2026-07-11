@@ -18,6 +18,7 @@ const SETTINGS_COPY = CONSUMER_COPY.settings
 interface SettingsRouteProps {
   profile: UserProfileResponse
   submissions: UserSubmissionItem[]
+  scaRegion: boolean
   isAdmin?: boolean
 }
 
@@ -35,6 +36,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 export function SettingsRoute({
   profile,
   submissions,
+  scaRegion,
   isAdmin = false,
 }: SettingsRouteProps) {
   const confirmedCount = submissions.filter(
@@ -75,7 +77,7 @@ export function SettingsRoute({
         {/* Plan */}
         <div className="px-4">
           <SectionLabel>{SETTINGS_COPY.planSection}</SectionLabel>
-          <PlanPanel planState={profile.planState} />
+          <PlanPanel planState={profile.planState} scaRegion={scaRegion} />
         </div>
 
         {/* Appearance */}

@@ -7,6 +7,7 @@
 // this panel surfaces Stripe's own user-facing message inline.
 
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import { loadStripe } from '@stripe/stripe-js'
 import {
   Elements,
@@ -24,14 +25,161 @@ const PUBLISHABLE_KEY = process.env['NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY']
 interface CheckoutPanelProps {
   tierKey: Exclude<TierKey, 'free'>
   clientSecret: string
+  // Server-resolved from x-vercel-ip-country (spec §1.7) — gates the
+  // conditional SCA notice row in the legal block.
+  scaRegion: boolean
   onBack: () => void
   onSuccess: () => void
 }
 
+const LegalRow = ({
+  children,
+  tone = 'subtle',
+}: {
+  children: React.ReactNode
+  tone?: 'subtle' | 'muted'
+}) => (
+  <div
+    style={{
+      fontFamily: 'var(--font-mono)',
+      fontSize: 10,
+      fontWeight: 500,
+      lineHeight: 1.5,
+      letterSpacing: '0.02em',
+      color: tone === 'muted' ? 'var(--fg-muted)' : 'var(--fg-subtle)',
+      display: 'flex',
+      alignItems: 'baseline',
+      gap: 7,
+    }}
+  >
+    <span
+      aria-hidden
+      style={{
+        width: 4,
+        height: 4,
+        borderRadius: 4,
+        marginTop: 6,
+        flexShrink: 0,
+        background: 'var(--border-strong)',
+      }}
+    />
+    <span style={{ flex: 1 }}>{children}</span>
+  </div>
+)
+
+// Legal pages open in a new tab — in-surface navigation would dismiss
+// the sheet and abandon the in-flight subscription mid-checkout.
+const LegalLink = ({ href, children }: { href: string; children: string }) => (
+  <Link
+    href={href}
+    target="_blank"
+    rel="noopener"
+    style={{
+      color: 'var(--signal)',
+      textDecoration: 'underline',
+      textUnderlineOffset: 2,
+      textDecorationColor:
+        'color-mix(in oklch, var(--signal) 45%, transparent)',
+    }}
+  >
+    {children}
+  </Link>
+)
+
+// Above-CTA legal block (#782 §6.1) — stacked mono micro-rows keep every
+// legal line visible, no collapse.
+const LegalBlock = ({ scaRegion }: { scaRegion: boolean }) => (
+  <div
+    role="group"
+    aria-label={CHECKOUT_COPY.legal.ariaLabel}
+    style={{
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 6,
+      padding: '10px 0 2px',
+    }}
+  >
+    <LegalRow>
+      {CHECKOUT_COPY.legal.agreePrefix}
+      <LegalLink href="/legal/terms">{CHECKOUT_COPY.legal.termsLink}</LegalLink>
+      {', '}
+      <LegalLink href="/legal/privacy">
+        {CHECKOUT_COPY.legal.privacyLink}
+      </LegalLink>
+      {' & '}
+      <LegalLink href="/legal/terms#refunds">
+        {CHECKOUT_COPY.legal.refundLink}
+      </LegalLink>
+      .
+    </LegalRow>
+    <LegalRow>{CHECKOUT_COPY.legal.autoRenew}</LegalRow>
+    {scaRegion && (
+      <LegalRow tone="muted">{CHECKOUT_COPY.legal.scaNotice}</LegalRow>
+    )}
+  </div>
+)
+
+const railTextStyle = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: 9,
+  fontWeight: 600,
+  color: 'var(--fg-subtle)',
+  letterSpacing: '0.12em',
+  textTransform: 'uppercase',
+} as const
+
+// Bottom mono rail (#782 §6.2) — splits trust (Stripe / card privacy)
+// from the cancel reassurance so each reads.
+const BottomMonoRail = () => (
+  <div
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexWrap: 'wrap',
+      gap: '4px 12px',
+      padding: '6px 0 2px',
+    }}
+  >
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+      <svg
+        width="11"
+        height="11"
+        viewBox="0 0 12 12"
+        aria-hidden="true"
+        style={{ color: 'var(--fg-subtle)' }}
+      >
+        <rect
+          x="2.5"
+          y="5"
+          width="7"
+          height="5"
+          rx="1"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.1"
+        />
+        <path
+          d="M4 5 V3.7 a2 2 0 0 1 4 0 V5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.1"
+        />
+      </svg>
+      <span style={railTextStyle}>{CHECKOUT_COPY.rail.stripe}</span>
+    </span>
+    <span aria-hidden style={{ color: 'var(--border-strong)', fontSize: 9 }}>
+      ·
+    </span>
+    <span style={railTextStyle}>{CHECKOUT_COPY.rail.cancel}</span>
+  </div>
+)
+
 const CheckoutForm = ({
   tierKey,
+  scaRegion,
   onSuccess,
-}: Pick<CheckoutPanelProps, 'tierKey' | 'onSuccess'>) => {
+}: Pick<CheckoutPanelProps, 'tierKey' | 'scaRegion' | 'onSuccess'>) => {
   const stripe = useStripe()
   const elements = useElements()
   const [submitting, setSubmitting] = useState(false)
@@ -80,6 +228,7 @@ const CheckoutForm = ({
           {errorText}
         </div>
       )}
+      <LegalBlock scaRegion={scaRegion} />
       <button
         type="button"
         disabled={!stripe || submitting}
@@ -101,18 +250,7 @@ const CheckoutForm = ({
           ? CHECKOUT_COPY.processing
           : `${CHECKOUT_COPY.payCta} · ${tier.priceText}${tier.key === 'founder' ? '/mo' : tier.priceUnit}`}
       </button>
-      <div
-        style={{
-          textAlign: 'center',
-          fontFamily: 'var(--font-mono)',
-          fontSize: 9.5,
-          color: 'var(--fg-subtle)',
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase',
-        }}
-      >
-        {CHECKOUT_COPY.secureLine}
-      </div>
+      <BottomMonoRail />
     </div>
   )
 }
@@ -120,6 +258,7 @@ const CheckoutForm = ({
 export const CheckoutPanel = ({
   tierKey,
   clientSecret,
+  scaRegion,
   onBack,
   onSuccess,
 }: CheckoutPanelProps) => {
@@ -188,7 +327,11 @@ export const CheckoutPanel = ({
         stripe={stripePromise}
         options={{ clientSecret, appearance: { theme: 'stripe' } }}
       >
-        <CheckoutForm tierKey={tierKey} onSuccess={onSuccess} />
+        <CheckoutForm
+          tierKey={tierKey}
+          scaRegion={scaRegion}
+          onSuccess={onSuccess}
+        />
       </Elements>
     </div>
   )

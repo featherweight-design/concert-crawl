@@ -11,7 +11,13 @@ import type { PlanState } from '@concert-crawl/types'
 import { TIER_PICKER_COPY } from './definitions/copy'
 import { TierPickerSheet } from './TierPickerSheet'
 
-export const TierPickerEntry = ({ planState }: { planState: PlanState }) => {
+export const TierPickerEntry = ({
+  planState,
+  scaRegion,
+}: {
+  planState: PlanState
+  scaRegion: boolean
+}) => {
   const [open, setOpen] = useState(false)
 
   return (
@@ -33,6 +39,7 @@ export const TierPickerEntry = ({ planState }: { planState: PlanState }) => {
         open={open}
         onClose={() => setOpen(false)}
         planState={planState}
+        scaRegion={scaRegion}
       />
     </>
   )

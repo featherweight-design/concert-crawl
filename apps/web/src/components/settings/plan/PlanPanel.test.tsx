@@ -89,7 +89,7 @@ const pickerOpenState = () =>
 
 describe('PlanPanel — free upgrade path', () => {
   it('renders the free card and opens the tier picker from the primary CTA', () => {
-    render(<PlanPanel planState={state()} />)
+    render(<PlanPanel planState={state()} scaRegion />)
     expect(screen.getByText(PLAN_CARD_COPY.free.headline)).toBeTruthy()
     expect(pickerOpenState()).toBe('false')
     fireEvent.click(
@@ -100,7 +100,7 @@ describe('PlanPanel — free upgrade path', () => {
   })
 
   it('free users get no manage-subscription CTA (portal is paid-only)', () => {
-    render(<PlanPanel planState={state()} />)
+    render(<PlanPanel planState={state()} scaRegion />)
     expect(
       screen.queryByRole('button', {
         name: PLAN_CARD_COPY.activePremium.manageCta,
@@ -110,7 +110,10 @@ describe('PlanPanel — free upgrade path', () => {
 
   it('the compare-plans entry opens the tier picker for every state', () => {
     render(
-      <PlanPanel planState={state({ plan: 'premium', status: 'active' })} />,
+      <PlanPanel
+        planState={state({ plan: 'premium', status: 'active' })}
+        scaRegion
+      />,
     )
     fireEvent.click(
       screen.getByRole('button', { name: TIER_PICKER_COPY.entry.compare }),
@@ -128,7 +131,9 @@ describe('PlanPanel — manage subscription (paid plans)', () => {
         writable: true,
         value: { ...window.location, assign: assignSpy },
       })
-      render(<PlanPanel planState={state({ plan, status: 'active' })} />)
+      render(
+        <PlanPanel planState={state({ plan, status: 'active' })} scaRegion />,
+      )
       fireEvent.click(
         screen.getByRole('button', {
           name: PLAN_CARD_COPY.activePremium.manageCta,
@@ -147,7 +152,10 @@ describe('PlanPanel — manage subscription (paid plans)', () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     mockCreatePortalSession.mockRejectedValue(new Error('boom'))
     render(
-      <PlanPanel planState={state({ plan: 'premium', status: 'active' })} />,
+      <PlanPanel
+        planState={state({ plan: 'premium', status: 'active' })}
+        scaRegion
+      />,
     )
     fireEvent.click(
       screen.getByRole('button', {
@@ -167,7 +175,10 @@ describe('PlanPanel — manage subscription (paid plans)', () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     mockCreatePortalSession.mockRejectedValue(new Error('boom'))
     render(
-      <PlanPanel planState={state({ plan: 'premium', status: 'active' })} />,
+      <PlanPanel
+        planState={state({ plan: 'premium', status: 'active' })}
+        scaRegion
+      />,
     )
     fireEvent.click(
       screen.getByRole('button', {
@@ -197,7 +208,10 @@ describe('PlanPanel — manage subscription (paid plans)', () => {
       value: { ...window.location, assign: assignSpy },
     })
     render(
-      <PlanPanel planState={state({ plan: 'premium', status: 'active' })} />,
+      <PlanPanel
+        planState={state({ plan: 'premium', status: 'active' })}
+        scaRegion
+      />,
     )
     const manageButton = screen.getByRole('button', {
       name: PLAN_CARD_COPY.activePremium.manageCta,
@@ -218,7 +232,10 @@ describe('PlanPanel — manage subscription (paid plans)', () => {
 describe('PlanPanel — lifecycle states', () => {
   it('past_due outranks the founder celebration and routes Update card to the portal', async () => {
     render(
-      <PlanPanel planState={state({ plan: 'founder', status: 'past_due' })} />,
+      <PlanPanel
+        planState={state({ plan: 'founder', status: 'past_due' })}
+        scaRegion
+      />,
     )
     expect(screen.getByText(PLAN_CARD_COPY.pastDue.headline)).toBeTruthy()
     expect(screen.queryByText(PLAN_CARD_COPY.activeFounder.headline)).toBeNull()
@@ -235,6 +252,7 @@ describe('PlanPanel — lifecycle states', () => {
   it('cancel-at-period-end renders the winding-down card with a portal CTA', () => {
     render(
       <PlanPanel
+        scaRegion
         planState={state({
           plan: 'premium',
           status: 'active',
@@ -258,6 +276,7 @@ describe('PlanPanel — lifecycle states', () => {
   it('trial renders the countdown card and its CTA opens the tier picker', () => {
     render(
       <PlanPanel
+        scaRegion
         planState={state({
           plan: 'premium',
           onTrial: true,
@@ -273,7 +292,7 @@ describe('PlanPanel — lifecycle states', () => {
   })
 
   it('gifted card has no manage CTA; discovery opens the picker', () => {
-    render(<PlanPanel planState={state({ plan: 'gifted' })} />)
+    render(<PlanPanel planState={state({ plan: 'gifted' })} scaRegion />)
     expect(screen.getByText(PLAN_CARD_COPY.gifted.headline)).toBeTruthy()
     expect(
       screen.queryByRole('button', {
@@ -289,6 +308,7 @@ describe('PlanPanel — lifecycle states', () => {
   it('unparseable trialEndsAt never renders NaN', () => {
     render(
       <PlanPanel
+        scaRegion
         planState={state({
           plan: 'premium',
           onTrial: true,
@@ -302,7 +322,7 @@ describe('PlanPanel — lifecycle states', () => {
 
 describe('PlanPanel — a11y and viewport parity', () => {
   it('the card is a labelled region', () => {
-    render(<PlanPanel planState={state()} />)
+    render(<PlanPanel planState={state()} scaRegion />)
     expect(
       screen.getByRole('region', { name: PLAN_CARD_COPY.ariaLabel }),
     ).toBeTruthy()
@@ -311,7 +331,10 @@ describe('PlanPanel — a11y and viewport parity', () => {
   it('mobile viewport renders the same CTAs (behavioral parity)', () => {
     mobileViewport = true
     render(
-      <PlanPanel planState={state({ plan: 'premium', status: 'active' })} />,
+      <PlanPanel
+        planState={state({ plan: 'premium', status: 'active' })}
+        scaRegion
+      />,
     )
     expect(
       screen.getByRole('button', {

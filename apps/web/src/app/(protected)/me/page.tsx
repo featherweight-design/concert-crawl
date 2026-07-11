@@ -1,5 +1,7 @@
+import { headers } from 'next/headers'
 import { auth } from '@/lib/auth'
 import { fetchMe, fetchMySubmissions } from '@/lib/users'
+import { isScaRegion } from '@/lib/sca-region'
 import { SettingsRoute } from '@/components/settings/SettingsRoute'
 import { SettingsRouteDesktop } from '@/components/settings/SettingsRouteDesktop'
 import { ThemeSync } from '@/components/settings/ThemeSync'
@@ -13,10 +15,14 @@ export default async function MePage() {
 
   const isAdmin = sessionClaims?.metadata?.role === 'admin'
 
-  const [profile, submissions] = await Promise.all([
+  const [profile, submissions, requestHeaders] = await Promise.all([
     fetchMe(token),
     fetchMySubmissions(token),
+    headers(),
   ])
+  // Spec §1.7: SCA notice gating, resolved server-side from Vercel's
+  // country header. Unknown (local dev, header absent) fails safe to true.
+  const scaRegion = isScaRegion(requestHeaders.get('x-vercel-ip-country'))
 
   return (
     <>
@@ -26,12 +32,17 @@ export default async function MePage() {
         <SettingsRoute
           profile={profile}
           submissions={submissions}
+          scaRegion={scaRegion}
           isAdmin={isAdmin}
         />
       </div>
       {/* Desktop (sm+) */}
       <div className="hidden sm:block">
-        <SettingsRouteDesktop profile={profile} submissions={submissions} />
+        <SettingsRouteDesktop
+          profile={profile}
+          submissions={submissions}
+          scaRegion={scaRegion}
+        />
       </div>
     </>
   )

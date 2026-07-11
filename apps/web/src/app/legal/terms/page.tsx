@@ -53,8 +53,8 @@ export default function TermsPage() {
             </p>
             <p>
               We may update these terms. When we do, we&apos;ll notify you by
-              email and update the &ldquo;Last updated&rdquo; date above. Continued use
-              after notice constitutes acceptance.
+              email and update the &ldquo;Last updated&rdquo; date above.
+              Continued use after notice constitutes acceptance.
             </p>
           </Section>
 
@@ -66,10 +66,10 @@ export default function TermsPage() {
               ticketing partner.
             </p>
             <p>
-              Event data is sourced by automated crawlers and user contributions.
-              We make reasonable efforts to keep it accurate, but we make no
-              guarantees. Always verify show details directly with the venue
-              before purchasing tickets.
+              Event data is sourced by automated crawlers and user
+              contributions. We make reasonable efforts to keep it accurate, but
+              we make no guarantees. Always verify show details directly with
+              the venue before purchasing tickets.
             </p>
           </Section>
 
@@ -127,17 +127,47 @@ export default function TermsPage() {
 
           <Section title="7. Subscriptions and payments">
             <p>
-              [To be written when Stripe integration is live — expected beta
-              period.]
+              Paid tiers are billed monthly through Stripe, our payment
+              processor. We never see or store your card details. Subscriptions
+              auto-renew each month until cancelled.
             </p>
+            <p>
+              You can cancel anytime from your settings page. Cancelling stops
+              future charges; your paid features keep working until the end of
+              the period you already paid for.
+            </p>
+            <p>
+              The price you subscribe at is the price you keep. If we raise
+              prices for new subscribers, your existing subscription is not
+              affected.
+            </p>
+            <div id="refunds" className="scroll-mt-8">
+              <h3 className="mb-2 pt-2 text-[15px] font-bold text-fg">
+                Refunds
+              </h3>
+              <p>
+                Monthly charges are generally not refunded when you cancel — you
+                keep access through the end of the billing period instead. If
+                something went wrong (a duplicate charge, a billing bug, a
+                charge you didn&apos;t expect), email us at{' '}
+                <a
+                  href="mailto:hugh@featherweight.design"
+                  className="text-fg-muted underline underline-offset-4 transition-colors hover:text-fg"
+                >
+                  hugh@featherweight.design
+                </a>{' '}
+                and we&apos;ll make it right. Nothing here limits any refund
+                rights you have under applicable law.
+              </p>
+            </div>
           </Section>
 
           <Section title="8. Disclaimers">
             <p>
-              The Service is provided &ldquo;as is&rdquo; and &ldquo;as available.&rdquo; We make
-              no warranties, express or implied, including but not limited to
-              merchantability, fitness for a particular purpose, or accuracy of
-              event information.
+              The Service is provided &ldquo;as is&rdquo; and &ldquo;as
+              available.&rdquo; We make no warranties, express or implied,
+              including but not limited to merchantability, fitness for a
+              particular purpose, or accuracy of event information.
             </p>
           </Section>
 

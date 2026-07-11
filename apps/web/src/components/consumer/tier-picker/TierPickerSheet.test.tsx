@@ -136,7 +136,7 @@ const planState = (
 })
 
 const renderSheet = (state: PlanState, onClose = vi.fn()) => {
-  render(<TierPickerSheet open onClose={onClose} planState={state} />)
+  render(<TierPickerSheet open onClose={onClose} planState={state} scaRegion />)
   return onClose
 }
 
@@ -147,6 +147,7 @@ describe('TierPickerSheet — visibility and states', () => {
         open={false}
         onClose={vi.fn()}
         planState={planState('free')}
+        scaRegion
       />,
     )
     expect(screen.queryByRole('dialog')).toBeNull()
@@ -162,11 +163,14 @@ describe('TierPickerSheet — visibility and states', () => {
     expect(screen.getByTestId('scarcity-rail')).toBeTruthy()
   })
 
-  it('price promise renders on Supporter and Premium only', () => {
+  it('price promise renders per tier with locked wording', () => {
     renderSheet(planState('free'))
     expect(
-      screen.getAllByText(TIER_PICKER_COPY.card.pricePromise),
-    ).toHaveLength(2)
+      screen.getAllByText(TIER_PICKER_COPY.card.pricePromise.supporter),
+    ).toHaveLength(2) // supporter + premium share the line
+    expect(
+      screen.getByText(TIER_PICKER_COPY.card.pricePromise.founder),
+    ).toBeTruthy()
   })
 
   it('founder pre-launch — card visible with disabled "Opens at public launch" CTA', () => {

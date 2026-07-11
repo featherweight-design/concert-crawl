@@ -104,11 +104,13 @@ const NAV_ICONS: Record<NavSection, React.ReactNode> = {
 interface SettingsRouteDesktopProps {
   profile: UserProfileResponse
   submissions: UserSubmissionItem[]
+  scaRegion: boolean
 }
 
 export function SettingsRouteDesktop({
   profile,
   submissions,
+  scaRegion,
 }: SettingsRouteDesktopProps) {
   const { openUserProfile } = useClerk()
   const { user } = useUser()
@@ -345,7 +347,10 @@ export function SettingsRouteDesktop({
                     What you&apos;re paying us. (Spoiler: nothing.)
                   </p>
                 </div>
-                <PlanPanel planState={profile.planState} />
+                <PlanPanel
+                  planState={profile.planState}
+                  scaRegion={scaRegion}
+                />
               </div>
             )}
 

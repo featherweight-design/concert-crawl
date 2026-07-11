@@ -14,7 +14,13 @@ import { resolvePlanCard } from './lib/resolve-plan-card'
 import { usePortalNavigation } from './lib/use-portal-navigation'
 import type { PlanCardCta } from './definitions/types'
 
-export const PlanPanel = ({ planState }: { planState: PlanState }) => {
+export const PlanPanel = ({
+  planState,
+  scaRegion,
+}: {
+  planState: PlanState
+  scaRegion: boolean
+}) => {
   const [pickerOpen, setPickerOpen] = useState(false)
   const { openPortal, portalPending, portalError, clearPortalError } =
     usePortalNavigation()
@@ -75,6 +81,7 @@ export const PlanPanel = ({ planState }: { planState: PlanState }) => {
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
         planState={planState}
+        scaRegion={scaRegion}
       />
     </div>
   )

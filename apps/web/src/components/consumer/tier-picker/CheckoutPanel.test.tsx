@@ -37,17 +37,23 @@ beforeEach(() => {
   mockConfirmPayment.mockResolvedValue({})
 })
 
+const renderPanel = (overrides: { scaRegion?: boolean } = {}) => {
+  const onSuccess = vi.fn()
+  render(
+    <CheckoutPanel
+      tierKey="premium"
+      clientSecret="cs_test_secret"
+      scaRegion={overrides.scaRegion ?? false}
+      onBack={vi.fn()}
+      onSuccess={onSuccess}
+    />,
+  )
+  return { onSuccess }
+}
+
 describe('CheckoutPanel — payment confirmation', () => {
   it('confirms with a return_url so redirect-based payment methods work', async () => {
-    const onSuccess = vi.fn()
-    render(
-      <CheckoutPanel
-        tierKey="premium"
-        clientSecret="cs_test_secret"
-        onBack={vi.fn()}
-        onSuccess={onSuccess}
-      />,
-    )
+    const { onSuccess } = renderPanel()
     fireEvent.click(
       screen.getByRole('button', {
         name: new RegExp(TIER_PICKER_COPY.checkout.payCta),
@@ -69,15 +75,7 @@ describe('CheckoutPanel — payment confirmation', () => {
     mockConfirmPayment.mockResolvedValue({
       error: { message: 'Your card was declined.' },
     })
-    const onSuccess = vi.fn()
-    render(
-      <CheckoutPanel
-        tierKey="premium"
-        clientSecret="cs_test_secret"
-        onBack={vi.fn()}
-        onSuccess={onSuccess}
-      />,
-    )
+    const { onSuccess } = renderPanel()
     fireEvent.click(
       screen.getByRole('button', {
         name: new RegExp(TIER_PICKER_COPY.checkout.payCta),
@@ -88,5 +86,49 @@ describe('CheckoutPanel — payment confirmation', () => {
     )
     expect(onSuccess).not.toHaveBeenCalled()
     consoleSpy.mockRestore()
+  })
+})
+
+describe('CheckoutPanel — legal block (#782 §6.1)', () => {
+  it('renders the legal group with links to terms, privacy, and the refund anchor', () => {
+    renderPanel()
+    const group = screen.getByRole('group', {
+      name: TIER_PICKER_COPY.checkout.legal.ariaLabel,
+    })
+    expect(group).toBeTruthy()
+    const links = screen.getAllByRole('link')
+    const hrefs = links.map((link) => link.getAttribute('href'))
+    expect(hrefs).toContain('/legal/terms')
+    expect(hrefs).toContain('/legal/privacy')
+    expect(hrefs).toContain('/legal/terms#refunds')
+  })
+
+  it('renders the auto-renew line', () => {
+    renderPanel()
+    expect(
+      screen.getByText(TIER_PICKER_COPY.checkout.legal.autoRenew),
+    ).toBeTruthy()
+  })
+
+  it('shows the SCA notice only for SCA-region users', () => {
+    renderPanel({ scaRegion: true })
+    expect(
+      screen.getByText(TIER_PICKER_COPY.checkout.legal.scaNotice),
+    ).toBeTruthy()
+  })
+
+  it('hides the SCA notice outside SCA regions', () => {
+    renderPanel({ scaRegion: false })
+    expect(
+      screen.queryByText(TIER_PICKER_COPY.checkout.legal.scaNotice),
+    ).toBeNull()
+  })
+})
+
+describe('CheckoutPanel — bottom mono rail (#782 §6.2)', () => {
+  it('renders both rail segments', () => {
+    renderPanel()
+    expect(screen.getByText(TIER_PICKER_COPY.checkout.rail.stripe)).toBeTruthy()
+    expect(screen.getByText(TIER_PICKER_COPY.checkout.rail.cancel)).toBeTruthy()
   })
 })

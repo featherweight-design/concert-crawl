@@ -32,7 +32,7 @@ export const TIER_DEFINITIONS: Record<TierKey, TierDefinition> = {
     rationale: TIERS_COPY.supporter.rationale,
     features: TIERS_COPY.supporter.features.map((text) => ({ text })),
     badgeOnlyNote: TIERS_COPY.supporter.badgeOnlyNote,
-    pricePromise: TIER_PICKER_COPY.card.pricePromise,
+    pricePromise: TIER_PICKER_COPY.card.pricePromise.supporter,
   },
   premium: {
     key: 'premium',
@@ -45,7 +45,7 @@ export const TIER_DEFINITIONS: Record<TierKey, TierDefinition> = {
       ...TIERS_COPY.premium.features.map((text) => ({ text })),
       { text: TIERS_COPY.premium.futureFeature, future: true },
     ],
-    pricePromise: TIER_PICKER_COPY.card.pricePromise,
+    pricePromise: TIER_PICKER_COPY.card.pricePromise.premium,
   },
   founder: {
     key: 'founder',
@@ -58,7 +58,8 @@ export const TIER_DEFINITIONS: Record<TierKey, TierDefinition> = {
       ...TIERS_COPY.founder.features.map((text) => ({ text })),
       { text: TIERS_COPY.founder.futureFeature, future: true },
     ],
-    // Founder's price promise is its own stronger feature bullet — no
-    // duplicate microcopy line (eng judgment allowed by #782 spec).
+    // Founder keeps its stronger locked-$3 stamp; this line reinforces
+    // rather than duplicates (#782 handoff, locked wording).
+    pricePromise: TIER_PICKER_COPY.card.pricePromise.founder,
   },
 }

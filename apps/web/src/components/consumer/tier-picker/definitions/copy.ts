@@ -26,7 +26,13 @@ export const TIER_PICKER_COPY = {
     yourPlanFounder: 'Your plan · locked $3/mo',
     yourPlanInline: '· Your plan',
     popular: 'Popular',
-    pricePromise: "Whatever you pay, you pay. We won't raise it.",
+    // Grandfather-everyone-forever promise (#782 §4, locked wording).
+    // Founder's line reinforces its locked-$3 stamp rather than duplicating.
+    pricePromise: {
+      supporter: 'Whatever you pay, you pay. We never raise it.',
+      premium: 'Whatever you pay, you pay. We never raise it.',
+      founder: '$3 is $3. New folks may pay double someday — never you.',
+    },
     founderPreLaunch: 'Opens at public launch',
   },
   scarcity: {
@@ -131,7 +137,26 @@ export const TIER_PICKER_COPY = {
     processing: 'Processing…',
     startError: "Couldn't start checkout. Try again in a moment.",
     confirmError: "Payment didn't go through. Check your card and try again.",
-    secureLine: 'Payments handled by Stripe · cancel any time',
+    // Above-CTA legal block (#782 §6.1) — stacked mono micro-rows, no
+    // "subject to change" disclaimer anywhere (it would undermine the
+    // grandfather-everyone-forever promise).
+    legal: {
+      ariaLabel: 'Terms and billing information',
+      agreePrefix: 'By continuing you agree to our ',
+      termsLink: 'Terms',
+      privacyLink: 'Privacy',
+      refundLink: 'Refund policy',
+      autoRenew:
+        'Auto-renews monthly. Cancel anytime — keeps working till the period ends.',
+      // Conditional on server-resolved SCA region (EEA + UK, spec §1.7).
+      scaNotice: 'Your bank may ask to confirm this payment.',
+    },
+    // Bottom mono rail — splits trust (Stripe / card privacy) from the
+    // cancel reassurance so each reads (#782 §6.2).
+    rail: {
+      stripe: 'Stripe handles your card · we never see it',
+      cancel: 'Cancel anytime, lose nothing',
+    },
   },
   entry: {
     compare: 'Compare plans →',

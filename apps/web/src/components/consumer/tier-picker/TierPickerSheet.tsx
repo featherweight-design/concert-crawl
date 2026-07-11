@@ -33,6 +33,9 @@ interface TierPickerSheetProps {
   open: boolean
   onClose: () => void
   planState: PlanState
+  // Server-resolved SCA-region boolean (spec §1.7) — forwarded to the
+  // checkout panel's legal block.
+  scaRegion: boolean
 }
 
 interface CheckoutContext {
@@ -135,6 +138,7 @@ export const TierPickerSheet = ({
   open,
   onClose,
   planState,
+  scaRegion,
 }: TierPickerSheetProps) => {
   const router = useRouter()
   const { getToken } = useAuth()
@@ -314,6 +318,7 @@ export const TierPickerSheet = ({
         <CheckoutPanel
           tierKey={checkout.tierKey}
           clientSecret={checkout.clientSecret}
+          scaRegion={scaRegion}
           onBack={backToTiers}
           onSuccess={completeCheckout}
         />
