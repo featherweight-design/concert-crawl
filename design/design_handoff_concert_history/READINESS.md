@@ -147,7 +147,7 @@ From CLAUDE.md CTA token rule:
 
 ## Open observations (no addendum required from Design)
 
-- The `<PassportTeaser>` share button is bound but unpiloted (no `onClick`). Eng wires the modal / route to the full `<PassportCard>` at integration.
+- The `<PassportTeaser>` share button is rendered but unwired (no `onClick` handler). Eng wires the modal / route to the full `<PassportCard>` at integration.
 - The `<HistoryRoute>` and `<HistoryRouteDesktop>` both accept `themeKey` / `density` / `shows` props — designer-friendly for canvas storyboarding but plan PR should route these through URL params + auth context, not props.
 - The nudge's copy includes `"Tonight."` and `"Tomorrow."` special-cases via `h_daysUntil` — nice detail, needs to survive the copy externalization.
 - No `role="status"` or transition annotation for the CTA state change (default → going animation). Design ships the visual (`transition: "background 160ms, border-color 160ms, color 160ms"`) but SR announcement of the state change isn't wired. Plan PR should add.
