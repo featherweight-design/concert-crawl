@@ -213,8 +213,9 @@ function TweaksPanel({ title = 'Tweaks', children }) {
 
   React.useEffect(() => {
     const onMsg = (e) => {
-      // Origin gate: only honor protocol messages from our embedding host, so an
-      // unrelated frame can't toggle edit mode in an embedded prototype.
+      // Source check: only honor protocol messages from our embedding host, so
+      // an unrelated frame can't toggle edit mode in an embedded prototype.
+      // (Source-based, not origin-based — sufficient for reviewer-only tooling.)
       if (e.source !== window.parent) return;
       const t = e?.data?.type;
       if (t === '__activate_edit_mode') setOpen(true);
@@ -360,7 +361,9 @@ function TweakRadio({ label, value, options, onChange }) {
              style={{ left: `calc(2px + ${idx} * (100% - 4px) / ${n})`,
                       width: `calc((100% - 4px) / ${n})` }} />
         {opts.map((o) => (
-          <button key={o.value} type="button" role="radio" aria-checked={o.value === value}>
+          <button key={o.value} type="button" role="radio" aria-checked={o.value === value}
+                  tabIndex={o.value === value ? 0 : -1}
+                  onClick={() => onChange(o.value)}>
             {o.label}
           </button>
         ))}
