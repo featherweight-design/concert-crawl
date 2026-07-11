@@ -132,9 +132,9 @@ export async function runBackfill(opts: {
       giftedFound: candidates.length,
       rowsInserted: 0,
       rowsSkippedExisting: 0,
-      // committed reflects whether writes actually happened, not the flag
-      // the operator set — convention from the sibling backfill scripts.
-      committed: false,
+      // Sibling-script convention: committed reflects commit-mode
+      // invocation, not whether any rows changed.
+      committed: opts.commit,
     }
   }
 
@@ -171,7 +171,7 @@ export async function runBackfill(opts: {
     giftedFound: candidates.length,
     rowsInserted: insertedCount,
     rowsSkippedExisting: candidates.length - insertedCount,
-    committed: insertedCount > 0,
+    committed: true,
   }
 }
 
