@@ -29,7 +29,14 @@ export const PastDueBanner = ({
 }: PastDueBannerProps) => {
   const inline = variant === 'inline'
 
-  const [wide, setWide] = useState(false)
+  // Lazy init from matchMedia so desktop doesn't flash mobile spacing on
+  // first paint. Safe: the gate mounts this only after a client-side
+  // fetch, so there is no SSR markup to mismatch.
+  const [wide, setWide] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      window.matchMedia('(min-width: 640px)').matches,
+  )
   useEffect(() => {
     const mql = window.matchMedia('(min-width: 640px)')
     setWide(mql.matches)
