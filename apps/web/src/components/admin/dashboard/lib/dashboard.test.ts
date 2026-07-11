@@ -6,6 +6,8 @@ import {
   buildActiveVenuesHint,
   buildSparklineData,
   buildCostAxisLabels,
+  formatChartDate,
+  formatCostTooltip,
   computeWowTrend,
   toStatusRow,
 } from './dashboard'
@@ -472,6 +474,26 @@ describe('buildCostAxisLabels', () => {
       { date: '2026-07-10', costUsd: 0 },
     ]
     expect(buildCostAxisLabels(days)).toEqual(['JUL 9', 'JUL 10'])
+  })
+})
+
+// --- formatChartDate / formatCostTooltip ---
+
+describe('formatChartDate', () => {
+  it('formats a series date as an uppercase short label', () => {
+    expect(formatChartDate('2026-07-08')).toBe('JUL 8')
+  })
+
+  it('parses at UTC midnight so the calendar day never shifts', () => {
+    expect(formatChartDate('2026-12-31')).toBe('DEC 31')
+  })
+})
+
+describe('formatCostTooltip', () => {
+  it('joins the date label and formatted cost', () => {
+    expect(formatCostTooltip({ date: '2026-07-08', costUsd: 1.5 })).toBe(
+      'JUL 8 · $1.50',
+    )
   })
 })
 

@@ -1,4 +1,5 @@
 import type { CrawlRun, DailyCost, Event, Venue } from '@concert-crawl/types'
+import { formatCost } from '@/components/admin/primitives'
 
 export const LLM_BUDGET_USD = 20
 
@@ -33,11 +34,27 @@ export function computeWowTrend(days: DailyCost[]): CostTrend | undefined {
   }
 }
 
-// Evenly spaced axis labels ("JUL 7" style) for the cost chart, derived from
-// the zero-filled daily series. Dates are data, not copy — formatting lives
-// here rather than in definitions/copy.ts. Parsed at UTC midnight so the
-// YYYY-MM-DD string renders as the same calendar day regardless of the
-// server's timezone.
+// "JUL 7"-style label for a YYYY-MM-DD series date. Dates are data, not
+// copy — formatting lives here rather than in definitions/copy.ts. Parsed at
+// UTC midnight so the string renders as the same calendar day regardless of
+// the server's timezone.
+export function formatChartDate(date: string): string {
+  return new Date(`${date}T00:00:00Z`)
+    .toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'UTC',
+    })
+    .toUpperCase()
+}
+
+// Hover/tap tooltip text for a point on the cost chart, e.g. "JUL 8 · $1.50".
+export function formatCostTooltip(day: DailyCost): string {
+  return `${formatChartDate(day.date)} · ${formatCost(day.costUsd)}`
+}
+
+// Evenly spaced axis labels for the cost chart, derived from the zero-filled
+// daily series.
 export function buildCostAxisLabels(
   days: DailyCost[],
   tickCount = 5,
@@ -50,15 +67,7 @@ export function buildCostAxisLabels(
       count > 1 ? Math.round((tick * (days.length - 1)) / (count - 1)) : 0
     const day = days[idx]
     if (!day) continue
-    labels.push(
-      new Date(`${day.date}T00:00:00Z`)
-        .toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          timeZone: 'UTC',
-        })
-        .toUpperCase(),
-    )
+    labels.push(formatChartDate(day.date))
   }
   return labels
 }

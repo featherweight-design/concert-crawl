@@ -110,7 +110,7 @@ export const CostPanel = ({ daily, topSpend, budgetUsd }: CostPanelProps) => {
             </div>
             <div style={{ width: '100%', height: 110, position: 'relative' }}>
               <CostChart
-                data={daily.days.map((day) => day.costUsd)}
+                days={daily.days}
                 ariaLabel={copy.chartAriaLabel(totalLabel)}
               />
             </div>
