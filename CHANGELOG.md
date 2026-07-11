@@ -1,3 +1,17 @@
+# [1.100.0](https://github.com/HartiganHM/concert-crawl/compare/v1.99.0...v1.100.0) (2026-07-11)
+
+
+### Bug Fixes
+
+* **api:** suppress trial-ended takeover and day-13 banner for live subscriptions ([1433bfc](https://github.com/HartiganHM/concert-crawl/commit/1433bfc8b3ed114806a1c589aa3e4aca46b8082f))
+* **web:** copilot round 3 — isSignedIn gate, dismissible rename, session marker comment ([401db0a](https://github.com/HartiganHM/concert-crawl/commit/401db0a368a9d915da9bb288c249718288f158ce))
+* **web:** plan-open param — same-path re-fire + viewport-variant gate for dual settings trees ([9569ff9](https://github.com/HartiganHM/concert-crawl/commit/9569ff97815f7e87cd10525b8c7a86fcc13f0497))
+
+
+### Features
+
+* **web,api:** trial-end takeover, day-13 banner, founder claim takeover (PR 4.2) ([4752b28](https://github.com/HartiganHM/concert-crawl/commit/4752b2883ea92ad36d8c1a855d2cf44c9eca51df)), closes [780/#781](https://github.com/HartiganHM/concert-crawl/issues/781)
+
 # [1.99.0](https://github.com/HartiganHM/concert-crawl/compare/v1.98.0...v1.99.0) (2026-07-11)
 
 
