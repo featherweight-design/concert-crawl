@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Supporting Artists Title Separator (#643)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="supporting-line.jsx"></script>
+<script type="text/babel" src="event-cards.jsx"></script>
+
+<script type="text/babel">
+const { ThemeProvider, CC_THEMES, CC_THEME_KEYS } = window;
+const { DesignCanvas, DCSection, DCArtboard } = window;
+const { IOSDevice } = window;
+const { EventTitleBlock, SupportingLine, supportingA11yLabel } = window;
+const { EventCard, HeroEventCard, DetailHeader } = window;
+const { useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakSelect, TweakSlider, TweakToggle } = window;
+
+// ── Sample events (data: supportingArtists[] + tourName) ─────────────────────
+const EV = {
+  full:      { headliner: "Electric Callboy", tourName: "Tanzneid World Tour", supportingArtists: ["Bad Omens", "Loveless", "Cliffdiver"], venue: "Red Rocks", time: "7:00 PM", price: "$45–$85", dateLong: "Thu, Apr 30 · 7:00 PM" },
+  many:      { headliner: "Turnstile", tourName: "Never Enough Tour", supportingArtists: ["Mannequin Pussy", "Speed", "Snuffed", "Gouge Away", "Ekulu"], venue: "Mission", time: "8:00 PM", price: "$38", dateLong: "Fri, May 1 · 8:00 PM" },
+  one:       { headliner: "Wednesday", supportingArtists: ["Hotline TNT"], venue: "Gothic", time: "9:00 PM", price: "$25", dateLong: "Sat, May 2 · 9:00 PM" },
+  tourOnly:  { headliner: "Puscifer", tourName: "Existential Reckoning: Redux", supportingArtists: [], venue: "Red Rocks", time: "7:30 PM", price: null, dateLong: "Sun, May 3 · 7:30 PM" },
+  solo:      { headliner: "Big Thief", supportingArtists: [], venue: "Ogden", time: "8:30 PM", price: "$40", dateLong: "Mon, May 4 · 8:30 PM" },
+  cancelled: { headliner: "Amyl and The Sniffers", tourName: "Cartoon Darkness Tour", supportingArtists: ["Bad Nerves", "C.O.F.F.I.N"], venue: "Gothic", time: "9:00 PM", price: "$28", status: "cancelled", dateLong: "Wed, Apr 28 · 9:00 PM" },
+  postponed: { headliner: "Geese", supportingArtists: ["Been Stellar", "Winter"], venue: "Ogden", time: "9:00 PM", price: "$25", status: "postponed", dateLong: "Fri, May 9 · 9:00 PM" },
+};
+
+// ── Themed stage panel ───────────────────────────────────────────────────────
+function Panel({ theme = "electric", pad = 20, width, children }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>
+      <div style={{
+        width: "100%", height: "100%", background: "var(--bg)", color: "var(--fg)",
+        fontFamily: "Inter, system-ui", padding: pad, display: "flex",
+        flexDirection: "column", gap: 12, overflow: "hidden",
+      }}>{children}</div>
+    </ThemeProvider>
+  );
+}
+
+// annotation caption (mono, sits under a specimen)
+function Cap({ children, tone = "muted" }) {
+  const c = tone === "good" ? "var(--success)" : tone === "bad" ? "var(--danger)" : "var(--fg-subtle)";
+  return (
+    <div style={{
+      fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, color: c,
+      letterSpacing: "0.04em", lineHeight: 1.5,
+    }}>{children}</div>
+  );
+}
+
+function Label({ children }) {
+  return (
+    <div style={{
+      fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "var(--fg-muted)",
+      letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 2,
+    }}>{children}</div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 0 · LIVE PREVIEW — phone browse list wired to Tweaks
+// ─────────────────────────────────────────────────────────────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "electric",
+  "variant": "billing",
+  "separator": "middot",
+  "lead": "with",
+  "tourPlacement": "eyebrow",
+  "maxInline": 2,
+  "status": "none",
+  "interactive": false
+}/*EDITMODE-END*/;
+
+function LivePhone() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const opts = {
+    variant: t.variant, separator: t.separator, lead: t.lead,
+    tourPlacement: t.tourPlacement, maxInline: t.maxInline, interactive: t.interactive,
+  };
+  const rows = [EV.full, EV.many, EV.one, EV.tourOnly];
+  const applyStatus = (e) => t.status === "none" ? e : { ...e, status: t.status };
+  return (
+    <>
+      <ThemeProvider theme={t.theme}>
+        <IOSDevice width={402} height={860} dark={t.theme !== "light"}>
+          <div style={{
+            height: "100%", background: "var(--bg)", color: "var(--fg)",
+            fontFamily: "Inter, system-ui", display: "flex", flexDirection: "column",
+          }}>
+            <div style={{ padding: "58px 16px 10px" }}>
+              <div style={{ fontWeight: 900, fontSize: 26, letterSpacing: "-0.03em" }}>What's on?</div>
+              <div style={{
+                fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "var(--fg-muted)",
+                letterSpacing: "0.08em", textTransform: "uppercase", marginTop: 2,
+              }}>Denver, CO · this week</div>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "4px 12px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
+              <HeroEventCard event={applyStatus(EV.full)} opts={{ ...opts, maxInline: 3 }} />
+              {rows.slice(1).map((e, i) => (
+                <EventCard key={i} event={applyStatus(e)} opts={opts} />
+              ))}
+            </div>
+          </div>
+        </IOSDevice>
+      </ThemeProvider>
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="Treatment" />
+        <TweakRadio label="Separator variant" value={t.variant}
+          options={[{ value: "billing", label: "Billing" }, { value: "chips", label: "Chips" }]}
+          onChange={(v) => setTweak("variant", v)} />
+        <TweakSelect label="Separator glyph" value={t.separator}
+          options={[{ value: "middot", label: "· middot" }, { value: "bullet", label: "• bullet" }, { value: "slash", label: "/ slash" }, { value: "comma", label: ", comma" }]}
+          onChange={(v) => setTweak("separator", v)} />
+        <TweakSelect label="Lead word (copy)" value={t.lead}
+          options={["with", "plus", "feat.", "also playing"]}
+          onChange={(v) => setTweak("lead", v)} />
+        <TweakSection label="Hierarchy" />
+        <TweakRadio label="Tour name" value={t.tourPlacement}
+          options={[{ value: "eyebrow", label: "Eyebrow" }, { value: "subtitle", label: "Subtitle" }, { value: "hidden", label: "Hide" }]}
+          onChange={(v) => setTweak("tourPlacement", v)} />
+        <TweakSlider label="Openers before +N more" value={t.maxInline} min={1} max={5} step={1}
+          onChange={(v) => setTweak("maxInline", v)} />
+        <TweakSection label="State" />
+        <TweakRadio label="Status" value={t.status}
+          options={[{ value: "none", label: "On" }, { value: "cancelled", label: "Canc." }, { value: "postponed", label: "Postp." }]}
+          onChange={(v) => setTweak("status", v)} />
+        <TweakToggle label="Openers tappable (#84)" value={t.interactive}
+          onChange={(v) => setTweak("interactive", v)} />
+        <TweakSection label="Theme" />
+        <TweakSelect label="Theme (all 9)" value={t.theme}
+          options={CC_THEME_KEYS.map(k => ({ value: k, label: CC_THEMES[k].label }))}
+          onChange={(v) => setTweak("theme", v)} />
+      </TweaksPanel>
+    </>
+  );
+}
+
+// specimen row: bare title block on a themed card
+function Specimen({ theme = "electric", event, opts = {}, surface = "card", label, cap, capTone, width = 360 }) {
+  return (
+    <Panel theme={theme} pad={0}>
+      <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 10, height: "100%" }}>
+        {label && <Label>{label}</Label>}
+        <div style={{
+          background: "var(--surface-1)", border: "1px solid var(--border)",
+          borderRadius: 12, padding: "13px 15px",
+        }}>
+          <EventTitleBlock headliner={event.headliner} supportingArtists={event.supportingArtists}
+            tourName={event.tourName} surface={surface} status={event.status} {...opts} />
+        </div>
+        {cap && <Cap tone={capTone}>{cap}</Cap>}
+      </div>
+    </Panel>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// A11y readout — shows what a screen reader announces
+// ─────────────────────────────────────────────────────────────────────────────
+function A11yReadout({ event }) {
+  const openers = supportingA11yLabel({ lead: "with", artists: event.supportingArtists });
+  return (
+    <Panel theme="electric" pad={0}>
+      <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 12, height: "100%" }}>
+        <Label>Rendered (sighted)</Label>
+        <div style={{ background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: 12, padding: "13px 15px" }}>
+          <EventTitleBlock headliner={event.headliner} supportingArtists={event.supportingArtists}
+            tourName={event.tourName} surface="card" maxInline={2} />
+        </div>
+        <Label>Announced (screen reader)</Label>
+        <div style={{
+          background: "var(--surface-2)", border: "1px dashed var(--border-strong)",
+          borderRadius: 12, padding: "13px 15px", display: "flex", flexDirection: "column", gap: 8,
+        }}>
+          {event.tourName && (
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "var(--fg-muted)", lineHeight: 1.5 }}>
+              <span style={{ color: "var(--fg-subtle)" }}>🔊 </span>“Tour: {event.tourName}”
+            </div>
+          )}
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "var(--fg)", lineHeight: 1.5 }}>
+            <span style={{ color: "var(--fg-subtle)" }}>🔊 </span>“{event.headliner}”
+          </div>
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "var(--signal)", lineHeight: 1.5 }}>
+            <span style={{ color: "var(--fg-subtle)" }}>🔊 </span>“group: {openers}”
+          </div>
+        </div>
+        <Cap>SR gets the full artist list as a natural-language group — never the truncated “+N more”. Visible middots are aria-hidden so they aren't read as “dot dot dot.”</Cap>
+      </div>
+    </Panel>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+const PW = 402, PH = 860;   // phone
+const CW = 380, CH = 200;   // card specimen
+const HW = 402, HH = 300;   // hero specimen
+
+function App() {
+  return (
+    <>
+      <DesignCanvas>
+
+        {/* 0 · LIVE */}
+        <DCSection id="live" title="0 · Live preview"
+          subtitle="Browse list wired to Tweaks — flip separator variant, glyph, lead word, tour-name placement, overflow limit, status and all 9 themes. Open Tweaks in the toolbar.">
+          <DCArtboard id="live-phone" label="Browse · driven by Tweaks" width={PW} height={PH}>
+            <LivePhone />
+          </DCArtboard>
+        </DCSection>
+
+        {/* 1 · THE FIX */}
+        <DCSection id="fix" title="1 · The fix — before / after"
+          subtitle="Beta bug: supporting artists + tour name render as one run-on string below the headliner, no separators, no telling where one opener ends. The fix splits the two concerns and gives the openers a real billing treatment.">
+          <DCArtboard id="fix-before" label="Before · run-on string (the bug)" width={CW} height={CH}>
+            <Panel theme="electric" pad={0}>
+              <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 10, height: "100%" }}>
+                <Label>Today</Label>
+                <div style={{ background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: 12, padding: "13px 15px" }}>
+                  <div style={{ fontWeight: 800, fontSize: 15, letterSpacing: "-0.02em" }}>Electric Callboy</div>
+                  <div style={{ fontSize: 12, color: "var(--fg-muted)", marginTop: 3, lineHeight: 1.35 }}>
+                    Bad Omens Loveless Cliffdiver Tanzneid World Tour
+                  </div>
+                </div>
+                <Cap tone="bad">✗ Where does one opener end? Which part is the tour? All one blur.</Cap>
+              </div>
+            </Panel>
+          </DCArtboard>
+          <DCArtboard id="fix-after" label="After · split + billing line" width={CW} height={CH}>
+            <Specimen theme="electric" event={EV.full} opts={{ maxInline: 3 }}
+              label="Fixed" cap="✓ Tour lifts to a mono kicker above · openers read as a clear support bill below." capTone="good" />
+          </DCArtboard>
+        </DCSection>
+
+        {/* 2 · SEPARATOR DIRECTIONS */}
+        <DCSection id="sep" title="2 · Separator treatment — two directions"
+          subtitle="Both frame the names with a quiet mono lead-word ('with', Sour Patch copy) so the row never reads as venue·time·price metadata. A = Billing (recommended): names joined by a spaced middot. B = Chips: each opener an outlined pill, forward-built for #84 tappable openers.">
+          <DCArtboard id="sep-billing" label="A · Billing line — RECOMMENDED" width={CW} height={CH}>
+            <Specimen theme="electric" event={EV.full} opts={{ maxInline: 3, variant: "billing" }}
+              label="Variant A · billing" cap="Lead-word mono + names Inter 600 + spaced middot. Quiet, poster-like, one line." capTone="good" />
+          </DCArtboard>
+          <DCArtboard id="sep-chips" label="B · Support chips" width={CW} height={CH}>
+            <Specimen theme="electric" event={EV.full} opts={{ maxInline: 3, variant: "chips" }}
+              label="Variant B · chips" cap="Each opener an outlined pill. Heavier, but the chip IS the future #84 tap target." />
+          </DCArtboard>
+          <DCArtboard id="sep-glyphs" label="Separator glyph options" width={CW} height={280}>
+            <Panel theme="electric" pad={18}>
+              <Label>Glyph audit</Label>
+              {["middot", "bullet", "slash", "comma"].map(g => (
+                <div key={g} style={{ background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 13px", marginBottom: 7 }}>
+                  <SupportingLine artists={EV.full.supportingArtists} surface="card" separator={g} />
+                  <Cap>{g === "middot" ? "· middot — recommended (matches app rhythm)" : g}</Cap>
+                </div>
+              ))}
+            </Panel>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 3 · HIERARCHY */}
+        <DCSection id="hier" title="3 · Visual hierarchy — where the tour name goes"
+          subtitle="The call: tour name = mono uppercase KICKER above the headliner. It keeps the tour out of the openers' slot (the exact collision that caused the run-on). Subtitle + hidden shown for comparison — flip in Tweaks to audit.">
+          <DCArtboard id="hier-eyebrow" label="Eyebrow above — RECOMMENDED" width={CW} height={CH}>
+            <Specimen theme="electric" event={EV.full} opts={{ maxInline: 3, tourPlacement: "eyebrow" }}
+              label="Tour = kicker" cap="✓ Tour and openers occupy different rows — no collision, fully scannable." capTone="good" />
+          </DCArtboard>
+          <DCArtboard id="hier-subtitle" label="Subtitle below headliner" width={CW} height={CH}>
+            <Specimen theme="electric" event={EV.full} opts={{ maxInline: 3, tourPlacement: "subtitle" }}
+              label="Tour = subtitle" cap="Italic line under the headliner. Reads, but competes with openers for the same eye-path." />
+          </DCArtboard>
+          <DCArtboard id="hier-hidden" label="Hidden (compact rows)" width={CW} height={CH}>
+            <Specimen theme="electric" event={EV.full} opts={{ maxInline: 3, tourPlacement: "hidden" }}
+              label="Tour = hidden" cap="For the densest lists — drop tour entirely, keep openers. Detail page still shows it." />
+          </DCArtboard>
+        </DCSection>
+
+        {/* 4 · OVERFLOW */}
+        <DCSection id="overflow" title="4 · Overflow at 320px — 4+ openers"
+          subtitle="Recommended: truncate to the names that fit on one line, roll the rest into '+N more' (Sour Patch copy). The row height never changes and the count is always honest. Wrap / marquee / fade rejected — noted on the card.">
+          <DCArtboard id="of-320-2" label="320px · limit 2 → +3 more" width={320} height={150}>
+            <Panel theme="electric" pad={14}>
+              <Label>320px · 5 openers</Label>
+              <div style={{ background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 14px" }}>
+                <EventTitleBlock headliner={EV.many.headliner} supportingArtists={EV.many.supportingArtists}
+                  tourName={EV.many.tourName} surface="card" maxInline={2} />
+              </div>
+              <Cap tone="good">✓ truncate + honest count</Cap>
+            </Panel>
+          </DCArtboard>
+          <DCArtboard id="of-320-3" label="320px · limit 3 → +2 more" width={320} height={150}>
+            <Panel theme="electric" pad={14}>
+              <Label>320px · 5 openers</Label>
+              <div style={{ background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 14px" }}>
+                <EventTitleBlock headliner={EV.many.headliner} supportingArtists={EV.many.supportingArtists}
+                  tourName={EV.many.tourName} surface="card" maxInline={3} />
+              </div>
+              <Cap>eng tunes the limit to measured width; count-based here for the mock</Cap>
+            </Panel>
+          </DCArtboard>
+          <DCArtboard id="of-full" label="Wider card · limit 4" width={CW} height={150}>
+            <Panel theme="electric" pad={14}>
+              <Label>Wider surface · same data</Label>
+              <div style={{ background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 14px" }}>
+                <EventTitleBlock headliner={EV.many.headliner} supportingArtists={EV.many.supportingArtists}
+                  tourName={EV.many.tourName} surface="card" maxInline={4} />
+              </div>
+              <Cap>more room → more names before the tail. Same component, one knob.</Cap>
+            </Panel>
+          </DCArtboard>
+          <DCArtboard id="of-detail" label="Detail page · no truncation, wraps" width={CW} height={220}>
+            <Panel theme="electric" pad={18}>
+              <Label>Detail · full room</Label>
+              <div style={{ background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: 12, padding: "16px 18px" }}>
+                <EventTitleBlock headliner={EV.many.headliner} supportingArtists={EV.many.supportingArtists}
+                  tourName={EV.many.tourName} surface="detail" maxInline={null} />
+              </div>
+              <Cap>Detail never truncates — every opener listed, billing line wraps if needed.</Cap>
+            </Panel>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 5 · EDGE CASES */}
+        <DCSection id="edges" title="5 · Empty · single · tour-only · solo"
+          subtitle="The treatment degrades cleanly. Scaffolding never renders without data behind it — no dangling 'with', no empty separators.">
+          <DCArtboard id="edge-single" label="Single opener — no separators" width={CW} height={150}>
+            <Specimen theme="electric" event={EV.one} opts={{ maxInline: 2 }}
+              label="1 opener" cap="'with Hotline TNT' — lead-word, no glyph. Nothing to separate." />
+          </DCArtboard>
+          <DCArtboard id="edge-touronly" label="Tour name, no openers" width={CW} height={150}>
+            <Specimen theme="electric" event={EV.tourOnly} opts={{}}
+              label="tour only" cap="Kicker shows the tour; the billing line simply doesn't render." />
+          </DCArtboard>
+          <DCArtboard id="edge-solo" label="Solo headliner — nothing extra" width={CW} height={150}>
+            <Specimen theme="electric" event={EV.solo} opts={{}}
+              label="headliner only" cap="No tour, no openers → just the name. No empty scaffolding." />
+          </DCArtboard>
+        </DCSection>
+
+        {/* 6 · CANCELLED / POSTPONED */}
+        <DCSection id="status" title="6 · Cancelled / postponed"
+          subtitle="Status pill sits in the kicker row alongside the tour eyebrow. The whole block dims to fg-muted; a cancelled headliner gets a danger strike. The openers line stays coherent — just quieter — so it never fights the badge.">
+          <DCArtboard id="st-cancel" label="Cancelled — strike + dim" width={CW} height={CH}>
+            <Specimen theme="electric" event={EV.cancelled} opts={{ maxInline: 3 }}
+              label="cancelled" cap="Pill + tour share the kicker row · headliner struck · openers dim to subtle." />
+          </DCArtboard>
+          <DCArtboard id="st-postpone" label="Postponed — warning pill" width={CW} height={CH}>
+            <Specimen theme="electric" event={EV.postponed} opts={{ maxInline: 3 }}
+              label="postponed" cap="Warning-toned pill, block dims, no strike (the show still happens later)." />
+          </DCArtboard>
+          <DCArtboard id="st-hero" label="Cancelled on a hero card" width={HW} height={340}>
+            <Panel theme="electric" pad={16}>
+              <HeroEventCard event={EV.cancelled} opts={{ maxInline: 3 }} />
+            </Panel>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 7 · #84 FORWARD-COMPAT */}
+        <DCSection id="future" title="7 · Forward-compat with #84 (tappable openers)"
+          subtitle="The treatment doesn't preclude Support Act Spotlight. Each opener name is already its own node — flip 'interactive' and names/chips become tap targets (hover → signal) that #84 wires to the artist route. No re-layout needed.">
+          <DCArtboard id="fut-billing" label="Billing · names tappable" width={CW} height={CH}>
+            <Specimen theme="electric" event={EV.full} opts={{ maxInline: 3, interactive: true }}
+              label="hover a name" cap="Names become buttons on hover (→ var(--signal)). Separators stay inert." />
+          </DCArtboard>
+          <DCArtboard id="fut-chips" label="Chips · pills tappable" width={CW} height={CH}>
+            <Specimen theme="electric" event={EV.full} opts={{ maxInline: 3, variant: "chips", interactive: true }}
+              label="hover a chip" cap="Chip variant is the most tap-obvious — the pill already looks pressable." />
+          </DCArtboard>
+        </DCSection>
+
+        {/* 8 · SURFACES IN CONTEXT */}
+        <DCSection id="surfaces" title="8 · Surfaces — parity across the three reference components"
+          subtitle="EventCard (browse/watching) · HeroEventCard · event detail header. Same EventTitleBlock, same tokens — size ramp + truncation adjust per surface. Mobile + desktop share one component.">
+          <DCArtboard id="surf-card" label="EventCard · list row" width={CW} height={140}>
+            <Panel theme="electric" pad={16}>
+              <EventCard event={EV.full} opts={{ maxInline: 2 }} />
+            </Panel>
+          </DCArtboard>
+          <DCArtboard id="surf-hero" label="HeroEventCard" width={HW} height={HH}>
+            <Panel theme="electric" pad={16}>
+              <HeroEventCard event={EV.full} opts={{ maxInline: 3 }} />
+            </Panel>
+          </DCArtboard>
+          <DCArtboard id="surf-detail" label="Event detail header" width={640} height={260}>
+            <Panel theme="electric" pad={0}>
+              <div style={{ background: "var(--bg)", height: "100%" }}>
+                <DetailHeader event={EV.many} opts={{}} />
+              </div>
+            </Panel>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 9 · THEME PARITY */}
+        <DCSection id="themes" title="9 · Theme parity — all 9, token-only"
+          subtitle="Every colour reads from var(--*). The separator treatment holds across Electric / Jade / Light / Pulse / Forge / Blue Note / Drip / Cedar / Gloss.">
+          {CC_THEME_KEYS.map(k => (
+            <DCArtboard key={k} id={"th-" + k} label={CC_THEMES[k].label} width={CW} height={CH}>
+              <Specimen theme={k} event={EV.full} opts={{ maxInline: 3 }} label={CC_THEMES[k].label} />
+            </DCArtboard>
+          ))}
+        </DCSection>
+
+        {/* 10 · A11Y */}
+        <DCSection id="a11y" title="10 · Accessibility — list, not run-on"
+          subtitle="The openers render as an aria group whose label is a natural-language list; visible glyphs are aria-hidden. Screen readers hear the COMPLETE roster even when the eye sees '+N more'. WCAG AA colour on every token pairing.">
+          <DCArtboard id="a11y-read" label="What the screen reader hears" width={CW} height={360}>
+            <A11yReadout event={EV.many} />
+          </DCArtboard>
+          <DCArtboard id="a11y-notes" label="Annotation" width={CW} height={360}>
+            <Panel theme="electric" pad={18}>
+              <Label>A11y contract</Label>
+              {[
+                ["Group semantics", "Openers wrap in role=\"group\" with aria-label = the full list (‘with A, B, and C’). Reads as a list, not a mashed string."],
+                ["Truncation", "‘+N more’ is visual only. The aria-label always carries every name, so nobody loses openers to truncation."],
+                ["Separators", "Middots / bullets are aria-hidden — never announced as punctuation."],
+                ["Tour name", "Kicker carries aria-label ‘Tour: {name}’ so it isn't mistaken for the headliner."],
+                ["Contrast", "fg-muted / fg-subtle on each surface pass AA against their bg token across all 9 themes."],
+                ["#84 targets", "When openers become tappable they're real <button>s — focusable, Enter/Space, 44px min hit area at integration."],
+              ].map(([h, b], i) => (
+                <div key={i} style={{ background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 13px", marginBottom: 7 }}>
+                  <div style={{ fontWeight: 700, fontSize: 12, color: "var(--fg)", marginBottom: 3 }}>{h}</div>
+                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "var(--fg-muted)", lineHeight: 1.55 }}>{b}</div>
+                </div>
+              ))}
+            </Panel>
+          </DCArtboard>
+        </DCSection>
+
+      </DesignCanvas>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
