@@ -15,14 +15,14 @@ existing "LLM cost" StatCard onto the same data so both surfaces agree.
 Rows marked **READINESS** were locked by the readiness audit; rows marked **this plan** were
 left open/recommended by READINESS.md and are resolved here.
 
-| Decision | Resolution | Locked by |
-| --- | --- | --- |
-| Chart implementation | Mock's dependency-free SVG (`CostChart`), token-only. No Recharts. | READINESS |
-| Budget source | Keep `LLM_BUDGET_USD` constant. No `app_config` table (KISS). | READINESS |
-| Day bucketing | Group by America/Denver day boundaries (timestamps stored UTC). | READINESS |
-| Spend window | Rolling 30 days, not calendar-month. No "resets" copy. | this plan |
-| Panel placement | Between `AttentionFeed` and the "Crawl health · today" panel. | this plan |
-| StatCard cost figure | Rebased on the daily-costs endpoint (30-day total), replacing the last-20-runs sum. | this plan |
+| Decision                | Resolution                                                                                                                                                | Locked by |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| Chart implementation    | Mock's dependency-free SVG (`CostChart`), token-only. No Recharts.                                                                                        | READINESS |
+| Budget source           | Keep `LLM_BUDGET_USD` constant. No `app_config` table (KISS).                                                                                             | READINESS |
+| Day bucketing           | Group by America/Denver day boundaries (timestamps stored UTC).                                                                                           | READINESS |
+| Spend window            | Rolling 30 days, not calendar-month. No "resets" copy.                                                                                                    | this plan |
+| Panel placement         | Between `AttentionFeed` and the "Crawl health · today" panel.                                                                                             | this plan |
+| StatCard cost figure    | Rebased on the daily-costs endpoint (30-day total), replacing the last-20-runs sum.                                                                       | this plan |
 | "Open billing ›" action | **Dropped.** No in-app billing surface exists; an external Anthropic console link from the dashboard adds little. Panel title carries the wow badge only. | this plan |
 
 ## Task 1 — API: costs admin router
@@ -39,6 +39,7 @@ GET-only, so the existing audit-log middleware skips it automatically.
   (`` sql`(${crawlRuns.createdAt} AT TIME ZONE 'America/Denver')::date` `` — qualified column
   reference, safe under joins/aliases) —
   a parameterized Drizzle `sql` fragment, consistent with the "Drizzle only" rule.
+  `llm_cost_usd` is nullable, so the aggregate must be `coalesce(sum(...), 0)`.
 - Response: `{ success: true, data: { days: Array<{ date: string; costUsd: number }>, totalUsd: number } }`.
   Zero-fill missing days server-side so the chart never has gaps.
 
@@ -68,9 +69,11 @@ zero-fill, others aggregation, pct math, `days` validation bounds.
 
 - `CostPanel.tsx` — `Panel` with composite title (`LLM spend, last 30 days` + wow
   `StatusBadge` when computable), `padding={0}`, internal grid `1fr 280px` on desktop,
-  single column (chart above list) below `lg`. Left cell: 30-day total (`ADMIN_MONO`, 32px) +
+  single column (chart above list) below `lg`. Left cell: 30-day total (JetBrains Mono
+  stack — the same monospace styling `CostText`/`MonoLabel` use, inline like the other
+  dashboard components — 32px) +
   "of $X budget" caption + `CostChart` + month-axis labels. Right cell: `MonoLabel`
-  "top spend" + ranked rows (`CostText` + `ProgressBar height={4} kind="signal"`).
+  "top spend" + ranked rows (`CostText` + `ProgressBar kind="signal"` — the primitive's fixed 4px height already matches the mock).
 - `CostChart.tsx` — the mock's SVG (area gradient + line + terminal dot + dashed gridlines),
   token-only (`var(--signal)`, `var(--border)`), `role="img"` + `aria-label` summarizing the
   window total. Unique gradient id via `useId`.

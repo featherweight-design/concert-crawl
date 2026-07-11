@@ -31,8 +31,7 @@ export type RoleBadge = 'admin' | 'promoter' | 'beta'
 
 // Standard API response envelope
 export type ApiResponse<T> =
-  | { success: true; data: T }
-  | { success: false; error: string; code?: string }
+  { success: true; data: T } | { success: false; error: string; code?: string }
 
 // Paginated list response
 export interface PaginatedResponse<T> {
@@ -79,12 +78,7 @@ export type Tier = 'GA' | 'Reserved' | 'VIP' | 'Pit' | 'Lawn'
 
 // Ticket vendor
 export type Vendor =
-  | 'AXS'
-  | 'Ticketmaster'
-  | 'SeatGeek'
-  | 'DICE'
-  | 'Eventbrite'
-  | 'VenueBoxOffice'
+  'AXS' | 'Ticketmaster' | 'SeatGeek' | 'DICE' | 'Eventbrite' | 'VenueBoxOffice'
 
 // Ticket vendor — lower-cased for pipeline
 export type TicketVendor =
@@ -263,6 +257,37 @@ export interface ActiveCrawlAlert {
   severity?: 'went_dark' | 'dropped_sharply' | null
 }
 
+// DailyCost — one zero-filled day bucket from GET /v1/admin/costs/daily.
+// `date` is a Mountain-Time calendar date (YYYY-MM-DD); `costUsd` is the
+// coalesced sum of crawl_runs.llm_cost_usd for runs on that MT day.
+export interface DailyCost {
+  date: string
+  costUsd: number
+}
+
+// AdminDailyCosts — GET /v1/admin/costs/daily response payload. `days` is
+// contiguous (missing days zero-filled server-side) and ordered oldest→newest.
+export interface AdminDailyCosts {
+  days: DailyCost[]
+  totalUsd: number
+}
+
+// TopSpendVenue — one ranked row from GET /v1/admin/costs/top-venues.
+// `venueId` is null for the aggregated "(others)" remainder row; `pct` is
+// the venue's rounded share of the window total.
+export interface TopSpendVenue {
+  venueId: string | null
+  name: string
+  costUsd: number
+  pct: number
+}
+
+// AdminTopSpend — GET /v1/admin/costs/top-venues response payload.
+export interface AdminTopSpend {
+  venues: TopSpendVenue[]
+  totalUsd: number
+}
+
 // Event — represents the JSON-serialized API response shape.
 // Date/time fields are strings; date is YYYY-MM-DD, time is HH:MM:SS or null.
 export interface Event {
@@ -345,10 +370,7 @@ export type EventReportStatus = 'sold-out' | 'cancelled' | 'postponed'
 
 // EventReport evidence methods
 export type EventReportEvidenceMethod =
-  | 'bought_myself'
-  | 'saw_listing'
-  | 'venue_site'
-  | 'other'
+  'bought_myself' | 'saw_listing' | 'venue_site' | 'other'
 
 // EventReport — community-filed report about an event's status
 export interface EventReport {

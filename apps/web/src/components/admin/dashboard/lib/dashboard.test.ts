@@ -5,10 +5,12 @@ import {
   buildCrawlHealthHint,
   buildActiveVenuesHint,
   buildSparklineData,
+  buildCostAxisLabels,
+  computeWowTrend,
   toStatusRow,
 } from './dashboard'
 import type { CrawlStatusRow, RawVenueStatus } from './dashboard'
-import type { CrawlRun, Event, Venue } from '@concert-crawl/types'
+import type { CrawlRun, DailyCost, Event, Venue } from '@concert-crawl/types'
 
 // --- Factories ---
 
@@ -376,6 +378,102 @@ describe('buildSparklineData', () => {
   it('caps at 8 runs', () => {
     const runs = Array.from({ length: 12 }, () => makeCrawlRun())
     expect(buildSparklineData(runs)).toHaveLength(8)
+  })
+})
+
+// --- computeWowTrend ---
+
+// Builds a zero-filled daily series ending 2026-07-10, oldest→newest, from
+// the per-day costs supplied newest-last.
+function makeDays(costs: number[]): DailyCost[] {
+  return costs.map((costUsd, idx) => {
+    const date = new Date(Date.UTC(2026, 6, 10 - (costs.length - 1 - idx)))
+    return { date: date.toISOString().slice(0, 10), costUsd }
+  })
+}
+
+describe('computeWowTrend', () => {
+  it('returns undefined when the prior window has no spend', () => {
+    const days = makeDays([0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1])
+    expect(computeWowTrend(days)).toBeUndefined()
+  })
+
+  it('returns undefined for an empty series', () => {
+    expect(computeWowTrend([])).toBeUndefined()
+  })
+
+  it('computes an upward trend as bad', () => {
+    // prior 7 days sum 7, recent 7 days sum 14 → +100%
+    const days = makeDays([1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2])
+    expect(computeWowTrend(days)).toEqual({
+      dir: 'up',
+      text: '+100%',
+      good: false,
+    })
+  })
+
+  it('computes a downward trend as good', () => {
+    // prior 7 days sum 14, recent 7 days sum 7 → -50%
+    const days = makeDays([2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1])
+    expect(computeWowTrend(days)).toEqual({
+      dir: 'down',
+      text: '-50%',
+      good: true,
+    })
+  })
+
+  it('treats flat spend as good and renders an unsigned 0%', () => {
+    const days = makeDays([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+    const trend = computeWowTrend(days)
+    expect(trend?.good).toBe(true)
+    expect(trend?.dir).toBe('down')
+    expect(trend?.text).toBe('0%')
+  })
+
+  it('handles a series shorter than 14 days', () => {
+    // 10 days: prior window is only days 1-3 of the series
+    const days = makeDays([1, 1, 1, 2, 2, 2, 2, 2, 2, 2])
+    const trend = computeWowTrend(days)
+    // prior = 3, recent = 14 → +367%
+    expect(trend).toEqual({ dir: 'up', text: '+367%', good: false })
+  })
+})
+
+// --- buildCostAxisLabels ---
+
+describe('buildCostAxisLabels', () => {
+  it('returns empty array for empty series', () => {
+    expect(buildCostAxisLabels([])).toEqual([])
+  })
+
+  it('returns a single label for a one-day series', () => {
+    expect(buildCostAxisLabels([{ date: '2026-07-10', costUsd: 1 }])).toEqual([
+      'JUL 10',
+    ])
+  })
+
+  it('returns 5 evenly spaced labels for a 30-day series', () => {
+    const days = Array.from({ length: 30 }, (unused, idx) => {
+      const date = new Date(Date.UTC(2026, 5, 11 + idx))
+      return { date: date.toISOString().slice(0, 10), costUsd: 0 }
+    })
+    const labels = buildCostAxisLabels(days)
+    expect(labels).toHaveLength(5)
+    expect(labels[0]).toBe('JUN 11')
+    expect(labels[4]).toBe('JUL 10')
+  })
+
+  it('formats dates as uppercase month + day in UTC', () => {
+    const labels = buildCostAxisLabels([{ date: '2026-01-02', costUsd: 0 }])
+    expect(labels).toEqual(['JAN 2'])
+  })
+
+  it('caps label count at the series length', () => {
+    const days: DailyCost[] = [
+      { date: '2026-07-09', costUsd: 0 },
+      { date: '2026-07-10', costUsd: 0 },
+    ]
+    expect(buildCostAxisLabels(days)).toEqual(['JUL 9', 'JUL 10'])
   })
 })
 

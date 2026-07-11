@@ -16,6 +16,18 @@ export const ADMIN_COPY = {
     panels: {
       crawlHealthToday: 'Crawl health · today',
     },
+    costPanel: {
+      title: 'LLM spend, last 30 days',
+      wowBadge: (delta: string) => `${delta} wow`,
+      wowBadgeAriaLabel: (delta: string) => `LLM spend ${delta} week over week`,
+      budgetCaption: (budget: number) => `of $${budget} budget`,
+      topSpendLabel: 'top spend',
+      othersLabel: '(others)',
+      empty: 'No LLM spend recorded in the last 30 days.',
+      topSpendEmpty: 'No venue spend yet.',
+      chartAriaLabel: (total: string) =>
+        `LLM spend over the last 30 days: ${total} total`,
+    },
     attentionItems: {
       crawlBlocked: (venueName: string) => `${venueName} — crawl blocked`,
       crawlFailed: (venueName: string) => `${venueName} — crawl failed`,

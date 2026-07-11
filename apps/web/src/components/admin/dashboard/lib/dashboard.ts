@@ -1,6 +1,62 @@
-import type { CrawlRun, Event, Venue } from '@concert-crawl/types'
+import type { CrawlRun, DailyCost, Event, Venue } from '@concert-crawl/types'
 
 export const LLM_BUDGET_USD = 20
+
+// Week-over-week LLM spend trend, shared by the CostPanel wow badge and the
+// "LLM cost" StatCard so the two surfaces always agree.
+export interface CostTrend {
+  dir: 'up' | 'down'
+  text: string
+  good: boolean
+}
+
+// Week-over-week delta from the daily-costs series: last 7 days vs the prior
+// 7. `days` is the zero-filled, oldest→newest series from
+// GET /v1/admin/costs/daily. Undefined when the prior window has no spend —
+// a percentage against $0 is meaningless, so callers omit the badge/trend.
+export function computeWowTrend(days: DailyCost[]): CostTrend | undefined {
+  const sumWindow = (window: DailyCost[]) =>
+    window.reduce((sum, day) => sum + day.costUsd, 0)
+  const recent = sumWindow(days.slice(-7))
+  const prior = sumWindow(days.slice(-14, -7))
+  if (prior <= 0) return undefined
+  const pctChange = Math.round(((recent - prior) / prior) * 100)
+  return {
+    dir: recent > prior ? 'up' : 'down',
+    text: `${pctChange > 0 ? '+' : ''}${pctChange}%`,
+    good: recent <= prior,
+  }
+}
+
+// Evenly spaced axis labels ("JUL 7" style) for the cost chart, derived from
+// the zero-filled daily series. Dates are data, not copy — formatting lives
+// here rather than in definitions/copy.ts. Parsed at UTC midnight so the
+// YYYY-MM-DD string renders as the same calendar day regardless of the
+// server's timezone.
+export function buildCostAxisLabels(
+  days: DailyCost[],
+  tickCount = 5,
+): string[] {
+  if (days.length === 0) return []
+  const count = Math.min(tickCount, days.length)
+  const labels: string[] = []
+  for (let tick = 0; tick < count; tick++) {
+    const idx =
+      count > 1 ? Math.round((tick * (days.length - 1)) / (count - 1)) : 0
+    const day = days[idx]
+    if (!day) continue
+    labels.push(
+      new Date(`${day.date}T00:00:00Z`)
+        .toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          timeZone: 'UTC',
+        })
+        .toUpperCase(),
+    )
+  }
+  return labels
+}
 
 export interface RawVenueStatus {
   id: string

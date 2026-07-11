@@ -3,7 +3,12 @@ import Link from 'next/link'
 import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import type { CrawlRun, Venue } from '@concert-crawl/types'
+import type {
+  AdminDailyCosts,
+  AdminTopSpend,
+  CrawlRun,
+  Venue,
+} from '@concert-crawl/types'
 import {
   StatCard,
   AdminButton,
@@ -13,12 +18,14 @@ import { CrawlHealthTable } from '@/components/admin/dashboard/CrawlHealthTable'
 import { AttentionFeed } from '@/components/admin/dashboard/AttentionFeed'
 import { DashboardGreeting } from '@/components/admin/dashboard/DashboardGreeting'
 import { RunHistoryBlocks } from '@/components/admin/dashboard/RunHistoryBlocks'
+import { CostPanel } from '@/components/admin/dashboard/CostPanel'
 import type { AttentionItemData } from '@/components/admin/dashboard/AttentionFeed'
 import {
   LLM_BUDGET_USD,
   toStatusRow,
   buildCrawlHealthHint,
   buildSparklineData,
+  computeWowTrend,
 } from '@/components/admin/dashboard/lib/dashboard'
 import type { RawVenueStatus } from '@/components/admin/dashboard/lib/dashboard'
 import { Panel } from '@/components/admin/primitives'
@@ -33,43 +40,61 @@ interface PriceSubmissionCount {
 }
 
 async function fetchDashboardData(token: string) {
-  const [rawStatus, venues, runs, eventCounts, priceCounts] = await Promise.all(
-    [
-      apiClient
-        .get<RawVenueStatus[]>('/v1/admin/crawl/status', token)
-        .catch((err: unknown) => {
-          throw new Error(
-            `Failed to load crawl status: ${err instanceof Error ? err.message : String(err)}`,
-          )
-        }),
-      apiClient
-        .get<Venue[]>('/v1/admin/venues', token)
-        .catch((err: unknown) => {
-          throw new Error(
-            `Failed to load venues: ${err instanceof Error ? err.message : String(err)}`,
-          )
-        }),
-      apiClient
-        .get<CrawlRun[]>('/v1/admin/crawl/runs?limit=20', token)
-        .catch((err: unknown) => {
-          throw new Error(
-            `Failed to load crawl runs: ${err instanceof Error ? err.message : String(err)}`,
-          )
-        }),
-      apiClient
-        .get<EventCount>('/v1/admin/events/count', token)
-        .catch(() => ({ pending: 0, approved: 0 })),
-      apiClient
-        .get<PriceSubmissionCount>('/v1/admin/prices/submissions/count', token)
-        .catch(() => ({ pending: 0 })),
-    ],
-  )
+  const [
+    rawStatus,
+    venues,
+    runs,
+    eventCounts,
+    priceCounts,
+    dailyCosts,
+    topSpend,
+  ] = await Promise.all([
+    apiClient
+      .get<RawVenueStatus[]>('/v1/admin/crawl/status', token)
+      .catch((err: unknown) => {
+        throw new Error(
+          `Failed to load crawl status: ${err instanceof Error ? err.message : String(err)}`,
+        )
+      }),
+    apiClient.get<Venue[]>('/v1/admin/venues', token).catch((err: unknown) => {
+      throw new Error(
+        `Failed to load venues: ${err instanceof Error ? err.message : String(err)}`,
+      )
+    }),
+    apiClient
+      .get<CrawlRun[]>('/v1/admin/crawl/runs?limit=20', token)
+      .catch((err: unknown) => {
+        throw new Error(
+          `Failed to load crawl runs: ${err instanceof Error ? err.message : String(err)}`,
+        )
+      }),
+    apiClient
+      .get<EventCount>('/v1/admin/events/count', token)
+      .catch(() => ({ pending: 0, approved: 0 })),
+    apiClient
+      .get<PriceSubmissionCount>('/v1/admin/prices/submissions/count', token)
+      .catch(() => ({ pending: 0 })),
+    apiClient
+      .get<AdminDailyCosts>('/v1/admin/costs/daily?days=30', token)
+      .catch((err: unknown) => {
+        console.error('Failed to load daily LLM costs', err)
+        return { days: [], totalUsd: 0 }
+      }),
+    apiClient
+      .get<AdminTopSpend>('/v1/admin/costs/top-venues?days=30', token)
+      .catch((err: unknown) => {
+        console.error('Failed to load top LLM spend venues', err)
+        return { venues: [], totalUsd: 0 }
+      }),
+  ])
   return {
     status: rawStatus.map(toStatusRow),
     venues,
     runs,
     pendingEventCount: eventCounts.pending,
     pendingPriceCount: priceCounts.pending,
+    dailyCosts,
+    topSpend,
   }
 }
 
@@ -153,8 +178,15 @@ export default async function AdminDashboardPage() {
 
   const firstName = user.firstName ?? user.email
 
-  const { status, venues, runs, pendingEventCount, pendingPriceCount } =
-    await fetchDashboardData(token)
+  const {
+    status,
+    venues,
+    runs,
+    pendingEventCount,
+    pendingPriceCount,
+    dailyCosts,
+    topSpend,
+  } = await fetchDashboardData(token)
 
   const greenCount = status.filter(
     (row) => row.status === 'success' || row.status === 'skipped',
@@ -163,23 +195,9 @@ export default async function AdminDashboardPage() {
   const blockedCount = status.filter(
     (row) => row.blockedAt !== null || row.status === 'failed',
   ).length
-  const totalCost = runs.reduce((sum, run) => sum + (run.llmCostUsd ?? 0), 0)
+  const totalCost = dailyCosts.totalUsd
   const llmBudgetPct = Math.round((totalCost / LLM_BUDGET_USD) * 100)
-
-  const recentCost = runs
-    .slice(0, 7)
-    .reduce((sum, run) => sum + (run.llmCostUsd ?? 0), 0)
-  const priorCost = runs
-    .slice(7, 14)
-    .reduce((sum, run) => sum + (run.llmCostUsd ?? 0), 0)
-  const costTrend =
-    priorCost > 0
-      ? {
-          dir: recentCost > priorCost ? ('up' as const) : ('down' as const),
-          text: `${recentCost > priorCost ? '+' : '-'}${Math.round((Math.abs(recentCost - priorCost) / priorCost) * 100)}%`,
-          good: recentCost <= priorCost,
-        }
-      : undefined
+  const costTrend = computeWowTrend(dailyCosts.days)
 
   const crawlHealthHint = buildCrawlHealthHint(status)
 
@@ -382,6 +400,13 @@ export default async function AdminDashboardPage() {
         items={attentionItems}
         {...(digestLabel ? { digestLabel } : {})}
         digestHref="/admin/crawl"
+      />
+
+      {/* LLM spend */}
+      <CostPanel
+        daily={dailyCosts}
+        topSpend={topSpend}
+        budgetUsd={LLM_BUDGET_USD}
       />
 
       {/* Crawl health detail */}
