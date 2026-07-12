@@ -1,3 +1,18 @@
+# [1.106.0](https://github.com/HartiganHM/concert-crawl/compare/v1.105.0...v1.106.0) (2026-07-12)
+
+
+### Bug Fixes
+
+* **api:** bound gift-ending query; clarify gifter + test-coverage comments ([0ca3271](https://github.com/HartiganHM/concert-crawl/commit/0ca327176462e61748546f67f9fefac9bab639d1))
+* **api:** make gift-revoke + lost-webhook reconcile writes atomic ([421e8c4](https://github.com/HartiganHM/concert-crawl/commit/421e8c410bd6862cc7541568dbdef883bf2d5a07))
+* **api:** task-6 reconcile mirrors deleted-webhook tier + 90-day clock ([b31ee5e](https://github.com/HartiganHM/concert-crawl/commit/b31ee5e790057578343ecf5ba65a5805afc5dced))
+* **billing:** atomic trial-end clock + purge; correct card-window comment ([2006464](https://github.com/HartiganHM/concert-crawl/commit/20064647ab1b25be0f231b53ba3d5cd109fddf1e))
+
+
+### Features
+
+* **api:** dunning/reminder/winback email templates + daily billing job ([43860e5](https://github.com/HartiganHM/concert-crawl/commit/43860e5080d42ad4e3a8cd429d2b10f8d971aeee)), closes [#783](https://github.com/HartiganHM/concert-crawl/issues/783)
+
 # [1.105.0](https://github.com/HartiganHM/concert-crawl/compare/v1.104.0...v1.105.0) (2026-07-12)
 
 
