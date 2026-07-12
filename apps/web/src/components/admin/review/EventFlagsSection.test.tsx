@@ -259,6 +259,87 @@ describe('EventFlagsSection pagination (#694)', () => {
     expect(inspectorTitle()).toBe('Show 0')
   })
 
+  it('shows the full server total in the panel badge, not the page slice', () => {
+    render(
+      <EventFlagsSection
+        events={buildPage(0, 20)}
+        page={1}
+        pageSize={20}
+        total={25}
+        onPageChange={noop}
+        onPageSizeChange={noop}
+        onApprove={noop}
+        onReject={noop}
+      />,
+    )
+
+    // The page holds 20 rows but the queue has 25 — the badge must reflect the
+    // server total so it agrees with the pager, not the sliced page length.
+    expect(screen.getByText('25 pending')).toBeTruthy()
+    expect(screen.queryByText('20 pending')).toBeNull()
+  })
+
+  it('snaps back to page 1 when a filter changes on a deep page', () => {
+    const onPageChange = vi.fn()
+    render(
+      <EventFlagsSection
+        events={buildPage(20, 5)}
+        page={2}
+        pageSize={20}
+        total={25}
+        onPageChange={onPageChange}
+        onPageSizeChange={noop}
+        onApprove={noop}
+        onReject={noop}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /hide non-concert/i }))
+
+    // Filtering while on a deep server page could strand the user on a slice
+    // that's entirely filtered out — reset to page 1.
+    expect(onPageChange).toHaveBeenCalledWith(1)
+  })
+
+  it('mounts the pager (not the queue-clear state) on an out-of-range page', () => {
+    // Out-of-range deep link: the server page is empty but total > 0. The panel
+    // must render the pager so its clamp-sync effect can pull the page back into
+    // range, rather than falsely reporting the queue is clear.
+    render(
+      <EventFlagsSection
+        events={[]}
+        page={99}
+        pageSize={20}
+        total={25}
+        onPageChange={noop}
+        onPageSizeChange={noop}
+        onApprove={noop}
+        onReject={noop}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: 'Page 1' })).toBeTruthy()
+    expect(screen.queryByText(/queue.*clear/i)).toBeNull()
+  })
+
+  it('shows the queue-clear state only when the server total is zero', () => {
+    render(
+      <EventFlagsSection
+        events={[]}
+        page={1}
+        pageSize={20}
+        total={0}
+        onPageChange={noop}
+        onPageSizeChange={noop}
+        onApprove={noop}
+        onReject={noop}
+      />,
+    )
+
+    // total === 0 → genuine empty queue, no pager.
+    expect(screen.queryByRole('button', { name: 'Page 1' })).toBeNull()
+  })
+
   it('shows the inspector empty state when the filtered page has no rows', () => {
     const nonConcert = Array.from({ length: 6 }).map((_, idx) =>
       buildFlag({

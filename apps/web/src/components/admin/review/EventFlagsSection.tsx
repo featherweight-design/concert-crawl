@@ -244,11 +244,15 @@ export const EventFlagsSection = ({
 
   // A filter change re-narrows the current page: drop the id-keyed checkbox
   // selection (it can't span a re-filtered set) and land the inspector on the
-  // new first visible row.
+  // new first visible row. Also snap back to page 1 — a filter change against a
+  // deep server page would otherwise strand the user on a slice that may be
+  // entirely filtered out, matching the "reset to first page on filter" UX of
+  // the sibling Review tabs.
   const handleToggleHideNonConcert = () => {
     const next = !hideNonConcert
     setHideNonConcert(next)
     setSelectedIds(new Set())
+    if (page > 1) onPageChange(1)
     const nextVisible = (
       next
         ? events.filter(
@@ -262,7 +266,11 @@ export const EventFlagsSection = ({
     setActiveId(nextVisible[0]?.id ?? null)
   }
 
-  if (events.length === 0) {
+  // Only the genuinely-empty queue (total === 0) gets the "all clear" state.
+  // An out-of-range deep link (e.g. ?page=99) yields an empty server page while
+  // total > 0; that must fall through to the normal render so <Pagination/>
+  // mounts and its clamp-sync effect can pull the page back into range.
+  if (total === 0) {
     const emptyTitle = (
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
         {ADMIN_COPY.review.eventFlags.panelTitle}
@@ -347,7 +355,7 @@ export const EventFlagsSection = ({
           lineHeight: 1.4,
         }}
       >
-        {events.length} pending
+        {total} pending
       </span>
     </span>
   )
