@@ -1,3 +1,17 @@
+# [1.105.0](https://github.com/HartiganHM/concert-crawl/compare/v1.104.0...v1.105.0) (2026-07-12)
+
+
+### Bug Fixes
+
+* **api:** r1 — shared premium unlocks, sanitize gifter name, variant coverage ([63d5299](https://github.com/HartiganHM/concert-crawl/commit/63d52996091a1da212098ed40fc28f9a5004454d))
+* **api:** r2 — always render receipt row with fallback when stripe url is null ([2d3470f](https://github.com/HartiganHM/concert-crawl/commit/2d3470fe02d3c0433089abd489d2d01ce1eb99a0))
+* **api:** r3 — purely informational retention copy in cancellation ack, tighten no-win-back test ([d5b5fef](https://github.com/HartiganHM/concert-crawl/commit/d5b5feff2d7e41b01218c269f1c36ce0fbc00601))
+
+
+### Features
+
+* **api:** welcome, receipt + cancellation email templates (pr 5.2) ([1331dcd](https://github.com/HartiganHM/concert-crawl/commit/1331dcd17a0af9179caa7ff9b7feafab38c29d57))
+
 # [1.104.0](https://github.com/HartiganHM/concert-crawl/compare/v1.103.0...v1.104.0) (2026-07-12)
 
 
