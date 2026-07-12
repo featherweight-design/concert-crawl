@@ -88,8 +88,15 @@ founderWindowAdminRouter.get('/', async (ctx) => {
 })
 
 // POST /open — the launch switch. Flips opens_at to NOW(); closes_at is a
-// generated column and follows automatically. Idempotency: refuse if the
-// window is already launched so a second click can't reset the clock.
+// generated column and follows automatically. opens_at is irreversible, so a
+// non-null value means the window has already been launched (it may now be
+// open OR closed). Refuse either way so a second click can't reset the clock.
+const ALREADY_OPENED = {
+  success: false,
+  error: 'The founder window has already been opened',
+  code: 'founder_window_already_open',
+} as const
+
 founderWindowAdminRouter.post('/open', async (ctx) => {
   const auth = getAuth(ctx)
   const row = await readFounderWindowRow()
@@ -98,21 +105,22 @@ founderWindowAdminRouter.post('/open', async (ctx) => {
     return ctx.json({ success: false, error: 'Internal server error' }, 500)
   }
   if (row.opensAt !== null) {
-    return ctx.json(
-      {
-        success: false,
-        error: 'The founder window is already open',
-        code: 'founder_window_already_open',
-      },
-      409,
-    )
+    return ctx.json(ALREADY_OPENED, 409)
   }
 
   const opensAt = new Date()
-  await db
+  // Guarded UPDATE: `opens_at is null` makes the flip atomic. Check the row
+  // count so a request that loses the concurrency race (another opener slipped
+  // in between our read and this UPDATE) returns 409 instead of writing a
+  // misleading audit entry with the wrong opensAt.
+  const opened = await db
     .update(founderWindow)
     .set({ opensAt })
     .where(and(eq(founderWindow.id, 1), sql`opens_at is null`))
+    .returning({ id: founderWindow.id })
+  if (opened.length === 0) {
+    return ctx.json(ALREADY_OPENED, 409)
+  }
 
   ctx.set('auditAction', 'founder_window.open')
   ctx.set('auditTargetId', 'founder_window:1')

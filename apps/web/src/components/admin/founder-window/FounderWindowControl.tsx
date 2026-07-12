@@ -357,8 +357,8 @@ const FounderLaunchConfirm = ({
           width: 460,
           maxWidth: '100%',
           background: 'var(--bg-elevated)',
-          borderTop: `3px solid ${accent}`,
           border: `1px solid color-mix(in oklab, ${accent} 30%, transparent)`,
+          borderTop: `3px solid ${accent}`,
           borderRadius: 14,
           overflow: 'hidden',
         }}
