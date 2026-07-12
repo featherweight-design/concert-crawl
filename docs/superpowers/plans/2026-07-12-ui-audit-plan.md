@@ -225,7 +225,7 @@ describe('collectHeuristicsScript', () => {
 })
 ```
 
-- [ ] **Step 2: Implement `collectHeuristicsScript`** as a function that runs entirely inside the page (no imports). The function reads `document.documentElement.scrollWidth > document.documentElement.clientWidth`, enumerates elements via `document.querySelectorAll('*')` and skips those with `display: none`, computes `getBoundingClientRect()` for each, and returns the four arrays. For images: narrow with `img instanceof HTMLImageElement && img.naturalWidth === 0`, OR `img.getAttribute('data-natural-width') === '0'` (the data-* check is only used to make tests deterministic under happy-dom; documented inline).
+- [ ] **Step 2: Implement `collectHeuristicsScript`** as a function that runs entirely inside the page (no imports). The function reads `document.documentElement.scrollWidth > document.documentElement.clientWidth`, enumerates elements via `document.querySelectorAll('*')` and skips those with `display: none`, computes `getBoundingClientRect()` for each, and returns the four arrays. For images: narrow with `img instanceof HTMLImageElement && img.naturalWidth === 0`, OR `img.getAttribute('data-natural-width') === '0'` (the data-* check is only used to make tests deterministic under jsdom — jsdom doesn't paint images so `naturalWidth` isn't reliable; documented inline).
 
 - [ ] **Step 3: Implement `collectHeuristics(page, viewportWidthPx)`** — `await page.evaluate(new Function(\`return (\${collectHeuristicsScript})(\${viewportWidthPx})\`))`.
 
@@ -359,6 +359,9 @@ export const runSweep = async (args: SweepArgs): Promise<SweepResult> => {
               captures++
             } catch (err) {
               // Selector drift or missing state — capture as-is + record.
+              // Counts toward `captures` so the PR-close math stays honest
+              // even when interactions drift; the stale capture is
+              // annotated in its filename and JSON for downstream triage.
               await captureState(
                 runId,
                 route.id,
@@ -366,6 +369,7 @@ export const runSweep = async (args: SweepArgs): Promise<SweepResult> => {
                 vp,
                 page,
               )
+              captures++
               errors.push({
                 routeId: route.id,
                 kind: 'interaction',

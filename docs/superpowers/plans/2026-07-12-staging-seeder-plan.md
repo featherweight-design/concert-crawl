@@ -510,7 +510,7 @@ export const generateFeedback = (deps: GeneratorDeps): Promise<GenResult> => { �
   - Determinism: two runs with `createRng(SAME_SEED)` produce identical row arrays (compare by JSON.stringify of the inserts recorded on a spy).
   - Layout-hostile coverage: at least one feedback message contains a substring of length ≥ 200 with no whitespace; at least one user has ≥ 25 `user_events`.
 
-- [ ] **Step 2: Implement each generator.** Use `deps.rng.pick(FIXTURE_USER_IDS)`, `.int()`, and `.pick()` throughout; **never** call `Math.random()`.
+- [ ] **Step 2: Implement each generator.** Use `deps.rng.pick(deps.fixtureUserIds)`, `deps.rng.int()`, and `deps.rng.pick()` throughout — always reach for fixture users through `deps`, never import `FIXTURE_USER_IDS` from `fixture-users.ts` directly (that would break test/reuse with a narrowed fixture set). **Never** call `Math.random()`.
 
 - [ ] **Step 3: Run tests.**
 
