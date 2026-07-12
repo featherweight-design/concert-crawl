@@ -163,6 +163,7 @@ export const CancelFlow = ({
             onClick={onSwitchToSupporter}
             style={{
               all: 'unset',
+              outline: 'revert',
               cursor: pending ? 'default' : 'pointer',
               boxSizing: 'border-box',
               width: '100%',

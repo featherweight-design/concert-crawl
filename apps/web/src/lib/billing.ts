@@ -104,18 +104,21 @@ export interface ProrationPreview {
 // Type guard (not a cast) for data crossing the API boundary — the proration
 // amounts render as customer-facing dollar figures, so a malformed payload
 // must fail loudly instead of printing "$NaN".
+const isValidCents = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isInteger(value) && value >= 0
+
 const parseProrationPreview = (payload: unknown): ProrationPreview | null => {
   if (typeof payload !== 'object' || payload === null) return null
   const amountDueCents: unknown = Reflect.get(payload, 'amountDueCents')
   const creditCents: unknown = Reflect.get(payload, 'creditCents')
   const currency: unknown = Reflect.get(payload, 'currency')
   const periodEnd: unknown = Reflect.get(payload, 'periodEnd')
+  // The API charges in whole USD cents only, so anything fractional,
+  // negative, or non-USD is a contract break — reject it.
   if (
-    typeof amountDueCents !== 'number' ||
-    !Number.isFinite(amountDueCents) ||
-    typeof creditCents !== 'number' ||
-    !Number.isFinite(creditCents) ||
-    typeof currency !== 'string'
+    !isValidCents(amountDueCents) ||
+    !isValidCents(creditCents) ||
+    currency !== 'usd'
   ) {
     return null
   }

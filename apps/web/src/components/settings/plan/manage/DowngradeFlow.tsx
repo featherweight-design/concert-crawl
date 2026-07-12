@@ -25,6 +25,8 @@ interface DowngradeFlowProps {
   /** Desktop modal layout — larger headline/subhead sizes. */
   wide: boolean
   pending: boolean
+  /** Gates the confirm CTA while the proration preview is still loading. */
+  confirmDisabled?: boolean
   errorText: string | null
   onConfirm: () => void
   onBack: () => void
@@ -34,6 +36,7 @@ export const DowngradeFlow = ({
   creditText,
   wide,
   pending,
+  confirmDisabled = false,
   errorText,
   onConfirm,
   onBack,
@@ -129,7 +132,7 @@ export const DowngradeFlow = ({
           kind="primary"
           accent="var(--accent)"
           glow
-          disabled={pending}
+          disabled={pending || confirmDisabled}
           onClick={onConfirm}
         />
         <FlowButton

@@ -76,6 +76,7 @@ const ManageRow = ({
     onClick={onClick}
     style={{
       all: 'unset',
+      outline: 'revert',
       cursor: disabled ? 'default' : 'pointer',
       boxSizing: 'border-box',
       width: '100%',

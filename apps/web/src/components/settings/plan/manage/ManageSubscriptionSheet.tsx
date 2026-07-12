@@ -132,6 +132,9 @@ export const ManageSubscriptionSheet = ({
           }
           wide={!isMobile}
           pending={pending}
+          // isLoading (not isPending) so a failed preview re-enables confirm —
+          // the API re-runs its own preview before mutating anyway.
+          confirmDisabled={downgradePreview.isLoading}
           errorText={errorText}
           onConfirm={() => changeTier('supporter', onClose)}
           onBack={() => showSurface('manage')}
@@ -147,6 +150,7 @@ export const ManageSubscriptionSheet = ({
           }
           wide={!isMobile}
           pending={pending}
+          confirmDisabled={upgradePreview.isLoading}
           errorText={errorText}
           onConfirm={() => changeTier('premium', onClose)}
           onBack={() => showSurface('manage')}

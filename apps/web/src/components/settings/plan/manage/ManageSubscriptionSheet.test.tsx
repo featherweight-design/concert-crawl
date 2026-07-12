@@ -375,10 +375,21 @@ describe('ManageSubscriptionSheet — downgrade flow', () => {
     expect(screen.getAllByText(AMOUNT_PLACEHOLDER).length).toBeGreaterThan(0)
   })
 
+  it('disables confirm while the preview is in flight', () => {
+    mockFetchPreview.mockImplementation(() => new Promise(() => undefined))
+    renderSheet({ tier: 'premium' })
+    openChangePlan()
+
+    fireEvent.click(screen.getByText(DOWNGRADE_FLOW_COPY.confirmCta))
+    expect(mockChangeTier).not.toHaveBeenCalled()
+  })
+
   it('confirm switches to supporter, refreshes plan state, and closes', async () => {
     const { onClose } = renderSheet({ tier: 'premium' })
     openChangePlan()
 
+    // Confirm is gated until the proration preview lands.
+    await waitFor(() => expect(screen.getByText('$1.23')).toBeTruthy())
     fireEvent.click(screen.getByText(DOWNGRADE_FLOW_COPY.confirmCta))
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
     expect(mockChangeTier).toHaveBeenCalledWith('test-token', 'supporter')
@@ -393,6 +404,7 @@ describe('ManageSubscriptionSheet — downgrade flow', () => {
     const { onClose } = renderSheet({ tier: 'premium' })
     openChangePlan()
 
+    await waitFor(() => expect(screen.getByText('$1.23')).toBeTruthy())
     fireEvent.click(screen.getByText(DOWNGRADE_FLOW_COPY.confirmCta))
     await waitFor(() => {
       expect(screen.getByRole('alert').textContent).toBe(
@@ -433,6 +445,9 @@ describe('ManageSubscriptionSheet — upgrade flow', () => {
     const { onClose } = renderSheet({ tier: 'supporter' })
     openChangePlan()
 
+    await waitFor(() => {
+      expect(screen.getAllByText('$3.17').length).toBeGreaterThan(0)
+    })
     fireEvent.click(screen.getByText(UPGRADE_FLOW_COPY.confirmCta))
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
     expect(mockChangeTier).toHaveBeenCalledWith('test-token', 'premium')

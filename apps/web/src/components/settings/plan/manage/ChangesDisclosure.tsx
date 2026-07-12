@@ -90,6 +90,7 @@ export const ChangesDisclosure = () => {
         onClick={() => setOpen((wasOpen) => !wasOpen)}
         style={{
           all: 'unset',
+          outline: 'revert',
           cursor: 'pointer',
           boxSizing: 'border-box',
           width: '100%',

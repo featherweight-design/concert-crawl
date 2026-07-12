@@ -103,6 +103,9 @@ export const FlowButton = ({
       onClick={onClick}
       style={{
         all: 'unset',
+        // Restore the native :focus-visible ring wiped by all:unset so
+        // keyboard focus stays visible (same pattern as PriceDisputesQueue).
+        outline: 'revert',
         cursor: disabled ? 'default' : 'pointer',
         textAlign: 'center',
         boxSizing: 'border-box',
